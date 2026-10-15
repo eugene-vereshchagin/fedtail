@@ -351,6 +351,16 @@ class PostRow(QWidget):
             num = QLabel(f"/{self.spec.number}")
             num.setObjectName("num")
             h.addWidget(num)
+        size = min(int(self.theme.shape["avatar"]), 28)  # one line: a small face
+        if self.theme.shape["card_avatars"] and size:
+            avatar = ClickLabel()
+            avatar.setFixedSize(QSize(size, size))
+            avatar.setCursor(Qt.CursorShape.PointingHandCursor)
+            avatar.setToolTip("@" + acc["acct"])
+            avatar.clicked.connect(lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
+            h.addWidget(avatar)
+            self.ctx.images.get(acc.get("avatar_static") or acc.get("avatar"),
+                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
         user, _sep, host = acc["acct"].partition("@")
         h.addWidget(self._label(link("account", acc["id"], "@" + esc(user), self.theme.css("text"),
                                      bold=True), "name", wrap=False))
