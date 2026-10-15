@@ -52,7 +52,6 @@ CHOICES = {
     ("account", "markdown"): {"auto", "on", "off"},
     ("ui", "frontend"): {"qt"},
     ("ui", "language"): {"auto", "ru", "en"},
-    ("ui", "theme"): {"system", "terminal"},
     ("ui", "image_viewer"): {"internal", "browser"},
     ("ui", "actions"): {"both", "icons", "text"},
     ("feed", "order"): {"oldest_first", "newest_first"},

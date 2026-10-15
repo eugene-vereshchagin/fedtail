@@ -20,7 +20,10 @@
 #frontend = "qt"
 # Язык интерфейса: "auto" (из LANG), "ru", "en".
 #language = "auto"
-# Тема: "system" (как в KDE), "terminal" (зелёным по чёрному).
+# Тема — файл в ~/.config/fedtail/themes/<имя>.toml или встроенная:
+#   "system"   — светлая/тёмная, как в KDE;
+#   "terminal" — зелёным по чёрному, всё моноширинное.
+# Свои темы: см. ~/.config/fedtail/themes/README.txt
 #theme = "system"
 # Размер шрифта постов в пунктах, 0 = системный.
 #font_size = 0

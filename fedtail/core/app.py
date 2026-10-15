@@ -327,6 +327,13 @@ class Core:
                 out[sid] = None
         return out
 
+    def short_ids(self, statuses):
+        """{status id: '#a3f'-style alias} for the posts on screen (boosts: the original)."""
+        return self.store.aliases(real(st)["id"] for st in statuses)
+
+    def resolve_alias(self, alias):
+        return self.store.by_alias(alias)
+
     def my_replies(self, statuses):
         """{status id: [my replies to it]} for the given (possibly boosted) statuses."""
         if not self.me:

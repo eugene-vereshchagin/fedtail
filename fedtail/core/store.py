@@ -37,11 +37,45 @@ CREATE TABLE IF NOT EXISTS drafts (
     data    TEXT NOT NULL,
     updated TEXT NOT NULL
 );
+-- short local names for posts, like #k7q on Point: stable, never reused
+CREATE TABLE IF NOT EXISTS aliases (
+    n         INTEGER PRIMARY KEY AUTOINCREMENT,
+    status_id TEXT NOT NULL UNIQUE
+);
 CREATE TABLE IF NOT EXISTS kv (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
 """
+
+
+_B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+_LETTERS = "abcdefghijklmnopqrstuvwxyz"
+
+
+def alias_text(n):
+    """1 → 'a00', 2 → 'a01', … 'zzz', then 'a000' …: a letter, then base-36."""
+    k, length = n - 1, 3
+    while k >= 26 * 36 ** (length - 1):
+        k -= 26 * 36 ** (length - 1)
+        length += 1
+    head, rest = divmod(k, 36 ** (length - 1))
+    tail = ""
+    for _ in range(length - 1):
+        rest, r = divmod(rest, 36)
+        tail = _B36[r] + tail
+    return _LETTERS[head] + tail
+
+
+def alias_number(text):
+    text = (text or "").lower().lstrip("#")
+    if len(text) < 3 or text[0] not in _LETTERS or any(c not in _B36 for c in text):
+        return None
+    k = sum(26 * 36 ** (length - 1) for length in range(3, len(text)))
+    v = _LETTERS.index(text[0])
+    for c in text[1:]:
+        v = v * 36 + _B36.index(c)
+    return k + v + 1
 
 
 def now_iso():
@@ -147,6 +181,29 @@ class Store:
                 for pid, data in self.db.execute(q, chunk + [author_id]):
                     out.setdefault(pid, []).append(json.loads(data))
         return out
+
+    def aliases(self, status_ids):
+        """{status id: short alias}, giving new ones to ids that have none yet."""
+        ids = list(dict.fromkeys(status_ids))
+        out = {}
+        with self._tx() as db:
+            db.executemany("INSERT OR IGNORE INTO aliases (status_id) VALUES (?)",
+                           [(i,) for i in ids])
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                marks = ",".join("?" * len(chunk))
+                for sid, n in db.execute(
+                        f"SELECT status_id, n FROM aliases WHERE status_id IN ({marks})", chunk):
+                    out[sid] = alias_text(n)
+        return out
+
+    def by_alias(self, alias):
+        n = alias_number(alias)
+        if n is None:
+            return None
+        with self.lock:
+            row = self.db.execute("SELECT status_id FROM aliases WHERE n=?", (n,)).fetchone()
+        return row[0] if row else None
 
     def missing_set(self, ids):
         ids = list(ids)

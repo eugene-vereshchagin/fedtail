@@ -6,6 +6,7 @@ space before they load.
 """
 
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from ...core.model import real, snippet
 from ...i18n import _
-from .card import CardSpec, PostRow
+from .card import CardSpec, PostRow, SeparatorRow
 from .text import display_name, esc
 
 POSTS_ONLY_LANES = ("people", "bots", "mine", "local")
@@ -153,7 +154,7 @@ class FeedView(QScrollArea):
         for i, spec in enumerate(specs):
             row = self.rows.get(spec.key)
             if row is None:
-                row = PostRow(spec, self.ctx)
+                row = (SeparatorRow if spec.extra.get("separator") else PostRow)(spec, self.ctx)
                 self.rows[spec.key] = row
                 self.col.insertWidget(base + i, row)
             else:
@@ -187,13 +188,16 @@ class FeedView(QScrollArea):
 
     def refresh_from_store(self, store):
         for row in self.rows.values():
+            if row.status_id is None:
+                continue
             fresh = store.get_status(row.status_id)
             if fresh and fresh != row.spec.status:
                 row.update_spec(CardSpec(**{**row.spec.__dict__, "status": fresh}))
 
     def remove_status(self, sid):
         rows = [self.rows[k] for k in self.order]
-        keep = [r.spec for r in rows if r.real_id != sid and r.status_id != sid]
+        keep = [r.spec for r in rows if r.status_id is None or
+                (r.real_id != sid and r.status_id != sid)]
         if len(keep) != len(self.order):
             self.set_specs(keep)
 
@@ -230,21 +234,46 @@ class FeedView(QScrollArea):
         self._seen_timer.start()
 
 
-def _button(text, slot):
+def _button(text, slot, name="tool", icon=None, tip=None):
     b = QPushButton(text)
+    b.setObjectName(name)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
+    if icon:
+        ic = QIcon.fromTheme(icon)
+        if not ic.isNull():
+            b.setIcon(ic)
+        elif not text:
+            b.setText(tip or "")
+    if tip:
+        b.setToolTip(tip)
     b.clicked.connect(slot)
     return b
 
 
-class _Strip(QWidget):
-    def __init__(self):
+class _Header(QWidget):
+    """Title line above a lane, a thread or an account."""
+
+    def __init__(self, theme, title=""):
         super().__init__()
+        self.setObjectName("laneHeader")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.theme = theme
         self.h = QHBoxLayout(self)
-        self.h.setContentsMargins(10, 4, 10, 4)
-        self.label = QLabel()
-        self.label.setObjectName("strip")
-        self.h.addWidget(self.label, 1)
+        self.h.setContentsMargins(28, 12, 20, 12)
+        self.h.setSpacing(12)
+        self.title = QLabel(title)
+        self.title.setObjectName("laneTitle")
+        self.title.setTextFormat(Qt.TextFormat.PlainText)
+        self.h.addWidget(self.title)
+        self.info = QLabel()
+        self.info.setObjectName("laneInfo")
+        self.info.setTextFormat(Qt.TextFormat.PlainText)
+        self.info.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.h.addWidget(self.info, 1)
+
+    def add(self, w):
+        self.h.addWidget(w)
+        return w
 
 
 class LaneWidget(QWidget):
@@ -252,30 +281,70 @@ class LaneWidget(QWidget):
         super().__init__()
         self.win, self.core, self.name = win, win.core, name
         self.cfg = self.core.cfg
+        self.theme = win.theme
         self.newest_first = self.cfg["feed"]["order"] == "newest_first"
         self.positioned = False
         self.dirty = False
+        self.separator = None  # (key of the first unread when the lane opened, count)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        self.strip = _Strip()
+        self.header = _Header(self.theme, self.theme.word("lane_title", _("lane_" + name)))
+        self.pill = QLabel()
+        self.pill.setObjectName("newPill")
+        self.header.h.insertWidget(1, self.pill)
+        self.only_posts = None
         if name in POSTS_ONLY_LANES:
-            self.only_posts = QCheckBox(_("posts_only"))
-            self.only_posts.setToolTip(_("posts_only_tip"))
-            self.only_posts.setChecked(self.core.posts_only(name))
-            self.only_posts.toggled.connect(self._toggle_posts_only)
-            self.strip.h.addWidget(self.only_posts)
-        self.btn_first = _button(_("to_first_unread"), self.jump_first_unread)
-        self.btn_all = _button(_("mark_all_read"), self.mark_all_read)
-        self.strip.h.addWidget(self.btn_first)
-        self.strip.h.addWidget(self.btn_all)
-        lay.addWidget(self.strip)
+            self._posts_only_control()
+        self.btn_first = self.header.add(_button(_("to_new"), self.jump_first_unread,
+                                                 icon="go-down"))
+        self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
+                                               icon="mail-mark-read"))
+        self.header.add(_button("", self.refresh_now, icon="view-refresh",
+                                tip=_("refresh") + " (F5)"))
+        lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         self.view.seen.connect(self._seen)
         lay.addWidget(self.view, 1)
         self.btn_older = _button(_("older_down") if self.newest_first else _("older_up"),
-                                 self.load_older)
+                                 self.load_older, name="older")
         (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
+
+    def _posts_only_control(self):
+        on = self.core.posts_only(self.name)
+        if self.theme.shape["posts_only"] == "check":
+            box = QCheckBox(self.theme.word("lane", _("posts_only")).strip())
+            box.setObjectName("check")
+            box.setChecked(on)
+            box.setToolTip(_("posts_only_tip"))
+            box.toggled.connect(self._toggle_posts_only)
+            self.only_posts = box
+            self.header.add(box)
+            return
+        group = QWidget()
+        g = QHBoxLayout(group)
+        g.setContentsMargins(0, 0, 0, 0)
+        g.setSpacing(0)
+        self._seg_all = QPushButton(_("show_all"))
+        self._seg_posts = QPushButton(_("posts_only"))
+        for b, pos in ((self._seg_all, "first"), (self._seg_posts, "last")):
+            b.setObjectName("seg")
+            b.setProperty("pos", pos)
+            b.setCheckable(True)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            g.addWidget(b)
+        self._seg_posts.setToolTip(_("posts_only_tip"))
+        (self._seg_posts if on else self._seg_all).setChecked(True)
+        self._seg_all.clicked.connect(lambda: self._set_seg(False))
+        self._seg_posts.clicked.connect(lambda: self._set_seg(True))
+        self.only_posts = _SegProxy(self)
+        self.header.add(group)
+
+    def _set_seg(self, on):
+        self._seg_all.setChecked(not on)
+        self._seg_posts.setChecked(on)
+        if on != self.core.posts_only(self.name):
+            self._toggle_posts_only(on)
 
     def _seen(self, ids):
         if self.cfg["read"]["mark_read"] == "on_scroll":
@@ -284,9 +353,13 @@ class LaneWidget(QWidget):
     def _toggle_posts_only(self, on):
         self.core.set_posts_only(self.name, on)
         self.positioned = False  # a different list: start over at the first unread
+        self.separator = None
         self.refresh(force=True)
         self._initial_position()
         self.win.update_badges()
+
+    def refresh_now(self):
+        self.core.poll_now()
 
     def refresh(self, force=False):
         # hidden lanes only remember that they are stale; they catch up when shown
@@ -299,17 +372,28 @@ class LaneWidget(QWidget):
         statuses = [st for _, st in entries]
         parents = self.core.parents_for(statuses)
         answers = self.core.my_replies(statuses)
+        short = self.core.short_ids(statuses)
         specs, unknown = [], []
         for item_id, st in entries:
             parent = parents.get(st["id"])
             if parent is None and real(st).get("in_reply_to_id"):
                 unknown.append(st)
             specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread,
-                                  extra={"my_replies": answers.get(real(st)["id"], [])}))
+                                  extra={"my_replies": answers.get(real(st)["id"], []),
+                                         "short_id": short.get(real(st)["id"])}))
         if self.name in ("comments", "mentions"):
             self.core.check_my_replies(statuses)
         if unknown:
             self.core.ensure_parents(unknown)
+        # "new below": fixed where the reader stood when the lane opened
+        if self.separator is None and not self.positioned:
+            first = next((s for s in specs if s.unread), None)
+            if first is not None and any(not s.unread for s in specs):
+                self.separator = (first.key, sum(1 for s in specs if s.unread))
+        if self.separator and any(s.key == self.separator[0] for s in specs):
+            i = next(i for i, s in enumerate(specs) if s.key == self.separator[0])
+            text = self.theme.word("separator", _("new_below"), n=self.separator[1])
+            specs.insert(i, CardSpec(key="__sep__", status={}, extra={"separator": text}))
         if self.newest_first:
             specs.reverse()
         if not self.positioned:
@@ -341,6 +425,8 @@ class LaneWidget(QWidget):
         if self.cfg["feed"]["start_at"] == "first_unread" and unread:
             if self.newest_first:
                 self.view.scroll_to(unread[-1], "bottom")
+            elif "__sep__" in self.view.rows:
+                self.view.scroll_to("__sep__", "top")
             else:
                 self.view.scroll_to(unread[0], "top")
         else:
@@ -353,6 +439,8 @@ class LaneWidget(QWidget):
                 self.view.scroll_to(unread[-1], "bottom")
             else:
                 self.view.scroll_to(unread[0], "top")
+        else:
+            self.view.scroll_to_end(not self.newest_first)
 
     def mark_all_read(self):
         ids = [self.view.rows[k].status_id for k in self.view.unread_keys()]
@@ -376,9 +464,22 @@ class LaneWidget(QWidget):
 
     def update_strip(self):
         n = len(self.view.unread_keys())
-        self.strip.label.setText(_("unread_n", n=n) if n else _("all_read"))
-        self.btn_first.setVisible(bool(n))
+        self.pill.setText(_("new_n", n=n))
+        self.pill.setVisible(bool(n))
         self.btn_all.setVisible(bool(n))
+
+
+class _SegProxy:
+    """Lets tests and the window treat the segmented control like a checkbox."""
+
+    def __init__(self, lane):
+        self.lane = lane
+
+    def isChecked(self):
+        return self.lane._seg_posts.isChecked()
+
+    def setChecked(self, on):
+        self.lane._set_seg(on)
 
 
 class ThreadWidget(QWidget):
@@ -391,9 +492,9 @@ class ThreadWidget(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        self.strip = _Strip()
-        self.strip.h.addWidget(_button(_("refresh"), self.reload))
-        lay.addWidget(self.strip)
+        self.header = _Header(win.theme)
+        self.header.add(_button("", self.reload, icon="view-refresh", tip=_("refresh")))
+        lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         self.view.seen.connect(self._seen)
         lay.addWidget(self.view, 1)
@@ -405,9 +506,9 @@ class ThreadWidget(QWidget):
             self.core.mark_read(ids)
 
     def reload(self):
-        self.strip.label.setText(_("loading"))
+        self.header.info.setText(_("loading"))
         self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
-                             fail=lambda e: self.strip.label.setText(_("load_failed", err=e)))
+                             fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
 
     def focus_on(self, sid):
         self.focus_id = sid
@@ -420,14 +521,18 @@ class ThreadWidget(QWidget):
     def _loaded(self, nodes):
         self.statuses = {n.status["id"] for n in nodes}
         unread = self.core.unread_ids([(n.status["id"], n.status) for n in nodes])
+        short = self.core.short_ids([n.status for n in nodes])
         specs = [CardSpec(key=n.status["id"], status=n.status, depth=n.depth,
                           number=n.number or None, in_thread=True,
                           focus=(n.status["id"] == self.focus_id and len(nodes) > 1),
-                          unread=n.status["id"] in unread) for n in nodes]
+                          unread=n.status["id"] in unread,
+                          extra={"short_id": short.get(n.status["id"])}) for n in nodes]
         self.view.set_specs(specs, keep_position=self.loaded)
         root = nodes[0].status
         self.title = f'{real(root)["account"]["username"]}: {snippet(root, 30)}'
-        self.strip.label.setText(_("thread_info", n=len(nodes) - 1))
+        self.header.title.setText(snippet(root, 60))
+        self.header.info.setText(_("thread_info", n=len(nodes) - 1) +
+                                 (f" · #{short[root['id']]}" if short.get(root["id"]) else ""))
         self.win.retitle(self)
         if not self.loaded:
             self.loaded = True
@@ -447,11 +552,11 @@ class AccountWidget(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        self.strip = _Strip()
-        lay.addWidget(self.strip)
+        self.header = _Header(win.theme, "@…")
+        lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         lay.addWidget(self.view, 1)
-        self.btn_more = _button(_("older_down"), self.more)
+        self.btn_more = _button(_("older_down"), self.more, name="older")
         self.view.footer.addWidget(self.btn_more)
         win.bridge.call(self.core.account(acc_id), ok=self._account)
         self.more()
@@ -459,7 +564,8 @@ class AccountWidget(QWidget):
     def _account(self, acc):
         self.title = "@" + acc["acct"]
         note = snippet({"content": acc.get("note", "")}, 200)
-        self.strip.label.setText(f"<b>{display_name(acc)}</b> @{esc(acc['acct'])} — {esc(note)}")
+        self.header.title.setText(acc.get("display_name") or acc["username"])
+        self.header.info.setText(f"@{acc['acct']} — {note}" if note else f"@{acc['acct']}")
         self.win.retitle(self)
 
     def more(self):
@@ -477,7 +583,9 @@ class AccountWidget(QWidget):
         self.render()
 
     def render(self):
-        specs = [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st))
+        short = self.core.short_ids(self.items)
+        specs = [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
+                          extra={"short_id": short.get(real(st)["id"])})
                  for st in self.items]
         self.view.set_specs(specs, keep_position=True)
 
@@ -491,9 +599,11 @@ class RequestsWidget(QScrollArea):
         self.win = win
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setObjectName("feed")
         self.body = QWidget()
+        self.body.setObjectName("feedBody")
         self.lay = QVBoxLayout(self.body)
-        self.lay.setContentsMargins(12, 12, 12, 12)
+        self.lay.setContentsMargins(28, 20, 28, 20)
         self.lay.setSpacing(10)
         self.setWidget(self.body)
         self.refresh()
@@ -510,6 +620,7 @@ class RequestsWidget(QScrollArea):
             card = QFrame()
             card.setObjectName("card")
             v = QVBoxLayout(card)
+            v.setContentsMargins(18, 14, 18, 14)
             name = QLabel(f'<b>{display_name(acc)}</b> @{esc(acc["acct"])} — '
                           f'<a href="{esc(acc.get("url", ""))}">{_("profile")} ↗</a>')
             name.setOpenExternalLinks(True)
@@ -520,9 +631,9 @@ class RequestsWidget(QScrollArea):
             v.addWidget(note)
             h = QHBoxLayout()
             h.addWidget(_button(_("approve"), lambda _c=False, a=acc["id"]:
-                                self.win.answer_follow(a, True)))
+                                self.win.answer_follow(a, True), icon="dialog-ok"))
             h.addWidget(_button(_("reject"), lambda _c=False, a=acc["id"]:
-                                self.win.answer_follow(a, False)))
+                                self.win.answer_follow(a, False), icon="dialog-cancel"))
             h.addStretch(1)
             v.addLayout(h)
             self.lay.addWidget(card)

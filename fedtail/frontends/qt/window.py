@@ -3,25 +3,33 @@
 from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, QTimer, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QDesktopServices, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QMenu,
     QMessageBox,
-    QSplitter,
+    QPushButton,
     QStackedWidget,
     QSystemTrayIcon,
     QTabBar,
     QTabWidget,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ... import __version__
 from ...core.model import real, snippet
 from ...i18n import _
+from .. import themefile
+from .card import _round
 from .compose import Compose
 from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
 from .images import Images
@@ -33,6 +41,56 @@ LANE_ICON = {"people": "system-users", "comments": "mail-replied",
              "mentions": "mail-mark-important", "bots": "applications-system",
              "mine": "document-edit", "local": "go-home",
              "requests": "list-add-user"}
+
+
+BADGE_KIND = {"comments": "hot", "bots": "quiet"}
+
+
+class LaneItem(QWidget):
+    """A lane in the sidebar: icon, name, unread badge."""
+
+    def __init__(self, name, theme, number):
+        super().__init__()
+        self.name, self.theme = name, theme
+        self.current = False
+        self.setToolTip(f"Alt+{number}" if number <= 9 else "")
+        h = QHBoxLayout(self)
+        h.setContentsMargins(10, 8, 10, 8)
+        h.setSpacing(10)
+        if theme.shape["lane_icons"]:
+            icon = QLabel()
+            ic = QIcon.fromTheme(LANE_ICON.get(name, ""))
+            if not ic.isNull():
+                icon.setPixmap(ic.pixmap(18, 18))
+            icon.setFixedWidth(18)
+            h.addWidget(icon)
+        self.label = QLabel()
+        self.label.setObjectName("laneName")
+        h.addWidget(self.label, 1)
+        self.badge = QLabel()
+        self.badge.setObjectName("badge")
+        self.badge.setProperty("kind", BADGE_KIND.get(name, "normal"))
+        self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.badge.setMinimumWidth(24)
+        h.addWidget(self.badge)
+        self.set_count(0)
+        self._render()
+
+    def _render(self):
+        key = "lane_selected" if self.current else "lane"
+        self.label.setText(self.theme.word(key, _("lane_" + self.name)))
+        self.label.setProperty("current", "true" if self.current else "false")
+        self.label.style().unpolish(self.label)
+        self.label.style().polish(self.label)
+
+    def set_current(self, on):
+        if on != self.current:
+            self.current = on
+            self._render()
+
+    def set_count(self, n):
+        self.badge.setText(str(n) if n < 1000 else "999+")
+        self.badge.setVisible(bool(n))
 
 
 @dataclass
@@ -76,64 +134,33 @@ class MainWindow(QMainWindow):
     # ---- layout -------------------------------------------------------------------
     def _build(self):
         self.tray = None
-        self.sidebar = QListWidget()
-        self.sidebar.setMinimumWidth(170)
-        self.sidebar.setMaximumWidth(280)
-        for lane in self.core.lanes:
-            it = QListWidgetItem(QIcon.fromTheme(LANE_ICON.get(lane.name, "")), "")
-            it.setData(Qt.ItemDataRole.UserRole, lane.name)
-            self.sidebar.addItem(it)
-        self.sidebar.currentItemChanged.connect(self._lane_clicked)
-        self.update_badges()
+        central = QWidget()
+        central.setObjectName("central")
+        row = QHBoxLayout(central)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(0)
+        row.addWidget(self._build_sidebar())
 
         self.stack = QStackedWidget()
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
         self.tabs.setTabsClosable(True)
         self.tabs.setMovable(True)
+        self.tabs.setTabBarAutoHide(True)  # one tab: no tab bar at all
         self.tabs.addTab(self.stack, "")
         self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.tabs.tabCloseRequested.connect(self.close_tab)
+        row.addWidget(self.tabs, 1)
+        self.setCentralWidget(central)
+        self.menuBar().hide()
 
-        split = QSplitter()
-        split.addWidget(self.sidebar)
-        split.addWidget(self.tabs)
-        split.setStretchFactor(1, 1)
-        split.setSizes([210, 940])
-        self.setCentralWidget(split)
-
-        a_new = QAction(QIcon.fromTheme("document-new"), _("write"), self)
-        a_new.setShortcut(QKeySequence("Ctrl+N"))
-        a_new.triggered.connect(lambda: self.compose())
-        a_ref = QAction(QIcon.fromTheme("view-refresh"), _("refresh"), self)
-        a_ref.setShortcut(QKeySequence("F5"))
-        a_ref.triggered.connect(self.refresh)
-        tb = self.addToolBar("main")
-        tb.setObjectName("main")
-        tb.setMovable(False)
-        tb.addAction(a_new)
-        tb.addAction(a_ref)
-
-        m = self.menuBar().addMenu(_("menu_file"))
-        m.addAction(a_new)
-        m.addAction(a_ref)
-        m.addSeparator()
-        m.addAction(_("open_config"), lambda: self.open_url(
-            QUrl.fromLocalFile(str(self.core.paths.config_file)).toString()))
-        m.addAction(_("open_data"), lambda: self.open_url(
-            QUrl.fromLocalFile(str(self.core.paths.data_dir)).toString()))
-        m.addAction(_("relogin"), self.relogin)
-        m.addSeparator()
-        a_quit = m.addAction(_("quit"), self.quit)
-        a_quit.setShortcut(QKeySequence("Ctrl+Q"))
-        h = self.menuBar().addMenu(_("menu_help"))
-        h.addAction(_("about"), self.about)
-
-        QShortcut(QKeySequence("Ctrl+W"), self).activated.connect(
-            lambda: self.close_tab(self.tabs.currentIndex()))
-        for i in range(min(9, self.sidebar.count())):
+        for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
+                        ("Ctrl+Q", self.quit),
+                        ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex()))):
+            QShortcut(QKeySequence(seq), self).activated.connect(fn)
+        for i in range(min(9, self.lanes.count())):
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
-                lambda r=i: self.sidebar.setCurrentRow(r))
+                lambda r=i: self.lanes.setCurrentRow(r))
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
@@ -149,6 +176,88 @@ class MainWindow(QMainWindow):
             self.tray.show()
         self._notify_lane = None
 
+    def _build_sidebar(self):
+        t = self.theme
+        side = QWidget()
+        side.setObjectName("sidebar")
+        side.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        side.setFixedWidth(272)
+        v = QVBoxLayout(side)
+        v.setContentsMargins(14, 16, 14, 14)
+        v.setSpacing(16)
+
+        acc = QHBoxLayout()
+        acc.setSpacing(12)
+        self.account_avatar = QLabel()
+        self.account_avatar.setFixedSize(44, 44)
+        self.account_avatar.setVisible(bool(t.shape["sidebar_avatar"]))
+        acc.addWidget(self.account_avatar)
+        names = QVBoxLayout()
+        names.setSpacing(0)
+        self.account_name = QLabel(self.base_title)
+        self.account_name.setObjectName("accountName")
+        self.account_sub = QLabel("")
+        self.account_sub.setObjectName("accountSub")
+        names.addWidget(self.account_name)
+        names.addWidget(self.account_sub)
+        acc.addLayout(names, 1)
+        menu_btn = QToolButton()
+        menu_btn.setObjectName("menu")
+        menu_btn.setToolTip(_("menu"))
+        ic = QIcon.fromTheme("application-menu", QIcon.fromTheme("open-menu-symbolic"))
+        if ic.isNull():
+            menu_btn.setText("≡")
+        else:
+            menu_btn.setIcon(ic)
+        menu_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu_btn.setMenu(self._app_menu())
+        acc.addWidget(menu_btn, 0, Qt.AlignmentFlag.AlignTop)
+        v.addLayout(acc)
+
+        compose = QPushButton(t.word("compose", _("write")))
+        compose.setObjectName("compose")
+        compose.setCursor(Qt.CursorShape.PointingHandCursor)
+        compose.setToolTip(_("write") + " (Ctrl+N)")
+        compose.clicked.connect(lambda: self.compose())
+        v.addWidget(compose)
+
+        self.lanes = QListWidget()
+        self.lanes.setObjectName("lanes")
+        self.lanes.setFrameShape(QFrame.Shape.NoFrame)
+        self.lanes.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.lane_items = {}
+        for i, lane in enumerate(self.core.lanes):
+            it = QListWidgetItem()
+            it.setData(Qt.ItemDataRole.UserRole, lane.name)
+            w = LaneItem(lane.name, t, i + 1)
+            it.setSizeHint(w.sizeHint())
+            self.lanes.addItem(it)
+            self.lanes.setItemWidget(it, w)
+            self.lane_items[lane.name] = w
+        self.lanes.currentItemChanged.connect(self._lane_clicked)
+        v.addWidget(self.lanes, 1)
+        self.sidebar = self.lanes  # older name, still used around
+        self.update_badges()
+        return side
+
+    def _app_menu(self):
+        m = QMenu(self)
+        m.addAction(_("write") + "\tCtrl+N", lambda: self.compose())
+        m.addAction(_("refresh") + "\tF5", self.refresh)
+        m.addSeparator()
+        m.addAction(_("open_config"), lambda: self.open_url(
+            QUrl.fromLocalFile(str(self.core.paths.config_file)).toString()))
+        m.addAction(_("open_themes"), lambda: self.open_url(
+            QUrl.fromLocalFile(str(themefile.user_dir())).toString()))
+        m.addAction(_("open_data"), lambda: self.open_url(
+            QUrl.fromLocalFile(str(self.core.paths.data_dir)).toString()))
+        m.addSeparator()
+        m.addAction(_("relogin"), self.relogin)
+        m.addAction(_("about"), self.about)
+        m.addSeparator()
+        m.addAction(_("quit") + "\tCtrl+Q", self.quit)
+        return m
+
     # ---- startup --------------------------------------------------------------------
     def start(self):
         if not self.core.logged_in:
@@ -160,6 +269,16 @@ class MainWindow(QMainWindow):
 
     def _connected(self, me):
         self.ctx.me_id = me["id"]
+        t = self.theme
+        fields = {"display_name": me.get("display_name") or me["username"],
+                  "username": me["username"], "acct": me["acct"]}
+        self.account_name.setText(t.words["account_title"].format(**fields))
+        self.account_sub.setText(t.words["account_subtitle"].format(**fields))
+        if t.shape["sidebar_avatar"]:
+            self.images.get(me.get("avatar_static") or me.get("avatar"),
+                            lambda pm: self.account_avatar.setPixmap(_round(pm, 44)))
+        for w in self.theme.warnings:
+            self.error(w)
         self.statusBar().showMessage(_("connected", acct=me["acct"],
                                        server=self.core.auth["server"]), 8000)
         if self.core.new_options:
@@ -171,7 +290,7 @@ class MainWindow(QMainWindow):
             self.tray.setToolTip(tip)
         last = self.core.get_state("lane")
         row = next((i for i, lane in enumerate(self.core.lanes) if lane.name == last), 0)
-        self.sidebar.setCurrentRow(row)
+        self.lanes.setCurrentRow(row)
         self.core.start_polling()
 
     def _connect_failed(self, err):
@@ -202,17 +321,17 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
         self.tabs.setTabText(self.tabs.indexOf(self.stack), _("lane_" + name))
         self.core.set_state("lane", name)
+        for lane_name, item in self.lane_items.items():
+            item.set_current(lane_name == name)
 
     def select_lane(self, name):
-        for i in range(self.sidebar.count()):
-            if self.sidebar.item(i).data(Qt.ItemDataRole.UserRole) == name:
-                self.sidebar.setCurrentRow(i)
+        for i in range(self.lanes.count()):
+            if self.lanes.item(i).data(Qt.ItemDataRole.UserRole) == name:
+                self.lanes.setCurrentRow(i)
 
     def update_badges(self):
         total = 0
-        for i in range(self.sidebar.count()):
-            it = self.sidebar.item(i)
-            name = it.data(Qt.ItemDataRole.UserRole)
+        for name, item in getattr(self, "lane_items", {}).items():
             if not self.core.me:
                 n = 0
             elif name == "requests":
@@ -221,11 +340,7 @@ class MainWindow(QMainWindow):
                 n = self.core.unread_count(name)
             if name in ("comments", "mentions", "requests"):
                 total += n
-            badge = f"  ({n})" if n else ""
-            it.setText(f"{_('lane_' + name)}{badge}")
-            f = it.font()
-            f.setBold(bool(n))
-            it.setFont(f)
+            item.set_count(n)
         if self.tray:
             base = self.windowTitle()
             self.tray.setToolTip(_("tray_new", title=base, n=total) if total else base)

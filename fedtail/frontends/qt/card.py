@@ -1,14 +1,15 @@
-"""One post on screen."""
+"""One post on screen, and the "new below" divider."""
 
 from dataclasses import dataclass, field
 
-from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import QRectF, QSize, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QSizePolicy,
     QToolButton,
@@ -17,14 +18,20 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.model import is_bot, real, snippet
-from ...i18n import _, months
-from .text import clean, display_name, esc, link, when
+from ...i18n import _
+from .text import clean, display_name, esc, link
 
-VIS_ICON = {"public": "🌐", "unlisted": "🔓", "private": "🔒", "direct": "✉"}
-INDENT = 18
-MAX_DEPTH_INDENT = 10
+RAIL_W = 20
+MAX_DEPTH_INDENT = 8
 THUMB_H = 170
 THUMB_MAX_W = 380
+VIS_ICONS = {
+    "public": ("globe", "applications-internet"),
+    "unlisted": ("object-unlocked", "unlock"),
+    "private": ("object-locked", "lock"),
+    "direct": ("mail-message", "mail-unread"),
+}
+VIS_WORD = {"public": "pub", "unlisted": "unl", "private": "priv", "direct": "dm"}
 
 
 @dataclass
@@ -37,7 +44,7 @@ class CardSpec:
     unread: bool = False
     focus: bool = False
     in_thread: bool = False
-    extra: dict = field(default_factory=dict)
+    extra: dict = field(default_factory=dict)  # my_replies, short_id, separator
 
 
 class ClickLabel(QLabel):
@@ -56,33 +63,83 @@ def _set_prop(w, name, value):
         w.style().polish(w)
 
 
+def _theme_icon(names):
+    for n in names:
+        ic = QIcon.fromTheme(n)
+        if not ic.isNull():
+            return ic
+    return QIcon()
+
+
+class SeparatorRow(QWidget):
+    """'new below · 12' between what was read and what wasn't."""
+
+    def __init__(self, spec, ctx):
+        super().__init__()
+        self.spec = spec
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 6, 0, 6)
+        h.setSpacing(12)
+        lines = ctx.theme.shape["card_style"] == "card"
+        if lines:
+            left = QFrame()
+            left.setObjectName("sepLine")
+            h.addWidget(left, 1)
+        self.label = QLabel(spec.extra["separator"])
+        self.label.setObjectName("sepText")
+        h.addWidget(self.label, 0 if lines else 1)
+        if lines:
+            right = QFrame()
+            right.setObjectName("sepLine")
+            h.addWidget(right, 1)
+
+    status_id = None
+    real_id = None
+
+    def update_spec(self, spec):
+        self.spec = spec
+        self.label.setText(spec.extra["separator"])
+
+    def set_unread(self, _unread):
+        pass
+
+
 class PostRow(QWidget):
-    """Indentation + rail + the card itself."""
+    """Thread rails + the card itself."""
 
     def __init__(self, spec, ctx):
         super().__init__()
         self.ctx = ctx
         self.spec = spec
+        self.theme = ctx.theme
         self.cw_open = ctx.cfg["ui"]["expand_cw"]
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        depth = min(spec.depth, MAX_DEPTH_INDENT)
-        if depth:
-            row.addSpacing(INDENT * depth)
+        for _i in range(min(spec.depth, MAX_DEPTH_INDENT)):
+            rail_box = QWidget()
+            rail_box.setFixedWidth(RAIL_W)
+            rb = QHBoxLayout(rail_box)
+            rb.setContentsMargins(0, 0, 0, 0)
             rail = QFrame()
             rail.setObjectName("rail")
             rail.setFixedWidth(2)
-            row.addWidget(rail)
+            rb.addWidget(rail, 0, Qt.AlignmentFlag.AlignHCenter)
+            row.addWidget(rail_box)
+        if spec.depth:
             row.addSpacing(6)
         self.card = QFrame()
         self.card.setObjectName("card")
         self.card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         row.addWidget(self.card)
         self.lay = QVBoxLayout(self.card)
-        self.lay.setContentsMargins(10, 8, 10, 8)
-        self.lay.setSpacing(4)
+        if self.theme.shape["card_style"] == "rule":
+            self.lay.setContentsMargins(6, 10, 6, 14)
+        else:
+            self.lay.setContentsMargins(18, 14, 18, 12)
+        self.lay.setSpacing(0)
         self.body = None
+        self.mark = None
         self._build()
         self._flags()
 
@@ -100,7 +157,8 @@ class PostRow(QWidget):
         self.spec = spec
         if (old.status is not spec.status and old.status != spec.status) \
                 or _parent_key(old.parent) != _parent_key(spec.parent) \
-                or old.number != spec.number \
+                or old.number != spec.number or old.focus != spec.focus \
+                or old.extra.get("short_id") != spec.extra.get("short_id") \
                 or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")):
             self._build()
         self._flags()
@@ -113,11 +171,13 @@ class PostRow(QWidget):
     def _flags(self):
         _set_prop(self.card, "unread", "true" if self.spec.unread else "false")
         _set_prop(self.card, "focus", "true" if self.spec.focus else "false")
+        if self.mark is not None:
+            self.mark.setVisible(self.spec.unread)
 
-    def _label(self, html="", name=None, selectable=False):
+    def _label(self, html="", name=None, selectable=False, wrap=True):
         lab = QLabel(html)
         lab.setTextFormat(Qt.TextFormat.RichText)
-        lab.setWordWrap(True)
+        lab.setWordWrap(wrap)
         lab.setOpenExternalLinks(False)
         flags = Qt.TextInteractionFlag.LinksAccessibleByMouse
         if selectable:
@@ -135,51 +195,34 @@ class PostRow(QWidget):
         self.body = QWidget()
         v = QVBoxLayout(self.body)
         v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(4)
+        v.setSpacing(9)
         self.lay.addWidget(self.body)
 
-        spec, ctx = self.spec, self.ctx
+        spec = self.spec
         wrapper = spec.status
         st = real(wrapper)
-        acc = st["account"]
 
         if wrapper.get("reblog"):
-            boosted = when(wrapper.get("created_at", ""), months())
-            v.addWidget(self._label(_("boosted_by", name=display_name(wrapper["account"])) +
-                                    " · " + _("boost_time", when=boosted), "boost"))
+            v.addWidget(self._label(
+                _("boosted_by", name=display_name(wrapper["account"])) + " · " +
+                _("boost_time", when=self.theme.date(wrapper.get("created_at", ""))), "boost"))
 
-        head = QHBoxLayout()
-        head.setSpacing(8)
-        avatar = ClickLabel()
-        avatar.setFixedSize(QSize(32, 32))
-        avatar.setCursor(Qt.CursorShape.PointingHandCursor)
-        avatar.clicked.connect(lambda a=acc["id"]: ctx.on_link(f"fedtail:account/{a}"))
-        head.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
-        ctx.images.get(acc.get("avatar_static") or acc.get("avatar"),
-                       lambda pm, w=avatar: w.setPixmap(_fit(pm, 32, 32)))
-        bot = f' <span style="color:{ctx.theme.muted}">[{_("bot")}]</span>' \
-            if is_bot(acc, ctx.cfg["lanes"]["extra_bots"]) else ""
-        vis = st.get("visibility", "public")
-        num = f' <b>/{spec.number}</b>' if spec.number else ""
-        title = (f'{link("account", acc["id"], "<b>" + display_name(acc) + "</b>")}'
-                 f' <span style="color:{ctx.theme.muted}">@{esc(acc["acct"])}</span>{bot}'
-                 f'<br><span style="color:{ctx.theme.muted}">'
-                 f'{link("thread", st["id"], when(st.get("created_at", ""), months()))}'
-                 f' · <span title="{esc(_("vis_" + vis))}">{VIS_ICON.get(vis, "?")}</span>'
-                 f'{num}</span>')
-        head.addWidget(self._label(title), 1)
-        v.addLayout(head)
+        if self.theme.shape["card_header"] == "compact":
+            v.addLayout(self._header_compact(st))
+        else:
+            v.addLayout(self._header_rich(st))
 
         if not spec.in_thread and st.get("in_reply_to_id") and \
-                ctx.cfg["feed"]["show_reply_context"]:
+                self.ctx.cfg["feed"]["show_reply_context"]:
             v.addWidget(self._label(self._context_html(st), "ctx"))
 
         content = QWidget()
         cv = QVBoxLayout(content)
         cv.setContentsMargins(0, 0, 0, 0)
-        cv.setSpacing(6)
+        cv.setSpacing(8)
         if st.get("content"):
-            cv.addWidget(self._label(clean(st["content"]), selectable=True))
+            text = self._label(clean(st["content"]), "postText", selectable=True)
+            cv.addWidget(text)
         media = self._media(st)
         if media:
             cv.addWidget(media)
@@ -188,7 +231,7 @@ class PostRow(QWidget):
             cw_row = QHBoxLayout()
             cw_row.addWidget(self._label("⚠ " + esc(st["spoiler_text"]), "cw"), 1)
             btn = QPushButton()
-            btn.setFlat(True)
+            btn.setObjectName("tool")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             cw_row.addWidget(btn, 0, Qt.AlignmentFlag.AlignTop)
             v.addLayout(cw_row)
@@ -203,16 +246,109 @@ class PostRow(QWidget):
             btn.clicked.connect(toggle)
             sync()
         v.addWidget(content)
+        v.addWidget(self._actions(st))
         answers = spec.extra.get("my_replies") or []
         if answers:
             last = answers[-1]
             more = f" (+{len(answers) - 1})" if len(answers) > 1 else ""
-            v.addWidget(self._label(link("thread", last["id"],
-                                         "↳ " + _("you_replied", when=when(
-                                             last.get("created_at", ""), months()),
-                                             text=esc(snippet(last, 120))) + more),
-                                    "myreply"))
-        v.addWidget(self._actions(st))
+            v.addWidget(self._label(link("thread", last["id"], "↳ " + _(
+                "you_replied", when=self.theme.date(last.get("created_at", "")),
+                text=esc(snippet(last, 120))) + more), "myreply"))
+
+    # ---- header -------------------------------------------------------------------
+    def _short_id(self, h):
+        sid = self.spec.extra.get("short_id")
+        if sid:
+            lab = QLabel("#" + sid)
+            lab.setObjectName("shortId")
+            lab.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            lab.setToolTip(_("short_id_tip"))
+            h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop)
+
+    def _unread_mark(self):
+        if self.theme.shape["unread_mark"] == "star":
+            m = QLabel("*")
+            m.setObjectName("star")
+        else:
+            m = QLabel()
+            m.setObjectName("dot")
+            m.setFixedSize(8, 8)
+        m.setToolTip(_("unread_tip"))
+        self.mark = m
+        return m
+
+    def _header_rich(self, st):
+        acc = st["account"]
+        h = QHBoxLayout()
+        h.setSpacing(12)
+        size = int(self.theme.shape["avatar"])
+        if self.theme.shape["card_avatars"] and size:
+            avatar = ClickLabel()
+            avatar.setFixedSize(QSize(size, size))
+            avatar.setCursor(Qt.CursorShape.PointingHandCursor)
+            avatar.setToolTip("@" + acc["acct"])
+            avatar.clicked.connect(lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
+            h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
+            self.ctx.images.get(acc.get("avatar_static") or acc.get("avatar"),
+                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
+        line = QHBoxLayout()
+        line.setSpacing(6)
+        if self.spec.number:
+            num = QLabel(f"/{self.spec.number}")
+            num.setObjectName("num")
+            line.addWidget(num)
+        line.addWidget(self._label(link("account", acc["id"], display_name(acc)), "name",
+                                   wrap=False))
+        bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
+        line.addWidget(self._label(
+            f'@{esc(acc["acct"])}{esc(bot)} · '
+            f'{link("thread", st["id"], self.theme.date(st.get("created_at", "")))}',
+            "meta", wrap=False))
+        vis = st.get("visibility", "public")
+        icon = _theme_icon(VIS_ICONS.get(vis, ()))
+        vis_label = QLabel()
+        vis_label.setToolTip(_("vis_" + vis))
+        if icon.isNull():
+            vis_label.setText("· " + VIS_WORD.get(vis, vis))
+            vis_label.setObjectName("meta")
+        else:
+            vis_label.setPixmap(icon.pixmap(14, 14))
+        line.addWidget(vis_label)
+        line.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
+        line.addStretch(1)
+        if self.spec.focus and self.spec.in_thread:
+            came = QLabel(_("came_from"))
+            came.setObjectName("cameFrom")
+            line.addWidget(came)
+        h.addLayout(line, 1)
+        self._short_id(h)
+        return h
+
+    def _header_compact(self, st):
+        acc = st["account"]
+        h = QHBoxLayout()
+        h.setSpacing(8)
+        h.addWidget(self._unread_mark())
+        if self.spec.number:
+            num = QLabel(f"/{self.spec.number}")
+            num.setObjectName("num")
+            h.addWidget(num)
+        user, _sep, host = acc["acct"].partition("@")
+        h.addWidget(self._label(link("account", acc["id"], "@" + esc(user)), "name", wrap=False))
+        vis = st.get("visibility", "public")
+        bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
+        meta = " · ".join(x for x in (esc(host) + esc(bot),
+                                      link("thread", st["id"],
+                                           self.theme.date(st.get("created_at", ""))),
+                                      VIS_WORD.get(vis, vis)) if x)
+        h.addWidget(self._label(meta, "meta", wrap=False))
+        h.addStretch(1)
+        if self.spec.focus and self.spec.in_thread:
+            came = QLabel(_("came_from"))
+            came.setObjectName("cameFrom")
+            h.addWidget(came)
+        self._short_id(h)
+        return h
 
     def _context_html(self, st):
         p = self.spec.parent
@@ -225,57 +361,82 @@ class PostRow(QWidget):
                      text=esc(snippet(p, 140)))
         return link("thread", st["id"], f"↪ {body}")
 
+    # ---- actions ------------------------------------------------------------------
     def _actions(self, st):
         """Flat buttons under a post: icon, text or both (ui.actions)."""
         style = self.ctx.cfg["ui"]["actions"]
         box = QWidget()
         box.setObjectName("actions")
         h = QHBoxLayout(box)
-        h.setContentsMargins(0, 2, 0, 0)
+        h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(2)
-        n = lambda x: f" {x}" if x else ""
-        fav = st.get("favourited")
-        boosted = st.get("reblogged")
-        buttons = [("reply", "mail-reply-sender", "↩", _("reply"), "")]
-        buttons.append(("fav", "rating" if fav else "rating-unrated", "★" if fav else "☆",
-                        _("unfav") if fav else _("fav"), n(st.get("favourites_count"))))
+        n = lambda x: f" · {x}" if x else ""
+        fav = bool(st.get("favourited"))
+        boosted = bool(st.get("reblogged"))
+        buttons = [("reply", ("mail-reply-sender",), "↩", _("reply"), "", False)]
+        buttons.append(("fav", ("rating", "starred-symbolic") if fav else
+                        ("rating-unrated", "non-starred-symbolic"), "★" if fav else "☆",
+                        _("faved") if fav else _("fav"), n(st.get("favourites_count")), fav))
         if st.get("visibility") in ("public", "unlisted"):
-            buttons.append(("boost", "media-playlist-repeat", "♻✓" if boosted else "♻",
-                            _("unboost") if boosted else _("boost"),
-                            n(st.get("reblogs_count"))))
+            buttons.append(("boost", ("media-playlist-repeat", "retweet"), "♻",
+                            _("boosted") if boosted else _("boost"),
+                            n(st.get("reblogs_count")), boosted))
         if not self.spec.in_thread:
-            buttons.append(("thread", "view-list-tree", "⤷", _("thread"),
-                            n(st.get("replies_count"))))
-        buttons.append(("open", "internet-web-browser", "↗", _("open_browser"), ""))
-        if st["account"]["id"] == self.ctx.me_id:
-            buttons.append(("delete", "edit-delete", "✕", _("delete"), ""))
-        for action, icon, glyph, label, count in buttons:
+            buttons.append(("thread", ("view-list-tree", "format-indent-more"), "⤷",
+                            _("thread"), n(st.get("replies_count")), False))
+        for action, icons, glyph, label, count, active in buttons:
             b = QToolButton()
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(label)
-            ic = QIcon.fromTheme(icon)
+            ic = _theme_icon(icons)
             if style == "text" or ic.isNull():
-                # no icon wanted (or the theme has none): words, or a glyph if icons-only
                 b.setText((glyph if style == "icons" else label) + count)
                 b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
             else:
                 b.setIcon(ic)
                 if style == "icons":
-                    b.setText(count.strip())
+                    b.setText(count.replace(" · ", ""))
                     b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon
                                          if count else Qt.ToolButtonStyle.ToolButtonIconOnly)
                 else:
                     b.setText(label + count)
                     b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-            if (action == "fav" and fav) or (action == "boost" and boosted):
+            if active:
                 b.setProperty("active", "true")
             b.clicked.connect(lambda _c=False, a=action, i=st["id"]:
                               self.ctx.on_link(f"fedtail:{a}/{i}"))
             h.addWidget(b)
         h.addStretch(1)
+        h.addWidget(self._more_button(st))
         return box
 
+    def _more_button(self, st):
+        b = QToolButton()
+        b.setAutoRaise(True)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setToolTip(_("more"))
+        ic = _theme_icon(("overflow-menu", "application-menu", "view-more-symbolic"))
+        if ic.isNull():
+            b.setText("⋯")
+        else:
+            b.setIcon(ic)
+        menu = QMenu(b)
+        url = st.get("url") or st.get("uri") or ""
+        menu.addAction(_("open_browser"), lambda u=url: QDesktopServices.openUrl(QUrl(u)))
+        menu.addAction(_("copy_link"), lambda u=url: QGuiApplication.clipboard().setText(u))
+        sid = self.spec.extra.get("short_id")
+        if sid:
+            menu.addAction(_("copy_id", id="#" + sid),
+                           lambda s=sid: QGuiApplication.clipboard().setText("#" + s))
+        if st["account"]["id"] == self.ctx.me_id:
+            menu.addSeparator()
+            menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
+        b.setMenu(menu)
+        b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        return b
+
+    # ---- media --------------------------------------------------------------------
     def _media(self, st):
         atts = st.get("media_attachments") or []
         if not atts:
@@ -286,6 +447,7 @@ class PostRow(QWidget):
         grid.setSpacing(6)
         visual = [m for m in atts if m.get("type") in ("image", "gifv", "video")
                   and (m.get("preview_url") or m.get("url"))]
+        images = [x for x in visual if x.get("type") == "image"]
         single = len(visual) == 1
         big_h = self.ctx.cfg["ui"]["image_height"]
         big_w = max(200, (self.ctx.cfg["ui"]["max_width"] or 900) - 60)
@@ -304,10 +466,10 @@ class PostRow(QWidget):
                 w, h = _dims(m)
                 tw, th = _thumb_box(w, h, *((big_h, big_w) if single else (150, 230)))
                 lab.setFixedSize(tw, th)
+                radius = min(10, int(self.theme.shape["radius"]))
                 if m.get("type") == "image":
-                    idx = [x for x in visual if x.get("type") == "image"].index(m)
-                    lab.clicked.connect(lambda i=idx: self.ctx.show_images(
-                        [x for x in visual if x.get("type") == "image"], i))
+                    idx = images.index(m)
+                    lab.clicked.connect(lambda i=idx: self.ctx.show_images(images, i))
                     # a single big picture deserves the full file, a grid tile the preview
                     src = full if single and full else m.get("preview_url") or full
                 else:  # gifv / video: still frame here, playback in the browser
@@ -315,8 +477,8 @@ class PostRow(QWidget):
                     lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
                     src = m.get("preview_url")
                 if src:
-                    self.ctx.images.get(
-                        src, lambda pm, w=lab, tw=tw, th=th: w.setPixmap(_fit(pm, tw, th)))
+                    self.ctx.images.get(src, lambda pm, w=lab, tw=tw, th=th, r=radius:
+                                        w.setPixmap(_fit(pm, tw, th, r)))
                 grid.addWidget(lab, *cell)
             else:
                 kind = _("media_" + (m.get("type") or "unknown"))
@@ -345,9 +507,37 @@ def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):
     return max_w, max(24, int(max_w * h / w))
 
 
-def _fit(pm: QPixmap, w, h):
-    return pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
-                     Qt.TransformationMode.SmoothTransformation)
+def _fit(pm: QPixmap, w, h, radius=0):
+    scaled = pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
+                       Qt.TransformationMode.SmoothTransformation)
+    if not radius:
+        return scaled
+    out = QPixmap(scaled.size())
+    out.fill(Qt.GlobalColor.transparent)
+    p = QPainter(out)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(out.rect()), radius, radius)
+    p.setClipPath(path)
+    p.drawPixmap(0, 0, scaled)
+    p.end()
+    return out
+
+
+def _round(pm: QPixmap, size):
+    """Avatar cut to a circle."""
+    scaled = pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                       Qt.TransformationMode.SmoothTransformation)
+    out = QPixmap(size, size)
+    out.fill(Qt.GlobalColor.transparent)
+    p = QPainter(out)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    path = QPainterPath()
+    path.addEllipse(QRectF(0, 0, size, size))
+    p.setClipPath(path)
+    p.drawPixmap((size - scaled.width()) // 2, (size - scaled.height()) // 2, scaled)
+    p.end()
+    return out
 
 
 def _ids(statuses):

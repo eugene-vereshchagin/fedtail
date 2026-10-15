@@ -1,0 +1,67 @@
+# fedtail theme: terminal — green on black, everything monospace.
+name = "Terminal"
+inherit = "system"
+
+[font]
+family = "IBM Plex Mono, DejaVu Sans Mono, Hack, monospace"
+mono = "IBM Plex Mono, DejaVu Sans Mono, Hack, monospace"
+post_scale = 1.0
+
+[colors]
+window = "#000000"
+sidebar = "#000000"
+sidebar_border = "#1f6f35"
+selected = "#0d3d1b"
+selected_text = "#d4ffe0"
+view = "#000000"
+header_border = "#1f6f35"
+card = "#000000"
+card_border = "#1f6f35"
+card_border_unread = "#3dff73"
+text = "#3dff73"
+muted = "#2fbf5a"
+link = "#9dffb5"
+accent = "#3dff73"
+on_accent = "#000000"
+hot = "#ffb000"
+on_hot = "#000000"
+quiet = "#000000"
+on_quiet = "#2fbf5a"
+new_pill = "#000000"
+on_new_pill = "#2fbf5a"
+ctx = "#000000"
+ctx_bar = "#1f6f35"
+focus = "#062b12"
+focus_border = "#3dff73"
+myreply = "#000000"
+on_myreply = "#9dffb5"
+active = "#062b12"
+on_active = "#d4ffe0"
+separator = "#ffb000"
+rail = "#1f6f35"
+button = "#000000"
+button_border = "#1f6f35"
+dot = "#ffb000"
+
+[shape]
+radius = 0
+button_radius = 2
+card_style = "rule"
+card_avatars = false
+avatar = 0
+sidebar_avatar = false
+lane_icons = false
+card_header = "compact"
+unread_mark = "star"
+posts_only = "check"
+
+[words]
+compose = "[ {text} ]"
+lane = "  {text}"
+lane_selected = "> {text}"
+lane_title = "== {text} =="
+lowercase = true
+separator = "---- {text}: {n} ----"
+account_title = "{username}@fedtail:~$"
+account_subtitle = "tail -f /dev/fediverse"
+date = "{dd}.{mm} {time}"

@@ -1,0 +1,78 @@
+# fedtail theme: system
+#
+# Follows the KDE colour scheme (light or dark): every colour set to "auto"
+# is taken from the desktop palette. This file is also the reference: it lists
+# every key a theme may set. A theme of your own can start with
+#     inherit = "system"
+# and change only what it needs.
+#
+# Colours: "auto" (system theme only), "#rrggbb", "#rrggbbaa" or "rgba(r,g,b,a)".
+
+name = "System (KDE)"
+inherit = ""
+
+[font]
+family = ""          # "" = the desktop font; otherwise e.g. "Noto Sans"
+mono = ""            # for #ids and /N numbers; "" = the desktop's fixed font
+post_scale = 1.1     # post text size relative to the interface font
+
+[colors]
+window = "auto"          # around everything
+sidebar = "auto"         # left panel
+sidebar_border = "auto"
+selected = "auto"        # the chosen lane
+selected_text = "auto"
+view = "auto"            # behind the posts
+header_border = "auto"   # line under the lane header
+card = "auto"
+card_border = "auto"
+card_border_unread = "auto"
+text = "auto"
+muted = "auto"           # names' @addresses, times, button labels
+link = "auto"
+accent = "auto"          # Write button, ordinary badges, segmented control
+on_accent = "auto"
+hot = "#c4501b"          # badge of replies to you
+on_hot = "#ffffff"
+quiet = "auto"           # badge of lanes that can wait (bots)
+on_quiet = "auto"
+new_pill = "auto"        # "12 new" next to the lane title
+on_new_pill = "auto"
+ctx = "auto"             # the "in reply to" quote
+ctx_bar = "auto"
+focus = "auto"           # the post you came to, in a thread
+focus_border = "auto"
+myreply = "auto"         # "you replied" strip
+on_myreply = "auto"
+active = "#fff4d6"       # a pressed star / boost
+on_active = "#7a5300"
+separator = "auto"       # "new below" line
+rail = "auto"            # thread depth lines
+button = "auto"
+button_border = "auto"
+dot = "auto"             # unread dot
+
+[shape]
+radius = 12              # card corners
+button_radius = 8
+card_style = "card"      # "card" (framed boxes) or "rule" (posts divided by lines)
+card_avatars = true
+avatar = 40
+sidebar_avatar = true
+lane_icons = true
+card_header = "rich"     # "rich": avatar, name, @address · time · icon
+                         # "compact": @user host · 13.10 17:22 · priv
+unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)
+posts_only = "segmented" # "segmented" (All | Posts only) or "check" ([ ] posts only)
+
+[words]
+# {text} is the interface's own wording in the current language
+compose = "✎  {text}"
+lane = "{text}"
+lane_selected = "{text}"
+lane_title = "{text}"
+lowercase = false
+separator = "{text} · {n}"
+account_title = "{display_name}"
+account_subtitle = "@{acct}"
+date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"

@@ -159,6 +159,22 @@ class StoreTest(TmpDir):
         s.close()
 
 
+class AliasTest(TmpDir):
+    def test_aliases(self):
+        from fedtail.core.store import alias_number, alias_text
+        self.assertEqual(alias_text(1), "a00")
+        for n in (1, 2, 35, 36, 1000, 33696, 33697, 2_000_000):
+            self.assertEqual(alias_number(alias_text(n)), n)
+            self.assertTrue(alias_text(n)[0].isalpha())
+        self.assertIsNone(alias_number("#!!"))
+        s = Store(self.tmp / "a.db")
+        a = s.aliases(["X", "Y"])
+        self.assertEqual(s.aliases(["Y", "Z"])["Y"], a["Y"])  # stable
+        self.assertEqual(len({*a.values(), s.aliases(["Z"])["Z"]}), 3)  # unique
+        self.assertEqual(s.by_alias("#" + a["X"]), "X")
+        s.close()
+
+
 class StoreLockTest(TmpDir):
     def test_failed_begin_releases_lock(self):
         import threading

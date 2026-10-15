@@ -57,3 +57,34 @@ jobs:
       - name: Failures as annotations
         if: failure()
         run: python3 .github/annotate.py test-output.txt
+
+  # real screenshots of the window with made-up data, published to the
+  # `screenshots` branch so the look can be reviewed without running the app
+  screenshots:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    permissions:
+      contents: write
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v5
+      - run: >
+          apt-get update && apt-get install -y --no-install-recommends
+          python3 python3-requests python3-pyside6.qtwidgets git ca-certificates
+          fonts-noto-core fonts-noto-color-emoji fonts-ibm-plex breeze-icon-theme
+      - run: python3 tools/screenshots.py out
+      - name: Publish to the screenshots branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd out
+          cat > README.md <<EOF
+          Screenshots of ${GITHUB_SHA} (made-up data, offscreen Qt, Fusion style).
+          EOF
+          git init -q
+          git checkout -q -b screenshots
+          git add .
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "screenshots for ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" screenshots
