@@ -242,7 +242,10 @@ class CoreTest(TmpDir):
         c1["replies_count"] = 1
         self.assertEqual(core.my_replies([c1, c2]), {})
         core.check_my_replies([c1, c2])
-        core.bg.submit(lambda: None).result()  # wait for the background check
+        import time
+        end = time.time() + 5
+        while core._replies_inflight and time.time() < end:  # background check
+            time.sleep(0.01)
         self.assertEqual([r["id"] for r in core.my_replies([c1])["041"]], ["043"])
         self.assertIn("041", core.store.read_set(["041"]))  # answered → read
         self.assertNotIn("042", core.store.read_set(["042"]))
