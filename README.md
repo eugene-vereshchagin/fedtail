@@ -95,6 +95,9 @@ The look is a theme file. Built in:
 
 - `system` — light or dark, whatever KDE uses: every colour comes from the desktop palette;
 - `terminal` — green on black, monospace, posts divided by lines, buttons in words.
+- `juick` — in the spirit of the old juick.com: a white page, posts divided by lines, Verdana.
+- `night` — dark, with its own colours, on any desktop.
+- `paper` — warm paper and a book face, for long threads.
 
 Pick one in the config: `[ui] theme = "terminal"`. Your own themes go to
 `~/.config/fedtail/themes/<name>.toml` (shared by all profiles); `builtin/` next to them always

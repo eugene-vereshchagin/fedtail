@@ -1,0 +1,46 @@
+# fedtail theme: night — dark and quiet for late reading, on any desktop:
+# its own colours, not the system's, and words instead of (dark) icons.
+name = "Night"
+inherit = "system"
+
+[colors]
+window = "#14171c"
+sidebar = "#101317"
+sidebar_border = "#232a33"
+selected = "#243142"
+selected_text = "#e8eef5"
+view = "#171b21"
+header_border = "#232a33"
+card = "#1d222a"
+card_border = "#2a313b"
+card_border_unread = "#4c8dde"
+text = "#d8dee6"
+muted = "#8792a2"
+link = "#7fb4ff"
+accent = "#4c8dde"
+on_accent = "#ffffff"
+hot = "#e0703a"
+on_hot = "#ffffff"
+quiet = "#232a33"
+on_quiet = "#8792a2"
+new_pill = "#243142"
+on_new_pill = "#a9c8f0"
+ctx = "#20262f"
+ctx_bar = "#3a4656"
+focus = "#1f2a38"
+focus_border = "#4c8dde"
+myreply = "#1c2a22"
+on_myreply = "#9fd3a9"
+active = "#3a3220"
+on_active = "#ffcf6b"
+separator = "#4c8dde"
+rail = "#2f3845"
+button = "#1d222a"
+button_border = "#323a46"
+dot = "#4c8dde"
+
+[shape]
+radius = 10
+button_radius = 7
+icons = false
+lane_icons = false

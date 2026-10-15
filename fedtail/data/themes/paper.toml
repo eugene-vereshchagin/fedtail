@@ -1,0 +1,52 @@
+# fedtail theme: paper — warm paper and a book face, for reading long threads.
+name = "Paper"
+inherit = "system"
+
+[font]
+family = "PT Serif, Noto Serif, DejaVu Serif, serif"
+mono = "PT Mono, DejaVu Sans Mono, monospace"
+post_scale = 1.15
+
+[colors]
+window = "#efe8da"
+sidebar = "#e8e0cf"
+sidebar_border = "#ddd2bc"
+selected = "#ddd1b6"
+selected_text = "#2e2a24"
+view = "#f6f1e6"
+header_border = "#e0d6c2"
+card = "#fbf8f1"
+card_border = "#e3d9c6"
+card_border_unread = "#c9a86a"
+text = "#2e2a24"
+muted = "#857a68"
+link = "#8a4b1f"
+accent = "#8a4b1f"
+on_accent = "#fff8ee"
+hot = "#b5462a"
+on_hot = "#fff8ee"
+quiet = "#e6dcc8"
+on_quiet = "#6f6555"
+new_pill = "#e9dcc0"
+on_new_pill = "#6b4a10"
+ctx = "#f1eadb"
+ctx_bar = "#cdbb98"
+focus = "#f4ead2"
+focus_border = "#cdb27a"
+myreply = "#ebefdc"
+on_myreply = "#4c5a2b"
+active = "#f6e2b8"
+on_active = "#6b4a10"
+separator = "#8a4b1f"
+rail = "#d8cbb0"
+button = "#fbf8f1"
+button_border = "#d9cdb5"
+dot = "#b5462a"
+
+[shape]
+radius = 6
+button_radius = 5
+avatar = 36
+
+[words]
+date = "{day} {mon}, {time}"
