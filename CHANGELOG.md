@@ -15,5 +15,9 @@
   context, flat action buttons; "new below" divider; thread rails and `/N` numbers.
 - Themes are files: `system` (follows KDE light/dark) and `terminal`; your own in
   `~/.config/fedtail/themes/`, with inheritance.
+- Notifications per lane with "Open" to the thread; privacy levels `full` / `sender` / `count`.
+- App icon; `--install-desktop` adds a menu entry with it.
+- Pictures by drag and drop (compose or main window) and `Ctrl+V`; thumbnails in compose;
+  the content warning field is hidden behind a button.
 - Image viewer over the main window; "you replied" under comments; posts-only toggle;
   `--update-config`; Russian plural forms.

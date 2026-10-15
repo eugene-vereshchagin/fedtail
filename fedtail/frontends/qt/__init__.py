@@ -4,10 +4,12 @@ import signal
 import sys
 
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from . import theme as themes
 from .bridge import Bridge
+from .notify import icon_path
 from .window import MainWindow
 
 
@@ -15,6 +17,7 @@ def run(core, instance, argv):
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
     app.setDesktopFileName("fedtail")
+    app.setWindowIcon(QIcon(icon_path()))
     app.setQuitOnLastWindowClosed(False)
     theme = themes.apply(app, core.cfg)
 

@@ -242,6 +242,13 @@ class CoreTest(TmpDir):
         self.assertIn("012", core.store.read_set(["012"]))  # my own post is read
         notes = [e for e in self.events if e[0] == "notify"]
         self.assertEqual(sorted(s["id"] for _, s in notes[0][1]), ["013", "014"])
+        # a new follow request is news too; an old one is not
+        w.requests = [BOB]
+        core.poll_once()
+        notes = [e for e in self.events if e[0] == "notify"]
+        self.assertEqual(notes[-1][1], [("requests", BOB)])
+        core.poll_once()
+        self.assertEqual(len([e for e in self.events if e[0] == "notify"]), len(notes))
         self.assertEqual(core.parent_of(core.store.get_status("014")), "missing")
         self.assertEqual(core.parent_of(core.store.get_status("013"))["id"], "012")
 

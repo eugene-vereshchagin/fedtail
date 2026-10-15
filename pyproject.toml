@@ -30,7 +30,7 @@ version = { attr = "fedtail.__version__" }
 include = ["fedtail*"]
 
 [tool.setuptools.package-data]
-fedtail = ["data/*", "data/themes/*"]
+fedtail = ["data/*", "data/themes/*", "data/icons/*"]
 
 [tool.ruff]
 line-length = 100

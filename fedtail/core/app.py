@@ -60,6 +60,7 @@ class Core:
         self._parent_inflight = set()
         self.new_options = []  # options the user's config doesn't mention yet
         self._replies_inflight = set()
+        self._known_requests = None  # follow requests seen so far (None: not fetched yet)
 
     # ---- plumbing ------------------------------------------------------------
     def submit(self, fn, *a, **kw):
@@ -159,9 +160,15 @@ class Core:
                 except Exception as e:  # network down etc.
                     self.emit("error", f"{name}: {e}")
 
+            new_requests = []
             if "requests" in self.lane_by_name:
                 try:
                     self.follow_requests = self.api.follow_requests() or []
+                    ids = {a["id"] for a in self.follow_requests}
+                    if self._known_requests is not None:
+                        new_requests = [a for a in self.follow_requests
+                                        if a["id"] not in self._known_requests]
+                    self._known_requests = ids
                     self.emit("requests_updated", self.follow_requests)
                 except Exception as e:
                     self.emit("error", f"requests: {e}")
@@ -184,7 +191,7 @@ class Core:
             if any(per_lane.values()):
                 self.emit("lanes_updated", per_lane)
             if not first_run:
-                self._notify(per_lane)
+                self._notify(per_lane, new_requests)
             self._fetch_parents(new_statuses)
 
     def _new_statuses(self, new_by_source):
@@ -209,17 +216,21 @@ class Core:
                                    if item_id in ids and lane.keep(st, ctx)]
         return per_lane
 
-    def _notify(self, per_lane):
+    def _notify(self, per_lane, new_requests=()):
+        """Emit 'notify' with [(lane, status-or-account)] for lanes the user wants."""
+        wanted = set(self.cfg["notify"]["lanes"])
         out = []
         for name, ids in per_lane.items():
             lane = self.lane_by_name[name]
-            if not lane.notify or not ids:
+            if name not in wanted or not ids:
                 continue
             id_set = set(ids)
             sts = [st for item_id, st in self.store.items(lane.source, len(ids) + 50)
                    if item_id in id_set]
             unread = self.store.read_set(st["id"] for st in sts)
             out += [(name, st) for st in sts if st["id"] not in unread]
+        if "requests" in wanted:
+            out += [("requests", acc) for acc in new_requests]
         if out:
             self.emit("notify", out)
 

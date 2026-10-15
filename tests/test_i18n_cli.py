@@ -50,6 +50,22 @@ class CliTest(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn(__version__, out.stdout)
 
+    def test_install_desktop(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            env = dict(os.environ, XDG_DATA_HOME=d)
+            out = subprocess.run([sys.executable, "-m", "fedtail", "--install-desktop",
+                                  "--profile", "croco"], cwd=ROOT, env=env,
+                                 capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            entry = (Path(d) / "applications" / "fedtail-croco.desktop").read_text()
+            self.assertIn("-m fedtail --profile croco", entry)
+            self.assertIn(f"Path={ROOT}", entry)
+            self.assertIn("Icon=fedtail", entry)
+            svg = Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"
+            self.assertTrue(svg.read_text().startswith("<svg"))
+
     def test_update_config_flag(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:

@@ -30,6 +30,8 @@ def parse_args(argv):
     p.add_argument("--update-config", action="store_true",
                    help="add options your config doesn't mention yet (commented out, "
                         "with explanations; a .bak copy is kept) and exit")
+    p.add_argument("--install-desktop", action="store_true",
+                   help="add fedtail (this profile) to the desktop menu, with its icon, and exit")
     p.add_argument("--debug", action="store_true", help="verbose log to stderr")
     p.add_argument("-V", "--version", action="version", version=f"fedtail {__version__}")
     return p.parse_args(argv)
@@ -37,6 +39,11 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    if args.install_desktop:
+        from .desktop import install
+        entry, icon = install(args.profile)
+        print(f"fedtail: menu entry {entry}\nfedtail: icon {icon}")
+        return 0
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.WARNING,
                         format="fedtail: %(levelname)s %(name)s: %(message)s")
     try:

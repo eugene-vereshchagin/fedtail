@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QDesktopServices, QIcon, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -31,10 +31,11 @@ from ...i18n import _
 from .. import themefile
 from . import feed as feed_module
 from .card import _round
-from .compose import Compose
+from .compose import Compose, media_paths, save_image
 from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
 from .images import Images
 from .login import LoginDialog
+from .notify import Notifier, icon_path
 from .viewer import ImageOverlay
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
@@ -124,8 +125,9 @@ class MainWindow(QMainWindow):
             f"fedtail [{core.paths.profile}]"
         self.base_title = title
         self.setWindowTitle(title)
-        self.setWindowIcon(QIcon.fromTheme("fedtail", QIcon.fromTheme("internet-mail")))
+        self.setWindowIcon(QIcon(icon_path()))
         self._build()
+        self.setAcceptDrops(True)
         geo = core.get_state("geometry")
         if geo:
             self.restoreGeometry(bytes.fromhex(geo))
@@ -172,10 +174,10 @@ class MainWindow(QMainWindow):
             menu.addAction(_("quit"), self.quit)
             self.tray.setContextMenu(menu)
             self.tray.activated.connect(self._tray_click)
-            self.tray.messageClicked.connect(self._notification_clicked)
             self.tray.setToolTip(self.windowTitle())
             self.tray.show()
-        self._notify_lane = None
+        self.notifier = Notifier(self)
+        self.notifier.clicked.connect(self._notification_clicked)
 
     def _build_sidebar(self):
         t = self.theme
@@ -390,21 +392,14 @@ class MainWindow(QMainWindow):
             self.relogin()
 
     def _notify(self, items):
-        if not (self.tray and self.cfg["ui"]["notifications"]):
-            return
-        if self.isActiveWindow():
-            return
-        lane, st = items[0]
-        self._notify_lane = lane
-        head = _("notify_comment") if lane == "comments" else _("notify_mention")
-        who = real(st)["account"]["acct"]
-        more = _("notify_more", n=len(items) - 1) if len(items) > 1 else ""
-        self.tray.showMessage(f"{head}: {who}{more}", snippet(st, 200), self.windowIcon(), 8000)
+        self.notifier.notify(items)
 
-    def _notification_clicked(self):
+    def _notification_clicked(self, note):
         self.show_raise()
-        if self._notify_lane:
-            self.select_lane(self._notify_lane)
+        if note.thread:
+            self.open_thread(note.thread)
+        else:
+            self.select_lane(note.lane)
 
     # ---- tabs ---------------------------------------------------------------------------
     def extra_tabs(self):
@@ -494,10 +489,24 @@ class MainWindow(QMainWindow):
     def answer_follow(self, acc_id, approve):
         self.bridge.call(self.core.answer_follow(acc_id, approve))
 
-    def compose(self, reply_to=None):
+    def compose(self, reply_to=None, attach=()):
         if not self.core.me:
             return
-        Compose(self, reply_to).show()
+        Compose(self, reply_to, attach).show()
+
+    # pictures dropped anywhere on the window start a new post with them
+    def dragEnterEvent(self, e):
+        if media_paths(e.mimeData()) or e.mimeData().hasImage():
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        paths = media_paths(e.mimeData())
+        if not paths and e.mimeData().hasImage():
+            saved = save_image(self.core, QImage(e.mimeData().imageData()))
+            paths = [saved] if saved else []
+        if paths:
+            e.acceptProposedAction()
+            self.compose(attach=paths)
 
     def after_post(self, st, reply_to):
         self.statusBar().showMessage(_("sent"), 4000)

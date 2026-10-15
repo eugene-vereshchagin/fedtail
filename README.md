@@ -106,6 +106,33 @@ A theme sets colours, fonts, corner radii, card style (boxes or rules), avatars,
 wording — `[ write ]`, `== people ==`, `---- new below ----`. Every key is explained in
 `builtin/system.toml`. A broken theme is reported in the status bar and `system` is used instead.
 
+## Notifications
+
+New comments, mentions and follow requests pop up as KDE notifications; "Open" goes straight to
+the thread. Which lanes notify, and how much a notification tells, is set in `[notify]`:
+
+```toml
+[notify]
+lanes = ["comments", "mentions", "requests"]
+privacy = "full"     # "sender": only who, never the text; "count": only "3 new comments"
+```
+
+`privacy = "count"` is for screen sharing and open-plan offices: nothing readable leaves the
+window. While fedtail is the active window it stays quiet (`when_focused = true` to change).
+
+For the icon in the launcher and in notifications, install a menu entry once:
+
+```sh
+python3 -m fedtail --install-desktop          # or --profile work --install-desktop
+```
+
+## Writing
+
+Pictures can be dropped onto the compose window (or onto the main window — that starts a new
+post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it.
+The content warning field is hidden behind "⚠ Content warning" (`post.cw_field = true` to keep
+it open).
+
 ## Keys
 
 | | |

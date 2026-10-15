@@ -16,7 +16,6 @@ DEFAULTS = {
         "theme": "system",
         "font_size": 0,
         "close_to_tray": True,
-        "notifications": True,
         "expand_cw": True,
         "max_width": 760,
         "image_height": 360,
@@ -44,6 +43,14 @@ DEFAULTS = {
         "default_visibility": "private",
         "reply_never_wider": True,
         "drafts_autosave": True,
+        "cw_field": False,
+    },
+    "notify": {
+        "enabled": True,
+        "lanes": ["comments", "mentions", "requests"],
+        "privacy": "full",
+        "when_focused": False,
+        "backend": "auto",
     },
     "poll": {"interval_seconds": 90},
 }
@@ -58,6 +65,8 @@ CHOICES = {
     ("feed", "start_at"): {"first_unread", "newest"},
     ("feed", "on_new"): {"keep_position", "jump_to_newest"},
     ("read", "mark_read"): {"on_scroll", "on_open", "manual"},
+    ("notify", "privacy"): {"full", "sender", "count"},
+    ("notify", "backend"): {"auto", "desktop", "tray"},
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "bots", "mine", "local", "requests"}
@@ -115,8 +124,8 @@ def validate(user):
                 continue
             cfg[section][key] = val
 
-    bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"]
-           if x not in LANE_NAMES]
+    bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
+           cfg["notify"]["lanes"] if x not in LANE_NAMES]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
     if not cfg["lanes"]["enabled"]:

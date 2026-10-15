@@ -24,6 +24,7 @@ from PySide6.QtGui import (  # noqa: E402
     QColor,
     QFont,
     QIcon,
+    QImage,
     QLinearGradient,
     QPainter,
     QPalette,
@@ -159,7 +160,7 @@ def shoot(widget, out, name):
 def run(app, out, label, palette, theme_name, extras):
     from fedtail.frontends.qt import theme as themes
     from fedtail.frontends.qt.bridge import Bridge
-    from fedtail.frontends.qt.compose import Compose
+    from fedtail.frontends.qt.compose import Compose, save_image
     from fedtail.frontends.qt.window import MainWindow
 
     pal = QPalette()
@@ -206,7 +207,10 @@ def run(app, out, label, palette, theme_name, extras):
     shoot(win, out, f"{label}-thread")
 
     if "extras" in extras:
-        dlg = Compose(win, core.store.get_status("103"))
+        pic = QImage(320, 200, QImage.Format.Format_RGB32)
+        pic.fill(QColor("#7fa7c9"))
+        dlg = Compose(win, core.store.get_status("103"), attach=[save_image(core, pic)])
+        dlg.text.setPlainText("Блок питания берите с запасом, проверено.")
         dlg.show()
         pump(app, 0.5)
         shoot(dlg, out, f"{label}-compose")
@@ -226,6 +230,25 @@ def run(app, out, label, palette, theme_name, extras):
     pump(app, 0.3)
 
 
+def icon_sheet(out):
+    """The app icon at launcher, panel and tray sizes, on light and dark."""
+    from fedtail.frontends.qt.notify import icon_path
+    icon = QIcon(icon_path())
+    sizes = [16, 22, 32, 48, 64, 128, 256]
+    width = sum(sizes) + 24 * (len(sizes) + 1)
+    sheet = QImage(width, 2 * (256 + 48), QImage.Format.Format_ARGB32)
+    p = QPainter(sheet)
+    for row, bg in enumerate(("#eff0f1", "#202326")):
+        y0 = row * (256 + 48)
+        p.fillRect(0, y0, width, 256 + 48, QColor(bg))
+        x = 24
+        for s in sizes:
+            p.drawPixmap(x, y0 + 24 + 256 - s, icon.pixmap(s, s))
+            x += s + 24
+    p.end()
+    sheet.save(str(out / "icon.png"))
+
+
 def main():
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "screenshots")
     out.mkdir(parents=True, exist_ok=True)
@@ -236,6 +259,7 @@ def main():
     QIcon.setThemeSearchPaths(["/usr/share/icons"] + QIcon.themeSearchPaths())
     QIcon.setThemeName("breeze")
     print("icons:", QIcon.themeName(), "go-home" if QIcon.hasThemeIcon("go-home") else "MISSING")
+    icon_sheet(out)
     run(app, out, "light", BREEZE_LIGHT, "system", {"extras"})
     run(app, out, "dark", BREEZE_DARK, "system", set())
     run(app, out, "terminal", BREEZE_LIGHT, "terminal", set())

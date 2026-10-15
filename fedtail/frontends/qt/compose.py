@@ -1,9 +1,10 @@
 """Writing a post or a reply. Drafts are saved as you type."""
 
+from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
+from PySide6.QtGui import QGuiApplication, QIcon, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -24,11 +25,32 @@ from ...core.model import VISIBILITIES, real, reply_mentions, snippet
 from ...i18n import _
 from .text import display_name, esc
 
-MEDIA_FILTER = "*.jpg *.jpeg *.png *.gif *.webp *.avif *.mp4 *.webm *.mov *.mp3 *.ogg"
+MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",
+             ".mp4", ".webm", ".mov", ".mp3", ".ogg", ".m4a", ".flac")
+MEDIA_FILTER = " ".join("*" + e for e in MEDIA_EXT)
+
+
+def media_paths(mime):
+    """Local media files in a drag or the clipboard (Dolphin, browser, file dialog)."""
+    out = []
+    if mime.hasUrls():
+        for url in mime.urls():
+            if url.isLocalFile() and url.toLocalFile().lower().endswith(MEDIA_EXT):
+                out.append(url.toLocalFile())
+    return out
+
+
+def save_image(core, image):
+    """A picture without a file (a screenshot, an image from a web page): keep it
+    as PNG next to the profile's data, so the draft can refer to it."""
+    folder = core.paths.data_dir / "attachments"
+    folder.mkdir(exist_ok=True)
+    path = folder / f"pasted-{datetime.now():%Y%m%d-%H%M%S-%f}.png"
+    return str(path) if image.save(str(path), "PNG") else None
 
 
 class Compose(QDialog):
-    def __init__(self, win, reply_to=None):
+    def __init__(self, win, reply_to=None, attach=()):
         super().__init__(win)
         self.win, self.core = win, win.core
         self.reply_to = real(reply_to) if reply_to else None
@@ -48,16 +70,25 @@ class Compose(QDialog):
 
         self.cw = QLineEdit()
         self.cw.setPlaceholderText(_("cw_placeholder"))
+        self.cw.setVisible(False)
         lay.addWidget(self.cw)
 
         self.text = QPlainTextEdit()
+        # pictures dropped or pasted into the text become attachments
+        self.text.installEventFilter(self)
+        self.text.viewport().installEventFilter(self)
+        self.setAcceptDrops(True)
         self.text.setPlaceholderText(_("text_placeholder_md") if self.core.markdown
                                      else _("text_placeholder"))
         lay.addWidget(self.text, 1)
 
         self.media = QListWidget()
         self.media.setObjectName("mediaList")
-        self.media.setMaximumHeight(90)
+        self.media.setViewMode(QListWidget.ViewMode.IconMode)
+        self.media.setIconSize(QSize(72, 72))
+        self.media.setMovement(QListWidget.Movement.Static)
+        self.media.setWrapping(False)
+        self.media.setFixedHeight(112)
         self.media.setVisible(False)
         self.media.setToolTip(_("media_tip"))
         self.media.itemDoubleClicked.connect(self.edit_description)
@@ -73,6 +104,12 @@ class Compose(QDialog):
         add.setObjectName("tool")
         add.clicked.connect(self.attach)
         row.addWidget(add)
+        self.cw_btn = QPushButton("⚠ " + _("cw_add"))
+        self.cw_btn.setObjectName("tool")
+        self.cw_btn.setCheckable(True)
+        self.cw_btn.setToolTip(_("cw_add_tip"))
+        self.cw_btn.toggled.connect(self._toggle_cw)
+        row.addWidget(self.cw_btn)
         rm = QPushButton(_("detach"))
         rm.setObjectName("tool")
         self.detach_btn = rm
@@ -108,6 +145,10 @@ class Compose(QDialog):
         self._autosave = QTimer(self, singleShot=True, interval=700)
         self._autosave.timeout.connect(self.save_draft)
         self._load()
+        if self.cw.text() or self.core.cfg["post"]["cw_field"]:
+            self.cw_btn.setChecked(True)
+        if attach:
+            self.add_paths(attach)
         self.text.textChanged.connect(self._changed)
         self.cw.textChanged.connect(self._changed)
         self.vis.currentIndexChanged.connect(self._changed)
@@ -166,6 +207,52 @@ class Compose(QDialog):
             self.sent = True  # nothing to keep
             self._leave()
 
+    def _toggle_cw(self, on):
+        self.cw.setVisible(on)
+        if on:
+            self.cw.setFocus()
+        elif self.cw.text():
+            self.cw.clear()  # hiding the field drops the warning
+            self.text.setFocus()
+
+    # ---- drag & drop, paste -----------------------------------------------------------
+    def _accepts(self, mime):
+        return bool(media_paths(mime)) or mime.hasImage()
+
+    def _take(self, mime):
+        paths = media_paths(mime)
+        if not paths and mime.hasImage():
+            img = QImage(mime.imageData())
+            saved = save_image(self.core, img) if not img.isNull() else None
+            paths = [saved] if saved else []
+        if paths:
+            self.add_paths(paths)
+        return bool(paths)
+
+    def eventFilter(self, obj, e):
+        t = e.type()
+        if t in (QEvent.Type.DragEnter, QEvent.Type.DragMove) and self._accepts(e.mimeData()):
+            e.acceptProposedAction()
+            return True
+        if t == QEvent.Type.Drop and self._accepts(e.mimeData()):
+            e.acceptProposedAction()
+            self._take(e.mimeData())
+            return True
+        if t == QEvent.Type.KeyPress and e.matches(QKeySequence.StandardKey.Paste):
+            mime = QGuiApplication.clipboard().mimeData()
+            if (media_paths(mime) or (mime.hasImage() and not mime.hasText())) and \
+                    self._take(mime):
+                return True
+        return super().eventFilter(obj, e)
+
+    def dragEnterEvent(self, e):
+        if self._accepts(e.mimeData()):
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        if self._take(e.mimeData()):
+            e.acceptProposedAction()
+
     # ---- media --------------------------------------------------------------------
     def _media_list(self):
         out = []
@@ -174,8 +261,19 @@ class Compose(QDialog):
             out.append([it.data(Qt.ItemDataRole.UserRole), it.data(Qt.ItemDataRole.UserRole + 1)])
         return out
 
+    def add_paths(self, paths):
+        known = {m[0] for m in self._media_list()}
+        paths = [p for p in paths if p not in known]
+        left = self.core.caps.max_media - self.media.count()
+        if len(paths) > left:
+            self.hint.setText(_("media_limit", n=self.core.caps.max_media))
+        for p in paths[:max(left, 0)]:
+            self._add_media(p)
+        if paths:
+            self._changed()
+
     def _add_media(self, path, desc=""):
-        it = QListWidgetItem()
+        it = QListWidgetItem(QIcon(path), "")
         it.setData(Qt.ItemDataRole.UserRole, path)
         it.setData(Qt.ItemDataRole.UserRole + 1, desc)
         self._label_item(it)
@@ -184,7 +282,8 @@ class Compose(QDialog):
     def _label_item(self, it):
         name = Path(it.data(Qt.ItemDataRole.UserRole)).name
         desc = it.data(Qt.ItemDataRole.UserRole + 1)
-        it.setText(f"{name} — {desc}" if desc else f"{name} — {_('no_alt')}")
+        it.setText(_("alt_set") if desc else _("no_alt"))
+        it.setToolTip(f"{name}\n{desc}" if desc else f"{name}\n{_('media_tip')}")
 
     def attach(self):
         left = self.core.caps.max_media - self.media.count()
@@ -194,11 +293,9 @@ class Compose(QDialog):
         last = self.core.get_state("last_media_dir", str(Path.home()))
         paths, _f = QFileDialog.getOpenFileNames(self, _("attach"), last,
                                                  f"{_('media_files')} ({MEDIA_FILTER});;* (*)")
-        for p in paths[:left]:
-            self._add_media(p)
         if paths:
             self.core.set_state("last_media_dir", str(Path(paths[0]).parent))
-            self._changed()
+            self.add_paths(paths)
 
     def detach(self):
         for it in self.media.selectedItems():

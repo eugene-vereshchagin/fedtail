@@ -155,6 +155,39 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: not dlg.isVisible())
         self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
 
+        # the content warning field hides until asked for
+        dlg = Compose(self.win)
+        dlg.show()
+        self.assertFalse(dlg.cw.isVisible())
+        dlg.cw_btn.setChecked(True)
+        self.assertTrue(dlg.cw.isVisible())
+        dlg.reject()
+
+        # dropped / pasted pictures become attachments, once each, within the limit
+        from PySide6.QtCore import QMimeData, QUrl
+        from PySide6.QtGui import QColor, QImage
+
+        from fedtail.frontends.qt.compose import media_paths, save_image
+        img = QImage(40, 30, QImage.Format.Format_RGB32)
+        img.fill(QColor("#2a86c4"))
+        saved = save_image(self.core, img)
+        self.assertTrue(saved and saved.endswith(".png"))
+        mime = QMimeData()
+        mime.setUrls([QUrl.fromLocalFile(saved), QUrl.fromLocalFile("/tmp/notes.txt")])
+        self.assertEqual(media_paths(mime), [saved])
+        dlg = Compose(self.win, attach=[saved])
+        dlg.show()
+        self.assertEqual(dlg.media.count(), 1)
+        self.assertTrue(dlg._take(mime))
+        self.assertEqual(dlg.media.count(), 1)  # the same file isn't added twice
+        raw = QMimeData()
+        raw.setImageData(img)
+        self.assertTrue(dlg._take(raw))
+        self.assertEqual(dlg.media.count(), 2)
+        dlg.reject()
+        self.core.delete_draft(dlg.key)
+        self.pump(0.1)
+
         # Esc closes too
         dlg = Compose(self.win)
         dlg.show()
