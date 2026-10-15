@@ -583,19 +583,30 @@ class AccountWidget(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
         self.header = _Header(win.theme, "@…")
+        self.mine = bool(self.core.me) and acc_id == self.core.me["id"]
+        if self.mine:
+            self.header.add(_button(_("edit_profile"), win.edit_profile, icon="document-edit"))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         lay.addWidget(self.view, 1)
         self.btn_more = _button(_("older_down"), self.more, name="older")
         self.view.footer.addWidget(self.btn_more)
-        win.bridge.call(self.core.account(acc_id), ok=self._account)
+        self.reload_account()
         self.more()
+
+    def reload_account(self):
+        self.win.bridge.call(self.core.account(self.acc_id), ok=self._account)
 
     def _account(self, acc):
         self.title = "@" + acc["acct"]
         note = snippet({"content": acc.get("note", "")}, 200)
+        counts = " · ".join(_(key, n=acc[field]) for key, field in
+                            (("posts_n", "statuses_count"), ("followers_n", "followers_count"),
+                             ("following_n", "following_count")) if field in acc)
+        line = " · ".join(x for x in (f"@{acc['acct']}", counts) if x)
         self.header.title.setText(acc.get("display_name") or acc["username"])
-        self.header.info.setText(f"@{acc['acct']} — {note}" if note else f"@{acc['acct']}")
+        self.header.info.setText(f"{line} — {note}" if note else line)
+        self.header.info.setToolTip(snippet({"content": acc.get("note", "")}, 2000))
         self.win.retitle(self)
 
     def more(self):

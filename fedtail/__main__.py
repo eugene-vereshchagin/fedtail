@@ -12,7 +12,7 @@ if not __package__:
 
     sys.exit(main())
 
-from . import __version__, frontends, i18n  # noqa: E402
+from . import frontends, i18n, version  # noqa: E402
 from .core import config, config_update, paths  # noqa: E402
 from .core.app import Core  # noqa: E402
 from .core.instance import SingleInstance  # noqa: E402
@@ -33,7 +33,7 @@ def parse_args(argv):
     p.add_argument("--install-desktop", action="store_true",
                    help="add fedtail (this profile) to the desktop menu, with its icon, and exit")
     p.add_argument("--debug", action="store_true", help="verbose log to stderr")
-    p.add_argument("-V", "--version", action="version", version=f"fedtail {__version__}")
+    p.add_argument("-V", "--version", action="version", version=f"fedtail {version.full()}")
     return p.parse_args(argv)
 
 

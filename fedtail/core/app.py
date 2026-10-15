@@ -494,6 +494,19 @@ class Core:
     def account(self, acc_id):
         return self.submit(self.api.get, f"/api/v1/accounts/{acc_id}")
 
+    # ---- my profile ------------------------------------------------------------
+    def my_profile(self):
+        """My account as the editor needs it (bio and fields as typed)."""
+        return self.submit(self.api.verify_credentials)
+
+    def update_profile(self, **changes):
+        def job():
+            me = self.api.update_credentials(**changes)
+            self.me = me
+            self.emit("me_updated", me)
+            return me
+        return self.submit(job)
+
     # ---- writing ---------------------------------------------------------------
     def reply_visibility(self, parent):
         default = self.cfg["post"]["default_visibility"]

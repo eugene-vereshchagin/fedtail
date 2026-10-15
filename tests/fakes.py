@@ -114,6 +114,18 @@ class FakeApi:
                     changed = True
         return {"ancestors": anc, "descendants": desc}
 
+    def verify_credentials(self):
+        me = dict(ME, source={"note": "о себе", "fields": [{"name": "сайт", "value": "x.org"}]})
+        me.update(self.w.profile)
+        return me
+
+    def update_credentials(self, **changes):
+        self.w.profile_updates.append(changes)
+        for k in ("display_name", "locked", "bot", "discoverable"):
+            if changes.get(k) is not None:
+                self.w.profile[k] = changes[k]
+        return self.verify_credentials()
+
     def follow_requests(self):
         return list(self.w.requests)
 
@@ -158,6 +170,8 @@ class World:
         self.calls = []
         self.seq = 1000
         self.fail_auth = False
+        self.profile = {}
+        self.profile_updates = []
 
     def add(self, st, home=False, mention=False):
         self.statuses[st["id"]] = st
@@ -167,3 +181,4 @@ class World:
             self.notifications.append({"id": "n" + st["id"], "type": "mention",
                                        "created_at": st["created_at"], "status": st})
         return st
+

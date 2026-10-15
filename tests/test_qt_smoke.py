@@ -213,6 +213,25 @@ class QtSmokeTest(unittest.TestCase):
         self.win.showNormal()
         self.pump(0.1)
 
+        # my profile: a tab with an edit button; the editor sends only what changed
+        from fedtail.frontends.qt.profile import ProfileDialog
+        self.win.open_my_profile()
+        mine = self.win.tabs.currentWidget()
+        self.assertTrue(mine.mine)
+        dlg = ProfileDialog(self.win)
+        dlg.show()
+        self.pump(until=lambda: dlg.save_btn.isEnabled())
+        self.assertEqual(dlg.bio.toPlainText(), "о себе")
+        self.assertEqual(dlg.field_edits[0][1].text(), "x.org")
+        self.assertEqual(dlg.changes(), {})
+        dlg.name.setText("Вереск Новый")
+        dlg.locked.setChecked(True)
+        self.assertEqual(dlg.changes(), {"display_name": "Вереск Новый", "locked": True})
+        dlg.save()
+        self.pump(until=lambda: self.world.profile_updates and not dlg.isVisible())
+        self.pump(until=lambda: "Вереск Новый" in self.win.account_name.text())
+        self.win.close_tab(self.win.tabs.currentIndex())
+
         # a thread can be followed from its header
         self.win.on_link("fedtail:thread/013")
         thread = self.win.tabs.currentWidget()

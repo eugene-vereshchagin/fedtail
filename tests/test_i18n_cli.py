@@ -42,13 +42,13 @@ class CliTest(unittest.TestCase):
     def test_version(self):
         out = subprocess.run([sys.executable, "-m", "fedtail", "--version"], cwd=ROOT,
                              capture_output=True, text=True, check=True)
-        self.assertIn(__version__, out.stdout)
+        self.assertIn("fedtail " + __version__.split(".dev")[0], out.stdout)
 
     def test_run_as_folder(self):
         out = subprocess.run([sys.executable, "fedtail", "--version"], cwd=ROOT,
                              capture_output=True, text=True)
         self.assertEqual(out.returncode, 0, out.stderr)
-        self.assertIn(__version__, out.stdout)
+        self.assertIn("fedtail " + __version__.split(".dev")[0], out.stdout)
 
     def test_install_desktop(self):
         import os

@@ -83,6 +83,9 @@ class Api:
     def delete(self, path):
         return self._req("DELETE", path)
 
+    def patch(self, path, data=None, files=None):
+        return self._req("PATCH", path, data=data, files=files)
+
     @staticmethod
     def _page(limit, max_id=None, min_id=None, **extra):
         p = {"limit": limit}
@@ -119,6 +122,38 @@ class Api:
         return res["access_token"]
 
     # ---- reading ------------------------------------------------------------
+    def verify_credentials(self):
+        """My account with `source`: the bio and fields as I typed them."""
+        return self.get("/api/v1/accounts/verify_credentials")
+
+    def update_credentials(self, display_name=None, note=None, fields=None, locked=None,
+                           bot=None, discoverable=None, avatar=None, header=None):
+        """Change my profile. fields: [(name, value)] up to the server's limit;
+        avatar/header: paths of new pictures. None leaves a thing as it is."""
+        data = {}
+        for key, val in (("display_name", display_name), ("note", note)):
+            if val is not None:
+                data[key] = val
+        for key, val in (("locked", locked), ("bot", bot), ("discoverable", discoverable)):
+            if val is not None:
+                data[key] = "true" if val else "false"
+        if fields is not None:
+            for i, (name, value) in enumerate(fields):
+                data[f"fields_attributes[{i}][name]"] = name
+                data[f"fields_attributes[{i}][value]"] = value
+        files, opened = {}, []
+        try:
+            for key, path in (("avatar", avatar), ("header", header)):
+                if path:
+                    f = open(path, "rb")  # noqa: SIM115 — closed below
+                    opened.append(f)
+                    files[key] = (path.rsplit("/", 1)[-1], f)
+            return self.patch("/api/v1/accounts/update_credentials", data=data,
+                              files=files or None)
+        finally:
+            for f in opened:
+                f.close()
+
     def me(self):
         return self.get("/api/v1/accounts/verify_credentials")
 

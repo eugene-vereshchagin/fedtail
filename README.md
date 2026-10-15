@@ -127,6 +127,13 @@ threads you comment in automatically; any other thread — from a post's ⋯ men
 bring the thread back. Settings are in `[subs]` (how often to check, when a quiet thread is
 dropped, what to follow automatically).
 
+## Your profile
+
+Click your avatar or name in the sidebar: your profile opens in a tab, with post and follower
+counts and an "Edit profile" button — name, about, avatar, header, profile fields, and
+whether to approve followers by hand, mark the account as a bot, show it in the directory.
+Only what you changed is sent to the server.
+
 ## Notifications
 
 New comments, mentions and follow requests pop up as KDE notifications; "Open" goes straight to

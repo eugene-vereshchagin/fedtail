@@ -22,6 +22,9 @@
 - Thread subscriptions like on Point: a "Subscriptions" lane with new comments in followed
   threads; own posts and threads you comment in are followed automatically; follow/unfollow
   from the ⋯ menu or the thread header; `[subs]` settings.
+- My profile: a tab with counts, and an editor for name, bio, avatar, header, fields and
+  switches (approve followers, bot, directory).
+- Version from git: `0.2.0.devN+gSHA`; About shows build, commit date, Python/Qt, profile.
 - The last `Esc` takes the window off the screen at once (to the tray) — `ui.esc_hides`.
 - `Ctrl+F`: find in the open lane, thread or profile; `F3` / `Shift+F3`, "3 of 12".
 - Image viewer over the main window; "you replied" under comments; posts-only toggle;

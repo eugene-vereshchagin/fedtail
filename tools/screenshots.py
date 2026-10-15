@@ -231,6 +231,12 @@ def run(app, out, label, palette, theme_name, extras):
         pump(app, 1.0)
         shoot(win, out, f"{label}-find")
         win.find_bar.close_bar()
+        from fedtail.frontends.qt.profile import ProfileDialog
+        dlg = ProfileDialog(win)
+        dlg.show()
+        pump(app, 1.0)
+        shoot(dlg, out, f"{label}-profile")
+        dlg.reject()
 
     win.quitting = True
     win.hide()

@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ... import __version__
+from ... import version
 from ...core.model import real, snippet
 from ...i18n import _
 from .. import themefile
@@ -37,6 +37,7 @@ from .find import FindBar
 from .images import Images
 from .login import LoginDialog
 from .notify import Notifier, icon_path
+from .profile import ProfileDialog
 from .viewer import ImageOverlay
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
@@ -235,6 +236,11 @@ class MainWindow(QMainWindow):
         menu_btn.setMenu(self._app_menu())
         acc.addWidget(menu_btn, 0, Qt.AlignmentFlag.AlignTop)
         v.addLayout(acc)
+        # my avatar and name open my profile
+        for w in (self.account_avatar, self.account_name, self.account_sub):
+            w.setCursor(Qt.CursorShape.PointingHandCursor)
+            w.setToolTip(_("my_profile"))
+            w.installEventFilter(self)
 
         compose = QPushButton(t.word("compose", _("write")))
         compose.setObjectName("compose")
@@ -266,6 +272,8 @@ class MainWindow(QMainWindow):
         m = QMenu(self)
         m.addAction(_("write") + "\tCtrl+N", lambda: self.compose())
         m.addAction(_("refresh") + "\tF5", self.refresh)
+        m.addAction(_("my_profile"), self.open_my_profile)
+        m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
         m.addAction(_("open_config"), lambda: self.open_url(
             QUrl.fromLocalFile(str(self.core.paths.config_file)).toString()))
@@ -289,7 +297,30 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(_("connecting"))
         self.bridge.call(self.core.connect(), ok=self._connected, fail=self._connect_failed)
 
+    def eventFilter(self, obj, e):
+        if e.type() == e.Type.MouseButtonRelease and \
+                obj in (self.account_avatar, self.account_name, self.account_sub):
+            self.open_my_profile()
+            return True
+        return super().eventFilter(obj, e)
+
+    def open_my_profile(self):
+        if self.core.me:
+            self.open_account(self.core.me["id"])
+
+    def edit_profile(self):
+        if self.core.me:
+            ProfileDialog(self).exec()
+
     def _connected(self, me):
+        self._show_me(me)
+        for w in self.theme.warnings:
+            self.error(w)
+        self.statusBar().showMessage(_("connected", acct=me["acct"],
+                                       server=self.core.auth["server"]), 8000)
+        self._after_connect(me)
+
+    def _show_me(self, me):
         self.ctx.me_id = me["id"]
         t = self.theme
         fields = {"display_name": me.get("display_name") or me["username"],
@@ -299,10 +330,8 @@ class MainWindow(QMainWindow):
         if t.shape["sidebar_avatar"]:
             self.images.get(me.get("avatar_static") or me.get("avatar"),
                             lambda pm: self.account_avatar.setPixmap(_round(pm, 44)))
-        for w in self.theme.warnings:
-            self.error(w)
-        self.statusBar().showMessage(_("connected", acct=me["acct"],
-                                       server=self.core.auth["server"]), 8000)
+
+    def _after_connect(self, me):
         if self.core.new_options:
             QTimer.singleShot(8500, lambda: self.statusBar().showMessage(
                 _("new_options", n=len(self.core.new_options)), 30_000))
@@ -395,6 +424,12 @@ class MainWindow(QMainWindow):
                 if hasattr(w, "view"):
                     w.view.remove_status(payload)
             self.statusBar().showMessage(_("deleted"), 4000)
+        elif name == "me_updated":
+            self._show_me(payload)
+            for w in self.extra_tabs():
+                if isinstance(w, AccountWidget) and w.mine:
+                    w.reload_account()
+            self.statusBar().showMessage(_("profile_saved"), 5000)
         elif name == "subs_changed":
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget):
@@ -555,7 +590,19 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(_("error", err=err), 10_000)
 
     def about(self):
-        QMessageBox.about(self, "fedtail", _("about_text", version=__version__))
+        import platform
+
+        from PySide6 import __version__ as pyside
+
+        info = version.info()
+        lines = [_("about_text", version=info["version"])]
+        if info["commit"]:
+            lines.append(_("about_build", commit=info["commit"], date=info["date"]))
+        lines.append(_("about_env", py=platform.python_version(), qt=pyside))
+        if self.core.me:
+            lines.append(_("about_profile", profile=self.core.paths.profile,
+                           acct="@" + self.core.me["acct"], server=self.core.auth["server"]))
+        QMessageBox.about(self, "fedtail", "<br>".join(lines))
 
     def show_raise(self):
         self.showNormal()
