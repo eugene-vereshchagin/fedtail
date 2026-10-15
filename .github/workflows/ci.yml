@@ -8,29 +8,37 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - run: pip install ruff
-      - run: ruff check .
+      - run: ruff check --output-format=github .
 
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python: ["3.11", "3.12", "3.13"]
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Qt runtime libraries
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
       - run: pip install requests PySide6-Essentials
-      - run: python -m unittest discover -s tests -t . -v
+      - name: Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+      - name: Failures as annotations
+        if: failure()
+        run: python .github/annotate.py test-output.txt
 
   # the real target: Debian 13 with Qt from apt, no pip at all
   debian:
@@ -39,6 +47,13 @@ jobs:
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-requests python3-pyside6.qtwidgets
-      - run: python3 -m unittest discover -s tests -t . -v
+      - name: Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+      - name: Failures as annotations
+        if: failure()
+        run: python3 .github/annotate.py test-output.txt
