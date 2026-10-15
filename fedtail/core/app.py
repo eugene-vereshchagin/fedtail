@@ -236,7 +236,8 @@ class Core:
 
     def _ctx(self):
         return lanes.LaneContext(self.me["id"] if self.me else "",
-                                 tuple(self.cfg["lanes"]["extra_bots"]))
+                                 tuple(self.cfg["lanes"]["extra_bots"]),
+                                 self.cfg["lanes"]["mentions_all"])
 
     # ---- reading ---------------------------------------------------------------
     def posts_only(self, name):

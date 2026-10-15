@@ -239,6 +239,11 @@ class CoreTest(TmpDir):
         self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("comments")], ["013"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("mentions")], ["014"])
+        core.cfg["lanes"]["mentions_all"] = True  # replies to me show in mentions too
+        core._lane_cache.clear()
+        self.assertEqual(sorted(st["id"] for _, st in core.lane_entries("mentions")),
+                         ["013", "014"])
+        core.cfg["lanes"]["mentions_all"] = False
         self.assertIn("012", core.store.read_set(["012"]))  # my own post is read
         notes = [e for e in self.events if e[0] == "notify"]
         self.assertEqual(sorted(s["id"] for _, s in notes[0][1]), ["013", "014"])

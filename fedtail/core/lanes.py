@@ -20,6 +20,7 @@ class Lane:
 class LaneContext:
     me_id: str
     extra_bots: tuple
+    mentions_all: bool = False
 
 
 def _all(st, ctx):
@@ -39,7 +40,7 @@ def _comments(st, ctx):
 
 
 def _other_mentions(st, ctx):
-    return not is_comment_to_me(real(st), ctx.me_id)
+    return ctx.mentions_all or not is_comment_to_me(real(st), ctx.me_id)
 
 
 LANES = {

@@ -106,6 +106,13 @@ A theme sets colours, fonts, corner radii, card style (boxes or rules), avatars,
 wording — `[ write ]`, `== people ==`, `---- new below ----`. Every key is explained in
 `builtin/system.toml`. A broken theme is reported in the status bar and `system` is used instead.
 
+## Lanes
+
+"Replies to me" holds every reply to your posts and comments; "Mentions" holds the rest, the
+places where you were tagged in someone else's conversation. A reply that also says `@you`
+is a reply, so it is not repeated in Mentions — set `lanes.mentions_all = true` if you want
+Mentions to show everything.
+
 ## Notifications
 
 New comments, mentions and follow requests pop up as KDE notifications; "Open" goes straight to

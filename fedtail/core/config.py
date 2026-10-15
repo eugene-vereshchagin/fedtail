@@ -38,6 +38,7 @@ DEFAULTS = {
         "enabled": ["people", "comments", "mentions", "bots", "mine", "local", "requests"],
         "extra_bots": [],
         "posts_only": [],
+        "mentions_all": False,
     },
     "post": {
         "default_visibility": "private",
