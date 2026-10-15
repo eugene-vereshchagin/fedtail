@@ -4,6 +4,7 @@ import os
 import sqlite3
 import stat
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -223,6 +224,28 @@ class CoreTest(TmpDir):
         ids = [st["id"] for _, st in core.lane_entries("people")]
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
+
+    def test_honest_counters_on_thread_open(self):
+        core, w = self.make(feed={"honest_counters": True})
+        st = w.add(status("050", BOB, vis="public"), home=True)
+        st["uri"] = "https://mastodon.social/users/bob/statuses/9"
+        asked = []
+
+        def origin(url):
+            asked.append(url)
+            return {"uri": st["uri"], "favourites_count": 12, "reblogs_count": 2,
+                    "replies_count": 0}
+        core._origin_get = origin
+        core.connect().result()
+        core.thread("050").result()
+        deadline = time.time() + 5
+        while core.store.get_status("050")["favourites_count"] != 12 and time.time() < deadline:
+            time.sleep(0.01)  # the check runs in the background
+        self.assertEqual(asked, ["https://mastodon.social/api/v1/statuses/9"])
+        self.assertEqual(core.store.get_status("050")["favourites_count"], 12)
+        core.thread("050").result()
+        time.sleep(0.2)
+        self.assertEqual(len(asked), 1)  # not again within ten minutes
 
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})

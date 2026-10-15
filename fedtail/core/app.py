@@ -20,7 +20,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import auth, lanes, search, sources, subs, threads
+from . import auth, counters, lanes, search, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import narrower, real
@@ -66,6 +66,7 @@ class Core:
         self.new_options = []  # options the user's config doesn't mention yet
         self._replies_inflight = set()
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
+        self._honest_checked = {}  # status id -> when its origin was asked
 
     # ---- plumbing ------------------------------------------------------------
     def submit(self, fn, *a, **kw):
@@ -642,10 +643,42 @@ class Core:
             focus = self.api.status(sid)
             focus = real(focus)
             ctx = self.api.context(focus["id"])
-            self.store.put_statuses([focus] + ctx.get("ancestors", []) +
-                                    ctx.get("descendants", []))
+            everything = [focus] + ctx.get("ancestors", []) + ctx.get("descendants", [])
+            self.store.put_statuses(everything)
+            if self.cfg["feed"]["honest_counters"]:
+                self.bg.submit(self._honest_counts, everything)
             return threads.build(focus, ctx)
         return self.submit(job)
+
+    def _origin_get(self, url):
+        """GET from someone else's server: no token, short timeout."""
+        import requests
+
+        from .api import USER_AGENT
+        r = requests.get(url, timeout=8, headers={"User-Agent": USER_AGENT})
+        return r.json() if r.status_code == 200 else None
+
+    def _honest_counts(self, statuses):
+        now = time.monotonic()
+        fresh = []
+        for st in statuses[:40]:
+            sid = real(st)["id"]
+            if now - self._honest_checked.get(sid, -1e9) < 600:
+                continue
+            url = counters.origin_api_url(st, self.auth["server"])
+            if not url:
+                continue
+            self._honest_checked[sid] = now
+            try:
+                better = counters.merge(st, self._origin_get(url))
+            except Exception as e:  # their server, their problems
+                log.debug("honest counters %s: %s", url, e)
+                continue
+            if better:
+                fresh.append(better)
+        if fresh:
+            self.store.put_statuses(fresh)
+            self.emit("status_updated", fresh[0])
 
     def account_statuses(self, acc_id, max_id=None):
         def job():

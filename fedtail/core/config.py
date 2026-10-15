@@ -34,6 +34,7 @@ DEFAULTS = {
         "catch_up_limit": 400,
         "render_limit": 300,
         "first_run_mark_read": True,
+        "honest_counters": False,
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
@@ -48,6 +49,7 @@ DEFAULTS = {
         "reply_never_wider": True,
         "drafts_autosave": True,
         "cw_field": False,
+        "camelcase_hint": True,
     },
     "notify": {
         "enabled": True,

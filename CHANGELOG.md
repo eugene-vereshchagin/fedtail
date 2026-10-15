@@ -21,6 +21,8 @@
   the content warning field is hidden behind a button.
 - Themes `point` (point.im today), `juick` and `juick-classic` (juick.com of 2013 and 2011),
   `night`, `paper`, `contrast` (for weak eyes).
+- Honest counters from the post's own server (`feed.honest_counters`, off by default).
+- CamelCase hint for one-case hashtags in the composer (`post.camelcase_hint`).
 - Activity lane and notifications: favourites, boosts, new followers, gathered per post.
 - Lists as lanes in a block of their own; "Add to list" from a post's menu or a right click;
   create, rename, delete, exclusive (hidden from People and Bots).

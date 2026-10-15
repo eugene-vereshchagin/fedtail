@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from ...core.hashtags import flat_tags
 from ...core.model import VISIBILITIES, real, reply_mentions, snippet
 from ...i18n import _
 from .text import display_name, esc
@@ -81,6 +82,11 @@ class Compose(QDialog):
         self.text.setPlaceholderText(_("text_placeholder_md") if self.core.markdown
                                      else _("text_placeholder"))
         lay.addWidget(self.text, 1)
+        self.camel = QLabel()
+        self.camel.setObjectName("counter")
+        self.camel.setWordWrap(True)
+        self.camel.hide()
+        lay.addWidget(self.camel)
 
         self.media = QListWidget()
         self.media.setObjectName("mediaList")
@@ -320,6 +326,11 @@ class Compose(QDialog):
             self.counter.setProperty("over", over)
             self.counter.style().unpolish(self.counter)
             self.counter.style().polish(self.counter)
+        if self.core.cfg["post"]["camelcase_hint"]:
+            flat = flat_tags(self.text.toPlainText())
+            self.camel.setVisible(bool(flat))
+            if flat:
+                self.camel.setText(_("camel_hint", tags=", ".join("#" + t for t in flat[:3])))
         has_media = self.media.count() > 0
         self.media.setVisible(has_media)
         self.detach_btn.setVisible(has_media)

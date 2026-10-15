@@ -141,6 +141,15 @@ or a new one; right-click a list for rename, delete and **exclusive**. Whoever i
 exclusive list is gone from People and Bots and shows up only there — sort the bots into
 "Memes", "News" and the rest. `[lists]` in the config.
 
+## Honest counters and readable hashtags
+
+Your server knows only the favourites and boosts that reached it. With
+`feed.honest_counters = true`, opening a thread asks each public post's own server for the real
+numbers (without your token, but it is a request from your IP — hence off by default).
+
+When a hashtag is written in one case (`#georgianews`), the composer suggests `#GeorgiaNews`:
+screen readers read it word by word. `post.camelcase_hint = false` turns the hint off.
+
 ## Your profile
 
 Click your avatar or name in the sidebar: your profile opens in a tab, with post and follower

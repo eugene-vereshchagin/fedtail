@@ -72,6 +72,8 @@ _STRINGS = {
                        "O — в браузере · Esc/клик — закрыть",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
+        "camel_hint": "♿ {tags}: напиши с большими буквами внутри слов (#GeorgiaNews) — "
+                      "экранные дикторы прочтут по словам, а не одной кашей",
         "cw_add": "Предупреждение", "alt_set": "есть подпись",
         "cw_add_tip": "Спрятать текст под предупреждение (CW): его покажут по кнопке",
         "boost_time": "продвинуто {when}",
@@ -212,6 +214,8 @@ _STRINGS = {
                        "O: browser · Esc/click: close",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
+        "camel_hint": "♿ {tags}: capitalise the words inside (#GeorgiaNews) — screen "
+                      "readers will read it word by word, not as one mumble",
         "cw_add": "Content warning", "alt_set": "described",
         "cw_add_tip": "Hide the text behind a warning (CW); readers open it with a click",
         "boost_time": "boosted {when}",
