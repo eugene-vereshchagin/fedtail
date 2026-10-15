@@ -15,13 +15,15 @@ def esc(s):
     return html.escape(s or "", quote=True)
 
 
-def clean(content):
+def clean(content, link_color=None):
     h = _SCRIPTY.sub("", content or "")
     h = _INVISIBLE.sub("", h)
     h = _ELLIPSIS.sub(r"\1…", h)
     h = _IMG.sub(lambda m: esc(m.group(1) or ""), h)  # custom emoji → :shortcode:
     h = _ATTRS.sub("", h)
-    return h
+    h = re.sub(r"\sstyle=\"[^\"]*\"", "", h)
+    style = "text-decoration:none;" + (f"color:{link_color};" if link_color else "")
+    return h.replace("<a ", f'<a style="{style}" ')
 
 
 def display_name(account):
@@ -41,5 +43,11 @@ def when(iso, months):
     return f"{dt.day} {mon} {dt:%H:%M}"
 
 
-def link(action, arg, label):
-    return f'<a href="fedtail:{action}/{esc(str(arg))}">{label}</a>'
+def link(action, arg, label, color=None, bold=False):
+    """An in-app link. QLabel ignores stylesheets for links, so style goes inline."""
+    style = "text-decoration:none;"
+    if color:
+        style += f"color:{color};"
+    if bold:
+        style += "font-weight:700;"
+    return f'<a href="fedtail:{action}/{esc(str(arg))}" style="{style}">{label}</a>'

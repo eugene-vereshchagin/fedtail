@@ -221,7 +221,8 @@ class PostRow(QWidget):
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(8)
         if st.get("content"):
-            text = self._label(clean(st["content"]), "postText", selectable=True)
+            text = self._label(clean(st["content"], self.theme.css("link")), "postText",
+                               selectable=True)
             cv.addWidget(text)
         media = self._media(st)
         if media:
@@ -253,7 +254,8 @@ class PostRow(QWidget):
             more = f" (+{len(answers) - 1})" if len(answers) > 1 else ""
             v.addWidget(self._label(link("thread", last["id"], "↳ " + _(
                 "you_replied", when=self.theme.date(last.get("created_at", "")),
-                text=esc(snippet(last, 120))) + more), "myreply"))
+                text=esc(snippet(last, 120))) + more, self.theme.css("on_myreply")),
+                "myreply"))
 
     # ---- header -------------------------------------------------------------------
     def _short_id(self, h):
@@ -297,12 +299,13 @@ class PostRow(QWidget):
             num = QLabel(f"/{self.spec.number}")
             num.setObjectName("num")
             line.addWidget(num)
-        line.addWidget(self._label(link("account", acc["id"], display_name(acc)), "name",
-                                   wrap=False))
+        line.addWidget(self._label(link("account", acc["id"], display_name(acc),
+                                        self.theme.css("text"), bold=True), "name", wrap=False))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc["acct"])}{esc(bot)} · '
-            f'{link("thread", st["id"], self.theme.date(st.get("created_at", "")))}',
+            + link("thread", st["id"], self.theme.date(st.get("created_at", "")),
+                   self.theme.css("muted")),
             "meta", wrap=False))
         vis = st.get("visibility", "public")
         icon = _theme_icon(VIS_ICONS.get(vis, ()))
@@ -334,12 +337,14 @@ class PostRow(QWidget):
             num.setObjectName("num")
             h.addWidget(num)
         user, _sep, host = acc["acct"].partition("@")
-        h.addWidget(self._label(link("account", acc["id"], "@" + esc(user)), "name", wrap=False))
+        h.addWidget(self._label(link("account", acc["id"], "@" + esc(user), self.theme.css("text"),
+                                     bold=True), "name", wrap=False))
         vis = st.get("visibility", "public")
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         meta = " · ".join(x for x in (esc(host) + esc(bot),
                                       link("thread", st["id"],
-                                           self.theme.date(st.get("created_at", ""))),
+                                           self.theme.date(st.get("created_at", "")),
+                                           self.theme.css("muted")),
                                       VIS_WORD.get(vis, vis)) if x)
         h.addWidget(self._label(meta, "meta", wrap=False))
         h.addStretch(1)
@@ -359,7 +364,7 @@ class PostRow(QWidget):
         else:
             body = _("ctx_reply", name="<b>" + display_name(real(p)["account"]) + "</b>",
                      text=esc(snippet(p, 140)))
-        return link("thread", st["id"], f"↪ {body}")
+        return link("thread", st["id"], f"↑ {body}", self.theme.css("muted"))
 
     # ---- actions ------------------------------------------------------------------
     def _actions(self, st):

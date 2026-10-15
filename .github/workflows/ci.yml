@@ -75,7 +75,8 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends python3 python3-requests \
             python3-pyside6.qtwidgets git ca-certificates
-          for p in fonts-noto-core fonts-noto-color-emoji fonts-ibm-plex breeze-icon-theme; do
+          for p in qt6-svg-plugins libqt6svg6 fonts-noto-core fonts-noto-color-emoji \
+                   fonts-dejavu-core breeze-icon-theme; do
             apt-get install -y --no-install-recommends "$p" || echo "::warning::no package $p"
           done
       - run: python3 tools/screenshots.py out

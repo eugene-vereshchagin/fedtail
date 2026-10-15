@@ -36,9 +36,11 @@ class Compose(QDialog):
         self.sent = False
         self.setWindowTitle(_("compose_reply") if reply_to else _("compose_new"))
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(16, 16, 16, 12)
+        lay.setSpacing(10)
 
         if self.reply_to:
-            q = QLabel(f"↪ <b>{display_name(self.reply_to['account'])}</b>: "
+            q = QLabel(f"↑ <b>{display_name(self.reply_to['account'])}</b>: "
                        f"{esc(snippet(self.reply_to, 400))}")
             q.setWordWrap(True)
             q.setObjectName("ctx")
@@ -54,33 +56,43 @@ class Compose(QDialog):
         lay.addWidget(self.text, 1)
 
         self.media = QListWidget()
+        self.media.setObjectName("mediaList")
         self.media.setMaximumHeight(90)
+        self.media.setVisible(False)
         self.media.setToolTip(_("media_tip"))
         self.media.itemDoubleClicked.connect(self.edit_description)
         lay.addWidget(self.media)
 
         row = QHBoxLayout()
         self.vis = QComboBox()
+        self.vis.setMinimumWidth(230)
         for v in VISIBILITIES:
             self.vis.addItem(_("vis_" + v), v)
         row.addWidget(self.vis)
         add = QPushButton(QIcon.fromTheme("mail-attachment"), _("attach"))
+        add.setObjectName("tool")
         add.clicked.connect(self.attach)
         row.addWidget(add)
         rm = QPushButton(_("detach"))
+        rm.setObjectName("tool")
+        self.detach_btn = rm
         rm.clicked.connect(self.detach)
         row.addWidget(rm)
         row.addStretch(1)
         self.counter = QLabel()
+        self.counter.setObjectName("counter")
         row.addWidget(self.counter)
         close_btn = QPushButton(_("close"))
+        close_btn.setObjectName("tool")
         close_btn.setToolTip(_("close_tip"))
         close_btn.clicked.connect(self.reject)
         row.addWidget(close_btn)
         self.discard_btn = QPushButton(_("discard"))
+        self.discard_btn.setObjectName("tool")
         self.discard_btn.clicked.connect(self.discard)
         row.addWidget(self.discard_btn)
         self.send_btn = QPushButton(_("send"))
+        self.send_btn.setObjectName("primary")
         self.send_btn.setDefault(True)
         self.send_btn.clicked.connect(self.send)
         row.addWidget(self.send_btn)
@@ -206,7 +218,14 @@ class Compose(QDialog):
         n = len(self.text.toPlainText()) + len(self.cw.text())
         lim = self.core.caps.max_characters
         self.counter.setText(f"{n} / {lim}")
-        self.counter.setStyleSheet("color: #d33" if n > lim else "")
+        over = "true" if n > lim else "false"
+        if self.counter.property("over") != over:
+            self.counter.setProperty("over", over)
+            self.counter.style().unpolish(self.counter)
+            self.counter.style().polish(self.counter)
+        has_media = self.media.count() > 0
+        self.media.setVisible(has_media)
+        self.detach_btn.setVisible(has_media)
 
     def send(self):
         text = self.text.toPlainText().strip()

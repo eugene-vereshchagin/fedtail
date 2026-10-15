@@ -62,6 +62,18 @@ for a in (KOT, ARSEN, OSTAP, NEWS, ME):
     a["avatar_static"] = f"https://img.example/avatar/{a['id']}"
 
 
+def _recent(w):
+    """Give the made-up posts today's dates, so cards show times, not years."""
+    from datetime import UTC, datetime, timedelta
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
+    for st in w.statuses.values():
+        minute = int(st["created_at"][14:16])
+        st["created_at"] = (now - timedelta(minutes=60 - minute)).strftime(
+            "%Y-%m-%dT%H:%M:%S.000Z")
+    for n in w.notifications:
+        n["created_at"] = n["status"]["created_at"]
+
+
 def world():
     w = fakes.World()
     t = lambda m: m  # minutes since 10:00 keep the order readable
@@ -96,6 +108,7 @@ def world():
           home=True, mention=True)
     w.requests = [OSTAP]
     del router
+    _recent(w)
     return w
 
 
@@ -181,9 +194,7 @@ def run(app, out, label, palette, theme_name, extras):
     lane.positioned = False
     lane.separator = None
     lane.refresh(force=True)
-    pump(app, 1.5)
-    lane.view.scroll_to_end(False)
-    pump(app, 1.0)
+    pump(app, 2.0)  # the lane stands on "new below" by itself
     shoot(win, out, f"{label}-people")
 
     win.select_lane("comments")

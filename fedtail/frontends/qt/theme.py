@@ -21,10 +21,10 @@ def _auto_colors(pal):
     """Every 'auto' colour, derived from the desktop palette (works light and dark)."""
     R = QPalette.ColorRole
     base, win, text = pal.color(R.Base), pal.color(R.Window), pal.color(R.Text)
-    hl, hl_text, link = pal.color(R.Highlight), pal.color(R.HighlightedText), pal.color(R.Link)
+    hl, link = pal.color(R.Highlight), pal.color(R.Link)
     dark = base.lightness() < 128
     green = QColor("#3c9a3c")
-    accent = hl.lighter(125) if dark else hl.darker(118)
+    accent = hl.darker(135) if dark else hl.darker(145)
     return {
         "window": win,
         "sidebar": win.lighter(112) if dark else win.darker(104),
@@ -40,7 +40,7 @@ def _auto_colors(pal):
         "muted": _mix(text, base, 0.36),
         "link": link,
         "accent": accent,
-        "on_accent": hl_text,
+        "on_accent": _readable_on(accent),
         "quiet": _mix(base, text, 0.18),
         "on_quiet": text,
         "new_pill": _mix(base, hl, 0.16),
@@ -141,6 +141,7 @@ QLabel#accountName {{ font-weight: 700; font-size: {round(base_pt * 1.1, 1)}pt; 
 QLabel#accountSub {{ color: {k('muted')}; }}
 QToolButton#menu {{ border: 0; border-radius: {br}px; padding: 6px; }}
 QToolButton#menu:hover {{ background: {k('selected')}; }}
+QToolButton#menu::menu-indicator {{ image: none; width: 0; }}
 QPushButton#compose {{ background: {k('accent')}; color: {k('on_accent')}; border: 0;
     border-radius: {br}px; padding: 11px; font-weight: 600; font-size: {round(base_pt * 1.05, 1)}pt; }}
 QPushButton#compose:hover {{ background: {self.c['accent'].lighter(110).name()}; }}
@@ -150,7 +151,8 @@ QListWidget#lanes::item:selected {{ background: {k('selected')}; }}
 QListWidget#lanes::item:hover:!selected {{ background: {_alpha(self.c['selected'], 110)}; }}
 QLabel#laneName {{ background: transparent; }}
 QLabel#laneName[current="true"] {{ font-weight: 600; color: {k('selected_text')}; }}
-QLabel#badge {{ border-radius: 9px; padding: 1px 7px; font-size: {round(base_pt * 0.85, 1)}pt;
+QLabel#badge {{ border-radius: 10px; padding: 0 7px; min-height: 20px; max-height: 20px;
+    font-size: {round(base_pt * 0.85, 1)}pt;
     font-weight: 700; background: {k('accent')}; color: {k('on_accent')}; }}
 QLabel#badge[kind="hot"] {{ background: {k('hot')}; color: {k('on_hot')}; }}
 QLabel#badge[kind="quiet"] {{ background: {k('quiet')}; color: {k('on_quiet')}; font-weight: 600;
@@ -176,7 +178,21 @@ QPushButton#seg[pos="first"] {{ border-top-left-radius: {br}px; border-bottom-le
 QPushButton#seg[pos="last"] {{ border-top-right-radius: {br}px; border-bottom-right-radius: {br}px; }}
 QPushButton#seg:checked {{ background: {k('accent')}; color: {k('on_accent')}; font-weight: 600;
     border-color: {k('accent')}; }}
-QCheckBox#check {{ color: {k('text')}; }}
+QCheckBox#check {{ color: {k('text')}; spacing: 8px; }}
+QCheckBox#check::indicator {{ width: 12px; height: 12px; border: 1px solid {k('muted')};
+    background: {k('view')}; border-radius: 2px; }}
+QCheckBox#check::indicator:checked {{ background: {k('accent')}; }}
+
+/* ---- inputs & dialogs ---- */
+QDialog {{ background: {k('window')}; }}
+QLineEdit, QPlainTextEdit, QComboBox, QListWidget#mediaList {{ background: {k('card')};
+    color: {k('text')}; border: 1px solid {k('card_border')}; border-radius: {br}px; padding: 6px 8px; }}
+QLineEdit:focus, QPlainTextEdit:focus {{ border-color: {k('accent')}; }}
+QPushButton#primary {{ background: {k('accent')}; color: {k('on_accent')}; border: 0;
+    border-radius: {br}px; padding: 8px 18px; font-weight: 600; }}
+QPushButton#primary:disabled {{ background: {k('quiet')}; color: {k('muted')}; }}
+QLabel#counter {{ color: {k('muted')}; }}
+QLabel#counter[over="true"] {{ color: {k('hot')}; font-weight: 700; }}
 
 /* ---- feed ---- */
 QScrollArea#feed, QWidget#feedBody {{ background: {k('view')}; border: 0; }}
@@ -210,6 +226,13 @@ QPushButton#older {{ background: transparent; color: {k('muted')}; border: 1px d
 QStatusBar {{ background: {k('window')}; color: {k('muted')}; }}
 QStatusBar::item {{ border: 0; }}
 """
+
+
+def _readable_on(bg):
+    """Black or white, whichever reads better on bg."""
+    r, g, b = (c / 255 for c in (bg.red(), bg.green(), bg.blue()))
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return QColor("#111111") if lum > 0.45 else QColor("#ffffff")
 
 
 def _alpha(col, a):
