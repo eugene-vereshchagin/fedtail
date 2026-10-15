@@ -190,14 +190,14 @@ class QtSmokeTest(unittest.TestCase):
         long_text = "длинный пост " * 120
         for i in range(60):
             self.world.local.append(status(f"5{i:02d}", BOB, minute=i % 60, text=long_text))
-            self.world.add(status(f"6{i:02d}", ME, minute=i % 60, text=long_text))
+            self.world.add(status(f"6{i:02d}", NEWS, minute=i % 60, text=long_text), home=True)
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.core.poll_once()
         local = [st["id"] for _, st in self.core.lane_entries("local")]
         self.core.mark_read(local)
-        mine = [st["id"] for _, st in self.core.lane_entries("mine")]
-        self.core.mark_read(mine[:-20])  # 20 newest stay unread
+        bots = [st["id"] for _, st in self.core.lane_entries("bots")]
+        self.core.mark_read(bots[:-20])  # 20 newest stay unread
 
         self.win.select_lane("local")
         view = self.win.lane_widgets["local"].view
@@ -206,9 +206,9 @@ class QtSmokeTest(unittest.TestCase):
         self.assertGreater(sb.maximum(), 0)
         self.assertEqual(sb.value(), sb.maximum())
 
-        self.win.select_lane("mine")
-        view = self.win.lane_widgets["mine"].view
-        self.pump(2.5)
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(1.0)  # well before reading kicks in
         first_unread = view.rows[view.unread_keys()[0]]
         top = view._top(first_unread) - view.verticalScrollBar().value()
         self.assertTrue(-20 < top < 40, top)
