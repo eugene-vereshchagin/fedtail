@@ -19,7 +19,7 @@
 - App icon; `--install-desktop` adds a menu entry with it.
 - Pictures by drag and drop (compose or main window) and `Ctrl+V`; thumbnails in compose;
   the content warning field is hidden behind a button.
-- Themes `juick`, `night`, `paper`.
+- Themes `juick` and `juick-classic` (juick.com of 2013 and 2011), `night`, `paper`.
 - Lists as lanes in a block of their own; "Add to list" from a post's menu or a right click;
   create, rename, delete, exclusive (hidden from People and Bots).
 - A right click on a post opens its menu.

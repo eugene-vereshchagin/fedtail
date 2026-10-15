@@ -1,55 +1,55 @@
-# fedtail theme: juick — in the spirit of the old juick.com: a white page, plain
-# lines between posts, "@nick" up front, small Verdana, nothing shiny.
+# fedtail theme: juick — juick.com around 2013: a light warm-grey page, white
+# posts without frames, blue links, "@nick:" up front, Arial.
 name = "Juick"
 inherit = "system"
 
 [font]
-family = "Verdana, DejaVu Sans, Tahoma, sans-serif"
+family = "Arial, Liberation Sans, Helvetica, sans-serif"
 mono = "DejaVu Sans Mono, monospace"
-post_scale = 1.0
+post_scale = 1.05
 
 [colors]
-window = "#e9e9e6"
-sidebar = "#f2f2ef"
-sidebar_border = "#d6d6d0"
+window = "#eeede6"
+sidebar = "#eeede6"
+sidebar_border = "#e0dfd6"
 selected = "#ffffff"
-selected_text = "#000000"
-view = "#ffffff"
-header_border = "#e2e2dc"
+selected_text = "#111111"
+view = "#eeede6"
+header_border = "#e0dfd6"
 card = "#ffffff"
-card_border = "#e4e4de"
-card_border_unread = "#e4e4de"
-text = "#222222"
-muted = "#8a8a84"
-link = "#2a6496"
-accent = "#3d7ab3"
+card_border = "#ffffff"
+card_border_unread = "#9cc3e0"
+text = "#111111"
+muted = "#999999"
+link = "#1b6aa5"
+accent = "#1b6aa5"
 on_accent = "#ffffff"
-hot = "#d9531e"
+hot = "#d1492b"
 on_hot = "#ffffff"
-quiet = "#e4e4de"
-on_quiet = "#5c5c58"
-new_pill = "#fff3c4"
-on_new_pill = "#6b5400"
-ctx = "#f6f6f2"
-ctx_bar = "#cfcfc7"
-focus = "#fffbe6"
-focus_border = "#e8d27a"
-myreply = "#f1f7ec"
-on_myreply = "#3d6b2a"
+quiet = "#dedcd2"
+on_quiet = "#555555"
+new_pill = "#dcebf6"
+on_new_pill = "#1b6aa5"
+ctx = "#f5f4ef"
+ctx_bar = "#d6d4c8"
+focus = "#f2f8fc"
+focus_border = "#9cc3e0"
+myreply = "#f5f4ef"
+on_myreply = "#777777"
 active = "#fff3c4"
 on_active = "#6b5400"
-separator = "#d9531e"
-rail = "#dcdcd5"
+separator = "#1b6aa5"
+rail = "#dedcd2"
 button = "#ffffff"
-button_border = "#d6d6d0"
-dot = "#d9531e"
+button_border = "#dedcd2"
+dot = "#1b6aa5"
 
 [shape]
 radius = 0
-button_radius = 3
-card_style = "rule"
+button_radius = 2
+card_style = "card"
 card_avatars = true
-avatar = 32
+avatar = 40
 sidebar_avatar = true
 lane_icons = false
 icons = false
@@ -59,11 +59,7 @@ posts_only = "check"
 
 [words]
 compose = "{text}"
-lane = "{text}"
-lane_selected = "{text}"
-lane_title = "{text}"
-lowercase = false
-separator = "*** {text} ({n}) ***"
 account_title = "@{username}"
 account_subtitle = "{acct}"
+separator = "{text} ({n})"
 date = "{dd}.{mm} {time}"

@@ -1,0 +1,44 @@
+# fedtail theme: juick-classic — juick.com around 2011: an olive page, beige
+# posts, brown-orange links, "@nick: *tags", Arial.
+name = "Juick classic"
+inherit = "juick"
+
+[colors]
+window = "#cdcb9b"
+sidebar = "#c6c48f"
+sidebar_border = "#b9b67f"
+selected = "#efeed9"
+selected_text = "#7a3e0f"
+view = "#cdcb9b"
+header_border = "#bdbb85"
+card = "#efeed9"
+card_border = "#dcdab6"
+card_border_unread = "#b4631f"
+text = "#111111"
+muted = "#7f7c50"
+link = "#b4631f"
+accent = "#b4631f"
+on_accent = "#fffbea"
+hot = "#c0392b"
+on_hot = "#ffffff"
+quiet = "#e4e2c4"
+on_quiet = "#6d6a42"
+new_pill = "#efeed9"
+on_new_pill = "#b4631f"
+ctx = "#e4e3c7"
+ctx_bar = "#c9c695"
+focus = "#f7f5e2"
+focus_border = "#b4631f"
+myreply = "#e4e3c7"
+on_myreply = "#6d6a42"
+active = "#f6e3b4"
+on_active = "#7a3e0f"
+separator = "#b4631f"
+rail = "#bdbb85"
+button = "#efeed9"
+button_border = "#d6d3ab"
+dot = "#b4631f"
+
+[shape]
+radius = 4
+button_radius = 6

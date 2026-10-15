@@ -66,7 +66,8 @@ class ThemeFileTest(unittest.TestCase):
         self.assertTrue((self.dir / "builtin" / "terminal.toml").exists())
         self.assertTrue((self.dir / "README.txt").exists())
         # copies in builtin/ are not themes of their own
-        self.assertEqual(themefile.available(), ["juick", "night", "paper", "system", "terminal"])
+        self.assertEqual(themefile.available(),
+                         ["juick", "juick-classic", "night", "paper", "system", "terminal"])
 
 
 if __name__ == "__main__":

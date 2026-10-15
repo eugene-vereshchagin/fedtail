@@ -95,7 +95,8 @@ The look is a theme file. Built in:
 
 - `system` — light or dark, whatever KDE uses: every colour comes from the desktop palette;
 - `terminal` — green on black, monospace, posts divided by lines, buttons in words.
-- `juick` — in the spirit of the old juick.com: a white page, posts divided by lines, Verdana.
+- `juick` — juick.com around 2013: a light warm-grey page, white posts, blue links.
+- `juick-classic` — juick.com around 2011: an olive page, beige posts, brown-orange links.
 - `night` — dark, with its own colours, on any desktop.
 - `paper` — warm paper and a book face, for long threads.
 

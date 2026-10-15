@@ -522,7 +522,12 @@ class MainWindow(QMainWindow):
     def select_lane(self, name):
         for i in range(self.lanes.count()):
             if self.lanes.item(i).data(Qt.ItemDataRole.UserRole) == name:
-                self.lanes.setCurrentRow(i)
+                if self.lanes.currentRow() == i:
+                    # already the current row (e.g. after rows were removed under it):
+                    # no change signal will come, so show the lane ourselves
+                    self._lane_clicked(self.lanes.item(i), None)
+                else:
+                    self.lanes.setCurrentRow(i)
 
     def update_badges(self):
         total = 0
