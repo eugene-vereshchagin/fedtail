@@ -25,6 +25,14 @@ from . import fakes  # noqa: E402
 from .fakes import BOB, ME, NEWS, FakeApi, status  # noqa: E402
 
 
+def gone(w):
+    """Closed, or already deleted by Qt after closing (that's fine too)."""
+    try:
+        return not w.isVisible()
+    except RuntimeError:
+        return True
+
+
 @unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class QtSmokeTest(unittest.TestCase):
     @classmethod
@@ -147,7 +155,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(dlg.text.toPlainText(), "@bob@mastodon.social ага")
         dlg.send()
         self.pump(until=lambda: self.world.posted)
-        self.pump(until=lambda: not dlg.isVisible())
+        self.pump(until=lambda: gone(dlg))
         self.pump(until=lambda: self.core.get_draft("reply:013") is None)
         self.assertEqual(self.world.posted[-1][2], "013")
 
@@ -156,7 +164,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.show()
         dlg.text.setPlainText("новый пост")
         dlg.send()
-        self.pump(until=lambda: not dlg.isVisible())
+        self.pump(until=lambda: gone(dlg))
         self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
 
         # the content warning field hides until asked for
@@ -286,7 +294,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.locked.setChecked(True)
         self.assertEqual(dlg.changes(), {"display_name": "Вереск Новый", "locked": True})
         dlg.save()
-        self.pump(until=lambda: self.world.profile_updates and not dlg.isVisible())
+        self.pump(until=lambda: self.world.profile_updates and gone(dlg))
         self.pump(until=lambda: "Вереск Новый" in self.win.account_name.text())
         self.win.close_tab(self.win.tabs.currentIndex())
 
