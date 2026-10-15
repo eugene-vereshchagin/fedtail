@@ -108,6 +108,8 @@ def world():
                  "перевернул вверх ногами — перестал греться. Десять лет работает."),
           home=True, mention=True)
     w.requests = [OSTAP]
+    w.lists = {"L1": {"title": "Новости", "exclusive": True, "members": {NEWS["id"]}},
+               "L2": {"title": "Мемасики", "exclusive": True, "members": set()}}
     del router
     _recent(w)
     return w

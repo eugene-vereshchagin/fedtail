@@ -38,6 +38,11 @@ def make_sources(api, me_id):
     }
 
 
+def list_source(api, list_id):
+    name = f"list:{list_id}"
+    return Source(name, lambda **kw: api.list_timeline(list_id, **kw), _status_entry)
+
+
 def _entries(source, page):
     return [e for e in (source.entry(raw) for raw in page) if e]
 

@@ -46,7 +46,7 @@ class Notifier(QObject):
             return
         if self.win.isActiveWindow() and not self.cfg["when_focused"]:
             return
-        for note in notifytext.build(items, self.cfg["privacy"]):
+        for note in notifytext.build(items, self.cfg["privacy"], self.win.lane_title):
             self._show(note)
 
     def _show(self, note):

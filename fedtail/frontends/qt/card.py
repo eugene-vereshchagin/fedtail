@@ -450,6 +450,10 @@ class PostRow(QWidget):
         if sid:
             menu.addAction(_("copy_id", id="#" + sid),
                            lambda s=sid: QGuiApplication.clipboard().setText("#" + s))
+        author = real(st)["account"]
+        if self.ctx.fill_list_menu is not None and author["id"] != self.ctx.me_id:
+            lists = menu.addMenu(_("add_to_list"))
+            lists.aboutToShow.connect(lambda m=lists, a=author: self.ctx.fill_list_menu(m, a))
         if self.ctx.subscribed is not None:
             menu.addSeparator()
             on = self.ctx.subscribed(st)
@@ -460,6 +464,14 @@ class PostRow(QWidget):
             menu.addSeparator()
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
         b.setMenu(menu)
+        # the same menu on a right click anywhere on the card
+        self.card.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        try:
+            self.card.customContextMenuRequested.disconnect()
+        except (RuntimeError, TypeError):
+            pass
+        self.card.customContextMenuRequested.connect(
+            lambda pos, m=menu: m.exec(self.card.mapToGlobal(pos)))
         b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         return b
 

@@ -127,6 +127,14 @@ threads you comment in automatically; any other thread — from a post's ⋯ men
 bring the thread back. Settings are in `[subs]` (how often to check, when a quiet thread is
 dropped, what to follow automatically).
 
+## Lists
+
+Your server's lists (Mastodon, GoToSocial) appear as lanes in a block of their own under the
+main ones. Right-click a post (or its ⋯ menu) → "Add to list" ticks its author into any list
+or a new one; right-click a list for rename, delete and **exclusive**. Whoever is in an
+exclusive list is gone from People and Bots and shows up only there — sort the bots into
+"Memes", "News" and the rest. `[lists]` in the config.
+
 ## Your profile
 
 Click your avatar or name in the sidebar: your profile opens in a tab, with post and follower

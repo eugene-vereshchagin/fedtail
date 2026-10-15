@@ -19,6 +19,10 @@
 - App icon; `--install-desktop` adds a menu entry with it.
 - Pictures by drag and drop (compose or main window) and `Ctrl+V`; thumbnails in compose;
   the content warning field is hidden behind a button.
+- Lists as lanes in a block of their own; "Add to list" from a post's menu or a right click;
+  create, rename, delete, exclusive (hidden from People and Bots).
+- A right click on a post opens its menu.
+- Pictures that fail to load fall back to the preview, then say so.
 - Thread subscriptions like on Point: a "Subscriptions" lane with new comments in followed
   threads; own posts and threads you comment in are followed automatically; follow/unfollow
   from the ⋯ menu or the thread header; `[subs]` settings.

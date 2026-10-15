@@ -17,6 +17,7 @@ worker threads (see events.py):
 
 import logging
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from . import auth, lanes, sources, subs, threads
@@ -47,6 +48,10 @@ class Core:
         self.me = None
         self.caps = Capabilities()
         self.sources = {}
+        self.lists = []           # [{"id", "title", "exclusive"}] from the server
+        self.list_members = {}    # list id -> {account ids}
+        self._lists_version = 0
+        self._lists_checked = 0.0
         self.lanes = lanes.enabled(cfg)
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
@@ -115,6 +120,11 @@ class Core:
                 caps = Capabilities()
             self.api, self.me, self.caps = api, me, caps
             self.sources = sources.make_sources(api, me["id"])
+            if self.cfg["lists"]["enabled"]:
+                try:
+                    self._refresh_lists()
+                except Exception as e:  # lists are a nicety; the rest must start
+                    log.warning("lists: %s", e)
             self.emit("ready", me)
             return me
         return self.submit(job)
@@ -147,6 +157,12 @@ class Core:
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
             new_by_source = {}
+            if self.cfg["lists"]["enabled"] and time.monotonic() - self._lists_checked > \
+                    self.cfg["lists"]["refresh_minutes"] * 60:
+                try:
+                    self._refresh_lists()
+                except Exception as e:
+                    self.emit("error", f"lists: {e}")
             if "subs" in self.lane_by_name:
                 try:
                     sc = self.cfg["subs"]
@@ -156,6 +172,8 @@ class Core:
                 except Exception as e:
                     self.emit("error", f"subs: {e}")
             for name in lanes.sources_needed(self.lanes):
+                if name not in self.sources:
+                    continue
                 try:
                     new_by_source[name] = sources.catch_up(
                         self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"])
@@ -233,7 +251,8 @@ class Core:
         out = []
         for name, ids in per_lane.items():
             lane = self.lane_by_name[name]
-            if name not in wanted or not ids:
+            if not ids or (name not in wanted and
+                           not (lanes.is_list(name) and "lists" in wanted)):
                 continue
             id_set = set(ids)
             sts = [st for item_id, st in self.store.items(lane.source, len(ids) + 50)
@@ -249,7 +268,77 @@ class Core:
         return lanes.LaneContext(self.me["id"] if self.me else "",
                                  tuple(self.cfg["lanes"]["extra_bots"]),
                                  self.cfg["lanes"]["mentions_all"],
-                                 self.cfg["subs"]["replies_to_me"])
+                                 self.cfg["subs"]["replies_to_me"],
+                                 self._hidden_authors())
+
+    # ---- lists ---------------------------------------------------------------------
+    def _hidden_authors(self):
+        if not self.cfg["lists"]["exclusive_hides"]:
+            return frozenset()
+        return frozenset(a for x in self.lists if x.get("exclusive")
+                         for a in self.list_members.get(x["id"], ()))
+
+    def _refresh_lists(self):
+        """Lists and who is in them, from the server; lanes follow."""
+        got = [{"id": x["id"], "title": x.get("title", ""), "exclusive": bool(x.get("exclusive"))}
+               for x in self.api.lists()]
+        members = {x["id"]: {a["id"] for a in self.api.list_accounts(x["id"])} for x in got}
+        self._lists_checked = time.monotonic()
+        if got == self.lists and members == self.list_members:
+            return
+        self._apply_lists(got, members)
+
+    def _apply_lists(self, got, members):
+        self.lists, self.list_members = got, members
+        for x in got:
+            name = f"list:{x['id']}"
+            if name not in self.sources:
+                self.sources[name] = sources.list_source(self.api, x["id"])
+        new_lanes = lanes.enabled(self.cfg, got)
+        self.lane_by_name = {lane.name: lane for lane in new_lanes}
+        self.lanes = new_lanes
+        self._lists_version += 1
+        self.emit("lists_changed", list(got))
+        self.poll_now()
+
+    def lane_title(self, name):
+        """A list's title; None for the built-in lanes (their names are translated)."""
+        if lanes.is_list(name):
+            lid = name[len(lanes.LIST_PREFIX):]
+            return next((x["title"] for x in self.lists if x["id"] == lid), "?")
+        return None
+
+    def lists_of(self, acc_id):
+        return {lid for lid, m in self.list_members.items() if acc_id in m}
+
+    def create_list(self, title, exclusive=False, add=None):
+        def job():
+            x = self.api.create_list(title, exclusive)
+            if add:
+                self.api.list_add(x["id"], add)
+            self._refresh_lists()
+            return x
+        return self.submit(job)
+
+    def update_list(self, list_id, title, exclusive):
+        def job():
+            self.api.update_list(list_id, title, exclusive)
+            self._refresh_lists()
+        return self.submit(job)
+
+    def delete_list(self, list_id):
+        def job():
+            self.api.delete_list(list_id)
+            self._refresh_lists()
+        return self.submit(job)
+
+    def set_in_list(self, list_id, acc_id, on):
+        def job():
+            (self.api.list_add if on else self.api.list_remove)(list_id, acc_id)
+            self._refresh_lists()
+            # who is hidden where changed: every lane may look different now
+            self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+        return self.submit(job)
 
     # ---- thread subscriptions ------------------------------------------------------
     def subscribed(self, status):
@@ -309,13 +398,13 @@ class Core:
         scroll-triggered badge update, and parsing thousands of JSON blobs
         each time is what makes a client feel sticky.
         """
-        lane = self.lane_by_name[name]
-        if not lane.source:
+        lane = self.lane_by_name.get(name)
+        if lane is None or not lane.source:  # a list deleted meanwhile
             return []
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
         only_posts = self.posts_only(name)
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
-               self.me["id"] if self.me else None, only_posts)
+               self.me["id"] if self.me else None, only_posts, self._lists_version)
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]

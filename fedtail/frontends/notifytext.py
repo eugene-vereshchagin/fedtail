@@ -33,12 +33,18 @@ def _who(obj):
     return acc.get("display_name") or acc.get("username") or acc.get("acct", "?")
 
 
+_titles = None
+
+
 def _lane_title(lane):
-    return _("lane_" + lane)
+    return (_titles and _titles(lane)) or _("lane_" + lane)
 
 
-def build(items, privacy="full"):
-    """items: [(lane, status or account)] → one Note per lane."""
+def build(items, privacy="full", titles=None):
+    """items: [(lane, status or account)] → one Note per lane.
+    titles(lane) names lanes that aren't built in (lists)."""
+    global _titles
+    _titles = titles
     groups = {}
     for lane, obj in items:
         groups.setdefault(lane, []).append(obj)

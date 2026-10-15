@@ -82,6 +82,10 @@ class QtSmokeTest(unittest.TestCase):
             self.fail("condition not reached")
         return True
 
+    def bridge_wait(self, fut):
+        self.pump(until=fut.done)
+        return fut.result()
+
     def test_whole_flow(self):
         from fedtail.frontends.qt.compose import Compose
         from fedtail.frontends.qt.feed import LaneWidget, ThreadWidget
@@ -230,6 +234,23 @@ class QtSmokeTest(unittest.TestCase):
         imgs.get("https://x/ok.png", got.append, failed=lambda: failed.append(1))
         self.pump(until=lambda: failed and got)
         self.assertEqual((len(got), len(failed)), (1, 1))
+
+        # lists: a block under the lanes, a lane each, ticks in a post's menu
+        from PySide6.QtWidgets import QMenu
+        self.bridge_wait(self.core.create_list("Друзья", add="B"))
+        self.pump(until=lambda: any(n.startswith("list:") for n in self.win.lane_items))
+        name = next(n for n in self.win.lane_items if n.startswith("list:"))
+        self.win.select_lane(name)
+        self.pump(0.2)
+        self.assertEqual(self.win.lane_widgets[name].header.title.text().strip("= "),
+                         "Друзья")
+        menu = QMenu()
+        self.win.fill_list_menu(menu, {"id": "B"})
+        ticks = [a for a in menu.actions() if a.isCheckable()]
+        self.assertEqual([(a.text(), a.isChecked()) for a in ticks], [("Друзья", True)])
+        self.bridge_wait(self.core.delete_list(name[len("list:"):]))
+        self.pump(until=lambda: name not in self.win.lane_items)
+        self.win.select_lane("people")
 
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog

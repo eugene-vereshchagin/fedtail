@@ -292,12 +292,12 @@ class LaneWidget(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        self.header = _Header(self.theme, self.theme.word("lane_title", _("lane_" + name)))
+        self.header = _Header(self.theme, self.theme.word("lane_title", win.lane_title(name)))
         self.pill = QLabel()
         self.pill.setObjectName("newPill")
         self.header.h.insertWidget(1, self.pill)
         self.only_posts = None
-        if name in POSTS_ONLY_LANES:
+        if name in POSTS_ONLY_LANES or name.startswith("list:"):
             self._posts_only_control()
         self.btn_first = self.header.add(_button(_("to_new"), self.jump_first_unread,
                                                  icon="go-down"))

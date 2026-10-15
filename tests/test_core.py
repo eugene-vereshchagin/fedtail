@@ -224,6 +224,31 @@ class CoreTest(TmpDir):
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
+    def test_lists_are_lanes_and_exclusive_hides(self):
+        core, w = self.make()
+        w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}
+        core.connect().result()
+        self.assertIn("list:L1", core.lane_by_name)
+        self.assertEqual(core.lane_title("list:L1"), "Новости")
+        w.add(status("010", BOB, minute=10), home=True)
+        w.add(status("011", NEWS, minute=11), home=True)
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("list:L1")], ["011"])
+        # in an exclusive list: gone from "bots", only its list shows it
+        self.assertEqual(core.lane_entries("bots"), [])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["010"])
+
+        # a new list with bob in it, from a post's menu
+        x = core.create_list("Друзья", add="B").result()
+        self.assertIn(f"list:{x['id']}", core.lane_by_name)
+        self.assertEqual(core.lists_of("B"), {x["id"]})
+        self.assertIn("010", [st["id"] for _, st in core.lane_entries("people")])  # not exclusive
+        core.set_in_list("L1", "N", False).result()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
+        core.delete_list(x["id"]).result()
+        self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
+        self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
+
     def test_thread_subscriptions(self):
         alice = fakes.acct("A", "alice@example.org")
         core, w = self.make()

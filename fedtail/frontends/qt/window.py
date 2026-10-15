@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -45,7 +46,7 @@ LANE_ICON = {"people": "system-users", "comments": "mail-replied",
              "mentions": "mail-mark-important", "subs": "mail-thread-watch",
              "bots": "applications-system",
              "mine": "document-edit", "local": "go-home",
-             "requests": "list-add-user"}
+             "requests": "list-add-user", "list": "view-list-details"}
 
 
 BADGE_KIND = {"comments": "hot", "bots": "quiet"}
@@ -54,9 +55,10 @@ BADGE_KIND = {"comments": "hot", "bots": "quiet"}
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
 
-    def __init__(self, name, theme, number):
+    def __init__(self, name, theme, number, title=None):
         super().__init__()
         self.name, self.theme = name, theme
+        self.title = title or _("lane_" + name)
         self.current = False
         self.setToolTip(f"Alt+{number}" if number <= 9 else "")
         h = QHBoxLayout(self)
@@ -64,7 +66,7 @@ class LaneItem(QWidget):
         h.setSpacing(10)
         if theme.shape["lane_icons"]:
             icon = QLabel()
-            ic = QIcon.fromTheme(LANE_ICON.get(name, ""))
+            ic = QIcon.fromTheme(LANE_ICON.get(name.split(":")[0], ""))
             if not ic.isNull():
                 icon.setPixmap(ic.pixmap(18, 18))
             icon.setFixedWidth(18)
@@ -83,7 +85,7 @@ class LaneItem(QWidget):
 
     def _render(self):
         key = "lane_selected" if self.current else "lane"
-        self.label.setText(self.theme.word(key, _("lane_" + self.name)))
+        self.label.setText(self.theme.word(key, self.title))
         self.label.setProperty("current", "true" if self.current else "false")
         self.label.style().unpolish(self.label)
         self.label.style().polish(self.label)
@@ -109,6 +111,7 @@ class ViewContext:
     show_images: object
     me_id: str = ""
     subscribed: object = None  # status -> is its thread followed
+    fill_list_menu: object = None  # (QMenu, account) -> fill "add to list"
 
 
 class MainWindow(QMainWindow):
@@ -120,6 +123,8 @@ class MainWindow(QMainWindow):
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
         self.ctx.subscribed = core.subscribed
+        if self.cfg["lists"]["enabled"]:
+            self.ctx.fill_list_menu = self.fill_list_menu
         self.lane_widgets = {}
         self.quitting = False
         bridge.on_error = self.error
@@ -263,6 +268,9 @@ class MainWindow(QMainWindow):
             self.lanes.setItemWidget(it, w)
             self.lane_items[lane.name] = w
         self.lanes.currentItemChanged.connect(self._lane_clicked)
+        self.lanes.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lanes.customContextMenuRequested.connect(self._lane_menu)
+        self._rebuild_lists()
         v.addWidget(self.lanes, 1)
         if self.cfg["ui"]["sidebar_footer"]:
             info = version.info()
@@ -353,8 +361,10 @@ class MainWindow(QMainWindow):
         if self.tray:
             self.tray.setToolTip(tip)
         last = self.core.get_state("lane")
-        row = next((i for i, lane in enumerate(self.core.lanes) if lane.name == last), 0)
-        self.lanes.setCurrentRow(row)
+        if last in self.lane_items:
+            self.select_lane(last)
+        else:
+            self.lanes.setCurrentRow(0)
         self.core.start_polling()
 
     def _connect_failed(self, err):
@@ -370,10 +380,131 @@ class MainWindow(QMainWindow):
         self.start()
 
     # ---- lanes ------------------------------------------------------------------------
+    # ---- lists in the sidebar -----------------------------------------------------------
+    def lane_title(self, name):
+        return self.core.lane_title(name) or _("lane_" + name)
+
+    def _rebuild_lists(self):
+        """The "Lists" block under the built-in lanes: a header with "+", then one
+        row per server list. Rebuilt whenever the lists change."""
+        current = self.lanes.currentItem()
+        current = current.data(Qt.ItemDataRole.UserRole) if current else None
+        self.lanes.blockSignals(True)
+        for i in reversed(range(self.lanes.count())):
+            name = self.lanes.item(i).data(Qt.ItemDataRole.UserRole)
+            if name is None or str(name).startswith("list:"):
+                self.lanes.takeItem(i)
+                self.lane_items.pop(name, None)
+        if self.cfg["lists"]["enabled"]:
+            head = QListWidgetItem()
+            head.setFlags(Qt.ItemFlag.NoItemFlags)
+            box = QWidget()
+            h = QHBoxLayout(box)
+            h.setContentsMargins(10, 14, 4, 2)
+            label = QLabel(self.theme.word("lane", _("lists_header")))
+            label.setObjectName("listsHeader")
+            h.addWidget(label, 1)
+            plus = QToolButton()
+            plus.setObjectName("menu")
+            plus.setText("+")
+            plus.setToolTip(_("list_new"))
+            plus.setCursor(Qt.CursorShape.PointingHandCursor)
+            plus.clicked.connect(lambda: self.new_list())
+            h.addWidget(plus)
+            head.setSizeHint(box.sizeHint())
+            self.lanes.addItem(head)
+            self.lanes.setItemWidget(head, box)
+            for x in self.core.lists:
+                name = f"list:{x['id']}"
+                it = QListWidgetItem()
+                it.setData(Qt.ItemDataRole.UserRole, name)
+                w = LaneItem(name, self.theme, 99, title=x["title"])
+                if x.get("exclusive"):
+                    w.setToolTip(_("list_exclusive_tip"))
+                it.setSizeHint(w.sizeHint())
+                self.lanes.addItem(it)
+                self.lanes.setItemWidget(it, w)
+                self.lane_items[name] = w
+        # lanes of lists that are gone
+        for name in [n for n in self.lane_widgets if n.startswith("list:")
+                     and n not in self.core.lane_by_name]:
+            w = self.lane_widgets.pop(name)
+            self.stack.removeWidget(w)
+            w.deleteLater()
+        self.lanes.blockSignals(False)
+        if current:
+            if current in self.lane_items:
+                self.select_lane(current)
+                self.lane_items[current].set_current(True)
+            elif current.startswith("list:"):
+                self.select_lane("people" if "people" in self.lane_items
+                                 else self.core.lanes[0].name)
+        self.update_badges()
+
+    def _lane_menu(self, pos):
+        it = self.lanes.itemAt(pos)
+        name = it.data(Qt.ItemDataRole.UserRole) if it else None
+        m = QMenu(self)
+        if name and name.startswith("list:"):
+            lid = name[len("list:"):]
+            x = next((x for x in self.core.lists if x["id"] == lid), None)
+            if x is None:
+                return
+            m.addAction(_("list_rename"), lambda: self.rename_list(x))
+            ex = m.addAction(_("list_exclusive"))
+            ex.setCheckable(True)
+            ex.setChecked(bool(x.get("exclusive")))
+            ex.setToolTip(_("list_exclusive_tip"))
+            ex.toggled.connect(lambda on: self.bridge.call(
+                self.core.update_list(x["id"], x["title"], on)))
+            m.addSeparator()
+            m.addAction(_("list_delete"), lambda: self.delete_list(x))
+        elif self.cfg["lists"]["enabled"]:
+            m.addAction(_("list_new"), lambda: self.new_list())
+        else:
+            return
+        m.exec(self.lanes.mapToGlobal(pos))
+
+    def new_list(self, add=None):
+        title, ok = QInputDialog.getText(self, _("list_new").rstrip("…"), _("list_name_q"))
+        if ok and title.strip():
+            self.bridge.call(self.core.create_list(title.strip(), add=add),
+                             ok=lambda x: self.statusBar().showMessage(
+                                 _("list_created", title=x["title"]), 5000))
+
+    def rename_list(self, x):
+        title, ok = QInputDialog.getText(self, _("list_rename"), _("list_name_q"),
+                                         text=x["title"])
+        if ok and title.strip() and title.strip() != x["title"]:
+            self.bridge.call(self.core.update_list(x["id"], title.strip(), x.get("exclusive")))
+
+    def delete_list(self, x):
+        if QMessageBox.question(self, _("list_delete"), _("list_delete_q", title=x["title"])) \
+                == QMessageBox.StandardButton.Yes:
+            self.bridge.call(self.core.delete_list(x["id"]))
+
+    def fill_list_menu(self, menu, account):
+        """"Add to list" submenu of a post: every list, ticked where the author is."""
+        menu.clear()
+        inside = self.core.lists_of(account["id"])
+        for x in self.core.lists:
+            a = menu.addAction(x["title"])
+            a.setCheckable(True)
+            a.setChecked(x["id"] in inside)
+            a.toggled.connect(lambda on, lid=x["id"], acc=account["id"]: self.bridge.call(
+                self.core.set_in_list(lid, acc, on),
+                ok=lambda _r, on=on: self.statusBar().showMessage(
+                    _("list_added" if on else "list_removed"), 4000)))
+        if self.core.lists:
+            menu.addSeparator()
+        menu.addAction(_("list_new"), lambda: self.new_list(add=account["id"]))
+
     def _lane_clicked(self, cur, _prev):
         if not cur or not self.core.me:
             return
         name = cur.data(Qt.ItemDataRole.UserRole)
+        if name is None:
+            return
         w = self.lane_widgets.get(name)
         if w is None:
             w = RequestsWidget(self) if name == "requests" else LaneWidget(self, name)
@@ -383,7 +514,7 @@ class MainWindow(QMainWindow):
                 w.refresh()
         self.stack.setCurrentWidget(w)
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
-        self.tabs.setTabText(self.tabs.indexOf(self.stack), _("lane_" + name))
+        self.tabs.setTabText(self.tabs.indexOf(self.stack), self.lane_title(name))
         self.core.set_state("lane", name)
         for lane_name, item in self.lane_items.items():
             item.set_current(lane_name == name)
@@ -443,6 +574,8 @@ class MainWindow(QMainWindow):
                 if isinstance(w, AccountWidget) and w.mine:
                     w.reload_account()
             self.statusBar().showMessage(_("profile_saved"), 5000)
+        elif name == "lists_changed":
+            self._rebuild_lists()
         elif name == "subs_changed":
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget):

@@ -83,6 +83,9 @@ class Api:
     def delete(self, path):
         return self._req("DELETE", path)
 
+    def put(self, path, data=None):
+        return self._req("PUT", path, data=data)
+
     def patch(self, path, data=None, files=None):
         return self._req("PATCH", path, data=data, files=files)
 
@@ -184,6 +187,35 @@ class Api:
 
     def follow_requests(self):
         return self.get("/api/v1/follow_requests", {"limit": 80})
+
+    # ---- lists --------------------------------------------------------------
+    def lists(self):
+        return self.get("/api/v1/lists") or []
+
+    def list_timeline(self, list_id, limit=40, max_id=None, min_id=None):
+        return self.get(f"/api/v1/timelines/list/{list_id}", self._page(limit, max_id, min_id))
+
+    def list_accounts(self, list_id):
+        # limit=0: everyone at once (Mastodon and GoToSocial both understand it)
+        return self.get(f"/api/v1/lists/{list_id}/accounts", {"limit": 0}) or []
+
+    def create_list(self, title, exclusive=False):
+        return self.post("/api/v1/lists", data={"title": title,
+                                                "exclusive": "true" if exclusive else "false"})
+
+    def update_list(self, list_id, title, exclusive):
+        return self.put(f"/api/v1/lists/{list_id}",
+                        data={"title": title, "exclusive": "true" if exclusive else "false"})
+
+    def delete_list(self, list_id):
+        return self.delete(f"/api/v1/lists/{list_id}")
+
+    def list_add(self, list_id, acc_id):
+        return self.post(f"/api/v1/lists/{list_id}/accounts", data={"account_ids[]": [acc_id]})
+
+    def list_remove(self, list_id, acc_id):
+        return self._req("DELETE", f"/api/v1/lists/{list_id}/accounts",
+                         data={"account_ids[]": [acc_id]})
 
     # ---- writing ------------------------------------------------------------
     def upload_media(self, path, description=""):

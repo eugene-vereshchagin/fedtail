@@ -22,6 +22,7 @@ class LaneContext:
     extra_bots: tuple
     mentions_all: bool = False
     subs_replies_to_me: bool = False
+    hidden: frozenset = frozenset()  # authors in exclusive lists: only their list shows them
 
 
 def _all(st, ctx):
@@ -29,11 +30,11 @@ def _all(st, ctx):
 
 
 def _people(st, ctx):
-    return not is_bot(st["account"], ctx.extra_bots)
+    return st["account"]["id"] not in ctx.hidden and not is_bot(st["account"], ctx.extra_bots)
 
 
 def _bots(st, ctx):
-    return is_bot(st["account"], ctx.extra_bots)
+    return st["account"]["id"] not in ctx.hidden and is_bot(st["account"], ctx.extra_bots)
 
 
 def _comments(st, ctx):
@@ -61,8 +62,24 @@ LANES = {
 }
 
 
-def enabled(cfg):
-    return [LANES[n] for n in cfg["lanes"]["enabled"]]
+LIST_PREFIX = "list:"
+
+
+def list_lane(list_id):
+    """A server-side list (Mastodon/GoToSocial) shown as a lane of its own."""
+    name = LIST_PREFIX + str(list_id)
+    return Lane(name, name, _all)
+
+
+def is_list(name):
+    return name.startswith(LIST_PREFIX)
+
+
+def enabled(cfg, lists=()):
+    out = [LANES[n] for n in cfg["lanes"]["enabled"]]
+    if cfg["lists"]["enabled"]:
+        out += [list_lane(x["id"]) for x in lists]
+    return out
 
 
 LOCAL_SOURCES = {"subs"}  # filled by the client itself, not a server stream

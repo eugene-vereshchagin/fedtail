@@ -56,6 +56,11 @@ DEFAULTS = {
         "when_focused": False,
         "backend": "auto",
     },
+    "lists": {
+        "enabled": True,
+        "exclusive_hides": True,
+        "refresh_minutes": 10,
+    },
     "subs": {
         "auto": ["posts", "comments"],
         "interval_minutes": 5,
@@ -85,6 +90,7 @@ SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {
     ("poll", "interval_seconds"): 30,
     ("subs", "interval_minutes"): 1,
+    ("lists", "refresh_minutes"): 1,
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,
@@ -140,7 +146,7 @@ def validate(user):
             cfg[section][key] = val
 
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
-           cfg["notify"]["lanes"] if x not in LANE_NAMES]
+           cfg["notify"]["lanes"] if x not in LANE_NAMES | {"lists"}]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]

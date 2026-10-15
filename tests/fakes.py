@@ -129,6 +129,38 @@ class FakeApi:
     def follow_requests(self):
         return list(self.w.requests)
 
+    # lists: {id: {"id", "title", "exclusive", "members": set()}}
+    def lists(self):
+        return [{"id": i, "title": x["title"], "exclusive": x["exclusive"]}
+                for i, x in self.w.lists.items()]
+
+    def list_timeline(self, list_id, limit=40, max_id=None, min_id=None):
+        members = self.w.lists[list_id]["members"]
+        return _page([s for s in self.w.home if s["account"]["id"] in members],
+                     limit, max_id, min_id)
+
+    def list_accounts(self, list_id):
+        return [{"id": a} for a in sorted(self.w.lists[list_id]["members"])]
+
+    def create_list(self, title, exclusive=False):
+        self.w.seq += 1
+        i = f"L{self.w.seq}"
+        self.w.lists[i] = {"title": title, "exclusive": exclusive, "members": set()}
+        return {"id": i, "title": title, "exclusive": exclusive}
+
+    def update_list(self, list_id, title, exclusive):
+        self.w.lists[list_id].update(title=title, exclusive=exclusive)
+        return {"id": list_id, "title": title, "exclusive": exclusive}
+
+    def delete_list(self, list_id):
+        self.w.lists.pop(list_id)
+
+    def list_add(self, list_id, acc_id):
+        self.w.lists[list_id]["members"].add(acc_id)
+
+    def list_remove(self, list_id, acc_id):
+        self.w.lists[list_id]["members"].discard(acc_id)
+
     def upload_media(self, path, description=""):
         return {"id": "m1", "url": "https://example.test/m1.png"}
 
@@ -171,6 +203,7 @@ class World:
         self.seq = 1000
         self.fail_auth = False
         self.profile = {}
+        self.lists = {}
         self.profile_updates = []
 
     def add(self, st, home=False, mention=False):

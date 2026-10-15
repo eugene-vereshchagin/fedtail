@@ -153,6 +153,7 @@ QListWidget#lanes::item {{ border-radius: {br}px; margin: 1px 0; }}
 QListWidget#lanes::item:selected {{ background: {k('selected')}; }}
 QListWidget#lanes::item:hover:!selected {{ background: {_alpha(self.c['selected'], 110)}; }}
 QLabel#laneName {{ background: transparent; }}
+QLabel#listsHeader {{ color: {k('muted')}; font-weight: 600; background: transparent; }}
 QLabel#laneName[current="true"] {{ font-weight: 600; color: {k('selected_text')}; }}
 QLabel#badge {{ border-radius: 10px; padding: 0 7px; min-height: 20px; max-height: 20px;
     font-size: {round(base_pt * 0.85, 1)}pt;
