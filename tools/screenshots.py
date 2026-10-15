@@ -232,7 +232,10 @@ def main():
     i18n.setup("ru")
     app = QApplication.instance() or QApplication([])
     app.setStyle("Fusion")
+    # offscreen Qt has no desktop integration: tell it where icon themes live
+    QIcon.setThemeSearchPaths(["/usr/share/icons"] + QIcon.themeSearchPaths())
     QIcon.setThemeName("breeze")
+    print("icons:", QIcon.themeName(), "go-home" if QIcon.hasThemeIcon("go-home") else "MISSING")
     run(app, out, "light", BREEZE_LIGHT, "system", {"extras"})
     run(app, out, "dark", BREEZE_DARK, "system", set())
     run(app, out, "terminal", BREEZE_LIGHT, "terminal", set())

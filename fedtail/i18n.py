@@ -27,7 +27,7 @@ _STRINGS = {
         "copy_link": "Скопировать ссылку", "copy_id": "Скопировать {id}",
         "short_id_tip": "Короткий номер поста — для командной строки, как #abc на Point",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
-        "to_new": "К новому", "show_all": "Всё", "new_n": "{n} новых",
+        "to_new": "К новому", "show_all": "Всё", "new_n": ["{n} новое", "{n} новых", "{n} новых"],
         "new_below": "дальше новое", "menu": "Меню", "open_themes": "Открыть папку тем",
         "you_replied": "ты ответил {when}: «{text}»",
         "fav": "В избранное", "unfav": "убрать из избранного", "boost": "Продвинуть",
@@ -36,8 +36,9 @@ _STRINGS = {
         "posts_only": "Только посты", "posts_only_tip": "Скрыть комментарии и ответы",
         "to_first_unread": "↧ к первому новому", "mark_all_read": "✓ всё прочитано",
         "older_up": "▲ раньше", "older_down": "▼ раньше", "no_older": "раньше ничего нет",
-        "unread_n": "новых: {n}", "all_read": "всё прочитано",
-        "thread_loading": "тред…", "thread_info": "тред: пост и ответов — {n}",
+        "unread_n": ["{n} новое", "{n} новых", "{n} новых"], "all_read": "всё прочитано",
+        "thread_loading": "тред…",
+        "thread_info": ["пост и {n} ответ", "пост и {n} ответа", "пост и {n} ответов"],
         "loading": "загружаю…", "load_failed": "не загрузилось: {err}", "refresh": "Обновить",
         "no_requests": "Заявок нет.", "profile": "профиль",
         "approve": "✔ пустить", "reject": "✘ отказать",
@@ -104,7 +105,7 @@ _STRINGS = {
         "copy_link": "Copy link", "copy_id": "Copy {id}",
         "short_id_tip": "Short post number — for the command line, like #abc on Point",
         "unread_tip": "New", "came_from": "you came from here",
-        "to_new": "To new", "show_all": "All", "new_n": "{n} new",
+        "to_new": "To new", "show_all": "All", "new_n": ["{n} new", "{n} new"],
         "new_below": "new below", "menu": "Menu", "open_themes": "Open themes folder",
         "you_replied": "you replied {when}: “{text}”",
         "fav": "Favourite", "unfav": "unfavourite", "boost": "Boost",
@@ -112,8 +113,8 @@ _STRINGS = {
         "posts_only": "Posts only", "posts_only_tip": "Hide replies",
         "to_first_unread": "↧ first unread", "mark_all_read": "✓ mark all read",
         "older_up": "▲ older", "older_down": "▼ older", "no_older": "nothing older",
-        "unread_n": "unread: {n}", "all_read": "all read",
-        "thread_loading": "thread…", "thread_info": "thread: post and {n} replies",
+        "unread_n": ["{n} unread", "{n} unread"], "all_read": "all read",
+        "thread_loading": "thread…", "thread_info": ["post and {n} reply", "post and {n} replies"],
         "loading": "loading…", "load_failed": "failed to load: {err}", "refresh": "Refresh",
         "no_requests": "No follow requests.", "profile": "profile",
         "approve": "✔ accept", "reject": "✘ reject",
@@ -181,8 +182,22 @@ def setup(language="auto"):
     _lang = lang if lang in _STRINGS else "en"
 
 
+def _plural_index(lang, n):
+    n = abs(int(n))
+    if lang == "ru":
+        if n % 10 == 1 and n % 100 != 11:
+            return 0
+        if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+            return 1
+        return 2
+    return 0 if n == 1 else 1
+
+
 def _(key, **kw):
-    s = _STRINGS[_lang].get(key) or _STRINGS["en"].get(key) or key
+    lang = _lang if key in _STRINGS[_lang] else "en"
+    s = _STRINGS[lang].get(key) or key
+    if isinstance(s, list):  # plural forms, chosen by n
+        s = s[min(_plural_index(lang, kw.get("n", 0)), len(s) - 1)]
     return s.format(**kw) if kw else s
 
 

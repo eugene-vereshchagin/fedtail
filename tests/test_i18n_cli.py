@@ -29,9 +29,13 @@ class I18nTest(unittest.TestCase):
     def test_months(self):
         i18n.setup("ru")
         self.assertEqual(len(i18n.months()), 12)
-        self.assertEqual(i18n._("unread_n", n=3), "новых: 3")
+        self.assertEqual(i18n._("new_n", n=1), "1 новое")
+        self.assertEqual(i18n._("new_n", n=3), "3 новых")
+        self.assertEqual(i18n._("thread_info", n=2), "пост и 2 ответа")
+        self.assertEqual(i18n._("thread_info", n=11), "пост и 11 ответов")
+        self.assertEqual(i18n._("thread_info", n=21), "пост и 21 ответ")
         i18n.setup("xx")
-        self.assertEqual(i18n._("unread_n", n=3), "unread: 3")
+        self.assertEqual(i18n._("thread_info", n=1), "post and 1 reply")
 
 
 class CliTest(unittest.TestCase):
