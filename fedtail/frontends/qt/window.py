@@ -569,6 +569,25 @@ class MainWindow(QMainWindow):
             else:
                 self.show_raise()
 
+    def keyPressEvent(self, e):
+        # Esc closes what's on top (the picture viewer and the find bar take it
+        # themselves); the last one takes the whole window off the screen.
+        if e.key() == Qt.Key.Key_Escape and not e.modifiers() and self.cfg["ui"]["esc_hides"]:
+            if self.find_bar.isVisible():
+                self.find_bar.close_bar()
+            else:
+                self.hide_away()
+            return
+        super().keyPressEvent(e)
+
+    def hide_away(self):
+        """Off the screen at once: to the tray if there is one, else minimized."""
+        self.core.set_state("geometry", bytes(self.saveGeometry()).hex())
+        if self.tray:
+            self.hide()
+        else:
+            self.showMinimized()
+
     def closeEvent(self, e):
         self.core.set_state("geometry", bytes(self.saveGeometry()).hex())
         if self.tray and self.cfg["ui"]["close_to_tray"] and not self.quitting:

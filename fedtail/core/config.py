@@ -16,6 +16,7 @@ DEFAULTS = {
         "theme": "system",
         "font_size": 0,
         "close_to_tray": True,
+        "esc_hides": True,
         "expand_cw": True,
         "max_width": 760,
         "image_height": 360,

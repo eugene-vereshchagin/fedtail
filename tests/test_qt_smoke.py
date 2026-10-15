@@ -194,6 +194,19 @@ class QtSmokeTest(unittest.TestCase):
         dlg.reject()
         self.assertFalse(dlg.isVisible())
 
+        # Esc: first the find bar, then the whole window goes off the screen
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+        self.win.find_bar.open()
+        QTest.keyClick(self.win, Qt.Key.Key_Escape)
+        self.assertFalse(self.win.find_bar.isVisible())
+        self.assertTrue(self.win.isVisible() and not self.win.isMinimized())
+        QTest.keyClick(self.win, Qt.Key.Key_Escape)
+        self.pump(0.1)
+        self.assertTrue(not self.win.isVisible() or self.win.isMinimized())
+        self.win.showNormal()
+        self.pump(0.1)
+
         # a thread can be followed from its header
         self.win.on_link("fedtail:thread/013")
         thread = self.win.tabs.currentWidget()
