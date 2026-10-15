@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -35,7 +35,6 @@ class Compose(QDialog):
         self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None)
         self.sent = False
         self.setWindowTitle(_("compose_reply") if reply_to else _("compose_new"))
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         lay = QVBoxLayout(self)
 
         if self.reply_to:
@@ -65,7 +64,7 @@ class Compose(QDialog):
         for v in VISIBILITIES:
             self.vis.addItem(_("vis_" + v), v)
         row.addWidget(self.vis)
-        add = QPushButton(_("attach"))
+        add = QPushButton(QIcon.fromTheme("mail-attachment"), _("attach"))
         add.clicked.connect(self.attach)
         row.addWidget(add)
         rm = QPushButton(_("detach"))
@@ -76,7 +75,7 @@ class Compose(QDialog):
         row.addWidget(self.counter)
         close_btn = QPushButton(_("close"))
         close_btn.setToolTip(_("close_tip"))
-        close_btn.clicked.connect(self.close)
+        close_btn.clicked.connect(self.reject)
         row.addWidget(close_btn)
         self.discard_btn = QPushButton(_("discard"))
         self.discard_btn.clicked.connect(self.discard)
@@ -153,7 +152,7 @@ class Compose(QDialog):
                 == QMessageBox.StandardButton.Yes:
             self.core.delete_draft(self.key)
             self.sent = True  # nothing to keep
-            self.close()
+            self._leave()
 
     # ---- media --------------------------------------------------------------------
     def _media_list(self):
@@ -228,28 +227,28 @@ class Compose(QDialog):
             self.core.delete_draft(self.key)
             self.win.after_post(st, self.reply_to)
         finally:
-            self.close()
+            self._leave()
 
     def _failed(self, err):
         self.send_btn.setEnabled(True)
         self.send_btn.setText(_("send"))
         QMessageBox.warning(self, _("send_failed"), _("send_failed_text", err=err))
 
-    def closeEvent(self, e):
-        if not self.send_btn.isEnabled() and not self.sent:
-            # still sending: the core will drop the draft when the post is out
-            self.hint.setText(_("sending"))
-            super().closeEvent(e)
-            return
-        if not self.sent:
+    # Every way out (Esc, the window's X, Close, after sending) goes through
+    # reject(): QDialog.closeEvent itself calls reject(), so reject() must
+    # never call close() again — that loop is what kept the window stuck.
+    def reject(self):
+        if not self.sent and self.send_btn.isEnabled():
             if self.core.cfg["post"]["drafts_autosave"]:
                 self.save_draft()
             elif self._snapshot() != self.initial and self.text.toPlainText().strip():
                 if QMessageBox.question(self, _("discard_q_title"), _("discard_q")) \
                         != QMessageBox.StandardButton.Yes:
-                    e.ignore()
                     return
-        super().closeEvent(e)
+        # still sending? fine: the core drops the draft once the post is out
+        self._leave()
 
-    def reject(self):  # Esc
-        self.close()
+    def _leave(self):
+        self._autosave.stop()
+        super().reject()  # hides the dialog
+        self.deleteLater()

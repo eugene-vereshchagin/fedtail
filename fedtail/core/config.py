@@ -19,6 +19,8 @@ DEFAULTS = {
         "notifications": True,
         "expand_cw": False,
         "max_width": 760,
+        "image_height": 360,
+        "image_viewer": "internal",
     },
     "feed": {
         "order": "oldest_first",
@@ -48,6 +50,7 @@ CHOICES = {
     ("ui", "frontend"): {"qt"},
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "theme"): {"system", "terminal"},
+    ("ui", "image_viewer"): {"internal", "browser"},
     ("feed", "order"): {"oldest_first", "newest_first"},
     ("feed", "start_at"): {"first_unread", "newest"},
     ("feed", "on_new"): {"keep_position", "jump_to_newest"},
@@ -62,6 +65,7 @@ MINIMUM = {
     ("feed", "render_limit"): 20,
     ("ui", "font_size"): 0,
     ("ui", "max_width"): 0,
+    ("ui", "image_height"): 80,
 }
 
 

@@ -238,29 +238,56 @@ class PostRow(QWidget):
         grid = QGridLayout(box)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setSpacing(6)
-        single = len(atts) == 1
-        for i, m in enumerate(atts):
-            cell = (i // 3, i % 3)
+        visual = [m for m in atts if m.get("type") in ("image", "gifv", "video")
+                  and (m.get("preview_url") or m.get("url"))]
+        single = len(visual) == 1
+        big_h = self.ctx.cfg["ui"]["image_height"]
+        big_w = max(200, (self.ctx.cfg["ui"]["max_width"] or 900) - 60)
+        pos = 0
+        for m in atts:
             full = m.get("url") or m.get("remote_url") or ""
-            if m.get("type") in ("image", "gifv") and m.get("preview_url"):
-                lab = ClickLabel("🖼")
+            if m in visual:
+                cell = (pos // 3, pos % 3)
+                pos += 1
+                lab = ClickLabel("…")
                 lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 lab.setToolTip(m.get("description") or "")
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
+                lab.setObjectName("media")
                 # reserve the final size now, so loading never shifts the text below
-                small = (m.get("meta") or {}).get("small") or {}
-                tw, th = _thumb_box(small.get("width"), small.get("height"),
-                                    *((THUMB_H, THUMB_MAX_W) if single else (140, 210)))
+                w, h = _dims(m)
+                tw, th = _thumb_box(w, h, *((big_h, big_w) if single else (150, 230)))
                 lab.setFixedSize(tw, th)
-                lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
-                self.ctx.images.get(m["preview_url"],
-                                    lambda pm, w=lab, tw=tw, th=th: w.setPixmap(_fit(pm, tw, th)))
+                if m.get("type") == "image":
+                    idx = [x for x in visual if x.get("type") == "image"].index(m)
+                    lab.clicked.connect(lambda i=idx: self.ctx.show_images(
+                        [x for x in visual if x.get("type") == "image"], i))
+                    # a single big picture deserves the full file, a grid tile the preview
+                    src = full if single and full else m.get("preview_url") or full
+                else:  # gifv / video: still frame here, playback in the browser
+                    lab.setToolTip(_("media_" + m["type"]) + " ▶ " + (m.get("description") or ""))
+                    lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
+                    src = m.get("preview_url")
+                if src:
+                    self.ctx.images.get(
+                        src, lambda pm, w=lab, tw=tw, th=th: w.setPixmap(_fit(pm, tw, th)))
                 grid.addWidget(lab, *cell)
             else:
                 kind = _("media_" + (m.get("type") or "unknown"))
-                grid.addWidget(self._label(f'<a href="{esc(full)}">[{kind}]</a>'), *cell)
+                grid.addWidget(self._label(f'<a href="{esc(full)}">[{kind}]</a>'),
+                               pos // 3, pos % 3)
+                pos += 1
         grid.setColumnStretch(3, 1)
         return box
+
+
+def _dims(m):
+    meta = m.get("meta") or {}
+    for k in ("original", "small"):
+        d = meta.get(k) or {}
+        if d.get("width") and d.get("height"):
+            return d["width"], d["height"]
+    return None, None
 
 
 def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):

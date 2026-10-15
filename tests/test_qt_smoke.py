@@ -59,7 +59,7 @@ class QtSmokeTest(unittest.TestCase):
         self.bridge = Bridge(self.core)
         self.theme = themes.apply(self.app, cfg)
         self.win = MainWindow(self.core, self.bridge, self.theme)
-        self.win.images.get = lambda url, cb: None  # no network in tests
+        self.win.images.get = lambda url, cb, *a: None  # no network in tests
         self.win.show()
 
     def tearDown(self):
@@ -120,18 +120,48 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: self.core.unread_count("people") == 0)
 
         # reply with a draft that survives closing the window
+        # (the dialogs are really shown: a hidden QDialog closes differently,
+        #  which is how "Sending…" got stuck on screen once)
         dlg = Compose(self.win, self.core.store.get_status("013"))
+        dlg.show()
         self.assertTrue(dlg.text.toPlainText().startswith("@bob@mastodon.social"))
         self.assertEqual(dlg.vis.currentData(), "private")
         dlg.text.setPlainText("@bob@mastodon.social ага")
-        dlg.close()
+        dlg.close()  # the window's X
+        self.assertFalse(dlg.isVisible())
         self.assertEqual(self.core.get_draft("reply:013")["text"], "@bob@mastodon.social ага")
         dlg = Compose(self.win, self.core.store.get_status("013"))
+        dlg.show()
         self.assertEqual(dlg.text.toPlainText(), "@bob@mastodon.social ага")
         dlg.send()
         self.pump(until=lambda: self.world.posted)
+        self.pump(until=lambda: not dlg.isVisible())
         self.pump(until=lambda: self.core.get_draft("reply:013") is None)
         self.assertEqual(self.world.posted[-1][2], "013")
+
+        # a new post: the dialog closes and the post opens as a thread
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.text.setPlainText("новый пост")
+        dlg.send()
+        self.pump(until=lambda: not dlg.isVisible())
+        self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
+
+        # Esc closes too
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.reject()
+        self.assertFalse(dlg.isVisible())
+
+        # pictures open in our own viewer
+        from fedtail.frontends.qt.viewer import ImageViewer
+        pic = self.core.store.get_status("013")["media_attachments"]
+        self.win.show_images(pic, 0)
+        viewers = [w for w in self.app.topLevelWidgets()
+                   if isinstance(w, ImageViewer) and w.isVisible()]
+        self.assertEqual(len(viewers), 1)
+        viewers[0].accept()
+        self.assertFalse(viewers[0].isVisible())
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

@@ -12,6 +12,9 @@ from PySide6.QtGui import QImage, QPixmap
 
 from ...core.api import USER_AGENT
 
+FEED_SIDE = 1200
+MEM_LIMIT = 600
+
 
 class Images:
     def __init__(self, core, bridge):
@@ -25,41 +28,45 @@ class Images:
         self.http = requests.Session()
         self.http.headers["User-Agent"] = USER_AGENT
 
-    def _download(self, url):
+    def _download(self, url, max_side):
         p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
         if p.exists():
             data = p.read_bytes()
         else:
-            r = self.http.get(url, timeout=30)
+            r = self.http.get(url, timeout=60)
             r.raise_for_status()
             data = r.content
             p.write_bytes(data)
         img = QImage.fromData(data)  # QImage is fine outside the GUI thread
-        if not img.isNull() and img.width() > 1200:
-            img = img.scaledToWidth(1200, Qt.TransformationMode.SmoothTransformation)
+        if not img.isNull() and max(img.width(), img.height()) > max_side:
+            img = img.scaled(max_side, max_side, Qt.AspectRatioMode.KeepAspectRatio,
+                             Qt.TransformationMode.SmoothTransformation)
         return img
 
-    def get(self, url, callback):
+    def get(self, url, callback, max_side=FEED_SIDE):
         """callback(QPixmap) now or later; never called for broken images."""
         if not url:
             return
-        if url in self.mem:
-            callback(self.mem[url])
+        key = (url, max_side)
+        if key in self.mem:
+            callback(self.mem[key])
             return
-        if url in self.waiting:
-            self.waiting[url].append(callback)
+        if key in self.waiting:
+            self.waiting[key].append(callback)
             return
-        self.waiting[url] = [callback]
-        self.bridge.call(self.pool.submit(self._download, url),
-                         ok=lambda img, u=url: self._ready(u, img),
-                         fail=lambda _e, u=url: self.waiting.pop(u, None))
+        self.waiting[key] = [callback]
+        self.bridge.call(self.pool.submit(self._download, url, max_side),
+                         ok=lambda img, k=key: self._ready(k, img),
+                         fail=lambda _e, k=key: self.waiting.pop(k, None))
 
-    def _ready(self, url, img):
-        callbacks = self.waiting.pop(url, [])
+    def _ready(self, key, img):
+        callbacks = self.waiting.pop(key, [])
         if img.isNull():
             return
         pm = QPixmap.fromImage(img)
-        self.mem[url] = pm
+        if len(self.mem) > MEM_LIMIT:  # crude, but keeps a long session bounded
+            self.mem.clear()
+        self.mem[key] = pm
         for cb in callbacks:
             try:
                 cb(pm)

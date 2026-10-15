@@ -26,9 +26,13 @@ from .compose import Compose
 from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
 from .images import Images
 from .login import LoginDialog
+from .viewer import ImageViewer
 
-LANE_ICON = {"people": "👥", "comments": "💬", "mentions": "@", "bots": "🤖",
-             "mine": "📝", "local": "🏠", "requests": "🚪"}
+# icons from the desktop theme (Breeze names); emoji are missing from many fonts
+LANE_ICON = {"people": "system-users", "comments": "mail-replied",
+             "mentions": "mail-mark-important", "bots": "applications-system",
+             "mine": "document-edit", "local": "go-home",
+             "requests": "list-add-user"}
 
 
 @dataclass
@@ -39,6 +43,7 @@ class ViewContext:
     images: Images
     on_link: object
     open_url: object
+    show_images: object
     me_id: str = ""
 
 
@@ -48,7 +53,8 @@ class MainWindow(QMainWindow):
         self.core, self.bridge, self.theme = core, bridge, theme
         self.cfg = core.cfg
         self.images = Images(core, bridge)
-        self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url)
+        self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
+                               self.show_images)
         self.lane_widgets = {}
         self.quitting = False
         bridge.on_error = self.error
@@ -74,7 +80,7 @@ class MainWindow(QMainWindow):
         self.sidebar.setMinimumWidth(170)
         self.sidebar.setMaximumWidth(280)
         for lane in self.core.lanes:
-            it = QListWidgetItem()
+            it = QListWidgetItem(QIcon.fromTheme(LANE_ICON.get(lane.name, "")), "")
             it.setData(Qt.ItemDataRole.UserRole, lane.name)
             self.sidebar.addItem(it)
         self.sidebar.currentItemChanged.connect(self._lane_clicked)
@@ -213,7 +219,7 @@ class MainWindow(QMainWindow):
             if name in ("comments", "mentions", "requests"):
                 total += n
             badge = f"  ({n})" if n else ""
-            it.setText(f"{LANE_ICON.get(name, '')}  {_('lane_' + name)}{badge}")
+            it.setText(f"{_('lane_' + name)}{badge}")
             f = it.font()
             f.setBold(bool(n))
             it.setFont(f)
@@ -356,6 +362,15 @@ class MainWindow(QMainWindow):
                                     _("delete_q", text=snippet(st, 200))) \
                     == QMessageBox.StandardButton.Yes:
                 self.bridge.call(self.core.delete(st))
+
+    def show_images(self, media, index):
+        if self.cfg["ui"]["image_viewer"] == "browser":
+            m = media[index]
+            self.open_url(m.get("url") or m.get("remote_url"))
+            return
+        v = ImageViewer(self, self.ctx, media, index)
+        v.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        v.show()
 
     def answer_follow(self, acc_id, approve):
         self.bridge.call(self.core.answer_follow(acc_id, approve))
