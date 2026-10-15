@@ -229,6 +229,43 @@ class CoreTest(TmpDir):
         core.favourite(first[0][1]).result()
         self.assertTrue(core.lane_entries("people")[0][1]["favourited"])
 
+    def test_my_replies_are_found(self):
+        core, w = self.make()
+        core.connect().result()
+        mine = w.add(status("040", ME, minute=1), home=True)
+        c1 = w.add(status("041", BOB, mine["id"], "ME", minute=2), mention=True)
+        c2 = w.add(status("042", BOB, mine["id"], "ME", minute=3), mention=True)
+        core.poll_once()
+        # I answered c1 long ago, in another client: only the server knows
+        old = status("043", ME, c1["id"], "B", minute=4, text="ответ")
+        w.statuses[old["id"]] = old
+        c1["replies_count"] = 1
+        self.assertEqual(core.my_replies([c1, c2]), {})
+        core.check_my_replies([c1, c2])
+        core.bg.submit(lambda: None).result()  # wait for the background check
+        self.assertEqual([r["id"] for r in core.my_replies([c1])["041"]], ["043"])
+        self.assertIn("041", core.store.read_set(["041"]))  # answered → read
+        self.assertNotIn("042", core.store.read_set(["042"]))
+        # replying from fedtail marks the comment read and is found at once
+        core.post("ага", "private", reply_to="042").result()
+        self.assertIn("042", core.store.read_set(["042"]))
+        self.assertIn("042", core.my_replies([c2]))
+
+    def test_migration_from_v1(self):
+        import json as _json
+        import sqlite3 as _sq
+        db = self.tmp / "old.db"
+        con = _sq.connect(db)
+        con.executescript("CREATE TABLE statuses (id TEXT PRIMARY KEY, data TEXT NOT NULL, "
+                          "created_at TEXT NOT NULL);")
+        st = status("1", ME, "p", "B")
+        con.execute("INSERT INTO statuses VALUES (?, ?, ?)", ("1", _json.dumps(st), "x"))
+        con.commit()
+        con.close()
+        s = Store(db)
+        self.assertEqual(list(s.replies_by(["p"], "ME")), ["p"])
+        s.close()
+
     def test_first_run_mark_read(self):
         core, w = self.make(feed={"first_run_mark_read": True})
         w.add(status("001", BOB, minute=1), home=True)

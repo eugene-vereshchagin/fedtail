@@ -164,23 +164,54 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.1)
         self.assertIn("013", [r.status_id for r in people.view.rows.values()])
 
-        # pictures open in our own viewer
-        from fedtail.frontends.qt.viewer import ImageViewer
+        # pictures open over the main window, fitted to it
+        from PySide6.QtGui import QPixmap
+
+        from fedtail.frontends.qt.viewer import ImageOverlay
         pic = self.core.store.get_status("013")["media_attachments"]
         self.win.show_images(pic, 0)
-        viewers = [w for w in self.app.topLevelWidgets()
-                   if isinstance(w, ImageViewer) and w.isVisible()]
-        self.assertEqual(len(viewers), 1)
-        from PySide6.QtGui import QPixmap
-        pm = QPixmap(3000, 2000)
-        viewers[0].canvas.set_pixmap(pm)
-        r = viewers[0].canvas._target()  # a huge picture is fitted into the window
-        self.assertLessEqual(r.width(), viewers[0].canvas.width() + 1)
-        self.assertLessEqual(r.height(), viewers[0].canvas.height() + 1)
-        viewers[0].canvas.toggle_actual()
-        self.assertEqual(viewers[0].canvas._target().width(), 3000)
-        viewers[0].accept()
-        self.assertFalse(viewers[0].isVisible())
+        ov = self.win.findChild(ImageOverlay)
+        self.assertIsNotNone(ov)
+        self.assertEqual(ov.geometry(), self.win.rect())
+        ov._loaded(0, QPixmap(3000, 2000))
+        r = ov.image_rect()  # a huge picture is fitted into the window
+        self.assertLessEqual(r.width(), self.win.width())
+        self.assertLessEqual(r.height(), self.win.height())
+        ov._loaded(0, QPixmap(200, 100))
+        self.assertEqual(ov.image_rect().width(), 400)  # small ones grow, up to 2x
+        ov.toggle_actual()
+        self.assertEqual(ov.image_rect().width(), 200)
+        ov.close_viewer()
+        self.assertFalse(ov.isVisible())
+
+    def test_lane_opens_where_reading_stopped(self):
+        """All read → stand at the newest; some unread → at the first unread.
+        Long posts make Qt lay out in several passes: the position must survive that."""
+        long_text = "длинный пост " * 120
+        for i in range(60):
+            self.world.local.append(status(f"5{i:02d}", BOB, minute=i % 60, text=long_text))
+            self.world.add(status(f"6{i:02d}", ME, minute=i % 60, text=long_text))
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        local = [st["id"] for _, st in self.core.lane_entries("local")]
+        self.core.mark_read(local)
+        mine = [st["id"] for _, st in self.core.lane_entries("mine")]
+        self.core.mark_read(mine[:-20])  # 20 newest stay unread
+
+        self.win.select_lane("local")
+        view = self.win.lane_widgets["local"].view
+        self.pump(2.5)
+        sb = view.verticalScrollBar()
+        self.assertGreater(sb.maximum(), 0)
+        self.assertEqual(sb.value(), sb.maximum())
+
+        self.win.select_lane("mine")
+        view = self.win.lane_widgets["mine"].view
+        self.pump(2.5)
+        first_unread = view.rows[view.unread_keys()[0]]
+        top = view._top(first_unread) - view.verticalScrollBar().value()
+        self.assertTrue(-20 < top < 40, top)
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

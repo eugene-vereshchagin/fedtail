@@ -9,7 +9,7 @@ import sqlite3
 import threading
 from datetime import UTC, datetime
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS statuses (
@@ -65,8 +65,19 @@ class Store:
         self.db.execute("PRAGMA synchronous=NORMAL")
         with self.lock:
             self.db.executescript(SCHEMA)
-            if self.kv_get("schema") is None:
-                self.kv_set("schema", SCHEMA_VERSION)
+            self._migrate()
+
+    def _migrate(self):
+        """Bring an older state.db up to date in place; never loses data."""
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(statuses)")}
+        if "reply_to" not in cols:  # v2: who answers whom, for "you replied"
+            self.db.execute("ALTER TABLE statuses ADD COLUMN reply_to TEXT")
+            self.db.execute("ALTER TABLE statuses ADD COLUMN author TEXT")
+            self.db.execute(
+                "UPDATE statuses SET reply_to = json_extract(data, '$.in_reply_to_id'), "
+                "author = json_extract(data, '$.account.id')")
+        self.db.execute("CREATE INDEX IF NOT EXISTS statuses_reply_to ON statuses (reply_to)")
+        self.kv_set("schema", SCHEMA_VERSION)
 
     def close(self):
         with self.lock:
@@ -89,12 +100,12 @@ class Store:
     def put_statuses(self, statuses):
         rows = []
         for st in statuses:
-            if st.get("reblog"):
-                rows.append((st["reblog"]["id"], json.dumps(st["reblog"]),
-                             st["reblog"].get("created_at", "")))
-            rows.append((st["id"], json.dumps(st), st.get("created_at", "")))
+            for s in ([st["reblog"]] if st.get("reblog") else []) + [st]:
+                rows.append((s["id"], json.dumps(s), s.get("created_at", ""),
+                             s.get("in_reply_to_id"), (s.get("account") or {}).get("id")))
         with self._tx() as db:
-            db.executemany("INSERT OR REPLACE INTO statuses VALUES (?, ?, ?)", rows)
+            db.executemany("INSERT OR REPLACE INTO statuses (id, data, created_at, reply_to, "
+                           "author) VALUES (?, ?, ?, ?, ?)", rows)
             self.status_version += 1
 
     def get_status(self, sid):
@@ -122,6 +133,20 @@ class Store:
     def mark_missing(self, sid):
         with self.lock:
             self.db.execute("INSERT OR IGNORE INTO missing VALUES (?)", (sid,))
+
+    def replies_by(self, parent_ids, author_id):
+        """{parent id: [replies by author, oldest first]}"""
+        ids = list(parent_ids)
+        out = {}
+        with self.lock:
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                marks = ",".join("?" * len(chunk))
+                q = (f"SELECT reply_to, data FROM statuses WHERE reply_to IN ({marks}) "
+                     f"AND author = ? ORDER BY created_at")
+                for pid, data in self.db.execute(q, chunk + [author_id]):
+                    out.setdefault(pid, []).append(json.loads(data))
+        return out
 
     def missing_set(self, ids):
         ids = list(ids)

@@ -1,71 +1,140 @@
-"""Full-size image viewer.
+"""Image viewer drawn over the main window (like Tuba), not as a separate window.
 
-Fits the window (never upscales). Double-click or Z: 100 % and back; in 100 %
-drag to pan. ←/→/Space: flip. F: full screen. O: open in the browser.
-Esc or a single click: close.
+Fits the window; small pictures are enlarged up to ui.image_upscale times.
+Double-click or Z: 100 % and back, drag to pan. ←/→/Space: flip.
+O: open in the browser. Esc or a click on the dark backdrop: close.
 """
 
-from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QKeySequence, QPainter, QShortcut
-from PySide6.QtWidgets import QDialog, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QFont, QPainter
+from PySide6.QtWidgets import QWidget
 
 from ...i18n import _
 
 FULL_SIDE = 8192
+MARGIN = 24
+CAPTION_H = 44
 
 
-class Canvas(QWidget):
-    """Draws the pixmap scaled to whatever size the window has right now.
-    (A QLabel would instead grow the window to the size of the picture.)"""
-
-    def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
+class ImageOverlay(QWidget):
+    def __init__(self, window, ctx, media, index=0):
+        super().__init__(window)
+        self.win = window
+        self.ctx = ctx
+        self.media = media
+        self.i = index
         self.pm = None
         self.actual = False      # 100 % instead of fit
         self.offset = QPointF()  # pan in 100 % mode
         self._press = None
         self._moved = False
-        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
-        self.setMouseTracking(False)
-        # a single click closes, but only if no double click follows
+        self.upscale = float(ctx.cfg["ui"]["image_upscale"])
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setMouseTracking(True)
+        # a single click closes, unless it turns out to be a double click
         self._click = QTimer(self, singleShot=True)
-        self._click.timeout.connect(viewer.accept)
+        self._click.timeout.connect(self.close_viewer)
+        window.installEventFilter(self)
+        self.setGeometry(window.rect())
+        self.show()
+        self.raise_()
+        self.setFocus()
+        self.load()
 
-    def set_pixmap(self, pm):
-        self.pm = pm
+    # ---- content ------------------------------------------------------------------
+    def url(self):
+        m = self.media[self.i]
+        return m.get("url") or m.get("remote_url") or m.get("preview_url") or ""
+
+    def load(self):
+        self.pm = None
         self.actual = False
         self.offset = QPointF()
+        want = self.i
         self.update()
+        self.ctx.images.get(self.url(), lambda pm, w=want: self._loaded(w, pm), FULL_SIDE)
 
-    def _target(self):
-        w, h = self.width(), self.height()
+    def _loaded(self, index, pm):
+        if index == self.i:
+            self.pm = pm
+            self.update()
+
+    def go(self, step):
+        if len(self.media) > 1:
+            self.i = (self.i + step) % len(self.media)
+            self.load()
+
+    def close_viewer(self):
+        self.win.removeEventFilter(self)
+        self.hide()
+        self.deleteLater()
+
+    # ---- geometry -----------------------------------------------------------------
+    def eventFilter(self, obj, e):
+        if obj is self.win and e.type() == QEvent.Type.Resize:
+            self.setGeometry(self.win.rect())
+        return False
+
+    def _area(self):
+        return QRectF(MARGIN, MARGIN, self.width() - 2 * MARGIN,
+                      self.height() - 2 * MARGIN - CAPTION_H)
+
+    def image_rect(self):
+        area = self._area()
         pw, ph = self.pm.width(), self.pm.height()
         if self.actual:
             scale = 1.0
         else:
-            scale = min(1.0, w / pw, h / ph)
+            scale = min(area.width() / pw, area.height() / ph, self.upscale)
         tw, th = pw * scale, ph * scale
-        x = (w - tw) / 2 + self.offset.x()
-        y = (h - th) / 2 + self.offset.y()
+        x = area.x() + (area.width() - tw) / 2 + self.offset.x()
+        y = area.y() + (area.height() - th) / 2 + self.offset.y()
         return QRectF(x, y, tw, th)
 
+    # ---- painting -------------------------------------------------------------------
     def paintEvent(self, _e):
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor("#000"))
+        p.fillRect(self.rect(), QColor(0, 0, 0, 215))
+        p.setPen(QColor("#ddd"))
         if self.pm is None:
-            p.setPen(QColor("#888"))
-            p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, _("loading"))
-            return
-        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        p.drawPixmap(self._target(), self.pm, QRectF(self.pm.rect()))
+            p.drawText(self._area(), Qt.AlignmentFlag.AlignCenter, _("loading"))
+        else:
+            p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+            p.drawPixmap(self.image_rect(), self.pm, QRectF(self.pm.rect()))
+        m = self.media[self.i]
+        n = f"{self.i + 1} / {len(self.media)}    " if len(self.media) > 1 else ""
+        desc = (m.get("description") or "").replace("\n", " ")
+        cap = QRectF(MARGIN, self.height() - MARGIN - CAPTION_H, self.width() - 2 * MARGIN,
+                     CAPTION_H)
+        p.drawText(cap, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop |
+                   Qt.TextFlag.TextWordWrap, n + desc)
+        f = QFont(self.font())
+        f.setPointSizeF(f.pointSizeF() * 0.85)
+        p.setFont(f)
+        p.setPen(QColor("#888"))
+        p.drawText(cap, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom,
+                   _("viewer_keys"))
+
+    # ---- input ------------------------------------------------------------------------
+    def keyPressEvent(self, e):
+        k = e.key()
+        if k == Qt.Key.Key_Escape:
+            self.close_viewer()
+        elif k in (Qt.Key.Key_Right, Qt.Key.Key_Space, Qt.Key.Key_PageDown):
+            self.go(1)
+        elif k in (Qt.Key.Key_Left, Qt.Key.Key_Backspace, Qt.Key.Key_PageUp):
+            self.go(-1)
+        elif k == Qt.Key.Key_Z:
+            self.toggle_actual()
+        elif k == Qt.Key.Key_O:
+            self.ctx.open_url(self.url())
+        else:
+            super().keyPressEvent(e)
 
     def toggle_actual(self):
         if self.pm is not None:
             self.actual = not self.actual
             self.offset = QPointF()
-            self.setCursor(Qt.CursorShape.OpenHandCursor if self.actual
-                           else Qt.CursorShape.ArrowCursor)
             self.update()
 
     def mousePressEvent(self, e):
@@ -74,79 +143,24 @@ class Canvas(QWidget):
             self._moved = False
 
     def mouseMoveEvent(self, e):
-        if self._press is None or not self.actual:
-            return
-        d = e.position() - self._press
-        if abs(d.x()) + abs(d.y()) > 3:
-            self._moved = True
-        self.offset += d
-        self._press = e.position()
-        self.update()
+        if self._press is not None and self.actual:
+            d = e.position() - self._press
+            if abs(d.x()) + abs(d.y()) > 3:
+                self._moved = True
+            self.offset += d
+            self._press = e.position()
+            self.update()
 
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton and not self._moved:
-            self._click.start(250)
+            on_image = self.pm is not None and self.image_rect().contains(e.position())
+            if not on_image or not self.actual:
+                self._click.start(250)
         self._press = None
 
-    def mouseDoubleClickEvent(self, e):
+    def mouseDoubleClickEvent(self, _e):
         self._click.stop()
         self.toggle_actual()
 
-
-class ImageViewer(QDialog):
-    def __init__(self, parent, ctx, media, index=0):
-        super().__init__(parent)
-        self.ctx = ctx
-        self.media = media
-        self.i = index
-        self.setWindowTitle(_("viewer_title"))
-        self.setStyleSheet("QDialog { background: #000; } QLabel { color: #bbb; }")
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 6)
-        lay.setSpacing(4)
-        self.canvas = Canvas(self)
-        lay.addWidget(self.canvas, 1)
-        self.caption = QLabel()
-        self.caption.setWordWrap(True)
-        self.caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.caption.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        lay.addWidget(self.caption)
-        for key, fn in (("Left", lambda: self.go(-1)), ("Right", lambda: self.go(1)),
-                        ("Space", lambda: self.go(1)), ("Backspace", lambda: self.go(-1)),
-                        ("O", self.open_browser), ("F", self.toggle_full),
-                        ("Z", self.canvas.toggle_actual)):
-            QShortcut(QKeySequence(key), self).activated.connect(fn)
-        screen = (parent.screen() if parent else self.screen()).availableGeometry()
-        self.resize(int(screen.width() * 0.9), int(screen.height() * 0.9))
-        self.move(screen.center() - QPoint(self.width() // 2, self.height() // 2))
-        self.show_current()
-
-    def url(self):
-        m = self.media[self.i]
-        return m.get("url") or m.get("remote_url") or m.get("preview_url") or ""
-
-    def show_current(self):
-        m = self.media[self.i]
-        self.canvas.set_pixmap(None)
-        n = f"{self.i + 1} / {len(self.media)}   " if len(self.media) > 1 else ""
-        self.caption.setText(n + (m.get("description") or "") + "   " + _("viewer_keys"))
-        want = self.i
-        self.ctx.images.get(self.url(), lambda pm, w=want: self._loaded(w, pm), FULL_SIDE)
-
-    def _loaded(self, index, pm):
-        if index == self.i:
-            self.canvas.set_pixmap(pm)
-
-    def go(self, step):
-        if len(self.media) > 1:
-            self.i = (self.i + step) % len(self.media)
-            self.show_current()
-
-    def toggle_full(self):
-        if self.isFullScreen():
-            self.showNormal()
-        else:
-            self.showFullScreen()
-
-    def open_browser(self):
-        self.ctx.open_url(self.url())
+    def wheelEvent(self, e):
+        self.go(-1 if e.angleDelta().y() > 0 else 1)

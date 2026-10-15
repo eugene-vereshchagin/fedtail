@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QApplication
 
+EMOJI_FONTS = ("Noto Color Emoji", "Twemoji", "JoyPixels")
+
 
 @dataclass
 class Theme:
@@ -31,6 +33,8 @@ QFrame#rail {{ background: {self.rail}; }}
 QLabel#ctx {{ background: {self.ctx}; color: {self.muted}; padding: 3px 6px;
               border-left: 2px solid {self.rail}; }}
 QLabel#muted, QLabel#boost, QLabel#actions {{ color: {self.muted}; }}
+QLabel#myreply {{ color: {self.muted}; padding: 2px 6px;
+                 border-left: 2px solid {self.unread}; }}
 QLabel#cw {{ color: {self.muted}; font-style: italic; }}
 QLabel#strip {{ color: {self.muted}; }}
 """
@@ -82,9 +86,12 @@ def apply(app, cfg):
         f.setStyleHint(QFont.StyleHint.Monospace)
         app.setFont(f)
     size = cfg["ui"]["font_size"]
+    f = app.font()
     if size:
-        f = app.font()
         f.setPointSize(size)
-        app.setFont(f)
+    # emoji and flags come from a colour emoji font when the main one lacks them
+    families = f.families() or [f.family()]
+    f.setFamilies([x for x in families if x not in EMOJI_FONTS] + list(EMOJI_FONTS))
+    app.setFont(f)
     app.setStyleSheet(theme.stylesheet())
     return theme

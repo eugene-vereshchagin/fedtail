@@ -99,7 +99,8 @@ class PostRow(QWidget):
         self.spec = spec
         if (old.status is not spec.status and old.status != spec.status) \
                 or _parent_key(old.parent) != _parent_key(spec.parent) \
-                or old.number != spec.number:
+                or old.number != spec.number \
+                or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")):
             self._build()
         self._flags()
 
@@ -201,6 +202,15 @@ class PostRow(QWidget):
             btn.clicked.connect(toggle)
             sync()
         v.addWidget(content)
+        answers = spec.extra.get("my_replies") or []
+        if answers:
+            last = answers[-1]
+            more = f" (+{len(answers) - 1})" if len(answers) > 1 else ""
+            v.addWidget(self._label(link("thread", last["id"],
+                                         "↳ " + _("you_replied", when=when(
+                                             last.get("created_at", ""), months()),
+                                             text=esc(snippet(last, 120))) + more),
+                                    "myreply"))
         v.addWidget(self._label(self._actions_html(st), "actions"))
 
     def _context_html(self, st):
@@ -302,6 +312,10 @@ def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):
 def _fit(pm: QPixmap, w, h):
     return pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
                      Qt.TransformationMode.SmoothTransformation)
+
+
+def _ids(statuses):
+    return [s["id"] for s in statuses or ()]
 
 
 def _parent_key(p):

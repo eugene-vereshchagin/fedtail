@@ -24,6 +24,13 @@ tired of reading scraps of other people's conversations.
   "like every other client" is one line away.
 - **One profile = one account = one window.** `fedtail --profile work` runs another account.
 
+## For Juick and Point.im people
+
+fedtail aims to feel like Point on top of the fediverse: you read the feed in order and never
+lose your place; every comment shows the thread it belongs to; threads are trees numbered
+`/1 /2 …`; private by default. Next on the list: thread subscriptions (like `S #abc` on Point)
+and an XMPP-client-style command line: `#abc text`, `S #abc`, `@user`.
+
 ## Running from source
 
 Debian 13 (trixie) or newer:
@@ -34,6 +41,9 @@ git clone https://github.com/eugene-vereshchagin/fedtail.git
 cd fedtail
 python3 -m fedtail
 ```
+
+Squares instead of emoji and flags mean there is no colour emoji font:
+`sudo apt install fonts-noto-color-emoji`.
 
 Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, then the same.
 

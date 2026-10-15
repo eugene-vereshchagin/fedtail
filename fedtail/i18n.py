@@ -23,6 +23,7 @@ _STRINGS = {
         "ctx_reply": "в ответ {name}: «{text}»",
         "cw_show": "показать", "cw_hide": "скрыть",
         "reply": "ответить", "thread": "тред", "delete": "удалить",
+        "you_replied": "ты ответил {when}: «{text}»",
         # feed
         "posts_only": "Только посты", "posts_only_tip": "Скрыть комментарии и ответы",
         "to_first_unread": "↧ к первому новому", "mark_all_read": "✓ всё прочитано",
@@ -38,8 +39,8 @@ _STRINGS = {
         "text_placeholder": "Пиши.", "text_placeholder_md": "Пиши. Markdown работает.",
         "media_tip": "Двойной клик — подпись к картинке (alt)",
         "viewer_title": "Картинка",
-        "viewer_keys": "← → листать · двойной клик/Z 1:1 · F во весь экран · "
-                       "O в браузере · Esc/клик закрыть",
+        "viewer_keys": "← → или колесо — листать · двойной клик/Z — 1:1 · "
+                       "O — в браузере · Esc/клик — закрыть",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
         "boost_time": "продвинуто {when}",
@@ -89,6 +90,7 @@ _STRINGS = {
         "ctx_reply": "in reply to {name}: “{text}”",
         "cw_show": "show", "cw_hide": "hide",
         "reply": "reply", "thread": "thread", "delete": "delete",
+        "you_replied": "you replied {when}: “{text}”",
         "posts_only": "Posts only", "posts_only_tip": "Hide replies",
         "to_first_unread": "↧ first unread", "mark_all_read": "✓ mark all read",
         "older_up": "▲ older", "older_down": "▼ older", "no_older": "nothing older",
@@ -101,8 +103,9 @@ _STRINGS = {
         "cw_placeholder": "Content warning / summary (optional)",
         "text_placeholder": "Write.", "text_placeholder_md": "Write. Markdown works.",
         "media_tip": "Double-click to add a description (alt text)",
-        "viewer_title": "Image", "viewer_keys": "← → flip · double-click/Z 1:1 · F full screen · "
-                       "O browser · Esc/click close",
+        "viewer_title": "Image",
+        "viewer_keys": "← → or wheel: flip · double-click/Z: 1:1 · "
+                       "O: browser · Esc/click: close",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
         "boost_time": "boosted {when}",

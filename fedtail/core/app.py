@@ -58,6 +58,7 @@ class Core:
         self._poll_lock = threading.Lock()
         self._poller = None
         self._parent_inflight = set()
+        self._replies_inflight = set()
 
     # ---- plumbing ------------------------------------------------------------
     def submit(self, fn, *a, **kw):
@@ -170,6 +171,11 @@ class Core:
                 self.store.mark_read([st["id"] for st in new_statuses])
             elif mine:
                 self.store.mark_read(mine)
+            # a post I replied to (from any client) counts as read
+            answered = [st["in_reply_to_id"] for st in new_statuses
+                        if st["account"]["id"] == self.me["id"] and st.get("in_reply_to_id")]
+            if answered and not first_run:
+                self.mark_read(answered)
             if first_run:
                 self.store.kv_set("initialized", True)
 
@@ -320,6 +326,49 @@ class Core:
                 out[sid] = None
         return out
 
+    def my_replies(self, statuses):
+        """{status id: [my replies to it]} for the given (possibly boosted) statuses."""
+        if not self.me:
+            return {}
+        return self.store.replies_by({real(st)["id"] for st in statuses}, self.me["id"])
+
+    def check_my_replies(self, statuses):
+        """Find my replies the cache doesn't know about yet (older than what the
+        'mine' lane fetched). Only for posts that have replies at all, and each
+        post only once per reply count, so this stays cheap."""
+        want = []
+        for st in statuses:
+            s = real(st)
+            n = s.get("replies_count") or 0
+            if n and s["id"] not in self._replies_inflight and \
+                    self.store.kv_get(f"replies_checked:{s['id']}") != n:
+                self._replies_inflight.add(s["id"])
+                want.append((s["id"], n))
+        if want:
+            self.bg.submit(self._check_my_replies, want)
+
+    def _check_my_replies(self, want):
+        known = self.my_replies([{"id": sid} for sid, _ in want])
+        found = []
+        for sid, n in want:
+            try:
+                if sid not in known:
+                    ctx = self.api.context(sid)
+                    self.store.put_statuses(ctx.get("descendants", []))
+                    mine = [d for d in ctx.get("descendants", [])
+                            if d.get("in_reply_to_id") == sid
+                            and d["account"]["id"] == self.me["id"]]
+                    if mine:
+                        found.append(sid)
+                self.store.kv_set(f"replies_checked:{sid}", n)
+            except Exception:
+                pass  # try again next time
+            finally:
+                self._replies_inflight.discard(sid)
+        if found:
+            self.mark_read(found)  # I answered it, so I have read it
+            self.emit("parents")
+
     def ensure_parents(self, statuses):
         self.bg.submit(self._fetch_parents, list(statuses))
 
@@ -390,7 +439,7 @@ class Core:
                 if draft_key:
                     self.store.delete_draft(draft_key)
                 self.store.put_statuses([st])
-                self.store.mark_read([st["id"]])
+                self.mark_read([st["id"]] + ([reply_to] if reply_to else []))
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()

@@ -54,7 +54,17 @@ class FeedView(QScrollArea):
         self.order = []
         self._seen_timer = QTimer(self, singleShot=True, interval=350)
         self._seen_timer.timeout.connect(self._emit_seen)
-        self.verticalScrollBar().valueChanged.connect(lambda _v: self._seen_timer.start())
+        sb = self.verticalScrollBar()
+        sb.valueChanged.connect(lambda _v: self._seen_timer.start())
+        # Word-wrapped posts get their real height only after Qt lays them out,
+        # sometimes several passes later. So "where to stand" is kept as a target
+        # and re-applied every time the scroll range changes, until the reader
+        # touches the scroll or things have been quiet for a while.
+        self._target = None
+        self._target_timer = QTimer(self, singleShot=True, interval=1500)
+        self._target_timer.timeout.connect(self._drop_target)
+        sb.rangeChanged.connect(lambda *_: self._apply_target())
+        sb.actionTriggered.connect(lambda _a: self._drop_target())
 
     # ---- geometry ---------------------------------------------------------------
     def resizeEvent(self, e):
@@ -80,11 +90,49 @@ class FeedView(QScrollArea):
                 return key, top - v
         return None
 
-    def _restore(self, anchor):
-        if not anchor or anchor[0] not in self.rows:
+    # ---- scroll targets -------------------------------------------------------------
+    def _set_target(self, target):
+        self._target = target
+        self._apply_target()
+        QTimer.singleShot(0, self._apply_target)
+        self._target_timer.start()
+
+    def _drop_target(self):
+        if self._target is not None:
+            self._target = None
+            self._seen_timer.start()
+
+    def _apply_target(self):
+        t = self._target
+        if t is None:
             return
         self._settle()
-        self.verticalScrollBar().setValue(self._top(self.rows[anchor[0]]) - anchor[1])
+        sb = self.verticalScrollBar()
+        kind = t[0]
+        if kind == "end":
+            value = sb.maximum() if t[1] else 0
+        else:
+            row = self.rows.get(t[1])
+            if row is None:
+                self._target = None
+                return
+            top = self._top(row)
+            if kind == "anchor":
+                value = top - t[2]
+            elif t[2] == "bottom":
+                value = top + row.height() - self.viewport().height() + 10
+            else:
+                value = top - 6
+        sb.setValue(max(0, value))
+        self._target_timer.start()  # still settling: keep the target a bit longer
+
+    def wheelEvent(self, e):
+        self._drop_target()
+        super().wheelEvent(e)
+
+    def keyPressEvent(self, e):
+        self._drop_target()
+        super().keyPressEvent(e)
 
     # ---- content ------------------------------------------------------------------
     def set_specs(self, specs, keep_position=True):
@@ -113,34 +161,23 @@ class FeedView(QScrollArea):
                 if relayout:
                     self.col.insertWidget(base + i, row)
         self.order = keys
-        if anchor:
-            self._restore(anchor)
-            QTimer.singleShot(0, lambda a=anchor: self._restore(a))
+        if anchor and anchor[0] in self.rows:
+            # keep the post that was on top exactly where it was
+            if self._target is None or self._target[0] == "anchor":
+                self._set_target(("anchor", anchor[0], anchor[1]))
+            else:
+                self._apply_target()
         self._seen_timer.start()
 
     def clear(self):
         self.set_specs([], keep_position=False)
 
     def scroll_to(self, key, where="top"):
-        def go():
-            row = self.rows.get(key)
-            if not row:
-                return
-            self._settle()
-            top = self._top(row)
-            if where == "bottom":
-                top = top + row.height() - self.viewport().height() + 10
-            self.verticalScrollBar().setValue(max(0, top - 6))
-        go()
-        QTimer.singleShot(0, go)
+        if key in self.rows:
+            self._set_target(("row", key, where))
 
     def scroll_to_end(self, end=True):
-        def go():
-            self._settle()
-            sb = self.verticalScrollBar()
-            sb.setValue(sb.maximum() if end else 0)
-        go()
-        QTimer.singleShot(0, go)
+        self._set_target(("end", end))
 
     def set_unread(self, status_ids, unread=False):
         ids = set(status_ids)
@@ -167,6 +204,8 @@ class FeedView(QScrollArea):
     def _emit_seen(self):
         if not self.isVisible() or not self.window().isActiveWindow():
             return
+        if self._target is not None:
+            return  # still settling: what's on screen now is not what the reader sees
         sb = self.verticalScrollBar()
         vtop, vh = sb.value(), self.viewport().height()
         vbot = vtop + vh
@@ -257,13 +296,18 @@ class LaneWidget(QWidget):
         self.dirty = False
         entries = self.core.lane_entries(self.name)
         unread = self.core.unread_ids(entries)
-        parents = self.core.parents_for([st for _, st in entries])
+        statuses = [st for _, st in entries]
+        parents = self.core.parents_for(statuses)
+        answers = self.core.my_replies(statuses)
         specs, unknown = [], []
         for item_id, st in entries:
             parent = parents.get(st["id"])
             if parent is None and real(st).get("in_reply_to_id"):
                 unknown.append(st)
-            specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread))
+            specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread,
+                                  extra={"my_replies": answers.get(real(st)["id"], [])}))
+        if self.name in ("comments", "mentions"):
+            self.core.check_my_replies(statuses)
         if unknown:
             self.core.ensure_parents(unknown)
         if self.newest_first:

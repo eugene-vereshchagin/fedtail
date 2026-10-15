@@ -21,6 +21,7 @@ DEFAULTS = {
         "max_width": 760,
         "image_height": 360,
         "image_viewer": "internal",
+        "image_upscale": 2,
     },
     "feed": {
         "order": "oldest_first",
@@ -67,6 +68,7 @@ MINIMUM = {
     ("ui", "font_size"): 0,
     ("ui", "max_width"): 0,
     ("ui", "image_height"): 80,
+    ("ui", "image_upscale"): 1,
 }
 
 

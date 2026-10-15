@@ -26,7 +26,7 @@ from .compose import Compose
 from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
 from .images import Images
 from .login import LoginDialog
-from .viewer import ImageViewer
+from .viewer import ImageOverlay
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
 LANE_ICON = {"people": "system-users", "comments": "mail-replied",
@@ -368,9 +368,7 @@ class MainWindow(QMainWindow):
             m = media[index]
             self.open_url(m.get("url") or m.get("remote_url"))
             return
-        v = ImageViewer(self, self.ctx, media, index)
-        v.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        v.show()
+        ImageOverlay(self, self.ctx, media, index)
 
     def answer_follow(self, acc_id, approve):
         self.bridge.call(self.core.answer_follow(acc_id, approve))
