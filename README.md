@@ -4,6 +4,12 @@
 else that speaks the Mastodon API — made for people who remember Juick and Point.im and are
 tired of reading scraps of other people's conversations.
 
+It is for people who are sick of hunting for where a reply came from and what the conversation
+was even about — who get pulled away from work by a toot and come back with no idea what was
+being discussed. So the whole point is giving that context back: every reply shows what it
+answers; under someone's comment you see what you said back; a thread opens as a tree right
+where you came from; a lane remembers where you stopped and never jumps.
+
 [Русская версия](README.ru.md)
 
 > Status: early development (0.1). Works for the author; expect rough edges.
