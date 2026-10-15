@@ -119,6 +119,14 @@ places where you were tagged in someone else's conversation. A reply that also s
 is a reply, so it is not repeated in Mentions — set `lanes.mentions_all = true` if you want
 Mentions to show everything.
 
+**Subscriptions**, like on Point: a server tells you only about replies that mention you, so
+when two people answer each other under your post you never hear of it. fedtail follows
+threads itself and puts what's new in them into "Subscriptions". You follow your own posts and
+threads you comment in automatically; any other thread — from a post's ⋯ menu or the
+"Follow thread" button in its header. Unfollowing is remembered: commenting there again won't
+bring the thread back. Settings are in `[subs]` (how often to check, when a quiet thread is
+dropped, what to follow automatically).
+
 ## Notifications
 
 New comments, mentions and follow requests pop up as KDE notifications; "Open" goes straight to

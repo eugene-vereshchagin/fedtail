@@ -19,6 +19,9 @@
 - App icon; `--install-desktop` adds a menu entry with it.
 - Pictures by drag and drop (compose or main window) and `Ctrl+V`; thumbnails in compose;
   the content warning field is hidden behind a button.
+- Thread subscriptions like on Point: a "Subscriptions" lane with new comments in followed
+  threads; own posts and threads you comment in are followed automatically; follow/unfollow
+  from the ⋯ menu or the thread header; `[subs]` settings.
 - `Ctrl+F`: find in the open lane, thread or profile; `F3` / `Shift+F3`, "3 of 12".
 - Image viewer over the main window; "you replied" under comments; posts-only toggle;
   `--update-config`; Russian plural forms.

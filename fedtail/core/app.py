@@ -19,7 +19,7 @@ import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-from . import auth, lanes, sources, threads
+from . import auth, lanes, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import narrower, real
@@ -147,6 +147,14 @@ class Core:
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
             new_by_source = {}
+            if "subs" in self.lane_by_name:
+                try:
+                    sc = self.cfg["subs"]
+                    new_by_source["subs"] = subs.check(
+                        self.store, self.api, self.me["id"], sc["interval_minutes"],
+                        sc["active_days"], sc["max_threads"])
+                except Exception as e:
+                    self.emit("error", f"subs: {e}")
             for name in lanes.sources_needed(self.lanes):
                 try:
                     new_by_source[name] = sources.catch_up(
@@ -186,6 +194,9 @@ class Core:
                 self.mark_read(answered)
             if first_run:
                 self.store.kv_set("initialized", True)
+            else:
+                self._auto_subscribe([st for st in new_statuses
+                                      if st["account"]["id"] == self.me["id"]])
 
             per_lane = self._split_by_lane(new_by_source)
             if any(per_lane.values()):
@@ -237,7 +248,51 @@ class Core:
     def _ctx(self):
         return lanes.LaneContext(self.me["id"] if self.me else "",
                                  tuple(self.cfg["lanes"]["extra_bots"]),
-                                 self.cfg["lanes"]["mentions_all"])
+                                 self.cfg["lanes"]["mentions_all"],
+                                 self.cfg["subs"]["replies_to_me"])
+
+    # ---- thread subscriptions ------------------------------------------------------
+    def subscribed(self, status):
+        """Is the thread this post is in followed? (Knows only threads it has seen.)"""
+        return self._sub_root(status) is not None
+
+    def subscribe(self, status):
+        def job():
+            root = subs.subscribe(self.store, self.api, status)
+            self.emit("subs_changed", root)
+            return root
+        return self.submit(job)
+
+    def _sub_root(self, status):
+        st = real(status)
+        parent = st.get("in_reply_to_id")
+        return self.store.sub_root_of(st["id"]) or \
+            (parent and self.store.sub_root_of(parent)) or None
+
+    def unsubscribe(self, status):
+        def job():
+            root = self._sub_root(status) or real(status)["id"]
+            subs.unsubscribe(self.store, root)
+            self.emit("subs_changed", root)
+            self.emit("lanes_updated", {"subs": []})
+            return root
+        return self.submit(job)
+
+    def _auto_subscribe(self, my_statuses):
+        """My new posts and comments: follow their threads (flags subs.auto)."""
+        if "subs" not in self.lane_by_name:
+            return
+        want = set(self.cfg["subs"]["auto"])
+        for st in my_statuses:
+            st = real(st)
+            kind = "comments" if st.get("in_reply_to_id") else "posts"
+            if kind not in want or self.subscribed(st):
+                continue
+            try:
+                if subs.subscribe(self.store, self.api, st, auto=True):
+                    self.emit("subs_changed", None)
+            except Exception as e:
+                log.warning("auto-subscribe %s: %s", st.get("id"), e)
 
     # ---- reading ---------------------------------------------------------------
     def posts_only(self, name):
@@ -296,6 +351,8 @@ class Core:
 
     def load_older(self, name):
         lane = self.lane_by_name[name]
+        if lane.source not in self.sources:  # nothing older on a server for this one
+            return self.submit(lambda: 0)
 
         def job():
             got = sources.fetch_older(self.store, self.sources[lane.source],
@@ -460,6 +517,7 @@ class Core:
                     self.store.delete_draft(draft_key)
                 self.store.put_statuses([st])
                 self.mark_read([st["id"]] + ([reply_to] if reply_to else []))
+                self._auto_subscribe([st])
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()

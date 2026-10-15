@@ -35,7 +35,8 @@ DEFAULTS = {
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
-        "enabled": ["people", "comments", "mentions", "bots", "mine", "local", "requests"],
+        "enabled": ["people", "comments", "mentions", "subs", "bots", "mine", "local",
+                    "requests"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,
@@ -48,10 +49,17 @@ DEFAULTS = {
     },
     "notify": {
         "enabled": True,
-        "lanes": ["comments", "mentions", "requests"],
+        "lanes": ["comments", "mentions", "subs", "requests"],
         "privacy": "full",
         "when_focused": False,
         "backend": "auto",
+    },
+    "subs": {
+        "auto": ["posts", "comments"],
+        "interval_minutes": 5,
+        "active_days": 14,
+        "max_threads": 30,
+        "replies_to_me": False,
     },
     "poll": {"interval_seconds": 90},
 }
@@ -70,9 +78,13 @@ CHOICES = {
     ("notify", "backend"): {"auto", "desktop", "tray"},
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
 }
-LANE_NAMES = {"people", "comments", "mentions", "bots", "mine", "local", "requests"}
+LANE_NAMES = {"people", "comments", "mentions", "subs", "bots", "mine", "local", "requests"}
+SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {
     ("poll", "interval_seconds"): 30,
+    ("subs", "interval_minutes"): 1,
+    ("subs", "active_days"): 1,
+    ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,
     ("feed", "catch_up_limit"): 1,
     ("feed", "render_limit"): 20,
@@ -129,6 +141,9 @@ def validate(user):
            cfg["notify"]["lanes"] if x not in LANE_NAMES]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
+    bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
+    if bad_auto:
+        errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")
     if not cfg["lanes"]["enabled"]:
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):

@@ -224,6 +224,53 @@ class CoreTest(TmpDir):
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
+    def test_thread_subscriptions(self):
+        alice = fakes.acct("A", "alice@example.org")
+        core, w = self.make()
+        core.connect().result()
+        core.poll_once()  # first run
+        core.cfg["subs"]["interval_minutes"] = 0  # check every poll here
+
+        # my post: followed by itself; a talk under it reaches me even without @me
+        w.add(status("100", ME, minute=20), home=True)
+        core.poll_once()
+        self.assertTrue(core.subscribed(w.statuses["100"]))
+        w.add(status("101", BOB, "100", "ME", minute=21), mention=True)
+        w.add(status("102", alice, "101", "B", minute=22))  # alice answers bob, no @me
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("comments")], ["101"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("subs")], ["102"])
+        notes = [e for e in self.events if e[0] == "notify"]
+        self.assertIn("102", [s["id"] for lane, s in notes[-1][1] if lane == "subs"])
+        core.poll_once()  # nothing new: nothing twice
+        self.assertEqual(len(core.lane_entries("subs")), 1)
+
+        # leaving the thread empties the lane, and my next comment doesn't bring it back
+        core.unsubscribe(w.statuses["102"]).result()
+        self.assertFalse(core.subscribed(w.statuses["100"]))
+        self.assertEqual(core.lane_entries("subs"), [])
+        w.add(status("103", ME, "102", "A", minute=23), home=True)
+        core.poll_once()
+        self.assertFalse(core.subscribed(w.statuses["100"]))
+
+        # by hand: someone else's thread; only what comes after counts
+        w.add(status("200", BOB, minute=30), home=True)
+        w.add(status("201", alice, "200", "B", minute=31))
+        core.poll_once()
+        core.subscribe(w.statuses["201"]).result()
+        self.assertTrue(core.subscribed(w.statuses["200"]))
+        core.poll_once()
+        self.assertEqual(core.lane_entries("subs"), [])
+        w.add(status("202", alice, "201", "A", minute=32))
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("subs")], ["202"])
+
+        # my comment in a thread follows it (subs.auto = comments)
+        w.add(status("300", BOB, minute=40), home=True)
+        w.add(status("301", ME, "300", "B", minute=41), home=True)
+        core.poll_once()
+        self.assertTrue(core.subscribed(w.statuses["300"]))
+
     def test_lanes_split_and_notify(self):
         core, w = self.make()
         core.connect().result()

@@ -194,6 +194,17 @@ class QtSmokeTest(unittest.TestCase):
         dlg.reject()
         self.assertFalse(dlg.isVisible())
 
+        # a thread can be followed from its header
+        self.win.on_link("fedtail:thread/013")
+        thread = self.win.tabs.currentWidget()
+        self.pump(until=lambda: thread.sub_btn.isEnabled())
+        was = thread.sub_btn.isChecked()
+        thread.sub_btn.click()
+        self.pump(until=lambda: thread.sub_btn.isEnabled() and
+                  thread.sub_btn.isChecked() != was)
+        self.assertEqual(self.core.subscribed(thread.root), not was)
+        self.win.close_tab(self.win.tabs.currentIndex())
+
         # Ctrl+F finds posts in the lane on screen and marks the one it stands on
         self.win.select_lane("people")
         self.pump(0.2)

@@ -450,6 +450,12 @@ class PostRow(QWidget):
         if sid:
             menu.addAction(_("copy_id", id="#" + sid),
                            lambda s=sid: QGuiApplication.clipboard().setText("#" + s))
+        if self.ctx.subscribed is not None:
+            menu.addSeparator()
+            on = self.ctx.subscribed(st)
+            menu.addAction(_("unsub_thread" if on else "sub_thread"),
+                           lambda i=st["id"], on=on:
+                           self.ctx.on_link(f"fedtail:{'unsub' if on else 'sub'}/{i}"))
         if st["account"]["id"] == self.ctx.me_id:
             menu.addSeparator()
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))

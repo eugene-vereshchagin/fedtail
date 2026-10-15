@@ -21,6 +21,7 @@ class LaneContext:
     me_id: str
     extra_bots: tuple
     mentions_all: bool = False
+    subs_replies_to_me: bool = False
 
 
 def _all(st, ctx):
@@ -43,10 +44,16 @@ def _other_mentions(st, ctx):
     return ctx.mentions_all or not is_comment_to_me(real(st), ctx.me_id)
 
 
+def _subs(st, ctx):
+    # replies to me are already in "comments"; here goes the rest of the talk
+    return ctx.subs_replies_to_me or not is_comment_to_me(real(st), ctx.me_id)
+
+
 LANES = {
     "people": Lane("people", "home", _people),
     "comments": Lane("comments", "mentions", _comments, by_status_time=True),
     "mentions": Lane("mentions", "mentions", _other_mentions, by_status_time=True),
+    "subs": Lane("subs", "subs", _subs, by_status_time=True),
     "bots": Lane("bots", "home", _bots),
     "mine": Lane("mine", "mine", _all),
     "local": Lane("local", "local", _all),
@@ -58,5 +65,8 @@ def enabled(cfg):
     return [LANES[n] for n in cfg["lanes"]["enabled"]]
 
 
+LOCAL_SOURCES = {"subs"}  # filled by the client itself, not a server stream
+
+
 def sources_needed(lanes):
-    return sorted({lane.source for lane in lanes if lane.source})
+    return sorted({lane.source for lane in lanes if lane.source} - LOCAL_SOURCES)

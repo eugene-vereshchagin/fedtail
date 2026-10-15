@@ -496,6 +496,11 @@ class ThreadWidget(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
         self.header = _Header(win.theme)
+        self.root = None
+        self.sub_btn = self.header.add(_button(_("sub_thread"), self._toggle_sub,
+                                               icon="mail-thread-watch", tip=_("sub_tip")))
+        self.sub_btn.setCheckable(True)
+        self.sub_btn.setEnabled(False)
         self.header.add(_button("", self.reload, icon="view-refresh", tip=_("refresh")))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
@@ -512,6 +517,26 @@ class ThreadWidget(QWidget):
         self.header.info.setText(_("loading"))
         self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
                              fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
+
+    def update_sub_button(self):
+        if self.root is None:
+            return
+        on = self.core.subscribed(self.root)
+        self.sub_btn.blockSignals(True)
+        self.sub_btn.setChecked(on)
+        self.sub_btn.blockSignals(False)
+        self.sub_btn.setText(_("subscribed") if on else _("sub_thread"))
+        self.sub_btn.setEnabled(True)
+
+    def _toggle_sub(self):
+        if self.root is None:
+            return
+        self.sub_btn.setEnabled(False)
+        on = self.core.subscribed(self.root)
+        job = (self.core.unsubscribe if on else self.core.subscribe)(self.root)
+        self.win.bridge.call(job, ok=lambda _r: self.win.statusBar().showMessage(
+            _("unsubbed" if on else "subbed"), 6000),
+            fail=lambda e: (self.win.error(e), self.update_sub_button()))
 
     def focus_on(self, sid):
         self.focus_id = sid
@@ -532,6 +557,8 @@ class ThreadWidget(QWidget):
                           extra={"short_id": short.get(n.status["id"])}) for n in nodes]
         self.view.set_specs(specs, keep_position=self.loaded)
         root = nodes[0].status
+        self.root = root
+        self.update_sub_button()
         self.title = f'{real(root)["account"]["username"]}: {snippet(root, 30)}'
         self.header.title.setText(snippet(root, 60))
         self.header.info.setText(_("thread_info", n=len(nodes) - 1) +

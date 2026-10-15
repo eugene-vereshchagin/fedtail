@@ -41,7 +41,8 @@ from .viewer import ImageOverlay
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
 LANE_ICON = {"people": "system-users", "comments": "mail-replied",
-             "mentions": "mail-mark-important", "bots": "applications-system",
+             "mentions": "mail-mark-important", "subs": "mail-thread-watch",
+             "bots": "applications-system",
              "mine": "document-edit", "local": "go-home",
              "requests": "list-add-user"}
 
@@ -106,6 +107,7 @@ class ViewContext:
     open_url: object
     show_images: object
     me_id: str = ""
+    subscribed: object = None  # status -> is its thread followed
 
 
 class MainWindow(QMainWindow):
@@ -116,6 +118,7 @@ class MainWindow(QMainWindow):
         self.images = Images(core, bridge)
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
+        self.ctx.subscribed = core.subscribed
         self.lane_widgets = {}
         self.quitting = False
         bridge.on_error = self.error
@@ -357,7 +360,7 @@ class MainWindow(QMainWindow):
                 n = len(self.core.follow_requests)
             else:
                 n = self.core.unread_count(name)
-            if name in ("comments", "mentions", "requests"):
+            if name in ("comments", "mentions", "subs", "requests"):
                 total += n
             item.set_count(n)
         if self.tray:
@@ -392,6 +395,10 @@ class MainWindow(QMainWindow):
                 if hasattr(w, "view"):
                     w.view.remove_status(payload)
             self.statusBar().showMessage(_("deleted"), 4000)
+        elif name == "subs_changed":
+            for w in self.extra_tabs():
+                if isinstance(w, ThreadWidget):
+                    w.update_sub_button()
         elif name == "requests_updated":
             w = self.lane_widgets.get("requests")
             if w:
@@ -494,6 +501,11 @@ class MainWindow(QMainWindow):
         elif action == "open":
             s = real(st)
             self.open_url(s.get("url") or s.get("uri"))
+        elif action in ("sub", "unsub"):
+            sub = action == "sub"
+            self.bridge.call((self.core.subscribe if sub else self.core.unsubscribe)(st),
+                             ok=lambda _r: self.statusBar().showMessage(
+                                 _("subbed" if sub else "unsubbed"), 6000))
         elif action == "delete":
             if QMessageBox.question(self, _("delete_q_title"),
                                     _("delete_q", text=snippet(st, 200))) \

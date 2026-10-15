@@ -42,6 +42,24 @@ CREATE TABLE IF NOT EXISTS aliases (
     n         INTEGER PRIMARY KEY AUTOINCREMENT,
     status_id TEXT NOT NULL UNIQUE
 );
+-- threads followed like on Point: new comments anywhere in them come to "Subscriptions"
+CREATE TABLE IF NOT EXISTS subs (
+    root_id       TEXT PRIMARY KEY,
+    since         TEXT NOT NULL,     -- only comments newer than this are news
+    last_activity TEXT NOT NULL,     -- quiet threads stop being checked after a while
+    checked       TEXT NOT NULL DEFAULT '',
+    auto          INTEGER NOT NULL DEFAULT 0
+);
+-- posts already known in a followed thread
+CREATE TABLE IF NOT EXISTS sub_members (
+    status_id TEXT PRIMARY KEY,
+    root_id   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sub_members_root ON sub_members (root_id);
+-- threads the user left: automatic subscription never brings them back
+CREATE TABLE IF NOT EXISTS unsubs (
+    root_id TEXT PRIMARY KEY
+);
 CREATE TABLE IF NOT EXISTS kv (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -289,6 +307,69 @@ class Store:
                 (source, source, keep))
             if cur.rowcount:
                 self._bump(source)
+
+    # ---- thread subscriptions ----------------------------------------------------
+    def sub_add(self, root_id, since, last_activity, auto, members):
+        with self._tx() as db:
+            if not auto:
+                db.execute("DELETE FROM unsubs WHERE root_id=?", (root_id,))
+            db.execute("INSERT OR IGNORE INTO subs (root_id, since, last_activity, checked, auto)"
+                       " VALUES (?, ?, ?, '', ?)", (root_id, since, last_activity, int(auto)))
+            db.executemany("INSERT OR IGNORE INTO sub_members VALUES (?, ?)",
+                           [(m, root_id) for m in members])
+
+    def sub_remove(self, root_id, remember=True):
+        """Leave a thread: its comments vanish from the lane, and (remember)
+        automatic subscription won't come back to it."""
+        with self._tx() as db:
+            cur = db.execute("DELETE FROM items WHERE source='subs' AND status_id IN "
+                             "(SELECT status_id FROM sub_members WHERE root_id=?)", (root_id,))
+            if cur.rowcount:
+                self._bump("subs")
+            db.execute("DELETE FROM sub_members WHERE root_id=?", (root_id,))
+            db.execute("DELETE FROM subs WHERE root_id=?", (root_id,))
+            if remember:
+                db.execute("INSERT OR IGNORE INTO unsubs VALUES (?)", (root_id,))
+
+    def sub_root_of(self, status_id):
+        """The followed thread a post belongs to, or None."""
+        with self.lock:
+            row = self.db.execute("SELECT root_id FROM subs WHERE root_id=?",
+                                  (status_id,)).fetchone() or \
+                self.db.execute("SELECT m.root_id FROM sub_members m JOIN subs s "
+                                "ON s.root_id = m.root_id WHERE m.status_id=?",
+                                (status_id,)).fetchone()
+        return row[0] if row else None
+
+    def sub_left(self, root_id):
+        with self.lock:
+            return self.db.execute("SELECT 1 FROM unsubs WHERE root_id=?",
+                                   (root_id,)).fetchone() is not None
+
+    def subs_due(self, active_after, checked_before, limit):
+        """Followed threads to look at now: alive lately, longest unchecked first."""
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT root_id, since, last_activity FROM subs WHERE last_activity > ? "
+                "AND checked < ? ORDER BY checked ASC LIMIT ?",
+                (active_after, checked_before, limit)).fetchall()
+        return rows
+
+    def sub_members(self, root_id):
+        with self.lock:
+            return {r[0] for r in self.db.execute(
+                "SELECT status_id FROM sub_members WHERE root_id=?", (root_id,))}
+
+    def sub_checked(self, root_id, checked, last_activity, members):
+        with self._tx() as db:
+            db.execute("UPDATE subs SET checked=?, last_activity=MAX(last_activity, ?) "
+                       "WHERE root_id=?", (checked, last_activity, root_id))
+            db.executemany("INSERT OR IGNORE INTO sub_members VALUES (?, ?)",
+                           [(m, root_id) for m in members])
+
+    def subs_count(self):
+        with self.lock:
+            return self.db.execute("SELECT COUNT(*) FROM subs").fetchone()[0]
 
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):
