@@ -247,8 +247,26 @@ def _alpha(col, a):
     return f"rgba({col.red()},{col.green()},{col.blue()},{a})"
 
 
+GENERIC = {"sans-serif", "serif", "monospace"}
+
+
 def _families(spec):
-    return [f.strip().strip('"') for f in (spec or "").split(",") if f.strip()]
+    """The theme's font list, only fonts that are actually installed. Handing Qt a
+    missing name makes fontconfig substitute something — sometimes with absurd
+    metrics; a generic name at the end ("serif") becomes the matching system face."""
+    wanted = [f.strip().strip('"') for f in (spec or "").split(",") if f.strip()]
+    if not wanted:
+        return []
+    have = {f.lower() for f in QFontDatabase.families()}
+    out = [f for f in wanted if f.lower() in have]
+    if not out:
+        generic = next((f for f in wanted if f in GENERIC), None)
+        hint = {"serif": QFont.StyleHint.Serif, "monospace": QFont.StyleHint.Monospace}.get(
+            generic, QFont.StyleHint.SansSerif)
+        probe = QFont()
+        probe.setStyleHint(hint)
+        out = [probe.defaultFamily()] if generic else []
+    return out
 
 
 def apply(app, cfg):

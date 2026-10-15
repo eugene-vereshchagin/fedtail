@@ -4,7 +4,7 @@ name = "Juick"
 inherit = "system"
 
 [font]
-family = "Arial, Liberation Sans, Helvetica, sans-serif"
+family = "Arial, Liberation Sans, Arimo, DejaVu Sans, sans-serif"
 mono = "DejaVu Sans Mono, monospace"
 post_scale = 1.05
 
