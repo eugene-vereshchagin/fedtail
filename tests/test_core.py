@@ -60,6 +60,29 @@ class ConfigTest(TmpDir):
             config.validate({"ui": {"close_to_tray": 1}})  # int is not bool
 
 
+class ConfigUpdateTest(unittest.TestCase):
+    def test_missing_and_update(self):
+        import tomllib
+
+        from fedtail.core import config_update as cu
+        example = config.example_text()
+        old = ("# my config\n[ui]\ntheme = \"terminal\"\n#language = \"auto\"\n\n"
+               "[feed]\norder = \"newest_first\"\n")
+        miss = cu.missing(old, example)
+        self.assertIn("ui.actions", miss)
+        self.assertIn("post.default_visibility", miss)
+        self.assertNotIn("ui.theme", miss)
+        self.assertNotIn("ui.language", miss)  # commented out still counts
+        new = cu.update(old, example)
+        self.assertEqual(cu.missing(new, example), [])
+        parsed = tomllib.loads(new)  # still valid TOML, user values untouched
+        self.assertEqual(parsed["ui"]["theme"], "terminal")
+        self.assertEqual(parsed["feed"]["order"], "newest_first")
+        self.assertEqual(config.validate(parsed)[1], [])
+        self.assertLess(new.index("#actions"), new.index("[feed]"))  # inside [ui]
+        self.assertEqual(cu.update(new, example), new)  # idempotent
+
+
 class PathsAuthTest(TmpDir):
     def test_profiles(self):
         os.environ["XDG_CONFIG_HOME"] = str(self.tmp / "cfg")

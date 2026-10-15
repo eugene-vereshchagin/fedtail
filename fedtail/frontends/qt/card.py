@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -211,7 +212,7 @@ class PostRow(QWidget):
                                              last.get("created_at", ""), months()),
                                              text=esc(snippet(last, 120))) + more),
                                     "myreply"))
-        v.addWidget(self._label(self._actions_html(st), "actions"))
+        v.addWidget(self._actions(st))
 
     def _context_html(self, st):
         p = self.spec.parent
@@ -224,21 +225,56 @@ class PostRow(QWidget):
                      text=esc(snippet(p, 140)))
         return link("thread", st["id"], f"↪ {body}")
 
-    def _actions_html(self, st):
+    def _actions(self, st):
+        """Flat buttons under a post: icon, text or both (ui.actions)."""
+        style = self.ctx.cfg["ui"]["actions"]
+        box = QWidget()
+        box.setObjectName("actions")
+        h = QHBoxLayout(box)
+        h.setContentsMargins(0, 2, 0, 0)
+        h.setSpacing(2)
         n = lambda x: f" {x}" if x else ""
-        acts = [link("reply", st["id"], _("reply"))]
-        acts.append(link("fav", st["id"],
-                         ("★" if st.get("favourited") else "☆") + n(st.get("favourites_count"))))
+        fav = st.get("favourited")
+        boosted = st.get("reblogged")
+        buttons = [("reply", "mail-reply-sender", "↩", _("reply"), "")]
+        buttons.append(("fav", "rating" if fav else "rating-unrated", "★" if fav else "☆",
+                        _("unfav") if fav else _("fav"), n(st.get("favourites_count"))))
         if st.get("visibility") in ("public", "unlisted"):
-            acts.append(link("boost", st["id"],
-                             ("♻✓" if st.get("reblogged") else "♻") +
-                             n(st.get("reblogs_count"))))
+            buttons.append(("boost", "media-playlist-repeat", "♻✓" if boosted else "♻",
+                            _("unboost") if boosted else _("boost"),
+                            n(st.get("reblogs_count"))))
         if not self.spec.in_thread:
-            acts.append(link("thread", st["id"], _("thread") + n(st.get("replies_count"))))
-        acts.append(link("open", st["id"], "↗"))
+            buttons.append(("thread", "view-list-tree", "⤷", _("thread"),
+                            n(st.get("replies_count"))))
+        buttons.append(("open", "internet-web-browser", "↗", _("open_browser"), ""))
         if st["account"]["id"] == self.ctx.me_id:
-            acts.append(link("delete", st["id"], _("delete")))
-        return " &nbsp;·&nbsp; ".join(acts)
+            buttons.append(("delete", "edit-delete", "✕", _("delete"), ""))
+        for action, icon, glyph, label, count in buttons:
+            b = QToolButton()
+            b.setAutoRaise(True)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setToolTip(label)
+            ic = QIcon.fromTheme(icon)
+            if style == "text" or ic.isNull():
+                # no icon wanted (or the theme has none): words, or a glyph if icons-only
+                b.setText((glyph if style == "icons" else label) + count)
+                b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+            else:
+                b.setIcon(ic)
+                if style == "icons":
+                    b.setText(count.strip())
+                    b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+                                         if count else Qt.ToolButtonStyle.ToolButtonIconOnly)
+                else:
+                    b.setText(label + count)
+                    b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            if (action == "fav" and fav) or (action == "boost" and boosted):
+                b.setProperty("active", "true")
+            b.clicked.connect(lambda _c=False, a=action, i=st["id"]:
+                              self.ctx.on_link(f"fedtail:{a}/{i}"))
+            h.addWidget(b)
+        h.addStretch(1)
+        return box
 
     def _media(self, st):
         atts = st.get("media_attachments") or []

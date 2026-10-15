@@ -5,7 +5,7 @@ import logging
 import sys
 
 from . import __version__, frontends, i18n
-from .core import config, paths
+from .core import config, config_update, paths
 from .core.app import Core
 from .core.instance import SingleInstance
 
@@ -19,6 +19,9 @@ def parse_args(argv):
     p.add_argument("-c", "--config", help="config file (overrides the profile's one)")
     p.add_argument("-d", "--data", help="data directory (overrides the profile's one)")
     p.add_argument("--ui", choices=sorted(frontends.FRONTENDS), help="frontend to use")
+    p.add_argument("--update-config", action="store_true",
+                   help="add options your config doesn't mention yet (commented out, "
+                        "with explanations; a .bak copy is kept) and exit")
     p.add_argument("--debug", action="store_true", help="verbose log to stderr")
     p.add_argument("-V", "--version", action="version", version=f"fedtail {__version__}")
     return p.parse_args(argv)
@@ -41,6 +44,31 @@ def main(argv=None):
     for w in warnings:
         print(f"fedtail: {where.config_file}: {w}", file=sys.stderr)
 
+    # the full reference for this version always sits next to the user's config
+    example = config.example_text()
+    ref = where.config_file.with_name("config.example.toml")
+    try:
+        if not ref.exists() or ref.read_text("utf-8") != example:
+            ref.write_text(example, "utf-8")
+    except OSError:
+        pass
+    user_text = where.config_file.read_text("utf-8")
+    new_options = config_update.missing(user_text, example)
+    if args.update_config:
+        if not new_options:
+            print(f"fedtail: {where.config_file} already lists every option.")
+            return 0
+        where.config_file.with_name(where.config_file.name + ".bak").write_text(user_text,
+                                                                                 "utf-8")
+        where.config_file.write_text(config_update.update(user_text, example), "utf-8")
+        print(f"fedtail: added to {where.config_file} (commented out):\n  " +
+              "\n  ".join(new_options))
+        return 0
+    if new_options:
+        print(f"fedtail: your config doesn't mention {len(new_options)} option(s): "
+              f"{', '.join(new_options)}.\n  Run `fedtail --update-config` to add them "
+              f"(commented out), or see {ref}", file=sys.stderr)
+
     i18n.setup(cfg["ui"]["language"])
 
     instance = SingleInstance(where.socket_file)
@@ -51,6 +79,7 @@ def main(argv=None):
 
     frontend = frontends.load(args.ui or cfg["ui"]["frontend"])
     core = Core(cfg, where)
+    core.new_options = new_options
     try:
         return frontend.run(core, instance, sys.argv[:1])
     finally:

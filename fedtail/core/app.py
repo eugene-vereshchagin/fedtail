@@ -58,6 +58,7 @@ class Core:
         self._poll_lock = threading.Lock()
         self._poller = None
         self._parent_inflight = set()
+        self.new_options = []  # options the user's config doesn't mention yet
         self._replies_inflight = set()
 
     # ---- plumbing ------------------------------------------------------------

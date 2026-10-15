@@ -162,6 +162,9 @@ class MainWindow(QMainWindow):
         self.ctx.me_id = me["id"]
         self.statusBar().showMessage(_("connected", acct=me["acct"],
                                        server=self.core.auth["server"]), 8000)
+        if self.core.new_options:
+            QTimer.singleShot(8500, lambda: self.statusBar().showMessage(
+                _("new_options", n=len(self.core.new_options)), 30_000))
         tip = f"{self.base_title} — @{me['acct']}"
         self.setWindowTitle(tip)
         if self.tray:

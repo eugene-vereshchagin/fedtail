@@ -40,6 +40,19 @@ class CliTest(unittest.TestCase):
                              capture_output=True, text=True, check=True)
         self.assertIn(__version__, out.stdout)
 
+    def test_update_config_flag(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            cfg = Path(d) / "c.toml"
+            cfg.write_text('[ui]\ntheme = "terminal"\n')
+            out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d,
+                                  "--update-config"], cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertIn("ui.actions", out.stdout)
+            self.assertTrue((Path(d) / "c.toml.bak").exists())
+            self.assertTrue((Path(d) / "config.example.toml").exists())
+            self.assertIn("#actions", cfg.read_text())
+
     def test_bad_config_is_explained(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:

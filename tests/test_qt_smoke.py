@@ -92,6 +92,10 @@ class QtSmokeTest(unittest.TestCase):
         lane = self.win.lane_widgets["people"]
         self.pump(until=lambda: len(lane.view.rows) == 4)  # bot is not in "people"
         self.assertIn("(", self.win.sidebar.item(0).text())  # unread badge
+        from PySide6.QtWidgets import QToolButton
+        buttons = lane.view.rows["011"].findChildren(QToolButton)
+        self.assertGreaterEqual(len(buttons), 4)  # reply, fav, thread, open (+ boost if public)
+        self.assertTrue(any(b.text().startswith("ответить") for b in buttons))
 
         # reply context strip gets filled in once parents arrive
         self.pump(until=lambda: self.core.parent_of(self.core.store.get_status("014")) == "missing")

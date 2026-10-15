@@ -32,7 +32,9 @@ QFrame#card[focus="true"] {{ background: {self.focus}; }}
 QFrame#rail {{ background: {self.rail}; }}
 QLabel#ctx {{ background: {self.ctx}; color: {self.muted}; padding: 3px 6px;
               border-left: 2px solid {self.rail}; }}
-QLabel#muted, QLabel#boost, QLabel#actions {{ color: {self.muted}; }}
+QLabel#muted, QLabel#boost {{ color: {self.muted}; }}
+QWidget#actions QToolButton {{ color: {self.muted}; padding: 2px 6px; }}
+QWidget#actions QToolButton[active="true"] {{ color: {self.link}; font-weight: bold; }}
 QLabel#myreply {{ color: {self.muted}; padding: 2px 6px;
                  border-left: 2px solid {self.unread}; }}
 QLabel#cw {{ color: {self.muted}; font-style: italic; }}

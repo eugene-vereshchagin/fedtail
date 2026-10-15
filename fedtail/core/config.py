@@ -22,6 +22,7 @@ DEFAULTS = {
         "image_height": 360,
         "image_viewer": "internal",
         "image_upscale": 2,
+        "actions": "both",
     },
     "feed": {
         "order": "oldest_first",
@@ -53,6 +54,7 @@ CHOICES = {
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "theme"): {"system", "terminal"},
     ("ui", "image_viewer"): {"internal", "browser"},
+    ("ui", "actions"): {"both", "icons", "text"},
     ("feed", "order"): {"oldest_first", "newest_first"},
     ("feed", "start_at"): {"first_unread", "newest"},
     ("feed", "on_new"): {"keep_position", "jump_to_newest"},

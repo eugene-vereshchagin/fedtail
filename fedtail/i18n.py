@@ -24,6 +24,8 @@ _STRINGS = {
         "cw_show": "показать", "cw_hide": "скрыть",
         "reply": "ответить", "thread": "тред", "delete": "удалить",
         "you_replied": "ты ответил {when}: «{text}»",
+        "fav": "в избранное", "unfav": "убрать из избранного", "boost": "продвинуть",
+        "unboost": "отменить продвижение", "open_browser": "открыть в браузере",
         # feed
         "posts_only": "Только посты", "posts_only_tip": "Скрыть комментарии и ответы",
         "to_first_unread": "↧ к первому новому", "mark_all_read": "✓ всё прочитано",
@@ -69,6 +71,8 @@ _STRINGS = {
         "tray_new": "{title} — новых: {n}",
         "notify_comment": "Коммент к твоему", "notify_mention": "Упоминание",
         "notify_more": " (и ещё {n})",
+        "new_options": "В конфиге не упомянуто новых опций: {n}. "
+                       "Запусти fedtail --update-config — допишет их закомментированными.",
         "deleted": "Удалено.", "sent": "Отправлено.", "error": "Ошибка: {err}",
         "not_in_cache": "Этого поста нет в кеше — обнови ленту.",
         "delete_q_title": "Удалить?", "delete_q": "Удалить пост насовсем?\n\n{text}",
@@ -91,6 +95,8 @@ _STRINGS = {
         "cw_show": "show", "cw_hide": "hide",
         "reply": "reply", "thread": "thread", "delete": "delete",
         "you_replied": "you replied {when}: “{text}”",
+        "fav": "favourite", "unfav": "unfavourite", "boost": "boost",
+        "unboost": "undo boost", "open_browser": "open in browser",
         "posts_only": "Posts only", "posts_only_tip": "Hide replies",
         "to_first_unread": "↧ first unread", "mark_all_read": "✓ mark all read",
         "older_up": "▲ older", "older_down": "▼ older", "no_older": "nothing older",
@@ -133,6 +139,8 @@ _STRINGS = {
         "tray_new": "{title} — new: {n}",
         "notify_comment": "Reply to you", "notify_mention": "Mention",
         "notify_more": " (and {n} more)",
+        "new_options": "Your config doesn't mention {n} new option(s). "
+                       "Run fedtail --update-config to add them, commented out.",
         "deleted": "Deleted.", "sent": "Sent.", "error": "Error: {err}",
         "not_in_cache": "This post is not cached — refresh the lane.",
         "delete_q_title": "Delete?", "delete_q": "Delete this post for good?\n\n{text}",
