@@ -22,7 +22,7 @@ tired of reading scraps of other people's conversations.
 - **Drafts survive.** Text is saved while you type; closing the window loses nothing.
 - **Config file, not a settings dialog.** Every behaviour is a flag. Defaults are opinionated;
   "like every other client" is one line away.
-- **One profile = one account = one window.** `fedtail --profile work` runs another account.
+- **One profile = one account = one window.** `--profile work` runs another account.
 
 ## For Juick and Point.im people
 
@@ -42,6 +42,18 @@ cd fedtail
 python3 -m fedtail
 ```
 
+**How to run.** From the source folder both forms work:
+
+```sh
+python3 -m fedtail           # as a module — the proper way
+python3 fedtail              # as a folder — works too
+```
+
+Options are the same for both: `python3 -m fedtail --profile croco`,
+`python3 fedtail --update-config` and so on. A bare `fedtail` command appears once the app is
+installed as a package (a deb is planned); until then use `python3 -m fedtail` in the examples
+below. All options: `python3 -m fedtail --help`.
+
 Squares instead of emoji and flags mean there is no colour emoji font:
 `sudo apt install fonts-noto-color-emoji`.
 
@@ -53,9 +65,9 @@ for the code the server shows you.
 ## Profiles and files
 
 ```sh
-fedtail                        # profile "default"
-fedtail --profile croco        # another account
-fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
+python3 -m fedtail                        # profile "default"
+python3 -m fedtail --profile croco        # another account
+python3 -m fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
 ```
 
 | what | where |
@@ -68,7 +80,7 @@ fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
 The config is created on first run as a fully commented copy of
 [`fedtail/data/config.example.toml`](fedtail/data/config.example.toml) and never touched again.
 `config.example.toml` next to it is always the full reference for the running version. When
-an update brings new options, fedtail says so at start, and `fedtail --update-config` adds
+an update brings new options, fedtail says so at start, and `python3 -m fedtail --update-config` adds
 them to your file, commented out, in the right sections (a `.bak` copy is kept).
 
 ## Themes

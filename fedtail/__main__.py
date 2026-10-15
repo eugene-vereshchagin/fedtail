@@ -74,7 +74,7 @@ def main(argv=None):
         return 0
     if new_options:
         print(f"fedtail: your config doesn't mention {len(new_options)} option(s): "
-              f"{', '.join(new_options)}.\n  Run `fedtail --update-config` to add them "
+              f"{', '.join(new_options)}.\n  Run `python3 -m fedtail --update-config` to add them "
               f"(commented out), or see {ref}", file=sys.stderr)
 
     i18n.setup(cfg["ui"]["language"])

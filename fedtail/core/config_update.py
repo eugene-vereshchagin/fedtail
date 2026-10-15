@@ -5,7 +5,7 @@ The app never edits config.toml on its own. Instead:
 * on every start it writes config.example.toml next to it — the complete,
   commented reference for this version (that file is ours, not the user's);
 * it tells which options the user's file doesn't mention yet;
-* `fedtail --update-config` inserts those options, commented out with their
+* `python3 -m fedtail --update-config` inserts those options, commented out with their
   explanations, into the right sections of the user's file (a .bak is kept).
 """
 
