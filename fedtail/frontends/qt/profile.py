@@ -38,7 +38,8 @@ class ProfileDialog(QDialog):
         self.header_img = QLabel()
         self.header_img.setFixedHeight(120)
         self.header_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.header_img.setObjectName("ctx")
+        self.header_img.setObjectName("profileHeader")
+        self.header_img.setText(_("no_header"))
         lay.addWidget(self.header_img)
 
         row = QHBoxLayout()
@@ -66,6 +67,8 @@ class ProfileDialog(QDialog):
 
         lay.addWidget(QLabel(_("profile_fields")))
         self.grid = QGridLayout()
+        self.grid.setColumnStretch(0, 1)
+        self.grid.setColumnStretch(1, 2)
         lay.addLayout(self.grid)
         self.field_edits = []
 
@@ -106,17 +109,20 @@ class ProfileDialog(QDialog):
             name.setPlaceholderText(_("field_name"))
             value.setPlaceholderText(_("field_value"))
             self.grid.addWidget(name, i, 0)
-            self.grid.addWidget(value, i, 1, 1, 2)
+            self.grid.addWidget(value, i, 1)
             self.field_edits.append((name, value))
         self.locked.setChecked(bool(me.get("locked")))
         self.bot.setChecked(bool(me.get("bot")))
         self.discoverable.setChecked(bool(me.get("discoverable")))
+        self.hint.setText("")
+        self.save_btn.setEnabled(True)
+        # pictures come later, from the image cache
         images = self.win.images
         images.get(me.get("avatar_static") or me.get("avatar"),
                    lambda pm: self.avatar_img.setPixmap(_round(pm, 72)))
-        images.get(me.get("header_static") or me.get("header"), self._show_header)
-        self.hint.setText("")
-        self.save_btn.setEnabled(True)
+        header = me.get("header_static") or me.get("header") or ""
+        if header and "/missing" not in header:  # Mastodon's "no header" placeholder
+            images.get(header, self._show_header)
 
     def _show_header(self, pm):
         w = max(self.header_img.width(), 520)
