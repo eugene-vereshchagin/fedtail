@@ -1,0 +1,49 @@
+# fedtail theme: contrast — for weak eyes: big type, black on white, firm lines,
+# nothing pale. (Write hashtags in CamelCase too: screen readers thank you.)
+name = "Contrast"
+inherit = "system"
+
+[font]
+post_scale = 1.35
+
+[colors]
+window = "#ffffff"
+sidebar = "#ffffff"
+sidebar_border = "#000000"
+selected = "#000000"
+selected_text = "#ffffff"
+view = "#ffffff"
+header_border = "#000000"
+card = "#ffffff"
+card_border = "#000000"
+card_border_unread = "#0033cc"
+text = "#000000"
+muted = "#222222"
+link = "#0033cc"
+accent = "#0033cc"
+on_accent = "#ffffff"
+hot = "#b00000"
+on_hot = "#ffffff"
+quiet = "#ffffff"
+on_quiet = "#000000"
+new_pill = "#0033cc"
+on_new_pill = "#ffffff"
+ctx = "#f0f0f0"
+ctx_bar = "#000000"
+focus = "#fff6bf"
+focus_border = "#000000"
+myreply = "#f0f0f0"
+on_myreply = "#000000"
+active = "#000000"
+on_active = "#ffffff"
+separator = "#b00000"
+rail = "#000000"
+button = "#ffffff"
+button_border = "#000000"
+dot = "#b00000"
+
+[shape]
+radius = 4
+button_radius = 4
+avatar = 48
+unread_mark = "star"

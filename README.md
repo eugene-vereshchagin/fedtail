@@ -97,7 +97,9 @@ The look is a theme file. Built in:
 - `terminal` — green on black, monospace, posts divided by lines, buttons in words.
 - `juick` — juick.com around 2013: a light warm-grey page, white posts, blue links.
 - `juick-classic` — juick.com around 2011: an olive page, beige posts, brown-orange links.
+- `point` — point.im as it is today: a white page, posts divided by thin lines, Open Sans.
 - `night` — dark, with its own colours, on any desktop.
+- `contrast` — for weak eyes: big type, black on white, firm lines.
 - `paper` — warm paper and a book face, for long threads.
 
 Pick one in the config: `[ui] theme = "terminal"`. Your own themes go to

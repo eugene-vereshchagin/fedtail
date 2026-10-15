@@ -1,0 +1,62 @@
+# fedtail theme: point — point.im as it looks today: a white page, posts divided
+# by thin lines, a bold name with the date under it, quiet word buttons, Open Sans.
+name = "Point"
+inherit = "system"
+
+[font]
+family = "Open Sans, Noto Sans, DejaVu Sans, sans-serif"
+mono = "DejaVu Sans Mono, monospace"
+post_scale = 1.0
+
+[colors]
+window = "#ffffff"
+sidebar = "#ffffff"
+sidebar_border = "#e6e8eb"
+selected = "#e4e8ee"
+selected_text = "#2c3e5c"
+view = "#ffffff"
+header_border = "#e6e8eb"
+card = "#ffffff"
+card_border = "#e6e8eb"
+card_border_unread = "#e6e8eb"
+text = "#222222"
+muted = "#a3aab4"
+link = "#3c5a8a"
+accent = "#3c5a8a"
+on_accent = "#ffffff"
+hot = "#c4501b"
+on_hot = "#ffffff"
+quiet = "#eef0f3"
+on_quiet = "#6d7684"
+new_pill = "#eef1f6"
+on_new_pill = "#3c5a8a"
+ctx = "#f6f7f9"
+ctx_bar = "#d5dae1"
+focus = "#f3f6fa"
+focus_border = "#c7d2e2"
+myreply = "#f6f7f9"
+on_myreply = "#6d7684"
+active = "#eef1f6"
+on_active = "#2c3e5c"
+separator = "#3c5a8a"
+rail = "#e1e4e8"
+button = "#ffffff"
+button_border = "#e1e4e8"
+dot = "#3c5a8a"
+
+[shape]
+radius = 0
+button_radius = 3
+card_style = "rule"
+card_avatars = true
+avatar = 40
+sidebar_avatar = true
+lane_icons = true
+icons = false
+card_header = "rich"
+unread_mark = "dot"
+posts_only = "segmented"
+
+[words]
+compose = "{text}"
+date = "{day} {mon} {time}"
