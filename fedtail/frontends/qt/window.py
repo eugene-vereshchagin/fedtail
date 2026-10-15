@@ -33,7 +33,7 @@ from .. import themefile
 from . import feed as feed_module
 from .card import _round
 from .compose import Compose, media_paths, save_image
-from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
+from .feed import AccountWidget, ActivityWidget, LaneWidget, RequestsWidget, ThreadWidget
 from .find import FindBar
 from .images import Images
 from .login import LoginDialog
@@ -46,10 +46,11 @@ LANE_ICON = {"people": "system-users", "comments": "mail-replied",
              "mentions": "mail-mark-important", "subs": "mail-thread-watch",
              "bots": "applications-system",
              "mine": "document-edit", "local": "go-home",
-             "requests": "list-add-user", "list": "view-list-details"}
+             "requests": "list-add-user", "list": "view-list-details",
+             "activity": "starred"}
 
 
-BADGE_KIND = {"comments": "hot", "bots": "quiet"}
+BADGE_KIND = {"comments": "hot", "bots": "quiet", "activity": "quiet"}
 
 
 class LaneItem(QWidget):
@@ -507,11 +508,15 @@ class MainWindow(QMainWindow):
             return
         w = self.lane_widgets.get(name)
         if w is None:
-            w = RequestsWidget(self) if name == "requests" else LaneWidget(self, name)
+            if name == "requests":
+                w = RequestsWidget(self)
+            elif name == "activity":
+                w = ActivityWidget(self)
+            else:
+                w = LaneWidget(self, name)
+                w.refresh()
             self.lane_widgets[name] = w
             self.stack.addWidget(w)
-            if name != "requests":
-                w.refresh()
         self.stack.setCurrentWidget(w)
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
         self.tabs.setTabText(self.tabs.indexOf(self.stack), self.lane_title(name))
@@ -536,6 +541,8 @@ class MainWindow(QMainWindow):
                 n = 0
             elif name == "requests":
                 n = len(self.core.follow_requests)
+            elif name == "activity":
+                n = self.core.activity_unread()
             else:
                 n = self.core.unread_count(name)
             if name in ("comments", "mentions", "subs", "requests"):
@@ -579,6 +586,11 @@ class MainWindow(QMainWindow):
                 if isinstance(w, AccountWidget) and w.mine:
                     w.reload_account()
             self.statusBar().showMessage(_("profile_saved"), 5000)
+        elif name in ("activity_updated", "activity_seen"):
+            w = self.lane_widgets.get("activity")
+            if w:
+                w.refresh()
+            self.update_badges()
         elif name == "lists_changed":
             self._rebuild_lists()
         elif name == "subs_changed":

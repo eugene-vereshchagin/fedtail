@@ -252,6 +252,25 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: name not in self.win.lane_items)
         self.win.select_lane("people")
 
+        # activity: favourites of one post gather in one row
+        from fedtail.frontends.qt.feed import ActivityWidget
+        mine = self.core.store.get_status("012") or {"id": "012"}
+        self.world.act("x1", "favourite", fakes.BOB, mine, minute=1)
+        self.world.act("x2", "favourite", fakes.NEWS, mine, minute=2)
+        self.world.act("x3", "follow", fakes.NEWS, minute=3)
+        self.core.poll_once()  # first fetch of activity: history
+        self.world.act("x4", "reblog", fakes.BOB, mine, minute=4)
+        self.core.poll_once()
+        self.pump(0.2)
+        self.assertEqual(self.core.activity_unread(), 1)
+        groups = ActivityWidget.groups(self.core.activity_entries())
+        self.assertEqual([(g["key"][0], len(g["entries"])) for g in groups],
+                         [("reblog", 1), ("follow", 1), ("favourite", 2)])
+        self.win.select_lane("activity")
+        self.pump(0.2)
+        self.assertIsInstance(self.win.lane_widgets["activity"], ActivityWidget)
+        self.win.select_lane("people")
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

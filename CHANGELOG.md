@@ -21,6 +21,7 @@
   the content warning field is hidden behind a button.
 - Themes `point` (point.im today), `juick` and `juick-classic` (juick.com of 2013 and 2011),
   `night`, `paper`, `contrast` (for weak eyes).
+- Activity lane and notifications: favourites, boosts, new followers, gathered per post.
 - Lists as lanes in a block of their own; "Add to list" from a post's menu or a right click;
   create, rename, delete, exclusive (hidden from People and Bots).
 - A right click on a post opens its menu.

@@ -37,8 +37,8 @@ DEFAULTS = {
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
-        "enabled": ["people", "comments", "mentions", "subs", "bots", "mine", "local",
-                    "requests"],
+        "enabled": ["people", "comments", "mentions", "subs", "activity", "bots", "mine",
+                    "local", "requests"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,
@@ -51,10 +51,13 @@ DEFAULTS = {
     },
     "notify": {
         "enabled": True,
-        "lanes": ["comments", "mentions", "subs", "requests"],
+        "lanes": ["comments", "mentions", "subs", "activity", "requests"],
         "privacy": "full",
         "when_focused": False,
         "backend": "auto",
+    },
+    "activity": {
+        "types": ["favourite", "reblog", "follow"],
     },
     "lists": {
         "enabled": True,
@@ -85,7 +88,9 @@ CHOICES = {
     ("notify", "backend"): {"auto", "desktop", "tray"},
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
 }
-LANE_NAMES = {"people", "comments", "mentions", "subs", "bots", "mine", "local", "requests"}
+LANE_NAMES = {"people", "comments", "mentions", "subs", "activity", "bots", "mine", "local",
+              "requests"}
+ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {
     ("poll", "interval_seconds"): 30,
@@ -149,6 +154,10 @@ def validate(user):
            cfg["notify"]["lanes"] if x not in LANE_NAMES | {"lists"}]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
+    bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]
+    if bad_types:
+        errors.append(f"activity.types: unknown {bad_types}; "
+                      f"known: {', '.join(sorted(ACTIVITY_TYPES))}")
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
     if bad_auto:
         errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")

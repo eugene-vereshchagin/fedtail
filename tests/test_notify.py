@@ -41,5 +41,23 @@ class NotifyTextTest(unittest.TestCase):
         self.assertIn("«Люди»", notes[2].title)
 
 
+
+    def test_activity(self):
+        mine = status("100", ME, text="фото гор")
+        items = [("activity", {"id": "a1", "type": "favourite", "account": BOB, "status": mine}),
+                 ("activity", {"id": "a2", "type": "favourite", "account": NEWS,
+                               "status": mine}),
+                 ("activity", {"id": "a3", "type": "follow", "account": NEWS, "status": None})]
+        follow, fav = notifytext.build(items, "full")
+        self.assertEqual(fav.title, "★ 2 в избранное")
+        self.assertIn("фото гор", fav.body)
+        self.assertEqual(fav.thread, "100")
+        self.assertEqual(follow.title, "1 новый подписчик")
+        [_f, fav] = notifytext.build(items, "sender")
+        self.assertNotIn("фото", fav.body)
+        self.assertIn("bob", fav.body.lower())
+        [_f, fav] = notifytext.build(items, "count")
+        self.assertEqual((fav.title, fav.body), ("fedtail", "★ 2 в избранное"))
+
 if __name__ == "__main__":
     unittest.main()

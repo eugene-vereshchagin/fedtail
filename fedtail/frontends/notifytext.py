@@ -12,6 +12,7 @@ from ..core.model import real, snippet
 from ..i18n import _
 
 ORDER = ["comments", "mentions", "requests"]  # the rest come after, by name
+ACTIVITY_ORDER = ["follow", "favourite", "reblog"]
 MAX_LINES = 3
 
 
@@ -45,11 +46,34 @@ def build(items, privacy="full", titles=None):
     titles(lane) names lanes that aren't built in (lists)."""
     global _titles
     _titles = titles
-    groups = {}
+    groups, acts = {}, {}
     for lane, obj in items:
-        groups.setdefault(lane, []).append(obj)
+        if lane == "activity":
+            acts.setdefault(obj["type"], []).append(obj)
+        else:
+            groups.setdefault(lane, []).append(obj)
     lanes = [x for x in ORDER if x in groups] + sorted(x for x in groups if x not in ORDER)
-    return [_note(lane, groups[lane], privacy) for lane in lanes]
+    notes = [_note(lane, groups[lane], privacy) for lane in lanes]
+    kinds = [k for k in ACTIVITY_ORDER if k in acts] + sorted(k for k in acts
+                                                              if k not in ACTIVITY_ORDER)
+    return notes + [_activity_note(k, acts[k], privacy) for k in kinds]
+
+
+def _activity_note(kind, notifs, privacy):
+    """"★ 3 in favourites" — from whom, and (full) on which post."""
+    n = len(notifs)
+    key = kind if kind in ("favourite", "reblog", "follow") else "other"
+    title = _(f"notify_act_{key}_n", n=n)
+    if privacy == "count":
+        return Note("fedtail", title, "activity")
+    names = list(dict.fromkeys(_who(x["account"]) for x in notifs))
+    shown = ", ".join(names[:5]) + ("…" if len(names) > 5 else "")
+    body = _("notify_from", names=shown)
+    posts = list(dict.fromkeys(snippet(x["status"], 80) for x in notifs if x.get("status")))
+    if privacy == "full" and posts:
+        body += "\n" + "\n".join(f"«{p}»" for p in posts[:2])
+    sids = {real(x["status"])["id"] for x in notifs if x.get("status")}
+    return Note(title, body, "activity", sids.pop() if len(sids) == 1 else "")
 
 
 def _note(lane, objs, privacy):

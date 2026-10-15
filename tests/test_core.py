@@ -224,6 +224,31 @@ class CoreTest(TmpDir):
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
+    def test_activity_favourites_boosts_follows(self):
+        core, w = self.make()
+        mine = w.add(status("100", ME, minute=1), home=True)
+        w.act("a1", "favourite", BOB, mine, minute=1)  # history: seen already
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.activity_unread(), 0)
+        self.assertEqual(len(core.activity_entries()), 1)
+        w.act("a2", "favourite", NEWS, mine, minute=2)
+        w.act("a3", "reblog", BOB, mine, minute=3)
+        w.act("a4", "follow", NEWS, minute=4)
+        w.act("a5", "mention", BOB, mine, minute=5)  # not an activity kind
+        core.poll_once()
+        self.assertEqual(core.activity_unread(), 3)
+        got = core.activity_entries()
+        self.assertEqual([(x["type"], x["account"]["id"]) for x in got],
+                         [("follow", "N"), ("reblog", "B"), ("favourite", "N"),
+                          ("favourite", "B")])
+        self.assertEqual(got[1]["status"]["id"], "100")
+        notes = [e for e in self.events if e[0] == "notify"][-1][1]
+        self.assertEqual(sorted(n["id"] for lane, n in notes if lane == "activity"),
+                         ["a2", "a3", "a4"])
+        core.mark_activity_seen()
+        self.assertEqual(core.activity_unread(), 0)
+
     def test_lists_are_lanes_and_exclusive_hides(self):
         core, w = self.make()
         w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}

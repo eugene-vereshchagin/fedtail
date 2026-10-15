@@ -682,3 +682,116 @@ class RequestsWidget(QScrollArea):
 
     def apply_read(self, ids):
         pass
+
+
+class ActivityWidget(QWidget):
+    """Who favourited, boosted, followed: one row per post and kind, the names
+    gathered, like a phone's notification shade. Seen once it's on screen."""
+
+    MAX_NAMES = 3
+
+    def __init__(self, win):
+        super().__init__()
+        self.win, self.core = win, win.core
+        self.view = None  # not a FeedView: Ctrl+F has nothing to do here
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
+        self.header.add(_button(_("mark_all_read"), self.core.mark_activity_seen,
+                                icon="mail-mark-read"))
+        lay.addWidget(self.header)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll.setObjectName("feed")
+        body = QWidget()
+        body.setObjectName("feedBody")
+        outer = QHBoxLayout(body)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self.column = QWidget()
+        self.column.setMaximumWidth(win.cfg["ui"]["max_width"] or 16777215)
+        outer.addWidget(self.column, 1)
+        self.lay = QVBoxLayout(self.column)
+        self.lay.setContentsMargins(20, 14, 20, 14)
+        self.lay.setSpacing(8)
+        self.scroll.setWidget(body)
+        lay.addWidget(self.scroll, 1)
+        self._seen_timer = QTimer(self, singleShot=True, interval=1500)
+        self._seen_timer.timeout.connect(self._mark_seen)
+        self.refresh()
+
+    @staticmethod
+    def groups(entries):
+        """Neighbouring entries of one kind about one post become one row."""
+        out = []
+        for e in entries:
+            key = (e["type"], (e.get("status") or {}).get("id"))
+            if out and out[-1]["key"] == key:
+                out[-1]["entries"].append(e)
+            else:
+                out.append({"key": key, "entries": [e]})
+        return out
+
+    def refresh(self):
+        while self.lay.count():
+            item = self.lay.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        seen = self.core.activity_seen_mark()
+        entries = self.core.activity_entries()
+        if not entries:
+            self.lay.addWidget(QLabel(_("activity_none")))
+        for g in self.groups(entries):
+            self.lay.addWidget(self._row(g, any(e["sort"] > seen for e in g["entries"])))
+        self.lay.addStretch(1)
+        if self.isVisible():
+            self._seen_timer.start()
+
+    def _row(self, group, unread):
+        es = group["entries"]
+        kind = es[0]["type"]
+        st = es[0].get("status")
+        card = QFrame()
+        card.setObjectName("card")
+        card.setProperty("unread", "true" if unread else "false")
+        v = QVBoxLayout(card)
+        v.setContentsMargins(16, 10, 16, 10)
+        v.setSpacing(4)
+        names = list(dict.fromkeys(
+            f'<a href="fedtail:account/{esc(e["account"]["id"])}" style="text-decoration:none;'
+            f'color:{self.win.theme.c["text"].name()};"><b>{display_name(e["account"])}</b></a>'
+            for e in es))
+        more = len(names) - self.MAX_NAMES
+        who = ", ".join(names[:self.MAX_NAMES]) + \
+            (" " + _("act_more", n=more) if more > 0 else "")
+        top = QLabel(f'{who} <span style="color:{self.win.theme.c["muted"].name()};">— '
+                     f'{_("act_" + kind) if kind in ACT_KINDS else kind}</span>')
+        top.setTextFormat(Qt.TextFormat.RichText)
+        top.setWordWrap(True)
+        top.linkActivated.connect(self.win.on_link)
+        v.addWidget(top)
+        if st:
+            post = QLabel(f'<a href="fedtail:thread/{esc(real(st)["id"])}" '
+                          f'style="text-decoration:none;color:{self.win.theme.c["muted"].name()};">'
+                          f'«{esc(snippet(st, 160))}»</a>')
+            post.setTextFormat(Qt.TextFormat.RichText)
+            post.setWordWrap(True)
+            post.setCursor(Qt.CursorShape.PointingHandCursor)
+            post.linkActivated.connect(self.win.on_link)
+            v.addWidget(post)
+        return card
+
+    def _mark_seen(self):
+        if self.isVisible() and self.window().isActiveWindow():
+            self.core.mark_activity_seen()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._seen_timer.start()
+
+    def apply_read(self, ids):
+        pass
+
+
+ACT_KINDS = ("favourite", "reblog", "follow", "poll", "update", "status")

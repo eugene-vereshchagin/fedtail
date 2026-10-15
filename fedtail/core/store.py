@@ -60,6 +60,15 @@ CREATE INDEX IF NOT EXISTS sub_members_root ON sub_members (root_id);
 CREATE TABLE IF NOT EXISTS unsubs (
     root_id TEXT PRIMARY KEY
 );
+-- favourites, boosts, new followers: who did what to which of my posts
+CREATE TABLE IF NOT EXISTS activity (
+    id         TEXT PRIMARY KEY,   -- notification id
+    type       TEXT NOT NULL,
+    account    TEXT NOT NULL,      -- JSON of who did it
+    status_id  TEXT,
+    sort       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS activity_sort ON activity (sort);
 CREATE TABLE IF NOT EXISTS kv (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -370,6 +379,47 @@ class Store:
     def subs_count(self):
         with self.lock:
             return self.db.execute("SELECT COUNT(*) FROM subs").fetchone()[0]
+
+    # ---- activity (favourites, boosts, follows) ------------------------------------
+    def activity_put(self, notifications):
+        """Returns the notifications that were new."""
+        sts = [n["status"] for n in notifications if n.get("status")]
+        if sts:
+            self.put_statuses(sts)
+        new = []
+        with self._tx() as db:
+            for n in notifications:
+                cur = db.execute(
+                    "INSERT OR IGNORE INTO activity VALUES (?, ?, ?, ?, ?)",
+                    (n["id"], n["type"], json.dumps(n["account"]),
+                     (n.get("status") or {}).get("id"), sort_key(n.get("created_at"), n["id"])))
+                if cur.rowcount:
+                    new.append(n)
+            if new:
+                self._bump("activity")
+        return new
+
+    def activity_newest(self):
+        with self.lock:
+            row = self.db.execute("SELECT id, sort FROM activity ORDER BY sort DESC LIMIT 1"
+                                  ).fetchone()
+        return (row[0], row[1]) if row else (None, "")
+
+    def activity_recent(self, limit):
+        """Newest first: [{id, type, account, status, created_at, sort}]."""
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT a.id, a.type, a.account, s.data, a.sort FROM activity a LEFT JOIN "
+                "statuses s ON s.id = a.status_id ORDER BY a.sort DESC LIMIT ?",
+                (limit,)).fetchall()
+        return [{"id": r[0], "type": r[1], "account": json.loads(r[2]),
+                 "status": json.loads(r[3]) if r[3] else None, "sort": r[4],
+                 "created_at": r[4].split("|")[0]} for r in rows]
+
+    def activity_count_after(self, sort):
+        with self.lock:
+            return self.db.execute("SELECT COUNT(*) FROM activity WHERE sort > ?",
+                                   (sort,)).fetchone()[0]
 
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):

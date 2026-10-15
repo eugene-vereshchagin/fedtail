@@ -92,6 +92,9 @@ class FakeApi:
     def mentions(self, limit=40, max_id=None, min_id=None):
         return _page(self.w.notifications, limit, max_id, min_id)
 
+    def notifications(self, types, limit=40, max_id=None, min_id=None):
+        return _page([n for n in self.w.activity if n["type"] in types], limit, max_id, min_id)
+
     def status(self, sid):
         if sid not in self.w.statuses:
             raise ApiError(404, "not found")
@@ -204,7 +207,14 @@ class World:
         self.fail_auth = False
         self.profile = {}
         self.lists = {}
+        self.activity = []
         self.profile_updates = []
+
+    def act(self, i, kind, account, st=None, minute=0):
+        n = {"id": i, "type": kind, "account": account, "status": st,
+             "created_at": f"2099-10-14T11:{minute:02d}:00.000Z"}
+        self.activity.append(n)
+        return n
 
     def add(self, st, home=False, mention=False):
         self.statuses[st["id"]] = st

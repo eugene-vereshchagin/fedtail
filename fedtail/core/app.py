@@ -24,7 +24,7 @@ from . import auth, lanes, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import narrower, real
-from .store import Store
+from .store import Store, sort_key
 
 log = logging.getLogger(__name__)
 
@@ -199,6 +199,15 @@ class Core:
                 except Exception as e:
                     self.emit("error", f"requests: {e}")
 
+            new_activity = []
+            if "activity" in self.lane_by_name:
+                try:
+                    new_activity = self._poll_activity()
+                    if new_activity:
+                        self.emit("activity_updated", len(new_activity))
+                except Exception as e:
+                    self.emit("error", f"activity: {e}")
+
             new_statuses = self._new_statuses(new_by_source)
             mine = [st["id"] for st in new_statuses if st["account"]["id"] == self.me["id"]]
             if first_run and fc["first_run_mark_read"]:
@@ -220,7 +229,7 @@ class Core:
             if any(per_lane.values()):
                 self.emit("lanes_updated", per_lane)
             if not first_run:
-                self._notify(per_lane, new_requests)
+                self._notify(per_lane, new_requests, new_activity)
             self._fetch_parents(new_statuses)
 
     def _new_statuses(self, new_by_source):
@@ -245,7 +254,7 @@ class Core:
                                    if item_id in ids and lane.keep(st, ctx)]
         return per_lane
 
-    def _notify(self, per_lane, new_requests=()):
+    def _notify(self, per_lane, new_requests=(), new_activity=()):
         """Emit 'notify' with [(lane, status-or-account)] for lanes the user wants."""
         wanted = set(self.cfg["notify"]["lanes"])
         out = []
@@ -261,6 +270,8 @@ class Core:
             out += [(name, st) for st in sts if st["id"] not in unread]
         if "requests" in wanted:
             out += [("requests", acc) for acc in new_requests]
+        if "activity" in wanted:
+            out += [("activity", n) for n in new_activity]
         if out:
             self.emit("notify", out)
 
@@ -270,6 +281,44 @@ class Core:
                                  self.cfg["lanes"]["mentions_all"],
                                  self.cfg["subs"]["replies_to_me"],
                                  self._hidden_authors())
+
+    # ---- activity: favourites, boosts, follows --------------------------------------
+    def _poll_activity(self):
+        """New notifications of the chosen kinds. The very first fetch is history,
+        not news: it is stored as already seen."""
+        types = self.cfg["activity"]["types"]
+        fc = self.cfg["feed"]
+        newest, _sort = self.store.activity_newest()
+        if newest is None:
+            self.store.activity_put(self.api.notifications(types, limit=fc["page_size"]))
+            self.store.kv_set("activity_seen", self.store.activity_newest()[1])
+            return []
+        new, cursor = [], newest
+        while True:
+            page = self.api.notifications(types, limit=fc["page_size"], min_id=cursor)
+            if not page:
+                break
+            new += self.store.activity_put(page)
+            nxt = max(page, key=lambda n: sort_key(n.get("created_at"), n["id"]))["id"]
+            if nxt == cursor or len(page) < fc["page_size"] or len(new) >= fc["catch_up_limit"]:
+                break
+            cursor = nxt
+        return new
+
+    def activity_entries(self, limit=300):
+        return self.store.activity_recent(limit)
+
+    def activity_seen_mark(self):
+        return self.store.kv_get("activity_seen", "")
+
+    def activity_unread(self):
+        return self.store.activity_count_after(self.activity_seen_mark())
+
+    def mark_activity_seen(self):
+        newest = self.store.activity_newest()[1]
+        if newest and newest != self.activity_seen_mark():
+            self.store.kv_set("activity_seen", newest)
+            self.emit("activity_seen", newest)
 
     # ---- lists ---------------------------------------------------------------------
     def _hidden_authors(self):

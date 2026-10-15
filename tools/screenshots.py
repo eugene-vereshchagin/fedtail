@@ -108,6 +108,11 @@ def world():
                  "перевернул вверх ногами — перестал греться. Десять лет работает."),
           home=True, mention=True)
     w.requests = [OSTAP]
+    router = w.statuses.get("100")
+    for i, (kind, who) in enumerate((("favourite", KOT), ("favourite", ARSEN),
+                                     ("favourite", OSTAP), ("reblog", ARSEN),
+                                     ("follow", OSTAP)), 1):
+        w.act(f"act{i}", kind, who, router if kind != "follow" else None, minute=i)
     w.lists = {"L1": {"title": "Новости", "exclusive": True, "members": {NEWS["id"]}},
                "L2": {"title": "Мемасики", "exclusive": True, "members": set()}}
     del router
@@ -233,6 +238,10 @@ def run(app, out, label, palette, theme_name, extras):
         pump(app, 1.0)
         shoot(win, out, f"{label}-find")
         win.find_bar.close_bar()
+        win.select_lane("activity")
+        pump(app, 1.0)
+        shoot(win, out, f"{label}-activity")
+        win.select_lane("people")
         from fedtail.frontends.qt.profile import ProfileDialog
         dlg = ProfileDialog(win)
         dlg.show()

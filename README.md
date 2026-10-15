@@ -150,7 +150,11 @@ Only what you changed is sent to the server.
 
 ## Notifications
 
-New comments, mentions and follow requests pop up as KDE notifications; "Open" goes straight to
+**Activity** is a lane of its own: who favourited or boosted your posts and who followed you,
+gathered per post ("Kot, Arsen and 3 more — ★ favourited «…»"). `[activity] types` picks the
+kinds.
+
+New comments, mentions, activity and follow requests pop up as KDE notifications; "Open" goes straight to
 the thread. Which lanes notify, and how much a notification tells, is set in `[notify]`:
 
 ```toml

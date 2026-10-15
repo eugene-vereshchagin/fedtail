@@ -179,6 +179,11 @@ class Api:
         p["types[]"] = ["mention"]
         return self.get("/api/v1/notifications", p)
 
+    def notifications(self, types, limit=40, max_id=None, min_id=None):
+        p = self._page(limit, max_id, min_id)
+        p["types[]"] = list(types)
+        return self.get("/api/v1/notifications", p)
+
     def status(self, sid):
         return self.get(f"/api/v1/statuses/{sid}")
 

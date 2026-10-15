@@ -59,6 +59,7 @@ LANES = {
     "mine": Lane("mine", "mine", _all),
     "local": Lane("local", "local", _all),
     "requests": Lane("requests", None, _all),
+    "activity": Lane("activity", None, _all),
 }
 
 
