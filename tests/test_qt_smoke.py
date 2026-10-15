@@ -195,13 +195,19 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(dlg.isVisible())
 
         # Esc: first the find bar, then the whole window goes off the screen
-        from PySide6.QtCore import Qt
-        from PySide6.QtTest import QTest
+        from PySide6.QtCore import QEvent, Qt
+        from PySide6.QtGui import QKeyEvent
+        from PySide6.QtWidgets import QApplication
+
+        def esc():
+            for t in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+                QApplication.sendEvent(self.win, QKeyEvent(t, Qt.Key.Key_Escape,
+                                                           Qt.KeyboardModifier.NoModifier))
         self.win.find_bar.open()
-        QTest.keyClick(self.win, Qt.Key.Key_Escape)
+        esc()
         self.assertFalse(self.win.find_bar.isVisible())
         self.assertTrue(self.win.isVisible() and not self.win.isMinimized())
-        QTest.keyClick(self.win, Qt.Key.Key_Escape)
+        esc()
         self.pump(0.1)
         self.assertTrue(not self.win.isVisible() or self.win.isMinimized())
         self.win.showNormal()
