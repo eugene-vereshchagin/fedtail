@@ -264,6 +264,16 @@ class MainWindow(QMainWindow):
             self.lane_items[lane.name] = w
         self.lanes.currentItemChanged.connect(self._lane_clicked)
         v.addWidget(self.lanes, 1)
+        if self.cfg["ui"]["sidebar_footer"]:
+            info = version.info()
+            build = info["version"] + (f" · {info['date']}" if info["date"] else "")
+            self.footer = QLabel(f"fedtail {build}<br>{_('made_by')}")
+            self.footer.setObjectName("sideFooter")
+            self.footer.setWordWrap(True)
+            self.footer.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.footer.setToolTip(_("about"))
+            self.footer.installEventFilter(self)
+            v.addWidget(self.footer)
         self.sidebar = self.lanes  # older name, still used around
         self.update_badges()
         return side
@@ -298,10 +308,13 @@ class MainWindow(QMainWindow):
         self.bridge.call(self.core.connect(), ok=self._connected, fail=self._connect_failed)
 
     def eventFilter(self, obj, e):
-        if e.type() == e.Type.MouseButtonRelease and \
-                obj in (self.account_avatar, self.account_name, self.account_sub):
-            self.open_my_profile()
-            return True
+        if e.type() == e.Type.MouseButtonRelease:
+            if obj in (self.account_avatar, self.account_name, self.account_sub):
+                self.open_my_profile()
+                return True
+            if obj is getattr(self, "footer", None):
+                self.about()
+                return True
         return super().eventFilter(obj, e)
 
     def open_my_profile(self):
@@ -599,6 +612,7 @@ class MainWindow(QMainWindow):
         if info["commit"]:
             lines.append(_("about_build", commit=info["commit"], date=info["date"]))
         lines.append(_("about_env", py=platform.python_version(), qt=pyside))
+        lines.append(_("made_by_long"))
         if self.core.me:
             lines.append(_("about_profile", profile=self.core.paths.profile,
                            acct="@" + self.core.me["acct"], server=self.core.auth["server"]))

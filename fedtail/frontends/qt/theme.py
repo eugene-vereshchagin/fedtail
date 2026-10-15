@@ -141,6 +141,7 @@ QToolTip {{ color: {k('text')}; background: {k('card')}; border: 1px solid {k('c
 QWidget#sidebar {{ background: {k('sidebar')}; border-right: 1px solid {k('sidebar_border')}; }}
 QLabel#accountName {{ font-weight: 700; font-size: {round(base_pt * 1.1, 1)}pt; }}
 QLabel#accountSub {{ color: {k('muted')}; }}
+QLabel#sideFooter {{ color: {k('muted')}; font-size: {round(base_pt * 0.8, 1)}pt; }}
 QToolButton#menu {{ border: 0; border-radius: {br}px; padding: 6px; }}
 QToolButton#menu:hover {{ background: {k('selected')}; }}
 QToolButton#menu::menu-indicator {{ image: none; width: 0; }}

@@ -183,6 +183,12 @@ ruff check .
 
 How it's built and what comes next: [docs/DESIGN.md](docs/DESIGN.md) (in Russian for now).
 
+## Who wrote it
+
+The code, from the first line to the icon, is written by Claude (Anthropic), an AI. A human
+came up with the idea, tested every build on his own fediverse node and reported what was
+wrong. Commits carry a `Co-Authored-By: Claude` line.
+
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).

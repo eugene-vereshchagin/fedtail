@@ -109,6 +109,9 @@ _STRINGS = {
         "delete_q_title": "Удалить?", "delete_q": "Удалить пост насовсем?\n\n{text}",
         "about_text": "<b>fedtail {version}</b><br>Клиент федиверса для тех, кто помнит Point."
                       "<br>Лицензия GPL-3.0-or-later.",
+        "made_by": "написан нейросетью Claude<br>под присмотром кожаного мешка",
+        "made_by_long": "Код написан нейросетью Claude (Anthropic) — от первой строки до "
+                        "иконки. Кожаный мешок придумывал, тестировал и ругался.",
         "about_build": "Сборка: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_profile": "Профиль «{profile}»: {acct} на {server}",
         "my_profile": "Мой профиль", "edit_profile": "Редактировать профиль",
@@ -217,6 +220,9 @@ _STRINGS = {
         "delete_q_title": "Delete?", "delete_q": "Delete this post for good?\n\n{text}",
         "about_text": "<b>fedtail {version}</b><br>A fediverse client for people who miss Point."
                       "<br>License GPL-3.0-or-later.",
+        "made_by": "written by Claude, an AI<br>supervised by a meatbag",
+        "made_by_long": "The code is written by Claude (Anthropic), an AI — from the first "
+                        "line to the icon. A meatbag came up with it, tested it and swore.",
         "about_build": "Build: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_profile": "Profile “{profile}”: {acct} at {server}",
         "my_profile": "My profile", "edit_profile": "Edit profile",
