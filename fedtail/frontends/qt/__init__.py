@@ -1,9 +1,10 @@
 """Qt Widgets frontend (PySide6)."""
 
+import logging
 import signal
 import sys
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QLoggingCategory, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -17,6 +18,10 @@ def run(core, instance, argv):
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
     app.setDesktopFileName("fedtail")
+    if not logging.getLogger().isEnabledFor(logging.DEBUG):
+        # images from the fediverse often carry odd metadata ("libpng warning:
+        # eXIf: duplicate"); harmless, the picture loads. Shown with --debug.
+        QLoggingCategory.setFilterRules("qt.gui.imageio.warning=false")
     app.setWindowIcon(QIcon(icon_path()))
     app.setQuitOnLastWindowClosed(False)
     theme = themes.apply(app, core.cfg)
