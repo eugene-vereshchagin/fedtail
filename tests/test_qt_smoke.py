@@ -153,6 +153,17 @@ class QtSmokeTest(unittest.TestCase):
         dlg.reject()
         self.assertFalse(dlg.isVisible())
 
+        # "posts only" hides replies, and remembers it
+        self.win.select_lane("people")
+        people = self.win.lane_widgets["people"]
+        people.only_posts.setChecked(True)
+        self.pump(0.1)
+        self.assertNotIn("013", [r.status_id for r in people.view.rows.values()])
+        self.assertTrue(self.core.posts_only("people"))
+        people.only_posts.setChecked(False)
+        self.pump(0.1)
+        self.assertIn("013", [r.status_id for r in people.view.rows.values()])
+
         # pictures open in our own viewer
         from fedtail.frontends.qt.viewer import ImageViewer
         pic = self.core.store.get_status("013")["media_attachments"]
@@ -160,6 +171,14 @@ class QtSmokeTest(unittest.TestCase):
         viewers = [w for w in self.app.topLevelWidgets()
                    if isinstance(w, ImageViewer) and w.isVisible()]
         self.assertEqual(len(viewers), 1)
+        from PySide6.QtGui import QPixmap
+        pm = QPixmap(3000, 2000)
+        viewers[0].canvas.set_pixmap(pm)
+        r = viewers[0].canvas._target()  # a huge picture is fitted into the window
+        self.assertLessEqual(r.width(), viewers[0].canvas.width() + 1)
+        self.assertLessEqual(r.height(), viewers[0].canvas.height() + 1)
+        viewers[0].canvas.toggle_actual()
+        self.assertEqual(viewers[0].canvas._target().width(), 3000)
         viewers[0].accept()
         self.assertFalse(viewers[0].isVisible())
 

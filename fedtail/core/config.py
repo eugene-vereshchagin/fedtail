@@ -17,7 +17,7 @@ DEFAULTS = {
         "font_size": 0,
         "close_to_tray": True,
         "notifications": True,
-        "expand_cw": False,
+        "expand_cw": True,
         "max_width": 760,
         "image_height": 360,
         "image_viewer": "internal",
@@ -36,6 +36,7 @@ DEFAULTS = {
     "lanes": {
         "enabled": ["people", "comments", "mentions", "bots", "mine", "local", "requests"],
         "extra_bots": [],
+        "posts_only": [],
     },
     "post": {
         "default_visibility": "private",
@@ -111,9 +112,10 @@ def validate(user):
                 continue
             cfg[section][key] = val
 
-    bad = [x for x in cfg["lanes"]["enabled"] if x not in LANE_NAMES]
+    bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"]
+           if x not in LANE_NAMES]
     if bad:
-        errors.append(f"lanes.enabled: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
+        errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
     if not cfg["lanes"]["enabled"]:
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):

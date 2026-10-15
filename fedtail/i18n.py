@@ -8,7 +8,7 @@ _STRINGS = {
         "months": "янв фев мар апр мая июн июл авг сен окт ноя дек",
         # lanes
         "lane_people": "Люди", "lane_comments": "Комменты к моим", "lane_mentions": "Упоминания",
-        "lane_bots": "Боты", "lane_mine": "Мои записи", "lane_local": "Локальная",
+        "lane_bots": "Боты", "lane_mine": "Мои записи и комменты", "lane_local": "Локальная",
         "lane_requests": "Заявки",
         # visibility
         "vis_public": "🌐 Публично", "vis_unlisted": "🔓 Не в общих лентах",
@@ -24,6 +24,7 @@ _STRINGS = {
         "cw_show": "показать", "cw_hide": "скрыть",
         "reply": "ответить", "thread": "тред", "delete": "удалить",
         # feed
+        "posts_only": "Только посты", "posts_only_tip": "Скрыть комментарии и ответы",
         "to_first_unread": "↧ к первому новому", "mark_all_read": "✓ всё прочитано",
         "older_up": "▲ раньше", "older_down": "▼ раньше", "no_older": "раньше ничего нет",
         "unread_n": "новых: {n}", "all_read": "всё прочитано",
@@ -36,7 +37,9 @@ _STRINGS = {
         "cw_placeholder": "Предупреждение / заголовок под катом (можно пусто)",
         "text_placeholder": "Пиши.", "text_placeholder_md": "Пиши. Markdown работает.",
         "media_tip": "Двойной клик — подпись к картинке (alt)",
-        "viewer_title": "Картинка", "viewer_keys": "← → листать · Esc/клик закрыть · O в браузере",
+        "viewer_title": "Картинка",
+        "viewer_keys": "← → листать · двойной клик/Z 1:1 · F во весь экран · "
+                       "O в браузере · Esc/клик закрыть",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
         "boost_time": "продвинуто {when}",
@@ -74,7 +77,7 @@ _STRINGS = {
     "en": {
         "months": "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",
         "lane_people": "People", "lane_comments": "Replies to me", "lane_mentions": "Mentions",
-        "lane_bots": "Bots", "lane_mine": "My posts", "lane_local": "Local",
+        "lane_bots": "Bots", "lane_mine": "My posts & replies", "lane_local": "Local",
         "lane_requests": "Follow requests",
         "vis_public": "🌐 Public", "vis_unlisted": "🔓 Unlisted",
         "vis_private": "🔒 Followers only", "vis_direct": "✉ Mentioned only",
@@ -86,6 +89,7 @@ _STRINGS = {
         "ctx_reply": "in reply to {name}: “{text}”",
         "cw_show": "show", "cw_hide": "hide",
         "reply": "reply", "thread": "thread", "delete": "delete",
+        "posts_only": "Posts only", "posts_only_tip": "Hide replies",
         "to_first_unread": "↧ first unread", "mark_all_read": "✓ mark all read",
         "older_up": "▲ older", "older_down": "▼ older", "no_older": "nothing older",
         "unread_n": "unread: {n}", "all_read": "all read",
@@ -97,7 +101,8 @@ _STRINGS = {
         "cw_placeholder": "Content warning / summary (optional)",
         "text_placeholder": "Write.", "text_placeholder_md": "Write. Markdown works.",
         "media_tip": "Double-click to add a description (alt text)",
-        "viewer_title": "Image", "viewer_keys": "← → flip · Esc/click close · O browser",
+        "viewer_title": "Image", "viewer_keys": "← → flip · double-click/Z 1:1 · F full screen · "
+                       "O browser · Esc/click close",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
         "boost_time": "boosted {when}",

@@ -7,6 +7,7 @@ space before they load.
 
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -20,6 +21,8 @@ from ...core.model import real, snippet
 from ...i18n import _
 from .card import CardSpec, PostRow
 from .text import display_name, esc
+
+POSTS_ONLY_LANES = ("people", "bots", "mine", "local")
 
 
 class FeedView(QScrollArea):
@@ -217,6 +220,12 @@ class LaneWidget(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
         self.strip = _Strip()
+        if name in POSTS_ONLY_LANES:
+            self.only_posts = QCheckBox(_("posts_only"))
+            self.only_posts.setToolTip(_("posts_only_tip"))
+            self.only_posts.setChecked(self.core.posts_only(name))
+            self.only_posts.toggled.connect(self._toggle_posts_only)
+            self.strip.h.addWidget(self.only_posts)
         self.btn_first = _button(_("to_first_unread"), self.jump_first_unread)
         self.btn_all = _button(_("mark_all_read"), self.mark_all_read)
         self.strip.h.addWidget(self.btn_first)
@@ -232,6 +241,13 @@ class LaneWidget(QWidget):
     def _seen(self, ids):
         if self.cfg["read"]["mark_read"] == "on_scroll":
             self.core.mark_read(ids)
+
+    def _toggle_posts_only(self, on):
+        self.core.set_posts_only(self.name, on)
+        self.positioned = False  # a different list: start over at the first unread
+        self.refresh(force=True)
+        self._initial_position()
+        self.win.update_badges()
 
     def refresh(self, force=False):
         # hidden lanes only remember that they are stale; they catch up when shown

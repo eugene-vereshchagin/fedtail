@@ -221,6 +221,13 @@ class Core:
                                  tuple(self.cfg["lanes"]["extra_bots"]))
 
     # ---- reading ---------------------------------------------------------------
+    def posts_only(self, name):
+        saved = self.get_state(f"posts_only.{name}")
+        return saved if saved is not None else name in self.cfg["lanes"]["posts_only"]
+
+    def set_posts_only(self, name, on):
+        self.set_state(f"posts_only.{name}", bool(on))
+
     def lane_entries(self, name):
         """[(item_id, status)] oldest → newest, at most the lane's render limit.
 
@@ -232,8 +239,9 @@ class Core:
         if not lane.source:
             return []
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        only_posts = self.posts_only(name)
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
-               self.me["id"] if self.me else None)
+               self.me["id"] if self.me else None, only_posts)
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]
@@ -241,6 +249,8 @@ class Core:
         kept = []
         for item_id, st in self.store.iter_items(lane.source,
                                                  max_rows=max(FILTER_WINDOW, limit)):
+            if only_posts and real(st).get("in_reply_to_id"):
+                continue
             if lane.keep(st, ctx):
                 kept.append((item_id, st))
                 if len(kept) >= limit:
