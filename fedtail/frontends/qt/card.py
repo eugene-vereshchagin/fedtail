@@ -71,6 +71,19 @@ def _theme_icon(names):
     return QIcon()
 
 
+class WrapLabel(QLabel):
+    """A word-wrapped label that always takes the height its text needs at the
+    width it actually got. Plain QLabel, deep in nested layouts, sometimes gets
+    a height computed for another width, and the last lines get cut off."""
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if self.wordWrap():
+            h = self.heightForWidth(self.width())
+            if h > 0 and h != self.minimumHeight():
+                self.setMinimumHeight(h)
+
+
 class SeparatorRow(QWidget):
     """'new below · 12' between what was read and what wasn't."""
 
@@ -175,7 +188,7 @@ class PostRow(QWidget):
             self.mark.setVisible(self.spec.unread)
 
     def _label(self, html="", name=None, selectable=False, wrap=True):
-        lab = QLabel(html)
+        lab = WrapLabel(html)
         lab.setTextFormat(Qt.TextFormat.RichText)
         lab.setWordWrap(wrap)
         lab.setOpenExternalLinks(False)
@@ -184,6 +197,8 @@ class PostRow(QWidget):
             flags |= Qt.TextInteractionFlag.TextSelectableByMouse
         lab.setTextInteractionFlags(flags)
         lab.linkActivated.connect(self.ctx.on_link)
+        # shortened links show the whole address on hover
+        lab.linkHovered.connect(lambda url: lab.setToolTip(url if url.startswith("http") else ""))
         if name:
             lab.setObjectName(name)
         return lab
