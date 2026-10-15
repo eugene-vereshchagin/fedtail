@@ -1,6 +1,6 @@
 """What Ctrl+F looks through in a post, and how it matches. No Qt: testable."""
 
-from ..core.model import html_to_text, real
+from .model import html_to_text, real
 
 
 def fold(s):

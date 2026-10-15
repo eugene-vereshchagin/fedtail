@@ -42,6 +42,10 @@ _STRINGS = {
         "find_prev": "Предыдущее (Shift+Enter, Shift+F3)",
         "find_next": "Следующее (Enter, F3)", "find_close": "Закрыть (Esc)",
         "find_none": "не найдено в загруженном", "find_count": "{i} из {n}",
+        "find_deeper": "Глубже", "find_searching": "ищу в архиве…",
+        "find_deeper_tip": "Искать во всём, что сохранено для этой ленты, и подгрузить "
+                           "ленту до найденного",
+        "find_archive_none": "и в архиве нет; «Ещё старее» внизу ленты подтянет с сервера",
         "to_new": "К новому", "show_all": "Всё", "new_n": ["{n} новое", "{n} новых", "{n} новых"],
         "new_below": "дальше новое", "menu": "Меню", "open_themes": "Открыть папку тем",
         "you_replied": "ты ответил {when}: «{text}»",
@@ -181,6 +185,11 @@ _STRINGS = {
         "find_prev": "Previous (Shift+Enter, Shift+F3)",
         "find_next": "Next (Enter, F3)", "find_close": "Close (Esc)",
         "find_none": "not found in what's loaded", "find_count": "{i} of {n}",
+        "find_deeper": "Deeper", "find_searching": "searching the archive…",
+        "find_deeper_tip": "Search everything stored for this lane and load the lane down to "
+                           "the match",
+        "find_archive_none": "not in the archive either; \"Older\" at the lane's end asks "
+                             "the server",
         "to_new": "To new", "show_all": "All", "new_n": ["{n} new", "{n} new"],
         "new_below": "new below", "menu": "Menu", "open_themes": "Open themes folder",
         "you_replied": "you replied {when}: “{text}”",

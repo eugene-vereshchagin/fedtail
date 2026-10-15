@@ -4,8 +4,8 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
+from ...core.search import haystack, matches
 from ...i18n import _
-from ..findtext import haystack, matches
 
 
 class FindBar(QWidget):
@@ -25,6 +25,12 @@ class FindBar(QWidget):
         self.count = QLabel()
         self.count.setObjectName("counter")
         lay.addWidget(self.count)
+        self.deeper = QPushButton(_("find_deeper"))
+        self.deeper.setObjectName("tool")
+        self.deeper.setToolTip(_("find_deeper_tip"))
+        self.deeper.clicked.connect(self.search_deeper)
+        self.deeper.hide()
+        lay.addWidget(self.deeper)
         for text, tip, slot in (("↑", _("find_prev"), lambda: self.step(-1)),
                                 ("↓", _("find_next"), lambda: self.step(1)),
                                 ("✕", _("find_close"), self.close_bar)):
@@ -100,6 +106,43 @@ class FindBar(QWidget):
             self._mark(None)
         self._show_count()
 
+    def _lane_name(self):
+        """The lane on screen, if the view is a lane (threads have no archive)."""
+        w = self.win.tabs.currentWidget()
+        if w is self.win.stack:
+            w = self.win.stack.currentWidget()
+        return getattr(w, "name", None) if hasattr(w, "load_older") else None
+
+    def search_deeper(self):
+        name = self._lane_name()
+        query = self.edit.text()
+        if not name or not query.strip():
+            return
+        before = set(self.hits)
+        self.deeper.setEnabled(False)
+        self.count.setText(_("find_searching"))
+
+        def done(res):
+            self.deeper.setEnabled(True)
+            if not res["more"]:
+                self.count.setText(_("find_archive_none") if not res["total"]
+                                   else _("find_count", i=self.pos + 1, n=len(self.hits)))
+                return
+            # the lane grows when the core says so; then stand on the first new match
+            QTimer.singleShot(400, lambda: self._after_deeper(before))
+        self.win.bridge.call(self.win.core.deep_find(name, query), ok=done,
+                             fail=lambda e: (self.deeper.setEnabled(True), self.win.error(e)))
+
+    def _after_deeper(self, before):
+        self.search(jump=False)
+        fresh = [i for i, k in enumerate(self.hits) if k not in before]
+        if fresh:
+            # the new match closest to what was loaded before: with oldest first, older
+            # posts came in above, so that's the last of them; newest first — the first
+            oldest_first = self.win.cfg["feed"]["order"] == "oldest_first"
+            self.pos = fresh[-1] if oldest_first else fresh[0]
+            self._go()
+
     def _nearest(self, view):
         """The first hit from where the reader is now, not from the very top."""
         top = view.verticalScrollBar().value()
@@ -129,6 +172,7 @@ class FindBar(QWidget):
                 card.style().polish(card)
 
     def _show_count(self):
+        self.deeper.setVisible(bool(self._lane_name()) and bool(self.edit.text().strip()))
         if not self.edit.text().strip():
             self.count.setText("")
         elif not self.hits:

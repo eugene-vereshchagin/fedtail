@@ -1,6 +1,6 @@
 import unittest
 
-from fedtail.frontends.findtext import haystack, matches
+from fedtail.core.search import haystack, matches
 
 POST = {
     "id": "1", "content": "<p>Лучший говорящий <b>куст</b> в мире! #игры</p>",

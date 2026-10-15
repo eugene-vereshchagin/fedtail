@@ -33,6 +33,7 @@
   switches (approve followers, bot, directory).
 - Version from git: `0.2.0.devN+gSHA`; About shows build, commit date, Python/Qt, profile.
 - The last `Esc` takes the window off the screen at once (to the tray) — `ui.esc_hides`.
+- `Ctrl+F` → "Deeper": search everything stored for the lane, the lane grows down to the match.
 - `Ctrl+F`: find in the open lane, thread or profile; `F3` / `Shift+F3`, "3 of 12".
 - Image viewer over the main window; "you replied" under comments; posts-only toggle;
   `--update-config`; Russian plural forms.

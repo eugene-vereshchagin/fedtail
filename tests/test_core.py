@@ -224,6 +224,19 @@ class CoreTest(TmpDir):
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
+    def test_deep_find_extends_the_lane(self):
+        core, w = self.make(feed={"render_limit": 20, "page_size": 40})
+        for i in range(1, 41):
+            w.add(status(f"{i:03d}", BOB, minute=i % 60, text="иголка" if i == 3 else "сено"),
+                  home=True)
+        core.connect().result()
+        core.poll_once()  # all 40 stored, the lane shows the newest 20
+        self.assertNotIn("003", [st["id"] for _, st in core.lane_entries("people")])
+        res = core.deep_find("people", "ИГОЛКА").result()
+        self.assertEqual(res, {"total": 1, "more": True})
+        self.assertIn("003", [st["id"] for _, st in core.lane_entries("people")])
+        self.assertEqual(core.deep_find("people", "нету").result(), {"total": 0, "more": False})
+
     def test_activity_favourites_boosts_follows(self):
         core, w = self.make()
         mine = w.add(status("100", ME, minute=1), home=True)

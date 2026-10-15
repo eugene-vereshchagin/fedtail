@@ -20,7 +20,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import auth, lanes, sources, subs, threads
+from . import auth, lanes, search, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import narrower, real
@@ -472,6 +472,32 @@ class Core:
             kept.sort(key=lambda e: (real(e[1]).get("created_at", ""), real(e[1])["id"]))
         self._lane_cache[name] = (key, kept)
         return kept
+
+    def deep_find(self, name, query):
+        """Ctrl+F past what the lane shows: look through everything stored for it.
+        If an older match exists, the lane is extended down to it. Returns
+        {"total": matches in the store, "more": whether the lane grew}."""
+        def job():
+            lane = self.lane_by_name.get(name)
+            if lane is None or not lane.source:
+                return {"total": 0, "more": False}
+            ctx, only_posts = self._ctx(), self.posts_only(name)
+            limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+            found, i = [], 0
+            for _item, st in self.store.iter_items(lane.source):
+                if only_posts and real(st).get("in_reply_to_id"):
+                    continue
+                if not lane.keep(st, ctx):
+                    continue
+                i += 1
+                if search.matches(query, search.haystack(st)):
+                    found.append(i)
+            older = [x for x in found if x > limit]
+            if older:
+                self._limits[name] = older[0] + 10  # down to the next match, a bit more
+                self.emit("lanes_updated", {name: []})
+            return {"total": len(found), "more": bool(older)}
+        return self.submit(job)
 
     def unread_ids(self, entries):
         ids = [st["id"] for _, st in entries]
