@@ -1,0 +1,59 @@
+"""Lanes: what the user sees on the left. A lane is a source plus a filter."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from .model import is_bot, is_comment_to_me, real
+
+
+@dataclass
+class Lane:
+    name: str
+    source: str | None  # None: not a status stream (follow requests)
+    keep: Callable  # keep(status, ctx) -> bool
+    notify: bool = False  # new unread items here deserve a desktop notification
+
+
+@dataclass
+class LaneContext:
+    me_id: str
+    extra_bots: tuple
+
+
+def _all(st, ctx):
+    return True
+
+
+def _people(st, ctx):
+    return not is_bot(st["account"], ctx.extra_bots)
+
+
+def _bots(st, ctx):
+    return is_bot(st["account"], ctx.extra_bots)
+
+
+def _comments(st, ctx):
+    return is_comment_to_me(real(st), ctx.me_id)
+
+
+def _other_mentions(st, ctx):
+    return not is_comment_to_me(real(st), ctx.me_id)
+
+
+LANES = {
+    "people": Lane("people", "home", _people),
+    "comments": Lane("comments", "mentions", _comments, notify=True),
+    "mentions": Lane("mentions", "mentions", _other_mentions, notify=True),
+    "bots": Lane("bots", "home", _bots),
+    "mine": Lane("mine", "mine", _all),
+    "local": Lane("local", "local", _all),
+    "requests": Lane("requests", None, _all),
+}
+
+
+def enabled(cfg):
+    return [LANES[n] for n in cfg["lanes"]["enabled"]]
+
+
+def sources_needed(lanes):
+    return sorted({lane.source for lane in lanes if lane.source})

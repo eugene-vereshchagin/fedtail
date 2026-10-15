@@ -1,0 +1,408 @@
+"""Core: everything a frontend needs, no GUI.
+
+Network calls return concurrent.futures.Future. Events are emitted from
+worker threads (see events.py):
+
+  ready            me (account dict)        connected and ready
+  lanes_updated    {lane: [new item ids]}   something new arrived / older loaded
+  parents          None                     reply contexts became available
+  status_updated   status                   a status changed (fav, boost…)
+  status_deleted   status id
+  read_changed     [status ids]
+  requests_updated [accounts]
+  notify           [(lane, status)]         new unread comments / mentions
+  error            str
+  auth_failed      str                      token no longer accepted
+"""
+
+import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+from . import auth, lanes, sources, threads
+from .api import Api, ApiError, Capabilities, capabilities_from_instance
+from .events import Events
+from .model import narrower, real
+from .store import Store
+
+log = logging.getLogger(__name__)
+
+KEEP_PER_SOURCE = 3000
+FILTER_WINDOW = 2000
+
+
+class Core:
+    def __init__(self, cfg, paths, api_class=Api):
+        self.cfg = cfg
+        self.paths = paths
+        self.api_class = api_class
+        paths.ensure()
+        self.store = Store(paths.db_file)
+        self.events = Events()
+        self.pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="fedtail")
+        self.auth = auth.load(paths.auth_file)
+        self.api = None
+        self.me = None
+        self.caps = Capabilities()
+        self.sources = {}
+        self.lanes = lanes.enabled(cfg)
+        self.lane_by_name = {lane.name: lane for lane in self.lanes}
+        self.follow_requests = []
+        self._limits = {}
+        self._pending_login = None
+        self._wake = threading.Event()
+        self._stop = threading.Event()
+        self._poll_lock = threading.Lock()
+        self._poller = None
+        self._parent_inflight = set()
+
+    # ---- plumbing ------------------------------------------------------------
+    def submit(self, fn, *a, **kw):
+        return self.pool.submit(fn, *a, **kw)
+
+    def emit(self, name, payload=None):
+        self.events.emit(name, payload)
+
+    @property
+    def logged_in(self):
+        return self.auth is not None
+
+    @property
+    def markdown(self):
+        mode = self.cfg["account"]["markdown"]
+        return self.caps.markdown if mode == "auto" else mode == "on"
+
+    # ---- login -----------------------------------------------------------------
+    def begin_login(self, server):
+        def job():
+            api = self.api_class(server)
+            app = api.register_app()
+            self._pending_login = (api, app)
+            return api.authorize_url(app["client_id"])
+        return self.submit(job)
+
+    def finish_login(self, code):
+        def job():
+            api, app = self._pending_login
+            token = api.get_token(app["client_id"], app["client_secret"], code)
+            me = self.api_class(api.base, token).me()
+            data = {"server": api.base, "client_id": app["client_id"],
+                    "client_secret": app["client_secret"], "token": token, "acct": me["acct"]}
+            auth.save(self.paths.auth_file, data)
+            self.auth = data
+            return me
+        return self.submit(job)
+
+    def logout(self):
+        auth.forget(self.paths.auth_file)
+        self.auth = None
+        self.api = None
+
+    # ---- connect & poll ----------------------------------------------------------
+    def connect(self):
+        def job():
+            api = self.api_class(self.auth["server"], self.auth["token"])
+            me = api.me()
+            try:
+                caps = capabilities_from_instance(api.instance())
+            except Exception:  # instance info is a nicety, not a must
+                caps = Capabilities()
+            self.api, self.me, self.caps = api, me, caps
+            self.sources = sources.make_sources(api, me["id"])
+            self.emit("ready", me)
+            return me
+        return self.submit(job)
+
+    def start_polling(self):
+        if self._poller:
+            return
+        self._poller = threading.Thread(target=self._poll_loop, name="fedtail-poll", daemon=True)
+        self._poller.start()
+
+    def poll_now(self):
+        self._wake.set()
+
+    def _poll_loop(self):
+        while not self._stop.is_set():
+            try:
+                self.poll_once()
+            except Exception as e:  # never let the poller die silently
+                if self._stop.is_set():
+                    return
+                log.exception("poll failed")
+                self.emit("error", str(e))
+            self._wake.wait(self.cfg["poll"]["interval_seconds"])
+            self._wake.clear()
+
+    def poll_once(self):
+        if not self.api:
+            return
+        with self._poll_lock:
+            first_run = not self.store.kv_get("initialized", False)
+            fc = self.cfg["feed"]
+            new_by_source = {}
+            for name in lanes.sources_needed(self.lanes):
+                try:
+                    new_by_source[name] = sources.catch_up(
+                        self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"])
+                    self.store.prune(name, KEEP_PER_SOURCE)
+                except ApiError as e:
+                    if e.status in (401, 403):
+                        self.emit("auth_failed", str(e))
+                        return
+                    self.emit("error", f"{name}: {e}")
+                except Exception as e:  # network down etc.
+                    self.emit("error", f"{name}: {e}")
+
+            if "requests" in self.lane_by_name:
+                try:
+                    self.follow_requests = self.api.follow_requests() or []
+                    self.emit("requests_updated", self.follow_requests)
+                except Exception as e:
+                    self.emit("error", f"requests: {e}")
+
+            new_statuses = self._new_statuses(new_by_source)
+            mine = [st["id"] for st in new_statuses if st["account"]["id"] == self.me["id"]]
+            if first_run and fc["first_run_mark_read"]:
+                self.store.mark_read([st["id"] for st in new_statuses])
+            elif mine:
+                self.store.mark_read(mine)
+            if first_run:
+                self.store.kv_set("initialized", True)
+
+            per_lane = self._split_by_lane(new_by_source)
+            if any(per_lane.values()):
+                self.emit("lanes_updated", per_lane)
+            if not first_run:
+                self._notify(per_lane)
+            self._fetch_parents(new_statuses)
+
+    def _new_statuses(self, new_by_source):
+        out = []
+        for name, ids in new_by_source.items():
+            if not ids:
+                continue
+            id_set = set(ids)
+            out += [st for item_id, st in self.store.items(name, len(ids) + 50)
+                    if item_id in id_set]
+        return out
+
+    def _split_by_lane(self, new_by_source):
+        ctx = self._ctx()
+        per_lane = {}
+        for lane in self.lanes:
+            ids = set(new_by_source.get(lane.source) or ())
+            if not ids:
+                continue
+            per_lane[lane.name] = [item_id for item_id, st
+                                   in self.store.items(lane.source, len(ids) + 50)
+                                   if item_id in ids and lane.keep(st, ctx)]
+        return per_lane
+
+    def _notify(self, per_lane):
+        out = []
+        for name, ids in per_lane.items():
+            lane = self.lane_by_name[name]
+            if not lane.notify or not ids:
+                continue
+            id_set = set(ids)
+            sts = [st for item_id, st in self.store.items(lane.source, len(ids) + 50)
+                   if item_id in id_set]
+            unread = self.store.read_set(st["id"] for st in sts)
+            out += [(name, st) for st in sts if st["id"] not in unread]
+        if out:
+            self.emit("notify", out)
+
+    def _ctx(self):
+        return lanes.LaneContext(self.me["id"] if self.me else "",
+                                 tuple(self.cfg["lanes"]["extra_bots"]))
+
+    # ---- reading ---------------------------------------------------------------
+    def lane_entries(self, name):
+        """[(item_id, status)] oldest → newest, at most the lane's render limit."""
+        lane = self.lane_by_name[name]
+        if not lane.source:
+            return []
+        limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        ctx = self._ctx()
+        window = max(FILTER_WINDOW, limit)
+        kept = [(i, st) for i, st in self.store.items(lane.source, window) if lane.keep(st, ctx)]
+        return kept[-limit:]
+
+    def unread_ids(self, entries):
+        ids = [st["id"] for _, st in entries]
+        read = self.store.read_set(ids)
+        return {i for i in ids if i not in read}
+
+    def unread_count(self, name):
+        return len(self.unread_ids(self.lane_entries(name)))
+
+    def mark_read(self, status_ids):
+        status_ids = list(status_ids)
+        if status_ids:
+            self.store.mark_read(status_ids)
+            self.emit("read_changed", status_ids)
+
+    def load_older(self, name):
+        lane = self.lane_by_name[name]
+
+        def job():
+            got = sources.fetch_older(self.store, self.sources[lane.source],
+                                      self.cfg["feed"]["page_size"])
+            limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+            self._limits[name] = limit + len(got)
+            # history is not news: older posts count as read
+            self.store.mark_read([st["id"] for st in got])
+            self.emit("lanes_updated", {name: []})
+            self._fetch_parents(got)
+            return len(got)
+        return self.submit(job)
+
+    def parent_of(self, status):
+        """Parent status, 'missing', or None when it isn't known (yet)."""
+        pid = real(status).get("in_reply_to_id")
+        if not pid:
+            return None
+        p = self.store.get_status(pid)
+        if p:
+            return p
+        if self.store.is_missing(pid):
+            return "missing"
+        return None
+
+    def ensure_parents(self, statuses):
+        self.submit(self._fetch_parents, list(statuses))
+
+    def _fetch_parents(self, statuses):
+        want = []
+        for st in statuses:
+            pid = real(st).get("in_reply_to_id")
+            if pid and pid not in self._parent_inflight and not self.store.get_status(pid) \
+                    and not self.store.is_missing(pid):
+                self._parent_inflight.add(pid)
+                want.append(pid)
+        got = False
+        for pid in want:
+            try:
+                self.store.put_statuses([self.api.status(pid)])
+                got = True
+            except ApiError as e:
+                if e.status in (403, 404, 410):
+                    self.store.mark_missing(pid)
+                    got = True
+            except Exception:
+                pass  # network hiccup: try again next time
+            finally:
+                self._parent_inflight.discard(pid)
+        if got:
+            self.emit("parents")
+
+    def thread(self, sid):
+        def job():
+            focus = self.api.status(sid)
+            focus = real(focus)
+            ctx = self.api.context(focus["id"])
+            self.store.put_statuses([focus] + ctx.get("ancestors", []) +
+                                    ctx.get("descendants", []))
+            return threads.build(focus, ctx)
+        return self.submit(job)
+
+    def account_statuses(self, acc_id, max_id=None):
+        def job():
+            page = self.api.account_statuses(acc_id, limit=self.cfg["feed"]["page_size"],
+                                             max_id=max_id)
+            self.store.put_statuses(page)
+            return page
+        return self.submit(job)
+
+    def account(self, acc_id):
+        return self.submit(self.api.get, f"/api/v1/accounts/{acc_id}")
+
+    # ---- writing ---------------------------------------------------------------
+    def reply_visibility(self, parent):
+        default = self.cfg["post"]["default_visibility"]
+        if parent is None:
+            return default
+        pv = real(parent).get("visibility", "public")
+        if self.cfg["post"]["reply_never_wider"]:
+            return narrower(pv, default)
+        return default
+
+    def post(self, text, visibility, reply_to=None, spoiler="", media=()):
+        """media: [(path, description)]"""
+        def job():
+            ids = [self.api.upload_media(p, d)["id"] for p, d in media]
+            st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown)
+            self.store.put_statuses([st])
+            self.store.mark_read([st["id"]])
+            self.poll_now()
+            return st
+        return self.submit(job)
+
+    def _update(self, st):
+        self.store.put_statuses([st])
+        self.emit("status_updated", st)
+        return st
+
+    def favourite(self, status):
+        s = real(status)
+        return self.submit(lambda: self._update(self.api.favourite(s["id"],
+                                                                   not s.get("favourited"))))
+
+    def boost(self, status):
+        s = real(status)
+
+        def job():
+            res = self.api.reblog(s["id"], not s.get("reblogged"))
+            return self._update((res or {}).get("reblog") or self.api.status(s["id"]))
+        return self.submit(job)
+
+    def delete(self, status):
+        s = real(status)
+
+        def job():
+            self.api.delete_status(s["id"])
+            self.store.delete_status(s["id"])
+            self.emit("status_deleted", s["id"])
+        return self.submit(job)
+
+    def answer_follow(self, acc_id, approve):
+        def job():
+            if approve:
+                self.api.authorize_follow(acc_id)
+            else:
+                self.api.reject_follow(acc_id)
+            self.follow_requests = [a for a in self.follow_requests if a["id"] != acc_id]
+            self.emit("requests_updated", self.follow_requests)
+        return self.submit(job)
+
+    # ---- drafts & ui state -----------------------------------------------------
+    @staticmethod
+    def draft_key(reply_to_id=None):
+        return f"reply:{reply_to_id}" if reply_to_id else "new"
+
+    def get_draft(self, key):
+        return self.store.get_draft(key)
+
+    def save_draft(self, key, data):
+        if self.cfg["post"]["drafts_autosave"]:
+            self.store.save_draft(key, data)
+
+    def delete_draft(self, key):
+        self.store.delete_draft(key)
+
+    def get_state(self, key, default=None):
+        return self.store.kv_get(f"ui.{key}", default)
+
+    def set_state(self, key, value):
+        self.store.kv_set(f"ui.{key}", value)
+
+    # ---- shutdown ----------------------------------------------------------------
+    def shutdown(self):
+        self._stop.set()
+        self._wake.set()
+        self.pool.shutdown(wait=False, cancel_futures=True)
+        if self._poller:
+            self._poller.join(timeout=5)
+        with self._poll_lock:
+            self.store.close()
