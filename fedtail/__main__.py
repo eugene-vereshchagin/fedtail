@@ -2,12 +2,20 @@
 
 import argparse
 import logging
+import os
 import sys
 
-from . import __version__, frontends, i18n
-from .core import config, config_update, paths
-from .core.app import Core
-from .core.instance import SingleInstance
+if not __package__:
+    # started as `python3 fedtail` (the folder) instead of `python3 -m fedtail`
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from fedtail.__main__ import main
+
+    sys.exit(main())
+
+from . import __version__, frontends, i18n  # noqa: E402
+from .core import config, config_update, paths  # noqa: E402
+from .core.app import Core  # noqa: E402
+from .core.instance import SingleInstance  # noqa: E402
 
 
 def parse_args(argv):

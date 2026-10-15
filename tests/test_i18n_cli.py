@@ -44,6 +44,12 @@ class CliTest(unittest.TestCase):
                              capture_output=True, text=True, check=True)
         self.assertIn(__version__, out.stdout)
 
+    def test_run_as_folder(self):
+        out = subprocess.run([sys.executable, "fedtail", "--version"], cwd=ROOT,
+                             capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn(__version__, out.stdout)
+
     def test_update_config_flag(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:
