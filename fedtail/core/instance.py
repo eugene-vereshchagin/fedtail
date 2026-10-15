@@ -23,7 +23,7 @@ class SingleInstance:
             s.connect(self.path)
             s.sendall(b"raise\n")
             return True
-        except (FileNotFoundError, ConnectionRefusedError, socket.timeout, OSError):
+        except (TimeoutError, FileNotFoundError, ConnectionRefusedError, OSError):
             return False
         finally:
             s.close()

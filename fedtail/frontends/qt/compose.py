@@ -4,9 +4,21 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
-from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QHBoxLayout, QInputDialog,
-                               QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox,
-                               QPlainTextEdit, QPushButton, QVBoxLayout)
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+)
 
 from ...core.model import VISIBILITIES, real, reply_mentions, snippet
 from ...i18n import _

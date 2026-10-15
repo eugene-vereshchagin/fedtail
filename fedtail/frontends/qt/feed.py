@@ -6,8 +6,15 @@ space before they load.
 """
 
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
-from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea,
-                               QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ...core.model import real, snippet
 from ...i18n import _

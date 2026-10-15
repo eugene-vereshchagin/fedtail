@@ -4,9 +4,20 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QDialog, QListWidget, QListWidgetItem, QMainWindow,
-                               QMenu, QMessageBox, QSplitter, QStackedWidget, QSystemTrayIcon,
-                               QTabBar, QTabWidget)
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QSplitter,
+    QStackedWidget,
+    QSystemTrayIcon,
+    QTabBar,
+    QTabWidget,
+)
 
 from ... import __version__
 from ...core.model import real, snippet
@@ -58,6 +69,7 @@ class MainWindow(QMainWindow):
 
     # ---- layout -------------------------------------------------------------------
     def _build(self):
+        self.tray = None
         self.sidebar = QListWidget()
         self.sidebar.setMinimumWidth(170)
         self.sidebar.setMaximumWidth(280)
@@ -117,7 +129,6 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
                 lambda r=i: self.sidebar.setCurrentRow(r))
 
-        self.tray = None
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
             menu = QMenu(self)
