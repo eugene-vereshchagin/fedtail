@@ -90,7 +90,9 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
         self.core.poll_once()
         lane = self.win.lane_widgets["people"]
-        self.pump(until=lambda: len(lane.view.rows) == 4)  # bot is not in "people"
+        posts = lambda v: [r for r in v.rows.values() if r.status_id is not None]
+        self.pump(until=lambda: len(posts(lane.view)) == 4)  # bot is not in "people"
+        self.assertIn("__sep__", lane.view.rows)  # "new below" after my own (read) post
         badge = self.win.lane_items["people"].badge
         self.assertTrue(badge.isVisible() or badge.text())  # unread badge
         self.assertEqual(badge.text(), "3")
@@ -217,7 +219,8 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(1.0)  # well before reading kicks in
         first_unread = view.rows[view.unread_keys()[0]]
         top = view._top(first_unread) - view.verticalScrollBar().value()
-        self.assertTrue(-20 < top < 40, top)
+        self.assertTrue(-20 < top < 90, top)  # just under the "new below" divider
+        self.assertIn("__sep__", view.rows)
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes
