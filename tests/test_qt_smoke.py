@@ -194,6 +194,26 @@ class QtSmokeTest(unittest.TestCase):
         dlg.reject()
         self.assertFalse(dlg.isVisible())
 
+        # Ctrl+F finds posts in the lane on screen and marks the one it stands on
+        self.win.select_lane("people")
+        self.pump(0.2)
+        from fedtail.core.model import snippet
+        view = self.win.current_view()
+        self.assertIs(view, self.win.lane_widgets["people"].view)
+        key = next(k for k in view.order if view.rows[k].status_id)
+        word = snippet(view.rows[key].spec.status).split()[0]
+        bar = self.win.find_bar
+        bar.open()
+        bar.edit.setText(word.upper())
+        bar.search(jump=True)
+        self.assertIn(key, bar.hits)
+        self.assertEqual(view.rows[bar.hits[bar.pos]].card.property("found"), "true")
+        bar.edit.setText("нет-такого-слова-нигде")
+        bar.search(jump=True)
+        self.assertEqual(bar.hits, [])
+        bar.close_bar()
+        self.assertFalse(bar.isVisible())
+
         # "posts only" hides replies, and remembers it
         self.win.select_lane("people")
         people = self.win.lane_widgets["people"]

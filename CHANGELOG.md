@@ -19,5 +19,6 @@
 - App icon; `--install-desktop` adds a menu entry with it.
 - Pictures by drag and drop (compose or main window) and `Ctrl+V`; thumbnails in compose;
   the content warning field is hidden behind a button.
+- `Ctrl+F`: find in the open lane, thread or profile; `F3` / `Shift+F3`, "3 of 12".
 - Image viewer over the main window; "you replied" under comments; posts-only toggle;
   `--update-config`; Russian plural forms.

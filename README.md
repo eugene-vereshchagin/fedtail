@@ -149,6 +149,7 @@ it open).
 | `F5` | refresh |
 | `Alt+1…9` | switch lane |
 | `Ctrl+W` | close tab |
+| `Ctrl+F`, `F3`, `Shift+F3` | find in the lane / thread on screen (text, name, `@handle`, `#id`, alt text) |
 | `Ctrl+Q` | quit (closing the window only hides it to the tray) |
 
 ## Development

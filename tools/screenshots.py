@@ -222,6 +222,15 @@ def run(app, out, label, palette, theme_name, extras):
         win.show_images(pics, 0)
         pump(app, 0.8)
         shoot(win, out, f"{label}-viewer")
+        from fedtail.frontends.qt.viewer import ImageOverlay
+        for w in win.findChildren(ImageOverlay):
+            w.close_viewer()
+        win.find_bar.open()
+        win.find_bar.edit.setText("кот")
+        win.find_bar.search(jump=True)
+        pump(app, 1.0)
+        shoot(win, out, f"{label}-find")
+        win.find_bar.close_bar()
 
     win.quitting = True
     win.hide()

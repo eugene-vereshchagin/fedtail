@@ -33,6 +33,7 @@ from . import feed as feed_module
 from .card import _round
 from .compose import Compose, media_paths, save_image
 from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
+from .find import FindBar
 from .images import Images
 from .login import LoginDialog
 from .notify import Notifier, icon_path
@@ -153,13 +154,26 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.stack, "")
         self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.tabs.tabCloseRequested.connect(self.close_tab)
-        row.addWidget(self.tabs, 1)
+        right = QWidget()
+        rv = QVBoxLayout(right)
+        rv.setContentsMargins(0, 0, 0, 0)
+        rv.setSpacing(0)
+        rv.addWidget(self.tabs, 1)
+        self.find_bar = FindBar(self)
+        rv.addWidget(self.find_bar)
+        self.tabs.currentChanged.connect(lambda _i: self.find_bar.view_changed())
+        self.stack.currentChanged.connect(lambda _i: self.find_bar.view_changed())
+        row.addWidget(right, 1)
         self.setCentralWidget(central)
         self.menuBar().hide()
 
         for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
                         ("Ctrl+Q", self.quit),
-                        ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex()))):
+                        ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex())),
+                        (QKeySequence.StandardKey.Find, self.find_bar.open),
+                        (QKeySequence.StandardKey.FindNext, lambda: self.find_bar.step(1)),
+                        (QKeySequence.StandardKey.FindPrevious,
+                         lambda: self.find_bar.step(-1))):
             QShortcut(QKeySequence(seq), self).activated.connect(fn)
         for i in range(min(9, self.lanes.count())):
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
@@ -440,6 +454,13 @@ class MainWindow(QMainWindow):
             return
         self.tabs.removeTab(i)
         w.deleteLater()
+
+    def current_view(self):
+        """The FeedView on screen: the current lane, thread or profile."""
+        w = self.tabs.currentWidget()
+        if w is self.stack:
+            w = self.stack.currentWidget()
+        return getattr(w, "view", None)
 
     def refresh(self):
         w = self.tabs.currentWidget()

@@ -125,11 +125,13 @@ class Theme:
             card_unread = "border-bottom: 1px dashed " + k("card_border")
             card_focus = (f"background: {k('focus')}; border: 1px solid {k('focus_border')}; "
                           f"border-radius: {r}px;")
+            card_found = f"border: 2px solid {k('accent')}; border-radius: {r}px;"
         else:
             card = (f"background: {k('card')}; border: 1px solid {k('card_border')}; "
                     f"border-radius: {r}px;")
             card_unread = f"border-color: {k('card_border_unread')}"
             card_focus = f"background: {k('focus')}; border-color: {k('focus_border')};"
+            card_found = f"border: 2px solid {k('accent')};"
         return f"""
 QMainWindow, QWidget#central {{ background: {k('window')}; }}
 QWidget {{ color: {k('text')}; }}
@@ -199,6 +201,8 @@ QScrollArea#feed, QWidget#feedBody {{ background: {k('view')}; border: 0; }}
 QFrame#card {{ {card} }}
 QFrame#card[unread="true"] {{ {card_unread} }}
 QFrame#card[focus="true"] {{ {card_focus} }}
+QFrame#card[found="true"] {{ {card_found} }}
+QWidget#findBar {{ background: {k('window')}; border-top: 1px solid {k('header_border')}; }}
 QLabel#name {{ font-weight: 700; }}
 QLabel#meta, QLabel#boost, QLabel#muted {{ color: {k('muted')}; }}
 QLabel#shortId {{ color: {k('muted')}; font-family: "{mono_family}"; }}
