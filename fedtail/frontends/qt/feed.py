@@ -1,0 +1,455 @@
+"""Scrollable lists of posts: lanes, threads, accounts; plus follow requests.
+
+The one rule here: nothing moves under the reader. Every update keeps the
+first visible post at the same place on screen, and images reserve their
+space before they load.
+"""
+
+from PySide6.QtCore import QPoint, Qt, QTimer, Signal
+from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea,
+                               QVBoxLayout, QWidget)
+
+from ...core.model import real, snippet
+from ...i18n import _
+from .card import CardSpec, PostRow
+from .text import display_name, esc
+
+
+class FeedView(QScrollArea):
+    seen = Signal(list)  # status ids the reader has actually seen
+
+    def __init__(self, ctx):
+        super().__init__()
+        self.ctx = ctx
+        self.setObjectName("feed")
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        body = QWidget()
+        body.setObjectName("feedBody")
+        outer = QHBoxLayout(body)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self.column = QWidget()
+        outer.addWidget(self.column, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.col = QVBoxLayout(self.column)
+        self.col.setContentsMargins(10, 10, 10, 10)
+        self.col.setSpacing(8)
+        self.header = QVBoxLayout()
+        self.footer = QVBoxLayout()
+        self.col.addLayout(self.header)
+        self.col.addLayout(self.footer)
+        self.col.addStretch(1)
+        self.setWidget(body)
+        self.rows = {}
+        self.order = []
+        self._seen_timer = QTimer(self, singleShot=True, interval=350)
+        self._seen_timer.timeout.connect(self._emit_seen)
+        self.verticalScrollBar().valueChanged.connect(lambda _v: self._seen_timer.start())
+
+    # ---- geometry ---------------------------------------------------------------
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        maxw = self.ctx.cfg["ui"]["max_width"]
+        w = self.viewport().width()
+        self.column.setFixedWidth(min(w, maxw) if maxw else w)
+        self._seen_timer.start()
+
+    def _settle(self):
+        self.col.activate()
+        self.widget().layout().activate()
+
+    def _top(self, row):
+        return row.mapTo(self.widget(), QPoint(0, 0)).y()
+
+    def _anchor(self):
+        v = self.verticalScrollBar().value()
+        for key in self.order:
+            row = self.rows[key]
+            top = self._top(row)
+            if top + row.height() > v:
+                return key, top - v
+        return None
+
+    def _restore(self, anchor):
+        if not anchor or anchor[0] not in self.rows:
+            return
+        self._settle()
+        self.verticalScrollBar().setValue(self._top(self.rows[anchor[0]]) - anchor[1])
+
+    # ---- content ------------------------------------------------------------------
+    def set_specs(self, specs, keep_position=True):
+        anchor = self._anchor() if keep_position else None
+        keys = [s.key for s in specs]
+        wanted = set(keys)
+        for key in [k for k in self.order if k not in wanted]:
+            row = self.rows.pop(key)
+            self.col.removeWidget(row)
+            row.deleteLater()
+        old = [k for k in self.order if k in wanted]
+        kept_in_new_order = [k for k in keys if k in self.rows]
+        if old != kept_in_new_order:  # order changed: lay everything out again
+            for k in old:
+                self.col.removeWidget(self.rows[k])
+        base = 1  # index 0 is the header layout
+        relayout = old != kept_in_new_order
+        for i, spec in enumerate(specs):
+            row = self.rows.get(spec.key)
+            if row is None:
+                row = PostRow(spec, self.ctx)
+                self.rows[spec.key] = row
+                self.col.insertWidget(base + i, row)
+            else:
+                row.update_spec(spec)
+                if relayout:
+                    self.col.insertWidget(base + i, row)
+        self.order = keys
+        if anchor:
+            self._restore(anchor)
+            QTimer.singleShot(0, lambda a=anchor: self._restore(a))
+        self._seen_timer.start()
+
+    def clear(self):
+        self.set_specs([], keep_position=False)
+
+    def scroll_to(self, key, where="top"):
+        def go():
+            row = self.rows.get(key)
+            if not row:
+                return
+            self._settle()
+            top = self._top(row)
+            if where == "bottom":
+                top = top + row.height() - self.viewport().height() + 10
+            self.verticalScrollBar().setValue(max(0, top - 6))
+        go()
+        QTimer.singleShot(0, go)
+
+    def scroll_to_end(self, end=True):
+        def go():
+            self._settle()
+            sb = self.verticalScrollBar()
+            sb.setValue(sb.maximum() if end else 0)
+        go()
+        QTimer.singleShot(0, go)
+
+    def set_unread(self, status_ids, unread=False):
+        ids = set(status_ids)
+        for row in self.rows.values():
+            if row.status_id in ids:
+                row.set_unread(unread)
+
+    def refresh_from_store(self, store):
+        for row in self.rows.values():
+            fresh = store.get_status(row.status_id)
+            if fresh and fresh != row.spec.status:
+                row.update_spec(CardSpec(**{**row.spec.__dict__, "status": fresh}))
+
+    def remove_status(self, sid):
+        rows = [self.rows[k] for k in self.order]
+        keep = [r.spec for r in rows if r.real_id != sid and r.status_id != sid]
+        if len(keep) != len(self.order):
+            self.set_specs(keep)
+
+    def unread_keys(self):
+        return [k for k in self.order if self.rows[k].spec.unread]
+
+    # ---- what the reader saw --------------------------------------------------------
+    def _emit_seen(self):
+        if not self.isVisible() or not self.window().isActiveWindow():
+            return
+        sb = self.verticalScrollBar()
+        vtop, vh = sb.value(), self.viewport().height()
+        vbot = vtop + vh
+        at_end = sb.value() >= sb.maximum()
+        ids = []
+        for key in self.order:
+            row = self.rows[key]
+            if not row.spec.unread:
+                continue
+            top = self._top(row)
+            bottom = top + row.height()
+            fully = top >= vtop - 2 and bottom <= vbot + 2
+            tall_and_done = row.height() > vh and bottom <= vbot + 2 and bottom > vtop
+            tail = at_end and top < vbot and bottom > vtop
+            if fully or tall_and_done or tail:
+                ids.append(row.status_id)
+        if ids:
+            self.seen.emit(ids)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._seen_timer.start()
+
+
+def _button(text, slot):
+    b = QPushButton(text)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.clicked.connect(slot)
+    return b
+
+
+class _Strip(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.h = QHBoxLayout(self)
+        self.h.setContentsMargins(10, 4, 10, 4)
+        self.label = QLabel()
+        self.label.setObjectName("strip")
+        self.h.addWidget(self.label, 1)
+
+
+class LaneWidget(QWidget):
+    def __init__(self, win, name):
+        super().__init__()
+        self.win, self.core, self.name = win, win.core, name
+        self.cfg = self.core.cfg
+        self.newest_first = self.cfg["feed"]["order"] == "newest_first"
+        self.positioned = False
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.strip = _Strip()
+        self.btn_first = _button(_("to_first_unread"), self.jump_first_unread)
+        self.btn_all = _button(_("mark_all_read"), self.mark_all_read)
+        self.strip.h.addWidget(self.btn_first)
+        self.strip.h.addWidget(self.btn_all)
+        lay.addWidget(self.strip)
+        self.view = FeedView(win.ctx)
+        self.view.seen.connect(self._seen)
+        lay.addWidget(self.view, 1)
+        self.btn_older = _button(_("older_down") if self.newest_first else _("older_up"),
+                                 self.load_older)
+        (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
+
+    def _seen(self, ids):
+        if self.cfg["read"]["mark_read"] == "on_scroll":
+            self.core.mark_read(ids)
+
+    def refresh(self):
+        entries = self.core.lane_entries(self.name)
+        unread = self.core.unread_ids(entries)
+        specs, unknown = [], []
+        for item_id, st in entries:
+            parent = self.core.parent_of(st)
+            if parent is None and real(st).get("in_reply_to_id"):
+                unknown.append(st)
+            specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread))
+        if unknown:
+            self.core.ensure_parents(unknown)
+        if self.newest_first:
+            specs.reverse()
+        if not self.positioned:
+            self.view.set_specs(specs, keep_position=False)
+            if self.isVisible():
+                self._initial_position()
+        else:
+            jump = self.cfg["feed"]["on_new"] == "jump_to_newest"
+            had = set(self.view.order)
+            self.view.set_specs(specs, keep_position=True)
+            if jump and any(s.key not in had for s in specs):
+                self.view.scroll_to_end(not self.newest_first)
+        self.update_strip()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if not self.positioned:
+            QTimer.singleShot(0, self._initial_position)
+        if self.cfg["read"]["mark_read"] == "on_open":
+            QTimer.singleShot(0, self.mark_all_read)
+
+    def _initial_position(self):
+        if self.positioned or not self.view.order:
+            return
+        self.positioned = True
+        unread = self.view.unread_keys()
+        if self.cfg["feed"]["start_at"] == "first_unread" and unread:
+            if self.newest_first:
+                self.view.scroll_to(unread[-1], "bottom")
+            else:
+                self.view.scroll_to(unread[0], "top")
+        else:
+            self.view.scroll_to_end(not self.newest_first)
+
+    def jump_first_unread(self):
+        unread = self.view.unread_keys()
+        if unread:
+            if self.newest_first:
+                self.view.scroll_to(unread[-1], "bottom")
+            else:
+                self.view.scroll_to(unread[0], "top")
+
+    def mark_all_read(self):
+        ids = [self.view.rows[k].status_id for k in self.view.unread_keys()]
+        self.core.mark_read(ids)
+
+    def load_older(self):
+        self.btn_older.setEnabled(False)
+        self.win.bridge.call(self.core.load_older(self.name),
+                             ok=lambda n: self._older_done(n),
+                             fail=lambda e: (self.btn_older.setEnabled(True), self.win.error(e)))
+
+    def _older_done(self, n):
+        self.btn_older.setEnabled(True)
+        if not n:
+            self.btn_older.setText(_("no_older"))
+
+    def apply_read(self, ids):
+        self.view.set_unread(ids, False)
+        self.update_strip()
+
+    def update_strip(self):
+        n = len(self.view.unread_keys())
+        self.strip.label.setText(_("unread_n", n=n) if n else _("all_read"))
+        self.btn_first.setVisible(bool(n))
+        self.btn_all.setVisible(bool(n))
+
+
+class ThreadWidget(QWidget):
+    def __init__(self, win, sid):
+        super().__init__()
+        self.win, self.core = win, win.core
+        self.focus_id = sid
+        self.title = _("thread_loading")
+        self.loaded = False
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.strip = _Strip()
+        self.strip.h.addWidget(_button(_("refresh"), self.reload))
+        lay.addWidget(self.strip)
+        self.view = FeedView(win.ctx)
+        self.view.seen.connect(self._seen)
+        lay.addWidget(self.view, 1)
+        self.statuses = set()
+        self.reload()
+
+    def _seen(self, ids):
+        if self.core.cfg["read"]["mark_read"] != "manual":
+            self.core.mark_read(ids)
+
+    def reload(self):
+        self.strip.label.setText(_("loading"))
+        self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
+                             fail=lambda e: self.strip.label.setText(_("load_failed", err=e)))
+
+    def focus_on(self, sid):
+        self.focus_id = sid
+        for row in self.view.rows.values():
+            focus = row.status_id == sid
+            if row.spec.focus != focus:
+                row.update_spec(CardSpec(**{**row.spec.__dict__, "focus": focus}))
+        self.view.scroll_to(sid, "top")
+
+    def _loaded(self, nodes):
+        self.statuses = {n.status["id"] for n in nodes}
+        unread = self.core.unread_ids([(n.status["id"], n.status) for n in nodes])
+        specs = [CardSpec(key=n.status["id"], status=n.status, depth=n.depth,
+                          number=n.number or None, in_thread=True,
+                          focus=(n.status["id"] == self.focus_id and len(nodes) > 1),
+                          unread=n.status["id"] in unread) for n in nodes]
+        self.view.set_specs(specs, keep_position=self.loaded)
+        root = nodes[0].status
+        self.title = f'{real(root)["account"]["username"]}: {snippet(root, 30)}'
+        self.strip.label.setText(_("thread_info", n=len(nodes) - 1))
+        self.win.retitle(self)
+        if not self.loaded:
+            self.loaded = True
+            self.view.scroll_to(self.focus_id, "top")
+
+    def apply_read(self, ids):
+        self.view.set_unread(ids, False)
+
+
+class AccountWidget(QWidget):
+    def __init__(self, win, acc_id):
+        super().__init__()
+        self.win, self.core = win, win.core
+        self.acc_id = acc_id
+        self.title = "@…"
+        self.items = []
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.strip = _Strip()
+        lay.addWidget(self.strip)
+        self.view = FeedView(win.ctx)
+        lay.addWidget(self.view, 1)
+        self.btn_more = _button(_("older_down"), self.more)
+        self.view.footer.addWidget(self.btn_more)
+        win.bridge.call(self.core.account(acc_id), ok=self._account)
+        self.more()
+
+    def _account(self, acc):
+        self.title = "@" + acc["acct"]
+        note = snippet({"content": acc.get("note", "")}, 200)
+        self.strip.label.setText(f"<b>{display_name(acc)}</b> @{esc(acc['acct'])} — {esc(note)}")
+        self.win.retitle(self)
+
+    def more(self):
+        self.btn_more.setEnabled(False)
+        max_id = self.items[-1]["id"] if self.items else None
+        self.win.bridge.call(self.core.account_statuses(self.acc_id, max_id), ok=self._page,
+                             fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
+
+    def _page(self, page):
+        self.items += page
+        self.btn_more.setEnabled(bool(page))
+        if not page:
+            self.btn_more.setText(_("no_older"))
+        self.core.ensure_parents(page)
+        self.render()
+
+    def render(self):
+        specs = [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st))
+                 for st in self.items]
+        self.view.set_specs(specs, keep_position=True)
+
+    def apply_read(self, ids):
+        pass
+
+
+class RequestsWidget(QScrollArea):
+    def __init__(self, win):
+        super().__init__()
+        self.win = win
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.body = QWidget()
+        self.lay = QVBoxLayout(self.body)
+        self.lay.setContentsMargins(12, 12, 12, 12)
+        self.lay.setSpacing(10)
+        self.setWidget(self.body)
+        self.refresh()
+
+    def refresh(self):
+        while self.lay.count():
+            item = self.lay.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        reqs = self.win.core.follow_requests
+        if not reqs:
+            self.lay.addWidget(QLabel(_("no_requests")))
+        for acc in reqs:
+            card = QFrame()
+            card.setObjectName("card")
+            v = QVBoxLayout(card)
+            name = QLabel(f'<b>{display_name(acc)}</b> @{esc(acc["acct"])} — '
+                          f'<a href="{esc(acc.get("url", ""))}">{_("profile")} ↗</a>')
+            name.setOpenExternalLinks(True)
+            v.addWidget(name)
+            note = QLabel(esc(snippet({"content": acc.get("note", "")}, 300)))
+            note.setWordWrap(True)
+            note.setObjectName("muted")
+            v.addWidget(note)
+            h = QHBoxLayout()
+            h.addWidget(_button(_("approve"), lambda _c=False, a=acc["id"]:
+                                self.win.answer_follow(a, True)))
+            h.addWidget(_button(_("reject"), lambda _c=False, a=acc["id"]:
+                                self.win.answer_follow(a, False)))
+            h.addStretch(1)
+            v.addLayout(h)
+            self.lay.addWidget(card)
+        self.lay.addStretch(1)
+
+    def apply_read(self, ids):
+        pass

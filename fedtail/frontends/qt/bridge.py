@@ -1,0 +1,42 @@
+"""Brings core events and futures into the Qt GUI thread."""
+
+import logging
+
+from PySide6.QtCore import QObject, Signal
+
+log = logging.getLogger(__name__)
+
+
+class Bridge(QObject):
+    event = Signal(str, object)          # core events, already in the GUI thread
+    raise_requested = Signal()           # another instance asked us to show up
+    _done = Signal(object, object, object)
+
+    def __init__(self, core):
+        super().__init__()
+        self.core = core
+        self.on_error = None
+        self._done.connect(self._finish)
+        core.events.on("*", lambda name, payload: self.event.emit(name, payload))
+
+    def call(self, future, ok=None, fail=None):
+        """Run ok(result) / fail(message) in the GUI thread when the future is done."""
+        future.add_done_callback(lambda f: self._done.emit(f, ok, fail))
+        return future
+
+    def _finish(self, future, ok, fail):
+        if future.cancelled():
+            return
+        exc = future.exception()
+        try:
+            if exc is not None:
+                log.debug("call failed", exc_info=exc)
+                handler = fail or self.on_error
+                if handler:
+                    handler(str(exc))
+            elif ok:
+                ok(future.result())
+        except RuntimeError as e:
+            # the widget waiting for this result is already gone
+            if "already deleted" not in str(e):
+                raise
