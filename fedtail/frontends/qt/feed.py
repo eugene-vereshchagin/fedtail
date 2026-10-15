@@ -212,6 +212,7 @@ class LaneWidget(QWidget):
         self.cfg = self.core.cfg
         self.newest_first = self.cfg["feed"]["order"] == "newest_first"
         self.positioned = False
+        self.dirty = False
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -232,12 +233,18 @@ class LaneWidget(QWidget):
         if self.cfg["read"]["mark_read"] == "on_scroll":
             self.core.mark_read(ids)
 
-    def refresh(self):
+    def refresh(self, force=False):
+        # hidden lanes only remember that they are stale; they catch up when shown
+        if not self.isVisible() and not force and self.positioned:
+            self.dirty = True
+            return
+        self.dirty = False
         entries = self.core.lane_entries(self.name)
         unread = self.core.unread_ids(entries)
+        parents = self.core.parents_for([st for _, st in entries])
         specs, unknown = [], []
         for item_id, st in entries:
-            parent = self.core.parent_of(st)
+            parent = parents.get(st["id"])
             if parent is None and real(st).get("in_reply_to_id"):
                 unknown.append(st)
             specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread))
@@ -259,6 +266,8 @@ class LaneWidget(QWidget):
 
     def showEvent(self, e):
         super().showEvent(e)
+        if self.dirty:
+            self.refresh()
         if not self.positioned:
             QTimer.singleShot(0, self._initial_position)
         if self.cfg["read"]["mark_read"] == "on_open":
@@ -302,7 +311,8 @@ class LaneWidget(QWidget):
 
     def apply_read(self, ids):
         self.view.set_unread(ids, False)
-        self.update_strip()
+        if self.isVisible():
+            self.update_strip()
 
     def update_strip(self):
         n = len(self.view.unread_keys())

@@ -57,7 +57,11 @@ class Store:
     def __init__(self, path):
         self.lock = threading.RLock()
         self.db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
+        self.db.execute("PRAGMA busy_timeout=5000")
         self.db.execute("PRAGMA journal_mode=WAL")
+        # bumped on every change, so callers can cache what they derive from the store
+        self.items_version = {}
+        self.status_version = 0
         self.db.execute("PRAGMA synchronous=NORMAL")
         with self.lock:
             self.db.executescript(SCHEMA)
@@ -91,6 +95,7 @@ class Store:
             rows.append((st["id"], json.dumps(st), st.get("created_at", "")))
         with self._tx() as db:
             db.executemany("INSERT OR REPLACE INTO statuses VALUES (?, ?, ?)", rows)
+            self.status_version += 1
 
     def get_status(self, sid):
         with self.lock:
@@ -112,10 +117,22 @@ class Store:
         with self._tx() as db:
             db.execute("DELETE FROM statuses WHERE id=?", (sid,))
             db.execute("DELETE FROM items WHERE status_id=?", (sid,))
+            self.status_version += 1
 
     def mark_missing(self, sid):
         with self.lock:
             self.db.execute("INSERT OR IGNORE INTO missing VALUES (?)", (sid,))
+
+    def missing_set(self, ids):
+        ids = list(ids)
+        out = set()
+        with self.lock:
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                marks = ",".join("?" * len(chunk))
+                q = f"SELECT status_id FROM missing WHERE status_id IN ({marks})"
+                out.update(r[0] for r in self.db.execute(q, chunk))
+        return out
 
     def is_missing(self, sid):
         with self.lock:
@@ -135,7 +152,12 @@ class Store:
                                  (source, item_id, st["id"], sort_key(created, item_id)))
                 if cur.rowcount:
                     new.append(item_id)
+            if new:
+                self._bump(source)
         return new
+
+    def _bump(self, source):
+        self.items_version[source] = self.items_version.get(source, 0) + 1
 
     def newest_item(self, source):
         with self.lock:
@@ -154,6 +176,21 @@ class Store:
             return self.db.execute("SELECT COUNT(*) FROM items WHERE source=?",
                                    (source,)).fetchone()[0]
 
+    def iter_items(self, source, chunk=200, max_rows=None):
+        """Items newest → oldest, parsed lazily chunk by chunk."""
+        offset = 0
+        while max_rows is None or offset < max_rows:
+            with self.lock:
+                rows = self.db.execute(
+                    "SELECT i.item_id, s.data FROM items i JOIN statuses s "
+                    "ON s.id = i.status_id WHERE i.source=? ORDER BY i.sort DESC "
+                    "LIMIT ? OFFSET ?", (source, chunk, offset)).fetchall()
+            for r in rows:
+                yield r[0], json.loads(r[1])
+            if len(rows) < chunk:
+                return
+            offset += chunk
+
     def items(self, source, limit):
         """Newest `limit` items of a source, returned oldest → newest."""
         with self.lock:
@@ -164,10 +201,12 @@ class Store:
 
     def prune(self, source, keep):
         with self._tx() as db:
-            db.execute(
+            cur = db.execute(
                 "DELETE FROM items WHERE source=? AND item_id NOT IN "
                 "(SELECT item_id FROM items WHERE source=? ORDER BY sort DESC LIMIT ?)",
                 (source, source, keep))
+            if cur.rowcount:
+                self._bump(source)
 
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):
@@ -213,7 +252,11 @@ class _Tx:
 
     def __enter__(self):
         self.store.lock.acquire()
-        self.store.db.execute("BEGIN")
+        try:
+            self.store.db.execute("BEGIN")
+        except BaseException:
+            self.store.lock.release()  # never leave the lock held on a failed BEGIN
+            raise
         return self.store.db
 
     def __exit__(self, exc_type, *_):

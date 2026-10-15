@@ -33,6 +33,7 @@ def run(core, instance, argv):
     try:
         return app.exec()
     finally:
+        win.images.pool.shutdown(wait=False, cancel_futures=True)
         core.shutdown()
 
 

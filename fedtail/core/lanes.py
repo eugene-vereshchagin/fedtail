@@ -12,6 +12,9 @@ class Lane:
     source: str | None  # None: not a status stream (follow requests)
     keep: Callable  # keep(status, ctx) -> bool
     notify: bool = False  # new unread items here deserve a desktop notification
+    # order by the post's own time instead of when it reached us (notifications
+    # can arrive late or out of order; the card shows the post's time)
+    by_status_time: bool = False
 
 
 @dataclass
@@ -42,8 +45,9 @@ def _other_mentions(st, ctx):
 
 LANES = {
     "people": Lane("people", "home", _people),
-    "comments": Lane("comments", "mentions", _comments, notify=True),
-    "mentions": Lane("mentions", "mentions", _other_mentions, notify=True),
+    "comments": Lane("comments", "mentions", _comments, notify=True, by_status_time=True),
+    "mentions": Lane("mentions", "mentions", _other_mentions, notify=True,
+                     by_status_time=True),
     "bots": Lane("bots", "home", _bots),
     "mine": Lane("mine", "mine", _all),
     "local": Lane("local", "local", _all),

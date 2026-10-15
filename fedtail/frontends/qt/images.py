@@ -4,6 +4,7 @@ The auth token is never sent along: media often lives on other servers.
 """
 
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from PySide6.QtCore import Qt
@@ -19,6 +20,8 @@ class Images:
         self.cache_dir = core.paths.cache_dir
         self.mem = {}
         self.waiting = {}
+        # own pool: a backlog of avatars must never delay sending a post
+        self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
         self.http = requests.Session()
         self.http.headers["User-Agent"] = USER_AGENT
 
@@ -47,7 +50,7 @@ class Images:
             self.waiting[url].append(callback)
             return
         self.waiting[url] = [callback]
-        self.bridge.call(self.core.submit(self._download, url),
+        self.bridge.call(self.pool.submit(self._download, url),
                          ok=lambda img, u=url: self._ready(u, img),
                          fail=lambda _e, u=url: self.waiting.pop(u, None))
 

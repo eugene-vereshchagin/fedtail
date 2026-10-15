@@ -39,7 +39,9 @@ class Core:
         paths.ensure()
         self.store = Store(paths.db_file)
         self.events = Events()
-        self.pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="fedtail")
+        # user actions never wait behind background work
+        self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail")
+        self.bg = ThreadPoolExecutor(max_workers=2, thread_name_prefix="fedtail-bg")
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
@@ -49,6 +51,7 @@ class Core:
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
         self._limits = {}
+        self._lane_cache = {}
         self._pending_login = None
         self._wake = threading.Event()
         self._stop = threading.Event()
@@ -219,15 +222,34 @@ class Core:
 
     # ---- reading ---------------------------------------------------------------
     def lane_entries(self, name):
-        """[(item_id, status)] oldest → newest, at most the lane's render limit."""
+        """[(item_id, status)] oldest → newest, at most the lane's render limit.
+
+        Cached until the store changes: the GUI asks for this on every
+        scroll-triggered badge update, and parsing thousands of JSON blobs
+        each time is what makes a client feel sticky.
+        """
         lane = self.lane_by_name[name]
         if not lane.source:
             return []
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
+               self.me["id"] if self.me else None)
+        hit = self._lane_cache.get(name)
+        if hit and hit[0] == key:
+            return hit[1]
         ctx = self._ctx()
-        window = max(FILTER_WINDOW, limit)
-        kept = [(i, st) for i, st in self.store.items(lane.source, window) if lane.keep(st, ctx)]
-        return kept[-limit:]
+        kept = []
+        for item_id, st in self.store.iter_items(lane.source,
+                                                 max_rows=max(FILTER_WINDOW, limit)):
+            if lane.keep(st, ctx):
+                kept.append((item_id, st))
+                if len(kept) >= limit:
+                    break
+        kept.reverse()
+        if lane.by_status_time:
+            kept.sort(key=lambda e: (real(e[1]).get("created_at", ""), real(e[1])["id"]))
+        self._lane_cache[name] = (key, kept)
+        return kept
 
     def unread_ids(self, entries):
         ids = [st["id"] for _, st in entries]
@@ -270,8 +292,26 @@ class Core:
             return "missing"
         return None
 
+    def parents_for(self, statuses):
+        """{status id: parent status | 'missing' | None} in two queries."""
+        pids = {st["id"]: real(st).get("in_reply_to_id") for st in statuses}
+        wanted = {p for p in pids.values() if p}
+        found = self.store.get_statuses(wanted)
+        missing = self.store.missing_set(wanted - set(found))
+        out = {}
+        for sid, pid in pids.items():
+            if not pid:
+                out[sid] = None
+            elif pid in found:
+                out[sid] = found[pid]
+            elif pid in missing:
+                out[sid] = "missing"
+            else:
+                out[sid] = None
+        return out
+
     def ensure_parents(self, statuses):
-        self.submit(self._fetch_parents, list(statuses))
+        self.bg.submit(self._fetch_parents, list(statuses))
 
     def _fetch_parents(self, statuses):
         want = []
@@ -328,13 +368,21 @@ class Core:
             return narrower(pv, default)
         return default
 
-    def post(self, text, visibility, reply_to=None, spoiler="", media=()):
-        """media: [(path, description)]"""
+    def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None):
+        """media: [(path, description)]. The draft is dropped once the post is out,
+        even if the window that sent it is gone by then."""
         def job():
             ids = [self.api.upload_media(p, d)["id"] for p, d in media]
             st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown)
-            self.store.put_statuses([st])
-            self.store.mark_read([st["id"]])
+            log.debug("posted %s", st.get("id"))
+            # the post is out; nothing below may turn that into a reported failure
+            try:
+                if draft_key:
+                    self.store.delete_draft(draft_key)
+                self.store.put_statuses([st])
+                self.store.mark_read([st["id"]])
+            except Exception:
+                log.exception("bookkeeping after post failed")
             self.poll_now()
             return st
         return self.submit(job)
@@ -402,6 +450,7 @@ class Core:
         self._stop.set()
         self._wake.set()
         self.pool.shutdown(wait=False, cancel_futures=True)
+        self.bg.shutdown(wait=False, cancel_futures=True)
         if self._poller:
             self._poller.join(timeout=5)
         with self._poll_lock:

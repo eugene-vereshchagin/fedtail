@@ -142,8 +142,9 @@ class PostRow(QWidget):
         acc = st["account"]
 
         if wrapper.get("reblog"):
-            v.addWidget(self._label(_("boosted_by", name=display_name(wrapper["account"])),
-                                    "boost"))
+            boosted = when(wrapper.get("created_at", ""), months())
+            v.addWidget(self._label(_("boosted_by", name=display_name(wrapper["account"])) +
+                                    " · " + _("boost_time", when=boosted), "boost"))
 
         head = QHBoxLayout()
         head.setSpacing(8)

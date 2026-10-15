@@ -74,6 +74,10 @@ class Compose(QDialog):
         row.addStretch(1)
         self.counter = QLabel()
         row.addWidget(self.counter)
+        close_btn = QPushButton(_("close"))
+        close_btn.setToolTip(_("close_tip"))
+        close_btn.clicked.connect(self.close)
+        row.addWidget(close_btn)
         self.discard_btn = QPushButton(_("discard"))
         self.discard_btn.clicked.connect(self.discard)
         row.addWidget(self.discard_btn)
@@ -215,14 +219,16 @@ class Compose(QDialog):
         self.send_btn.setText(_("sending"))
         fut = self.core.post(text, self.vis.currentData(),
                              self.reply_to["id"] if self.reply_to else None,
-                             self.cw.text().strip(), media)
+                             self.cw.text().strip(), media, draft_key=self.key)
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _sent(self, st):
         self.sent = True
-        self.core.delete_draft(self.key)
-        self.win.after_post(st, self.reply_to)
-        self.close()
+        try:
+            self.core.delete_draft(self.key)
+            self.win.after_post(st, self.reply_to)
+        finally:
+            self.close()
 
     def _failed(self, err):
         self.send_btn.setEnabled(True)
@@ -230,6 +236,11 @@ class Compose(QDialog):
         QMessageBox.warning(self, _("send_failed"), _("send_failed_text", err=err))
 
     def closeEvent(self, e):
+        if not self.send_btn.isEnabled() and not self.sent:
+            # still sending: the core will drop the draft when the post is out
+            self.hint.setText(_("sending"))
+            super().closeEvent(e)
+            return
         if not self.sent:
             if self.core.cfg["post"]["drafts_autosave"]:
                 self.save_draft()

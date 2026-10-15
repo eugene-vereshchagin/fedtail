@@ -1,6 +1,7 @@
 """Core tests. No network, no display:  python3 -m unittest -v"""
 
 import os
+import sqlite3
 import stat
 import tempfile
 import unittest
@@ -135,6 +136,22 @@ class StoreTest(TmpDir):
         s.close()
 
 
+class StoreLockTest(TmpDir):
+    def test_failed_begin_releases_lock(self):
+        import threading
+        s = Store(self.tmp / "s.db")
+        s.db.execute("BEGIN")  # simulate a dangling transaction
+        with self.assertRaises(sqlite3.OperationalError):
+            s.mark_read(["1"])
+        s.db.execute("ROLLBACK")
+        done = []
+        t = threading.Thread(target=lambda: (s.mark_read(["2"]), done.append(1)))
+        t.start()
+        t.join(2)
+        self.assertEqual(done, [1])  # another thread can still get the lock
+        s.close()
+
+
 class CoreTest(TmpDir):
     def make(self, **over):
         FakeApi.world = fakes.World()
@@ -189,6 +206,29 @@ class CoreTest(TmpDir):
         self.assertEqual(core.parent_of(core.store.get_status("014")), "missing")
         self.assertEqual(core.parent_of(core.store.get_status("013"))["id"], "012")
 
+    def test_mentions_ordered_by_post_time(self):
+        core, w = self.make()
+        core.connect().result()
+        mine = w.add(status("020", ME, minute=1), home=True)
+        late = status("021", BOB, mine["id"], "ME", minute=5)
+        early = status("022", BOB, mine["id"], "ME", minute=3)
+        w.add(late, mention=True)   # notification for the later post arrives first
+        w.add(early, mention=True)  # the earlier post federates late
+        w.notifications[-2]["created_at"] = "2099-10-14T10:06:00.000Z"
+        w.notifications[-1]["created_at"] = "2099-10-14T10:07:00.000Z"
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("comments")], ["022", "021"])
+
+    def test_lane_cache_invalidates(self):
+        core, w = self.make()
+        core.connect().result()
+        w.add(status("030", BOB, minute=1), home=True)
+        core.poll_once()
+        first = core.lane_entries("people")
+        self.assertIs(core.lane_entries("people"), first)  # cached
+        core.favourite(first[0][1]).result()
+        self.assertTrue(core.lane_entries("people")[0][1]["favourited"])
+
     def test_first_run_mark_read(self):
         core, w = self.make(feed={"first_run_mark_read": True})
         w.add(status("001", BOB, minute=1), home=True)
@@ -207,7 +247,9 @@ class CoreTest(TmpDir):
         core.connect().result()
         self.assertEqual(core.reply_visibility(None), "private")
         self.assertEqual(core.reply_visibility(dict(parent, visibility="direct")), "direct")
-        st = core.post("**hi**", "private", reply_to="050").result()
+        core.save_draft("reply:050", {"text": "**hi**"})
+        st = core.post("**hi**", "private", reply_to="050", draft_key="reply:050").result()
+        self.assertIsNone(core.get_draft("reply:050"))  # dropped by the core itself
         self.assertEqual(w.posted[-1], ("**hi**", "private", "050", True))  # GtS → markdown
         core.favourite(parent).result()
         self.assertTrue(core.store.get_status("050")["favourited"])

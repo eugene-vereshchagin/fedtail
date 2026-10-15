@@ -30,7 +30,7 @@ class Bridge(QObject):
         exc = future.exception()
         try:
             if exc is not None:
-                log.debug("call failed", exc_info=exc)
+                log.warning("call failed: %s", exc, exc_info=exc)
                 handler = fail or self.on_error
                 if handler:
                     handler(str(exc))
@@ -38,5 +38,13 @@ class Bridge(QObject):
                 ok(future.result())
         except RuntimeError as e:
             # the widget waiting for this result is already gone
-            if "already deleted" not in str(e):
-                raise
+            if "already deleted" in str(e):
+                return
+            self._report(e)
+        except Exception as e:  # a bug in a handler: show it, don't swallow it
+            self._report(e)
+
+    def _report(self, e):
+        log.exception("result handler failed")
+        if self.on_error:
+            self.on_error(f"{type(e).__name__}: {e}")
