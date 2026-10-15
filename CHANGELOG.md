@@ -9,4 +9,11 @@
 - Reply context strip above every reply; threads as trees with `/N` numbering.
 - Composer: drafts saved while typing, Markdown when the server supports it,
   attachments with alt text, reply visibility never wider than the parent.
-- Qt frontend: tray, notifications, system or terminal theme.
+- Qt frontend: tray, notifications.
+- New look (from the mockup): sidebar with account, Write button and unread badges; lane
+  header with "N new", All | Posts only; cards with round avatars, short `#ids`, quoted reply
+  context, flat action buttons; "new below" divider; thread rails and `/N` numbers.
+- Themes are files: `system` (follows KDE light/dark) and `terminal`; your own in
+  `~/.config/fedtail/themes/`, with inheritance.
+- Image viewer over the main window; "you replied" under comments; posts-only toggle;
+  `--update-config`; Russian plural forms.

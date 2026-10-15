@@ -71,6 +71,29 @@ The config is created on first run as a fully commented copy of
 an update brings new options, fedtail says so at start, and `fedtail --update-config` adds
 them to your file, commented out, in the right sections (a `.bak` copy is kept).
 
+## Themes
+
+The look is a theme file. Built in:
+
+- `system` — light or dark, whatever KDE uses: every colour comes from the desktop palette;
+- `terminal` — green on black, monospace, posts divided by lines, buttons in words.
+
+Pick one in the config: `[ui] theme = "terminal"`. Your own themes go to
+`~/.config/fedtail/themes/<name>.toml` (shared by all profiles); `builtin/` next to them always
+holds fresh copies of the built-ins to start from. The easy way is to inherit and change a line:
+
+```toml
+name = "My green"
+inherit = "terminal"
+
+[colors]
+text = "#a8ff60"
+```
+
+A theme sets colours, fonts, corner radii, card style (boxes or rules), avatars, icons, and even
+wording — `[ write ]`, `== people ==`, `---- new below ----`. Every key is explained in
+`builtin/system.toml`. A broken theme is reported in the status bar and `system` is used instead.
+
 ## Keys
 
 | | |

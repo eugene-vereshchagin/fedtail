@@ -60,6 +60,7 @@ card_avatars = true
 avatar = 40
 sidebar_avatar = true
 lane_icons = true
+icons = true             # desktop icons on buttons; false = words only (dark custom themes)
 card_header = "rich"     # "rich": avatar, name, @address · time · icon
                          # "compact": @user host · 13.10 17:22 · priv
 unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)

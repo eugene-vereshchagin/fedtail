@@ -308,7 +308,7 @@ class PostRow(QWidget):
                    self.theme.css("muted")),
             "meta", wrap=False))
         vis = st.get("visibility", "public")
-        icon = _theme_icon(VIS_ICONS.get(vis, ()))
+        icon = _theme_icon(VIS_ICONS.get(vis, ())) if self.theme.shape["icons"] else QIcon()
         vis_label = QLabel()
         vis_label.setToolTip(_("vis_" + vis))
         if icon.isNull():
@@ -394,7 +394,7 @@ class PostRow(QWidget):
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(label)
-            ic = _theme_icon(icons)
+            ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
             if style == "text" or ic.isNull():
                 b.setText((glyph if style == "icons" else label) + count)
                 b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
@@ -421,7 +421,8 @@ class PostRow(QWidget):
         b.setAutoRaise(True)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(_("more"))
-        ic = _theme_icon(("overflow-menu", "application-menu", "view-more-symbolic"))
+        ic = _theme_icon(("overflow-menu", "application-menu", "view-more-symbolic")) \
+            if self.theme.shape["icons"] else QIcon()
         if ic.isNull():
             b.setText("⋯")
         else:

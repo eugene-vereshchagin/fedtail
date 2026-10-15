@@ -29,6 +29,7 @@ from ... import __version__
 from ...core.model import real, snippet
 from ...i18n import _
 from .. import themefile
+from . import feed as feed_module
 from .card import _round
 from .compose import Compose
 from .feed import AccountWidget, LaneWidget, RequestsWidget, ThreadWidget
@@ -178,6 +179,7 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self):
         t = self.theme
+        feed_module.ICONS = bool(t.shape["icons"])
         side = QWidget()
         side.setObjectName("sidebar")
         side.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -204,7 +206,8 @@ class MainWindow(QMainWindow):
         menu_btn = QToolButton()
         menu_btn.setObjectName("menu")
         menu_btn.setToolTip(_("menu"))
-        ic = QIcon.fromTheme("application-menu", QIcon.fromTheme("open-menu-symbolic"))
+        ic = QIcon.fromTheme("application-menu", QIcon.fromTheme("open-menu-symbolic")) \
+            if t.shape["icons"] else QIcon()
         if ic.isNull():
             menu_btn.setText("≡")
         else:

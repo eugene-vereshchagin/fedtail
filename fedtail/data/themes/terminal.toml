@@ -51,6 +51,7 @@ card_avatars = false
 avatar = 0
 sidebar_avatar = false
 lane_icons = false
+icons = false
 card_header = "compact"
 unread_mark = "star"
 posts_only = "check"

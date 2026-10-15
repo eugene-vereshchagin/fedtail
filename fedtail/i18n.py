@@ -34,7 +34,7 @@ _STRINGS = {
         "unboost": "отменить продвижение", "open_browser": "открыть в браузере",
         # feed
         "posts_only": "Только посты", "posts_only_tip": "Скрыть комментарии и ответы",
-        "to_first_unread": "↧ к первому новому", "mark_all_read": "✓ всё прочитано",
+        "to_first_unread": "↧ к первому новому", "mark_all_read": "Всё прочитано",
         "older_up": "▲ раньше", "older_down": "▼ раньше", "no_older": "раньше ничего нет",
         "unread_n": ["{n} новое", "{n} новых", "{n} новых"], "all_read": "всё прочитано",
         "thread_loading": "тред…",
@@ -111,7 +111,7 @@ _STRINGS = {
         "fav": "Favourite", "unfav": "unfavourite", "boost": "Boost",
         "unboost": "undo boost", "open_browser": "open in browser",
         "posts_only": "Posts only", "posts_only_tip": "Hide replies",
-        "to_first_unread": "↧ first unread", "mark_all_read": "✓ mark all read",
+        "to_first_unread": "↧ first unread", "mark_all_read": "Mark all read",
         "older_up": "▲ older", "older_down": "▼ older", "no_older": "nothing older",
         "unread_n": ["{n} unread", "{n} unread"], "all_read": "all read",
         "thread_loading": "thread…", "thread_info": ["post and {n} reply", "post and {n} replies"],

@@ -234,12 +234,15 @@ class FeedView(QScrollArea):
         self._seen_timer.start()
 
 
+ICONS = True  # set from the theme by the window: dark custom themes want words only
+
+
 def _button(text, slot, name="tool", icon=None, tip=None):
     b = QPushButton(text)
     b.setObjectName(name)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
     if icon:
-        ic = QIcon.fromTheme(icon)
+        ic = QIcon.fromTheme(icon) if ICONS else QIcon()
         if not ic.isNull():
             b.setIcon(ic)
         elif not text:
