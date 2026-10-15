@@ -203,6 +203,7 @@ QFrame#card {{ {card} }}
 QFrame#card[unread="true"] {{ {card_unread} }}
 QFrame#card[focus="true"] {{ {card_focus} }}
 QFrame#card[found="true"] {{ {card_found} }}
+QLabel#media {{ background: {k('quiet')}; color: {k('muted')}; border-radius: {r}px; }}
 QLabel#profileHeader {{ background: {k('quiet')}; color: {k('muted')}; border-radius: {r}px; }}
 QWidget#findBar {{ background: {k('window')}; border-top: 1px solid {k('header_border')}; }}
 QLabel#name {{ font-weight: 700; }}

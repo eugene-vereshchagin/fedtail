@@ -59,7 +59,7 @@ class QtSmokeTest(unittest.TestCase):
         self.bridge = Bridge(self.core)
         self.theme = themes.apply(self.app, cfg)
         self.win = MainWindow(self.core, self.bridge, self.theme)
-        self.win.images.get = lambda url, cb, *a: None  # no network in tests
+        self.win.images.get = lambda url, cb, *a, **k: None  # no network in tests
         self.win.show()
 
     def tearDown(self):
@@ -212,6 +212,24 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(not self.win.isVisible() or self.win.isMinimized())
         self.win.showNormal()
         self.pump(0.1)
+
+        # a picture that won't load: the preview is tried, then the card says so
+        from PySide6.QtGui import QImage
+
+        from fedtail.frontends.qt.images import Images
+        imgs = Images(self.core, self.win.bridge)
+        good = QImage(8, 8, QImage.Format.Format_RGB32)
+
+        def fake_download(url, _side):
+            if "broken" in url:
+                raise OSError("timeout")
+            return good
+        imgs._download = fake_download
+        got, failed = [], []
+        imgs.get("https://x/broken.png", got.append, failed=lambda: failed.append(1))
+        imgs.get("https://x/ok.png", got.append, failed=lambda: failed.append(1))
+        self.pump(until=lambda: failed and got)
+        self.assertEqual((len(got), len(failed)), (1, 1))
 
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog

@@ -181,7 +181,7 @@ def run(app, out, label, palette, theme_name, extras):
     theme = themes.apply(app, cfg)
     bridge = Bridge(core)
     win = MainWindow(core, bridge, theme)
-    win.images.get = lambda url, cb, *a: cb(make_pixmap(url))
+    win.images.get = lambda url, cb, *a, **k: cb(make_pixmap(url))
     win.tray = None
     win.resize(1280, 860)
     win.show()

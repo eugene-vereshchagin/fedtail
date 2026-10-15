@@ -30,39 +30,54 @@ class Images:
 
     def _download(self, url, max_side):
         p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
+        img = QImage()  # QImage is fine outside the GUI thread
         if p.exists():
-            data = p.read_bytes()
-        else:
+            img = QImage.fromData(p.read_bytes())
+            if img.isNull():
+                p.unlink(missing_ok=True)  # a broken file from before: fetch again
+        if img.isNull():
             r = self.http.get(url, timeout=60)
             r.raise_for_status()
-            data = r.content
-            p.write_bytes(data)
-        img = QImage.fromData(data)  # QImage is fine outside the GUI thread
+            img = QImage.fromData(r.content)
+            if not img.isNull():  # never keep an error page or half a file
+                p.write_bytes(r.content)
         if not img.isNull() and max(img.width(), img.height()) > max_side:
             img = img.scaled(max_side, max_side, Qt.AspectRatioMode.KeepAspectRatio,
                              Qt.TransformationMode.SmoothTransformation)
         return img
 
-    def get(self, url, callback, max_side=FEED_SIDE):
-        """callback(QPixmap) now or later; never called for broken images."""
+    def get(self, url, callback, max_side=FEED_SIDE, failed=None):
+        """callback(QPixmap) now or later; for a broken or unreachable image
+        failed() is called instead (if given)."""
         if not url:
+            if failed:
+                failed()
             return
         key = (url, max_side)
         if key in self.mem:
             callback(self.mem[key])
             return
         if key in self.waiting:
-            self.waiting[key].append(callback)
+            self.waiting[key].append((callback, failed))
             return
-        self.waiting[key] = [callback]
+        self.waiting[key] = [(callback, failed)]
         self.bridge.call(self.pool.submit(self._download, url, max_side),
                          ok=lambda img, k=key: self._ready(k, img),
-                         fail=lambda _e, k=key: self.waiting.pop(k, None))
+                         fail=lambda _e, k=key: self._failed(k))
+
+    def _failed(self, key):
+        for _cb, failed in self.waiting.pop(key, []):
+            if failed:
+                try:
+                    failed()
+                except RuntimeError:  # its widget is gone
+                    pass
 
     def _ready(self, key, img):
-        callbacks = self.waiting.pop(key, [])
         if img.isNull():
+            self._failed(key)
             return
+        callbacks = [cb for cb, _f in self.waiting.pop(key, [])]
         pm = QPixmap.fromImage(img)
         if len(self.mem) > MEM_LIMIT:  # crude, but keeps a long session bounded
             self.mem.clear()

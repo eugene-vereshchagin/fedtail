@@ -484,7 +484,7 @@ class PostRow(QWidget):
             if m in visual:
                 cell = (pos // 3, pos % 3)
                 pos += 1
-                lab = ClickLabel("…")
+                lab = ClickLabel(_("image_loading"))
                 lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 lab.setToolTip(m.get("description") or "")
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -504,8 +504,7 @@ class PostRow(QWidget):
                     lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
                     src = m.get("preview_url")
                 if src:
-                    self.ctx.images.get(src, lambda pm, w=lab, tw=tw, th=th, r=radius:
-                                        w.setPixmap(_fit(pm, tw, th, r)))
+                    self._load_media(lab, src, m.get("preview_url"), tw, th, radius)
                 grid.addWidget(lab, *cell)
             else:
                 kind = _("media_" + (m.get("type") or "unknown"))
@@ -514,6 +513,20 @@ class PostRow(QWidget):
                 pos += 1
         grid.setColumnStretch(3, 1)
         return box
+
+    def _load_media(self, lab, src, fallback, tw, th, radius):
+        """The picture into its box; if the full file won't come, the preview;
+        if nothing comes, say so (a click still opens it)."""
+        def show(pm):
+            lab.setPixmap(_fit(pm, tw, th, radius))
+
+        def failed():
+            if fallback and fallback != src:
+                self._load_media(lab, fallback, None, tw, th, radius)
+            else:
+                lab.setText(_("image_failed"))
+                lab.setWordWrap(True)
+        self.ctx.images.get(src, show, failed=failed)
 
 
 def _dims(m):
