@@ -6,6 +6,7 @@ worker threads (see events.py):
   ready            me (account dict)        connected and ready
   lanes_updated    {lane: [new item ids]}   something new arrived / older loaded
   parents          None                     reply contexts became available
+  arrived          [(id, in_reply_to_id)]   new posts from a poll (open threads grow)
   status_updated   status                   a status changed (fav, boost…)
   status_deleted   status id
   read_changed     [status ids]
@@ -281,6 +282,9 @@ class Core:
             per_lane = self._split_by_lane(new_by_source)
             if any(per_lane.values()):
                 self.emit("lanes_updated", per_lane)
+            if new_statuses and not first_run:
+                self.emit("arrived", [(real(st)["id"], real(st).get("in_reply_to_id"))
+                                      for st in new_statuses])
             if not first_run:
                 self._notify(per_lane, new_requests, new_activity)
             self._fetch_parents(new_statuses)
@@ -843,6 +847,20 @@ class Core:
 
     def follow(self, acc_id, on=True):
         return self.submit(self.api.follow, acc_id, on)
+
+    def followed_among(self, accounts):
+        """Which of these accounts I follow — why a thread I'm not subscribed to still
+        reaches my Home: the server puts there replies between people I follow.
+        Future: [account] in the given order, me left out."""
+        mine = (self.me or {}).get("id")
+        uniq = list({a["id"]: a for a in accounts if a["id"] != mine}.values())
+
+        def job():
+            if not uniq:
+                return []
+            rel = {r["id"]: r for r in self.api.relationships([a["id"] for a in uniq[:40]])}
+            return [a for a in uniq if rel.get(a["id"], {}).get("following")]
+        return self.submit(job)
 
     def search(self, q):
         """People, tags and posts for a query; addresses (@user@server, a profile

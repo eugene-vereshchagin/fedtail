@@ -644,6 +644,13 @@ class MainWindow(QMainWindow):
                 if isinstance(w, LaneWidget):
                     w.refresh()
             self.update_badges()
+        elif name == "arrived":
+            # an open thread someone just answered in takes the answer in by itself
+            for w in self.extra_tabs():
+                if isinstance(w, ThreadWidget) and w.loaded and any(
+                        sid not in w.statuses and parent in w.statuses
+                        for sid, parent in payload):
+                    w.reload(quiet=True)
         elif name == "parents":
             for w in self.lane_widgets.values():
                 if isinstance(w, LaneWidget):

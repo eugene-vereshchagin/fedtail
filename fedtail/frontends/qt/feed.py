@@ -534,6 +534,7 @@ class ThreadWidget(QWidget):
         self.win, self.core = win, win.core
         self.focus_id = sid
         self.title = _("thread_loading")
+        self.info_text = ""
         self.loaded = False
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -556,8 +557,9 @@ class ThreadWidget(QWidget):
         if self.core.cfg["read"]["mark_read"] != "manual":
             self.core.mark_read(ids)
 
-    def reload(self):
-        self.header.info.setText(_("loading"))
+    def reload(self, quiet=False):
+        if not quiet:
+            self.header.info.setText(_("loading"))
         self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
                              fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
 
@@ -569,6 +571,9 @@ class ThreadWidget(QWidget):
         self.sub_btn.setChecked(on)
         self.sub_btn.blockSignals(False)
         self.sub_btn.setText(_("subscribed") if on else _("sub_thread"))
+        if on and self.info_text:
+            self.header.info.setText(self.info_text)
+            self.header.info.setToolTip("")
         self.sub_btn.setEnabled(True)
 
     def _toggle_sub(self):
@@ -604,12 +609,35 @@ class ThreadWidget(QWidget):
         self.update_sub_button()
         self.title = f'{real(root)["account"]["username"]}: {snippet(root, 30)}'
         self.header.title.setText(snippet(root, 60))
-        self.header.info.setText(_("thread_info", n=len(nodes) - 1) +
-                                 (f" · #{short[root['id']]}" if short.get(root["id"]) else ""))
+        self.info_text = _("thread_info", n=len(nodes) - 1) + \
+            (f" · #{short[root['id']]}" if short.get(root["id"]) else "")
+        self.header.info.setText(self.info_text)
+        self._why_it_reaches_me(nodes)
         self.win.retitle(self)
         if not self.loaded:
             self.loaded = True
             self.view.scroll_to(self.focus_id, "top")
+
+    def _why_it_reaches_me(self, nodes):
+        """Not subscribed, yet the comments come? Say why: the server puts replies
+        between people you follow into Home."""
+        self.header.info.setToolTip("")
+        if self.root is None or self.core.subscribed(self.root):
+            return
+        authors = [real(n.status)["account"] for n in nodes]
+
+        def show(followed):
+            if not followed or self.core.subscribed(self.root):
+                return
+            names = ", ".join("@" + a["acct"].split("@")[0] for a in followed[:3])
+            more = len(followed) - 3
+            if more > 0:
+                names += " " + _("and_more", n=more)
+            self.header.info.setText(self.info_text + " · " + _("thread_via_home",
+                                                                 names=names))
+            self.header.info.setToolTip(_("thread_via_home_tip"))
+        self.win.bridge.call(self.core.followed_among(authors), ok=show,
+                             fail=lambda e: None)
 
     def apply_read(self, ids):
         self.view.set_unread(ids, False)

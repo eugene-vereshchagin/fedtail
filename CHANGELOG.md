@@ -2,6 +2,11 @@
 
 ## 0.3.0 — in progress
 
+- An open thread takes new replies in by itself as the poll brings them (and F5 reloads
+  it as before).
+- A thread you don't follow but whose replies still come says why: "not followed, but
+  replies by @a, @b show in Home" — the server puts into Home replies between people you
+  follow; following the thread brings everyone's.
 - A command line like on Point at the bottom (`Ctrl+L`): `#a3f` opens, `#a3f text` replies,
   `#a3f/2 text` answers comment /2, `S`/`U #a3f` (un)subscribes to the thread, `S`/`U @user`
   (un)follows, `! #a3f` boosts, `~ #a3f` bookmarks, `D #a3f` deletes, `@user` opens the

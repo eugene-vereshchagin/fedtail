@@ -310,6 +310,27 @@ class CoreTest(TmpDir):
         core.bookmark(core.store.get_status("095")).result()  # toggled off
         self.assertEqual([s["id"] for _, s in core.lane_entries("bookmarks")], ["096"])
 
+    def test_followed_among_explains_home_replies(self):
+        core, w = self.make()
+        carol = fakes.acct("C", "carol@x.example")
+        w.following.add("B")
+        core.connect().result()
+        got = core.followed_among([ME, BOB, carol, BOB]).result()
+        self.assertEqual([a["id"] for a in got], ["B"])  # me left out, once each
+        self.assertEqual(core.followed_among([ME]).result(), [])
+
+    def test_new_replies_announced_for_open_threads(self):
+        core, w = self.make()
+        w.add(status("110", BOB, minute=1), home=True)
+        core.connect().result()
+        core.poll_once()
+        seen = []
+        core.events.on("arrived", lambda name, payload: seen.append((name, payload)))
+        w.add(status("111", BOB, "110", "B", minute=2), home=True)
+        core.poll_once()
+        arrived = [p for n, p in seen if n == "arrived"]
+        self.assertEqual(arrived, [[("111", "110")]])
+
     def test_silence_mute_block_filters(self):
         core, w = self.make()
         w.add(status("100", BOB, minute=1), home=True)

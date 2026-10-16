@@ -36,6 +36,11 @@ _STRINGS = {
         "subscribed": "Подписан", "subbed": "Подписался: новое в треде будет в «Подписках»",
         "unsubbed": "Отписался: тред больше не придёт, даже если ты в нём напишешь",
         "sub_tip": "Новые комменты в этом треде — в ленту «Подписки», как на Point",
+        "thread_via_home": "не подписан, но ответы {names} видны в «Ленте»",
+        "thread_via_home_tip": "Ты на них подписан, и сервер кладёт в «Ленту» их ответы тем, "
+                               "кого ты тоже читаешь. Это не подписка на тред: ответы "
+                               "остальных сюда не придут. «Подписаться на тред» — придут все.",
+        "and_more": "и ещё {n}",
         # visibility
         "vis_public": "🌐 Публично", "vis_unlisted": "🔓 Не в общих лентах",
         "vis_private": "🔒 Только подписчикам", "vis_direct": "✉ Лично упомянутым",
@@ -299,6 +304,11 @@ _STRINGS = {
         "subscribed": "Following", "subbed": "Following: new comments go to Subscriptions",
         "unsubbed": "Unfollowed: this thread won't come back, even if you comment in it",
         "sub_tip": "New comments in this thread go to the Subscriptions lane, like on Point",
+        "thread_via_home": "not followed, but replies by {names} show in Home",
+        "thread_via_home_tip": "You follow them, and the server puts into Home their replies "
+                               "to people you also follow. That's not following the thread: "
+                               "others' replies won't come. Follow the thread to get them all.",
+        "and_more": "and {n} more",
         "vis_public": "🌐 Public", "vis_unlisted": "🔓 Unlisted",
         "vis_private": "🔒 Followers only", "vis_direct": "✉ Mentioned only",
         "media_video": "video", "media_audio": "audio", "media_image": "image",

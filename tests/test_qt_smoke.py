@@ -565,6 +565,42 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_open_thread_grows_and_says_why_replies_come(self):
+        from PySide6.QtCore import Qt
+
+        from fedtail.frontends.qt.feed import ThreadWidget
+
+        self.world.following.add("B")
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        self.win.on_link("fedtail:thread/011")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, ThreadWidget)
+        self.pump(until=lambda: tab.loaded and len(tab.view.rows) == 1)
+        # not subscribed, but Bob is followed: the header says why his replies come
+        self.pump(until=lambda: "@bob" in tab.header.info.text())
+
+        # a reply arrives by the poll: the open thread takes it in by itself
+        self.world.add(status("015", NEWS, "011", "B", minute=15), home=True)
+        self.core.poll_once()
+        self.pump(until=lambda: "015" in tab.view.rows)
+
+        # one that only F5 can find (not in any lane): F5 reloads the thread on screen
+        self.world.statuses["016"] = status("016", NEWS, "015", "N", minute=16)
+        try:
+            from PySide6.QtTest import QTest
+        except ImportError:  # Debian has no QtTest
+            self.win.refresh()
+        else:
+            self.win.activateWindow()
+            QTest.keyClick(self.win, Qt.Key.Key_F5)
+        self.pump(until=lambda: "016" in tab.view.rows)
+
+        # subscribed: the explanation goes away
+        self.win.bridge.call(self.core.subscribe(tab.root))
+        self.pump(until=lambda: "@bob" not in tab.header.info.text())
+
     def test_lane_opens_where_reading_stopped(self):
         """All read → stand at the newest; some unread → at the first unread.
         Long posts make Qt lay out in several passes: the position must survive that."""
