@@ -2,6 +2,9 @@
 
 ## 0.3.0 — in progress
 
+- "N new" over a lane could stay after everything was read (posts of someone just put in
+  a list stayed drawn in Home while the counts already left them out): lanes redraw when
+  lists change, and the pill checks the read marks themselves before it says anything.
 - Accounts: right-click your avatar (or ≡ → Accounts) for the list of profiles, each named
   "@you@server"; pick one and its window opens with its own theme and config, this one closes
   (`ui.switch_closes`). "Add an account…" makes a new profile and opens the login window.

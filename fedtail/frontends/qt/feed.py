@@ -509,6 +509,14 @@ class LaneWidget(QWidget):
             self.update_strip()
 
     def update_strip(self):
+        # the store has the last word: a post marked read by any road (another lane,
+        # a thread, another client) loses its mark here too, so "N new" never lies
+        keys = self.view.unread_keys()
+        rows = [self.view.rows[k] for k in keys  # (a conversation card speaks for many)
+                if self.view.rows[k].status_id and not str(k).startswith("conv:")]
+        read = self.core.store.read_set([r.status_id for r in rows]) if rows else set()
+        if read:
+            self.view.set_unread(read, False)
         n = len(self.view.unread_keys())
         self.pill.setText(_("new_n", n=n))
         self.pill.setVisible(bool(n))

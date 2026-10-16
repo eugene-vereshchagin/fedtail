@@ -599,6 +599,27 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_new_pill_agrees_with_the_store(self):
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        lane = self.win.lane_widgets["people"]
+        self.win.select_lane("people")
+        self.pump(until=lambda: lane.pill.text() and not lane.pill.isHidden())
+        # read by a road that sends no event (another client, an old bug): the pill
+        # follows the store the next time it's drawn
+        self.core.store.mark_read([r.status_id for r in lane.view.rows.values()
+                                   if r.status_id])
+        lane.update_strip()
+        self.assertTrue(lane.pill.isHidden())
+        # someone goes into a list: Home drops them at once, the badge and pill agree
+        self.world.add(status("040", BOB, minute=40), home=True)
+        self.core.poll_once()
+        self.pump(until=lambda: "040" in lane.view.rows)
+        self.bridge_wait(self.core.create_list("Друзья", add="B"))
+        self.pump(until=lambda: "040" not in lane.view.rows)
+        self.assertEqual(self.win.lane_items["people"].count, len(lane.view.unread_keys()))
+
     def test_accounts_menu_switches_profiles(self):
         from fedtail.core import profiles
         fake = [{"name": "default", "acct": "veresk", "display_name": "", "logged_in": True,

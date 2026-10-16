@@ -827,6 +827,11 @@ class MainWindow(QMainWindow):
             self.update_badges()
         elif name == "lists_changed":
             self._rebuild_lists()
+            # who is hidden where may have changed (lists.hide_members): lanes redraw
+            for w in self.lane_widgets.values():
+                if isinstance(w, LaneWidget):
+                    w.refresh()
+            self.update_badges()
         elif name == "subs_changed":
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget):
