@@ -594,7 +594,10 @@ class QtSmokeTest(unittest.TestCase):
             self.win.refresh()
         else:
             self.win.activateWindow()
-            QTest.keyClick(self.win, Qt.Key.Key_F5)
+            self.pump(0.3)
+            print("F5 test: active window is ours:", self.app.activeWindow() is self.win,
+                  file=__import__("sys").stderr)
+            QTest.keyClick(self.win.tabs.currentWidget(), Qt.Key.Key_F5)
         self.pump(until=lambda: "016" in tab.view.rows)
 
         # subscribed: the explanation goes away

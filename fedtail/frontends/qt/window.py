@@ -216,7 +216,12 @@ class MainWindow(QMainWindow):
                         (QKeySequence.StandardKey.FindNext, lambda: self.find_bar.step(1)),
                         (QKeySequence.StandardKey.FindPrevious,
                          lambda: self.find_bar.step(-1))):
-            QShortcut(QKeySequence(seq), self).activated.connect(fn)
+            sc = QShortcut(QKeySequence(seq), self)
+            sc.activated.connect(fn)
+            # two owners of one key make Qt run neither; say so and run ours anyway
+            key = sc.key().toString()
+            sc.activatedAmbiguously.connect(
+                lambda f=fn, k=key: (log.warning("ambiguous shortcut %s", k), f()))
         for i in range(9):  # Alt+N: the N-th lane as the sidebar shows them
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
                 lambda r=i: r < len(self.lane_order) and self.select_lane(self.lane_order[r]))
@@ -664,11 +669,11 @@ class MainWindow(QMainWindow):
             self.update_badges()
         elif name == "status_updated":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
-                if hasattr(w, "view"):
+                if getattr(w, "view", None) is not None:  # Activity has none
                     w.view.refresh_from_store(self.core.store)
         elif name == "status_deleted":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
-                if hasattr(w, "view"):
+                if getattr(w, "view", None) is not None:
                     w.view.remove_status(payload)
             self.statusBar().showMessage(_("deleted"), 4000)
         elif name == "me_updated":
