@@ -518,7 +518,7 @@ class LaneWidget(QWidget):
             specs.reverse()
         if not self.positioned:
             self.view.set_specs(specs, keep_position=False)
-            if self.isVisible():
+            if self.isVisible() and self.view.isVisible():
                 # after the layout has settled (long posts take several passes), the
                 # same way as when a drawn lane is shown
                 QTimer.singleShot(0, self._initial_position)
@@ -565,9 +565,17 @@ class LaneWidget(QWidget):
         t = time.monotonic()
         self.show_plate()
         self.win.repaint()  # paints now, without running other events in between
+        # a lane drawn for the first time is filled hidden and then shown, so Qt lays
+        # all its cards out at once and "where reading stopped" lands where it should
+        first = not self.positioned
+        if first:
+            self.view.hide()
         try:
             self.refresh(force=True)
         finally:
+            if first:
+                self.view.show()
+                QTimer.singleShot(0, self._initial_position)
             self.show_plate(False)
         log.debug("lane %s on screen in %.0f ms", self.name, (time.monotonic() - t) * 1000)
 
@@ -588,7 +596,7 @@ class LaneWidget(QWidget):
             QTimer.singleShot(0, self.mark_all_read)
 
     def _initial_position(self):
-        if self.positioned or not self.view.order:
+        if self.positioned or not self.view.order or not self.view.isVisible():
             return
         self.positioned = True
         unread = self.view.unread_keys()
