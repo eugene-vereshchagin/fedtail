@@ -15,6 +15,8 @@ def real(st):
 def html_to_text(h):
     h = re.sub(r"<br\s*/?>", "\n", h or "", flags=re.I)
     h = re.sub(r"</p>\s*<p[^>]*>", "\n\n", h, flags=re.I)
+    # other blocks (a quote, a list) are lines of their own too — not glued to the next
+    h = re.sub(r"</?(p|blockquote|li|ul|ol|div|pre|h[1-6])\b[^>]*>", "\n", h, flags=re.I)
     h = re.sub(r"<[^>]+>", "", h)
     return html.unescape(h).strip()
 

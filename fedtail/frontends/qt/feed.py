@@ -272,6 +272,40 @@ def _button(text, slot, name="tool", icon=None, tip=None):
     return b
 
 
+class _ElidedLabel(QLabel):
+    """One line that gives way: when there's no room it ends in "…" (the whole text
+    in the tooltip) instead of pushing the window wider."""
+
+    def __init__(self, text=""):
+        super().__init__()
+        self._full = ""
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setMinimumWidth(40)
+        self.setText(text)
+
+    def setText(self, text):  # noqa: N802 — Qt's name
+        self._full = text or ""
+        self.setToolTip(self._full if len(self._full) > 30 else "")
+        self._elide()
+
+    def text(self):
+        return self._full
+
+    def _elide(self):
+        shown = self.fontMetrics().elidedText(self._full, Qt.TextElideMode.ElideRight,
+                                              max(self.width(), 40))
+        QLabel.setText(self, shown)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._elide()
+
+    def sizeHint(self):  # noqa: N802
+        hint = super().sizeHint()
+        hint.setWidth(self.fontMetrics().horizontalAdvance(self._full) + 4)
+        return hint
+
+
 class _Header(QWidget):
     """Title line above a lane, a thread or an account."""
 
@@ -283,15 +317,15 @@ class _Header(QWidget):
         self.h = QHBoxLayout(self)
         self.h.setContentsMargins(28, 12, 20, 12)
         self.h.setSpacing(12)
-        self.title = QLabel(title)
+        # a long title or a long note must never make the window wider: they give way
+        self.title = _ElidedLabel(title)
         self.title.setObjectName("laneTitle")
         self.title.setTextFormat(Qt.TextFormat.PlainText)
-        self.h.addWidget(self.title)
-        self.info = QLabel()
+        self.h.addWidget(self.title, 3)
+        self.info = _ElidedLabel()
         self.info.setObjectName("laneInfo")
         self.info.setTextFormat(Qt.TextFormat.PlainText)
-        self.info.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.h.addWidget(self.info, 1)
+        self.h.addWidget(self.info, 2)
 
     def add(self, w):
         self.h.addWidget(w)

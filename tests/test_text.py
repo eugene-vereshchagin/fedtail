@@ -52,3 +52,11 @@ class CleanTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SnippetBlocksTest(unittest.TestCase):
+    def test_quote_and_paragraph_are_not_glued(self):
+        from fedtail.core.model import snippet
+        st = {"content": '<p><span class="h-card">@anna</span></p>'
+                         "<blockquote><p>quote</p></blockquote><p>AO3</p><ul><li>Кто</li></ul>"}
+        self.assertEqual(snippet(st), "@anna quote AO3 Кто")

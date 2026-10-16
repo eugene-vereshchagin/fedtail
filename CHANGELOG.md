@@ -2,6 +2,10 @@
 
 ## 0.6.0 — in progress
 
+- Opening a thread no longer makes the window wider: a long title or note above a lane, thread
+  or account ends in "…" and shows the whole text in its tooltip.
+- Short texts (conversation lines, notifications) no longer glue words across a quote or a
+  list item: "@annaquote" is "@anna quote" again.
 - Feed | Conversations is offered only where it changes something — Replies to me, Mentions,
   Subscriptions (many replies to the same threads); in Home nearly every post is a
   conversation of its own and both views looked the same. The tooltip says what it does.
