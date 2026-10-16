@@ -659,7 +659,7 @@ class QtSmokeTest(unittest.TestCase):
         other.poll_once()
         win.select_lane("people")
         lane = win.lane_widgets["people"]
-        self.pump(until=lambda: "work~700" in lane.view.rows)
+        self.pump(until=lambda: "work~700" in lane.view.rows and "011" in lane.view.rows)
         marks = [w.text() for w in lane.view.rows["work~700"].findChildren(QLabel)
                  if w.objectName() == "via"]
         self.assertEqual(marks, ["→ @w"])
