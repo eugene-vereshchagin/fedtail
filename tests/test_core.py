@@ -326,7 +326,7 @@ class CoreTest(TmpDir):
         core.delete_filter(f["id"]).result()
         self.assertEqual(core.filters().result(), [])
         w.muted.add("B")  # muted from another client: picked up on refresh
-        core._silence_checked = 0
+        core._silence_checked = None
         core.poll_once()
         self.assertEqual(core.lane_entries("people"), [])
 

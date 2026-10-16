@@ -34,6 +34,12 @@ KEEP_PER_SOURCE = 3000
 FILTER_WINDOW = 2000
 
 
+def _due(last, every):
+    """Time to do it again? (last: monotonic seconds, None = never done). Not
+    "last = 0": monotonic time starts near zero at boot, so that would wait."""
+    return last is None or time.monotonic() - last > every
+
+
 class Core:
     def __init__(self, cfg, paths, api_class=Api):
         self.cfg = cfg
@@ -53,7 +59,7 @@ class Core:
         self.lists = []           # [{"id", "title", "exclusive"}] from the server
         self.list_members = {}    # list id -> {account ids}
         self._lists_version = 0
-        self._lists_checked = 0.0
+        self._lists_checked = None  # monotonic time of the last check; None: never
         self.lanes = lanes.enabled(cfg)
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
@@ -71,7 +77,7 @@ class Core:
         self._honest_checked = {}  # status id -> when its origin was asked
         self.muted, self.blocked = set(), set()
         self._silence_version = 0
-        self._silence_checked = 0.0
+        self._silence_checked = None
         self._poll_count = 0
         self._active_lane = None  # the lane on screen: browse lanes are fetched only then
         self._last_poll_s = None
@@ -185,17 +191,18 @@ class Core:
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
             new_by_source = {}
-            if time.monotonic() - self._silence_checked > self.cfg["lists"]["refresh_minutes"] * 60:
+            every = self.cfg["lists"]["refresh_minutes"] * 60
+            if _due(self._silence_checked, every):
                 try:
                     self._refresh_silence()
                 except Exception as e:  # an old server without mutes/blocks: never mind
                     self._silence_checked = time.monotonic()
                     log.warning("silence: %s", e)
-            if self.cfg["lists"]["enabled"] and time.monotonic() - self._lists_checked > \
-                    self.cfg["lists"]["refresh_minutes"] * 60:
+            if self.cfg["lists"]["enabled"] and _due(self._lists_checked, every):
                 try:
                     self._refresh_lists()
-                except Exception as e:
+                except Exception as e:  # try again next round, not every poll
+                    self._lists_checked = time.monotonic()
                     self.emit("error", f"lists: {e}")
             if "subs" in self.lane_by_name:
                 try:
