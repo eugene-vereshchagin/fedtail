@@ -2,6 +2,12 @@
 
 ## 0.3.0 — in progress
 
+- Logs where you can find them: `~/fedtail-logs/<profile>/`, a new file at every start and
+  every hour (`2026-10-16_15-04-12.log`), `latest.log` pointing at the current one, the
+  folder kept under `debug.keep_mb` (500 MB) — the oldest go by themselves. `debug.log_dir`
+  moves them ("" — back into the data folder). The log also tells what you did: lanes and
+  tabs opened, post actions by id, what was sent (its length, not its text), how long lanes
+  took to draw, slow window events. `--bug-report` takes the last two days.
 - All accounts in one window (≡ → Accounts → "All accounts in one window", or `ui.merge`):
   lanes of the same name merge, the other accounts' lists are lanes of their own, a post
   another account received is marked "→ @handle" and a reply, like or boost on it goes from

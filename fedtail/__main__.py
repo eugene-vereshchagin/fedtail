@@ -105,7 +105,7 @@ def main(argv=None):
 
     if args.bug_report:
         from . import diag
-        out = diag.bug_report(where)
+        out = diag.bug_report(where, cfg=cfg)
         print(f"fedtail: report {out}\n  Send this file. It has the logs and the config, "
               f"no token and no database.")
         return 0

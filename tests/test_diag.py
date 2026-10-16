@@ -20,7 +20,7 @@ class DiagTest(unittest.TestCase):
         self.paths.ensure()
         self.paths.config_file.write_text("[ui]\n", "utf-8")
         self.paths.auth_file.write_text('{"token": "SECRET"}', "utf-8")
-        self.cfg, _ = config.validate({})
+        self.cfg, _ = config.validate({"debug": {"log_dir": str(tmp / "logs")}})
         root = logging.getLogger()
         self._saved = (root.handlers[:], root.level, sys.excepthook, threading.excepthook)
 
@@ -52,7 +52,8 @@ class DiagTest(unittest.TestCase):
         dog.stop()
         for h in logging.getLogger().handlers:
             h.flush()
-        text = (folder / "fedtail.log").read_text("utf-8")
+        self.assertEqual(folder, tmp_logs := Path(self._tmp.name) / "logs" / "t")
+        text = (tmp_logs / "latest.log").read_text("utf-8")
         self.assertIn("session start", text)
         self.assertIn('"demo.things": 3', text)
         self.assertIn("hasn't answered", text)
@@ -65,17 +66,40 @@ class DiagTest(unittest.TestCase):
             diag._excepthook(*sys.exc_info())
         for h in logging.getLogger().handlers:
             h.flush()
-        self.assertIn("ValueError: boom", (folder / "fedtail.log").read_text("utf-8"))
+        self.assertIn("ValueError: boom", (folder / "latest.log").read_text("utf-8"))
 
-        out = diag.bug_report(self.paths, self.paths.data_dir)
+        out = diag.bug_report(self.paths, self.paths.data_dir, cfg=self.cfg)
         with tarfile.open(out) as tar:
             names = tar.getnames()
             everything = b"".join(tar.extractfile(m).read() for m in tar.getmembers()
                                   if m.isfile())
-        self.assertIn("logs/fedtail.log", names)
+        self.assertTrue(any(n.startswith("logs/20") and n.endswith(".log") for n in names))
+        self.assertNotIn("logs/latest.log", names)  # the link, not a second copy
         self.assertIn("system.txt", names)
         self.assertIn("config.toml", names)
         self.assertNotIn(b"SECRET", everything)  # the token never goes in
+
+    def test_session_files_split_and_capped(self):
+        folder = Path(self._tmp.name) / "split"
+        folder.mkdir()
+        old = folder / "2020-01-01_00-00-00.log"
+        old.write_text("x" * 3 * 1024 * 1024)
+        keep = folder / "crash.log"
+        keep.write_text("crash")
+        h = diag.SessionLog(folder, max_mb=0.001, keep_mb=1)
+        self.assertFalse(old.exists())  # over the cap: the oldest goes
+        self.assertTrue(keep.exists())  # never crash.log
+        rec = logging.LogRecord("x", logging.INFO, "", 0, "y" * 300, None, None)
+        first = h.path
+        for _ in range(10):
+            h.emit(rec)
+        self.assertNotEqual(h.path, first)  # over log_mb: the next file
+        self.assertEqual((folder / "latest.log").resolve(), h.path.resolve())
+        h.hour = "1999010100"  # a new hour: a new file too
+        before = h.path
+        h.emit(rec)
+        self.assertNotEqual(h.path, before)
+        h.close()
 
     def test_timed(self):
         with self.assertLogs("fedtail.diag", level="WARNING") as got:

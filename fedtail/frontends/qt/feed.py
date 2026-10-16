@@ -5,6 +5,9 @@ first visible post at the same place on screen, and images reserve their
 space before they load.
 """
 
+import logging
+import time
+
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -22,6 +25,8 @@ from ...core.model import real, snippet
 from ...i18n import _
 from .card import CardSpec, PostRow, SeparatorRow
 from .text import display_name, esc
+
+log = logging.getLogger(__name__)
 
 POSTS_ONLY_LANES = ("people", "bots", "mine", "local")
 
@@ -227,6 +232,7 @@ class FeedView(QScrollArea):
             if fully or tall_and_done or tail:
                 ids.append(row.status_id)
         if ids:
+            log.debug("seen on screen: %d", len(ids))
             self.seen.emit(ids)
 
     def showEvent(self, e):
@@ -389,6 +395,7 @@ class LaneWidget(QWidget):
             self.dirty = True
             return
         self.dirty = False
+        t0 = time.monotonic()
         entries = self.core.lane_entries(self.name)
         # browse lanes (local, federated) have nothing "unread": no marks, no divider
         lazy = getattr(self.core.lane_by_name.get(self.name), "lazy", False)
@@ -433,6 +440,8 @@ class LaneWidget(QWidget):
             if jump and any(s.key not in had for s in specs):
                 self.view.scroll_to_end(not self.newest_first)
         self.update_strip()
+        log.debug("lane %s drawn: %d rows, %d unread, %.0f ms", self.name, len(specs),
+                  len(unread), (time.monotonic() - t0) * 1000)
 
     def _conversation_specs(self, entries, unread, parents, answers, short):
         """One card per conversation: its top post, with a line about the rest."""

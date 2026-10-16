@@ -8,14 +8,22 @@
 
 ## Где лежит
 
-В папке данных профиля, `logs/`:
+В домашней папке, `~/fedtail-logs/<профиль>/` (другое место — `debug.log_dir`;
+`""` — папка данных профиля, `logs/`):
 
 ```
-~/.local/share/fedtail/<профиль>/logs/
-    fedtail.log      журнал (и fedtail.log.1 … — предыдущие куски)
+~/fedtail-logs/default/
+    2026-10-16_15-04-12.log   журнал: новый файл при каждом запуске и каждый час
+                              (и при debug.log_mb), всего не больше debug.keep_mb —
+                              самые старые удаляются сами
+    latest.log       ссылка на файл, который пишется сейчас, — его и присылай
     crash.log        стеки всех потоков, если процесс упал (segfault в Qt и т.п.)
     stacks.log       стеки по запросу и при зависании окна
 ```
+
+Кроме запросов и опросов, журнал пишет и действия: какая лента открыта, какие вкладки,
+клики по действиям у постов (лайк, ответ, тред — по id, без текстов), что отправлено
+(длина и куда, не текст), сколько строк нарисовано и за сколько, долгие события окна.
 
 Быстро открыть: меню ≡ → «Отладка» → «Открыть папку логов».
 
@@ -81,7 +89,9 @@ rss_warn_mb = 1500
 Until 1.0 fedtail always keeps a detailed log. It's meant to stay open for days,
 so when it crashes, hangs or grows, the log shows what happened.
 
-**Where:** `~/.local/share/fedtail/<profile>/logs/` — `fedtail.log` (rotated),
+**Where:** `~/fedtail-logs/<profile>/` (`debug.log_dir`) — a new
+`YYYY-MM-DD_HH-MM-SS.log` per start and per hour, `latest.log` links to the current one,
+the folder kept under `debug.keep_mb`;
 `crash.log` (all thread stacks on a fatal crash), `stacks.log` (stacks on demand
 and when the window freezes). Menu ≡ → Debugging → Open the logs folder.
 

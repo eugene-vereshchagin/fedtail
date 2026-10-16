@@ -92,8 +92,9 @@ DEFAULTS = {
     "poll": {"interval_seconds": 90},
     "debug": {
         "level": "debug",
+        "log_dir": "~/fedtail-logs",
         "log_mb": 10,
-        "keep": 5,
+        "keep_mb": 500,
         "stats_minutes": 5,
         "watchdog_seconds": 8,
         "slow_request_seconds": 5,
@@ -128,7 +129,7 @@ MINIMUM = {
     ("lists", "refresh_minutes"): 1,
     ("debug", "log_mb"): 1,
     ("ui", "image_cache_mb"): 16,
-    ("debug", "keep"): 1,
+    ("debug", "keep_mb"): 20,
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,
@@ -165,6 +166,9 @@ def validate(user):
             errors.append(f"[{section}] must be a section, not a value")
             continue
         for key, val in values.items():
+            if (section, key) == ("debug", "keep"):  # 0.3: a size for the folder instead
+                warnings.append("debug.keep is gone: debug.keep_mb caps the log folder")
+                continue
             if (section, key) == ("lists", "exclusive_hides") and "hide_members" not in values:
                 # replaced in 0.3: hiding now covers every list unless told otherwise
                 if val is False:

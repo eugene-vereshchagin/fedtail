@@ -1,6 +1,7 @@
 """Main window: lanes on the left, tabs (lane / threads / accounts) on the right."""
 
 import logging
+import time
 from dataclasses import dataclass
 from urllib.parse import unquote
 
@@ -711,6 +712,7 @@ class MainWindow(QMainWindow):
         name = cur.data(Qt.ItemDataRole.UserRole)
         if name is None:
             return
+        log.info("lane opened: %s", name)
         if self.curtain_shown():
             self.right_stack.setCurrentIndex(0)
         w = self.lane_widgets.get(name)
@@ -806,6 +808,17 @@ class MainWindow(QMainWindow):
 
     # ---- events from the core ---------------------------------------------------------
     def on_event(self, name, payload):
+        t = time.monotonic()
+        try:
+            self._on_event(name, payload)
+        finally:
+            ms = (time.monotonic() - t) * 1000
+            if ms > 300:
+                log.warning("event %s took %.0f ms in the window", name, ms)
+            elif ms > 50:
+                log.debug("event %s: %.0f ms", name, ms)
+
+    def _on_event(self, name, payload):
         if name == "lanes_updated":
             for lane in payload:
                 w = self.lane_widgets.get(lane)
@@ -895,6 +908,7 @@ class MainWindow(QMainWindow):
                 if self.tabs.widget(i) is not self.stack]
 
     def _add_tab(self, w, title):
+        log.info("tab opened: %s", type(w).__name__)
         i = self.tabs.addTab(w, title)
         self.tabs.setCurrentIndex(i)
 
@@ -970,6 +984,7 @@ class MainWindow(QMainWindow):
         w = self.tabs.widget(i)
         if w is None or w is self.stack:
             return
+        log.info("tab closed: %s", type(w).__name__)
         self.tabs.removeTab(i)
         w.deleteLater()
 
@@ -1008,9 +1023,11 @@ class MainWindow(QMainWindow):
 
     def on_link(self, url):
         if not url.startswith("fedtail:"):
+            log.info("link: browser (%s)", QUrl(url).host() or "?")
             self.open_url(url)
             return
         action, _sep, arg = url[len("fedtail:"):].partition("/")
+        log.info("action %s %s", action, arg if action not in ("tag", "resolve") else "…")
         st = self.core.store.get_status(arg) \
             if action not in ("account", "tag", "resolve", "alias") else None
         if action == "alias":  # a post's #abc: into the command line
@@ -1145,7 +1162,7 @@ class MainWindow(QMainWindow):
     def bug_report(self):
         try:
             diag.log_stats()
-            out = diag.bug_report(self.core.paths)
+            out = diag.bug_report(self.core.paths, cfg=self.cfg)
         except OSError as e:
             self.error(e)
             return

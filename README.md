@@ -272,7 +272,8 @@ ruff check .
 
 ## If it breaks
 
-Logs are always kept (until 1.0): `~/.local/share/fedtail/<profile>/logs/`. Run
+Logs are always kept (until 1.0): `~/fedtail-logs/<profile>/`, a file per start and per
+hour, `latest.log` the current one (`debug.log_dir`). Attach `latest.log`, or run
 `python3 -m fedtail --bug-report` and send the archive it makes in your home folder — logs,
 crash traces, config and a system summary, without the token and the database. A frozen
 window: `kill -USR1 <pid>` first, it writes where every thread is stuck. Details in

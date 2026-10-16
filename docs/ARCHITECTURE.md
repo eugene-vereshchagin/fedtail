@@ -478,7 +478,8 @@ language.
 ## 18. Diagnostics
 
 See `docs/DEBUGGING.md` for the user's side. In code: `fedtail/diag.py` sets up
-a rotating log (`logs/fedtail.log`), `crash.log` (faulthandler), `stacks.log`
+the log (`SessionLog`: a file per start and per hour in `debug.log_dir/<profile>/`,
+`latest.log` linking the current one, capped by `debug.keep_mb`), `crash.log` (faulthandler), `stacks.log`
 (SIGUSR1, menu, watchdog), exception hooks for all threads, a stats thread with
 providers (`diag.add_stats(name, fn)`: the core adds store/pool/cache counts, the
 Qt frontend widget and image counts) and `bug_report()`. `qt/diagnostics.py`

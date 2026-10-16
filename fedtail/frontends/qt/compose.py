@@ -1,5 +1,6 @@
 """Writing a post or a reply. Drafts are saved as you type."""
 
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -29,6 +30,8 @@ from .text import display_name, esc
 MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",
              ".mp4", ".webm", ".mov", ".mp3", ".ogg", ".m4a", ".flac")
 MEDIA_FILTER = " ".join("*" + e for e in MEDIA_EXT)
+
+log = logging.getLogger(__name__)
 
 
 def media_paths(mime):
@@ -414,6 +417,9 @@ class Compose(QDialog):
         if not text and not media:
             return
         self.save_draft()  # whatever happens next, the text is safe
+        log.info("send: %s, reply to %s, %s, language %s, %d chars, %d pictures",
+                 "edit" if self.edit else "post", self.reply_to["id"] if self.reply_to else "-",
+                 self.vis.currentData(), self.lang.currentData() or "-", len(text), len(media))
         self.send_btn.setEnabled(False)
         self.send_btn.setText(_("sending"))
         if self.edit:

@@ -4,10 +4,14 @@ fedtail is meant to stay open for days. When it falls over, hangs or grows fat,
 the files here are what you send for a diagnosis. Until 1.0 everything is on by
 default and verbose (`[debug]` in the config tones it down).
 
-Where (per profile, in the data dir, e.g. ~/.local/share/fedtail/default/logs/):
+Where: debug.log_dir/<profile>/, ~/fedtail-logs/default/ unless set otherwise
+("" — the profile's data dir, logs/):
 
-    fedtail.log      the log: every request with its timing, polls, errors with
-                     tracebacks, stats every few minutes. Rotated: fedtail.log.1 …
+    2026-10-16_15-04-12.log   the log: every request with its timing, polls, user
+                     actions, errors with tracebacks, stats every few minutes. A new
+                     file at every start and every hour (or debug.log_mb); the
+                     oldest go once there are more than debug.keep_mb of them.
+    latest.log       a link to the file being written — the one to send
     crash.log        Python's faulthandler: the stacks of all threads if the
                      process dies on a fatal signal (a segfault inside Qt, say)
     stacks.log       stacks of all threads on demand (`kill -USR1 <pid>`, the
@@ -49,8 +53,87 @@ _state = {"dir": None, "stacks": None, "crash": None, "providers": {}, "stats_th
           "cpu": None, "rss_warned": 0}
 
 
-def logs_dir(paths):
-    return paths.data_dir / "logs"
+def logs_dir(paths, cfg=None):
+    """The profile's log folder: the one in use, or where debug.log_dir puts it."""
+    if _state["dir"] is not None:
+        return _state["dir"]
+    where = ((cfg or {}).get("debug") or {}).get("log_dir", DEFAULT_LOG_DIR)
+    if not where:
+        return paths.data_dir / "logs"
+    return Path(os.path.expanduser(where)) / paths.profile
+
+
+DEFAULT_LOG_DIR = "~/fedtail-logs"
+
+
+class SessionLog(logging.Handler):
+    """One file per start and per hour (and per log_mb): YYYY-MM-DD_HH-MM-SS.log,
+    latest.log pointing at the current one; old files go once the folder holds
+    more than keep_mb of them. Small files, easy to find, easy to send."""
+
+    def __init__(self, folder, max_mb=10, keep_mb=500):
+        super().__init__()
+        self.folder = Path(folder)
+        self.max_bytes = int(max_mb * 1024 * 1024)
+        self.keep_bytes = int(keep_mb * 1024 * 1024)
+        self.stream = None
+        self.hour = None
+        self.path = None
+        self._open()
+
+    def _open(self):
+        if self.stream:
+            self.stream.close()
+        now = datetime.now()
+        name = f"{now:%Y-%m-%d_%H-%M-%S}.log"
+        n = 1
+        while (self.folder / name).exists():  # two in one second: don't overwrite
+            n += 1
+            name = f"{now:%Y-%m-%d_%H-%M-%S}-{n}.log"
+        self.path = self.folder / name
+        self.stream = open(self.path, "a", encoding="utf-8")  # noqa: SIM115
+        self.hour = now.strftime("%Y%m%d%H")
+        latest = self.folder / "latest.log"
+        try:
+            if latest.is_symlink() or latest.exists():
+                latest.unlink()
+            latest.symlink_to(self.path.name)
+        except OSError:  # no symlinks here (Windows without the right): fine
+            pass
+        self._prune()
+
+    def _prune(self):
+        files = sorted((f for f in self.folder.glob("2[0-9][0-9][0-9]-*.log")
+                        if f.is_file() and not f.is_symlink() and f != self.path),
+                       key=lambda f: f.stat().st_mtime, reverse=True)
+        total = self.path.stat().st_size if self.path and self.path.exists() else 0
+        for f in files:
+            total += f.stat().st_size
+            if total > self.keep_bytes:
+                try:
+                    f.unlink()
+                except OSError:
+                    pass
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            if self.hour != datetime.now().strftime("%Y%m%d%H") or \
+                    self.stream.tell() > self.max_bytes:
+                self.stream.write("---- continued in the next file\n")
+                self._open()
+            self.stream.write(msg + "\n")
+            self.stream.flush()
+        except Exception:  # noqa: BLE001 — logging must never take the app down
+            self.handleError(record)
+
+    def close(self):
+        try:
+            if self.stream:
+                self.stream.close()
+                self.stream = None
+        finally:
+            super().close()
 
 
 # ---- setup ---------------------------------------------------------------------------
@@ -58,7 +141,8 @@ def setup(paths, cfg, console_debug=False):
     """Logging to a rotating file (and warnings to the terminal), crash traces,
     stack dumps on SIGUSR1, uncaught exceptions of every thread into the log."""
     d = cfg.get("debug", {})
-    folder = logs_dir(paths)
+    _state["dir"] = None
+    folder = logs_dir(paths, cfg)
     folder.mkdir(parents=True, exist_ok=True)
     _state["dir"] = folder
 
@@ -67,9 +151,7 @@ def setup(paths, cfg, console_debug=False):
     root.setLevel(logging.DEBUG)
     fmt = logging.Formatter(FORMAT, DATEFMT)
 
-    fh = logging.handlers.RotatingFileHandler(
-        folder / "fedtail.log", maxBytes=int(d.get("log_mb", 10)) * 1024 * 1024,
-        backupCount=int(d.get("keep", 5)), encoding="utf-8")
+    fh = SessionLog(folder, max_mb=d.get("log_mb", 10), keep_mb=d.get("keep_mb", 500))
     fh.setLevel(LEVELS.get(d.get("level", "debug"), logging.DEBUG))
     fh.setFormatter(fmt)
     root.addHandler(fh)
@@ -289,18 +371,20 @@ class timed:
 REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm"}
 
 
-def bug_report(paths, dest_dir=None):
-    """A .tar.gz with the logs, crash and stack files, the config and a system
-    summary. Never the token or the database. Returns the archive path."""
+def bug_report(paths, dest_dir=None, cfg=None, hours=48):
+    """A .tar.gz with the logs of the last `hours`, crash and stack files, the config
+    and a system summary. Never the token or the database. Returns the archive path."""
     dest = Path(dest_dir or Path.home())
     name = f"fedtail-report-{paths.profile}-{datetime.now():%Y%m%d-%H%M%S}.tar.gz"
     out = dest / name
-    folder = logs_dir(paths)
+    folder = logs_dir(paths, cfg)
+    since = time.time() - hours * 3600
     summary = _system_summary(paths)
     with tarfile.open(out, "w:gz") as tar:
         if folder.exists():
             for f in sorted(folder.iterdir()):
-                if f.is_file() and f.name not in REPORT_SKIP:
+                if f.is_file() and not f.is_symlink() and f.name not in REPORT_SKIP \
+                        and (not f.name[:1].isdigit() or f.stat().st_mtime >= since):
                     tar.add(f, arcname=f"logs/{f.name}")
         if paths.config_file.exists():
             tar.add(paths.config_file, arcname="config.toml")
