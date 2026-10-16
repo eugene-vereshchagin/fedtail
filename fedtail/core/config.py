@@ -81,6 +81,7 @@ DEFAULTS = {
         "languages": ["ru", "en", "ka", "uk"],
         "complete_mentions": True,
         "complete_tags": True,
+        "report_forward": True,
     },
     "notify": {
         "enabled": True,

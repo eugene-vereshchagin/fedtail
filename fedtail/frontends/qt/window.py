@@ -1081,6 +1081,8 @@ class MainWindow(QMainWindow):
             self.bridge.call((self.core.subscribe if sub else self.core.unsubscribe)(st),
                              ok=lambda _r: self.statusBar().showMessage(
                                  _("subbed" if sub else "unsubbed"), 6000))
+        elif action == "report":
+            self.report(st)
         elif action in ("pin", "unpin"):
             on = action == "pin"
             self.bridge.call(self.core.pin(st, on), ok=lambda _s: self.statusBar().showMessage(
@@ -1119,6 +1121,48 @@ class MainWindow(QMainWindow):
         if paths:
             e.acceptProposedAction()
             self.compose(attach=paths)
+
+    def report(self, st):
+        """Complain about a post to my server's moderators — with why, what kind, and
+        whether the author's server should hear too."""
+        from PySide6.QtWidgets import QCheckBox, QComboBox, QDialogButtonBox, QPlainTextEdit
+        acc = real(st)["account"]
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_("report_title", acct=acc["acct"]))
+        dlg.resize(480, 320)
+        lay = QVBoxLayout(dlg)
+        quote = QLabel(snippet(st, 200))
+        quote.setWordWrap(True)
+        quote.setObjectName("muted")
+        lay.addWidget(quote)
+        kind = QComboBox()
+        for key in ("spam", "legal", "violation", "other"):
+            kind.addItem(_("report_" + key), key)
+        kind.setCurrentIndex(3)
+        lay.addWidget(kind)
+        why = QPlainTextEdit()
+        why.setPlaceholderText(_("report_why"))
+        lay.addWidget(why, 1)
+        remote = "@" in acc["acct"]
+        fwd = QCheckBox(_("report_forward", host=acc["acct"].split("@")[-1]))
+        fwd.setChecked(remote and self.cfg["post"].get("report_forward", True))
+        fwd.setVisible(remote)
+        lay.addWidget(fwd)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        send = buttons.addButton(_("report_send"), QDialogButtonBox.ButtonRole.AcceptRole)
+        send.setObjectName("primary")
+        buttons.rejected.connect(dlg.reject)
+        lay.addWidget(buttons)
+
+        def go():
+            dlg.accept()
+            self.bridge.call(self.core.report(st, why.toPlainText().strip(), fwd.isChecked(),
+                                              kind.currentData()),
+                             ok=lambda _r: self.statusBar().showMessage(_("report_sent"), 6000),
+                             fail=self.error)
+        send.clicked.connect(go)
+        dlg.show()
+        return dlg
 
     def show_history(self, st):
         """The versions of an edited post, oldest first, as the server keeps them."""

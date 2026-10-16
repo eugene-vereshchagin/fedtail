@@ -93,6 +93,10 @@ class FakeApi:
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
         return _page(mine, limit, max_id, min_id)
 
+    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
+        self.w.reports.append((acc_id, list(status_ids), comment, forward, category))
+        return {"id": "r1"}
+
     def pinned(self, acc_id):
         return [s for s in self.w.statuses.values()
                 if s["account"]["id"] == acc_id and s.get("pinned")]
@@ -363,6 +367,7 @@ class World:
         self.profile_updates = []
         self.markers = {}  # timeline -> last_read_id, as another client left it
         self.extras = []  # sensitive / poll of each post
+        self.reports = []
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())

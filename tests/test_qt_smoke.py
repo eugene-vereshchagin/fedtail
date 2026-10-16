@@ -805,6 +805,21 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("исходная новость", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "card"
 
+    def test_report(self):
+        from PySide6.QtWidgets import QCheckBox, QComboBox, QPlainTextEdit, QPushButton
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        dlg = self.win.report(self.core.store.get_status("011"))
+        dlg.findChild(QPlainTextEdit).setPlainText("реклама")
+        combo = dlg.findChild(QComboBox)
+        combo.setCurrentIndex(combo.findData("spam"))
+        self.assertTrue(dlg.findChild(QCheckBox).isChecked())  # Bob is from elsewhere
+        send = next(b for b in dlg.findChildren(QPushButton) if b.objectName() == "primary")
+        send.click()
+        self.pump(until=lambda: self.world.reports)
+        self.assertEqual(self.world.reports[-1], ("B", ["011"], "реклама", True, "spam"))
+
     def test_pinned_on_profile(self):
         from fedtail.frontends.qt.feed import AccountWidget
         self.world.statuses["011"]["pinned"] = True

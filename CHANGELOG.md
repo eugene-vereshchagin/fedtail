@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Report a post to your server's moderators from its ⋯ menu: what kind, what's wrong, and
+  for someone from another server whether their moderators hear too (without your name;
+  `post.report_forward` sets that tick's default).
 - Pinned posts come first on a profile, marked 📌 (`feed.profile_pinned`); your own public
   posts can be pinned and unpinned from their ⋯ menu.
 - Pictures the author marked sensitive (without a content warning) stay covered until

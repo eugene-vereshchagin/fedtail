@@ -1338,6 +1338,13 @@ class Core:
         pid = (s.get("poll") or {}).get("id")
         return self.submit(lambda: self._update(dict(s, poll=self.api.poll(pid))))
 
+    def report(self, status, comment="", forward=False, category="other"):
+        """Tell my server's moderators about a post (and its author); forward: also the
+        moderators of the author's server, without saying who reported."""
+        s = real(status)
+        return self.submit(self.api.report, s["account"]["id"], [s["id"]], comment,
+                           forward, category)
+
     def pinned(self, acc_id):
         """The posts someone pinned to the top of their profile (a future of a list)."""
         def job():

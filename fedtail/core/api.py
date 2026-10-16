@@ -202,6 +202,11 @@ class Api:
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
 
+    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
+        body = {"account_id": acc_id, "status_ids": list(status_ids), "comment": comment,
+                "forward": bool(forward), "category": category}
+        return self.post("/api/v1/reports", json=body)
+
     def pinned(self, acc_id):
         return self.get(f"/api/v1/accounts/{acc_id}/statuses", {"pinned": "true"}) or []
 
