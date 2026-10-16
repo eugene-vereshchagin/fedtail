@@ -331,6 +331,19 @@ class CoreTest(TmpDir):
         arrived = [p for n, p in seen if n == "arrived"]
         self.assertEqual(arrived, [[("111", "110")]])
 
+    def test_follow_requests_event_only_on_change(self):
+        core, w = self.make()
+        core.connect().result()
+        seen = []
+        core.events.on("requests_updated", lambda name, payload: seen.append(len(payload)))
+        core.poll_once()
+        core.poll_once()
+        self.assertEqual(seen, [0])  # the first look, then nothing new: quiet
+        w.requests.append(fakes.acct("R", "reader@x.example"))
+        core.poll_once()
+        core.poll_once()
+        self.assertEqual(seen, [0, 1])
+
     def test_silence_mute_block_filters(self):
         core, w = self.make()
         w.add(status("100", BOB, minute=1), home=True)

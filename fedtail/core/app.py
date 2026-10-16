@@ -248,8 +248,10 @@ class Core:
                     if self._known_requests is not None:
                         new_requests = [a for a in self.follow_requests
                                         if a["id"] not in self._known_requests]
+                    changed = ids != self._known_requests
                     self._known_requests = ids
-                    self.emit("requests_updated", self.follow_requests)
+                    if changed:  # not every poll: the tab would be rebuilt for nothing
+                        self.emit("requests_updated", self.follow_requests)
                 except Exception as e:
                     self.emit("error", f"requests: {e}")
 

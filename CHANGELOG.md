@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- Network failures in the log and the terminal take one line instead of a page of
+  traceback (the request itself is logged with its timing); pictures give up after 30 s
+  of silence instead of 60, so a server stuck on a remote original doesn't stall the rest;
+  the follow-requests tab is no longer rebuilt on every poll.
 - Post HTML goes through an allow-list: text formatting, lists, quotes, code and links
   stay; scripts, styles, frames, pictures by path, headings, fonts and tables don't (headings
   and boxes become paragraphs). Links only to the web (and mail, xmpp, gemini, magnet) or

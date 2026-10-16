@@ -46,7 +46,9 @@ class Images:
         if img.isNull():
             t = time.monotonic()
             try:
-                r = self.http.get(url, timeout=60)
+                # 10 s to connect, 30 s of silence at most: a server stuck fetching a
+                # remote original must not hold one of the four image workers for a minute
+                r = self.http.get(url, timeout=(10, 30))
                 r.raise_for_status()
             except requests.RequestException as e:
                 log.warning("image %s: %s after %.1f s", url, e.__class__.__name__,

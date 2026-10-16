@@ -2,9 +2,16 @@
 
 import logging
 
+import requests
 from PySide6.QtCore import QObject, Signal
 
+from ...core.api import ApiError
+
 log = logging.getLogger(__name__)
+
+# The network or the server said no: one line is the whole story (the request is
+# logged by api.py with its timing). Anything else gets its traceback.
+EXPECTED = (requests.RequestException, ApiError, TimeoutError, ConnectionError)
 
 
 class Bridge(QObject):
@@ -30,7 +37,10 @@ class Bridge(QObject):
         exc = future.exception()
         try:
             if exc is not None:
-                log.warning("call failed: %s", exc, exc_info=exc)
+                if isinstance(exc, EXPECTED):
+                    log.warning("call failed: %s: %s", type(exc).__name__, exc)
+                else:
+                    log.warning("call failed: %s", exc, exc_info=exc)
                 handler = fail or self.on_error
                 if handler:
                     handler(str(exc))
