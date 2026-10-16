@@ -2,6 +2,10 @@
 
 ## 0.6.0 — in progress
 
+- Pictures come quicker: a single big picture shows its preview at once and the full file
+  replaces it when it arrives (it used to wait for the full file); the picture asked for
+  last loads first, so the one on screen doesn't queue behind everything scrolled past; the
+  log says when a picture waited for a worker.
 ## 0.5.0 — 2026-10-16
 
 - One file, no installing: every release has `fedtail-X.Y.Z-linux-x86_64` (built on Debian 12)

@@ -5,6 +5,7 @@ The auth token is never sent along: media often lives on other servers.
 
 import hashlib
 import logging
+import threading
 import time
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -36,8 +37,27 @@ class Images:
         self.why = {}     # url -> ("network" | "format", detail) of its last failure
         # own pool: a backlog of avatars must never delay sending a post
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
+        # newest first: the picture asked for last is the one on screen now; a lane full
+        # of pictures scrolled past must not make it wait behind them all
+        self._stack = []
+        self._stack_lock = threading.Lock()
         self.http = requests.Session()
         self.http.headers["User-Agent"] = USER_AGENT
+
+    def _next(self, key):
+        """A worker takes the newest request still waiting (not necessarily `key`:
+        every request has its own worker call, so all get done, newest first).
+        Returns (key, image) for the request it actually did."""
+        with self._stack_lock:
+            url, max_side, asked = self._stack.pop()
+        waited = time.monotonic() - asked
+        if waited > 2:
+            log.info("image waited %.1f s for a worker (%d more waiting)", waited,
+                     len(self._stack))
+        try:
+            return (url, max_side), self._download(url, max_side)
+        except Exception:  # noqa: BLE001 — said in the log by _download; the card says it
+            return (url, max_side), None
 
     def _download(self, url, max_side):
         p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
@@ -119,9 +139,11 @@ class Images:
             self.waiting[key].append((callback, failed))
             return
         self.waiting[key] = [(callback, failed)]
-        self.bridge.call(self.pool.submit(self._download, url, max_side),
-                         ok=lambda img, k=key: self._ready(k, img),
-                         fail=lambda _e, k=key: self._failed(k))
+        with self._stack_lock:
+            self._stack.append((url, max_side, time.monotonic()))
+        self.bridge.call(self.pool.submit(self._next, key),
+                         ok=lambda done: self._ready(*done) if done[1] is not None
+                         else self._failed(done[0]))
 
     def _remember(self, key, pm):
         size = pm.width() * pm.height() * 4

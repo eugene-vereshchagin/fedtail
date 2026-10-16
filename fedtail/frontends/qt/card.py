@@ -678,15 +678,18 @@ class PostRow(QWidget):
                 if m.get("type") == "image":
                     idx = images.index(m)
                     lab.clicked.connect(lambda i=idx: self.ctx.show_images(images, i))
-                    # a single big picture deserves the full file, a grid tile the preview
-                    src = full if single and full else m.get("preview_url") or full
+                    # the preview first, at once; a single big picture then gets the full
+                    # file, which may take a while (a big photo, a slow server)
+                    src = m.get("preview_url") or full
+                    upgrade = full if single and full and full != src else None
                 else:  # gifv / video: still frame here, playback in the browser
+                    upgrade = None
                     lab.setToolTip(_("media_" + m["type"]) + " ▶ " + (m.get("description") or ""))
                     lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
                     src = m.get("preview_url")
                 if src:
-                    self._load_media(lab, src, m.get("preview_url"), tw, th, radius,
-                                     kind=m["type"])
+                    self._load_media(lab, src, full if src != full else None, tw, th, radius,
+                                     kind=m["type"], upgrade=upgrade)
                 elif m["type"] != "image":  # a video without a still frame: say what it is
                     lab.setText("▶ " + _("media_" + m["type"]) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
@@ -707,15 +710,21 @@ class PostRow(QWidget):
         menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
         menu.exec(lab.mapToGlobal(pos))
 
-    def _load_media(self, lab, src, fallback, tw, th, radius, kind="image"):
-        """The picture into its box; if the full file won't come, the preview;
-        if nothing comes, say so (a click still opens it). A video's still frame
-        gets a ▶ on it; a video without one says it's a video, not a broken picture."""
+    def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None):
+        """The picture into its box; if it won't come, the fallback; if nothing comes,
+        say so (a click still opens it). upgrade: a sharper file to put in once this
+        one is shown — if it fails, the one shown stays. A video's still frame gets a
+        ▶ on it; a video without one says it's a video, not a broken picture."""
         def show(pm):
             pm = _fit(pm, tw, th, radius)
             if kind != "image":
                 pm = _play_mark(pm)
-            lab.setPixmap(pm)
+            try:
+                lab.setPixmap(pm)
+            except RuntimeError:  # the card was rebuilt meanwhile
+                return
+            if upgrade:
+                self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)))
 
         def failed():
             if fallback and fallback != src:
@@ -725,6 +734,13 @@ class PostRow(QWidget):
                             "▶ " + _("media_" + kind) + "\n" + _("media_click"))
                 lab.setWordWrap(True)
         self.ctx.images.get(src, show, failed=failed)
+
+
+def _set(lab, pm):
+    try:
+        lab.setPixmap(pm)
+    except RuntimeError:  # gone meanwhile
+        pass
 
 
 VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")

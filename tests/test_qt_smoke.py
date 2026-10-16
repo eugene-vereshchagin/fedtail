@@ -656,6 +656,24 @@ class QtSmokeTest(unittest.TestCase):
         merge = next(a for a in menu.actions() if a.text() == "Все аккаунты в одном окне")
         self.assertTrue(merge.isChecked())
 
+    def test_single_picture_preview_first_then_original(self):
+        from PySide6.QtGui import QPixmap
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        asked = []
+
+        def fake_get(url, cb, *a, **k):
+            asked.append(url)
+            cb(QPixmap(40, 30))
+        self.win.images.get = fake_get
+        st = status("091", BOB, minute=1)
+        st["media_attachments"] = [{"type": "image", "url": "https://x/big.jpg",
+                                    "preview_url": "https://x/small.jpg",
+                                    "meta": {"original": {"width": 4000, "height": 3000}}}]
+        PostRow(CardSpec(key="091", status=st), self.win.ctx)
+        pictures = [u for u in asked if "/x/" in u]
+        self.assertEqual(pictures, ["https://x/small.jpg", "https://x/big.jpg"])
+
     def test_video_called_a_picture(self):
         """A server that calls an mp4 an "image": a video with a ▶, not a broken picture."""
         from PySide6.QtWidgets import QLabel
