@@ -3,10 +3,10 @@
 import html
 import re
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 
 _INVISIBLE = re.compile(r'<span class="invisible">.*?</span>', re.S)
 _ELLIPSIS = re.compile(r'<span class="ellipsis">(.*?)</span>', re.S)
-_ATTRS = re.compile(r'\s(class|rel|target|translate|data-[\w-]+)="[^"]*"')
 _IMG = re.compile(r'<img[^>]*?alt="([^"]*)"[^>]*>|<img[^>]*>', re.S)
 _SCRIPTY = re.compile(r"<(script|style|iframe)[^>]*>.*?</\1>", re.S | re.I)
 _TAG = re.compile(r"(<[^>]*>)")
@@ -49,6 +49,95 @@ def _fit_text(h):
     return "".join(out)
 
 
+# What a post may contain on screen. QLabel runs no scripts (it's not a browser), but
+# whatever is not on these lists goes anyway: no forms, tables, headings, fonts,
+# pictures from paths, and no links but to the web — a post must not be able to hold
+# a link to fedtail's own actions (fedtail:delete/…) or to a local file; links that
+# only go somewhere inside (a profile, a tag, a thread) stay.
+ALLOWED_TAGS = {"p", "br", "a", "span", "b", "strong", "i", "em", "u", "s", "del",
+                "code", "pre", "blockquote", "ul", "ol", "li"}
+VOID_TAGS = {"br"}
+DROP_WITH_CONTENT = {"script", "style", "iframe", "object", "embed", "template", "noscript",
+                     "svg", "math", "head", "title", "textarea", "select"}
+AS_PARAGRAPH = {"h1", "h2", "h3", "h4", "h5", "h6", "div", "section", "article", "header",
+                "footer", "aside", "table", "figure", "figcaption", "details", "summary"}
+AS_BREAK = {"tr", "hr", "dt", "dd"}
+AS_SPACE = {"td", "th"}
+SAFE_SCHEMES = ("http://", "https://", "mailto:", "xmpp:", "gemini://", "magnet:",
+                # links.in_app's own: going somewhere inside is fine, doing things is not
+                "fedtail:account/", "fedtail:tag/", "fedtail:resolve/", "fedtail:thread/")
+
+
+class _Sanitizer(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.out, self.skip = [], 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in DROP_WITH_CONTENT:
+            self.skip += 1
+            return
+        if self.skip:
+            return
+        if tag in AS_PARAGRAPH:  # a heading or a box: text of its own, the plain way
+            self.out.append("<p>")
+            return
+        if tag in AS_BREAK:
+            self.out.append("<br>")
+            return
+        if tag in AS_SPACE:
+            self.out.append(" ")
+            return
+        if tag not in ALLOWED_TAGS:
+            return
+        if tag == "a":
+            href = (dict(attrs).get("href") or "").strip()
+            if href.lower().startswith(SAFE_SCHEMES):
+                self.out.append(f'<a href="{esc(html.unescape(href))}">')
+            else:
+                self.out.append("<a>")
+            return
+        self.out.append(f"<{tag}>")
+
+    def handle_startendtag(self, tag, attrs):
+        if self.skip:
+            return
+        if tag in VOID_TAGS or tag in AS_BREAK:
+            self.out.append("<br>")
+
+    def handle_endtag(self, tag):
+        if tag in DROP_WITH_CONTENT:
+            self.skip = max(0, self.skip - 1)
+            return
+        if self.skip:
+            return
+        if tag in AS_PARAGRAPH:
+            self.out.append("</p>")
+        elif tag in ALLOWED_TAGS and tag not in VOID_TAGS:
+            self.out.append(f"</{tag}>")
+
+    def handle_data(self, data):
+        if not self.skip:
+            self.out.append(esc(data))
+
+    def handle_entityref(self, name):
+        if not self.skip:
+            self.out.append(esc(html.unescape(f"&{name};")))
+
+    def handle_charref(self, name):
+        if not self.skip:
+            self.out.append(esc(html.unescape(f"&#{name};")))
+
+
+def sanitize(h):
+    """Rebuild server HTML from the allowed tags only, attributes dropped but a
+    web link's href."""
+    p = _Sanitizer()
+    p.feed(h or "")
+    p.close()
+    return "".join(p.out)
+
+
 def esc(s):
     return html.escape(s or "", quote=True)
 
@@ -58,8 +147,7 @@ def clean(content, link_color=None):
     h = _INVISIBLE.sub("", h)
     h = _ELLIPSIS.sub(r"\1…", h)
     h = _IMG.sub(lambda m: esc(m.group(1) or ""), h)  # custom emoji → :shortcode:
-    h = _ATTRS.sub("", h)
-    h = re.sub(r"\sstyle=\"[^\"]*\"", "", h)
+    h = sanitize(h)
     h = _fit_text(h)
     style = "text-decoration:none;" + (f"color:{link_color};" if link_color else "")
     return h.replace("<a ", f'<a style="{style}" ')

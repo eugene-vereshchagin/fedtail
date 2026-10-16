@@ -99,7 +99,8 @@ fedtail/
                      ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
       card.py        PostRow (one post), CardSpec, SeparatorRow, media grid
       compose.py     the compose dialog (drafts, media, drag&drop, CW, hint)
-      text.py        server HTML → QLabel rich text; links; dates
+      text.py        server HTML → QLabel rich text (an allow-list sanitizer: no scripts,
+                     no pictures from paths, links only to the web or inside); dates
       theme.py       Theme object, palette, the generated QSS
       images.py      avatars/pictures: disk+memory cache, own thread pool, save
       viewer.py      picture viewer drawn over the main window

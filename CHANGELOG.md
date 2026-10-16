@@ -2,6 +2,11 @@
 
 ## 0.3.0 — in progress
 
+- Post HTML goes through an allow-list: text formatting, lists, quotes, code and links
+  stay; scripts, styles, frames, pictures by path, headings, fonts and tables don't (headings
+  and boxes become paragraphs). Links only to the web (and mail, xmpp, gemini, magnet) or
+  inside fedtail to a profile, tag or thread — a post can't carry a link that deletes,
+  boosts or follows on your behalf. There never was a browser engine here to run scripts.
 - An open thread takes new replies in by itself as the poll brings them (and F5 reloads
   it as before).
 - A thread you don't follow but whose replies still come says why: "not followed, but

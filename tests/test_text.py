@@ -27,6 +27,28 @@ class CleanTest(unittest.TestCase):
         self.assertEqual(h.replace(ZWSP, "").count("x"), 70)
         self.assertIn("&amp; &lt;b&gt; it's", h)
 
+    def test_hostile_html_is_defused(self):
+        h = clean('<p onclick="x()">hi<script>alert(1)</script><style>p{}</style>'
+                  '<img src="file:///etc/passwd"><iframe src="https://x">in</iframe>'
+                  '<a href="javascript:alert(1)">js</a> '
+                  '<a href="fedtail:delete/123">tap me</a> '
+                  '<a href="file:///home">f</a> <h1>BIG</h1><font size="9">f</font>'
+                  '<table><tr><td>t</td></tr></table>'
+                  '<a href="fedtail:account/42">@bob</a> <a href="https://ok.example/">ok</a>'
+                  '<b style="font-size:90px">b</b></p>')
+        for bad in ("script", "alert", "p{}", "90px", "onclick", "img", "iframe", "javascript",
+                    "fedtail:delete", "file:", "<h1", "<font", "<table", "size"):
+            self.assertNotIn(bad, h)
+        for text in ("hi", "js", "tap me", "<p>BIG</p>", " t<", "<b>b</b>"):
+            self.assertIn(text, h)
+        self.assertIn('href="fedtail:account/42"', h)
+        self.assertIn('href="https://ok.example/"', h)
+
+    def test_entities_and_breaks_survive_sanitizing(self):
+        from fedtail.frontends.qt.text import sanitize
+        self.assertEqual(sanitize('<p>a &amp; b<br/>c &#39;d&#39; &lt;x&gt;</p>'),
+                         "<p>a &amp; b<br>c &#x27;d&#x27; &lt;x&gt;</p>")
+
 
 if __name__ == "__main__":
     unittest.main()
