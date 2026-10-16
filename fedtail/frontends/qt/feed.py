@@ -519,7 +519,9 @@ class LaneWidget(QWidget):
         if not self.positioned:
             self.view.set_specs(specs, keep_position=False)
             if self.isVisible():
-                self._initial_position()
+                # after the layout has settled (long posts take several passes), the
+                # same way as when a drawn lane is shown
+                QTimer.singleShot(0, self._initial_position)
         else:
             jump = self.cfg["feed"]["on_new"] == "jump_to_newest"
             had = set(self.view.order)
