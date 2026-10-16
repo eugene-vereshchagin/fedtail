@@ -100,12 +100,19 @@ jobs:
         with:
           fetch-depth: 0
       - name: Build
+        shell: bash
         run: |
+          set -o pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           python3 -m venv /tmp/venv
-          /tmp/venv/bin/pip install requests PySide6-Essentials pyinstaller
-          /tmp/venv/bin/python packaging/build.py
-          ./dist/fedtail --version
+          {
+            /tmp/venv/bin/pip install requests PySide6-Essentials pyinstaller &&
+            /tmp/venv/bin/python packaging/build.py &&
+            ./dist/fedtail --version
+          } 2>&1 | tee build.log
+      - name: What went wrong
+        if: failure()
+        run: tail -n 40 build.log | sed 's/^/::warning::/' 
       - uses: actions/upload-artifact@v4
         with:
           name: fedtail-linux
