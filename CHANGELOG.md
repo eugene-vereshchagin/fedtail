@@ -2,6 +2,9 @@
 
 ## 0.5.0 — in progress
 
+- "Unread" over a lane: only what was unread when you opened it, plus what arrives. Reading
+  doesn't make posts vanish under your eyes — they grey out and stay until you leave the
+  lane; the next time it opens without them. Remembered per lane.
 - A video a server calls a picture (an mp4 as "image") shows as a video, and a video whose
   still frame won't load says "▶ video — click to open in the browser" instead of "picture
   didn't load"; still frames of videos get a ▶ on them.

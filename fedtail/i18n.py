@@ -43,6 +43,11 @@ _STRINGS = {
         "and_more": "и ещё {n}",
         "group_fold_tip": "Свернуть или развернуть раздел (непрочитанное останется числом)",
         "viewer_save": "Сохранить",
+        "unread_only": "Непрочитанное",
+        "unread_only_tip": "Только то, что было непрочитано, когда ты открыл ленту, и что пришло "
+                           "потом. Прочитанное остаётся на месте, пока не уйдёшь из ленты",
+        "unread_only_info": ["{n} непрочитанный", "{n} непрочитанных", "{n} непрочитанных"],
+        "unread_only_none": "всё прочитано",
         "profile_posts": "Посты",
         "viewer_original_coming": "это уменьшенная, оригинал загружается…",
         "viewer_format": "Оригинал скачан, но показать его Qt не умеет ({kind}). "
@@ -339,6 +344,11 @@ _STRINGS = {
         "and_more": "and {n} more",
         "group_fold_tip": "Fold or unfold the section (unread stays as a number)",
         "viewer_save": "Save",
+        "unread_only": "Unread",
+        "unread_only_tip": "Only what was unread when you opened the lane, and what came "
+                           "since. What you read stays put until you leave the lane",
+        "unread_only_info": ["{n} unread", "{n} unread"],
+        "unread_only_none": "all read",
         "profile_posts": "Posts",
         "viewer_original_coming": "a smaller copy, the original is loading…",
         "viewer_format": "The original is here, but Qt can't show it ({kind}). "

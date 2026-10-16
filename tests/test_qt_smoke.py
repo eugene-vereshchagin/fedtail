@@ -671,6 +671,30 @@ class QtSmokeTest(unittest.TestCase):
         texts = [w.text() for w in row.findChildren(QLabel)]
         self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
+    def test_unread_only(self):
+        """Unread: what was unread on opening stays while you read it; leaving thins it."""
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        self.core.mark_read(["011"])
+        self.win.select_lane("people")
+        lane = self.win.lane_widgets["people"]
+        self.pump(until=lambda: "012" in lane.view.rows)
+        posts = lambda: sorted(k for k in lane.view.rows if not k.startswith("__"))
+        lane.unread_btn.setChecked(True)
+        lane._toggle_unread_only()
+        self.assertNotIn("011", posts())  # read already: not here
+        self.assertIn("012", posts())
+        self.assertFalse(lane.btn_older.isVisible())
+        self.core.mark_read(["012"])  # read while looking at it: stays, greyed
+        self.pump(0.1)
+        self.assertIn("012", posts())
+        self.win.select_lane("comments")  # leave and come back: it's gone
+        self.pump(0.1)
+        self.win.select_lane("people")
+        self.pump(until=lambda: "012" not in lane.view.rows)
+        self.assertEqual(self.core.get_state("unread_only.people"), True)  # remembered
+
     def test_start_lane(self):
         self.win.cfg["ui"]["start_lane"] = "none"  # the default: nothing opens by itself
         self.win.start()

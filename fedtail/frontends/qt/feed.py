@@ -314,6 +314,17 @@ class LaneWidget(QWidget):
             self.conv_btn.setCheckable(True)
             self.conv_btn.setChecked(bool(self.core.get_state(f"conversations.{name}")))
         self._conv_members = {}  # top status id -> member status ids (conversations view)
+        # "Unread": what was unread when the lane opened (or the button was pressed) stays
+        # on screen while you read it — greyed, not gone — plus whatever arrives; it
+        # thins out the next time the lane opens
+        self.unread_btn = None
+        self._kept = None  # item keys on screen in this mode, None: not fixed yet
+        if not lazy:
+            self.unread_btn = self.header.add(_button(_("unread_only"),
+                                                      self._toggle_unread_only,
+                                                      tip=_("unread_only_tip")))
+            self.unread_btn.setCheckable(True)
+            self.unread_btn.setChecked(bool(self.core.get_state(f"unread_only.{name}")))
         self.btn_first = self.header.add(_button(_("to_new"), self.jump_first_unread,
                                                  icon="go-down"))
         self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
@@ -327,6 +338,7 @@ class LaneWidget(QWidget):
         self.btn_older = _button(_("older_down") if self.newest_first else _("older_up"),
                                  self.load_older, name="older")
         (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
+        self.btn_older.setVisible(not self.unread_only_on())
 
     def _posts_only_control(self):
         on = self.core.posts_only(self.name)
@@ -370,6 +382,26 @@ class LaneWidget(QWidget):
             ids = [m for i in ids for m in self._conv_members.get(i, [i])]
             self.core.mark_read(ids)
 
+    def unread_only_on(self):
+        return self.unread_btn is not None and self.unread_btn.isChecked()
+
+    def _toggle_unread_only(self):
+        on = self.unread_only_on()
+        self.core.set_state(f"unread_only.{self.name}", on)
+        self._kept = None
+        self.separator = None
+        self.positioned = False
+        self.btn_older.setVisible(not on)  # older history is read: nothing to add here
+        self.refresh(force=True)
+
+    def hideEvent(self, e):
+        # left the lane: what got read meanwhile goes the next time it opens
+        if self.unread_only_on():
+            self._kept = None
+            self.positioned = False
+            self.dirty = True
+        super().hideEvent(e)
+
     def conversations_on(self):
         return self.conv_btn is not None and self.conv_btn.isChecked()
 
@@ -401,6 +433,14 @@ class LaneWidget(QWidget):
         # browse lanes (local, federated) have nothing "unread": no marks, no divider
         lazy = getattr(self.core.lane_by_name.get(self.name), "lazy", False)
         unread = set() if lazy else self.core.unread_ids(entries)
+        if self.unread_only_on():
+            fresh = {item for item, st in entries if st["id"] in unread}
+            self._kept = fresh if self._kept is None else self._kept | fresh
+            entries = [e for e in entries if e[0] in self._kept]
+            self.header.info.setText(_("unread_only_info", n=len(fresh)) if self._kept
+                                     else _("unread_only_none"))
+        elif self.unread_btn is not None:
+            self.header.info.setText("")
         statuses = [st for _, st in entries]
         parents = self.core.parents_for(statuses)
         answers = self.core.my_replies(statuses)
@@ -420,7 +460,7 @@ class LaneWidget(QWidget):
         if unknown:
             self.core.ensure_parents(unknown)
         # "new below": fixed where the reader stood when the lane opened
-        if self.separator is None and not self.positioned:
+        if self.separator is None and not self.positioned and not self.unread_only_on():
             first = next((s for s in specs if s.unread), None)
             if first is not None and any(not s.unread for s in specs):
                 self.separator = (first.key, sum(1 for s in specs if s.unread))
