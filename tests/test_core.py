@@ -721,6 +721,15 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
 
+    def test_pin_my_post(self):
+        core, w = self.make()
+        core.connect().result()
+        mine = w.add(status("030", fakes.ME, minute=1, vis="public"))
+        core.pin(mine, True).result()
+        self.assertEqual([s["id"] for s in core.pinned("ME").result()], ["030"])
+        core.pin(mine, False).result()
+        self.assertEqual(core.pinned("ME").result(), [])
+
     def test_direct_lane(self):
         core, w = self.make()
         core.connect().result()

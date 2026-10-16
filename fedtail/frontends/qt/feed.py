@@ -903,8 +903,29 @@ class AccountWidget(_PagedTab):
         self.relation = {}
         self._first_page = None
         self._origin_asked = False
+        self.pinned = []
         self.reload_account()
         self.more()
+        if self.core.cfg["feed"].get("profile_pinned", True):
+            self.win.bridge.call(self.core.pinned(self.acc_id), ok=self._pinned,
+                                 fail=lambda _e: None)
+
+    def _pinned(self, statuses):
+        self.pinned = statuses or []
+        if self.pinned:
+            self.render()
+
+    def render(self):
+        """Pinned posts first (marked 📌), then the rest by time."""
+        top = {st["id"] for st in self.pinned}
+        rest = [st for st in self.items if st["id"] not in top]
+        short = self.core.short_ids(self.pinned + rest)
+        specs = [CardSpec(key="pin:" + st["id"], status=st, parent=self.core.parent_of(st),
+                          extra={"short_id": short.get(real(st)["id"]), "pinned": True})
+                 for st in self.pinned]
+        specs += [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
+                           extra={"short_id": short.get(real(st)["id"])}) for st in rest]
+        self.view.set_specs(specs, keep_position=True)
 
     def fetch(self, max_id):
         return self.core.account_statuses(self.acc_id, max_id)

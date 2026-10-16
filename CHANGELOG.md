@@ -2,6 +2,8 @@
 
 ## 0.8.0 — in progress
 
+- Pinned posts come first on a profile, marked 📌 (`feed.profile_pinned`); your own public
+  posts can be pinned and unpinned from their ⋯ menu.
 - Pictures the author marked sensitive (without a content warning) stay covered until
   clicked — not even downloaded before that (`feed.sensitive_media = "show"` to see them at
   once). Your own pictures can be marked so: "🔞 Sensitive" in the post panel.

@@ -1081,6 +1081,10 @@ class MainWindow(QMainWindow):
             self.bridge.call((self.core.subscribe if sub else self.core.unsubscribe)(st),
                              ok=lambda _r: self.statusBar().showMessage(
                                  _("subbed" if sub else "unsubbed"), 6000))
+        elif action in ("pin", "unpin"):
+            on = action == "pin"
+            self.bridge.call(self.core.pin(st, on), ok=lambda _s: self.statusBar().showMessage(
+                _("pinned_msg" if on else "unpinned_msg"), 4000), fail=self.error)
         elif action == "delete":
             if QMessageBox.question(self, _("delete_q_title"),
                                     _("delete_q", text=snippet(st, 200))) \

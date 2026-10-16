@@ -202,6 +202,12 @@ class Api:
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
 
+    def pinned(self, acc_id):
+        return self.get(f"/api/v1/accounts/{acc_id}/statuses", {"pinned": "true"}) or []
+
+    def pin(self, sid, on=True):
+        return self.post(f"/api/v1/statuses/{sid}/{'pin' if on else 'unpin'}")
+
     def mentions(self, limit=40, max_id=None, min_id=None):
         p = self._page(limit, max_id, min_id)
         p["types[]"] = ["mention"]

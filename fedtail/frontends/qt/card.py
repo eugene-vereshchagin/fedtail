@@ -429,6 +429,7 @@ class PostRow(QWidget):
             line.addWidget(self._edited_mark(st))
         self._via_mark(line)
         line.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
+        self._pinned_mark(line)
         line.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
@@ -471,6 +472,7 @@ class PostRow(QWidget):
         if st.get("edited_at"):
             h.addWidget(self._edited_mark(st))
         self._via_mark(h)
+        self._pinned_mark(h)
         h.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
@@ -478,6 +480,12 @@ class PostRow(QWidget):
             h.addWidget(came)
         self._short_id(h)
         return h
+
+    def _pinned_mark(self, row):
+        if self.spec.extra.get("pinned"):
+            pin = QLabel("📌 " + _("pinned"))
+            pin.setObjectName("cameFrom")
+            row.addWidget(pin)
 
     def _via_mark(self, row):
         """All accounts in one window: which of mine got this post (and acts on it)."""
@@ -590,6 +598,11 @@ class PostRow(QWidget):
         if st["account"]["id"] == self.ctx.me_id:
             menu.addSeparator()
             menu.addAction(_("edit"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:edit/{i}"))
+            if real(st).get("visibility") in ("public", "unlisted"):
+                pinned = bool(real(st).get("pinned"))
+                pin_url = f"fedtail:{'unpin' if pinned else 'pin'}/{real(st)['id']}"
+                menu.addAction(_("unpin") if pinned else _("pin"),
+                               lambda u=pin_url: self.ctx.on_link(u))
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
         b.setMenu(menu)
         self._menu = menu  # also shown on a right click on the card (see __init__)

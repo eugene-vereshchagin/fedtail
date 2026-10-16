@@ -207,6 +207,8 @@ _STRINGS = {
         "poll_1d": "1 день", "poll_3d": "3 дня", "poll_7d": "7 дней",
         "sensitive_mark": "Чувствительное",
         "sensitive_mark_tip": "Картинки закрыты плашкой, пока читатель сам не откроет",
+        "pinned": "закреплено", "pin": "Закрепить в профиле", "unpin": "Открепить",
+        "pinned_msg": "Закреплено в профиле.", "unpinned_msg": "Откреплено.",
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -526,6 +528,8 @@ _STRINGS = {
         "poll_6h": "6 hours", "poll_1d": "1 day", "poll_3d": "3 days", "poll_7d": "7 days",
         "sensitive_mark": "Sensitive",
         "sensitive_mark_tip": "Pictures stay covered until the reader opens them",
+        "pinned": "pinned", "pin": "Pin to profile", "unpin": "Unpin",
+        "pinned_msg": "Pinned to your profile.", "unpinned_msg": "Unpinned.",
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",

@@ -1338,6 +1338,25 @@ class Core:
         pid = (s.get("poll") or {}).get("id")
         return self.submit(lambda: self._update(dict(s, poll=self.api.poll(pid))))
 
+    def pinned(self, acc_id):
+        """The posts someone pinned to the top of their profile (a future of a list)."""
+        def job():
+            page = self.api.pinned(acc_id)
+            self.store.put_statuses(page)
+            return page
+        return self.submit(job)
+
+    def pin(self, status, on=True):
+        """Pin my post to my profile, or take it off."""
+        s = real(status)
+
+        def job():
+            st = self.api.pin(s["id"], on) or dict(s, pinned=on)
+            self.store.put_statuses([st])
+            self.emit("status_updated", st)
+            return st
+        return self.submit(job)
+
     def bookmark(self, status, on=None):
         """Into the bookmarks or out (on=None: toggle). The Bookmarks lane follows
         at once, without waiting for the server's list."""

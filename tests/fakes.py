@@ -93,6 +93,14 @@ class FakeApi:
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
         return _page(mine, limit, max_id, min_id)
 
+    def pinned(self, acc_id):
+        return [s for s in self.w.statuses.values()
+                if s["account"]["id"] == acc_id and s.get("pinned")]
+
+    def pin(self, sid, on=True):
+        self.w.statuses[sid]["pinned"] = on
+        return self.w.statuses[sid]
+
     def mentions(self, limit=40, max_id=None, min_id=None):
         return _page(self.w.notifications, limit, max_id, min_id)
 

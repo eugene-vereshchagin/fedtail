@@ -56,6 +56,7 @@ DEFAULTS = {
         "remote_posts": 20,
         "remote_people": True,
         "sensitive_media": 'hide',
+        "profile_pinned": True,
     },
     "read": {
         "mark_read": "on_scroll",

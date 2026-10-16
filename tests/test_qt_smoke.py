@@ -805,6 +805,18 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("исходная новость", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "card"
 
+    def test_pinned_on_profile(self):
+        from fedtail.frontends.qt.feed import AccountWidget
+        self.world.statuses["011"]["pinned"] = True
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.on_link("fedtail:account/B")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountWidget)
+        self.pump(until=lambda: "pin:011" in tab.view.rows)
+        self.assertEqual(tab.view.order[0], "pin:011")
+        self.assertNotIn("011", tab.view.rows)  # not twice
+
     def test_sensitive_media_covered(self):
         from PySide6.QtWidgets import QLabel
 
