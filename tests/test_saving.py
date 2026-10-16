@@ -19,9 +19,11 @@ class SavingTest(unittest.TestCase):
             p.write_bytes(b"1")
             self.assertEqual(saving.free_path(d, "cat.png").name, "cat-1.png")
 
+    @unittest.skipIf(os.name == "nt", "XDG user dirs: Linux and the like")
     def test_where(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
-            (Path(d) / "user-dirs.dirs").write_text('XDG_DOWNLOAD_DIR="$HOME/Загрузки"\n')
+            (Path(d) / "user-dirs.dirs").write_text('XDG_DOWNLOAD_DIR="$HOME/Загрузки"\n',
+                                                    encoding="utf-8")
             with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": d, "HOME": "/home/u"}):
                 self.assertEqual(saving.downloads_dir(), Path("/home/u/Загрузки"))
                 cfg, _ = config.validate({})

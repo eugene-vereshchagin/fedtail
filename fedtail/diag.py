@@ -290,8 +290,12 @@ def _windows_memory():
                     ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
     c = Counters()
     c.cb = ctypes.sizeof(c)
-    proc = ctypes.windll.kernel32.GetCurrentProcess()
-    if not ctypes.windll.psapi.GetProcessMemoryInfo(proc, ctypes.byref(c), c.cb):
+    k32 = ctypes.windll.kernel32
+    k32.GetCurrentProcess.restype = wintypes.HANDLE
+    get = getattr(k32, "K32GetProcessMemoryInfo", None) or ctypes.windll.psapi.GetProcessMemoryInfo
+    get.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+    get.restype = wintypes.BOOL
+    if not get(k32.GetCurrentProcess(), ctypes.byref(c), c.cb):
         return {}
     return {"VmRSS": c.WorkingSetSize // 1024, "VmHWM": c.PeakWorkingSetSize // 1024}
 

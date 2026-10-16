@@ -19,7 +19,7 @@ class IconTest(unittest.TestCase):
         self.assertNotEqual(c["bg_top"], iconart.DEFAULT["bg_top"])
 
     def test_installed_icon_is_the_default_drawing(self):
-        shipped = resources.files("fedtail").joinpath("data/icons/fedtail.svg").read_text()
+        shipped = resources.files("fedtail").joinpath("data/icons/fedtail.svg").read_text("utf-8")
         self.assertEqual(shipped, iconart.svg(iconart.colors({})))
 
 

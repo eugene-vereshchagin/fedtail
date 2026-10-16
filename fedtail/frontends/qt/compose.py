@@ -40,7 +40,7 @@ def media_paths(mime):
     if mime.hasUrls():
         for url in mime.urls():
             if url.isLocalFile() and url.toLocalFile().lower().endswith(MEDIA_EXT):
-                out.append(url.toLocalFile())
+                out.append(str(Path(url.toLocalFile())))  # C:\\… on Windows, not C:/…
     return out
 
 

@@ -67,14 +67,14 @@ class CliTest(unittest.TestCase):
                                   "--profile", "croco"], cwd=ROOT, env=env,
                                  capture_output=True, text=True)
             self.assertEqual(out.returncode, 0, out.stderr)
-            entry = (Path(d) / "applications" / "fedtail-croco.desktop").read_text()
+            entry = (Path(d) / "applications" / "fedtail-croco.desktop").read_text("utf-8")
             self.assertIn("-m fedtail --profile croco", entry)
             self.assertIn(f"Path={ROOT}", entry)
             # a full path: Plasma doesn't have to find it in a cached icon theme
             self.assertIn("Icon=" + str(Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"),
                           entry)
             svg = Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"
-            self.assertTrue(svg.read_text().startswith("<svg"))
+            self.assertTrue(svg.read_text("utf-8").startswith("<svg"))
 
     def test_bug_report_flag(self):
         import os
@@ -93,20 +93,20 @@ class CliTest(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             cfg = Path(d) / "c.toml"
-            cfg.write_text('[ui]\ntheme = "terminal"\n')
+            cfg.write_text('[ui]\ntheme = "terminal"\n', encoding="utf-8")
             out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d,
                                   "--update-config"], cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(out.returncode, 0, out.stderr)
             self.assertIn("ui.actions", out.stdout)
             self.assertTrue((Path(d) / "c.toml.bak").exists())
             self.assertTrue((Path(d) / "config.example.toml").exists())
-            self.assertIn("#actions", cfg.read_text())
+            self.assertIn("#actions", cfg.read_text("utf-8"))
 
     def test_bad_config_is_explained(self):
         import tempfile
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             cfg = Path(d) / "c.toml"
-            cfg.write_text('[feed]\norder = "sideways"\n')
+            cfg.write_text('[feed]\norder = "sideways"\n', encoding="utf-8")
             out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d],
                                  cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(out.returncode, 2)

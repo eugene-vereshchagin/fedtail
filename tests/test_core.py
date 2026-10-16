@@ -189,7 +189,7 @@ class PathsAuthTest(TmpDir):
                           "https://social.example")
         work = paths.resolve("work")
         work.ensure()  # made, not logged in yet
-        work.config_file.write_text("")
+        work.config_file.write_text("", encoding="utf-8")
         (self.tmp / "cfg/fedtail/themes").mkdir()   # the shared themes: not a profile
         (self.tmp / "cfg/fedtail/stray").mkdir()    # an empty folder: not one either
         got = profiles.listing()
@@ -197,7 +197,7 @@ class PathsAuthTest(TmpDir):
         self.assertEqual(profiles.label(got[0]), "@veresk@social.example")
         self.assertEqual(profiles.label(got[1]), "work")
         self.assertEqual([p["logged_in"] for p in got], [True, False])
-        card = (home.data_dir / profiles.CARD).read_text()
+        card = (home.data_dir / profiles.CARD).read_text("utf-8")
         self.assertNotIn("SECRET", card)  # the card never holds the token
         argv, _cwd = profiles.command("work")
         self.assertEqual(argv[-2:], ["--profile", "work"])
@@ -217,7 +217,8 @@ class PathsAuthTest(TmpDir):
     def test_auth_file_is_private(self):
         f = self.tmp / "auth.json"
         auth.save(f, {"server": "https://x", "token": "t"})
-        self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
+        if os.name != "nt":  # Windows: the user's AppData is theirs, no mode bits
+            self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
         self.assertEqual(auth.load(f)["token"], "t")
         auth.forget(f)
         self.assertIsNone(auth.load(f))

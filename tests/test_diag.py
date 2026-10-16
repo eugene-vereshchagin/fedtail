@@ -113,9 +113,9 @@ class DiagTest(unittest.TestCase):
         folder = Path(self._tmp.name) / "split"
         folder.mkdir()
         old = folder / "2020-01-01_00-00-00.log"
-        old.write_text("x" * 3 * 1024 * 1024)
+        old.write_text("x" * 3 * 1024 * 1024, encoding="utf-8")
         keep = folder / "crash.log"
-        keep.write_text("crash")
+        keep.write_text("crash", encoding="utf-8")
         h = diag.SessionLog(folder, max_mb=0.001, keep_mb=1)
         self.assertFalse(old.exists())  # over the cap: the oldest goes
         self.assertTrue(keep.exists())  # never crash.log
