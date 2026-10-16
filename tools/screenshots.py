@@ -127,6 +127,7 @@ def world():
 
 
 def make_pixmap(url, _max_side=0):
+    url = url or ""
     if "/avatar/" in url:
         color, letter = AVATAR_COLORS.get(url.rsplit("/", 1)[1], ("#777", "?"))
         pm = QPixmap(88, 88)
