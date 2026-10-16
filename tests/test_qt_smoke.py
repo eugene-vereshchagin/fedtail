@@ -859,7 +859,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotEqual(view.cursor_key, first)
         key(Qt.Key.Key_K)
         self.assertEqual(view.cursor_key, first)
-        self.assertEqual(view.rows[first].card.property("cursor"), True)
+        self.assertEqual(view.rows[first].card.property("keyed"), True)
         sid = view.rows[first].spec.status["id"]
         key(Qt.Key.Key_F)
         self.pump(until=lambda: self.world.statuses[sid].get("favourited"))

@@ -188,11 +188,11 @@ class FeedView(QScrollArea):
     def put_cursor(self, key):
         old = self.rows.get(self.cursor_key)
         if old is not None and hasattr(old, "card"):
-            _mark(old.card, "cursor", False)
+            _mark(old.card, "keyed", False)
         self.cursor_key = key
         row = self.rows.get(key)
         if row is not None and hasattr(row, "card"):
-            _mark(row.card, "cursor", True)
+            _mark(row.card, "keyed", True)
             self.scroll_to(key, "top")
 
     # ---- content ------------------------------------------------------------------
