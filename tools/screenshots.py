@@ -107,6 +107,12 @@ def world():
     w.add(status("108", OSTAP, "100", "ME", minute=t(25), text="@veresk а я свой просто "
                  "перевернул вверх ногами — перестал греться. Десять лет работает."),
           home=True, mention=True)
+    w.statuses["106"]["poll"] = {
+        "id": "P1", "expired": False, "multiple": False, "voted": True, "own_votes": [0],
+        "votes_count": 23, "voters_count": 23, "expires_at": "2099-01-01T12:00:00Z",
+        "options": [{"title": "GoToSocial", "votes_count": 12},
+                    {"title": "Mastodon", "votes_count": 7},
+                    {"title": "обратно на Point", "votes_count": 4}]}
     w.requests = [OSTAP]
     router = w.statuses.get("100")
     for i, (kind, who) in enumerate((("favourite", KOT), ("favourite", ARSEN),
