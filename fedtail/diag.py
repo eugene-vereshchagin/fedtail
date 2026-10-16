@@ -32,7 +32,6 @@ import logging
 import logging.handlers
 import os
 import platform
-import resource
 import shutil
 import signal
 import sys
@@ -42,6 +41,11 @@ import time
 import traceback
 from datetime import datetime
 from pathlib import Path
+
+try:
+    import resource  # not on Windows
+except ImportError:
+    resource = None
 
 log = logging.getLogger("fedtail.diag")
 
@@ -271,8 +275,34 @@ def add_stats(name, fn):
     _state["providers"][name] = fn
 
 
+def _windows_memory():
+    """{"VmRSS", "VmHWM"} in kB from GetProcessMemoryInfo — Windows' /proc/self/status."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Counters(ctypes.Structure):
+        _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                    ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                    ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                    ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+    c = Counters()
+    c.cb = ctypes.sizeof(c)
+    proc = ctypes.windll.kernel32.GetCurrentProcess()
+    if not ctypes.windll.psapi.GetProcessMemoryInfo(proc, ctypes.byref(c), c.cb):
+        return {}
+    return {"VmRSS": c.WorkingSetSize // 1024, "VmHWM": c.PeakWorkingSetSize // 1024}
+
+
 def _proc_status():
     out = {}
+    if os.name == "nt":
+        try:
+            return _windows_memory()
+        except Exception:  # noqa: BLE001 — stats are a nicety
+            return {}
     try:
         for line in Path("/proc/self/status").read_text().splitlines():
             key, _sep, val = line.partition(":")
@@ -286,15 +316,15 @@ def _proc_status():
 def stats():
     """One snapshot: memory, CPU since the last snapshot, threads, files, providers."""
     now = time.monotonic()
-    ru = resource.getrusage(resource.RUSAGE_SELF)
-    cpu = ru.ru_utime + ru.ru_stime
+    cpu = time.process_time()  # user + system time of this process, on every system
+    maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if resource else 0
     prev = _state["cpu"]
     _state["cpu"] = (now, cpu)
     st = _proc_status()
-    rss_mb = round((st.get("VmRSS") or ru.ru_maxrss) / 1024, 1)
+    rss_mb = round((st.get("VmRSS") or maxrss) / 1024, 1)
     out = {
         "rss_mb": rss_mb,
-        "peak_mb": round(st.get("VmHWM", ru.ru_maxrss) / 1024, 1),
+        "peak_mb": round(st.get("VmHWM", maxrss) / 1024, 1),
         "cpu_s": round(cpu, 1),
         "cpu_pct": round(100 * (cpu - prev[1]) / max(now - prev[0], 1e-6), 1) if prev else None,
         "threads": threading.active_count(),

@@ -6,6 +6,7 @@ notify-send the tray balloon is used.
 """
 
 import logging
+import os
 import shutil
 import subprocess
 import threading
@@ -67,7 +68,8 @@ class Notifier(QObject):
         if self.backend == "desktop" and not self.notify_send:
             self.problem = _("notify_no_send")
             self.backend = "tray"
-        elif wanted == "auto" and not self.notify_send:
+        elif wanted == "auto" and not self.notify_send and os.name != "nt":
+            # (on Windows the tray's own notifications are the native ones: no problem)
             self.problem = _("notify_no_send")
         if self.backend == "tray" and not win.tray:
             self.problem = _("notify_nothing")

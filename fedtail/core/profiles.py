@@ -21,11 +21,11 @@ NOT_PROFILES = {"themes"}  # ~/.config/fedtail/themes: shared by all profiles
 
 
 def data_root():
-    return paths._xdg("XDG_DATA_HOME", ".local/share") / paths.APP
+    return paths.data_base()
 
 
 def config_root():
-    return paths._xdg("XDG_CONFIG_HOME", ".config") / paths.APP
+    return paths.config_base()
 
 
 def remember(where, me, server):
@@ -94,9 +94,11 @@ def launch(profile, after=0.0):
     argv, cwd = command(profile)
     log.info("starting profile %s%s", profile, f" in {after} s" if after else "")
     env = dict(os.environ)
-    if after:
-        import shlex
-        argv = ["sh", "-c", f"sleep {float(after)}; exec " + shlex.join(argv)]
-    subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True,
-                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL)
+    if after:  # a small Python waits, then starts it: works the same on every system
+        argv = [sys.executable, "-c",
+                f"import subprocess, time; time.sleep({float(after)}); "
+                f"subprocess.Popen({argv!r}, cwd={cwd!r})"]
+    detached = {"creationflags": 0x00000008 | 0x00000200} if paths.WINDOWS else \
+        {"start_new_session": True}  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+    subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **detached)

@@ -40,6 +40,28 @@ jobs:
         if: failure()
         run: python .github/annotate.py test-output.txt
 
+  # the port: Windows with Qt from pip
+  windows:
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install requests PySide6-Essentials
+      - name: Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+      - name: Failures as annotations
+        if: failure()
+        shell: bash
+        run: python .github/annotate.py test-output.txt
+
   # the real target: Debian 13 with Qt from apt, no pip at all
   debian:
     runs-on: ubuntu-latest
