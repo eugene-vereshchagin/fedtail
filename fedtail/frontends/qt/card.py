@@ -597,6 +597,11 @@ class PostRow(QWidget):
         if self.ctx.fill_list_menu is not None and author["id"] != self.ctx.me_id:
             lists = menu.addMenu(_("add_to_list"))
             lists.aboutToShow.connect(lambda m=lists, a=author: self.ctx.fill_list_menu(m, a))
+        approval = (real(st).get("quote_approval") or {}).get("current_user")
+        if self.ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
+            quote_url = f"fedtail:quote/{real(st)['id']}"
+            menu.addAction(_("quote") if approval == "automatic" else _("quote_ask"),
+                           lambda u=quote_url: self.ctx.on_link(u))
         lang = (real(st).get("language") or "").split("-")[0]
         if self.ctx.translate and lang and lang != current_language() and real(st).get("content"):
             menu.addAction(_("translate"), self._translate)

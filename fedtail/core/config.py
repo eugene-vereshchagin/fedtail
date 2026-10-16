@@ -84,6 +84,8 @@ DEFAULTS = {
         "complete_mentions": True,
         "complete_tags": True,
         "report_forward": True,
+        "quote_policy": '',
+        "quote_action": True,
     },
     "notify": {
         "enabled": True,
@@ -123,6 +125,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("post", "quote_policy"): {'', 'public', 'followers', 'nobody'},
     ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},

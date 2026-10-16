@@ -2,6 +2,10 @@
 
 ## 0.8.0 — in progress
 
+- Quote a post (Mastodon 4.5+): "Quote" in the ⋯ menu of a post its author lets quote ("the
+  author approves" when they decide by hand); the post panel shows what you quote.
+  `post.quote_policy` says who may quote your new posts (everyone, followers, nobody, or as
+  set on the server); `post.quote_action = false` drops the menu item.
 - "Translate" in the ⋯ menu of a post in another language, when your server translates
   (Mastodon with DeepL or LibreTranslate): the translation shows in the card, with
   "original" to go back. `feed.translate = false` drops the menu item.

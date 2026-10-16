@@ -1254,7 +1254,7 @@ class Core:
         return default
 
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
-             language=None, sensitive=False, poll=None):
+             language=None, sensitive=False, poll=None, quote=None):
         """media: [(path, description)]. language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
@@ -1267,6 +1267,10 @@ class Core:
                 extra["sensitive"] = True
             if poll and not ids:  # a server takes either pictures or a poll
                 extra["poll"] = poll
+            if quote:
+                extra["quoted_status_id"] = quote
+            if self.cfg["post"].get("quote_policy"):
+                extra["quote_policy"] = self.cfg["post"]["quote_policy"]
             st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
                                       **extra)
             log.debug("posted %s", st.get("id"))
@@ -1414,7 +1418,9 @@ class Core:
 
     # ---- drafts & ui state -----------------------------------------------------
     @staticmethod
-    def draft_key(reply_to_id=None):
+    def draft_key(reply_to_id=None, quote_id=None):
+        if quote_id:
+            return f"quote:{quote_id}"
         return f"reply:{reply_to_id}" if reply_to_id else "new"
 
     def get_draft(self, key):

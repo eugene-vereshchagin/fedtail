@@ -190,6 +190,18 @@ class QtSmokeTest(unittest.TestCase):
                          {"options": ["GoToSocial", "Mastodon"], "expires_in": 86400,
                           "multiple": True})
 
+        # a quote: the quoted post shown above, its id sent; who may quote mine from config
+        self.core.cfg["post"]["quote_policy"] = "followers"
+        dlg = Compose(self.win, quote=self.core.store.get_status("011"))
+        dlg.show()
+        self.assertEqual(dlg.key, "quote:011")
+        dlg.text.setPlainText("вот это")
+        dlg.send()
+        self.pump(until=lambda: gone(dlg))
+        self.assertEqual(self.world.extras[-1]["quote"], "011")
+        self.assertEqual(self.world.extras[-1]["quote_policy"], "followers")
+        self.core.cfg["post"]["quote_policy"] = ""
+
         # @names and #tags complete: the people seen in the lanes, then the server's
         dlg = Compose(self.win)
         dlg.show()

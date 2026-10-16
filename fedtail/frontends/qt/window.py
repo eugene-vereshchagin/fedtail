@@ -1088,6 +1088,8 @@ class MainWindow(QMainWindow):
                                  _("subbed" if sub else "unsubbed"), 6000))
         elif action == "report":
             self.report(st)
+        elif action == "quote":
+            Compose(self, quote=st).show()
         elif action in ("pin", "unpin"):
             on = action == "pin"
             self.bridge.call(self.core.pin(st, on), ok=lambda _s: self.statusBar().showMessage(

@@ -404,9 +404,14 @@ class Api:
 
     def post_status(self, text, visibility="private", in_reply_to_id=None,
                     spoiler_text="", media_ids=(), markdown=False, language="",
-                    sensitive=False, poll=None):
-        """poll: {"options": [...], "expires_in": seconds, "multiple": bool}."""
+                    sensitive=False, poll=None, quoted_status_id=None, quote_policy=""):
+        """poll: {"options": [...], "expires_in": seconds, "multiple": bool}.
+        quoted_status_id: the post this one quotes; quote_policy: who may quote this one."""
         body = {"status": text, "visibility": visibility}
+        if quoted_status_id:
+            body["quoted_status_id"] = quoted_status_id
+        if quote_policy:
+            body["quote_approval_policy"] = quote_policy
         if sensitive:
             body["sensitive"] = True
         if poll:

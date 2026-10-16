@@ -218,6 +218,8 @@ _STRINGS = {
         "translate": "Перевести", "show_original": "оригинал",
         "translated_from": "переведено с «{lang}» · {provider}",
         "translate_none": "Твой сервер не умеет переводить посты.",
+        "quote": "Цитировать", "quote_ask": "Цитировать (автор одобрит)",
+        "compose_quote": "Цитата",
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -548,6 +550,8 @@ _STRINGS = {
         "translate": "Translate", "show_original": "original",
         "translated_from": "translated from “{lang}” · {provider}",
         "translate_none": "Your server doesn't translate posts.",
+        "quote": "Quote", "quote_ask": "Quote (the author approves)",
+        "compose_quote": "Quote",
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",

@@ -58,19 +58,21 @@ def save_image(core, image):
 
 
 class Compose(QDialog):
-    def __init__(self, win, reply_to=None, attach=(), text="", edit=None):
+    def __init__(self, win, reply_to=None, attach=(), text="", edit=None, quote=None):
         super().__init__(win)
         self.win, self.core = win, win.core
         self.edit = real(edit) if edit else None  # my post being corrected
         self.reply_to = real(reply_to) if reply_to else None
+        self.quote = real(quote) if quote else None  # the post this one quotes
         if self.edit:
             self.key = f"edit:{self.edit['id']}"
         else:
-            self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None)
+            self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None,
+                                           self.quote["id"] if self.quote else None)
         self.start_text = text  # "@someone " from a profile's Mention button
         self.sent = False
         title = _("compose_edit") if edit else \
-            _("compose_reply") if reply_to else _("compose_new")
+            _("compose_reply") if reply_to else _("compose_quote") if quote else _("compose_new")
         self.setWindowTitle(title)
         # ui.compose = "inline": a panel inside the main window, not a window of its own.
         # A new window can come up with another keyboard layout (KDE keeps one per
@@ -106,6 +108,12 @@ class Compose(QDialog):
         if self.reply_to:
             q = QLabel(f"↑ <b>{display_name(self.reply_to['account'])}</b>: "
                        f"{esc(snippet(self.reply_to, 400))}")
+            q.setWordWrap(True)
+            q.setObjectName("ctx")
+            lay.addWidget(q)
+        if self.quote:
+            q = QLabel(f"❝ <b>{display_name(self.quote['account'])}</b>: "
+                       f"{esc(snippet(self.quote, 400))}")
             q.setWordWrap(True)
             q.setObjectName("ctx")
             lay.addWidget(q)
@@ -648,7 +656,8 @@ class Compose(QDialog):
                              self.reply_to["id"] if self.reply_to else None,
                              self.cw.text().strip(), media, draft_key=self.key,
                              language=self.lang.currentData(),
-                             sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data())
+                             sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data(),
+                             quote=self.quote["id"] if self.quote else None)
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _sent(self, st):
