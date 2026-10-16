@@ -89,6 +89,7 @@ DEFAULTS = {
         "who_can_reply": '',
         "who_can_boost": '',
         "who_can_like": '',
+        "schedule": True,
     },
     "notify": {
         "enabled": True,

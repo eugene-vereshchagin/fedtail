@@ -462,6 +462,8 @@ class MainWindow(QMainWindow):
         m.addAction(_("refresh") + "\tF5", self.refresh)
         m.addAction(_("search_title") + "\tCtrl+K", lambda: self.open_search(""))
         m.addAction(_("silence_title") + "…", lambda: SilenceDialog(self).exec())
+        if self.cfg["post"].get("schedule", True):
+            m.addAction(_("scheduled_title") + "…", self.show_scheduled)
         m.addAction(_("my_profile"), self.open_my_profile)
         m.addMenu(self.accounts_menu(m))
         m.addAction(_("edit_profile"), self.edit_profile)
@@ -1144,6 +1146,44 @@ class MainWindow(QMainWindow):
             self.error(_("translate_none"))
             return
         self.bridge.call(self.core.translate(st), ok=done, fail=self.error)
+
+    def show_scheduled(self):
+        """Posts waiting on the server to go out at their time; any can be cancelled."""
+        from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPushButton
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_("scheduled_title"))
+        dlg.resize(520, 360)
+        lay = QVBoxLayout(dlg)
+        lst = QListWidget()
+        lay.addWidget(lst, 1)
+        cancel = QPushButton(_("scheduled_cancel"))
+        cancel.setObjectName("tool")
+        lay.addWidget(cancel)
+
+        def fill(items):
+            lst.clear()
+            for s in items:
+                text = (s.get("params") or {}).get("text") or ""
+                it = QListWidgetItem(f"{self.theme.date(s.get('scheduled_at', ''))} — "
+                                     f"{text[:120]}")
+                it.setData(Qt.ItemDataRole.UserRole, s["id"])
+                lst.addItem(it)
+            if not items:
+                lst.addItem(_("scheduled_none"))
+
+        def load():
+            self.bridge.call(self.core.scheduled(), ok=fill, fail=self.error)
+
+        def drop():
+            it = lst.currentItem()
+            sid = it.data(Qt.ItemDataRole.UserRole) if it else None
+            if sid:
+                self.bridge.call(self.core.cancel_scheduled(sid), ok=lambda _r: load(),
+                                 fail=self.error)
+        cancel.clicked.connect(drop)
+        load()
+        dlg.show()
+        return dlg, lst
 
     def report(self, st):
         """Complain about a post to my server's moderators — with why, what kind, and

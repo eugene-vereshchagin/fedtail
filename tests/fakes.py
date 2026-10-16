@@ -93,6 +93,13 @@ class FakeApi:
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
         return _page(mine, limit, max_id, min_id)
 
+    def scheduled(self):
+        return list(self.w.scheduled)
+
+    def cancel_scheduled(self, sid):
+        self.w.scheduled = [s for s in self.w.scheduled if s["id"] != sid]
+        return {}
+
     def domain_blocks(self):
         return sorted(self.w.blocked_domains)
 
@@ -251,7 +258,13 @@ class FakeApi:
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
                     media_ids=(), markdown=False, language="", sensitive=False, poll=None,
-                    quoted_status_id=None, quote_policy="", interaction_policy=None):
+                    quoted_status_id=None, quote_policy="", interaction_policy=None,
+                    scheduled_at=None):
+        if scheduled_at:
+            item = {"id": f"s{len(self.w.scheduled) + 1}", "scheduled_at": scheduled_at,
+                    "params": {"text": text, "visibility": visibility}}
+            self.w.scheduled.append(item)
+            return item
         self.w.languages.append(language)
         self.w.extras.append({"sensitive": sensitive, "poll": poll,
                               "quote": quoted_status_id, "quote_policy": quote_policy,
@@ -384,6 +397,7 @@ class World:
         self.reports = []
         self.blocked_domains = set()
         self.notes = {}
+        self.scheduled = []
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())

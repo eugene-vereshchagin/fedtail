@@ -228,6 +228,10 @@ _STRINGS = {
         "silence_domains_hint": "Заблокированные серверы: никого оттуда не видно.",
         "note_edit": "Заметка…", "note_title": "Заметка о @{acct}",
         "note_tip": "Видишь только ты — хранится на твоём сервере",
+        "schedule": "Позже", "schedule_tip": "Отправить в назначенное время",
+        "schedule_when": "Когда отправить:", "schedule_ok": "Запланировать",
+        "scheduled_msg": "Запланировано на {when}.", "scheduled_title": "Запланированные",
+        "scheduled_cancel": "Отменить выбранный", "scheduled_none": "Ничего не запланировано.",
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -568,6 +572,10 @@ _STRINGS = {
         "silence_domains_hint": "Blocked servers: nobody from there shows.",
         "note_edit": "Note…", "note_title": "Note on @{acct}",
         "note_tip": "Only you see it — kept on your server",
+        "schedule": "Later", "schedule_tip": "Send it at a set time",
+        "schedule_when": "When to send:", "schedule_ok": "Schedule",
+        "scheduled_msg": "Scheduled for {when}.", "scheduled_title": "Scheduled posts",
+        "scheduled_cancel": "Cancel the chosen one", "scheduled_none": "Nothing scheduled.",
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",

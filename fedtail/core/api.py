@@ -204,6 +204,12 @@ class Api:
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
 
+    def scheduled(self):
+        return self.get("/api/v1/scheduled_statuses", {"limit": 40}) or []
+
+    def cancel_scheduled(self, sid):
+        return self.delete(f"/api/v1/scheduled_statuses/{sid}")
+
     def domain_blocks(self):
         return self.get("/api/v1/domain_blocks", {"limit": 200}) or []
 
@@ -416,7 +422,7 @@ class Api:
     def post_status(self, text, visibility="private", in_reply_to_id=None,
                     spoiler_text="", media_ids=(), markdown=False, language="",
                     sensitive=False, poll=None, quoted_status_id=None, quote_policy="",
-                    interaction_policy=None):
+                    interaction_policy=None, scheduled_at=None):
         """poll: {"options": [...], "expires_in": seconds, "multiple": bool}.
         quoted_status_id: the post this one quotes; quote_policy: who may quote this one."""
         body = {"status": text, "visibility": visibility}
@@ -426,6 +432,8 @@ class Api:
             body["quote_approval_policy"] = quote_policy
         if interaction_policy:
             body["interaction_policy"] = interaction_policy
+        if scheduled_at:  # then the answer is a ScheduledStatus, not a status
+            body["scheduled_at"] = scheduled_at
         if sensitive:
             body["sensitive"] = True
         if poll:

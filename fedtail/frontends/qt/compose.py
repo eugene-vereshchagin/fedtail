@@ -229,6 +229,12 @@ class Compose(QDialog):
         self.discard_btn.setObjectName("tool")
         self.discard_btn.clicked.connect(self.discard)
         row.addWidget(self.discard_btn)
+        self.later_btn = QPushButton("⏰ " + _("schedule"))
+        self.later_btn.setObjectName("tool")
+        self.later_btn.setToolTip(_("schedule_tip"))
+        self.later_btn.clicked.connect(self.ask_schedule)
+        self.later_btn.setVisible(not self.edit and self.core.cfg["post"].get("schedule", True))
+        row.addWidget(self.later_btn)
         self.send_btn = QPushButton(_("send"))
         self.send_btn.setObjectName("primary")
         self.send_btn.setDefault(True)
@@ -637,7 +643,32 @@ class Compose(QDialog):
         self.media.setVisible(has_media)
         self.detach_btn.setVisible(has_media)
 
-    def send(self):
+    def ask_schedule(self):
+        """When to send it: the server keeps the post and sends it then."""
+        from PySide6.QtCore import QDateTime
+        from PySide6.QtWidgets import QDateTimeEdit, QDialogButtonBox
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_("schedule"))
+        v = QVBoxLayout(dlg)
+        when = QDateTimeEdit(QDateTime.currentDateTime().addSecs(3600))
+        when.setCalendarPopup(True)
+        when.setMinimumDateTime(QDateTime.currentDateTime().addSecs(300))
+        when.setDisplayFormat("dd.MM.yyyy HH:mm")
+        v.addWidget(QLabel(_("schedule_when")))
+        v.addWidget(when)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        ok = buttons.addButton(_("schedule_ok"), QDialogButtonBox.ButtonRole.AcceptRole)
+        ok.setObjectName("primary")
+        buttons.rejected.connect(dlg.reject)
+        ok.clicked.connect(dlg.accept)
+        v.addWidget(buttons)
+        self.schedule_dialog = dlg
+        dlg.accepted.connect(lambda: self.send(
+            scheduled_at=when.dateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ss.zzzZ")))
+        dlg.open()
+        return dlg
+
+    def send(self, scheduled_at=None):
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
         if not text and not media:
@@ -657,13 +688,19 @@ class Compose(QDialog):
                              self.cw.text().strip(), media, draft_key=self.key,
                              language=self.lang.currentData(),
                              sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data(),
-                             quote=self.quote["id"] if self.quote else None)
+                             quote=self.quote["id"] if self.quote else None,
+                             scheduled_at=scheduled_at)
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _sent(self, st):
         self.sent = True
         try:
             self.core.delete_draft(self.key)
+            if st.get("scheduled"):
+                self.win.statusBar().showMessage(
+                    _("scheduled_msg", when=self.win.theme.date(st.get("scheduled_at", ""))),
+                    8000)
+                return
             self.win.after_post(st, self.reply_to)
         finally:
             self._leave()

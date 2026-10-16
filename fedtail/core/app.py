@@ -505,6 +505,12 @@ class Core:
             return domain
         return self.submit(job)
 
+    def scheduled(self):
+        return self.submit(self.api.scheduled)
+
+    def cancel_scheduled(self, sid):
+        return self.submit(self.api.cancel_scheduled, sid)
+
     def set_note(self, acc_id, text):
         return self.submit(self.api.set_note, acc_id, text)
 
@@ -1284,7 +1290,7 @@ class Core:
         return default
 
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
-             language=None, sensitive=False, poll=None, quote=None):
+             language=None, sensitive=False, poll=None, quote=None, scheduled_at=None):
         """media: [(path, description)]. language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
@@ -1304,6 +1310,14 @@ class Core:
             policy = interaction_policy(self.cfg["post"])
             if policy and self.caps.software == "gotosocial":
                 extra["interaction_policy"] = policy
+            if scheduled_at:
+                extra["scheduled_at"] = scheduled_at
+                st = self.api.post_status(text, visibility, reply_to, spoiler, ids,
+                                          self.markdown, **extra)
+                if draft_key:
+                    self.store.delete_draft(draft_key)
+                log.info("scheduled for %s", scheduled_at)
+                return dict(st or {}, scheduled=True)
             st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
                                       **extra)
             log.debug("posted %s", st.get("id"))

@@ -97,6 +97,8 @@ class QtSmokeTest(unittest.TestCase):
         return fut.result()
 
     def test_whole_flow(self):
+        from PySide6.QtWidgets import QPushButton
+
         from fedtail.frontends.qt.compose import Compose
         from fedtail.frontends.qt.feed import LaneWidget, ThreadWidget
 
@@ -201,6 +203,21 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.world.extras[-1]["quote"], "011")
         self.assertEqual(self.world.extras[-1]["quote_policy"], "followers")
         self.core.cfg["post"]["quote_policy"] = ""
+
+        # later: the server keeps it; the list shows it and can cancel it
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.text.setPlainText("утром")
+        dlg.ask_schedule().accept()
+        self.pump(until=lambda: gone(dlg))
+        self.assertEqual(self.world.scheduled[-1]["params"]["text"], "утром")
+        self.assertTrue(self.world.scheduled[-1]["scheduled_at"].endswith("Z"))
+        sched, lst = self.win.show_scheduled()
+        self.pump(until=lambda: lst.count() and "утром" in lst.item(0).text())
+        lst.setCurrentRow(0)
+        next(b for b in sched.findChildren(QPushButton)).click()
+        self.pump(until=lambda: not self.world.scheduled)
+        sched.close()
 
         # @names and #tags complete: the people seen in the lanes, then the server's
         dlg = Compose(self.win)

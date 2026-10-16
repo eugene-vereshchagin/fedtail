@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Scheduled posts: "⏰ Later" in the post panel sends it at a set time — the server keeps it,
+  fedtail needn't be running; ≡ → Scheduled posts lists what's waiting, with cancel.
+  `post.schedule = false` hides both.
 - Who may reply to, boost and like your new posts, on GoToSocial: `post.who_can_reply`,
   `who_can_boost`, `who_can_like` — everyone, followers, those you follow, the mentioned, or
   just you; left empty, the account's settings decide. Other servers aren't sent it.
