@@ -69,7 +69,9 @@ _STRINGS = {
                      "Картинки можно перетаскивать сюда и вставлять Ctrl+V",
         "viewer_title": "Картинка",
         "viewer_keys": "← → или колесо — листать · двойной клик/Z — 1:1 · "
-                       "O — в браузере · Esc/клик — закрыть",
+                       "S — сохранить · O — в браузере · Esc/клик — закрыть",
+        "save_image": "Сохранить картинку", "saved_to": "Сохранено: {path}",
+        "save_failed": "Не сохранилось: {err}",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
         "camel_hint": "♿ {tags}: напиши с большими буквами внутри слов (#GeorgiaNews) — "
@@ -216,7 +218,9 @@ _STRINGS = {
         "media_tip": "Double-click to describe (alt text). Drop pictures here or paste with Ctrl+V",
         "viewer_title": "Image",
         "viewer_keys": "← → or wheel: flip · double-click/Z: 1:1 · "
-                       "O: browser · Esc/click: close",
+                       "S: save · O: browser · Esc/click: close",
+        "save_image": "Save picture", "saved_to": "Saved: {path}",
+        "save_failed": "Couldn't save: {err}",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
         "camel_hint": "♿ {tags}: capitalise the words inside (#GeorgiaNews) — screen "

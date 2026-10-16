@@ -23,6 +23,7 @@ DEFAULTS = {
         "image_height": 360,
         "image_viewer": "internal",
         "image_upscale": 2,
+        "save_dir": "",
         "actions": "both",
     },
     "feed": {

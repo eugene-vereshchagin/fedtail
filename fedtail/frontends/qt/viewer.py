@@ -2,7 +2,8 @@
 
 Fits the window; small pictures are enlarged up to ui.image_upscale times.
 Double-click or Z: 100 % and back, drag to pan. ←/→/Space: flip.
-O: open in the browser. Esc or a click on the dark backdrop: close.
+O: open in the browser. S: save to the downloads folder (ui.save_dir).
+Esc or a click on the dark backdrop: close.
 """
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
@@ -128,6 +129,8 @@ class ImageOverlay(QWidget):
             self.toggle_actual()
         elif k == Qt.Key.Key_O:
             self.ctx.open_url(self.url())
+        elif k == Qt.Key.Key_S and self.ctx.save_image:
+            self.ctx.save_image(self.media[self.i])
         else:
             super().keyPressEvent(e)
 

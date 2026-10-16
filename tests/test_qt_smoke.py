@@ -243,6 +243,16 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: failed and got)
         self.assertEqual((len(got), len(failed)), (1, 1))
 
+        # saving takes the original from the cache, never overwrites
+        import hashlib
+        url = "https://x/cat.png"
+        (imgs.cache_dir / hashlib.sha1(url.encode()).hexdigest()).write_bytes(b"PNGDATA")
+        folder = Path(self._tmp.name) / "saved"
+        first = self.bridge_wait(imgs.save(url, folder))
+        second = self.bridge_wait(imgs.save(url, folder))
+        self.assertEqual((first.name, second.name), ("cat.png", "cat-1.png"))
+        self.assertEqual(first.read_bytes(), b"PNGDATA")
+
         # lists: a block under the lanes, a lane each, ticks in a post's menu
         from PySide6.QtWidgets import QMenu
         self.bridge_wait(self.core.create_list("Друзья", add="B"))

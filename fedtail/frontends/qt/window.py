@@ -113,6 +113,7 @@ class ViewContext:
     me_id: str = ""
     subscribed: object = None  # status -> is its thread followed
     fill_list_menu: object = None  # (QMenu, account) -> fill "add to list"
+    save_image: object = None      # media attachment -> save it to disk
 
 
 class MainWindow(QMainWindow):
@@ -124,6 +125,7 @@ class MainWindow(QMainWindow):
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
         self.ctx.subscribed = core.subscribed
+        self.ctx.save_image = self.save_image
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
         self.lane_widgets = {}
@@ -759,6 +761,16 @@ class MainWindow(QMainWindow):
     # ---- window -------------------------------------------------------------------------
     def error(self, err):
         self.statusBar().showMessage(_("error", err=err), 10_000)
+
+    def save_image(self, media):
+        url = media.get("url") or media.get("remote_url") or media.get("preview_url")
+        if not url:
+            return
+        from ...core import saving
+        self.bridge.call(self.images.save(url, saving.save_dir(self.cfg)),
+                         ok=lambda p: self.statusBar().showMessage(_("saved_to", path=str(p)),
+                                                                   8000),
+                         fail=lambda e: self.error(_("save_failed", err=e)))
 
     def bug_report(self):
         try:

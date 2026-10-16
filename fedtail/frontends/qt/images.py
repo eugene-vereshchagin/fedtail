@@ -57,6 +57,26 @@ class Images:
                              Qt.TransformationMode.SmoothTransformation)
         return img
 
+    def save(self, url, folder):
+        """The original file into folder (from the cache when it's there).
+        Returns a future with the saved path."""
+        def job():
+            from ...core import saving
+            folder.mkdir(parents=True, exist_ok=True)
+            cached = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
+            ctype = ""
+            if cached.exists():
+                data = cached.read_bytes()
+            else:
+                r = self.http.get(url, timeout=120)
+                r.raise_for_status()
+                data, ctype = r.content, r.headers.get("Content-Type", "")
+            path = saving.free_path(folder, saving.file_name(url, ctype))
+            path.write_bytes(data)
+            log.info("saved %s -> %s (%d B)", url, path, len(data))
+            return path
+        return self.pool.submit(job)
+
     def get(self, url, callback, max_side=FEED_SIDE, failed=None):
         """callback(QPixmap) now or later; for a broken or unreachable image
         failed() is called instead (if given)."""

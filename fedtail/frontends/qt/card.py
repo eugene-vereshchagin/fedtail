@@ -518,6 +518,10 @@ class PostRow(QWidget):
                 tw, th = _thumb_box(w, h, *((big_h, big_w) if single else (150, 230)))
                 lab.setFixedSize(tw, th)
                 radius = min(10, int(self.theme.shape["radius"]))
+                # right click: save it, open it
+                lab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+                lab.customContextMenuRequested.connect(
+                    lambda pos, w=lab, mm=m: self._media_menu(w, mm, pos))
                 if m.get("type") == "image":
                     idx = images.index(m)
                     lab.clicked.connect(lambda i=idx: self.ctx.show_images(images, i))
@@ -537,6 +541,15 @@ class PostRow(QWidget):
                 pos += 1
         grid.setColumnStretch(3, 1)
         return box
+
+    def _media_menu(self, lab, m, pos):
+        menu = QMenu(lab)
+        url = m.get("url") or m.get("remote_url") or ""
+        if self.ctx.save_image:
+            menu.addAction(_("save_image"), lambda: self.ctx.save_image(m))
+        menu.addAction(_("open_browser"), lambda: self.ctx.open_url(url))
+        menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
+        menu.exec(lab.mapToGlobal(pos))
 
     def _load_media(self, lab, src, fallback, tw, th, radius):
         """The picture into its box; if the full file won't come, the preview;

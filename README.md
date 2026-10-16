@@ -192,6 +192,7 @@ it open).
 
 | | |
 |---|---|
+| `S` (in the picture viewer) | save the picture to Downloads (`ui.save_dir`); also a right click on a picture |
 | `Ctrl+N` | new post |
 | `Ctrl+Enter` | send |
 | `F5` | refresh |

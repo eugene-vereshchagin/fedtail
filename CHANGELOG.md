@@ -7,6 +7,8 @@
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
   (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
   go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
+- Save pictures: `S` in the viewer or a right click on a picture; to the desktop's Downloads
+  folder (`ui.save_dir`), under the file's own name, never overwriting.
 - Fixed: "Failed to disconnect" warning on every card rebuild.
 
 ## 0.1.0
