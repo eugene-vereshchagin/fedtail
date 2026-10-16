@@ -368,6 +368,30 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertEqual(seen, [0, 1])
 
+    def test_polls_vote_and_refresh(self):
+        core, w = self.make()
+        st = w.add(status("120", BOB, minute=1, text="чай или кофе?"), home=True)
+        st["poll"] = {"id": "P1", "expired": False, "multiple": False, "voted": False,
+                      "own_votes": [], "votes_count": 3, "voters_count": 3,
+                      "expires_at": "2099-01-01T00:00:00Z",
+                      "options": [{"title": "чай", "votes_count": 2},
+                                  {"title": "кофе", "votes_count": 1}]}
+        core.connect().result()
+        core.poll_once()
+        got = []
+        core.events.on("status_updated", lambda _n, p: got.append(p["id"]))
+        voted = core.vote(core.store.get_status("120"), [1]).result()
+        self.assertTrue(voted["poll"]["voted"])
+        self.assertEqual(voted["poll"]["own_votes"], [1])
+        self.assertEqual([o["votes_count"] for o in voted["poll"]["options"]], [2, 2])
+        self.assertEqual(core.store.get_status("120")["poll"]["voters_count"], 4)  # stored
+        self.assertEqual(got, ["120"])  # cards update everywhere
+        with self.assertRaises(ApiError):
+            core.vote(core.store.get_status("120"), [0]).result()  # once is enough
+        w.statuses["120"]["poll"]["options"][0]["votes_count"] = 9  # others voted meanwhile
+        fresh = core.refresh_poll(core.store.get_status("120")).result()
+        self.assertEqual(fresh["poll"]["options"][0]["votes_count"], 9)
+
     def test_silence_mute_block_filters(self):
         core, w = self.make()
         w.add(status("100", BOB, minute=1), home=True)

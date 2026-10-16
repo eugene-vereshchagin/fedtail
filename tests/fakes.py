@@ -278,6 +278,28 @@ class FakeApi:
     def delete_filter(self, filter_id):
         self.w.filters.pop(filter_id, None)
 
+    def _poll_owner(self, pid):
+        return next(s for s in self.w.statuses.values() if (s.get("poll") or {}).get("id") == pid)
+
+    def poll(self, pid):
+        return self._poll_owner(pid)["poll"]
+
+    def vote(self, pid, choices):
+        st = self._poll_owner(pid)
+        poll = st["poll"]
+        if poll.get("expired"):
+            raise ApiError(422, "poll has already ended")
+        if poll.get("voted"):
+            raise ApiError(422, "already voted")
+        opts = [dict(o) for o in poll["options"]]
+        for i in choices:
+            opts[i]["votes_count"] = (opts[i].get("votes_count") or 0) + 1
+        poll = dict(poll, options=opts, voted=True, own_votes=list(choices),
+                    votes_count=poll.get("votes_count", 0) + len(choices),
+                    voters_count=(poll.get("voters_count") or 0) + 1)
+        self.w.statuses[st["id"]] = dict(st, poll=poll)
+        return poll
+
     def bookmark(self, sid, on=True):
         st = dict(self.w.statuses[sid], bookmarked=on)
         self.w.statuses[sid] = st

@@ -213,6 +213,11 @@ QLabel#meta, QLabel#boost, QLabel#muted {{ color: {k('muted')}; }}
 QLabel#shortId {{ color: {k('muted')}; font-family: "{mono_family}"; }}
 QLabel#num {{ color: {k('link')}; font-family: "{mono_family}"; font-weight: 700; }}
 QLabel#cameFrom {{ color: {k('link')}; font-weight: 600; }}
+QProgressBar#pollBar {{ background: {k('quiet')}; border: 0; border-radius: 3px;
+    min-height: 6px; max-height: 6px; }}
+QProgressBar#pollBar::chunk {{ background: {_alpha(self.c['accent'], 150)}; border-radius: 3px; }}
+QProgressBar#pollBar[mine="true"]::chunk {{ background: {k('accent')}; }}
+QRadioButton#pollChoice, QCheckBox#pollChoice {{ color: {k('text')}; spacing: 8px; }}
 QLabel#dot {{ background: {k('dot')}; border-radius: 4px; }}
 QLabel#star {{ color: {k('dot')}; font-weight: 700; }}
 QLabel#postText {{ font-size: {post_pt}pt; }}

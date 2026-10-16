@@ -387,6 +387,13 @@ class Api:
     def favourite(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'favourite' if on else 'unfavourite'}")
 
+    def poll(self, pid):
+        return self.get(f"/api/v1/polls/{pid}")
+
+    def vote(self, pid, choices):
+        """choices: option indexes. Returns the poll with my votes and new counts."""
+        return self.post(f"/api/v1/polls/{pid}/votes", json={"choices": list(choices)})
+
     def bookmark(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'bookmark' if on else 'unbookmark'}")
 

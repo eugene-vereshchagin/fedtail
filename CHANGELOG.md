@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- Polls: the options right on the card (one or several, as the poll allows) and a Vote
+  button; the results — bars, percentages, your choice ticked, the leader in bold — once
+  you voted, when it's over, on your own poll, or by "Results"; how many voted, until when,
+  "refresh" for fresh counts.
 - `--update-config` also refreshes the explanations of options already in your file (the
   themes and choices of this version) and drops commented-out options that no longer exist;
   your values and your own notes stay.

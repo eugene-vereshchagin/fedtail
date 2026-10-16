@@ -574,6 +574,34 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_poll_vote_on_the_card(self):
+        from PySide6.QtWidgets import QProgressBar, QPushButton, QRadioButton
+        st = self.world.add(status("030", BOB, minute=30, text="чай или кофе?"), home=True)
+        st["poll"] = {"id": "P1", "expired": False, "multiple": False, "voted": False,
+                      "own_votes": [], "votes_count": 3, "voters_count": 3,
+                      "expires_at": "2099-01-01T00:00:00Z",
+                      "options": [{"title": "чай", "votes_count": 2},
+                                  {"title": "кофе", "votes_count": 1}]}
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        lane = self.win.lane_widgets["people"]
+        self.pump(until=lambda: "030" in lane.view.rows)
+        row = lane.view.rows["030"]
+        radios = row.findChildren(QRadioButton)
+        self.assertEqual([r.text() for r in radios], ["чай", "кофе"])
+        self.assertEqual(row.findChildren(QProgressBar), [])  # no results before voting
+        vote = next(b for b in row.findChildren(QPushButton) if b.text() == "Голосовать")
+        self.assertFalse(vote.isEnabled())
+        radios[1].setChecked(True)
+        self.assertTrue(vote.isEnabled())
+        vote.click()
+        self.pump(until=lambda: lane.view.rows["030"].findChildren(QProgressBar))
+        bars = lane.view.rows["030"].findChildren(QProgressBar)
+        self.assertEqual([b.value() for b in bars], [50, 50])
+        self.assertEqual([b.property("mine") for b in bars], ["false", "true"])
+        self.assertEqual(self.world.statuses["030"]["poll"]["own_votes"], [1])
+
     def test_sidebar_sections_fold(self):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)

@@ -176,6 +176,8 @@ class ViewContext:
     subscribed: object = None  # status -> is its thread followed
     fill_list_menu: object = None  # (QMenu, account) -> fill "add to list"
     save_image: object = None      # media attachment -> save it to disk
+    vote: object = None            # (status, [option indexes]) -> vote in its poll
+    refresh_poll: object = None    # set when "refresh" next to a poll's results works
 
 
 class MainWindow(QMainWindow):
@@ -188,6 +190,8 @@ class MainWindow(QMainWindow):
                                self.show_images)
         self.ctx.subscribed = core.subscribed
         self.ctx.save_image = self.save_image
+        self.ctx.vote = self.vote
+        self.ctx.refresh_poll = True
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
         self.lane_widgets = {}
@@ -881,6 +885,21 @@ class MainWindow(QMainWindow):
         self.tabs.removeTab(i)
         w.deleteLater()
 
+    def vote(self, st, choices):
+        sid = real(st)["id"]
+        self.bridge.call(self.core.vote(st, choices),
+                         ok=lambda _s: self.statusBar().showMessage(_("poll_voted"), 4000),
+                         fail=lambda e: (self.error(e), self._rebuild_cards(sid)))
+
+    def _rebuild_cards(self, sid):
+        """Cards of this post drawn again from what they hold (after a failed action
+        left a button saying "sending…")."""
+        for w in list(self.lane_widgets.values()) + self.extra_tabs():
+            view = getattr(w, "view", None)
+            for row in (view.rows.values() if view is not None else ()):
+                if row.status_id is not None and row.real_id == sid:
+                    row._build()
+
     def current_view(self):
         """The FeedView on screen: the current lane, thread or profile."""
         w = self.tabs.currentWidget()
@@ -916,6 +935,8 @@ class MainWindow(QMainWindow):
             self.open_account(arg)
         elif st is None:
             self.error(_("not_in_cache"))
+        elif action == "poll":
+            self.bridge.call(self.core.refresh_poll(st), fail=self.error)
         elif action == "reply":
             self.compose(st)
         elif action == "edit":

@@ -1002,6 +1002,21 @@ class Core:
         return self.submit(lambda: self._update(self.api.favourite(s["id"],
                                                                    not s.get("favourited"))))
 
+    def vote(self, status, choices):
+        """Vote in the post's poll (choices: option indexes); the post comes back
+        with the counts and my votes in it."""
+        s = real(status)
+        pid = (s.get("poll") or {}).get("id")
+        if not pid or not choices:
+            raise ValueError("no poll or no choice")
+        return self.submit(lambda: self._update(dict(s, poll=self.api.vote(pid, choices))))
+
+    def refresh_poll(self, status):
+        """Fresh counts for the post's poll."""
+        s = real(status)
+        pid = (s.get("poll") or {}).get("id")
+        return self.submit(lambda: self._update(dict(s, poll=self.api.poll(pid))))
+
     def bookmark(self, status, on=None):
         """Into the bookmarks or out (on=None: toggle). The Bookmarks lane follows
         at once, without waiting for the server's list."""

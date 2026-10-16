@@ -6,12 +6,16 @@ from urllib.parse import unquote
 from PySide6.QtCore import QRectF, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
+    QButtonGroup,
+    QCheckBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QMenu,
+    QProgressBar,
     QPushButton,
+    QRadioButton,
     QSizePolicy,
     QToolButton,
     QVBoxLayout,
@@ -264,6 +268,8 @@ class PostRow(QWidget):
         media = self._media(st)
         if media:
             cv.addWidget(media)
+        if st.get("poll"):
+            cv.addWidget(self._poll(st))
 
         # a server filter that says "warn": folded like a content warning, closed
         warned = [(f.get("filter") or {}).get("title") or "?" for f in st.get("filtered") or []
@@ -530,6 +536,98 @@ class PostRow(QWidget):
         return b
 
     # ---- media --------------------------------------------------------------------
+    # ---- polls --------------------------------------------------------------------
+    def _poll(self, st):
+        """Options to pick and a Vote button; or the results — after voting, when
+        it's over, on my own post, or when asked."""
+        poll = st["poll"]
+        box = QFrame()
+        box.setObjectName("poll")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(0, 2, 0, 2)
+        v.setSpacing(6)
+        mine = st["account"]["id"] == self.ctx.me_id
+        results = poll.get("voted") or poll.get("expired") or mine or \
+            getattr(self, "poll_results", False) or self.ctx.vote is None
+        options = poll.get("options") or []
+        if results:
+            total = (poll.get("voters_count") if poll.get("multiple") else None) or \
+                poll.get("votes_count") or 0
+            own = set(poll.get("own_votes") or [])
+            top = max((o.get("votes_count") or 0 for o in options), default=0)
+            for i, o in enumerate(options):
+                n = o.get("votes_count")
+                pct = round(100 * (n or 0) / total) if total and n is not None else 0
+                row = QHBoxLayout()
+                title = esc(o.get("title", ""))
+                if i in own:
+                    title = "✓ " + title
+                if n is not None and n == top and top > 0:
+                    title = f"<b>{title}</b>"
+                row.addWidget(self._label(title, "pollOption"), 1)
+                row.addWidget(self._label(f"{pct}%" if n is not None else "?", "meta"))
+                v.addLayout(row)
+                bar = QProgressBar()
+                bar.setObjectName("pollBar")
+                bar.setRange(0, 100)
+                bar.setValue(pct)
+                bar.setTextVisible(False)
+                bar.setProperty("mine", "true" if i in own else "false")
+                v.addWidget(bar)
+        else:
+            group = QButtonGroup(box)
+            group.setExclusive(not poll.get("multiple"))
+            for i, o in enumerate(options):
+                b = (QCheckBox if poll.get("multiple") else QRadioButton)(o.get("title", ""))
+                b.setObjectName("pollChoice")
+                b.setCursor(Qt.CursorShape.PointingHandCursor)
+                group.addButton(b, i)
+                v.addWidget(b)
+            row = QHBoxLayout()
+            vote = QPushButton(_("poll_vote"))
+            vote.setObjectName("tool")
+            vote.setEnabled(False)
+            vote.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            def picked():
+                return [group.id(b) for b in group.buttons() if b.isChecked()]
+            group.buttonToggled.connect(lambda *_a: vote.setEnabled(bool(picked())))
+
+            def send():
+                vote.setEnabled(False)
+                vote.setText(_("poll_sending"))
+                self.ctx.vote(st, picked())
+            vote.clicked.connect(send)
+            row.addWidget(vote)
+            peek = QPushButton(_("poll_results"))
+            peek.setObjectName("tool")
+            peek.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            def show_results():
+                self.poll_results = True
+                self._build()
+            peek.clicked.connect(show_results)
+            row.addWidget(peek)
+            row.addStretch(1)
+            v.addLayout(row)
+        v.addWidget(self._label(self._poll_footer(st), "meta"))
+        return box
+
+    def _poll_footer(self, st):
+        poll = st["poll"]
+        voters = poll.get("voters_count")
+        n = voters if voters is not None else poll.get("votes_count") or 0
+        parts = [_("poll_people" if voters is not None else "poll_votes", n=n)]
+        if poll.get("expired"):
+            parts.append(_("poll_closed"))
+        elif poll.get("expires_at"):
+            parts.append(_("poll_until", when=self.theme.date(poll["expires_at"])))
+        if poll.get("multiple"):
+            parts.append(_("poll_multiple"))
+        if self.ctx.refresh_poll is not None and not poll.get("expired"):
+            parts.append(link("poll", st["id"], _("poll_refresh")))
+        return " · ".join(parts)
+
     def _media(self, st):
         atts = st.get("media_attachments") or []
         if not atts:
