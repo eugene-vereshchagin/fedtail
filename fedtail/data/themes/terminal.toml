@@ -66,3 +66,11 @@ separator = "---- {text}: {n} ----"
 account_title = "{username}@fedtail:~$"
 account_subtitle = "tail -f /dev/fediverse"
 date = "{dd}.{mm} {time}"
+
+[icon]
+style = "terminal"
+bg_top = "#1f6f35"
+bg_bottom = "#000000"
+bubble = "#3dff73"
+ink = "#3dff73"
+accent = "#ffb000"

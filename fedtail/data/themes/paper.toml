@@ -50,3 +50,10 @@ avatar = 36
 
 [words]
 date = "{day} {mon}, {time}"
+
+[icon]
+bg_top = "#c08a54"
+bg_bottom = "#6e421d"
+bubble = "#fbf8f1"
+ink = "#5b3412"
+accent = "#b5462a"

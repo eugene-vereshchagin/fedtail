@@ -8,9 +8,9 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from . import notify
 from . import theme as themes
 from .bridge import Bridge
-from .notify import icon_path
 from .window import MainWindow
 
 
@@ -18,9 +18,11 @@ def run(core, instance, argv):
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
     app.setDesktopFileName("fedtail")
-    app.setWindowIcon(QIcon(icon_path()))
     app.setQuitOnLastWindowClosed(False)
     theme = themes.apply(app, core.cfg)
+    if core.cfg["ui"]["themed_icon"]:
+        notify.use_theme_icon(theme, core.paths.cache_dir)
+    app.setWindowIcon(QIcon(notify.icon_path()))
 
     bridge = Bridge(core)
     win = MainWindow(core, bridge, theme)
@@ -30,7 +32,8 @@ def run(core, instance, argv):
     from PySide6 import __version__ as pyside
     from PySide6.QtCore import qVersion
     logging.getLogger("fedtail").info("Qt %s, PySide6 %s, style %s, theme %s", qVersion(),
-                                      pyside, app.style().name(), core.cfg["ui"]["theme"])
+                                      pyside, app.style().metaObject().className(),
+                                      core.cfg["ui"]["theme"])
     instance.listen(lambda _msg: bridge.raise_requested.emit())
 
     # Ctrl+C in the terminal should quit, not be swallowed by the Qt loop

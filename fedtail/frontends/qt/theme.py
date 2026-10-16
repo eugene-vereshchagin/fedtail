@@ -66,6 +66,7 @@ class Theme:
         self.font = data["font"]
         self.shape = data["shape"]
         self.words = data["words"]
+        self.icon = data.get("icon", {})
         self.warnings = list(warnings)
         auto = _auto_colors(palette)
         self.c = {}

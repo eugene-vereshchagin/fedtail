@@ -42,3 +42,10 @@ dot = "#b4631f"
 [shape]
 radius = 4
 button_radius = 6
+
+[icon]
+bg_top = "#d6d39e"
+bg_bottom = "#9e9b62"
+bubble = "#efeed9"
+ink = "#7a3e0f"
+accent = "#b4631f"

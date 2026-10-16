@@ -60,3 +60,10 @@ posts_only = "segmented"
 [words]
 compose = "{text}"
 date = "{day} {mon} {time}"
+
+[icon]
+bg_top = "#5a5a5a"
+bg_bottom = "#2f2f2f"
+bubble = "#ffffff"
+ink = "#3c5a8a"
+accent = "#c4501b"

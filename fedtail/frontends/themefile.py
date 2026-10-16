@@ -20,6 +20,7 @@ CHOICES = {
     ("shape", "card_header"): {"rich", "compact"},
     ("shape", "unread_mark"): {"dot", "star"},
     ("shape", "posts_only"): {"segmented", "check"},
+    ("icon", "style"): {"bubble", "terminal"},
 }
 
 README = """fedtail themes
@@ -121,7 +122,7 @@ def validate(theme, ref):
                 warnings.append(f"unknown key {section}.{key}")
                 continue
             want = ref[section][key]
-            if section == "colors":
+            if section == "colors" or (section == "icon" and key != "style"):
                 if not isinstance(val, str) or not _COLOR.match(val.strip()):
                     errors.append(f"colors.{key} = {val!r}: use \"#rrggbb\" or \"auto\"")
             elif isinstance(want, bool) or isinstance(val, bool):

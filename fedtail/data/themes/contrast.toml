@@ -47,3 +47,10 @@ radius = 4
 button_radius = 4
 avatar = 48
 unread_mark = "star"
+
+[icon]
+bg_top = "#000000"
+bg_bottom = "#000000"
+bubble = "#ffffff"
+ink = "#000000"
+accent = "#ffd400"

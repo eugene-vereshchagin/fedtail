@@ -7,6 +7,9 @@
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
   (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
   go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
+- New icon: a talk bubble with a curled tail and a thread inside; drawn in the current
+  theme's colours for the window, tray and notifications (`[icon]` in theme files, "auto"
+  follows the accent; `ui.themed_icon`).
 - Decoded pictures are kept within `ui.image_cache_mb` (128 MB), least recently used out
   first — the first bug report showed 800 MB after a few minutes with a cache bounded only by
   count.

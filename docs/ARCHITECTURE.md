@@ -89,6 +89,7 @@ fedtail/
   frontends/
     __init__.py      registry: name -> module with run(core, instance, argv)
     notifytext.py    what a desktop notification says (no Qt, tested)
+    iconart.py       the app icon as SVG, drawn from a theme's [icon] colours
     themefile.py     theme TOML files: find, inherit, validate (no Qt)
     qt/              the Qt Widgets frontend (PySide6)
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics
@@ -399,7 +400,9 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 * Sections: `[font]` (family list, mono, post_scale), `[colors]` (hex or "auto" =
   derived from the desktop palette), `[shape]` (radius, card style card|rule,
   avatars, icons, header rich|compact, unread mark, posts-only control), `[words]`
-  (templates such as `lane_title = "== {text} =="`, date format, lowercase).
+  (templates such as `lane_title = "== {text} =="`, date format, lowercase),
+  `[icon]` (style bubble|terminal and colours; "auto" = from the accent — the
+  frontend draws the icon with `iconart.svg()` into the cache dir at start-up).
 * `qt/theme.py`: `Theme` resolves colours (`_auto_colors`, `_readable_on`),
   `stylesheet()` generates the whole QSS, `apply()` sets palette, fonts (only
   installed families — a missing one may be substituted with absurd metrics) and

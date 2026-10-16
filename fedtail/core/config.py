@@ -26,6 +26,7 @@ DEFAULTS = {
         "save_dir": "",
         "links_in_app": True,
         "image_cache_mb": 128,
+        "themed_icon": True,
         "actions": "both",
     },
     "feed": {

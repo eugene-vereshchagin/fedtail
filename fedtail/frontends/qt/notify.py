@@ -19,8 +19,29 @@ from .. import notifytext
 log = logging.getLogger(__name__)
 
 
+_themed = None  # the icon drawn in the current theme's colours, set at start-up
+
+
 def icon_path():
-    return str(resources.files("fedtail").joinpath("data/icons/fedtail.svg"))
+    """The icon for the window, tray and notifications: the theme's own, or the
+    standard one."""
+    return _themed or str(resources.files("fedtail").joinpath("data/icons/fedtail.svg"))
+
+
+def use_theme_icon(theme, folder):
+    """Draw the icon in the theme's colours into folder/icon-<theme>.svg."""
+    global _themed
+    from .. import iconart
+    c = iconart.colors(theme.icon, theme.c["accent"].name(), theme.c["hot"].name())
+    path = folder / f"icon-{theme.id}.svg"
+    text = iconart.svg(c)
+    try:
+        if not path.exists() or path.read_text("utf-8") != text:
+            path.write_text(text, "utf-8")
+        _themed = str(path)
+    except OSError as e:
+        log.warning("themed icon: %s", e)
+    return icon_path()
 
 
 class Notifier(QObject):

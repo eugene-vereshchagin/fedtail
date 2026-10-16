@@ -257,20 +257,31 @@ def run(app, out, label, palette, theme_name, extras):
 
 
 def icon_sheet(out):
-    """The app icon at launcher, panel and tray sizes, on light and dark."""
-    from fedtail.frontends.qt.notify import icon_path
-    icon = QIcon(icon_path())
-    sizes = [16, 22, 32, 48, 64, 128, 256]
-    width = sum(sizes) + 24 * (len(sizes) + 1)
-    sheet = QImage(width, 2 * (256 + 48), QImage.Format.Format_ARGB32)
+    """The icon in every theme's colours at panel, launcher and big sizes,
+    on light and dark backgrounds."""
+    from fedtail.frontends import iconart, themefile
+    names = themefile.available()
+    sizes = [22, 48, 128]
+    cell = sum(sizes) + 24 * (len(sizes) + 1)
+    row_h = 128 + 40
+    sheet = QImage(cell * 2, row_h * len(names), QImage.Format.Format_ARGB32)
     p = QPainter(sheet)
-    for row, bg in enumerate(("#eff0f1", "#202326")):
-        y0 = row * (256 + 48)
-        p.fillRect(0, y0, width, 256 + 48, QColor(bg))
-        x = 24
-        for s in sizes:
-            p.drawPixmap(x, y0 + 24 + 256 - s, icon.pixmap(s, s))
-            x += s + 24
+    tmp = Path(tempfile.mkdtemp())
+    for r, name in enumerate(names):
+        data, _w = themefile.load(name)
+        c = iconart.colors(data.get("icon"), "#2a86c4", "#e8702a")
+        f = tmp / f"{name}.svg"
+        f.write_text(iconart.svg(c), "utf-8")
+        icon = QIcon(str(f))
+        for col, bg in enumerate(("#eff0f1", "#202326")):
+            x0, y0 = col * cell, r * row_h
+            p.fillRect(x0, y0, cell, row_h, QColor(bg))
+            p.setPen(QColor("#888"))
+            p.drawText(x0 + 8, y0 + 16, name)
+            x = x0 + 24
+            for size in sizes:
+                p.drawPixmap(x, y0 + 28 + 128 - size, icon.pixmap(size, size))
+                x += size + 24
     p.end()
     sheet.save(str(out / "icon.png"))
 

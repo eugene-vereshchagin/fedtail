@@ -63,3 +63,10 @@ account_title = "@{username}"
 account_subtitle = "{acct}"
 separator = "{text} ({n})"
 date = "{dd}.{mm} {time}"
+
+[icon]
+bg_top = "#4a4a4a"
+bg_bottom = "#262626"
+bubble = "#ffffff"
+ink = "#1b6aa5"
+accent = "#4aa3df"

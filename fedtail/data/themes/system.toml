@@ -77,3 +77,13 @@ separator = "{text} · {n}"
 account_title = "{display_name}"
 account_subtitle = "@{acct}"
 date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"
+
+[icon]
+# The window, tray and notification icon in this theme's colours.
+# "auto" takes it from colors.accent / colors.hot, so your own theme gets a matching icon.
+style = "bubble"         # "bubble" (a talk bubble with a thread inside) or "terminal" (>_)
+bg_top = "#3b8fd0"       # background gradient, top left …
+bg_bottom = "#174a78"    # … to bottom right
+bubble = "#ffffff"
+ink = "#1d4f7a"          # the thread lines (the prompt, in "terminal")
+accent = "#e8702a"       # the "new" dot (the cursor, in "terminal")

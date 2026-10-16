@@ -44,3 +44,10 @@ radius = 10
 button_radius = 7
 icons = false
 lane_icons = false
+
+[icon]
+bg_top = "#2b3a50"
+bg_bottom = "#0d1014"
+bubble = "#d8dee6"
+ink = "#243142"
+accent = "#4c8dde"
