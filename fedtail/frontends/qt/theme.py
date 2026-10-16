@@ -181,12 +181,15 @@ QPushButton#seg {{ background: {k('button')}; color: {k('text')}; border: 1px so
 QPushButton#seg[pos="first"] {{ border-top-left-radius: {br}px; border-bottom-left-radius: {br}px;
     border-right: 0; }}
 QPushButton#seg[pos="last"] {{ border-top-right-radius: {br}px; border-bottom-right-radius: {br}px; }}
+QPushButton#seg[pos="middle"] {{ border-right: 0; border-radius: 0; }}
+QPushButton:disabled {{ color: {k('muted')}; }}
 QPushButton#seg:checked {{ background: {k('accent')}; color: {k('on_accent')}; font-weight: 600;
     border-color: {k('accent')}; }}
 QCheckBox#check {{ color: {k('text')}; spacing: 8px; }}
 QCheckBox#check::indicator {{ width: 12px; height: 12px; border: 1px solid {k('muted')};
     background: {k('view')}; border-radius: 2px; }}
 QCheckBox#check::indicator:checked {{ background: {k('accent')}; }}
+QRadioButton#check {{ color: {k('text')}; spacing: 6px; }}
 
 /* ---- inputs & dialogs ---- */
 QDialog {{ background: {k('window')}; }}

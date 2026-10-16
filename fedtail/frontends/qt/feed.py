@@ -11,11 +11,11 @@ import time
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -303,30 +303,32 @@ class LaneWidget(QWidget):
         self.pill = QLabel()
         self.pill.setObjectName("newPill")
         self.header.h.insertWidget(1, self.pill)
-        self.only_posts = None
-        if name in POSTS_ONLY_LANES or name.startswith("list:"):
-            self._posts_only_control()
+        # what to show: everything / posts only / what's unread — one control, so the
+        # three sit together; how: as a feed / as conversations — another
         lazy = getattr(self.core.lane_by_name.get(name), "lazy", False)
-        self.conv_btn = None
-        if not lazy:
-            self.conv_btn = self.header.add(_button(_("conv_mode"), self._toggle_conversations,
-                                                    tip=_("conv_mode_tip")))
-            self.conv_btn.setCheckable(True)
-            self.conv_btn.setChecked(bool(self.core.get_state(f"conversations.{name}")))
+        self.has_posts_only = name in POSTS_ONLY_LANES or name.startswith("list:")
+        self._kept = None  # "Unread": item keys on screen while the lane is open
         self._conv_members = {}  # top status id -> member status ids (conversations view)
-        # "Unread": what was unread when the lane opened (or the button was pressed) stays
-        # on screen while you read it — greyed, not gone — plus whatever arrives; it
-        # thins out the next time the lane opens
-        self.unread_btn = None
-        self._kept = None  # item keys on screen in this mode, None: not fixed yet
+        options = [("all", _("show_all"), _("show_all_tip"))]
+        if self.has_posts_only:
+            options.append(("posts", _("posts_only"), _("posts_only_tip")))
         if not lazy:
-            self.unread_btn = self.header.add(_button(_("unread_only"),
-                                                      self._toggle_unread_only,
-                                                      tip=_("unread_only_tip")))
-            self.unread_btn.setCheckable(True)
-            self.unread_btn.setChecked(bool(self.core.get_state(f"unread_only.{name}")))
-        self.btn_first = self.header.add(_button(_("to_new"), self.jump_first_unread,
-                                                 icon="go-down"))
+            options.append(("unread", _("unread_only"), _("unread_only_tip")))
+        self.filter_seg = None
+        if len(options) > 1:
+            self.filter_seg = _Segmented(options, self._current_filter(), self.set_filter,
+                                         self.theme.shape["posts_only"])
+            self.header.add(self.filter_seg)
+        self.view_seg = None
+        if not lazy:
+            self.view_seg = _Segmented(
+                [("feed", _("view_feed"), _("view_feed_tip")),
+                 ("conversations", _("conv_mode"), _("conv_mode_tip"))],
+                "conversations" if self.core.get_state(f"conversations.{name}") else "feed",
+                self.set_view, self.theme.shape["posts_only"])
+            self.header.add(self.view_seg)
+        self.btn_first = self.header.add(_button("↓ " + _("to_new"), self.jump_first_unread,
+                                                 tip=_("to_new_tip")))
         self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
                                                icon="mail-mark-read"))
         self.header.add(_button("", self.refresh_now, icon="view-refresh",
@@ -340,41 +342,37 @@ class LaneWidget(QWidget):
         (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
         self.btn_older.setVisible(not self.unread_only_on())
 
-    def _posts_only_control(self):
-        on = self.core.posts_only(self.name)
-        if self.theme.shape["posts_only"] == "check":
-            box = QCheckBox(self.theme.word("lane", _("posts_only")).strip())
-            box.setObjectName("check")
-            box.setChecked(on)
-            box.setToolTip(_("posts_only_tip"))
-            box.toggled.connect(self._toggle_posts_only)
-            self.only_posts = box
-            self.header.add(box)
-            return
-        group = QWidget()
-        g = QHBoxLayout(group)
-        g.setContentsMargins(0, 0, 0, 0)
-        g.setSpacing(0)
-        self._seg_all = QPushButton(_("show_all"))
-        self._seg_posts = QPushButton(_("posts_only"))
-        for b, pos in ((self._seg_all, "first"), (self._seg_posts, "last")):
-            b.setObjectName("seg")
-            b.setProperty("pos", pos)
-            b.setCheckable(True)
-            b.setCursor(Qt.CursorShape.PointingHandCursor)
-            g.addWidget(b)
-        self._seg_posts.setToolTip(_("posts_only_tip"))
-        (self._seg_posts if on else self._seg_all).setChecked(True)
-        self._seg_all.clicked.connect(lambda: self._set_seg(False))
-        self._seg_posts.clicked.connect(lambda: self._set_seg(True))
-        self.only_posts = _SegProxy(self)
-        self.header.add(group)
+    # ---- what to show, and how ---------------------------------------------------
+    def _current_filter(self):
+        if self.has_posts_only and self.core.posts_only(self.name):
+            return "posts"
+        if self.core.get_state(f"unread_only.{self.name}"):
+            return "unread"
+        return "all"
 
-    def _set_seg(self, on):
-        self._seg_all.setChecked(not on)
-        self._seg_posts.setChecked(on)
-        if on != self.core.posts_only(self.name):
-            self._toggle_posts_only(on)
+    def set_filter(self, which):
+        """"all", "posts" (no replies) or "unread" — one at a time."""
+        if self.filter_seg is not None:
+            self.filter_seg.select(which)
+        if self.has_posts_only and self.core.posts_only(self.name) != (which == "posts"):
+            self.core.set_posts_only(self.name, which == "posts")
+        self.core.set_state(f"unread_only.{self.name}", which == "unread")
+        self._kept = None
+        self.positioned = False  # a different list: start over at the first unread
+        self.separator = None
+        self.btn_older.setVisible(which != "unread")  # older history is read: not here
+        self.refresh(force=True)
+        self._initial_position()
+        self.win.update_badges()
+
+    def set_view(self, which):
+        """"feed" or "conversations" (one card per conversation)."""
+        if self.view_seg is not None:
+            self.view_seg.select(which)
+        self.core.set_state(f"conversations.{self.name}", which == "conversations")
+        self.separator = None
+        self.positioned = False
+        self.refresh(force=True)
 
     def _seen(self, ids):
         if self.cfg["read"]["mark_read"] == "on_scroll":
@@ -383,16 +381,7 @@ class LaneWidget(QWidget):
             self.core.mark_read(ids)
 
     def unread_only_on(self):
-        return self.unread_btn is not None and self.unread_btn.isChecked()
-
-    def _toggle_unread_only(self):
-        on = self.unread_only_on()
-        self.core.set_state(f"unread_only.{self.name}", on)
-        self._kept = None
-        self.separator = None
-        self.positioned = False
-        self.btn_older.setVisible(not on)  # older history is read: nothing to add here
-        self.refresh(force=True)
+        return self.filter_seg is not None and self.filter_seg.current == "unread"
 
     def hideEvent(self, e):
         # left the lane: what got read meanwhile goes the next time it opens
@@ -403,21 +392,7 @@ class LaneWidget(QWidget):
         super().hideEvent(e)
 
     def conversations_on(self):
-        return self.conv_btn is not None and self.conv_btn.isChecked()
-
-    def _toggle_conversations(self):
-        self.core.set_state(f"conversations.{self.name}", self.conv_btn.isChecked())
-        self.separator = None
-        self.positioned = False
-        self.refresh(force=True)
-
-    def _toggle_posts_only(self, on):
-        self.core.set_posts_only(self.name, on)
-        self.positioned = False  # a different list: start over at the first unread
-        self.separator = None
-        self.refresh(force=True)
-        self._initial_position()
-        self.win.update_badges()
+        return self.view_seg is not None and self.view_seg.current == "conversations"
 
     def refresh_now(self):
         self.core.poll_now()
@@ -439,7 +414,7 @@ class LaneWidget(QWidget):
             entries = [e for e in entries if e[0] in self._kept]
             self.header.info.setText(_("unread_only_info", n=len(fresh)) if self._kept
                                      else _("unread_only_none"))
-        elif self.unread_btn is not None:
+        elif self.filter_seg is not None:
             self.header.info.setText("")
         statuses = [st for _, st in entries]
         parents = self.core.parents_for(statuses)
@@ -570,21 +545,44 @@ class LaneWidget(QWidget):
         n = len(self.view.unread_keys())
         self.pill.setText(_("new_n", n=n))
         self.pill.setVisible(bool(n))
-        self.btn_all.setVisible(bool(n))
+        # greyed, not hidden: buttons that come and go make the others jump about
+        self.btn_all.setEnabled(bool(n))
+        self.btn_first.setEnabled(bool(n))
 
 
-class _SegProxy:
-    """Lets tests and the window treat the segmented control like a checkbox."""
+class _Segmented(QWidget):
+    """A choice of a few: buttons stuck together, one pressed — or, in themes with
+    shape.posts_only = "check", a row of round marks (terminal, juick)."""
 
-    def __init__(self, lane):
-        self.lane = lane
+    def __init__(self, options, current, on_pick, style="segmented"):
+        super().__init__()
+        self.current = current
+        self.buttons = {}
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0 if style == "segmented" else 12)
+        for i, (key, text, tip) in enumerate(options):
+            if style == "check":
+                b = QRadioButton(text)
+                b.setObjectName("check")
+                b.setAutoExclusive(False)  # select() does it, the same for both looks
+            else:
+                b = QPushButton(text)
+                b.setObjectName("seg")
+                b.setProperty("pos", "first" if i == 0 else
+                              "last" if i == len(options) - 1 else "middle")
+            b.setCheckable(True)
+            b.setChecked(key == current)
+            b.setToolTip(tip)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.clicked.connect(lambda _c=False, k=key: on_pick(k))
+            h.addWidget(b)
+            self.buttons[key] = b
 
-    def isChecked(self):
-        return self.lane._seg_posts.isChecked()
-
-    def setChecked(self, on):
-        self.lane._set_seg(on)
-
+    def select(self, key):
+        self.current = key
+        for k, b in self.buttons.items():
+            b.setChecked(k == key)
 
 class ThreadWidget(QWidget):
     def __init__(self, win, sid):

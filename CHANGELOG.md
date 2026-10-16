@@ -2,6 +2,10 @@
 
 ## 0.6.0 — in progress
 
+- A tidier lane header: what to show is one control — All | Posts | New — and how to show it
+  another — Feed | Conversations (each with a tooltip saying what it does); "↓ To new" no
+  longer looks like a drop-down; buttons with nothing to do grey out instead of vanishing,
+  so the others stay where they were. "Posts only" and "New" are one choice now.
 - Pictures come quicker: a single big picture shows its preview at once and the full file
   replaces it when it arrives (it used to wait for the full file); the picture asked for
   last loads first, so the one on screen doesn't queue behind everything scrolled past; the

@@ -474,14 +474,12 @@ class QtSmokeTest(unittest.TestCase):
         self.win.select_lane("comments")
         lane = self.win.lane_widgets["comments"]
         self.pump(0.2)
-        lane.conv_btn.setChecked(True)
-        lane._toggle_conversations()
+        lane.set_view("conversations")
         self.pump(0.2)
         keys = [k for k in lane.view.order if not k.startswith("__")]
         self.assertTrue(keys and all(k.startswith("conv:") for k in keys))
         self.assertTrue(self.core.get_state("conversations.comments"))
-        lane.conv_btn.setChecked(False)
-        lane._toggle_conversations()
+        lane.set_view("feed")
         self.pump(0.2)
         self.assertFalse(any(k.startswith("conv:") for k in lane.view.order))
         self.win.select_lane("people")
@@ -564,11 +562,11 @@ class QtSmokeTest(unittest.TestCase):
         # "posts only" hides replies, and remembers it
         self.win.select_lane("people")
         people = self.win.lane_widgets["people"]
-        people.only_posts.setChecked(True)
+        people.set_filter("posts")
         self.pump(0.1)
         self.assertNotIn("013", [r.status_id for r in people.view.rows.values()])
         self.assertTrue(self.core.posts_only("people"))
-        people.only_posts.setChecked(False)
+        people.set_filter("all")
         self.pump(0.1)
         self.assertIn("013", [r.status_id for r in people.view.rows.values()])
 
@@ -699,8 +697,7 @@ class QtSmokeTest(unittest.TestCase):
         lane = self.win.lane_widgets["people"]
         self.pump(until=lambda: "014" in lane.view.rows)
         posts = lambda: sorted(k for k in lane.view.rows if not k.startswith("__"))
-        lane.unread_btn.setChecked(True)
-        lane._toggle_unread_only()
+        lane.set_filter("unread")
         self.assertNotIn("011", posts())  # read already: not here
         self.assertIn("014", posts())
         self.assertFalse(lane.btn_older.isVisible())

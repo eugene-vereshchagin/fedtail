@@ -64,7 +64,7 @@ icons = true             # desktop icons on buttons; false = words only (dark cu
 card_header = "rich"     # "rich": avatar, name, @address · time · icon
                          # "compact": @user host · 13.10 17:22 · priv
 unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)
-posts_only = "segmented" # "segmented" (All | Posts only) or "check" ([ ] posts only)
+posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Conversations): "segmented" — buttons stuck together, "check" — round marks
 
 [words]
 # {text} is the interface's own wording in the current language
