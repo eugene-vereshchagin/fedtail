@@ -202,7 +202,8 @@ _STRINGS = {
         "history_title": "Версии поста", "history_version": "Версия {n}",
         "history_none": "Сервер не хранит версий этого поста.",
         "conv_mode": "Беседами",
-        "conv_mode_tip": "Один раз каждый разговор: начало треда и что в нём нового",
+        "conv_mode_tip": "Ответы одного треда — одной карточкой: его начало, сколько там "
+                         "сообщений и новых, кто написал последним. Клик — весь тред",
         "conv_line": ["{n} сообщение в разговоре, новых: {new}",
                       "{n} сообщения в разговоре, новых: {new}",
                       "{n} сообщений в разговоре, новых: {new}"],
@@ -494,7 +495,8 @@ _STRINGS = {
         "history_title": "Post versions", "history_version": "Version {n}",
         "history_none": "The server keeps no versions of this post.",
         "conv_mode": "Conversations",
-        "conv_mode_tip": "Each conversation once: where it started and what's new in it",
+        "conv_mode_tip": "A thread's replies as one card: where it started, how many "
+                         "messages and new ones, who wrote last. Click — the whole thread",
         "conv_line": ["{n} message in the conversation, new: {new}",
                       "{n} messages in the conversation, new: {new}"],
         "conv_last": "the last — {who}: “{text}”",

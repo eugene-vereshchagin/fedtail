@@ -2,6 +2,9 @@
 
 ## 0.6.0 — in progress
 
+- Feed | Conversations is offered only where it changes something — Replies to me, Mentions,
+  Subscriptions (many replies to the same threads); in Home nearly every post is a
+  conversation of its own and both views looked the same. The tooltip says what it does.
 - Switching All | Posts | New or Feed | Conversations: the pressed button turns at once and the
   lane is redrawn after it, under a wait cursor and in one paint (it took over a second with
   both buttons lit). The choices start fresh every run — All and Feed, or what

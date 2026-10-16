@@ -367,7 +367,9 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Conversations view** — `threads.conversations(entries, get_status, unread)`
   groups lane entries by the highest known post of their thread; `LaneWidget`
   builds one card per group (`extra["conversation"]`), and a seen card marks all
-  its members read. Per lane, remembered in `kv conversations.<lane>`.
+  its members read. Offered over Replies to me, Mentions and Subscriptions only
+  (`feed.CONVERSATION_LANES`); kept for the run by `core.choice()` (or in `kv` with
+  `feed.remember_choices`), like All | Posts | New.
 * **Editing** — `core.source()` (`/statuses/:id/source`, the typed text) →
   `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, media ids passed again so
   they stay); `core.history()` feeds `MainWindow.show_history`; cards show "edited"

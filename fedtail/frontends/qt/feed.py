@@ -30,6 +30,10 @@ from .text import display_name, esc
 log = logging.getLogger(__name__)
 
 POSTS_ONLY_LANES = ("people", "bots", "mine", "local")
+# where Feed | Conversations means something: lanes made of replies, many of them to the
+# same few threads. In Home almost every post is a conversation of its own — the two
+# views would look the same there, so the switch isn't offered.
+CONVERSATION_LANES = ("comments", "mentions", "subs")
 
 
 class FeedView(QScrollArea):
@@ -328,7 +332,7 @@ class LaneWidget(QWidget):
                                          self.theme.shape["posts_only"])
             self.header.add(self.filter_seg)
         self.view_seg = None
-        if not lazy:
+        if name in CONVERSATION_LANES:
             self.view_seg = _Segmented(
                 [("feed", _("view_feed"), _("view_feed_tip")),
                  ("conversations", _("conv_mode"), _("conv_mode_tip"))],

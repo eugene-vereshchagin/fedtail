@@ -210,8 +210,10 @@ deletes your post, `@user` opens a profile, `@user text` writes to them directly
 is a new post, `?` shows it all. While you type it says what Enter will do — which post a reply
 goes to and who will see it. `↑` `↓` bring back earlier commands.
 
-**Conversations**: the button over a lane switches it to one card per conversation — where it
-started, how many messages and how many new, who wrote last.
+**Feed | Conversations** over Replies to me, Mentions and Subscriptions: Conversations shows a
+thread's replies as one card — where it started, how many messages and how many new, who wrote
+last; a click opens the whole thread. Over every lane, **All | Posts | New** picks what to show
+(New: what was unread when you opened the lane, staying put while you read it).
 
 ## Silence
 
