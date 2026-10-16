@@ -2,6 +2,11 @@
 
 ## 0.4.0 — in progress
 
+- Windows: a zip with `fedtail.exe` in every release (built by CI with PyInstaller, no Python
+  needed); config in `%APPDATA%\fedtail`, data in `%LOCALAPPDATA%\fedtail`; one window per
+  profile through a named pipe; `--install-desktop` makes a Start menu shortcut; the tests
+  run on Windows too.
+
 ## 0.3.0 — 2026-10-16
 
 - A profile's card no longer looks like one more post: a tinted block with an accent edge,

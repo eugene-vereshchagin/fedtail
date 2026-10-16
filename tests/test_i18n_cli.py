@@ -58,6 +58,20 @@ class CliTest(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("fedtail " + __version__.split(".dev")[0], out.stdout)
 
+    @unittest.skipUnless(sys.platform == "win32", "the Start menu: Windows")
+    def test_install_start_menu(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+            env = dict(os.environ, APPDATA=d)
+            out = subprocess.run([sys.executable, "-m", "fedtail", "--install-desktop",
+                                  "--profile", "croco"], cwd=ROOT, env=env,
+                                 capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            link = Path(d) / "Microsoft/Windows/Start Menu/Programs/fedtail-croco.lnk"
+            self.assertTrue(link.exists())
+
+    @unittest.skipIf(sys.platform == "win32", "a .desktop entry: Linux and the like")
     def test_install_desktop(self):
         import os
         import tempfile

@@ -60,7 +60,35 @@ def source_dir():
     return root if (root / "pyproject.toml").exists() else None
 
 
+def _windows_install(profile):
+    """A Start menu shortcut (a .lnk, made by PowerShell's WScript.Shell)."""
+    stem = desktop_id(profile)
+    menu = Path(os.environ.get("APPDATA") or Path.home() / "AppData/Roaming") / \
+        "Microsoft/Windows/Start Menu/Programs"
+    menu.mkdir(parents=True, exist_ok=True)
+    link = menu / f"{stem}.lnk"
+    args = "" if profile == DEFAULT_PROFILE else f"--profile {profile}"
+    if getattr(sys, "frozen", False):  # fedtail.exe from the zip
+        target, workdir, icon = sys.executable, str(Path(sys.executable).parent), sys.executable
+    else:  # from the source: pythonw — no console window
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        target = str(pyw if pyw.exists() else sys.executable)
+        args = ("-m fedtail " + args).strip()
+        workdir = str(source_dir() or Path.cwd())
+        icon = target
+    q = lambda s: "'" + str(s).replace("'", "''") + "'"  # noqa: E731 — PowerShell quoting
+    script = (f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut({q(link)}); "
+              f"$s.TargetPath = {q(target)}; $s.Arguments = {q(args)}; "
+              f"$s.WorkingDirectory = {q(workdir)}; $s.IconLocation = {q(icon)}; "
+              f"$s.Description = 'fediverse client'; $s.Save()")
+    subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                   check=True, capture_output=True)
+    return link, Path(icon)
+
+
 def install(profile=DEFAULT_PROFILE):
+    if os.name == "nt":
+        return _windows_install(profile)
     data = _data_home()
     apps = data / "applications"
     icons = data / "icons" / "hicolor" / "scalable" / "apps"

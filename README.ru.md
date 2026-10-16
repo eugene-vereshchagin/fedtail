@@ -68,6 +68,13 @@ python3 fedtail              # папкой — тоже работает
 
 Где угодно ещё с Python ≥ 3.11: `pip install requests PySide6-Essentials`, дальше так же.
 
+**Windows** (пока проба): в [релизах](https://github.com/eugene-vereshchagin/fedtail/releases)
+лежит `fedtail-…-windows.zip` — распакуй куда угодно и запусти `fedtail.exe`, Python не нужен.
+`fedtail.exe --install-desktop` добавит ярлык в меню «Пуск». Конфиг — в
+`%APPDATA%\fedtail\<профиль>\`, данные — в `%LOCALAPPDATA%\fedtail\<профиль>\`,
+уведомления — через значок в трее. Из исходников — так же, как выше, через
+`pip install requests PySide6-Essentials` и `python -m fedtail`.
+
 При первом запуске fedtail спросит адрес сервера, откроет страницу входа в браузере и будет
 ждать код, который покажет сервер. Заходи обычной учёткой, не админской.
 

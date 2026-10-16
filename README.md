@@ -69,6 +69,13 @@ Squares instead of emoji and flags mean there is no colour emoji font:
 
 Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, then the same.
 
+**Windows** (an early try): the [releases](https://github.com/eugene-vereshchagin/fedtail/releases)
+have `fedtail-…-windows.zip` — unpack it anywhere and run `fedtail.exe`, no Python needed.
+`fedtail.exe --install-desktop` adds a Start menu shortcut. The config lives in
+`%APPDATA%\fedtail\<profile>\`, the data in `%LOCALAPPDATA%\fedtail\<profile>\`;
+notifications come through the tray icon. From the source: as above, with
+`pip install requests PySide6-Essentials` and `python -m fedtail`.
+
 On first start fedtail asks for your server, opens the login page in the browser and waits
 for the code the server shows you.
 
