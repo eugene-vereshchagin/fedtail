@@ -2,6 +2,9 @@
 
 ## 0.6.0 — in progress
 
+- Notifications about one list, by its title: `notify.lanes = [..., "list:Друзья"]` —
+  not all lists at once (`"lists"`), which with bots in them would never stop. The log
+  says which new posts got no notification because their lane isn't in `notify.lanes`.
 - A picture, avatar or profile banner that doesn't come within 30 s (a server still fetching
   it from elsewhere) is asked for once more a few seconds later, with more patience, instead
   of staying grey until a restart. A request with no answer for three minutes is asked again.

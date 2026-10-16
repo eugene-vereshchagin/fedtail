@@ -326,11 +326,17 @@ class Core:
     def _notify(self, per_lane, new_requests=(), new_activity=()):
         """Emit 'notify' with [(lane, status-or-account)] for lanes the user wants."""
         wanted = set(self.cfg["notify"]["lanes"])
-        out = []
+        # one list by its title: "list:Друзья" (the id works too)
+        titled = {x[5:].casefold() for x in wanted if lanes.is_list(x)}
+        out, quiet = [], []
         for name, ids in per_lane.items():
             lane = self.lane_by_name[name]
-            if not ids or (name not in wanted and
-                           not (lanes.is_list(name) and "lists" in wanted)):
+            if not ids:
+                continue
+            if name not in wanted and not (lanes.is_list(name) and (
+                    "lists" in wanted or self.lane_title(name).casefold() in titled
+                    or name[len(lanes.LIST_PREFIX):].casefold() in titled)):
+                quiet.append(f"{name}+{len(ids)}")
                 continue
             id_set = set(ids)
             sts = [st for item_id, st in self.store.items(lane.source, len(ids) + 50)
@@ -341,6 +347,8 @@ class Core:
             out += [("requests", acc) for acc in new_requests]
         if "activity" in wanted:
             out += [("activity", n) for n in new_activity]
+        if quiet:  # "why no notification?" — answered by the log
+            log.debug("notify: not asked for (notify.lanes): %s", ", ".join(quiet))
         if out:
             self.emit("notify", out)
 

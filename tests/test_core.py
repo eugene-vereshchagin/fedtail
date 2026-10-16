@@ -645,6 +645,21 @@ class CoreTest(TmpDir):
         self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
 
+    def test_notify_about_one_list_by_title(self):
+        core, w = self.make()
+        w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}
+        w.lists["L2"] = {"title": "Друзья", "exclusive": True, "members": {"B"}}
+        core.cfg["notify"]["lanes"] = ["comments", "list:друзья"]
+        core.connect().result()
+        core.poll_once()
+        w.add(status("010", BOB, minute=10), home=True)
+        w.add(status("011", NEWS, minute=11), home=True)
+        core.poll_once()
+        notes = [e for e in self.events if e[0] == "notify"][-1][1]
+        self.assertEqual([(lane, st["id"]) for lane, st in notes], [("list:L2", "010")])
+        cfg, errors = config.validate({"notify": {"lanes": ["mentions", "list:Друзья"]}})
+        self.assertEqual(errors, [])
+
     def test_thread_subscriptions(self):
         alice = fakes.acct("A", "alice@example.org")
         core, w = self.make()

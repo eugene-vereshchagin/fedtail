@@ -208,7 +208,10 @@ def validate(user):
 
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] + cfg["lists"]["hide_in"]
-           if x not in LANE_NAMES | {"lists"}]
+           if x not in LANE_NAMES | {"lists"}
+           # notify.lanes may name one list: "list:Друзья" (its title, or its id)
+           and not (x in cfg["notify"]["lanes"] and isinstance(x, str)
+                    and x.startswith("list:") and len(x) > 5)]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]
