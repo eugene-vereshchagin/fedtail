@@ -74,7 +74,8 @@ DEFAULTS = {
     },
     "lists": {
         "enabled": True,
-        "exclusive_hides": True,
+        "hide_members": "all",
+        "hide_in": ["people", "bots", "global", "local"],
         "refresh_minutes": 10,
     },
     "subs": {
@@ -111,6 +112,7 @@ CHOICES = {
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
     ("debug", "level"): {"debug", "info", "warning"},
     ("ui", "esc"): {"curtain", "tray", "off"},
+    ("lists", "hide_members"): {"all", "exclusive", "off"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",
               "local", "global", "requests"}
@@ -159,6 +161,13 @@ def validate(user):
             errors.append(f"[{section}] must be a section, not a value")
             continue
         for key, val in values.items():
+            if (section, key) == ("lists", "exclusive_hides") and "hide_members" not in values:
+                # replaced in 0.3: hiding now covers every list unless told otherwise
+                if val is False:
+                    cfg["lists"]["hide_members"] = "off"
+                warnings.append('lists.exclusive_hides is now lists.hide_members '
+                                '("all", "exclusive" or "off")')
+                continue
             if (section, key) == ("ui", "esc_hides") and "esc" not in values:
                 # replaced in 0.3: false still means Esc does nothing; true was the old
                 # default (to the tray) and now gets the new default, the curtain
@@ -185,7 +194,8 @@ def validate(user):
             cfg[section][key] = val
 
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
-           cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] if x not in LANE_NAMES | {"lists"}]
+           cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] + cfg["lists"]["hide_in"]
+           if x not in LANE_NAMES | {"lists"}]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]

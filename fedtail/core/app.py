@@ -315,7 +315,7 @@ class Core:
                 continue
             per_lane[lane.name] = [item_id for item_id, st
                                    in self.store.items(lane.source, len(ids) + 50)
-                                   if item_id in ids and lane.keep(st, ctx)]
+                                   if item_id in ids and lanes.keeps(lane, st, ctx)]
         return per_lane
 
     def _notify(self, per_lane, new_requests=(), new_activity=()):
@@ -344,7 +344,8 @@ class Core:
                                  tuple(self.cfg["lanes"]["extra_bots"]),
                                  self.cfg["lanes"]["mentions_all"],
                                  self.cfg["subs"]["replies_to_me"],
-                                 self._hidden_authors())
+                                 self._hidden_authors(),
+                                 frozenset(self.cfg["lists"]["hide_in"]))
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def _poll_activity(self):
@@ -440,9 +441,12 @@ class Core:
         return self.submit(self.api.delete_filter, filter_id)
 
     def _hidden_authors(self):
-        if not self.cfg["lists"]["exclusive_hides"]:
+        """Who the lanes in lists.hide_in leave out: everyone in a list
+        (lists.hide_members = "all"), only in exclusive ones, or nobody."""
+        which = self.cfg["lists"]["hide_members"]
+        if which == "off":
             return frozenset()
-        return frozenset(a for x in self.lists if x.get("exclusive")
+        return frozenset(a for x in self.lists if which == "all" or x.get("exclusive")
                          for a in self.list_members.get(x["id"], ()))
 
     def _refresh_lists(self):
@@ -592,7 +596,7 @@ class Core:
                 continue
             if self.silenced(st):
                 continue
-            if lane.keep(st, ctx):
+            if lanes.keeps(lane, st, ctx):
                 kept.append((item_id, st))
                 if len(kept) >= limit:
                     break
@@ -616,7 +620,7 @@ class Core:
             for _item, st in self.store.iter_items(lane.source):
                 if only_posts and real(st).get("in_reply_to_id"):
                     continue
-                if not lane.keep(st, ctx):
+                if not lanes.keeps(lane, st, ctx):
                     continue
                 i += 1
                 if search.matches(query, search.haystack(st)):

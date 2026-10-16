@@ -25,7 +25,8 @@ class LaneContext:
     extra_bots: tuple
     mentions_all: bool = False
     subs_replies_to_me: bool = False
-    hidden: frozenset = frozenset()  # authors in exclusive lists: only their list shows them
+    hidden: frozenset = frozenset()  # authors put in lists: their list shows them…
+    hide_in: frozenset = frozenset()  # …and these lanes don't (lists.hide_in)
 
 
 def _all(st, ctx):
@@ -33,11 +34,19 @@ def _all(st, ctx):
 
 
 def _people(st, ctx):
-    return st["account"]["id"] not in ctx.hidden and not is_bot(st["account"], ctx.extra_bots)
+    return not is_bot(st["account"], ctx.extra_bots)
 
 
 def _bots(st, ctx):
-    return st["account"]["id"] not in ctx.hidden and is_bot(st["account"], ctx.extra_bots)
+    return is_bot(st["account"], ctx.extra_bots)
+
+
+def keeps(lane, st, ctx):
+    """Does this post belong in this lane? Someone you put in a list (and their
+    boosts) leaves the lanes in lists.hide_in: the list is where they're read."""
+    if lane.name in ctx.hide_in and st["account"]["id"] in ctx.hidden:
+        return False
+    return lane.keep(st, ctx)
 
 
 def _comments(st, ctx):

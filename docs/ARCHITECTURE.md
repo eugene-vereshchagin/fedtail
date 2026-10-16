@@ -266,8 +266,10 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `feed.render_limit` (raised by "Older" and by Ctrl+F "Deeper" via `_limits`),
   filtered by `keep` and by "posts only". Cached until the store changes.
   `by_status_time` lanes (notifications) are sorted by the post's own time.
-* "Exclusive" lists: `Core._hidden_authors()` collects members of exclusive lists;
-  people/bots skip them (`lists.exclusive_hides`).
+* List members leave the general lanes: `Core._hidden_authors()` collects members of
+  every list (`lists.hide_members = "all"`; or only exclusive lists, or none) and
+  `lanes.keeps()` drops their posts and boosts from the lanes in `lists.hide_in`
+  (people, bots, global, local by default); their list lane shows them.
 
 ## 9. One poll, step by step (`Core._poll_once`)
 

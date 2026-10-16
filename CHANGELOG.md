@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- Someone you put in a list leaves the general lanes — Home, Bots, Federated, Local — and
+  is read in their list, so subscriptions don't clutter the feed. `lists.hide_members`:
+  `all` (default), `exclusive` (only lists marked exclusive, the old way) or `off`;
+  `lists.hide_in` — which lanes. Replaces `lists.exclusive_hides`.
 - A profile's buttons wrap onto the next line when the window is narrow instead of being
   squeezed until their words are cut.
 - The language of a post: a list in the post window (each language by its own name), the

@@ -60,6 +60,8 @@ class ConfigTest(TmpDir):
         self.assertEqual((cfg["ui"]["esc"], len(warns)), ("curtain", 1))
         cfg, _ = config.validate({"ui": {"esc_hides": False}})
         self.assertEqual(cfg["ui"]["esc"], "off")
+        cfg, _ = config.validate({"lists": {"exclusive_hides": False}})
+        self.assertEqual(cfg["lists"]["hide_members"], "off")
         with self.assertRaises(config.ConfigError):
             config.validate({"lanes": {"enabled": ["people", "tiktok"]}})
         with self.assertRaises(config.ConfigError):
@@ -467,7 +469,7 @@ class CoreTest(TmpDir):
         core.mark_activity_seen()
         self.assertEqual(core.activity_unread(), 0)
 
-    def test_lists_are_lanes_and_exclusive_hides(self):
+    def test_lists_are_lanes_and_members_leave_general_lanes(self):
         core, w = self.make()
         w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}
         core.connect().result()
@@ -485,7 +487,19 @@ class CoreTest(TmpDir):
         x = core.create_list("Друзья", add="B").result()
         self.assertIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lists_of("B"), {x["id"]})
-        self.assertIn("010", [st["id"] for _, st in core.lane_entries("people")])  # not exclusive
+        # in any list (lists.hide_members = "all"): gone from Home too, read in the list
+        self.assertEqual(core.lane_entries("people"), [])
+        core.poll_once()  # the new list's timeline comes with the next poll
+        self.assertEqual([st["id"] for _, st in core.lane_entries(f"list:{x['id']}")], ["010"])
+        core.cfg["lists"]["hide_members"] = "exclusive"  # only exclusive lists hide
+        core._lists_version += 1
+        self.assertIn("010", [st["id"] for _, st in core.lane_entries("people")])
+        core.cfg["lists"]["hide_members"] = "all"
+        core.cfg["lists"]["hide_in"] = ["bots"]  # hidden only where asked
+        core._lists_version += 1
+        self.assertIn("010", [st["id"] for _, st in core.lane_entries("people")])
+        core.cfg["lists"]["hide_in"] = ["people", "bots", "global", "local"]
+        core._lists_version += 1
         core.set_in_list("L1", "N", False).result()
         self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
         core.delete_list(x["id"]).result()
