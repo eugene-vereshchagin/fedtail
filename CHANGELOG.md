@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 — in progress
+
+- Started.
+
 ## 0.2.0 — 2026-10-16
 
 - Themes `pink`, `nord` and `solarized`.
