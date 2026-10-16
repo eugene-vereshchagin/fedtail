@@ -59,7 +59,7 @@ LANE_ICON = {"people": "system-users", "comments": "mail-replied",
              "bots": "applications-system",
              "mine": "document-edit", "local": "go-home", "global": "applications-internet",
              "requests": "list-add-user", "list": "view-list-details",
-             "activity": "rating"}
+             "activity": "rating", "bookmarks": "bookmarks"}
 
 
 BADGE_KIND = {"comments": "hot", "bots": "quiet", "activity": "quiet"}
@@ -806,6 +806,10 @@ class MainWindow(QMainWindow):
             self.error(_("not_in_cache"))
         elif action == "reply":
             self.compose(st)
+        elif action == "bookmark":
+            on = not real(st).get("bookmarked")
+            self.bridge.call(self.core.bookmark(st, on), ok=lambda _s: self.statusBar().showMessage(
+                _("bookmarked" if on else "unbookmarked"), 4000))
         elif action == "fav":
             self.bridge.call(self.core.favourite(st))
         elif action == "boost":

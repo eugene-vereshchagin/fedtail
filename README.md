@@ -23,8 +23,8 @@ where you came from; a lane remembers where you stopped and never jumps.
 - **Threads are trees.** Indented by depth, comments numbered `/1 /2 …`, the post you came
   from highlighted.
 - **Separate lanes, in sections.** Timelines from the widest down (Federated, Home, Local,
-  Bots), Personal (My posts, Mentions, Replies to me, Subscriptions, Likes & boosts, Follow
-  requests), and your Lists at the bottom.
+  Bots), Personal (My posts, Mentions, Replies to me, Subscriptions, Bookmarks, Likes & boosts,
+  Follow requests), and your Lists at the bottom.
 - **Private by default.** New posts go to followers only; a reply is never more public than
   the post it answers.
 - **Drafts survive.** Text is saved while you type; closing the window loses nothing.

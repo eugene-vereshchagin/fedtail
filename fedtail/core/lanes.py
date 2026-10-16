@@ -48,6 +48,10 @@ def _other_mentions(st, ctx):
     return ctx.mentions_all or not is_comment_to_me(real(st), ctx.me_id)
 
 
+def _bookmarked(st, ctx):
+    return real(st).get("bookmarked", True)  # un-bookmarked here or elsewhere: gone
+
+
 def _subs(st, ctx):
     # replies to me are already in "comments"; here goes the rest of the talk
     return ctx.subs_replies_to_me or not is_comment_to_me(real(st), ctx.me_id)
@@ -58,6 +62,7 @@ LANES = {
     "comments": Lane("comments", "mentions", _comments, by_status_time=True),
     "mentions": Lane("mentions", "mentions", _other_mentions, by_status_time=True),
     "subs": Lane("subs", "subs", _subs, by_status_time=True),
+    "bookmarks": Lane("bookmarks", "bookmarks", _bookmarked, lazy=True),
     "bots": Lane("bots", "home", _bots),
     "mine": Lane("mine", "mine", _all),
     "local": Lane("local", "local", _all, lazy=True),
@@ -71,7 +76,8 @@ LANES = {
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
     ("standard", ["global", "people", "local", "bots"]),        # from the widest down
-    ("personal", ["mine", "mentions", "comments", "subs", "activity", "requests"]),
+    ("personal", ["mine", "mentions", "comments", "subs", "bookmarks", "activity",
+                  "requests"]),
     ("lists", []),
 ]
 

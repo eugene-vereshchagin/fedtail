@@ -29,8 +29,23 @@ def _notification_entry(n):
     return n["id"], st, n.get("created_at", "")
 
 
+class _Cursor:
+    """A stream that pages by the Link header: "older" continues from where the
+    previous page ended, whatever the oldest stored item is."""
+
+    def __init__(self, fetch, attr):
+        self.fetch_page, self.attr, self.next = fetch, attr, None
+
+    def __call__(self, limit=40, max_id=None, min_id=None):
+        page = self.fetch_page(limit=limit, max_id=self.next if max_id else None)
+        self.next = getattr(self.fetch_page.__self__, self.attr, None)
+        return page
+
+
 def make_sources(api, me_id):
     return {
+        "bookmarks": Source("bookmarks", _Cursor(api.bookmarks, "bookmarks_next"),
+                            _status_entry),
         "home": Source("home", api.home, _status_entry),
         "mentions": Source("mentions", api.mentions, _notification_entry),
         "mine": Source("mine", lambda **kw: api.account_statuses(me_id, **kw), _status_entry),

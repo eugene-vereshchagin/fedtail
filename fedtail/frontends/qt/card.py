@@ -478,6 +478,8 @@ class PostRow(QWidget):
         if self.ctx.fill_list_menu is not None and author["id"] != self.ctx.me_id:
             lists = menu.addMenu(_("add_to_list"))
             lists.aboutToShow.connect(lambda m=lists, a=author: self.ctx.fill_list_menu(m, a))
+        menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
+                       lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
         if self.ctx.subscribed is not None:
             menu.addSeparator()
             on = self.ctx.subscribed(st)

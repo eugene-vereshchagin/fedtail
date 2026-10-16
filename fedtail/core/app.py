@@ -26,7 +26,7 @@ from . import auth, counters, lanes, search, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import narrower, real
-from .store import Store, sort_key
+from .store import Store, now_iso, sort_key
 
 log = logging.getLogger(__name__)
 
@@ -854,6 +854,22 @@ class Core:
         s = real(status)
         return self.submit(lambda: self._update(self.api.favourite(s["id"],
                                                                    not s.get("favourited"))))
+
+    def bookmark(self, status, on=None):
+        """Into the bookmarks or out (on=None: toggle). The Bookmarks lane follows
+        at once, without waiting for the server's list."""
+        s = real(status)
+        on = (not s.get("bookmarked")) if on is None else on
+
+        def job():
+            st = self.api.bookmark(s["id"], on) or dict(s, bookmarked=on)
+            self.store.put_statuses([st])
+            if on:
+                self.store.put_items("bookmarks", [(st["id"], st, now_iso())])
+            self.emit("status_updated", st)
+            self.emit("lanes_updated", {"bookmarks": []})
+            return st
+        return self.submit(job)
 
     def boost(self, status):
         s = real(status)

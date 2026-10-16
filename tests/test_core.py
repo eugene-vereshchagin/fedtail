@@ -289,6 +289,22 @@ class CoreTest(TmpDir):
         self.assertEqual(groups["personal"][:3], ["mine", "mentions", "comments"])
         self.assertEqual([g for g, _n in lanes.grouped(core.lanes)][-1], "lists")
 
+    def test_bookmarks(self):
+        core, w = self.make()
+        st = w.add(status("095", BOB), home=True)
+        w.add(status("096", BOB, minute=5, text="old one"), home=True)
+        w.statuses["096"]["bookmarked"] = True  # bookmarked from another client
+        core.connect().result()
+        core.poll_once()
+        core.bookmark(st).result()  # here: shows at once
+        self.assertEqual([s["id"] for _, s in core.lane_entries("bookmarks")], ["095"])
+        core.set_active_lane("bookmarks")
+        core.poll_once()  # the server's list joins in
+        self.assertEqual(sorted(s["id"] for _, s in core.lane_entries("bookmarks")),
+                         ["095", "096"])
+        core.bookmark(core.store.get_status("095")).result()  # toggled off
+        self.assertEqual([s["id"] for _, s in core.lane_entries("bookmarks")], ["096"])
+
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

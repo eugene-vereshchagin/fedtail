@@ -2,6 +2,8 @@
 
 ## 0.3.0 — in progress
 
+- Bookmarks, like on Point: "Bookmark" in a post's ⋯ menu, a Bookmarks lane (the server's
+  bookmarks; a post bookmarked here shows up at once).
 - Notifications: no longer all silent while the window is active — only the lane on screen
   stays quiet; every decision and notify-send's answer go to the log; a missing notify-send
   is said out loud (with the package to install); Debugging → Send a test notification.

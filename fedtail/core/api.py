@@ -337,6 +337,16 @@ class Api:
     def favourite(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'favourite' if on else 'unfavourite'}")
 
+    def bookmark(self, sid, on=True):
+        return self.post(f"/api/v1/statuses/{sid}/{'bookmark' if on else 'unbookmark'}")
+
+    def bookmarks(self, limit=40, max_id=None, min_id=None):
+        """Bookmarks page by the Link header (their ids aren't status ids), so
+        max_id here is the cursor from the previous page."""
+        items, nxt = self.get_page("/api/v1/bookmarks", self._page(limit, max_id))
+        self.bookmarks_next = nxt
+        return items
+
     def reblog(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'reblog' if on else 'unreblog'}")
 

@@ -44,7 +44,7 @@ DEFAULTS = {
     "read": {"mark_read": "on_scroll"},
     "lanes": {
         "enabled": ["global", "people", "local", "bots", "mine", "mentions", "comments", "subs",
-                    "activity", "requests"],
+                    "bookmarks", "activity", "requests"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,
@@ -105,8 +105,8 @@ CHOICES = {
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
     ("debug", "level"): {"debug", "info", "warning"},
 }
-LANE_NAMES = {"people", "comments", "mentions", "subs", "activity", "bots", "mine", "local",
-              "global", "requests"}
+LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",
+              "local", "global", "requests"}
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {

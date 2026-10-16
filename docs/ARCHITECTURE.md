@@ -239,6 +239,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 | `comments` ("replies to me") | mentions | replies to my posts/comments |
 | `mentions` | mentions | other mentions (`lanes.mentions_all` → all) |
 | `subs` ("Subscriptions") | subs (local) | new comments in followed threads, minus replies to me |
+| `bookmarks` | bookmarks | still bookmarked; *lazy*; paged by the Link header (`sources._Cursor`); `core.bookmark()` adds/removes at once |
 | `activity` ("Likes & boosts") | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
 | `bots` | home | bots, not in an exclusive list |
 | `mine` | mine | everything |
@@ -252,7 +253,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   only (`sources.refresh_top`; a hole is fine there), no unread marks or badges.
 * **Sidebar sections** — `lanes.GROUPS` / `lanes.grouped()`: Timelines, from the
   widest down (global, people, local, bots), Personal (mine, mentions, comments,
-  subs, activity, requests), Lists at the bottom; the configured order holds inside
+  subs, bookmarks, activity, requests), Lists at the bottom; the configured order holds inside
   a section
   (`ui.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
   builds it (again on `lists_changed`); Alt+1…9 follow `lane_order`, not rows.

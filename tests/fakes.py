@@ -234,6 +234,16 @@ class FakeApi:
         self.w.statuses[sid] = st
         return st
 
+    def bookmark(self, sid, on=True):
+        st = dict(self.w.statuses[sid], bookmarked=on)
+        self.w.statuses[sid] = st
+        return st
+
+    def bookmarks(self, limit=40, max_id=None, min_id=None):
+        marked = [s for s in self.w.statuses.values() if s.get("bookmarked")]
+        self.bookmarks_next = None
+        return sorted(marked, key=_sid, reverse=True)[:limit]
+
     def reblog(self, sid, on=True):
         st = dict(self.w.statuses[sid], reblogged=on)
         self.w.statuses[sid] = st
