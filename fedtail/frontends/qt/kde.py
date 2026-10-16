@@ -30,6 +30,9 @@ BREEZE = {
 }
 
 
+DEFAULT_FONT = "Noto Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+
+
 def in_kde():
     return sys.platform.startswith("linux") and \
         "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
@@ -102,7 +105,9 @@ def adopt(app):
     app.setStyle("Fusion")
     app.setPalette(palette(cp))
     done = [f"style {style} → Fusion", "KDE colours"]
-    font = cp.get("General", "font", fallback="")
+    # KDE writes the font into kdeglobals only once it has been changed; until then
+    # it is Plasma's own default — not the bare "Sans Serif 9" Qt would pick
+    font = cp.get("General", "font", fallback="") or DEFAULT_FONT
     if font:
         f = QFont()
         if f.fromString(font):

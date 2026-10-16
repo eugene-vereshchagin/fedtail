@@ -214,6 +214,8 @@ class MainWindow(QMainWindow):
             self.restoreGeometry(bytes.fromhex(geo))
         else:
             self.resize(1150, 850)
+        log.info("window %dx%d at %d,%d (%s)", self.width(), self.height(), self.x(), self.y(),
+                 "restored" if geo else "first time")
 
     # ---- layout -------------------------------------------------------------------
     def _build(self):

@@ -2,6 +2,8 @@
 
 ## 0.7.0 — in progress
 
+- The one-file build in KDE uses Plasma's default font (Noto Sans 10) when `kdeglobals` names
+  none — KDE writes it there only once it's been changed — instead of Qt's bare "Sans Serif 9".
 - The Linux one-file build brings all of Qt's platform plugins, Wayland's included: without
   them Plasma on Wayland ran it through XWayland, unscaled — tiny letters and a window of
   the wrong size.

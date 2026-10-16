@@ -46,6 +46,17 @@ class KdeGlobalsTest(unittest.TestCase):
         self.assertEqual(pal.color(R.Window).getRgb()[:3], (239, 240, 241))  # Breeze default
         self.assertEqual(self.app.font().pointSize(), 11)
 
+    def test_plasma_font_when_kdeglobals_has_none(self):
+        from fedtail.frontends.qt import kde
+        Path(self._tmp.name, "kdeglobals").write_text("[Icons]\nTheme=breeze\n", "utf-8")
+        keep_font, keep_style = self.app.font(), self.app.style().name()
+        self.addCleanup(lambda: (self.app.setFont(keep_font), self.app.setStyle(keep_style)))
+        env = {"XDG_CONFIG_HOME": self._tmp.name, "XDG_CURRENT_DESKTOP": "KDE"}
+        with mock.patch.dict(os.environ, env), mock.patch.object(kde.sys, "platform", "linux"):
+            done = kde.adopt(self.app)
+        self.assertIn("10pt", done)
+        self.assertEqual(self.app.font().pointSize(), 10)
+
     def test_nothing_outside_kde(self):
         from fedtail.frontends.qt import kde
         with mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "GNOME"}):
