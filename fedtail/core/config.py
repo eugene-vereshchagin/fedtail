@@ -55,6 +55,7 @@ DEFAULTS = {
         "remote_profiles": True,
         "remote_posts": 20,
         "remote_people": True,
+        "sensitive_media": 'hide',
     },
     "read": {
         "mark_read": "on_scroll",
@@ -118,6 +119,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},

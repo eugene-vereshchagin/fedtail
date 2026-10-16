@@ -1254,7 +1254,7 @@ class Core:
         return default
 
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
-             language=None):
+             language=None, sensitive=False, poll=None):
         """media: [(path, description)]. language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
@@ -1262,8 +1262,13 @@ class Core:
 
         def job():
             ids = [self.api.upload_media(p, d)["id"] for p, d in media]
+            extra = {"language": lang} if lang else {}
+            if sensitive and ids:
+                extra["sensitive"] = True
+            if poll and not ids:  # a server takes either pictures or a poll
+                extra["poll"] = poll
             st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
-                                      **({"language": lang} if lang else {}))
+                                      **extra)
             log.debug("posted %s", st.get("id"))
             # the post is out; nothing below may turn that into a reported failure
             try:

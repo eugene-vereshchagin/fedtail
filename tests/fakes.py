@@ -227,8 +227,9 @@ class FakeApi:
         return {"id": "m1", "url": "https://example.test/m1.png"}
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
-                    media_ids=(), markdown=False, language=""):
+                    media_ids=(), markdown=False, language="", sensitive=False, poll=None):
         self.w.languages.append(language)
+        self.w.extras.append({"sensitive": sensitive, "poll": poll})
         self.w.seq += 1
         reply_acc = self.w.statuses[in_reply_to_id]["account"]["id"] if in_reply_to_id else None
         st = status(str(self.w.seq), ME, in_reply_to_id, reply_acc, minute=59, vis=visibility,
@@ -353,6 +354,7 @@ class World:
         self.history = {}
         self.profile_updates = []
         self.markers = {}  # timeline -> last_read_id, as another client left it
+        self.extras = []  # sensitive / poll of each post
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())

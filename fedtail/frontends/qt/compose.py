@@ -8,6 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QEvent, QSize, QStringListModel, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QCompleter,
     QDialog,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from ...core.hashtags import flat_tags
@@ -151,6 +153,7 @@ class Compose(QDialog):
         self.media.setToolTip(_("media_tip"))
         self.media.itemDoubleClicked.connect(self.edit_description)
         lay.addWidget(self.media)
+        self._build_poll(lay)
 
         row = QHBoxLayout()
         self.vis = QComboBox()
@@ -164,6 +167,7 @@ class Compose(QDialog):
         self._fill_languages()
         row.addWidget(self.lang)
         add = QPushButton(QIcon.fromTheme("mail-attachment"), _("attach"))
+        self.attach_btn = add
         add.setObjectName("tool")
         add.clicked.connect(self.attach)
         row.addWidget(add)
@@ -177,6 +181,20 @@ class Compose(QDialog):
         self.cw_btn.setToolTip(_("cw_add_tip"))
         self.cw_btn.toggled.connect(self._toggle_cw)
         row.addWidget(self.cw_btn)
+        self.poll_btn = QPushButton("📊 " + _("poll_add"))
+        self.poll_btn.setObjectName("tool")
+        self.poll_btn.setCheckable(True)
+        self.poll_btn.setToolTip(_("poll_add_tip"))
+        self.poll_btn.toggled.connect(self._toggle_poll)
+        self.poll_btn.setVisible(not self.edit)
+        row.addWidget(self.poll_btn)
+        self.sensitive_btn = QPushButton("🔞 " + _("sensitive_mark"))
+        self.sensitive_btn.setObjectName("tool")
+        self.sensitive_btn.setCheckable(True)
+        self.sensitive_btn.setToolTip(_("sensitive_mark_tip"))
+        self.sensitive_btn.setVisible(False)
+        self.sensitive_btn.toggled.connect(lambda _on: self._changed())
+        row.addWidget(self.sensitive_btn)
         rm = QPushButton(_("detach"))
         rm.setObjectName("tool")
         self.detach_btn = rm
@@ -268,6 +286,16 @@ class Compose(QDialog):
             for path, desc in d.get("media", []):
                 if Path(path).exists():
                     self._add_media(path, desc)
+            self.sensitive_btn.setChecked(bool(d.get("sensitive")))
+            poll = d.get("poll")
+            if poll:
+                self.poll_btn.setChecked(True)
+                for e, text in zip(self.poll_options, poll.get("options", []), strict=False):
+                    e.setText(text)
+                i = self.poll_time.findData(poll.get("expires_in"))
+                if i >= 0:
+                    self.poll_time.setCurrentIndex(i)
+                self.poll_multiple.setChecked(bool(poll.get("multiple")))
             self.hint.setText(_("draft_restored"))
         else:
             if self.start_text:
@@ -313,10 +341,70 @@ class Compose(QDialog):
     def _snapshot(self):
         return {"text": self.text.toPlainText(), "cw": self.cw.text(),
                 "visibility": self.vis.currentData(), "media": self._media_list(),
-                "language": self.lang.currentData()}
+                "language": self.lang.currentData(),
+                "sensitive": self.sensitive_btn.isChecked(), "poll": self.poll_data()}
+
+    # ---- a poll -------------------------------------------------------------------
+    POLL_TIMES = [(300, "poll_5m"), (1800, "poll_30m"), (3600, "poll_1h"), (21600, "poll_6h"),
+                  (86400, "poll_1d"), (259200, "poll_3d"), (604800, "poll_7d")]
+
+    def _build_poll(self, lay):
+        self.poll_box = QWidget()
+        self.poll_box.setObjectName("pollEditor")
+        v = QVBoxLayout(self.poll_box)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(4)
+        self.poll_options = []
+        for i in range(max(2, self.core.caps.max_poll_options)):
+            e = QLineEdit()
+            e.setPlaceholderText(_("poll_option", n=i + 1))
+            e.textChanged.connect(lambda _t: self._changed())
+            v.addWidget(e)
+            self.poll_options.append(e)
+        h = QHBoxLayout()
+        self.poll_time = QComboBox()
+        for secs, key in self.POLL_TIMES:
+            self.poll_time.addItem(_(key), secs)
+        self.poll_time.setCurrentIndex(4)  # a day
+        self.poll_time.currentIndexChanged.connect(lambda _i: self._changed())
+        h.addWidget(self.poll_time)
+        self.poll_multiple = QCheckBox(_("poll_several"))
+        self.poll_multiple.toggled.connect(lambda _on: self._changed())
+        h.addWidget(self.poll_multiple)
+        h.addStretch(1)
+        v.addLayout(h)
+        self.poll_box.setVisible(False)
+        lay.addWidget(self.poll_box)
+
+    def _toggle_poll(self, on):
+        self.poll_box.setVisible(on)
+        if on:
+            self.poll_options[0].setFocus()
+        self._media_or_poll()
+        self._changed()
+
+    def _media_or_poll(self):
+        """A server takes pictures or a poll, not both: one closes the other's door."""
+        if not hasattr(self, "sensitive_btn"):
+            return  # still being built
+        has_media = bool(self._media_list())
+        self.poll_btn.setEnabled(not has_media and not self.edit)
+        self.sensitive_btn.setVisible(has_media)
+        if getattr(self, "attach_btn", None) is not None:
+            self.attach_btn.setEnabled(not self.poll_btn.isChecked() and not self.edit)
+
+    def poll_data(self):
+        if not getattr(self, "poll_btn", None) or not self.poll_btn.isChecked():
+            return None
+        options = [e.text().strip() for e in self.poll_options if e.text().strip()]
+        if len(options) < 2:
+            return None
+        return {"options": options, "expires_in": self.poll_time.currentData(),
+                "multiple": self.poll_multiple.isChecked()}
 
     def _changed(self):
         self._count()
+        self._media_or_poll()
         self._autosave.start()
 
     # ---- completing #tags and @people -----------------------------------------------
@@ -489,6 +577,7 @@ class Compose(QDialog):
         it.setData(Qt.ItemDataRole.UserRole + 1, desc)
         self._label_item(it)
         self.media.addItem(it)
+        self._media_or_poll()
 
     def _label_item(self, it):
         name = Path(it.data(Qt.ItemDataRole.UserRole)).name
@@ -558,7 +647,8 @@ class Compose(QDialog):
         fut = self.core.post(text, self.vis.currentData(),
                              self.reply_to["id"] if self.reply_to else None,
                              self.cw.text().strip(), media, draft_key=self.key,
-                             language=self.lang.currentData())
+                             language=self.lang.currentData(),
+                             sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data())
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _sent(self, st):

@@ -2,6 +2,11 @@
 
 ## 0.8.0 — in progress
 
+- Pictures the author marked sensitive (without a content warning) stay covered until
+  clicked — not even downloaded before that (`feed.sensitive_media = "show"` to see them at
+  once). Your own pictures can be marked so: "🔞 Sensitive" in the post panel.
+- Polls in the post panel: "📊 Poll" — up to as many choices as the server allows, how long
+  it runs, one choice or several; a draft keeps it. A post has either pictures or a poll.
 - "Direct" lane: private messages to you (posts only the mentioned can see), in Personal and
   notified about by default; they no longer double up in Replies to me and Mentions
   (`lanes.direct_apart = false` to keep them there too). A config written earlier lists its

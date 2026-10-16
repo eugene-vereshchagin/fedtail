@@ -174,6 +174,22 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
         self.assertEqual(self.world.languages[-1], "ka")
 
+        # a poll: choices, how long, one or several
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.text.setPlainText("что выбрать?")
+        dlg.poll_btn.setChecked(True)
+        self.assertTrue(dlg.poll_box.isVisible())
+        self.assertFalse(dlg.attach_btn.isEnabled())  # pictures or a poll
+        dlg.poll_options[0].setText("GoToSocial")
+        dlg.poll_options[1].setText("Mastodon")
+        dlg.poll_multiple.setChecked(True)
+        dlg.send()
+        self.pump(until=lambda: gone(dlg))
+        self.assertEqual(self.world.extras[-1]["poll"],
+                         {"options": ["GoToSocial", "Mastodon"], "expires_in": 86400,
+                          "multiple": True})
+
         # @names and #tags complete: the people seen in the lanes, then the server's
         dlg = Compose(self.win)
         dlg.show()
@@ -788,6 +804,29 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("RE:", texts(row))
         self.assertNotIn("исходная новость", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "card"
+
+    def test_sensitive_media_covered(self):
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("095", BOB, minute=1)
+        st["sensitive"] = True
+        st["media_attachments"] = [{"type": "image", "url": "https://x.example/a.png",
+                                    "preview_url": "https://x.example/a_s.png",
+                                    "meta": {"small": {"width": 400, "height": 300}}}]
+        asked = []
+        self.win.images.get = lambda url, cb, *a, **k: asked.append(url)
+        row = PostRow(CardSpec(key="095", status=st), self.win.ctx)
+        covers = [w for w in row.findChildren(QLabel) if w.text().startswith("⚠")]
+        self.assertEqual(len(covers), 1)
+        self.assertNotIn("https://x.example/a_s.png", asked)  # not even downloaded
+        covers[0].clicked.emit()
+        self.assertIn("https://x.example/a_s.png", asked)
+        self.win.ctx.cfg["feed"]["sensitive_media"] = "show"
+        asked.clear()
+        PostRow(CardSpec(key="095", status=st), self.win.ctx)
+        self.assertIn("https://x.example/a_s.png", asked)
+        self.win.ctx.cfg["feed"]["sensitive_media"] = "hide"
 
     def test_custom_emoji(self):
         """:blobcat: in a post and a name: a picture once it's downloaded."""

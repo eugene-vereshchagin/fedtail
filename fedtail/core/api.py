@@ -38,6 +38,7 @@ class Capabilities:
     max_characters: int = 500
     max_media: int = 4
     markdown: bool = False
+    max_poll_options: int = 4
 
 
 def capabilities_from_instance(inst):
@@ -52,6 +53,7 @@ def capabilities_from_instance(inst):
         software=software,
         max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or 500),
         max_media=int(st.get("max_media_attachments") or 4),
+        max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
         markdown=md,
     )
 
@@ -383,8 +385,14 @@ class Api:
         return media
 
     def post_status(self, text, visibility="private", in_reply_to_id=None,
-                    spoiler_text="", media_ids=(), markdown=False, language=""):
+                    spoiler_text="", media_ids=(), markdown=False, language="",
+                    sensitive=False, poll=None):
+        """poll: {"options": [...], "expires_in": seconds, "multiple": bool}."""
         body = {"status": text, "visibility": visibility}
+        if sensitive:
+            body["sensitive"] = True
+        if poll:
+            body["poll"] = poll
         if language:
             body["language"] = language
         if markdown:

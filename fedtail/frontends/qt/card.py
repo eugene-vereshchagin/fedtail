@@ -704,8 +704,26 @@ class PostRow(QWidget):
         big_h = self.ctx.cfg["ui"]["image_height"]
         big_w = max(200, (self.ctx.cfg["ui"]["max_width"] or 900) - 60)
         pos = 0
+        # marked sensitive by the author, with no warning text to hide behind: covered
+        # until clicked (feed.sensitive_media); under a CW the whole post is folded anyway
+        covered = bool(st.get("sensitive")) and not st.get("spoiler_text") and \
+            not getattr(self, "media_revealed", False) and \
+            self.ctx.cfg["feed"].get("sensitive_media", "hide") == "hide"
         for m in atts:
             full = m.get("url") or m.get("remote_url") or ""
+            if m in visual and covered:
+                lab = ClickLabel("⚠ " + _("sensitive_media") + "\n" + _("sensitive_click"))
+                lab.setObjectName("media")
+                lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                lab.setWordWrap(True)
+                lab.setCursor(Qt.CursorShape.PointingHandCursor)
+                w, h = _dims(m)
+                lab.setFixedSize(*_thumb_box(w, h, *((big_h, big_w) if single else (150, 230))))
+                lab.setToolTip(m.get("description") or "")
+                lab.clicked.connect(self._reveal_media)
+                grid.addWidget(lab, pos // 3, pos % 3)
+                pos += 1
+                continue
             if m in visual:
                 cell = (pos // 3, pos % 3)
                 pos += 1
@@ -836,6 +854,10 @@ class PostRow(QWidget):
         col.addStretch(1)
         h.addLayout(col, 1)
         return box
+
+    def _reveal_media(self):
+        self.media_revealed = True
+        self._build()
 
     def _media_menu(self, lab, m, pos):
         menu = QMenu(lab)
