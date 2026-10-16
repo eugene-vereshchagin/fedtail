@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -719,12 +720,18 @@ class AccountWidget(_PagedTab):
         self.mine = bool(self.core.me) and acc_id == self.core.me["id"]
         if self.mine:
             self.header.add(_button(_("edit_profile"), win.edit_profile, icon="document-edit"))
+        # who this is: a block of its own, not one more post — the banner, a tinted
+        # card with an accent edge, and a "Posts" heading under it
         self.info = QFrame()
-        self.info.setObjectName("card")
+        self.info.setObjectName("profileCard")
+        self.info.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.view.header.addWidget(self.info)
         self._info_layout = QVBoxLayout(self.info)
-        self._info_layout.setContentsMargins(18, 14, 18, 14)
-        self._info_layout.setSpacing(8)
+        self._info_layout.setContentsMargins(20, 16, 20, 18)
+        self._info_layout.setSpacing(10)
+        posts = QLabel(_("profile_posts"))
+        posts.setObjectName("sectionTitle")
+        self.view.header.addWidget(posts)
         self.relation = {}
         self.reload_account()
         self.more()
@@ -768,6 +775,27 @@ class AccountWidget(_PagedTab):
                 item.widget().deleteLater()
             elif item.layout():
                 _clear(item.layout())
+        header = acc.get("header_static") or acc.get("header") or ""
+        if header and not header.endswith("/missing.png"):
+            banner = QLabel()
+            banner.setObjectName("profileBanner")
+            banner.setFixedHeight(120)
+            banner.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+
+            def got(pm, w=banner):
+                try:
+                    width = max(w.width(), 400)
+                    scaled = pm.scaled(width, 120, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                       Qt.TransformationMode.SmoothTransformation)
+                    x = max(0, (scaled.width() - width) // 2)
+                    w.setPixmap(scaled.copy(x, max(0, (scaled.height() - 120) // 2), width, 120))
+                except RuntimeError:  # the card was rebuilt meanwhile
+                    pass
+            self.win.images.get(header, got)
+            lay.addWidget(banner)
+        name = QLabel(esc(acc.get("display_name") or acc["username"]))
+        name.setObjectName("profileName")
+        lay.addWidget(name)
         top = QHBoxLayout()
         top.setSpacing(14)
         avatar = QLabel()

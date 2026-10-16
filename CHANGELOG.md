@@ -2,6 +2,8 @@
 
 ## 0.3.0 — in progress
 
+- A profile's card no longer looks like one more post: a tinted block with an accent edge,
+  the header picture as a banner, the name in large type, and a "Posts" heading under it.
 - The debugging mode can be turned off: `debug.mode` = `auto` (on before 1.0 and in
   development builds, off in releases), `on` or `off`. Off: warnings and errors only, a few
   MB in the profile's data folder, no stats, no freeze watchdog; crash traces stay.

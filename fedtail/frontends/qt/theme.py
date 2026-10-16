@@ -207,6 +207,16 @@ QFrame#card[focus="true"] {{ {card_focus} }}
 QFrame#card[found="true"] {{ {card_found} }}
 QLabel#media {{ background: {k('quiet')}; color: {k('muted')}; border-radius: {r}px; }}
 QLabel#profileHeader {{ background: {k('quiet')}; color: {k('muted')}; border-radius: {r}px; }}
+QFrame#profileCard {{ background: {_alpha(self.c['accent'], 22)};
+    border: 1px solid {_alpha(self.c['accent'], 90)}; border-left: 4px solid {k('accent')};
+    border-radius: {r}px; margin-bottom: 4px; }}
+QFrame#profileCard[focus="true"] {{ border: 2px solid {k('accent')};
+    border-left: 4px solid {k('accent')}; }}
+QLabel#profileBanner {{ border-radius: {r}px; background: {k('quiet')}; }}
+QLabel#profileName {{ font-size: {round(base_pt * 1.35, 1)}pt; font-weight: 700;
+    background: transparent; }}
+QLabel#sectionTitle {{ color: {k('muted')}; font-weight: 600; padding: 10px 4px 2px 4px;
+    border-bottom: 1px solid {k('card_border')}; }}
 QWidget#findBar {{ background: {k('window')}; border-top: 1px solid {k('header_border')}; }}
 QLabel#name {{ font-weight: 700; }}
 QLabel#meta, QLabel#boost, QLabel#muted {{ color: {k('muted')}; }}

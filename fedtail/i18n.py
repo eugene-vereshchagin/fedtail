@@ -43,6 +43,7 @@ _STRINGS = {
         "and_more": "и ещё {n}",
         "group_fold_tip": "Свернуть или развернуть раздел (непрочитанное останется числом)",
         "viewer_save": "Сохранить",
+        "profile_posts": "Посты",
         "viewer_original_coming": "это уменьшенная, оригинал загружается…",
         "viewer_format": "Оригинал скачан, но показать его Qt не умеет ({kind}). "
                          "S — сохранить, O — в браузере; для webp/avif поставь "
@@ -337,6 +338,7 @@ _STRINGS = {
         "and_more": "and {n} more",
         "group_fold_tip": "Fold or unfold the section (unread stays as a number)",
         "viewer_save": "Save",
+        "profile_posts": "Posts",
         "viewer_original_coming": "a smaller copy, the original is loading…",
         "viewer_format": "The original is here, but Qt can't show it ({kind}). "
                          "S — save, O — browser; for webp/avif install "
