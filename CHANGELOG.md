@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.2.0 — in progress
+## 0.2.0 — 2026-10-16
 
+- Themes `pink`, `nord` and `solarized`.
 - Diagnostics on by default until 1.0: a rotating log with every request and its timing,
   polls, errors with tracebacks and stats (memory, CPU, threads, caches, widgets) every few
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
@@ -29,22 +30,6 @@
 - Save pictures: `S` in the viewer or a right click on a picture; to the desktop's Downloads
   folder (`ui.save_dir`), under the file's own name, never overwriting.
 - Fixed: "Failed to disconnect" warning on every card rebuild.
-
-## 0.1.0
-
-- Core without GUI: profiles, TOML config with validation, token file, SQLite state.
-- Lanes: people, replies to me, other mentions, bots, my posts, local, follow requests.
-- Forward catch-up with `min_id`: reading stays chronological, no holes.
-- Read marks per post; start at the first unread; new posts never move the view.
-- Reply context strip above every reply; threads as trees with `/N` numbering.
-- Composer: drafts saved while typing, Markdown when the server supports it,
-  attachments with alt text, reply visibility never wider than the parent.
-- Qt frontend: tray, notifications.
-- New look (from the mockup): sidebar with account, Write button and unread badges; lane
-  header with "N new", All | Posts only; cards with round avatars, short `#ids`, quoted reply
-  context, flat action buttons; "new below" divider; thread rails and `/N` numbers.
-- Themes are files: `system` (follows KDE light/dark) and `terminal`; your own in
-  `~/.config/fedtail/themes/`, with inheritance.
 - Notifications per lane with "Open" to the thread; privacy levels `full` / `sender` / `count`.
 - App icon; `--install-desktop` adds a menu entry with it.
 - Pictures by drag and drop (compose or main window) and `Ctrl+V`; thumbnails in compose;
@@ -67,5 +52,21 @@
 - The last `Esc` takes the window off the screen at once (to the tray) — `ui.esc_hides`.
 - `Ctrl+F` → "Deeper": search everything stored for the lane, the lane grows down to the match.
 - `Ctrl+F`: find in the open lane, thread or profile; `F3` / `Shift+F3`, "3 of 12".
+
+## 0.1.0 — 2026-10-15
+
+- Core without GUI: profiles, TOML config with validation, token file, SQLite state.
+- Lanes: people, replies to me, other mentions, bots, my posts, local, follow requests.
+- Forward catch-up with `min_id`: reading stays chronological, no holes.
+- Read marks per post; start at the first unread; new posts never move the view.
+- Reply context strip above every reply; threads as trees with `/N` numbering.
+- Composer: drafts saved while typing, Markdown when the server supports it,
+  attachments with alt text, reply visibility never wider than the parent.
+- Qt frontend: tray, notifications.
+- New look (from the mockup): sidebar with account, Write button and unread badges; lane
+  header with "N new", All | Posts only; cards with round avatars, short `#ids`, quoted reply
+  context, flat action buttons; "new below" divider; thread rails and `/N` numbers.
+- Themes are files: `system` (follows KDE light/dark) and `terminal`; your own in
+  `~/.config/fedtail/themes/`, with inheritance.
 - Image viewer over the main window; "you replied" under comments; posts-only toggle;
   `--update-config`; Russian plural forms.

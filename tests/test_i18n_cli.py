@@ -38,6 +38,14 @@ class I18nTest(unittest.TestCase):
         self.assertEqual(i18n._("thread_info", n=1), "post and 1 reply")
 
 
+class VersionTest(unittest.TestCase):
+    def test_compose(self):
+        from fedtail.version import compose
+        self.assertEqual(compose("0.2.0", 0, "abc"), "0.2.0")
+        self.assertEqual(compose("0.3.0.dev0", 7, "abc"), "0.3.0.dev7+gabc")
+        self.assertEqual(compose("0.2.0", 3, "abc"), "0.2.0+3.gabc")  # past it, not bumped
+
+
 class CliTest(unittest.TestCase):
     def test_version(self):
         out = subprocess.run([sys.executable, "-m", "fedtail", "--version"], cwd=ROOT,

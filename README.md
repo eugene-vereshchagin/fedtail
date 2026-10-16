@@ -102,6 +102,9 @@ The look is a theme file. Built in:
 - `point` — point.im as it is today: a white page, posts divided by thin lines, Open Sans.
 - `night` — dark, with its own colours, on any desktop.
 - `contrast` — for weak eyes: big type, black on white, firm lines.
+- `pink` — powder rose and berry links, soft corners, little flowers.
+- `nord` — the arctic palette: cold blue-grey, frosty links, dark.
+- `solarized` — Solarized light: warm paper, blue links.
 - `paper` — warm paper and a book face, for long threads.
 
 Pick one in the config: `[ui] theme = "terminal"`. Your own themes go to

@@ -1,0 +1,60 @@
+# fedtail theme: pink — soft rose and powder, berry links, round corners, little
+# flowers where it doesn't hurt. Light and gentle, but every text stays readable.
+name = "Pink"
+inherit = "system"
+
+[font]
+family = "Comfortaa, Nunito, Quicksand, Noto Sans, sans-serif"
+post_scale = 1.08
+
+[colors]
+window = "#fbeff4"
+sidebar = "#f7e1ea"
+sidebar_border = "#f0cfdc"
+selected = "#f4c9da"
+selected_text = "#6b1f43"
+view = "#fff5f9"
+header_border = "#f3d3e0"
+card = "#ffffff"
+card_border = "#f3d3e0"
+card_border_unread = "#e2669b"
+text = "#3d1f2c"
+muted = "#9b6f82"
+link = "#c2185b"
+accent = "#e0457b"
+on_accent = "#ffffff"
+hot = "#d81b60"
+on_hot = "#ffffff"
+quiet = "#f6dbe6"
+on_quiet = "#8a5a6e"
+new_pill = "#ffe0ec"
+on_new_pill = "#a0174f"
+ctx = "#fdeef4"
+ctx_bar = "#f0a6c3"
+focus = "#fff0f6"
+focus_border = "#e889b0"
+myreply = "#f3eaff"
+on_myreply = "#6a3d9a"
+active = "#ffe3ef"
+on_active = "#b0175a"
+separator = "#e0457b"
+rail = "#f1c4d6"
+button = "#ffffff"
+button_border = "#efc6d6"
+dot = "#e0457b"
+
+[shape]
+radius = 18
+button_radius = 14
+avatar = 42
+
+[words]
+compose = "✿ {text}"
+separator = "♡ {text} · {n} ♡"
+
+[icon]
+bg_top = "#ff9cc2"
+bg_bottom = "#d6336c"
+bubble = "#ffffff"
+ink = "#c2185b"
+accent = "#ffc94d"

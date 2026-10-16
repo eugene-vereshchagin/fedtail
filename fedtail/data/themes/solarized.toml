@@ -1,0 +1,54 @@
+# fedtail theme: solarized — Ethan Schoonover's Solarized, light: warm paper
+# base, blue links, the eight accents used sparingly.
+name = "Solarized light"
+inherit = "system"
+
+[font]
+mono = "Source Code Pro, DejaVu Sans Mono, monospace"
+
+[colors]
+window = "#eee8d5"
+sidebar = "#eee8d5"
+sidebar_border = "#e0d9c3"
+selected = "#fdf6e3"
+selected_text = "#073642"
+view = "#fdf6e3"
+header_border = "#e4ddc8"
+card = "#fdf6e3"
+card_border = "#e4ddc8"
+card_border_unread = "#268bd2"
+text = "#586e75"
+muted = "#93a1a1"
+link = "#268bd2"
+accent = "#268bd2"
+on_accent = "#fdf6e3"
+hot = "#cb4b16"
+on_hot = "#fdf6e3"
+quiet = "#eee8d5"
+on_quiet = "#657b83"
+new_pill = "#eee8d5"
+on_new_pill = "#b58900"
+ctx = "#f5efdc"
+ctx_bar = "#93a1a1"
+focus = "#f7f0da"
+focus_border = "#b58900"
+myreply = "#f1f2d9"
+on_myreply = "#859900"
+active = "#f7ecc8"
+on_active = "#b58900"
+separator = "#d33682"
+rail = "#e0d9c3"
+button = "#fdf6e3"
+button_border = "#dcd5bf"
+dot = "#d33682"
+
+[shape]
+radius = 6
+button_radius = 4
+
+[icon]
+bg_top = "#268bd2"
+bg_bottom = "#073642"
+bubble = "#fdf6e3"
+ink = "#073642"
+accent = "#cb4b16"

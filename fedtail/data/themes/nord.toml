@@ -1,0 +1,53 @@
+# fedtail theme: nord — the arctic palette: cold blue-grey, frosty links, warm
+# aurora accents. Dark, calm, its own colours on any desktop.
+name = "Nord"
+inherit = "system"
+
+[colors]
+window = "#2e3440"
+sidebar = "#2b303b"
+sidebar_border = "#3b4252"
+selected = "#434c5e"
+selected_text = "#eceff4"
+view = "#2e3440"
+header_border = "#3b4252"
+card = "#3b4252"
+card_border = "#434c5e"
+card_border_unread = "#88c0d0"
+text = "#e5e9f0"
+muted = "#9aa5b8"
+link = "#88c0d0"
+accent = "#5e81ac"
+on_accent = "#eceff4"
+hot = "#d08770"
+on_hot = "#2e3440"
+quiet = "#3b4252"
+on_quiet = "#9aa5b8"
+new_pill = "#434c5e"
+on_new_pill = "#8fbcbb"
+ctx = "#353c4a"
+ctx_bar = "#4c566a"
+focus = "#3f4859"
+focus_border = "#88c0d0"
+myreply = "#36423d"
+on_myreply = "#a3be8c"
+active = "#4a4536"
+on_active = "#ebcb8b"
+separator = "#88c0d0"
+rail = "#4c566a"
+button = "#3b4252"
+button_border = "#4c566a"
+dot = "#88c0d0"
+
+[shape]
+radius = 8
+button_radius = 6
+icons = false
+lane_icons = false
+
+[icon]
+bg_top = "#5e81ac"
+bg_bottom = "#2e3440"
+bubble = "#eceff4"
+ink = "#3b4252"
+accent = "#88c0d0"

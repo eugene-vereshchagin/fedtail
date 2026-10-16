@@ -1,9 +1,14 @@
-"""The version shown to people: `fedtail -V`, About, bug reports.
+"""The version shown to people: `fedtail -V`, About, the sidebar, bug reports.
 
-`fedtail.__version__` is the release this code is heading to. Run from a git
-checkout, the build is told apart by the commits on top of it:
-0.2.0.dev143+g87f64ef (143 commits in history, commit 87f64ef). A package
-can drop a `_build.py` with BUILD = "…" next to this file instead.
+Releases are git tags `vX.Y.Z` (and `fedtail.__version__` says the same in the
+tagged commit). Between releases `__version__` names the next one as
+`X.Y.Z.dev0`, and a checkout shows how far it is past the last tag:
+
+    0.2.0                      exactly the v0.2.0 commit
+    0.3.0.dev7+gabc1234        7 commits after the last release tag
+    0.3.0.dev7+gabc1234 (dirty)  …with uncommitted changes
+
+A package can ship `_build.py` with BUILD, COMMIT, DATE instead (no git there).
 """
 
 import functools
@@ -22,6 +27,16 @@ def _git(*args):
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
+def compose(base, since_tag, sha):
+    """The displayed version from __version__, commits since the last release tag
+    (None: no tag known) and the short commit."""
+    release = base.split(".dev")[0]
+    if ".dev" not in base:
+        # a release; commits past its tag without a bump show as a local build of it
+        return release if since_tag == 0 else f"{release}+{since_tag}.g{sha}"
+    return f"{release}.dev{since_tag or 0}+g{sha}"
+
+
 @functools.cache
 def info():
     """{'version', 'commit', 'date'} — commit and date empty when unknown."""
@@ -30,16 +45,20 @@ def info():
         return {"version": BUILD, "commit": COMMIT, "date": DATE}
     except ImportError:
         pass
-    base = __version__.split(".dev")[0]
     if (ROOT / ".git").exists() and shutil.which("git"):
         try:
-            count, sha = _git("rev-list", "--count", "HEAD"), _git("rev-parse", "--short", "HEAD")
+            sha = _git("rev-parse", "--short", "HEAD")
             date = _git("log", "-1", "--format=%cs")
-            dirty = "-dirty" if _git("status", "--porcelain", "--untracked-files=no") else ""
-            if count and sha:
-                return {"version": f"{base}.dev{count}+g{sha}", "commit": sha + dirty,
-                        "date": date}
-        except (OSError, subprocess.SubprocessError):
+            dirty = " (dirty)" if _git("status", "--porcelain", "--untracked-files=no") else ""
+            described = _git("describe", "--tags", "--long", "--match", "v[0-9]*")
+            if described:  # v0.2.0-7-gabc1234
+                since = int(described.rsplit("-", 2)[1])
+            else:  # no tags fetched (a shallow clone): count the whole history
+                since = int(_git("rev-list", "--count", "HEAD") or 0)
+            if sha:
+                return {"version": compose(__version__, since, sha) + dirty,
+                        "commit": sha, "date": date}
+        except (OSError, subprocess.SubprocessError, ValueError):
             pass
     return {"version": __version__, "commit": "", "date": ""}
 

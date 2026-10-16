@@ -31,5 +31,10 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-requests` (no QtTest ther
 * The repository never names the author's own server; nothing is hardcoded.
 * Comments and commit messages in English; user-facing config reference and
   README.ru.md in Russian.
+* Versions: releases are tags `vX.Y.Z`; in the tagged commit `fedtail/__init__.py`
+  says `X.Y.Z` and CHANGELOG has `## X.Y.Z — <date>`. Right after, bump to the next
+  `X.Y+1.0.dev0` with `## X.Y+1.0 — in progress`. Every user-visible change gets a
+  CHANGELOG line in the "in progress" section; cut a release when a batch of
+  features has landed and CI is green (`git tag -a vX.Y.Z -m … && git push --tags`).
 * Add a test with every fix (tests/fakes.py is an in-memory Mastodon), and keep
   `CHANGELOG.md` and the docs in step with the code.
