@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.8.0 — in progress
+
 ## 0.7.0 — 2026-10-17
 
 - In the debugging mode the status bar's right end says how the window is drawn: theme, Qt
