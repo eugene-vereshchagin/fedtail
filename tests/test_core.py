@@ -55,6 +55,11 @@ class ConfigTest(TmpDir):
         self.assertIn("poll.interval_seconds", msg)
         _, warns = config.validate({"nope": {}, "ui": {"colour": 1}})
         self.assertEqual(len(warns), 2)
+        # the old ui.esc_hides: true gets the curtain (the new default), false stays off
+        cfg, warns = config.validate({"ui": {"esc_hides": True}})
+        self.assertEqual((cfg["ui"]["esc"], len(warns)), ("curtain", 1))
+        cfg, _ = config.validate({"ui": {"esc_hides": False}})
+        self.assertEqual(cfg["ui"]["esc"], "off")
         with self.assertRaises(config.ConfigError):
             config.validate({"lanes": {"enabled": ["people", "tiktok"]}})
         with self.assertRaises(config.ConfigError):

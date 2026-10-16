@@ -155,6 +155,13 @@ def validate(user):
             errors.append(f"[{section}] must be a section, not a value")
             continue
         for key, val in values.items():
+            if (section, key) == ("ui", "esc_hides") and "esc" not in values:
+                # replaced in 0.3: false still means Esc does nothing; true was the old
+                # default (to the tray) and now gets the new default, the curtain
+                if val is False:
+                    cfg["ui"]["esc"] = "off"
+                warnings.append('ui.esc_hides is now ui.esc ("curtain", "tray" or "off")')
+                continue
             if key not in DEFAULTS[section]:
                 warnings.append(f"unknown key {section}.{key} — ignored")
                 continue
