@@ -2,6 +2,11 @@
 
 ## 0.3.0 — in progress
 
+- Accounts: right-click your avatar (or ≡ → Accounts) for the list of profiles, each named
+  "@you@server"; pick one and its window opens with its own theme and config, this one closes
+  (`ui.switch_closes`). "Add an account…" makes a new profile and opens the login window.
+  `--profiles` lists them in the terminal. A profile keeps a small `profile.json` (who and
+  which server, never the token) so the list knows names without logging in.
 - Someone you put in a list leaves the general lanes — Home, Bots, Federated, Local — and
   is read in their list, so subscriptions don't clutter the feed. `lists.hide_members`:
   `all` (default), `exclusive` (only lists marked exclusive, the old way) or `off`;

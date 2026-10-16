@@ -30,6 +30,8 @@ def parse_args(argv):
     p.add_argument("--update-config", action="store_true",
                    help="add options your config doesn't mention yet (commented out, "
                         "with explanations; a .bak copy is kept) and exit")
+    p.add_argument("--profiles", action="store_true",
+                   help="list the profiles (accounts) there are and exit")
     p.add_argument("--install-desktop", action="store_true",
                    help="add fedtail (this profile) to the desktop menu, with its icon, and exit")
     p.add_argument("--debug", action="store_true",
@@ -43,6 +45,12 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    if args.profiles:
+        from .core import profiles
+        for prof in profiles.listing():
+            state = "" if prof["logged_in"] else "  (not logged in)"
+            print(f"{prof['name']:<16} {profiles.label(prof)}{state}")
+        return 0
     if args.install_desktop:
         from .desktop import install
         entry, icon = install(args.profile)

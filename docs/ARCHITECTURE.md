@@ -78,6 +78,8 @@ fedtail/
     hashtags.py      one-case hashtags for the CamelCase hint
     links.py         @mentions, #tags, fediverse links → in-app links
     instance.py      one window per profile (unix socket)
+    profiles.py      the profiles there are (profile.json: acct + server, no token), how to
+                     start another one (the account switcher, --profiles)
     lanes.py         Lane = source + filter; built-in lanes; list lanes
     model.py         helpers over status/account dicts (real(), snippet(), …)
     paths.py         where a profile's files live (XDG)

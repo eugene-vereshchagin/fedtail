@@ -18,6 +18,7 @@ DEFAULTS = {
         "font_size": 0,
         "close_to_tray": True,
         "esc": "curtain",
+        "switch_closes": True,
         "sidebar_footer": True,
         "sidebar_groups": True,
         "command_line": True,

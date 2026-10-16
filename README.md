@@ -70,13 +70,21 @@ Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, t
 On first start fedtail asks for your server, opens the login page in the browser and waits
 for the code the server shows you.
 
-## Profiles and files
+## Accounts, profiles and files
+
+An account is a profile: its own config (so its own theme), its own data, its own window.
 
 ```sh
 python3 -m fedtail                        # profile "default"
-python3 -m fedtail --profile croco        # another account
+python3 -m fedtail --profile croco        # another account (the first time: the login window)
+python3 -m fedtail --profiles             # which profiles there are, and who they are
+python3 -m fedtail --install-desktop --profile croco   # a menu entry of its own
 python3 -m fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
 ```
+
+In the window, right-click your avatar (or ≡ → Accounts): the other accounts are listed;
+pick one and its window opens with its theme, this one closes (`ui.switch_closes = false`
+keeps both). "Add an account…" asks for a profile name and opens the login window.
 
 | what | where |
 |---|---|

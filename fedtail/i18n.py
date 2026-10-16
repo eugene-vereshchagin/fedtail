@@ -43,6 +43,12 @@ _STRINGS = {
         "and_more": "и ещё {n}",
         "group_fold_tip": "Свернуть или развернуть раздел (непрочитанное останется числом)",
         "viewer_save": "Сохранить",
+        "accounts": "Аккаунты", "accounts_tip": "Правый клик — другие аккаунты",
+        "not_logged_in": "(не вошёл)", "account_add": "Добавить аккаунт…",
+        "account_add_q": "Имя профиля для нового аккаунта (латиница, цифры, _ . -),\n"
+                         "например work. Откроется окно входа.",
+        "account_bad_name": "«{name}» не подходит: такой профиль уже есть или в имени "
+                            "что-то кроме латиницы, цифр, _ . -",
         "lang_default": "Язык: как в настройках",
         "lang_tip": "Язык поста — по нему фильтруют и переводят. По умолчанию — post.language",
         "viewer_save_tip": "Оригинал — в папку для загрузок (ui.save_dir), клавиша S",
@@ -322,6 +328,12 @@ _STRINGS = {
         "and_more": "and {n} more",
         "group_fold_tip": "Fold or unfold the section (unread stays as a number)",
         "viewer_save": "Save",
+        "accounts": "Accounts", "accounts_tip": "Right click — other accounts",
+        "not_logged_in": "(not logged in)", "account_add": "Add an account…",
+        "account_add_q": "A profile name for the new account (latin letters, digits, _ . -),\n"
+                         "like work. The login window opens.",
+        "account_bad_name": "\"{name}\" won't do: that profile exists, or the name has "
+                            "something besides latin letters, digits, _ . -",
         "lang_default": "Language: as in settings",
         "lang_tip": "The post's language — used for filters and translation. "
                     "Default: post.language",

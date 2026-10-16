@@ -332,6 +332,12 @@ class MainWindow(QMainWindow):
         menu_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu_btn.setMenu(self._app_menu())
         acc.addWidget(menu_btn, 0, Qt.AlignmentFlag.AlignTop)
+        # a right click on who I am: the other accounts (profiles), to switch to
+        for w in (self.account_avatar, self.account_name, self.account_sub):
+            w.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            w.customContextMenuRequested.connect(
+                lambda pos, w=w: self.accounts_menu().exec(w.mapToGlobal(pos)))
+            w.setToolTip(_("accounts_tip"))
         v.addLayout(acc)
         # my avatar and name open my profile
         for w in (self.account_avatar, self.account_name, self.account_sub):
@@ -380,6 +386,52 @@ class MainWindow(QMainWindow):
         self.update_badges()
         return side
 
+    # ---- accounts: one profile each, switched by starting the other one ------------------
+    def accounts_menu(self, parent=None):
+        m = QMenu(parent or self)
+        m.setTitle(_("accounts"))
+        m.aboutToShow.connect(lambda: self._fill_accounts(m))
+        self._fill_accounts(m)
+        return m
+
+    def _fill_accounts(self, m):
+        from ...core import profiles
+        m.clear()
+        me = self.core.paths.profile
+        for p in profiles.listing():
+            a = m.addAction(profiles.label(p) + ("" if p["logged_in"] else
+                                                 "  " + _("not_logged_in")))
+            a.setCheckable(True)
+            a.setChecked(p["name"] == me)
+            if p["name"] == me:
+                a.setEnabled(False)
+            else:
+                a.triggered.connect(lambda _c=False, n=p["name"]: self.switch_profile(n))
+        m.addSeparator()
+        m.addAction(_("account_add"), self.add_profile)
+
+    def switch_profile(self, name):
+        """The other account in its own window, with its own theme and config; this
+        one closes (ui.switch_closes) — its unread stays counted for next time."""
+        from ...core import profiles
+        log.info("switching to profile %s", name)
+        profiles.launch(name)
+        if self.cfg["ui"]["switch_closes"]:
+            QTimer.singleShot(300, self.quit)
+
+    def add_profile(self):
+        from ...core import paths as paths_module
+        from ...core import profiles
+        taken = {p["name"] for p in profiles.listing()}
+        name, ok = QInputDialog.getText(self, _("account_add"), _("account_add_q"))
+        name = name.strip()
+        if not ok or not name:
+            return
+        if name in taken or not paths_module._PROFILE_RE.match(name):
+            QMessageBox.warning(self, _("account_add"), _("account_bad_name", name=name))
+            return
+        self.switch_profile(name)  # a new profile starts with the login window
+
     def _app_menu(self):
         m = QMenu(self)
         m.addAction(_("write") + "\tCtrl+N", lambda: self.compose())
@@ -387,6 +439,7 @@ class MainWindow(QMainWindow):
         m.addAction(_("search_title") + "\tCtrl+K", lambda: self.open_search(""))
         m.addAction(_("silence_title") + "…", lambda: SilenceDialog(self).exec())
         m.addAction(_("my_profile"), self.open_my_profile)
+        m.addMenu(self.accounts_menu(m))
         m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
         m.addAction(_("open_config"), lambda: self.open_url(

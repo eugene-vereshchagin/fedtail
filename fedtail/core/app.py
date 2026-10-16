@@ -141,6 +141,8 @@ class Core:
             except Exception:  # instance info is a nicety, not a must
                 caps = Capabilities()
             self.api, self.me, self.caps = api, me, caps
+            from . import profiles
+            profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
             if self.cfg["lists"]["enabled"]:
                 try:

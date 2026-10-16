@@ -599,6 +599,31 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_accounts_menu_switches_profiles(self):
+        from fedtail.core import profiles
+        fake = [{"name": "default", "acct": "veresk", "display_name": "", "logged_in": True,
+                 "server": "https://example.test"},
+                {"name": "t", "acct": "me", "display_name": "", "logged_in": True,
+                 "server": "https://example.test"},
+                {"name": "work", "acct": "", "display_name": "", "logged_in": False,
+                 "server": ""}]
+        launched, quit_ = [], []
+        keep = profiles.listing, profiles.launch, self.win.quit
+        profiles.listing, profiles.launch = lambda: fake, launched.append
+        self.win.quit = lambda: quit_.append(1)
+        try:
+            m = self.win.accounts_menu()
+            acts = [a for a in m.actions() if a.text()]
+            self.assertEqual(acts[0].text(), "@veresk@example.test")
+            current = acts[1]  # this window's profile is "t"
+            self.assertTrue(current.isChecked() and not current.isEnabled())
+            self.assertIn("work", acts[2].text())
+            acts[2].trigger()
+            self.pump(0.5)
+            self.assertEqual((launched, quit_), (["work"], [1]))
+        finally:
+            profiles.listing, profiles.launch, self.win.quit = keep
+
     def test_short_id_goes_to_the_command_line(self):
         bar = self.win.cmdline
         self.assertTrue(bar.hint.isHidden())  # nothing typed: the line takes the width

@@ -116,6 +116,29 @@ class ConfigUpdateTest(unittest.TestCase):
 
 
 class PathsAuthTest(TmpDir):
+    def test_profiles_listing(self):
+        from fedtail.core import profiles
+        os.environ["XDG_CONFIG_HOME"] = str(self.tmp / "cfg")
+        os.environ["XDG_DATA_HOME"] = str(self.tmp / "data")
+        self.addCleanup(os.environ.pop, "XDG_CONFIG_HOME")
+        self.addCleanup(os.environ.pop, "XDG_DATA_HOME")
+        home = paths.resolve()
+        home.ensure()
+        auth.save(home.auth_file, {"server": "https://social.example", "token": "SECRET"})
+        profiles.remember(home, {"acct": "veresk", "display_name": "V"},
+                          "https://social.example")
+        work = paths.resolve("work")
+        work.ensure()  # made, not logged in yet
+        got = profiles.listing()
+        self.assertEqual([p["name"] for p in got], ["default", "work"])
+        self.assertEqual(profiles.label(got[0]), "@veresk@social.example")
+        self.assertEqual(profiles.label(got[1]), "work")
+        self.assertEqual([p["logged_in"] for p in got], [True, False])
+        card = (home.data_dir / profiles.CARD).read_text()
+        self.assertNotIn("SECRET", card)  # the card never holds the token
+        argv, _cwd = profiles.command("work")
+        self.assertEqual(argv[-2:], ["--profile", "work"])
+
     def test_profiles(self):
         os.environ["XDG_CONFIG_HOME"] = str(self.tmp / "cfg")
         os.environ["XDG_DATA_HOME"] = str(self.tmp / "data")
