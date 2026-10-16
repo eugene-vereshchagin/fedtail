@@ -2,6 +2,10 @@
 
 ## 0.8.0 — in progress
 
+- The read position is shared with your other clients (Mastodon markers, also in GoToSocial
+  and Akkoma): Home or mentions read up to some post on the phone are read here too, and how
+  far you've read here — everything from the oldest on — goes to the server for them.
+  `read.sync_markers = false` keeps reading marks here only.
 - @names complete while you write: the people seen most in the lanes first, then those the
   server finds (a moment later, without fetching from other servers); the list shows the
   name next to the address. `post.complete_mentions` and `post.complete_tags` turn either off.

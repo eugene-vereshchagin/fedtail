@@ -53,7 +53,10 @@ DEFAULTS = {
         "custom_emoji": True,
         "quotes": 'card',
     },
-    "read": {"mark_read": "on_scroll"},
+    "read": {
+        "mark_read": "on_scroll",
+        "sync_markers": True,
+    },
     "lanes": {
         "enabled": ["global", "people", "local", "bots", "mine", "mentions", "comments", "subs",
                     "bookmarks", "activity", "requests"],

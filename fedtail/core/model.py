@@ -49,6 +49,16 @@ def without_quote_fallback(content):
     return _QUOTE_FALLBACK.sub("", content or "")
 
 
+def id_after(a, b):
+    """Is id a newer than id b? Mastodon ids are numbers in text, GoToSocial's are ULIDs
+    of one length: both compare as numbers or as text of equal length."""
+    if a.isdigit() and b.isdigit():
+        return int(a) > int(b)
+    if len(a) != len(b):
+        return len(a) > len(b)
+    return a > b
+
+
 def snippet(st, n=160):
     st = real(st)
     t = re.sub(r"\s+", " ", html_to_text(st.get("content", "")))

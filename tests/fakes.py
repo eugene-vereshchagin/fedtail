@@ -99,6 +99,13 @@ class FakeApi:
     def notifications(self, types, limit=40, max_id=None, min_id=None):
         return _page([n for n in self.w.activity if n["type"] in types], limit, max_id, min_id)
 
+    def markers(self, timelines=("home", "notifications")):
+        return {t: {"last_read_id": v} for t, v in self.w.markers.items() if t in timelines}
+
+    def set_markers(self, positions):
+        self.w.markers.update(positions)
+        return {}
+
     def relationship(self, acc_id):
         return {"id": acc_id, "following": acc_id in self.w.following,
                 "followed_by": False, "requested": False}
@@ -345,6 +352,7 @@ class World:
         self.muted, self.blocked, self.filters = set(), set(), {}
         self.history = {}
         self.profile_updates = []
+        self.markers = {}  # timeline -> last_read_id, as another client left it
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())

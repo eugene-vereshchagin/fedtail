@@ -258,6 +258,15 @@ class Api:
         return self.post(f"/api/v1/tags/{quote(name, safe='')}/"
                          f"{'follow' if on else 'unfollow'}")
 
+    def markers(self, timelines=("home", "notifications")):
+        """Where the reader stopped, shared by every client: {timeline: {last_read_id}}."""
+        return self.get("/api/v1/markers", {"timeline[]": list(timelines)}) or {}
+
+    def set_markers(self, positions):
+        """positions: {timeline: last_read_id}."""
+        data = {f"{tl}[last_read_id]": last for tl, last in positions.items()}
+        return self.post("/api/v1/markers", data=data)
+
     def followed_tags(self):
         return self.get("/api/v1/followed_tags", {"limit": 200}) or []
 

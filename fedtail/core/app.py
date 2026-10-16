@@ -27,7 +27,7 @@ from . import api as api_module
 from . import auth, counters, lanes, search, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
-from .model import narrower, real
+from .model import id_after, narrower, real
 from .store import Store, now_iso, sort_key
 
 log = logging.getLogger(__name__)
@@ -294,12 +294,59 @@ class Core:
                                       for st in new_statuses])
             if not first_run:
                 self._notify(per_lane, new_requests, new_activity)
+                self._sync_markers()
             self._fetch_parents(new_statuses)
             got = {k: len(v) for k, v in new_by_source.items() if v}
             if got or new_activity or new_requests:
                 log.info("new: %s%s%s", got or "-",
                          f" activity+{len(new_activity)}" if new_activity else "",
                          f" requests+{len(new_requests)}" if new_requests else "")
+
+    # ---- read position shared with other clients (markers) -------------------------
+    MARKERS = {"home": "home", "notifications": "mentions"}  # marker timeline -> our source
+
+    def _sync_markers(self):
+        """Pull: what another client marked as read up to its marker is read here too.
+        Push: how far everything is read here, from the oldest on, goes to the server.
+        (read.sync_markers)"""
+        if not self.cfg["read"].get("sync_markers", True):
+            return
+        try:
+            remote = self.api.markers(tuple(self.MARKERS))
+        except Exception as e:  # noqa: BLE001 — an old server without markers: just skip
+            log.info("markers: %s", e)
+            return
+        push = {}
+        for timeline, source in self.MARKERS.items():
+            items = self.store.items(source, 400)  # oldest -> newest
+            if not items:
+                continue
+            last = ((remote or {}).get(timeline) or {}).get("last_read_id")
+            seen_key = f"marker.{timeline}"
+            if last and last != self.store.kv_get(seen_key):
+                older = [st["id"] for item, st in items if not id_after(item, last)]
+                fresh = [i for i in older if i not in self.store.read_set(older)]
+                if fresh:
+                    log.info("markers: %s read up to %s elsewhere: %d here", timeline, last,
+                             len(fresh))
+                    self.mark_read(fresh)
+                self.store.kv_set(seen_key, last)
+            read = self.store.read_set(st["id"] for _i, st in items)
+            mine = None
+            for item, st in items:
+                if st["id"] not in read:
+                    break
+                mine = item
+            if mine and (not last or id_after(mine, last)):
+                push[timeline] = mine
+        if push:
+            try:
+                self.api.set_markers(push)
+                for timeline, mine in push.items():
+                    self.store.kv_set(f"marker.{timeline}", mine)
+                log.debug("markers: read up to %s", push)
+            except Exception as e:  # noqa: BLE001
+                log.info("markers: can't set: %s", e)
 
     def _new_statuses(self, new_by_source):
         out = []

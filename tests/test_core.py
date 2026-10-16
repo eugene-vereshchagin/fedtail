@@ -691,6 +691,28 @@ class CoreTest(TmpDir):
         self.assertIn("gogo", core.tag_suggestions("go"))
         self.assertEqual(core.tag_suggestions(""), [])
 
+    def test_markers_shared_read_position(self):
+        core, w = self.make(feed={"page_size": 40})
+        core.connect().result()
+        for i in range(10, 15):
+            w.add(status(f"0{i}", BOB, minute=i), home=True)
+        core.poll_once()
+        core.poll_once()
+        self.assertEqual(core.unread_count("people"), 5)
+        # read on the phone up to 012: those are read here too
+        w.markers["home"] = "012"
+        core.poll_once()
+        self.assertEqual(sorted(core.store.read_set(["010", "011", "012", "013", "014"])),
+                         ["010", "011", "012"])
+        # read here up to 013 (014 still not): the server hears 013
+        core.mark_read(["013"])
+        core.poll_once()
+        self.assertEqual(w.markers["home"], "013")
+        core.cfg["read"]["sync_markers"] = False
+        w.markers["home"] = "014"
+        core.poll_once()
+        self.assertNotIn("014", core.store.read_set(["014"]))
+
     def test_mention_suggestions(self):
         core, w = self.make()
         core.connect().result()
