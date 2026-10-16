@@ -2,7 +2,9 @@
 
 ## 0.3.0 — in progress
 
-- Started.
+- Notifications: no longer all silent while the window is active — only the lane on screen
+  stays quiet; every decision and notify-send's answer go to the log; a missing notify-send
+  is said out loud (with the package to install); Debugging → Send a test notification.
 
 ## 0.2.0 — 2026-10-16
 

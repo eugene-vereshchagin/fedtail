@@ -352,6 +352,34 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.core._active_lane, "global")
         self.win.select_lane("people")
 
+        # notifications go out through notify-send (a fake one here that records its
+        # arguments), and stay quiet only about the lane that's on screen
+        import stat
+        rec = Path(self._tmp.name) / "notify-args"
+        fake = Path(self._tmp.name) / "notify-send"
+        fake.write_text(f"#!/bin/sh\nprintf '%s\\n' \"$@\" >> {rec}\n")
+        fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+        n = self.win.notifier
+        n.notify_send, n.backend = str(fake), "desktop"
+        reply = self.core.store.get_status("013")
+        n.notify([("comments", reply)])
+        self.pump(until=lambda: rec.exists() and "--wait" in rec.read_text())
+        args = rec.read_text().splitlines()
+        self.assertIn("--app-name=fedtail", args)
+        self.assertTrue(any(a.startswith("--action=open=") for a in args))
+        rec.unlink()
+        self.win.select_lane("comments")
+        self.pump(0.1)
+        self.win.isActiveWindow = lambda: True  # the reader is looking at that lane
+        n.notify([("comments", reply)])
+        n.notify([("mentions", reply)])
+        self.pump(until=lambda: rec.exists())
+        self.pump(0.3)
+        text = rec.read_text()
+        self.assertEqual(text.count("--wait"), 1)  # only the mention
+        del self.win.isActiveWindow
+        self.win.select_lane("people")
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

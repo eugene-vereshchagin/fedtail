@@ -220,6 +220,10 @@ class MainWindow(QMainWindow):
             self.tray.show()
         self.notifier = Notifier(self)
         self.notifier.clicked.connect(self._notification_clicked)
+        self.notifier.failed.connect(lambda why: self.error(_("notify_failed", err=why)))
+        if self.notifier.problem:
+            QTimer.singleShot(4000, lambda: self.statusBar().showMessage(
+                self.notifier.problem, 20000))
 
     def _build_sidebar(self):
         t = self.theme
@@ -326,6 +330,8 @@ class MainWindow(QMainWindow):
         dbg.addAction(_("debug_logs"), lambda: self.open_url(
             QUrl.fromLocalFile(str(diag.logs_dir(self.core.paths))).toString()))
         dbg.addAction(_("debug_report"), self.bug_report)
+        dbg.addAction(_("debug_notify"), lambda: self.statusBar().showMessage(
+            _("debug_notify_sent", backend=self.notifier.test()), 8000))
         dbg.addAction(_("debug_stacks"), lambda: (diag.dump_stacks("asked from the menu"),
                                                   diag.log_stats(),
                                                   self.statusBar().showMessage(
@@ -573,6 +579,13 @@ class MainWindow(QMainWindow):
         self.core.set_active_lane(name)
         for lane_name, item in self.lane_items.items():
             item.set_current(lane_name == name)
+
+    def current_lane(self):
+        """The lane on screen, or None when a thread/profile tab is in front."""
+        if self.tabs.currentWidget() is not self.stack:
+            return None
+        w = self.stack.currentWidget()
+        return getattr(w, "name", None)
 
     def select_lane(self, name):
         for i in range(self.lanes.count()):
