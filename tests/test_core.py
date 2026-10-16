@@ -670,6 +670,27 @@ class CoreTest(TmpDir):
         self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
 
+    def test_tag_suggestions(self):
+        core, w = self.make()
+        core.connect().result()
+        a = status("010", BOB, minute=10)
+        a["tags"] = [{"name": "georgia"}, {"name": "GeorgiaNews"}]
+        b = status("011", NEWS, minute=11)
+        b["tags"] = [{"name": "georgia"}, {"name": "go"}]
+        w.add(a, home=True)
+        w.add(b, home=True)
+        core.poll_once()
+        self.assertIsNone(core.store.tag_counts(compute=False))  # not built before asked
+        core.prepare_tags()
+        core.store.tag_counts()  # waits for the background pass, if still running
+        self.assertEqual(core.tag_suggestions("ge"), ["georgia", "GeorgiaNews"])
+        self.assertEqual(core.tag_suggestions("G"), ["georgia", "GeorgiaNews", "go"])
+        c = status("012", NEWS, minute=12)
+        c["tags"] = [{"name": "gogo"}]
+        core.store.put_statuses([c])  # kept up to date as posts come
+        self.assertIn("gogo", core.tag_suggestions("go"))
+        self.assertEqual(core.tag_suggestions(""), [])
+
     def test_notify_about_one_list_by_title(self):
         core, w = self.make()
         w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}

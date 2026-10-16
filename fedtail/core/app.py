@@ -982,6 +982,40 @@ class Core:
     def followed_tags(self):
         return self.submit(self.api.followed_tags)
 
+    # ---- completing hashtags while writing -------------------------------------------
+    def prepare_tags(self):
+        """Warm up what tag_suggestions() needs, in the background: the tags of the
+        stored posts and the tags you follow."""
+        self.bg.submit(self.store.tag_counts)
+        if getattr(self, "_followed_tag_names", None) is None:
+            self._followed_tag_names = set()
+
+            def followed():
+                try:
+                    self._followed_tag_names = {t["name"] for t in self.api.followed_tags()
+                                                if t.get("name")}
+                except Exception as e:  # noqa: BLE001 — only suggestions are missing then
+                    log.info("followed tags: %s", e)
+            self.bg.submit(followed)
+
+    def tag_suggestions(self, prefix, limit=8):
+        """Tags starting with prefix (no "#"): the ones you follow first, then the
+        most used in the posts fedtail has seen."""
+        p = prefix.casefold()
+        if not p:
+            return []
+        followed = getattr(self, "_followed_tag_names", None) or set()
+        counts = self.store.tag_counts(compute=False) or {}
+        score = {}
+        for key, (name, n) in counts.items():
+            if key.startswith(p):
+                score[key] = [name, n]
+        for name in followed:
+            if name.casefold().startswith(p):
+                score.setdefault(name.casefold(), [name, 0])[1] += 1_000_000
+        best = sorted(score.values(), key=lambda x: (-x[1], x[0].casefold()))
+        return [name for name, _n in best[:limit]]
+
     def tag_timeline(self, tag, max_id=None):
         def job():
             page = self.api.tag_timeline(tag, limit=self.cfg["feed"]["page_size"],

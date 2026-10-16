@@ -2,6 +2,14 @@
 
 ## 0.7.0 — in progress
 
+- Hashtags complete while you write: `#ge` offers the tags already in use — the ones you
+  follow first, then the most used in the posts fedtail has seen (`#georgia`,
+  `#GeorgiaNews`…); ↑ ↓ and Enter or Tab pick one.
+- Pictures stuck in "loading": with avatars and pictures asked for all the time, newest
+  first, an older request could wait behind them forever — now one that has waited 6 s
+  goes next, and there are six downloads at a time, not four. A preview that gave up is
+  asked again as soon as its original comes (opened in the viewer), so closing the viewer
+  shows it in the lane too.
 - The Linux one-file build uses the system's fontconfig and freetype instead of the build
   machine's older ones, which couldn't read a newer system's font setup — every font fell
   apart. In KDE it takes the colour scheme, the font and the icon theme from `kdeglobals`

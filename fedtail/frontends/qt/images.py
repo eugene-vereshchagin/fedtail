@@ -28,6 +28,7 @@ class Images:
     # patience, before it counts as broken (it used to stay grey until a restart)
     SECOND_TRY_AFTER = 8000  # ms
     STUCK_AFTER = 180  # s: a request this old with no answer is asked for again
+    STARVING = 6  # s: newest first — but a request waiting this long goes next
     def __init__(self, core, bridge):
         self.core = core
         self.bridge = bridge
@@ -42,8 +43,12 @@ class Images:
         self.why = {}     # url -> ("network" | "format", detail) of its last failure
         self.asked = {}   # key -> when it was handed to the workers (monotonic)
         self.patient = set()  # keys on their second try: longer read timeout
+        # a preview and its original are the same picture: when one comes, a preview
+        # that gave up is asked again (a server that was still fetching it has it now)
+        self.related = {}   # original url -> {preview urls}
+        self.gave_up = {}   # url -> [(max_side, callback, failed)] whose request failed
         # own pool: a backlog of avatars must never delay sending a post
-        self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
+        self.pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="fedtail-img")
         # newest first: the picture asked for last is the one on screen now; a lane full
         # of pictures scrolled past must not make it wait behind them all
         self._stack = []
@@ -56,7 +61,10 @@ class Images:
         every request has its own worker call, so all get done, newest first).
         Returns (key, image) for the request it actually did."""
         with self._stack_lock:
-            url, max_side, asked = self._stack.pop()
+            # newest first, but nobody starves: with avatars and pictures asked for all
+            # the time, the oldest request could wait behind them forever
+            starving = time.monotonic() - self._stack[0][2] > self.STARVING
+            url, max_side, asked = self._stack.pop(0 if starving else -1)
             patient = (url, max_side) in self.patient
         waited = time.monotonic() - asked
         if waited > 2:
@@ -125,18 +133,25 @@ class Images:
             return path
         return self.pool.submit(job)
 
-    def get(self, url, callback, max_side=FEED_SIDE, failed=None, retry=False):
+    def get(self, url, callback, max_side=FEED_SIDE, failed=None, retry=False, original=None):
         """callback(QPixmap) now or later; for a broken or unreachable image
-        failed() is called instead (if given). retry: ask again even if it just failed."""
+        failed() is called instead (if given). retry: ask again even if it just failed.
+        original: the full picture this one is a preview of — if the preview gives up and
+        the original comes later (opened in the viewer), the preview is asked again."""
         if not url:
             if failed:
                 failed()
             return
+        if original and original != url:
+            if len(self.related) > 2000:
+                self.related.pop(next(iter(self.related)))
+            self.related.setdefault(original, set()).add(url)
         if retry:
             self.broken.pop(url, None)
         key = (url, max_side)
         broke = self.broken.get(url)
         if broke is not None and time.monotonic() - broke < self.RETRY_AFTER:
+            self._give_up(url, max_side, callback, failed)
             if failed:  # it just failed: don't keep a worker on it again so soon
                 failed()
             return
@@ -164,6 +179,14 @@ class Images:
                          ok=lambda done: self._ready(*done) if done[1] is not None
                          else self._failed(done[0]))
 
+    def _give_up(self, url, max_side, callback, failed):
+        """Keep who wanted a picture that failed, to hand it over if it comes after all."""
+        if len(self.gave_up) > 500:
+            self.gave_up.pop(next(iter(self.gave_up)))
+        waiters = self.gave_up.setdefault(url, [])
+        if len(waiters) < 8:
+            waiters.append((max_side, callback, failed))
+
     def _remember(self, key, pm):
         size = pm.width() * pm.height() * 4
         self.mem[key] = pm
@@ -185,7 +208,10 @@ class Images:
             return
         self.patient.discard(key)
         self.broken[key[0]] = time.monotonic()
-        for _cb, failed in self.waiting.pop(key, []):
+        waiting = self.waiting.pop(key, [])
+        for cb, failed in waiting:
+            self._give_up(key[0], key[1], cb, failed)
+        for _cb, failed in waiting:
             if failed:
                 try:
                     failed()
@@ -200,6 +226,14 @@ class Images:
             return
         self.broken.pop(key[0], None)
         self.why.pop(key[0], None)
+        self.gave_up.pop(key[0], None)
+        for preview in self.related.pop(key[0], ()):
+            again = self.gave_up.pop(preview, [])
+            if again:
+                log.info("image %s: its original came, asking the preview again", preview)
+                self.broken.pop(preview, None)
+            for max_side, cb, failed in again:
+                self.get(preview, cb, max_side, failed)
         self.asked.pop(key, None)
         self.patient.discard(key)
         callbacks = [cb for cb, _f in self.waiting.pop(key, [])]

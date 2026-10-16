@@ -733,7 +733,9 @@ class PostRow(QWidget):
                 lab.setText(_("image_failed") if kind == "image" else
                             "▶ " + _("media_" + kind) + "\n" + _("media_click"))
                 lab.setWordWrap(True)
-        self.ctx.images.get(src, show, failed=failed)
+        # the original named: once it comes (opened in the viewer), a preview that gave up
+        # is asked again instead of staying broken
+        self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade)
 
 
 def _set(lab, pm):

@@ -297,6 +297,23 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(tries, [False, True])
         self.assertIsNotNone(late[0])
 
+        # a preview that gave up is asked again once its original comes (the viewer)
+        ready = {"now": False}
+
+        def fetching(url, _side, patient=False):
+            if "prev" in url and not ready["now"]:
+                imgs.why[url] = ("format", "?")  # not a network error: no second try
+                raise OSError("not yet")
+            return good
+        imgs._download = fetching
+        shown, gave_up = [], []
+        imgs.get("https://x/prev.png", shown.append, failed=lambda: gave_up.append(1),
+                 original="https://x/full.png")
+        self.pump(until=lambda: gave_up)
+        ready["now"] = True
+        imgs.get("https://x/full.png", lambda pm: None, 4000)
+        self.pump(until=lambda: shown)
+
         # the memory cache keeps to its budget in bytes, dropping the oldest first
         from PySide6.QtGui import QPixmap
         imgs.mem_budget = 3 * 100 * 100 * 4

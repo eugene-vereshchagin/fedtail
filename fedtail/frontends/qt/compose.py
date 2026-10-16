@@ -1,13 +1,15 @@
 """Writing a post or a reply. Drafts are saved as you type."""
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QSize, QStringListModel, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
+    QCompleter,
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -119,6 +121,15 @@ class Compose(QDialog):
         self.text.setPlaceholderText(_("text_placeholder_md") if self.core.markdown
                                      else _("text_placeholder"))
         lay.addWidget(self.text, 1)
+        # "#ge" offers the tags already in use: #georgia, #GeorgiaNews…
+        self._tag_model = QStringListModel(self)
+        self.tag_completer = QCompleter(self._tag_model, self)
+        self.tag_completer.setWidget(self.text)
+        self.tag_completer.setCompletionMode(QCompleter.CompletionMode.UnfilteredPopupCompletion)
+        self.tag_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.tag_completer.activated.connect(self._put_tag)
+        self.text.textChanged.connect(self._suggest_tags)
+        self.core.prepare_tags()
         self.camel = QLabel()
         self.camel.setObjectName("counter")
         self.camel.setWordWrap(True)
@@ -304,6 +315,40 @@ class Compose(QDialog):
         self._count()
         self._autosave.start()
 
+    # ---- completing hashtags --------------------------------------------------------
+    _TAG_AT_END = re.compile(r"(?:^|[\s(«\"'])#(\w+)$")
+
+    def _tag_at_cursor(self):
+        """The tag being typed right before the cursor, without "#" — or None."""
+        cur = self.text.textCursor()
+        before = cur.block().text()[:cur.positionInBlock()]
+        m = self._TAG_AT_END.search(before)
+        return m.group(1) if m else None
+
+    def _suggest_tags(self):
+        popup = self.tag_completer.popup()
+        word = self._tag_at_cursor()
+        names = self.core.tag_suggestions(word) if word else []
+        if not names or (len(names) == 1 and names[0] == word):
+            popup.hide()
+            return
+        self._tag_model.setStringList(["#" + n for n in names])
+        rect = self.text.cursorRect()
+        rect.setWidth(popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width()
+                      + 16)
+        self.tag_completer.complete(rect)
+        popup.setCurrentIndex(self._tag_model.index(0))
+
+    def _put_tag(self, text):
+        word = self._tag_at_cursor()
+        if word is None:
+            return
+        cur = self.text.textCursor()
+        cur.movePosition(cur.MoveOperation.Left, cur.MoveMode.KeepAnchor, len(word) + 1)
+        cur.insertText(text + " ")
+        self.text.setTextCursor(cur)
+        self.tag_completer.popup().hide()
+
     def save_draft(self):
         if self.sent:
             return
@@ -358,6 +403,11 @@ class Compose(QDialog):
             e.acceptProposedAction()
             self._take(e.mimeData())
             return True
+        if t == QEvent.Type.KeyPress and obj is self.text and \
+                self.tag_completer.popup().isVisible() and e.key() in (
+                    Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Tab, Qt.Key.Key_Escape,
+                    Qt.Key.Key_Backtab):
+            return True  # the list of tags takes these
         if t == QEvent.Type.KeyPress and e.matches(QKeySequence.StandardKey.Paste):
             mime = QGuiApplication.clipboard().mimeData()
             if (media_paths(mime) or (mime.hasImage() and not mime.hasText())) and \

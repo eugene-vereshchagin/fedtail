@@ -123,6 +123,7 @@ class Store:
         # bumped on every change, so callers can cache what they derive from the store
         self.items_version = {}
         self.status_version = 0
+        self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self.db.execute("PRAGMA synchronous=NORMAL")
         with self.lock:
             self.db.executescript(SCHEMA)
@@ -181,6 +182,31 @@ class Store:
             db.executemany("INSERT OR REPLACE INTO statuses (id, data, created_at, reply_to, "
                            "author) VALUES (?, ?, ?, ?, ?)", rows)
             self.status_version += 1
+            if self._tags is not None:
+                for st in statuses:
+                    for t in (st.get("reblog") or st).get("tags") or ():
+                        self._count_tag(t.get("name"))
+
+    def _count_tag(self, name):
+        if not name:
+            return
+        seen = self._tags.setdefault(name.casefold(), [name, 0])
+        seen[1] += 1
+        if seen[0] == seen[0].lower() and name != name.lower():
+            seen[0] = name  # #GeorgiaNews over #georgianews when somebody wrote it so
+
+    def tag_counts(self, compute=True):
+        """Hashtags of every stored post, how often each is used — for completing
+        a tag while writing. Built once (one pass over the store), then kept up
+        to date as posts come. compute=False: None until it's built."""
+        with self.lock:
+            if self._tags is None and compute:
+                self._tags = {}
+                q = ("SELECT json_extract(t.value, '$.name') FROM statuses, "
+                     "json_each(statuses.data, '$.tags') AS t")
+                for (name,) in self.db.execute(q):
+                    self._count_tag(name)
+            return self._tags
 
     def get_status(self, sid):
         with self.lock:
