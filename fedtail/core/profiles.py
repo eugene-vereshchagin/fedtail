@@ -17,6 +17,7 @@ from . import paths
 log = logging.getLogger(__name__)
 
 CARD = "profile.json"
+NOT_PROFILES = {"themes"}  # ~/.config/fedtail/themes: shared by all profiles
 
 
 def data_root():
@@ -42,11 +43,15 @@ def remember(where, me, server):
 def listing():
     """[{"name", "acct", "server", "display_name", "logged_in"}] for every profile
     found in the data and config folders, the default first, then by name."""
+    # a profile is a config folder with config.toml or a data folder with a login or a
+    # database in it — not just any folder there (themes/ lives next to the profiles)
+    marks = {config_root(): ("config.toml",), data_root(): ("auth.json", "state.db")}
     names = set()
-    for root in (data_root(), config_root()):
+    for root, files in marks.items():
         if root.is_dir():
             names |= {p.name for p in root.iterdir() if p.is_dir()
-                      and paths._PROFILE_RE.match(p.name)}
+                      and p.name not in NOT_PROFILES and paths._PROFILE_RE.match(p.name)
+                      and any((p / f).exists() for f in files)}
     out = []
     for name in names:
         d = data_root() / name

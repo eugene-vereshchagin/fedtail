@@ -129,6 +129,9 @@ class PathsAuthTest(TmpDir):
                           "https://social.example")
         work = paths.resolve("work")
         work.ensure()  # made, not logged in yet
+        work.config_file.write_text("")
+        (self.tmp / "cfg/fedtail/themes").mkdir()   # the shared themes: not a profile
+        (self.tmp / "cfg/fedtail/stray").mkdir()    # an empty folder: not one either
         got = profiles.listing()
         self.assertEqual([p["name"] for p in got], ["default", "work"])
         self.assertEqual(profiles.label(got[0]), "@veresk@social.example")

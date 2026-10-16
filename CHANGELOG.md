@@ -23,7 +23,8 @@
   "@you@server"; pick one and its window opens with its own theme and config, this one closes
   (`ui.switch_closes`). "Add an account…" makes a new profile and opens the login window.
   `--profiles` lists them in the terminal. A profile keeps a small `profile.json` (who and
-  which server, never the token) so the list knows names without logging in.
+  which server, never the token) so the list knows names without logging in. Only real
+  profiles are listed (a config.toml, a login or a database), not the shared themes folder.
 - Someone you put in a list leaves the general lanes — Home, Bots, Federated, Local — and
   is read in their list, so subscriptions don't clutter the feed. `lists.hide_members`:
   `all` (default), `exclusive` (only lists marked exclusive, the old way) or `off`;

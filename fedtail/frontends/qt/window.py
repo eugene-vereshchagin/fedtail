@@ -427,7 +427,8 @@ class MainWindow(QMainWindow):
         name = name.strip()
         if not ok or not name:
             return
-        if name in taken or not paths_module._PROFILE_RE.match(name):
+        if name in taken or name in profiles.NOT_PROFILES or \
+                not paths_module._PROFILE_RE.match(name):
             QMessageBox.warning(self, _("account_add"), _("account_bad_name", name=name))
             return
         self.switch_profile(name)  # a new profile starts with the login window
