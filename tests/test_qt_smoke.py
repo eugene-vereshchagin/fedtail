@@ -357,6 +357,15 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: prof.relation.get("following"))
         self.win.on_link("fedtail:account/B")  # same tab: no new one
         self.assertIs(self.win.tabs.currentWidget(), prof)
+        # a narrow window: the buttons wrap onto more lines, none is squeezed
+        from PySide6.QtWidgets import QPushButton
+        self.win.resize(700, 700)
+        self.pump(0.3)
+        btns = [b for b in prof.info.findChildren(QPushButton) if b.isVisible()]
+        self.assertTrue(btns)
+        for b in btns:
+            self.assertGreaterEqual(b.width(), b.sizeHint().width(), b.text())
+        self.assertGreater(len({b.y() for b in btns}), 1)
         self.win.on_link("fedtail:tag/linux")
         self.assertIsInstance(self.win.tabs.currentWidget(), TagWidget)
         self.win.close_tab(self.win.tabs.currentIndex())

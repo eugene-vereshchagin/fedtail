@@ -2,6 +2,8 @@
 
 ## 0.3.0 — in progress
 
+- A profile's buttons wrap onto the next line when the window is narrow instead of being
+  squeezed until their words are cut.
 - The language of a post: a list in the post window (each language by its own name), the
   default in `post.language` (`""` — as in the account's settings), the list in
   `post.languages`; drafts keep it.

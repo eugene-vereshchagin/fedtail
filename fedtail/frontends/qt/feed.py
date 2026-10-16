@@ -798,7 +798,8 @@ class AccountWidget(_PagedTab):
         top.addLayout(col, 1)
         lay.addLayout(top)
 
-        buttons = QHBoxLayout()
+        from .flow import FlowLayout
+        buttons = FlowLayout(spacing=8)  # too many for one line: they wrap, not shrink
         if not self.mine:
             following = self.relation.get("following")
             requested = self.relation.get("requested")
@@ -824,7 +825,6 @@ class AccountWidget(_PagedTab):
                 buttons.addWidget(_button(_(f"people_{which}_n", n=acc[field]),
                                           lambda _c=False, w=which: self.win.open_people(acc, w)))
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
-        buttons.addStretch(1)
         lay.addLayout(buttons)
 
     def _toggle_mute(self):
