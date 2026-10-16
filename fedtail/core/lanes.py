@@ -72,6 +72,10 @@ def _direct(st, ctx):
     return _is_direct(st)
 
 
+def _liked(st, ctx):
+    return real(st).get("favourited", True)  # un-liked here or elsewhere: gone
+
+
 def _bookmarked(st, ctx):
     return real(st).get("bookmarked", True)  # un-bookmarked here or elsewhere: gone
 
@@ -87,6 +91,7 @@ LANES = {
     "mentions": Lane("mentions", "mentions", _other_mentions, by_status_time=True),
     "subs": Lane("subs", "subs", _subs, by_status_time=True),
     "bookmarks": Lane("bookmarks", "bookmarks", _bookmarked, lazy=True),
+    "favourites": Lane("favourites", "favourites", _liked, lazy=True),
     "bots": Lane("bots", "home", _bots),
     "mine": Lane("mine", "mine", _all),
     # private messages to me: the mentions stream, only what was sent to the named
@@ -102,8 +107,8 @@ LANES = {
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
     ("standard", ["global", "people", "local", "bots"]),        # from the widest down
-    ("personal", ["mine", "direct", "mentions", "comments", "subs", "bookmarks", "activity",
-                  "requests"]),
+    ("personal", ["mine", "direct", "mentions", "comments", "subs", "bookmarks", "favourites",
+                  "activity", "requests"]),
     ("lists", []),
 ]
 

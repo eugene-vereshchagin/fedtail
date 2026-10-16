@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- "My likes" lane: the posts you liked (`"favourites"` in `lanes.enabled`; off by default).
+- The bell on a profile of someone you follow: each of their new posts comes as a
+  notification (shown in Likes & boosts when `activity.types` includes `"status"`).
 - Scheduled posts: "⏰ Later" in the post panel sends it at a set time — the server keeps it,
   fedtail needn't be running; ≡ → Scheduled posts lists what's waiting, with cancel.
   `post.schedule = false` hides both.

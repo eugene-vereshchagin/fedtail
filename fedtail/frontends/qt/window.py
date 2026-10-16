@@ -67,7 +67,8 @@ LANE_ICON = {"people": "system-users", "comments": "mail-replied",
              "bots": "applications-system",
              "mine": "document-edit", "local": "go-home", "global": "applications-internet",
              "requests": "list-add-user", "list": "view-list-details",
-             "activity": "rating", "bookmarks": "bookmarks", "direct": "mail-message"}
+             "activity": "rating", "bookmarks": "bookmarks", "direct": "mail-message",
+             "favourites": "starred-symbolic"}
 
 
 BADGE_KIND = {"comments": "hot", "bots": "quiet", "activity": "quiet"}

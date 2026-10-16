@@ -155,7 +155,7 @@ CHOICES = {
     ("lists", "hide_members"): {"all", "exclusive", "off"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",
-              "local", "global", "requests", "direct"}
+              "local", "global", "requests", "direct", "favourites"}
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {

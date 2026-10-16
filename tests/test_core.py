@@ -751,6 +751,17 @@ class CoreTest(TmpDir):
         core.set_note("B", "знакомый по Point").result()
         self.assertEqual(w.notes["B"], "знакомый по Point")
 
+    def test_my_likes_lane_and_bell(self):
+        core, w = self.make(lanes={"enabled": ["people", "favourites"]})
+        core.connect().result()
+        liked = w.add(status("050", BOB, minute=1), home=True)
+        liked["favourited"] = True
+        core.set_active_lane("favourites")
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("favourites")], ["050"])
+        core.notify_posts("B", True).result()
+        self.assertTrue(w.bells["B"])
+
     def test_pin_my_post(self):
         core, w = self.make()
         core.connect().result()

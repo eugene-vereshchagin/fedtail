@@ -46,6 +46,8 @@ def make_sources(api, me_id):
     return {
         "bookmarks": Source("bookmarks", _Cursor(api.bookmarks, "bookmarks_next"),
                             _status_entry),
+        "favourites": Source("favourites", _Cursor(api.favourites, "favourites_next"),
+                             _status_entry),
         "home": Source("home", api.home, _status_entry),
         "mentions": Source("mentions", api.mentions, _notification_entry),
         "mine": Source("mine", lambda **kw: api.account_statuses(me_id, **kw), _status_entry),

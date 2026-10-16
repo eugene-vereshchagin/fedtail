@@ -1130,6 +1130,10 @@ class AccountWidget(_PagedTab):
                 (_("follow_requested") if requested else _("follow"))
             fb = _button(label, self._toggle_follow, name="primary" if not following else "tool")
             buttons.addWidget(fb)
+            if following:
+                bell = self.relation.get("notifying")
+                buttons.addWidget(_button("🔔 " + (_("bell_off") if bell else _("bell_on")),
+                                          self._toggle_bell, tip=_("bell_tip")))
             buttons.addWidget(_button(_("mention"), lambda: self.win.compose(
                 text=f"@{acc['acct']} ")))
             buttons.addWidget(_button(_("unmute") if self.relation.get("muting") else _("mute"),
@@ -1169,6 +1173,13 @@ class AccountWidget(_PagedTab):
                                  ok=lambda r: self._relation(dict(self.relation,
                                                                   note=text.strip())),
                                  fail=self.win.error)
+
+    def _toggle_bell(self):
+        on = not self.relation.get("notifying")
+        self.win.bridge.call(self.core.notify_posts(self.acc_id, on),
+                             ok=lambda r: self._relation(dict(self.relation, notifying=on,
+                                                              **(r or {}))),
+                             fail=self.win.error)
 
     def _toggle_mute(self):
         on = not self.relation.get("muting")

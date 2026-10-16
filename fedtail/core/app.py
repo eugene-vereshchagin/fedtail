@@ -1092,6 +1092,11 @@ class Core:
     def follow(self, acc_id, on=True):
         return self.submit(self.api.follow, acc_id, on)
 
+    def notify_posts(self, acc_id, on=True):
+        """The bell on someone I follow: their every new post comes as a notification
+        (in Likes & boosts, with activity.types including "status")."""
+        return self.submit(self.api.notify_posts, acc_id, on)
+
     def followed_among(self, accounts):
         """Which of these accounts I follow — why a thread I'm not subscribed to still
         reaches my Home: the server puts there replies between people I follow.

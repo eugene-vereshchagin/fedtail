@@ -487,6 +487,16 @@ class Api:
         self.bookmarks_next = nxt
         return items
 
+    def favourites(self, limit=40, max_id=None, min_id=None):
+        """My likes, newest first; pages by the Link header like bookmarks."""
+        items, nxt = self.get_page("/api/v1/favourites", self._page(limit, max_id))
+        self.favourites_next = nxt
+        return items
+
+    def notify_posts(self, acc_id, on=True):
+        """The bell: a notification for each new post of someone I follow."""
+        return self.post(f"/api/v1/accounts/{acc_id}/follow", json={"notify": bool(on)})
+
     def reblog(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'reblog' if on else 'unreblog'}")
 

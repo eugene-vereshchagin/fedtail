@@ -362,6 +362,15 @@ class FakeApi:
         self.bookmarks_next = None
         return sorted(marked, key=_sid, reverse=True)[:limit]
 
+    def favourites(self, limit=40, max_id=None, min_id=None):
+        liked = [s for s in self.w.statuses.values() if s.get("favourited")]
+        self.favourites_next = None
+        return sorted(liked, key=_sid, reverse=True)[:limit]
+
+    def notify_posts(self, acc_id, on=True):
+        self.w.bells[acc_id] = on
+        return {"id": acc_id, "following": True, "notifying": on}
+
     def reblog(self, sid, on=True):
         st = dict(self.w.statuses[sid], reblogged=on)
         self.w.statuses[sid] = st
@@ -398,6 +407,7 @@ class World:
         self.blocked_domains = set()
         self.notes = {}
         self.scheduled = []
+        self.bells = {}
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())
