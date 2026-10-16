@@ -180,6 +180,7 @@ class ViewContext:
     save_image: object = None      # media attachment -> save it to disk
     vote: object = None            # (status, [option indexes]) -> vote in its poll
     refresh_poll: object = None    # set when "refresh" next to a poll's results works
+    translate: object = None       # (status, done(translation)) -> ask the server
 
 
 class MainWindow(QMainWindow):
@@ -194,6 +195,8 @@ class MainWindow(QMainWindow):
         self.ctx.save_image = self.save_image
         self.ctx.vote = self.vote
         self.ctx.refresh_poll = True
+        self.ctx.translate = self.translate_post if self.cfg["feed"].get("translate", True) \
+            else None
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
         self.lane_widgets = {}
@@ -1123,6 +1126,13 @@ class MainWindow(QMainWindow):
         if paths:
             e.acceptProposedAction()
             self.compose(attach=paths)
+
+    def translate_post(self, st, done):
+        """Ask the server for a translation; done(result) in the card, or an error."""
+        if not self.core.caps.translation:
+            self.error(_("translate_none"))
+            return
+        self.bridge.call(self.core.translate(st), ok=done, fail=self.error)
 
     def report(self, st):
         """Complain about a post to my server's moderators — with why, what kind, and

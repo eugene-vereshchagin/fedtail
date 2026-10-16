@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from ...core import links
 from ...core.model import QUOTE_SHOWN, is_bot, quoted, real, snippet, without_quote_fallback
-from ...i18n import _
+from ...i18n import _, current_language
 from .text import clean, display_name, emojify, esc, link
 
 RAIL_W = 20
@@ -147,6 +147,8 @@ class PostRow(QWidget):
         self.spec = spec
         self.theme = ctx.theme
         self.cw_open = ctx.cfg["ui"]["expand_cw"]
+        self.translation = None
+        self.show_translation = False
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
@@ -296,8 +298,22 @@ class PostRow(QWidget):
         cv.setSpacing(8)
         quote_mode = self.ctx.cfg["feed"].get("quotes", "card")
         quote = quoted(st) if quote_mode != "off" else None
+        tr = getattr(self, "translation", None)
+        if tr and self.show_translation:
+            src = tr.get("detected_source_language") or "?"
+            row = QHBoxLayout()
+            row.addWidget(self._label(esc(_("translated_from", lang=src,
+                                               provider=tr.get("provider") or "")),
+                                      "quoteNote"), 1)
+            back = QPushButton(_("show_original"))
+            back.setObjectName("tool")
+            back.clicked.connect(self._translate)
+            row.addWidget(back)
+            cv.addLayout(row)
         if st.get("content"):
             html = st["content"]
+            if tr and self.show_translation and tr.get("content"):
+                html = tr["content"]
             if quote:
                 html = without_quote_fallback(html)
             if self.ctx.cfg["ui"]["links_in_app"]:
@@ -581,6 +597,9 @@ class PostRow(QWidget):
         if self.ctx.fill_list_menu is not None and author["id"] != self.ctx.me_id:
             lists = menu.addMenu(_("add_to_list"))
             lists.aboutToShow.connect(lambda m=lists, a=author: self.ctx.fill_list_menu(m, a))
+        lang = (real(st).get("language") or "").split("-")[0]
+        if self.ctx.translate and lang and lang != current_language() and real(st).get("content"):
+            menu.addAction(_("translate"), self._translate)
         menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
                        lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
         if self.ctx.subscribed is not None:
@@ -868,6 +887,22 @@ class PostRow(QWidget):
         col.addStretch(1)
         h.addLayout(col, 1)
         return box
+
+    def _translate(self):
+        st = real(self.spec.status)
+
+        def done(result):
+            self.translation = result or {}
+            self.show_translation = True
+            try:
+                self._build()
+            except RuntimeError:
+                pass
+        if getattr(self, "translation", None):
+            self.show_translation = not self.show_translation
+            self._build()
+        elif self.ctx.translate:
+            self.ctx.translate(st, done)
 
     def _reveal_media(self):
         self.media_revealed = True

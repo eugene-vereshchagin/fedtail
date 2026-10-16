@@ -805,6 +805,26 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("исходная новость", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "card"
 
+    def test_translate(self):
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("096", BOB, minute=1, text="გამარჯობა")
+        st["language"] = "ka"
+        asked = []
+        self.win.ctx.translate = lambda s, done: (asked.append(s["id"]), done(
+            {"content": "<p>привет</p>", "detected_source_language": "ka",
+             "provider": "DeepL.com"}))
+        row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+        text = lambda: " ".join(w.text() for w in row.findChildren(QLabel))
+        row._translate()
+        self.assertEqual(asked, ["096"])
+        self.assertIn("привет", text())
+        self.assertIn("DeepL", text())
+        row._translate()  # back to the original, without asking again
+        self.assertIn("გამარჯობა", text())
+        self.assertEqual(asked, ["096"])
+
     def test_post_keys(self):
         """j / k walk the posts, f likes the one under the cursor."""
         from PySide6.QtCore import Qt

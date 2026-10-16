@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- "Translate" in the ⋯ menu of a post in another language, when your server translates
+  (Mastodon with DeepL or LibreTranslate): the translation shows in the card, with
+  "original" to go back. `feed.translate = false` drops the menu item.
 - Keys in lanes and threads: j / k walk the posts (the current one framed), r replies, f
   likes, b boosts, m bookmarks, o or Enter opens the thread. `ui.post_keys = false` turns the
   letters off.

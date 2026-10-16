@@ -58,6 +58,7 @@ DEFAULTS = {
         "remote_people": True,
         "sensitive_media": 'hide',
         "profile_pinned": True,
+        "translate": True,
     },
     "read": {
         "mark_read": "on_scroll",

@@ -1338,6 +1338,11 @@ class Core:
         pid = (s.get("poll") or {}).get("id")
         return self.submit(lambda: self._update(dict(s, poll=self.api.poll(pid))))
 
+    def translate(self, status):
+        """The post in the interface's language, by my server (a future)."""
+        from ..i18n import current_language
+        return self.submit(self.api.translate, real(status)["id"], current_language())
+
     def report(self, status, comment="", forward=False, category="other"):
         """Tell my server's moderators about a post (and its author); forward: also the
         moderators of the author's server, without saying who reported."""

@@ -39,6 +39,7 @@ class Capabilities:
     max_media: int = 4
     markdown: bool = False
     max_poll_options: int = 4
+    translation: bool = False
 
 
 def capabilities_from_instance(inst):
@@ -54,6 +55,7 @@ def capabilities_from_instance(inst):
         max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or 500),
         max_media=int(st.get("max_media_attachments") or 4),
         max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
+        translation=bool((conf.get("translation") or {}).get("enabled")),
         markdown=md,
     )
 
@@ -201,6 +203,11 @@ class Api:
     def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None):
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
+
+    def translate(self, sid, lang=None):
+        """{content, spoiler_text, detected_source_language, provider} in my language."""
+        return self.post(f"/api/v1/statuses/{sid}/translate",
+                         json={"lang": lang} if lang else None)
 
     def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
         body = {"account_id": acc_id, "status_ids": list(status_ids), "comment": comment,

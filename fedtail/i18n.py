@@ -215,6 +215,9 @@ _STRINGS = {
         "report_why": "Что не так (увидят модераторы)",
         "report_forward": "Переслать и модераторам {host} (без твоего имени)",
         "report_send": "Отправить жалобу", "report_sent": "Жалоба отправлена модераторам.",
+        "translate": "Перевести", "show_original": "оригинал",
+        "translated_from": "переведено с «{lang}» · {provider}",
+        "translate_none": "Твой сервер не умеет переводить посты.",
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -542,6 +545,9 @@ _STRINGS = {
         "report_why": "What's wrong (the moderators will read it)",
         "report_forward": "Forward to the moderators of {host} too (without your name)",
         "report_send": "Send the report", "report_sent": "Reported to the moderators.",
+        "translate": "Translate", "show_original": "original",
+        "translated_from": "translated from “{lang}” · {provider}",
+        "translate_none": "Your server doesn't translate posts.",
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",
@@ -671,6 +677,11 @@ _STRINGS = {
 }
 
 _lang = "en"
+
+
+def current_language():
+    """The interface's language code ("ru", "en")."""
+    return _lang
 
 
 def detect():
