@@ -222,6 +222,7 @@ QFrame#card {{ {card} }}
 QFrame#card[unread="true"] {{ {card_unread} }}
 QFrame#card[focus="true"] {{ {card_focus} }}
 QFrame#card[found="true"] {{ {card_found} }}
+QFrame#card[cursor="true"] {{ {card_found} }}
 QLabel#media {{ background: {k('quiet')}; color: {k('muted')}; border-radius: {r}px; }}
 QLabel#profileHeader {{ background: {k('quiet')}; color: {k('muted')}; border-radius: {r}px; }}
 QFrame#profileCard {{ background: {_alpha(self.c['accent'], 22)};

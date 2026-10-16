@@ -805,6 +805,37 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("исходная новость", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "card"
 
+    def test_post_keys(self):
+        """j / k walk the posts, f likes the one under the cursor."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QKeyEvent
+        from PySide6.QtWidgets import QApplication
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        self.win.select_lane("people")
+        view = self.win.lane_widgets["people"].view
+        self.pump(until=lambda: "011" in view.rows)
+
+        def key(k):
+            QApplication.sendEvent(view, QKeyEvent(QKeyEvent.Type.KeyPress, k,
+                                                   Qt.KeyboardModifier.NoModifier))
+        key(Qt.Key.Key_J)
+        first = view.cursor_key
+        self.assertIsNotNone(first)
+        key(Qt.Key.Key_J)
+        self.assertNotEqual(view.cursor_key, first)
+        key(Qt.Key.Key_K)
+        self.assertEqual(view.cursor_key, first)
+        self.assertEqual(view.rows[first].card.property("cursor"), True)
+        sid = view.rows[first].spec.status["id"]
+        key(Qt.Key.Key_F)
+        self.pump(until=lambda: self.world.statuses[sid].get("favourited"))
+        self.win.cfg["ui"]["post_keys"] = False
+        key(Qt.Key.Key_J)
+        self.assertEqual(view.cursor_key, first)
+        self.win.cfg["ui"]["post_keys"] = True
+
     def test_report(self):
         from PySide6.QtWidgets import QCheckBox, QComboBox, QPlainTextEdit, QPushButton
         self.win.start()

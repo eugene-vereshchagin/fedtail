@@ -36,6 +36,7 @@ DEFAULTS = {
         "themed_icon": True,
         "icon_count": ["comments", "mentions", "subs", "requests"],
         "actions": "both",
+        "post_keys": True,
     },
     "feed": {
         "order": "oldest_first",

@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from ...core.model import real, snippet
 from ...i18n import _
 from .card import CardSpec, PostRow, SeparatorRow
+from .card import _set_prop as _mark
 from .text import display_name, esc
 
 log = logging.getLogger(__name__)
@@ -43,6 +44,8 @@ class FeedView(QScrollArea):
         super().__init__()
         self.ctx = ctx
         self.setObjectName("feed")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)  # j / k and friends
+        self.cursor_key = None
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -141,9 +144,56 @@ class FeedView(QScrollArea):
         self._drop_target()
         super().wheelEvent(e)
 
+    # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys)
+    POST_KEYS = {Qt.Key.Key_R: "reply", Qt.Key.Key_F: "fav", Qt.Key.Key_B: "boost",
+                 Qt.Key.Key_M: "bookmark", Qt.Key.Key_O: "thread",
+                 Qt.Key.Key_Return: "thread", Qt.Key.Key_Enter: "thread"}
+
     def keyPressEvent(self, e):
+        plain = e.modifiers() in (Qt.KeyboardModifier.NoModifier,
+                                  Qt.KeyboardModifier.KeypadModifier)
+        if plain and self.ctx.cfg["ui"].get("post_keys", True) and self._post_key(e.key()):
+            e.accept()
+            return
         self._drop_target()
         super().keyPressEvent(e)
+
+    def _posts(self):
+        return [k for k in self.order if getattr(self.rows[k], "spec", None) is not None
+                and self.rows[k].spec.status]
+
+    def _post_key(self, key):
+        posts = self._posts()
+        if not posts:
+            return False
+        if key in (Qt.Key.Key_J, Qt.Key.Key_K):
+            if self.cursor_key not in posts:
+                # start from the post at the top of the screen
+                top = self.verticalScrollBar().value()
+                at = next((k for k in posts if self._top(self.rows[k]) + self.rows[k].height()
+                           > top + 4), posts[0])
+                nxt = at
+            else:
+                i = posts.index(self.cursor_key) + (1 if key == Qt.Key.Key_J else -1)
+                nxt = posts[max(0, min(len(posts) - 1, i))]
+            self.put_cursor(nxt)
+            return True
+        action = self.POST_KEYS.get(key)
+        if action is None or self.cursor_key not in posts:
+            return False
+        st = real(self.rows[self.cursor_key].spec.status)
+        self.ctx.on_link(f"fedtail:{action}/{st['id']}")
+        return True
+
+    def put_cursor(self, key):
+        old = self.rows.get(self.cursor_key)
+        if old is not None and hasattr(old, "card"):
+            _mark(old.card, "cursor", False)
+        self.cursor_key = key
+        row = self.rows.get(key)
+        if row is not None and hasattr(row, "card"):
+            _mark(row.card, "cursor", True)
+            self.scroll_to(key, "top")
 
     # ---- content ------------------------------------------------------------------
     def set_specs(self, specs, keep_position=True):

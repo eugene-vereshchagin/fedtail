@@ -734,6 +734,8 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
         if isinstance(w, LaneWidget) and w.dirty:
             w.draw_shown()
+        if isinstance(w, LaneWidget):
+            w.view.setFocus()  # j / k work right away
         self.tabs.setTabText(self.tabs.indexOf(self.stack), self.lane_title(name))
         self.core.set_state("lane", name)
         self.core.set_active_lane(name)

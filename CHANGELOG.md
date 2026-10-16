@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Keys in lanes and threads: j / k walk the posts (the current one framed), r replies, f
+  likes, b boosts, m bookmarks, o or Enter opens the thread. `ui.post_keys = false` turns the
+  letters off.
 - Report a post to your server's moderators from its ⋯ menu: what kind, what's wrong, and
   for someone from another server whether their moderators hear too (without your name;
   `post.report_forward` sets that tick's default).
