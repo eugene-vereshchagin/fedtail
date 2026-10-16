@@ -396,16 +396,16 @@ class MergedCore:
 
     # ---- the whole family ------------------------------------------------------
     def connect(self):
-        for core in self.others.values():
+        for tag, core in self.others.items():
             if core.logged_in:
-                core.connect()
+                # each one polls once it's connected; one that can't stays quiet
+                core.connect().add_done_callback(
+                    lambda f, c=core, t=tag: c.start_polling() if f.exception() is None
+                    else log.warning("merge: %s didn't connect: %s", t, f.exception()))
         return self.primary.connect()
 
     def start_polling(self):
-        self.primary.start_polling()
-        for core in self.others.values():
-            if core.logged_in:
-                core.start_polling()
+        self.primary.start_polling()  # the others start when they've connected
 
     def poll_now(self):
         for core in [self.primary, *self.others.values()]:
