@@ -20,7 +20,7 @@ class DiagTest(unittest.TestCase):
         self.paths.ensure()
         self.paths.config_file.write_text("[ui]\n", "utf-8")
         self.paths.auth_file.write_text('{"token": "SECRET"}', "utf-8")
-        self.cfg, _ = config.validate({"debug": {"log_dir": str(tmp / "logs")}})
+        self.cfg, _ = config.validate({"debug": {"mode": "on", "log_dir": str(tmp / "logs")}})
         root = logging.getLogger()
         self._saved = (root.handlers[:], root.level, sys.excepthook, threading.excepthook)
 
