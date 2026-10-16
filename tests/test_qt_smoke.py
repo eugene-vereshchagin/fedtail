@@ -365,7 +365,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(btns)
         for b in btns:
             self.assertGreaterEqual(b.width(), b.sizeHint().width(), b.text())
-        self.assertGreater(len({b.y() for b in btns}), 1)
+            right = b.mapTo(prof.info, b.rect().topRight()).x()
+            self.assertLessEqual(right, prof.info.width(), b.text())  # and none sticks out
         self.win.on_link("fedtail:tag/linux")
         self.assertIsInstance(self.win.tabs.currentWidget(), TagWidget)
         self.win.close_tab(self.win.tabs.currentIndex())
