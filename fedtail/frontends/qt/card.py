@@ -642,7 +642,7 @@ class PostRow(QWidget):
         return " · ".join(parts)
 
     def _media(self, st):
-        atts = st.get("media_attachments") or []
+        atts = [_true_kind(m) for m in st.get("media_attachments") or []]
         if not atts:
             return None
         box = QWidget()
@@ -685,7 +685,10 @@ class PostRow(QWidget):
                     lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
                     src = m.get("preview_url")
                 if src:
-                    self._load_media(lab, src, m.get("preview_url"), tw, th, radius)
+                    self._load_media(lab, src, m.get("preview_url"), tw, th, radius,
+                                     kind=m["type"])
+                elif m["type"] != "image":  # a video without a still frame: say what it is
+                    lab.setText("▶ " + _("media_" + m["type"]) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
             else:
                 kind = _("media_" + (m.get("type") or "unknown"))
@@ -704,19 +707,57 @@ class PostRow(QWidget):
         menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
         menu.exec(lab.mapToGlobal(pos))
 
-    def _load_media(self, lab, src, fallback, tw, th, radius):
+    def _load_media(self, lab, src, fallback, tw, th, radius, kind="image"):
         """The picture into its box; if the full file won't come, the preview;
-        if nothing comes, say so (a click still opens it)."""
+        if nothing comes, say so (a click still opens it). A video's still frame
+        gets a ▶ on it; a video without one says it's a video, not a broken picture."""
         def show(pm):
-            lab.setPixmap(_fit(pm, tw, th, radius))
+            pm = _fit(pm, tw, th, radius)
+            if kind != "image":
+                pm = _play_mark(pm)
+            lab.setPixmap(pm)
 
         def failed():
             if fallback and fallback != src:
-                self._load_media(lab, fallback, None, tw, th, radius)
+                self._load_media(lab, fallback, None, tw, th, radius, kind)
             else:
-                lab.setText(_("image_failed"))
+                lab.setText(_("image_failed") if kind == "image" else
+                            "▶ " + _("media_" + kind) + "\n" + _("media_click"))
                 lab.setWordWrap(True)
         self.ctx.images.get(src, show, failed=failed)
+
+
+VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
+
+
+def _true_kind(m):
+    """Servers sometimes call a video an "image" (a remote one they couldn't sort);
+    the file's name knows better. A copy with the right "type"."""
+    url = (m.get("url") or m.get("remote_url") or "").lower().split("?")[0]
+    if m.get("type") in ("image", "unknown", None) and url.endswith(VIDEO_EXT):
+        return dict(m, type="video")
+    return m
+
+
+def _play_mark(pm):
+    """A round ▶ in the middle of a still frame."""
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QColor, QPolygonF
+    out = QPixmap(pm)
+    p = QPainter(out)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    side = max(28, min(out.width(), out.height()) // 4)
+    dpr = out.devicePixelRatio() or 1
+    cx, cy = out.width() / dpr / 2, out.height() / dpr / 2
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(0, 0, 0, 140))
+    p.drawEllipse(QPointF(cx, cy), side / 2, side / 2)
+    p.setBrush(QColor(255, 255, 255, 230))
+    r = side / 4
+    p.drawPolygon(QPolygonF([QPointF(cx - r * 0.7, cy - r), QPointF(cx - r * 0.7, cy + r),
+                             QPointF(cx + r, cy)]))
+    p.end()
+    return out
 
 
 def _conv_key(spec):

@@ -133,6 +133,7 @@ class MergedTest(TmpDir):
                               data=str(self.tmp / name))
             auth.save(p.auth_file, {"server": server, "token": "tok"})
             core = Core(cfg, p, api_class=FakeApi)
+            core._origin_json = lambda url: None
             self.addCleanup(core.shutdown)
             cores.append(core)
         self.home, self.work = home, work
@@ -320,6 +321,7 @@ class CoreTest(TmpDir):
         p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None  # tests never reach other servers
         self.events = []
         core.events.on("*", lambda n, pl: self.events.append((n, pl)))
         self.addCleanup(core.shutdown)

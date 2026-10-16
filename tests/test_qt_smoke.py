@@ -65,6 +65,7 @@ class QtSmokeTest(unittest.TestCase):
         p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
+        self.core._origin_json = lambda url: None  # tests never reach other servers
         self.bridge = Bridge(self.core)
         self.theme = themes.apply(self.app, cfg)
         self.win = MainWindow(self.core, self.bridge, self.theme)
@@ -654,6 +655,21 @@ class QtSmokeTest(unittest.TestCase):
         menu = win.accounts_menu()
         merge = next(a for a in menu.actions() if a.text() == "Все аккаунты в одном окне")
         self.assertTrue(merge.isChecked())
+
+    def test_video_called_a_picture(self):
+        """A server that calls an mp4 an "image": a video with a ▶, not a broken picture."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow, _true_kind
+        clip = {"type": "image", "url": "https://x.example/media/clip.mp4?x=1",
+                "preview_url": None, "meta": {"original": {"width": 320, "height": 480}}}
+        self.assertEqual(_true_kind(clip)["type"], "video")
+        self.assertEqual(_true_kind(dict(clip, url="https://x/a.png"))["type"], "image")
+        st = status("090", BOB, minute=1)
+        st["media_attachments"] = [clip]
+        row = PostRow(CardSpec(key="090", status=st), self.win.ctx)
+        texts = [w.text() for w in row.findChildren(QLabel)]
+        self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
     def test_start_lane(self):
         self.win.cfg["ui"]["start_lane"] = "none"  # the default: nothing opens by itself

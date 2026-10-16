@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 — in progress
+
+- A video a server calls a picture (an mp4 as "image") shows as a video, and a video whose
+  still frame won't load says "▶ video — click to open in the browser" instead of "picture
+  didn't load"; still frames of videos get a ▶ on them.
+
 ## 0.4.0 — 2026-10-16
 
 The public beta.
