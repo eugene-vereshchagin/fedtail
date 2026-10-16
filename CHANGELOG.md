@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 — in progress
+## 0.7.0 — 2026-10-17
 
 - In the debugging mode the status bar's right end says how the window is drawn: theme, Qt
   style, font, platform, scale, one-file build or source. The log adds the window's size,
