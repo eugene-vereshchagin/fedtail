@@ -93,3 +93,36 @@ jobs:
           git add .
           git -c user.name=ci -c user.email=ci@localhost commit -qm "screenshots for ${GITHUB_SHA}"
           git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" screenshots
+
+  # a release version in fedtail/__init__.py (no ".dev") that has no tag yet:
+  # once everything is green, tag the commit vX.Y.Z and publish a GitHub release
+  # with that version's CHANGELOG section as the notes
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, test, debian]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('fedtail/__init__.py').read()).group(1))")
+          case "$VER" in *dev*) echo "development version $VER: nothing to release"; exit 0;; esac
+          if git rev-parse "v$VER" >/dev/null 2>&1; then echo "v$VER already tagged"; exit 0; fi
+          python3 - "$VER" > notes.md <<'PY'
+          import re, sys
+          ver = sys.argv[1]
+          text = open("CHANGELOG.md").read()
+          m = re.search(rf"^## {re.escape(ver)}\b.*?$\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+          print(m.group(1).strip() if m else f"fedtail {ver}")
+          PY
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git tag -a "v$VER" -m "fedtail $VER"
+          git push origin "v$VER"
+          gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag
