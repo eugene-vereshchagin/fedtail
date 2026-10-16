@@ -43,6 +43,11 @@ _STRINGS = {
         "and_more": "и ещё {n}",
         "group_fold_tip": "Свернуть или развернуть раздел (непрочитанное останется числом)",
         "viewer_save": "Сохранить",
+        "viewer_original_coming": "это уменьшенная, оригинал загружается…",
+        "viewer_format": "Оригинал скачан, но показать его Qt не умеет ({kind}). "
+                         "S — сохранить, O — в браузере; для webp/avif поставь "
+                         "qt6-image-formats-plugins",
+        "viewer_unreachable": "Оригинал не загрузился ({err}). R — ещё раз, O — в браузере",
         "accounts": "Аккаунты", "accounts_tip": "Правый клик — другие аккаунты",
         "not_logged_in": "(не вошёл)", "account_add": "Добавить аккаунт…",
         "account_add_q": "Имя профиля для нового аккаунта (латиница, цифры, _ . -),\n"
@@ -328,6 +333,11 @@ _STRINGS = {
         "and_more": "and {n} more",
         "group_fold_tip": "Fold or unfold the section (unread stays as a number)",
         "viewer_save": "Save",
+        "viewer_original_coming": "a smaller copy, the original is loading…",
+        "viewer_format": "The original is here, but Qt can't show it ({kind}). "
+                         "S — save, O — browser; for webp/avif install "
+                         "qt6-image-formats-plugins",
+        "viewer_unreachable": "The original didn't load ({err}). R — again, O — browser",
         "accounts": "Accounts", "accounts_tip": "Right click — other accounts",
         "not_logged_in": "(not logged in)", "account_add": "Add an account…",
         "account_add_q": "A profile name for the new account (latin letters, digits, _ . -),\n"

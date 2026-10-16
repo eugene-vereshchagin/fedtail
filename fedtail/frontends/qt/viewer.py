@@ -4,7 +4,8 @@ Fits the window; small pictures are enlarged up to ui.image_upscale times.
 Double-click or Z: 100 % and back, drag to pan. ←/→/Space: flip.
 O: open in the browser. S: save to the downloads folder (ui.save_dir) — or the
 half-transparent buttons in the top right corner. Esc or a click on the dark
-backdrop: close.
+backdrop: close. The feed's small copy shows at once while the original loads; an
+original that won't show says why (format, network), R asks again.
 """
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
@@ -82,18 +83,38 @@ class ImageOverlay(QWidget):
         m = self.media[self.i]
         return m.get("url") or m.get("remote_url") or m.get("preview_url") or ""
 
-    def load(self):
+    def load(self, retry=False):
         self.pm = None
+        self.preview = False   # what's shown is the small picture, the original is coming
+        self.problem = ""      # why the original won't show, if it won't
         self.actual = False
         self.offset = QPointF()
         want = self.i
         self.update()
-        self.ctx.images.get(self.url(), lambda pm, w=want: self._loaded(w, pm), FULL_SIDE)
+        m = self.media[self.i]
+        if m.get("preview_url") and m.get("preview_url") != self.url():
+            # the feed's small picture first (usually cached already), the original after
+            self.ctx.images.get(m["preview_url"], lambda pm, w=want: self._small(w, pm))
+        self.ctx.images.get(self.url(), lambda pm, w=want: self._loaded(w, pm), FULL_SIDE,
+                            failed=lambda w=want: self._failed(w), retry=retry)
+
+    def _small(self, index, pm):
+        if index == self.i and self.pm is None:
+            self.pm, self.preview = pm, True
+            self.update()
 
     def _loaded(self, index, pm):
         if index == self.i:
-            self.pm = pm
+            self.pm, self.preview, self.problem = pm, False, ""
             self.update()
+
+    def _failed(self, index):
+        if index != self.i:
+            return
+        kind, detail = self.ctx.images.why.get(self.url(), ("network", ""))
+        self.problem = _("viewer_format", kind=detail) if kind == "format" else \
+            _("viewer_unreachable", err=detail or "?")
+        self.update()
 
     def go(self, step):
         if len(self.media) > 1:
@@ -133,12 +154,15 @@ class ImageOverlay(QWidget):
         p.fillRect(self.rect(), QColor(0, 0, 0, 215))
         p.setPen(QColor("#ddd"))
         if self.pm is None:
-            p.drawText(self._area(), Qt.AlignmentFlag.AlignCenter, _("loading"))
+            p.drawText(self._area(), Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap,
+                       self.problem or _("loading"))
         else:
             p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             p.drawPixmap(self.image_rect(), self.pm, QRectF(self.pm.rect()))
         m = self.media[self.i]
         n = f"{self.i + 1} / {len(self.media)}    " if len(self.media) > 1 else ""
+        if self.pm is not None and (self.preview or self.problem):
+            n += (self.problem or _("viewer_original_coming")) + "    "
         desc = (m.get("description") or "").replace("\n", " ")
         cap = QRectF(MARGIN, self.height() - MARGIN - CAPTION_H, self.width() - 2 * MARGIN,
                      CAPTION_H)
@@ -162,6 +186,8 @@ class ImageOverlay(QWidget):
             self.go(-1)
         elif k == Qt.Key.Key_Z:
             self.toggle_actual()
+        elif k == Qt.Key.Key_R:  # the original again, now
+            self.load(retry=True)
         elif k == Qt.Key.Key_O:
             self.ctx.open_url(self.url())
         elif k == Qt.Key.Key_S and self.ctx.save_image:

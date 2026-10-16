@@ -586,6 +586,19 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(ov.image_rect().width(), 400)  # small ones grow, up to 2x
         ov.toggle_actual()
         self.assertEqual(ov.image_rect().width(), 200)
+        # the original won't show (a format Qt can't read): the viewer says so, and the
+        # small copy stays on screen instead of "loading…" forever
+        ov._small(0, QPixmap(40, 30))
+        self.assertFalse(ov.preview)  # the original was already there: no downgrade
+        ov.pm = None
+        ov._small(0, QPixmap(40, 30))
+        self.assertTrue(ov.preview)
+        self.win.images.why[ov.url()] = ("format", "image/avif")
+        ov._failed(0)
+        self.assertIn("image/avif", ov.problem)
+        ov.pm = None
+        ov.update()
+        self.pump(0.05)  # paints the explanation instead of "loading…"
         # the half-transparent Save button in the corner saves the picture on screen
         saved = []
         self.win.ctx.save_image, keep = saved.append, self.win.ctx.save_image

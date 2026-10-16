@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- The picture viewer no longer says "loading…" forever: it shows the feed's smaller copy at
+  once while the original loads, and when the original won't show it says why — a format
+  Qt can't read (webp/avif without `qt6-image-formats-plugins`; Save still works) or the
+  server didn't answer (R tries again).
 - A thread is the same whichever post it's opened from: a server's context of a post holds
   only its own branch, so the tree is now read from the top post.
 - Threads with holes fill themselves: on opening, fedtail reads the list of replies the

@@ -33,6 +33,7 @@ class Images:
         self.mem_budget = int(core.cfg["ui"].get("image_cache_mb", MEM_MB)) * 1024 * 1024
         self.waiting = {}
         self.broken = {}  # url -> when it last failed (monotonic)
+        self.why = {}     # url -> ("network" | "format", detail) of its last failure
         # own pool: a backlog of avatars must never delay sending a post
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
         self.http = requests.Session()
@@ -55,10 +56,17 @@ class Images:
             except requests.RequestException as e:
                 log.warning("image %s: %s after %.1f s", url, e.__class__.__name__,
                             time.monotonic() - t)
+                self.why[url] = ("network", e.__class__.__name__)
                 raise
             img = QImage.fromData(r.content)
             log.debug("image %s %d B %.2f s%s", url, len(r.content), time.monotonic() - t,
                       "" if not img.isNull() else " (not an image)")
+            if img.isNull():  # downloaded fine, but Qt can't read it (webp, avif, heic…)
+                kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+                self.why[url] = ("format", kind or "?")
+                log.warning("image %s: %s, %d B — Qt can't show this format "
+                            "(qt6-image-formats-plugins?)", url, kind or "unknown type",
+                            len(r.content))
             if not img.isNull():  # never keep an error page or half a file
                 p.write_bytes(r.content)
         if not img.isNull() and max(img.width(), img.height()) > max_side:
@@ -86,13 +94,15 @@ class Images:
             return path
         return self.pool.submit(job)
 
-    def get(self, url, callback, max_side=FEED_SIDE, failed=None):
+    def get(self, url, callback, max_side=FEED_SIDE, failed=None, retry=False):
         """callback(QPixmap) now or later; for a broken or unreachable image
-        failed() is called instead (if given)."""
+        failed() is called instead (if given). retry: ask again even if it just failed."""
         if not url:
             if failed:
                 failed()
             return
+        if retry:
+            self.broken.pop(url, None)
         key = (url, max_side)
         broke = self.broken.get(url)
         if broke is not None and time.monotonic() - broke < self.RETRY_AFTER:
