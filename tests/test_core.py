@@ -247,6 +247,17 @@ class CoreTest(TmpDir):
         time.sleep(0.2)
         self.assertEqual(len(asked), 1)  # not again within ten minutes
 
+    def test_people_tags_and_resolving(self):
+        core, w = self.make()
+        st = w.add(status("070", BOB, text="про #Linux и прочее"), home=True)
+        core.connect().result()
+        self.assertFalse(core.relationship("B").result()["following"])
+        self.assertTrue(core.follow("B").result()["following"])
+        self.assertEqual([s["id"] for s in core.tag_timeline("linux").result()], ["070"])
+        self.assertEqual(core.resolve(st["url"]).result()[0], "status")
+        self.assertEqual(core.resolve(BOB["url"]).result()[0], "account")
+        self.assertIsNone(core.resolve("https://nowhere.example/@x").result())
+
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

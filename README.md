@@ -141,6 +141,13 @@ or a new one; right-click a list for rename, delete and **exclusive**. Whoever i
 exclusive list is gone from People and Bots and shows up only there — sort the bots into
 "Memes", "News" and the rest. `[lists]` in the config.
 
+## Links stay inside
+
+@mentions open the person's profile in a tab (bio, fields, "follows you", Follow, Mention,
+Add to list), #hashtags open the tag's timeline, links to posts and profiles on other servers
+are looked up through your server and open as a thread or a profile — the browser only gets
+what fedtail can't find. `ui.links_in_app = false` sends everything to the browser.
+
 ## Honest counters and readable hashtags
 
 Your server knows only the favourites and boosts that reached it. With

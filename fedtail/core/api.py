@@ -8,7 +8,7 @@ import mimetypes
 import os
 import time
 from dataclasses import dataclass
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import requests
 
@@ -210,6 +210,25 @@ class Api:
 
     def follow_requests(self):
         return self.get("/api/v1/follow_requests", {"limit": 80})
+
+    # ---- people, tags, search -------------------------------------------------
+    def relationship(self, acc_id):
+        got = self.get("/api/v1/accounts/relationships", {"id[]": [acc_id]}) or []
+        return got[0] if got else {}
+
+    def follow(self, acc_id, on=True):
+        return self.post(f"/api/v1/accounts/{acc_id}/{'follow' if on else 'unfollow'}")
+
+    def tag_timeline(self, tag, limit=40, max_id=None, min_id=None):
+        return self.get(f"/api/v1/timelines/tag/{quote(tag, safe='')}",
+                        self._page(limit, max_id, min_id))
+
+    def search(self, q, kind=None, resolve=True, limit=5):
+        """Ask my server to find (and fetch from its home, if needed) an address."""
+        p = {"q": q, "resolve": "true" if resolve else "false", "limit": limit}
+        if kind:
+            p["type"] = kind
+        return self.get("/api/v2/search", p) or {}
 
     # ---- lists --------------------------------------------------------------
     def lists(self):

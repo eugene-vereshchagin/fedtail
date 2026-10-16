@@ -1,6 +1,7 @@
 """Main window: lanes on the left, tabs (lane / threads / accounts) on the right."""
 
 from dataclasses import dataclass
+from urllib.parse import unquote
 
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices, QIcon, QImage, QKeySequence, QShortcut
@@ -33,7 +34,14 @@ from .. import themefile
 from . import feed as feed_module
 from .card import _round
 from .compose import Compose, media_paths, save_image
-from .feed import AccountWidget, ActivityWidget, LaneWidget, RequestsWidget, ThreadWidget
+from .feed import (
+    AccountWidget,
+    ActivityWidget,
+    LaneWidget,
+    RequestsWidget,
+    TagWidget,
+    ThreadWidget,
+)
 from .find import FindBar
 from .images import Images
 from .login import LoginDialog
@@ -653,9 +661,36 @@ class MainWindow(QMainWindow):
     def open_account(self, acc_id):
         for w in self.extra_tabs():
             if isinstance(w, AccountWidget) and w.acc_id == acc_id:
-                self.tabs.setCurrentWidget(w)
+                if self.tabs.currentWidget() is w:
+                    w.show_info()  # already here: back up to who this is
+                else:
+                    self.tabs.setCurrentWidget(w)
                 return
         self._add_tab(AccountWidget(self, acc_id), "@…")
+
+    def open_tag(self, tag):
+        for w in self.extra_tabs():
+            if isinstance(w, TagWidget) and w.tag.lower() == tag.lower():
+                self.tabs.setCurrentWidget(w)
+                return
+        self._add_tab(TagWidget(self, tag), "#" + tag)
+
+    def resolve_link(self, url):
+        """A fediverse address: find it through my server and open it here."""
+        self.statusBar().showMessage(_("resolving", url=url), 10000)
+
+        def done(found):
+            if not found:
+                self.statusBar().showMessage(_("resolve_browser"), 4000)
+                self.open_url(url)
+            elif found[0] == "status":
+                self.statusBar().clearMessage()
+                self.open_thread(real(found[1])["id"])
+            else:
+                self.statusBar().clearMessage()
+                self.open_account(found[1]["id"])
+        self.bridge.call(self.core.resolve(url), ok=done,
+                         fail=lambda _e: (self.statusBar().clearMessage(), self.open_url(url)))
 
     def retitle(self, w):
         i = self.tabs.indexOf(w)
@@ -693,8 +728,13 @@ class MainWindow(QMainWindow):
             self.open_url(url)
             return
         action, _sep, arg = url[len("fedtail:"):].partition("/")
-        st = self.core.store.get_status(arg) if action not in ("account",) else None
-        if action == "thread":
+        st = self.core.store.get_status(arg) if action not in ("account", "tag", "resolve") \
+            else None
+        if action == "tag":
+            self.open_tag(unquote(arg))
+        elif action == "resolve":
+            self.resolve_link(unquote(arg))
+        elif action == "thread":
             self.open_thread(arg)
         elif action == "account":
             self.open_account(arg)
@@ -730,10 +770,10 @@ class MainWindow(QMainWindow):
     def answer_follow(self, acc_id, approve):
         self.bridge.call(self.core.answer_follow(acc_id, approve))
 
-    def compose(self, reply_to=None, attach=()):
+    def compose(self, reply_to=None, attach=(), text=""):
         if not self.core.me:
             return
-        Compose(self, reply_to, attach).show()
+        Compose(self, reply_to, attach, text).show()
 
     # pictures dropped anywhere on the window start a new post with them
     def dragEnterEvent(self, e):

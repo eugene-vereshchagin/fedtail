@@ -719,6 +719,35 @@ class Core:
     def account(self, acc_id):
         return self.submit(self.api.get, f"/api/v1/accounts/{acc_id}")
 
+    def relationship(self, acc_id):
+        """following, followed_by, requested, … between me and an account."""
+        return self.submit(self.api.relationship, acc_id)
+
+    def follow(self, acc_id, on=True):
+        return self.submit(self.api.follow, acc_id, on)
+
+    def tag_timeline(self, tag, max_id=None):
+        def job():
+            page = self.api.tag_timeline(tag, limit=self.cfg["feed"]["page_size"],
+                                         max_id=max_id)
+            self.store.put_statuses(page)
+            return page
+        return self.submit(job)
+
+    def resolve(self, url):
+        """A web address of a fediverse profile or post → ("account", acc) /
+        ("status", st) through my own server, or None if it doesn't know it."""
+        def job():
+            got = self.api.search(url, resolve=True, limit=1)
+            if got.get("statuses"):
+                st = got["statuses"][0]
+                self.store.put_statuses([st])
+                return ("status", st)
+            if got.get("accounts"):
+                return ("account", got["accounts"][0])
+            return None
+        return self.submit(job)
+
     # ---- my profile ------------------------------------------------------------
     def my_profile(self):
         """My account as the editor needs it (bio and fields as typed)."""

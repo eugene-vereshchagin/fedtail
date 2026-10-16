@@ -75,6 +75,7 @@ fedtail/
     counters.py      honest counters: ask the post's own server
     events.py        tiny event bus (handlers run in the emitting thread)
     hashtags.py      one-case hashtags for the CamelCase hint
+    links.py         @mentions, #tags, fediverse links → in-app links
     instance.py      one window per profile (unix socket)
     lanes.py         Lane = source + filter; built-in lanes; list lanes
     model.py         helpers over status/account dicts (real(), snippet(), …)
@@ -324,6 +325,17 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Saving pictures** — `core/saving.py` (where, file name, no overwrite) +
   `Images.save()` (from the cache when possible).
 * **CamelCase hint** — `core/hashtags.flat_tags()`, shown under the compose text.
+* **Links stay inside** — `core/links.in_app(html, status)` rewrites hrefs before
+  `text.clean()`: known @mentions → `fedtail:account/<id>`, hashtags →
+  `fedtail:tag/<name>`, fediverse-looking profile/post addresses (and unknown
+  mentions) → `fedtail:resolve/<quoted url>`. `core.resolve(url)` asks the user's
+  server (`/api/v2/search?resolve=true`) and the window opens the thread or the
+  profile; the browser only if nothing is found. Flag `ui.links_in_app`.
+* **Profiles and tags** — `AccountWidget` (info card: bio, fields, counts, since,
+  "follows you", Follow/Mention/Add to list/browser; `core.relationship/follow`)
+  and `TagWidget` (`core.tag_timeline`) share `_PagedTab` (a server timeline read
+  page by page). Clicking the name of the person whose tab is open scrolls back
+  to their card.
 
 ## 13. Events (core → frontend)
 
@@ -353,8 +365,8 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
   images, `on_link`, `open_url`, `show_images`, `me_id`, `subscribed`,
   `fill_list_menu`, `save_image`. Cards never import the window.
 * **In-app links** are `fedtail:<action>/<arg>` (`text.link()`), handled in
-  `MainWindow.on_link`: `thread`, `account`, `reply`, `fav`, `boost`, `open`,
-  `delete`, `sub`, `unsub`. Labels style links inline (QLabel ignores QSS for `<a>`).
+  `MainWindow.on_link`: `thread`, `account`, `tag`, `resolve`, `reply`, `fav`,
+  `boost`, `open`, `delete`, `sub`, `unsub`. Labels style links inline (QLabel ignores QSS for `<a>`).
 * **`CardSpec`** (card.py) describes one row: status, depth, `/N` number, parent,
   unread, focus, in_thread, extra (my_replies, short_id, separator). `PostRow`
   rebuilds only when the spec really changed (`update_spec`).

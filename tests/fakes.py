@@ -95,6 +95,24 @@ class FakeApi:
     def notifications(self, types, limit=40, max_id=None, min_id=None):
         return _page([n for n in self.w.activity if n["type"] in types], limit, max_id, min_id)
 
+    def relationship(self, acc_id):
+        return {"id": acc_id, "following": acc_id in self.w.following,
+                "followed_by": False, "requested": False}
+
+    def follow(self, acc_id, on=True):
+        (self.w.following.add if on else self.w.following.discard)(acc_id)
+        return self.relationship(acc_id)
+
+    def tag_timeline(self, tag, limit=40, max_id=None, min_id=None):
+        tagged = [s for s in self.w.statuses.values() if f"#{tag}".lower() in
+                  s["content"].lower()]
+        return _page(tagged, limit, max_id, min_id)
+
+    def search(self, q, kind=None, resolve=True, limit=5):
+        st = [s for s in self.w.statuses.values() if s.get("url") == q]
+        acc = [s["account"] for s in self.w.statuses.values() if s["account"].get("url") == q]
+        return {"statuses": st[:limit], "accounts": acc[:limit], "hashtags": []}
+
     def status(self, sid):
         if sid not in self.w.statuses:
             raise ApiError(404, "not found")
@@ -208,6 +226,7 @@ class World:
         self.profile = {}
         self.lists = {}
         self.activity = []
+        self.following = set()
         self.profile_updates = []
 
     def act(self, i, kind, account, st=None, minute=0):

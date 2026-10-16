@@ -51,11 +51,12 @@ def save_image(core, image):
 
 
 class Compose(QDialog):
-    def __init__(self, win, reply_to=None, attach=()):
+    def __init__(self, win, reply_to=None, attach=(), text=""):
         super().__init__(win)
         self.win, self.core = win, win.core
         self.reply_to = real(reply_to) if reply_to else None
         self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None)
+        self.start_text = text  # "@someone " from a profile's Mention button
         self.sent = False
         self.setWindowTitle(_("compose_reply") if reply_to else _("compose_new"))
         lay = QVBoxLayout(self)
@@ -178,6 +179,8 @@ class Compose(QDialog):
                     self._add_media(path, desc)
             self.hint.setText(_("draft_restored"))
         else:
+            if self.start_text:
+                self.text.setPlainText(self.start_text)
             if self.reply_to:
                 self.text.setPlainText(reply_mentions(self.reply_to, self.core.me["acct"]))
                 if self.reply_to.get("spoiler_text"):

@@ -24,6 +24,7 @@ DEFAULTS = {
         "image_viewer": "internal",
         "image_upscale": 2,
         "save_dir": "",
+        "links_in_app": True,
         "actions": "both",
     },
     "feed": {

@@ -1,6 +1,7 @@
 """One post on screen, and the "new below" divider."""
 
 from dataclasses import dataclass, field
+from urllib.parse import unquote
 
 from PySide6.QtCore import QRectF, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core import links
 from ...core.model import is_bot, real, snippet
 from ...i18n import _
 from .text import clean, display_name, esc, link
@@ -207,7 +209,7 @@ class PostRow(QWidget):
         lab.setTextInteractionFlags(flags)
         lab.linkActivated.connect(self.ctx.on_link)
         # shortened links show the whole address on hover
-        lab.linkHovered.connect(lambda url: lab.setToolTip(url if url.startswith("http") else ""))
+        lab.linkHovered.connect(lambda url: lab.setToolTip(_hover_text(url)))
         if name:
             lab.setObjectName(name)
         return lab
@@ -245,7 +247,10 @@ class PostRow(QWidget):
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(8)
         if st.get("content"):
-            text = self._label(clean(st["content"], self.theme.css("link")), "postText",
+            html = st["content"]
+            if self.ctx.cfg["ui"]["links_in_app"]:
+                html = links.in_app(html, st)  # @mentions, #tags, fediverse links stay inside
+            text = self._label(clean(html, self.theme.css("link")), "postText",
                                selectable=True)
             cv.addWidget(text)
         media = self._media(st)
@@ -564,6 +569,18 @@ class PostRow(QWidget):
                 lab.setText(_("image_failed"))
                 lab.setWordWrap(True)
         self.ctx.images.get(src, show, failed=failed)
+
+
+def _hover_text(url):
+    """What a link's tooltip says: the web address, also for in-app links that
+    were made from one (fedtail:resolve/…)."""
+    if url.startswith("http"):
+        return url
+    if url.startswith("fedtail:resolve/"):
+        return unquote(url[len("fedtail:resolve/"):])
+    if url.startswith("fedtail:tag/"):
+        return "#" + unquote(url[len("fedtail:tag/"):])
+    return ""
 
 
 def _dims(m):

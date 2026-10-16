@@ -572,51 +572,36 @@ class ThreadWidget(QWidget):
         self.view.set_unread(ids, False)
 
 
-class AccountWidget(QWidget):
-    def __init__(self, win, acc_id):
+class _PagedTab(QWidget):
+    """A tab with a server timeline read page by page (a profile, a hashtag)."""
+
+    def __init__(self, win, title):
         super().__init__()
         self.win, self.core = win, win.core
-        self.acc_id = acc_id
-        self.title = "@…"
+        self.title = title
         self.items = []
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        self.header = _Header(win.theme, "@…")
-        self.mine = bool(self.core.me) and acc_id == self.core.me["id"]
-        if self.mine:
-            self.header.add(_button(_("edit_profile"), win.edit_profile, icon="document-edit"))
+        self.header = _Header(win.theme, title)
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         lay.addWidget(self.view, 1)
         self.btn_more = _button(_("older_down"), self.more, name="older")
         self.view.footer.addWidget(self.btn_more)
-        self.reload_account()
-        self.more()
 
-    def reload_account(self):
-        self.win.bridge.call(self.core.account(self.acc_id), ok=self._account)
-
-    def _account(self, acc):
-        self.title = "@" + acc["acct"]
-        note = snippet({"content": acc.get("note", "")}, 200)
-        counts = " · ".join(_(key, n=acc[field]) for key, field in
-                            (("posts_n", "statuses_count"), ("followers_n", "followers_count"),
-                             ("following_n", "following_count")) if field in acc)
-        line = " · ".join(x for x in (f"@{acc['acct']}", counts) if x)
-        self.header.title.setText(acc.get("display_name") or acc["username"])
-        self.header.info.setText(f"{line} — {note}" if note else line)
-        self.header.info.setToolTip(snippet({"content": acc.get("note", "")}, 2000))
-        self.win.retitle(self)
+    def fetch(self, max_id):  # -> future with a page of statuses
+        raise NotImplementedError
 
     def more(self):
         self.btn_more.setEnabled(False)
         max_id = self.items[-1]["id"] if self.items else None
-        self.win.bridge.call(self.core.account_statuses(self.acc_id, max_id), ok=self._page,
+        self.win.bridge.call(self.fetch(max_id), ok=self._page,
                              fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
 
     def _page(self, page):
-        self.items += page
+        known = {st["id"] for st in self.items}
+        self.items += [st for st in page if st["id"] not in known]
         self.btn_more.setEnabled(bool(page))
         if not page:
             self.btn_more.setText(_("no_older"))
@@ -632,6 +617,178 @@ class AccountWidget(QWidget):
 
     def apply_read(self, ids):
         pass
+
+
+class AccountWidget(_PagedTab):
+    """Someone's profile inside the app: who they are (bio, fields, counts, since
+    when, whether they follow you), what you can do (follow, mention, put in a
+    list, open in the browser), and their posts below."""
+
+    def __init__(self, win, acc_id):
+        super().__init__(win, "@…")
+        self.acc_id = acc_id
+        self.acc = None
+        self.mine = bool(self.core.me) and acc_id == self.core.me["id"]
+        if self.mine:
+            self.header.add(_button(_("edit_profile"), win.edit_profile, icon="document-edit"))
+        self.info = QFrame()
+        self.info.setObjectName("card")
+        self.view.header.addWidget(self.info)
+        self._info_layout = QVBoxLayout(self.info)
+        self._info_layout.setContentsMargins(18, 14, 18, 14)
+        self._info_layout.setSpacing(8)
+        self.relation = {}
+        self.reload_account()
+        self.more()
+
+    def fetch(self, max_id):
+        return self.core.account_statuses(self.acc_id, max_id)
+
+    def reload_account(self):
+        self.win.bridge.call(self.core.account(self.acc_id), ok=self._account)
+        if not self.mine:
+            self.win.bridge.call(self.core.relationship(self.acc_id), ok=self._relation)
+
+    def show_info(self):
+        """Clicking the name of the person whose tab this is: back to their card."""
+        self.view.verticalScrollBar().setValue(0)
+        _flash(self.info)
+
+    def _relation(self, rel):
+        self.relation = rel or {}
+        if self.acc:
+            self._fill()
+
+    def _account(self, acc):
+        self.acc = acc
+        self.title = "@" + acc["acct"]
+        counts = " · ".join(_(key, n=acc[field]) for key, field in
+                            (("posts_n", "statuses_count"), ("followers_n", "followers_count"),
+                             ("following_n", "following_count")) if field in acc)
+        self.header.title.setText(acc.get("display_name") or acc["username"])
+        self.header.info.setText(" · ".join(x for x in (f"@{acc['acct']}", counts) if x))
+        self.win.retitle(self)
+        self._fill()
+
+    def _fill(self):
+        from ...core import links
+        from .text import clean
+        acc, lay, theme = self.acc, self._info_layout, self.win.theme
+        while lay.count():
+            item = lay.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                _clear(item.layout())
+        top = QHBoxLayout()
+        top.setSpacing(14)
+        avatar = QLabel()
+        avatar.setFixedSize(72, 72)
+        from .card import _round
+        self.win.images.get(acc.get("avatar_static") or acc.get("avatar"),
+                            lambda pm, w=avatar: w.setPixmap(_round(pm, 72)))
+        top.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
+        col = QVBoxLayout()
+        col.setSpacing(6)
+        bits = [f"@{esc(acc['acct'])}"]
+        if acc.get("bot"):
+            bits.append(_("bot"))
+        if acc.get("locked"):
+            bits.append("🔒 " + _("acc_locked"))
+        if acc.get("created_at"):
+            y, m, d = acc["created_at"][:10].split("-")
+            bits.append(_("acc_since", date=f"{d}.{m}.{y}"))
+        if self.relation.get("followed_by"):
+            bits.append("<b>" + _("acc_follows_you") + "</b>")
+        meta = QLabel(" · ".join(bits))
+        meta.setObjectName("muted")
+        meta.setTextFormat(Qt.TextFormat.RichText)
+        col.addWidget(meta)
+        note = acc.get("note") or ""
+        if self.core.cfg["ui"]["links_in_app"]:
+            note = links.in_app(note)
+        bio = QLabel(clean(note, theme.css("link")))
+        bio.setTextFormat(Qt.TextFormat.RichText)
+        bio.setWordWrap(True)
+        bio.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        bio.linkActivated.connect(self.win.on_link)
+        col.addWidget(bio)
+        for f in acc.get("fields") or []:
+            value = f.get("value", "")
+            if self.core.cfg["ui"]["links_in_app"]:
+                value = links.in_app(value)
+            row = QLabel(f'<b>{esc(f.get("name", ""))}</b>: {clean(value, theme.css("link"))}'
+                         + (" ✓" if f.get("verified_at") else ""))
+            row.setTextFormat(Qt.TextFormat.RichText)
+            row.setWordWrap(True)
+            row.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+            row.linkActivated.connect(self.win.on_link)
+            col.addWidget(row)
+        top.addLayout(col, 1)
+        lay.addLayout(top)
+
+        buttons = QHBoxLayout()
+        if not self.mine:
+            following = self.relation.get("following")
+            requested = self.relation.get("requested")
+            label = _("unfollow") if following else \
+                (_("follow_requested") if requested else _("follow"))
+            fb = _button(label, self._toggle_follow, name="primary" if not following else "tool")
+            buttons.addWidget(fb)
+            buttons.addWidget(_button(_("mention"), lambda: self.win.compose(
+                text=f"@{acc['acct']} ")))
+            if self.win.ctx.fill_list_menu is not None:
+                from PySide6.QtWidgets import QMenu
+                lb = _button(_("add_to_list"), lambda: None)
+                menu = QMenu(lb)
+                menu.aboutToShow.connect(lambda m=menu: self.win.ctx.fill_list_menu(m, acc))
+                lb.setMenu(menu)
+                buttons.addWidget(lb)
+        buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
+        buttons.addStretch(1)
+        lay.addLayout(buttons)
+
+    def _toggle_follow(self):
+        on = not (self.relation.get("following") or self.relation.get("requested"))
+        self.win.bridge.call(self.core.follow(self.acc_id, on), ok=self._relation)
+
+
+class TagWidget(_PagedTab):
+    """Posts with a hashtag, as your server knows them."""
+
+    def __init__(self, win, tag):
+        super().__init__(win, "#" + tag)
+        self.tag = tag
+        self.header.info.setText(_("tag_info"))
+        self.more()
+
+    def fetch(self, max_id):
+        return self.core.tag_timeline(self.tag, max_id)
+
+
+def _clear(layout):
+    while layout.count():
+        item = layout.takeAt(0)
+        if item.widget():
+            item.widget().deleteLater()
+        elif item.layout():
+            _clear(item.layout())
+
+
+def _flash(w):
+    """Draw the eye to a widget for a moment (the focus style of a card)."""
+    w.setProperty("focus", "true")
+    w.style().unpolish(w)
+    w.style().polish(w)
+
+    def off():
+        try:
+            w.setProperty("focus", "false")
+            w.style().unpolish(w)
+            w.style().polish(w)
+        except RuntimeError:
+            pass
+    QTimer.singleShot(1200, off)
 
 
 class RequestsWidget(QScrollArea):

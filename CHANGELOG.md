@@ -7,6 +7,9 @@
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
   (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
   go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
+- Links stay inside: @mentions → profile tab, #hashtags → tag timeline, fediverse links →
+  looked up through your server; profiles get an info card with Follow, Mention, Add to
+  list; clicking the name in its own profile tab goes back to the card.
 - Docs: ARCHITECTURE.md (the whole system for the next developer, human or AI),
   DEBUGGING.md (logs and bug reports), AGENTS.md (rules on one page).
 - Save pictures: `S` in the viewer or a right click on a picture; to the desktop's Downloads

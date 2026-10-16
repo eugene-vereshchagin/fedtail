@@ -302,6 +302,22 @@ class QtSmokeTest(unittest.TestCase):
         beat.stop()
         qInstallMessageHandler(None)
 
+        # someone's profile inside the app: info card, follow; a click on the name
+        # in their own tab goes back up to it; hashtags open a tab of their own
+        from fedtail.frontends.qt.feed import AccountWidget, TagWidget
+        self.win.on_link("fedtail:account/B")
+        prof = self.win.tabs.currentWidget()
+        self.assertIsInstance(prof, AccountWidget)
+        self.pump(until=lambda: prof.acc is not None and prof._info_layout.count())
+        prof._toggle_follow()
+        self.pump(until=lambda: prof.relation.get("following"))
+        self.win.on_link("fedtail:account/B")  # same tab: no new one
+        self.assertIs(self.win.tabs.currentWidget(), prof)
+        self.win.on_link("fedtail:tag/linux")
+        self.assertIsInstance(self.win.tabs.currentWidget(), TagWidget)
+        self.win.close_tab(self.win.tabs.currentIndex())
+        self.win.close_tab(self.win.tabs.indexOf(prof))
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()
