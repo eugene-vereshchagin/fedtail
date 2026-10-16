@@ -39,6 +39,10 @@ jobs:
       - name: Failures as annotations
         if: failure()
         run: python .github/annotate.py test-output.txt
+      - name: Installs as a package (pip), the command works
+        run: |
+          cd /tmp && pip install "$GITHUB_WORKSPACE[qt]" && fedtail --version
+          python -c "import fedtail, importlib.resources as r; assert r.files('fedtail').joinpath('data/config.example.toml').is_file(); assert r.files('fedtail').joinpath('data/themes/system.toml').is_file()"
 
   # the port: Windows with Qt from pip
   windows:

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem / Уязвимость
+    url: https://github.com/eugene-vereshchagin/fedtail/security/advisories/new
+    about: Report privately, not as a public issue / Приватно, не публичным issue

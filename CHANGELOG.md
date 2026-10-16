@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.4.0 — in progress
+## 0.4.0 — 2026-10-16
+
+The public beta.
+
+- Ready to be shown: CONTRIBUTING.md, SECURITY.md (what fedtail promises about the token,
+  other servers, HTML and logs), issue templates that ask for the log, a pull request
+  checklist, package metadata; CI checks that `pip install` gives a working `fedtail`
+  command. The README says what fedtail is now, with a screenshot.
 
 - Windows: a zip with `fedtail.exe` in every release (built by CI with PyInstaller, no Python
   needed); config in `%APPDATA%\fedtail`, data in `%LOCALAPPDATA%\fedtail`; one window per

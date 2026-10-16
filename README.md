@@ -1,5 +1,9 @@
 # fedtail
 
+[![CI](https://github.com/eugene-vereshchagin/fedtail/actions/workflows/ci.yml/badge.svg)](https://github.com/eugene-vereshchagin/fedtail/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/eugene-vereshchagin/fedtail)](https://github.com/eugene-vereshchagin/fedtail/releases)
+[![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+
 *`tail -f` for the fediverse.* A desktop client for GoToSocial, Mastodon, Akkoma and anything
 else that speaks the Mastodon API — made for people who remember Juick and Point.im and are
 tired of reading scraps of other people's conversations.
@@ -12,7 +16,12 @@ where you came from; a lane remembers where you stopped and never jumps.
 
 [Русская версия](README.ru.md)
 
-> Status: early development (0.1). Works for the author; expect rough edges.
+> **Status: public beta.** Used every day by its author on GoToSocial; Mastodon, Akkoma and
+> Friendica work through the same API. Linux (Debian 13 and newer) first, Windows on trial.
+> Found a bug? [Open an issue](https://github.com/eugene-vereshchagin/fedtail/issues) with `latest.log` — see
+> [docs/TESTING.md](docs/TESTING.md).
+
+![A thread as a tree, in the default theme](https://raw.githubusercontent.com/eugene-vereshchagin/fedtail/screenshots/light-thread.png)
 
 ## What's different
 
@@ -20,8 +29,9 @@ where you came from; a lane remembers where you stopped and never jumps.
   move what you're reading. You read in chronological order, like RSS.
 - **Every reply says what it replies to.** A strip above the reply quotes the start of the
   parent post; click it to open the whole conversation.
-- **Threads are trees.** Indented by depth, comments numbered `/1 /2 …`, the post you came
-  from highlighted.
+- **Threads are trees — whole ones.** Indented by depth, comments numbered `/1 /2 …`, the post
+  you came from highlighted; replies your server never got are fetched from the author's
+  server, so a thread looks the same from wherever you open it.
 - **Separate lanes, in sections.** Timelines from the widest down (Federated, Home, Local,
   Bots), Personal (My posts, Mentions, Replies to me, Subscriptions, Bookmarks, Likes & boosts,
   Follow requests), and your Lists at the bottom.
@@ -30,7 +40,8 @@ where you came from; a lane remembers where you stopped and never jumps.
 - **Drafts survive.** Text is saved while you type; closing the window loses nothing.
 - **Config file, not a settings dialog.** Every behaviour is a flag. Defaults are opinionated;
   "like every other client" is one line away.
-- **One profile = one account = one window.** `--profile work` runs another account.
+- **Several accounts.** One profile per account, each with its own config and theme; switch
+  with a right click on your avatar, or put them all in one window.
 
 ## For Juick and Point.im people
 
@@ -277,11 +288,13 @@ ruff check .
 * [docs/DEBUGGING.md](docs/DEBUGGING.md) — the logs, and what to send when it breaks.
 * [docs/DESIGN.md](docs/DESIGN.md) — the spec and the queue of planned work (Russian).
 * [AGENTS.md](AGENTS.md) — the rules in one page, for coding agents and humans in a hurry.
+* [CONTRIBUTING.md](CONTRIBUTING.md) — reporting bugs, proposing changes, running the tests.
 
 ## If it breaks
 
-The debugging mode (`debug.mode`, on by itself before 1.0 and in development builds, off in releases; `--debug` for one run) keeps logs in `~/fedtail-logs/<profile>/`, a file per start and per
-hour, `latest.log` the current one (`debug.log_dir`). Attach `latest.log`, or run
+The debugging mode (`debug.mode`: on by itself before 1.0 and in development builds, off in
+releases; `--debug` for one run) keeps logs in `~/fedtail-logs/<profile>/`, a file per start
+and per hour, `latest.log` the current one (`debug.log_dir`). Attach `latest.log`, or run
 `python3 -m fedtail --bug-report` and send the archive it makes in your home folder — logs,
 crash traces, config and a system summary, without the token and the database. A frozen
 window: `kill -USR1 <pid>` first, it writes where every thread is stuck. Details in

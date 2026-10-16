@@ -1,0 +1,11 @@
+name: Idea / Идея
+description: Something fedtail should do / Чего не хватает
+labels: [idea]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why / Что и зачем
+      description: What you'd like to happen, and the situation where you missed it. / Что хочется и в какой ситуации этого не хватило.
+    validations:
+      required: true

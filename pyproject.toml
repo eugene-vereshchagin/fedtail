@@ -5,17 +5,35 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fedtail"
 dynamic = ["version"]
-description = "Desktop fediverse client for people who miss Point.im: threads as trees, nothing jumps, everything is a config flag"
+description = "Desktop fediverse client for people who miss Point.im: whole threads as trees, nothing jumps, everything is a config flag"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Eugene Vereshchagin" }]
 requires-python = ">=3.11"
 dependencies = ["requests>=2.28"]
+keywords = ["fediverse", "mastodon", "gotosocial", "akkoma", "client", "qt", "point.im", "juick"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Environment :: X11 Applications :: Qt",
+    "Environment :: Win32 (MS Windows)",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Natural Language :: English",
+    "Natural Language :: Russian",
     "Topic :: Communications",
+    "Topic :: Internet",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
+
+[project.urls]
+Homepage = "https://github.com/eugene-vereshchagin/fedtail"
+Issues = "https://github.com/eugene-vereshchagin/fedtail/issues"
+Changelog = "https://github.com/eugene-vereshchagin/fedtail/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 qt = ["PySide6-Essentials>=6.5"]

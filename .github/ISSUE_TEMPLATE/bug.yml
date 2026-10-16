@@ -1,0 +1,28 @@
+name: Bug report / Ошибка
+description: Something doesn't work as it should / Что-то работает не так
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / Что случилось
+      description: What you did, what you expected, what you got. Screenshots help. / Что делал, что ждал, что получилось. Скриншот помогает.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: fedtail version / Версия
+      description: Bottom of the sidebar, or `python3 -m fedtail --version`
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System and server / Система и сервер
+      placeholder: Debian 13, KDE; GoToSocial 0.19
+  - type: textarea
+    id: log
+    attributes:
+      label: Log / Журнал
+      description: Attach ~/fedtail-logs/<profile>/latest.log or the archive from `python3 -m fedtail --bug-report` (no token, no post texts; the archive includes your config — look it over). / Приложи latest.log или архив --bug-report.
