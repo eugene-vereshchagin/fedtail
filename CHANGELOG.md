@@ -2,6 +2,9 @@
 
 ## 0.6.0 — in progress
 
+- A picture, avatar or profile banner that doesn't come within 30 s (a server still fetching
+  it from elsewhere) is asked for once more a few seconds later, with more patience, instead
+  of staying grey until a restart. A request with no answer for three minutes is asked again.
 - Opening a thread no longer makes the window wider: a long title or note above a lane, thread
   or account ends in "…" and shows the whole text in its tooltip.
 - Short texts (conversation lines, notifications) no longer glue words across a quote or a

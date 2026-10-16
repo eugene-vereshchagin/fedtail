@@ -11,7 +11,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
 
 from ...core.api import USER_AGENT
@@ -23,6 +23,11 @@ MEM_MB = 128  # default memory budget for decoded pictures (ui.image_cache_mb)
 
 class Images:
     RETRY_AFTER = 300  # s: a picture that just failed isn't asked for again before that
+    # a server that fetches remote media on demand may take longer than a feed picture
+    # is allowed to: such a picture is asked for once more, a bit later and with more
+    # patience, before it counts as broken (it used to stay grey until a restart)
+    SECOND_TRY_AFTER = 8000  # ms
+    STUCK_AFTER = 180  # s: a request this old with no answer is asked for again
     def __init__(self, core, bridge):
         self.core = core
         self.bridge = bridge
@@ -35,6 +40,8 @@ class Images:
         self.waiting = {}
         self.broken = {}  # url -> when it last failed (monotonic)
         self.why = {}     # url -> ("network" | "format", detail) of its last failure
+        self.asked = {}   # key -> when it was handed to the workers (monotonic)
+        self.patient = set()  # keys on their second try: longer read timeout
         # own pool: a backlog of avatars must never delay sending a post
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
         # newest first: the picture asked for last is the one on screen now; a lane full
@@ -50,16 +57,17 @@ class Images:
         Returns (key, image) for the request it actually did."""
         with self._stack_lock:
             url, max_side, asked = self._stack.pop()
+            patient = (url, max_side) in self.patient
         waited = time.monotonic() - asked
         if waited > 2:
             log.info("image waited %.1f s for a worker (%d more waiting)", waited,
                      len(self._stack))
         try:
-            return (url, max_side), self._download(url, max_side)
+            return (url, max_side), self._download(url, max_side, patient)
         except Exception:  # noqa: BLE001 — said in the log by _download; the card says it
             return (url, max_side), None
 
-    def _download(self, url, max_side):
+    def _download(self, url, max_side, patient=False):
         p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
         img = QImage()  # QImage is fine outside the GUI thread
         if p.exists():
@@ -73,7 +81,8 @@ class Images:
                 # remote original must not hold one of the four image workers for a minute
                 # — but an original opened in the viewer is worth waiting for: a server
                 # may be fetching it from the author's server right now
-                r = self.http.get(url, timeout=(10, 30 if max_side <= FEED_SIDE else 120))
+                slow = 30 if max_side <= FEED_SIDE and not patient else 120
+                r = self.http.get(url, timeout=(10, slow))
                 r.raise_for_status()
             except requests.RequestException as e:
                 log.warning("image %s: %s after %.1f s", url, e.__class__.__name__,
@@ -137,8 +146,18 @@ class Images:
             return
         if key in self.waiting:
             self.waiting[key].append((callback, failed))
-            return
-        self.waiting[key] = [(callback, failed)]
+            since = time.monotonic() - self.asked.get(key, time.monotonic())
+            if since < self.STUCK_AFTER:
+                return
+            # no answer for minutes (a lost result?): ask again rather than wait forever
+            log.warning("image %s: no answer for %.0f s, asking again", url, since)
+        else:
+            self.waiting[key] = [(callback, failed)]
+        self._ask(key)
+
+    def _ask(self, key):
+        url, max_side = key
+        self.asked[key] = time.monotonic()
         with self._stack_lock:
             self._stack.append((url, max_side, time.monotonic()))
         self.bridge.call(self.pool.submit(self._next, key),
@@ -156,6 +175,15 @@ class Images:
         # cache from holding every picture ever seen
 
     def _failed(self, key):
+        self.asked.pop(key, None)
+        if (self.why.get(key[0], ("",))[0] == "network" and key not in self.patient
+                and key in self.waiting):
+            # once more, later and with more patience; the pictures keep waiting
+            log.info("image %s: second try in %d s", key[0], self.SECOND_TRY_AFTER // 1000)
+            self.patient.add(key)
+            QTimer.singleShot(self.SECOND_TRY_AFTER, lambda: self._ask(key))
+            return
+        self.patient.discard(key)
         self.broken[key[0]] = time.monotonic()
         for _cb, failed in self.waiting.pop(key, []):
             if failed:
@@ -163,12 +191,17 @@ class Images:
                     failed()
                 except RuntimeError:  # its widget is gone
                     pass
+                except Exception:  # noqa: BLE001 — one bad card mustn't keep the others waiting
+                    log.exception("image failure handler")
 
     def _ready(self, key, img):
         if img.isNull():
             self._failed(key)
             return
         self.broken.pop(key[0], None)
+        self.why.pop(key[0], None)
+        self.asked.pop(key, None)
+        self.patient.discard(key)
         callbacks = [cb for cb, _f in self.waiting.pop(key, [])]
         pm = QPixmap.fromImage(img)
         self._remember(key, pm)
@@ -177,3 +210,5 @@ class Images:
                 cb(pm)
             except RuntimeError:  # its widget is gone
                 pass
+            except Exception:  # noqa: BLE001 — one bad card mustn't keep the others waiting
+                log.exception("image handler")

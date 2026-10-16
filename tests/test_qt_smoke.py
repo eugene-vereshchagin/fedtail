@@ -885,8 +885,6 @@ class QtSmokeTest(unittest.TestCase):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
         self.core.poll_once()
-        self.win.resize(600, 500)
-        self.pump(0.1)
         self.win.on_link("fedtail:thread/011")
         tab = self.win.tabs.currentWidget()
         self.assertIsInstance(tab, ThreadWidget)
@@ -894,11 +892,12 @@ class QtSmokeTest(unittest.TestCase):
         # not subscribed, but Bob is followed: the header says why his replies come
         self.pump(until=lambda: "@bob" in tab.header.info.text())
         # a long title and note give way ("…", whole text in the tooltip): no wider window
+        before = self.win.minimumSizeHint().width(), self.win.width()
         tab.header.info.setText("очень длинное пояснение " * 20)
+        tab.header.title.setText("очень длинный заголовок " * 20)
         self.pump(0.1)
-        self.assertLessEqual(self.win.minimumSizeHint().width(), 600)
-        self.assertLessEqual(self.win.width(), 600)
-        self.assertTrue(tab.header.info.toolTip())
+        self.assertEqual((self.win.minimumSizeHint().width(), self.win.width()), before)
+        self.assertIn("пояснение", tab.header.info.toolTip())
 
         # a reply arrives by the poll: the open thread takes it in by itself
         self.world.add(status("015", NEWS, "011", "B", minute=15), home=True)

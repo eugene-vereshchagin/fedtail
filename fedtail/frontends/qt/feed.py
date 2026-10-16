@@ -279,14 +279,26 @@ class _ElidedLabel(QLabel):
     def __init__(self, text=""):
         super().__init__()
         self._full = ""
+        self._tip = ""
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.setMinimumWidth(40)
         self.setText(text)
 
     def setText(self, text):  # noqa: N802 — Qt's name
         self._full = text or ""
-        self.setToolTip(self._full if len(self._full) > 30 else "")
         self._elide()
+
+    def setToolTip(self, tip):  # noqa: N802 — Qt's name
+        """An explanation of its own, shown under the whole text when that's cut."""
+        self._tip = tip or ""
+        self._show_tip()
+
+    def _show_tip(self):
+        cut = QLabel.text(self) != self._full
+        parts = [self._full] if cut else []
+        if self._tip:
+            parts.append(self._tip)
+        QLabel.setToolTip(self, "\n\n".join(parts))
 
     def text(self):
         return self._full
@@ -295,6 +307,7 @@ class _ElidedLabel(QLabel):
         shown = self.fontMetrics().elidedText(self._full, Qt.TextElideMode.ElideRight,
                                               max(self.width(), 40))
         QLabel.setText(self, shown)
+        self._show_tip()
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
