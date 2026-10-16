@@ -2,6 +2,8 @@
 
 ## 0.6.0 — in progress
 
+- Somebody's boost of a post by a person you put in a list stays out of Home (and the other
+  lanes in `lists.hide_in`) too, not only that person's own posts and boosts.
 - Theme `bnw` — bnw.im: a black frame, grey posts on white, everything monospace, bright
   green buttons. Themes may now colour the left panel apart from the posts
   (`sidebar_text`, `sidebar_muted`) and give the post panel and dialogs their own background

@@ -621,6 +621,12 @@ class CoreTest(TmpDir):
         # in an exclusive list: gone from "bots", only its list shows it
         self.assertEqual(core.lane_entries("bots"), [])
         self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["010"])
+        # somebody boosts a post of the list's member: that stays out of Home too
+        boost = status("012", fakes.acct("Z", "zed@example.org"), minute=12)
+        boost["reblog"] = w.statuses["011"]
+        w.add(boost, home=True)
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["010"])
 
         # a new list with bob in it, from a post's menu
         x = core.create_list("Друзья", add="B").result()

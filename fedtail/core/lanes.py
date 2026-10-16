@@ -43,8 +43,10 @@ def _bots(st, ctx):
 
 def keeps(lane, st, ctx):
     """Does this post belong in this lane? Someone you put in a list (and their
-    boosts) leaves the lanes in lists.hide_in: the list is where they're read."""
-    if lane.name in ctx.hide_in and st["account"]["id"] in ctx.hidden:
+    boosts, and anybody's boost of their posts) leaves the lanes in lists.hide_in:
+    the list is where they're read."""
+    if lane.name in ctx.hide_in and (st["account"]["id"] in ctx.hidden
+                                     or real(st)["account"]["id"] in ctx.hidden):
         return False
     return lane.keep(st, ctx)
 
