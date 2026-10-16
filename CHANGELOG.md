@@ -2,6 +2,10 @@
 
 ## 0.6.0 — in progress
 
+- The post window is a panel inside the main window now (`ui.compose = "inline"`): KDE keeps a
+  keyboard layout per window, so a new window could come up in another language mid-thought.
+  One panel at a time (opening another keeps the first as a draft), ✕ or Esc closes it,
+  pictures dropped on the window go into it. `"window"` brings the separate window back.
 - A tidier lane header: what to show is one control — All | Posts | New — and how to show it
   another — Feed | Conversations (each with a tooltip saying what it does); "↓ To new" no
   longer looks like a drop-down; buttons with nothing to do grey out instead of vanishing,

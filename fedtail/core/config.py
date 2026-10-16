@@ -19,6 +19,7 @@ DEFAULTS = {
         "close_to_tray": True,
         "esc": "curtain",
         "switch_closes": True,
+        "compose": "inline",
         "start_lane": "none",
         "merge": [],
         "sidebar_footer": True,
@@ -119,6 +120,7 @@ CHOICES = {
     ("debug", "level"): {"debug", "info", "warning"},
     ("debug", "mode"): {"auto", "on", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
+    ("ui", "compose"): {"inline", "window"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",

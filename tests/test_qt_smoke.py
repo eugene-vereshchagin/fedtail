@@ -710,6 +710,29 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "014" not in lane.view.rows)
         self.assertEqual(self.core.get_state("unread_only.people"), True)  # remembered
 
+    def test_compose_inline_panel(self):
+        """The post window lives inside the main one (the keyboard layout stays)."""
+        from fedtail.frontends.qt.compose import Compose
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        first = Compose(self.win)
+        first.show()
+        self.assertFalse(first.isWindow())  # a panel, not a window of its own
+        self.assertTrue(self.win.isAncestorOf(first))
+        self.assertTrue(self.win.rect().contains(first.geometry()))
+        first.text.setPlainText("черновик")
+        second = Compose(self.win, self.core.store.get_status("011"))
+        second.show()
+        self.assertTrue(gone(first))  # one at a time…
+        self.assertEqual(self.core.get_draft(first.key)["text"], "черновик")  # …kept
+        second.reject()
+        self.assertTrue(gone(second))
+        self.win.cfg["ui"]["compose"] = "window"
+        third = Compose(self.win)
+        third.show()
+        self.assertTrue(third.isWindow())  # the old way, when asked for
+        third.reject()
+
     def test_start_lane(self):
         self.win.cfg["ui"]["start_lane"] = "none"  # the default: nothing opens by itself
         self.win.start()

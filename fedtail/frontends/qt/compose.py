@@ -65,11 +65,39 @@ class Compose(QDialog):
             self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None)
         self.start_text = text  # "@someone " from a profile's Mention button
         self.sent = False
-        self.setWindowTitle(_("compose_edit") if edit else
-                            _("compose_reply") if reply_to else _("compose_new"))
+        title = _("compose_edit") if edit else \
+            _("compose_reply") if reply_to else _("compose_new")
+        self.setWindowTitle(title)
+        # ui.compose = "inline": a panel inside the main window, not a window of its own.
+        # A new window can come up with another keyboard layout (KDE keeps one per
+        # window): typing on in Russian you'd get Latin letters. Inside, it stays.
+        self.inline = win.cfg["ui"]["compose"] == "inline"
         lay = QVBoxLayout(self)
         lay.setContentsMargins(16, 16, 16, 12)
         lay.setSpacing(10)
+        if self.inline:
+            old = getattr(win, "inline_compose", None)
+            try:
+                if old is not None and old.isVisible():
+                    old.reject()  # one panel at a time; its text stays a draft
+            except RuntimeError:  # already gone
+                pass
+            win.inline_compose = self
+            self.setWindowFlags(Qt.WindowType.Widget)
+            self.setObjectName("composePanel")
+            self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            top = QHBoxLayout()
+            head = QLabel(title)
+            head.setObjectName("laneTitle")
+            top.addWidget(head, 1)
+            close = QPushButton("✕")
+            close.setObjectName("tool")
+            close.setToolTip(_("close_tip") + " (Esc)")
+            close.setCursor(Qt.CursorShape.PointingHandCursor)
+            close.clicked.connect(self.reject)
+            top.addWidget(close)
+            lay.addLayout(top)
+            win.installEventFilter(self)
 
         if self.reply_to:
             q = QLabel(f"↑ <b>{display_name(self.reply_to['account'])}</b>: "
@@ -177,6 +205,8 @@ class Compose(QDialog):
         self.vis.currentIndexChanged.connect(self._changed)
         self._count()
         self.resize(720, 500)
+        if self.inline:
+            self._place()
         self.text.setFocus()
         cur = self.text.textCursor()
         cur.movePosition(cur.MoveOperation.End)
@@ -313,6 +343,9 @@ class Compose(QDialog):
 
     def eventFilter(self, obj, e):
         t = e.type()
+        if self.inline and obj is self.win and t == QEvent.Type.Resize:
+            self._place()  # the panel follows the window
+            return False
         if t in (QEvent.Type.DragEnter, QEvent.Type.DragMove) and self._accepts(e.mimeData()):
             e.acceptProposedAction()
             return True
@@ -465,7 +498,25 @@ class Compose(QDialog):
         # still sending? fine: the core drops the draft once the post is out
         self._leave()
 
+    # ---- the inline panel: over the lanes, at the bottom, following the window -------
+    def _place(self):
+        win = self.win
+        w = min(760, max(420, win.width() - 340))
+        h = min(520, max(320, win.height() - 120))
+        x = max(10, win.width() - w - 28)
+        y = max(10, win.height() - h - 48)
+        self.setGeometry(x, y, w, h)
+        self.raise_()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self.inline:
+            self._place()
+            self.text.setFocus()
+
     def _leave(self):
         self._autosave.stop()
+        if self.inline:
+            self.win.removeEventFilter(self)
         super().reject()  # hides the dialog
         self.deleteLater()
