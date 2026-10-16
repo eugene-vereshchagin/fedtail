@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- The last `Esc` closes every lane behind a curtain instead of hiding the window: the
+  sidebar with its counts stays, nothing is marked read, new posts pile up ("Piling up:
+  Replies to me — 3, Home — 12"); a lane click or Enter opens again. `ui.esc` (was
+  `ui.esc_hides`): `curtain`, `tray` (the old way) or `off`.
 - Bookmarks, like on Point: "Bookmark" in a post's ⋯ menu, a Bookmarks lane (the server's
   bookmarks; a post bookmarked here shows up at once).
 - Notifications: no longer all silent while the window is active — only the lane on screen

@@ -1,5 +1,6 @@
 """Main window: lanes on the left, tabs (lane / threads / accounts) on the right."""
 
+import logging
 from dataclasses import dataclass
 from urllib.parse import unquote
 
@@ -52,6 +53,8 @@ from .login import LoginDialog
 from .notify import Notifier, icon_path
 from .profile import ProfileDialog
 from .viewer import ImageOverlay
+
+log = logging.getLogger(__name__)
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
 LANE_ICON = {"people": "system-users", "comments": "mail-replied",
@@ -189,7 +192,12 @@ class MainWindow(QMainWindow):
         rv.addWidget(self.find_bar)
         self.tabs.currentChanged.connect(lambda _i: self.find_bar.view_changed())
         self.stack.currentChanged.connect(lambda _i: self.find_bar.view_changed())
-        row.addWidget(right, 1)
+        # the right side is either the tabs or the curtain (all lanes closed: Esc)
+        self.right_stack = QStackedWidget()
+        self.right_stack.addWidget(right)
+        self.curtain = self._build_curtain()
+        self.right_stack.addWidget(self.curtain)
+        row.addWidget(self.right_stack, 1)
         self.setCentralWidget(central)
         self.menuBar().hide()
 
@@ -561,6 +569,8 @@ class MainWindow(QMainWindow):
         name = cur.data(Qt.ItemDataRole.UserRole)
         if name is None:
             return
+        if self.curtain_shown():
+            self.right_stack.setCurrentIndex(0)
         w = self.lane_widgets.get(name)
         if w is None:
             if name == "requests":
@@ -613,6 +623,8 @@ class MainWindow(QMainWindow):
             if name in ("comments", "mentions", "subs", "requests"):
                 total += n
             item.set_count(n)
+        if getattr(self, "curtain", None) is not None and self.curtain_shown():
+            self._curtain_text()
         if self.tray:
             base = self.windowTitle()
             self.tray.setToolTip(_("tray_new", title=base, n=total) if total else base)
@@ -920,14 +932,74 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, e):
         # Esc closes what's on top (the picture viewer and the find bar take it
-        # themselves); the last one takes the whole window off the screen.
-        if e.key() == Qt.Key.Key_Escape and not e.modifiers() and self.cfg["ui"]["esc_hides"]:
+        # themselves); the last one closes all lanes behind a curtain (ui.esc).
+        mode = self.cfg["ui"]["esc"]
+        if e.key() == Qt.Key.Key_Escape and not e.modifiers() and mode != "off":
             if self.find_bar.isVisible():
                 self.find_bar.close_bar()
-            else:
+            elif mode == "tray":
                 self.hide_away()
+            elif not self.curtain_shown():
+                self.close_all()
+            return
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.curtain_shown():
+            self.select_lane(self.core.get_state("lane") or "people")
             return
         super().keyPressEvent(e)
+
+    # ---- the curtain: every lane closed, new posts pile up unread --------------------
+    def _build_curtain(self):
+        w = QWidget()
+        w.setObjectName("feedBody")
+        w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        v = QVBoxLayout(w)
+        v.addStretch(2)
+        self.curtain_icon = QLabel()
+        self.curtain_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(self.curtain_icon)
+        title = QLabel(_("curtain_title"))
+        title.setObjectName("laneTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(title)
+        self.curtain_info = QLabel()
+        self.curtain_info.setObjectName("muted")
+        self.curtain_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.curtain_info.setWordWrap(True)
+        v.addWidget(self.curtain_info)
+        hint = QLabel(_("curtain_hint"))
+        hint.setObjectName("muted")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(hint)
+        v.addStretch(3)
+        return w
+
+    def curtain_shown(self):
+        return self.right_stack.currentWidget() is self.curtain
+
+    def close_all(self):
+        """Esc: no lane, thread or profile on screen; nothing gets marked read, so
+        whatever comes meanwhile waits, counted on the left."""
+        self.find_bar.close_bar()
+        for w in self.findChildren(ImageOverlay):
+            w.close_viewer()
+        self.curtain_icon.setPixmap(QIcon(icon_path()).pixmap(96, 96))
+        self.right_stack.setCurrentWidget(self.curtain)
+        self.lanes.blockSignals(True)
+        self.lanes.setCurrentItem(None)
+        self.lanes.clearSelection()
+        self.lanes.blockSignals(False)
+        for item in self.lane_items.values():
+            item.set_current(False)
+        self.core.set_active_lane(None)
+        self._curtain_text()
+        log.info("all lanes closed (Esc)")
+
+    def _curtain_text(self):
+        waiting = [(self.lane_title(n), self.lane_items[n].badge.text())
+                   for n in self.lane_order if self.lane_items[n].badge.isVisible()]
+        self.curtain_info.setText(
+            _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting))
+            if waiting else _("curtain_empty"))
 
     def hide_away(self):
         """Off the screen at once: to the tray if there is one, else minimized."""

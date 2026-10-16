@@ -206,24 +206,45 @@ class QtSmokeTest(unittest.TestCase):
         dlg.reject()
         self.assertFalse(dlg.isVisible())
 
-        # Esc: first the find bar, then the whole window goes off the screen
+        # Esc: first the find bar, then every lane closes behind the curtain; nothing
+        # is marked read meanwhile; a click on a lane (or Enter) opens it again
         from PySide6.QtCore import QEvent, Qt
         from PySide6.QtGui import QKeyEvent
         from PySide6.QtWidgets import QApplication
 
-        def esc():
+        def key(k):
             for t in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
-                QApplication.sendEvent(self.win, QKeyEvent(t, Qt.Key.Key_Escape,
-                                                           Qt.KeyboardModifier.NoModifier))
+                QApplication.sendEvent(self.win, QKeyEvent(t, k, Qt.KeyboardModifier.NoModifier))
+
+        def esc():
+            key(Qt.Key.Key_Escape)
+        self.win.select_lane("people")
         self.win.find_bar.open()
         esc()
         self.assertFalse(self.win.find_bar.isVisible())
-        self.assertTrue(self.win.isVisible() and not self.win.isMinimized())
+        self.assertFalse(self.win.curtain_shown())
+        esc()
+        self.pump(0.1)
+        self.assertTrue(self.win.curtain_shown())
+        self.assertTrue(self.win.isVisible())
+        self.assertIsNone(self.core._active_lane)
+        self.assertFalse(self.win.lane_widgets["people"].view.isVisible())  # nothing "seen"
+        key(Qt.Key.Key_Return)
+        self.pump(0.1)
+        self.assertFalse(self.win.curtain_shown())
+        esc()
+        self.win.select_lane("comments")
+        self.pump(0.1)
+        self.assertFalse(self.win.curtain_shown())
+        self.assertEqual(self.win.current_lane(), "comments")
+        self.win.cfg["ui"]["esc"] = "tray"  # the old way, by a flag
         esc()
         self.pump(0.1)
         self.assertTrue(not self.win.isVisible() or self.win.isMinimized())
+        self.win.cfg["ui"]["esc"] = "curtain"
         self.win.showNormal()
         self.pump(0.1)
+        self.win.select_lane("people")
 
         # a picture that won't load: the preview is tried, then the card says so
         from PySide6.QtGui import QImage

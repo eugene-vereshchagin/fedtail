@@ -218,7 +218,7 @@ it open).
 | `F5` | refresh |
 | `Alt+1…9` | switch lane |
 | `Ctrl+W` | close tab |
-| `Esc` | closes what's on top (picture, find bar); the last `Esc` takes the window off the screen at once |
+| `Esc` | closes what's on top (picture, find bar); the last `Esc` closes every lane behind a curtain — nothing is marked read, new posts pile up for later (`ui.esc = "tray"` hides the window instead) |
 | `Ctrl+F`, `F3`, `Shift+F3` | find in the lane / thread on screen (text, name, `@handle`, `#id`, alt text); "Deeper" searches everything stored for the lane |
 | `Ctrl+Q` | quit (closing the window only hides it to the tray) |
 

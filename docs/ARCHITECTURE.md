@@ -396,7 +396,7 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 * **`MainWindow`**: sidebar (account, Write, `QListWidget#lanes` of `LaneItem`s,
   the lists block, footer), a `QTabWidget` whose first tab is a `QStackedWidget`
   of lane widgets and whose other tabs are threads/profiles, the find bar,
-  the tray, shortcuts. Esc closes what's on top, the last Esc hides the window.
+  the tray, shortcuts. Esc closes what's on top; the last Esc shows the *curtain* (`right_stack` page 1: no lane on screen, so nothing is marked read; `ui.esc`).
 * **Compose**: drafts are saved while typing (`post.drafts_autosave`); all exits
   go through `reject()` → `_leave()`; never call `close()` inside `reject()`
   (Qt's closeEvent calls reject → infinite loop). The core deletes the draft

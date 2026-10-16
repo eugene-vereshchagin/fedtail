@@ -16,7 +16,7 @@ DEFAULTS = {
         "theme": "system",
         "font_size": 0,
         "close_to_tray": True,
-        "esc_hides": True,
+        "esc": "curtain",
         "sidebar_footer": True,
         "sidebar_groups": True,
         "expand_cw": True,
@@ -104,6 +104,7 @@ CHOICES = {
     ("notify", "backend"): {"auto", "desktop", "tray"},
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
     ("debug", "level"): {"debug", "info", "warning"},
+    ("ui", "esc"): {"curtain", "tray", "off"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",
               "local", "global", "requests"}
