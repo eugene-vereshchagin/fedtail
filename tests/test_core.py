@@ -35,12 +35,9 @@ class ConfigTest(TmpDir):
         self.assertEqual(warns, [])
 
     def test_example_is_all_defaults(self):
-        # every commented line in the example must match the real default
+        # every option in the example is set to the real default
         import tomllib
-        text = "\n".join(line[1:] if line.startswith("#") and "=" in line and
-                         not line.startswith("# ") else line
-                         for line in config.example_text().splitlines())
-        parsed = tomllib.loads(text)
+        parsed = tomllib.loads(config.example_text())
         cfg, warns = config.validate(parsed)
         self.assertEqual(warns, [])
         self.assertEqual(cfg, config.DEFAULTS)
@@ -87,8 +84,30 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertEqual(parsed["ui"]["theme"], "terminal")
         self.assertEqual(parsed["feed"]["order"], "newest_first")
         self.assertEqual(config.validate(parsed)[1], [])
-        self.assertLess(new.index("#actions"), new.index("[feed]"))  # inside [ui]
+        self.assertLess(new.index("\nactions ="), new.index("\n[feed]"))  # inside [ui]
         self.assertEqual(cu.update(new, example), new)  # idempotent
+
+    def test_rebuild_keeps_values_in_chapters(self):
+        import tomllib
+
+        from fedtail.core import config_update as cu
+        example = config.example_text()
+        old = ("# my notes\n[ui]\ntheme = \"bnw\"\n#font_size = 14\nwhatever = 3\n\n"
+               "[notify]\nlanes = [\"comments\", \"list:Друзья\"]\n\n[mystery]\nx = \"y\"\n")
+        report = {}
+        new = cu.rebuild(old, example, report)
+        parsed = tomllib.loads(new)
+        self.assertEqual(parsed["ui"]["theme"], "bnw")
+        self.assertEqual(parsed["ui"]["font_size"], 0)  # commented out: the default
+        self.assertEqual(parsed["notify"]["lanes"], ["comments", "list:Друзья"])
+        self.assertEqual(parsed["ui"]["whatever"], 3)
+        self.assertEqual(parsed["mystery"], {"x": "y"})
+        self.assertEqual(sorted(report["kept"]), ["notify.lanes", "ui.theme"])
+        self.assertEqual(sorted(report["extra"]), ["mystery.x", "ui.whatever"])
+        self.assertIn("Главы:", new)
+        self.assertLess(new.index("whatever ="), new.index("\n[feed]"))
+        self.assertEqual(cu.missing(new, example), [])
+        self.assertEqual(cu.rebuild(new, example), new)  # stable
 
     def test_update_refreshes_explanations_keeps_user_lines(self):
         import tomllib

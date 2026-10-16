@@ -14,12 +14,21 @@ being discussed. So the whole point is giving that context back: every reply sho
 answers; under someone's comment you see what you said back; a thread opens as a tree right
 where you came from; a lane remembers where you stopped and never jumps.
 
+**Download:** one file, nothing to install — [the latest release](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` for Linux, `fedtail-…-windows.exe` for Windows ([how](#one-file-no-installing)). Or [run it from the source](#running-from-source).
+
 [Русскоязычная версия](README.ru.md)
 
 > **Status: public beta.** Used every day by its author on GoToSocial; Mastodon, Akkoma and
 > Friendica work through the same API. Linux (Debian 13 and newer) first, Windows on trial.
 > Found a bug? [Open an issue](https://github.com/eugene-vereshchagin/fedtail/issues) with `latest.log` — see
 > [docs/TESTING.md](docs/TESTING.md).
+
+**Contents**
+
+- *Start:* [What's different](#whats-different) · [For Juick and Point.im people](#for-juick-and-pointim-people) · [One file, no installing](#one-file-no-installing) · [Running from source](#running-from-source) · [Accounts, profiles and files](#accounts-profiles-and-files)
+- *Reading:* [Lanes](#lanes) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
+- *Writing and you:* [Writing](#writing) · [Your profile](#your-profile) · [Themes](#themes) · [Keys](#keys)
+- *More:* [If it breaks](#if-it-breaks) · [Development](#development) · [Who wrote it](#who-wrote-it) · [License](#license)
 
 ![A thread as a tree, in the default theme](https://raw.githubusercontent.com/eugene-vereshchagin/fedtail/screenshots/light-thread.png)
 
@@ -131,13 +140,18 @@ command line, likes & boosts and follow requests are the main account's.
 | cache, read marks, drafts | `~/.local/share/fedtail/<profile>/state.db` |
 | images | `~/.local/share/fedtail/<profile>/cache/` |
 
-The config is created on first run as a fully commented copy of
-[`fedtail/data/config.example.toml`](fedtail/data/config.example.toml) and never touched again.
-`config.example.toml` next to it is always the full reference for the running version. When
-an update brings new options, fedtail says so at start, and `python3 -m fedtail --update-config` adds
-them to your file, commented out, in the right sections, refreshes the explanations of the
-options already there and drops commented-out ones that are gone (a `.bak` copy is kept;
-your values and notes stay).
+The config is created on first run as a copy of
+[`fedtail/data/config.example.toml`](fedtail/data/config.example.toml) — in chapters (look &
+window, reading, lanes, posts, notifications…), every option set to its default with an
+explanation, so an editor colours it — and never touched again. A value written there stays
+yours even if a later version changes the default; comment it out (or delete it) to follow
+the program's default. `config.example.toml` next to it is always the full reference for the
+running version. When an update brings new options, fedtail says so at start, and
+`python3 -m fedtail --update-config` adds them to your file in the right sections, refreshes the
+explanations of the options already there and drops commented-out ones that are gone (a `.bak`
+copy is kept; your values and notes stay). `python3 -m fedtail --rebuild-config` lays the
+file out anew in the current chapters with your values in place (your own comments don't
+survive that; the `.bak` does).
 
 ## Themes
 
@@ -310,8 +324,8 @@ ruff check .
 
 ## If it breaks
 
-The debugging mode (`debug.mode`: on by itself before 1.0 and in development builds, off in
-releases; `--debug` for one run) keeps logs in `~/fedtail-logs/<profile>/`, a file per start
+The debugging mode (`debug.mode`: on by itself in development versions from git, off in
+releases and the one-file builds; `--debug` for one run) keeps logs in `~/fedtail-logs/<profile>/`, a file per start
 and per hour, `latest.log` the current one (`debug.log_dir`). Attach `latest.log`, or run
 `python3 -m fedtail --bug-report` and send the archive it makes in your home folder — logs,
 crash traces, config and a system summary, without the token and the database. A frozen

@@ -2,6 +2,16 @@
 
 ## 0.7.0 — in progress
 
+- The config is in chapters now — look & window, reading, lanes, posts, notifications… with
+  a list of them at the top and sub-headings inside `[ui]` — and every option is written with
+  its default value (not commented out), so an editor colours it. A value written there stays
+  yours even when a later default changes; comment it out to follow the program.
+  `--rebuild-config` lays an existing config out anew in the chapters, keeping your values
+  (a `.bak` keeps the old file).
+- The detailed log (debugging mode) is on only in development versions from git now, not in
+  releases or the one-file builds; `debug.mode = "on"` or `--debug` turns it on there.
+- README: a download line at the top and a table of contents.
+
 ## 0.6.0 — 2026-10-16
 
 - Somebody's boost of a post by a person you put in a list stays out of Home (and the other

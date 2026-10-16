@@ -45,6 +45,8 @@ python3 -m fedtail --install-desktop    # пункт в меню и иконка
 
 1. Опиши в двух словах: что делал, что ждал, что получилось. Скриншот — очень помогает.
 2. Приложи журнал: файл `~/fedtail-logs/<профиль>/latest.log` (профиль обычно `default`).
+   Однофайловая сборка из релиза подробный журнал не пишет: включи `debug.mode = "on"` в
+   конфиге (или запусти с `--debug`) и повтори.
    Если программа уже перезапускалась — файлы там же, по дате и часу в имени.
    Или одним архивом: `python3 -m fedtail --bug-report` — он появится в домашней папке.
 3. Окно зависло — сначала `kill -USR1 <pid>` (pid есть в журнале), потом присылай.
@@ -71,6 +73,7 @@ notifications (≡ → Debugging → Send a test notification); the command line
 `?`); several accounts (right-click your avatar); themes (`ui.theme`).
 
 **Found a problem:** say what you did, expected and got (a screenshot helps), and attach
-`~/fedtail-logs/<profile>/latest.log` or the archive from `python3 -m fedtail --bug-report`.
+`~/fedtail-logs/<profile>/latest.log` (a release build keeps it only with `debug.mode = "on"`
+or `--debug`) or the archive from `python3 -m fedtail --bug-report`.
 A frozen window: `kill -USR1 <pid>` first. Logs hold no token and no post texts; the
 archive holds no token and no database, but does include your config.

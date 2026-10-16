@@ -32,7 +32,7 @@ ruff check .                                 # line length 100
 
 Read [AGENTS.md](AGENTS.md) (one page of rules) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 (the map). In short: the core never imports Qt; every option goes into `config.DEFAULTS` and the
-commented `fedtail/data/config.example.toml`; every string into both `ru` and `en`; every fix
+`fedtail/data/config.example.toml` (with its explanation); every string into both `ru` and `en`; every fix
 comes with a test; `CHANGELOG.md` and the docs keep up with the code. Comments and commit
 messages in English.
 

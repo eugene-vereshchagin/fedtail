@@ -71,7 +71,7 @@ fedtail/
     api.py           Mastodon REST client (blocking, requests) + request logging
     auth.py          token file (JSON, 0600)
     config.py        DEFAULTS, validation (types, choices, minimums)
-    config_update.py --update-config: adds missing options, commented out; refreshes our
+    config_update.py --update-config: adds missing options; refreshes our
                      explanations above existing ones; drops commented-out options that are gone
     counters.py      honest counters: ask the post's own server
     replies.py       replies my server never got: the post's ActivityPub replies list
@@ -116,7 +116,7 @@ fedtail/
       login.py       first-run login dialog (OAuth out-of-band code)
       diagnostics.py Qt messages → log, freeze watchdog, widget counts
   data/
-    config.example.toml  the full commented config (Russian), the reference
+    config.example.toml  the full config in chapters (Russian), the reference
     themes/*.toml        built-in themes (system.toml lists every key)
     icons/fedtail.svg    app icon
 tests/               unittest; fakes.py is an in-memory Mastodon
@@ -465,10 +465,13 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 * `core/config.py: DEFAULTS` is the single source of truth: section → key →
   default. `validate()` checks types strictly (bool is not int), `CHOICES`,
   `MINIMUM`, lane names; unknown keys are warnings, wrong values are errors.
-* `fedtail/data/config.example.toml` documents every option in Russian; a test
-  asserts that parsing its commented-out lines gives exactly `DEFAULTS`.
-* `config_update.py`: finds options the user's file doesn't mention, inserts them
-  commented with their explanations (`--update-config`).
+* `fedtail/data/config.example.toml` documents every option in Russian, in chapters
+  (a banner before each section, sub-headings inside `[ui]`; a comment block followed by
+  a blank line belongs to no option), every option set to its default; a test asserts
+  that parsing it gives exactly `DEFAULTS`.
+* `config_update.py`: finds options the user's file doesn't mention, inserts them with
+  their explanations (`--update-config`); `rebuild()` lays the user's file out anew from
+  the example with their values put in (`--rebuild-config`).
 
 ## 17. Strings (i18n)
 

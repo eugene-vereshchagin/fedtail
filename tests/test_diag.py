@@ -91,7 +91,7 @@ class DiagTest(unittest.TestCase):
             fedtail.__version__ = "1.3.0.dev4"
             self.assertTrue(diag.enabled({"debug": {"mode": "auto"}}))
             fedtail.__version__ = "0.9.0"
-            self.assertTrue(diag.enabled({"debug": {"mode": "auto"}}))   # before 1.0: on
+            self.assertFalse(diag.enabled({"debug": {"mode": "auto"}}))  # a release: quiet
         finally:
             fedtail.__version__ = keep
         cfg, _ = config.validate({"debug": {"mode": "off",

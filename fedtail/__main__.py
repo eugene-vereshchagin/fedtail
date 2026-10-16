@@ -28,8 +28,12 @@ def parse_args(argv):
     p.add_argument("-d", "--data", help="data directory (overrides the profile's one)")
     p.add_argument("--ui", choices=sorted(frontends.FRONTENDS), help="frontend to use")
     p.add_argument("--update-config", action="store_true",
-                   help="add options your config doesn't mention yet (commented out, "
-                        "with explanations; a .bak copy is kept) and exit")
+                   help="add options your config doesn't mention yet (with explanations; "
+                        "a .bak copy is kept) and exit")
+    p.add_argument("--rebuild-config", action="store_true",
+                   help="write your config anew, in the chapters of this version, with your "
+                        "values in place (your own comments are dropped; a .bak copy is "
+                        "kept) and exit")
     p.add_argument("--profiles", action="store_true",
                    help="list the profiles (accounts) there are and exit")
     p.add_argument("--install-desktop", action="store_true",
@@ -81,6 +85,19 @@ def main(argv=None):
         pass
     user_text = where.config_file.read_text("utf-8")
     new_options = config_update.missing(user_text, example)
+    if args.rebuild_config:
+        report = {}
+        new_text = config_update.rebuild(user_text, example, report)
+        where.config_file.with_name(where.config_file.name + ".bak").write_text(user_text,
+                                                                                 "utf-8")
+        where.config_file.write_text(new_text, "utf-8")
+        print(f"fedtail: rebuilt {where.config_file} (the old one is config.toml.bak)")
+        if report["kept"]:
+            print("  your values:\n    " + "\n    ".join(report["kept"]))
+        if report["extra"]:
+            print("  kept, though this version doesn't know them:\n    "
+                  + "\n    ".join(report["extra"]))
+        return 0
     if args.update_config:
         report = {}
         new_text = config_update.update(user_text, example, report)
@@ -91,7 +108,7 @@ def main(argv=None):
                                                                                  "utf-8")
         where.config_file.write_text(new_text, "utf-8")
         print(f"fedtail: updated {where.config_file} (the old one is config.toml.bak)")
-        for what, keys in (("added (commented out)", report["added"]),
+        for what, keys in (("added", report["added"]),
                            ("explanation refreshed", report["refreshed"]),
                            ("dropped (no longer exists, was commented out)",
                             report["dropped"])):
@@ -101,7 +118,7 @@ def main(argv=None):
     if new_options:
         print(f"fedtail: your config doesn't mention {len(new_options)} option(s): "
               f"{', '.join(new_options)}.\n  Run `python3 -m fedtail --update-config` to add them "
-              f"(commented out), or see {ref}", file=sys.stderr)
+              f"(or --rebuild-config to lay the file out anew), or see {ref}", file=sys.stderr)
 
     if args.bug_report:
         from . import diag

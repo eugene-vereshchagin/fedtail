@@ -26,7 +26,7 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   `Core` through futures and events only.
 * Qt objects only in the GUI thread; results come back via `Bridge.call`.
 * Every behaviour is a flag: add new options to `config.DEFAULTS` **and**
-  `fedtail/data/config.example.toml` (commented, Russian explanation) — a test
+  `fedtail/data/config.example.toml` (set to the default, Russian explanation above) — a test
   checks they match.
 * Strings go to both `ru` and `en` in `fedtail/i18n.py` (a test checks).
 * Never log or send the token; requests to other servers go without it; the bug

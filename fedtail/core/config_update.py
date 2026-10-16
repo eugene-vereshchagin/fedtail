@@ -2,17 +2,22 @@
 
 The app never edits config.toml on its own. Instead:
 
-* on every start it writes config.example.toml next to it — the complete,
-  commented reference for this version (that file is ours, not the user's);
+* on every start it writes config.example.toml next to it — the complete reference
+  for this version, in chapters, every option set to its default with an explanation
+  (that file is ours, not the user's);
 * it tells which options the user's file doesn't mention yet;
 * `python3 -m fedtail --update-config` inserts those options, commented out with their
   explanations, into the right sections of the user's file (a .bak is kept); it also
   brings the explanations of the options already there up to date (new themes, new
   choices) and drops commented-out options this version no longer has. The user's
-  values and their own notes stay as they are.
+  values and their own notes stay as they are;
+* `python3 -m fedtail --rebuild-config` writes the file anew from the reference, in
+  its chapters, with the user's values put in (their own notes don't survive that;
+  a .bak is kept).
 """
 
 import difflib
+import json
 import re
 
 _HEADER = re.compile(r"^\s*#?\s*\[([A-Za-z0-9_]+)\]\s*$")
@@ -31,7 +36,7 @@ def parse_example(text):
         if section is None:
             continue
         m = _OPTION.match(line)
-        if m and line.lstrip().startswith("#") and not line.lstrip().startswith("# "):
+        if m and not line.lstrip().startswith("# "):  # "key = …" or "#key = …"
             out[section].append((m.group(1), pending + [line]))
             pending = []
         elif line.lstrip().startswith("#"):
@@ -165,4 +170,68 @@ def update(user_text, example_text, report=None):
     if len(lines) in inserts:
         out += inserts[len(lines)]
     out += appended
+    return "\n".join(out) + "\n"
+
+
+def _toml(value):
+    """One value written back as TOML (what tomllib gave us: bool, number, text,
+    list, table)."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return repr(value)
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml(x) for x in value) + "]"
+    if isinstance(value, dict):
+        return "{ " + ", ".join(f"{k} = {_toml(v)}" for k, v in value.items()) + " }"
+    return json.dumps(str(value), ensure_ascii=False)
+
+
+def rebuild(user_text, example_text, report=None):
+    """The reference file, chapter by chapter, with every value the user set put in
+    its place. Options this version doesn't know are kept at the end of their
+    section with a note. The user's own comments are not carried over."""
+    import tomllib
+    user = tomllib.loads(user_text)
+    out, section, ends, kept = [], None, {}, []
+    for line in example_text.splitlines():
+        m = _HEADER.match(line)
+        if m and not line.lstrip().startswith("#"):
+            section = m.group(1)
+            out.append(line)
+            ends[section] = len(out)
+            continue
+        m = _OPTION.match(line)
+        if section and m and not line.lstrip().startswith("#"):
+            key = m.group(1)
+            mine = user.get(section, {})
+            if isinstance(mine, dict) and key in mine:
+                line = f"{key} = {_toml(mine[key])}"
+                kept.append(f"{section}.{key}")
+            out.append(line)
+            ends[section] = len(out)
+            continue
+        out.append(line)
+    known = parse_example(example_text)
+    extra, inserts = [], {}
+    for sec, values in user.items():
+        if not isinstance(values, dict):
+            continue
+        names = {k for k, _ in known.get(sec, [])}
+        rest = [(k, v) for k, v in values.items() if k not in names]
+        if not rest:
+            continue
+        lines = ["# не из этой версии — оставлено как было:"] + \
+            [f"{k} = {_toml(v)}" for k, v in rest]
+        extra += [f"{sec}.{k}" for k, _ in rest]
+        if sec in ends:
+            inserts[ends[sec]] = lines
+        else:
+            out += ["", f"[{sec}]"] + lines
+    for at in sorted(inserts, reverse=True):
+        out[at:at] = inserts[at]
+    if report is not None:
+        report["kept"], report["extra"] = kept, extra
     return "\n".join(out) + "\n"

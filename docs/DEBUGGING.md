@@ -2,12 +2,13 @@
 
 [English below](#english)
 
-До версии 1.0 (и в сборках для разработки) fedtail пишет подробный журнал сам —
+Версия для разработки (из git, номер вида `0.7.0.dev0`) пишет подробный журнал сама —
 это режим отладки, `debug.mode = "auto"`. Клиент держат открытым сутками, и если он
 упадёт, зависнет, начнёт есть память или процессор — по журналу видно, что происходило.
-В релизах с 1.0 режим выключен: в папке данных профиля, `logs/`, остаются только
-предупреждения и ошибки, несколько МБ, и crash.log. Включить — `debug.mode = "on"` или
-на один запуск `python3 -m fedtail --debug`.
+В релизах (и в однофайловых сборках из них) режим выключен: в папке данных профиля,
+`logs/`, остаются только предупреждения и ошибки, несколько МБ, и crash.log. Включить —
+`debug.mode = "on"` в конфиге или на один запуск ключ `--debug`
+(`python3 -m fedtail --debug`, `./fedtail-0.6.0-linux-x86_64 --debug`, `fedtail-….exe --debug`).
 
 ## Где лежит
 
@@ -89,8 +90,11 @@ rss_warn_mb = 1500
 <a name="english"></a>
 ## English
 
-Until 1.0 fedtail always keeps a detailed log. It's meant to stay open for days,
-so when it crashes, hangs or grows, the log shows what happened.
+A development version (from git, numbered like `0.7.0.dev0`) keeps a detailed log by
+itself (`debug.mode = "auto"`). It's meant to stay open for days, so when it crashes, hangs
+or grows, the log shows what happened. Releases and the one-file builds keep only warnings
+and errors in the profile's data folder, `logs/`; `debug.mode = "on"` or `--debug` (one run)
+turns the detailed log on.
 
 **Where:** `~/fedtail-logs/<profile>/` (`debug.log_dir`) — a new
 `YYYY-MM-DD_HH-MM-SS.log` per start and per hour, `latest.log` links to the current one,

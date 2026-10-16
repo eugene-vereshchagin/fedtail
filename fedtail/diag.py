@@ -64,19 +64,16 @@ def is_on():
 
 def enabled(cfg, forced=False):
     """Is the debugging mode on? debug.mode: "on", "off" or "auto" — on for
-    versions before 1.0 and for development builds, off for releases from 1.0.
-    --debug turns it on whatever the config says."""
+    development versions (X.Y.Z.devN, i.e. a git checkout between releases), off for
+    releases and the one-file builds made from them. --debug turns it on whatever the
+    config says."""
     if forced:
         return True
     mode = ((cfg or {}).get("debug") or {}).get("mode", "auto")
     if mode != "auto":
         return mode == "on"
     from . import __version__
-    try:
-        major = int(__version__.split(".")[0])
-    except ValueError:
-        major = 0
-    return major < 1 or ".dev" in __version__
+    return ".dev" in __version__
 
 
 def logs_dir(paths, cfg=None):

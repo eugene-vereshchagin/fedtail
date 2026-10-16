@@ -183,7 +183,7 @@ _STRINGS = {
         "notify_more": " (и ещё {n})",
         "new_options": "В конфиге не упомянуто новых опций: {n}. "
                        "Запусти python3 -m fedtail --update-config — "
-                       "допишет их закомментированными.",
+                       "допишет их с пояснениями.",
         "deleted": "Удалено.", "sent": "Отправлено.", "error": "Ошибка: {err}",
         "not_in_cache": "Этого поста нет в кеше — обнови ленту.",
         "delete_q_title": "Удалить?", "delete_q": "Удалить пост насовсем?\n\n{text}",
@@ -476,7 +476,7 @@ _STRINGS = {
         "open_action": "Open",
         "notify_more": " (and {n} more)",
         "new_options": "Your config doesn't mention {n} new option(s). "
-                       "Run python3 -m fedtail --update-config to add them, commented out.",
+                       "Run python3 -m fedtail --update-config to add them, with explanations.",
         "deleted": "Deleted.", "sent": "Sent.", "error": "Error: {err}",
         "not_in_cache": "This post is not cached — refresh the lane.",
         "delete_q_title": "Delete?", "delete_q": "Delete this post for good?\n\n{text}",
