@@ -141,6 +141,13 @@ or a new one; right-click a list for rename, delete and **exclusive**. Whoever i
 exclusive list is gone from People and Bots and shows up only there — sort the bots into
 "Memes", "News" and the rest. `[lists]` in the config.
 
+## Finding people and tags
+
+The search box under Write (`Ctrl+K`) finds people by name, `@user@server` or a profile link,
+hashtags and posts — with Follow right in the results; tags can be followed too (their posts
+come to People). A profile shows whom the person follows and who follows them, each with a
+Follow button: the easiest way to find more people is through people you already read.
+
 ## Links stay inside
 
 @mentions open the person's profile in a tab (bio, fields, "follows you", Follow, Mention,
@@ -200,6 +207,7 @@ it open).
 | | |
 |---|---|
 | `S` (in the picture viewer) | save the picture to Downloads (`ui.save_dir`); also a right click on a picture |
+| `Ctrl+K` | search people, tags, posts |
 | `Ctrl+N` | new post |
 | `Ctrl+Enter` | send |
 | `F5` | refresh |

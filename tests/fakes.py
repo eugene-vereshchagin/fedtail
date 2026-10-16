@@ -109,9 +109,36 @@ class FakeApi:
         return _page(tagged, limit, max_id, min_id)
 
     def search(self, q, kind=None, resolve=True, limit=5):
+        ql = q.lower().lstrip("@#")
         st = [s for s in self.w.statuses.values() if s.get("url") == q]
-        acc = [s["account"] for s in self.w.statuses.values() if s["account"].get("url") == q]
-        return {"statuses": st[:limit], "accounts": acc[:limit], "hashtags": []}
+        accs = {s["account"]["id"]: s["account"] for s in self.w.statuses.values()}
+        acc = [a for a in accs.values() if a.get("url") == q or ql in a["acct"].lower()]
+        tags = [{"name": t, "url": f"https://example.test/tags/{t}", "following": t in
+                 self.w.followed_tags} for t in ("linux", "georgia") if ql and ql in t]
+        return {"statuses": st[:limit], "accounts": acc[:limit], "hashtags": tags}
+
+    def get_page(self, path, params=None):
+        return [], None
+
+    def following(self, acc_id, max_id=None):
+        return [a for a in self.w.accounts() if a["id"] in self.w.following], None
+
+    def followers(self, acc_id, max_id=None):
+        return list(self.w.accounts())[:2], None
+
+    def relationships(self, ids):
+        return [self.relationship(i) for i in ids]
+
+    def tag(self, name):
+        return {"name": name, "url": f"https://example.test/tags/{name}",
+                "following": name in self.w.followed_tags}
+
+    def follow_tag(self, name, on=True):
+        (self.w.followed_tags.add if on else self.w.followed_tags.discard)(name)
+        return self.tag(name)
+
+    def followed_tags(self):
+        return [self.tag(n) for n in sorted(self.w.followed_tags)]
 
     def status(self, sid):
         if sid not in self.w.statuses:
@@ -227,7 +254,11 @@ class World:
         self.lists = {}
         self.activity = []
         self.following = set()
+        self.followed_tags = set()
         self.profile_updates = []
+
+    def accounts(self):
+        return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())
 
     def act(self, i, kind, account, st=None, minute=0):
         n = {"id": i, "type": kind, "account": account, "status": st,

@@ -327,6 +327,23 @@ class QtSmokeTest(unittest.TestCase):
         self.win.close_tab(self.win.tabs.currentIndex())
         self.win.close_tab(self.win.tabs.indexOf(prof))
 
+        # search: people with a Follow button, tags; followers lists from a profile
+        from fedtail.frontends.qt.feed import AccountRow, PeopleWidget, SearchWidget, TagRow
+        self.win.open_search("bob")
+        search = self.win.tabs.currentWidget()
+        self.assertIsInstance(search, SearchWidget)
+        self.pump(until=lambda: search.box.findChildren(AccountRow))
+        row = search.box.findChildren(AccountRow)[0]
+        was = bool(row.relation.get("following"))
+        row._toggle()
+        self.pump(until=lambda: bool(row.relation.get("following")) != was)
+        search.run("#lin")
+        self.pump(until=lambda: search.box.findChildren(TagRow))
+        self.win.open_people({"id": "ME", "acct": "veresk"}, "followers")
+        self.assertIsInstance(self.win.tabs.currentWidget(), PeopleWidget)
+        self.win.close_tab(self.win.tabs.currentIndex())
+        self.win.close_tab(self.win.tabs.indexOf(search))
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

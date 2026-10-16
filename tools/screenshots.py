@@ -241,6 +241,10 @@ def run(app, out, label, palette, theme_name, extras):
         win.select_lane("activity")
         pump(app, 1.0)
         shoot(win, out, f"{label}-activity")
+        win.open_search("o")
+        pump(app, 1.2)
+        shoot(win, out, f"{label}-search")
+        win.close_tab(win.tabs.currentIndex())
         win.select_lane("people")
         from fedtail.frontends.qt.profile import ProfileDialog
         dlg = ProfileDialog(win)

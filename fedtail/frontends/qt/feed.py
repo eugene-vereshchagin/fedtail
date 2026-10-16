@@ -744,6 +744,10 @@ class AccountWidget(_PagedTab):
                 menu.aboutToShow.connect(lambda m=menu: self.win.ctx.fill_list_menu(m, acc))
                 lb.setMenu(menu)
                 buttons.addWidget(lb)
+        for which, field in (("following", "following_count"), ("followers", "followers_count")):
+            if acc.get(field):
+                buttons.addWidget(_button(_(f"people_{which}_n", n=acc[field]),
+                                          lambda _c=False, w=which: self.win.open_people(acc, w)))
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
         buttons.addStretch(1)
         lay.addLayout(buttons)
@@ -760,7 +764,19 @@ class TagWidget(_PagedTab):
         super().__init__(win, "#" + tag)
         self.tag = tag
         self.header.info.setText(_("tag_info"))
+        self.follow_btn = self.header.add(_button(_("tag_follow"), self._toggle_follow))
+        self.follow_btn.setToolTip(_("tag_follow_tip"))
+        self.following = False
+        win.bridge.call(self.core.tag_info(tag), ok=self._info, fail=lambda _e: None)
         self.more()
+
+    def _info(self, t):
+        self.following = bool((t or {}).get("following"))
+        self.follow_btn.setText(_("tag_unfollow") if self.following else _("tag_follow"))
+
+    def _toggle_follow(self):
+        self.win.bridge.call(self.core.follow_tag(self.tag, not self.following), ok=self._info,
+                             fail=self.win.error)
 
     def fetch(self, max_id):
         return self.core.tag_timeline(self.tag, max_id)
@@ -952,3 +968,239 @@ class ActivityWidget(QWidget):
 
 
 ACT_KINDS = ("favourite", "reblog", "follow", "poll", "update", "status")
+
+
+class AccountRow(QFrame):
+    """A person in a list (search results, followers): face, name, a line of
+    bio, and a Follow button that knows the current state."""
+
+    def __init__(self, win, acc, relation=None):
+        super().__init__()
+        self.win, self.core, self.acc = win, win.core, acc
+        self.relation = relation or {}
+        self.setObjectName("card")
+        h = QHBoxLayout(self)
+        h.setContentsMargins(14, 10, 14, 10)
+        h.setSpacing(12)
+        avatar = QLabel()
+        avatar.setFixedSize(40, 40)
+        from .card import _round
+        win.images.get(acc.get("avatar_static") or acc.get("avatar"),
+                       lambda pm, w=avatar: w.setPixmap(_round(pm, 40)))
+        h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
+        col = QVBoxLayout()
+        col.setSpacing(2)
+        name = QLabel(f'<a href="fedtail:account/{esc(acc["id"])}" style="text-decoration:none;'
+                      f'color:{win.theme.c["text"].name()};"><b>{display_name(acc)}</b></a>'
+                      f' <span style="color:{win.theme.c["muted"].name()};">@{esc(acc["acct"])}'
+                      f'{" · " + _("bot") if acc.get("bot") else ""}</span>')
+        name.setTextFormat(Qt.TextFormat.RichText)
+        name.linkActivated.connect(win.on_link)
+        col.addWidget(name)
+        note = snippet({"content": acc.get("note", "")}, 160)
+        if note:
+            bio = QLabel(esc(note))
+            bio.setObjectName("muted")
+            bio.setWordWrap(True)
+            col.addWidget(bio)
+        counts = " · ".join(_(key, n=acc[field]) for key, field in
+                            (("posts_n", "statuses_count"), ("followers_n", "followers_count"))
+                            if field in acc)
+        if counts or self.relation.get("followed_by"):
+            extra = QLabel(counts + (" · <b>" + _("acc_follows_you") + "</b>"
+                                     if self.relation.get("followed_by") else ""))
+            extra.setObjectName("muted")
+            extra.setTextFormat(Qt.TextFormat.RichText)
+            col.addWidget(extra)
+        h.addLayout(col, 1)
+        self.btn = None
+        if not self.core.me or acc["id"] != self.core.me["id"]:
+            self.btn = _button("", self._toggle)
+            h.addWidget(self.btn, 0, Qt.AlignmentFlag.AlignTop)
+            self._paint()
+
+    def _paint(self):
+        r = self.relation
+        self.btn.setText(_("unfollow") if r.get("following") else
+                         _("follow_requested") if r.get("requested") else _("follow"))
+        self.btn.setObjectName("tool" if r.get("following") or r.get("requested") else "primary")
+        self.btn.style().unpolish(self.btn)
+        self.btn.style().polish(self.btn)
+
+    def _toggle(self):
+        on = not (self.relation.get("following") or self.relation.get("requested"))
+        self.btn.setEnabled(False)
+
+        def done(rel):
+            self.relation = rel or {}
+            self.btn.setEnabled(True)
+            self._paint()
+        self.win.bridge.call(self.core.follow(self.acc["id"], on), ok=done,
+                             fail=lambda e: (self.btn.setEnabled(True), self.win.error(e)))
+
+
+class TagRow(QFrame):
+    """#tag with how many people used it lately, Follow tag, and a click to open it."""
+
+    def __init__(self, win, tag):
+        super().__init__()
+        self.win, self.core, self.tag = win, win.core, tag
+        self.setObjectName("card")
+        h = QHBoxLayout(self)
+        h.setContentsMargins(14, 8, 14, 8)
+        people = sum(int(d.get("accounts", 0)) for d in (tag.get("history") or [])[:7])
+        label = QLabel(f'<a href="fedtail:tag/{esc(tag["name"])}" style="text-decoration:none;'
+                       f'color:{win.theme.c["link"].name()};"><b>#{esc(tag["name"])}</b></a>'
+                       + (f' <span style="color:{win.theme.c["muted"].name()};">· '
+                          f'{_("tag_people", n=people)}</span>' if people else ""))
+        label.setTextFormat(Qt.TextFormat.RichText)
+        label.linkActivated.connect(win.on_link)
+        h.addWidget(label, 1)
+        self.btn = _button("", self._toggle)
+        h.addWidget(self.btn)
+        self._paint()
+
+    def _paint(self):
+        on = bool(self.tag.get("following"))
+        self.btn.setText(_("tag_unfollow") if on else _("tag_follow"))
+        self.btn.setToolTip(_("tag_follow_tip"))
+
+    def _toggle(self):
+        on = not self.tag.get("following")
+        self.btn.setEnabled(False)
+
+        def done(t):
+            self.tag = dict(self.tag, following=bool((t or {}).get("following", on)))
+            self.btn.setEnabled(True)
+            self._paint()
+        self.win.bridge.call(self.core.follow_tag(self.tag["name"], on), ok=done,
+                             fail=lambda e: (self.btn.setEnabled(True), self.win.error(e)))
+
+
+class SearchWidget(QWidget):
+    """Finding new sources: people (by name, @user@server or a profile link),
+    hashtags and posts, with Follow right there. With an empty query it shows the
+    tags you follow."""
+
+    def __init__(self, win, query=""):
+        super().__init__()
+        self.win, self.core = win, win.core
+        self.title = _("search_title")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.header = _Header(win.theme, _("search_title"))
+        lay.addWidget(self.header)
+        self.view = FeedView(win.ctx)
+        lay.addWidget(self.view, 1)
+        from PySide6.QtWidgets import QLineEdit
+        self.edit = QLineEdit()
+        self.edit.setPlaceholderText(_("search_placeholder"))
+        self.edit.setClearButtonEnabled(True)
+        self.edit.returnPressed.connect(lambda: self.run(self.edit.text()))
+        self.view.header.addWidget(self.edit)
+        self.box = QWidget()
+        self.box_lay = QVBoxLayout(self.box)
+        self.box_lay.setContentsMargins(0, 0, 0, 0)
+        self.box_lay.setSpacing(8)
+        self.view.header.addWidget(self.box)
+        self.edit.setText(query)
+        self.run(query)
+
+    def focus(self):
+        self.edit.setFocus()
+        self.edit.selectAll()
+
+    def _section(self, text):
+        lab = QLabel(text)
+        lab.setObjectName("listsHeader")
+        self.box_lay.addWidget(lab)
+
+    def run(self, query):
+        query = query.strip()
+        _clear(self.box_lay)
+        self.view.set_specs([], keep_position=False)
+        if not query:
+            self.header.info.setText(_("search_hint"))
+            self.win.bridge.call(self.core.followed_tags(), ok=self._followed_tags)
+            return
+        self.title = _("search_title") + ": " + query
+        self.win.retitle(self)
+        self.header.info.setText(_("searching"))
+        self.win.bridge.call(self.core.search(query), ok=self._results,
+                             fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
+
+    def _followed_tags(self, tags):
+        if tags:
+            self._section(_("followed_tags"))
+            for t in tags:
+                self.box_lay.addWidget(TagRow(self.win, t))
+
+    def _results(self, res):
+        accs, tags, sts = res["accounts"], res["hashtags"], res["statuses"]
+        self.header.info.setText(_("search_found", people=len(accs), tags=len(tags),
+                                   posts=len(sts)) if accs or tags or sts else _("search_none"))
+        if accs:
+            self._section(_("search_people"))
+            for a in accs:
+                self.box_lay.addWidget(AccountRow(self.win, a, res["relations"].get(a["id"])))
+        if tags:
+            self._section(_("search_tags"))
+            for t in tags:
+                self.box_lay.addWidget(TagRow(self.win, t))
+        if sts:
+            self._section(_("search_posts"))
+            short = self.core.short_ids(sts)
+            self.view.set_specs([CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
+                                          extra={"short_id": short.get(real(st)["id"])})
+                                 for st in sts], keep_position=False)
+
+    def apply_read(self, ids):
+        pass
+
+
+class PeopleWidget(QWidget):
+    """Whom someone follows, or who follows them — a way to find people through
+    people you know. Each with a Follow button."""
+
+    def __init__(self, win, acc, which):
+        super().__init__()
+        self.win, self.core, self.acc, self.which = win, win.core, acc, which
+        self.acc_id = acc["id"]
+        self.title = _("people_" + which, acct=acc["acct"])
+        self.next = None
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.header = _Header(win.theme, self.title)
+        lay.addWidget(self.header)
+        self.view = FeedView(win.ctx)
+        lay.addWidget(self.view, 1)
+        self.box = QWidget()
+        self.box_lay = QVBoxLayout(self.box)
+        self.box_lay.setContentsMargins(0, 0, 0, 0)
+        self.box_lay.setSpacing(8)
+        self.view.header.addWidget(self.box)
+        self.btn_more = _button(_("older_down"), self.more, name="older")
+        self.view.footer.addWidget(self.btn_more)
+        self.count = 0
+        self.more()
+
+    def more(self):
+        self.btn_more.setEnabled(False)
+        self.win.bridge.call(self.core.people(self.acc_id, self.which, self.next), ok=self._page,
+                             fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
+
+    def _page(self, got):
+        res, nxt = got
+        for a in res["accounts"]:
+            self.box_lay.addWidget(AccountRow(self.win, a, res["relations"].get(a["id"])))
+        self.count += len(res["accounts"])
+        self.header.info.setText(_("people_shown", n=self.count))
+        self.next = nxt
+        self.btn_more.setEnabled(bool(nxt))
+        if not nxt:
+            self.btn_more.setText(_("no_older"))
+
+    def apply_read(self, ids):
+        pass

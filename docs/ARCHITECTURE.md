@@ -332,6 +332,11 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   mentions) → `fedtail:resolve/<quoted url>`. `core.resolve(url)` asks the user's
   server (`/api/v2/search?resolve=true`) and the window opens the thread or the
   profile; the browser only if nothing is found. Flag `ui.links_in_app`.
+* **Search and follow** — `core.search(q)` (`/api/v2/search?resolve=true` +
+  relationships), `core.people(acc, "following"|"followers", max_id)` (Link-header
+  paging via `Api.get_page`), `core.follow`, `core.follow_tag`/`tag_info`/
+  `followed_tags`. Qt: `SearchWidget` (the sidebar box, Ctrl+K), `PeopleWidget`,
+  reusable `AccountRow` and `TagRow` with their own Follow buttons.
 * **Profiles and tags** — `AccountWidget` (info card: bio, fields, counts, since,
   "follows you", Follow/Mention/Add to list/browser; `core.relationship/follow`)
   and `TagWidget` (`core.tag_timeline`) share `_PagedTab` (a server timeline read

@@ -7,6 +7,9 @@
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
   (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
   go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
+- Search (`Ctrl+K`, the box under Write): people by name, @user@server or link, tags, posts;
+  Follow and Follow tag right in the results; followed tags with an empty query; a tag tab
+  has Follow tag; a profile opens whom they follow / their followers, each with Follow.
 - New icon: a talk bubble with a curled tail and a thread inside; drawn in the current
   theme's colours for the window, tray and notifications (`[icon]` in theme files, "auto"
   follows the accent; `ui.themed_icon`).

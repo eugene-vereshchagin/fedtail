@@ -726,6 +726,39 @@ class Core:
     def follow(self, acc_id, on=True):
         return self.submit(self.api.follow, acc_id, on)
 
+    def search(self, q):
+        """People, tags and posts for a query; addresses (@user@server, a profile
+        or post URL) are fetched from their home server by mine."""
+        def job():
+            got = self.api.search(q.strip(), resolve=True, limit=20)
+            self.store.put_statuses(got.get("statuses") or [])
+            accounts = got.get("accounts") or []
+            rel = {r["id"]: r for r in self.api.relationships([a["id"] for a in accounts])} \
+                if accounts else {}
+            return {"accounts": accounts, "relations": rel,
+                    "hashtags": got.get("hashtags") or [], "statuses": got.get("statuses") or []}
+        return self.submit(job)
+
+    def people(self, acc_id, which, max_id=None):
+        """One page of whom an account follows (which="following") or who follows
+        it ("followers"), with my relationship to each: ({accounts, relations}, next)."""
+        def job():
+            fetch = self.api.following if which == "following" else self.api.followers
+            accounts, nxt = fetch(acc_id, max_id)
+            rel = {r["id"]: r for r in self.api.relationships([a["id"] for a in accounts])} \
+                if accounts else {}
+            return {"accounts": accounts, "relations": rel}, nxt
+        return self.submit(job)
+
+    def tag_info(self, name):
+        return self.submit(self.api.tag, name)
+
+    def follow_tag(self, name, on=True):
+        return self.submit(self.api.follow_tag, name, on)
+
+    def followed_tags(self):
+        return self.submit(self.api.followed_tags)
+
     def tag_timeline(self, tag, max_id=None):
         def job():
             page = self.api.tag_timeline(tag, limit=self.cfg["feed"]["page_size"],

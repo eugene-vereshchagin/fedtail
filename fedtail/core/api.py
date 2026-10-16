@@ -6,6 +6,7 @@ Plain blocking calls; the core runs them in worker threads.
 import logging
 import mimetypes
 import os
+import re
 import time
 from dataclasses import dataclass
 from urllib.parse import quote, urlencode
@@ -222,6 +223,39 @@ class Api:
     def tag_timeline(self, tag, limit=40, max_id=None, min_id=None):
         return self.get(f"/api/v1/timelines/tag/{quote(tag, safe='')}",
                         self._page(limit, max_id, min_id))
+
+    def get_page(self, path, params=None):
+        """GET a list that pages by the Link header (followers, following):
+        returns (items, max_id for the next page or None)."""
+        r = self.s.get(self.base + path, params=params, timeout=30)
+        if r.status_code >= 400:
+            raise ApiError(r.status_code, r.text[:300])
+        log.debug("GET %s -> %s %d B", path, r.status_code, len(r.content or b""))
+        nxt = (r.links or {}).get("next", {}).get("url", "")
+        m = re.search(r"[?&]max_id=([^&]+)", nxt)
+        return r.json() or [], (m.group(1) if m else None)
+
+    def following(self, acc_id, max_id=None):
+        return self.get_page(f"/api/v1/accounts/{acc_id}/following",
+                             self._page(40, max_id))
+
+    def followers(self, acc_id, max_id=None):
+        return self.get_page(f"/api/v1/accounts/{acc_id}/followers",
+                             self._page(40, max_id))
+
+    def relationships(self, ids):
+        return self.get("/api/v1/accounts/relationships", {"id[]": list(ids)}) or []
+
+    def tag(self, name):
+        """{name, url, history, following} — whether I follow the tag."""
+        return self.get(f"/api/v1/tags/{quote(name, safe='')}")
+
+    def follow_tag(self, name, on=True):
+        return self.post(f"/api/v1/tags/{quote(name, safe='')}/"
+                         f"{'follow' if on else 'unfollow'}")
+
+    def followed_tags(self):
+        return self.get("/api/v1/followed_tags", {"limit": 200}) or []
 
     def search(self, q, kind=None, resolve=True, limit=5):
         """Ask my server to find (and fetch from its home, if needed) an address."""

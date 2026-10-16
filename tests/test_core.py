@@ -258,6 +258,22 @@ class CoreTest(TmpDir):
         self.assertEqual(core.resolve(BOB["url"]).result()[0], "account")
         self.assertIsNone(core.resolve("https://nowhere.example/@x").result())
 
+    def test_search_people_and_tags(self):
+        core, w = self.make()
+        w.add(status("080", BOB), home=True)
+        core.connect().result()
+        res = core.search("bob").result()
+        self.assertEqual([a["id"] for a in res["accounts"]], ["B"])
+        self.assertFalse(res["relations"]["B"]["following"])
+        core.follow("B").result()
+        got, nxt = core.people("ME", "following").result()
+        self.assertEqual([a["id"] for a in got["accounts"]], ["B"])
+        self.assertIsNone(nxt)
+        self.assertEqual([t["name"] for t in core.search("#lin").result()["hashtags"]], ["linux"])
+        core.follow_tag("linux").result()
+        self.assertTrue(core.tag_info("linux").result()["following"])
+        self.assertEqual([t["name"] for t in core.followed_tags().result()], ["linux"])
+
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

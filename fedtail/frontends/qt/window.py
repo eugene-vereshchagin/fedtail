@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
@@ -38,7 +39,9 @@ from .feed import (
     AccountWidget,
     ActivityWidget,
     LaneWidget,
+    PeopleWidget,
     RequestsWidget,
+    SearchWidget,
     TagWidget,
     ThreadWidget,
 )
@@ -191,6 +194,8 @@ class MainWindow(QMainWindow):
                         ("Ctrl+Q", self.quit),
                         ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex())),
                         (QKeySequence.StandardKey.Find, self.find_bar.open),
+                        ("Ctrl+K", lambda: (self.search_box.setFocus(),
+                                            self.search_box.selectAll())),
                         (QKeySequence.StandardKey.FindNext, lambda: self.find_bar.step(1)),
                         (QKeySequence.StandardKey.FindPrevious,
                          lambda: self.find_bar.step(-1))):
@@ -264,6 +269,15 @@ class MainWindow(QMainWindow):
         compose.setToolTip(_("write") + " (Ctrl+N)")
         compose.clicked.connect(lambda: self.compose())
         v.addWidget(compose)
+        # finding new people and tags: Enter opens the Search tab (Ctrl+K gets here)
+        self.search_box = QLineEdit()
+        self.search_box.setObjectName("sideSearch")
+        self.search_box.setPlaceholderText(_("search_side"))
+        self.search_box.setClearButtonEnabled(True)
+        self.search_box.setToolTip(_("search_side_tip"))
+        self.search_box.returnPressed.connect(
+            lambda: (self.open_search(self.search_box.text()), self.search_box.clear()))
+        v.addWidget(self.search_box)
 
         self.lanes = QListWidget()
         self.lanes.setObjectName("lanes")
@@ -301,6 +315,7 @@ class MainWindow(QMainWindow):
         m = QMenu(self)
         m.addAction(_("write") + "\tCtrl+N", lambda: self.compose())
         m.addAction(_("refresh") + "\tF5", self.refresh)
+        m.addAction(_("search_title") + "\tCtrl+K", lambda: self.open_search(""))
         m.addAction(_("my_profile"), self.open_my_profile)
         m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
@@ -667,6 +682,23 @@ class MainWindow(QMainWindow):
                     self.tabs.setCurrentWidget(w)
                 return
         self._add_tab(AccountWidget(self, acc_id), "@…")
+
+    def open_search(self, query=""):
+        for w in self.extra_tabs():
+            if isinstance(w, SearchWidget):
+                self.tabs.setCurrentWidget(w)
+                w.edit.setText(query)
+                w.run(query)
+                return
+        self._add_tab(SearchWidget(self, query), _("search_title"))
+
+    def open_people(self, acc, which):
+        for w in self.extra_tabs():
+            if isinstance(w, PeopleWidget) and w.acc_id == acc["id"] and w.which == which:
+                self.tabs.setCurrentWidget(w)
+                return
+        w = PeopleWidget(self, acc, which)
+        self._add_tab(w, w.title)
 
     def open_tag(self, tag):
         for w in self.extra_tabs():
