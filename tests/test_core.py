@@ -274,6 +274,20 @@ class CoreTest(TmpDir):
         self.assertTrue(core.tag_info("linux").result()["following"])
         self.assertEqual([t["name"] for t in core.followed_tags().result()], ["linux"])
 
+    def test_browse_lanes_fetch_only_while_open(self):
+        core, w = self.make()
+        w.add(status("090", BOB), home=True)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.lane_entries("global"), [])  # not open: not fetched
+        core.set_active_lane("global")
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("global")], ["090"])
+        from fedtail.core import lanes
+        groups = dict(lanes.grouped(core.lanes))
+        self.assertEqual(groups["reading"], ["people", "bots"])
+        self.assertEqual(groups["more"], ["mine", "local", "global"])
+
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

@@ -371,7 +371,9 @@ class LaneWidget(QWidget):
             return
         self.dirty = False
         entries = self.core.lane_entries(self.name)
-        unread = self.core.unread_ids(entries)
+        # browse lanes (local, federated) have nothing "unread": no marks, no divider
+        lazy = getattr(self.core.lane_by_name.get(self.name), "lazy", False)
+        unread = set() if lazy else self.core.unread_ids(entries)
         statuses = [st for _, st in entries]
         parents = self.core.parents_for(statuses)
         answers = self.core.my_replies(statuses)

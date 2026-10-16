@@ -35,6 +35,7 @@ def make_sources(api, me_id):
         "mentions": Source("mentions", api.mentions, _notification_entry),
         "mine": Source("mine", lambda **kw: api.account_statuses(me_id, **kw), _status_entry),
         "local": Source("local", api.local, _status_entry),
+        "federated": Source("federated", api.federated, _status_entry),
     }
 
 
@@ -95,6 +96,12 @@ def _fill_empty(store, source, page_size, limit):
         entries = _entries(source, page)
         new += store.put_items(source.name, [e for e in entries if (e[2] or "") > since])
     return new
+
+
+def refresh_top(store, source, page_size):
+    """For lanes you browse rather than read through (local, federated): just the
+    newest page. A hole between it and what we had is fine there."""
+    return store.put_items(source.name, _entries(source, source.fetch(limit=page_size)))
 
 
 def fetch_older(store, source, page_size):

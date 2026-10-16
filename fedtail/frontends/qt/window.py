@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import diag, version
+from ...core import lanes as lanes_module
 from ...core.model import real, snippet
 from ...i18n import _
 from .. import themefile
@@ -56,7 +57,7 @@ from .viewer import ImageOverlay
 LANE_ICON = {"people": "system-users", "comments": "mail-replied",
              "mentions": "mail-mark-important", "subs": "mail-thread-watch",
              "bots": "applications-system",
-             "mine": "document-edit", "local": "go-home",
+             "mine": "document-edit", "local": "go-home", "global": "applications-internet",
              "requests": "list-add-user", "list": "view-list-details",
              "activity": "rating"}
 
@@ -200,9 +201,9 @@ class MainWindow(QMainWindow):
                         (QKeySequence.StandardKey.FindPrevious,
                          lambda: self.find_bar.step(-1))):
             QShortcut(QKeySequence(seq), self).activated.connect(fn)
-        for i in range(min(9, self.lanes.count())):
+        for i in range(9):  # Alt+N: the N-th lane as the sidebar shows them
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
-                lambda r=i: self.lanes.setCurrentRow(r))
+                lambda r=i: r < len(self.lane_order) and self.select_lane(self.lane_order[r]))
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
@@ -284,18 +285,11 @@ class MainWindow(QMainWindow):
         self.lanes.setFrameShape(QFrame.Shape.NoFrame)
         self.lanes.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.lane_items = {}
-        for i, lane in enumerate(self.core.lanes):
-            it = QListWidgetItem()
-            it.setData(Qt.ItemDataRole.UserRole, lane.name)
-            w = LaneItem(lane.name, t, i + 1)
-            it.setSizeHint(w.sizeHint())
-            self.lanes.addItem(it)
-            self.lanes.setItemWidget(it, w)
-            self.lane_items[lane.name] = w
+        self.lane_order = []
         self.lanes.currentItemChanged.connect(self._lane_clicked)
         self.lanes.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.lanes.customContextMenuRequested.connect(self._lane_menu)
-        self._rebuild_lists()
+        self._rebuild_sidebar()
         v.addWidget(self.lanes, 1)
         if self.cfg["ui"]["sidebar_footer"]:
             info = version.info()
@@ -398,7 +392,7 @@ class MainWindow(QMainWindow):
         if last in self.lane_items:
             self.select_lane(last)
         else:
-            self.lanes.setCurrentRow(0)
+            self.select_lane(self.lane_order[0])
         self.core.start_polling()
 
     def _connect_failed(self, err):
@@ -419,46 +413,66 @@ class MainWindow(QMainWindow):
         return self.core.lane_title(name) or _("lane_" + name)
 
     def _rebuild_lists(self):
-        """The "Lists" block under the built-in lanes: a header with "+", then one
-        row per server list. Rebuilt whenever the lists change."""
+        self._rebuild_sidebar()
+
+    def _section_header(self, title, plus=False):
+        head = QListWidgetItem()
+        head.setFlags(Qt.ItemFlag.NoItemFlags)
+        box = QWidget()
+        h = QHBoxLayout(box)
+        h.setContentsMargins(10, 14, 4, 2)
+        label = QLabel(self.theme.word("lane", title))
+        label.setObjectName("listsHeader")
+        h.addWidget(label, 1)
+        if plus:
+            btn = QToolButton()
+            btn.setObjectName("menu")
+            btn.setText("+")
+            btn.setToolTip(_("list_new"))
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda: self.new_list())
+            h.addWidget(btn)
+        head.setSizeHint(box.sizeHint())
+        self.lanes.addItem(head)
+        self.lanes.setItemWidget(head, box)
+
+    def _rebuild_sidebar(self):
+        """The lanes on the left, in sections (Reading, Lists, For me, More) or as
+        one list (ui.sidebar_groups = false). Rebuilt when the lists change."""
         current = self.lanes.currentItem()
         current = current.data(Qt.ItemDataRole.UserRole) if current else None
         self.lanes.blockSignals(True)
-        for i in reversed(range(self.lanes.count())):
-            name = self.lanes.item(i).data(Qt.ItemDataRole.UserRole)
-            if name is None or str(name).startswith("list:"):
-                self.lanes.takeItem(i)
-                self.lane_items.pop(name, None)
-        if self.cfg["lists"]["enabled"]:
-            head = QListWidgetItem()
-            head.setFlags(Qt.ItemFlag.NoItemFlags)
-            box = QWidget()
-            h = QHBoxLayout(box)
-            h.setContentsMargins(10, 14, 4, 2)
-            label = QLabel(self.theme.word("lane", _("lists_header")))
-            label.setObjectName("listsHeader")
-            h.addWidget(label, 1)
-            plus = QToolButton()
-            plus.setObjectName("menu")
-            plus.setText("+")
-            plus.setToolTip(_("list_new"))
-            plus.setCursor(Qt.CursorShape.PointingHandCursor)
-            plus.clicked.connect(lambda: self.new_list())
-            h.addWidget(plus)
-            head.setSizeHint(box.sizeHint())
-            self.lanes.addItem(head)
-            self.lanes.setItemWidget(head, box)
-            for x in self.core.lists:
-                name = f"list:{x['id']}"
+        self.lanes.clear()
+        self.lane_items = {}
+        self.lane_order = []
+        if self.cfg["ui"]["sidebar_groups"]:
+            groups = lanes_module.grouped(self.core.lanes)
+        else:
+            groups = [(None, [x.name for x in self.core.lanes if not lanes_module.is_list(x.name)]),
+                      ("lists", [x.name for x in self.core.lanes if lanes_module.is_list(x.name)])]
+        titles = {x["id"]: x for x in self.core.lists}
+        for group, names in groups:
+            if group == "lists":
+                if not self.cfg["lists"]["enabled"]:
+                    continue
+                self._section_header(_("lists_header"), plus=True)
+            elif not names:
+                continue
+            elif group:
+                self._section_header(_("grp_" + group))
+            for name in names:
                 it = QListWidgetItem()
                 it.setData(Qt.ItemDataRole.UserRole, name)
-                w = LaneItem(name, self.theme, 99, title=x["title"])
-                if x.get("exclusive"):
+                lst = titles.get(name[len("list:"):]) if lanes_module.is_list(name) else None
+                w = LaneItem(name, self.theme, len(self.lane_order) + 1,
+                             title=lst["title"] if lst else None)
+                if lst and lst.get("exclusive"):
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())
                 self.lanes.addItem(it)
                 self.lanes.setItemWidget(it, w)
                 self.lane_items[name] = w
+                self.lane_order.append(name)
         # lanes of lists that are gone
         for name in [n for n in self.lane_widgets if n.startswith("list:")
                      and n not in self.core.lane_by_name]:
@@ -470,9 +484,9 @@ class MainWindow(QMainWindow):
             if current in self.lane_items:
                 self.select_lane(current)
                 self.lane_items[current].set_current(True)
-            elif current.startswith("list:"):
+            else:
                 self.select_lane("people" if "people" in self.lane_items
-                                 else self.core.lanes[0].name)
+                                 else self.lane_order[0])
         self.update_badges()
 
     def _lane_menu(self, pos):
@@ -554,6 +568,7 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
         self.tabs.setTabText(self.tabs.indexOf(self.stack), self.lane_title(name))
         self.core.set_state("lane", name)
+        self.core.set_active_lane(name)
         for lane_name, item in self.lane_items.items():
             item.set_current(lane_name == name)
 
@@ -576,6 +591,8 @@ class MainWindow(QMainWindow):
                 n = len(self.core.follow_requests)
             elif name == "activity":
                 n = self.core.activity_unread()
+            elif getattr(self.core.lane_by_name.get(name), "lazy", False):
+                n = 0  # browse lanes have no "unread"
             else:
                 n = self.core.unread_count(name)
             if name in ("comments", "mentions", "subs", "requests"):

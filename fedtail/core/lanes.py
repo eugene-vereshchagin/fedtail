@@ -14,6 +14,9 @@ class Lane:
     # order by the post's own time instead of when it reached us (notifications
     # can arrive late or out of order; the card shows the post's time)
     by_status_time: bool = False
+    # a lane to browse, not to read through (local, federated): fetched only while
+    # it's open, newest page first, no unread marks or badges
+    lazy: bool = False
 
 
 @dataclass
@@ -57,10 +60,39 @@ LANES = {
     "subs": Lane("subs", "subs", _subs, by_status_time=True),
     "bots": Lane("bots", "home", _bots),
     "mine": Lane("mine", "mine", _all),
-    "local": Lane("local", "local", _all),
+    "local": Lane("local", "local", _all, lazy=True),
+    "global": Lane("global", "federated", _all, lazy=True),
     "requests": Lane("requests", None, _all),
     "activity": Lane("activity", None, _all),
 }
+
+
+# the sidebar's sections, in order; a lane goes to the first section that names it,
+# lists get their own section, anything else ends up in "more"
+GROUPS = [
+    ("reading", ["people", "bots"]),
+    ("lists", []),
+    ("me", ["comments", "mentions", "subs", "activity", "requests"]),
+    ("more", ["mine", "local", "global"]),
+]
+
+
+def grouped(lanes):
+    """[(group, [lane names])] for the sidebar, keeping the configured order inside."""
+    names = [lane.name for lane in lanes]
+    out = []
+    placed = set()
+    for group, members in GROUPS:
+        if group == "lists":
+            got = [n for n in names if is_list(n)]
+        else:
+            got = [n for n in names if n in members]
+            if group == "more":
+                got += [n for n in names if n not in placed and n not in got
+                        and not is_list(n) and not any(n in m for _g, m in GROUPS)]
+        placed.update(got)
+        out.append((group, got))
+    return out
 
 
 LIST_PREFIX = "list:"

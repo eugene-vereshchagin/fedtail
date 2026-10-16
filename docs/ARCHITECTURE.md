@@ -45,7 +45,7 @@ Principles that shape the code (from DESIGN.md):
 
 * **Nothing jumps.** New posts never move what you are reading.
 * **Every reply knows its parent.** A quote of the parent is above every reply.
-* **Lanes are separate.** People, bots, replies to me, other mentions, …
+* **Lanes are separate.** Home, bots, replies to me, other mentions, …
 * **Private by default.** A new post goes to followers; a reply is never more
   public than its parent.
 * **All behaviour is flags in a config file.** No settings window, ever.
@@ -235,16 +235,26 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 
 | lane | source | keeps |
 |---|---|---|
-| `people` | home | not bots, not in an exclusive list |
+| `people` ("Home") | home | not bots, not in an exclusive list |
 | `comments` ("replies to me") | mentions | replies to my posts/comments |
 | `mentions` | mentions | other mentions (`lanes.mentions_all` → all) |
-| `subs` | subs (local) | new comments in followed threads, minus replies to me |
+| `subs` ("Threads") | subs (local) | new comments in followed threads, minus replies to me |
 | `activity` | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
 | `bots` | home | bots, not in an exclusive list |
 | `mine` | mine | everything |
-| `local` | local | everything |
+| `local` | local | everything; *lazy* |
+| `global` ("Federated") | federated | everything; *lazy* |
 | `requests` | — | follow requests (`RequestsWidget`) |
 | `list:<id>` | list:<id> | everything (one per server list, appended after the built-ins) |
+
+* **Lazy (browse) lanes** — `local`, `global`: fetched only while on screen
+  (`core.set_active_lane`, called by the window on every lane switch), newest page
+  only (`sources.refresh_top`; a hole is fine there), no unread marks or badges.
+* **Sidebar sections** — `lanes.GROUPS` / `lanes.grouped()`: Reading (people,
+  bots), Lists, For me (comments, mentions, subs, activity, requests), More (mine,
+  local, global); the configured order holds inside a section
+  (`ui.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
+  builds it (again on `lists_changed`); Alt+1…9 follow `lane_order`, not rows.
 
 * `lanes.enabled(cfg, lists)` builds the list from `lanes.enabled` plus list lanes.
   `Core._apply_lists()` replaces `Core.lanes`/`lane_by_name` when lists change.

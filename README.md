@@ -22,7 +22,8 @@ where you came from; a lane remembers where you stopped and never jumps.
   parent post; click it to open the whole conversation.
 - **Threads are trees.** Indented by depth, comments numbered `/1 /2 …`, the post you came
   from highlighted.
-- **Separate lanes.** People and bots apart; replies to your posts apart from other mentions.
+- **Separate lanes, in sections.** Reading (Home, Bots), your Lists, For me (Replies to me,
+  Mentions, Threads, Activity, Follow requests), More (My posts, Local, Federated).
 - **Private by default.** New posts go to followers only; a reply is never more public than
   the post it answers.
 - **Drafts survive.** Text is saved while you type; closing the window loses nothing.
@@ -127,7 +128,7 @@ Mentions to show everything.
 
 **Subscriptions**, like on Point: a server tells you only about replies that mention you, so
 when two people answer each other under your post you never hear of it. fedtail follows
-threads itself and puts what's new in them into "Subscriptions". You follow your own posts and
+threads itself and puts what's new in them into "Threads". You follow your own posts and
 threads you comment in automatically; any other thread — from a post's ⋯ menu or the
 "Follow thread" button in its header. Unfollowing is remembered: commenting there again won't
 bring the thread back. Settings are in `[subs]` (how often to check, when a quiet thread is
@@ -138,14 +139,14 @@ dropped, what to follow automatically).
 Your server's lists (Mastodon, GoToSocial) appear as lanes in a block of their own under the
 main ones. Right-click a post (or its ⋯ menu) → "Add to list" ticks its author into any list
 or a new one; right-click a list for rename, delete and **exclusive**. Whoever is in an
-exclusive list is gone from People and Bots and shows up only there — sort the bots into
+exclusive list is gone from Home and Bots and shows up only there — sort the bots into
 "Memes", "News" and the rest. `[lists]` in the config.
 
 ## Finding people and tags
 
 The search box under Write (`Ctrl+K`) finds people by name, `@user@server` or a profile link,
 hashtags and posts — with Follow right in the results; tags can be followed too (their posts
-come to People). A profile shows whom the person follows and who follows them, each with a
+come to Home). A profile shows whom the person follows and who follows them, each with a
 Follow button: the easiest way to find more people is through people you already read.
 
 ## Links stay inside

@@ -18,6 +18,7 @@ DEFAULTS = {
         "close_to_tray": True,
         "esc_hides": True,
         "sidebar_footer": True,
+        "sidebar_groups": True,
         "expand_cw": True,
         "max_width": 760,
         "image_height": 360,
@@ -42,8 +43,8 @@ DEFAULTS = {
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
-        "enabled": ["people", "comments", "mentions", "subs", "activity", "bots", "mine",
-                    "local", "requests"],
+        "enabled": ["people", "bots", "comments", "mentions", "subs", "activity", "requests",
+                    "mine", "local", "global"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,
@@ -105,7 +106,7 @@ CHOICES = {
     ("debug", "level"): {"debug", "info", "warning"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "activity", "bots", "mine", "local",
-              "requests"}
+              "global", "requests"}
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {

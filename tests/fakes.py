@@ -82,6 +82,9 @@ class FakeApi:
         self.w.calls.append(("home", max_id, min_id))
         return _page(self.w.home, limit, max_id, min_id)
 
+    def federated(self, limit=40, max_id=None, min_id=None):
+        return _page(self.w.local + self.w.home, limit, max_id, min_id)
+
     def local(self, limit=40, max_id=None, min_id=None):
         return _page(self.w.local, limit, max_id, min_id)
 

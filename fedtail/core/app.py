@@ -70,6 +70,7 @@ class Core:
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
         self._honest_checked = {}  # status id -> when its origin was asked
         self._poll_count = 0
+        self._active_lane = None  # the lane on screen: browse lanes are fetched only then
         self._last_poll_s = None
         api_module.SLOW_SECONDS = float(cfg["debug"]["slow_request_seconds"])
         diag.add_stats("core", self.diag_stats)
@@ -195,8 +196,20 @@ class Core:
                         sc["active_days"], sc["max_threads"])
                 except Exception as e:
                     self.emit("error", f"subs: {e}")
+            lazy = {lane.source for lane in self.lanes if lane.lazy}
+            active = self.lane_by_name.get(self._active_lane)
             for name in lanes.sources_needed(self.lanes):
                 if name not in self.sources:
+                    continue
+                if name in lazy:  # browse lanes: only while open, newest page only
+                    if active is None or active.source != name:
+                        continue
+                    try:
+                        new_by_source[name] = sources.refresh_top(
+                            self.store, self.sources[name], fc["page_size"])
+                        self.store.prune(name, KEEP_PER_SOURCE // 3)
+                    except Exception as e:
+                        self.emit("error", f"{name}: {e}")
                     continue
                 try:
                     new_by_source[name] = sources.catch_up(
@@ -462,6 +475,14 @@ class Core:
                 log.warning("auto-subscribe %s: %s", st.get("id"), e)
 
     # ---- reading ---------------------------------------------------------------
+    def set_active_lane(self, name):
+        """The frontend tells which lane is on screen; a browse lane (local,
+        federated) is fetched right away and then on every poll while it stays."""
+        self._active_lane = name
+        lane = self.lane_by_name.get(name)
+        if lane is not None and lane.lazy:
+            self.poll_now()
+
     def posts_only(self, name):
         saved = self.get_state(f"posts_only.{name}")
         return saved if saved is not None else name in self.cfg["lanes"]["posts_only"]

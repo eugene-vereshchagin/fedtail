@@ -189,6 +189,10 @@ class Api:
         return self.get("/api/v1/timelines/public",
                         self._page(limit, max_id, min_id, local="true"))
 
+    def federated(self, limit=40, max_id=None, min_id=None):
+        """The whole fediverse as this server knows it."""
+        return self.get("/api/v1/timelines/public", self._page(limit, max_id, min_id))
+
     def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None):
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))

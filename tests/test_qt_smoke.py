@@ -344,6 +344,14 @@ class QtSmokeTest(unittest.TestCase):
         self.win.close_tab(self.win.tabs.currentIndex())
         self.win.close_tab(self.win.tabs.indexOf(search))
 
+        # the sidebar in sections; Alt+N counts lanes, not headers; browse lanes
+        self.assertEqual(self.win.lane_order[:2], ["people", "bots"])
+        self.assertIn("global", self.win.lane_order)
+        self.win.select_lane("global")
+        self.pump(0.2)
+        self.assertEqual(self.core._active_lane, "global")
+        self.win.select_lane("people")
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()
