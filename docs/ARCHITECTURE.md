@@ -71,7 +71,8 @@ fedtail/
     api.py           Mastodon REST client (blocking, requests) + request logging
     auth.py          token file (JSON, 0600)
     config.py        DEFAULTS, validation (types, choices, minimums)
-    config_update.py --update-config: adds missing options, commented out
+    config_update.py --update-config: adds missing options, commented out; refreshes our
+                     explanations above existing ones; drops commented-out options that are gone
     counters.py      honest counters: ask the post's own server
     events.py        tiny event bus (handlers run in the emitting thread)
     hashtags.py      one-case hashtags for the CamelCase hint

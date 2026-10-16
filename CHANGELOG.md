@@ -2,6 +2,9 @@
 
 ## 0.3.0 — in progress
 
+- `--update-config` also refreshes the explanations of options already in your file (the
+  themes and choices of this version) and drops commented-out options that no longer exist;
+  your values and your own notes stay.
 - `--install-desktop` writes the icon's full path into the menu entry: Plasma takes a
   window's icon from its entry, and a bare name in a freshly filled icon theme often came
   out as a blank page on the task bar and in the title bar. A profile's window now names

@@ -88,6 +88,30 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertLess(new.index("#actions"), new.index("[feed]"))  # inside [ui]
         self.assertEqual(cu.update(new, example), new)  # idempotent
 
+    def test_update_refreshes_explanations_keeps_user_lines(self):
+        import tomllib
+
+        from fedtail.core import config_update as cu
+        example = config.example_text()
+        old = ("# fedtail — конфиг профиля.\n# старая шапка\n\n[ui]\n"
+               "# Тема — файл в ~/.config/fedtail/themes/<имя>.toml или встроенная:\n"
+               "#   \"system\"   — светлая/тёмная, как в KDE;\n"
+               "theme = \"point\"\n"
+               "# Esc закрывает то, что сверху, а последний Esc сразу убирает окно\n"
+               "#esc_hides = true\n"
+               "# моя заметка: шрифт побольше\nfont_size = 12\n")
+        report = {}
+        new = cu.update(old, example, report)
+        self.assertEqual(report["refreshed"], ["ui.theme"])
+        self.assertEqual(report["dropped"], ["ui.esc_hides"])
+        self.assertIn('"pink"', new)  # the themes of this version are listed now
+        self.assertNotIn("esc_hides", new)
+        self.assertNotIn("старая шапка", new)  # our header, refreshed
+        self.assertIn("# моя заметка: шрифт побольше\nfont_size = 12", new)  # theirs stays
+        parsed = tomllib.loads(new)
+        self.assertEqual((parsed["ui"]["theme"], parsed["ui"]["font_size"]), ("point", 12))
+        self.assertEqual(cu.update(new, example), new)
+
 
 class PathsAuthTest(TmpDir):
     def test_profiles(self):

@@ -74,14 +74,21 @@ def main(argv=None):
     user_text = where.config_file.read_text("utf-8")
     new_options = config_update.missing(user_text, example)
     if args.update_config:
-        if not new_options:
-            print(f"fedtail: {where.config_file} already lists every option.")
+        report = {}
+        new_text = config_update.update(user_text, example, report)
+        if new_text == user_text:
+            print(f"fedtail: {where.config_file} is up to date.")
             return 0
         where.config_file.with_name(where.config_file.name + ".bak").write_text(user_text,
                                                                                  "utf-8")
-        where.config_file.write_text(config_update.update(user_text, example), "utf-8")
-        print(f"fedtail: added to {where.config_file} (commented out):\n  " +
-              "\n  ".join(new_options))
+        where.config_file.write_text(new_text, "utf-8")
+        print(f"fedtail: updated {where.config_file} (the old one is config.toml.bak)")
+        for what, keys in (("added (commented out)", report["added"]),
+                           ("explanation refreshed", report["refreshed"]),
+                           ("dropped (no longer exists, was commented out)",
+                            report["dropped"])):
+            if keys:
+                print(f"  {what}:\n    " + "\n    ".join(keys))
         return 0
     if new_options:
         print(f"fedtail: your config doesn't mention {len(new_options)} option(s): "

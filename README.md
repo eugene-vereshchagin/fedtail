@@ -89,7 +89,9 @@ The config is created on first run as a fully commented copy of
 [`fedtail/data/config.example.toml`](fedtail/data/config.example.toml) and never touched again.
 `config.example.toml` next to it is always the full reference for the running version. When
 an update brings new options, fedtail says so at start, and `python3 -m fedtail --update-config` adds
-them to your file, commented out, in the right sections (a `.bak` copy is kept).
+them to your file, commented out, in the right sections, refreshes the explanations of the
+options already there and drops commented-out ones that are gone (a `.bak` copy is kept;
+your values and notes stay).
 
 ## Themes
 
