@@ -78,6 +78,7 @@ class Core:
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
         self._honest_checked = {}  # status id -> when its origin was asked
         self._completed = {}  # thread root id -> when its missing replies were looked for
+        self._choices = {}  # this run's choices over lanes (see choice())
         self.muted, self.blocked = set(), set()
         self._silence_version = 0
         self._silence_checked = None
@@ -567,12 +568,27 @@ class Core:
         if lane is not None and lane.lazy:
             self.poll_now()
 
+    # ---- choices over a lane (posts only, new only, conversations) -----------------
+    # Kept for this run only, unless feed.remember_choices: every start begins at the
+    # config's defaults (lanes.posts_only), not wherever a lane was left last week.
+    def choice(self, key, default=None):
+        if self.cfg["feed"]["remember_choices"]:
+            return self.get_state(key, default)
+        return self._choices.get(key, default)
+
+    def set_choice(self, key, value):
+        if self.cfg["feed"]["remember_choices"]:
+            self.set_state(key, value)
+        else:
+            self._choices[key] = value
+        self._lane_cache.clear()
+
     def posts_only(self, name):
-        saved = self.get_state(f"posts_only.{name}")
+        saved = self.choice(f"posts_only.{name}")
         return saved if saved is not None else name in self.cfg["lanes"]["posts_only"]
 
     def set_posts_only(self, name, on):
-        self.set_state(f"posts_only.{name}", bool(on))
+        self.set_choice(f"posts_only.{name}", bool(on))
 
     def lane_entries(self, name):
         """[(item_id, status)] oldest → newest, at most the lane's render limit.

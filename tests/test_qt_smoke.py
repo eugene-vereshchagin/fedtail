@@ -478,7 +478,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.2)
         keys = [k for k in lane.view.order if not k.startswith("__")]
         self.assertTrue(keys and all(k.startswith("conv:") for k in keys))
-        self.assertTrue(self.core.get_state("conversations.comments"))
+        self.assertTrue(self.core.choice("conversations.comments"))
         lane.set_view("feed")
         self.pump(0.2)
         self.assertFalse(any(k.startswith("conv:") for k in lane.view.order))
@@ -698,6 +698,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "014" in lane.view.rows)
         posts = lambda: sorted(k for k in lane.view.rows if not k.startswith("__"))
         lane.set_filter("unread")
+        self.pump(0.2)
         self.assertNotIn("011", posts())  # read already: not here
         self.assertIn("014", posts())
         self.assertFalse(lane.btn_older.isVisible())
@@ -708,7 +709,8 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.1)
         self.win.select_lane("people")
         self.pump(until=lambda: "014" not in lane.view.rows)
-        self.assertEqual(self.core.get_state("unread_only.people"), True)  # remembered
+        self.assertEqual(self.core.choice("unread_only.people"), True)  # kept for this run
+        self.assertIsNone(self.core.get_state("unread_only.people"))  # not past it
 
     def test_compose_inline_panel(self):
         """The post window lives inside the main one (the keyboard layout stays)."""

@@ -2,6 +2,10 @@
 
 ## 0.6.0 — in progress
 
+- Switching All | Posts | New or Feed | Conversations: the pressed button turns at once and the
+  lane is redrawn after it, under a wait cursor and in one paint (it took over a second with
+  both buttons lit). The choices start fresh every run — All and Feed, or what
+  `lanes.posts_only` says — unless `feed.remember_choices = true`.
 - The post window is a panel inside the main window now (`ui.compose = "inline"`): KDE keeps a
   keyboard layout per window, so a new window could come up in another language mid-thought.
   One panel at a time (opening another keeps the first as a draft), ✕ or Esc closes it,

@@ -47,6 +47,7 @@ DEFAULTS = {
         "render_limit": 300,
         "first_run_mark_read": True,
         "honest_counters": False,
+        "remember_choices": False,
         "complete_threads": True,
     },
     "read": {"mark_read": "on_scroll"},

@@ -143,6 +143,14 @@ class FeedView(QScrollArea):
 
     # ---- content ------------------------------------------------------------------
     def set_specs(self, specs, keep_position=True):
+        # no painting while hundreds of cards come and go: one paint at the end
+        self.setUpdatesEnabled(False)
+        try:
+            self._set_specs(specs, keep_position)
+        finally:
+            self.setUpdatesEnabled(True)
+
+    def _set_specs(self, specs, keep_position=True):
         anchor = self._anchor() if keep_position else None
         keys = [s.key for s in specs]
         wanted = set(keys)
@@ -324,7 +332,7 @@ class LaneWidget(QWidget):
             self.view_seg = _Segmented(
                 [("feed", _("view_feed"), _("view_feed_tip")),
                  ("conversations", _("conv_mode"), _("conv_mode_tip"))],
-                "conversations" if self.core.get_state(f"conversations.{name}") else "feed",
+                "conversations" if self.core.choice(f"conversations.{name}") else "feed",
                 self.set_view, self.theme.shape["posts_only"])
             self.header.add(self.view_seg)
         self.btn_first = self.header.add(_button("↓ " + _("to_new"), self.jump_first_unread,
@@ -346,17 +354,21 @@ class LaneWidget(QWidget):
     def _current_filter(self):
         if self.has_posts_only and self.core.posts_only(self.name):
             return "posts"
-        if self.core.get_state(f"unread_only.{self.name}"):
+        if self.core.choice(f"unread_only.{self.name}"):
             return "unread"
         return "all"
 
     def set_filter(self, which):
-        """"all", "posts" (no replies) or "unread" — one at a time."""
+        """"all", "posts" (no replies) or "unread" — one at a time. The button turns at
+        once; the lane is redrawn right after (it can take a moment with many posts)."""
         if self.filter_seg is not None:
             self.filter_seg.select(which)
+        _busy(lambda: self._apply_filter(which))
+
+    def _apply_filter(self, which):
         if self.has_posts_only and self.core.posts_only(self.name) != (which == "posts"):
             self.core.set_posts_only(self.name, which == "posts")
-        self.core.set_state(f"unread_only.{self.name}", which == "unread")
+        self.core.set_choice(f"unread_only.{self.name}", which == "unread")
         self._kept = None
         self.positioned = False  # a different list: start over at the first unread
         self.separator = None
@@ -369,7 +381,10 @@ class LaneWidget(QWidget):
         """"feed" or "conversations" (one card per conversation)."""
         if self.view_seg is not None:
             self.view_seg.select(which)
-        self.core.set_state(f"conversations.{self.name}", which == "conversations")
+        _busy(lambda: self._apply_view(which))
+
+    def _apply_view(self, which):
+        self.core.set_choice(f"conversations.{self.name}", which == "conversations")
         self.separator = None
         self.positioned = False
         self.refresh(force=True)
@@ -548,6 +563,19 @@ class LaneWidget(QWidget):
         # greyed, not hidden: buttons that come and go make the others jump about
         self.btn_all.setEnabled(bool(n))
         self.btn_first.setEnabled(bool(n))
+
+
+def _busy(fn):
+    """Let the pressed button paint first, then do the slow part under a wait cursor."""
+    from PySide6.QtWidgets import QApplication
+
+    def run():
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            fn()
+        finally:
+            QApplication.restoreOverrideCursor()
+    QTimer.singleShot(0, run)
 
 
 class _Segmented(QWidget):
