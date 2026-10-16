@@ -14,7 +14,7 @@ from fedtail.core import config, paths
 
 class DiagTest(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         tmp = Path(self._tmp.name)
         self.paths = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         self.paths.ensure()

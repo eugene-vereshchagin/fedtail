@@ -45,7 +45,7 @@ class QtSmokeTest(unittest.TestCase):
         from fedtail.frontends.qt.window import MainWindow
 
         i18n.setup("ru")
-        self._tmp = tempfile.TemporaryDirectory()
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         tmp = Path(self._tmp.name)
         FakeApi.world = w = fakes.World()
         mine = w.add(status("010", ME, minute=10, text="мой пост"), home=True)
@@ -862,7 +862,10 @@ class QtSmokeTest(unittest.TestCase):
         first_unread = view.rows[view.unread_keys()[0]]
         top = view._top(first_unread) - view.verticalScrollBar().value()
         self.assertTrue(-20 < top < 90, top)  # just under the "new below" divider
-        self.assertIn("__sep__", view.rows)
+        lane = self.win.lane_widgets["bots"]
+        self.assertIn("__sep__", view.rows, f"separator={lane.separator} "
+                      f"positioned={lane.positioned} unread={len(view.unread_keys())} "
+                      f"rows={len(view.rows)} active={self.win.isActiveWindow()}")
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

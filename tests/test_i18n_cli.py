@@ -61,7 +61,7 @@ class CliTest(unittest.TestCase):
     def test_install_desktop(self):
         import os
         import tempfile
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             env = dict(os.environ, XDG_DATA_HOME=d)
             out = subprocess.run([sys.executable, "-m", "fedtail", "--install-desktop",
                                   "--profile", "croco"], cwd=ROOT, env=env,
@@ -80,7 +80,7 @@ class CliTest(unittest.TestCase):
         import os
         import tarfile
         import tempfile
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             env = dict(os.environ, HOME=d, XDG_DATA_HOME=d + "/data", XDG_CONFIG_HOME=d + "/cfg")
             out = subprocess.run([sys.executable, "-m", "fedtail", "--bug-report"], cwd=ROOT,
                                  env=env, capture_output=True, text=True)
@@ -91,7 +91,7 @@ class CliTest(unittest.TestCase):
 
     def test_update_config_flag(self):
         import tempfile
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             cfg = Path(d) / "c.toml"
             cfg.write_text('[ui]\ntheme = "terminal"\n')
             out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d,
@@ -104,7 +104,7 @@ class CliTest(unittest.TestCase):
 
     def test_bad_config_is_explained(self):
         import tempfile
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             cfg = Path(d) / "c.toml"
             cfg.write_text('[feed]\norder = "sideways"\n')
             out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d],

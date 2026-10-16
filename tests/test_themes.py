@@ -7,7 +7,7 @@ from fedtail.frontends import themefile
 
 class ThemeFileTest(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.old = os.environ.get("XDG_CONFIG_HOME")
         os.environ["XDG_CONFIG_HOME"] = self._tmp.name
         self.dir = themefile.user_dir()

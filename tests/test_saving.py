@@ -14,13 +14,13 @@ class SavingTest(unittest.TestCase):
         self.assertEqual(saving.file_name("https://x.org/"), "picture.jpg")
 
     def test_never_overwrites(self):
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             p = saving.free_path(d, "cat.png")
             p.write_bytes(b"1")
             self.assertEqual(saving.free_path(d, "cat.png").name, "cat-1.png")
 
     def test_where(self):
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             (Path(d) / "user-dirs.dirs").write_text('XDG_DOWNLOAD_DIR="$HOME/Загрузки"\n')
             with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": d, "HOME": "/home/u"}):
                 self.assertEqual(saving.downloads_dir(), Path("/home/u/Загрузки"))
@@ -28,7 +28,7 @@ class SavingTest(unittest.TestCase):
                 self.assertEqual(saving.save_dir(cfg), Path("/home/u/Загрузки"))
                 cfg, _ = config.validate({"ui": {"save_dir": "~/Pics"}})
                 self.assertEqual(saving.save_dir(cfg), Path("/home/u/Pics"))
-        with tempfile.TemporaryDirectory() as d, \
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d, \
                 mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": d, "HOME": "/home/u"}):
             self.assertEqual(saving.downloads_dir(), Path("/home/u/Downloads"))
 

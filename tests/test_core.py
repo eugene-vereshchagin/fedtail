@@ -19,11 +19,11 @@ from .fakes import BOB, ME, NEWS, FakeApi, status
 
 class TmpDir(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.tmp = Path(self._tmp.name)
-
-    def tearDown(self):
-        self._tmp.cleanup()
+        # a cleanup, not tearDown: it must run after the cores' shutdowns (registered
+        # later, run earlier), or Windows refuses to delete their open databases
+        self.addCleanup(self._tmp.cleanup)
 
 
 class ConfigTest(TmpDir):
