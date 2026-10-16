@@ -209,7 +209,19 @@ python3 -m unittest discover -s tests -t .   # core tests need no display
 ruff check .
 ```
 
-How it's built and what comes next: [docs/DESIGN.md](docs/DESIGN.md) (in Russian for now).
+* [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it is built: modules, threads, the store,
+  lanes, the poll cycle, events, the Qt frontend, themes, config, tests, recipes.
+* [docs/DEBUGGING.md](docs/DEBUGGING.md) — the logs, and what to send when it breaks.
+* [docs/DESIGN.md](docs/DESIGN.md) — the spec and the queue of planned work (Russian).
+* [AGENTS.md](AGENTS.md) — the rules in one page, for coding agents and humans in a hurry.
+
+## If it breaks
+
+Logs are always kept (until 1.0): `~/.local/share/fedtail/<profile>/logs/`. Run
+`python3 -m fedtail --bug-report` and send the archive it makes in your home folder — logs,
+crash traces, config and a system summary, without the token and the database. A frozen
+window: `kill -USR1 <pid>` first, it writes where every thread is stuck. Details in
+[docs/DEBUGGING.md](docs/DEBUGGING.md).
 
 ## Who wrote it
 
