@@ -807,7 +807,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(asked)
         self.win.images.local = lambda url: "/tmp/b.png"  # it came
         for url, cb in asked:
-            if url.endswith("b.png"):  # the emoji, not the avatar
+            if (url or "").endswith("b.png"):  # the emoji, not the avatar
                 cb(None)
         self.assertIn("<img", html())
         self.assertNotIn(">привет :blobcat:", html())
