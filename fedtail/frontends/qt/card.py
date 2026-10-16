@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core import links
-from ...core.model import is_bot, real, snippet
+from ...core.model import QUOTE_SHOWN, is_bot, quoted, real, snippet, without_quote_fallback
 from ...i18n import _
 from .text import clean, display_name, emojify, esc, link
 
@@ -294,8 +294,12 @@ class PostRow(QWidget):
         cv = QVBoxLayout(content)
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(8)
+        quote_mode = self.ctx.cfg["feed"].get("quotes", "card")
+        quote = quoted(st) if quote_mode != "off" else None
         if st.get("content"):
             html = st["content"]
+            if quote:
+                html = without_quote_fallback(html)
             if self.ctx.cfg["ui"]["links_in_app"]:
                 html = links.in_app(html, st)  # @mentions, #tags, fediverse links stay inside
             text = self._emoji_label(clean(html, self.theme.css("link")), st.get("emojis"),
@@ -304,7 +308,9 @@ class PostRow(QWidget):
         media = self._media(st)
         if media:
             cv.addWidget(media)
-        else:
+        if quote:
+            cv.addWidget(self._quote(quote, quote_mode))
+        elif not media:
             card = self._link_card(st)
             if card:
                 cv.addWidget(card)
@@ -741,6 +747,50 @@ class PostRow(QWidget):
                                pos // 3, pos % 3)
                 pos += 1
         grid.setColumnStretch(3, 1)
+        return box
+
+    def _quote(self, quote, mode):
+        """The quoted post, framed inside this one (feed.quotes = "card"), or a line
+        with a link to it ("link"); a quote that can't be shown says why."""
+        state, q, qid = quote
+        if state not in QUOTE_SHOWN or (q is None and not qid):
+            why = _("quote_" + state) if _("quote_" + state) != "quote_" + state \
+                else _("quote_unavailable")
+            line = "❝ " + why
+            if qid and state in ("blocked_account", "blocked_domain", "muted_account"):
+                line += " · " + link("thread", qid, _("quote_show_anyway"),
+                                     self.theme.css("link"))
+            return self._label(line, "quoteNote")
+        if q is None or mode == "link":
+            who = ""
+            if q is not None:
+                who = " " + _("quote_by", name=display_name(q["account"])) + ": " + \
+                    esc(snippet(q, 90))
+            return self._label(link("thread", qid, "❝" + who if who else "❝ " +
+                                    _("quote_open"), self.theme.css("link")), "quoteNote")
+        box = ClickFrame()
+        box.setObjectName("quoteBox")
+        box.setCursor(Qt.CursorShape.PointingHandCursor)
+        box.clicked.connect(lambda: self.ctx.on_link(f"fedtail:thread/{qid}"))
+        v = QVBoxLayout(box)
+        v.setContentsMargins(12, 8, 12, 10)
+        v.setSpacing(4)
+        acc = q["account"]
+        v.addWidget(self._emoji_label(
+            f"<b>{display_name(acc)}</b> @{esc(acc.get('acct', ''))} · "
+            + esc(self.theme.date(q.get("created_at", ""))), acc.get("emojis"), "quoteHead",
+            wrap=False))
+        if q.get("spoiler_text"):
+            v.addWidget(self._label("⚠ " + esc(q["spoiler_text"]), "cw"))
+        else:
+            html = q.get("content") or ""
+            if self.ctx.cfg["ui"]["links_in_app"]:
+                html = links.in_app(html, q)
+            v.addWidget(self._emoji_label(clean(html, self.theme.css("link")),
+                                          q.get("emojis"), "quoteText", selectable=True))
+            n = len(q.get("media_attachments") or [])
+            if n:
+                v.addWidget(self._label("🖼 " + _("quote_media", n=n), "quoteHead"))
         return box
 
     def _link_card(self, st):

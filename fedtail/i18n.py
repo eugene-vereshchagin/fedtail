@@ -184,6 +184,17 @@ _STRINGS = {
         "new_options": "В конфиге не упомянуто новых опций: {n}. "
                        "Запусти python3 -m fedtail --update-config — "
                        "допишет их с пояснениями.",
+        "quote_by": "цитата {name}", "quote_open": "цитата — открыть",
+        "quote_media": "вложений: {n}", "quote_unavailable": "цитата недоступна",
+        "quote_pending": "цитата ждёт одобрения автора",
+        "quote_rejected": "автор не разрешил цитировать",
+        "quote_revoked": "автор отозвал разрешение цитировать",
+        "quote_deleted": "цитируемый пост удалён",
+        "quote_unauthorized": "цитата недоступна вам",
+        "quote_blocked_account": "цитата скрыта: автор заблокирован",
+        "quote_blocked_domain": "цитата скрыта: сервер автора заблокирован",
+        "quote_muted_account": "цитата скрыта: автор в тишине",
+        "quote_show_anyway": "открыть всё равно",
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -480,6 +491,17 @@ _STRINGS = {
         "notify_more": " (and {n} more)",
         "new_options": "Your config doesn't mention {n} new option(s). "
                        "Run python3 -m fedtail --update-config to add them, with explanations.",
+        "quote_by": "quoting {name}", "quote_open": "quoted post — open",
+        "quote_media": "attachments: {n}", "quote_unavailable": "quoted post unavailable",
+        "quote_pending": "quote awaiting the author's approval",
+        "quote_rejected": "the author didn't allow quoting",
+        "quote_revoked": "the author withdrew the permission to quote",
+        "quote_deleted": "the quoted post was deleted",
+        "quote_unauthorized": "the quoted post isn't visible to you",
+        "quote_blocked_account": "quote hidden: you blocked the author",
+        "quote_blocked_domain": "quote hidden: you blocked the author's server",
+        "quote_muted_account": "quote hidden: you muted the author",
+        "quote_show_anyway": "open anyway",
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",

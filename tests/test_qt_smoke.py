@@ -743,6 +743,31 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(cards(PostRow(CardSpec(key="091", status=st), self.win.ctx)), [])
         self.win.ctx.cfg["feed"]["link_cards"] = "full"
 
+    def test_quotes(self):
+        """A quote post: the quoted one framed inside; a pending one says so; off as sent."""
+        from PySide6.QtWidgets import QFrame, QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        inner = status("093", NEWS, minute=1, text="исходная новость")
+        st = status("094", BOB, minute=2, text="смотрите")
+        st["content"] += '<p class="quote-inline">RE: <a href="x">x</a></p>'
+        st["quote"] = {"state": "accepted", "quoted_status": inner}
+        texts = lambda row: " ".join(w.text() for w in row.findChildren(QLabel))
+        row = PostRow(CardSpec(key="094", status=st), self.win.ctx)
+        self.assertEqual(len(row.findChildren(QFrame, "quoteBox")), 1)
+        self.assertIn("исходная новость", texts(row))
+        self.assertNotIn("RE:", texts(row))
+        st["quote"] = {"state": "pending", "quoted_status_id": "093"}
+        row = PostRow(CardSpec(key="094", status=st), self.win.ctx)
+        self.assertFalse(row.findChildren(QFrame, "quoteBox"))
+        self.assertIn("одобрения", texts(row))
+        self.win.ctx.cfg["feed"]["quotes"] = "off"
+        st["quote"] = {"state": "accepted", "quoted_status": inner}
+        row = PostRow(CardSpec(key="094", status=st), self.win.ctx)
+        self.assertIn("RE:", texts(row))
+        self.assertNotIn("исходная новость", texts(row))
+        self.win.ctx.cfg["feed"]["quotes"] = "card"
+
     def test_custom_emoji(self):
         """:blobcat: in a post and a name: a picture once it's downloaded."""
         from PySide6.QtWidgets import QLabel

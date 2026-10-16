@@ -2,6 +2,11 @@
 
 ## 0.8.0 — in progress
 
+- Quote posts (Mastodon 4.5+, Akkoma, Misskey, Fedibird): the quoted post framed inside the
+  quoting one, a click opens its thread; a quote that can't be shown says why (awaiting
+  approval, withdrawn, deleted, its author muted or blocked — with "open anyway"); the
+  "RE: link" line servers add for older clients is gone. `feed.quotes = "card"`, `"link"`
+  (one line) or `"off"`.
 - Servers' own emoji (`:blobcat:`) are pictures now — in posts, content warnings, names and
   "boosted by"; the ones not downloaded yet come in by themselves. `feed.custom_emoji =
   false` keeps them as text.

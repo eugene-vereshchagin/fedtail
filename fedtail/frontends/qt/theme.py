@@ -242,6 +242,11 @@ QLabel#num {{ color: {k('link')}; font-family: "{mono_family}"; font-weight: 700
 QLabel#cameFrom {{ color: {k('link')}; font-weight: 600; }}
 QDialog#composePanel {{ background: {k('panel')}; border: 1px solid {k('accent')};
     border-radius: {r}px; }}
+QFrame#quoteBox {{ background: {k('ctx')}; border: 1px solid {k('card_border')};
+    border-left: 3px solid {k('ctx_bar')}; border-radius: {r}px; }}
+QFrame#quoteBox:hover {{ border-color: {k('accent')}; }}
+QFrame#quoteBox QLabel {{ background: transparent; }}
+QLabel#quoteHead, QLabel#quoteNote {{ color: {k('muted')}; }}
 QFrame#linkCard {{ background: {k('ctx')}; border: 1px solid {k('card_border')};
     border-radius: {r}px; }}
 QFrame#linkCard:hover {{ border-color: {k('accent')}; }}

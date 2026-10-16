@@ -21,6 +21,34 @@ def html_to_text(h):
     return html.unescape(h).strip()
 
 
+QUOTE_SHOWN = {"accepted"}
+_QUOTE_FALLBACK = re.compile(r'<p class="quote-inline">.*?</p>', re.S | re.I)
+
+
+def quoted(st):
+    """The post this one quotes: (state, quoted status or None, its id or None).
+    Mastodon 4.5+ gives {"state", "quoted_status"} or, nested deeper, just
+    {"state", "quoted_status_id"}; Akkoma and Fedibird put the whole status in
+    "quote" (or pleroma.quote). None when it quotes nothing."""
+    q = st.get("quote")
+    if not q:
+        q = (st.get("pleroma") or {}).get("quote")
+    if not isinstance(q, dict):
+        if st.get("quote_id"):
+            return "accepted", None, st["quote_id"]
+        return None
+    if "account" in q and "content" in q:  # a whole status (Akkoma, Fedibird)
+        return "accepted", q, q.get("id")
+    inner = q.get("quoted_status")
+    qid = (inner or {}).get("id") or q.get("quoted_status_id")
+    return q.get("state") or "accepted", inner, qid
+
+
+def without_quote_fallback(content):
+    """Mastodon adds "RE: <link>" for clients that don't show quotes; we do."""
+    return _QUOTE_FALLBACK.sub("", content or "")
+
+
 def snippet(st, n=160):
     st = real(st)
     t = re.sub(r"\s+", " ", html_to_text(st.get("content", "")))

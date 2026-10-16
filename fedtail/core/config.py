@@ -51,6 +51,7 @@ DEFAULTS = {
         "complete_threads": True,
         "link_cards": 'full',
         "custom_emoji": True,
+        "quotes": 'card',
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
@@ -108,6 +109,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},
     ("ui", "frontend"): {"qt"},
