@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.6.0 — in progress
+
 ## 0.5.0 — 2026-10-16
 
 - One file, no installing: every release has `fedtail-X.Y.Z-linux-x86_64` (built on Debian 12)
