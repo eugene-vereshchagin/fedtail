@@ -66,6 +66,7 @@ fedtail/
                      bug-report archive (no Qt)
   desktop.py         --install-desktop: .desktop entry + icon in ~/.local/share
   i18n.py            interface strings, ru/en, Russian plural forms
+  sysenv.py          the one-file build: start other programs with the system's environment
   core/              everything that is not GUI
     app.py           Core: the facade the frontends talk to (see §4, §9)
     api.py           Mastodon REST client (blocking, requests) + request logging
@@ -74,7 +75,8 @@ fedtail/
     config_update.py --update-config: adds missing options; refreshes our
                      explanations above existing ones; drops commented-out options that are gone
     counters.py      honest counters: ask the post's own server
-    replies.py       replies my server never got: the post's ActivityPub replies list
+    replies.py       ActivityPub reading without my token: a post's replies collection,
+                     an actor's outbox (newest public posts), followers/following lists
     events.py        tiny event bus (handlers run in the emitting thread)
     hashtags.py      one-case hashtags for the CamelCase hint
     links.py         @mentions, #tags, fediverse links → in-app links
@@ -106,7 +108,10 @@ fedtail/
       card.py        PostRow (one post), CardSpec, SeparatorRow, media grid
       compose.py     the compose dialog (drafts, media, drag&drop, CW, hint)
       text.py        server HTML → QLabel rich text (an allow-list sanitizer: no scripts,
-                     no pictures from paths, links only to the web or inside); dates
+                     no pictures from paths, links only to the web or inside); dates;
+                     emojify(): :shortcodes: → our own <img> of the cached emoji file
+      kde.py         the one-file build in KDE: colours, font, icons from kdeglobals
+      opener.py      links and files to the desktop's programs (via sysenv when frozen)
       theme.py       Theme object, palette, the generated QSS
       images.py      avatars/pictures: disk+memory cache, own thread pool, save
       viewer.py      picture viewer drawn over the main window
@@ -384,6 +389,44 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   paging via `Api.get_page`), `core.follow`, `core.follow_tag`/`tag_info`/
   `followed_tags`. Qt: `SearchWidget` (the sidebar box, Ctrl+K), `PeopleWidget`,
   reusable `AccountRow` and `TagRow` with their own Follow buttons.
+* **Post content** (`card.py`) — `_link_card` (status.card; `feed.link_cards`),
+  `_emoji_label` (custom emoji: `text.emojify` points `<img>` at the picture already in
+  `Images` cache, `Images.local(url)`, and re-renders the label when a missing one
+  arrives; `feed.custom_emoji`), `_quote` (`model.quoted()` understands Mastodon 4.5
+  Quote/ShallowQuote, Akkoma/Fedibird whole-status quotes; states other than
+  "accepted" are explained; `model.without_quote_fallback` drops the "RE:" paragraph;
+  `feed.quotes`), sensitive media covered until clicked (`feed.sensitive_media`),
+  translation via `ctx.translate` (`feed.translate`; the card keeps it and toggles).
+* **Completion in the composer** — `#` from `store.tag_counts()` + followed tags, `@` from
+  `store.people_counts()` then `core.search_people()` (no resolve), both built lazily in
+  one SQL pass (json_each) and kept up to date by `put_statuses`; `Compose._offer`.
+* **Markers** — `Core._sync_markers()` after each poll (`read.sync_markers`): pull —
+  everything up to another client's `last_read_id` (home → source home, notifications →
+  source mentions) is marked read once per new marker; push — the newest item such that
+  everything older is read goes to the server. Ids compare with `model.id_after`
+  (numbers or same-length ULIDs).
+* **Async refresh** — Mastodon 4.5 answers `/context` with `Mastodon-Async-Refresh`;
+  `Api.last_async_refresh()` reads the last response's headers (thread-local);
+  `Core._await_refresh()` polls `/api/v1_alpha/async_refreshes/:id` and emits
+  `thread_grew` when it's finished.
+* **Remote profiles** — `Core.posts_from_origin(acc)`: the actor (acc.uri or url,
+  AP Accept), its outbox's first pages (`replies.outbox_post_uris`: Create, public),
+  each resolved through my server (`feed.remote_profiles`, `remote_posts`);
+  `AccountWidget._from_origin` asks when my server has fewer posts than the profile
+  counts. `Core.people_from_origin(acc, which)`: the actor's followers/following
+  collection, resolved likewise, on the "more — from their server" button
+  (`feed.remote_people`).
+* **Direct** — lane `direct` = source mentions, visibility direct; with
+  `lanes.direct_apart` such posts leave comments/mentions (`LaneContext.direct_apart`).
+* **Posting extras** — `Core.post(..., sensitive, poll, quote, scheduled_at)`: polls
+  (`Compose._build_poll`), `quoted_status_id` + `post.quote_policy`, GoToSocial
+  `interaction_policy` from `post.who_can_*` (`model.interaction_policy`, sent only to
+  GoToSocial), `scheduled_at` (the answer is a ScheduledStatus; `show_scheduled`).
+* **Moderation and people** — `core.report` (`/api/v1/reports`), `core.block_domain`
+  (`blocked_domains` joins `silenced()`), `core.set_note` (relationship.note), pinned
+  posts (`core.pinned`, `core.pin`; `AccountWidget.render` puts them first).
+* **Keys** — `FeedView.keyPressEvent`: j/k move `cursor_key` (card property `keyed`),
+  r/f/b/m/o act through `ctx.on_link` (`ui.post_keys`).
 * **Profiles and tags** — `AccountWidget` (info card: bio, fields, counts, since,
   "follows you", Follow/Mention/Add to list/browser; `core.relationship/follow`)
   and `TagWidget` (`core.tag_timeline`) share `_PagedTab` (a server timeline read
