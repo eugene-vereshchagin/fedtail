@@ -426,6 +426,23 @@ class QtSmokeTest(unittest.TestCase):
         row = PostRow(CardSpec(key="x", status=folded), self.win.ctx)
         self.assertFalse(row.cw_open)
 
+        # editing my post: the editor fetches what I typed, sends the change, the card
+        # gets "edited" with the versions behind it
+        mine = self.world.add(status("120", ME, text="очепятка"), home=True)
+        self.core.store.put_statuses([mine])
+        dlg = Compose(self.win, edit=mine)
+        dlg.show()
+        self.pump(until=lambda: dlg.text.toPlainText() == "очепятка")
+        self.assertFalse(dlg.vis.isEnabled())
+        dlg.text.setPlainText("опечатка")
+        dlg.send()
+        self.pump(until=lambda: "опечатка" in self.core.store.get_status("120")["content"])
+        self.pump(until=lambda: gone(dlg))
+        edited = self.core.store.get_status("120")
+        self.assertTrue(edited.get("edited_at"))
+        self.win.show_history(edited)
+        self.pump(0.3)
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

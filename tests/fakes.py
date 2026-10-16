@@ -225,6 +225,23 @@ class FakeApi:
         self.w.add(st, home=True)
         return st
 
+    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False):
+        old = self.w.statuses[sid]
+        self.w.history.setdefault(sid, []).append(old)
+        st = dict(old, content=f"<p>{text}</p>", spoiler_text=spoiler_text,
+                  edited_at="2099-10-14T12:00:00.000Z",
+                  media_attachments=[m for m in old["media_attachments"]
+                                     if m["id"] in media_ids])
+        self.w.statuses[sid] = st
+        return st
+
+    def status_source(self, sid):
+        st = self.w.statuses[sid]
+        return {"id": sid, "text": st["content"][3:-4], "spoiler_text": st["spoiler_text"]}
+
+    def status_history(self, sid):
+        return self.w.history.get(sid, []) + [self.w.statuses[sid]]
+
     def delete_status(self, sid):
         self.w.statuses.pop(sid, None)
         self.w.home = [s for s in self.w.home if s["id"] != sid]
@@ -296,6 +313,7 @@ class World:
         self.following = set()
         self.followed_tags = set()
         self.muted, self.blocked, self.filters = set(), set(), {}
+        self.history = {}
         self.profile_updates = []
 
     def accounts(self):

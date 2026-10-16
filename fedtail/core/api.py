@@ -367,6 +367,20 @@ class Api:
             body["media_ids"] = list(media_ids)
         return self.post("/api/v1/statuses", json=body)
 
+    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False):
+        """Change my post. Media ids must be passed again, or they go away."""
+        body = {"status": text, "spoiler_text": spoiler_text, "media_ids": list(media_ids)}
+        if markdown:
+            body["content_type"] = "text/markdown"
+        return self._req("PUT", f"/api/v1/statuses/{sid}", json=body)
+
+    def status_source(self, sid):
+        """{text, spoiler_text} as I typed them (Markdown and all)."""
+        return self.get(f"/api/v1/statuses/{sid}/source")
+
+    def status_history(self, sid):
+        return self.get(f"/api/v1/statuses/{sid}/history") or []
+
     def delete_status(self, sid):
         return self.delete(f"/api/v1/statuses/{sid}")
 

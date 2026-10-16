@@ -2,6 +2,9 @@
 
 ## 0.3.0 — in progress
 
+- Edit your posts: "Edit" in the ⋯ menu opens the composer with the text as you typed it
+  (Markdown included); text and warning change, pictures and visibility stay. Edited posts
+  say "edited", a click shows every version.
 - Silence: mute or block from a post's ⋯ menu or the profile (their posts vanish from every
   lane at once); word filters kept on the server (≡ → Silence…: fold or hide, where);
   a post folded by a filter says which; muted/blocked lists with undo.

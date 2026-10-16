@@ -918,6 +918,36 @@ class Core:
             return st
         return self.submit(job)
 
+    def edit(self, status, text, spoiler="", draft_key=None):
+        """Change my post's text and warning; its pictures stay as they are."""
+        s = real(status)
+
+        def job():
+            ids = [m["id"] for m in s.get("media_attachments") or []]
+            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
+            self.store.put_statuses([st])
+            if draft_key:
+                self.store.delete_draft(draft_key)
+            self.emit("status_updated", st)
+            return st
+        return self.submit(job)
+
+    def source(self, status):
+        """What I typed for this post; the shown text if the server can't say."""
+        s = real(status)
+
+        def job():
+            try:
+                return self.api.status_source(s["id"])
+            except ApiError:
+                from .model import html_to_text
+                return {"text": html_to_text(s.get("content", "")),
+                        "spoiler_text": s.get("spoiler_text", "")}
+        return self.submit(job)
+
+    def history(self, status):
+        return self.submit(self.api.status_history, real(status)["id"])
+
     def _update(self, st):
         self.store.put_statuses([st])
         self.emit("status_updated", st)

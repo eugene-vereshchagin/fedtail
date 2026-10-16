@@ -330,6 +330,18 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertEqual(core.lane_entries("people"), [])
 
+    def test_edit_my_post(self):
+        core, w = self.make()
+        mine = w.add(status("110", ME, text="очепятка"), home=True)
+        mine["media_attachments"] = [{"id": "m9", "type": "image", "url": "u"}]
+        core.connect().result()
+        self.assertEqual(core.source(mine).result()["text"], "очепятка")
+        st = core.edit(mine, "опечатка", "", draft_key="edit:110").result()
+        self.assertIn("опечатка", core.store.get_status("110")["content"])
+        self.assertEqual([m["id"] for m in st["media_attachments"]], ["m9"])  # kept
+        self.assertTrue(st.get("edited_at"))
+        self.assertEqual(len(core.history(mine).result()), 2)
+
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

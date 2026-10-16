@@ -344,6 +344,10 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   mentions) → `fedtail:resolve/<quoted url>`. `core.resolve(url)` asks the user's
   server (`/api/v2/search?resolve=true`) and the window opens the thread or the
   profile; the browser only if nothing is found. Flag `ui.links_in_app`.
+* **Editing** — `core.source()` (`/statuses/:id/source`, the typed text) →
+  `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, media ids passed again so
+  they stay); `core.history()` feeds `MainWindow.show_history`; cards show "edited"
+  when `edited_at` is set. Drafts of edits use the key `edit:<id>`.
 * **Silence** — `core.mute/block` (server) + `core.muted/blocked` sets refreshed every
   `lists.refresh_minutes`; `core.silenced(st)` (author or booster muted/blocked, or a
   server filter with action "hide") is applied in `lane_entries` and `_notify`; "warn"

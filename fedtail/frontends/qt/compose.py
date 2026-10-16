@@ -51,14 +51,19 @@ def save_image(core, image):
 
 
 class Compose(QDialog):
-    def __init__(self, win, reply_to=None, attach=(), text=""):
+    def __init__(self, win, reply_to=None, attach=(), text="", edit=None):
         super().__init__(win)
         self.win, self.core = win, win.core
+        self.edit = real(edit) if edit else None  # my post being corrected
         self.reply_to = real(reply_to) if reply_to else None
-        self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None)
+        if self.edit:
+            self.key = f"edit:{self.edit['id']}"
+        else:
+            self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None)
         self.start_text = text  # "@someone " from a profile's Mention button
         self.sent = False
-        self.setWindowTitle(_("compose_reply") if reply_to else _("compose_new"))
+        self.setWindowTitle(_("compose_edit") if edit else
+                            _("compose_reply") if reply_to else _("compose_new"))
         lay = QVBoxLayout(self)
         lay.setContentsMargins(16, 16, 16, 12)
         lay.setSpacing(10)
@@ -111,6 +116,10 @@ class Compose(QDialog):
         add.setObjectName("tool")
         add.clicked.connect(self.attach)
         row.addWidget(add)
+        if self.edit:  # an edit changes words; pictures and who sees it stay as they were
+            add.setEnabled(False)
+            add.setToolTip(_("edit_media_kept"))
+            self.setAcceptDrops(False)
         self.cw_btn = QPushButton("⚠ " + _("cw_add"))
         self.cw_btn.setObjectName("tool")
         self.cw_btn.setCheckable(True)
@@ -168,6 +177,9 @@ class Compose(QDialog):
 
     # ---- drafts -------------------------------------------------------------------
     def _load(self):
+        if self.edit:
+            self._load_edit()
+            return
         d = self.core.get_draft(self.key)
         vis = self.core.reply_visibility(self.reply_to)
         if d:
@@ -187,6 +199,35 @@ class Compose(QDialog):
                     self.cw.setText(self.reply_to["spoiler_text"])
         self.vis.setCurrentIndex(VISIBILITIES.index(vis) if vis in VISIBILITIES else 2)
         self.initial = self._snapshot()
+
+    def _load_edit(self):
+        v = self.edit.get("visibility", "private")
+        self.vis.setCurrentIndex(VISIBILITIES.index(v) if v in VISIBILITIES else 2)
+        self.vis.setEnabled(False)
+        self.vis.setToolTip(_("edit_media_kept"))
+        d = self.core.get_draft(self.key)
+        if d:
+            self.text.setPlainText(d.get("text", ""))
+            self.cw.setText(d.get("cw", ""))
+            self.hint.setText(_("draft_restored"))
+            self.initial = self._snapshot()
+            return
+        self.text.setEnabled(False)
+        self.hint.setText(_("loading"))
+
+        def got(src):
+            self.text.setEnabled(True)
+            self.text.setPlainText(src.get("text", ""))
+            self.cw.setText(src.get("spoiler_text", ""))
+            if self.cw.text():
+                self.cw_btn.setChecked(True)
+            self.hint.setText(_("edit_hint"))
+            self.initial = self._snapshot()
+            self.text.setFocus()
+        self.initial = self._snapshot()
+        self.win.bridge.call(self.core.source(self.edit), ok=got,
+                             fail=lambda e: (self.text.setEnabled(True),
+                                             self.hint.setText(_("load_failed", err=e))))
 
     def _snapshot(self):
         return {"text": self.text.toPlainText(), "cw": self.cw.text(),
@@ -346,6 +387,10 @@ class Compose(QDialog):
         self.save_draft()  # whatever happens next, the text is safe
         self.send_btn.setEnabled(False)
         self.send_btn.setText(_("sending"))
+        if self.edit:
+            fut = self.core.edit(self.edit, text, self.cw.text().strip(), draft_key=self.key)
+            self.win.bridge.call(fut, ok=self._edited, fail=self._failed)
+            return
         fut = self.core.post(text, self.vis.currentData(),
                              self.reply_to["id"] if self.reply_to else None,
                              self.cw.text().strip(), media, draft_key=self.key)
@@ -358,6 +403,12 @@ class Compose(QDialog):
             self.win.after_post(st, self.reply_to)
         finally:
             self._leave()
+
+    def _edited(self, st):
+        self.sent = True
+        self.core.delete_draft(self.key)
+        self.win.statusBar().showMessage(_("edited_msg"), 4000)
+        self._leave()
 
     def _failed(self, err):
         self.send_btn.setEnabled(True)

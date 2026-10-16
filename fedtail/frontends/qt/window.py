@@ -820,6 +820,10 @@ class MainWindow(QMainWindow):
             self.error(_("not_in_cache"))
         elif action == "reply":
             self.compose(st)
+        elif action == "edit":
+            Compose(self, edit=st).show()
+        elif action == "history":
+            self.show_history(st)
         elif action in ("mute", "block"):
             acc = real(st)["account"]
             if action == "block" and QMessageBox.question(
@@ -879,6 +883,32 @@ class MainWindow(QMainWindow):
         if paths:
             e.acceptProposedAction()
             self.compose(attach=paths)
+
+    def show_history(self, st):
+        """The versions of an edited post, oldest first, as the server keeps them."""
+        from PySide6.QtWidgets import QTextBrowser
+
+        from .text import clean
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_("history_title"))
+        dlg.resize(560, 480)
+        lay = QVBoxLayout(dlg)
+        view = QTextBrowser()
+        view.setOpenLinks(False)
+        lay.addWidget(view)
+        view.setPlainText(_("loading"))
+
+        def got(versions):
+            parts = []
+            for i, v in enumerate(versions, 1):
+                when = self.theme.date(v.get("created_at", ""))
+                cw = f"<p><i>⚠ {v['spoiler_text']}</i></p>" if v.get("spoiler_text") else ""
+                parts.append(f"<h4>{_('history_version', n=i)} · {when}</h4>{cw}"
+                             f"{clean(v.get('content', ''), self.theme.css('link'))}")
+            view.setHtml("<hr>".join(parts) or _("history_none"))
+        self.bridge.call(self.core.history(st), ok=got,
+                         fail=lambda e: view.setPlainText(_("load_failed", err=e)))
+        dlg.show()
 
     def after_post(self, st, reply_to):
         self.statusBar().showMessage(_("sent"), 4000)

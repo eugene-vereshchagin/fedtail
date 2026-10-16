@@ -163,6 +163,13 @@ class PostRow(QWidget):
         self._build()
         self._flags()
 
+    def _edited_mark(self, st):
+        """"· edited", a link to the versions."""
+        mark = link("history", st["id"], _("edited_mark"), self.theme.css("muted"))
+        lab = self._label("· " + mark, "meta", wrap=False)
+        lab.setToolTip(_("edited_tip", when=self.theme.date(st["edited_at"])))
+        return lab
+
     def _card_menu(self, pos):
         if self._menu is not None:
             self._menu.exec(self.card.mapToGlobal(pos))
@@ -353,6 +360,8 @@ class PostRow(QWidget):
         else:
             vis_label.setPixmap(icon.pixmap(14, 14))
         line.addWidget(vis_label)
+        if st.get("edited_at"):
+            line.addWidget(self._edited_mark(st))
         line.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
         line.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
@@ -393,6 +402,8 @@ class PostRow(QWidget):
                                            self.theme.css("muted")),
                                       VIS_WORD.get(vis, vis)) if x)
         h.addWidget(self._label(meta, "meta", wrap=False))
+        if st.get("edited_at"):
+            h.addWidget(self._edited_mark(st))
         h.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
@@ -501,6 +512,7 @@ class PostRow(QWidget):
                            lambda i=st["id"]: self.ctx.on_link(f"fedtail:block/{i}"))
         if st["account"]["id"] == self.ctx.me_id:
             menu.addSeparator()
+            menu.addAction(_("edit"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:edit/{i}"))
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
         b.setMenu(menu)
         self._menu = menu  # also shown on a right click on the card (see __init__)
