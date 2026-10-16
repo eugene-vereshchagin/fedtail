@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 — in progress
+## 0.3.0 — 2026-10-16
 
 - A profile's card no longer looks like one more post: a tinted block with an accent edge,
   the header picture as a banner, the name in large type, and a "Posts" heading under it.

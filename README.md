@@ -36,8 +36,9 @@ where you came from; a lane remembers where you stopped and never jumps.
 
 fedtail aims to feel like Point on top of the fediverse: you read the feed in order and never
 lose your place; every comment shows the thread it belongs to; threads are trees numbered
-`/1 /2 …`; private by default. Next on the list: thread subscriptions (like `S #abc` on Point)
-and an XMPP-client-style command line: `#abc text`, `S #abc`, `@user`.
+`/1 /2 …`, whole — replies your server never got are fetched from the author's server;
+thread subscriptions (like `S #abc` on Point) and a command line: `#abc text`, `S #abc`,
+`@user`; private by default. Trying it out: [docs/TESTING.md](docs/TESTING.md).
 
 ## Running from source
 

@@ -3,7 +3,8 @@
 Read `docs/ARCHITECTURE.md` first: it maps every module, the threads, the store
 schema, the lanes, the poll cycle, the events and the Qt frontend, with recipes
 for common changes. `docs/DESIGN.md` (Russian) is the product spec and the queue
-of planned work. `docs/DEBUGGING.md` explains the logs a user can send.
+of planned work. `docs/DEBUGGING.md` explains the logs a user can send; `docs/TESTING.md` is the page
+for alpha testers (install, what to try, how to report).
 
 ## Run, test, lint
 
