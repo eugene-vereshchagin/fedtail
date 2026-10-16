@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.7.0 — in progress
+
 ## 0.6.1 — 2026-10-17
 
 - The config is in chapters now — look & window, reading, lanes, posts, notifications… with
