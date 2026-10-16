@@ -164,10 +164,18 @@ def pump(app, seconds):
         time.sleep(0.01)
 
 
+ERRORS = []
+
+
 def shoot(widget, out, name):
     path = Path(out) / f"{name}.png"
     widget.grab().save(str(path))
     print("saved", path)
+    win = widget.window()
+    bar = getattr(win, "statusBar", None)
+    msg = bar().currentMessage() if bar else ""
+    if msg.startswith(("Ошибка", "Error")):  # a screenshot of an error is a bug found
+        ERRORS.append(f"{name}: {msg}")
 
 
 def run(app, out, label, palette, theme_name, extras):
@@ -304,6 +312,9 @@ def icon_sheet(out):
 
 
 def main():
+    import logging
+    logging.basicConfig(level=logging.WARNING, stream=sys.stderr,
+                        format="%(levelname)s %(name)s: %(message)s")
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "screenshots")
     out.mkdir(parents=True, exist_ok=True)
     i18n.setup("ru")
@@ -320,6 +331,8 @@ def main():
     for name in ("point", "juick", "juick-classic", "night", "paper", "contrast",
                  "pink", "nord", "solarized"):
         run(app, out, name, BREEZE_LIGHT, name, set())
+    if ERRORS:
+        sys.exit("errors on screen:\n  " + "\n  ".join(ERRORS))
 
 
 if __name__ == "__main__":
