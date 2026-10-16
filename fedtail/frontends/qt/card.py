@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 from ...core import links
 from ...core.model import is_bot, real, snippet
 from ...i18n import _
-from .text import clean, display_name, esc, link
+from .text import clean, display_name, emojify, esc, link
 
 RAIL_W = 20
 MAX_DEPTH_INDENT = 8
@@ -241,6 +241,26 @@ class PostRow(QWidget):
             lab.setObjectName(name)
         return lab
 
+    def _emoji_label(self, html, emojis, name=None, selectable=False, wrap=True):
+        """A label whose :shortcodes: become the server's emoji pictures; the ones not
+        downloaded yet are fetched and put in when they come (feed.custom_emoji)."""
+        lab = self._label(html, name, selectable, wrap)
+        if not emojis or not self.ctx.cfg["feed"].get("custom_emoji", True):
+            return lab
+        lab.ensurePolished()
+        px = max(14, lab.fontMetrics().height())
+
+        def render():
+            out, missing = emojify(html, emojis, px, self.ctx.images.local)
+            try:
+                lab.setText(out)
+            except RuntimeError:  # the card was rebuilt meanwhile
+                return []
+            return missing
+        for url in set(render()):
+            self.ctx.images.get(url, lambda _pm: render(), 128)
+        return lab
+
     def _build(self):
         if self.body is not None:
             self.lay.removeWidget(self.body)
@@ -256,9 +276,10 @@ class PostRow(QWidget):
         st = real(wrapper)
 
         if wrapper.get("reblog"):
-            v.addWidget(self._label(
+            v.addWidget(self._emoji_label(
                 _("boosted_by", name=display_name(wrapper["account"])) + " · " +
-                _("boost_time", when=self.theme.date(wrapper.get("created_at", ""))), "boost"))
+                _("boost_time", when=self.theme.date(wrapper.get("created_at", ""))),
+                wrapper["account"].get("emojis"), "boost"))
 
         if self.theme.shape["card_header"] == "compact":
             v.addLayout(self._header_compact(st))
@@ -277,8 +298,8 @@ class PostRow(QWidget):
             html = st["content"]
             if self.ctx.cfg["ui"]["links_in_app"]:
                 html = links.in_app(html, st)  # @mentions, #tags, fediverse links stay inside
-            text = self._label(clean(html, self.theme.css("link")), "postText",
-                               selectable=True)
+            text = self._emoji_label(clean(html, self.theme.css("link")), st.get("emojis"),
+                                     "postText", selectable=True)
             cv.addWidget(text)
         media = self._media(st)
         if media:
@@ -299,7 +320,7 @@ class PostRow(QWidget):
             cw_row = QHBoxLayout()
             label = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else []) +
                                (["⚠ " + st["spoiler_text"]] if st.get("spoiler_text") else []))
-            cw_row.addWidget(self._label(esc(label), "cw"), 1)
+            cw_row.addWidget(self._emoji_label(esc(label), st.get("emojis"), "cw"), 1)
             btn = QPushButton()
             btn.setObjectName("tool")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -379,8 +400,9 @@ class PostRow(QWidget):
             num = QLabel(f"/{self.spec.number}")
             num.setObjectName("num")
             line.addWidget(num)
-        line.addWidget(self._label(link("account", acc["id"], display_name(acc),
-                                        self.theme.css("text"), bold=True), "name", wrap=False))
+        line.addWidget(self._emoji_label(link("account", acc["id"], display_name(acc),
+                                              self.theme.css("text"), bold=True),
+                                         acc.get("emojis"), "name", wrap=False))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc["acct"])}{esc(bot)} · '

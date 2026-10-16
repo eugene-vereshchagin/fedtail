@@ -50,6 +50,7 @@ DEFAULTS = {
         "remember_choices": False,
         "complete_threads": True,
         "link_cards": 'full',
+        "custom_emoji": True,
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {

@@ -4,6 +4,7 @@ import html
 import re
 from datetime import UTC, datetime
 from html.parser import HTMLParser
+from pathlib import Path
 
 _INVISIBLE = re.compile(r'<span class="invisible">.*?</span>', re.S)
 _ELLIPSIS = re.compile(r'<span class="ellipsis">(.*?)</span>', re.S)
@@ -151,6 +152,36 @@ def clean(content, link_color=None):
     h = _fit_text(h)
     style = "text-decoration:none;" + (f"color:{link_color};" if link_color else "")
     return h.replace("<a ", f'<a style="{style}" ')
+
+
+_TAG_SPLIT = re.compile(r"(<[^>]+>)")
+_SHORTCODE = re.compile(r":([A-Za-z0-9_]{2,}):")
+
+
+def emojify(h, emojis, px, local):
+    """:shortcode: in the text (never inside a tag) becomes the server's picture, when
+    that picture is already on disk; local(url) -> path or None. Our own <img>, after
+    sanitizing, pointing only at our own cache. Returns (html, urls still missing)."""
+    table = {e["shortcode"]: e.get("static_url") or e.get("url")
+             for e in emojis or () if e.get("shortcode") and (e.get("static_url") or e.get("url"))}
+    if not table or ":" not in h:
+        return h, []
+    missing = []
+
+    def sub(m):
+        url = table.get(m.group(1))
+        path = local(url) if url else None
+        if not path:
+            if url:
+                missing.append(url)
+            return m.group(0)
+        src = esc(Path(path).resolve().as_uri())
+        return (f'<img src="{src}" width="{px}" height="{px}" align="middle" '
+                f'title=":{esc(m.group(1))}:">')
+    parts = _TAG_SPLIT.split(h)
+    for i in range(0, len(parts), 2):
+        parts[i] = _SHORTCODE.sub(sub, parts[i])
+    return "".join(parts), missing
 
 
 def display_name(account):

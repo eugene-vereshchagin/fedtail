@@ -743,6 +743,32 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(cards(PostRow(CardSpec(key="091", status=st), self.win.ctx)), [])
         self.win.ctx.cfg["feed"]["link_cards"] = "full"
 
+    def test_custom_emoji(self):
+        """:blobcat: in a post and a name: a picture once it's downloaded."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("092", BOB, minute=1, text="привет :blobcat:")
+        st["emojis"] = [{"shortcode": "blobcat", "url": "https://s.example/b.png"}]
+        st["account"] = dict(st["account"], display_name="Bob :blobcat:",
+                             emojis=st["emojis"])
+        asked = []
+        self.win.images.get = lambda url, cb, *a, **k: asked.append((url, cb))
+        self.win.images.local = lambda url: None
+        row = PostRow(CardSpec(key="092", status=st), self.win.ctx)
+        html = lambda: " ".join(w.text() for w in row.findChildren(QLabel))
+        self.assertIn(":blobcat:", html())
+        self.assertTrue(asked)
+        self.win.images.local = lambda url: "/tmp/b.png"  # it came
+        for _url, cb in asked:
+            cb(None)
+        self.assertIn("<img", html())
+        self.assertNotIn(">привет :blobcat:", html())
+        self.win.ctx.cfg["feed"]["custom_emoji"] = False
+        row = PostRow(CardSpec(key="092", status=st), self.win.ctx)
+        self.assertNotIn("<img", " ".join(w.text() for w in row.findChildren(QLabel)))
+        self.win.ctx.cfg["feed"]["custom_emoji"] = True
+
     def test_unread_only(self):
         """Unread: what was unread on opening stays while you read it; leaving thins it."""
         self.win.start()

@@ -60,3 +60,22 @@ class SnippetBlocksTest(unittest.TestCase):
         st = {"content": '<p><span class="h-card">@anna</span></p>'
                          "<blockquote><p>quote</p></blockquote><p>AO3</p><ul><li>Кто</li></ul>"}
         self.assertEqual(snippet(st), "@anna quote AO3 Кто")
+
+
+@unittest.skipIf(clean is None, "PySide6 is not installed")
+class EmojiTest(unittest.TestCase):
+    def test_shortcodes_become_pictures_outside_tags(self):
+        from fedtail.frontends.qt.text import emojify
+        emojis = [{"shortcode": "blobcat", "url": "https://s/blobcat.gif",
+                   "static_url": "https://s/blobcat.png"},
+                  {"shortcode": "nope", "url": "https://s/nope.png"}]
+        have = {"https://s/blobcat.png": "/tmp/cache/abc"}
+        h, missing = emojify('<a title=":blobcat:">hi :blobcat: and :nope: and :other:</a>',
+                             emojis, 18, have.get)
+        self.assertIn('src="file:///tmp/cache/abc"', h)
+        self.assertIn('width="18"', h)
+        self.assertIn('title=":blobcat:">hi <img', h)  # not inside the tag's attribute
+        self.assertIn(":nope:", h)
+        self.assertIn(":other:", h)
+        self.assertEqual(missing, ["https://s/nope.png"])
+        self.assertEqual(emojify("plain", [], 18, have.get), ("plain", []))

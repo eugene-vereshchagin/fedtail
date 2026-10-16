@@ -113,6 +113,14 @@ class Images:
                              Qt.TransformationMode.SmoothTransformation)
         return img
 
+    def local(self, url):
+        """The cached file of a picture already downloaded, or None (for rich text that
+        points at it: custom emoji)."""
+        if not url:
+            return None
+        p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
+        return str(p) if p.exists() and p.stat().st_size else None
+
     def save(self, url, folder):
         """The original file into folder (from the cache when it's there).
         Returns a future with the saved path."""

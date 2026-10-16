@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Servers' own emoji (`:blobcat:`) are pictures now — in posts, content warnings, names and
+  "boosted by"; the ones not downloaded yet come in by themselves. `feed.custom_emoji =
+  false` keeps them as text.
 - Link cards: a post that links to a page shows the page's card — site, title, a line or
   two of description, its picture — as the server collected it; a click opens the link.
   `feed.link_cards = "full"`, `"text"` (no picture, no description) or `"off"`.
