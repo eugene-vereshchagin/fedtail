@@ -785,8 +785,9 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn(":blobcat:", html())
         self.assertTrue(asked)
         self.win.images.local = lambda url: "/tmp/b.png"  # it came
-        for _url, cb in asked:
-            cb(None)
+        for url, cb in asked:
+            if url.endswith("b.png"):  # the emoji, not the avatar
+                cb(None)
         self.assertIn("<img", html())
         self.assertNotIn(">привет :blobcat:", html())
         self.win.ctx.cfg["feed"]["custom_emoji"] = False

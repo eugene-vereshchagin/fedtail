@@ -72,7 +72,8 @@ class EmojiTest(unittest.TestCase):
         have = {"https://s/blobcat.png": "/tmp/cache/abc"}
         h, missing = emojify('<a title=":blobcat:">hi :blobcat: and :nope: and :other:</a>',
                              emojis, 18, have.get)
-        self.assertIn('src="file:///tmp/cache/abc"', h)
+        from pathlib import Path
+        self.assertIn(f'src="{Path("/tmp/cache/abc").resolve().as_uri()}"', h)
         self.assertIn('width="18"', h)
         self.assertIn('title=":blobcat:">hi <img', h)  # not inside the tag's attribute
         self.assertIn(":nope:", h)
