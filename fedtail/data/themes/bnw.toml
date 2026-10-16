@@ -1,0 +1,75 @@
+# fedtail theme: bnw — bnw.im of the 2010s: a black frame, grey posts with thin
+# borders on white, everything monospace, bright green buttons, red accents.
+name = "BnW"
+inherit = "system"
+
+[font]
+family = "DejaVu Sans Mono, Liberation Mono, Hack, monospace"
+mono = "DejaVu Sans Mono, Liberation Mono, Hack, monospace"
+post_scale = 0.95
+
+[colors]
+window = "#000000"
+sidebar = "#000000"
+sidebar_border = "#000000"
+sidebar_text = "#e5e5e5"
+sidebar_muted = "#8c8c8c"
+panel = "#e5e5e5"
+selected = "#00dd00"
+selected_text = "#000000"
+view = "#ffffff"
+header_border = "#000000"
+card = "#e5e5e5"
+card_border = "#9a9a9a"
+card_border_unread = "#00b000"
+text = "#000000"
+muted = "#555555"
+link = "#2b3fcc"
+accent = "#00dd00"
+on_accent = "#000000"
+hot = "#e0002a"
+on_hot = "#ffffff"
+quiet = "#cfcfcf"
+on_quiet = "#333333"
+new_pill = "#00dd00"
+on_new_pill = "#000000"
+ctx = "#ececec"
+ctx_bar = "#6b9a2b"
+focus = "#f2f2f2"
+focus_border = "#000000"
+myreply = "#ececec"
+on_myreply = "#5e8f1f"
+active = "#fffbb8"
+on_active = "#000000"
+separator = "#e0002a"
+rail = "#b5b5b5"
+button = "#00dd00"
+button_border = "#00a800"
+dot = "#e0002a"
+
+[shape]
+radius = 0
+button_radius = 0
+card_style = "card"
+card_avatars = true
+avatar = 32
+sidebar_avatar = true
+lane_icons = false
+icons = false
+card_header = "compact"
+unread_mark = "star"
+posts_only = "check"
+
+[words]
+compose = "{text}"
+account_title = "@{username}"
+account_subtitle = "{acct}"
+separator = "--- {text}: {n} ---"
+date = "{dd}.{mm} {time}"
+
+[icon]
+bg_top = "#000000"
+bg_bottom = "#000000"
+bubble = "#e5e5e5"
+ink = "#000000"
+accent = "#00dd00"

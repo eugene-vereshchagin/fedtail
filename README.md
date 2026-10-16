@@ -147,6 +147,7 @@ The look is a theme file. Built in:
 - `terminal` — green on black, monospace, posts divided by lines, buttons in words.
 - `juick` — juick.com around 2013: a light warm-grey page, white posts, blue links.
 - `juick-classic` — juick.com around 2011: an olive page, beige posts, brown-orange links.
+- `bnw` — bnw.im: a black frame, grey posts on white, all monospace, bright green buttons.
 - `point` — point.im as it is today: a white page, posts divided by thin lines, Open Sans.
 - `night` — dark, with its own colours, on any desktop.
 - `contrast` — for weak eyes: big type, black on white, firm lines.

@@ -2,6 +2,10 @@
 
 ## 0.6.0 — in progress
 
+- Theme `bnw` — bnw.im: a black frame, grey posts on white, everything monospace, bright
+  green buttons. Themes may now colour the left panel apart from the posts
+  (`sidebar_text`, `sidebar_muted`) and give the post panel and dialogs their own background
+  (`panel`); left at "auto" they follow `text`, `muted` and `window` as before.
 - A lane opens at once on a click: first the switch, with "loading…" over the lane, then the
   drawing (a lane of a few hundred cards takes a moment); the same over All | Posts | New.
 - Quit (from the tray or the menu) quits at once: the process no longer lingers for minutes

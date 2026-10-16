@@ -7,6 +7,8 @@
 # and change only what it needs.
 #
 # Colours: "auto" (system theme only), "#rrggbb", "#rrggbbaa" or "rgba(r,g,b,a)".
+# sidebar_text, sidebar_muted and panel left at "auto" in any theme follow text,
+# muted and window — set them only when the sidebar is darker than the posts (bnw).
 
 name = "System (KDE)"
 inherit = ""
@@ -20,6 +22,9 @@ post_scale = 1.1     # post text size relative to the interface font
 window = "auto"          # around everything
 sidebar = "auto"         # left panel
 sidebar_border = "auto"
+sidebar_text = "auto"    # lane names, your name in the left panel ("auto": = text)
+sidebar_muted = "auto"   # section titles, @address in the left panel ("auto": = muted)
+panel = "auto"           # the post panel, dialogs, the find bar ("auto": = window)
 selected = "auto"        # the chosen lane
 selected_text = "auto"
 view = "auto"            # behind the posts

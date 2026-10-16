@@ -45,7 +45,7 @@ def entry_text(profile=DEFAULT_PROFILE, source_dir=None, icon="fedtail"):
         f"Icon={icon}\n"
         "Terminal=false\n"
         "Categories=Network;Chat;InstantMessaging;Qt;\n"
-        "Keywords=mastodon;gotosocial;fediverse;point;juick;\n"
+        "Keywords=mastodon;gotosocial;fediverse;point;juick;bnw;\n"
         "StartupWMClass=fedtail\n"
         "StartupNotify=true\n"
     )

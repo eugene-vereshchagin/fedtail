@@ -337,7 +337,7 @@ def main():
     run(app, out, "light", BREEZE_LIGHT, "system", {"extras"})
     run(app, out, "dark", BREEZE_DARK, "system", set())
     run(app, out, "terminal", BREEZE_LIGHT, "terminal", set())
-    for name in ("point", "juick", "juick-classic", "night", "paper", "contrast",
+    for name in ("point", "juick", "juick-classic", "bnw", "night", "paper", "contrast",
                  "pink", "nord", "solarized"):
         run(app, out, name, BREEZE_LIGHT, name, set())
     # what went wrong goes next to the pictures (CI publishes the folder), and fails the run

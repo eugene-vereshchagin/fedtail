@@ -59,6 +59,11 @@ def _auto_colors(pal):
     }
 
 
+# colours that, left at "auto", copy another one of the same theme (not the desktop):
+# a theme with its own text colour gets it in the sidebar too
+FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window"}
+
+
 class Theme:
     def __init__(self, data, palette, warnings=()):
         self.id = data["id"]
@@ -70,8 +75,12 @@ class Theme:
         self.warnings = list(warnings)
         auto = _auto_colors(palette)
         self.c = {}
+        follow = []
         for key, val in data["colors"].items():
             val = val.strip()
+            if val == "auto" and key in FOLLOWS:
+                follow.append(key)
+                continue
             if val == "auto":
                 col = auto.get(key, QColor("#888888"))
             elif val.startswith("rgb"):
@@ -85,6 +94,8 @@ class Theme:
                     col = QColor(val[:7])
                     col.setAlpha(int(val[7:], 16))
             self.c[key] = col
+        for key in follow:  # "auto" here means "the same as the colour it stands for"
+            self.c[key] = QColor(self.c[FOLLOWS[key]])
         # the old flat attributes some widgets still use
         self.muted = self.c["muted"].name()
         self.bg = self.c["view"].name()
@@ -140,9 +151,10 @@ QToolTip {{ color: {k('text')}; background: {k('card')}; border: 1px solid {k('c
 
 /* ---- sidebar ---- */
 QWidget#sidebar {{ background: {k('sidebar')}; border-right: 1px solid {k('sidebar_border')}; }}
+QLabel#accountName, QLabel#laneName, QToolButton#menu {{ color: {k('sidebar_text')}; }}
+QLabel#accountSub, QLabel#sideFooter, QLabel#listsHeader {{ color: {k('sidebar_muted')}; }}
 QLabel#accountName {{ font-weight: 700; font-size: {round(base_pt * 1.1, 1)}pt; }}
-QLabel#accountSub {{ color: {k('muted')}; }}
-QLabel#sideFooter {{ color: {k('muted')}; font-size: {round(base_pt * 0.8, 1)}pt; }}
+QLabel#sideFooter {{ font-size: {round(base_pt * 0.8, 1)}pt; }}
 QToolButton#menu {{ border: 0; border-radius: {br}px; padding: 6px; }}
 QToolButton#menu:hover {{ background: {k('selected')}; }}
 QToolButton#menu::menu-indicator {{ image: none; width: 0; }}
@@ -154,7 +166,7 @@ QListWidget#lanes::item {{ border-radius: {br}px; margin: 1px 0; }}
 QListWidget#lanes::item:selected {{ background: {k('selected')}; }}
 QListWidget#lanes::item:hover:!selected {{ background: {_alpha(self.c['selected'], 110)}; }}
 QLabel#laneName {{ background: transparent; }}
-QLabel#listsHeader {{ color: {k('muted')}; font-weight: 600; background: transparent; }}
+QLabel#listsHeader {{ font-weight: 600; background: transparent; }}
 QLabel#laneName[current="true"] {{ font-weight: 600; color: {k('selected_text')}; }}
 QLabel#badge {{ border-radius: 10px; padding: 0 7px; min-height: 20px; max-height: 20px;
     font-size: {round(base_pt * 0.85, 1)}pt;
@@ -194,7 +206,7 @@ QCheckBox#check::indicator:checked {{ background: {k('accent')}; }}
 QRadioButton#check {{ color: {k('text')}; spacing: 6px; }}
 
 /* ---- inputs & dialogs ---- */
-QDialog {{ background: {k('window')}; }}
+QDialog {{ background: {k('panel')}; }}
 QLineEdit, QPlainTextEdit, QComboBox, QListWidget#mediaList {{ background: {k('card')};
     color: {k('text')}; border: 1px solid {k('card_border')}; border-radius: {br}px; padding: 6px 8px; }}
 QLineEdit:focus, QPlainTextEdit:focus {{ border-color: {k('accent')}; }}
@@ -222,13 +234,13 @@ QLabel#profileName {{ font-size: {round(base_pt * 1.35, 1)}pt; font-weight: 700;
     background: transparent; }}
 QLabel#sectionTitle {{ color: {k('muted')}; font-weight: 600; padding: 10px 4px 2px 4px;
     border-bottom: 1px solid {k('card_border')}; }}
-QWidget#findBar {{ background: {k('window')}; border-top: 1px solid {k('header_border')}; }}
+QWidget#findBar {{ background: {k('panel')}; border-top: 1px solid {k('header_border')}; }}
 QLabel#name {{ font-weight: 700; }}
 QLabel#meta, QLabel#boost, QLabel#muted {{ color: {k('muted')}; }}
 QLabel#shortId {{ color: {k('muted')}; font-family: "{mono_family}"; }}
 QLabel#num {{ color: {k('link')}; font-family: "{mono_family}"; font-weight: 700; }}
 QLabel#cameFrom {{ color: {k('link')}; font-weight: 600; }}
-QDialog#composePanel {{ background: {k('window')}; border: 1px solid {k('accent')};
+QDialog#composePanel {{ background: {k('panel')}; border: 1px solid {k('accent')};
     border-radius: {r}px; }}
 QLabel#via {{ color: {k('on_quiet')}; background: {k('quiet')}; border-radius: 8px;
     padding: 0 7px; font-size: {round(base_pt * 0.85, 1)}pt; }}
