@@ -111,9 +111,14 @@ jobs:
             ./dist/fedtail --version
           } 2>&1 | tee build.log
           # fonts and keyboard come from the system it runs on, never from this one
-          if /tmp/venv/bin/pyi-archive_viewer -l dist/fedtail | grep -iE 'libfontconfig|libfreetype'; then
+          /tmp/venv/bin/pyi-archive_viewer -l dist/fedtail > contents.txt || true
+          if grep -iE 'libfontconfig|libfreetype' contents.txt; then
             echo "::error::fontconfig/freetype got into the one-file build"; exit 1
           fi
+          if ! grep -q 'libqwayland' contents.txt; then
+            echo "::warning::no Wayland platform plugin in the one-file build"
+          fi
+          echo "Qt plugin files: $(grep -c 'plugins' contents.txt || true)"
       - name: What went wrong
         if: failure()
         run: grep -iE 'error|traceback|no matching|not found|denied|requires' build.log | tail -n 9 | sed 's/^/::warning::/'

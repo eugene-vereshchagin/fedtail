@@ -3,8 +3,8 @@
 from dataclasses import dataclass, field
 from urllib.parse import unquote
 
-from PySide6.QtCore import QRectF, QSize, Qt, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
+from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -515,7 +515,8 @@ class PostRow(QWidget):
             b.setIcon(ic)
         menu = QMenu(b)
         url = st.get("url") or st.get("uri") or ""
-        menu.addAction(_("open_browser"), lambda u=url: QDesktopServices.openUrl(QUrl(u)))
+        from .opener import open_link
+        menu.addAction(_("open_browser"), lambda u=url: open_link(u))
         menu.addAction(_("copy_link"), lambda u=url: QGuiApplication.clipboard().setText(u))
         sid = self.spec.extra.get("short_id")
         if sid:

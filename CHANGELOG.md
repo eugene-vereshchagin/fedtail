@@ -2,6 +2,12 @@
 
 ## 0.7.0 — in progress
 
+- The Linux one-file build brings all of Qt's platform plugins, Wayland's included: without
+  them Plasma on Wayland ran it through XWayland, unscaled — tiny letters and a window of
+  the wrong size.
+- Links, the config, folders and notifications from the one-file build open with the
+  system's programs in the system's environment (they were handed the build's own Qt
+  libraries, so KDE asked every time what to open the config with).
 - Hashtags complete while you write: `#ge` offers the tags already in use — the ones you
   follow first, then the most used in the posts fedtail has seen (`#georgia`,
   `#GeorgiaNews`…); ↑ ↓ and Enter or Tab pick one.

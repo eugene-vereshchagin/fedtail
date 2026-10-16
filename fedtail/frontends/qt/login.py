@@ -1,7 +1,6 @@
 """First login: register the app, open the browser, paste the code."""
 
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout
 
 from ...i18n import _
@@ -47,7 +46,8 @@ class LoginDialog(QDialog):
 
     def _opened(self, url):
         self.url = url
-        QDesktopServices.openUrl(QUrl(url))
+        from .opener import open_link
+        open_link(url)
         self.code.setEnabled(True)
         self.b2.setEnabled(True)
         self.b1.setEnabled(True)

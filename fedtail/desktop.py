@@ -108,5 +108,6 @@ def install(profile=DEFAULT_PROFILE):
                 ["gtk-update-icon-cache", "-q", "-t", str(data / "icons" / "hicolor")],
                 ["kbuildsycoca6"], ["kbuildsycoca5"]):
         if shutil.which(cmd[0]):
-            subprocess.run(cmd, capture_output=True)
+            from . import sysenv
+            subprocess.run(cmd, capture_output=True, env=sysenv.child_env())
     return entry, icons / "fedtail.svg"

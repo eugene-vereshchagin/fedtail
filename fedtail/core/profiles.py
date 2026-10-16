@@ -95,7 +95,8 @@ def launch(profile, after=0.0):
     wait first (a restart of this very profile: let this window close)."""
     argv, cwd = command(profile)
     log.info("starting profile %s%s", profile, f" in {after} s" if after else "")
-    env = dict(os.environ)
+    from .. import sysenv
+    env = sysenv.child_env() or dict(os.environ)
     if after:  # a small Python waits, then starts it: works the same on every system
         argv = [sys.executable, "-c",
                 f"import subprocess, time; time.sleep({float(after)}); "

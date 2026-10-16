@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from urllib.parse import unquote
 
 from PySide6.QtCore import Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QIcon, QImage, QKeySequence, QShortcut
+from PySide6.QtGui import QIcon, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -1021,8 +1021,8 @@ class MainWindow(QMainWindow):
 
     # ---- links & actions --------------------------------------------------------------
     def open_url(self, url):
-        if url:
-            QDesktopServices.openUrl(QUrl(url))
+        from .opener import open_link
+        open_link(url)
 
     def on_link(self, url):
         if not url.startswith("fedtail:"):
