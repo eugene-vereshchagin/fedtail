@@ -344,6 +344,14 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   mentions) → `fedtail:resolve/<quoted url>`. `core.resolve(url)` asks the user's
   server (`/api/v2/search?resolve=true`) and the window opens the thread or the
   profile; the browser only if nothing is found. Flag `ui.links_in_app`.
+* **Command line** — `core/commands.py` parses a line into a `Command` (pure,
+  tested); `qt/cmdline.py: CommandBar` previews what Enter will do and runs it
+  through `core.target(alias, n)` (a short id, or comment /N of its thread),
+  `core.find_user`, `core.post/boost/bookmark/subscribe/follow`.
+* **Conversations view** — `threads.conversations(entries, get_status, unread)`
+  groups lane entries by the highest known post of their thread; `LaneWidget`
+  builds one card per group (`extra["conversation"]`), and a seen card marks all
+  its members read. Per lane, remembered in `kv conversations.<lane>`.
 * **Editing** — `core.source()` (`/statuses/:id/source`, the typed text) →
   `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, media ids passed again so
   they stay); `core.history()` feeds `MainWindow.show_history`; cards show "edited"

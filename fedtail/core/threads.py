@@ -50,3 +50,36 @@ def build(focus, context):
         for child in reversed(children.get(s["id"], [])):
             stack.append((child, depth + 1))
     return out
+
+
+def conversations(entries, get_status, unread):
+    """Lane entries gathered by conversation, for the "conversations" view.
+
+    entries: [(item_id, status)] oldest → newest; get_status(id) looks a parent
+    up in the store; unread: set of status ids. Each conversation is keyed by
+    the highest post we know of its thread (the root, when we have it) and comes
+    out once, at the place of its newest entry:
+
+        [{"key", "top": status, "members": [status…], "unread": n, "last": status}]
+    """
+    groups, order = {}, []
+    for _item, st in entries:
+        s = st.get("reblog") or st
+        top, seen = s, set()
+        while top.get("in_reply_to_id") and top["id"] not in seen:
+            seen.add(top["id"])
+            parent = get_status(top["in_reply_to_id"])
+            if not parent:
+                break
+            top = parent
+        key = top["id"]
+        g = groups.get(key)
+        if g is None:
+            g = groups[key] = {"key": key, "top": top, "members": [], "unread": 0}
+        g["members"].append(st)
+        g["unread"] += st["id"] in unread
+        g["last"] = st
+        if key in order:
+            order.remove(key)
+        order.append(key)  # where its newest entry is
+    return [groups[k] for k in order]

@@ -190,7 +190,8 @@ class PostRow(QWidget):
                 or _parent_key(old.parent) != _parent_key(spec.parent) \
                 or old.number != spec.number or old.focus != spec.focus \
                 or old.extra.get("short_id") != spec.extra.get("short_id") \
-                or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")):
+                or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")) \
+                or _conv_key(old) != _conv_key(spec):
             self._build()
         self._flags()
 
@@ -299,6 +300,15 @@ class PostRow(QWidget):
                 "you_replied", when=self.theme.date(last.get("created_at", "")),
                 text=esc(snippet(last, 120))) + more, self.theme.css("on_myreply")),
                 "myreply"))
+        conv = spec.extra.get("conversation")
+        if conv and len(conv["members"]) > 1 or conv and conv["last"]["id"] != st["id"]:
+            last = conv["last"]
+            who = (real(last)["account"].get("display_name") or
+                   real(last)["account"].get("username", ""))
+            text = _("conv_line", n=len(conv["members"]), new=conv["unread"]) + " · " + \
+                _("conv_last", who=esc(who), text=esc(snippet(last, 90)))
+            v.addWidget(self._label(link("thread", real(last)["id"], "💬 " + text,
+                                         self.theme.css("link")), "ctx"))
 
     # ---- header -------------------------------------------------------------------
     def _short_id(self, h):
@@ -596,6 +606,11 @@ class PostRow(QWidget):
                 lab.setText(_("image_failed"))
                 lab.setWordWrap(True)
         self.ctx.images.get(src, show, failed=failed)
+
+
+def _conv_key(spec):
+    c = spec.extra.get("conversation")
+    return (len(c["members"]), c["unread"], c["last"]["id"]) if c else None
 
 
 def _hover_text(url):

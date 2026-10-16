@@ -761,15 +761,39 @@ class Core:
             self.emit("parents")
 
     def thread(self, sid):
+        return self.submit(self._thread_nodes, sid)
+
+    def _thread_nodes(self, sid):
+        focus = real(self.api.status(sid))
+        ctx = self.api.context(focus["id"])
+        everything = [focus] + ctx.get("ancestors", []) + ctx.get("descendants", [])
+        self.store.put_statuses(everything)
+        if self.cfg["feed"]["honest_counters"]:
+            self.bg.submit(self._honest_counts, everything)
+        return threads.build(focus, ctx)
+
+    # ---- the command line (core/commands.py parses, the frontend runs) --------------
+    def by_alias(self, alias):
+        """The stored status behind a short id like a3f, or None."""
+        sid = self.store.by_alias(alias)
+        return self.store.get_status(sid) if sid else None
+
+    def target(self, alias, number=0):
+        """#a3f → that post; #a3f/2 → comment /2 of its thread. Future: status or None."""
         def job():
-            focus = self.api.status(sid)
-            focus = real(focus)
-            ctx = self.api.context(focus["id"])
-            everything = [focus] + ctx.get("ancestors", []) + ctx.get("descendants", [])
-            self.store.put_statuses(everything)
-            if self.cfg["feed"]["honest_counters"]:
-                self.bg.submit(self._honest_counts, everything)
-            return threads.build(focus, ctx)
+            st = self.by_alias(alias)
+            if st is None or not number:
+                return st
+            nodes = self._thread_nodes(real(st)["id"])
+            return next((n.status for n in nodes if n.number == number), None)
+        return self.submit(job)
+
+    def find_user(self, handle):
+        """@user or user@server → the account (fetched through my server), or None."""
+        def job():
+            got = self.api.search("@" + handle.lstrip("@"), kind="accounts", resolve=True,
+                                  limit=1)
+            return (got.get("accounts") or [None])[0]
         return self.submit(job)
 
     def _origin_get(self, url):

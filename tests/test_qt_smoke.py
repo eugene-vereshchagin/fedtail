@@ -443,6 +443,47 @@ class QtSmokeTest(unittest.TestCase):
         self.win.show_history(edited)
         self.pump(0.3)
 
+        # conversations view: one card per thread, the line about the rest
+        self.win.select_lane("comments")
+        lane = self.win.lane_widgets["comments"]
+        self.pump(0.2)
+        lane.conv_btn.setChecked(True)
+        lane._toggle_conversations()
+        self.pump(0.2)
+        keys = [k for k in lane.view.order if not k.startswith("__")]
+        self.assertTrue(keys and all(k.startswith("conv:") for k in keys))
+        self.assertTrue(self.core.get_state("conversations.comments"))
+        lane.conv_btn.setChecked(False)
+        lane._toggle_conversations()
+        self.pump(0.2)
+        self.assertFalse(any(k.startswith("conv:") for k in lane.view.order))
+        self.win.select_lane("people")
+
+        # the command line, Point-style
+        bar = self.win.cmdline
+        alias = self.core.short_ids([self.core.store.get_status("013")])["013"]
+        before = len(self.world.posted)
+        bar.edit.setText(f"#{alias} согласен")
+        self.assertIn(alias, bar.hint.text())  # says what Enter will do
+        bar.run()
+        self.pump(until=lambda: len(self.world.posted) > before)
+        text, _vis, reply_to, _md = self.world.posted[-1]
+        self.assertEqual(reply_to, "013")
+        self.assertTrue(text.startswith("@") and text.endswith("согласен"))
+        bar.edit.setText(f"S #{alias}")
+        bar.run()
+        self.pump(until=lambda: self.core.subscribed(self.core.store.get_status("013")))
+        bar.edit.setText("@bob")
+        bar.run()
+        self.pump(until=lambda: isinstance(self.win.tabs.currentWidget(), AccountWidget))
+        self.win.close_tab(self.win.tabs.currentIndex())
+        n = len(self.world.posted)
+        bar.edit.setText("просто мысль вслух")
+        bar.run()
+        self.pump(until=lambda: len(self.world.posted) > n)
+        self.assertEqual(self.world.posted[-1][:3], ("просто мысль вслух", "private", None))
+        bar.edit.clear()
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

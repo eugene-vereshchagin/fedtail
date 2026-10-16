@@ -161,6 +161,42 @@ _STRINGS = {
         "edited_tip": "Изменён {when}; клик — версии",
         "history_title": "Версии поста", "history_version": "Версия {n}",
         "history_none": "Сервер не хранит версий этого поста.",
+        "conv_mode": "Разговоры",
+        "conv_mode_tip": "Один раз каждый разговор: начало треда и что в нём нового",
+        "conv_line": ["{n} сообщение в разговоре, новых: {new}",
+                      "{n} сообщения в разговоре, новых: {new}",
+                      "{n} сообщений в разговоре, новых: {new}"],
+        "conv_last": "последнее — {who}: «{text}»",
+        "cmd_placeholder": "#a3f текст — ответ · S #a3f · @ник · ? — справка   (Ctrl+L)",
+        "cmd_tip": "Команды как на Point. Справка — «?» и Enter",
+        "cmd_no_post": "нет поста #{alias} здесь",
+        "cmd_as_post": "— Enter отправит строку новым постом",
+        "cmd_no_comment": "в треде нет {where}", "cmd_no_user": "не нашёл @{who}",
+        "cmd_unknown": "не понял команду; «?» — справка",
+        "cmd_do_open": "Enter — открыть {where}: {who} «{text}»",
+        "cmd_do_reply": "Enter — ответ на {where} ({who} «{text}»), увидят: {vis}",
+        "cmd_do_sub": "Enter — подписаться на тред {where}",
+        "cmd_do_unsub": "Enter — отписаться от треда {where}",
+        "cmd_do_boost": "Enter — продвинуть {where} ({who})",
+        "cmd_do_bookmark": "Enter — закладка на {where} ({who})",
+        "cmd_do_delete": "Enter — удалить {where} (спрошу ещё раз)",
+        "cmd_do_follow": "Enter — подписаться на @{who}",
+        "cmd_do_unfollow": "Enter — отписаться от @{who}",
+        "cmd_do_profile": "Enter — профиль @{who}",
+        "cmd_do_direct": "Enter — личное сообщение @{who} (увидит только он)",
+        "cmd_do_post": "Enter — новый пост, увидят: {vis}",
+        "cmd_do_help": "Enter — список команд",
+        "cmd_boosted": "Продвинуто", "cmd_followed": "Подписался на @{who}",
+        "cmd_unfollowed": "Отписался от @{who}",
+        "cmd_help_title": "Команды",
+        "cmd_help": "#a3f — открыть пост\n#a3f текст — ответить на него\n"
+                    "#a3f/2 текст — ответить на коммент /2 его треда\n"
+                    "S #a3f, U #a3f — подписаться на тред, отписаться\n"
+                    "S @ник, U @ник — подписаться на человека, отписаться\n"
+                    "! #a3f — продвинуть\n~ #a3f — в закладки (ещё раз — убрать)\n"
+                    "D #a3f — удалить свой пост\n@ник — профиль\n"
+                    "@ник текст — личное сообщение\nпросто текст — новый пост\n"
+                    "↑ ↓ — прошлые команды",
         "silence_title": "Тишина", "silence_filters": "Фильтры по словам",
         "silence_muted": "Заглушённые", "silence_blocked": "Заблокированные",
         "filters_hint": "Фильтры хранятся на сервере, их слушаются все твои клиенты. "
@@ -375,6 +411,41 @@ _STRINGS = {
         "edited_tip": "Edited {when}; click for versions",
         "history_title": "Post versions", "history_version": "Version {n}",
         "history_none": "The server keeps no versions of this post.",
+        "conv_mode": "Conversations",
+        "conv_mode_tip": "Each conversation once: where it started and what's new in it",
+        "conv_line": ["{n} message in the conversation, new: {new}",
+                      "{n} messages in the conversation, new: {new}"],
+        "conv_last": "the last — {who}: “{text}”",
+        "cmd_placeholder": "#a3f text — reply · S #a3f · @user · ? — help   (Ctrl+L)",
+        "cmd_tip": "Commands like on Point. Help: \"?\" and Enter",
+        "cmd_no_post": "no post #{alias} here",
+        "cmd_as_post": "— Enter sends the line as a new post",
+        "cmd_no_comment": "the thread has no {where}", "cmd_no_user": "can't find @{who}",
+        "cmd_unknown": "not a command; \"?\" for help",
+        "cmd_do_open": "Enter — open {where}: {who} “{text}”",
+        "cmd_do_reply": "Enter — reply to {where} ({who} “{text}”), visible to: {vis}",
+        "cmd_do_sub": "Enter — subscribe to the thread {where}",
+        "cmd_do_unsub": "Enter — unsubscribe from the thread {where}",
+        "cmd_do_boost": "Enter — boost {where} ({who})",
+        "cmd_do_bookmark": "Enter — bookmark {where} ({who})",
+        "cmd_do_delete": "Enter — delete {where} (asks again)",
+        "cmd_do_follow": "Enter — follow @{who}",
+        "cmd_do_unfollow": "Enter — unfollow @{who}",
+        "cmd_do_profile": "Enter — @{who}'s profile",
+        "cmd_do_direct": "Enter — a direct message to @{who} (only they see it)",
+        "cmd_do_post": "Enter — a new post, visible to: {vis}",
+        "cmd_do_help": "Enter — the list of commands",
+        "cmd_boosted": "Boosted", "cmd_followed": "Following @{who}",
+        "cmd_unfollowed": "Unfollowed @{who}",
+        "cmd_help_title": "Commands",
+        "cmd_help": "#a3f — open the post\n#a3f text — reply to it\n"
+                    "#a3f/2 text — reply to comment /2 of its thread\n"
+                    "S #a3f, U #a3f — subscribe to / unsubscribe from the thread\n"
+                    "S @user, U @user — follow / unfollow\n"
+                    "! #a3f — boost\n~ #a3f — bookmark (again: remove)\n"
+                    "D #a3f — delete your post\n@user — profile\n"
+                    "@user text — a direct message\nplain text — a new post\n"
+                    "↑ ↓ — earlier commands",
         "silence_title": "Silence", "silence_filters": "Word filters",
         "silence_muted": "Muted", "silence_blocked": "Blocked",
         "filters_hint": "Filters live on the server, every client of yours obeys them. "

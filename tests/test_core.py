@@ -609,3 +609,19 @@ class CoreTest(TmpDir):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConversationsTest(unittest.TestCase):
+    def test_grouped_by_thread_at_the_newest(self):
+        from fedtail.core.threads import conversations
+        root = status("1", BOB, minute=1)
+        a = status("2", ME, "1", "B", minute=2)
+        other = status("3", NEWS, minute=3)
+        b = status("4", BOB, "2", "ME", minute=4)
+        known = {s["id"]: s for s in (root, a, other, b)}
+        got = conversations([("2", a), ("3", other), ("4", b)], known.get, {"4"})
+        self.assertEqual([g["key"] for g in got], ["3", "1"])  # the thread moved down
+        thread = got[1]
+        self.assertEqual(thread["top"]["id"], "1")  # its root, though not in the lane
+        self.assertEqual([m["id"] for m in thread["members"]], ["2", "4"])
+        self.assertEqual((thread["unread"], thread["last"]["id"]), (1, "4"))

@@ -36,6 +36,7 @@ from ...i18n import _
 from .. import themefile
 from . import feed as feed_module
 from .card import _round
+from .cmdline import CommandBar
 from .compose import Compose, media_paths, save_image
 from .feed import (
     AccountWidget,
@@ -191,6 +192,9 @@ class MainWindow(QMainWindow):
         rv.addWidget(self.tabs, 1)
         self.find_bar = FindBar(self)
         rv.addWidget(self.find_bar)
+        self.cmdline = CommandBar(self)
+        self.cmdline.setVisible(self.cfg["ui"]["command_line"])
+        rv.addWidget(self.cmdline)
         self.tabs.currentChanged.connect(lambda _i: self.find_bar.view_changed())
         self.stack.currentChanged.connect(lambda _i: self.find_bar.view_changed())
         # the right side is either the tabs or the curtain (all lanes closed: Esc)
@@ -208,6 +212,7 @@ class MainWindow(QMainWindow):
                         (QKeySequence.StandardKey.Find, self.find_bar.open),
                         ("Ctrl+K", lambda: (self.search_box.setFocus(),
                                             self.search_box.selectAll())),
+                        ("Ctrl+L", lambda: (self.cmdline.show(), self.cmdline.focus())),
                         (QKeySequence.StandardKey.FindNext, lambda: self.find_bar.step(1)),
                         (QKeySequence.StandardKey.FindPrevious,
                          lambda: self.find_bar.step(-1))):

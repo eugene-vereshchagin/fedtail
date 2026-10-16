@@ -153,6 +153,18 @@ hashtags and posts — with Follow right in the results; tags can be followed to
 come to Home). A profile shows whom the person follows and who follows them, each with a
 Follow button: the easiest way to find more people is through people you already read.
 
+## Command line, like on Point
+
+At the bottom of the window (`Ctrl+L`): `#a3f` opens a post, `#a3f text` replies, `#a3f/2 text`
+answers comment /2 of its thread, `S #a3f` / `U #a3f` subscribe to a thread or leave it,
+`S @user` / `U @user` follow or unfollow, `! #a3f` boosts, `~ #a3f` bookmarks, `D #a3f`
+deletes your post, `@user` opens a profile, `@user text` writes to them directly, plain text
+is a new post, `?` shows it all. While you type it says what Enter will do — which post a reply
+goes to and who will see it. `↑` `↓` bring back earlier commands.
+
+**Conversations**: the button over a lane switches it to one card per conversation — where it
+started, how many messages and how many new, who wrote last.
+
 ## Silence
 
 A post's ⋯ menu (or the profile) mutes or blocks its author: their posts vanish from every

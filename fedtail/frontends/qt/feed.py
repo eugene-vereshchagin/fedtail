@@ -299,6 +299,14 @@ class LaneWidget(QWidget):
         self.only_posts = None
         if name in POSTS_ONLY_LANES or name.startswith("list:"):
             self._posts_only_control()
+        lazy = getattr(self.core.lane_by_name.get(name), "lazy", False)
+        self.conv_btn = None
+        if not lazy:
+            self.conv_btn = self.header.add(_button(_("conv_mode"), self._toggle_conversations,
+                                                    tip=_("conv_mode_tip")))
+            self.conv_btn.setCheckable(True)
+            self.conv_btn.setChecked(bool(self.core.get_state(f"conversations.{name}")))
+        self._conv_members = {}  # top status id -> member status ids (conversations view)
         self.btn_first = self.header.add(_button(_("to_new"), self.jump_first_unread,
                                                  icon="go-down"))
         self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
@@ -351,7 +359,18 @@ class LaneWidget(QWidget):
 
     def _seen(self, ids):
         if self.cfg["read"]["mark_read"] == "on_scroll":
+            # a conversation card seen = its new messages seen
+            ids = [m for i in ids for m in self._conv_members.get(i, [i])]
             self.core.mark_read(ids)
+
+    def conversations_on(self):
+        return self.conv_btn is not None and self.conv_btn.isChecked()
+
+    def _toggle_conversations(self):
+        self.core.set_state(f"conversations.{self.name}", self.conv_btn.isChecked())
+        self.separator = None
+        self.positioned = False
+        self.refresh(force=True)
 
     def _toggle_posts_only(self, on):
         self.core.set_posts_only(self.name, on)
@@ -386,6 +405,8 @@ class LaneWidget(QWidget):
             specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread,
                                   extra={"my_replies": answers.get(real(st)["id"], []),
                                          "short_id": short.get(real(st)["id"])}))
+        if self.conversations_on():
+            specs = self._conversation_specs(entries, unread, parents, answers, short)
         if self.name in ("comments", "mentions"):
             self.core.check_my_replies(statuses)
         if unknown:
@@ -412,6 +433,26 @@ class LaneWidget(QWidget):
             if jump and any(s.key not in had for s in specs):
                 self.view.scroll_to_end(not self.newest_first)
         self.update_strip()
+
+    def _conversation_specs(self, entries, unread, parents, answers, short):
+        """One card per conversation: its top post, with a line about the rest."""
+        from ...core.threads import conversations
+        groups = conversations(entries, self.core.store.get_status, unread)
+        tops = [g["top"] for g in groups]
+        more_short = self.core.short_ids(tops)
+        self._conv_members = {g["top"]["id"]: [m["id"] for m in g["members"]] for g in groups}
+        specs = []
+        for g in groups:
+            top = g["top"]
+            specs.append(CardSpec(
+                key="conv:" + g["key"], status=top,
+                parent=parents.get(top["id"]) or self.core.parent_of(top),
+                unread=g["unread"] > 0,
+                extra={"my_replies": answers.get(real(top)["id"], []),
+                       "short_id": more_short.get(real(top)["id"]) or
+                       short.get(real(top)["id"]),
+                       "conversation": g}))
+        return specs
 
     def showEvent(self, e):
         super().showEvent(e)

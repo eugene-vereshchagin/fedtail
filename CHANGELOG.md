@@ -2,6 +2,14 @@
 
 ## 0.3.0 — in progress
 
+- A command line like on Point at the bottom (`Ctrl+L`): `#a3f` opens, `#a3f text` replies,
+  `#a3f/2 text` answers comment /2, `S`/`U #a3f` (un)subscribes to the thread, `S`/`U @user`
+  (un)follows, `! #a3f` boosts, `~ #a3f` bookmarks, `D #a3f` deletes, `@user` opens the
+  profile, `@user text` writes directly, plain text posts, `?` lists it all; while you type
+  it says what Enter will do; ↑ ↓ bring earlier commands back (`ui.command_line`,
+  `post.plain_posts`).
+- Conversations view: a button over a lane shows each conversation once — where it started,
+  how many messages, how many new, who wrote last; seeing the card marks them read.
 - Edit your posts: "Edit" in the ⋯ menu opens the composer with the text as you typed it
   (Markdown included); text and warning change, pictures and visibility stay. Edited posts
   say "edited", a click shows every version.

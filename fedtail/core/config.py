@@ -19,6 +19,7 @@ DEFAULTS = {
         "esc": "curtain",
         "sidebar_footer": True,
         "sidebar_groups": True,
+        "command_line": True,
         "expand_cw": True,
         "max_width": 760,
         "image_height": 360,
@@ -55,6 +56,7 @@ DEFAULTS = {
         "drafts_autosave": True,
         "cw_field": False,
         "camelcase_hint": True,
+        "plain_posts": True,
     },
     "notify": {
         "enabled": True,
