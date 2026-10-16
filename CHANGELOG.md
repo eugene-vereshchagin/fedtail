@@ -2,6 +2,15 @@
 
 ## 0.7.0 — in progress
 
+- The Linux one-file build uses the system's fontconfig and freetype instead of the build
+  machine's older ones, which couldn't read a newer system's font setup — every font fell
+  apart. In KDE it takes the colour scheme, the font and the icon theme from `kdeglobals`
+  (its Qt can't load KDE's own integration), instead of plain washed-out grey.
+- The one-file build keeps its window size and place apart from the one run from the
+  source: they may scale differently, and one stretched the other's window.
+- The log's first lines say more about the display: Qt platform, style, font, screen scale
+  and DPI, one-file build or not.
+
 ## 0.6.1 — 2026-10-17
 
 - The config is in chapters now — look & window, reading, lanes, posts, notifications… with

@@ -1,6 +1,7 @@
 """Main window: lanes on the left, tabs (lane / threads / accounts) on the right."""
 
 import logging
+import sys
 import time
 from dataclasses import dataclass
 from urllib.parse import unquote
@@ -208,7 +209,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(icon_path()))
         self._build()
         self.setAcceptDrops(True)
-        geo = core.get_state("geometry")
+        geo = core.get_state(self._geometry_key())
         if geo:
             self.restoreGeometry(bytes.fromhex(geo))
         else:
@@ -1272,20 +1273,26 @@ class MainWindow(QMainWindow):
 
     def hide_away(self):
         """Off the screen at once: to the tray if there is one, else minimized."""
-        self.core.set_state("geometry", bytes(self.saveGeometry()).hex())
+        self.core.set_state(self._geometry_key(), bytes(self.saveGeometry()).hex())
         if self.tray:
             self.hide()
         else:
             self.showMinimized()
 
     def closeEvent(self, e):
-        self.core.set_state("geometry", bytes(self.saveGeometry()).hex())
+        self.core.set_state(self._geometry_key(), bytes(self.saveGeometry()).hex())
         if self.tray and self.cfg["ui"]["close_to_tray"] and not self.quitting:
             self.hide()
             e.ignore()
             return
         super().closeEvent(e)
         QApplication.quit()
+
+    @staticmethod
+    def _geometry_key():
+        """The window's size and place, kept apart for the one-file build: its Qt may
+        scale differently from the system's, and one would stretch the other's window."""
+        return "geometry.onefile" if getattr(sys, "frozen", False) else "geometry"
 
     def quit(self):
         self.quitting = True

@@ -32,9 +32,14 @@ def run(core, instance, argv):
     keep = diagnostics.install(app, win, core.cfg)  # noqa: F841 — the timer must live
     from PySide6 import __version__ as pyside
     from PySide6.QtCore import qVersion
-    logging.getLogger("fedtail").info("Qt %s, PySide6 %s, style %s, theme %s", qVersion(),
-                                      pyside, app.style().metaObject().className(),
-                                      core.cfg["ui"]["theme"])
+    screen = app.primaryScreen()
+    logging.getLogger("fedtail").info(
+        "Qt %s, PySide6 %s, platform %s, style %s, theme %s, font %s %gpt, screen %s "
+        "dpr %g dpi %.0f, %s", qVersion(), pyside, app.platformName(),
+        app.style().metaObject().className(), core.cfg["ui"]["theme"], app.font().family(),
+        app.font().pointSizeF(), screen.name() if screen else "-",
+        screen.devicePixelRatio() if screen else 0, screen.logicalDotsPerInch() if screen else 0,
+        "one-file build" if getattr(sys, "frozen", False) else "from source")
     instance.listen(lambda _msg: bridge.raise_requested.emit())
 
     # Ctrl+C in the terminal should quit, not be swallowed by the Qt loop

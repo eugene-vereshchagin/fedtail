@@ -309,6 +309,12 @@ def _families(spec):
 def apply(app, cfg):
     """Load the configured theme (falling back to 'system'), style the app."""
     name = cfg["ui"]["theme"]
+    from . import kde
+    adopted = kde.adopt(app)
+    if adopted:
+        import logging
+        logging.getLogger(__name__).info("Qt has no KDE integration here (one-file build?): "
+                                         "%s from kdeglobals", adopted)
     themefile.install_copies()
     try:
         data, warnings = themefile.load(name)
