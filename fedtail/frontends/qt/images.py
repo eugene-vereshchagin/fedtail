@@ -4,6 +4,8 @@ The auth token is never sent along: media often lives on other servers.
 """
 
 import hashlib
+import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -12,6 +14,7 @@ from PySide6.QtGui import QImage, QPixmap
 
 from ...core.api import USER_AGENT
 
+log = logging.getLogger(__name__)
 FEED_SIDE = 1200
 MEM_LIMIT = 600
 
@@ -36,9 +39,17 @@ class Images:
             if img.isNull():
                 p.unlink(missing_ok=True)  # a broken file from before: fetch again
         if img.isNull():
-            r = self.http.get(url, timeout=60)
-            r.raise_for_status()
+            t = time.monotonic()
+            try:
+                r = self.http.get(url, timeout=60)
+                r.raise_for_status()
+            except requests.RequestException as e:
+                log.warning("image %s: %s after %.1f s", url, e.__class__.__name__,
+                            time.monotonic() - t)
+                raise
             img = QImage.fromData(r.content)
+            log.debug("image %s %d B %.2f s%s", url, len(r.content), time.monotonic() - t,
+                      "" if not img.isNull() else " (not an image)")
             if not img.isNull():  # never keep an error page or half a file
                 p.write_bytes(r.content)
         if not img.isNull() and max(img.width(), img.height()) > max_side:

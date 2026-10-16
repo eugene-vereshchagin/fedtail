@@ -74,6 +74,15 @@ DEFAULTS = {
         "replies_to_me": False,
     },
     "poll": {"interval_seconds": 90},
+    "debug": {
+        "level": "debug",
+        "log_mb": 10,
+        "keep": 5,
+        "stats_minutes": 5,
+        "watchdog_seconds": 8,
+        "slow_request_seconds": 5,
+        "rss_warn_mb": 1500,
+    },
 }
 
 CHOICES = {
@@ -89,6 +98,7 @@ CHOICES = {
     ("notify", "privacy"): {"full", "sender", "count"},
     ("notify", "backend"): {"auto", "desktop", "tray"},
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
+    ("debug", "level"): {"debug", "info", "warning"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "activity", "bots", "mine", "local",
               "requests"}
@@ -98,6 +108,8 @@ MINIMUM = {
     ("poll", "interval_seconds"): 30,
     ("subs", "interval_minutes"): 1,
     ("lists", "refresh_minutes"): 1,
+    ("debug", "log_mb"): 1,
+    ("debug", "keep"): 1,
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,

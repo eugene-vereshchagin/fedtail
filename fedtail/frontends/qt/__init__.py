@@ -4,7 +4,7 @@ import logging
 import signal
 import sys
 
-from PySide6.QtCore import QLoggingCategory, QTimer
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -18,16 +18,19 @@ def run(core, instance, argv):
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
     app.setDesktopFileName("fedtail")
-    if not logging.getLogger().isEnabledFor(logging.DEBUG):
-        # images from the fediverse often carry odd metadata ("libpng warning:
-        # eXIf: duplicate"); harmless, the picture loads. Shown with --debug.
-        QLoggingCategory.setFilterRules("qt.gui.imageio.warning=false")
     app.setWindowIcon(QIcon(icon_path()))
     app.setQuitOnLastWindowClosed(False)
     theme = themes.apply(app, core.cfg)
 
     bridge = Bridge(core)
     win = MainWindow(core, bridge, theme)
+    # Qt messages into the log, a watchdog for a frozen window, widget counts
+    from . import diagnostics
+    keep = diagnostics.install(app, win, core.cfg)  # noqa: F841 — the timer must live
+    from PySide6 import __version__ as pyside
+    from PySide6.QtCore import qVersion
+    logging.getLogger("fedtail").info("Qt %s, PySide6 %s, style %s, theme %s", qVersion(),
+                                      pyside, app.style().name(), core.cfg["ui"]["theme"])
     instance.listen(lambda _msg: bridge.raise_requested.emit())
 
     # Ctrl+C in the terminal should quit, not be swallowed by the Qt loop

@@ -279,6 +279,19 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(self.win.lane_widgets["activity"], ActivityWidget)
         self.win.select_lane("people")
 
+        # diagnostics: Qt messages into the log, widget counts in the stats line
+        from PySide6.QtCore import qInstallMessageHandler
+
+        from fedtail import diag
+        from fedtail.frontends.qt import diagnostics
+        dog, beat = diagnostics.install(self.app, self.win, self.core.cfg)
+        snap = diag.stats()
+        self.assertGreater(snap["qt.widgets"], 10)
+        self.assertIn("core.statuses", snap)
+        dog.stop()
+        beat.stop()
+        qInstallMessageHandler(None)
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

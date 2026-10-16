@@ -3,6 +3,7 @@
 Plain blocking calls; the core runs them in worker threads.
 """
 
+import logging
 import mimetypes
 import os
 import time
@@ -17,6 +18,10 @@ OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
 USER_AGENT = f"fedtail/{__version__}"
 MARKDOWN_SERVERS = ("gotosocial", "akkoma", "pleroma", "glitch")
+SLOW_SECONDS = 5.0  # set from [debug] slow_request_seconds
+log = logging.getLogger("fedtail.api")
+# query keys that are fine in a log line (paging, kinds); anything else is left out
+_SAFE_PARAMS = {"limit", "max_id", "min_id", "since_id", "local", "types[]"}
 
 
 class ApiError(Exception):
@@ -63,7 +68,20 @@ class Api:
     # ---- plumbing ---------------------------------------------------------
     def _req(self, method, path, **kw):
         kw.setdefault("timeout", 30)
-        r = self.s.request(method, self.base + path, **kw)
+        params = kw.get("params") or {}
+        shown = " ".join(f"{k}={v}" for k, v in params.items() if k in _SAFE_PARAMS)
+        t = time.monotonic()
+        try:
+            r = self.s.request(method, self.base + path, **kw)
+        except requests.RequestException as e:
+            log.warning("%s %s %s -> %s after %.2f s", method, path, shown,
+                        e.__class__.__name__, time.monotonic() - t)
+            raise
+        took = time.monotonic() - t
+        # path, paging and timing only: never the token, a body or a post's text
+        log.log(logging.WARNING if took > SLOW_SECONDS or r.status_code >= 400
+                else logging.DEBUG, "%s %s %s -> %s %.2f s %d B", method, path, shown,
+                r.status_code, took, len(r.content or b""))
         if r.status_code >= 400:
             try:
                 msg = r.json().get("error") or r.text

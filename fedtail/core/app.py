@@ -20,6 +20,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from .. import diag
+from . import api as api_module
 from . import auth, counters, lanes, search, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
@@ -67,12 +69,20 @@ class Core:
         self._replies_inflight = set()
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
         self._honest_checked = {}  # status id -> when its origin was asked
+        self._poll_count = 0
+        self._last_poll_s = None
+        api_module.SLOW_SECONDS = float(cfg["debug"]["slow_request_seconds"])
+        diag.add_stats("core", self.diag_stats)
 
     # ---- plumbing ------------------------------------------------------------
     def submit(self, fn, *a, **kw):
         return self.pool.submit(fn, *a, **kw)
 
     def emit(self, name, payload=None):
+        if name == "error":
+            log.warning("error shown to the user: %s", payload)
+        else:
+            log.debug("event %s", name)
         self.events.emit(name, payload)
 
     @property
@@ -152,8 +162,21 @@ class Core:
             self._wake.clear()
 
     def poll_once(self):
+        """One round: catch every source up, check subscriptions, lists, activity,
+        follow requests; then tell the frontend. Logged with its timing."""
         if not self.api:
             return
+        t = time.monotonic()
+        try:
+            return self._poll_once()
+        finally:
+            took = time.monotonic() - t
+            self._poll_count += 1
+            self._last_poll_s = round(took, 2)
+            log.log(logging.WARNING if took > 60 else logging.DEBUG,
+                    "poll #%d took %.2f s", self._poll_count, took)
+
+    def _poll_once(self):
         with self._poll_lock:
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
@@ -232,6 +255,11 @@ class Core:
             if not first_run:
                 self._notify(per_lane, new_requests, new_activity)
             self._fetch_parents(new_statuses)
+            got = {k: len(v) for k, v in new_by_source.items() if v}
+            if got or new_activity or new_requests:
+                log.info("new: %s%s%s", got or "-",
+                         f" activity+{len(new_activity)}" if new_activity else "",
+                         f" requests+{len(new_requests)}" if new_requests else "")
 
     def _new_statuses(self, new_by_source):
         out = []
@@ -793,6 +821,19 @@ class Core:
         self.store.kv_set(f"ui.{key}", value)
 
     # ---- shutdown ----------------------------------------------------------------
+    def diag_stats(self):
+        """For the periodic stats line: what could grow or get stuck."""
+        out = {"polls": self._poll_count, "last_poll_s": self._last_poll_s,
+               "pool_queue": self.pool._work_queue.qsize(),
+               "bg_queue": self.bg._work_queue.qsize(),
+               "lane_cache": len(self._lane_cache),
+               "parents_inflight": len(self._parent_inflight),
+               "replies_inflight": len(self._replies_inflight),
+               "honest_checked": len(self._honest_checked),
+               "lists": len(self.lists)}
+        out.update(self.store.diag_counts())
+        return out
+
     def shutdown(self):
         self._stop.set()
         self._wake.set()

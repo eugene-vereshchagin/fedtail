@@ -66,6 +66,19 @@ class CliTest(unittest.TestCase):
             svg = Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"
             self.assertTrue(svg.read_text().startswith("<svg"))
 
+    def test_bug_report_flag(self):
+        import os
+        import tarfile
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            env = dict(os.environ, HOME=d, XDG_DATA_HOME=d + "/data", XDG_CONFIG_HOME=d + "/cfg")
+            out = subprocess.run([sys.executable, "-m", "fedtail", "--bug-report"], cwd=ROOT,
+                                 env=env, capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            [archive] = Path(d).glob("fedtail-report-default-*.tar.gz")
+            with tarfile.open(archive) as tar:
+                self.assertIn("system.txt", tar.getnames())
+
     def test_update_config_flag(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:

@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.1.0 — in progress
+## 0.2.0 — in progress
+
+- Diagnostics on by default until 1.0: a rotating log with every request and its timing,
+  polls, errors with tracebacks and stats (memory, CPU, threads, caches, widgets) every few
+  minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
+  (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
+  go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
+- Fixed: "Failed to disconnect" warning on every card rebuild.
+
+## 0.1.0
 
 - Core without GUI: profiles, TOML config with validation, token file, SQLite state.
 - Lanes: people, replies to me, other mentions, bots, my posts, local, follow requests.

@@ -32,7 +32,11 @@ def parse_args(argv):
                         "with explanations; a .bak copy is kept) and exit")
     p.add_argument("--install-desktop", action="store_true",
                    help="add fedtail (this profile) to the desktop menu, with its icon, and exit")
-    p.add_argument("--debug", action="store_true", help="verbose log to stderr")
+    p.add_argument("--debug", action="store_true",
+                   help="also print the full log to the terminal (the log file is always kept)")
+    p.add_argument("--bug-report", action="store_true",
+                   help="pack logs, crash traces and system info into an archive in your home "
+                        "folder (no token, no database) and exit")
     p.add_argument("-V", "--version", action="version", version=f"fedtail {version.full()}")
     return p.parse_args(argv)
 
@@ -84,6 +88,13 @@ def main(argv=None):
               f"{', '.join(new_options)}.\n  Run `python3 -m fedtail --update-config` to add them "
               f"(commented out), or see {ref}", file=sys.stderr)
 
+    if args.bug_report:
+        from . import diag
+        out = diag.bug_report(where)
+        print(f"fedtail: report {out}\n  Send this file. It has the logs and the config, "
+              f"no token and no database.")
+        return 0
+
     i18n.setup(cfg["ui"]["language"])
 
     instance = SingleInstance(where.socket_file)
@@ -92,11 +103,18 @@ def main(argv=None):
               file=sys.stderr)
         return 0
 
+    from . import diag
+    folder = diag.setup(where, cfg, console_debug=args.debug)
+    diag.session_header(where.profile, {"logs": str(folder)})
+    diag.start_stats(cfg)
+
     frontend = frontends.load(args.ui or cfg["ui"]["frontend"])
     core = Core(cfg, where)
     core.new_options = new_options
     try:
-        return frontend.run(core, instance, sys.argv[:1])
+        code = frontend.run(core, instance, sys.argv[:1])
+        logging.getLogger("fedtail").info("==== session end, exit code %s", code)
+        return code
     finally:
         instance.close()
 

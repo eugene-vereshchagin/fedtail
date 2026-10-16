@@ -144,6 +144,11 @@ class PostRow(QWidget):
         self.card = QFrame()
         self.card.setObjectName("card")
         self.card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        # a right click anywhere on the card opens the post's ⋯ menu; connected once,
+        # the menu itself is rebuilt with the card
+        self._menu = None
+        self.card.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.card.customContextMenuRequested.connect(self._card_menu)
         row.addWidget(self.card)
         self.lay = QVBoxLayout(self.card)
         if self.theme.shape["card_style"] == "rule":
@@ -155,6 +160,10 @@ class PostRow(QWidget):
         self.mark = None
         self._build()
         self._flags()
+
+    def _card_menu(self, pos):
+        if self._menu is not None:
+            self._menu.exec(self.card.mapToGlobal(pos))
 
     # ---- public -----------------------------------------------------------------
     @property
@@ -474,14 +483,7 @@ class PostRow(QWidget):
             menu.addSeparator()
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
         b.setMenu(menu)
-        # the same menu on a right click anywhere on the card
-        self.card.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        try:
-            self.card.customContextMenuRequested.disconnect()
-        except (RuntimeError, TypeError):
-            pass
-        self.card.customContextMenuRequested.connect(
-            lambda pos, m=menu: m.exec(self.card.mapToGlobal(pos)))
+        self._menu = menu  # also shown on a right click on the card (see __init__)
         b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         return b
 

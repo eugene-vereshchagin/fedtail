@@ -147,6 +147,19 @@ class Store:
     def _tx(self):
         return _Tx(self)
 
+    def diag_counts(self):
+        """Row counts and the file size, for the stats line."""
+        with self.lock:
+            q = self.db.execute
+            out = {"statuses": q("SELECT COUNT(*) FROM statuses").fetchone()[0],
+                   "items": q("SELECT COUNT(*) FROM items").fetchone()[0],
+                   "read": q("SELECT COUNT(*) FROM read").fetchone()[0],
+                   "activity": q("SELECT COUNT(*) FROM activity").fetchone()[0],
+                   "subs": q("SELECT COUNT(*) FROM subs").fetchone()[0]}
+            page = q("PRAGMA page_count").fetchone()[0] * q("PRAGMA page_size").fetchone()[0]
+        out["db_mb"] = round(page / 1024 / 1024, 1)
+        return out
+
     # ---- kv -------------------------------------------------------------------
     def kv_get(self, key, default=None):
         with self.lock:

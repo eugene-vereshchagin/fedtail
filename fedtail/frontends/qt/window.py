@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ... import version
+from ... import diag, version
 from ...core.model import real, snippet
 from ...i18n import _
 from .. import themefile
@@ -301,6 +301,14 @@ class MainWindow(QMainWindow):
         m.addAction(_("open_data"), lambda: self.open_url(
             QUrl.fromLocalFile(str(self.core.paths.data_dir)).toString()))
         m.addSeparator()
+        dbg = m.addMenu(_("debug_menu"))
+        dbg.addAction(_("debug_logs"), lambda: self.open_url(
+            QUrl.fromLocalFile(str(diag.logs_dir(self.core.paths))).toString()))
+        dbg.addAction(_("debug_report"), self.bug_report)
+        dbg.addAction(_("debug_stacks"), lambda: (diag.dump_stacks("asked from the menu"),
+                                                  diag.log_stats(),
+                                                  self.statusBar().showMessage(
+                                                      _("debug_stacks_done"), 5000)))
         m.addAction(_("relogin"), self.relogin)
         m.addAction(_("about"), self.about)
         m.addSeparator()
@@ -751,6 +759,16 @@ class MainWindow(QMainWindow):
     # ---- window -------------------------------------------------------------------------
     def error(self, err):
         self.statusBar().showMessage(_("error", err=err), 10_000)
+
+    def bug_report(self):
+        try:
+            diag.log_stats()
+            out = diag.bug_report(self.core.paths)
+        except OSError as e:
+            self.error(e)
+            return
+        self.statusBar().showMessage(_("debug_report_done", path=str(out)), 15000)
+        self.open_url(QUrl.fromLocalFile(str(out.parent)).toString())
 
     def about(self):
         import platform
