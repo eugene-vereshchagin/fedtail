@@ -26,7 +26,7 @@ where you came from; a lane remembers where you stopped and never jumps.
 **Contents**
 
 - *Start:* [What's different](#whats-different) · [For Juick and Point.im people](#for-juick-and-pointim-people) · [One file, no installing](#one-file-no-installing) · [Running from source](#running-from-source) · [Accounts, profiles and files](#accounts-profiles-and-files)
-- *Reading:* [Lanes](#lanes) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
+- *Reading:* [Lanes](#lanes) · [Posts](#posts) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
 - *Writing and you:* [Writing](#writing) · [Your profile](#your-profile) · [Themes](#themes) · [Keys](#keys)
 - *More:* [If it breaks](#if-it-breaks) · [Development](#development) · [Who wrote it](#who-wrote-it) · [License](#license)
 
@@ -206,6 +206,21 @@ the lane, staying put while you read it). **Feed | Conversations** over Replies 
 and Subscriptions: Conversations shows a thread's replies as one card — where it started, how
 many messages and how many new, who wrote last; a click opens the whole thread.
 
+## Posts
+
+A post shows what's in it the way its server meant: the server's own emoji (`:blobcat:`) as
+pictures; a link as the page's card (site, title, a line of description, its picture); a quote
+(Mastodon 4.5+, Akkoma, Misskey) as the quoted post framed inside, or a line saying why it
+can't be shown. Each is a switch in `[feed]`: `custom_emoji`, `link_cards`, `quotes`.
+
+Where you stopped reading is shared with your other clients (`read.sync_markers`): Home and
+mentions read on the phone are read here too, and the other way round.
+
+Someone from another server your server knows little about: their profile fills in with their
+newest public posts read from their own server, and their followers and follows can be read
+from there too (`feed.remote_profiles`, `feed.remote_people`) — ActivityPub requests without
+your token, like completing threads.
+
 ## Lists
 
 Your server's lists (Mastodon, GoToSocial) appear as lanes in a block of their own under the
@@ -289,7 +304,8 @@ python3 -m fedtail --install-desktop          # or --profile work --install-desk
 ## Writing
 
 A new post opens as a panel in the middle of the window (`ui.compose = "window"` for a separate
-window). Pictures can be dropped onto it (or onto the main window — that starts a new post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it.
+window). `@na` and `#ta` complete as you type — people and tags seen in the lanes first, then what the
+server finds (`post.complete_mentions`, `post.complete_tags`). Pictures can be dropped onto it (or onto the main window — that starts a new post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it.
 The content warning field is hidden behind "⚠ Content warning" (`post.cw_field = true` to keep
 it open).
 
