@@ -7,6 +7,9 @@
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
   (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
   go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
+- Decoded pictures are kept within `ui.image_cache_mb` (128 MB), least recently used out
+  first — the first bug report showed 800 MB after a few minutes with a cache bounded only by
+  count.
 - Links stay inside: @mentions → profile tab, #hashtags → tag timeline, fediverse links →
   looked up through your server; profiles get an info card with Follow, Mention, Add to
   list; clicking the name in its own profile tab goes back to the card.

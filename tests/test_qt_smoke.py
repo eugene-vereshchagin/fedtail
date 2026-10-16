@@ -243,6 +243,15 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: failed and got)
         self.assertEqual((len(got), len(failed)), (1, 1))
 
+        # the memory cache keeps to its budget in bytes, dropping the oldest first
+        from PySide6.QtGui import QPixmap
+        imgs.mem_budget = 3 * 100 * 100 * 4
+        for i in range(5):
+            pm = QPixmap(100, 100)
+            imgs._remember((f"u{i}", 1200), pm)
+        self.assertEqual(list(k for k, _s in imgs.mem), ["u2", "u3", "u4"])
+        self.assertLessEqual(imgs.mem_bytes, imgs.mem_budget)
+
         # saving takes the original from the cache, never overwrites
         import hashlib
         url = "https://x/cat.png"

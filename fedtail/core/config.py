@@ -25,6 +25,7 @@ DEFAULTS = {
         "image_upscale": 2,
         "save_dir": "",
         "links_in_app": True,
+        "image_cache_mb": 128,
         "actions": "both",
     },
     "feed": {
@@ -111,6 +112,7 @@ MINIMUM = {
     ("subs", "interval_minutes"): 1,
     ("lists", "refresh_minutes"): 1,
     ("debug", "log_mb"): 1,
+    ("ui", "image_cache_mb"): 16,
     ("debug", "keep"): 1,
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,

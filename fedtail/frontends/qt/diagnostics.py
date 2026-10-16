@@ -45,6 +45,7 @@ def install(app, win, cfg):
                 "rows": sum(len(v.rows) for v in views),
                 "tabs": win.tabs.count(),
                 "images_mem": len(win.images.mem),
+                "images_mb": round(win.images.mem_bytes / 1024 / 1024, 1),
                 "images_waiting": len(win.images.waiting)}
     diag.add_stats("qt", counts)
     return dog, beat

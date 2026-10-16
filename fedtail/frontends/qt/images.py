@@ -6,6 +6,7 @@ The auth token is never sent along: media often lives on other servers.
 import hashlib
 import logging
 import time
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -16,7 +17,7 @@ from ...core.api import USER_AGENT
 
 log = logging.getLogger(__name__)
 FEED_SIDE = 1200
-MEM_LIMIT = 600
+MEM_MB = 128  # default memory budget for decoded pictures (ui.image_cache_mb)
 
 
 class Images:
@@ -24,7 +25,11 @@ class Images:
         self.core = core
         self.bridge = bridge
         self.cache_dir = core.paths.cache_dir
-        self.mem = {}
+        # decoded pictures, least recently used first; bounded by bytes, not by count:
+        # a hundred 1200-px photos alone are half a gigabyte
+        self.mem = OrderedDict()
+        self.mem_bytes = 0
+        self.mem_budget = int(core.cfg["ui"].get("image_cache_mb", MEM_MB)) * 1024 * 1024
         self.waiting = {}
         # own pool: a backlog of avatars must never delay sending a post
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
@@ -86,6 +91,7 @@ class Images:
             return
         key = (url, max_side)
         if key in self.mem:
+            self.mem.move_to_end(key)
             callback(self.mem[key])
             return
         if key in self.waiting:
@@ -95,6 +101,16 @@ class Images:
         self.bridge.call(self.pool.submit(self._download, url, max_side),
                          ok=lambda img, k=key: self._ready(k, img),
                          fail=lambda _e, k=key: self._failed(k))
+
+    def _remember(self, key, pm):
+        size = pm.width() * pm.height() * 4
+        self.mem[key] = pm
+        self.mem_bytes += size
+        while self.mem_bytes > self.mem_budget and len(self.mem) > 1:
+            _k, old = self.mem.popitem(last=False)
+            self.mem_bytes -= old.width() * old.height() * 4
+        # pictures already on screen keep their own copies; this only stops the
+        # cache from holding every picture ever seen
 
     def _failed(self, key):
         for _cb, failed in self.waiting.pop(key, []):
@@ -110,9 +126,7 @@ class Images:
             return
         callbacks = [cb for cb, _f in self.waiting.pop(key, [])]
         pm = QPixmap.fromImage(img)
-        if len(self.mem) > MEM_LIMIT:  # crude, but keeps a long session bounded
-            self.mem.clear()
-        self.mem[key] = pm
+        self._remember(key, pm)
         for cb in callbacks:
             try:
                 cb(pm)

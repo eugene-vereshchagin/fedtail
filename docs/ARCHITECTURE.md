@@ -384,7 +384,7 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
   (Qt's closeEvent calls reject → infinite loop). The core deletes the draft
   itself after a successful post (`draft_key`), even if the dialog is gone.
 * **Images**: `get(url, callback, max_side, failed)`; memory cache of QPixmaps
-  + disk cache (`cache/` by sha1 of the URL; only decodable files are kept); the
+  (an LRU bounded in bytes by `ui.image_cache_mb`) + disk cache (`cache/` by sha1 of the URL; only decodable files are kept); the
   feed asks for 1200 px, the viewer for the full size.
 * **Notifications**: `notify.Notifier` → `notify-send --action=open --wait` in a
   thread (so "Open" can bring the window to the thread), tray balloon otherwise;
