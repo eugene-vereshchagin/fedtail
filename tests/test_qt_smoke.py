@@ -864,7 +864,7 @@ class QtSmokeTest(unittest.TestCase):
         top = view._top(first_unread) - view.verticalScrollBar().value()
         self.assertTrue(-20 < top < 90, top)  # just under the "new below" divider
         lane = self.win.lane_widgets["bots"]
-        self.assertIn("__sep__", view.rows, f"separator={lane.separator} "
+        self.assertTrue("__sep__" in view.rows, f"separator={lane.separator} "
                       f"positioned={lane.positioned} unread={len(view.unread_keys())} "
                       f"rows={len(view.rows)} active={self.win.isActiveWindow()}")
 

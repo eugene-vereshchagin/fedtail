@@ -81,7 +81,8 @@ class CliTest(unittest.TestCase):
         import tarfile
         import tempfile
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
-            env = dict(os.environ, HOME=d, XDG_DATA_HOME=d + "/data", XDG_CONFIG_HOME=d + "/cfg")
+            env = dict(os.environ, HOME=d, USERPROFILE=d,  # the home on Windows
+                       XDG_DATA_HOME=d + "/data", XDG_CONFIG_HOME=d + "/cfg")
             out = subprocess.run([sys.executable, "-m", "fedtail", "--bug-report"], cwd=ROOT,
                                  env=env, capture_output=True, text=True)
             self.assertEqual(out.returncode, 0, out.stderr)
