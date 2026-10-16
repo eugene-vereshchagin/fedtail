@@ -1191,6 +1191,13 @@ class Core:
         self.pool.shutdown(wait=False, cancel_futures=True)
         self.bg.shutdown(wait=False, cancel_futures=True)
         if self._poller:
-            self._poller.join(timeout=5)
-        with self._poll_lock:
-            self.store.close()
+            self._poller.join(timeout=3)
+        # a poll stuck in a slow request must not hold the exit: what's written is
+        # committed already, an unclosed database is fine
+        if self._poll_lock.acquire(timeout=3):
+            try:
+                self.store.close()
+            finally:
+                self._poll_lock.release()
+        else:
+            log.warning("exit: a poll is still running, database left open")

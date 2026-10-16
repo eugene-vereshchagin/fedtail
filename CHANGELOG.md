@@ -2,6 +2,9 @@
 
 ## 0.6.0 — in progress
 
+- Quit (from the tray or the menu) quits at once: the process no longer lingers for minutes
+  after the window is gone, waiting for downloads nobody needs any more (a picture's
+  original may take two minutes). The log says which were left behind.
 - Notifications about one list, by its title: `notify.lanes = [..., "list:Друзья"]` —
   not all lists at once (`"lists"`), which with bots in them would never stop. The log
   says which new posts got no notification because their lane isn't in `notify.lanes`.

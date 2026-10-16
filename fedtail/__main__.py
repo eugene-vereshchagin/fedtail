@@ -129,12 +129,29 @@ def main(argv=None):
     core, held = merge_accounts(core, where.profile)
     try:
         code = frontend.run(core, instance, sys.argv[:1])
-        logging.getLogger("fedtail").info("==== session end, exit code %s", code)
-        return code
     finally:
         instance.close()
         for other in held:
             other.close()
+    return _leave(code)
+
+
+def _leave(code):
+    """Exit now. Workers still waiting on the network (a picture's original may take
+    two minutes) would otherwise keep the process alive after the window is gone:
+    their results are not needed any more, and everything worth keeping is saved."""
+    import os
+    import threading
+    log = logging.getLogger("fedtail")
+    busy = [t.name for t in threading.enumerate()
+            if t is not threading.current_thread() and not t.daemon and t.is_alive()]
+    if busy:
+        log.info("exit: not waiting for %s", ", ".join(sorted(busy)))
+    log.info("==== session end, exit code %s", code)
+    logging.shutdown()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code or 0)
 
 
 def merge_accounts(core, me):
