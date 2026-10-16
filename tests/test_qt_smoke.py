@@ -721,6 +721,28 @@ class QtSmokeTest(unittest.TestCase):
         texts = [w.text() for w in row.findChildren(QLabel)]
         self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
+    def test_link_card(self):
+        """A post with a link gets the page's card; feed.link_cards turns it down or off."""
+        from PySide6.QtWidgets import QFrame, QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("091", BOB, minute=1)
+        st["card"] = {"url": "https://www.news.example/a", "title": "Заголовок статьи",
+                      "description": "Описание", "image": "https://news.example/a.png"}
+        cards = lambda row: row.findChildren(QFrame, "linkCard")
+        texts = lambda row: [w.text() for w in row.findChildren(QLabel)]
+        row = PostRow(CardSpec(key="091", status=st), self.win.ctx)
+        self.assertEqual(len(cards(row)), 1)
+        self.assertIn("news.example", texts(row))
+        self.assertTrue(any("Описание" in t for t in texts(row)))
+        self.win.ctx.cfg["feed"]["link_cards"] = "text"
+        row = PostRow(CardSpec(key="091", status=st), self.win.ctx)
+        self.assertFalse(row.findChildren(QLabel, "linkCardImage"))
+        self.assertFalse(any("Описание" in t for t in texts(row)))
+        self.win.ctx.cfg["feed"]["link_cards"] = "off"
+        self.assertEqual(cards(PostRow(CardSpec(key="091", status=st), self.win.ctx)), [])
+        self.win.ctx.cfg["feed"]["link_cards"] = "full"
+
     def test_unread_only(self):
         """Unread: what was unread on opening stays while you read it; leaving thins it."""
         self.win.start()

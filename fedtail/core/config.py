@@ -49,6 +49,7 @@ DEFAULTS = {
         "honest_counters": False,
         "remember_choices": False,
         "complete_threads": True,
+        "link_cards": 'full',
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
@@ -106,6 +107,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},
     ("ui", "frontend"): {"qt"},
     ("ui", "language"): {"auto", "ru", "en"},

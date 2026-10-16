@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Link cards: a post that links to a page shows the page's card — site, title, a line or
+  two of description, its picture — as the server collected it; a click opens the link.
+  `feed.link_cards = "full"`, `"text"` (no picture, no description) or `"off"`.
 ## 0.7.0 — 2026-10-17
 
 - In the debugging mode the status bar's right end says how the window is drawn: theme, Qt

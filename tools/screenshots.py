@@ -113,6 +113,12 @@ def world():
         "options": [{"title": "GoToSocial", "votes_count": 12},
                     {"title": "Mastodon", "votes_count": 7},
                     {"title": "обратно на Point", "votes_count": 4}]}
+    w.statuses["107"]["card"] = {
+        "url": "https://weather.example/black-sea-storm", "provider_name": "weather.example",
+        "title": "Шторм на черноморском побережье: ветер до 25 м/с",
+        "description": "Порывы до 25 метров в секунду ожидаются в Батуми и Поти до конца "
+                       "недели, паромы задерживаются.",
+        "image": "https://img.example/small/storm"}
     w.requests = [OSTAP]
     router = w.statuses.get("100")
     for i, (kind, who) in enumerate((("favourite", KOT), ("favourite", ARSEN),

@@ -62,6 +62,21 @@ class ClickLabel(QLabel):
         super().mouseReleaseEvent(e)
 
 
+class ClickFrame(QFrame):
+    clicked = Signal()
+
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mouseReleaseEvent(e)
+
+
+def _host(url):
+    from urllib.parse import urlsplit
+    host = urlsplit(url).hostname or ""
+    return host[4:] if host.startswith("www.") else host
+
+
 def _set_prop(w, name, value):
     if w.property(name) != value:
         w.setProperty(name, value)
@@ -268,6 +283,10 @@ class PostRow(QWidget):
         media = self._media(st)
         if media:
             cv.addWidget(media)
+        else:
+            card = self._link_card(st)
+            if card:
+                cv.addWidget(card)
         if st.get("poll"):
             cv.addWidget(self._poll(st))
 
@@ -700,6 +719,50 @@ class PostRow(QWidget):
                                pos // 3, pos % 3)
                 pos += 1
         grid.setColumnStretch(3, 1)
+        return box
+
+    def _link_card(self, st):
+        """The page a post links to, as the server saw it: title, a line or two of
+        description, the site, a picture (feed.link_cards)."""
+        mode = self.ctx.cfg["feed"].get("link_cards", "full")
+        c = st.get("card") or {}
+        url = c.get("url") or ""
+        if mode == "off" or not url or not (c.get("title") or c.get("image")):
+            return None
+        box = ClickFrame()
+        box.setObjectName("linkCard")
+        box.setCursor(Qt.CursorShape.PointingHandCursor)
+        box.setToolTip(_hover_text(url))
+        box.clicked.connect(lambda: self.ctx.on_link(url))
+        h = QHBoxLayout(box)
+        h.setContentsMargins(0, 0, 10, 0)
+        h.setSpacing(12)
+        side = 96
+        if mode == "full" and c.get("image"):
+            pic = QLabel()
+            pic.setObjectName("linkCardImage")
+            pic.setFixedSize(side, side)
+            pic.setToolTip(c.get("image_description") or "")
+
+            def got(pm, lab=pic):
+                _set(lab, _fit(pm, side, side, 0))
+            self.ctx.images.get(c["image"], got)
+            h.addWidget(pic, 0, Qt.AlignmentFlag.AlignTop)
+        else:
+            h.setContentsMargins(10, 0, 10, 0)
+        col = QVBoxLayout()
+        col.setContentsMargins(0, 8, 0, 8)
+        col.setSpacing(2)
+        site = c.get("provider_name") or _host(url)
+        col.addWidget(self._label(esc(site), "linkCardSite", wrap=False))
+        if c.get("title"):
+            col.addWidget(self._label("<b>" + esc(c["title"][:200]) + "</b>", "linkCardTitle"))
+        desc = (c.get("description") or "").strip()
+        if desc and mode == "full":
+            col.addWidget(self._label(esc(desc[:220] + ("…" if len(desc) > 220 else "")),
+                                      "linkCardText"))
+        col.addStretch(1)
+        h.addLayout(col, 1)
         return box
 
     def _media_menu(self, lab, m, pos):

@@ -242,6 +242,14 @@ QLabel#num {{ color: {k('link')}; font-family: "{mono_family}"; font-weight: 700
 QLabel#cameFrom {{ color: {k('link')}; font-weight: 600; }}
 QDialog#composePanel {{ background: {k('panel')}; border: 1px solid {k('accent')};
     border-radius: {r}px; }}
+QFrame#linkCard {{ background: {k('ctx')}; border: 1px solid {k('card_border')};
+    border-radius: {r}px; }}
+QFrame#linkCard:hover {{ border-color: {k('accent')}; }}
+QFrame#linkCard QLabel {{ background: transparent; }}
+QLabel#linkCardSite {{ color: {k('muted')}; font-size: {round(base_pt * 0.85, 1)}pt; }}
+QLabel#linkCardText {{ color: {k('muted')}; }}
+QLabel#linkCardImage {{ background: {k('quiet')}; border-top-left-radius: {r}px;
+    border-bottom-left-radius: {r}px; }}
 QLabel#via {{ color: {k('on_quiet')}; background: {k('quiet')}; border-radius: 8px;
     padding: 0 7px; font-size: {round(base_pt * 0.85, 1)}pt; }}
 QProgressBar#pollBar {{ background: {k('quiet')}; border: 0; border-radius: 3px;
