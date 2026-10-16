@@ -7,6 +7,7 @@ worker threads (see events.py):
   lanes_updated    {lane: [new item ids]}   something new arrived / older loaded
   parents          None                     reply contexts became available
   arrived          [(id, in_reply_to_id)]   new posts from a poll (open threads grow)
+  thread_grew      root id                  replies fetched from other servers
   status_updated   status                   a status changed (fav, boost…)
   status_deleted   status id
   read_changed     [status ids]
@@ -76,6 +77,7 @@ class Core:
         self._replies_inflight = set()
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
         self._honest_checked = {}  # status id -> when its origin was asked
+        self._completed = {}  # thread root id -> when its missing replies were looked for
         self.muted, self.blocked = set(), set()
         self._silence_version = 0
         self._silence_checked = None
@@ -776,13 +778,66 @@ class Core:
         return self.submit(self._thread_nodes, sid)
 
     def _thread_nodes(self, sid):
+        """The whole conversation, the same from whichever post it is opened: a
+        server's context of a post holds its ancestors and *its* descendants only —
+        not the sibling branches — so the tree is read from the top post."""
         focus = real(self.api.status(sid))
         ctx = self.api.context(focus["id"])
-        everything = [focus] + ctx.get("ancestors", []) + ctx.get("descendants", [])
+        ancestors = ctx.get("ancestors", [])
+        root = ancestors[0] if ancestors else focus
+        below = list(ctx.get("descendants", []))
+        if ancestors:
+            below = self.api.context(root["id"]).get("descendants", []) + below + \
+                ancestors[1:] + [focus]
+        seen, rest = {root["id"]}, []
+        for st in below:
+            if st["id"] not in seen:
+                seen.add(st["id"])
+                rest.append(st)
+        everything = [root] + rest
         self.store.put_statuses(everything)
         if self.cfg["feed"]["honest_counters"]:
             self.bg.submit(self._honest_counts, everything)
-        return threads.build(focus, ctx)
+        if self.cfg["feed"]["complete_threads"]:
+            self.bg.submit(self._complete_thread, root, {s.get("uri") for s in everything})
+        return threads.build(root, {"ancestors": [], "descendants": rest})
+
+    def _complete_thread(self, root, known):
+        """Replies the post's own server lists and mine hasn't got: mine fetches them
+        by address. Then the open thread grows (event thread_grew)."""
+        if root.get("visibility") not in ("public", "unlisted") or not root.get("uri"):
+            return
+        now = time.monotonic()
+        if now - self._completed.get(root["id"], -1e9) < 300:
+            return
+        self._completed[root["id"]] = now
+        from . import replies
+        t = time.monotonic()
+        uris = replies.reply_uris(self._origin_json, root["uri"])
+        missing = [u for u in uris if u not in known]
+        got = []
+        for uri in missing[:30]:
+            try:
+                found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
+            except Exception as e:  # not reachable, not public, gone: skip it
+                log.debug("resolve %s: %s", uri, e)
+                continue
+            got += (found or {}).get("statuses") or []
+        log.info("thread %s: origin lists %d replies, %d missing here, %d fetched (%.1f s)",
+                 root["id"], len(uris), len(missing), len(got), time.monotonic() - t)
+        if got:
+            self.store.put_statuses(got)
+            self.emit("thread_grew", root["id"])
+
+    def _origin_json(self, url):
+        """An ActivityPub object from someone else's server: no token, short timeout."""
+        import requests
+
+        from .api import USER_AGENT
+        from .replies import AP_ACCEPT
+        r = requests.get(url, timeout=8, headers={"User-Agent": USER_AGENT,
+                                                  "Accept": AP_ACCEPT})
+        return r.json() if r.status_code == 200 else None
 
     # ---- the command line (core/commands.py parses, the frontend runs) --------------
     def by_alias(self, alias):

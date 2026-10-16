@@ -113,7 +113,10 @@ class FakeApi:
 
     def search(self, q, kind=None, resolve=True, limit=5):
         ql = q.lower().lstrip("@#")
-        st = [s for s in self.w.statuses.values() if s.get("url") == q]
+        if resolve and q in self.w.remote:  # my server fetches it from its home
+            got = self.w.remote.pop(q)
+            self.w.statuses[got["id"]] = got
+        st = [s for s in self.w.statuses.values() if q in (s.get("url"), s.get("uri"))]
         accs = {s["account"]["id"]: s["account"] for s in self.w.statuses.values()}
         acc = [a for a in accs.values() if a.get("url") == q or ql in a["acct"].lower()]
         tags = [{"name": t, "url": f"https://example.test/tags/{t}", "following": t in
@@ -327,6 +330,7 @@ class World:
         self.statuses, self.home, self.local, self.notifications = {}, [], [], []
         self.requests = []
         self.posted = []
+        self.remote = {}  # uri -> status my server hasn't got yet (search resolves it)
         self.languages = []  # the language of each post, "" — none given
         self.calls = []
         self.seq = 1000

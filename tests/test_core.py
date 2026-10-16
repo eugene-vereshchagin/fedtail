@@ -393,6 +393,56 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertEqual(seen, [0, 1])
 
+    def test_thread_is_the_same_from_any_post(self):
+        core, w = self.make()
+        root = w.add(status("130", BOB, minute=1, vis="public"))
+        w.add(status("131", NEWS, "130", "B", minute=2, vis="public"))   # branch one
+        w.add(status("132", ME, "131", "N", minute=3, vis="public"))
+        w.add(status("133", fakes.acct("H", "hub@x.example"), "130", "B", minute=4,
+                      vis="public"))                                    # branch two
+        core.connect().result()
+        core.cfg["feed"]["complete_threads"] = False
+        ids = lambda sid: [n.status["id"] for n in core.thread(sid).result()]
+        # a server's context of 133 knows nothing of 131/132 (siblings): read from the top
+        self.assertEqual(ids("133"), ids("132"))
+        self.assertEqual(ids("133"), ["130", "131", "132", "133"])
+        del root
+
+    def test_thread_completed_from_the_origin(self):
+        core, w = self.make()
+        root = w.add(status("140", BOB, minute=1, vis="public"))
+        root["uri"] = "https://far.example/objects/140"
+        w.add(status("141", ME, "140", "B", minute=2, vis="public"))
+        lost = status("142", fakes.acct("K", "kos@far.example"), "140", "B", minute=3,
+                      vis="public")
+        lost["uri"] = "https://far.example/objects/142"
+        w.remote[lost["uri"]] = lost  # my server never got this one
+        far = {"https://far.example/objects/140": {
+            "id": "https://far.example/objects/140",
+            "replies": {"type": "Collection", "first": {
+                "type": "CollectionPage",
+                "items": ["https://example.test/s/141", "https://far.example/objects/142"]}}}}
+        asked = []
+        core._origin_json = lambda url: asked.append(url) or far.get(url)
+        grew = []
+        core.events.on("thread_grew", lambda _n, p: grew.append(p))
+        core.connect().result()
+        first = [n.status["id"] for n in core.thread("141").result()]
+        self.assertEqual(first, ["140", "141"])
+        import time
+        end = time.time() + 5
+        while not grew and time.time() < end:  # the look runs in the background
+            time.sleep(0.01)
+        self.assertEqual(grew, ["140"])
+        self.assertEqual([n.status["id"] for n in core.thread("141").result()],
+                         ["140", "141", "142"])
+        self.assertIn("https://far.example/objects/140", asked)
+        # not again right away; never without the flag
+        asked.clear()
+        core.thread("141").result()
+        time.sleep(0.2)
+        self.assertEqual(asked, [])
+
     def test_polls_vote_and_refresh(self):
         core, w = self.make()
         st = w.add(status("120", BOB, minute=1, text="чай или кофе?"), home=True)

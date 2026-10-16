@@ -2,6 +2,12 @@
 
 ## 0.3.0 — in progress
 
+- A thread is the same whichever post it's opened from: a server's context of a post holds
+  only its own branch, so the tree is now read from the top post.
+- Threads with holes fill themselves: on opening, fedtail reads the list of replies the
+  post's own server publishes and asks your server to fetch the ones it never got; the
+  thread grows a moment later, the new replies answerable like any other
+  (`feed.complete_threads`; requests to other servers go without your token).
 - "N new" over a lane could stay after everything was read (posts of someone just put in
   a list stayed drawn in Home while the counts already left them out): lanes redraw when
   lists change, and the pill checks the read marks themselves before it says anything.

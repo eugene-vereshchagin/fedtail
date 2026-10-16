@@ -74,6 +74,7 @@ fedtail/
     config_update.py --update-config: adds missing options, commented out; refreshes our
                      explanations above existing ones; drops commented-out options that are gone
     counters.py      honest counters: ask the post's own server
+    replies.py       replies my server never got: the post's ActivityPub replies list
     events.py        tiny event bus (handlers run in the emitting thread)
     hashtags.py      one-case hashtags for the CamelCase hint
     links.py         @mentions, #tags, fediverse links → in-app links
@@ -341,6 +342,13 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Honest counters** — `core/counters.py`: for public posts from other servers,
   GET `https://<origin>/api/v1/statuses/<id>` *without the token*, keep the bigger
   numbers; once per post per 10 minutes; off by default (`feed.honest_counters`).
+* **Whole threads** — `Core._thread_nodes()` reads the context of the *top* post (a
+  post's context has its own branch only), so a thread looks the same from any post.
+  `core/replies.py` + `Core._complete_thread()`: the top post's ActivityPub object is
+  fetched from its server (no token), its `replies` collection walked a few levels
+  down, and every reply address my server doesn't know is resolved through my server
+  (`/api/v2/search?resolve=true`); then `thread_grew` makes the open thread reload.
+  Once per thread per 5 minutes; `feed.complete_threads`.
 * **Saving pictures** — `core/saving.py` (where, file name, no overwrite) +
   `Images.save()` (from the cache when possible).
 * **CamelCase hint** — `core/hashtags.flat_tags()`, shown under the compose text.

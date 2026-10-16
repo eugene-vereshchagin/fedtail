@@ -794,6 +794,11 @@ class MainWindow(QMainWindow):
                         sid not in w.statuses and parent in w.statuses
                         for sid, parent in payload):
                     w.reload(quiet=True)
+        elif name == "thread_grew":  # replies fetched from other servers
+            for w in self.extra_tabs():
+                if isinstance(w, ThreadWidget) and w.root is not None and \
+                        real(w.root)["id"] == payload:
+                    w.reload(quiet=True)
         elif name == "parents":
             for w in self.lane_widgets.values():
                 if isinstance(w, LaneWidget):
