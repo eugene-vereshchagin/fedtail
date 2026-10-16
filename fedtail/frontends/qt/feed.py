@@ -901,11 +901,49 @@ class AccountWidget(_PagedTab):
         posts.setObjectName("sectionTitle")
         self.view.header.addWidget(posts)
         self.relation = {}
+        self._first_page = None
+        self._origin_asked = False
         self.reload_account()
         self.more()
 
     def fetch(self, max_id):
         return self.core.account_statuses(self.acc_id, max_id)
+
+    def _page(self, page):
+        if self._first_page is None:
+            self._first_page = page
+        super()._page(page)
+        self._from_origin()
+
+    def _from_origin(self):
+        """Someone from another server mine knows little about (fewer posts here than
+        their profile counts): read their newest from their own server."""
+        acc, page = self.acc, self._first_page
+        if self._origin_asked or acc is None or page is None or "@" not in acc.get("acct", ""):
+            return
+        if not self.core.cfg["feed"].get("remote_profiles", True):
+            return
+        if len(page) >= min(acc.get("statuses_count") or 0, self.core.cfg["feed"]["page_size"]):
+            return  # my server has them
+        self._origin_asked = True
+        host = acc["acct"].split("@", 1)[1]
+        self.header.info.setText(self.header.info.text() + " · " +
+                                 _("origin_asking", host=host))
+        have = [st.get("uri") for st in self.items]
+
+        def got(statuses):
+            known = {st["id"] for st in self.items}
+            new = [st for st in statuses if st["id"] not in known]
+            self.items = sorted(self.items + new, key=lambda st: st.get("created_at", ""),
+                                reverse=True)
+            info = self.header.info.text().replace(" · " + _("origin_asking", host=host), "")
+            self.header.info.setText(info + (" · " + _("origin_got", n=len(new), host=host)
+                                             if new else ""))
+            if new:
+                self.core.ensure_parents(new)
+                self.render()
+        self.win.bridge.call(self.core.posts_from_origin(acc, have), ok=got,
+                             fail=lambda _e: None)
 
     def reload_account(self):
         self.win.bridge.call(self.core.account(self.acc_id), ok=self._account)
@@ -932,6 +970,7 @@ class AccountWidget(_PagedTab):
         self.header.info.setText(" · ".join(x for x in (f"@{acc['acct']}", counts) if x))
         self.win.retitle(self)
         self._fill()
+        self._from_origin()
 
     def _fill(self):
         from ...core import links

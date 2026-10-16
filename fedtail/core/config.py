@@ -52,6 +52,8 @@ DEFAULTS = {
         "link_cards": 'full',
         "custom_emoji": True,
         "quotes": 'card',
+        "remote_profiles": True,
+        "remote_posts": 20,
     },
     "read": {
         "mark_read": "on_scroll",
@@ -148,6 +150,7 @@ MINIMUM = {
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,
+    ("feed", "remote_posts"): 1,
     ("feed", "catch_up_limit"): 1,
     ("feed", "render_limit"): 20,
     ("ui", "font_size"): 0,

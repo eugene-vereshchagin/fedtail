@@ -1002,6 +1002,51 @@ class Core:
     def account(self, acc_id):
         return self.submit(self.api.get, f"/api/v1/accounts/{acc_id}")
 
+    def posts_from_origin(self, acc, have_uris=()):
+        """Someone from another server my server knows little about: their newest public
+        posts, read from their own server's outbox (ActivityPub, without my token),
+        fetched into my server by address so they are ordinary posts here — answerable,
+        likeable. A future of those statuses (feed.remote_profiles)."""
+        def job():
+            fc = self.cfg["feed"]
+            if not fc.get("remote_profiles", True) or "@" not in (acc.get("acct") or ""):
+                return []
+            from . import replies
+            t = time.monotonic()
+            actor = None
+            for url in (acc.get("uri"), acc.get("url")):
+                if url:
+                    try:
+                        actor = self._origin_json(url)
+                    except Exception as e:  # noqa: BLE001 — their server, anything goes
+                        log.debug("actor %s: %s", url, e)
+                    if isinstance(actor, dict) and actor.get("outbox"):
+                        break
+            if not isinstance(actor, dict) or not actor.get("outbox"):
+                log.info("profile %s: no outbox to read", acc.get("id"))
+                return []
+            limit = min(40, int(fc.get("remote_posts", 20)))
+            try:
+                uris = replies.outbox_post_uris(self._origin_json, actor["outbox"], limit)
+            except Exception as e:  # noqa: BLE001
+                log.info("profile %s: outbox: %s", acc.get("id"), e)
+                return []
+            have = set(have_uris)
+            got = []
+            for uri in [u for u in uris if u not in have]:
+                try:
+                    found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
+                except Exception as e:  # noqa: BLE001 — gone, not public: skip it
+                    log.debug("resolve %s: %s", uri, e)
+                    continue
+                got += (found or {}).get("statuses") or []
+            if got:
+                self.store.put_statuses(got)
+            log.info("profile %s: outbox lists %d posts, %d new here, fetched in %.1f s",
+                     acc.get("id"), len(uris), len(got), time.monotonic() - t)
+            return got
+        return self.bg.submit(job)
+
     def relationship(self, acc_id):
         """following, followed_by, requested, … between me and an account."""
         return self.submit(self.api.relationship, acc_id)

@@ -691,6 +691,36 @@ class CoreTest(TmpDir):
         self.assertIn("gogo", core.tag_suggestions("go"))
         self.assertEqual(core.tag_suggestions(""), [])
 
+    def test_posts_from_origin_outbox(self):
+        """A profile my server knows little about: newest public posts from the
+        author's outbox, fetched into my server by address."""
+        core, w = self.make()
+        core.connect().result()
+        far = fakes.acct("F", "fay@far.example")
+        far["uri"] = "https://far.example/users/fay"
+        pub = "https://www.w3.org/ns/activitystreams#Public"
+        docs = {
+            "https://far.example/users/fay": {"outbox": "https://far.example/users/fay/outbox"},
+            "https://far.example/users/fay/outbox": {
+                "first": "https://far.example/users/fay/outbox?page=1"},
+            "https://far.example/users/fay/outbox?page=1": {"orderedItems": [
+                {"type": "Create", "to": [pub], "object": {"id": "https://far.example/n/3"}},
+                {"type": "Create", "to": ["https://far.example/users/fay/followers"],
+                 "object": {"id": "https://far.example/n/2", "to": []}},  # not public
+                {"type": "Announce", "to": [pub], "object": "https://else.example/n/9"},
+                {"type": "Create", "cc": [pub], "object": "https://far.example/n/1"}]},
+        }
+        core._origin_json = docs.get
+        for n in (1, 3):
+            st = status(f"7{n}", far, minute=n, vis="public")
+            st["uri"] = f"https://far.example/n/{n}"
+            w.remote[st["uri"]] = st
+        got = core.posts_from_origin(far).result()
+        self.assertEqual(sorted(st["id"] for st in got), ["71", "73"])
+        self.assertIsNotNone(core.store.get_status("73"))
+        core.cfg["feed"]["remote_profiles"] = False
+        self.assertEqual(core.posts_from_origin(far).result(), [])
+
     def test_async_refresh_grows_thread(self):
         """Mastodon 4.5+ says it's fetching the rest of a thread: when it's done, the
         open thread is told to grow."""

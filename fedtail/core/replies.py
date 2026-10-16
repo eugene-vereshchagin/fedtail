@@ -78,3 +78,47 @@ def reply_uris(get_json, root_uri, limit=40, depth=3):
             if len(found) >= limit:
                 break
     return found
+
+
+PUBLIC = {"https://www.w3.org/ns/activitystreams#Public", "as:Public", "Public"}
+
+
+def _audience(x):
+    v = x.get("to") or []
+    v = [v] if isinstance(v, str) else list(v)
+    c = x.get("cc") or []
+    return set(v + ([c] if isinstance(c, str) else list(c)))
+
+
+def outbox_post_uris(get_json, outbox, limit=20, pages=3):
+    """Addresses of the newest public posts in an actor's outbox — the posts they
+    wrote themselves (Create), not their boosts; at most `limit`."""
+    found = []
+    col = get_json(outbox) if isinstance(outbox, str) else outbox
+    if not isinstance(col, dict):
+        return found
+    page = col.get("first")
+    items = list(col.get("orderedItems") or col.get("items") or [])
+    seen = 0
+    while len(found) < limit:
+        for it in items:
+            if not isinstance(it, dict) or it.get("type") != "Create":
+                continue
+            obj = it.get("object")
+            target = obj if isinstance(obj, dict) else it
+            if not (_audience(target) | _audience(it)) & PUBLIC:
+                continue
+            uri = _id(obj)
+            if uri and urlparse(uri).scheme in ("https", "http") and uri not in found:
+                found.append(uri)
+            if len(found) >= limit:
+                break
+        if page is None or seen >= pages or len(found) >= limit:
+            break
+        page = get_json(page) if isinstance(page, str) else page
+        if not isinstance(page, dict):
+            break
+        seen += 1
+        items = list(page.get("orderedItems") or page.get("items") or [])
+        page = page.get("next")
+    return found

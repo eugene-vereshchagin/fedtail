@@ -2,6 +2,10 @@
 
 ## 0.8.0 — in progress
 
+- A profile of someone from another server that yours knows little about fills in: fedtail
+  reads their newest public posts from their own server's outbox (ActivityPub, without your
+  token) and has your server fetch them, so they are ordinary posts — answerable, likeable;
+  the header says how many came and from where. `feed.remote_profiles`, `feed.remote_posts`.
 - Mastodon 4.5+ fetches a thread's missing replies itself and says so
   (`Mastodon-Async-Refresh`): fedtail waits for it and the open thread grows when the server
   is done — alongside its own asking of the author's server (`feed.complete_threads`).

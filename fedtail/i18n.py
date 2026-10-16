@@ -195,6 +195,8 @@ _STRINGS = {
         "quote_blocked_domain": "цитата скрыта: сервер автора заблокирован",
         "quote_muted_account": "цитата скрыта: автор в тишине",
         "quote_show_anyway": "открыть всё равно",
+        "origin_asking": "читаю посты с {host}…",
+        "origin_got": ["{n} пост с {host}", "{n} поста с {host}", "{n} постов с {host}"],
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -502,6 +504,8 @@ _STRINGS = {
         "quote_blocked_domain": "quote hidden: you blocked the author's server",
         "quote_muted_account": "quote hidden: you muted the author",
         "quote_show_anyway": "open anyway",
+        "origin_asking": "reading posts from {host}…",
+        "origin_got": ["{n} post from {host}", "{n} posts from {host}"],
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",
