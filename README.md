@@ -187,13 +187,20 @@ threads you comment in automatically; any other thread — from a post's ⋯ men
 bring the thread back. Settings are in `[subs]` (how often to check, when a quiet thread is
 dropped, what to follow automatically).
 
+Over every lane, **All | Posts | New** picks what to show (New: what was unread when you opened
+the lane, staying put while you read it). **Feed | Conversations** over Replies to me, Mentions
+and Subscriptions: Conversations shows a thread's replies as one card — where it started, how
+many messages and how many new, who wrote last; a click opens the whole thread.
+
 ## Lists
 
 Your server's lists (Mastodon, GoToSocial) appear as lanes in a block of their own under the
 main ones. Right-click a post (or its ⋯ menu) → "Add to list" ticks its author into any list
-or a new one; right-click a list for rename, delete and **exclusive**. Whoever is in an
-exclusive list is gone from Home and Bots and shows up only there — sort the bots into
-"Memes", "News" and the rest. `[lists]` in the config.
+or a new one; right-click a list for rename, delete and **exclusive**. Whoever you put in a
+list is read there and leaves the general lanes — Home, Bots, Local, Federated — with their
+boosts and other people's boosts of their posts: sort the bots into "Memes", "News" and the
+rest, and Home is people again. `lists.hide_members = "exclusive"` keeps that to exclusive
+lists, `"off"` to nothing. `[lists]` in the config.
 
 ## Finding people and tags
 
@@ -210,11 +217,6 @@ answers comment /2 of its thread, `S #a3f` / `U #a3f` subscribe to a thread or l
 deletes your post, `@user` opens a profile, `@user text` writes to them directly, plain text
 is a new post, `?` shows it all. While you type it says what Enter will do — which post a reply
 goes to and who will see it. `↑` `↓` bring back earlier commands.
-
-**Feed | Conversations** over Replies to me, Mentions and Subscriptions: Conversations shows a
-thread's replies as one card — where it started, how many messages and how many new, who wrote
-last; a click opens the whole thread. Over every lane, **All | Posts | New** picks what to show
-(New: what was unread when you opened the lane, staying put while you read it).
 
 ## Silence
 
@@ -251,17 +253,18 @@ Only what you changed is sent to the server.
 gathered per post ("Kot, Arsen and 3 more — ★ favourited «…»"). `[activity] types` picks the
 kinds.
 
-New comments, mentions, activity and follow requests pop up as KDE notifications; "Open" goes straight to
-the thread. Which lanes notify, and how much a notification tells, is set in `[notify]`:
+New comments, mentions, activity and follow requests pop up as KDE notifications (in the tray
+on Windows); "Open" goes straight to the thread. Home and the lists stay quiet unless asked.
+Which lanes notify, and how much a notification tells, is set in `[notify]`:
 
 ```toml
 [notify]
-lanes = ["comments", "mentions", "requests"]
+lanes = ["comments", "mentions", "requests", "list:Friends"]   # one list by its title
 privacy = "full"     # "sender": only who, never the text; "count": only "3 new comments"
 ```
 
 `privacy = "count"` is for screen sharing and open-plan offices: nothing readable leaves the
-window. While fedtail is the active window it stays quiet (`when_focused = true` to change).
+window. A lane you're looking at doesn't notify about itself (`when_focused = true` to change).
 
 For the icon in the launcher and in notifications, install a menu entry once:
 
@@ -271,8 +274,8 @@ python3 -m fedtail --install-desktop          # or --profile work --install-desk
 
 ## Writing
 
-Pictures can be dropped onto the compose window (or onto the main window — that starts a new
-post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it.
+A new post opens as a panel in the middle of the window (`ui.compose = "window"` for a separate
+window). Pictures can be dropped onto it (or onto the main window — that starts a new post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it.
 The content warning field is hidden behind "⚠ Content warning" (`post.cw_field = true` to keep
 it open).
 

@@ -20,7 +20,7 @@ class CommandsTest(unittest.TestCase):
     def test_letters(self):
         self.check("S #a3f", "sub", alias="a3f")
         self.check("U #k00", "unsub", alias="k00")
-        self.check("S @kot@mastodon.ml", "follow", user="kot@mastodon.ml")
+        self.check("S @kot@kot.example", "follow", user="kot@kot.example")
         self.check("U @bob", "unfollow", user="bob")
         self.check("! #a3f", "boost", alias="a3f")
         self.check("~#a3f", "bookmark", alias="a3f")

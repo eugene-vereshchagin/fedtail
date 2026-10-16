@@ -49,7 +49,7 @@ BREEZE_DARK = {"Window": "#202326", "Base": "#141618", "AlternateBase": "#1d1f22
                "Link": "#1d99f3", "PlaceholderText": "#8d9196", "Mid": "#4d5257",
                "ToolTipBase": "#292c30", "ToolTipText": "#fcfcfc"}
 
-KOT = acct("K", "kot@mastodon.ml")
+KOT = acct("K", "kot@kot.example")
 KOT["display_name"] = "Кот Учёный"
 ARSEN = acct("A", "arsen@gts.example")
 ARSEN["display_name"] = "Арсен"

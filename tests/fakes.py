@@ -11,7 +11,7 @@ def acct(i, name, bot=False):
             "bot": bot, "avatar_static": "", "url": f"https://example.test/@{name}", "note": ""}
 
 
-BOB = acct("B", "bob@mastodon.social")
+BOB = acct("B", "bob@social.example")
 NEWS = acct("N", "georgia_news", bot=True)
 
 

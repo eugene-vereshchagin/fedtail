@@ -9,11 +9,11 @@ from .fakes import BOB, status
 class LinksTest(unittest.TestCase):
     def setUp(self):
         self.st = status("1", BOB)
-        self.st["mentions"] = [{"id": "K", "url": "https://mastodon.ml/@kot",
-                                "acct": "kot@mastodon.ml"}]
+        self.st["mentions"] = [{"id": "K", "url": "https://kot.example/@kot",
+                                "acct": "kot@kot.example"}]
 
     def test_mentions_tags_and_fedi_links_stay_inside(self):
-        html = ('<p><span class="h-card"><a href="https://mastodon.ml/@kot" '
+        html = ('<p><span class="h-card"><a href="https://kot.example/@kot" '
                 'class="u-url mention">@<span>kot</span></a></span> '
                 '<a href="https://gts.example/tags/%D0%B8%D0%B3%D1%80%D1%8B" class="mention '
                 'hashtag" rel="tag">#<span>игры</span></a> '

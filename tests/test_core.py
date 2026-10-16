@@ -230,10 +230,10 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(model.narrower("public", "private"), "private")
         self.assertEqual(model.narrower("direct", "private"), "direct")
         p = status("1", BOB)
-        p["mentions"] = [{"acct": "veresk"}, {"acct": "alice@x.y"}, {"acct": "BOB@mastodon.social"}]
-        self.assertEqual(model.reply_mentions(p, "veresk"), "@bob@mastodon.social @alice@x.y ")
+        p["mentions"] = [{"acct": "veresk"}, {"acct": "alice@x.y"}, {"acct": "BOB@social.example"}]
+        self.assertEqual(model.reply_mentions(p, "veresk"), "@bob@social.example @alice@x.y ")
         self.assertTrue(model.is_bot(NEWS))
-        self.assertTrue(model.is_bot(BOB, ["@Bob@Mastodon.social"]))
+        self.assertTrue(model.is_bot(BOB, ["@Bob@Social.example"]))
 
     def test_capabilities(self):
         c = capabilities_from_instance({"version": "4.3.0", "configuration": {}})
