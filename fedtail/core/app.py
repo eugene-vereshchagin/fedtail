@@ -998,6 +998,34 @@ class Core:
                     log.info("followed tags: %s", e)
             self.bg.submit(followed)
 
+    def prepare_people(self):
+        self.bg.submit(self.store.people_counts)
+
+    def mention_suggestions(self, prefix, limit=8):
+        """People whose address or name starts with prefix (no "@"), the most seen
+        first: [(acct, display name)]. Never yourself."""
+        p = prefix.casefold()
+        if not p:
+            return []
+        me = (self.me or {}).get("acct", "").casefold()
+        found = []
+        for key, (acct, name, n) in (self.store.people_counts(compute=False) or {}).items():
+            if key == me:
+                continue
+            words = [key, key.split("@")[0]] + [w.casefold() for w in (name or "").split()]
+            if any(w.startswith(p) for w in words):
+                found.append((-n, acct.casefold(), acct, name))
+        found.sort()
+        return [(acct, name) for _n, _k, acct, name in found[:limit]]
+
+    def search_people(self, q, limit=8):
+        """Ask the server for accounts matching q (no fetching from other servers):
+        a future of [(acct, display name)]."""
+        def job():
+            got = self.api.search(q, "accounts", resolve=False, limit=limit)
+            return [(a["acct"], a.get("display_name") or "") for a in got.get("accounts") or []]
+        return self.submit(job)
+
     def tag_suggestions(self, prefix, limit=8):
         """Tags starting with prefix (no "#"): the ones you follow first, then the
         most used in the posts fedtail has seen."""

@@ -124,6 +124,7 @@ class Store:
         self.items_version = {}
         self.status_version = 0
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
+        self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
         self.db.execute("PRAGMA synchronous=NORMAL")
         with self.lock:
             self.db.executescript(SCHEMA)
@@ -186,6 +187,9 @@ class Store:
                 for st in statuses:
                     for t in (st.get("reblog") or st).get("tags") or ():
                         self._count_tag(t.get("name"))
+            if self._people is not None:
+                for st in statuses:
+                    self._count_people(st.get("reblog") or st)
 
     def _count_tag(self, name):
         if not name:
@@ -194,6 +198,35 @@ class Store:
         seen[1] += 1
         if seen[0] == seen[0].lower() and name != name.lower():
             seen[0] = name  # #GeorgiaNews over #georgianews when somebody wrote it so
+
+    def _count_people(self, s):
+        acc = s.get("account") or {}
+        self._count_person(acc.get("acct"), acc.get("display_name"))
+        for m in s.get("mentions") or ():
+            self._count_person(m.get("acct"), None)
+
+    def _count_person(self, acct, name):
+        if not acct:
+            return
+        seen = self._people.setdefault(acct.casefold(), [acct, "", 0])
+        seen[2] += 1
+        if name:
+            seen[1] = name
+
+    def people_counts(self, compute=True):
+        """Who posts and who gets mentioned in the stored posts, how often — for
+        completing @names while writing. Built once, then kept up to date."""
+        with self.lock:
+            if self._people is None and compute:
+                self._people = {}
+                q = ("SELECT json_extract(data, '$.account.acct'), "
+                     "json_extract(data, '$.account.display_name'), "
+                     "json_extract(data, '$.mentions') FROM statuses")
+                for acct, name, mentions in self.db.execute(q):
+                    self._count_person(acct, name)
+                    for m in json.loads(mentions or "[]") or ():
+                        self._count_person(m.get("acct"), None)
+            return self._people
 
     def tag_counts(self, compute=True):
         """Hashtags of every stored post, how often each is used — for completing

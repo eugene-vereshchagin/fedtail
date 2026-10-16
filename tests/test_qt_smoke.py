@@ -174,6 +174,27 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
         self.assertEqual(self.world.languages[-1], "ka")
 
+        # @names and #tags complete: the people seen in the lanes, then the server's
+        dlg = Compose(self.win)
+        dlg.show()
+        self.core.store.people_counts()
+        dlg.text.setPlainText("привет @bo")
+        cur = dlg.text.textCursor()
+        cur.movePosition(cur.MoveOperation.End)
+        dlg.text.setTextCursor(cur)
+        dlg._suggest_tags()
+        offered = dlg._tag_model.stringList()
+        self.assertTrue(any(x.startswith("@bob@social.example") for x in offered), offered)
+        dlg._put_tag(offered[0])
+        self.assertEqual(dlg.text.toPlainText(), "привет @bob@social.example ")
+        self.core.cfg["post"]["complete_mentions"] = False
+        dlg.text.setPlainText("@bo")
+        dlg.text.moveCursor(cur.MoveOperation.End)
+        dlg._suggest_tags()
+        self.assertFalse(dlg.tag_completer.popup().isVisible())
+        self.core.cfg["post"]["complete_mentions"] = True
+        dlg.reject()
+
         # the content warning field hides until asked for
         dlg = Compose(self.win)
         dlg.show()

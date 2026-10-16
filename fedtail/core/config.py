@@ -70,6 +70,8 @@ DEFAULTS = {
         "plain_posts": True,
         "language": "",
         "languages": ["ru", "en", "ka", "uk"],
+        "complete_mentions": True,
+        "complete_tags": True,
     },
     "notify": {
         "enabled": True,

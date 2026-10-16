@@ -691,6 +691,22 @@ class CoreTest(TmpDir):
         self.assertIn("gogo", core.tag_suggestions("go"))
         self.assertEqual(core.tag_suggestions(""), [])
 
+    def test_mention_suggestions(self):
+        core, w = self.make()
+        core.connect().result()
+        a = status("010", BOB, minute=10)
+        a["mentions"] = [{"acct": "bonnie@far.example"}, {"acct": "veresk"}]
+        w.add(a, home=True)
+        w.add(status("011", BOB, minute=11), home=True)
+        core.poll_once()
+        core.prepare_people()
+        core.store.people_counts()  # waits for the background pass, if still running
+        got = core.mention_suggestions("bo")
+        self.assertEqual(got[0][0], "bob@social.example")  # seen most
+        self.assertIn("bonnie@far.example", [x[0] for x in got])
+        self.assertEqual(core.mention_suggestions("veresk"), [])  # never yourself
+        self.assertEqual(core.search_people("bob").result()[0][0], "bob@social.example")
+
     def test_notify_about_one_list_by_title(self):
         core, w = self.make()
         w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}

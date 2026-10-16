@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- @names complete while you write: the people seen most in the lanes first, then those the
+  server finds (a moment later, without fetching from other servers); the list shows the
+  name next to the address. `post.complete_mentions` and `post.complete_tags` turn either off.
 - Quote posts (Mastodon 4.5+, Akkoma, Misskey, Fedibird): the quoted post framed inside the
   quoting one, a click opens its thread; a quote that can't be shown says why (awaiting
   approval, withdrawn, deleted, its author muted or blocked — with "open anyway"); the

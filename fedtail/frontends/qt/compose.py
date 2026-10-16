@@ -129,7 +129,11 @@ class Compose(QDialog):
         self.tag_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.tag_completer.activated.connect(self._put_tag)
         self.text.textChanged.connect(self._suggest_tags)
+        self._people_query = ""
+        self._people_timer = QTimer(self, singleShot=True, interval=350)
+        self._people_timer.timeout.connect(self._ask_server_people)
         self.core.prepare_tags()
+        self.core.prepare_people()
         self.camel = QLabel()
         self.camel.setObjectName("counter")
         self.camel.setWordWrap(True)
@@ -315,37 +319,74 @@ class Compose(QDialog):
         self._count()
         self._autosave.start()
 
-    # ---- completing hashtags --------------------------------------------------------
-    _TAG_AT_END = re.compile(r"(?:^|[\s(«\"'])#(\w+)$")
+    # ---- completing #tags and @people -----------------------------------------------
+    _TOKEN_AT_END = re.compile(r"(?:^|[\s(«\"'])([#@])(\w[\w.@-]*)$")
 
-    def _tag_at_cursor(self):
-        """The tag being typed right before the cursor, without "#" — or None."""
+    def _token_at_cursor(self):
+        """("#" or "@", the word typed right before the cursor) — or (None, None)."""
         cur = self.text.textCursor()
         before = cur.block().text()[:cur.positionInBlock()]
-        m = self._TAG_AT_END.search(before)
-        return m.group(1) if m else None
+        m = self._TOKEN_AT_END.search(before)
+        if not m or (m.group(1) == "#" and not re.fullmatch(r"\w+", m.group(2))):
+            return None, None
+        return m.group(1), m.group(2)
+
+    # (kept for the name the tests know it by)
+    def _tag_at_cursor(self):
+        sigil, word = self._token_at_cursor()
+        return word if sigil == "#" else None
 
     def _suggest_tags(self):
+        """Offer what fits the #tag or @name being typed (post.complete_tags,
+        post.complete_mentions); for a name, the server is asked too, a moment later."""
+        sigil, word = self._token_at_cursor()
+        post = self.core.cfg["post"]
+        items = []
+        if sigil == "#" and post.get("complete_tags", True):
+            items = [("#" + n, "#" + n) for n in self.core.tag_suggestions(word)]
+        elif sigil == "@" and post.get("complete_mentions", True):
+            items = self._people_items(self.core.mention_suggestions(word))
+            if len(word) >= 2:
+                self._people_query = word
+                self._people_timer.start()
+        self._offer(items, sigil, word)
+
+    def _people_items(self, people):
+        return [("@" + acct, f"@{acct}" + (f" — {name}" if name else "")) for acct, name in people]
+
+    def _ask_server_people(self):
+        word = self._people_query
+
+        def got(found):
+            sigil, now = self._token_at_cursor()
+            if sigil != "@" or now != word:
+                return  # typed on meanwhile
+            local = self.core.mention_suggestions(word)
+            seen = {a.casefold() for a, _n in local}
+            more = [(a, n) for a, n in found if a.casefold() not in seen]
+            self._offer(self._people_items(local + more)[:10], "@", word)
+        self.win.bridge.call(self.core.search_people(word), ok=got, fail=lambda _e: None)
+
+    def _offer(self, items, sigil, word):
         popup = self.tag_completer.popup()
-        word = self._tag_at_cursor()
-        names = self.core.tag_suggestions(word) if word else []
-        if not names or (len(names) == 1 and names[0] == word):
+        if not items or (len(items) == 1 and items[0][0][1:].casefold() == (word or "").casefold()):
             popup.hide()
             return
-        self._tag_model.setStringList(["#" + n for n in names])
+        self._inserts = {label: insert for insert, label in items}
+        self._tag_model.setStringList([label for _i, label in items])
         rect = self.text.cursorRect()
         rect.setWidth(popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width()
                       + 16)
         self.tag_completer.complete(rect)
         popup.setCurrentIndex(self._tag_model.index(0))
 
-    def _put_tag(self, text):
-        word = self._tag_at_cursor()
+    def _put_tag(self, label):
+        sigil, word = self._token_at_cursor()
         if word is None:
             return
         cur = self.text.textCursor()
         cur.movePosition(cur.MoveOperation.Left, cur.MoveMode.KeepAnchor, len(word) + 1)
-        cur.insertText(text + " ")
+        cur.insertText(getattr(self, "_inserts", {}).get(label, label) + " ")
         self.text.setTextCursor(cur)
         self.tag_completer.popup().hide()
 
