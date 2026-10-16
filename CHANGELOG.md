@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- The unread count on the icon: drawn into the tray icon and shown on the task bar button
+  (the LauncherEntry signal KDE Plasma listens to; needs the menu entry from
+  `--install-desktop` and QtDBus — Debian: `python3-pyside6.qtdbus`). Which lanes count:
+  `ui.icon_count` (Replies to me, Mentions, Subscriptions, Follow requests; `[]` — none).
 - Network failures in the log and the terminal take one line instead of a page of
   traceback (the request itself is logged with its timing); pictures give up after 30 s
   of silence instead of 60, so a server stuck on a remote original doesn't stall the rest;

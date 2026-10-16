@@ -48,7 +48,7 @@ jobs:
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v5
-      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-requests python3-pyside6.qtwidgets
+      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-requests python3-pyside6.qtwidgets python3-pyside6.qtdbus
       - name: Tests
         shell: bash
         run: |

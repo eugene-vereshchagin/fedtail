@@ -29,6 +29,7 @@ DEFAULTS = {
         "links_in_app": True,
         "image_cache_mb": 128,
         "themed_icon": True,
+        "icon_count": ["comments", "mentions", "subs", "requests"],
         "actions": "both",
     },
     "feed": {
@@ -181,7 +182,7 @@ def validate(user):
             cfg[section][key] = val
 
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
-           cfg["notify"]["lanes"] if x not in LANE_NAMES | {"lists"}]
+           cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] if x not in LANE_NAMES | {"lists"}]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]

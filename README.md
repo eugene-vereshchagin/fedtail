@@ -44,7 +44,7 @@ and an XMPP-client-style command line: `#abc text`, `S #abc`, `@user`.
 Debian 13 (trixie) or newer:
 
 ```sh
-sudo apt install python3-pyside6.qtwidgets python3-requests
+sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests
 git clone https://github.com/eugene-vereshchagin/fedtail.git
 cd fedtail
 python3 -m fedtail

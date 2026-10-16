@@ -565,6 +565,26 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_count_on_the_icon(self):
+        from PySide6.QtGui import QIcon
+
+        from fedtail.frontends.qt import badge
+        self.assertEqual([badge.text(n) for n in (0, 7, 100)], ["", "7", "99+"])
+        base = QIcon(self.win.windowIcon())
+        self.assertIs(badge.icon_with_count(base, 0), base)
+        drawn = badge.icon_with_count(base, 5).pixmap(64, 64).toImage()
+        plain = base.pixmap(64, 64).toImage()
+        self.assertNotEqual(drawn, plain)  # the badge is painted in
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        # the comment on my post counts (comments is in ui.icon_count), Home doesn't
+        self.pump(until=lambda: getattr(self.win, "_tray_count", 0) == 1)
+        sent = []
+        self.win.launcher = type("L", (), {"set": lambda _s, n: sent.append(n)})()
+        self.win.update_badges()
+        self.assertEqual(sent, [1])
+
     def test_open_thread_grows_and_says_why_replies_come(self):
         from PySide6.QtCore import Qt
 

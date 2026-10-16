@@ -34,6 +34,7 @@ from ...core import lanes as lanes_module
 from ...core.model import real, snippet
 from ...i18n import _
 from .. import themefile
+from . import badge
 from . import feed as feed_module
 from .card import _round
 from .cmdline import CommandBar
@@ -169,6 +170,11 @@ class MainWindow(QMainWindow):
     # ---- layout -------------------------------------------------------------------
     def _build(self):
         self.tray = None
+        from ...core.paths import DEFAULT_PROFILE
+        prof = self.core.paths.profile
+        self.launcher = badge.Launcher("fedtail" if prof == DEFAULT_PROFILE
+                                       else f"fedtail-{prof}") \
+            if self.cfg["ui"]["icon_count"] else None
         central = QWidget()
         central.setObjectName("central")
         row = QHBoxLayout(central)
@@ -632,7 +638,7 @@ class MainWindow(QMainWindow):
                 n = 0  # browse lanes have no "unread"
             else:
                 n = self.core.unread_count(name)
-            if name in ("comments", "mentions", "subs", "requests"):
+            if name in self.cfg["ui"]["icon_count"]:
                 total += n
             item.set_count(n)
         if getattr(self, "curtain", None) is not None and self.curtain_shown():
@@ -640,6 +646,12 @@ class MainWindow(QMainWindow):
         if self.tray:
             base = self.windowTitle()
             self.tray.setToolTip(_("tray_new", title=base, n=total) if total else base)
+            if total != getattr(self, "_tray_count", 0):
+                self.tray.setIcon(badge.icon_with_count(self.windowIcon(), total,
+                                                        self.theme.c["hot"].name()))
+        self._tray_count = total
+        if self.launcher:
+            self.launcher.set(total)
 
     # ---- events from the core ---------------------------------------------------------
     def on_event(self, name, payload):
