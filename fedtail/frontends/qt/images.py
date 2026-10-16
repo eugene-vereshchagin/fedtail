@@ -51,7 +51,9 @@ class Images:
             try:
                 # 10 s to connect, 30 s of silence at most: a server stuck fetching a
                 # remote original must not hold one of the four image workers for a minute
-                r = self.http.get(url, timeout=(10, 30))
+                # — but an original opened in the viewer is worth waiting for: a server
+                # may be fetching it from the author's server right now
+                r = self.http.get(url, timeout=(10, 30 if max_side <= FEED_SIDE else 120))
                 r.raise_for_status()
             except requests.RequestException as e:
                 log.warning("image %s: %s after %.1f s", url, e.__class__.__name__,

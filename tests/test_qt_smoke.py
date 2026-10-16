@@ -60,7 +60,8 @@ class QtSmokeTest(unittest.TestCase):
         w.add(status("014", BOB, "gone", "X", minute=14, text="чужой разговор"), home=True)
         self.world = w
 
-        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}})
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                  "ui": {"start_lane": "last"}})
         p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
@@ -611,6 +612,17 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(saved, [pic[0]])
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
+
+    def test_start_lane(self):
+        self.win.cfg["ui"]["start_lane"] = "none"  # the default: nothing opens by itself
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.pump(until=self.win.curtain_shown)
+        self.assertNotIn("people", self.win.lane_widgets)  # not even built, nothing read
+        self.win.cfg["ui"]["start_lane"] = "comments"
+        self.win._open_start_lane()
+        self.assertFalse(self.win.curtain_shown())
+        self.assertIn("comments", self.win.lane_widgets)
 
     def test_new_pill_agrees_with_the_store(self):
         self.win.start()

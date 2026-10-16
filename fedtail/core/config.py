@@ -19,6 +19,7 @@ DEFAULTS = {
         "close_to_tray": True,
         "esc": "curtain",
         "switch_closes": True,
+        "start_lane": "none",
         "sidebar_footer": True,
         "sidebar_groups": True,
         "command_line": True,
@@ -212,6 +213,10 @@ def validate(user):
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):
         errors.append("lanes.extra_bots must be a list of strings")
     langs = [cfg["post"]["language"]] + cfg["post"]["languages"]
+    start = cfg["ui"]["start_lane"]
+    if start not in {"none", "last"} | LANE_NAMES:
+        errors.append(f"ui.start_lane = {start!r}; allowed: none, last or a lane: "
+                      f"{', '.join(sorted(LANE_NAMES))}")
     bad_lang = [x for x in langs
                 if x and not (isinstance(x, str) and re.fullmatch(r"[a-z]{2,3}", x))]
     if bad_lang:

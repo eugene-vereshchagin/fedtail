@@ -2,10 +2,14 @@
 
 ## 0.3.0 — in progress
 
+- At start no lane is open (the curtain, with the counts on the left; Enter opens the last
+  one): starting fedtail no longer reads anything for you. `ui.start_lane`: `none`, `last`
+  (the old way) or a lane's name.
 - The picture viewer no longer says "loading…" forever: it shows the feed's smaller copy at
   once while the original loads, and when the original won't show it says why — a format
   Qt can't read (webp/avif without `qt6-image-formats-plugins`; Save still works) or the
-  server didn't answer (R tries again).
+  server didn't answer (R tries again). An original opened in the viewer is waited for up to
+  two minutes (a server may be fetching it from the author's server just then).
 - A thread is the same whichever post it's opened from: a server's context of a post holds
   only its own branch, so the tree is now read from the top post.
 - Threads with holes fill themselves: on opening, fedtail reads the list of replies the

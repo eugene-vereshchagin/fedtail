@@ -15,7 +15,9 @@ ruff check .                             # line length 100
 python3 tools/screenshots.py out/        # PNGs of every theme with made-up data
 ```
 
-Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests` (no QtTest there).
+Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests`
+(no QtTest there); at run time also `qt6-image-formats-plugins` (webp/avif pictures) and
+`libnotify-bin` (notify-send). The deb package's dependency list is in docs/DESIGN.md.
 
 ## Rules
 

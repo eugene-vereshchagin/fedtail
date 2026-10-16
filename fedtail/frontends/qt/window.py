@@ -519,12 +519,21 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tip)
         if self.tray:
             self.tray.setToolTip(tip)
-        last = self.core.get_state("lane")
-        if last in self.lane_items:
-            self.select_lane(last)
-        else:  # the first time: Home, not whatever happens to be on top
-            self.select_lane("people" if "people" in self.lane_items else self.lane_order[0])
+        self._open_start_lane()
         self.core.start_polling()
+
+    def _open_start_lane(self):
+        """ui.start_lane: "none" — every lane closed behind the curtain (nothing gets
+        read by just starting; Enter opens the last one); "last" — the lane of last
+        time; or a lane by name."""
+        want = self.cfg["ui"]["start_lane"]
+        if want == "none":
+            self.close_all()
+            return
+        name = self.core.get_state("lane") if want == "last" else want
+        if name not in self.lane_items:  # the first time, or a lane that's off
+            name = "people" if "people" in self.lane_items else self.lane_order[0]
+        self.select_lane(name)
 
     def _connect_failed(self, err):
         if "HTTP 401" in err or "HTTP 403" in err:

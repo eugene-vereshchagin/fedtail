@@ -69,6 +69,10 @@
 8. **Фронтенды:** CLI → TUI → GTK4 → XMPP-шлюз → веб → Toga.
 9. **Подписаться на старые треды пачкой** («все мои посты за месяц») — в самом конце.
 10. **deb-пакет** с номером сборки (`_build.py` → версия в About) — в самом конце.
+    Зависимости (Debian 13): `python3 (>= 3.11)`, `python3-pyside6.qtwidgets`,
+    `python3-requests`; Recommends: `python3-pyside6.qtdbus` (число на кнопке в панели
+    задач), `qt6-image-formats-plugins` (webp/avif/tiff в просмотрщике — без него такие
+    оригиналы не показываются), `libnotify-bin` (notify-send, уведомления).
 
 ## Известные ограничения сервера
 
