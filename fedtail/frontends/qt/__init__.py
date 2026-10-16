@@ -49,12 +49,30 @@ def run(core, instance, argv):
     tick.timeout.connect(lambda: None)
 
     win.show()
+    QTimer.singleShot(1500, lambda: _log_size(win))
     QTimer.singleShot(0, win.start)
     try:
         return app.exec()
     finally:
         win.images.pool.shutdown(wait=False, cancel_futures=True)
         core.shutdown()
+
+
+def _log_size(win):
+    """What the window ended up as, and what keeps it from being narrower: a window
+    that "always opens too wide" has some widget asking for that width."""
+    from PySide6.QtWidgets import QWidget
+    try:
+        hint = win.minimumSizeHint()
+        wide = sorted(((w.minimumSizeHint().width(), w.metaObject().className(),
+                        w.objectName()) for w in win.findChildren(QWidget)
+                       if w.isVisible()), reverse=True)[:5]
+        logging.getLogger("fedtail").info(
+            "window %dx%d, needs at least %dx%d; widest: %s", win.width(), win.height(),
+            hint.width(), hint.height(),
+            ", ".join(f"{cls}#{name or '-'} {w}px" for w, cls, name in wide))
+    except RuntimeError:
+        pass
 
 
 if __name__ == "__main__":
