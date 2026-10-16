@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Mastodon 4.5+ fetches a thread's missing replies itself and says so
+  (`Mastodon-Async-Refresh`): fedtail waits for it and the open thread grows when the server
+  is done — alongside its own asking of the author's server (`feed.complete_threads`).
 - The read position is shared with your other clients (Mastodon markers, also in GoToSocial
   and Akkoma): Home or mentions read up to some post on the phone are read here too, and how
   far you've read here — everything from the oldest on — goes to the server for them.

@@ -7,6 +7,7 @@ import logging
 import mimetypes
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass
 from urllib.parse import quote, urlencode
@@ -61,6 +62,7 @@ class Api:
         if not server.startswith(("http://", "https://")):
             server = "https://" + server
         self.base = server
+        self._last = threading.local()  # the latest response's headers, per thread
         self.s = session or requests.Session()
         self.s.headers["User-Agent"] = USER_AGENT
         if token:
@@ -83,6 +85,7 @@ class Api:
         log.log(logging.WARNING if took > SLOW_SECONDS or r.status_code >= 400
                 else logging.DEBUG, "%s %s %s -> %s %.2f s %d B", method, path, shown,
                 r.status_code, took, len(r.content or b""))
+        self._last.headers = r.headers
         if r.status_code >= 400:
             try:
                 msg = r.json().get("error") or r.text
@@ -212,6 +215,22 @@ class Api:
 
     def context(self, sid):
         return self.get(f"/api/v1/statuses/{sid}/context")
+
+    def last_async_refresh(self):
+        """After a request in this thread: Mastodon 4.5+'s "I'm fetching more of this
+        in the background" (Mastodon-Async-Refresh: id="…", retry=N) as (id, seconds),
+        or None."""
+        raw = (getattr(self._last, "headers", None) or {}).get("Mastodon-Async-Refresh")
+        if not raw:
+            return None
+        m = re.search(r'id="([^"]+)"', raw)
+        retry = re.search(r"retry=(\d+)", raw)
+        return (m.group(1), int(retry.group(1)) if retry else 3) if m else None
+
+    def async_refresh(self, refresh_id):
+        """"running" or "finished" (an experimental Mastodon endpoint)."""
+        got = self.get(f"/api/v1_alpha/async_refreshes/{refresh_id}") or {}
+        return (got.get("async_refresh") or {}).get("status", "finished")
 
     def follow_requests(self):
         return self.get("/api/v1/follow_requests", {"limit": 80})

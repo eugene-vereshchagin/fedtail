@@ -691,6 +691,28 @@ class CoreTest(TmpDir):
         self.assertIn("gogo", core.tag_suggestions("go"))
         self.assertEqual(core.tag_suggestions(""), [])
 
+    def test_async_refresh_grows_thread(self):
+        """Mastodon 4.5+ says it's fetching the rest of a thread: when it's done, the
+        open thread is told to grow."""
+        core, w = self.make()
+        core.connect().result()
+        root = w.add(status("010", BOB, minute=10, vis="public"), home=True)
+        hints = [("r1", 1)]
+        core.api.last_async_refresh = lambda: hints.pop() if hints else None
+        core.api.async_refresh = lambda rid: "finished"
+        core.thread(root["id"]).result()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not any(
+                e == ("thread_grew", "010") for e in self.events):
+            time.sleep(0.05)
+        self.assertIn(("thread_grew", "010"), self.events)
+        core.cfg["feed"]["complete_threads"] = False  # that switch covers this too
+        self.events.clear()
+        hints.append(("r2", 1))
+        core.thread(root["id"]).result()
+        time.sleep(1.5)
+        self.assertNotIn(("thread_grew", "010"), self.events)
+
     def test_markers_shared_read_position(self):
         core, w = self.make(feed={"page_size": 40})
         core.connect().result()

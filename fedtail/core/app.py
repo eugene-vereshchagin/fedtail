@@ -857,9 +857,11 @@ class Core:
         ancestors = ctx.get("ancestors", [])
         root = ancestors[0] if ancestors else focus
         below = list(ctx.get("descendants", []))
+        refresh = self._async_refresh_hint()
         if ancestors:
             below = self.api.context(root["id"]).get("descendants", []) + below + \
                 ancestors[1:] + [focus]
+            refresh = self._async_refresh_hint() or refresh
         seen, rest = {root["id"]}, []
         for st in below:
             if st["id"] not in seen:
@@ -871,7 +873,32 @@ class Core:
             self.bg.submit(self._honest_counts, everything)
         if self.cfg["feed"]["complete_threads"]:
             self.bg.submit(self._complete_thread, root, {s.get("uri") for s in everything})
+            if refresh:
+                self.bg.submit(self._await_refresh, root["id"], *refresh)
         return threads.build(root, {"ancestors": [], "descendants": rest})
+
+    def _async_refresh_hint(self):
+        hint = getattr(self.api, "last_async_refresh", None)
+        return hint() if hint else None
+
+    def _await_refresh(self, root_id, refresh_id, retry, budget=60):
+        """Mastodon 4.5+ said it is fetching the rest of this thread from other
+        servers: ask how it goes, and when done, the open thread grows."""
+        waited = 0
+        while waited < budget and not self._stop.is_set():
+            pause = max(1, min(retry, 10))
+            self._stop.wait(pause)
+            waited += pause
+            try:
+                status = self.api.async_refresh(refresh_id)
+            except Exception as e:  # noqa: BLE001 — experimental endpoint: give up quietly
+                log.debug("async refresh %s: %s", refresh_id, e)
+                return
+            if status == "finished":
+                log.info("thread %s: the server finished fetching replies (%d s)",
+                         root_id, waited)
+                self.emit("thread_grew", root_id)
+                return
 
     def _complete_thread(self, root, known):
         """Replies the post's own server lists and mine hasn't got: mine fetches them
