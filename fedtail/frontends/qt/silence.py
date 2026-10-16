@@ -122,8 +122,15 @@ class SilenceDialog(QDialog):
 
     # ---- loading --------------------------------------------------------------------
     def reload(self):
-        self.win.bridge.call(self.core.filters(), ok=self._filters, fail=self.win.error)
-        self.win.bridge.call(self.core.silenced_people(), ok=self._people,
+        # answers may come back out of order (the first load and the one after an
+        # add run side by side): only the latest one is drawn
+        self._gen = getattr(self, "_gen", 0) + 1
+        gen = self._gen
+        self.win.bridge.call(self.core.filters(),
+                             ok=lambda f: gen == self._gen and self._filters(f),
+                             fail=self.win.error)
+        self.win.bridge.call(self.core.silenced_people(),
+                             ok=lambda p: gen == self._gen and self._people(p),
                              fail=self.win.error)
 
     def _filters(self, filters):
