@@ -671,7 +671,7 @@ class QtSmokeTest(unittest.TestCase):
                                     "preview_url": "https://x/small.jpg",
                                     "meta": {"original": {"width": 4000, "height": 3000}}}]
         PostRow(CardSpec(key="091", status=st), self.win.ctx)
-        pictures = [u for u in asked if "/x/" in u]
+        pictures = [u for u in asked if u and "/x/" in u]  # (the avatar has no address)
         self.assertEqual(pictures, ["https://x/small.jpg", "https://x/big.jpg"])
 
     def test_video_called_a_picture(self):
