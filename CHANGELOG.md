@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.7.0 — in progress
+
 ## 0.6.0 — 2026-10-16
 
 - Somebody's boost of a post by a person you put in a list stays out of Home (and the other
