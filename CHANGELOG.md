@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0 — in progress
+## 0.8.0 — 2026-10-17
 
 - "My likes" lane: the posts you liked (`"favourites"` in `lanes.enabled`; off by default).
 - The bell on a profile of someone you follow: each of their new posts comes as a
