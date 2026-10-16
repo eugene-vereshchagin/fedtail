@@ -19,7 +19,7 @@ class I18nTest(unittest.TestCase):
         for f in (ROOT / "fedtail").rglob("*.py"):
             text = f.read_text("utf-8")
             used |= set(re.findall(r'\b_\("([a-z_0-9]+)"', text))
-            prefixes |= set(re.findall(r'\b_\("([a-z]+_)"\s*\+', text))
+            prefixes |= set(re.findall(r'\b_\("([a-z_]+_)"\s*\+', text))
         known = i18n.keys("en")
         concrete = {k for k in used if k not in prefixes}
         self.assertEqual(concrete - known, set())

@@ -268,6 +268,42 @@ class Api:
             p["type"] = kind
         return self.get("/api/v2/search", p) or {}
 
+    # ---- silence: mute, block, filters ------------------------------------------
+    def mute(self, acc_id, on=True):
+        return self.post(f"/api/v1/accounts/{acc_id}/{'mute' if on else 'unmute'}")
+
+    def block(self, acc_id, on=True):
+        return self.post(f"/api/v1/accounts/{acc_id}/{'block' if on else 'unblock'}")
+
+    def _all_pages(self, path, pages=10):
+        out, cursor = [], None
+        for _ in range(pages):
+            items, cursor = self.get_page(path, self._page(80, cursor))
+            out += items
+            if not cursor or not items:
+                break
+        return out
+
+    def mutes(self):
+        return self._all_pages("/api/v1/mutes")
+
+    def blocks(self):
+        return self._all_pages("/api/v1/blocks")
+
+    def filters(self):
+        return self.get("/api/v2/filters") or []
+
+    def create_filter(self, title, keywords, action="warn", contexts=("home", "public",
+                                                                       "thread", "account")):
+        data = {"title": title, "filter_action": action, "context[]": list(contexts)}
+        for i, word in enumerate(keywords):
+            data[f"keywords_attributes[{i}][keyword]"] = word
+            data[f"keywords_attributes[{i}][whole_word]"] = "true"
+        return self.post("/api/v2/filters", data=data)
+
+    def delete_filter(self, filter_id):
+        return self.delete(f"/api/v2/filters/{filter_id}")
+
     # ---- lists --------------------------------------------------------------
     def lists(self):
         return self.get("/api/v1/lists") or []

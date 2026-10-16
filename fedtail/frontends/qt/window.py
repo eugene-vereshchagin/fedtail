@@ -52,6 +52,7 @@ from .images import Images
 from .login import LoginDialog
 from .notify import Notifier, icon_path
 from .profile import ProfileDialog
+from .silence import SilenceDialog
 from .viewer import ImageOverlay
 
 log = logging.getLogger(__name__)
@@ -324,6 +325,7 @@ class MainWindow(QMainWindow):
         m.addAction(_("write") + "\tCtrl+N", lambda: self.compose())
         m.addAction(_("refresh") + "\tF5", self.refresh)
         m.addAction(_("search_title") + "\tCtrl+K", lambda: self.open_search(""))
+        m.addAction(_("silence_title") + "…", lambda: SilenceDialog(self).exec())
         m.addAction(_("my_profile"), self.open_my_profile)
         m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
@@ -818,6 +820,15 @@ class MainWindow(QMainWindow):
             self.error(_("not_in_cache"))
         elif action == "reply":
             self.compose(st)
+        elif action in ("mute", "block"):
+            acc = real(st)["account"]
+            if action == "block" and QMessageBox.question(
+                    self, _("block"), _("block_q", acct=acc["acct"])) \
+                    != QMessageBox.StandardButton.Yes:
+                return
+            call = self.core.mute if action == "mute" else self.core.block
+            self.bridge.call(call(acc["id"], True), ok=lambda _r: self.statusBar().showMessage(
+                _(action + "d_msg", acct=acc["acct"]), 6000))
         elif action == "bookmark":
             on = not real(st).get("bookmarked")
             self.bridge.call(self.core.bookmark(st, on), ok=lambda _s: self.statusBar().showMessage(

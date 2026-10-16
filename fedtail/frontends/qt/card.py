@@ -257,9 +257,16 @@ class PostRow(QWidget):
         if media:
             cv.addWidget(media)
 
-        if st.get("spoiler_text"):
+        # a server filter that says "warn": folded like a content warning, closed
+        warned = [(f.get("filter") or {}).get("title") or "?" for f in st.get("filtered") or []
+                  if (f.get("filter") or {}).get("filter_action", "warn") == "warn"]
+        if warned:
+            self.cw_open = False
+        if st.get("spoiler_text") or warned:
             cw_row = QHBoxLayout()
-            cw_row.addWidget(self._label("⚠ " + esc(st["spoiler_text"]), "cw"), 1)
+            label = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else []) +
+                               (["⚠ " + st["spoiler_text"]] if st.get("spoiler_text") else []))
+            cw_row.addWidget(self._label(esc(label), "cw"), 1)
             btn = QPushButton()
             btn.setObjectName("tool")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -486,6 +493,12 @@ class PostRow(QWidget):
             menu.addAction(_("unsub_thread" if on else "sub_thread"),
                            lambda i=st["id"], on=on:
                            self.ctx.on_link(f"fedtail:{'unsub' if on else 'sub'}/{i}"))
+        if author["id"] != self.ctx.me_id:
+            menu.addSeparator()
+            menu.addAction(_("mute_acct", acct=author["acct"]),
+                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:mute/{i}"))
+            menu.addAction(_("block_acct", acct=author["acct"]),
+                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:block/{i}"))
         if st["account"]["id"] == self.ctx.me_id:
             menu.addSeparator()
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))

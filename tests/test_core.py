@@ -305,6 +305,31 @@ class CoreTest(TmpDir):
         core.bookmark(core.store.get_status("095")).result()  # toggled off
         self.assertEqual([s["id"] for _, s in core.lane_entries("bookmarks")], ["096"])
 
+    def test_silence_mute_block_filters(self):
+        core, w = self.make()
+        w.add(status("100", BOB, minute=1), home=True)
+        w.add(status("101", NEWS, minute=2), home=True)
+        spam = w.add(status("102", fakes.acct("S", "spam@x.example"), minute=3), home=True)
+        spam["filtered"] = [{"filter": {"id": "F1", "title": "крипта", "filter_action": "hide"},
+                             "keyword_matches": ["крипта"]}]
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["100"])
+        core.mute("B").result()  # gone from every lane at once
+        self.assertEqual(core.lane_entries("people"), [])
+        core.mute("B", False).result()
+        core.block("N").result()
+        self.assertEqual(core.lane_entries("bots"), [])
+        self.assertEqual(w.blocked, {"N"})
+        f = core.add_filter("шум", ["крипта", "nft"], "hide").result()
+        self.assertEqual([x["title"] for x in core.filters().result()], ["шум"])
+        core.delete_filter(f["id"]).result()
+        self.assertEqual(core.filters().result(), [])
+        w.muted.add("B")  # muted from another client: picked up on refresh
+        core._silence_checked = 0
+        core.poll_once()
+        self.assertEqual(core.lane_entries("people"), [])
+
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})
         for i in range(1, 41):

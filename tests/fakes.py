@@ -234,6 +234,33 @@ class FakeApi:
         self.w.statuses[sid] = st
         return st
 
+    def mute(self, acc_id, on=True):
+        (self.w.muted.add if on else self.w.muted.discard)(acc_id)
+        return {"id": acc_id, "muting": on}
+
+    def block(self, acc_id, on=True):
+        (self.w.blocked.add if on else self.w.blocked.discard)(acc_id)
+        return {"id": acc_id, "blocking": on}
+
+    def mutes(self):
+        return [{"id": i} for i in sorted(self.w.muted)]
+
+    def blocks(self):
+        return [{"id": i} for i in sorted(self.w.blocked)]
+
+    def filters(self):
+        return list(self.w.filters.values())
+
+    def create_filter(self, title, keywords, action="warn", contexts=("home",)):
+        self.w.seq += 1
+        f = {"id": f"F{self.w.seq}", "title": title, "filter_action": action,
+             "context": list(contexts), "keywords": [{"keyword": k} for k in keywords]}
+        self.w.filters[f["id"]] = f
+        return f
+
+    def delete_filter(self, filter_id):
+        self.w.filters.pop(filter_id, None)
+
     def bookmark(self, sid, on=True):
         st = dict(self.w.statuses[sid], bookmarked=on)
         self.w.statuses[sid] = st
@@ -268,6 +295,7 @@ class World:
         self.activity = []
         self.following = set()
         self.followed_tags = set()
+        self.muted, self.blocked, self.filters = set(), set(), {}
         self.profile_updates = []
 
     def accounts(self):

@@ -153,6 +153,12 @@ hashtags and posts — with Follow right in the results; tags can be followed to
 come to Home). A profile shows whom the person follows and who follows them, each with a
 Follow button: the easiest way to find more people is through people you already read.
 
+## Silence
+
+A post's ⋯ menu (or the profile) mutes or blocks its author: their posts vanish from every
+lane at once. ≡ → Silence… keeps word filters on your server — "fold" shows a post folded with
+a note, "hide" drops it — and lists who you muted or blocked, with undo.
+
 ## Links stay inside
 
 @mentions open the person's profile in a tab (bio, fields, "follows you", Follow, Mention,

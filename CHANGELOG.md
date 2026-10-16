@@ -2,6 +2,9 @@
 
 ## 0.3.0 — in progress
 
+- Silence: mute or block from a post's ⋯ menu or the profile (their posts vanish from every
+  lane at once); word filters kept on the server (≡ → Silence…: fold or hide, where);
+  a post folded by a filter says which; muted/blocked lists with undo.
 - The last `Esc` closes every lane behind a curtain instead of hiding the window: the
   sidebar with its counts stays, nothing is marked read, new posts pile up ("Piling up:
   Replies to me — 3, Home — 12"); a lane click or Enter opens again. `ui.esc` (was

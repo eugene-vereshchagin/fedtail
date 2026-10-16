@@ -401,6 +401,31 @@ class QtSmokeTest(unittest.TestCase):
         del self.win.isActiveWindow
         self.win.select_lane("people")
 
+        # silence: a filter added in the dialog, a mute from a post's menu, a post folded
+        # by a "warn" filter
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        from fedtail.frontends.qt.silence import SilenceDialog
+        dlg = SilenceDialog(self.win)
+        dlg.show()
+        dlg.words.setText("крипта, nft")
+        dlg._add_filter()
+        self.pump(until=lambda: dlg.filter_list.count() == 1)
+        dlg.filter_list.setCurrentRow(0)
+        dlg._delete_filter()
+        self.pump(until=lambda: dlg.filter_list.count() == 0)
+        self.win.on_link("fedtail:mute/013")
+        self.pump(until=lambda: "B" in self.core.muted)
+        dlg.reload()
+        self.pump(until=lambda: dlg.muted_list.count() == 1)
+        dlg.muted_list.setCurrentRow(0)
+        dlg._undo(dlg.muted_list, "mute")
+        self.pump(until=lambda: "B" not in self.core.muted)
+        dlg.accept()
+        folded = dict(self.core.store.get_status("013"),
+                      filtered=[{"filter": {"title": "шум", "filter_action": "warn"}}])
+        row = PostRow(CardSpec(key="x", status=folded), self.win.ctx)
+        self.assertFalse(row.cw_open)
+
         # my profile: a tab with an edit button; the editor sends only what changed
         from fedtail.frontends.qt.profile import ProfileDialog
         self.win.open_my_profile()

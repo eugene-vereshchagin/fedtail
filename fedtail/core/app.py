@@ -69,6 +69,9 @@ class Core:
         self._replies_inflight = set()
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
         self._honest_checked = {}  # status id -> when its origin was asked
+        self.muted, self.blocked = set(), set()
+        self._silence_version = 0
+        self._silence_checked = 0.0
         self._poll_count = 0
         self._active_lane = None  # the lane on screen: browse lanes are fetched only then
         self._last_poll_s = None
@@ -182,6 +185,12 @@ class Core:
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
             new_by_source = {}
+            if time.monotonic() - self._silence_checked > self.cfg["lists"]["refresh_minutes"] * 60:
+                try:
+                    self._refresh_silence()
+                except Exception as e:  # an old server without mutes/blocks: never mind
+                    self._silence_checked = time.monotonic()
+                    log.warning("silence: %s", e)
             if self.cfg["lists"]["enabled"] and time.monotonic() - self._lists_checked > \
                     self.cfg["lists"]["refresh_minutes"] * 60:
                 try:
@@ -309,7 +318,7 @@ class Core:
             sts = [st for item_id, st in self.store.items(lane.source, len(ids) + 50)
                    if item_id in id_set]
             unread = self.store.read_set(st["id"] for st in sts)
-            out += [(name, st) for st in sts if st["id"] not in unread]
+            out += [(name, st) for st in sts if st["id"] not in unread and not self.silenced(st)]
         if "requests" in wanted:
             out += [("requests", acc) for acc in new_requests]
         if "activity" in wanted:
@@ -363,6 +372,60 @@ class Core:
             self.emit("activity_seen", newest)
 
     # ---- lists ---------------------------------------------------------------------
+    # ---- silence: muted and blocked people, server filters ----------------------------
+    def _refresh_silence(self):
+        muted = {a["id"] for a in self.api.mutes()}
+        blocked = {a["id"] for a in self.api.blocks()}
+        self._silence_checked = time.monotonic()
+        if (muted, blocked) != (self.muted, self.blocked):
+            self.muted, self.blocked = muted, blocked
+            self._silence_version += 1
+            self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+
+    def silenced(self, status):
+        """Is this post hidden: its author or booster muted/blocked, or a server
+        filter says "hide"?"""
+        quiet = self.muted | self.blocked
+        s = real(status)
+        if s["account"]["id"] in quiet or status["account"]["id"] in quiet:
+            return True
+        return any((f.get("filter") or {}).get("filter_action") == "hide"
+                   for f in s.get("filtered") or [])
+
+    def mute(self, acc_id, on=True):
+        return self._silence(self.api.mute, self.muted, acc_id, on)
+
+    def block(self, acc_id, on=True):
+        return self._silence(self.api.block, self.blocked, acc_id, on)
+
+    def _silence(self, call, bucket, acc_id, on):
+        def job():
+            rel = call(acc_id, on)
+            (bucket.add if on else bucket.discard)(acc_id)
+            self._silence_version += 1
+            self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+            return rel
+        return self.submit(job)
+
+    def filters(self):
+        return self.submit(self.api.filters)
+
+    def silenced_people(self):
+        """{"muted": [accounts], "blocked": [accounts]} for the Silence dialog."""
+        def job():
+            muted, blocked = self.api.mutes(), self.api.blocks()
+            self.muted = {a["id"] for a in muted}
+            self.blocked = {a["id"] for a in blocked}
+            return {"muted": muted, "blocked": blocked}
+        return self.submit(job)
+
+    def add_filter(self, title, keywords, action="warn", contexts=None):
+        args = (title, keywords, action) + ((tuple(contexts),) if contexts else ())
+        return self.submit(self.api.create_filter, *args)
+
+    def delete_filter(self, filter_id):
+        return self.submit(self.api.delete_filter, filter_id)
+
     def _hidden_authors(self):
         if not self.cfg["lists"]["exclusive_hides"]:
             return frozenset()
@@ -503,7 +566,8 @@ class Core:
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
         only_posts = self.posts_only(name)
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
-               self.me["id"] if self.me else None, only_posts, self._lists_version)
+               self.me["id"] if self.me else None, only_posts, self._lists_version,
+               self._silence_version)
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]
@@ -512,6 +576,8 @@ class Core:
         for item_id, st in self.store.iter_items(lane.source,
                                                  max_rows=max(FILTER_WINDOW, limit)):
             if only_posts and real(st).get("in_reply_to_id"):
+                continue
+            if self.silenced(st):
                 continue
             if lane.keep(st, ctx):
                 kept.append((item_id, st))

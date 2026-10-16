@@ -739,6 +739,10 @@ class AccountWidget(_PagedTab):
             buttons.addWidget(fb)
             buttons.addWidget(_button(_("mention"), lambda: self.win.compose(
                 text=f"@{acc['acct']} ")))
+            buttons.addWidget(_button(_("unmute") if self.relation.get("muting") else _("mute"),
+                                      self._toggle_mute))
+            buttons.addWidget(_button(_("unblock") if self.relation.get("blocking")
+                                      else _("block"), self._toggle_block))
             if self.win.ctx.fill_list_menu is not None:
                 from PySide6.QtWidgets import QMenu
                 lb = _button(_("add_to_list"), lambda: None)
@@ -753,6 +757,23 @@ class AccountWidget(_PagedTab):
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
         buttons.addStretch(1)
         lay.addLayout(buttons)
+
+    def _toggle_mute(self):
+        on = not self.relation.get("muting")
+        self.win.bridge.call(self.core.mute(self.acc_id, on),
+                             ok=lambda r: self._relation(dict(self.relation, muting=on,
+                                                              **(r or {}))))
+
+    def _toggle_block(self):
+        on = not self.relation.get("blocking")
+        if on:
+            from PySide6.QtWidgets import QMessageBox
+            if QMessageBox.question(self, _("block"), _("block_q", acct=self.acc["acct"])) \
+                    != QMessageBox.StandardButton.Yes:
+                return
+        self.win.bridge.call(self.core.block(self.acc_id, on),
+                             ok=lambda r: self._relation(dict(self.relation, blocking=on,
+                                                              **(r or {}))))
 
     def _toggle_follow(self):
         on = not (self.relation.get("following") or self.relation.get("requested"))
@@ -775,6 +796,23 @@ class TagWidget(_PagedTab):
     def _info(self, t):
         self.following = bool((t or {}).get("following"))
         self.follow_btn.setText(_("tag_unfollow") if self.following else _("tag_follow"))
+
+    def _toggle_mute(self):
+        on = not self.relation.get("muting")
+        self.win.bridge.call(self.core.mute(self.acc_id, on),
+                             ok=lambda r: self._relation(dict(self.relation, muting=on,
+                                                              **(r or {}))))
+
+    def _toggle_block(self):
+        on = not self.relation.get("blocking")
+        if on:
+            from PySide6.QtWidgets import QMessageBox
+            if QMessageBox.question(self, _("block"), _("block_q", acct=self.acc["acct"])) \
+                    != QMessageBox.StandardButton.Yes:
+                return
+        self.win.bridge.call(self.core.block(self.acc_id, on),
+                             ok=lambda r: self._relation(dict(self.relation, blocking=on,
+                                                              **(r or {}))))
 
     def _toggle_follow(self):
         self.win.bridge.call(self.core.follow_tag(self.tag, not self.following), ok=self._info,
