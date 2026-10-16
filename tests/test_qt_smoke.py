@@ -613,6 +613,47 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_merged_window(self):
+        """All accounts in one window: the other account's posts in Home, marked."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.core.merged import MergedCore
+        from fedtail.frontends.qt.bridge import Bridge
+        from fedtail.frontends.qt.window import MainWindow
+        work = fakes.World()
+        work.me = dict(ME, id="W", acct="w", username="w")
+        work.add(status("700", BOB, minute=50, text="через work"), home=True)
+        FakeApi.worlds = {"https://work.example": work}
+        self.addCleanup(setattr, FakeApi, "worlds", {})
+        tmp = Path(self._tmp.name)
+        p = paths.resolve("work", config=str(tmp / "w.toml"), data=str(tmp / "w"))
+        auth.save(p.auth_file, {"server": "https://work.example", "token": "tok"})
+        other = Core(self.core.cfg, p, api_class=FakeApi)
+        merged = MergedCore(self.core, {"work": other})
+        self.win.quitting = True
+        self.win.hide()
+        win = MainWindow(merged, Bridge(merged), self.theme)
+        win.images.get = lambda url, cb, *a, **k: None
+        self.addCleanup(lambda: (setattr(win, "quitting", True), win.hide(), other.shutdown()))
+        win.show()
+        win.start()
+        self.pump(until=lambda: self.core.me is not None and other.me is not None)
+        self.core.poll_once()
+        other.poll_once()
+        win.select_lane("people")
+        lane = win.lane_widgets["people"]
+        self.pump(until=lambda: "work~700" in lane.view.rows)
+        marks = [w.text() for w in lane.view.rows["work~700"].findChildren(QLabel)
+                 if w.objectName() == "via"]
+        self.assertEqual(marks, ["→ @w"])
+        self.assertEqual([w for w in lane.view.rows["011"].findChildren(QLabel)
+                          if w.objectName() == "via"], [])  # mine: no mark
+        win.on_link("fedtail:fav/work~700")  # acts through work
+        self.pump(until=lambda: work.statuses["700"].get("favourited"))
+        menu = win.accounts_menu()
+        merge = next(a for a in menu.actions() if a.text() == "Все аккаунты в одном окне")
+        self.assertTrue(merge.isChecked())
+
     def test_start_lane(self):
         self.win.cfg["ui"]["start_lane"] = "none"  # the default: nothing opens by itself
         self.win.start()

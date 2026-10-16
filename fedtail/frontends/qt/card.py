@@ -380,6 +380,7 @@ class PostRow(QWidget):
         line.addWidget(vis_label)
         if st.get("edited_at"):
             line.addWidget(self._edited_mark(st))
+        self._via_mark(line)
         line.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
         line.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
@@ -422,6 +423,7 @@ class PostRow(QWidget):
         h.addWidget(self._label(meta, "meta", wrap=False))
         if st.get("edited_at"):
             h.addWidget(self._edited_mark(st))
+        self._via_mark(h)
         h.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
@@ -429,6 +431,15 @@ class PostRow(QWidget):
             h.addWidget(came)
         self._short_id(h)
         return h
+
+    def _via_mark(self, row):
+        """All accounts in one window: which of mine got this post (and acts on it)."""
+        via = self.spec.status.get("_via") if self.spec.status else None
+        if via:
+            lab = QLabel("→ " + via)
+            lab.setObjectName("via")
+            lab.setToolTip(_("via_tip", acct=via))
+            row.addWidget(lab)
 
     def _context_html(self, st):
         p = self.spec.parent

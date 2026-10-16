@@ -87,6 +87,12 @@ In the window, right-click your avatar (or ≡ → Accounts): the other accounts
 pick one and its window opens with its theme, this one closes (`ui.switch_closes = false`
 keeps both). "Add an account…" asks for a profile name and opens the login window.
 
+Or all accounts in one window (the same menu, "All accounts in one window", or
+`ui.merge = ["all"]`): lanes of the same name become one (both Homes are one Home), the
+other accounts' lists come as lanes of their own, and a post another account received
+says so — "→ @work"; a reply, a like or a boost goes from that account. New posts, the
+command line, likes & boosts and follow requests are the main account's.
+
 | what | where |
 |---|---|
 | config (read-only for the app) | `~/.config/fedtail/<profile>/config.toml` |

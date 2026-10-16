@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- All accounts in one window (≡ → Accounts → "All accounts in one window", or `ui.merge`):
+  lanes of the same name merge, the other accounts' lists are lanes of their own, a post
+  another account received is marked "→ @handle" and a reply, like or boost on it goes from
+  that account. A profile already open in its own window stays there.
 - At start no lane is open (the curtain, with the counts on the left; Enter opens the last
   one): starting fedtail no longer reads anything for you. `ui.start_lane`: `none`, `last`
   (the old way) or a lane's name.

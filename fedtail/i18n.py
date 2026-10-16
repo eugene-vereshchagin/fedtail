@@ -49,6 +49,10 @@ _STRINGS = {
                          "qt6-image-formats-plugins",
         "viewer_unreachable": "Оригинал не загрузился ({err}). R — ещё раз, O — в браузере",
         "accounts": "Аккаунты", "accounts_tip": "Правый клик — другие аккаунты",
+        "accounts_merge": "Все аккаунты в одном окне",
+        "accounts_merge_tip": "Ленты всех аккаунтов вместе, у чужих постов — от кого получено. "
+                              "fedtail перезапустится",
+        "via_tip": "Получено аккаунтом {acct}: ответ, лайк и буст уйдут от него",
         "not_logged_in": "(не вошёл)", "account_add": "Добавить аккаунт…",
         "account_add_q": "Имя профиля для нового аккаунта (латиница, цифры, _ . -),\n"
                          "например work. Откроется окно входа.",
@@ -339,6 +343,10 @@ _STRINGS = {
                          "qt6-image-formats-plugins",
         "viewer_unreachable": "The original didn't load ({err}). R — again, O — browser",
         "accounts": "Accounts", "accounts_tip": "Right click — other accounts",
+        "accounts_merge": "All accounts in one window",
+        "accounts_merge_tip": "Every account's lanes together, each post saying who got it. "
+                              "fedtail restarts",
+        "via_tip": "Received by {acct}: a reply, a like or a boost goes from it",
         "not_logged_in": "(not logged in)", "account_add": "Add an account…",
         "account_add_q": "A profile name for the new account (latin letters, digits, _ . -),\n"
                          "like work. The login window opens.",

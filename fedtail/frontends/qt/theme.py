@@ -213,6 +213,8 @@ QLabel#meta, QLabel#boost, QLabel#muted {{ color: {k('muted')}; }}
 QLabel#shortId {{ color: {k('muted')}; font-family: "{mono_family}"; }}
 QLabel#num {{ color: {k('link')}; font-family: "{mono_family}"; font-weight: 700; }}
 QLabel#cameFrom {{ color: {k('link')}; font-weight: 600; }}
+QLabel#via {{ color: {k('on_quiet')}; background: {k('quiet')}; border-radius: 8px;
+    padding: 0 7px; font-size: {round(base_pt * 0.85, 1)}pt; }}
 QProgressBar#pollBar {{ background: {k('quiet')}; border: 0; border-radius: 3px;
     min-height: 6px; max-height: 6px; }}
 QProgressBar#pollBar::chunk {{ background: {_alpha(self.c['accent'], 150)}; border-radius: 3px; }}

@@ -87,12 +87,16 @@ def command(profile):
     return [sys.executable, "-m", "fedtail", "--profile", profile], None
 
 
-def launch(profile):
+def launch(profile, after=0.0):
     """Start fedtail with that profile, detached. If it is already running, the new
-    process asks it to show itself and leaves (SingleInstance)."""
+    process asks it to show itself and leaves (SingleInstance). after: seconds to
+    wait first (a restart of this very profile: let this window close)."""
     argv, cwd = command(profile)
-    log.info("starting profile %s", profile)
+    log.info("starting profile %s%s", profile, f" in {after} s" if after else "")
     env = dict(os.environ)
+    if after:
+        import shlex
+        argv = ["sh", "-c", f"sleep {float(after)}; exec " + shlex.join(argv)]
     subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True,
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL)

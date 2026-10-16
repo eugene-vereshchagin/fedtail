@@ -408,6 +408,12 @@ class MainWindow(QMainWindow):
             else:
                 a.triggered.connect(lambda _c=False, n=p["name"]: self.switch_profile(n))
         m.addSeparator()
+        merged = m.addAction(_("accounts_merge"))
+        merged.setCheckable(True)
+        merged.setChecked(bool(getattr(self.core, "others", None)))
+        merged.setToolTip(_("accounts_merge_tip"))
+        merged.setEnabled(not self.cfg["ui"]["merge"])  # the config decides then
+        merged.toggled.connect(self.set_merged)
         m.addAction(_("account_add"), self.add_profile)
 
     def switch_profile(self, name):
@@ -418,6 +424,15 @@ class MainWindow(QMainWindow):
         profiles.launch(name)
         if self.cfg["ui"]["switch_closes"]:
             QTimer.singleShot(300, self.quit)
+
+    def set_merged(self, on):
+        """All accounts in one window or not: remembered, then fedtail restarts."""
+        from ...core import profiles
+        primary = getattr(self.core, "primary", self.core)
+        primary.set_state("merge", ["all"] if on else [])
+        log.info("merge %s: restarting", "on" if on else "off")
+        profiles.launch(primary.paths.profile, after=1.5)
+        QTimer.singleShot(200, self.quit)
 
     def add_profile(self):
         from ...core import paths as paths_module

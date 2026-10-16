@@ -1,0 +1,445 @@
+"""All accounts in one window: several Cores behind the face of one.
+
+The window talks to a MergedCore exactly as to a Core. The main profile's posts
+keep their ids; the other accounts' posts, accounts and lists get theirs prefixed
+with the profile name ("work~01ABC"), so one id still says everything — which
+account received the post, and so which account a reply, a like or a boost goes
+from. Their posts also carry "_via" (the account's @handle) for the card to show.
+
+Lanes of the same name are merged (Home of both accounts is one Home); lists of
+the other accounts come as lanes of their own. Activity, follow requests, the
+command line and new (not reply) posts belong to the main account.
+"""
+
+import logging
+from concurrent.futures import Future
+
+from . import lanes as lanes_module
+from .events import Events
+from .model import real
+from .threads import Node
+
+log = logging.getLogger(__name__)
+
+SEP = "~"
+
+
+class MergedCore:
+    def __init__(self, primary, others):
+        """others: {profile name: Core}, in the order they should be listed."""
+        self.primary = primary
+        self.others = dict(others)
+        self.events = Events()
+        self.store = _Store(self)
+        primary.events.on("*", lambda n, p: self.events.emit(n, p))
+        for tag, core in self.others.items():
+            core.events.on("*", lambda n, p, t=tag: self._from_other(t, n, p))
+
+    # anything not merged is the main account's
+    def __getattr__(self, name):
+        return getattr(self.primary, name)
+
+    # ---- ids --------------------------------------------------------------------
+    def via(self, tag):
+        me = self.others[tag].me
+        return "@" + me["acct"] if me else tag
+
+    def split(self, x):
+        """A (possibly prefixed) id → (core, tag or None, the id on that core)."""
+        if isinstance(x, str) and SEP in x:
+            tag, _s, rest = x.partition(SEP)
+            if tag in self.others:
+                return self.others[tag], tag, rest
+        return self.primary, None, x
+
+    def _p(self, tag, x):
+        return f"{tag}{SEP}{x}" if tag and x else x
+
+    def wrap(self, tag, st):
+        """Another account's status in this window's terms (ids prefixed)."""
+        if not tag or not isinstance(st, dict):
+            return st
+        s = dict(st)
+        s["id"] = self._p(tag, st.get("id"))
+        for k in ("in_reply_to_id", "in_reply_to_account_id"):
+            if s.get(k):
+                s[k] = self._p(tag, s[k])
+        if isinstance(s.get("account"), dict):
+            s["account"] = dict(s["account"], id=self._p(tag, s["account"].get("id")))
+        if s.get("mentions"):
+            s["mentions"] = [dict(m, id=self._p(tag, m.get("id"))) for m in s["mentions"]]
+        if isinstance(s.get("reblog"), dict):
+            s["reblog"] = self.wrap(tag, s["reblog"])
+        s["_via"] = self.via(tag)
+        s["_profile"] = tag
+        return s
+
+    def own(self, status):
+        """(core, tag, the status as that core knows it) for a status in window terms."""
+        core, tag, sid = self.split(status["id"] if isinstance(status, dict) else status)
+        if tag is None:
+            return core, None, status
+        got = core.store.get_status(sid)
+        return core, tag, got if got is not None else self._unwrap(tag, status)
+
+    def _unwrap(self, tag, st):
+        if not isinstance(st, dict):
+            return st
+        s = {k: v for k, v in st.items() if k not in ("_via", "_profile")}
+        cut = len(tag) + len(SEP)
+        for k in ("id", "in_reply_to_id", "in_reply_to_account_id"):
+            if isinstance(s.get(k), str) and s[k].startswith(tag + SEP):
+                s[k] = s[k][cut:]
+        if isinstance(s.get("account"), dict):
+            a = s["account"].get("id", "")
+            s["account"] = dict(s["account"], id=a[cut:] if a.startswith(tag + SEP) else a)
+        if isinstance(s.get("reblog"), dict):
+            s["reblog"] = self._unwrap(tag, s["reblog"])
+        return s
+
+    def _then(self, fut, fn):
+        """A future whose result is fn(result of fut)."""
+        out = Future()
+
+        def done(f):
+            if f.exception() is not None:
+                out.set_exception(f.exception())
+            else:
+                try:
+                    out.set_result(fn(f.result()))
+                except Exception as e:  # noqa: BLE001 — handed to the caller
+                    out.set_exception(e)
+        fut.add_done_callback(done)
+        return out
+
+    def _wrapped(self, tag, fut):
+        return fut if tag is None else self._then(fut, lambda r: self.wrap(tag, r))
+
+    # ---- events from the other accounts -------------------------------------------
+    def _from_other(self, tag, name, payload):
+        if name == "lanes_updated":
+            self.events.emit(name, {self._lane_name(tag, k): [self._p(tag, i) for i in v]
+                                    for k, v in payload.items()})
+        elif name in ("status_updated",):
+            self.events.emit(name, self.wrap(tag, payload))
+        elif name == "status_deleted":
+            self.events.emit(name, self._p(tag, payload))
+        elif name == "read_changed":
+            self.events.emit(name, [self._p(tag, i) for i in payload])
+        elif name == "arrived":
+            self.events.emit(name, [(self._p(tag, a), self._p(tag, b)) for a, b in payload])
+        elif name == "thread_grew":
+            self.events.emit(name, self._p(tag, payload))
+        elif name == "notify":
+            items = [(self._lane_name(tag, lane), self.wrap(tag, x)) for lane, x in payload
+                     if lane not in ("requests", "activity")]
+            if items:
+                self.events.emit(name, items)
+        elif name in ("parents", "lists_changed", "subs_changed"):
+            self.events.emit(name, payload)
+        elif name == "ready":
+            self.events.emit("lists_changed", self.lists)
+            self.events.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+        elif name == "error":
+            self.events.emit(name, f"{self.via(tag)}: {payload}")
+        # ready, me_updated, requests and activity of the others stay theirs
+
+    @staticmethod
+    def _lane_name(tag, name):
+        if lanes_module.is_list(name):
+            return lanes_module.LIST_PREFIX + tag + SEP + name[len(lanes_module.LIST_PREFIX):]
+        return name
+
+    def _own_lane(self, name):
+        """A merged lane name → [(core, tag, its name there)]."""
+        if lanes_module.is_list(name):
+            core, tag, lid = self.split(name[len(lanes_module.LIST_PREFIX):])
+            return [(core, tag, lanes_module.LIST_PREFIX + lid)]
+        out = [(self.primary, None, name)]
+        out += [(c, t, name) for t, c in self.others.items() if name in c.lane_by_name]
+        return out
+
+    # ---- lanes --------------------------------------------------------------------
+    @property
+    def lists(self):
+        out = list(self.primary.lists)
+        for tag, core in self.others.items():
+            out += [dict(x, id=self._p(tag, x["id"]), title=f"{x['title']} · {self.via(tag)}")
+                    for x in core.lists]
+        return out
+
+    @property
+    def lanes(self):
+        out = list(self.primary.lanes)
+        for tag, core in self.others.items():
+            for lane in core.lanes:
+                if lanes_module.is_list(lane.name):
+                    out.append(_renamed(lane, self._lane_name(tag, lane.name)))
+        return out
+
+    @property
+    def lane_by_name(self):
+        return {lane.name: lane for lane in self.lanes}
+
+    def lane_title(self, name):
+        if lanes_module.is_list(name):
+            lid = name[len(lanes_module.LIST_PREFIX):]
+            return next((x["title"] for x in self.lists if x["id"] == lid), "?")
+        return None
+
+    def lane_entries(self, name):
+        parts = self._own_lane(name)
+        out, seen = [], set()
+        for core, tag, own in parts:
+            if own not in core.lane_by_name:
+                continue
+            for item, st in core.lane_entries(own):
+                uri = real(st).get("uri") or real(st).get("id")
+                if uri in seen:  # the same post through two accounts: the first one
+                    continue
+                seen.add(uri)
+                out.append((self._p(tag, item), self.wrap(tag, st)))
+        if len(parts) > 1 and any(t for _c, t, _n in parts):
+            by_time = getattr(self.primary.lane_by_name.get(name), "by_status_time", False)
+            out.sort(key=lambda e: (real(e[1]) if by_time else e[1]).get("created_at", ""))
+        return out
+
+    def unread_ids(self, entries):
+        groups = {}
+        for item, st in entries:
+            core, tag, sid = self.split(st["id"])
+            groups.setdefault(tag, (core, []))[1].append((item, dict(st, id=sid)))
+        out = set()
+        for tag, (core, own) in groups.items():
+            out |= {self._p(tag, i) for i in core.unread_ids(own)}
+        return out
+
+    def unread_count(self, name):
+        return len(self.unread_ids(self.lane_entries(name)))
+
+    def mark_read(self, status_ids):
+        groups = {}
+        for x in status_ids:
+            core, tag, sid = self.split(x)
+            groups.setdefault(tag, (core, []))[1].append(sid)
+        for _tag, (core, ids) in groups.items():
+            core.mark_read(ids)
+
+    def set_active_lane(self, name):
+        for core, _tag, own in self._own_lane(name) if name else []:
+            core.set_active_lane(own)
+        if not name:
+            for core in [self.primary, *self.others.values()]:
+                core.set_active_lane(None)
+
+    def load_older(self, name):
+        futs = [core.load_older(own) for core, _t, own in self._own_lane(name)
+                if own in core.lane_by_name]
+        return self._then(futs[0], lambda n: n) if len(futs) == 1 else \
+            self.primary.submit(lambda: sum(f.result() for f in futs))
+
+    # ---- what cards need ----------------------------------------------------------
+    def _by_core(self, statuses):
+        groups = {}
+        for st in statuses:
+            core, tag, own = self.own(st)
+            groups.setdefault(tag, (core, []))[1].append(own)
+        return groups
+
+    def parents_for(self, statuses):
+        out = {}
+        for tag, (core, own) in self._by_core(statuses).items():
+            for k, v in core.parents_for(own).items():
+                out[self._p(tag, k)] = self.wrap(tag, v) if isinstance(v, dict) else v
+        return out
+
+    def parent_of(self, status):
+        core, tag, own = self.own(status)
+        p = core.parent_of(own)
+        return self.wrap(tag, p) if isinstance(p, dict) else p
+
+    def ensure_parents(self, statuses):
+        for _tag, (core, own) in self._by_core(statuses).items():
+            core.ensure_parents(own)
+
+    def my_replies(self, statuses):
+        out = {}
+        for tag, (core, own) in self._by_core(statuses).items():
+            for k, v in core.my_replies(own).items():
+                out[self._p(tag, k)] = [self.wrap(tag, x) for x in v]
+        return out
+
+    def check_my_replies(self, statuses):
+        for _tag, (core, own) in self._by_core(statuses).items():
+            core.check_my_replies(own)
+
+    def short_ids(self, statuses):
+        # #abc names posts of the main account only (the command line is its)
+        return self.primary.short_ids([s for s in statuses if self.split(s["id"])[1] is None])
+
+    # ---- actions on a post go from the account that received it ---------------------
+    def _act(self, method, status, *a, **kw):
+        core, tag, own = self.own(status)
+        return self._wrapped(tag, getattr(core, method)(own, *a, **kw))
+
+    def favourite(self, status):
+        return self._act("favourite", status)
+
+    def boost(self, status, *a, **kw):
+        return self._act("boost", status, *a, **kw)
+
+    def bookmark(self, status, on=None):
+        return self._act("bookmark", status, on)
+
+    def vote(self, status, choices):
+        return self._act("vote", status, choices)
+
+    def refresh_poll(self, status):
+        return self._act("refresh_poll", status)
+
+    def edit(self, status, *a, **kw):
+        return self._act("edit", status, *a, **kw)
+
+    def delete(self, status):
+        core, _tag, own = self.own(status)
+        return core.delete(own)
+
+    def source(self, status):
+        core, _tag, own = self.own(status)
+        return core.source(own)
+
+    def history(self, status):
+        core, tag, own = self.own(status)
+        return self._then(core.history(own), lambda v: [self.wrap(tag, x) for x in v or []])
+
+    def subscribed(self, status):
+        core, _tag, own = self.own(status)
+        return core.subscribed(own)
+
+    def subscribe(self, status):
+        core, _tag, own = self.own(status)
+        return core.subscribe(own)
+
+    def unsubscribe(self, status):
+        core, _tag, own = self.own(status)
+        return core.unsubscribe(own)
+
+    def reply_visibility(self, status):
+        if status is None:
+            return self.primary.reply_visibility(None)
+        core, _tag, own = self.own(status)
+        return core.reply_visibility(own)
+
+    def post(self, text, visibility, reply_to=None, *a, **kw):
+        core, tag, rid = self.split(reply_to) if reply_to else (self.primary, None, None)
+        return self._wrapped(tag, core.post(text, visibility, rid, *a, **kw))
+
+    def thread(self, sid):
+        core, tag, own = self.split(sid)
+        if tag is None:
+            return core.thread(own)
+        return self._then(core.thread(own), lambda nodes: [
+            Node(self.wrap(tag, n.status), n.depth, n.number) for n in nodes])
+
+    # ---- people of another account: through that account ---------------------------
+    def _acc(self, method, acc_id, *a, **kw):
+        core, tag, own = self.split(acc_id)
+        fut = getattr(core, method)(own, *a, **kw)
+        if tag is None:
+            return fut
+        return self._then(fut, lambda r: self._wrap_any(tag, r))
+
+    def _wrap_any(self, tag, r):
+        if isinstance(r, list):
+            return [self.wrap(tag, x) if isinstance(x, dict) and "content" in x else x
+                    for x in r]
+        if isinstance(r, dict) and "acct" in r and "id" in r:
+            return dict(r, id=self._p(tag, r["id"]))
+        return r
+
+    def account(self, acc_id):
+        return self._acc("account", acc_id)
+
+    def relationship(self, acc_id):
+        return self._acc("relationship", acc_id)
+
+    def follow(self, acc_id, on=True):
+        return self._acc("follow", acc_id, on)
+
+    def mute(self, acc_id, on=True):
+        return self._acc("mute", acc_id, on)
+
+    def block(self, acc_id, on=True):
+        return self._acc("block", acc_id, on)
+
+    def account_statuses(self, acc_id, max_id=None):
+        core, tag, own = self.split(acc_id)
+        _c, _t, mid = self.split(max_id) if max_id else (None, None, None)
+        return self._then(core.account_statuses(own, mid),
+                          lambda page: [self.wrap(tag, s) for s in page])
+
+    def followed_among(self, accounts):
+        if not accounts:
+            return self.primary.followed_among([])
+        core, tag, _x = self.split(accounts[0]["id"])
+        own = [dict(a, id=self.split(a["id"])[2]) for a in accounts]
+        return self._then(core.followed_among(own), lambda r: [
+            dict(a, id=self._p(tag, a["id"])) for a in r])
+
+    def lists_of(self, acc_id):
+        core, tag, own = self.split(acc_id)
+        return {self._p(tag, x) for x in core.lists_of(own)}
+
+    def set_in_list(self, list_id, acc_id, on):
+        core, _tag, lid = self.split(list_id)
+        return core.set_in_list(lid, self.split(acc_id)[2], on)
+
+    # ---- the whole family ------------------------------------------------------
+    def connect(self):
+        for core in self.others.values():
+            if core.logged_in:
+                core.connect()
+        return self.primary.connect()
+
+    def start_polling(self):
+        self.primary.start_polling()
+        for core in self.others.values():
+            if core.logged_in:
+                core.start_polling()
+
+    def poll_now(self):
+        for core in [self.primary, *self.others.values()]:
+            core.poll_now()
+
+    def shutdown(self):
+        for core in [*self.others.values(), self.primary]:
+            core.shutdown()
+
+
+class _Store:
+    """The bits of the store the window reads, routed by id."""
+
+    def __init__(self, merged):
+        self.m = merged
+
+    def get_status(self, sid):
+        core, tag, own = self.m.split(sid)
+        return self.m.wrap(tag, core.store.get_status(own))
+
+    def read_set(self, ids):
+        out = set()
+        groups = {}
+        for x in ids:
+            core, tag, own = self.m.split(x)
+            groups.setdefault(tag, (core, []))[1].append(own)
+        for tag, (core, own) in groups.items():
+            out |= {self.m._p(tag, i) for i in core.store.read_set(own)}
+        return out
+
+    def __getattr__(self, name):
+        return getattr(self.m.primary.store, name)
+
+
+def _renamed(lane, name):
+    from dataclasses import replace
+    return replace(lane, name=name)

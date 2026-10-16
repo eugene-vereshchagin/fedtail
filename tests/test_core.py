@@ -115,6 +115,66 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertEqual(cu.update(new, example), new)
 
 
+class MergedTest(TmpDir):
+    """Two accounts in one window: the other one's ids prefixed, actions routed."""
+
+    def setUp(self):
+        super().setUp()
+        from fedtail.core.merged import MergedCore
+        FakeApi.world = home = fakes.World()
+        work = fakes.World()
+        work.me = dict(ME, id="W", acct="w", username="w")
+        FakeApi.worlds = {"https://work.example": work}
+        self.addCleanup(setattr, FakeApi, "worlds", {})
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}})
+        cores = []
+        for name, server in (("home", "https://example.test"), ("work", "https://work.example")):
+            p = paths.resolve(name, config=str(self.tmp / f"{name}.toml"),
+                              data=str(self.tmp / name))
+            auth.save(p.auth_file, {"server": server, "token": "tok"})
+            core = Core(cfg, p, api_class=FakeApi)
+            self.addCleanup(core.shutdown)
+            cores.append(core)
+        self.home, self.work = home, work
+        self.m = MergedCore(cores[0], {"work": cores[1]})
+        self.events = []
+        self.m.events.on("*", lambda n, pl: self.events.append((n, pl)))
+
+    def test_lanes_merge_and_actions_route(self):
+        m = self.m
+        self.home.add(status("010", BOB, minute=10), home=True)
+        shared = status("010", BOB, minute=10)  # the same post reached both accounts
+        self.work.add(dict(shared, id="499"), home=True)
+        self.work.add(status("500", NEWS, minute=11, text="через work"), home=True)
+        self.work.add(status("501", BOB, minute=12, text="тоже через work"), home=True)
+        for core in (m.primary, m.others["work"]):
+            core.connect().result()
+            core.poll_once()
+        got = m.lane_entries("people")
+        self.assertEqual([st["id"] for _i, st in got], ["010", "work~501"])  # bob, no dup
+        self.assertEqual(got[1][1]["_via"], "@w")
+        self.assertEqual(got[1][1]["account"]["id"], "work~B")
+        self.assertEqual(m.unread_ids(got), {"010", "work~501"})
+        self.assertEqual(m.unread_count("people"), 2)
+        m.mark_read(["work~501"])
+        self.assertEqual(m.unread_ids(got), {"010"})
+        self.assertIn(("read_changed", ["work~501"]), self.events)  # translated back
+        self.assertEqual(m.store.get_status("work~501")["id"], "work~501")
+        # a like and a reply go from the account that got the post
+        m.favourite(m.store.get_status("work~501")).result()
+        self.assertTrue(self.work.statuses["501"]["favourited"])
+        self.assertFalse(self.home.statuses["010"].get("favourited"))
+        st = m.post("ответ", "private", reply_to="work~501").result()
+        self.assertTrue(st["id"].startswith("work~"))
+        self.assertEqual(self.work.posted[-1][2], "501")
+        self.assertEqual(self.home.posted, [])
+        m.post("новый пост", "private").result()  # new posts: the main account
+        self.assertEqual(self.home.posted[-1][0], "новый пост")
+        nodes = m.thread("work~501").result()
+        self.assertTrue(all(n.status["id"].startswith("work~") for n in nodes))
+        self.assertEqual(m.relationship("work~B").result()["id"], "B")
+
+
 class PathsAuthTest(TmpDir):
     def test_profiles_listing(self):
         from fedtail.core import profiles

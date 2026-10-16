@@ -20,6 +20,7 @@ DEFAULTS = {
         "esc": "curtain",
         "switch_closes": True,
         "start_lane": "none",
+        "merge": [],
         "sidebar_footer": True,
         "sidebar_groups": True,
         "command_line": True,
@@ -213,6 +214,10 @@ def validate(user):
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):
         errors.append("lanes.extra_bots must be a list of strings")
     langs = [cfg["post"]["language"]] + cfg["post"]["languages"]
+    bad_merge = [x for x in cfg["ui"]["merge"]
+                 if not (isinstance(x, str) and re.fullmatch(r"[A-Za-z0-9_.-]+", x))]
+    if bad_merge:
+        errors.append(f"ui.merge: {bad_merge} — profile names, or [\"all\"]")
     start = cfg["ui"]["start_lane"]
     if start not in {"none", "last"} | LANE_NAMES:
         errors.append(f"ui.start_lane = {start!r}; allowed: none, last or a lane: "

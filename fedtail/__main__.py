@@ -126,12 +126,48 @@ def main(argv=None):
     frontend = frontends.load(args.ui or cfg["ui"]["frontend"])
     core = Core(cfg, where)
     core.new_options = new_options
+    core, held = merge_accounts(core, where.profile)
     try:
         code = frontend.run(core, instance, sys.argv[:1])
         logging.getLogger("fedtail").info("==== session end, exit code %s", code)
         return code
     finally:
         instance.close()
+        for other in held:
+            other.close()
+
+
+def merge_accounts(core, me):
+    """ui.merge (or the window's "All accounts in one window"): the other profiles'
+    Cores join this one behind a MergedCore. A profile already running in its own
+    window stays there. Returns (the core to use, the instance locks held)."""
+    from .core import profiles
+    log = logging.getLogger("fedtail")
+    want = core.cfg["ui"]["merge"] or core.get_state("merge") or []
+    if not want:
+        return core, []
+    names = [p["name"] for p in profiles.listing() if p["logged_in"] and p["name"] != me] \
+        if "all" in want else [n for n in want if n != me]
+    others, held = {}, []
+    for name in names:
+        try:
+            where = paths.resolve(name)
+            cfg, _warn = config.load(where.config_file)
+        except (ValueError, config.ConfigError) as e:
+            log.warning("merge: profile %s skipped: %s", name, e)
+            continue
+        lock = SingleInstance(where.socket_file)
+        if lock.poke_existing():
+            log.warning("merge: profile %s runs in its own window, not merged", name)
+            continue
+        lock.listen(lambda _m: None)
+        held.append(lock)
+        others[name] = Core(cfg, where)
+    if not others:
+        return core, held
+    from .core.merged import MergedCore
+    log.info("merged window: %s + %s", me, ", ".join(others))
+    return MergedCore(core, others), held
 
 
 if __name__ == "__main__":

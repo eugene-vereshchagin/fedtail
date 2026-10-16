@@ -45,11 +45,12 @@ def _page(items, limit, max_id=None, min_id=None):
 class FakeApi:
     """Use FakeApi.world to share state between instances created by Core."""
     world = None
+    worlds = {}  # server -> World, for more than one account at once
 
     def __init__(self, server="https://example.test", token=None, session=None):
         self.base = server if server.startswith("http") else "https://" + server
         self.token = token
-        w = FakeApi.world
+        w = FakeApi.worlds.get(self.base) or FakeApi.world
         if w is None:
             w = FakeApi.world = World()
         self.w = w
@@ -68,7 +69,7 @@ class FakeApi:
     def me(self):
         if self.w.fail_auth:
             raise ApiError(401, "nope")
-        return ME
+        return self.w.me
 
     def instance(self):
         return {"version": "0.20.0 git-abc (gotosocial)",
@@ -330,6 +331,7 @@ class World:
         self.statuses, self.home, self.local, self.notifications = {}, [], [], []
         self.requests = []
         self.posted = []
+        self.me = ME
         self.remote = {}  # uri -> status my server hasn't got yet (search resolves it)
         self.languages = []  # the language of each post, "" — none given
         self.calls = []
