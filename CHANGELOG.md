@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 — in progress
+## 0.6.1 — 2026-10-17
 
 - The config is in chapters now — look & window, reading, lanes, posts, notifications… with
   a list of them at the top and sub-headings inside `[ui]` — and every option is written with
