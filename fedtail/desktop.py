@@ -15,8 +15,12 @@ def _data_home():
     return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
 
 
-def entry_text(profile=DEFAULT_PROFILE, source_dir=None):
-    """The .desktop file. From a git checkout it runs `python3 -m fedtail` there."""
+def entry_text(profile=DEFAULT_PROFILE, source_dir=None, icon="fedtail"):
+    """The .desktop file. From a git checkout it runs `python3 -m fedtail` there.
+
+    icon is best a full path: KWin and the task manager take the icon of a window
+    from its .desktop entry, and a bare name has to be found in the icon theme —
+    which Plasma caches, so a freshly installed one often shows as a blank page."""
     args = "" if profile == DEFAULT_PROFILE else f" --profile {profile}"
     if source_dir:
         exec_line = f"{sys.executable} -m fedtail{args}"
@@ -35,13 +39,19 @@ def entry_text(profile=DEFAULT_PROFILE, source_dir=None):
         "Comment[ru]=Читать и писать в GoToSocial, Mastodon и весь федиверс\n"
         f"Exec={exec_line}\n"
         f"{path_line}"
-        "Icon=fedtail\n"
+        f"Icon={icon}\n"
         "Terminal=false\n"
         "Categories=Network;Chat;InstantMessaging;Qt;\n"
         "Keywords=mastodon;gotosocial;fediverse;point;juick;\n"
         "StartupWMClass=fedtail\n"
         "StartupNotify=true\n"
     )
+
+
+def desktop_id(profile=DEFAULT_PROFILE):
+    """The .desktop file's name without .desktop: what the window says it is, so
+    the task bar finds its icon and the unread count lands on the right button."""
+    return "fedtail" if profile == DEFAULT_PROFILE else f"fedtail-{profile}"
 
 
 def source_dir():
@@ -58,9 +68,10 @@ def install(profile=DEFAULT_PROFILE):
     icons.mkdir(parents=True, exist_ok=True)
     icon_src = resources.files("fedtail").joinpath("data/icons/fedtail.svg")
     (icons / "fedtail.svg").write_bytes(icon_src.read_bytes())
-    stem = "fedtail" if profile == DEFAULT_PROFILE else f"fedtail-{profile}"
+    stem = desktop_id(profile)
     entry = apps / f"{stem}.desktop"
-    entry.write_text(entry_text(profile, source_dir()), "utf-8")
+    entry.write_text(entry_text(profile, source_dir(), icon=str(icons / "fedtail.svg")),
+                     "utf-8")
     # let the desktop notice right away (best effort)
     for cmd in (["update-desktop-database", str(apps)],
                 ["gtk-update-icon-cache", "-q", "-t", str(data / "icons" / "hicolor")],

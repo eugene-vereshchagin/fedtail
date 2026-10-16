@@ -212,10 +212,8 @@ class MainWindow(QMainWindow):
     # ---- layout -------------------------------------------------------------------
     def _build(self):
         self.tray = None
-        from ...core.paths import DEFAULT_PROFILE
-        prof = self.core.paths.profile
-        self.launcher = badge.Launcher("fedtail" if prof == DEFAULT_PROFILE
-                                       else f"fedtail-{prof}") \
+        from ...desktop import desktop_id
+        self.launcher = badge.Launcher(desktop_id(self.core.paths.profile)) \
             if self.cfg["ui"]["icon_count"] else None
         central = QWidget()
         central.setObjectName("central")

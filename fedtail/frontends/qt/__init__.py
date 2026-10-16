@@ -17,7 +17,8 @@ from .window import MainWindow
 def run(core, instance, argv):
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
-    app.setDesktopFileName("fedtail")
+    from ...desktop import desktop_id
+    app.setDesktopFileName(desktop_id(core.paths.profile))
     app.setQuitOnLastWindowClosed(False)
     theme = themes.apply(app, core.cfg)
     if core.cfg["ui"]["themed_icon"]:

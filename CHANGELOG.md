@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- `--install-desktop` writes the icon's full path into the menu entry: Plasma takes a
+  window's icon from its entry, and a bare name in a freshly filled icon theme often came
+  out as a blank page on the task bar and in the title bar. A profile's window now names
+  its own entry (`fedtail-<profile>`), not the default one.
 - Sidebar sections fold: a click on "Lists" (or any section title) hides its lanes and
   shows their unread as one number next to the title; remembered across restarts.
 - The unread count on the icon: drawn into the tray icon and shown on the task bar button

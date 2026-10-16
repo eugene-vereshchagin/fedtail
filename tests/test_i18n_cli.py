@@ -70,7 +70,9 @@ class CliTest(unittest.TestCase):
             entry = (Path(d) / "applications" / "fedtail-croco.desktop").read_text()
             self.assertIn("-m fedtail --profile croco", entry)
             self.assertIn(f"Path={ROOT}", entry)
-            self.assertIn("Icon=fedtail", entry)
+            # a full path: Plasma doesn't have to find it in a cached icon theme
+            self.assertIn("Icon=" + str(Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"),
+                          entry)
             svg = Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"
             self.assertTrue(svg.read_text().startswith("<svg"))
 
