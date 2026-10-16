@@ -559,7 +559,8 @@ class _Segmented(QWidget):
         self.current = current
         self.buttons = {}
         h = QHBoxLayout(self)
-        h.setContentsMargins(0, 0, 0, 0)
+        # marks need air around the group, or two groups read as one row of choices
+        h.setContentsMargins(0 if style == "segmented" else 14, 0, 0, 0)
         h.setSpacing(0 if style == "segmented" else 12)
         for i, (key, text, tip) in enumerate(options):
             if style == "check":
