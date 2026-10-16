@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.4.0 — in progress
+
 ## 0.3.0 — 2026-10-16
 
 - A profile's card no longer looks like one more post: a tinted block with an accent edge,
