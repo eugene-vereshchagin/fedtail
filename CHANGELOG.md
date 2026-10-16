@@ -2,6 +2,10 @@
 
 ## 0.3.0 — in progress
 
+- The debugging mode can be turned off: `debug.mode` = `auto` (on before 1.0 and in
+  development builds, off in releases), `on` or `off`. Off: warnings and errors only, a few
+  MB in the profile's data folder, no stats, no freeze watchdog; crash traces stay.
+  `--debug` turns it on for one run.
 - Logs where you can find them: `~/fedtail-logs/<profile>/`, a new file at every start and
   every hour (`2026-10-16_15-04-12.log`), `latest.log` pointing at the current one, the
   folder kept under `debug.keep_mb` (500 MB) — the oldest go by themselves. `debug.log_dir`

@@ -92,6 +92,7 @@ DEFAULTS = {
     "poll": {"interval_seconds": 90},
     "debug": {
         "level": "debug",
+        "mode": "auto",
         "log_dir": "~/fedtail-logs",
         "log_mb": 10,
         "keep_mb": 500,
@@ -116,6 +117,7 @@ CHOICES = {
     ("notify", "backend"): {"auto", "desktop", "tray"},
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
     ("debug", "level"): {"debug", "info", "warning"},
+    ("debug", "mode"): {"auto", "on", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
 }

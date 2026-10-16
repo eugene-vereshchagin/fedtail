@@ -29,7 +29,7 @@ def _qt_message(kind, context, message):
 def install(app, win, cfg):
     qInstallMessageHandler(_qt_message)
 
-    seconds = float(cfg["debug"]["watchdog_seconds"])
+    seconds = float(cfg["debug"]["watchdog_seconds"]) if diag.is_on() else 0
     dog = diag.Watchdog(seconds)
     beat = QTimer(app)
     beat.setInterval(1000)

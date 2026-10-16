@@ -50,15 +50,38 @@ DATEFMT = "%Y-%m-%d %H:%M:%S"
 LEVELS = {"debug": logging.DEBUG, "info": logging.INFO, "warning": logging.WARNING}
 
 _state = {"dir": None, "stacks": None, "crash": None, "providers": {}, "stats_thread": None,
-          "cpu": None, "rss_warned": 0}
+          "cpu": None, "rss_warned": 0, "on": True}
+
+
+def is_on():
+    """The debugging mode of this run (after setup())."""
+    return _state.get("on", True)
+
+
+def enabled(cfg, forced=False):
+    """Is the debugging mode on? debug.mode: "on", "off" or "auto" — on for
+    versions before 1.0 and for development builds, off for releases from 1.0.
+    --debug turns it on whatever the config says."""
+    if forced:
+        return True
+    mode = ((cfg or {}).get("debug") or {}).get("mode", "auto")
+    if mode != "auto":
+        return mode == "on"
+    from . import __version__
+    try:
+        major = int(__version__.split(".")[0])
+    except ValueError:
+        major = 0
+    return major < 1 or ".dev" in __version__
 
 
 def logs_dir(paths, cfg=None):
-    """The profile's log folder: the one in use, or where debug.log_dir puts it."""
+    """The profile's log folder: the one in use, or where debug.log_dir puts it.
+    With debugging off, a small log of warnings stays in the data folder, logs/."""
     if _state["dir"] is not None:
         return _state["dir"]
     where = ((cfg or {}).get("debug") or {}).get("log_dir", DEFAULT_LOG_DIR)
-    if not where:
+    if not where or (cfg is not None and not enabled(cfg)):
         return paths.data_dir / "logs"
     return Path(os.path.expanduser(where)) / paths.profile
 
@@ -138,9 +161,13 @@ class SessionLog(logging.Handler):
 
 # ---- setup ---------------------------------------------------------------------------
 def setup(paths, cfg, console_debug=False):
-    """Logging to a rotating file (and warnings to the terminal), crash traces,
-    stack dumps on SIGUSR1, uncaught exceptions of every thread into the log."""
+    """Logging to session files (and warnings to the terminal), crash traces,
+    stack dumps on SIGUSR1, uncaught exceptions of every thread into the log.
+    With the debugging mode off (debug.mode): warnings and errors only, in the data
+    folder, a few MB at most; crash traces stay."""
     d = cfg.get("debug", {})
+    on = enabled(cfg, console_debug)
+    _state["on"] = on
     _state["dir"] = None
     folder = logs_dir(paths, cfg)
     folder.mkdir(parents=True, exist_ok=True)
@@ -151,8 +178,12 @@ def setup(paths, cfg, console_debug=False):
     root.setLevel(logging.DEBUG)
     fmt = logging.Formatter(FORMAT, DATEFMT)
 
-    fh = SessionLog(folder, max_mb=d.get("log_mb", 10), keep_mb=d.get("keep_mb", 500))
-    fh.setLevel(LEVELS.get(d.get("level", "debug"), logging.DEBUG))
+    if on:
+        fh = SessionLog(folder, max_mb=d.get("log_mb", 10), keep_mb=d.get("keep_mb", 500))
+        fh.setLevel(LEVELS.get(d.get("level", "debug"), logging.DEBUG))
+    else:  # an ordinary user's run: what went wrong, nothing else
+        fh = SessionLog(folder, max_mb=1, keep_mb=5)
+        fh.setLevel(logging.WARNING)
     fh.setFormatter(fmt)
     root.addHandler(fh)
 
@@ -295,7 +326,7 @@ def log_stats(rss_warn_mb=1500):
 def start_stats(cfg):
     d = cfg.get("debug", {})
     minutes = float(d.get("stats_minutes", 5))
-    if minutes <= 0 or _state["stats_thread"]:
+    if minutes <= 0 or _state["stats_thread"] or not _state.get("on", True):
         return
 
     def loop():

@@ -79,6 +79,36 @@ class DiagTest(unittest.TestCase):
         self.assertIn("config.toml", names)
         self.assertNotIn(b"SECRET", everything)  # the token never goes in
 
+    def test_debug_mode_switch(self):
+        import fedtail
+        self.assertTrue(diag.enabled({"debug": {"mode": "on"}}))
+        self.assertFalse(diag.enabled({"debug": {"mode": "off"}}))
+        self.assertTrue(diag.enabled({"debug": {"mode": "off"}}, forced=True))  # --debug
+        keep = fedtail.__version__
+        try:
+            fedtail.__version__ = "1.2.0"
+            self.assertFalse(diag.enabled({"debug": {"mode": "auto"}}))  # a release: quiet
+            fedtail.__version__ = "1.3.0.dev4"
+            self.assertTrue(diag.enabled({"debug": {"mode": "auto"}}))
+            fedtail.__version__ = "0.9.0"
+            self.assertTrue(diag.enabled({"debug": {"mode": "auto"}}))   # before 1.0: on
+        finally:
+            fedtail.__version__ = keep
+        cfg, _ = config.validate({"debug": {"mode": "off",
+                                            "log_dir": str(Path(self._tmp.name) / "logs")}})
+        folder = diag.setup(self.paths, cfg)
+        self.assertEqual(folder, self.paths.data_dir / "logs")  # not the debugging folder
+        self.assertFalse(diag.is_on())
+        logging.getLogger("fedtail.x").info("chatter")
+        logging.getLogger("fedtail.x").warning("trouble")
+        for h in logging.getLogger().handlers:
+            h.flush()
+        text = (folder / "latest.log").read_text("utf-8")
+        self.assertIn("trouble", text)
+        self.assertNotIn("chatter", text)
+        diag._state["dir"] = None
+        diag._state["on"] = True
+
     def test_session_files_split_and_capped(self):
         folder = Path(self._tmp.name) / "split"
         folder.mkdir()
