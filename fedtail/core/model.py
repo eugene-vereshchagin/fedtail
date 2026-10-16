@@ -59,6 +59,23 @@ def id_after(a, b):
     return a > b
 
 
+_WHO = {"everyone": ["public"], "followers": ["author", "followers", "mentioned"],
+        "following": ["author", "following", "mentioned"], "mentioned": ["author", "mentioned"],
+        "me": ["author"]}
+
+
+def interaction_policy(post_cfg):
+    """GoToSocial's interaction policy for a new post from post.who_can_reply / _boost /
+    _like; None when all three are left to the account's settings."""
+    out = {}
+    for key, field in (("who_can_reply", "can_reply"), ("who_can_boost", "can_reblog"),
+                       ("who_can_like", "can_favourite")):
+        who = post_cfg.get(key) or ""
+        if who in _WHO:
+            out[field] = {"always": list(_WHO[who]), "with_approval": []}
+    return out or None
+
+
 def snippet(st, n=160):
     st = real(st)
     t = re.sub(r"\s+", " ", html_to_text(st.get("content", "")))

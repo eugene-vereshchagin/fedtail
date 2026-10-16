@@ -721,6 +721,18 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
 
+    def test_interaction_policy_for_gotosocial(self):
+        from fedtail.core.model import interaction_policy
+        self.assertIsNone(interaction_policy({}))
+        self.assertEqual(interaction_policy({"who_can_reply": "followers", "who_can_like": ""}),
+                         {"can_reply": {"always": ["author", "followers", "mentioned"],
+                                        "with_approval": []}})
+        core, w = self.make(post={"who_can_reply": "mentioned"})
+        core.connect().result()  # the fake server says it's GoToSocial
+        core.post("тест", "public").result()
+        self.assertEqual(w.extras[-1]["interaction_policy"]["can_reply"]["always"],
+                         ["author", "mentioned"])
+
     def test_block_domain_and_note(self):
         core, w = self.make()
         core.connect().result()

@@ -27,7 +27,7 @@ from . import api as api_module
 from . import auth, counters, lanes, search, sources, subs, threads
 from .api import Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
-from .model import id_after, narrower, real
+from .model import id_after, interaction_policy, narrower, real
 from .store import Store, now_iso, sort_key
 
 log = logging.getLogger(__name__)
@@ -1301,6 +1301,9 @@ class Core:
                 extra["quoted_status_id"] = quote
             if self.cfg["post"].get("quote_policy"):
                 extra["quote_policy"] = self.cfg["post"]["quote_policy"]
+            policy = interaction_policy(self.cfg["post"])
+            if policy and self.caps.software == "gotosocial":
+                extra["interaction_policy"] = policy
             st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
                                       **extra)
             log.debug("posted %s", st.get("id"))

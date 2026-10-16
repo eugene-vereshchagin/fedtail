@@ -86,6 +86,9 @@ DEFAULTS = {
         "report_forward": True,
         "quote_policy": '',
         "quote_action": True,
+        "who_can_reply": '',
+        "who_can_boost": '',
+        "who_can_like": '',
     },
     "notify": {
         "enabled": True,
@@ -125,6 +128,9 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("post", "who_can_like"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
+    ("post", "who_can_boost"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
+    ("post", "who_can_reply"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "quote_policy"): {'', 'public', 'followers', 'nobody'},
     ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},

@@ -2,6 +2,9 @@
 
 ## 0.8.0 — in progress
 
+- Who may reply to, boost and like your new posts, on GoToSocial: `post.who_can_reply`,
+  `who_can_boost`, `who_can_like` — everyone, followers, those you follow, the mentioned, or
+  just you; left empty, the account's settings decide. Other servers aren't sent it.
 - Block a whole server from a post's ⋯ menu: nobody from there in any lane; ≡ → Silence →
   Servers lists them, with unblock.
 - A private note on someone ("Note…" on their profile): only you see it, it's kept on your

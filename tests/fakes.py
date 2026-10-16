@@ -251,10 +251,11 @@ class FakeApi:
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
                     media_ids=(), markdown=False, language="", sensitive=False, poll=None,
-                    quoted_status_id=None, quote_policy=""):
+                    quoted_status_id=None, quote_policy="", interaction_policy=None):
         self.w.languages.append(language)
         self.w.extras.append({"sensitive": sensitive, "poll": poll,
-                              "quote": quoted_status_id, "quote_policy": quote_policy})
+                              "quote": quoted_status_id, "quote_policy": quote_policy,
+                              "interaction_policy": interaction_policy})
         self.w.seq += 1
         reply_acc = self.w.statuses[in_reply_to_id]["account"]["id"] if in_reply_to_id else None
         st = status(str(self.w.seq), ME, in_reply_to_id, reply_acc, minute=59, vis=visibility,
