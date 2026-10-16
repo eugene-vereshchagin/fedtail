@@ -73,7 +73,9 @@ class LaneItem(QWidget):
         self.name, self.theme = name, theme
         self.title = title or _("lane_" + name)
         self.current = False
-        self.setToolTip(f"Alt+{number}" if number <= 9 else "")
+        tip = _("tip_" + name) if not name.startswith("list:") else ""
+        tip = "" if tip == "tip_" + name else tip
+        self.setToolTip(" ".join(x for x in (tip, f"(Alt+{number})" if number <= 9 else "") if x))
         h = QHBoxLayout(self)
         h.setContentsMargins(10, 8, 10, 8)
         h.setSpacing(10)
@@ -391,8 +393,8 @@ class MainWindow(QMainWindow):
         last = self.core.get_state("lane")
         if last in self.lane_items:
             self.select_lane(last)
-        else:
-            self.select_lane(self.lane_order[0])
+        else:  # the first time: Home, not whatever happens to be on top
+            self.select_lane("people" if "people" in self.lane_items else self.lane_order[0])
         self.core.start_polling()
 
     def _connect_failed(self, err):

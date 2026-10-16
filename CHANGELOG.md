@@ -7,9 +7,10 @@
   minutes; crash.log with all thread stacks on a fatal crash; stacks on demand
   (`kill -USR1`, the menu) and by themselves when the window freezes; Qt's own messages
   go to the log, not the terminal; `--bug-report` packs it all (no token, no database).
-- Sidebar in sections: Reading (Home, Bots), Lists, For me (Replies to me, Mentions, Threads,
-  Activity, Follow requests), More (My posts, Local, Federated). "People" is now "Home",
-  thread subscriptions are "Threads". New: Federated — the whole fediverse as your server
+- Sidebar in sections: Timelines from the widest down (Federated, Home, Local, Bots), Personal
+  (My posts, Mentions, Replies to me, Subscriptions, Likes & boosts, Follow requests), Lists at
+  the bottom; every lane explains itself on hover. "People" is now "Home" and opens first;
+  "Activity" is "Likes & boosts". New: Federated — the whole fediverse as your server
   knows it; Local and Federated are fetched only while open, without unread counts.
 - Search (`Ctrl+K`, the box under Write): people by name, @user@server or link, tags, posts;
   Follow and Follow tag right in the results; followed tags with an empty query; a tag tab

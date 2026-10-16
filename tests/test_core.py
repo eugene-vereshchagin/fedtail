@@ -285,8 +285,9 @@ class CoreTest(TmpDir):
         self.assertEqual([st["id"] for _, st in core.lane_entries("global")], ["090"])
         from fedtail.core import lanes
         groups = dict(lanes.grouped(core.lanes))
-        self.assertEqual(groups["reading"], ["people", "bots"])
-        self.assertEqual(groups["more"], ["mine", "local", "global"])
+        self.assertEqual(groups["standard"], ["global", "people", "local", "bots"])
+        self.assertEqual(groups["personal"][:3], ["mine", "mentions", "comments"])
+        self.assertEqual([g for g, _n in lanes.grouped(core.lanes)][-1], "lists")
 
     def test_deep_find_extends_the_lane(self):
         core, w = self.make(feed={"render_limit": 20, "page_size": 40})

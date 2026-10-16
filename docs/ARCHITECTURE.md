@@ -238,8 +238,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 | `people` ("Home") | home | not bots, not in an exclusive list |
 | `comments` ("replies to me") | mentions | replies to my posts/comments |
 | `mentions` | mentions | other mentions (`lanes.mentions_all` → all) |
-| `subs` ("Threads") | subs (local) | new comments in followed threads, minus replies to me |
-| `activity` | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
+| `subs` ("Subscriptions") | subs (local) | new comments in followed threads, minus replies to me |
+| `activity` ("Likes & boosts") | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
 | `bots` | home | bots, not in an exclusive list |
 | `mine` | mine | everything |
 | `local` | local | everything; *lazy* |
@@ -250,9 +250,10 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * **Lazy (browse) lanes** — `local`, `global`: fetched only while on screen
   (`core.set_active_lane`, called by the window on every lane switch), newest page
   only (`sources.refresh_top`; a hole is fine there), no unread marks or badges.
-* **Sidebar sections** — `lanes.GROUPS` / `lanes.grouped()`: Reading (people,
-  bots), Lists, For me (comments, mentions, subs, activity, requests), More (mine,
-  local, global); the configured order holds inside a section
+* **Sidebar sections** — `lanes.GROUPS` / `lanes.grouped()`: Timelines, from the
+  widest down (global, people, local, bots), Personal (mine, mentions, comments,
+  subs, activity, requests), Lists at the bottom; the configured order holds inside
+  a section
   (`ui.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
   builds it (again on `lists_changed`); Alt+1…9 follow `lane_order`, not rows.
 

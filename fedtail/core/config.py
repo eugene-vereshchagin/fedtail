@@ -43,8 +43,8 @@ DEFAULTS = {
     },
     "read": {"mark_read": "on_scroll"},
     "lanes": {
-        "enabled": ["people", "bots", "comments", "mentions", "subs", "activity", "requests",
-                    "mine", "local", "global"],
+        "enabled": ["global", "people", "local", "bots", "mine", "mentions", "comments", "subs",
+                    "activity", "requests"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,

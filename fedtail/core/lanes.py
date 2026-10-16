@@ -70,10 +70,9 @@ LANES = {
 # the sidebar's sections, in order; a lane goes to the first section that names it,
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
-    ("reading", ["people", "bots"]),
+    ("standard", ["global", "people", "local", "bots"]),        # from the widest down
+    ("personal", ["mine", "mentions", "comments", "subs", "activity", "requests"]),
     ("lists", []),
-    ("me", ["comments", "mentions", "subs", "activity", "requests"]),
-    ("more", ["mine", "local", "global"]),
 ]
 
 
@@ -87,7 +86,7 @@ def grouped(lanes):
             got = [n for n in names if is_list(n)]
         else:
             got = [n for n in names if n in members]
-            if group == "more":
+            if group == "standard":
                 got += [n for n in names if n not in placed and n not in got
                         and not is_list(n) and not any(n in m for _g, m in GROUPS)]
         placed.update(got)

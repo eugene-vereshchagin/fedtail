@@ -345,7 +345,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.close_tab(self.win.tabs.indexOf(search))
 
         # the sidebar in sections; Alt+N counts lanes, not headers; browse lanes
-        self.assertEqual(self.win.lane_order[:2], ["people", "bots"])
+        self.assertEqual(self.win.lane_order[:4], ["global", "people", "local", "bots"])
         self.assertIn("global", self.win.lane_order)
         self.win.select_lane("global")
         self.pump(0.2)

@@ -22,8 +22,9 @@ where you came from; a lane remembers where you stopped and never jumps.
   parent post; click it to open the whole conversation.
 - **Threads are trees.** Indented by depth, comments numbered `/1 /2 …`, the post you came
   from highlighted.
-- **Separate lanes, in sections.** Reading (Home, Bots), your Lists, For me (Replies to me,
-  Mentions, Threads, Activity, Follow requests), More (My posts, Local, Federated).
+- **Separate lanes, in sections.** Timelines from the widest down (Federated, Home, Local,
+  Bots), Personal (My posts, Mentions, Replies to me, Subscriptions, Likes & boosts, Follow
+  requests), and your Lists at the bottom.
 - **Private by default.** New posts go to followers only; a reply is never more public than
   the post it answers.
 - **Drafts survive.** Text is saved while you type; closing the window loses nothing.
@@ -128,7 +129,7 @@ Mentions to show everything.
 
 **Subscriptions**, like on Point: a server tells you only about replies that mention you, so
 when two people answer each other under your post you never hear of it. fedtail follows
-threads itself and puts what's new in them into "Threads". You follow your own posts and
+threads itself and puts what's new in them into "Subscriptions". You follow your own posts and
 threads you comment in automatically; any other thread — from a post's ⋯ menu or the
 "Follow thread" button in its header. Unfollowing is remembered: commenting there again won't
 bring the thread back. Settings are in `[subs]` (how often to check, when a quiet thread is
