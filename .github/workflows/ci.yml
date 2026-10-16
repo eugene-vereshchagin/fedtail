@@ -112,7 +112,7 @@ jobs:
           } 2>&1 | tee build.log
       - name: What went wrong
         if: failure()
-        run: tail -n 40 build.log | sed 's/^/::warning::/' 
+        run: grep -iE 'error|traceback|no matching|not found|denied|requires' build.log | tail -n 9 | sed 's/^/::warning::/'
       - uses: actions/upload-artifact@v4
         with:
           name: fedtail-linux
