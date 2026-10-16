@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0 — in progress
+## 0.6.0 — 2026-10-16
 
 - Somebody's boost of a post by a person you put in a list stays out of Home (and the other
   lanes in `lists.hide_in`) too, not only that person's own posts and boosts.
