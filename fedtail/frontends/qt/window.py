@@ -208,6 +208,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(title)
         self.setWindowIcon(QIcon(icon_path()))
         self._build()
+        self._debug_corner()
         self.setAcceptDrops(True)
         geo = core.get_state(self._geometry_key())
         if geo:
@@ -1289,6 +1290,25 @@ class MainWindow(QMainWindow):
             return
         super().closeEvent(e)
         QApplication.quit()
+
+    def _debug_corner(self):
+        """In the debugging mode, the right end of the status bar says how this
+        window is drawn: theme, style, font, Qt platform, scale, build."""
+        from ... import diag
+        if not diag.is_on():
+            return
+        app = QApplication.instance()
+        screen = app.primaryScreen()
+        f = app.font()
+        bits = [_("debug_theme", theme=self.theme.id), app.style().name(),
+                f"{f.family()} {f.pointSizeF():g}pt", app.platformName()]
+        if screen:
+            bits.append(f"{screen.devicePixelRatio() * 100:g}%")
+        bits.append("onefile" if getattr(sys, "frozen", False) else "source")
+        label = QLabel(" · ".join(bits))
+        label.setObjectName("muted")
+        label.setToolTip(_("debug_corner_tip"))
+        self.statusBar().addPermanentWidget(label)
 
     @staticmethod
     def _geometry_key():

@@ -184,6 +184,9 @@ _STRINGS = {
         "new_options": "В конфиге не упомянуто новых опций: {n}. "
                        "Запусти python3 -m fedtail --update-config — "
                        "допишет их с пояснениями.",
+        "debug_theme": "тема {theme}",
+        "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
+                            "платформа, масштаб, сборка или исходники.",
         "deleted": "Удалено.", "sent": "Отправлено.", "error": "Ошибка: {err}",
         "not_in_cache": "Этого поста нет в кеше — обнови ленту.",
         "delete_q_title": "Удалить?", "delete_q": "Удалить пост насовсем?\n\n{text}",
@@ -477,6 +480,9 @@ _STRINGS = {
         "notify_more": " (and {n} more)",
         "new_options": "Your config doesn't mention {n} new option(s). "
                        "Run python3 -m fedtail --update-config to add them, with explanations.",
+        "debug_theme": "theme {theme}",
+        "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
+                            "platform, scale, one-file build or source.",
         "deleted": "Deleted.", "sent": "Sent.", "error": "Error: {err}",
         "not_in_cache": "This post is not cached — refresh the lane.",
         "delete_q_title": "Delete?", "delete_q": "Delete this post for good?\n\n{text}",

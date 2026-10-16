@@ -2,6 +2,9 @@
 
 ## 0.7.0 — in progress
 
+- In the debugging mode the status bar's right end says how the window is drawn: theme, Qt
+  style, font, platform, scale, one-file build or source. The log adds the window's size,
+  the least it needs and the widest widgets.
 - The one-file build in KDE uses Plasma's default font (Noto Sans 10) when `kdeglobals` names
   none — KDE writes it there only once it's been changed — instead of Qt's bare "Sans Serif 9".
 - The Linux one-file build brings all of Qt's platform plugins, Wayland's included: without
