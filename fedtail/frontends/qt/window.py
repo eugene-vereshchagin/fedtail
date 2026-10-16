@@ -723,11 +723,13 @@ class MainWindow(QMainWindow):
                 w = ActivityWidget(self)
             else:
                 w = LaneWidget(self, name)
-                w.refresh()
+                w.dirty = True  # drawn right after the switch, under "loading…"
             self.lane_widgets[name] = w
             self.stack.addWidget(w)
         self.stack.setCurrentWidget(w)
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
+        if isinstance(w, LaneWidget) and w.dirty:
+            w.draw_shown()
         self.tabs.setTabText(self.tabs.indexOf(self.stack), self.lane_title(name))
         self.core.set_state("lane", name)
         self.core.set_active_lane(name)

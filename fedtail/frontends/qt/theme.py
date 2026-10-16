@@ -171,6 +171,8 @@ QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weigh
 QWidget#laneHeader {{ background: {k('view')}; border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
+QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};
+    border: 1px solid {k('header_border')}; border-radius: 12px; padding: 8px 18px; }}
 QLabel#newPill {{ background: {k('new_pill')}; color: {k('on_new_pill')}; border-radius: 11px;
     padding: 2px 10px; font-weight: 600; }}
 QPushButton#tool, QToolButton#tool {{ background: {k('button')}; color: {k('text')};

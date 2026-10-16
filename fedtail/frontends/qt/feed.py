@@ -396,6 +396,11 @@ class LaneWidget(QWidget):
         self.view = FeedView(win.ctx)
         self.view.seen.connect(self._seen)
         lay.addWidget(self.view, 1)
+        # "loading…" over the lane while it's being drawn: the click switches at once,
+        # the drawing comes after (a lane of a few hundred cards takes a moment)
+        self.plate = QLabel(_("loading"), self)
+        self.plate.setObjectName("loadingPlate")
+        self.plate.hide()
         self.btn_older = _button(_("older_down") if self.newest_first else _("older_up"),
                                  self.load_older, name="older")
         (self.view.footer if self.newest_first else self.view.header).addWidget(self.btn_older)
@@ -414,7 +419,7 @@ class LaneWidget(QWidget):
         once; the lane is redrawn right after (it can take a moment with many posts)."""
         if self.filter_seg is not None:
             self.filter_seg.select(which)
-        _busy(lambda: self._apply_filter(which))
+        _busy(lambda: self._apply_filter(which), self)
 
     def _apply_filter(self, which):
         if self.has_posts_only and self.core.posts_only(self.name) != (which == "posts"):
@@ -432,7 +437,7 @@ class LaneWidget(QWidget):
         """"feed" or "conversations" (one card per conversation)."""
         if self.view_seg is not None:
             self.view_seg.select(which)
-        _busy(lambda: self._apply_view(which))
+        _busy(lambda: self._apply_view(which), self)
 
     def _apply_view(self, which):
         self.core.set_choice(f"conversations.{self.name}", which == "conversations")
@@ -545,10 +550,36 @@ class LaneWidget(QWidget):
                        "conversation": g}))
         return specs
 
+    def show_plate(self, on=True):
+        if on:
+            self.plate.adjustSize()
+            self.plate.move(max(0, (self.width() - self.plate.width()) // 2),
+                            self.header.height() + 24)
+            self.plate.raise_()
+        self.plate.setVisible(on)
+
+    def draw_shown(self):
+        """Just switched to: let the switch and "loading…" show, then draw."""
+        t = time.monotonic()
+        self.show_plate()
+        self.win.repaint()  # paints now, without running other events in between
+        try:
+            self.refresh(force=True)
+        finally:
+            self.show_plate(False)
+        log.debug("lane %s on screen in %.0f ms", self.name, (time.monotonic() - t) * 1000)
+
+    def _catch_up(self):
+        if self.dirty and self.isVisible():
+            self.draw_shown()
+
     def showEvent(self, e):
         super().showEvent(e)
         if self.dirty:
-            self.refresh()
+            # stale since it was last on screen: show it as it was, "loading…" on top,
+            # and redraw right after the switch has painted
+            self.show_plate()
+            QTimer.singleShot(0, self._catch_up)
         if not self.positioned:
             QTimer.singleShot(0, self._initial_position)
         if self.cfg["read"]["mark_read"] == "on_open":
@@ -616,9 +647,13 @@ class LaneWidget(QWidget):
         self.btn_first.setEnabled(bool(n))
 
 
-def _busy(fn):
-    """Let the pressed button paint first, then do the slow part under a wait cursor."""
+def _busy(fn, lane=None):
+    """Let the pressed button paint first (and "loading…" over the lane, if given),
+    then do the slow part under a wait cursor."""
     from PySide6.QtWidgets import QApplication
+
+    if lane is not None:
+        lane.show_plate()
 
     def run():
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -626,6 +661,11 @@ def _busy(fn):
             fn()
         finally:
             QApplication.restoreOverrideCursor()
+            if lane is not None:
+                try:
+                    lane.show_plate(False)
+                except RuntimeError:  # the lane is gone
+                    pass
     QTimer.singleShot(0, run)
 
 

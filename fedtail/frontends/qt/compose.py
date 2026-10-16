@@ -139,12 +139,13 @@ class Compose(QDialog):
 
         row = QHBoxLayout()
         self.vis = QComboBox()
-        self.vis.setMinimumWidth(230)
+        self.vis.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         for v in VISIBILITIES:
             self.vis.addItem(_("vis_" + v), v)
         row.addWidget(self.vis)
         self.lang = QComboBox()
         self.lang.setToolTip(_("lang_tip"))
+        self.lang.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._fill_languages()
         row.addWidget(self.lang)
         add = QPushButton(QIcon.fromTheme("mail-attachment"), _("attach"))
@@ -170,6 +171,14 @@ class Compose(QDialog):
         self.counter = QLabel()
         self.counter.setObjectName("counter")
         row.addWidget(self.counter)
+        lay.addLayout(row)
+        # what the post is (above) and what to do with it (below): two rows, so nothing
+        # gets squeezed into "ontent war" in a narrow window
+        row = QHBoxLayout()
+        self.hint = QLabel()
+        self.hint.setObjectName("muted")
+        self.hint.setWordWrap(True)
+        row.addWidget(self.hint, 1)
         close_btn = QPushButton(_("close"))
         close_btn.setObjectName("tool")
         close_btn.setToolTip(_("close_tip"))
@@ -185,10 +194,6 @@ class Compose(QDialog):
         self.send_btn.clicked.connect(self.send)
         row.addWidget(self.send_btn)
         lay.addLayout(row)
-
-        self.hint = QLabel()
-        self.hint.setObjectName("muted")
-        lay.addWidget(self.hint)
 
         for seq in ("Ctrl+Return", "Ctrl+Enter"):
             QShortcut(QKeySequence(seq), self).activated.connect(self.send)
@@ -498,13 +503,13 @@ class Compose(QDialog):
         # still sending? fine: the core drops the draft once the post is out
         self._leave()
 
-    # ---- the inline panel: over the lanes, at the bottom, following the window -------
+    # ---- the inline panel: over the lanes, in the middle, following the window ------
     def _place(self):
         win = self.win
-        w = min(760, max(420, win.width() - 340))
-        h = min(520, max(320, win.height() - 120))
-        x = max(10, win.width() - w - 28)
-        y = max(10, win.height() - h - 48)
+        w = min(820, max(420, win.width() - 80))
+        h = min(540, max(320, win.height() - 120))
+        x = max(10, (win.width() - w) // 2)
+        y = max(10, (win.height() - h) // 2)
         self.setGeometry(x, y, w, h)
         self.raise_()
 

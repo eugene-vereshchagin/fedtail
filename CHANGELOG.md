@@ -2,6 +2,8 @@
 
 ## 0.6.0 — in progress
 
+- A lane opens at once on a click: first the switch, with "loading…" over the lane, then the
+  drawing (a lane of a few hundred cards takes a moment); the same over All | Posts | New.
 - Quit (from the tray or the menu) quits at once: the process no longer lingers for minutes
   after the window is gone, waiting for downloads nobody needs any more (a picture's
   original may take two minutes). The log says which were left behind.
@@ -24,8 +26,10 @@
   `lanes.posts_only` says — unless `feed.remember_choices = true`.
 - The post window is a panel inside the main window now (`ui.compose = "inline"`): KDE keeps a
   keyboard layout per window, so a new window could come up in another language mid-thought.
-  One panel at a time (opening another keeps the first as a draft), ✕ or Esc closes it,
-  pictures dropped on the window go into it. `"window"` brings the separate window back.
+  It sits in the middle of the window; what the post is (who sees it, language, pictures,
+  warning) is one row and what to do with it (Close, Discard, Send) another, so nothing is
+  cut off in a narrow window. One panel at a time (opening another keeps the first as a
+  draft), ✕ or Esc closes it, pictures dropped on the window go into it. `"window"` brings the separate window back.
 - A tidier lane header: what to show is one control — All | Posts | New — and how to show it
   another — Feed | Conversations (each with a tooltip saying what it does); "↓ To new" no
   longer looks like a drop-down; buttons with nothing to do grey out instead of vanishing,
