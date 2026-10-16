@@ -1088,6 +1088,15 @@ class MainWindow(QMainWindow):
                                  _("subbed" if sub else "unsubbed"), 6000))
         elif action == "report":
             self.report(st)
+        elif action == "blockdomain":
+            domain = real(st)["account"]["acct"].partition("@")[2]
+            if domain and QMessageBox.question(
+                    self, _("block_domain", domain=domain), _("block_domain_q", domain=domain)) \
+                    == QMessageBox.StandardButton.Yes:
+                self.bridge.call(self.core.block_domain(domain, True),
+                                 ok=lambda _d: self.statusBar().showMessage(
+                                     _("domain_blocked", domain=domain), 6000),
+                                 fail=self.error)
         elif action == "quote":
             Compose(self, quote=st).show()
         elif action in ("pin", "unpin"):

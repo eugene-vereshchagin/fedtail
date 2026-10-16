@@ -721,6 +721,24 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
 
+    def test_block_domain_and_note(self):
+        core, w = self.make()
+        core.connect().result()
+        w.add(status("040", BOB, minute=1), home=True)
+        w.add(status("041", NEWS, minute=2), home=True)
+        core.poll_once()
+        ids = lambda: [st["id"] for _, st in core.lane_entries("people")] + \
+            [st["id"] for _, st in core.lane_entries("bots")]
+        self.assertIn("040", ids())
+        core.block_domain("Social.Example", True).result()
+        self.assertNotIn("040", ids())
+        self.assertIn("041", ids())  # from my own server
+        self.assertEqual(core.silenced_people().result()["domains"], ["social.example"])
+        core.block_domain("social.example", False).result()
+        self.assertIn("040", ids())
+        core.set_note("B", "знакомый по Point").result()
+        self.assertEqual(w.notes["B"], "знакомый по Point")
+
     def test_pin_my_post(self):
         core, w = self.make()
         core.connect().result()

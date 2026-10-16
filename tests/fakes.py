@@ -93,6 +93,17 @@ class FakeApi:
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
         return _page(mine, limit, max_id, min_id)
 
+    def domain_blocks(self):
+        return sorted(self.w.blocked_domains)
+
+    def block_domain(self, domain, on=True):
+        (self.w.blocked_domains.add if on else self.w.blocked_domains.discard)(domain)
+        return {}
+
+    def set_note(self, acc_id, text):
+        self.w.notes[acc_id] = text
+        return {"id": acc_id, "note": text}
+
     def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
         self.w.reports.append((acc_id, list(status_ids), comment, forward, category))
         return {"id": "r1"}
@@ -370,6 +381,8 @@ class World:
         self.markers = {}  # timeline -> last_read_id, as another client left it
         self.extras = []  # sensitive / poll of each post
         self.reports = []
+        self.blocked_domains = set()
+        self.notes = {}
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())

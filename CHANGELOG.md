@@ -2,6 +2,10 @@
 
 ## 0.8.0 — in progress
 
+- Block a whole server from a post's ⋯ menu: nobody from there in any lane; ≡ → Silence →
+  Servers lists them, with unblock.
+- A private note on someone ("Note…" on their profile): only you see it, it's kept on your
+  server and shows under their card.
 - Quote a post (Mastodon 4.5+): "Quote" in the ⋯ menu of a post its author lets quote ("the
   author approves" when they decide by hand); the post panel shows what you quote.
   `post.quote_policy` says who may quote your new posts (everyone, followers, nobody, or as

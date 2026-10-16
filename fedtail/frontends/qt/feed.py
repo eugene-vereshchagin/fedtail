@@ -1147,8 +1147,28 @@ class AccountWidget(_PagedTab):
             if acc.get(field):
                 buttons.addWidget(_button(_(f"people_{which}_n", n=acc[field]),
                                           lambda _c=False, w=which: self.win.open_people(acc, w)))
+        if not self.mine:
+            buttons.addWidget(_button(_("note_edit"), self.edit_note))
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
         lay.addLayout(buttons)
+        note = (self.relation.get("note") or "").strip()
+        if note and not self.mine:
+            label = QLabel("📝 " + esc(note).replace("\n", "<br>"))
+            label.setObjectName("muted")
+            label.setWordWrap(True)
+            label.setToolTip(_("note_tip"))
+            lay.addWidget(label)
+
+    def edit_note(self):
+        """My private note on this person — only I see it, on my server."""
+        from PySide6.QtWidgets import QInputDialog
+        text, ok = QInputDialog.getMultiLineText(self, _("note_title", acct=self.acc["acct"]),
+                                                 _("note_tip"), self.relation.get("note") or "")
+        if ok:
+            self.win.bridge.call(self.core.set_note(self.acc_id, text.strip()),
+                                 ok=lambda r: self._relation(dict(self.relation,
+                                                                  note=text.strip())),
+                                 fail=self.win.error)
 
     def _toggle_mute(self):
         on = not self.relation.get("muting")

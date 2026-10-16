@@ -220,6 +220,14 @@ _STRINGS = {
         "translate_none": "Твой сервер не умеет переводить посты.",
         "quote": "Цитировать", "quote_ask": "Цитировать (автор одобрит)",
         "compose_quote": "Цитата",
+        "block_domain": "Заблокировать сервер {domain}…",
+        "block_domain_q": "Скрыть всех с {domain}: их посты не будут видны нигде, подписки "
+                          "между тобой и ими отменятся. Продолжить?",
+        "domain_blocked": "Сервер {domain} заблокирован.",
+        "silence_domains": "Серверы",
+        "silence_domains_hint": "Заблокированные серверы: никого оттуда не видно.",
+        "note_edit": "Заметка…", "note_title": "Заметка о @{acct}",
+        "note_tip": "Видишь только ты — хранится на твоём сервере",
         "debug_theme": "тема {theme}",
         "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
                             "платформа, масштаб, сборка или исходники.",
@@ -552,6 +560,14 @@ _STRINGS = {
         "translate_none": "Your server doesn't translate posts.",
         "quote": "Quote", "quote_ask": "Quote (the author approves)",
         "compose_quote": "Quote",
+        "block_domain": "Block the server {domain}…",
+        "block_domain_q": "Hide everyone from {domain}: their posts won't show anywhere, "
+                          "follows between you and them end. Go on?",
+        "domain_blocked": "Server {domain} blocked.",
+        "silence_domains": "Servers",
+        "silence_domains_hint": "Blocked servers: nobody from there shows.",
+        "note_edit": "Note…", "note_title": "Note on @{acct}",
+        "note_tip": "Only you see it — kept on your server",
         "debug_theme": "theme {theme}",
         "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
                             "platform, scale, one-file build or source.",

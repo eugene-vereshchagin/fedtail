@@ -80,6 +80,7 @@ class Core:
         self._completed = {}  # thread root id -> when its missing replies were looked for
         self._choices = {}  # this run's choices over lanes (see choice())
         self.muted, self.blocked = set(), set()
+        self.blocked_domains = set()
         self._silence_version = 0
         self._silence_checked = None
         self._poll_count = 0
@@ -452,9 +453,14 @@ class Core:
     def _refresh_silence(self):
         muted = {a["id"] for a in self.api.mutes()}
         blocked = {a["id"] for a in self.api.blocks()}
+        try:
+            domains = {d.lower() for d in self.api.domain_blocks()}
+        except Exception as e:  # noqa: BLE001 — a server without it
+            log.debug("domain blocks: %s", e)
+            domains = self.blocked_domains
         self._silence_checked = time.monotonic()
-        if (muted, blocked) != (self.muted, self.blocked):
-            self.muted, self.blocked = muted, blocked
+        if (muted, blocked, domains) != (self.muted, self.blocked, self.blocked_domains):
+            self.muted, self.blocked, self.blocked_domains = muted, blocked, domains
             self._silence_version += 1
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
 
@@ -464,6 +470,10 @@ class Core:
         quiet = self.muted | self.blocked
         s = real(status)
         if s["account"]["id"] in quiet or status["account"]["id"] in quiet:
+            return True
+        if self.blocked_domains and any(
+                (a.get("acct") or "").partition("@")[2].lower() in self.blocked_domains
+                for a in (s["account"], status["account"])):
             return True
         return any((f.get("filter") or {}).get("filter_action") == "hide"
                    for f in s.get("filtered") or [])
@@ -483,6 +493,21 @@ class Core:
             return rel
         return self.submit(job)
 
+    def block_domain(self, domain, on=True):
+        """Hide a whole server: nobody from there in any lane, no follows across."""
+        domain = domain.lower()
+
+        def job():
+            self.api.block_domain(domain, on)
+            (self.blocked_domains.add if on else self.blocked_domains.discard)(domain)
+            self._silence_version += 1
+            self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+            return domain
+        return self.submit(job)
+
+    def set_note(self, acc_id, text):
+        return self.submit(self.api.set_note, acc_id, text)
+
     def filters(self):
         return self.submit(self.api.filters)
 
@@ -492,7 +517,12 @@ class Core:
             muted, blocked = self.api.mutes(), self.api.blocks()
             self.muted = {a["id"] for a in muted}
             self.blocked = {a["id"] for a in blocked}
-            return {"muted": muted, "blocked": blocked}
+            try:
+                self.blocked_domains = {d.lower() for d in self.api.domain_blocks()}
+            except Exception as e:  # noqa: BLE001
+                log.debug("domain blocks: %s", e)
+            return {"muted": muted, "blocked": blocked,
+                    "domains": sorted(self.blocked_domains)}
         return self.submit(job)
 
     def add_filter(self, title, keywords, action="warn", contexts=None):

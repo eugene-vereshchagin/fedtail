@@ -37,6 +37,8 @@ class SilenceDialog(QDialog):
         tabs.addTab(self._people_tab(self.muted_list, "mute"), _("silence_muted"))
         self.blocked_list = QListWidget()
         tabs.addTab(self._people_tab(self.blocked_list, "block"), _("silence_blocked"))
+        self.domain_list = QListWidget()
+        tabs.addTab(self._people_tab(self.domain_list, "domain"), _("silence_domains"))
         close = QPushButton(_("close"))
         close.setObjectName("tool")
         close.clicked.connect(self.accept)
@@ -106,6 +108,11 @@ class SilenceDialog(QDialog):
         v = QVBoxLayout(w)
         v.addWidget(lst, 1)
         undo = QPushButton(_("unmute") if kind == "mute" else _("unblock"))
+        if kind == "domain":
+            hint = QLabel(_("silence_domains_hint"))
+            hint.setObjectName("muted")
+            hint.setWordWrap(True)
+            v.insertWidget(0, hint)
         undo.setObjectName("tool")
         undo.clicked.connect(lambda: self._undo(lst, kind))
         v.addWidget(undo, 0, Qt.AlignmentFlag.AlignLeft)
@@ -116,6 +123,10 @@ class SilenceDialog(QDialog):
         if not it:
             return
         acc_id = it.data(Qt.ItemDataRole.UserRole)
+        if kind == "domain":
+            self.win.bridge.call(self.core.block_domain(acc_id, False),
+                                 ok=lambda _r: self.reload(), fail=self.win.error)
+            return
         call = self.core.mute if kind == "mute" else self.core.block
         self.win.bridge.call(call(acc_id, False), ok=lambda _r: self.reload(),
                              fail=self.win.error)
@@ -144,6 +155,11 @@ class SilenceDialog(QDialog):
             self.filter_list.addItem(it)
 
     def _people(self, got):
+        self.domain_list.clear()
+        for d in got.get("domains") or []:
+            it = QListWidgetItem(d)
+            it.setData(Qt.ItemDataRole.UserRole, d)
+            self.domain_list.addItem(it)
         for lst, accounts in ((self.muted_list, got["muted"]), (self.blocked_list, got["blocked"])):
             lst.clear()
             for a in accounts:

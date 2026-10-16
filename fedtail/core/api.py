@@ -204,6 +204,17 @@ class Api:
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
 
+    def domain_blocks(self):
+        return self.get("/api/v1/domain_blocks", {"limit": 200}) or []
+
+    def block_domain(self, domain, on=True):
+        return self._req("POST" if on else "DELETE", "/api/v1/domain_blocks",
+                         params={"domain": domain})
+
+    def set_note(self, acc_id, text):
+        """My private note on someone (only I see it)."""
+        return self.post(f"/api/v1/accounts/{acc_id}/note", json={"comment": text})
+
     def translate(self, sid, lang=None):
         """{content, spoiler_text, detected_source_language, provider} in my language."""
         return self.post(f"/api/v1/statuses/{sid}/translate",

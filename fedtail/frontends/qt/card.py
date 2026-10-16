@@ -619,6 +619,10 @@ class PostRow(QWidget):
                            lambda i=st["id"]: self.ctx.on_link(f"fedtail:mute/{i}"))
             menu.addAction(_("block_acct", acct=author["acct"]),
                            lambda i=st["id"]: self.ctx.on_link(f"fedtail:block/{i}"))
+            domain = author["acct"].partition("@")[2]
+            if domain:
+                menu.addAction(_("block_domain", domain=domain),
+                               lambda i=st["id"]: self.ctx.on_link(f"fedtail:blockdomain/{i}"))
             menu.addAction(_("report"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:report/{i}"))
         if st["account"]["id"] == self.ctx.me_id:
             menu.addSeparator()
