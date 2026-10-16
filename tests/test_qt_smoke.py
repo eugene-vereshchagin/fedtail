@@ -263,6 +263,15 @@ class QtSmokeTest(unittest.TestCase):
         imgs.get("https://x/ok.png", got.append, failed=lambda: failed.append(1))
         self.pump(until=lambda: failed and got)
         self.assertEqual((len(got), len(failed)), (1, 1))
+        # asked again right away: no new download, it fails at once
+        calls = []
+        imgs._download = lambda url, side: calls.append(url) or good
+        imgs.get("https://x/broken.png", got.append, failed=lambda: failed.append(1))
+        self.assertEqual((calls, len(failed)), ([], 2))
+        imgs.broken["https://x/broken.png"] -= Images.RETRY_AFTER + 1  # time passed
+        imgs.get("https://x/broken.png", got.append, failed=lambda: failed.append(1))
+        self.pump(until=lambda: len(got) == 2)
+        self.assertNotIn("https://x/broken.png", imgs.broken)
 
         # the memory cache keeps to its budget in bytes, dropping the oldest first
         from PySide6.QtGui import QPixmap

@@ -38,7 +38,10 @@ class Bridge(QObject):
         try:
             if exc is not None:
                 if isinstance(exc, EXPECTED):
-                    log.warning("call failed: %s: %s", type(exc).__name__, exc)
+                    # the request is in the log already; a caller with its own fail
+                    # handler deals with it, so only say it twice when debugging
+                    (log.debug if fail else log.warning)(
+                        "call failed: %s: %s", type(exc).__name__, exc)
                 else:
                     log.warning("call failed: %s", exc, exc_info=exc)
                 handler = fail or self.on_error

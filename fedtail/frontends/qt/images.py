@@ -21,6 +21,7 @@ MEM_MB = 128  # default memory budget for decoded pictures (ui.image_cache_mb)
 
 
 class Images:
+    RETRY_AFTER = 300  # s: a picture that just failed isn't asked for again before that
     def __init__(self, core, bridge):
         self.core = core
         self.bridge = bridge
@@ -31,6 +32,7 @@ class Images:
         self.mem_bytes = 0
         self.mem_budget = int(core.cfg["ui"].get("image_cache_mb", MEM_MB)) * 1024 * 1024
         self.waiting = {}
+        self.broken = {}  # url -> when it last failed (monotonic)
         # own pool: a backlog of avatars must never delay sending a post
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-img")
         self.http = requests.Session()
@@ -92,6 +94,11 @@ class Images:
                 failed()
             return
         key = (url, max_side)
+        broke = self.broken.get(url)
+        if broke is not None and time.monotonic() - broke < self.RETRY_AFTER:
+            if failed:  # it just failed: don't keep a worker on it again so soon
+                failed()
+            return
         if key in self.mem:
             self.mem.move_to_end(key)
             callback(self.mem[key])
@@ -115,6 +122,7 @@ class Images:
         # cache from holding every picture ever seen
 
     def _failed(self, key):
+        self.broken[key[0]] = time.monotonic()
         for _cb, failed in self.waiting.pop(key, []):
             if failed:
                 try:
@@ -126,6 +134,7 @@ class Images:
         if img.isNull():
             self._failed(key)
             return
+        self.broken.pop(key[0], None)
         callbacks = [cb for cb, _f in self.waiting.pop(key, [])]
         pm = QPixmap.fromImage(img)
         self._remember(key, pm)
