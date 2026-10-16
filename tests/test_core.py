@@ -664,6 +664,18 @@ class CoreTest(TmpDir):
         nodes = core.thread("050").result()
         self.assertEqual(nodes[0].status["id"], "050")
 
+    def test_post_language(self):
+        core, w = self.make(post={"language": "ka"})
+        core.connect().result()
+        core.post("გამარჯობა", "private").result()  # post.language by default
+        core.post("hello", "private", language="en").result()  # chosen for this one
+        core.post("whatever", "private", language="").result()  # none: the server decides
+        self.assertEqual(w.languages, ["ka", "en", ""])
+        with self.assertRaises(config.ConfigError):
+            config.validate({"post": {"language": "Russian"}})
+        with self.assertRaises(config.ConfigError):
+            config.validate({"post": {"languages": ["ru", "EN"]}})
+
     def test_markdown_flag_override(self):
         core, w = self.make(account={"markdown": "off"})
         core.connect().result()

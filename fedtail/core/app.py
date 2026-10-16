@@ -942,12 +942,17 @@ class Core:
             return narrower(pv, default)
         return default
 
-    def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None):
-        """media: [(path, description)]. The draft is dropped once the post is out,
+    def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
+             language=None):
+        """media: [(path, description)]. language: ISO 639 code, None — post.language,
+        "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
+        lang = self.cfg["post"]["language"] if language is None else language
+
         def job():
             ids = [self.api.upload_media(p, d)["id"] for p, d in media]
-            st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown)
+            st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
+                                      **({"language": lang} if lang else {}))
             log.debug("posted %s", st.get("id"))
             # the post is out; nothing below may turn that into a reported failure
             try:

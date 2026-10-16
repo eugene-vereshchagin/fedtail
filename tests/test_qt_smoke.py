@@ -163,9 +163,14 @@ class QtSmokeTest(unittest.TestCase):
         dlg = Compose(self.win)
         dlg.show()
         dlg.text.setPlainText("новый пост")
+        self.assertEqual(dlg.lang.currentData(), "")  # post.language = "": as in settings
+        self.assertEqual([dlg.lang.itemData(i) for i in range(dlg.lang.count())],
+                         ["", "ru", "en", "ka", "uk"])
+        dlg.set_language("ka")
         dlg.send()
         self.pump(until=lambda: gone(dlg))
         self.assertEqual(self.world.posted[-1][:3], ("новый пост", "private", None))
+        self.assertEqual(self.world.languages[-1], "ka")
 
         # the content warning field hides until asked for
         dlg = Compose(self.win)
@@ -571,8 +576,31 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(ov.image_rect().width(), 400)  # small ones grow, up to 2x
         ov.toggle_actual()
         self.assertEqual(ov.image_rect().width(), 200)
+        # the half-transparent Save button in the corner saves the picture on screen
+        saved = []
+        self.win.ctx.save_image, keep = saved.append, self.win.ctx.save_image
+        try:
+            self.assertIsNotNone(ov.btn_save)
+            self.assertGreater(ov.buttons.x(), self.win.width() // 2)  # top right
+            ov.btn_save.click()
+        finally:
+            self.win.ctx.save_image = keep
+        self.assertEqual(saved, [pic[0]])
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
+
+    def test_short_id_goes_to_the_command_line(self):
+        bar = self.win.cmdline
+        self.assertTrue(bar.hint.isHidden())  # nothing typed: the line takes the width
+        self.win.on_link("fedtail:alias/isf")
+        self.assertEqual(bar.edit.text(), "#isf ")
+        bar.edit.setText("#abc/2 привет")
+        self.win.on_link("fedtail:alias/k9")
+        self.assertEqual(bar.edit.text(), "#k9 привет")  # the number replaced, text kept
+        bar.edit.setText("просто текст")
+        self.win.on_link("fedtail:alias/k9")
+        self.assertEqual(bar.edit.text(), "#k9 просто текст")
+        self.assertEqual(bar.edit.cursorPosition(), len(bar.edit.text()))
 
     def test_poll_vote_on_the_card(self):
         from PySide6.QtWidgets import QProgressBar, QPushButton, QRadioButton

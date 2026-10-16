@@ -923,9 +923,11 @@ class MainWindow(QMainWindow):
             self.open_url(url)
             return
         action, _sep, arg = url[len("fedtail:"):].partition("/")
-        st = self.core.store.get_status(arg) if action not in ("account", "tag", "resolve") \
-            else None
-        if action == "tag":
+        st = self.core.store.get_status(arg) \
+            if action not in ("account", "tag", "resolve", "alias") else None
+        if action == "alias":  # a post's #abc: into the command line
+            self.cmdline.put_alias(arg)
+        elif action == "tag":
             self.open_tag(unquote(arg))
         elif action == "resolve":
             self.resolve_link(unquote(arg))

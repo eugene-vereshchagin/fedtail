@@ -5,6 +5,7 @@ example is copied there once so there's something to edit.
 """
 
 import copy
+import re
 import tomllib
 from importlib import resources
 
@@ -58,6 +59,8 @@ DEFAULTS = {
         "cw_field": False,
         "camelcase_hint": True,
         "plain_posts": True,
+        "language": "",
+        "languages": ["ru", "en", "ka", "uk"],
     },
     "notify": {
         "enabled": True,
@@ -196,6 +199,12 @@ def validate(user):
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):
         errors.append("lanes.extra_bots must be a list of strings")
+    langs = [cfg["post"]["language"]] + cfg["post"]["languages"]
+    bad_lang = [x for x in langs
+                if x and not (isinstance(x, str) and re.fullmatch(r"[a-z]{2,3}", x))]
+    if bad_lang:
+        errors.append(f"post.language(s): {bad_lang} — two or three small letters (ISO 639), "
+                      f"like \"ru\" or \"en\"")
     if errors:
         raise ConfigError("\n".join(errors))
     return cfg, warnings

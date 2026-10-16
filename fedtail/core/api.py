@@ -355,8 +355,10 @@ class Api:
         return media
 
     def post_status(self, text, visibility="private", in_reply_to_id=None,
-                    spoiler_text="", media_ids=(), markdown=False):
+                    spoiler_text="", media_ids=(), markdown=False, language=""):
         body = {"status": text, "visibility": visibility}
+        if language:
+            body["language"] = language
         if markdown:
             body["content_type"] = "text/markdown"
         if in_reply_to_id:

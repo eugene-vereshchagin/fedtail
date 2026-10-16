@@ -112,6 +112,10 @@ class Compose(QDialog):
         for v in VISIBILITIES:
             self.vis.addItem(_("vis_" + v), v)
         row.addWidget(self.vis)
+        self.lang = QComboBox()
+        self.lang.setToolTip(_("lang_tip"))
+        self._fill_languages()
+        row.addWidget(self.lang)
         add = QPushButton(QIcon.fromTheme("mail-attachment"), _("attach"))
         add.setObjectName("tool")
         add.clicked.connect(self.attach)
@@ -175,6 +179,26 @@ class Compose(QDialog):
         cur.movePosition(cur.MoveOperation.End)
         self.text.setTextCursor(cur)
 
+    def _fill_languages(self):
+        """"As in settings" first, then post.languages, then post.language if it's
+        not among them — each by its own name (Русский, ქართული…)."""
+        from PySide6.QtCore import QLocale
+        cfg = self.core.cfg["post"]
+        codes = list(dict.fromkeys(cfg["languages"] + ([cfg["language"]] if cfg["language"]
+                                                       else [])))
+        self.lang.addItem(_("lang_default"), "")
+        for code in codes:
+            name = QLocale(code).nativeLanguageName() or code
+            self.lang.addItem(f"{name[:1].upper()}{name[1:]} ({code})", code)
+        self.set_language(cfg["language"])
+
+    def set_language(self, code):
+        i = self.lang.findData(code or "")
+        if i < 0 and code:
+            self.lang.addItem(code, code)
+            i = self.lang.count() - 1
+        self.lang.setCurrentIndex(max(i, 0))
+
     # ---- drafts -------------------------------------------------------------------
     def _load(self):
         if self.edit:
@@ -186,6 +210,8 @@ class Compose(QDialog):
             self.text.setPlainText(d.get("text", ""))
             self.cw.setText(d.get("cw", ""))
             vis = d.get("visibility", vis)
+            if "language" in d:
+                self.set_language(d["language"])
             for path, desc in d.get("media", []):
                 if Path(path).exists():
                     self._add_media(path, desc)
@@ -203,6 +229,8 @@ class Compose(QDialog):
     def _load_edit(self):
         v = self.edit.get("visibility", "private")
         self.vis.setCurrentIndex(VISIBILITIES.index(v) if v in VISIBILITIES else 2)
+        self.set_language(self.edit.get("language") or "")
+        self.lang.setEnabled(False)
         self.vis.setEnabled(False)
         self.vis.setToolTip(_("edit_media_kept"))
         d = self.core.get_draft(self.key)
@@ -231,7 +259,8 @@ class Compose(QDialog):
 
     def _snapshot(self):
         return {"text": self.text.toPlainText(), "cw": self.cw.text(),
-                "visibility": self.vis.currentData(), "media": self._media_list()}
+                "visibility": self.vis.currentData(), "media": self._media_list(),
+                "language": self.lang.currentData()}
 
     def _changed(self):
         self._count()
@@ -393,7 +422,8 @@ class Compose(QDialog):
             return
         fut = self.core.post(text, self.vis.currentData(),
                              self.reply_to["id"] if self.reply_to else None,
-                             self.cw.text().strip(), media, draft_key=self.key)
+                             self.cw.text().strip(), media, draft_key=self.key,
+                             language=self.lang.currentData())
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _sent(self, st):

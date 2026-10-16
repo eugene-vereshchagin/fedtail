@@ -320,10 +320,12 @@ class PostRow(QWidget):
     def _short_id(self, h):
         sid = self.spec.extra.get("short_id")
         if sid:
-            lab = QLabel("#" + sid)
+            lab = QLabel(link("alias", sid, "#" + sid, self.theme.css("muted")))
             lab.setObjectName("shortId")
-            lab.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            lab.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+            lab.setCursor(Qt.CursorShape.PointingHandCursor)
             lab.setToolTip(_("short_id_tip"))
+            lab.linkActivated.connect(self.ctx.on_link)
             h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop)
 
     def _unread_mark(self):

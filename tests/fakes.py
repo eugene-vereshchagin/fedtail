@@ -216,7 +216,8 @@ class FakeApi:
         return {"id": "m1", "url": "https://example.test/m1.png"}
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
-                    media_ids=(), markdown=False):
+                    media_ids=(), markdown=False, language=""):
+        self.w.languages.append(language)
         self.w.seq += 1
         reply_acc = self.w.statuses[in_reply_to_id]["account"]["id"] if in_reply_to_id else None
         st = status(str(self.w.seq), ME, in_reply_to_id, reply_acc, minute=59, vis=visibility,
@@ -326,6 +327,7 @@ class World:
         self.statuses, self.home, self.local, self.notifications = {}, [], [], []
         self.requests = []
         self.posted = []
+        self.languages = []  # the language of each post, "" — none given
         self.calls = []
         self.seq = 1000
         self.fail_auth = False

@@ -2,6 +2,8 @@
 has the grammar). While you type it says what Enter will do — which post a
 reply goes to, who will see a new post — so nothing is sent by surprise."""
 
+import re
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QMessageBox, QWidget
 
@@ -28,12 +30,28 @@ class CommandBar(QWidget):
         self.hint = QLabel()
         self.hint.setObjectName("counter")
         self.hint.setTextFormat(Qt.TextFormat.PlainText)
+        self.hint.hide()  # the line takes the whole width until there's a hint
         lay.addWidget(self.hint, 2)
         self.history, self.pos = [], 0
 
     def focus(self):
         self.edit.setFocus()
         self.edit.selectAll()
+
+    def _hint(self, text):
+        self.hint.setText(text)
+        self.hint.setVisible(bool(text))
+
+    def put_alias(self, alias):
+        """A click on a post's #abc: it goes to the start of the line (instead of the
+        #number already there, if any), the cursor to the end, ready for the text."""
+        self.show()
+        text = self.edit.text()
+        rest = re.sub(r"^\s*#[0-9a-z]+(/\d+)?\s*", "", text) if text.lstrip().startswith("#") \
+            else text
+        self.edit.setText(f"#{alias} " + rest.lstrip())
+        self.edit.setFocus()
+        self.edit.end(False)
 
     # ---- what Enter would do ------------------------------------------------------
     def _who_sees(self, vis):
@@ -42,37 +60,37 @@ class CommandBar(QWidget):
     def _preview(self, text):
         c = parse(text)
         if not text.strip():
-            self.hint.setText("")
+            self._hint("")
             return
         if c.kind in ("open", "reply", "sub", "unsub", "boost", "bookmark", "delete"):
             st = self.core.by_alias(c.alias)
             if st is None:
-                self.hint.setText(_("cmd_no_post", alias=c.alias) +
+                self._hint(_("cmd_no_post", alias=c.alias) +
                                   (" " + _("cmd_as_post") if c.kind == "reply" and
                                    self.core.cfg["post"]["plain_posts"] else ""))
                 return
             who = real(st)["account"].get("acct", "")
             where = f"#{c.alias}" + (f"/{c.number}" if c.number else "")
-            self.hint.setText(_("cmd_do_" + c.kind, where=where, who=who,
+            self._hint(_("cmd_do_" + c.kind, where=where, who=who,
                                 text=snippet(st, 50),
                                 vis=self._who_sees(self.core.reply_visibility(real(st)))))
         elif c.kind in ("follow", "unfollow", "profile", "direct"):
-            self.hint.setText(_("cmd_do_" + c.kind, who=c.user))
+            self._hint(_("cmd_do_" + c.kind, who=c.user))
         elif c.kind == "post":
-            self.hint.setText(_("cmd_do_post", vis=self._who_sees(
+            self._hint(_("cmd_do_post", vis=self._who_sees(
                 self.core.cfg["post"]["default_visibility"]))
                 if self.core.cfg["post"]["plain_posts"] else _("cmd_unknown"))
         elif c.kind == "help":
-            self.hint.setText(_("cmd_do_help"))
+            self._hint(_("cmd_do_help"))
         else:
-            self.hint.setText(_("cmd_unknown"))
+            self._hint(_("cmd_unknown"))
 
     # ---- doing it -------------------------------------------------------------------
     def run(self):
         line = self.edit.text()
         c = parse(line)
         if c.kind == "error":
-            self.hint.setText(_("cmd_unknown"))
+            self._hint(_("cmd_unknown"))
             return
         if line.strip() and (not self.history or self.history[-1] != line):
             self.history.append(line)
@@ -82,7 +100,7 @@ class CommandBar(QWidget):
             return
         if c.kind == "post":
             if not self.core.cfg["post"]["plain_posts"]:
-                self.hint.setText(_("cmd_unknown"))
+                self._hint(_("cmd_unknown"))
                 return
             self._send(c.text, self.core.cfg["post"]["default_visibility"])
             return
@@ -94,14 +112,14 @@ class CommandBar(QWidget):
             if c.kind == "reply" and self.core.cfg["post"]["plain_posts"]:
                 self._send(line.strip(), self.core.cfg["post"]["default_visibility"])
             else:
-                self.hint.setText(_("cmd_no_post", alias=c.alias))
+                self._hint(_("cmd_no_post", alias=c.alias))
             return
         self.win.bridge.call(self.core.target(c.alias, c.number),
                              ok=lambda st: self._post_cmd(c, st), fail=self.win.error)
 
     def _post_cmd(self, c, st):
         if st is None:
-            self.hint.setText(_("cmd_no_comment", where=f"#{c.alias}/{c.number}"))
+            self._hint(_("cmd_no_comment", where=f"#{c.alias}/{c.number}"))
             return
         s = real(st)
         done = lambda key: (self.edit.clear(), self.win.statusBar().showMessage(_(key), 4000))  # noqa: E731
@@ -127,7 +145,7 @@ class CommandBar(QWidget):
 
     def _user(self, c, acc):
         if acc is None:
-            self.hint.setText(_("cmd_no_user", who=c.user))
+            self._hint(_("cmd_no_user", who=c.user))
             return
         if c.kind == "profile":
             self.win.open_account(acc["id"])

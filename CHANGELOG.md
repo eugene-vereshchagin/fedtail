@@ -2,6 +2,14 @@
 
 ## 0.3.0 — in progress
 
+- The language of a post: a list in the post window (each language by its own name), the
+  default in `post.language` (`""` — as in the account's settings), the list in
+  `post.languages`; drafts keep it.
+- The image viewer has half-transparent buttons in the top right corner: Save, open in the
+  browser, close.
+- A post's `#abc` is a link: a click puts it at the start of the command line (replacing the
+  number already there), ready for the text; the command line takes the whole width until
+  there's a hint to show.
 - Polls: the options right on the card (one or several, as the poll allows) and a Vote
   button; the results — bars, percentages, your choice ticked, the leader in bold — once
   you voted, when it's over, on your own poll, or by "Results"; how many voted, until when,

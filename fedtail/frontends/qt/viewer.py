@@ -2,19 +2,26 @@
 
 Fits the window; small pictures are enlarged up to ui.image_upscale times.
 Double-click or Z: 100 % and back, drag to pan. ←/→/Space: flip.
-O: open in the browser. S: save to the downloads folder (ui.save_dir).
-Esc or a click on the dark backdrop: close.
+O: open in the browser. S: save to the downloads folder (ui.save_dir) — or the
+half-transparent buttons in the top right corner. Esc or a click on the dark
+backdrop: close.
 """
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
 
 from ...i18n import _
 
 FULL_SIDE = 8192
 MARGIN = 24
 CAPTION_H = 44
+BUTTONS_CSS = """
+QToolButton { background: rgba(0, 0, 0, 120); color: rgba(255, 255, 255, 210);
+    border: 1px solid rgba(255, 255, 255, 60); border-radius: 8px; padding: 7px 14px; }
+QToolButton:hover { background: rgba(255, 255, 255, 45); color: white;
+    border-color: rgba(255, 255, 255, 140); }
+"""
 
 
 class ImageOverlay(QWidget):
@@ -36,11 +43,39 @@ class ImageOverlay(QWidget):
         self._click = QTimer(self, singleShot=True)
         self._click.timeout.connect(self.close_viewer)
         window.installEventFilter(self)
+        self.buttons = QWidget(self)
+        self.buttons.setStyleSheet(BUTTONS_CSS)
+        row = QHBoxLayout(self.buttons)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
+        self.btn_save = None
+        if ctx.save_image:
+            self.btn_save = self._button("⤓  " + _("viewer_save"), _("viewer_save_tip"),
+                                         lambda: ctx.save_image(self.media[self.i]))
+            row.addWidget(self.btn_save)
+        row.addWidget(self._button("↗", _("open_browser") + " (O)",
+                                   lambda: ctx.open_url(self.url())))
+        row.addWidget(self._button("✕", _("close") + " (Esc)", self.close_viewer))
         self.setGeometry(window.rect())
         self.show()
         self.raise_()
         self.setFocus()
         self.load()
+
+    def _button(self, text, tip, fn):
+        b = QToolButton()
+        b.setText(text)
+        b.setToolTip(tip)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # the keys stay with the viewer
+        b.clicked.connect(fn)
+        return b
+
+    def resizeEvent(self, e):
+        self.buttons.adjustSize()
+        self.buttons.move(self.width() - self.buttons.width() - MARGIN, MARGIN)
+        self.buttons.raise_()
+        super().resizeEvent(e)
 
     # ---- content ------------------------------------------------------------------
     def url(self):
