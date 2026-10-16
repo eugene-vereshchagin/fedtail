@@ -41,6 +41,7 @@ _STRINGS = {
                                "кого ты тоже читаешь. Это не подписка на тред: ответы "
                                "остальных сюда не придут. «Подписаться на тред» — придут все.",
         "and_more": "и ещё {n}",
+        "group_fold_tip": "Свернуть или развернуть раздел (непрочитанное останется числом)",
         # visibility
         "vis_public": "🌐 Публично", "vis_unlisted": "🔓 Не в общих лентах",
         "vis_private": "🔒 Только подписчикам", "vis_direct": "✉ Лично упомянутым",
@@ -309,6 +310,7 @@ _STRINGS = {
                                "to people you also follow. That's not following the thread: "
                                "others' replies won't come. Follow the thread to get them all.",
         "and_more": "and {n} more",
+        "group_fold_tip": "Fold or unfold the section (unread stays as a number)",
         "vis_public": "🌐 Public", "vis_unlisted": "🔓 Unlisted",
         "vis_private": "🔒 Followers only", "vis_direct": "✉ Mentioned only",
         "media_video": "video", "media_audio": "audio", "media_image": "image",

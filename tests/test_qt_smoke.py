@@ -565,6 +565,29 @@ class QtSmokeTest(unittest.TestCase):
         ov.close_viewer()
         self.assertFalse(ov.isVisible())
 
+    def test_sidebar_sections_fold(self):
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.core.poll_once()
+        self.pump(until=lambda: self.win.lane_items["comments"].count == 1)
+        rows = {self.win.lanes.item(i).data(0x0100): self.win.lanes.item(i)
+                for i in range(self.win.lanes.count())}
+        head = self.win.group_heads["personal"]
+        self.win.fold_group("personal")
+        self.assertTrue(rows["comments"].isHidden())
+        self.assertFalse(rows["people"].isHidden())
+        self.assertEqual((head.arrow.text(), head.badge.text()), ("▸", "1"))
+        self.assertFalse(head.badge.isHidden())
+        # kept across a rebuild (lists change) and a restart
+        self.win._rebuild_sidebar()
+        row = next(self.win.lanes.item(i) for i in range(self.win.lanes.count())
+                   if self.win.lanes.item(i).data(0x0100) == "comments")
+        self.assertTrue(row.isHidden())
+        self.assertEqual(self.core.get_state("folded_groups"), ["personal"])
+        self.win.fold_group("personal")
+        self.assertFalse(row.isHidden())
+        self.assertTrue(self.win.group_heads["personal"].badge.isHidden())
+
     def test_count_on_the_icon(self):
         from PySide6.QtGui import QIcon
 

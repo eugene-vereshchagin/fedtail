@@ -2,6 +2,8 @@
 
 ## 0.3.0 — in progress
 
+- Sidebar sections fold: a click on "Lists" (or any section title) hides its lanes and
+  shows their unread as one number next to the title; remembered across restarts.
 - The unread count on the icon: drawn into the tray icon and shown on the task bar button
   (the LauncherEntry signal KDE Plasma listens to; needs the menu entry from
   `--install-desktop` and QtDBus — Debian: `python3-pyside6.qtdbus`). Which lanes count:

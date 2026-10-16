@@ -117,8 +117,50 @@ class LaneItem(QWidget):
             self._render()
 
     def set_count(self, n):
+        self.count = n
         self.badge.setText(str(n) if n < 1000 else "999+")
         self.badge.setVisible(bool(n))
+
+
+class GroupHeader(QWidget):
+    """A section title in the sidebar; a click folds the section away (its lanes
+    hidden, their unread summed up next to the title) — for screenshots, or for
+    lists that are nobody's business."""
+
+    def __init__(self, title, on_toggle):
+        super().__init__()
+        self.on_toggle = on_toggle
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip(_("group_fold_tip"))
+        h = QHBoxLayout(self)
+        h.setContentsMargins(10, 14, 4, 2)
+        h.setSpacing(6)
+        self.arrow = QLabel()
+        self.arrow.setObjectName("listsHeader")
+        h.addWidget(self.arrow)
+        self.label = QLabel(title)
+        self.label.setObjectName("listsHeader")
+        h.addWidget(self.label, 1)
+        self.badge = QLabel()
+        self.badge.setObjectName("badge")
+        self.badge.setProperty("kind", "normal")
+        self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.badge.setMinimumWidth(24)
+        h.addWidget(self.badge)
+        self.layout_ = h
+        self.set_folded(False, 0)
+
+    def set_folded(self, folded, count):
+        self.arrow.setText("▸" if folded else "▾")
+        self.badge.setText(str(count) if count < 1000 else "999+")
+        self.badge.setVisible(folded and count > 0)
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.on_toggle()
+            e.accept()
+            return
+        super().mousePressEvent(e)
 
 
 @dataclass
@@ -449,15 +491,12 @@ class MainWindow(QMainWindow):
     def _rebuild_lists(self):
         self._rebuild_sidebar()
 
-    def _section_header(self, title, plus=False):
+    def _section_header(self, title, group, plus=False):
         head = QListWidgetItem()
         head.setFlags(Qt.ItemFlag.NoItemFlags)
-        box = QWidget()
-        h = QHBoxLayout(box)
-        h.setContentsMargins(10, 14, 4, 2)
-        label = QLabel(self.theme.word("lane", title))
-        label.setObjectName("listsHeader")
-        h.addWidget(label, 1)
+        box = GroupHeader(self.theme.word("lane", title), lambda g=group: self.fold_group(g))
+        self.group_heads[group] = box
+        h = box.layout_
         if plus:
             btn = QToolButton()
             btn.setObjectName("menu")
@@ -479,6 +518,7 @@ class MainWindow(QMainWindow):
         self.lanes.clear()
         self.lane_items = {}
         self.lane_order = []
+        self.group_heads, self.group_rows = {}, {}
         if self.cfg["ui"]["sidebar_groups"]:
             groups = lanes_module.grouped(self.core.lanes)
         else:
@@ -489,11 +529,12 @@ class MainWindow(QMainWindow):
             if group == "lists":
                 if not self.cfg["lists"]["enabled"]:
                     continue
-                self._section_header(_("lists_header"), plus=True)
+                self._section_header(_("lists_header"), group, plus=True)
             elif not names:
                 continue
             elif group:
-                self._section_header(_("grp_" + group))
+                self._section_header(_("grp_" + group), group)
+            self.group_rows[group] = names
             for name in names:
                 it = QListWidgetItem()
                 it.setData(Qt.ItemDataRole.UserRole, name)
@@ -507,6 +548,7 @@ class MainWindow(QMainWindow):
                 self.lanes.setItemWidget(it, w)
                 self.lane_items[name] = w
                 self.lane_order.append(name)
+                it.setHidden(group in self.folded_groups())
         # lanes of lists that are gone
         for name in [n for n in self.lane_widgets if n.startswith("list:")
                      and n not in self.core.lane_by_name]:
@@ -514,6 +556,8 @@ class MainWindow(QMainWindow):
             self.stack.removeWidget(w)
             w.deleteLater()
         self.lanes.blockSignals(False)
+        for g in self.group_heads:
+            self._show_fold(g)
         if current:
             if current in self.lane_items:
                 self.select_lane(current)
@@ -615,6 +659,31 @@ class MainWindow(QMainWindow):
         w = self.stack.currentWidget()
         return getattr(w, "name", None)
 
+    # ---- folding sections of the sidebar -----------------------------------------------
+    def folded_groups(self):
+        return set(self.core.get_state("folded_groups") or [])
+
+    def fold_group(self, group, fold=None):
+        folded = self.folded_groups()
+        fold = (group not in folded) if fold is None else fold
+        (folded.add if fold else folded.discard)(group)
+        self.core.set_state("folded_groups", sorted(folded))
+        names = set(self.group_rows.get(group, ()))
+        for i in range(self.lanes.count()):
+            it = self.lanes.item(i)
+            if it.data(Qt.ItemDataRole.UserRole) in names:
+                it.setHidden(fold)
+        self._show_fold(group)
+        log.info("sidebar section %s %s", group, "folded" if fold else "unfolded")
+
+    def _show_fold(self, group):
+        head = self.group_heads.get(group)
+        if head is None:
+            return
+        total = sum(self.lane_items[n].count for n in self.group_rows.get(group, ())
+                    if n in self.lane_items)
+        head.set_folded(group in self.folded_groups(), total)
+
     def select_lane(self, name):
         for i in range(self.lanes.count()):
             if self.lanes.item(i).data(Qt.ItemDataRole.UserRole) == name:
@@ -641,6 +710,8 @@ class MainWindow(QMainWindow):
             if name in self.cfg["ui"]["icon_count"]:
                 total += n
             item.set_count(n)
+        for g in getattr(self, "group_heads", {}):
+            self._show_fold(g)
         if getattr(self, "curtain", None) is not None and self.curtain_shown():
             self._curtain_text()
         if self.tray:
