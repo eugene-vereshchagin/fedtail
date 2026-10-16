@@ -54,6 +54,7 @@ DEFAULTS = {
         "quotes": 'card',
         "remote_profiles": True,
         "remote_posts": 20,
+        "remote_people": True,
     },
     "read": {
         "mark_read": "on_scroll",

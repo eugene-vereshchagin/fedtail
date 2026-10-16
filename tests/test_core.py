@@ -721,6 +721,25 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
 
+    def test_people_from_origin(self):
+        core, w = self.make()
+        core.connect().result()
+        far = fakes.acct("F", "fay@far.example")
+        far["uri"] = "https://far.example/users/fay"
+        w.add(status("080", BOB, minute=1))  # Bob is known to my server
+        bob_uri = "https://social.example/users/bob"
+        w.statuses["080"]["account"]["url"] = bob_uri
+        core._origin_json = {
+            "https://far.example/users/fay": {"followers": "https://far.example/f"},
+            "https://far.example/f": {"totalItems": 120, "first": {"orderedItems": [bob_uri]}},
+        }.get
+        res, nxt = core.people_from_origin(far, "followers").result()
+        self.assertIsNone(nxt)
+        self.assertEqual(res["total"], 120)
+        self.assertEqual([a["id"] for a in res["accounts"]], ["B"])
+        res, _ = core.people_from_origin(far, "followers", have_ids={"B"}).result()
+        self.assertEqual(res["accounts"], [])  # shown already
+
     def test_async_refresh_grows_thread(self):
         """Mastodon 4.5+ says it's fetching the rest of a thread: when it's done, the
         open thread is told to grow."""

@@ -1092,6 +1092,49 @@ class Core:
             return {"accounts": accounts, "relations": rel}, nxt
         return self.submit(job)
 
+    def people_from_origin(self, acc, which, have_ids=(), limit=40):
+        """Whom someone from another server follows / who follows them, as their own
+        server lists it (ActivityPub, without my token), each found through my server:
+        ({accounts, relations, total}, None). Lists hidden by their owner give nothing."""
+        def job():
+            from . import replies
+            actor = None
+            for url in (acc.get("uri"), acc.get("url")):
+                if url:
+                    try:
+                        actor = self._origin_json(url)
+                    except Exception as e:  # noqa: BLE001
+                        log.debug("actor %s: %s", url, e)
+                    if isinstance(actor, dict) and actor.get(which):
+                        break
+            coll_url = actor.get(which) if isinstance(actor, dict) else None
+            if not coll_url:
+                return {"accounts": [], "relations": {}, "total": None}, None
+            coll = self._origin_json(coll_url) if isinstance(coll_url, str) else coll_url
+            total = coll.get("totalItems") if isinstance(coll, dict) else None
+            try:
+                uris = replies.collection_items(self._origin_json, coll or {}, pages=3)
+            except Exception as e:  # noqa: BLE001
+                log.info("%s of %s: %s", which, acc.get("id"), e)
+                uris = []
+            have, found = set(have_ids), []
+            for uri in uris[:limit]:
+                try:
+                    got = self.api.search(uri, kind="accounts", resolve=True, limit=1)
+                except Exception as e:  # noqa: BLE001
+                    log.debug("resolve %s: %s", uri, e)
+                    continue
+                for a in (got or {}).get("accounts") or []:
+                    if a["id"] not in have:
+                        have.add(a["id"])
+                        found.append(a)
+            rel = {r["id"]: r for r in self.api.relationships([a["id"] for a in found])} \
+                if found else {}
+            log.info("%s of %s from their server: %s listed, %d found here", which,
+                     acc.get("id"), total, len(found))
+            return {"accounts": found, "relations": rel, "total": total}, None
+        return self.bg.submit(job)
+
     def tag_info(self, name):
         return self.submit(self.api.tag, name)
 

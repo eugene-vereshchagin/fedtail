@@ -2,6 +2,10 @@
 
 ## 0.8.0 — in progress
 
+- Followers and follows of someone from another server: your server knows only part of
+  them; the end of such a list offers "more — from their server", read there (ActivityPub,
+  without your token) and found through yours, with the total their server reports.
+  `feed.remote_people = false` hides that button.
 - A profile of someone from another server that yours knows little about fills in: fedtail
   reads their newest public posts from their own server's outbox (ActivityPub, without your
   token) and has your server fetch them, so they are ordinary posts — answerable, likeable;

@@ -1545,6 +1545,8 @@ class PeopleWidget(QWidget):
         self.btn_more = _button(_("older_down"), self.more, name="older")
         self.view.footer.addWidget(self.btn_more)
         self.count = 0
+        self.from_origin = False
+        self.shown_ids = set()
         self.more()
 
     def more(self):
@@ -1559,9 +1561,31 @@ class PeopleWidget(QWidget):
         self.count += len(res["accounts"])
         self.header.info.setText(_("people_shown", n=self.count))
         self.next = nxt
+        self.shown_ids = getattr(self, "shown_ids", set()) | {a["id"] for a in res["accounts"]}
+        if res.get("total") is not None:
+            self.header.info.setText(_("people_shown", n=self.count) + " · " +
+                                     _("people_origin_total", n=res["total"]))
         self.btn_more.setEnabled(bool(nxt))
-        if not nxt:
+        if nxt:
+            return
+        host = self.acc["acct"].split("@", 1)[1] if "@" in self.acc["acct"] else ""
+        if host and not self.from_origin and \
+                self.core.cfg["feed"].get("remote_people", True):
+            # my server knows only part of them: the rest is on theirs
+            self.from_origin = True
+            self.btn_more.setText(_("people_more_from", host=host))
+            self.btn_more.setEnabled(True)
+            self.btn_more.clicked.disconnect()
+            self.btn_more.clicked.connect(self._ask_origin)
+        else:
             self.btn_more.setText(_("no_older"))
+
+    def _ask_origin(self):
+        self.btn_more.setEnabled(False)
+        self.btn_more.setText(_("loading"))
+        self.win.bridge.call(
+            self.core.people_from_origin(self.acc, self.which, self.shown_ids), ok=self._page,
+            fail=lambda e: (self.btn_more.setText(_("no_older")), self.win.error(e)))
 
     def apply_read(self, ids):
         pass
