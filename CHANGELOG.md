@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.9.0 — in progress
+
 ## 0.8.0 — 2026-10-17
 
 - "My likes" lane: the posts you liked (`"favourites"` in `lanes.enabled`; off by default).
