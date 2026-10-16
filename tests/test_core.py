@@ -425,7 +425,7 @@ class CoreTest(TmpDir):
         from fedtail.core import lanes
         groups = dict(lanes.grouped(core.lanes))
         self.assertEqual(groups["standard"], ["global", "people", "local", "bots"])
-        self.assertEqual(groups["personal"][:3], ["mine", "mentions", "comments"])
+        self.assertEqual(groups["personal"][:4], ["mine", "direct", "mentions", "comments"])
         self.assertEqual([g for g, _n in lanes.grouped(core.lanes)][-1], "lists")
 
     def test_bookmarks(self):
@@ -720,6 +720,21 @@ class CoreTest(TmpDir):
         self.assertIsNotNone(core.store.get_status("73"))
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
+
+    def test_direct_lane(self):
+        core, w = self.make()
+        core.connect().result()
+        dm = status("020", BOB, "010", "ME", minute=20, vis="direct", text="лично")
+        w.add(status("010", fakes.ME, minute=10), home=True)
+        w.add(dm, mention=True)
+        w.add(status("021", BOB, "010", "ME", minute=21), mention=True)
+        core.poll_once()
+        ids = lambda lane: [st["id"] for _, st in core.lane_entries(lane)]
+        self.assertEqual(ids("direct"), ["020"])
+        self.assertEqual(ids("comments"), ["021"])  # the private one lives apart
+        core.cfg["lanes"]["direct_apart"] = False
+        core._lists_version += 1
+        self.assertEqual(ids("comments"), ["020", "021"])
 
     def test_people_from_origin(self):
         core, w = self.make()

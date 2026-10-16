@@ -405,7 +405,9 @@ class Core:
                                  self.cfg["lanes"]["mentions_all"],
                                  self.cfg["subs"]["replies_to_me"],
                                  self._hidden_authors(),
-                                 frozenset(self.cfg["lists"]["hide_in"]))
+                                 frozenset(self.cfg["lists"]["hide_in"]),
+                                 self.cfg["lanes"].get("direct_apart", True)
+                                 and "direct" in self.lane_by_name)
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def _poll_activity(self):

@@ -61,11 +61,12 @@ DEFAULTS = {
         "sync_markers": True,
     },
     "lanes": {
-        "enabled": ["global", "people", "local", "bots", "mine", "mentions", "comments", "subs",
-                    "bookmarks", "activity", "requests"],
+        "enabled": ["global", "people", "local", "bots", "mine", "direct", "mentions", "comments",
+                    "subs", "bookmarks", "activity", "requests"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,
+        "direct_apart": True,
     },
     "post": {
         "default_visibility": "private",
@@ -81,7 +82,7 @@ DEFAULTS = {
     },
     "notify": {
         "enabled": True,
-        "lanes": ["comments", "mentions", "subs", "activity", "requests"],
+        "lanes": ["direct", "comments", "mentions", "subs", "activity", "requests"],
         "privacy": "full",
         "when_focused": False,
         "backend": "auto",
@@ -138,7 +139,7 @@ CHOICES = {
     ("lists", "hide_members"): {"all", "exclusive", "off"},
 }
 LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",
-              "local", "global", "requests"}
+              "local", "global", "requests", "direct"}
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {

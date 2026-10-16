@@ -2,6 +2,10 @@
 
 ## 0.8.0 — in progress
 
+- "Direct" lane: private messages to you (posts only the mentioned can see), in Personal and
+  notified about by default; they no longer double up in Replies to me and Mentions
+  (`lanes.direct_apart = false` to keep them there too). A config written earlier lists its
+  lanes itself: add `"direct"` to `lanes.enabled` (and `notify.lanes`) to get it.
 - Followers and follows of someone from another server: your server knows only part of
   them; the end of such a list offers "more — from their server", read there (ActivityPub,
   without your token) and found through yours, with the total their server reports.

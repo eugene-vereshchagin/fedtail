@@ -27,6 +27,7 @@ class LaneContext:
     subs_replies_to_me: bool = False
     hidden: frozenset = frozenset()  # authors put in lists: their list shows them…
     hide_in: frozenset = frozenset()  # …and these lanes don't (lists.hide_in)
+    direct_apart: bool = False  # private messages only in "direct" (lanes.direct_apart)
 
 
 def _all(st, ctx):
@@ -51,12 +52,24 @@ def keeps(lane, st, ctx):
     return lane.keep(st, ctx)
 
 
+def _is_direct(st):
+    return real(st).get("visibility") == "direct"
+
+
 def _comments(st, ctx):
+    if ctx.direct_apart and _is_direct(st):
+        return False
     return is_comment_to_me(real(st), ctx.me_id)
 
 
 def _other_mentions(st, ctx):
+    if ctx.direct_apart and _is_direct(st):
+        return False
     return ctx.mentions_all or not is_comment_to_me(real(st), ctx.me_id)
+
+
+def _direct(st, ctx):
+    return _is_direct(st)
 
 
 def _bookmarked(st, ctx):
@@ -76,6 +89,8 @@ LANES = {
     "bookmarks": Lane("bookmarks", "bookmarks", _bookmarked, lazy=True),
     "bots": Lane("bots", "home", _bots),
     "mine": Lane("mine", "mine", _all),
+    # private messages to me: the mentions stream, only what was sent to the named
+    "direct": Lane("direct", "mentions", _direct, by_status_time=True),
     "local": Lane("local", "local", _all, lazy=True),
     "global": Lane("global", "federated", _all, lazy=True),
     "requests": Lane("requests", None, _all),
@@ -87,7 +102,7 @@ LANES = {
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
     ("standard", ["global", "people", "local", "bots"]),        # from the widest down
-    ("personal", ["mine", "mentions", "comments", "subs", "bookmarks", "activity",
+    ("personal", ["mine", "direct", "mentions", "comments", "subs", "bookmarks", "activity",
                   "requests"]),
     ("lists", []),
 ]
