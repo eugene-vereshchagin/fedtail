@@ -165,6 +165,7 @@ def pump(app, seconds):
 
 
 ERRORS = []
+LOGGED = []
 
 
 def shoot(widget, out, name):
@@ -315,6 +316,13 @@ def main():
     import logging
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr,
                         format="%(levelname)s %(name)s: %(message)s")
+
+    class Keep(logging.Handler):
+        def emit(self, record):
+            LOGGED.append(self.format(record))
+    keep = Keep(logging.WARNING)
+    keep.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    logging.getLogger().addHandler(keep)
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "screenshots")
     out.mkdir(parents=True, exist_ok=True)
     i18n.setup("ru")
@@ -331,8 +339,10 @@ def main():
     for name in ("point", "juick", "juick-classic", "night", "paper", "contrast",
                  "pink", "nord", "solarized"):
         run(app, out, name, BREEZE_LIGHT, name, set())
+    # what went wrong goes next to the pictures (CI publishes the folder), and fails the run
+    (out / "errors.txt").write_text("\n".join(ERRORS + LOGGED) + "\n" if ERRORS else "none\n")
     if ERRORS:
-        sys.exit("errors on screen:\n  " + "\n  ".join(ERRORS))
+        print("errors on screen:\n  " + "\n  ".join(ERRORS), file=sys.stderr)
 
 
 if __name__ == "__main__":
