@@ -81,6 +81,8 @@ def label(p):
 def command(profile):
     """(argv, cwd) that starts fedtail with this profile — from the same checkout
     or installation this one runs from."""
+    if getattr(sys, "frozen", False):  # the one-file build
+        return [sys.executable, "--profile", profile], None
     root = Path(__file__).resolve().parent.parent.parent
     if (root / "pyproject.toml").exists():
         return [sys.executable, "-m", "fedtail", "--profile", profile], str(root)

@@ -2,6 +2,9 @@
 
 ## 0.5.0 — in progress
 
+- One file, no installing: every release has `fedtail-X.Y.Z-linux-x86_64` (built on Debian 12)
+  and `fedtail-X.Y.Z-windows.exe` with Python and Qt inside; `--install-desktop` works from
+  them; `packaging/build.py` builds one locally. Running from the source stays as it was.
 - "Unread" over a lane: only what was unread when you opened it, plus what arrives. Reading
   doesn't make posts vanish under your eyes — they grey out and stay until you leave the
   lane; the next time it opens without them. Remembered per lane.

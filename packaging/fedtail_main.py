@@ -1,4 +1,4 @@
-"""Entry point for the frozen Windows build (PyInstaller)."""
+"""Entry point of the one-file builds (PyInstaller), Linux and Windows."""
 
 import os
 import sys

@@ -14,7 +14,7 @@ being discussed. So the whole point is giving that context back: every reply sho
 answers; under someone's comment you see what you said back; a thread opens as a tree right
 where you came from; a lane remembers where you stopped and never jumps.
 
-[Русская версия](README.ru.md)
+[Русскоязычная версия](README.ru.md)
 
 > **Status: public beta.** Used every day by its author on GoToSocial; Mastodon, Akkoma and
 > Friendica work through the same API. Linux (Debian 13 and newer) first, Windows on trial.
@@ -51,6 +51,21 @@ lose your place; every comment shows the thread it belongs to; threads are trees
 thread subscriptions (like `S #abc` on Point) and a command line: `#abc text`, `S #abc`,
 `@user`; private by default. Trying it out: [docs/TESTING.md](docs/TESTING.md).
 
+## One file, no installing
+
+Every [release](https://github.com/eugene-vereshchagin/fedtail/releases) has fedtail as a single file with Python and Qt inside:
+
+* **Linux** (x86-64; Debian 12 and newer, Ubuntu 22.04 and newer, and the like):
+  `fedtail-X.Y.Z-linux-x86_64` — `chmod +x` it and run. `--install-desktop` adds it to the
+  menu with its icon.
+* **Windows** (10 and 11): `fedtail-X.Y.Z-windows.exe` — run it. `--install-desktop` adds a
+  Start menu shortcut. The config lives in `%APPDATA%\fedtail\<profile>\`, the data in
+  `%LOCALAPPDATA%\fedtail\<profile>\`; notifications come through the tray icon. Windows
+  warns about an unknown app the first time (the file isn't signed): "More info" → "Run anyway".
+
+The file unpacks itself on start, so the first window takes a few seconds. Everything else is
+the same as running from the source — the same config, profiles and logs.
+
 ## Running from source
 
 Debian 13 (trixie) or newer:
@@ -80,12 +95,9 @@ Squares instead of emoji and flags mean there is no colour emoji font:
 
 Anywhere else with Python ≥ 3.11: `pip install requests PySide6-Essentials`, then the same.
 
-**Windows** (an early try): the [releases](https://github.com/eugene-vereshchagin/fedtail/releases)
-have `fedtail-…-windows.zip` — unpack it anywhere and run `fedtail.exe`, no Python needed.
-`fedtail.exe --install-desktop` adds a Start menu shortcut. The config lives in
-`%APPDATA%\fedtail\<profile>\`, the data in `%LOCALAPPDATA%\fedtail\<profile>\`;
-notifications come through the tray icon. From the source: as above, with
-`pip install requests PySide6-Essentials` and `python -m fedtail`.
+On Windows from the source: the same, with `pip install requests PySide6-Essentials` and
+`python -m fedtail`. To build the one-file version yourself: `pip install pyinstaller` and
+`python3 packaging/build.py` (it lands in `dist/`).
 
 On first start fedtail asks for your server, opens the login page in the browser and waits
 for the code the server shows you.

@@ -50,6 +50,22 @@ fedtail задуман как клиент «по-поинтовски» пов�
 подписка на треды (как `S #abc` на Point) и командная строка: `#abc текст`, `S #abc`, `@user`;
 приватность по умолчанию. Попробовать и прислать отзыв: [docs/TESTING.md](docs/TESTING.md).
 
+## Одним файлом, без установки
+
+В каждом [релизе](https://github.com/eugene-vereshchagin/fedtail/releases) fedtail лежит одним файлом, внутри — и Python, и Qt:
+
+* **Linux** (x86-64; Debian 12 и новее, Ubuntu 22.04 и новее и тому подобное):
+  `fedtail-X.Y.Z-linux-x86_64` — `chmod +x` и запускай. `--install-desktop` добавит его в
+  меню с иконкой.
+* **Windows** (10 и 11): `fedtail-X.Y.Z-windows.exe` — просто запусти. `--install-desktop`
+  добавит ярлык в «Пуск». Конфиг — в `%APPDATA%\fedtail\<профиль>\`, данные — в
+  `%LOCALAPPDATA%\fedtail\<профиль>\`, уведомления — через значок в трее. В первый раз Windows
+  предупредит о неизвестном приложении (файл не подписан): «Подробнее» → «Выполнить в любом
+  случае».
+
+Файл при запуске распаковывает себя, поэтому окно появляется через несколько секунд. В
+остальном всё как при запуске из исходников — тот же конфиг, профили и журналы.
+
 ## Запуск из исходников
 
 Debian 13 (trixie) и новее:
@@ -79,12 +95,9 @@ python3 fedtail              # папкой — тоже работает
 
 Где угодно ещё с Python ≥ 3.11: `pip install requests PySide6-Essentials`, дальше так же.
 
-**Windows** (пока проба): в [релизах](https://github.com/eugene-vereshchagin/fedtail/releases)
-лежит `fedtail-…-windows.zip` — распакуй куда угодно и запусти `fedtail.exe`, Python не нужен.
-`fedtail.exe --install-desktop` добавит ярлык в меню «Пуск». Конфиг — в
-`%APPDATA%\fedtail\<профиль>\`, данные — в `%LOCALAPPDATA%\fedtail\<профиль>\`,
-уведомления — через значок в трее. Из исходников — так же, как выше, через
-`pip install requests PySide6-Essentials` и `python -m fedtail`.
+На Windows из исходников — так же, через `pip install requests PySide6-Essentials` и
+`python -m fedtail`. Собрать однофайловую версию самому: `pip install pyinstaller` и
+`python3 packaging/build.py` (появится в `dist/`).
 
 При первом запуске fedtail спросит адрес сервера, откроет страницу входа в браузере и будет
 ждать код, который покажет сервер. Заходи обычной учёткой, не админской.

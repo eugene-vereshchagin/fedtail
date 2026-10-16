@@ -66,7 +66,7 @@ jobs:
         shell: bash
         run: python .github/annotate.py test-output.txt
 
-  # a folder with fedtail.exe and everything it needs, zipped: no Python to install
+  # one file with everything inside, no Python to install: fedtail.exe for Windows…
   windows-build:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [windows]
@@ -79,22 +79,37 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install requests PySide6-Essentials pyinstaller
-      - name: Icon
-        run: python packaging/windows/make_icon.py fedtail/data/icons/fedtail.svg fedtail.ico
-      - name: Build
+      - run: python packaging/build.py
+      - name: Starts
         shell: bash
-        run: |
-          VER=$(python -c "import fedtail.version as v; print(v.full())")
-          echo "building fedtail $VER"
-          python -m PyInstaller --noconfirm --windowed --name fedtail --icon fedtail.ico \
-            --add-data "fedtail/data:fedtail/data" --collect-submodules fedtail \
-            packaging/windows/fedtail_main.py
-          ./dist/fedtail/fedtail.exe --version
-          cd dist && 7z a -tzip ../fedtail-windows.zip fedtail > /dev/null
+        run: ./dist/fedtail.exe --version
       - uses: actions/upload-artifact@v4
         with:
           name: fedtail-windows
-          path: fedtail-windows.zip
+          path: dist/fedtail.exe
+
+  # …and fedtail for Linux, built on Debian 12 so it runs on older systems too
+  linux-build:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, debian]
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv python3-pip binutils git ca-certificates
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install requests PySide6-Essentials pyinstaller
+          /tmp/venv/bin/python packaging/build.py
+          ./dist/fedtail --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-linux
+          path: dist/fedtail
 
   # the real target: Debian 13 with Qt from apt, no pip at all
   debian:
@@ -155,7 +170,7 @@ jobs:
   # with that version's CHANGELOG section as the notes
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, test, debian, windows-build]
+    needs: [lint, test, debian, windows-build, linux-build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -165,7 +180,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          name: fedtail-windows
+          path: built
       - name: Tag and release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -184,6 +199,7 @@ jobs:
           git config user.email "github-actions@users.noreply.github.com"
           git tag -a "v$VER" -m "fedtail $VER"
           git push origin "v$VER"
-          cp fedtail-windows.zip "fedtail-$VER-windows.zip"
+          cp built/fedtail-windows/fedtail.exe "fedtail-$VER-windows.exe"
+          cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
           gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag \
-            "fedtail-$VER-windows.zip"
+            "fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64"

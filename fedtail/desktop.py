@@ -22,7 +22,10 @@ def entry_text(profile=DEFAULT_PROFILE, source_dir=None, icon="fedtail"):
     from its .desktop entry, and a bare name has to be found in the icon theme —
     which Plasma caches, so a freshly installed one often shows as a blank page."""
     args = "" if profile == DEFAULT_PROFILE else f" --profile {profile}"
-    if source_dir:
+    if getattr(sys, "frozen", False):  # the one-file build: the file itself
+        exec_line = f'"{sys.executable}"{args}'
+        path_line = ""
+    elif source_dir:
         exec_line = f"{sys.executable} -m fedtail{args}"
         path_line = f"Path={source_dir}\n"
     else:
