@@ -395,6 +395,8 @@ ruff check .
 * [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it is built: modules, threads, the store,
   lanes, the poll cycle, events, the Qt frontend, themes, config, tests, recipes.
 * [docs/DEBUGGING.md](docs/DEBUGGING.md) — the logs, and what to send when it breaks.
+* [docs/FEATURES.md](docs/FEATURES.md) — what fedtail does and doesn't, next to other clients,
+  with the config switch for each (Russian tables, English summary).
 * [docs/DESIGN.md](docs/DESIGN.md) — the spec and the queue of planned work (Russian).
 * [AGENTS.md](AGENTS.md) — the rules in one page, for coding agents and humans in a hurry.
 * [CONTRIBUTING.md](CONTRIBUTING.md) — reporting bugs, proposing changes, running the tests.

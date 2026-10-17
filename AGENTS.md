@@ -4,7 +4,8 @@ Read `docs/ARCHITECTURE.md` first: it maps every module, the threads, the store
 schema, the lanes, the poll cycle, the events and the Qt frontend, with recipes
 for common changes. `docs/DESIGN.md` (Russian) is the product spec and the queue
 of planned work. `docs/DEBUGGING.md` explains the logs a user can send; `docs/TESTING.md` is the page
-for alpha testers (install, what to try, how to report).
+for alpha testers (install, what to try, how to report); `docs/FEATURES.md` is the
+feature table (have / partly / no / planned, other clients, the config switch for each).
 
 ## Run, test, lint
 
@@ -41,4 +42,5 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   features has landed: set the release version and CHANGELOG date and push — CI's
   `release` job tags the commit and publishes a GitHub release once tests are green.
 * Add a test with every fix (tests/fakes.py is an in-memory Mastodon), and keep
-  `CHANGELOG.md` and the docs in step with the code.
+  `CHANGELOG.md` and the docs in step with the code — a new feature or switch also
+  gets its row in `docs/FEATURES.md`.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0 — in progress
+
+- `docs/FEATURES.md`: what fedtail does and doesn't, next to other clients, with the config
+  switch for each; linked from both READMEs.
+
 ## 0.10.0 — 2026-10-17
 
 - The whole interface in a terminal: `fedtail --ui tui` (or `ui.frontend = "tui"`) — lanes,
