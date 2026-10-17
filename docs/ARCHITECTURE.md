@@ -96,6 +96,8 @@ fedtail/
     threads.py       context → flat tree with depth and /N numbers
   frontends/
     __init__.py      registry: name -> module with run(core, instance, argv)
+    cli.py           terminal commands (lanes/show/tail/post/read): plain stdout,
+                     no Qt, no single-instance lock; `fedtail COMMAND …`
     notifytext.py    what a desktop notification says (no Qt, tested)
     iconart.py       the app icon as SVG, drawn from a theme's [icon] colours
     themefile.py     theme TOML files: find, inherit, validate (no Qt)
@@ -151,6 +153,9 @@ docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md
    session header and the stats thread.
 9. `frontends.load(name)` imports the frontend module; `Core(cfg, paths)` opens
    the store and creates the thread pools (no network yet).
+    A terminal command (`fedtail show comments`) stops before the lock:
+    `__main__._terminal()` → `cli.run(core, argv)`, which connects, polls once,
+    prints, and leaves.
 10. `frontend.run(core, instance, argv)` — for Qt (`frontends/qt/__init__.py`):
     QApplication → `theme.apply()` → `Bridge(core)` → `MainWindow` →
     `diagnostics.install()` → `win.show()` → `win.start()`.

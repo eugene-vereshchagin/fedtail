@@ -26,7 +26,7 @@ where you came from; a lane remembers where you stopped and never jumps.
 **Contents**
 
 - *Start:* [What's different](#whats-different) · [For Juick and Point.im people](#for-juick-and-pointim-people) · [One file, no installing](#one-file-no-installing) · [Running from source](#running-from-source) · [Accounts, profiles and files](#accounts-profiles-and-files)
-- *Reading:* [Lanes](#lanes) · [Posts](#posts) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
+- *Reading:* [Lanes](#lanes) · [Posts](#posts) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [In the terminal](#in-the-terminal) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
 - *Writing and you:* [Writing](#writing) · [Your profile](#your-profile) · [Themes](#themes) · [Keys](#keys)
 - *More:* [If it breaks](#if-it-breaks) · [Development](#development) · [Who wrote it](#who-wrote-it) · [License](#license)
 
@@ -246,6 +246,25 @@ answers comment /2 of its thread, `S #a3f` / `U #a3f` subscribe to a thread or l
 deletes your post, `@user` opens a profile, `@user text` writes to them directly, plain text
 is a new post, `?` shows it all. While you type it says what Enter will do — which post a reply
 goes to and who will see it. `↑` `↓` bring back earlier commands.
+
+## In the terminal
+
+The same profile without the window — over ssh, in a script, in a pipe:
+
+```
+fedtail lanes                         # the lanes and how much is unread in each
+fedtail show comments -n 20           # the newest posts of a lane (--unread, --mark-read)
+fedtail tail comments mentions        # new posts as they arrive, until Ctrl+C
+fedtail post "text"                   # a new post; "-" or no text: read it from stdin
+fedtail post --reply a3f "text"       # a reply to #a3f (#a3f/2: to comment /2)
+fedtail read comments                 # mark a lane read
+fedtail -p work show people           # another profile
+```
+
+Lists go by their title (`fedtail show Friends`). It shares the database and the read marks
+with the window, so it works with the window open. Colour only on a terminal (`NO_COLOR` is
+respected); `[cli]` in the config: `color`, `max_lines`, `tail_lanes`, and `enabled = false`
+to turn the commands off.
 
 ## Silence
 

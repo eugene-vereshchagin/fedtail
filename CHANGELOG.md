@@ -2,6 +2,11 @@
 
 ## 0.9.0 — in progress
 
+- In the terminal: `fedtail lanes`, `fedtail show LANE`, `fedtail tail [LANE…]`,
+  `fedtail post [--reply ALIAS] TEXT|-`, `fedtail read LANE` — the same profile, database and
+  read marks as the window, no Qt needed. New config chapter `[cli]`: `enabled`, `color`,
+  `max_lines`, `tail_lanes`.
+
 ## 0.8.0 — 2026-10-17
 
 - "My likes" lane: the posts you liked (`"favourites"` in `lanes.enabled`; off by default).

@@ -16,6 +16,7 @@ from . import frontends, i18n, version  # noqa: E402
 from .core import config, config_update, paths  # noqa: E402
 from .core.app import Core  # noqa: E402
 from .core.instance import SingleInstance  # noqa: E402
+from .frontends import cli  # noqa: E402
 
 
 def parse_args(argv):
@@ -44,6 +45,12 @@ def parse_args(argv):
                    help="pack logs, crash traces and system info into an archive in your home "
                         "folder (no token, no database) and exit")
     p.add_argument("-V", "--version", action="version", version=f"fedtail {version.full()}")
+    p.add_argument("command", nargs="?", choices=cli.COMMANDS, metavar="COMMAND",
+                   help="work in the terminal instead of opening the window: "
+                        + ", ".join(cli.COMMANDS) + " (`fedtail COMMAND -h` for each)")
+    p.add_argument("rest", nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
+    p.epilog = ("terminal: fedtail lanes | show LANE [-n N] [--unread] | tail [LANE…] | "
+                "read LANE | post [--reply ALIAS] [-v VIS] [--cw TEXT] TEXT|-")
     return p.parse_args(argv)
 
 
@@ -129,6 +136,9 @@ def main(argv=None):
 
     i18n.setup(cfg["ui"]["language"])
 
+    if args.command:
+        return _terminal(args, cfg, where)
+
     instance = SingleInstance(where.socket_file)
     if instance.poke_existing():
         print(f"fedtail: profile '{where.profile}' is already running — brought it to front.",
@@ -150,6 +160,29 @@ def main(argv=None):
         instance.close()
         for other in held:
             other.close()
+    return _leave(code)
+
+
+def _terminal(args, cfg, where):
+    """`fedtail show comments`: no window, no single-instance lock (the window of the
+    same profile may well be open: they share the database and the read marks)."""
+    if not cfg["cli"]["enabled"]:
+        print("fedtail: terminal commands are off (cli.enabled = false)", file=sys.stderr)
+        return 2
+    from . import diag
+    diag.setup(where, cfg, console_debug=args.debug)
+    diag.session_header(where.profile, {"cli": args.command})
+    core = Core(cfg, where)
+    try:
+        code = cli.run(core, [args.command, *args.rest])
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(f"fedtail: {e.code}", file=sys.stderr)
+            code = 1
+        else:
+            code = e.code or 0
+    except KeyboardInterrupt:
+        code = 130
     return _leave(code)
 
 

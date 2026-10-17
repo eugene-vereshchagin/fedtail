@@ -126,6 +126,12 @@ DEFAULTS = {
         "slow_request_seconds": 5,
         "rss_warn_mb": 1500,
     },
+    "cli": {
+        "enabled": True,
+        "color": "auto",
+        "max_lines": 0,
+        "tail_lanes": [],
+    },
 }
 
 CHOICES = {
@@ -150,6 +156,7 @@ CHOICES = {
     ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
     ("debug", "level"): {"debug", "info", "warning"},
     ("debug", "mode"): {"auto", "on", "off"},
+    ("cli", "color"): {"auto", "always", "never"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "compose"): {"inline", "window"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
