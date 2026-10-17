@@ -2,6 +2,10 @@
 
 ## 0.12.0 — in progress
 
+- `--update-config`: a new option went under the next chapter's banner (inside the next
+  section's comments) instead of at the end of its own section; and a file without blank
+  lines between options stayed packed. Now options sit where they belong, a blank line
+  between each.
 - A search, thread or profile tab no longer jumps back to the lanes: when the sidebar was
   rebuilt (lists refreshed, say), choosing the lane again brought the lanes tab to the
   front. The lanes tab comes forward only when I choose a lane (a click, the sidebar

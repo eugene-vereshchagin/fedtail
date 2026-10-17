@@ -108,6 +108,20 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertLess(new.index("\nactions ="), new.index("\n[feed]"))  # inside [ui]
         self.assertEqual(cu.update(new, example), new)  # idempotent
 
+    def test_update_a_packed_file(self):
+        """A file of an older version, no blank lines: a new option lands in its own
+        section (not under the next chapter's banner) and options get their gaps."""
+        from fedtail.core import config_update as cu
+        example = config.example_text()
+        lines = [x for x in example.splitlines() if x.strip()]
+        old = "\n".join(x for x in lines if "follow_date_note" not in x) + "\n"
+        new = cu.update(old, example)
+        at = new.index("follow_date_note = ")
+        self.assertLess(at, new.index("\n[read]"))
+        self.assertGreater(new.rfind("[feed]", 0, at), new.rfind("Прочитанное", 0, at))
+        self.assertIn("profile_featured = true\n\n#", new)
+        self.assertEqual(cu.update(new, example), new)
+
     def test_rebuild_keeps_values_in_chapters(self):
         import tomllib
 

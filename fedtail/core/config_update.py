@@ -146,9 +146,10 @@ def update(user_text, example_text, report=None):
             current = m.group(1)
         if current:
             ends[current] = i + 1
-    # walk back over trailing blank lines, so additions sit with the section
+    # walk back over trailing blank lines and the comments under the last option — the
+    # banner of the next chapter, say: those belong to what follows, additions go above
     for sec, end in ends.items():
-        while end > 0 and not lines[end - 1].strip():
+        while end > 0 and (not lines[end - 1].strip() or _is_comment(lines[end - 1])):
             end -= 1
         ends[sec] = end
 
@@ -171,7 +172,21 @@ def update(user_text, example_text, report=None):
     if len(lines) in inserts:
         out += inserts[len(lines)]
     out += appended
-    return "\n".join(out) + "\n"
+    return "\n".join(_spaced(out)) + "\n"
+
+
+def _spaced(lines):
+    """A blank line between an option and whatever comes next (the explanation of the
+    next option, a chapter banner, a section header), as in the reference — files of
+    older versions had none."""
+    out = []
+    for line in lines:
+        if out and line.strip() and (_is_comment(line) or _HEADER.match(line)):
+            prev = out[-1]
+            if prev.strip() and _OPTION.match(prev) and not prev.lstrip().startswith("# "):
+                out.append("")
+        out.append(line)
+    return out
 
 
 def _toml(value):
