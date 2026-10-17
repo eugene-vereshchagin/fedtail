@@ -243,6 +243,29 @@ class SocialTest(TmpDir):
         core.poll_once()
         self.assertEqual(core.store.activity_recent(10), [])
 
+    def test_reject_gone_and_no_such_feature(self):
+        core, w = self.make()
+        mine = w.add(status("182", ME, minute=1, vis="public"), home=True)
+        w.act("p3", "pending.favourite", NEWS, mine, minute=2)
+        w.act("p4", "pending.reblog", BOB, mine, minute=3)
+        w.interactions = [{"id": "r3", "type": "favourite", "account": NEWS, "status": mine}]
+        core.poll_once()
+        by_id = {n["id"]: n for n in core.store.activity_recent(10)}
+        self.assertTrue(core.answer_interaction(by_id["p3"], False).result())
+        self.assertEqual(w.answered, [("r3", False)])
+        # answered somewhere else already: nothing to answer, the notification goes all
+        # the same
+        self.assertFalse(core.answer_interaction(by_id["p4"], True).result())
+        self.assertEqual(core.store.activity_recent(10), [])
+        # Mastodon has no interaction requests: said so, nothing broken
+        w.missing = {"interactions"}
+        w.act("p5", "pending.reply", BOB, mine, minute=4)
+        core.poll_once()
+        entry = core.store.activity_recent(10)[0]
+        with self.assertRaises(ApiError):
+            core.answer_interaction(entry, True).result()
+        self.assertFalse(core.supports("interactions"))
+
     def test_no_preferences_no_trouble(self):
         core, _w = self.make(missing={"preferences"})
         self.assertEqual(core.server_prefs, {})
