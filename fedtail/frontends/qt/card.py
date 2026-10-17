@@ -624,6 +624,28 @@ class PostRow(QWidget):
             menu.addAction(_("translate"), self._translate)
         menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
                        lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
+        # who liked, who boosted; quotes of my post; my post out of someone's quote
+        s = real(st)
+        sup = self.ctx.supports
+        for kind, count in (("favourited_by", "favourites_count"),
+                            ("reblogged_by", "reblogs_count")):
+            if sup(kind) and s.get(count):
+                menu.addAction(_("who_" + kind + "_n", n=s[count]),
+                               lambda i=st["id"], k=kind: self.ctx.on_link(f"fedtail:{k}/{i}"))
+        if s["account"]["id"] == self.ctx.me_id and sup("quotes") and \
+                s.get("visibility") in ("public", "unlisted"):
+            menu.addAction(_("quotes_of"), lambda i=st["id"]:
+                           self.ctx.on_link(f"fedtail:quotes/{i}"))
+        quoted = (s.get("quote") or {}).get("quoted_status") or {}
+        if (quoted.get("account") or {}).get("id") == self.ctx.me_id and sup("quotes") and \
+                s["account"]["id"] != self.ctx.me_id:
+            menu.addAction(_("revoke_quote"), lambda i=st["id"]:
+                           self.ctx.on_link(f"fedtail:revokequote/{i}"))
+        if sup("mute_thread") and s.get("muted") is not None:  # threads I'm in
+            muted = bool(s.get("muted"))
+            menu.addAction(_("unmute_thread" if muted else "mute_thread"),
+                           lambda i=st["id"], m=muted:
+                           self.ctx.on_link(f"fedtail:{'unmute' if m else 'mute'}thread/{i}"))
         if self.ctx.subscribed is not None:
             menu.addSeparator()
             on = self.ctx.subscribed(st)
