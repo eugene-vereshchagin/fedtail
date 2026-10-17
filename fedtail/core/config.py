@@ -96,6 +96,7 @@ DEFAULTS = {
         "schedule": True,
         "alt_reminder": True,
         "complete_emoji": True,
+        "focus_point": True,
     },
     "notify": {
         "enabled": True,

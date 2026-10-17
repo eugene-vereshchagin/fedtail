@@ -431,9 +431,12 @@ class Api:
                          data={"account_ids[]": [acc_id]})
 
     # ---- writing ------------------------------------------------------------
-    def upload_media(self, path, description=""):
+    def upload_media(self, path, description="", focus=None):
+        """focus: (x, y), each -1…1, y up — the part a cropped preview keeps."""
         mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
         data = {"description": description} if description else {}
+        if focus:
+            data["focus"] = f"{float(focus[0]):.2f},{float(focus[1]):.2f}"
         with open(path, "rb") as f:
             files = {"file": (os.path.basename(path), f, mime)}
             try:

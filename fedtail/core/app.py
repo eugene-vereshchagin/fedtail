@@ -1397,13 +1397,15 @@ class Core:
 
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
              language=None, sensitive=False, poll=None, quote=None, scheduled_at=None):
-        """media: [(path, description)]. language: ISO 639 code, None — post.language,
+        """media: [(path, description)] or [(path, description, (x, y) focus point)].
+        language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
         lang = self.cfg["post"]["language"] if language is None else language
 
         def job():
-            ids = [self.api.upload_media(p, d)["id"] for p, d in media]
+            ids = [self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None)["id"]
+                   for m in media]
             extra = {"language": lang} if lang else {}
             if sensitive and ids:
                 extra["sensitive"] = True

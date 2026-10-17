@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -299,9 +298,9 @@ class Compose(QDialog):
             vis = d.get("visibility", vis)
             if "language" in d:
                 self.set_language(d["language"])
-            for path, desc in d.get("media", []):
+            for path, desc, *focus in d.get("media", []):
                 if Path(path).exists():
-                    self._add_media(path, desc)
+                    self._add_media(path, desc, focus[0] if focus else None)
             self.sensitive_btn.setChecked(bool(d.get("sensitive")))
             poll = d.get("poll")
             if poll:
@@ -577,7 +576,11 @@ class Compose(QDialog):
         out = []
         for i in range(self.media.count()):
             it = self.media.item(i)
-            out.append([it.data(Qt.ItemDataRole.UserRole), it.data(Qt.ItemDataRole.UserRole + 1)])
+            entry = [it.data(Qt.ItemDataRole.UserRole), it.data(Qt.ItemDataRole.UserRole + 1)]
+            focus = it.data(Qt.ItemDataRole.UserRole + 2)
+            if focus:
+                entry.append(list(focus))
+            out.append(entry)
         return out
 
     def add_paths(self, paths):
@@ -591,10 +594,11 @@ class Compose(QDialog):
         if paths:
             self._changed()
 
-    def _add_media(self, path, desc=""):
+    def _add_media(self, path, desc="", focus=None):
         it = QListWidgetItem(QIcon(path), "")
         it.setData(Qt.ItemDataRole.UserRole, path)
         it.setData(Qt.ItemDataRole.UserRole + 1, desc)
+        it.setData(Qt.ItemDataRole.UserRole + 2, list(focus) if focus else None)
         self._label_item(it)
         self.media.addItem(it)
         self._media_or_poll()
@@ -623,12 +627,23 @@ class Compose(QDialog):
         self._changed()
 
     def edit_description(self, it):
-        desc, ok = QInputDialog.getMultiLineText(
-            self, _("alt_title"), _("alt_prompt"), it.data(Qt.ItemDataRole.UserRole + 1) or "")
-        if ok:
-            it.setData(Qt.ItemDataRole.UserRole + 1, desc.strip())
+        """The picture's description and (post.focus_point) its focus point: a click on
+        the picture puts the cross where the main thing is."""
+        from .focus import FocusDialog
+        dlg = FocusDialog(self, it.data(Qt.ItemDataRole.UserRole),
+                          it.data(Qt.ItemDataRole.UserRole + 1) or "",
+                          it.data(Qt.ItemDataRole.UserRole + 2),
+                          with_focus=self.core.cfg["post"].get("focus_point", True))
+
+        def done():
+            it.setData(Qt.ItemDataRole.UserRole + 1, dlg.description())
+            it.setData(Qt.ItemDataRole.UserRole + 2, dlg.focus)
             self._label_item(it)
             self._changed()
+        dlg.accepted.connect(done)
+        self.focus_dialog = dlg
+        dlg.open()
+        return dlg
 
     # ---- sending --------------------------------------------------------------------
     def _count(self):

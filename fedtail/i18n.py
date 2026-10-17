@@ -68,6 +68,9 @@ _STRINGS = {
                         "{n} картинок без описания: тем, кто не видит, будет непонятно, "
                         "что на них."],
         "alt_describe": "Описать", "alt_send_anyway": "Отправить так",
+        "focus_tip": "Щёлкни, где на картинке главное: это и останется в обрезанном превью",
+        "focus_centre": "По центру", "focus_none": "Фокус: по центру",
+        "focus_at": "Фокус: {x}, {y}",
         "featured_tags": "Часто пишет о:", "featured_people": "Рекомендует:",
         "announce_title": "Объявление сервера", "announce_ok": "Понятно",
         "tip_announce_ok": "Больше не показывать (сервер запомнит и для других клиентов)",
@@ -469,6 +472,9 @@ _STRINGS = {
                         "{n} pictures have no description: people who can't see them won't "
                         "know what's in them."],
         "alt_describe": "Describe", "alt_send_anyway": "Send as is",
+        "focus_tip": "Click where the main thing is: that part stays in a cropped preview",
+        "focus_centre": "Centre", "focus_none": "Focus: the centre",
+        "focus_at": "Focus: {x}, {y}",
         "featured_tags": "Often writes about:", "featured_people": "Recommends:",
         "announce_title": "Server announcement", "announce_ok": "Got it",
         "tip_announce_ok": "Don't show it again (the server remembers it for other apps too)",

@@ -1007,6 +1007,27 @@ class QtSmokeTest(unittest.TestCase):
         anyway.click()
         self.pump(until=lambda: len(self.world.posted) == before + 1)
 
+        # describe it, with a focus point: both go with the upload
+        from fedtail.frontends.qt import focus as focus_module
+        self.assertEqual(focus_module.to_focus(0, 0, 100, 50), (-1.0, 1.0))
+        self.assertEqual(focus_module.to_focus(75, 25, 100, 50), (0.5, 0.0))
+        self.assertEqual(focus_module.from_focus((0.5, 0.0), 100, 50), (75.0, 25.0))
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.text.setPlainText("ещё")
+        dlg._add_media(str(pic))
+        dlg.send()
+        describe = next(b for b in dlg.alt_box.buttons() if b.text() == i18n._("alt_describe"))
+        describe.click()
+        fd = dlg.focus_dialog
+        fd._clicked(fd.src.width() * 0.75, fd.src.height() * 0.5)
+        fd.text.setPlainText("синий квадрат")
+        fd.accept()
+        self.assertEqual(dlg._media_list()[0][1:], ["синий квадрат", [0.5, 0.0]])
+        dlg.send()
+        self.pump(until=lambda: self.world.uploads and
+                  self.world.uploads[-1][1:] == ("синий квадрат", [0.5, 0.0]))
+
     def test_sensitive_media_covered(self):
         from PySide6.QtWidgets import QLabel
 

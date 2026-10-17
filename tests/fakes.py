@@ -292,7 +292,8 @@ class FakeApi:
     def list_remove(self, list_id, acc_id):
         self.w.lists[list_id]["members"].discard(acc_id)
 
-    def upload_media(self, path, description=""):
+    def upload_media(self, path, description="", focus=None):
+        self.w.uploads.append((path, description, focus))
         return {"id": "m1", "url": "https://example.test/m1.png"}
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
@@ -427,6 +428,7 @@ class World:
         self.requests = []
         self.posted = []
         self.announcements = []
+        self.uploads = []  # (path, description, focus)
         self.emoji = []  # the server's custom emoji
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.policy = None  # notification policy: None — the server has none (404)

@@ -14,7 +14,8 @@
 - A profile shows the person's featured tags and the people they recommend
   (`feed.profile_featured`).
 - `ui.media_grid = "square"`: several pictures as even squares, cut around the author's
-  focus point (the default, `"natural"`, keeps each whole).
+  focus point (the default, `"natural"`, keeps each whole). Your own pictures get one too:
+  double-click a picture in a new post, click where the main thing is (`post.focus_point`).
 - Accessibility: alt text as a caption under pictures (`ui.alt_text = "caption"`), a question
   before sending a picture without one (`post.alt_reminder`), names for screen readers on the
   post buttons, avatars and pictures.

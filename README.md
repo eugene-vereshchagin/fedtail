@@ -348,7 +348,8 @@ apps too. `ui.announcements = "off"` hides them.
 A new post opens as a panel in the middle of the window (`ui.compose = "window"` for a separate
 window). `@na` and `#ta` complete as you type — people and tags seen in the lanes first, then what the
 server finds (`post.complete_mentions`, `post.complete_tags`); `:bl` offers the server's own
-emoji (`post.complete_emoji`). Pictures can be dropped onto it (or onto the main window — that starts a new post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it.
+emoji (`post.complete_emoji`). Pictures can be dropped onto it (or onto the main window — that starts a new post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it and, with a click on it, set its focus point — the part
+a cropped preview keeps (`post.focus_point`).
 The content warning field is hidden behind "⚠ Content warning" (`post.cw_field = true` to keep
 it open).
 
