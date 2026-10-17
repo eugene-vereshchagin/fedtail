@@ -336,7 +336,7 @@ class QtSmokeTest(unittest.TestCase):
         imgs = Images(self.core, self.win.bridge)
         good = QImage(8, 8, QImage.Format.Format_RGB32)
 
-        def fake_download(url, _side, _patient=False):
+        def fake_download(url, _side, _patient=False, _big=False):
             if "broken" in url:
                 raise OSError("timeout")
             return good
@@ -348,7 +348,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual((len(got), len(failed)), (1, 1))
         # asked again right away: no new download, it fails at once
         calls = []
-        imgs._download = lambda url, side, patient=False: calls.append(url) or good
+        imgs._download = lambda url, side, patient=False, big=False: calls.append(url) or good
         imgs.get("https://x/broken.png", got.append, failed=lambda: failed.append(1))
         self.assertEqual((calls, len(failed)), ([], 2))
         imgs.broken["https://x/broken.png"] -= Images.RETRY_AFTER + 1  # time passed
@@ -360,7 +360,7 @@ class QtSmokeTest(unittest.TestCase):
         imgs.SECOND_TRY_AFTER = 50
         tries = []
 
-        def slow_server(url, _side, patient=False):
+        def slow_server(url, _side, patient=False, _big=False):
             tries.append(patient)
             if not patient:
                 imgs.why[url] = ("network", "ReadTimeout")
@@ -376,7 +376,7 @@ class QtSmokeTest(unittest.TestCase):
         # a preview that gave up is asked again once its original comes (the viewer)
         ready = {"now": False}
 
-        def fetching(url, _side, patient=False):
+        def fetching(url, _side, patient=False, _big=False):
             if "prev" in url and not ready["now"]:
                 imgs.why[url] = ("format", "?")  # not a network error: no second try
                 raise OSError("not yet")
@@ -779,8 +779,8 @@ class QtSmokeTest(unittest.TestCase):
                                     "preview_url": "https://x/small.jpg",
                                     "meta": {"original": {"width": 4000, "height": 3000}}}]
         bigs = []
-        self.win.images.get = lambda url, cb, *a, **k: (fake_get(url, cb),
-                                                        bigs.append(k.get("big", False)))
+        self.win.images.get = lambda url, cb, *a, **k: (bigs.append(k.get("big", False)),
+                                                        fake_get(url, cb))
         PostRow(CardSpec(key="091", status=st), self.win.ctx)
         pictures = [u for u in asked if u and "/x/" in u]  # (the avatar has no address)
         self.assertEqual(pictures, ["https://x/small.jpg", "https://x/big.jpg"])
