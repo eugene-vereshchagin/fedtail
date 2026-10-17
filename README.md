@@ -221,6 +221,9 @@ newest public posts read from their own server, and their followers and follows 
 from there too (`feed.remote_profiles`, `feed.remote_people`) — ActivityPub requests without
 your token, like completing threads.
 
+Several pictures in a post come each whole, in its own shape; `ui.media_grid = "square"` lays
+them out as even squares cut around the focus point their author set.
+
 ## Lists
 
 Your server's lists (Mastodon, GoToSocial) appear as lanes in a block of their own under the

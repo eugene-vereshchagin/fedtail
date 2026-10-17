@@ -13,6 +13,8 @@
   `notify.filtered` = `"remind"` (also a line at start when someone waits), `"menu"`, `"off"`.
 - A profile shows the person's featured tags and the people they recommend
   (`feed.profile_featured`).
+- `ui.media_grid = "square"`: several pictures as even squares, cut around the author's
+  focus point (the default, `"natural"`, keeps each whole).
 
 ## 0.8.0 — 2026-10-17
 

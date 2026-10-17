@@ -38,6 +38,7 @@ DEFAULTS = {
         "actions": "both",
         "post_keys": True,
         "announcements": 'banner',
+        "media_grid": 'natural',
     },
     "feed": {
         "order": "oldest_first",
@@ -138,6 +139,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("ui", "media_grid"): {'natural', 'square'},
     ("notify", "filtered"): {'menu', 'remind', 'off'},
     ("ui", "announcements"): {'off', 'banner'},
     ("post", "who_can_like"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},

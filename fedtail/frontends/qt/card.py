@@ -777,6 +777,10 @@ class PostRow(QWidget):
                 # reserve the final size now, so loading never shifts the text below
                 w, h = _dims(m)
                 tw, th = _thumb_box(w, h, *((big_h, big_w) if single else (150, 230)))
+                focus = None
+                if not single and self.ctx.cfg["ui"].get("media_grid") == "square":
+                    tw = th = 150
+                    focus = _focus(m)
                 lab.setFixedSize(tw, th)
                 radius = min(10, int(self.theme.shape["radius"]))
                 # right click: save it, open it
@@ -797,7 +801,7 @@ class PostRow(QWidget):
                     src = m.get("preview_url")
                 if src:
                     self._load_media(lab, src, full if src != full else None, tw, th, radius,
-                                     kind=m["type"], upgrade=upgrade)
+                                     kind=m["type"], upgrade=upgrade, focus=focus)
                 elif m["type"] != "image":  # a video without a still frame: say what it is
                     lab.setText("▶ " + _("media_" + m["type"]) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
@@ -926,13 +930,14 @@ class PostRow(QWidget):
         menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
         menu.exec(lab.mapToGlobal(pos))
 
-    def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None):
+    def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None,
+                    focus=None):
         """The picture into its box; if it won't come, the fallback; if nothing comes,
         say so (a click still opens it). upgrade: a sharper file to put in once this
         one is shown — if it fails, the one shown stays. A video's still frame gets a
         ▶ on it; a video without one says it's a video, not a broken picture."""
         def show(pm):
-            pm = _fit(pm, tw, th, radius)
+            pm = _fit(pm, tw, th, radius, focus)
             if kind != "image":
                 pm = _play_mark(pm)
             try:
@@ -944,7 +949,7 @@ class PostRow(QWidget):
 
         def failed():
             if fallback and fallback != src:
-                self._load_media(lab, fallback, None, tw, th, radius, kind)
+                self._load_media(lab, fallback, None, tw, th, radius, kind, focus=focus)
             else:
                 lab.setText(_("image_failed") if kind == "image" else
                             "▶ " + _("media_" + kind) + "\n" + _("media_click"))
@@ -1029,9 +1034,35 @@ def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):
     return max_w, max(24, int(max_w * h / w))
 
 
-def _fit(pm: QPixmap, w, h, radius=0):
-    scaled = pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
-                       Qt.TransformationMode.SmoothTransformation)
+def _focus(m):
+    """The author's focus point (Mastodon: x, y in -1…1, y up), (0, 0) if none."""
+    f = (m.get("meta") or {}).get("focus") or {}
+    try:
+        x, y = float(f.get("x", 0)), float(f.get("y", 0))
+    except (TypeError, ValueError):
+        return 0.0, 0.0
+    return max(-1.0, min(1.0, x)), max(-1.0, min(1.0, y))
+
+
+def _crop_rect(sw, sh, w, h, focus):
+    """Where a w×h window over a picture scaled to sw×sh goes, centred on the focus."""
+    fx, fy = focus
+    cx, cy = (fx + 1) / 2 * sw, (1 - fy) / 2 * sh
+    x = int(min(max(cx - w / 2, 0), max(sw - w, 0)))
+    y = int(min(max(cy - h / 2, 0), max(sh - h, 0)))
+    return x, y
+
+
+def _fit(pm: QPixmap, w, h, radius=0, focus=None):
+    """Into w×h: whole (focus None), or filling it, cut around the focus point."""
+    if focus is None:
+        scaled = pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
+                           Qt.TransformationMode.SmoothTransformation)
+    else:
+        big = pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                        Qt.TransformationMode.SmoothTransformation)
+        x, y = _crop_rect(big.width(), big.height(), w, h, focus)
+        scaled = big.copy(x, y, min(w, big.width()), min(h, big.height()))
     if not radius:
         return scaled
     out = QPixmap(scaled.size())

@@ -930,6 +930,36 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("(12)", rows()[0])
         self.assertIn("fedtail:account/N", rows()[1])
 
+    def test_media_grid_square_around_focus(self):
+        from PySide6.QtGui import QColor, QPixmap
+
+        from fedtail.frontends.qt import card as card_module
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        self.assertEqual(card_module._focus({"meta": {"focus": {"x": 2, "y": "-0.5"}}}),
+                         (1.0, -0.5))
+        self.assertEqual(card_module._focus({}), (0.0, 0.0))
+        # a 300×150 picture into 150×150: focus at the right edge → the right half
+        self.assertEqual(card_module._crop_rect(300, 150, 150, 150, (1.0, 0.0)), (150, 0))
+        self.assertEqual(card_module._crop_rect(300, 150, 150, 150, (0.0, 0.0)), (75, 0))
+        self.assertEqual(card_module._crop_rect(150, 300, 150, 150, (0.0, 1.0)), (0, 0))  # top
+        pm = QPixmap(300, 150)
+        pm.fill(QColor("red"))
+        self.assertEqual(card_module._fit(pm, 150, 150, 0, (0.0, 0.0)).size().width(), 150)
+        st = status("096", BOB, minute=1)
+        st["media_attachments"] = [
+            {"type": "image", "url": f"https://x.example/{i}.png",
+             "preview_url": f"https://x.example/{i}_s.png",
+             "meta": {"small": {"width": 400, "height": 100}, "focus": {"x": 0.5, "y": 0}}}
+            for i in range(2)]
+        sizes = lambda: [w.size().toTuple() for w in row.findChildren(card_module.ClickLabel)
+                         if w.objectName() == "media"]
+        row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+        self.assertNotEqual(sizes()[0], (150, 150))  # natural: its own shape
+        self.core.cfg["ui"]["media_grid"] = "square"
+        row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+        self.assertEqual(sizes(), [(150, 150), (150, 150)])
+        self.core.cfg["ui"]["media_grid"] = "natural"
+
     def test_sensitive_media_covered(self):
         from PySide6.QtWidgets import QLabel
 
