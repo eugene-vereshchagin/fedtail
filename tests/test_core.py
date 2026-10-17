@@ -346,6 +346,20 @@ class CoreTest(TmpDir):
         self.addCleanup(core.shutdown)
         return core, FakeApi.world
 
+    def test_emoji_suggestions(self):
+        core, w = self.make()
+        w.emoji = [{"shortcode": "blobcat"}, {"shortcode": "catjam"}, {"shortcode": "hidden_cat",
+                                                                    "visible_in_picker": False},
+                   {"shortcode": "dog"}]
+        core.connect().result()
+        self.assertEqual(core.emoji_suggestions("cat"), [])  # not fetched yet
+        core.prepare_emoji()
+        deadline = time.time() + 5
+        while not core._emoji and time.time() < deadline:
+            time.sleep(0.01)
+        self.assertEqual([c for c, _e in core.emoji_suggestions("cat")], ["catjam", "blobcat"])
+        self.assertEqual(core.emoji_suggestions(""), [])
+
     def test_featured_tags_and_people(self):
         core, w = self.make()
         core.connect().result()

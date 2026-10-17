@@ -253,6 +253,9 @@ class Api:
     def pinned(self, acc_id):
         return self.get(f"/api/v1/accounts/{acc_id}/statuses", {"pinned": "true"}) or []
 
+    def custom_emojis(self):
+        return self.get("/api/v1/custom_emojis") or []
+
     def featured_tags(self, acc_id):
         return self.get(f"/api/v1/accounts/{acc_id}/featured_tags") or []
 

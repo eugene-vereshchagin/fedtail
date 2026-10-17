@@ -238,6 +238,16 @@ class QtSmokeTest(unittest.TestCase):
         dlg._suggest_tags()
         self.assertFalse(dlg.tag_completer.popup().isVisible())
         self.core.cfg["post"]["complete_mentions"] = True
+        self.core._emoji = [{"shortcode": "blobcat"}, {"shortcode": "catjam"}]
+        dlg.text.setPlainText("ну :cat")
+        dlg.text.moveCursor(cur.MoveOperation.End)
+        dlg._suggest_tags()
+        self.assertEqual(dlg._tag_model.stringList(), [":catjam:", ":blobcat:"])
+        dlg._put_tag(":catjam:")
+        self.assertEqual(dlg.text.toPlainText(), "ну :catjam: ")
+        dlg.text.setPlainText("в 12:30")
+        dlg.text.moveCursor(cur.MoveOperation.End)
+        self.assertEqual(dlg._token_at_cursor(), (None, None))
         dlg.reject()
 
         # the content warning field hides until asked for

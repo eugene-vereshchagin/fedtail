@@ -95,6 +95,7 @@ DEFAULTS = {
         "who_can_like": '',
         "schedule": True,
         "alt_reminder": True,
+        "complete_emoji": True,
     },
     "notify": {
         "enabled": True,

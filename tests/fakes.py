@@ -143,6 +143,9 @@ class FakeApi:
         self.w.reports.append((acc_id, list(status_ids), comment, forward, category))
         return {"id": "r1"}
 
+    def custom_emojis(self):
+        return list(self.w.emoji)
+
     def featured_tags(self, acc_id):
         if acc_id not in self.w.featured:
             raise ApiError(404, "not found")
@@ -424,6 +427,7 @@ class World:
         self.requests = []
         self.posted = []
         self.announcements = []
+        self.emoji = []  # the server's custom emoji
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.policy = None  # notification policy: None — the server has none (404)
         self.held, self.answered = [], []  # notification requests; answers to them

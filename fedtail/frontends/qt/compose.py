@@ -144,6 +144,8 @@ class Compose(QDialog):
         self._people_timer.timeout.connect(self._ask_server_people)
         self.core.prepare_tags()
         self.core.prepare_people()
+        if self.core.cfg["post"].get("complete_emoji", True):
+            self.core.prepare_emoji()
         self.camel = QLabel()
         self.camel.setObjectName("counter")
         self.camel.setWordWrap(True)
@@ -422,14 +424,16 @@ class Compose(QDialog):
         self._autosave.start()
 
     # ---- completing #tags and @people -----------------------------------------------
-    _TOKEN_AT_END = re.compile(r"(?:^|[\s(«\"'])([#@])(\w[\w.@-]*)$")
+    _TOKEN_AT_END = re.compile(r"(?:^|[\s(«\"'])([#@:])(\w[\w.@-]*)$")
 
     def _token_at_cursor(self):
         """("#" or "@", the word typed right before the cursor) — or (None, None)."""
         cur = self.text.textCursor()
         before = cur.block().text()[:cur.positionInBlock()]
         m = self._TOKEN_AT_END.search(before)
-        if not m or (m.group(1) == "#" and not re.fullmatch(r"\w+", m.group(2))):
+        if not m or (m.group(1) in "#:" and not re.fullmatch(r"\w+", m.group(2))):
+            return None, None
+        if m.group(1) == ":" and len(m.group(2)) < 2:
             return None, None
         return m.group(1), m.group(2)
 
@@ -451,6 +455,8 @@ class Compose(QDialog):
             if len(word) >= 2:
                 self._people_query = word
                 self._people_timer.start()
+        elif sigil == ":" and post.get("complete_emoji", True):
+            items = [(f":{code}:", f":{code}:") for code, _e in self.core.emoji_suggestions(word)]
         self._offer(items, sigil, word)
 
     def _people_items(self, people):

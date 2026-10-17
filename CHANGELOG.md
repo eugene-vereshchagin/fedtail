@@ -18,6 +18,7 @@
 - Accessibility: alt text as a caption under pictures (`ui.alt_text = "caption"`), a question
   before sending a picture without one (`post.alt_reminder`), names for screen readers on the
   post buttons, avatars and pictures.
+- `:bl` in a post offers the server's custom emoji (`post.complete_emoji`).
 
 ## 0.8.0 — 2026-10-17
 

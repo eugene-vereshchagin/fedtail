@@ -1259,6 +1259,33 @@ class Core:
     def prepare_people(self):
         self.bg.submit(self.store.people_counts)
 
+    def prepare_emoji(self):
+        """The server's own emoji, once a run, for emoji_suggestions()."""
+        if getattr(self, "_emoji", None) is not None or not self.api:
+            return
+        self._emoji = []
+
+        def job():
+            try:
+                self._emoji = [e for e in self.api.custom_emojis()
+                               if e.get("shortcode") and e.get("visible_in_picker", True)]
+            except Exception as e:  # noqa: BLE001 — only suggestions are missing then
+                log.info("custom emoji: %s", e)
+        self.bg.submit(job)
+
+    def emoji_suggestions(self, prefix, limit=8):
+        """The server's emoji whose shortcode has prefix (no ":"): starting with it
+        first, then containing it. [(shortcode, emoji dict)]."""
+        p = prefix.casefold()
+        if not p:
+            return []
+        every = getattr(self, "_emoji", None) or []
+        starts = [e for e in every if e["shortcode"].casefold().startswith(p)]
+        within = [e for e in every if p in e["shortcode"].casefold() and e not in starts]
+        best = sorted(starts, key=lambda e: e["shortcode"].casefold()) + \
+            sorted(within, key=lambda e: e["shortcode"].casefold())
+        return [(e["shortcode"], e) for e in best[:limit]]
+
     def mention_suggestions(self, prefix, limit=8):
         """People whose address or name starts with prefix (no "@"), the most seen
         first: [(acct, display name)]. Never yourself."""
