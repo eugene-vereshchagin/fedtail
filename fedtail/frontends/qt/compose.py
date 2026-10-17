@@ -668,10 +668,16 @@ class Compose(QDialog):
         dlg.open()
         return dlg
 
-    def send(self, scheduled_at=None):
+    def send(self, scheduled_at=None, alt_checked=False):
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
         if not text and not media:
+            return
+        bare = [i for i in range(self.media.count())
+                if not self.media.item(i).data(Qt.ItemDataRole.UserRole + 1)]
+        if bare and not alt_checked and not self.edit and \
+                self.core.cfg["post"].get("alt_reminder", True):
+            self._ask_alt(bare, scheduled_at)
             return
         self.save_draft()  # whatever happens next, the text is safe
         log.info("send: %s, reply to %s, %s, language %s, %d chars, %d pictures",
@@ -691,6 +697,25 @@ class Compose(QDialog):
                              quote=self.quote["id"] if self.quote else None,
                              scheduled_at=scheduled_at)
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
+
+    def _ask_alt(self, bare, scheduled_at):
+        """post.alt_reminder: a picture without a description — describe it, or send as is."""
+        box = QMessageBox(QMessageBox.Icon.Question, _("alt_missing_title"),
+                          _("alt_missing", n=len(bare)), parent=self)
+        describe = box.addButton(_("alt_describe"), QMessageBox.ButtonRole.AcceptRole)
+        anyway = box.addButton(_("alt_send_anyway"), QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(describe)
+
+        def done(button):
+            if button is describe:
+                self.edit_description(self.media.item(bare[0]))
+            elif button is anyway:
+                self.send(scheduled_at, alt_checked=True)
+        box.buttonClicked.connect(done)
+        self.alt_box = box
+        box.open()
+        return box
 
     def _sent(self, st):
         self.sent = True

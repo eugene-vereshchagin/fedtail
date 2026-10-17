@@ -960,6 +960,43 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(sizes(), [(150, 150), (150, 150)])
         self.core.cfg["ui"]["media_grid"] = "natural"
 
+    def test_alt_text_caption_and_reminder(self):
+        from PySide6.QtGui import QColor, QPixmap
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        from fedtail.frontends.qt.compose import Compose
+        st = status("097", BOB, minute=1)
+        st["media_attachments"] = [{"type": "image", "url": "https://x.example/a.png",
+                                    "preview_url": "https://x.example/a_s.png",
+                                    "description": "кот на окне"}]
+        caps = lambda r: [w for w in r.findChildren(QLabel) if w.objectName() == "altCaption"]
+        self.assertEqual(caps(PostRow(CardSpec(key="097", status=st), self.win.ctx)), [])
+        self.core.cfg["ui"]["alt_text"] = "caption"
+        row = PostRow(CardSpec(key="097", status=st), self.win.ctx)
+        self.assertIn("кот на окне", caps(row)[0].text())
+        media = [w for w in row.findChildren(QLabel) if w.objectName() == "media"]
+        self.assertEqual(media[0].accessibleDescription(), "кот на окне")
+        self.core.cfg["ui"]["alt_text"] = "tooltip"
+
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        pic = Path(self._tmp.name) / "p.png"
+        pm = QPixmap(8, 8)
+        pm.fill(QColor("blue"))
+        pm.save(str(pic))
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.text.setPlainText("смотрите")
+        dlg._add_media(str(pic))
+        before = len(self.world.posted)
+        dlg.send()
+        self.assertTrue(dlg.alt_box.isVisible())
+        self.assertEqual(len(self.world.posted), before)  # asked first
+        anyway = next(b for b in dlg.alt_box.buttons() if b.text() == i18n._("alt_send_anyway"))
+        anyway.click()
+        self.pump(until=lambda: len(self.world.posted) == before + 1)
+
     def test_sensitive_media_covered(self):
         from PySide6.QtWidgets import QLabel
 

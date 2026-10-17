@@ -224,6 +224,10 @@ your token, like completing threads.
 Several pictures in a post come each whole, in its own shape; `ui.media_grid = "square"` lays
 them out as even squares cut around the focus point their author set.
 
+A picture's description (alt text) shows on hover; `ui.alt_text = "caption"` also puts it
+under the pictures. Sending a picture without one asks first — describe it or send as is
+(`post.alt_reminder`).
+
 ## Lists
 
 Your server's lists (Mastodon, GoToSocial) appear as lanes in a block of their own under the

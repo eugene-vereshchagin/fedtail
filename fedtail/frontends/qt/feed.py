@@ -318,6 +318,7 @@ def _button(text, slot, name="tool", icon=None, tip=None):
             b.setText(tip or "")
     if tip:
         b.setToolTip(tip)
+    b.setAccessibleName(text or tip or "")
     b.clicked.connect(slot)
     return b
 

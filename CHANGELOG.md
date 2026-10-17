@@ -15,6 +15,9 @@
   (`feed.profile_featured`).
 - `ui.media_grid = "square"`: several pictures as even squares, cut around the author's
   focus point (the default, `"natural"`, keeps each whole).
+- Accessibility: alt text as a caption under pictures (`ui.alt_text = "caption"`), a question
+  before sending a picture without one (`post.alt_reminder`), names for screen readers on the
+  post buttons, avatars and pictures.
 
 ## 0.8.0 — 2026-10-17
 

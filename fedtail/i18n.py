@@ -59,6 +59,15 @@ _STRINGS = {
                              "«Отфильтрованные уведомления…»",
                              "{n} отправителей ждут в отфильтрованных уведомлениях: ≡ → "
                              "«Отфильтрованные уведомления…»"],
+        "a11y_avatar": "Аватар @{acct}: открыть профиль", "a11y_no_alt": "без описания",
+        "alt_missing_title": "Без описания",
+        "alt_missing": ["{n} картинка без описания: тем, кто не видит, будет непонятно, "
+                        "что на ней.",
+                        "{n} картинки без описания: тем, кто не видит, будет непонятно, "
+                        "что на них.",
+                        "{n} картинок без описания: тем, кто не видит, будет непонятно, "
+                        "что на них."],
+        "alt_describe": "Описать", "alt_send_anyway": "Отправить так",
         "featured_tags": "Часто пишет о:", "featured_people": "Рекомендует:",
         "announce_title": "Объявление сервера", "announce_ok": "Понятно",
         "tip_announce_ok": "Больше не показывать (сервер запомнит и для других клиентов)",
@@ -453,6 +462,13 @@ _STRINGS = {
                              "\"Filtered notifications…\"",
                              "{n} senders are waiting in filtered notifications: ≡ → "
                              "\"Filtered notifications…\""],
+        "a11y_avatar": "@{acct}'s avatar: open the profile", "a11y_no_alt": "no description",
+        "alt_missing_title": "No description",
+        "alt_missing": ["{n} picture has no description: people who can't see it won't know "
+                        "what's in it.",
+                        "{n} pictures have no description: people who can't see them won't "
+                        "know what's in them."],
+        "alt_describe": "Describe", "alt_send_anyway": "Send as is",
         "featured_tags": "Often writes about:", "featured_people": "Recommends:",
         "announce_title": "Server announcement", "announce_ok": "Got it",
         "tip_announce_ok": "Don't show it again (the server remembers it for other apps too)",

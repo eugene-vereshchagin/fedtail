@@ -248,6 +248,7 @@ QFrame#quoteBox {{ background: {k('ctx')}; border: 1px solid {k('card_border')};
 QFrame#quoteBox:hover {{ border-color: {k('accent')}; }}
 QFrame#quoteBox QLabel {{ background: transparent; }}
 QLabel#quoteHead, QLabel#quoteNote {{ color: {k('muted')}; }}
+QLabel#altCaption {{ color: {k('muted')}; font-size: {round(base_pt * 0.9, 1)}pt; }}
 QFrame#announceBar {{ background: {k('ctx')}; border-bottom: 1px solid {k('card_border')};
     border-left: 3px solid {k('accent')}; }}
 QFrame#announceBar QLabel {{ background: transparent; }}

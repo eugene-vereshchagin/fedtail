@@ -412,6 +412,7 @@ class PostRow(QWidget):
             avatar.setFixedSize(QSize(size, size))
             avatar.setCursor(Qt.CursorShape.PointingHandCursor)
             avatar.setToolTip("@" + acc["acct"])
+            avatar.setAccessibleName(_("a11y_avatar", acct=acc["acct"]))
             avatar.clicked.connect(lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
             self.ctx.images.get(acc.get("avatar_static") or acc.get("avatar"),
@@ -551,6 +552,7 @@ class PostRow(QWidget):
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(label)
+            b.setAccessibleName(label + count)
             ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
             if style == "text" or ic.isNull():
                 b.setText((glyph if style == "icons" else label) + count)
@@ -578,6 +580,7 @@ class PostRow(QWidget):
         b.setAutoRaise(True)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(_("more"))
+        b.setAccessibleName(_("more"))
         ic = _theme_icon(("overflow-menu", "application-menu", "view-more-symbolic")) \
             if self.theme.shape["icons"] else QIcon()
         if ic.isNull():
@@ -772,6 +775,8 @@ class PostRow(QWidget):
                 lab = ClickLabel(_("image_loading"))
                 lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 lab.setToolTip(m.get("description") or "")
+                lab.setAccessibleName(_("media_" + m["type"]))
+                lab.setAccessibleDescription(m.get("description") or _("a11y_no_alt"))
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
                 lab.setObjectName("media")
                 # reserve the final size now, so loading never shifts the text below
@@ -810,6 +815,15 @@ class PostRow(QWidget):
                 grid.addWidget(self._label(f'<a href="{esc(full)}">[{kind}]</a>'),
                                pos // 3, pos % 3)
                 pos += 1
+        if self.ctx.cfg["ui"].get("alt_text") == "caption" and not covered:
+            row = (pos + 2) // 3
+            for i, m in enumerate(visual):
+                desc = (m.get("description") or "").strip()
+                if desc:
+                    num = f"{i + 1}. " if len(visual) > 1 else ""
+                    cap = self._label(esc(num + desc[:400]), "altCaption")
+                    grid.addWidget(cap, row, 0, 1, 4)
+                    row += 1
         grid.setColumnStretch(3, 1)
         return box
 

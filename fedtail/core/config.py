@@ -39,6 +39,7 @@ DEFAULTS = {
         "post_keys": True,
         "announcements": 'banner',
         "media_grid": 'natural',
+        "alt_text": 'tooltip',
     },
     "feed": {
         "order": "oldest_first",
@@ -93,6 +94,7 @@ DEFAULTS = {
         "who_can_boost": '',
         "who_can_like": '',
         "schedule": True,
+        "alt_reminder": True,
     },
     "notify": {
         "enabled": True,
@@ -139,6 +141,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("ui", "alt_text"): {'caption', 'tooltip'},
     ("ui", "media_grid"): {'natural', 'square'},
     ("notify", "filtered"): {'menu', 'remind', 'off'},
     ("ui", "announcements"): {'off', 'banner'},
