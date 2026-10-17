@@ -1,4 +1,5 @@
-"""Server HTML → the rich-text subset QLabel understands."""
+"""Server HTML → the safe rich-text subset fedtail shows (QLabel in the window, a
+page in the web interface). No Qt here."""
 
 import html
 import re
