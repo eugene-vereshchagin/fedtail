@@ -140,7 +140,10 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: app.lane is not None and
                             len(app.query_one("#posts").children) >= 1)
             main = app.screen
-            app.query_one("#posts", ListView).focus()
+            posts = app.query_one("#posts", ListView)
+            posts.focus()
+            posts.index = 0
+            await pilot.pause(0.1)
             await pilot.press("enter")
             await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen))
             # a new lane appears (a fresh list) and the open lane gets a post
