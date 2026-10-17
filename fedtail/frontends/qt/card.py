@@ -584,6 +584,14 @@ class PostRow(QWidget):
                 b.setProperty("active", "true")
             b.clicked.connect(lambda _c=False, a=action, i=st["id"]:
                               self.ctx.on_link(f"fedtail:{a}/{i}"))
+            # a right click on the like or the boost: who did it
+            who = {"fav": ("favourited_by", "favourites_count"),
+                   "boost": ("reblogged_by", "reblogs_count")}.get(action)
+            if who and st.get(who[1]) and self.ctx.supports(who[0]):
+                b.setToolTip(label + "\n" + _("who_right_click"))
+                b.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+                b.customContextMenuRequested.connect(
+                    lambda _p, k=who[0], i=st["id"]: self.ctx.on_link(f"fedtail:{k}/{i}"))
             h.addWidget(b)
         h.addStretch(1)
         h.addWidget(self._more_button(st))
