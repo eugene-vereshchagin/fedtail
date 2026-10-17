@@ -65,8 +65,18 @@ class FeedView(QScrollArea):
         self.col.addLayout(self.footer)
         self.col.addStretch(1)
         self.setWidget(body)
-        self.rows = {}
-        self.order = []
+        self.rows = {}    # key -> card, for the cards built (see "the window" below)
+        self.order = []   # their keys, top to bottom
+        # A lane can hold hundreds of posts; building a card for each one at once froze
+        # the window for seconds. A windowed view (lanes) keeps them all as specs and
+        # builds cards only around the place reading is at, more as the reader scrolls
+        # near an edge. No guessed heights: cards added above the screen are held in
+        # place by the same anchor that holds it when new posts come in.
+        self.model = []       # every spec, top to bottom
+        self.windowed = False  # set by lanes; threads and profiles build everything
+        self.window = 40      # cards built at first (feed.build_at_once)
+        self._grow_timer = QTimer(self, singleShot=True, interval=30)
+        self._grow_timer.timeout.connect(self._grow)
         self._seen_timer = QTimer(self, singleShot=True, interval=350)
         self._seen_timer.timeout.connect(self._emit_seen)
         # while the feed keeps moving the quiet moment never comes: look every so often
@@ -164,6 +174,7 @@ class FeedView(QScrollArea):
         self._seen_timer.start()
         if not self._seen_tick.isActive():
             self._seen_tick.start()
+        self._grow_soon()
 
     # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys)
     POST_KEYS = {Qt.Key.Key_R: "reply", Qt.Key.Key_F: "fav", Qt.Key.Key_B: "boost",
@@ -217,13 +228,101 @@ class FeedView(QScrollArea):
             self.scroll_to(key, "top")
 
     # ---- content ------------------------------------------------------------------
-    def set_specs(self, specs, keep_position=True):
-        # no painting while hundreds of cards come and go: one paint at the end
+    def set_specs(self, specs, keep_position=True, around=None):
+        """Show these specs. A windowed view builds cards only for some of them: around
+        `around` (a key) when it starts over, else the stretch already built, grown to
+        the ends it touched (new posts at the end the reader stands at come in)."""
+        old_keys = [s.key for s in self.model]
+        self.model = list(specs)
+        if self._all_at_once():
+            window = self.model
+        else:
+            window = self._window(keep_position, around, old_keys)
+        # no painting while cards come and go: one paint at the end
         self.setUpdatesEnabled(False)
         try:
-            self._set_specs(specs, keep_position)
+            self._set_specs(window, keep_position)
         finally:
             self.setUpdatesEnabled(True)
+        self._grow_soon()
+
+    def _all_at_once(self):
+        return not self.windowed or not self.window or len(self.model) <= 2 * self.window
+
+    def _window(self, keep_position, around, old_keys):
+        keys = [s.key for s in self.model]
+        index = {k: i for i, k in enumerate(keys)}
+        have = [index[k] for k in self.order if k in index]
+        if keep_position and have:
+            lo, hi = min(have), max(have) + 1
+            if self.order and old_keys and self.order[0] == old_keys[0]:
+                lo = 0  # it reached the top: what came in above comes in too
+            if self.order and old_keys and self.order[-1] == old_keys[-1]:
+                hi = len(keys)  # …and the bottom
+            return self.model[lo:hi]
+        c = index.get(around, len(keys) - 1)
+        before = max(4, self.window // 4)
+        lo = max(0, c - before)
+        hi = min(len(keys), lo + self.window)
+        lo = max(0, hi - self.window)
+        return self.model[lo:hi]
+
+    def keys(self):
+        """Every key shown or to be shown (built or not)."""
+        return [s.key for s in self.model]
+
+    def has(self, key):
+        return any(s.key == key for s in self.model)
+
+    def _grow_soon(self):
+        if not self._all_at_once():
+            self._grow_timer.start()
+
+    def _grow(self):
+        """The reader is near the top or the bottom of the cards built: build some more
+        there — a few at a time, so the window stays responsive meanwhile."""
+        if self._all_at_once() or not self.order or not self.isVisible():
+            return
+        keys = self.keys()
+        index = {k: i for i, k in enumerate(keys)}
+        if self.order[0] not in index or self.order[-1] not in index:
+            return
+        lo, hi = index[self.order[0]], index[self.order[-1]] + 1
+        sb = self.verticalScrollBar()
+        reach = self.viewport().height() * 2
+        step = max(8, self.window // 2)
+        new_lo, new_hi = lo, hi
+        if lo > 0 and sb.value() < reach:
+            new_lo = max(0, lo - step)
+        elif hi < len(keys) and sb.value() > sb.maximum() - reach:
+            new_hi = min(len(keys), hi + step)
+        if (new_lo, new_hi) == (lo, hi):
+            return
+        t = time.monotonic()
+        self.setUpdatesEnabled(False)
+        try:
+            self._set_specs(self.model[new_lo:new_hi], keep_position=True)
+        finally:
+            self.setUpdatesEnabled(True)
+        log.debug("feed: %d more cards built (%d of %d), %.0f ms",
+                  (lo - new_lo) + (new_hi - hi), new_hi - new_lo, len(keys),
+                  (time.monotonic() - t) * 1000)
+        self._grow_timer.start()  # still near an edge? the next few
+
+    def _bring(self, key):
+        """Make sure the card of key is built: if it isn't, build the window around it
+        instead of the one there was. True if it is there now."""
+        if key in self.rows:
+            return True
+        if not self.has(key):
+            return False
+        self.setUpdatesEnabled(False)
+        try:
+            self._set_specs(self._window(False, key, []), keep_position=False)
+        finally:
+            self.setUpdatesEnabled(True)
+        self._grow_soon()
+        return key in self.rows
 
     def _set_specs(self, specs, keep_position=True):
         anchor = self._anchor() if keep_position else None
@@ -263,14 +362,19 @@ class FeedView(QScrollArea):
         self.set_specs([], keep_position=False)
 
     def scroll_to(self, key, where="top"):
-        if key in self.rows:
+        if self._bring(key):
             self._set_target(("row", key, where))
 
     def scroll_to_end(self, end=True):
+        if self.model and not self._all_at_once():
+            self._bring(self.model[-1 if end else 0].key)
         self._set_target(("end", end))
 
     def set_unread(self, status_ids, unread=False):
         ids = set(status_ids)
+        for spec in self.model:  # cards not built yet too: they're built as they are now
+            if spec.status and spec.status.get("id") in ids:
+                spec.unread = unread
         for row in self.rows.values():
             if row.status_id in ids:
                 row.set_unread(unread)
@@ -283,12 +387,18 @@ class FeedView(QScrollArea):
             self.refresh_from_store(store)
             return
         ids = {st["id"], real(st)["id"]}
-        for row in self.rows.values():
-            if row.status_id is None or (row.status_id not in ids and row.real_id not in ids):
+        for i, spec in enumerate(self.model):
+            if not spec.status or (spec.status.get("id") not in ids and
+                                   real(spec.status).get("id") not in ids):
                 continue
-            fresh = store.get_status(row.status_id)
-            if fresh and fresh != row.spec.status:
-                row.update_spec(CardSpec(**{**row.spec.__dict__, "status": fresh}))
+            fresh = store.get_status(spec.status["id"])
+            if not fresh or fresh == spec.status:
+                continue
+            new = CardSpec(**{**spec.__dict__, "status": fresh})
+            self.model[i] = new
+            row = self.rows.get(spec.key)
+            if row is not None:
+                row.update_spec(new)
 
     def refresh_from_store(self, store):
         for row in self.rows.values():
@@ -299,14 +409,17 @@ class FeedView(QScrollArea):
                 row.update_spec(CardSpec(**{**row.spec.__dict__, "status": fresh}))
 
     def remove_status(self, sid):
-        rows = [self.rows[k] for k in self.order]
-        keep = [r.spec for r in rows if r.status_id is None or
-                (r.real_id != sid and r.status_id != sid)]
-        if len(keep) != len(self.order):
+        keep = [s for s in self.model if not s.status or
+                (s.status.get("id") != sid and real(s.status).get("id") != sid)]
+        if len(keep) != len(self.model):
             self.set_specs(keep)
 
     def unread_keys(self):
-        return [k for k in self.order if self.rows[k].spec.unread]
+        """Unread, built or not, top to bottom."""
+        return [s.key for s in self.model if s.unread]
+
+    def unread_status_ids(self):
+        return [s.status["id"] for s in self.model if s.unread and s.status]
 
     # ---- what the reader saw --------------------------------------------------------
     def _emit_seen(self):
@@ -351,6 +464,7 @@ class FeedView(QScrollArea):
     def showEvent(self, e):
         super().showEvent(e)
         self._seen_timer.start()
+        self._grow_soon()
 
 
 READING_S = 5  # s after a scroll by hand that a window without focus still counts as read
@@ -500,6 +614,8 @@ class LaneWidget(QWidget):
                                 tip=_("refresh") + " (F5)"))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
+        self.view.windowed = True
+        self.view.window = int(self.cfg["feed"].get("build_at_once", 40))
         self.view.seen.connect(self._seen)
         lay.addWidget(self.view, 1)
         # "loading…" over the lane while it's being drawn: the click switches at once,
@@ -647,14 +763,14 @@ class LaneWidget(QWidget):
         if self.newest_first:
             specs.reverse()
         if not self.positioned:
-            self.view.set_specs(specs, keep_position=False)
+            self.view.set_specs(specs, keep_position=False, around=self._start_key(specs))
             if self.isVisible() and self.view.isVisible():
                 # after the layout has settled (long posts take several passes), the
                 # same way as when a drawn lane is shown
                 QTimer.singleShot(0, self._initial_position)
         else:
             jump = self.cfg["feed"]["on_new"] == "jump_to_newest"
-            had = set(self.view.order)
+            had = set(self.view.keys())
             self.view.set_specs(specs, keep_position=True)
             if jump and any(s.key not in had for s in specs):
                 self.view.scroll_to_end(not self.newest_first)
@@ -726,6 +842,20 @@ class LaneWidget(QWidget):
         if self.cfg["read"]["mark_read"] == "on_open":
             QTimer.singleShot(0, self.mark_all_read)
 
+    def _start_key(self, specs):
+        """Where reading starts (as _initial_position goes there): the cards around it
+        are the ones built first."""
+        if not specs:
+            return None
+        unread = [s.key for s in specs if s.unread]
+        if self.cfg["feed"]["start_at"] == "first_unread" and unread:
+            if self.newest_first:
+                return unread[-1]
+            if any(s.key == "__sep__" for s in specs):
+                return "__sep__"
+            return unread[0]
+        return specs[0].key if self.newest_first else specs[-1].key
+
     def _initial_position(self):
         if self.positioned or not self.view.order or not self.view.isVisible():
             return
@@ -734,7 +864,7 @@ class LaneWidget(QWidget):
         if self.cfg["feed"]["start_at"] == "first_unread" and unread:
             if self.newest_first:
                 self.view.scroll_to(unread[-1], "bottom")
-            elif "__sep__" in self.view.rows:
+            elif self.view.has("__sep__"):
                 self.view.scroll_to("__sep__", "top")
             else:
                 self.view.scroll_to(unread[0], "top")
@@ -752,8 +882,7 @@ class LaneWidget(QWidget):
             self.view.scroll_to_end(not self.newest_first)
 
     def mark_all_read(self):
-        ids = [self.view.rows[k].status_id for k in self.view.unread_keys()]
-        self.core.mark_read(ids)
+        self.core.mark_read(self.view.unread_status_ids())
 
     def load_older(self):
         self.btn_older.setEnabled(False)
@@ -774,10 +903,9 @@ class LaneWidget(QWidget):
     def update_strip(self):
         # the store has the last word: a post marked read by any road (another lane,
         # a thread, another client) loses its mark here too, so "N new" never lies
-        keys = self.view.unread_keys()
-        rows = [self.view.rows[k] for k in keys  # (a conversation card speaks for many)
-                if self.view.rows[k].status_id and not str(k).startswith("conv:")]
-        read = self.core.store.read_set([r.status_id for r in rows]) if rows else set()
+        ids = [s.status["id"] for s in self.view.model  # (a conversation card speaks for
+               if s.unread and s.status and not str(s.key).startswith("conv:")]  # many)
+        read = self.core.store.read_set(ids) if ids else set()
         if read:
             self.view.set_unread(read, False)
         n = len(self.view.unread_keys())

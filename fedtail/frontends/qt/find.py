@@ -88,13 +88,12 @@ class FindBar(QWidget):
         old = self.hits[self.pos] if 0 <= self.pos < len(self.hits) else None
         self.hits = []
         if view is not None and query.strip():
-            for key in view.order:
-                row = view.rows[key]
-                if row.status_id is None:
+            # every post of the lane, also those whose cards aren't built yet
+            for spec in view.model or [view.rows[k].spec for k in view.order]:
+                if not spec.status or spec.extra.get("separator"):
                     continue
-                spec = row.spec
                 if matches(query, haystack(spec.status, spec.extra.get("short_id"))):
-                    self.hits.append(key)
+                    self.hits.append(spec.key)
         if old in self.hits:
             self.pos = self.hits.index(old)
         elif jump and self.hits:
@@ -146,16 +145,20 @@ class FindBar(QWidget):
     def _nearest(self, view):
         """The first hit from where the reader is now, not from the very top."""
         top = view.verticalScrollBar().value()
+        keys = view.keys() if view.model else list(view.order)
+        place = {k: i for i, k in enumerate(keys)}
+        # the first built card still on screen, and its place among all of them
+        here = next((place[k] for k in view.order if k in place and
+                     view._top(view.rows[k]) + view.rows[k].height() > top), 0)
         for i, key in enumerate(self.hits):
-            row = view.rows[key]
-            if view._top(row) + row.height() > top:
+            if place.get(key, -1) >= here:
                 return i
         return 0
 
     def _go(self):
         key = self.hits[self.pos]
+        self.view.scroll_to(key, "top")  # builds its card if it wasn't built yet
         self._mark(key)
-        self.view.scroll_to(key, "top")
         self._show_count()
 
     def _mark(self, key):

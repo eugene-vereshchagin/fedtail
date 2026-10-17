@@ -1466,6 +1466,50 @@ class QtSmokeTest(unittest.TestCase):
                       f"positioned={lane.positioned} unread={len(view.unread_keys())} "
                       f"rows={len(view.rows)} active={self.win.isActiveWindow()}")
 
+    def test_big_lane_builds_cards_around_the_reading_place(self):
+        """A lane of hundreds: only the cards around the first unread are built at first;
+        scrolling up builds more above without moving what's on screen; going to a post
+        far away builds there; "all read" covers the cards not built too."""
+        for i in range(200):
+            self.world.add(status(f"8{i:03d}", NEWS, minute=i % 60,
+                                  text="пост " * (5 + i % 30) + str(i)), home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        bots = [st["id"] for _, st in self.core.lane_entries("bots")]
+        self.assertGreater(len(bots), 150)
+        self.core.mark_read(bots[:-20])  # the newest 20 unread
+        self.win.select_lane("bots")
+        lane = self.win.lane_widgets["bots"]
+        view = lane.view
+        self.pump(1.5)
+        self.assertLess(len(view.rows), len(view.model) // 2)  # not all built
+        first = view.unread_keys()[0]
+        self.assertIn(first, view.rows)  # the reading place is
+        self.assertEqual(len(view.unread_keys()), 20)
+
+        # up: more is built above, and the post at the top of the screen stays put
+        sb = view.verticalScrollBar()
+        built = len(view.rows)
+        top_key = view.order[0]
+        sb.setValue(0)
+        view._touched()
+        y = view._top(view.rows[top_key]) - sb.value()
+        self.pump(until=lambda: len(view.rows) > built)
+        self.pump(0.3)
+        self.assertEqual(view._top(view.rows[top_key]) - sb.value(), y)
+
+        # far away: its card is built there
+        oldest = view.model[0].key
+        if oldest not in view.rows:
+            view.scroll_to(oldest, "top")
+            self.assertIn(oldest, view.rows)
+
+        # "all read" is about the whole lane, built or not
+        lane.mark_all_read()
+        self.pump(0.2)
+        self.assertEqual(self.core.unread_ids(self.core.lane_entries("bots")), set())
+
     def test_posts_scrolled_past_count_as_read(self):
         """read.mark_read = on_scroll: a post that was on screen and that the reader went
         on past is read, even if it was never all on screen while the feed stood still —

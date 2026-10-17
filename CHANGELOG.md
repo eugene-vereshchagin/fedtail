@@ -32,6 +32,11 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- Opening a lane no longer builds a card for every post in it: only those around the place
+  reading starts at (`feed.build_at_once`, 40), the rest a few at a time as you scroll near
+  an edge. Cards built above the screen are held in place by the same anchor that keeps
+  your place when new posts come, so nothing jumps; finding (Ctrl+F), "to the first
+  unread" and "all read" still cover the whole lane. `0` builds everything at once.
 - Lanes with many posts under content warnings opened in seconds instead of tens of
   seconds: every such card made, and threw away, a native window of its own while it was
   built (the log showed a 16 s freeze for a list of 300 posts). Word-wrapped text also no
