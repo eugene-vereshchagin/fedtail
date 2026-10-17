@@ -404,7 +404,7 @@ ruff check .
 ## If it breaks
 
 The debugging mode (`debug.mode`: on by itself in development versions from git, off in
-releases and the one-file builds; `--debug` for one run) keeps logs in `~/fedtail-logs/<profile>/`, a file per start
+releases and the one-file builds; `--debug` for one run) keeps logs in the profile's data folder, `logs/` (the menu opens it), a file per start
 and per hour, `latest.log` the current one (`debug.log_dir`). Attach `latest.log`, or run
 `python3 -m fedtail --bug-report` and send the archive it makes in your home folder — logs,
 crash traces, config and a system summary, without the token and the database. A frozen

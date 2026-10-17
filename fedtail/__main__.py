@@ -150,7 +150,10 @@ def main(argv=None):
     diag.session_header(where.profile, {"logs": str(folder)})
     diag.start_stats(cfg)
 
-    frontend = frontends.load(args.ui or cfg["ui"]["frontend"])
+    ui = args.ui or cfg["ui"]["frontend"]
+    frontend = frontends.load(ui)
+    if ui == "tui":
+        diag.quiet_console()
     core = Core(cfg, where)
     core.new_options = new_options
     core, held = merge_accounts(core, where.profile)

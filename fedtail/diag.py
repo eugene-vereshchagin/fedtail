@@ -4,7 +4,7 @@ fedtail is meant to stay open for days. When it falls over, hangs or grows fat,
 the files here are what you send for a diagnosis. Until 1.0 everything is on by
 default and verbose (`[debug]` in the config tones it down).
 
-Where: debug.log_dir/<profile>/, ~/fedtail-logs/default/ unless set otherwise
+Where: the profile's data folder, logs/ (debug.log_dir/<profile>/ if set)
 ("" — the profile's data dir, logs/):
 
     2026-10-16_15-04-12.log   the log: every request with its timing, polls, user
@@ -78,16 +78,64 @@ def enabled(cfg, forced=False):
 
 def logs_dir(paths, cfg=None):
     """The profile's log folder: the one in use, or where debug.log_dir puts it.
-    With debugging off, a small log of warnings stays in the data folder, logs/."""
+    By default (and always with debugging off) the profile's data folder, logs/ —
+    the menu opens it, nothing goes into the home folder."""
     if _state["dir"] is not None:
         return _state["dir"]
     where = ((cfg or {}).get("debug") or {}).get("log_dir", DEFAULT_LOG_DIR)
+    if where == OLD_LOG_DIR:  # the default before 0.11, written into many configs
+        where = DEFAULT_LOG_DIR
     if not where or (cfg is not None and not enabled(cfg)):
         return paths.data_dir / "logs"
     return Path(os.path.expanduser(where)) / paths.profile
 
 
-DEFAULT_LOG_DIR = "~/fedtail-logs"
+DEFAULT_LOG_DIR = ""
+OLD_LOG_DIR = "~/fedtail-logs"
+# what a log folder holds that is ours to delete (nothing else in it is touched)
+OUR_LOGS = ("2[0-9][0-9][0-9]-*.log", "latest.log", "crash.log", "stacks.log", "version")
+
+
+def _remove_ours(folder):
+    """Our log files in folder gone; the folder too if that leaves it empty."""
+    for pattern in OUR_LOGS:
+        for f in folder.glob(pattern):
+            try:
+                if f.is_symlink() or f.is_file():
+                    f.unlink()
+            except OSError:
+                pass
+    try:
+        folder.rmdir()  # only when empty
+    except OSError:
+        pass
+
+
+def _forget_old_logs(paths, folder):
+    """Logs of another version are no use any more: a fresh version starts clean.
+    Also the logs the old default left in ~/fedtail-logs/<profile>/."""
+    from . import version
+    now = version.info()["version"].replace(" (dirty)", "")
+    mark = folder / "version"
+    try:
+        before = mark.read_text("utf-8").strip()
+    except OSError:
+        before = None
+    if before != now:
+        if before is not None or any(folder.glob("2[0-9][0-9][0-9]-*.log")):
+            _remove_ours(folder)
+            folder.mkdir(parents=True, exist_ok=True)
+        try:
+            mark.write_text(now + "\n", "utf-8")
+        except OSError:
+            pass
+    old = Path(os.path.expanduser(OLD_LOG_DIR)) / paths.profile
+    if old.is_dir() and old.resolve() != folder.resolve():
+        _remove_ours(old)
+        try:
+            old.parent.rmdir()  # ~/fedtail-logs itself, once no profile is left in it
+        except OSError:
+            pass
 
 
 class SessionLog(logging.Handler):
@@ -172,6 +220,7 @@ def setup(paths, cfg, console_debug=False):
     _state["dir"] = None
     folder = logs_dir(paths, cfg)
     folder.mkdir(parents=True, exist_ok=True)
+    _forget_old_logs(paths, folder)
     _state["dir"] = folder
 
     root = logging.getLogger()
@@ -192,6 +241,7 @@ def setup(paths, cfg, console_debug=False):
     ch.setLevel(logging.DEBUG if console_debug else logging.WARNING)
     ch.setFormatter(logging.Formatter("fedtail: %(levelname)s %(name)s: %(message)s"))
     root.addHandler(ch)
+    _state["console"] = ch
     # chatty libraries: their debug lines say nothing we don't log ourselves
     for name in ("urllib3", "requests", "PIL"):
         logging.getLogger(name).setLevel(logging.WARNING)
@@ -211,6 +261,15 @@ def setup(paths, cfg, console_debug=False):
     sys.excepthook = _excepthook
     threading.excepthook = _thread_excepthook
     return folder
+
+
+def quiet_console():
+    """No more log lines on the terminal: a full-screen terminal interface (the TUI) owns
+    it, and a traceback printed over it scrambles the screen. The log file keeps them."""
+    ch = _state.get("console")
+    if ch is not None:
+        logging.getLogger().removeHandler(ch)
+        _state["console"] = None
 
 
 def session_header(profile, extra=None):

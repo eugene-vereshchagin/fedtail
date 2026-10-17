@@ -9,7 +9,7 @@ Open an [issue](https://github.com/eugene-vereshchagin/fedtail/issues/new/choose
 * what you did, what you expected, what happened (a screenshot helps a lot);
 * the version: the bottom of the sidebar, or `python3 -m fedtail --version`;
 * your server software if you know it (GoToSocial, Mastodon, Akkoma, Friendica…);
-* attach `~/fedtail-logs/<profile>/latest.log`, or the archive made by
+* attach `latest.log` from the log folder (menu ≡ → Debugging → Open the log folder), or the archive made by
   `python3 -m fedtail --bug-report`.
 
 Logs never contain your token or the texts of posts — API paths, ids, timings and errors only.
@@ -46,7 +46,7 @@ By contributing you agree that your work is licensed under GPL-3.0-or-later, lik
 **Ошибка:** заведи [issue](https://github.com/eugene-vereshchagin/fedtail/issues/new/choose):
 что делал, что ждал, что получилось (скриншот очень помогает), версия (внизу боковой панели
 или `python3 -m fedtail --version`), какой у тебя сервер, и приложи
-`~/fedtail-logs/<профиль>/latest.log` или архив `python3 -m fedtail --bug-report`. В журнале
+`latest.log` из папки логов (меню ≡ → «Отладка» → «Открыть папку логов») или архив `python3 -m fedtail --bug-report`. В журнале
 нет токена и текстов постов; в архиве есть конфиг — посмотри его перед отправкой. Уязвимости —
 не в issue, а приватно, см. [SECURITY.md](SECURITY.md).
 

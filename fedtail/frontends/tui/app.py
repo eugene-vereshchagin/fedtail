@@ -355,6 +355,13 @@ class FedtailApp(App, PostsMixin):
             except RuntimeError:  # the app is gone
                 pass
 
+    def _main(self, selector, kind=None):
+        """A widget of the main screen, whatever screen is on top now: core events come
+        while a thread, a profile or the composer is open (App.query_one only looks at
+        the screen on top, and the lanes aren't there)."""
+        screen = self.screen_stack[0] if self.screen_stack else self.screen
+        return screen.query_one(selector, kind) if kind else screen.query_one(selector)
+
     def show_error(self, message):
         self.notify(str(message)[:300], severity="error", timeout=8)
 
@@ -387,7 +394,7 @@ class FedtailApp(App, PostsMixin):
         self.begin()
 
     def begin(self):
-        self.query_one("#title", Static).update(_("tui_connecting"))
+        self._main("#title", Static).update(_("tui_connecting"))
         self.later(self.core.connect(), ok=self.connected,
                    fail=lambda e: self.show_error(_("tui_connect_failed", err=e)))
 
@@ -398,10 +405,10 @@ class FedtailApp(App, PostsMixin):
         first = start_lane(self.core, self._lane_names())
         if first:
             await self.select_lane(first)
-        self.query_one("#posts", ListView).focus()
+        self._main("#posts", ListView).focus()
 
     async def fill_lanes(self):
-        lv = self.query_one("#lanes", ListView)
+        lv = self._main("#lanes", ListView)
         await lv.clear()
         items = []
         for _group, names in ordered_lanes(self.core):
@@ -411,7 +418,7 @@ class FedtailApp(App, PostsMixin):
         await lv.extend(items)
 
     def update_lane_counts(self):
-        for item in self.query_one("#lanes", ListView).children:
+        for item in self._main("#lanes", ListView).children:
             if isinstance(item, LaneItem):
                 item.update(*lane_label(self.core, item.lane, self.lanes_width - 2))
 
@@ -419,7 +426,7 @@ class FedtailApp(App, PostsMixin):
         self.lane = name
         self.core.set_active_lane(name)
         self.core.set_state("lane", name)
-        lanes = self.query_one("#lanes", ListView)
+        lanes = self._main("#lanes", ListView)
         for i, item in enumerate(lanes.children):
             if isinstance(item, LaneItem) and item.lane == name:
                 if lanes.index != i:
@@ -430,7 +437,7 @@ class FedtailApp(App, PostsMixin):
         core, name = self.core, self.lane
         if name is None:
             return
-        lv = self.query_one("#posts", ListView)
+        lv = self._main("#posts", ListView)
         entries = core.lane_entries(name)
         if core.cfg["feed"]["order"] == "newest_first":
             entries = list(reversed(entries))
@@ -444,7 +451,7 @@ class FedtailApp(App, PostsMixin):
                               width=width, parent=core.parent_of(st))
             items.append(PostItem(st, render(shown), key=item_id))
         title = core.lane_title(name) or _("lane_" + name)
-        self.query_one("#title", Static).update(
+        self._main("#title", Static).update(
             Text(title, style="bold") + Text(f"  {_('tui_unread', n=len(unread))}"
                                              if unread else "", style="dim"))
         await lv.clear()
@@ -483,7 +490,7 @@ class FedtailApp(App, PostsMixin):
             self.update_lane_counts()
 
     def _lane_names(self):
-        return [i.lane for i in self.query_one("#lanes", ListView).children
+        return [i.lane for i in self._main("#lanes", ListView).children
                 if isinstance(i, LaneItem)]
 
     def refresh_lane(self):

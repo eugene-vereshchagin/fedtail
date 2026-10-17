@@ -129,7 +129,7 @@ DEFAULTS = {
     "debug": {
         "level": "debug",
         "mode": "auto",
-        "log_dir": "~/fedtail-logs",
+        "log_dir": "",
         "log_mb": 10,
         "keep_mb": 500,
         "stats_minutes": 5,

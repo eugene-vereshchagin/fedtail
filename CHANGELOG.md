@@ -4,6 +4,13 @@
 
 - `docs/FEATURES.md`: what fedtail does and doesn't, next to other clients, with the config
   switch for each; linked from both READMEs.
+- Terminal interface: a poll landing while a thread, a profile or the composer was open
+  (right after sending a reply, say) failed and printed its traceback over the screen. The
+  update now finds the lanes on the main screen, and no log lines go to the terminal while
+  the interface owns it (they are in the log file).
+- Logs live in the profile's data folder, `logs/` (≡ → Debugging → Open the log folder),
+  not in `~/fedtail-logs` any more; `debug.log_dir` still sends them elsewhere. A new
+  version deletes the old version's logs at its first start, and the old home folder ones.
 
 ## 0.10.0 — 2026-10-17
 

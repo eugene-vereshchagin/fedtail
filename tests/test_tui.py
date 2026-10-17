@@ -126,6 +126,35 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("escape")
             await pilot.press("q")
 
+    async def test_new_posts_while_another_screen_is_on_top(self):
+        """A poll lands while a thread is open (or the composer, after sending): the
+        lanes live on the main screen, and the update must find them there."""
+        from textual.widgets import ListView
+
+        from fedtail.frontends.tui.app import FedtailApp, LaneItem, ThreadScreen
+        core, w = self.make()
+        w.add(status("001", BOB, minute=1, text="first", vis="public"), home=True)
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            await self.wait(pilot, lambda: app.lane is not None and
+                            len(app.query_one("#posts").children) >= 1)
+            main = app.screen
+            app.query_one("#posts", ListView).focus()
+            await pilot.press("enter")
+            await self.wait(pilot, lambda: isinstance(app.screen, ThreadScreen))
+            # a new lane appears (a fresh list) and the open lane gets a post
+            w.add(status("002", BOB, minute=2, text="second", vis="public"), home=True)
+            before = len(main.query_one("#posts", ListView).children)
+            await pilot.pause(0.1)
+            core.poll_once()
+            await self.wait(pilot, lambda: len(main.query_one("#posts", ListView).children)
+                            > before)
+            self.assertTrue(any(isinstance(i, LaneItem)
+                                for i in main.query_one("#lanes", ListView).children))
+            await pilot.press("escape")
+            await pilot.press("q")
+
     async def test_login_screen_without_token(self):
         from fedtail.core import auth
         from fedtail.frontends.tui.app import FedtailApp, LoginScreen

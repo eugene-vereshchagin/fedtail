@@ -116,6 +116,51 @@ class DiagTest(unittest.TestCase):
         diag._state["dir"] = None
         diag._state["on"] = True
 
+    def test_old_logs_go(self):
+        """A new version starts with a clean log folder; the logs the old default put in
+        the home folder go too; the log goes to the data folder unless told otherwise."""
+        from fedtail import version
+        tmp = Path(self._tmp.name)
+        keep = diag.OLD_LOG_DIR
+        diag.OLD_LOG_DIR = str(tmp / "home-logs")
+        try:
+            old_home = tmp / "home-logs" / "t"
+            old_home.mkdir(parents=True)
+            (old_home / "2026-10-01_10-00-00.log").write_text("old", "utf-8")
+            (old_home / "crash.log").write_text("old", "utf-8")
+            # the old default in a config means the new default
+            cfg, _ = config.validate({"debug": {"mode": "on", "log_dir": diag.OLD_LOG_DIR}})
+            folder = self.paths.data_dir / "logs"
+            folder.mkdir(parents=True)
+            (folder / "version").write_text("0.0.1.dev1+gold\n", "utf-8")
+            (folder / "2026-10-02_10-00-00.log").write_text("old", "utf-8")
+            (folder / "notes.txt").write_text("not ours", "utf-8")
+            self.assertEqual(diag.setup(self.paths, cfg), folder)
+            self.assertFalse(old_home.exists())  # and ~/fedtail-logs itself, empty now
+            self.assertFalse((tmp / "home-logs").exists())
+            self.assertFalse((folder / "2026-10-02_10-00-00.log").exists())
+            self.assertTrue((folder / "notes.txt").exists())  # not ours: left alone
+            now = version.info()["version"].replace(" (dirty)", "")
+            self.assertEqual((folder / "version").read_text("utf-8").strip(), now)
+            # the same version again: this run's log stays
+            for h in logging.getLogger().handlers:
+                h.close()
+            diag._state["dir"] = None
+            for f in ("crash", "stacks"):
+                diag._state[f].close()
+                diag._state[f] = None
+            ours = sorted(folder.glob("2*.log"))
+            self.assertTrue(ours)
+            diag.setup(self.paths, cfg)
+            self.assertTrue(all(f.exists() for f in ours))
+            # the terminal interface owns the screen: no log lines printed over it
+            diag.quiet_console()
+            self.assertFalse(any(getattr(h, "stream", None) is sys.stderr
+                                 for h in logging.getLogger().handlers))
+        finally:
+            diag.OLD_LOG_DIR = keep
+            diag._state["dir"] = None
+
     def test_session_files_split_and_capped(self):
         folder = Path(self._tmp.name) / "split"
         folder.mkdir()

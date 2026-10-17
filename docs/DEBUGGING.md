@@ -12,11 +12,12 @@
 
 ## Где лежит
 
-В домашней папке, `~/fedtail-logs/<профиль>/` (другое место — `debug.log_dir`;
-`""` — папка данных профиля, `logs/`):
+В папке данных профиля, `logs/` — `~/.local/share/fedtail/<профиль>/logs/` (меню ≡ →
+«Отладка» → «Открыть папку логов»; другое место — `debug.log_dir`). Логи прошлой версии
+новая версия удаляет при первом запуске (в папке лежит файл `version` — чья она):
 
 ```
-~/fedtail-logs/default/
+~/.local/share/fedtail/default/logs/
     2026-10-16_15-04-12.log   журнал: новый файл при каждом запуске и каждый час
                               (и при debug.log_mb), всего не больше debug.keep_mb —
                               самые старые удаляются сами
@@ -96,7 +97,7 @@ or grows, the log shows what happened. Releases and the one-file builds keep onl
 and errors in the profile's data folder, `logs/`; `debug.mode = "on"` or `--debug` (one run)
 turns the detailed log on.
 
-**Where:** `~/fedtail-logs/<profile>/` (`debug.log_dir`) — a new
+**Where:** the profile's data folder, `logs/` (`~/.local/share/fedtail/<profile>/logs/`, the menu opens it; `debug.log_dir` for another place; a new version deletes the old version's logs) — a new
 `YYYY-MM-DD_HH-MM-SS.log` per start and per hour, `latest.log` links to the current one,
 the folder kept under `debug.keep_mb`;
 `crash.log` (all thread stacks on a fatal crash), `stacks.log` (stacks on demand
