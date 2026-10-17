@@ -1094,6 +1094,17 @@ class MainWindow(QMainWindow):
                 if row.status_id is not None and row.real_id == sid:
                     row._build()
 
+    def read_up_to(self, sid):
+        """This post and everything older in the view it's in: read."""
+        view = self.current_view()
+        specs = [s for s in (view.model if view is not None else []) if s.status]
+        at = next((i for i, s in enumerate(specs) if s.status.get("id") == sid), None)
+        if at is None:
+            self.core.mark_read([sid])
+            return
+        older = specs[:at + 1] if self.cfg["feed"]["order"] == "oldest_first" else specs[at:]
+        self.core.mark_read([s.status["id"] for s in older if s.unread])
+
     def current_view(self):
         """The FeedView on screen: the current lane, thread or profile."""
         w = self.tabs.currentWidget()
@@ -1179,6 +1190,10 @@ class MainWindow(QMainWindow):
                                  fail=self.error)
         elif action == "quote":
             Compose(self, quote=st).show()
+        elif action == "readone":
+            self.core.mark_read([arg])
+        elif action == "readupto":
+            self.read_up_to(arg)
         elif action in ("favourited_by", "reblogged_by"):
             self.open_reactions(st, action)
         elif action in ("mutethread", "unmutethread"):

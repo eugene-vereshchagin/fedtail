@@ -32,6 +32,10 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- Read by hand, one post at a time: "Mark read" and "Read up to here" (this one and
+  everything older) in every post's menu; with `read.mark_read = "manual"` the lane waits
+  exactly where you stopped. `read.read_button` puts a ✓ under each unread post.
+- A bookmark button under every post (`ui.bookmark_button`; it was only in the ⋯ menu).
 - Opening a lane no longer builds a card for every post in it: only those around the place
   reading starts at (`feed.build_at_once`, 40), the rest a few at a time as you scroll near
   an edge. Cards built above the screen are held in place by the same anchor that keeps

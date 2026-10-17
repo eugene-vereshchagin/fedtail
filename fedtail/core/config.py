@@ -26,6 +26,7 @@ DEFAULTS = {
         "sidebar_groups": True,
         "command_line": True,
         "expand_cw": True,
+        "bookmark_button": True,
         "arts_mode": True,
         "max_width": 760,
         "image_height": 360,
@@ -70,6 +71,7 @@ DEFAULTS = {
     },
     "read": {
         "mark_read": "on_scroll",
+        "read_button": False,
         "sync_markers": True,
     },
     "lanes": {

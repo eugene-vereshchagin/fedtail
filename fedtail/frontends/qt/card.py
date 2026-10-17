@@ -561,6 +561,13 @@ class PostRow(QWidget):
         if not self.spec.in_thread:
             buttons.append(("thread", ("view-list-tree", "format-indent-more"), "⤷",
                             _("thread"), n(st.get("replies_count")), False))
+        if self.ctx.cfg["ui"].get("bookmark_button", True):
+            marked = bool(st.get("bookmarked"))
+            buttons.append(("bookmark", ("bookmark-new", "bookmarks"), "🔖",
+                            _("unbookmark") if marked else _("bookmark"), "", marked))
+        if self.spec.unread and self.ctx.cfg["read"].get("read_button", False):
+            buttons.append(("readone", ("mail-mark-read", "object-select-symbolic"), "✓",
+                            _("mark_one_read"), "", False))
         for action, icons, glyph, label, count, active in buttons:
             b = QToolButton()
             b.setAutoRaise(True)
@@ -632,6 +639,11 @@ class PostRow(QWidget):
             menu.addAction(_("translate"), self._translate)
         menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
                        lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
+        if self.spec.unread:  # by hand, whatever read.mark_read says
+            menu.addAction(_("mark_one_read"),
+                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:readone/{i}"))
+            menu.addAction(_("mark_read_upto"),
+                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:readupto/{i}"))
         # who liked, who boosted; quotes of my post; my post out of someone's quote
         s = real(st)
         sup = self.ctx.supports
