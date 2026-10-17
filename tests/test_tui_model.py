@@ -39,7 +39,7 @@ class TuiModelTest(TmpDir):
                          ("num", "/2"))
 
     def test_cw_folds_unless_expand(self):
-        core, _w = self.make(ui={"expand_cw": False})
+        core, _w = self.make(ui={"expand_cw": False, "arts_mode": False})
         st = status("003", BOB, minute=3, text="spoiler")
         st["spoiler_text"] = "careful"
         shown = model.show_post(core, st)

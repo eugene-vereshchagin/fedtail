@@ -64,16 +64,20 @@ class CliTest(TmpDir):
         return c, FakeApi.world
 
     def test_cw_hidden_unless_expand(self):
-        core, w = self.make(ui={"expand_cw": False})
+        core, w = self.make(ui={"expand_cw": False, "arts_mode": False})
         st = status("001", BOB, minute=1, text="the spoiler")
         st["spoiler_text"] = "careful"
         w.add(st, home=True)
         got = self.run_cli(core, "show", "people")
         self.assertIn("careful", got)
         self.assertNotIn("the spoiler", got)
-        core2, w = self.make(ui={"expand_cw": True})
+        core2, w = self.make(ui={"expand_cw": True, "arts_mode": False})
         w.add(st, home=True)
         self.assertIn("the spoiler", self.run_cli(core2, "show", "people"))
+        # arts mode opens it whatever expand_cw says
+        core3, w = self.make(ui={"expand_cw": False, "arts_mode": True})
+        w.add(st, home=True)
+        self.assertIn("the spoiler", self.run_cli(core3, "show", "people"))
 
     def test_max_lines_and_color(self):
         core, w = self.make(cli={"max_lines": 1, "color": "always"})

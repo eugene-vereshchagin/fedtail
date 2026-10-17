@@ -605,7 +605,7 @@ class CoreTest(TmpDir):
         self.assertEqual(fresh["poll"]["options"][0]["votes_count"], 9)
 
     def test_silence_mute_block_filters(self):
-        core, w = self.make()
+        core, w = self.make(ui={"arts_mode": False})
         w.add(status("100", BOB, minute=1), home=True)
         w.add(status("101", NEWS, minute=2), home=True)
         spam = w.add(status("102", fakes.acct("S", "spam@x.example"), minute=3), home=True)
@@ -628,6 +628,11 @@ class CoreTest(TmpDir):
         core._silence_checked = None
         core.poll_once()
         self.assertEqual(core.lane_entries("people"), [])
+        # arts mode: a server filter hides nothing; your own mutes and blocks still do
+        self.assertTrue(core.silenced(spam))
+        core.cfg["ui"]["arts_mode"] = True
+        self.assertFalse(core.silenced(spam))
+        self.assertTrue(core.silenced(w.statuses["100"]))  # B is still muted
 
     def test_edit_my_post(self):
         core, w = self.make()

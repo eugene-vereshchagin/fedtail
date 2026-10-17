@@ -40,6 +40,7 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | Цитаты: показ | есть | `feed.quotes` = card / link / off | `status.quote` | M 4.5+ I P E |
 | Чувствительные картинки под шторкой | есть | `feed.sensitive_media` | `status.sensitive` | все |
 | CW разворачиваются сами | есть | `ui.expand_cw` | `spoiler_text` | настраивается у всех |
+| ⭐ Режим «искусство»: CW, шторки, фильтры сервера и «Пожаловаться» — разом прочь | есть | `ui.arts_mode` (вкл. по умолчанию) | — | нет ни у кого одним переключателем |
 | Опросы: смотреть, голосовать | есть | — | polls/:id, votes | все |
 | История правок | есть | — | statuses/:id/history | M I P E |
 | Перевод поста сервером | есть | `feed.translate` | statuses/:id/translate | M I P E |
@@ -171,7 +172,7 @@ reference is `config.example.toml`).
 hashtags, My likes, Direct messages; whole threads as numbered trees, filled from the author's
 server and by Mastodon-Async-Refresh; thread subscriptions; conversations view; All / Posts /
 New; read position shared through markers; link cards; custom emoji; quote posts (showing,
-quoting, who may quote); sensitive media covered; polls (voting and creating); edit history;
+quoting, who may quote); sensitive media covered (or, with `ui.arts_mode`, the default: no CW folding, no covers, no server-filter folding, no Report item); polls (voting and creating); edit history;
 translation; pinned and featured on profiles; profiles, followers and follows filled in from
 the person's own server (ActivityPub outbox and collections); honest counters; announcements;
 live stream; find in lane; in-app links; the composer panel with drafts, Markdown, alt text,

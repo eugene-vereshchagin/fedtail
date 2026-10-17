@@ -15,6 +15,10 @@
   a post that was on screen and that you went on past counts as read even if it never
   stood all on screen at a pause; scrolling a window without focus with the wheel (KDE
   does that) counts too; and pictures still arriving no longer hold the marks back.
+- `ui.arts_mode` (on by default): every post as its author made it — content warnings
+  open, sensitive pictures uncovered, server filters neither hide nor fold posts, no
+  "Report" item. Your own mutes and blocks keep working; what the server itself cuts off
+  never reaches a client. `false` brings back the separate switches.
 
 ## 0.10.0 — 2026-10-17
 

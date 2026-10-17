@@ -5,6 +5,7 @@ import textwrap
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from ...core import config
 from ...core.commands import parse
 from ...core.model import html_to_text, real, reply_mentions, snippet
 from ...i18n import _
@@ -62,7 +63,7 @@ def show_post(core, wrapper, alias=None, unread=False, number=None, width=80, pa
             out.context = "↳ " + _("tui_parent_gone")
         else:
             out.context = "↳ …"
-    expand = core.cfg["ui"]["expand_cw"]
+    expand = config.expand_cw(core.cfg)
     if st.get("spoiler_text"):
         out.cw = "⚠ " + st["spoiler_text"]
     if not st.get("spoiler_text") or expand:

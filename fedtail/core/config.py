@@ -26,6 +26,7 @@ DEFAULTS = {
         "sidebar_groups": True,
         "command_line": True,
         "expand_cw": True,
+        "arts_mode": True,
         "max_width": 760,
         "image_height": 360,
         "image_viewer": "internal",
@@ -306,6 +307,21 @@ def validate(user):
     if errors:
         raise ConfigError("\n".join(errors))
     return cfg, warnings
+
+
+# ui.arts_mode: the whole post as its author wrote it. Frontends ask these instead of
+# reading the separate switches it overrides (server filters and the report item are
+# checked where they act).
+def expand_cw(cfg):
+    """Content warnings open from the start."""
+    return bool(cfg["ui"].get("arts_mode") or cfg["ui"]["expand_cw"])
+
+
+def sensitive_media(cfg):
+    """feed.sensitive_media as it applies now: "show" or "hide"."""
+    if cfg["ui"].get("arts_mode"):
+        return "show"
+    return cfg["feed"].get("sensitive_media", "hide")
 
 
 def load(path):

@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...core import links
+from ...core import config, links
 from ...core.model import QUOTE_SHOWN, is_bot, quoted, real, snippet, without_quote_fallback
 from ...i18n import _, current_language
 from .text import clean, display_name, emojify, esc, link
@@ -146,7 +146,7 @@ class PostRow(QWidget):
         self.ctx = ctx
         self.spec = spec
         self.theme = ctx.theme
-        self.cw_open = ctx.cfg["ui"]["expand_cw"]
+        self.cw_open = config.expand_cw(ctx.cfg)
         self.translation = None
         self.show_translation = False
         row = QHBoxLayout(self)
@@ -335,7 +335,8 @@ class PostRow(QWidget):
 
         # a server filter that says "warn": folded like a content warning, closed
         warned = [(f.get("filter") or {}).get("title") or "?" for f in st.get("filtered") or []
-                  if (f.get("filter") or {}).get("filter_action", "warn") == "warn"]
+                  if (f.get("filter") or {}).get("filter_action", "warn") == "warn"
+                  and not self.ctx.cfg["ui"]["arts_mode"]]
         if warned:
             self.cw_open = False
         if st.get("spoiler_text") or warned:
@@ -626,7 +627,9 @@ class PostRow(QWidget):
             if domain:
                 menu.addAction(_("block_domain", domain=domain),
                                lambda i=st["id"]: self.ctx.on_link(f"fedtail:blockdomain/{i}"))
-            menu.addAction(_("report"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:report/{i}"))
+            if not self.ctx.cfg["ui"]["arts_mode"]:
+                menu.addAction(_("report"),
+                               lambda i=st["id"]: self.ctx.on_link(f"fedtail:report/{i}"))
         if st["account"]["id"] == self.ctx.me_id:
             menu.addSeparator()
             menu.addAction(_("edit"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:edit/{i}"))
@@ -753,7 +756,7 @@ class PostRow(QWidget):
         # until clicked (feed.sensitive_media); under a CW the whole post is folded anyway
         covered = bool(st.get("sensitive")) and not st.get("spoiler_text") and \
             not getattr(self, "media_revealed", False) and \
-            self.ctx.cfg["feed"].get("sensitive_media", "hide") == "hide"
+            config.sensitive_media(self.ctx.cfg) == "hide"
         for m in atts:
             full = m.get("url") or m.get("remote_url") or ""
             if m in visual and covered:

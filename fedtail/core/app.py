@@ -496,6 +496,8 @@ class Core:
                 (a.get("acct") or "").partition("@")[2].lower() in self.blocked_domains
                 for a in (s["account"], status["account"])):
             return True
+        if self.cfg["ui"]["arts_mode"]:
+            return False  # server filters don't hide anything in arts mode
         return any((f.get("filter") or {}).get("filter_action") == "hide"
                    for f in s.get("filtered") or [])
 

@@ -20,7 +20,7 @@ from importlib import resources
 from urllib.parse import parse_qs, urlsplit
 
 from ... import __version__
-from ...core import links
+from ...core import config, links
 from ...core.model import real, snippet
 from ...i18n import _
 from ..richtext import clean
@@ -143,9 +143,9 @@ class Web:
         return {"acct": (self.core.me or {}).get("acct"), "version": __version__,
                 "server": (self.core.auth or {}).get("server"),
                 "mark_read": c["read"]["mark_read"], "order": c["feed"]["order"],
-                "start_at": c["feed"]["start_at"], "expand_cw": c["ui"]["expand_cw"],
+                "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
                 "visibility": c["post"]["default_visibility"],
-                "sensitive_media": c["feed"].get("sensitive_media", "hide"),
+                "sensitive_media": config.sensitive_media(c),
                 "words": {k: _(k) for k in WORDS}}
 
     def lanes(self):

@@ -20,6 +20,7 @@ import sys
 import textwrap
 from datetime import datetime
 
+from ..core import config
 from ..core.model import html_to_text, real
 from ..i18n import _
 
@@ -75,7 +76,7 @@ def print_post(out, core, wrapper, alias, unread=False):
     body = []
     if st.get("spoiler_text"):
         body.append(out.c("warn", "⚠ " + st["spoiler_text"]))
-    if not st.get("spoiler_text") or core.cfg["ui"]["expand_cw"]:
+    if not st.get("spoiler_text") or config.expand_cw(core.cfg):
         text = html_to_text(st.get("content", ""))
         for para in text.split("\n"):
             body += textwrap.wrap(para, max(20, out.width - 4)) or [""]

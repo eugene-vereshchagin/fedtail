@@ -61,7 +61,7 @@ class QtSmokeTest(unittest.TestCase):
         self.world = w
 
         cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
-                                  "ui": {"start_lane": "last"}})
+                                  "ui": {"start_lane": "last", "arts_mode": False}})
         p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
@@ -1050,6 +1050,45 @@ class QtSmokeTest(unittest.TestCase):
         PostRow(CardSpec(key="095", status=st), self.win.ctx)
         self.assertIn("https://x.example/a_s.png", asked)
         self.win.ctx.cfg["feed"]["sensitive_media"] = "hide"
+
+    def test_arts_mode(self):
+        """ui.arts_mode: no CW folding, no covers, server filters don't fold, no report."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        from fedtail.i18n import _
+        st = status("096", BOB, minute=1, text="как есть")
+        st["sensitive"] = True
+        st["spoiler_text"] = "осторожно"
+        st["filtered"] = [{"filter": {"title": "шум", "filter_action": "warn"}}]
+        st["media_attachments"] = [{"type": "image", "url": "https://x.example/b.png",
+                                    "preview_url": "https://x.example/b_s.png",
+                                    "meta": {"small": {"width": 400, "height": 300}}}]
+        bare = dict(st, spoiler_text="", filtered=[])
+        cfg = self.win.ctx.cfg
+        cfg["ui"]["expand_cw"] = False
+
+        def menu_texts(row):
+            from PySide6.QtWidgets import QMenu
+            return [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
+
+        asked = []
+        self.win.images.get = lambda url, cb, *a, **k: asked.append(url)
+        try:
+            row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+            self.assertFalse(row.cw_open)  # off: folded as usual
+            self.assertIn(_("report"), menu_texts(row))
+            cfg["ui"]["arts_mode"] = True
+            row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+            self.assertTrue(row.cw_open)  # neither the CW nor the filter folds it
+            self.assertNotIn(_("report"), menu_texts(row))
+            row = PostRow(CardSpec(key="097", status=bare), self.win.ctx)
+            covers = [w for w in row.findChildren(QLabel) if w.text().startswith("⚠")]
+            self.assertEqual(covers, [])
+            self.assertIn("https://x.example/b_s.png", asked)  # shown straight away
+        finally:
+            cfg["ui"]["arts_mode"] = False
+            cfg["ui"]["expand_cw"] = True
 
     def test_custom_emoji(self):
         """:blobcat: in a post and a name: a picture once it's downloaded."""
