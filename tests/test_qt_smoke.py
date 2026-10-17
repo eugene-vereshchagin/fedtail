@@ -1470,15 +1470,16 @@ class QtSmokeTest(unittest.TestCase):
         """A lane of hundreds: only the cards around the first unread are built at first;
         scrolling up builds more above without moving what's on screen; going to a post
         far away builds there; "all read" covers the cards not built too."""
-        for i in range(200):
+        self.win.cfg["feed"]["build_at_once"] = 10  # a small window: 40 posts make "big"
+        for i in range(60):
             self.world.add(status(f"8{i:03d}", NEWS, minute=i % 60,
                                   text="пост " * (5 + i % 30) + str(i)), home=True)
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.core.poll_once()
         bots = [st["id"] for _, st in self.core.lane_entries("bots")]
-        self.assertGreater(len(bots), 150)
-        self.core.mark_read(bots[:-20])  # the newest 20 unread
+        self.assertGreaterEqual(len(bots), 40)
+        self.core.mark_read(bots[:-5])  # the newest 5 unread
         self.win.select_lane("bots")
         lane = self.win.lane_widgets["bots"]
         view = lane.view
@@ -1486,7 +1487,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertLess(len(view.rows), len(view.model) // 2)  # not all built
         first = view.unread_keys()[0]
         self.assertIn(first, view.rows)  # the reading place is
-        self.assertEqual(len(view.unread_keys()), 20)
+        self.assertEqual(len(view.unread_keys()), 5)
 
         # up: more is built above, and the post at the top of the screen stays put
         sb = view.verticalScrollBar()

@@ -74,7 +74,7 @@ class FeedView(QScrollArea):
         # place by the same anchor that holds it when new posts come in.
         self.model = []       # every spec, top to bottom
         self.windowed = False  # set by lanes; threads and profiles build everything
-        self.window = 40      # cards built at first (feed.build_at_once)
+        self.build_at_once = 40      # cards built at first (feed.build_at_once)
         self._grow_timer = QTimer(self, singleShot=True, interval=30)
         self._grow_timer.timeout.connect(self._grow)
         self._seen_timer = QTimer(self, singleShot=True, interval=350)
@@ -247,7 +247,8 @@ class FeedView(QScrollArea):
         self._grow_soon()
 
     def _all_at_once(self):
-        return not self.windowed or not self.window or len(self.model) <= 2 * self.window
+        n = self.build_at_once
+        return not self.windowed or not n or len(self.model) <= 2 * n
 
     def _window(self, keep_position, around, old_keys):
         keys = [s.key for s in self.model]
@@ -261,10 +262,10 @@ class FeedView(QScrollArea):
                 hi = len(keys)  # …and the bottom
             return self.model[lo:hi]
         c = index.get(around, len(keys) - 1)
-        before = max(4, self.window // 4)
+        before = max(4, self.build_at_once // 4)
         lo = max(0, c - before)
-        hi = min(len(keys), lo + self.window)
-        lo = max(0, hi - self.window)
+        hi = min(len(keys), lo + self.build_at_once)
+        lo = max(0, hi - self.build_at_once)
         return self.model[lo:hi]
 
     def keys(self):
@@ -290,7 +291,7 @@ class FeedView(QScrollArea):
         lo, hi = index[self.order[0]], index[self.order[-1]] + 1
         sb = self.verticalScrollBar()
         reach = self.viewport().height() * 2
-        step = max(8, self.window // 2)
+        step = max(8, self.build_at_once // 2)
         new_lo, new_hi = lo, hi
         if lo > 0 and sb.value() < reach:
             new_lo = max(0, lo - step)
@@ -615,7 +616,7 @@ class LaneWidget(QWidget):
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         self.view.windowed = True
-        self.view.window = int(self.cfg["feed"].get("build_at_once", 40))
+        self.view.build_at_once = int(self.cfg["feed"].get("build_at_once", 40))
         self.view.seen.connect(self._seen)
         lay.addWidget(self.view, 1)
         # "loading…" over the lane while it's being drawn: the click switches at once,
