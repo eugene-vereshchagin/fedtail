@@ -1262,39 +1262,81 @@ class Core(SocialMixin):
                 return []
             from . import replies
             t = time.monotonic()
-            actor = None
-            for url in (acc.get("uri"), acc.get("url")):
-                if url:
-                    try:
-                        actor = self._origin_json(url)
-                    except Exception as e:  # noqa: BLE001 — their server, anything goes
-                        log.debug("actor %s: %s", url, e)
-                    if isinstance(actor, dict) and actor.get("outbox"):
-                        break
-            if not isinstance(actor, dict) or not actor.get("outbox"):
-                log.info("profile %s: no outbox to read", acc.get("id"))
+            outbox = self._outbox_of(acc)
+            if not outbox:
                 return []
             limit = min(40, int(fc.get("remote_posts", 20)))
             try:
-                uris = replies.outbox_post_uris(self._origin_json, actor["outbox"], limit)
-            except Exception as e:  # noqa: BLE001
+                uris = replies.outbox_post_uris(self._origin_json, outbox, limit)
+            except Exception as e:  # noqa: BLE001 — their server, anything goes
                 log.info("profile %s: outbox: %s", acc.get("id"), e)
                 return []
             have = set(have_uris)
-            got = []
-            for uri in [u for u in uris if u not in have]:
-                try:
-                    found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
-                except Exception as e:  # noqa: BLE001 — gone, not public: skip it
-                    log.debug("resolve %s: %s", uri, e)
-                    continue
-                got += (found or {}).get("statuses") or []
-            if got:
-                self.store.put_statuses(got)
+            got = self._resolve_statuses([u for u in uris if u not in have])
             log.info("profile %s: outbox lists %d posts, %d new here, fetched in %.1f s",
                      acc.get("id"), len(uris), len(got), time.monotonic() - t)
             return got
         return self.bg.submit(job)
+
+    def older_from_origin(self, acc, cursor=None, have_uris=()):
+        """Further back in someone's posts than my server has (it knows only what reached
+        it, mostly since someone here followed them): page by page from their own
+        server's outbox, fetched into mine by address. A future of (statuses, cursor
+        for the next call or None) — cursor None to start from their newest."""
+        def job():
+            if not self.cfg["feed"].get("remote_profiles", True) or \
+                    "@" not in (acc.get("acct") or ""):
+                return [], None
+            from . import replies
+            t = time.monotonic()
+            where = cursor or self._outbox_of(acc)
+            if not where:
+                return [], None
+            limit = min(40, int(self.cfg["feed"].get("remote_posts", 20)))
+            try:
+                uris, nxt = replies.outbox_page(self._origin_json, where, limit, pages=5,
+                                                skip=have_uris)
+            except Exception as e:  # noqa: BLE001 — their server, anything goes
+                log.info("profile %s: outbox page: %s", acc.get("id"), e)
+                return [], None
+            got = self._resolve_statuses(uris)
+            log.info("profile %s: older from origin: %d listed, %d fetched in %.1f s, %s",
+                     acc.get("id"), len(uris), len(got), time.monotonic() - t,
+                     "more there" if nxt else "that's all")
+            return got, nxt
+        return self.bg.submit(job)
+
+    def _outbox_of(self, acc):
+        for url in (acc.get("uri"), acc.get("url")):
+            if not url:
+                continue
+            try:
+                actor = self._origin_json(url)
+            except Exception as e:  # noqa: BLE001
+                log.debug("actor %s: %s", url, e)
+                continue
+            if isinstance(actor, dict) and actor.get("outbox"):
+                return actor["outbox"]
+        log.info("profile %s: no outbox to read", acc.get("id"))
+        return None
+
+    def _resolve_statuses(self, uris):
+        """Posts by address, fetched into my server (a few at a time) and stored."""
+        def one(uri):
+            try:
+                found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
+            except Exception as e:  # noqa: BLE001 — gone, not public: skip it
+                log.debug("resolve %s: %s", uri, e)
+                return []
+            return (found or {}).get("statuses") or []
+        got = []
+        if uris:
+            with ThreadPoolExecutor(4, thread_name_prefix="resolve") as pool:
+                for sts in pool.map(one, uris):
+                    got += sts
+        if got:
+            self.store.put_statuses(got)
+        return got
 
     def relationship(self, acc_id):
         """following, followed_by, requested, … between me and an account."""

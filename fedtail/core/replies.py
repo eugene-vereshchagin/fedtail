@@ -145,10 +145,46 @@ def _audience(x):
 def outbox_post_uris(get_json, outbox, limit=20, pages=3):
     """Addresses of the newest public posts in an actor's outbox — the posts they
     wrote themselves (Create), not their boosts; at most `limit`."""
-    found = []
-    col = get_json(outbox) if isinstance(outbox, str) else outbox
+    return outbox_page(get_json, outbox, limit, pages)[0][:limit]
+
+
+def outbox_page(get_json, where, limit=20, pages=3, skip=()):
+    """Public posts of their own from an outbox (its address or the collection) or from
+    one of its pages (the cursor this returned before): (addresses, cursor to go on
+    from, or None when it ends). Whole pages are read until `limit` is reached, so a
+    few more may come; addresses in `skip` (already here) are left out."""
+    found, skip = [], set(skip)
+    col = get_json(where) if isinstance(where, str) else where
     if not isinstance(col, dict):
-        return found
+        return found, None
+    if col.get("type") in ("OrderedCollection", "Collection") or "first" in col:
+        page = col.get("first")  # the outbox itself: its items (if any), then pages
+    else:
+        page = col.get("next")  # one page of it
+    items = list(col.get("orderedItems") or col.get("items") or [])
+    seen = 0
+    while True:
+        for it in items:
+            if not isinstance(it, dict) or it.get("type") != "Create":
+                continue
+            obj = it.get("object")
+            target = obj if isinstance(obj, dict) else it
+            if not (_audience(target) | _audience(it)) & PUBLIC:
+                continue
+            uri = _id(obj)
+            if uri and urlparse(uri).scheme in ("https", "http") and uri not in found \
+                    and uri not in skip:
+                found.append(uri)
+        if page is None or seen >= pages or len(found) >= limit:
+            break
+        page = get_json(page) if isinstance(page, str) else page
+        if not isinstance(page, dict):
+            page = None
+            break
+        seen += 1
+        items = list(page.get("orderedItems") or page.get("items") or [])
+        page = page.get("next")
+    return found, page if isinstance(page, str) else None
     page = col.get("first")
     items = list(col.get("orderedItems") or col.get("items") or [])
     seen = 0

@@ -335,6 +335,7 @@ _STRINGS = {
         "menu_people": "Кого почитать",
         "mark_one_read": "Прочитано",
         "copy": "Копировать",
+        "older_from_origin": "▼ ещё раньше — с {host}",
         "list_pending": "Сервер пока не берёт его в список (подписка ещё не подтверждена) — "
                         "добавлю сам, как только сможет",
         "media_filter": "Что показывать",
@@ -820,6 +821,7 @@ _STRINGS = {
         "menu_people": "Find people",
         "mark_one_read": "Mark read",
         "copy": "Copy",
+        "older_from_origin": "▼ further back — from {host}",
         "list_pending": "The server won't take them into the list yet (the follow isn't "
                         "confirmed) — I'll add them as soon as it does",
         "media_filter": "Show",

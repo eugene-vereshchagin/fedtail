@@ -2,6 +2,8 @@
 
 ## 0.11.0 — in progress
 
+- A profile from another server: once my server has nothing older, "▼ further back —
+  from their server" reads on in their own outbox, a page at a time (`feed.remote_profiles`).
 - Putting someone just followed into a list: the server refuses until the follow is
   confirmed (a 404). They now go into the list in fedtail at once, and fedtail puts them
   into the server's list by itself on a later lists refresh (given up after 30 days).

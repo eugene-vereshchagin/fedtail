@@ -846,6 +846,43 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
 
+    def test_older_posts_from_origin_page_by_page(self):
+        """My server ran out of someone's posts: further back from their outbox, a page
+        at a time, leaving out what's already here."""
+        core, w = self.make()
+        core.connect().result()
+        core.cfg["feed"]["remote_posts"] = 2
+        far = fakes.acct("F", "fay@far.example")
+        far["uri"] = "https://far.example/users/fay"
+        pub = "https://www.w3.org/ns/activitystreams#Public"
+        base = "https://far.example/users/fay/outbox"
+
+        def page(n, nums, nxt):
+            d = {"type": "OrderedCollectionPage", "orderedItems": [
+                {"type": "Create", "to": [pub], "object": f"https://far.example/n/{k}"}
+                for k in nums]}
+            if nxt:
+                d["next"] = f"{base}?page={nxt}"
+            return d
+        docs = {"https://far.example/users/fay": {"outbox": base},
+                base: {"type": "OrderedCollection", "first": f"{base}?page=1"},
+                f"{base}?page=1": page(1, (6, 5), 2),
+                f"{base}?page=2": page(2, (4, 3), 3),
+                f"{base}?page=3": page(3, (2, 1), None)}
+        core._origin_json = docs.get
+        for n in range(1, 7):
+            st = status(f"8{n}", far, minute=n, vis="public")
+            st["uri"] = f"https://far.example/n/{n}"
+            w.remote[st["uri"]] = st
+        have = ["https://far.example/n/6", "https://far.example/n/5"]  # mine has these
+        got, cur = core.older_from_origin(far, None, have).result()
+        self.assertEqual([st["id"] for st in got], ["84", "83"])
+        self.assertEqual(cur, f"{base}?page=3")
+        got, cur = core.older_from_origin(far, cur, have).result()
+        self.assertEqual(([st["id"] for st in got], cur), (["82", "81"], None))
+        mine = dict(far, acct="fay")  # someone from my own server: nothing elsewhere
+        self.assertEqual(core.older_from_origin(mine).result(), ([], None))
+
     def test_interaction_policy_for_gotosocial(self):
         from fedtail.core.model import interaction_policy
         self.assertIsNone(interaction_policy({}))

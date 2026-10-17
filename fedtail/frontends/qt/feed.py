@@ -1261,6 +1261,9 @@ class AccountWidget(_PagedTab):
         self.relation = {}
         self._first_page = None
         self._origin_asked = False
+        self._older_origin = False  # my server's pages ran out: further back from theirs
+        self._origin_next = None
+        self._mine_done = False
         self.pinned = []
         self.featured = {}
         self.familiar = []  # of the people I follow, who follows this one
@@ -1304,6 +1307,56 @@ class AccountWidget(_PagedTab):
             self._first_page = page
         super()._page(page)
         self._from_origin()
+        if not page:
+            self._mine_done = True
+            self._offer_origin()
+
+    def _remote_host(self):
+        acct = (self.acc or {}).get("acct", "")
+        if "@" not in acct or not self.core.cfg["feed"].get("remote_profiles", True):
+            return ""
+        return acct.split("@", 1)[1]
+
+    def _offer_origin(self):
+        """My server has nothing older: the button now reads further back from their
+        own server."""
+        host = self._remote_host()
+        if not host or self._older_origin:
+            return
+        self._older_origin = True
+        self.btn_more.setText(_("older_from_origin", host=host))
+        self.btn_more.setEnabled(True)
+
+    def more(self):
+        if not self._older_origin:
+            return super().more()
+        host = self._remote_host()
+        self.btn_more.setEnabled(False)
+        self.btn_more.setText(_("origin_asking", host=host))
+        have = [st.get("uri") for st in self.items if st.get("uri")]
+
+        def got(r):
+            statuses, self._origin_next = r
+            known = {st["id"] for st in self.items}
+            new = [st for st in statuses if st["id"] not in known]
+            self.items = sorted(self.items + new, key=lambda st: st.get("created_at", ""),
+                                reverse=True)
+            if new:
+                self.core.ensure_parents(new)
+                self.render()
+            if self._origin_next:
+                self.btn_more.setText(_("older_from_origin", host=host))
+                self.btn_more.setEnabled(True)
+            else:
+                self.btn_more.setText(_("no_older"))
+            self.win.statusBar().showMessage(_("origin_got", n=len(new), host=host), 5000)
+
+        def failed(e):
+            self.btn_more.setText(_("older_from_origin", host=host))
+            self.btn_more.setEnabled(True)
+            self.win.error(e)
+        self.win.bridge.call(self.core.older_from_origin(self.acc, self._origin_next, have),
+                             ok=got, fail=failed)
 
     def _from_origin(self):
         """Someone from another server mine knows little about (fewer posts here than
@@ -1361,6 +1414,8 @@ class AccountWidget(_PagedTab):
         self.win.retitle(self)
         self._fill()
         self._from_origin()
+        if self._mine_done:  # the empty page came before who this is
+            self._offer_origin()
         if not self.mine and self.core.supports("familiar"):
             self.win.bridge.call(self.core.familiar(self.acc_id), ok=self._familiar,
                                  fail=lambda _e: None)
