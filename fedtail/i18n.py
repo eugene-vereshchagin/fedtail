@@ -124,6 +124,7 @@ _STRINGS = {
         "show_all_tip": "Все посты и ответы",
         "view_feed": "Лентой", "view_feed_tip": "Каждый пост отдельной карточкой, по порядку",
         "to_new_tip": "Прокрутить к первому непрочитанному",
+        "to_end_tip": "Нового нет: прокрутить к самым свежим",
         "unread_only_tip": "Только то, что было непрочитано, когда ты открыл ленту, и что пришло "
                            "потом. Прочитанное остаётся на месте, пока не уйдёшь из ленты",
         "unread_only_info": ["{n} непрочитанный", "{n} непрочитанных", "{n} непрочитанных"],
@@ -609,6 +610,7 @@ _STRINGS = {
         "show_all_tip": "Every post and reply",
         "view_feed": "Feed", "view_feed_tip": "Every post a card of its own, in order",
         "to_new_tip": "Scroll to the first unread",
+        "to_end_tip": "Nothing new: scroll to the newest",
         "unread_only_tip": "Only what was unread when you opened the lane, and what came "
                            "since. What you read stays put until you leave the lane",
         "unread_only_info": ["{n} unread", "{n} unread"],

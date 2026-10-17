@@ -939,7 +939,8 @@ class LaneWidget(QWidget):
         self.pill.setVisible(bool(n))
         # greyed, not hidden: buttons that come and go make the others jump about
         self.btn_all.setEnabled(bool(n))
-        self.btn_first.setEnabled(bool(n))
+        # nothing new: it still works — to the newest end of the lane
+        self.btn_first.setToolTip(_("to_new_tip") if n else _("to_end_tip"))
 
 
 def _busy(fn, lane=None):
