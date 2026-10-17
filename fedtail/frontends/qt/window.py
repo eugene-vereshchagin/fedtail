@@ -1166,7 +1166,7 @@ class MainWindow(QMainWindow):
                     == QMessageBox.StandardButton.Yes:
                 self.bridge.call(self.core.revoke_quote(mine, st),
                                  ok=lambda _s: self.statusBar().showMessage(
-                                     _("quote_revoked"), 5000),
+                                     _("quote_taken_back"), 5000),
                                  fail=self.error)
         elif action in ("pin", "unpin"):
             on = action == "pin"
