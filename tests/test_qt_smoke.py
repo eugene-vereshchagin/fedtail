@@ -1293,6 +1293,51 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
 
+    def test_download_in_pieces_no_half_files(self):
+        """Saving a video not in the cache: written a piece at a time under its own name;
+        a download cut off halfway leaves nothing behind."""
+        from fedtail.frontends.qt.images import Images
+        imgs = Images(self.core, self.win.bridge)
+        folder = Path(self._tmp.name) / "dl"
+
+        class Resp:
+            def __init__(self, chunks, fail=False):
+                self.chunks, self.fail = chunks, fail
+                self.headers = {"Content-Type": "video/mp4"}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_a):
+                return False
+
+            def raise_for_status(self):
+                pass
+
+            def iter_content(self, _size):
+                yield from self.chunks
+                if self.fail:
+                    raise OSError("connection reset")
+
+        class Http:
+            def __init__(self, resp):
+                self.resp, self.kw = resp, None
+
+            def get(self, url, **kw):
+                self.kw = kw
+                return self.resp
+
+        imgs.http = Http(Resp([b"ab", b"cd", b"ef"]))
+        path = self.bridge_wait(imgs.save("https://x/clip.mp4", folder))
+        self.assertEqual(path.read_bytes(), b"abcdef")
+        self.assertTrue(imgs.http.kw.get("stream"))
+        imgs.http = Http(Resp([b"half"], fail=True))
+        fut = imgs.save("https://x/other.mp4", folder)
+        self.pump(until=fut.done)
+        with self.assertRaises(OSError):
+            fut.result()
+        self.assertEqual(sorted(f.name for f in folder.iterdir()), [path.name])
+
     def test_new_pill_agrees_with_the_store(self):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
