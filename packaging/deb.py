@@ -21,7 +21,8 @@ from fedtail import __version__  # noqa: E402
 from fedtail.desktop import entry_text  # noqa: E402
 
 DEPENDS = "python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets"
-RECOMMENDS = "python3-pyside6.qtdbus, python3-pyside6.qtsvg"
+RECOMMENDS = ("python3-pyside6.qtdbus, python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, "
+              "python3-pyside6.qtmultimediawidgets")
 SUGGESTS = "python3-textual"
 MAINTAINER = "Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>"
 HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"

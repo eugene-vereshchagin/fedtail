@@ -905,17 +905,24 @@ class PostRow(QWidget):
                     # file, which may take a while (a big photo, a slow server)
                     src = m.get("preview_url") or full
                     upgrade = full if single and full and full != src else None
-                else:  # gifv / video: still frame here, playback in the browser
+                else:  # gifv / video: a still frame here, played over the window on a click
                     upgrade = None
                     lab.setToolTip(_("media_" + m["type"]) + " ▶ " + (m.get("description") or ""))
-                    lab.clicked.connect(lambda u=full: self.ctx.open_url(u))
+                    lab.clicked.connect(lambda mm=m: self.ctx.play_video(mm))
                     src = m.get("preview_url")
+                    if m["type"] == "gifv" and self.ctx.loop_gifv is not None:
+                        self.ctx.loop_gifv(lab, m, lambda pm, a=tw, b=th, r=radius, f=focus:
+                                           _fit(pm, a, b, r, f))
                 if src:
                     self._load_media(lab, src, full if src != full else None, tw, th, radius,
                                      kind=m["type"], upgrade=upgrade, focus=focus)
                 elif m["type"] != "image":  # a video without a still frame: say what it is
                     lab.setText("▶ " + _("media_" + m["type"]) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
+            elif m.get("type") == "audio" and self.ctx.audio_bar is not None:
+                row = -(-pos // 3)  # a row of its own, under the pictures
+                grid.addWidget(self.ctx.audio_bar(m), row, 0, 1, 3)
+                pos = (row + 1) * 3
             else:
                 kind = _("media_" + (m.get("type") or "unknown"))
                 grid.addWidget(self._label(f'<a href="{esc(full)}">[{kind}]</a>'),

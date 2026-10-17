@@ -32,6 +32,10 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- Video, gifv and audio in the window (`ui.video_player`, QtMultimedia): a video plays over
+  the window (Space, ← →, M, O for the browser, Esc); gifvs loop in their cards, muted,
+  only while on screen and at most three at once (`ui.gifv`); audio gets a player in its
+  card. Without QtMultimedia, or with `"browser"`, they open in the browser as before.
 - Around posts and people, where the server can (a feature it hasn't got disappears after
   its first "no"): who liked and who boosted a post (also the rest from the post's own
   server; a right click on ★ or ♻), mute a thread, who quoted my post and taking my post

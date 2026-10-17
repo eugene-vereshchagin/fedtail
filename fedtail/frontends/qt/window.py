@@ -185,6 +185,9 @@ class ViewContext:
     refresh_poll: object = None    # set when "refresh" next to a poll's results works
     translate: object = None       # (status, done(translation)) -> ask the server
     supports: object = lambda _feature: True  # can my server do this (core.supports)
+    play_video: object = None      # media attachment -> play it (or open in the browser)
+    loop_gifv: object = None       # (label, attachment, fit) -> loop a gifv in its card
+    audio_bar: object = None       # attachment -> a small audio player widget
 
 
 class MainWindow(QMainWindow):
@@ -197,6 +200,12 @@ class MainWindow(QMainWindow):
                                self.show_images)
         self.ctx.subscribed = core.subscribed
         self.ctx.supports = core.supports
+        self.ctx.play_video = self.play_video
+        from . import player
+        if self.cfg["ui"].get("video_player", "internal") == "internal" and player.available():
+            if self.cfg["ui"].get("gifv", "play") == "play":
+                self.ctx.loop_gifv = player.InlineLoop
+            self.ctx.audio_bar = player.AudioBar
         self.ctx.save_image = self.save_image
         self.ctx.vote = self.vote
         self.ctx.refresh_poll = True
@@ -1224,6 +1233,15 @@ class MainWindow(QMainWindow):
                                     _("delete_q", text=snippet(st, 200))) \
                     == QMessageBox.StandardButton.Yes:
                 self.bridge.call(self.core.delete(st))
+
+    def play_video(self, m):
+        """A video or a gifv: over the window (ui.video_player), or in the browser."""
+        from . import player
+        if self.cfg["ui"].get("video_player", "internal") == "internal" and \
+                player.available():
+            player.VideoOverlay(self, self.ctx, m, loop=m.get("type") == "gifv")
+        else:
+            self.open_url(player.media_url(m))
 
     def show_images(self, media, index):
         if self.cfg["ui"]["image_viewer"] == "browser":

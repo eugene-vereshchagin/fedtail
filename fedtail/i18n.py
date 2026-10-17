@@ -334,6 +334,11 @@ _STRINGS = {
         "menu_people": "Кого почитать",
         "mark_one_read": "Прочитано",
         "copy": "Копировать",
+        "player_pause_tip": "Пауза / играть (пробел)",
+        "player_mute_tip": "Звук (M)",
+        "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · O — в браузере · Esc — "
+                       "закрыть",
+        "player_failed": "Не играется: {err}. O — открыть в браузере",
         "browse_empty": "Сервер отдаёт эту ленту пустой: похоже, живые ленты у него "
                         "выключены (так на mastodon.social)",
         "activity_clear": "Очистить",
@@ -802,6 +807,10 @@ _STRINGS = {
         "menu_people": "Find people",
         "mark_one_read": "Mark read",
         "copy": "Copy",
+        "player_pause_tip": "Pause / play (Space)",
+        "player_mute_tip": "Sound (M)",
+        "player_keys": "Space pause · ← → 5 seconds · M sound · O browser · Esc close",
+        "player_failed": "Can't play it: {err}. O opens it in the browser",
         "browse_empty": "The server gives this feed empty: its live feeds seem to be off "
                         "(as on mastodon.social)",
         "activity_clear": "Clear",
