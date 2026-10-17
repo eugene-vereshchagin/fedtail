@@ -1282,7 +1282,7 @@ class Core(SocialMixin):
             return got
         return self.bg.submit(job)
 
-    def older_from_origin(self, acc, cursor=None, have_uris=()):
+    def older_from_origin(self, acc, cursor=None, have_uris=(), resolve=True):
         """Further back in someone's posts than my server has (it knows only what reached
         it, mostly since someone here followed them): page by page from their own
         server's outbox, fetched into mine by address. A future of (statuses, cursor
@@ -1308,7 +1308,10 @@ class Core(SocialMixin):
                 # their server's public API, if it answers without a token
                 how = "api"
                 uris, nxt = self._older_via_api(acc, cursor, set(have_uris), limit)
-            log.info("profile %s: older from origin via %s", acc.get("id"), how)
+            log.info("profile %s: older from origin via %s: %d listed", acc.get("id"), how,
+                     len(uris))
+            if not resolve:  # the frontend fetches them a few at a time (resolve_statuses)
+                return uris, nxt
             got = self._resolve_statuses(uris)
             log.info("profile %s: older from origin: %d listed, %d fetched in %.1f s, %s",
                      acc.get("id"), len(uris), len(got), time.monotonic() - t,
@@ -1366,6 +1369,10 @@ class Core(SocialMixin):
                 return actor["outbox"]
         log.info("profile %s: no outbox to read", acc.get("id"))
         return None
+
+    def resolve_statuses(self, uris):
+        """A future of the posts at these addresses, fetched into my server."""
+        return self.bg.submit(self._resolve_statuses, list(uris))
 
     def _resolve_statuses(self, uris):
         """Posts by address, fetched into my server (a few at a time) and stored."""

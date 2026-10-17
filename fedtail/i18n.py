@@ -338,6 +338,7 @@ _STRINGS = {
         "copy": "Копировать",
         "older_from_origin": "▼ ещё раньше — с {host}",
         "acc_followed_since": "подписан с {when}",
+        "origin_fetching": "подтягиваю с {host}: {n} из {total}…",
         "older_from_origin_tip": "Мой сервер знает его посты только с тех пор, как они до "
                                  "него дошли (обычно — с подписки). Более старые — с {host}",
         "older_from_origin_note": "старые посты, могут быть ещё до подписки",
@@ -828,6 +829,7 @@ _STRINGS = {
         "copy": "Copy",
         "older_from_origin": "▼ further back — from {host}",
         "acc_followed_since": "following since {when}",
+        "origin_fetching": "fetching from {host}: {n} of {total}…",
         "older_from_origin_tip": "My server knows their posts only since they reached it "
                                  "(usually since the follow). Older ones come from {host}",
         "older_from_origin_note": "old posts, maybe from before the follow",

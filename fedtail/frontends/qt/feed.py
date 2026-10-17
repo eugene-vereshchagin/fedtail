@@ -1341,30 +1341,54 @@ class AccountWidget(_PagedTab):
         self.btn_more.setText(_("origin_asking", host=host))
         have = [st.get("uri") for st in self.items if st.get("uri")]
 
-        def got(r):
-            statuses, self._origin_next = r
-            known = {st["id"] for st in self.items}
-            new = [st for st in statuses if st["id"] not in known]
-            self.items = sorted(self.items + new, key=lambda st: st.get("created_at", ""),
-                                reverse=True)
-            if new:
-                self.core.ensure_parents(new)
-                self.render()
+        shown = [0]
+
+        def listed(r):
+            # the addresses come fast; my server fetching each post is the slow part
+            # (seconds a post), so they come in a few at a time and show as they come
+            uris, self._origin_next = r
+            if not uris:
+                return done()
+            self.btn_more.setText(_("origin_fetching", n=0, total=len(uris), host=host))
+            step(list(uris), len(uris))
+
+        def step(left, total):
+            batch, rest = left[:4], left[4:]
+
+            def got(statuses):
+                known = {st["id"] for st in self.items}
+                new = [st for st in statuses if st["id"] not in known]
+                shown[0] += len(new)
+                if new:
+                    self.items = sorted(self.items + new,
+                                        key=lambda st: st.get("created_at", ""), reverse=True)
+                    self.core.ensure_parents(new)
+                    self.render()
+                if rest:
+                    self.btn_more.setText(_("origin_fetching", n=total - len(rest),
+                                            total=total, host=host))
+                    step(rest, total)
+                else:
+                    done()
+            self.win.bridge.call(self.core.resolve_statuses(batch), ok=got, fail=failed)
+
+        def done():
             if self._origin_next:
                 self.btn_more.setText(_("older_from_origin", host=host))
                 self.btn_more.setEnabled(True)
             else:
                 self.btn_more.setText(_("no_older"))
             self.win.statusBar().showMessage(
-                _("origin_got", n=len(new), host=host) + " · " + _("older_from_origin_note"),
+                _("origin_got", n=shown[0], host=host) + " · " + _("older_from_origin_note"),
                 8000)
 
         def failed(e):
             self.btn_more.setText(_("older_from_origin", host=host))
             self.btn_more.setEnabled(True)
             self.win.error(e)
-        self.win.bridge.call(self.core.older_from_origin(self.acc, self._origin_next, have),
-                             ok=got, fail=failed)
+        self.win.bridge.call(self.core.older_from_origin(self.acc, self._origin_next, have,
+                                                         resolve=False),
+                             ok=listed, fail=failed)
 
     def _from_origin(self):
         """Someone from another server mine knows little about (fewer posts here than

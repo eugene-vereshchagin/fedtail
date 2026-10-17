@@ -9,6 +9,8 @@
 - Older posts of a profile from a server that won't show its outbox to strangers
   (GoToSocial, Mastodon with authorized fetch): read through that server's public API
   instead, when it answers without a token.
+- Those older posts show four at a time as my server fetches them (it takes seconds a
+  post), with "n of total" on the button, instead of all at once a minute later.
 
 ## 0.11.0 — 2026-10-18
 
