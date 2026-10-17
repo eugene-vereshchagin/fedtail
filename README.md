@@ -188,6 +188,10 @@ wording — `[ write ]`, `== people ==`, `---- new below ----`. Every key is exp
 
 ## Lanes
 
+New posts arrive at once: the server's live stream wakes fedtail the moment something comes,
+and the regular poll (`poll.interval_seconds`) fetches it — so a dropped stream (a laptop
+asleep, a proxy) loses nothing. `poll.stream = "off"`: polling only.
+
 "Replies to me" holds every reply to your posts and comments; "Mentions" holds the rest, the
 places where you were tagged in someone else's conversation. A reply that also says `@you`
 is a reply, so it is not repeated in Mentions — set `lanes.mentions_all = true` if you want

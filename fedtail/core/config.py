@@ -121,7 +121,10 @@ DEFAULTS = {
         "max_threads": 30,
         "replies_to_me": False,
     },
-    "poll": {"interval_seconds": 90},
+    "poll": {
+        "interval_seconds": 90,
+        "stream": 'auto',
+    },
     "debug": {
         "level": "debug",
         "mode": "auto",
@@ -142,6 +145,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("poll", "stream"): {'auto', 'off'},
     ("ui", "alt_text"): {'caption', 'tooltip'},
     ("ui", "media_grid"): {'natural', 'square'},
     ("notify", "filtered"): {'menu', 'remind', 'off'},

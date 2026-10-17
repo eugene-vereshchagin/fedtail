@@ -40,6 +40,7 @@ class Capabilities:
     markdown: bool = False
     max_poll_options: int = 4
     translation: bool = False
+    streaming: str = ""  # wss://… of the live stream, "" — not said
 
 
 def capabilities_from_instance(inst):
@@ -57,10 +58,13 @@ def capabilities_from_instance(inst):
         max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
         translation=bool((conf.get("translation") or {}).get("enabled")),
         markdown=md,
+        streaming=str((inst.get("urls") or {}).get("streaming_api") or
+                      ((conf.get("urls") or {}).get("streaming")) or ""),
     )
 
 
 class Api:
+    has_stream = True  # a live stream to connect to (core/stream.py); fakes say no
     def __init__(self, server, token=None, session=None):
         server = server.strip().rstrip("/")
         if not server.startswith(("http://", "https://")):

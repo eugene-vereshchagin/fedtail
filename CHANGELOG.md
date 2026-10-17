@@ -19,6 +19,9 @@
   before sending a picture without one (`post.alt_reminder`), names for screen readers on the
   post buttons, avatars and pictures.
 - `:bl` in a post offers the server's custom emoji (`post.complete_emoji`).
+- Live stream: the server's WebSocket stream wakes the poll the moment something arrives
+  instead of up to 90 s later (`poll.stream = "auto"`; `"off"` — polling only). No new
+  dependency; a dropped stream reconnects and loses nothing.
 
 ## 0.8.0 — 2026-10-17
 

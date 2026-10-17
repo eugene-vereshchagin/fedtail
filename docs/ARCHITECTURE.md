@@ -69,6 +69,7 @@ fedtail/
   sysenv.py          the one-file build: start other programs with the system's environment
   core/              everything that is not GUI
     app.py           Core: the facade the frontends talk to (see §4, §9)
+    stream.py        the live stream: a stdlib WebSocket client that wakes the poller
     api.py           Mastodon REST client (blocking, requests) + request logging
     auth.py          token file (JSON, 0600)
     config.py        DEFAULTS, validation (types, choices, minimums)
@@ -171,6 +172,7 @@ docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md
 |---|---|
 | GUI (main) | all Qt objects; Bridge slots; never blocks on the network |
 | `fedtail-poll` | `Core._poll_loop`: `poll_once()` every `poll.interval_seconds` or when woken (`poll_now()`) |
+| `fedtail-stream` | `core/stream.py`: the server's WebSocket stream (`poll.stream`); an `update` / `notification` only calls `poll_now()` — the poll still fetches, so a dropped stream loses nothing; reconnects with backoff 5 s…5 min; the token goes in the handshake headers, never the URL or the log |
 | `fedtail_*` pool (4) | user actions: post, favourite, open thread, profile… (`core.submit`) |
 | `fedtail-bg` pool (2) | background work: parents, "did I reply?", subscriptions on demand, honest counters |
 | `fedtail-img` pool (4) | image downloads and saving (in `Images`) — a backlog of avatars never delays sending a post |

@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .. import diag
 from . import api as api_module
 from . import auth, counters, lanes, search, sources, subs, threads
-from .api import Api, ApiError, Capabilities, capabilities_from_instance
+from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import id_after, interaction_policy, narrower, real
 from .store import Store, now_iso, sort_key
@@ -160,11 +160,32 @@ class Core:
     def start_polling(self):
         if self._poller:
             return
+        self._start_stream()
         self._poller = threading.Thread(target=self._poll_loop, name="fedtail-poll", daemon=True)
         self._poller.start()
 
     def poll_now(self):
         self._wake.set()
+
+    def _start_stream(self):
+        """poll.stream: the server's live stream wakes the poller when something
+        arrives. The stream itself fetches nothing: the poll does, as always."""
+        if self.cfg["poll"].get("stream", "auto") == "off" or not self.auth or \
+                not getattr(self.api, "has_stream", False):  # a test's fake API has none
+            return
+        from . import stream
+        base = self.caps.streaming or self.auth["server"]
+        base = base.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
+        if not base.startswith(("wss://", "ws://")):
+            base = "wss://" + base.split("://")[-1]
+
+        def on_event(name):
+            if name in stream.WAKE_ON:
+                log.debug("stream: %s", name)
+                self.poll_now()
+        self._stream = stream.Stream(base, self.auth["token"], on_event,
+                                     user_agent=USER_AGENT)
+        self._stream.start()
 
     def _poll_loop(self):
         while not self._stop.is_set():
@@ -1602,6 +1623,8 @@ class Core:
     def shutdown(self):
         self._stop.set()
         self._wake.set()
+        if getattr(self, "_stream", None) is not None:
+            self._stream.stop()
         self.pool.shutdown(wait=False, cancel_futures=True)
         self.bg.shutdown(wait=False, cancel_futures=True)
         if self._poller:
