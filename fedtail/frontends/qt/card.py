@@ -77,6 +77,22 @@ def _host(url):
     return host[4:] if host.startswith("www.") else host
 
 
+def emoji_reactions(st):
+    """[{name, count}] — emoji reactions where the server passes them on (Akkoma and
+    Pleroma: pleroma.emoji_reactions; Fedibird, Iceshrimp and kin: emoji_reactions or
+    reactions). Mastodon and GoToSocial have none."""
+    raw = ((st.get("pleroma") or {}).get("emoji_reactions") or st.get("emoji_reactions")
+           or st.get("reactions") or [])
+    out = []
+    for r in raw if isinstance(raw, list) else []:
+        try:
+            if isinstance(r, dict) and r.get("name") and int(r.get("count") or 0) > 0:
+                out.append({"name": str(r["name"]), "count": int(r["count"])})
+        except (TypeError, ValueError):
+            continue
+    return sorted(out, key=lambda r: -r["count"])
+
+
 def _set_prop(w, name, value):
     if w.property(name) != value:
         w.setProperty(name, value)
@@ -370,6 +386,13 @@ class PostRow(QWidget):
                 cv.addWidget(card)
         if st.get("poll"):
             cv.addWidget(self._poll(st))
+        reacted = emoji_reactions(st)
+        if reacted:
+            line = self._label(" ".join(
+                (esc(r["name"]) if len(r["name"]) <= 4 else ":" + esc(r["name"].strip(":"))
+                 + ":") + f"\u00a0{r['count']}" for r in reacted[:12]), "reactions")
+            line.setToolTip(_("reactions_tip"))
+            cv.addWidget(line)
 
         # a server filter that says "warn": folded like a content warning, closed
         warned = [(f.get("filter") or {}).get("title") or "?" for f in st.get("filtered") or []

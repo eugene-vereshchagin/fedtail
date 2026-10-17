@@ -1638,6 +1638,9 @@ class ActivityWidget(QWidget):
         self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
         self.header.add(_button(_("mark_all_read"), self.core.mark_activity_seen,
                                 icon="mail-mark-read"))
+        if self.core.supports("dismiss"):
+            self.header.add(_button(_("activity_clear"), self._clear, icon="edit-clear-all",
+                                    tip=_("activity_clear_tip")))
         lay.addWidget(self.header)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -1708,7 +1711,18 @@ class ActivityWidget(QWidget):
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
         top.linkActivated.connect(self.win.on_link)
-        v.addWidget(top)
+        if self.core.supports("dismiss"):
+            line = QHBoxLayout()
+            line.addWidget(top, 1)
+            x = QPushButton("×")
+            x.setObjectName("tool")
+            x.setFixedWidth(28)
+            x.setToolTip(_("activity_dismiss_tip"))
+            x.clicked.connect(lambda _c=False, ids=[e["id"] for e in es]: self._dismiss(ids))
+            line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
+            v.addLayout(line)
+        else:
+            v.addWidget(top)
         if st:
             post = QLabel(f'<a href="fedtail:thread/{esc(real(st)["id"])}" '
                           f'style="text-decoration:none;color:{self.win.theme.c["muted"].name()};">'
@@ -1723,6 +1737,17 @@ class ActivityWidget(QWidget):
     def _mark_seen(self):
         if self.isVisible() and self.window().isActiveWindow():
             self.core.mark_activity_seen()
+
+    def _dismiss(self, ids):
+        """A row gone: each notification in it, here and on the server."""
+        for nid in ids:
+            self.win.bridge.call(self.core.dismiss_activity(nid), fail=self.win.error)
+
+    def _clear(self):
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(self, _("activity_clear"), _("activity_clear_q")) \
+                == QMessageBox.StandardButton.Yes:
+            self.win.bridge.call(self.core.clear_activity(), fail=self.win.error)
 
     def showEvent(self, e):
         super().showEvent(e)

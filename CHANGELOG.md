@@ -32,6 +32,16 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- Around posts and people, where the server can (a feature it hasn't got disappears after
+  its first "no"): who liked and who boosted a post (also the rest from the post's own
+  server; a right click on ★ or ♻), mute a thread, who quoted my post and taking my post
+  out of a quote; on profiles — remove a follower, feature someone, people in common; a
+  tag on my profile; ≡ → Find people (server suggestions, profile directory, trends) and
+  About the server (rules, description, privacy); Activity — dismiss one, clear all;
+  emoji reactions shown on posts from servers that have them; reactions to announcements.
+- `post.default_visibility = "server"`: what you set on the server's web side.
+- Direct messages read here are read on the server too (Mastodon conversations).
+- A right click on a post's text opens the post's menu.
 - Read by hand, one post at a time: "Mark read" and "Read up to here" (this one and
   everything older) in every post's menu; with `read.mark_read = "manual"` the lane waits
   exactly where you stopped. `read.read_button` puts a ✓ under each unread post.
