@@ -2,6 +2,13 @@
 
 ## 0.12.0 — in progress
 
+- Less memory and CPU for pictures: a feed picture is decoded at the size of its box
+  (times the screen's pixel density), not at 1200 px — most of a lane's memory was
+  pictures held at several times the pixels shown (`ui.image_decode = "box"`; "full" as
+  before).
+- The live stream wakes a poll at most every 10 s (`poll.stream_gap_seconds`): a busy server
+  sends events many times a minute and each poll asks every lane. Refresh doesn't wait.
+- The stats every 5 minutes count Python objects too (`py_objects`), to tell a leak.
 - The log of the first versions (`fedtail.log`, `fedtail.log.1`…) now goes with the other
   old logs when a new version starts. Tabs coming to the front, the curtain lifting and
   Enter on the curtain are in the log.

@@ -916,7 +916,8 @@ class PostRow(QWidget):
                                            _fit(pm, a, b, r, f))
                 if src:
                     self._load_media(lab, src, full if src != full else None, tw, th, radius,
-                                     kind=m["type"], upgrade=upgrade, focus=focus)
+                                     kind=m["type"], upgrade=upgrade, focus=focus,
+                                     side=_decode_side(lab, tw, th, w, h, self.ctx.cfg))
                 elif m["type"] != "image":  # a video without a still frame: say what it is
                     lab.setText("▶ " + _("media_" + m["type"]) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
@@ -1060,7 +1061,7 @@ class PostRow(QWidget):
         menu.exec(lab.mapToGlobal(pos))
 
     def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None,
-                    focus=None, big=False):
+                    focus=None, big=False, side=None):
         """The picture into its box; if it won't come, the fallback; if nothing comes,
         say so (a click still opens it). upgrade: a sharper file to put in once this
         one is shown — if it fails, the one shown stays. A video's still frame gets a
@@ -1075,19 +1076,20 @@ class PostRow(QWidget):
                 return
             if upgrade:
                 self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)),
-                                    big=True)
+                                    big=True, **({"max_side": side} if side else {}))
 
         def failed():
             if fallback and fallback != src:
                 self._load_media(lab, fallback, None, tw, th, radius, kind, focus=focus,
-                                 big=True)
+                                 big=True, side=side)
             else:
                 lab.setText(_("image_failed") if kind == "image" else
                             "▶ " + _("media_" + kind) + "\n" + _("media_click"))
                 lab.setWordWrap(True)
         # the original named: once it comes (opened in the viewer), a preview that gave up
         # is asked again instead of staying broken
-        self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big)
+        self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big,
+                            **({"max_side": side} if side else {}))
 
 
 def _set(lab, pm):
@@ -1145,6 +1147,27 @@ def _hover_text(url):
     if url.startswith("fedtail:tag/"):
         return "#" + unquote(url[len("fedtail:tag/"):])
     return ""
+
+
+def _decode_side(lab, tw, th, w, h, cfg):
+    """How big a feed picture has to be decoded for its box (filled, on this screen's
+    pixel density), in steps of 100 — not the 1200 px of before: a picture kept in memory
+    four times the pixels it is shown at was most of the memory a lane held
+    (ui.image_decode = "box"). None: as before."""
+    if cfg["ui"].get("image_decode", "box") != "box":
+        return None
+    from .images import FEED_SIDE
+    try:
+        dpr = max(1.0, float(lab.devicePixelRatioF()))
+    except (AttributeError, RuntimeError):
+        dpr = 1.0
+    if w and h:  # filling the box: the short side reaches it, the long one goes past
+        scale = max(tw / w, th / h)
+        need = max(w, h) * scale
+    else:
+        need = max(tw, th) * 2
+    need = int(-(-need * dpr // 100) * 100)
+    return max(100, min(FEED_SIDE, need))
 
 
 def _dims(m):

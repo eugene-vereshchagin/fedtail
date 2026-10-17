@@ -37,6 +37,7 @@ DEFAULTS = {
         "save_dir": "",
         "links_in_app": True,
         "image_cache_mb": 128,
+        "image_decode": 'box',
         "unload_hidden_minutes": 10,
         "themed_icon": True,
         "icon_count": ["comments", "mentions", "subs", "requests"],
@@ -133,6 +134,7 @@ DEFAULTS = {
     },
     "poll": {
         "interval_seconds": 90,
+        "stream_gap_seconds": 10,
         "stream": 'auto',
     },
     "debug": {
@@ -167,6 +169,7 @@ DEFAULTS = {
 
 CHOICES = {
     ("poll", "stream"): {'auto', 'off'},
+    ("ui", "image_decode"): {'box', 'full'},
     ("ui", "alt_text"): {'caption', 'tooltip'},
     ("ui", "media_grid"): {'natural', 'square'},
     ("notify", "filtered"): {'menu', 'remind', 'off'},
@@ -205,6 +208,7 @@ ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {
     ("poll", "interval_seconds"): 30,
+    ("poll", "stream_gap_seconds"): 0,
     ("subs", "interval_minutes"): 1,
     ("lists", "refresh_minutes"): 1,
     ("debug", "log_mb"): 1,

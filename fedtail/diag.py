@@ -26,6 +26,7 @@ through `add_stats()` and the module's loggers.
 """
 
 import faulthandler
+import gc
 import io
 import json
 import logging
@@ -388,6 +389,7 @@ def stats():
         "rss_mb": rss_mb,
         "peak_mb": round(st.get("VmHWM", maxrss) / 1024, 1),
         "cpu_s": round(cpu, 1),
+        "py_objects": len(gc.get_objects()),  # growing for hours: Python-side leak
         "cpu_pct": round(100 * (cpu - prev[1]) / max(now - prev[0], 1e-6), 1) if prev else None,
         "threads": threading.active_count(),
     }

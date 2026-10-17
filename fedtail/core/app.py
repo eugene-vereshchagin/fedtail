@@ -171,6 +171,13 @@ class Core(SocialMixin):
         self._poller.start()
 
     def poll_now(self):
+        self._urgent = True  # asked for (Refresh, a post sent): no waiting
+        self._wake.set()
+
+    def _poll_soon(self):
+        """The live stream says something came: a poll, but not more often than
+        poll.stream_gap_seconds — a busy server sends events many times a minute, and
+        every poll asks each lane (a dozen requests and some CPU each time)."""
         self._wake.set()
 
     def _start_stream(self):
@@ -188,7 +195,7 @@ class Core(SocialMixin):
         def on_event(name):
             if name in stream.WAKE_ON:
                 log.debug("stream: %s", name)
-                self.poll_now()
+                self._poll_soon()
         self._stream = stream.Stream(base, self.auth["token"], on_event,
                                      user_agent=USER_AGENT)
         self._stream.start()
@@ -202,8 +209,16 @@ class Core(SocialMixin):
                     return
                 log.exception("poll failed")
                 self.emit("error", str(e))
+            done = time.monotonic()
             self._wake.wait(self.cfg["poll"]["interval_seconds"])
             self._wake.clear()
+            gap = float(self.cfg["poll"].get("stream_gap_seconds", 10))
+            left = gap - (time.monotonic() - done)
+            if not getattr(self, "_urgent", False) and left > 0 and not self._stop.is_set():
+                # woken by the stream right after a poll: gather what else comes meanwhile
+                self._wake.wait(left)  # Refresh still cuts it short
+                self._wake.clear()
+            self._urgent = False
 
     def poll_once(self):
         """One round: catch every source up, check subscriptions, lists, activity,
