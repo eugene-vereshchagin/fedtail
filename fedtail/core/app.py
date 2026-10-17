@@ -1103,7 +1103,8 @@ class Core:
                 fresh.append(better)
         if fresh:
             self.store.put_statuses(fresh)
-            self.emit("status_updated", fresh[0])
+            for st in fresh:  # each its own: the window redoes only the cards of each
+                self.emit("status_updated", st)
 
     def account_statuses(self, acc_id, max_id=None):
         def job():

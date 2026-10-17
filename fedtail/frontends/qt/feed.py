@@ -274,6 +274,21 @@ class FeedView(QScrollArea):
             if row.status_id in ids:
                 row.set_unread(unread)
 
+    def refresh_status(self, store, st):
+        """One post changed (a like, a boost, an edit): only its cards are redone. Going
+        through every card asks the database for each, and with a few hundred cards
+        open that froze the window for seconds after every click."""
+        if not st or not st.get("id"):
+            self.refresh_from_store(store)
+            return
+        ids = {st["id"], real(st)["id"]}
+        for row in self.rows.values():
+            if row.status_id is None or (row.status_id not in ids and row.real_id not in ids):
+                continue
+            fresh = store.get_status(row.status_id)
+            if fresh and fresh != row.spec.status:
+                row.update_spec(CardSpec(**{**row.spec.__dict__, "status": fresh}))
+
     def refresh_from_store(self, store):
         for row in self.rows.values():
             if row.status_id is None:
@@ -441,7 +456,10 @@ class LaneWidget(QWidget):
         self.newest_first = self.cfg["feed"]["order"] == "newest_first"
         self.positioned = False
         self.dirty = False
+        self.unloaded = False  # its cards let go while it was hidden (ui.unload_hidden_minutes)
         self.separator = None  # (key of the first unread when the lane opened, count)
+        self._unload_timer = QTimer(self, singleShot=True)
+        self._unload_timer.timeout.connect(self._unload)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -547,7 +565,26 @@ class LaneWidget(QWidget):
             self._kept = None
             self.positioned = False
             self.dirty = True
+        minutes = self.cfg["ui"].get("unload_hidden_minutes", 0)
+        if minutes:
+            self._unload_timer.start(int(minutes * 60_000))
         super().hideEvent(e)
+
+    def _unload(self):
+        """Long out of sight: its cards go (a card is a score of widgets, its pictures
+        a megabyte each at screen size: a few hundred of them held over a gigabyte in a
+        client kept open for days). Opening it again draws it anew, at the first unread."""
+        if self.isVisible() or not self.view.order:
+            return
+        if self.win.stack.currentWidget() is self:
+            return  # the lane in front, only out of sight with the window: keep it as is
+        n = len(self.view.order)
+        self.view.clear()
+        self.positioned = False
+        self.separator = None
+        self.unloaded = True
+        self.dirty = True
+        log.info("lane %s unloaded: %d cards let go", self.name, n)
 
     def conversations_on(self):
         return self.view_seg is not None and self.view_seg.current == "conversations"
@@ -557,10 +594,11 @@ class LaneWidget(QWidget):
 
     def refresh(self, force=False):
         # hidden lanes only remember that they are stale; they catch up when shown
-        if not self.isVisible() and not force and self.positioned:
+        if not self.isVisible() and not force and (self.positioned or self.unloaded):
             self.dirty = True
             return
         self.dirty = False
+        self.unloaded = False
         t0 = time.monotonic()
         entries = self.core.lane_entries(self.name)
         # browse lanes (local, federated) have nothing "unread": no marks, no divider
@@ -672,6 +710,7 @@ class LaneWidget(QWidget):
 
     def showEvent(self, e):
         super().showEvent(e)
+        self._unload_timer.stop()
         if self.dirty:
             # stale since it was last on screen: show it as it was, "loading…" on top,
             # and redraw right after the switch has painted

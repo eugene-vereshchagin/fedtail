@@ -19,6 +19,19 @@
   open, sensitive pictures uncovered, server filters neither hide nor fold posts, no
   "Report" item. Your own mutes and blocks keep working; what the server itself cuts off
   never reaches a client. `false` brings back the separate switches.
+- Pictures: originals (a single picture made sharp, the viewer, saving) have their own
+  workers and no longer hold up the previews; a preview that hasn't come in 12 s is asked
+  again 1.5 s later with a minute of patience (a server fetching it from elsewhere usually
+  has it by then — before, all workers sat 30 s on such pictures and the rest waited);
+  pictures are decoded straight at the size they're shown (a big JPEG is read at a fraction
+  of its size), which costs less time and memory; a broken picture is retried after a
+  minute, not five.
+- A like, a boost or an edit redraws only the cards of that post. Every card in every lane
+  used to be fetched from the database again — over a second of frozen window with a few
+  hundred cards open.
+- `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
+  again, it's drawn anew at the first unread. A client kept open for days held over a
+  gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
 
 ## 0.10.0 — 2026-10-17
 

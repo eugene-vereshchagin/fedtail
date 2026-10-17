@@ -778,9 +778,61 @@ class QtSmokeTest(unittest.TestCase):
         st["media_attachments"] = [{"type": "image", "url": "https://x/big.jpg",
                                     "preview_url": "https://x/small.jpg",
                                     "meta": {"original": {"width": 4000, "height": 3000}}}]
+        bigs = []
+        self.win.images.get = lambda url, cb, *a, **k: (fake_get(url, cb),
+                                                        bigs.append(k.get("big", False)))
         PostRow(CardSpec(key="091", status=st), self.win.ctx)
         pictures = [u for u in asked if u and "/x/" in u]  # (the avatar has no address)
         self.assertEqual(pictures, ["https://x/small.jpg", "https://x/big.jpg"])
+        # the original goes to its own workers, the preview doesn't
+        flags = [b for u, b in zip(asked, bigs, strict=True) if u and "/x/" in u]
+        self.assertEqual(flags, [False, True])
+
+    def test_originals_dont_wait_behind_stuck_previews(self):
+        """Every preview worker stuck on a slow server: an original still comes, and it
+        comes already shrunk to the feed size by the decoder."""
+        import threading
+
+        from PySide6.QtCore import QBuffer, QIODevice
+        from PySide6.QtGui import QImage
+
+        from fedtail.frontends.qt import images as imgmod
+        photo = QImage(3000, 2000, QImage.Format.Format_RGB32)
+        photo.fill(0x336699)
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        photo.save(buf, "JPG")
+        data = bytes(buf.data())
+        small = imgmod.decode(data, 600)
+        self.assertEqual((small.width(), small.height()), (600, 400))
+
+        release = threading.Event()
+
+        class Resp:
+            content = data
+            headers = {"Content-Type": "image/jpeg"}
+
+            def raise_for_status(self):
+                pass
+
+        def fake_http(url, timeout):
+            if "slow" in url:
+                release.wait(10)
+            return Resp()
+        self.core.paths.cache_dir.mkdir(parents=True, exist_ok=True)
+        im = imgmod.Images(self.core, self.bridge)
+        im.http.get = fake_http
+        try:
+            for i in range(im.FEED_WORKERS + 2):
+                im.get(f"https://slow.example/p{i}.jpg", lambda pm: None)
+            got = []
+            im.get("https://fast.example/original.jpg", got.append, big=True)
+            self.pump(until=lambda: got, timeout=5)
+            self.assertLessEqual(max(got[0].width(), got[0].height()), imgmod.FEED_SIDE)
+            self.assertTrue(im.waiting)  # the previews are still stuck meanwhile
+        finally:
+            release.set()
+            im.shutdown()
 
     def test_video_called_a_picture(self):
         """A server that calls an mp4 an "image": a video with a ▶, not a broken picture."""
@@ -1429,6 +1481,29 @@ class QtSmokeTest(unittest.TestCase):
         view._touched()  # the wheel over the window: it's being read
         view._emit_seen()
         self.assertIn(far.status_id, seen)
+
+    def test_hidden_lane_lets_its_cards_go(self):
+        """ui.unload_hidden_minutes: a lane long out of sight drops its cards and draws
+        them anew when opened; the lane in front never does."""
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("people")
+        people = self.win.lane_widgets["people"]
+        self.pump(until=lambda: len(people.view.rows) > 1)
+        people._unload()  # in front: kept
+        self.assertTrue(people.view.rows)
+        self.win.select_lane("bots")
+        self.pump(0.2)
+        self.assertTrue(people._unload_timer.isActive())
+        people._unload()
+        self.assertEqual(people.view.rows, {})
+        self.core.poll_once()  # updates while unloaded: still nothing drawn while hidden
+        self.pump(0.2)
+        self.assertEqual(people.view.rows, {})
+        self.win.select_lane("people")
+        self.pump(until=lambda: len(people.view.rows) > 1)
+        self.assertFalse(people._unload_timer.isActive())
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

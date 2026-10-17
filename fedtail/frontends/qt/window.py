@@ -873,7 +873,7 @@ class MainWindow(QMainWindow):
         elif name == "status_updated":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:  # Activity has none
-                    w.view.refresh_from_store(self.core.store)
+                    w.view.refresh_status(self.core.store, payload)
         elif name == "status_deleted":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:

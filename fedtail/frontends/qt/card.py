@@ -948,7 +948,7 @@ class PostRow(QWidget):
         menu.exec(lab.mapToGlobal(pos))
 
     def _load_media(self, lab, src, fallback, tw, th, radius, kind="image", upgrade=None,
-                    focus=None):
+                    focus=None, big=False):
         """The picture into its box; if it won't come, the fallback; if nothing comes,
         say so (a click still opens it). upgrade: a sharper file to put in once this
         one is shown — if it fails, the one shown stays. A video's still frame gets a
@@ -962,18 +962,20 @@ class PostRow(QWidget):
             except RuntimeError:  # the card was rebuilt meanwhile
                 return
             if upgrade:
-                self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)))
+                self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)),
+                                    big=True)
 
         def failed():
             if fallback and fallback != src:
-                self._load_media(lab, fallback, None, tw, th, radius, kind, focus=focus)
+                self._load_media(lab, fallback, None, tw, th, radius, kind, focus=focus,
+                                 big=True)
             else:
                 lab.setText(_("image_failed") if kind == "image" else
                             "▶ " + _("media_" + kind) + "\n" + _("media_click"))
                 lab.setWordWrap(True)
         # the original named: once it comes (opened in the viewer), a preview that gave up
         # is asked again instead of staying broken
-        self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade)
+        self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big)
 
 
 def _set(lab, pm):
