@@ -28,6 +28,7 @@ from . import auth, counters, lanes, search, sources, subs, threads
 from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import id_after, interaction_policy, narrower, real
+from .social import SocialMixin
 from .store import Store, now_iso, sort_key
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def _due(last, every):
     return last is None or time.monotonic() - last > every
 
 
-class Core:
+class Core(SocialMixin):
     def __init__(self, cfg, paths, api_class=Api):
         self.cfg = cfg
         self.paths = paths
@@ -57,6 +58,9 @@ class Core:
         self.api = None
         self.me = None
         self.caps = Capabilities()
+        self.unsupported = set()  # features the server said it hasn't got (social.py)
+        self._conv_of = {}        # last status id -> (conversation id, unread on the server)
+        self.server_prefs = {}    # what I set on the server's web side (/api/v1/preferences)
         self.sources = {}
         self.lists = []           # [{"id", "title", "exclusive"}] from the server
         self.list_members = {}    # list id -> {account ids}
@@ -145,6 +149,7 @@ class Core:
             except Exception:  # instance info is a nicety, not a must
                 caps = Capabilities()
             self.api, self.me, self.caps = api, me, caps
+            self.load_preferences()
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
@@ -232,6 +237,8 @@ class Core:
                 except Exception as e:  # try again next round, not every poll
                     self._lists_checked = time.monotonic()
                     self.emit("error", f"lists: {e}")
+            if "direct" in self.lane_by_name:
+                self.sync_conversations()  # read here = read on the server (social.py)
             if "subs" in self.lane_by_name:
                 try:
                     sc = self.cfg["subs"]
@@ -834,6 +841,7 @@ class Core:
         if status_ids:
             self.store.mark_read(status_ids)
             self.emit("read_changed", status_ids)
+            self._read_conversations(status_ids)
 
     def load_older(self, name):
         lane = self.lane_by_name[name]
@@ -1389,8 +1397,17 @@ class Core:
         return self.submit(job)
 
     # ---- writing ---------------------------------------------------------------
+    def default_visibility(self):
+        """post.default_visibility; "server" — what's set on the server's web side."""
+        v = self.cfg["post"]["default_visibility"]
+        if v == "server":
+            v = self.server_prefs.get("posting:default:visibility") or "public"
+            if v not in ("public", "unlisted", "private", "direct"):
+                v = "public"
+        return v
+
     def reply_visibility(self, parent):
-        default = self.cfg["post"]["default_visibility"]
+        default = self.default_visibility()
         if parent is None:
             return default
         pv = real(parent).get("visibility", "public")

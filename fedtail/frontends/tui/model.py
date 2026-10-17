@@ -107,7 +107,7 @@ class Commands:
         if c.kind == "post":
             if not core.cfg["post"]["plain_posts"]:
                 return None, _("cmd_unknown")
-            return core.post(c.text, core.cfg["post"]["default_visibility"]), _("sent")
+            return core.post(c.text, core.default_visibility()), _("sent")
         if c.kind in ("follow", "unfollow", "direct", "profile"):
             return self._user(c), None
         if core.by_alias(c.alias) is None:

@@ -540,3 +540,102 @@ class Api:
 
     def reject_follow(self, acc_id):
         return self.post(f"/api/v1/follow_requests/{acc_id}/reject")
+
+    # ---- 0.11: who reacted, quiet threads, conversations, people, trends, server ----
+    def favourited_by(self, sid, max_id=None):
+        """Who liked a post: (accounts, cursor of the next page or None)."""
+        return self.get_page(f"/api/v1/statuses/{sid}/favourited_by", self._page(80, max_id))
+
+    def reblogged_by(self, sid, max_id=None):
+        """Who boosted a post: (accounts, cursor of the next page or None)."""
+        return self.get_page(f"/api/v1/statuses/{sid}/reblogged_by", self._page(80, max_id))
+
+    def quotes(self, sid, max_id=None):
+        """Posts quoting my post: (statuses, cursor of the next page or None)."""
+        return self.get_page(f"/api/v1/statuses/{sid}/quotes", self._page(40, max_id))
+
+    def revoke_quote(self, sid, quoting_id):
+        """Take my post out of someone's quote of it (I'm the quoted post's author)."""
+        return self.post(f"/api/v1/statuses/{sid}/quotes/{quoting_id}/revoke")
+
+    def mute_conversation(self, sid, on=True):
+        """No more notifications from the thread this post is in (I take part in it)."""
+        return self.post(f"/api/v1/statuses/{sid}/{'mute' if on else 'unmute'}")
+
+    def conversations(self, limit=40):
+        """Direct conversations, newest first: [{id, unread, accounts, last_status}]."""
+        return self.get("/api/v1/conversations", {"limit": limit}) or []
+
+    def read_conversation(self, cid):
+        return self.post(f"/api/v1/conversations/{cid}/read")
+
+    def dismiss_notification(self, nid):
+        return self.post(f"/api/v1/notifications/{nid}/dismiss")
+
+    def clear_notifications(self):
+        """Every notification gone, on the server (for every app)."""
+        return self.post("/api/v1/notifications/clear")
+
+    def notifications_unread(self):
+        """{"count": n} — what the server counts as unread (since the marker)."""
+        return self.get("/api/v1/notifications/unread_count") or {}
+
+    def remove_from_followers(self, acc_id):
+        """They no longer follow me — without blocking them."""
+        return self.post(f"/api/v1/accounts/{acc_id}/remove_from_followers")
+
+    def endorse(self, acc_id, on=True):
+        """Recommend someone on my profile (Mastodon 4.4+; older ones call it pin)."""
+        try:
+            return self.post(f"/api/v1/accounts/{acc_id}/{'endorse' if on else 'unendorse'}")
+        except ApiError as e:
+            if e.status != 404:
+                raise
+            return self.post(f"/api/v1/accounts/{acc_id}/{'pin' if on else 'unpin'}")
+
+    def my_featured_tags(self):
+        return self.get("/api/v1/featured_tags") or []
+
+    def feature_tag(self, name):
+        return self.post("/api/v1/featured_tags", data={"name": name.lstrip("#")})
+
+    def unfeature_tag(self, tag_id):
+        return self.delete(f"/api/v1/featured_tags/{tag_id}")
+
+    def familiar_followers(self, ids):
+        """[{id, accounts}] — of the people I follow, who follows each of these."""
+        return self.get("/api/v1/accounts/familiar_followers", {"id[]": list(ids)}) or []
+
+    def suggestions(self, limit=40):
+        """Whom my server suggests following: [{source(s), account}]."""
+        return self.get("/api/v2/suggestions", {"limit": limit}) or []
+
+    def dismiss_suggestion(self, acc_id):
+        return self.delete(f"/api/v1/suggestions/{acc_id}")
+
+    def directory(self, offset=0, local=False, limit=40):
+        """The profile directory: people who chose to be listed, recently active first."""
+        return self.get("/api/v1/directory", {"offset": offset, "limit": limit,
+                                              "order": "active",
+                                              "local": "true" if local else "false"}) or []
+
+    def trends(self, kind, offset=0, limit=20):
+        """What's being talked about: kind = "statuses", "tags" or "links"."""
+        return self.get(f"/api/v1/trends/{kind}", {"offset": offset, "limit": limit}) or []
+
+    def instance_rules(self):
+        return self.get("/api/v1/instance/rules") or []
+
+    def instance_page(self, which):
+        """The server's own text: which = "extended_description" or "privacy_policy";
+        {"updated_at", "content" (HTML)}."""
+        return self.get(f"/api/v1/instance/{which}") or {}
+
+    def preferences(self):
+        """What I set on the server's web side: default visibility, sensitivity,
+        language, expanding media and CWs."""
+        return self.get("/api/v1/preferences") or {}
+
+    def react_announcement(self, aid, name, on=True):
+        path = f"/api/v1/announcements/{aid}/reactions/{quote(name, safe='')}"
+        return self.put(path) if on else self.delete(path)

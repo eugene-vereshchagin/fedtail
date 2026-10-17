@@ -421,6 +421,116 @@ class FakeApi:
 
     reject_follow = authorize_follow
 
+    # ---- 0.11 (core/social.py) ------------------------------------------------------
+    def _need(self, feature):
+        self.w.calls.append(feature)
+        if feature in self.w.missing:  # a server without it (GoToSocial, say)
+            raise ApiError(404, "Not Found")
+
+    def favourited_by(self, sid, max_id=None):
+        self._need("favourited_by")
+        return list(self.w.reactions.get(sid, {}).get("favourited_by", [])), None
+
+    def reblogged_by(self, sid, max_id=None):
+        self._need("reblogged_by")
+        return list(self.w.reactions.get(sid, {}).get("reblogged_by", [])), None
+
+    def quotes(self, sid, max_id=None):
+        self._need("quotes")
+        return list(self.w.quotes.get(sid, [])), None
+
+    def revoke_quote(self, sid, quoting_id):
+        self._need("quotes")
+        st = dict(self.w.statuses[quoting_id], quote={"state": "revoked", "quoted_status": None})
+        self.w.statuses[quoting_id] = st
+        self.w.quotes[sid] = [q for q in self.w.quotes.get(sid, []) if q["id"] != quoting_id]
+        return st
+
+    def mute_conversation(self, sid, on=True):
+        self._need("mute_thread")
+        st = dict(self.w.statuses[sid], muted=on)
+        self.w.statuses[sid] = st
+        return st
+
+    def conversations(self, limit=40):
+        self._need("conversations")
+        return [dict(c) for c in self.w.conversations][:limit]
+
+    def read_conversation(self, cid):
+        self._need("conversations")
+        for c in self.w.conversations:
+            if c["id"] == cid:
+                c["unread"] = False
+        self.w.read_conversations.append(cid)
+        return {}
+
+    def dismiss_notification(self, nid):
+        self._need("dismiss")
+        self.w.activity = [n for n in self.w.activity if n["id"] != nid]
+
+    def clear_notifications(self):
+        self._need("dismiss")
+        self.w.activity = []
+
+    def notifications_unread(self):
+        return {"count": len(self.w.activity)}
+
+    def remove_from_followers(self, acc_id):
+        self._need("remove_follower")
+        self.w.followers.discard(acc_id)
+        return {"id": acc_id, "followed_by": False, "following": acc_id in self.w.following}
+
+    def endorse(self, acc_id, on=True):
+        self._need("endorse")
+        (self.w.endorsed.add if on else self.w.endorsed.discard)(acc_id)
+        return {"id": acc_id, "endorsed": on}
+
+    def my_featured_tags(self):
+        self._need("featured_tags")
+        return [{"id": "t" + n, "name": n} for n in sorted(self.w.my_tags)]
+
+    def feature_tag(self, name):
+        self._need("featured_tags")
+        self.w.my_tags.add(name)
+        return {"id": "t" + name, "name": name}
+
+    def unfeature_tag(self, tag_id):
+        self.w.my_tags.discard(tag_id[1:])
+
+    def familiar_followers(self, ids):
+        self._need("familiar")
+        return [{"id": i, "accounts": self.w.familiar.get(i, [])} for i in ids]
+
+    def suggestions(self, limit=40):
+        self._need("suggestions")
+        return [{"source": "global", "account": a} for a in self.w.suggested][:limit]
+
+    def dismiss_suggestion(self, acc_id):
+        self._need("suggestions")
+        self.w.suggested = [a for a in self.w.suggested if a["id"] != acc_id]
+
+    def directory(self, offset=0, local=False, limit=40):
+        self._need("directory")
+        return self.w.directory[offset:offset + limit]
+
+    def trends(self, kind, offset=0, limit=20):
+        self._need("trends_" + kind)
+        return list(self.w.trends.get(kind, []))
+
+    def instance_rules(self):
+        return [{"id": "1", "text": "Be kind"}]
+
+    def instance_page(self, which):
+        return {"content": f"<p>{which} text</p>"}
+
+    def preferences(self):
+        self._need("preferences")
+        return dict(self.w.prefs)
+
+    def react_announcement(self, aid, name, on=True):
+        self._need("announcement_reactions")
+        self.w.reacted.append((aid, name, on))
+
 
 class World:
     def __init__(self):
@@ -454,6 +564,15 @@ class World:
         self.notes = {}
         self.scheduled = []
         self.bells = {}
+        self.missing = set()  # features this server answers 404 for (social.py)
+        self.reactions = {}  # sid -> {"favourited_by": [accounts], "reblogged_by": [...]}
+        self.quotes = {}  # sid -> [statuses quoting it]
+        self.conversations, self.read_conversations = [], []
+        self.followers, self.endorsed, self.my_tags = set(), set(), set()
+        self.familiar, self.suggested, self.directory = {}, [], []
+        self.trends = {}
+        self.prefs = {"posting:default:visibility": "public"}
+        self.reacted = []
 
     def accounts(self):
         return list({s["account"]["id"]: s["account"] for s in self.statuses.values()}.values())

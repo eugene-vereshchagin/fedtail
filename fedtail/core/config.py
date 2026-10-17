@@ -182,7 +182,7 @@ CHOICES = {
     ("read", "mark_read"): {"on_scroll", "on_open", "manual"},
     ("notify", "privacy"): {"full", "sender", "count"},
     ("notify", "backend"): {"auto", "desktop", "tray"},
-    ("post", "default_visibility"): {"public", "unlisted", "private", "direct"},
+    ("post", "default_visibility"): {"public", "unlisted", "private", "direct", "server"},
     ("debug", "level"): {"debug", "info", "warning"},
     ("debug", "mode"): {"auto", "on", "off"},
     ("cli", "color"): {"auto", "always", "never"},

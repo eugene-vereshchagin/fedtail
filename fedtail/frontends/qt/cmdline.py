@@ -78,7 +78,7 @@ class CommandBar(QWidget):
             self._hint(_("cmd_do_" + c.kind, who=c.user))
         elif c.kind == "post":
             self._hint(_("cmd_do_post", vis=self._who_sees(
-                self.core.cfg["post"]["default_visibility"]))
+                self.core.default_visibility()))
                 if self.core.cfg["post"]["plain_posts"] else _("cmd_unknown"))
         elif c.kind == "help":
             self._hint(_("cmd_do_help"))
@@ -102,7 +102,7 @@ class CommandBar(QWidget):
             if not self.core.cfg["post"]["plain_posts"]:
                 self._hint(_("cmd_unknown"))
                 return
-            self._send(c.text, self.core.cfg["post"]["default_visibility"])
+            self._send(c.text, self.core.default_visibility())
             return
         if c.kind in ("follow", "unfollow", "profile", "direct"):
             self.win.bridge.call(self.core.find_user(c.user), ok=lambda acc: self._user(c, acc),
@@ -110,7 +110,7 @@ class CommandBar(QWidget):
             return
         if self.core.by_alias(c.alias) is None:
             if c.kind == "reply" and self.core.cfg["post"]["plain_posts"]:
-                self._send(line.strip(), self.core.cfg["post"]["default_visibility"])
+                self._send(line.strip(), self.core.default_visibility())
             else:
                 self._hint(_("cmd_no_post", alias=c.alias))
             return

@@ -357,6 +357,50 @@ class MergedCore:
             return dict(r, id=self._p(tag, r["id"]))
         return r
 
+    # ---- 0.11 (core/social.py): each on the account the post or person came by ------
+    def _people(self, tag, got):
+        """({accounts, relations, …}, next) of another account, ids prefixed."""
+        res, nxt = got
+        if tag is None:
+            return got
+        res = dict(res, accounts=[dict(a, id=self._p(tag, a["id"])) for a in res["accounts"]],
+                   relations={self._p(tag, k): v for k, v in res["relations"].items()})
+        return res, nxt
+
+    def who_reacted(self, status, kind, max_id=None):
+        core, tag, own = self.own(status)
+        return self._then(core.who_reacted(own, kind, max_id), lambda r: self._people(tag, r))
+
+    def who_reacted_from_origin(self, status, kind, have_ids=(), limit=40):
+        core, tag, own = self.own(status)
+        have = [self.split(i)[2] for i in have_ids]
+        return self._then(core.who_reacted_from_origin(own, kind, have, limit),
+                          lambda r: self._people(tag, r))
+
+    def mute_thread(self, status, on=True):
+        return self._act("mute_thread", status, on)
+
+    def quotes_of(self, status, max_id=None):
+        core, tag, own = self.own(status)
+        return self._then(core.quotes_of(own, max_id),
+                          lambda r: ([self.wrap(tag, s) for s in r[0]], r[1]))
+
+    def revoke_quote(self, my_status, quoting):
+        core, tag, mine = self.own(my_status)
+        _c, _t, theirs = self.own(quoting)
+        return self._wrapped(tag, core.revoke_quote(mine, theirs))
+
+    def remove_follower(self, acc_id):
+        return self._acc("remove_follower", acc_id)
+
+    def endorse(self, acc_id, on=True):
+        return self._acc("endorse", acc_id, on)
+
+    def familiar(self, acc_id):
+        core, tag, own = self.split(acc_id)
+        return self._then(core.familiar(own),
+                          lambda r: [dict(a, id=self._p(tag, a["id"])) for a in r])
+
     def account(self, acc_id):
         return self._acc("account", acc_id)
 

@@ -471,6 +471,15 @@ class Store:
                 self._bump("activity")
         return new
 
+    def activity_delete(self, ids=None):
+        """Some notifications gone from Activity (ids), or all of them (None)."""
+        with self._tx() as db:
+            if ids is None:
+                db.execute("DELETE FROM activity")
+            else:
+                db.executemany("DELETE FROM activity WHERE id = ?", [(i,) for i in ids])
+            self._bump("activity")
+
     def activity_newest(self):
         with self.lock:
             row = self.db.execute("SELECT id, sort FROM activity ORDER BY sort DESC LIMIT 1"

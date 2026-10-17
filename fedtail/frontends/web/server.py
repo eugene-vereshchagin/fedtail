@@ -144,7 +144,7 @@ class Web:
                 "server": (self.core.auth or {}).get("server"),
                 "mark_read": c["read"]["mark_read"], "order": c["feed"]["order"],
                 "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
-                "visibility": c["post"]["default_visibility"],
+                "visibility": self.core.default_visibility(),
                 "sensitive_media": config.sensitive_media(c),
                 "words": {k: _(k) for k in WORDS}}
 
