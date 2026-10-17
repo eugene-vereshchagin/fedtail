@@ -118,6 +118,7 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | Рекомендации сервера, каталог профилей | есть | — | /api/v2/suggestions, /api/v1/directory | M T I |
 | О сервере: правила, описание, политика | есть | — | instance/rules, extended_description | M I P |
 | Уведомления: убрать одно, очистить все | есть | — | notifications/:id/dismiss, clear | все |
+| Одобрить или отклонить ответ, лайк, буст (GoToSocial) | есть | `activity.approvals` | /api/v1/interaction_requests | — |
 | Реакции на анонсы сервера | есть | — | announcements/:id/reactions | M |
 | ⭐ ЛС, прочитанные здесь, прочитаны и на сервере | есть | `"direct"` в `lanes.enabled` | /api/v1/conversations | — |
 | Видимость поста как в настройках сервера | есть | `post.default_visibility = "server"` | /api/v1/preferences | M I |

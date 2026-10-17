@@ -475,6 +475,15 @@ class FakeApi:
         self._need("dismiss")
         self.w.activity = []
 
+    def interaction_requests(self, status_id=None):
+        self._need("interactions")
+        return list(self.w.interactions)
+
+    def answer_interaction(self, req_id, approve):
+        self.w.interactions = [r for r in self.w.interactions if r["id"] != req_id]
+        self.w.answered.append((req_id, approve))
+        return {"id": req_id}
+
     def notifications_unread(self):
         return {"count": len(self.w.activity)}
 
@@ -555,6 +564,7 @@ class World:
         self.profile = {}
         self.lists = {}
         self.list_refuse = set()
+        self.interactions, self.answered = [], []
         self.activity = []
         self.following = set()
         self.followed_tags = set()

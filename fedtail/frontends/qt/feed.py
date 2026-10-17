@@ -1927,6 +1927,18 @@ class ActivityWidget(QWidget):
             v.addLayout(line)
         else:
             v.addWidget(top)
+        if kind.startswith("pending."):
+            # waiting for my yes (GoToSocial): answer right here, one by one
+            for e in es:
+                line = QHBoxLayout()
+                line.addStretch(1)
+                for approve in (True, False):
+                    b = _button(_("ok_interaction") if approve else _("no_interaction"),
+                                lambda _c=False, en=e, a=approve: self._answer(en, a),
+                                name="primary" if approve else "tool")
+                    b.setToolTip(_("approve_tip") if approve else _("reject_tip"))
+                    line.addWidget(b)
+                v.addLayout(line)
         if st:
             post = QLabel(f'<a href="fedtail:thread/{esc(real(st)["id"])}" '
                           f'style="text-decoration:none;color:{self.win.theme.c["muted"].name()};">'
@@ -1941,6 +1953,14 @@ class ActivityWidget(QWidget):
     def _mark_seen(self):
         if self.isVisible() and self.window().isActiveWindow():
             self.core.mark_activity_seen()
+
+    def _answer(self, entry, approve):
+        self.win.bridge.call(
+            self.core.answer_interaction(entry, approve),
+            ok=lambda found: self.win.statusBar().showMessage(
+                _(("approved" if approve else "rejected") if found else "approval_gone"),
+                5000),
+            fail=self.win.error)
 
     def _dismiss(self, ids):
         """A row gone: each notification in it, here and on the server."""
@@ -1961,7 +1981,8 @@ class ActivityWidget(QWidget):
         pass
 
 
-ACT_KINDS = ("favourite", "reblog", "follow", "poll", "update", "status")
+ACT_KINDS = ("favourite", "reblog", "follow", "poll", "update", "status",
+             "pending.reply", "pending.favourite", "pending.reblog")
 
 
 class AccountRow(QFrame):

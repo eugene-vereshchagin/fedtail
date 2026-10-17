@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0 — in progress
+
+- Replies, likes and boosts waiting for my approval (GoToSocial interaction policies) come
+  to Likes & boosts — "reply waiting for your approval" — with ✔ approve and ✘ reject
+  right on the row; the server's request is answered and the notification goes. They came
+  before only to clients that ask for every kind (`activity.approvals`).
+
 ## 0.12.0 — 2026-10-18
 
 **In short:** tabs stop jumping (to the lanes, to the bots, from under the curtain); the

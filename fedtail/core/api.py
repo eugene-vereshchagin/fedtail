@@ -639,3 +639,14 @@ class Api:
     def react_announcement(self, aid, name, on=True):
         path = f"/api/v1/announcements/{aid}/reactions/{quote(name, safe='')}"
         return self.put(path) if on else self.delete(path)
+
+    # ---- interaction requests (GoToSocial): replies, likes, boosts waiting for my yes
+    def interaction_requests(self, status_id=None):
+        p = {"limit": 80}
+        if status_id:
+            p["status_id"] = status_id
+        return self.get("/api/v1/interaction_requests", p) or []
+
+    def answer_interaction(self, req_id, approve):
+        return self.post(f"/api/v1/interaction_requests/{req_id}/"
+                         + ("authorize" if approve else "reject"))

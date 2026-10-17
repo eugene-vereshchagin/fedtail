@@ -222,6 +222,27 @@ class SocialTest(TmpDir):
         self.assertEqual(told, ["favourited_by", "trends_statuses", "trends_tags",
                                 "trends_links", "suggestions"])
 
+    def test_approve_a_reply_waiting(self):
+        """GoToSocial: a reply waiting for my yes comes with Likes & boosts; approving it
+        answers that request on the server and the notification goes."""
+        core, w = self.make()
+        mine = w.add(status("180", ME, minute=1, vis="public"), home=True)
+        reply = dict(status("181", BOB, minute=2, vis="public"), in_reply_to_id="180")
+        w.act("p1", "pending.reply", BOB, reply, minute=2)
+        w.interactions = [{"id": "r9", "type": "favourite", "account": BOB, "status": mine},
+                          {"id": "r1", "type": "reply", "account": BOB, "status": mine,
+                           "reply": reply}]
+        core.poll_once()
+        got = [n for n in core.store.activity_recent(10) if n["id"] == "p1"]
+        self.assertEqual(len(got), 1)  # asked for, though not in activity.types
+        self.assertTrue(core.answer_interaction(got[0], True).result())
+        self.assertEqual(w.answered, [("r1", True)])
+        self.assertEqual([n["id"] for n in core.store.activity_recent(10)], [])
+        core.cfg["activity"]["approvals"] = False
+        w.act("p2", "pending.reply", BOB, reply, minute=3)
+        core.poll_once()
+        self.assertEqual(core.store.activity_recent(10), [])
+
     def test_no_preferences_no_trouble(self):
         core, _w = self.make(missing={"preferences"})
         self.assertEqual(core.server_prefs, {})

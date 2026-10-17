@@ -160,6 +160,38 @@ class SocialMixin:
             self.emit("activity_updated", None)
         return self.submit(job)
 
+    def answer_interaction(self, entry, approve):
+        """A reply, like or boost waiting for my approval (GoToSocial's interaction
+        policies): yes or no, on the server; the notification goes either way."""
+        kind = entry["type"].split(".", 1)[-1]  # pending.reply -> reply
+        st = entry.get("status") or {}
+        who = (entry.get("account") or {}).get("id")
+
+        def job():
+            reqs = self._api("interactions", self.api.interaction_requests)
+            match = None
+            for r in reqs:
+                if r.get("type") != kind or (r.get("account") or {}).get("id") != who:
+                    continue
+                theirs = (r.get("reply") or {}).get("id") if kind == "reply" else None
+                mine = (r.get("status") or {}).get("id")
+                if st.get("id") in (theirs, mine) or match is None:
+                    match = r
+            if match is None:
+                log.info("interaction %s: no request waiting any more", entry["id"])
+            else:
+                self.api.answer_interaction(match["id"], approve)
+                log.info("interaction %s %s: %s", match["id"], kind,
+                         "approved" if approve else "rejected")
+            try:
+                self.api.dismiss_notification(entry["id"])
+            except ApiError as e:
+                log.debug("dismiss %s: %s", entry["id"], e)
+            self.store.activity_delete([entry["id"]])
+            self.emit("activity_updated", None)
+            return bool(match)
+        return self.submit(job)
+
     def clear_activity(self):
         """Every notification gone, here and on the server (for every app)."""
         def job():

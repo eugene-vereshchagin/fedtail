@@ -118,6 +118,7 @@ DEFAULTS = {
     },
     "activity": {
         "types": ["favourite", "reblog", "follow"],
+        "approvals": True,
     },
     "lists": {
         "enabled": True,

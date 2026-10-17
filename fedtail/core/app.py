@@ -468,7 +468,9 @@ class Core(SocialMixin):
     def _poll_activity(self):
         """New notifications of the chosen kinds. The very first fetch is history,
         not news: it is stored as already seen."""
-        types = self.cfg["activity"]["types"]
+        types = list(self.cfg["activity"]["types"])
+        if self.cfg["activity"].get("approvals", True):  # GoToSocial: waiting for my yes
+            types += ["pending.reply", "pending.favourite", "pending.reblog"]
         fc = self.cfg["feed"]
         newest, _sort = self.store.activity_newest()
         if newest is None:
