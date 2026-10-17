@@ -122,6 +122,19 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertIn("profile_featured = true\n\n#", new)
         self.assertEqual(cu.update(new, example), new)
 
+    def test_update_keeps_my_notes(self):
+        """My own comments next to my values stay word for word; a blank line goes in
+        only after an option, never inside my note."""
+        from fedtail.core import config_update as cu
+        example = config.example_text()
+        old = ("[ui]\ntheme = \"terminal\"\n# моя заметка: тёмная тема на ночь\n"
+               "# и вторая строка заметки\nlanguage = \"ru\"\n")
+        new = cu.update(old, example)
+        self.assertIn("# моя заметка: тёмная тема на ночь\n# и вторая строка заметки\n"
+                      "language = \"ru\"", new)
+        self.assertIn('theme = "terminal"\n\n# моя заметка', new)
+        self.assertEqual(cu.update(new, example), new)
+
     def test_rebuild_keeps_values_in_chapters(self):
         import tomllib
 
