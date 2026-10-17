@@ -786,6 +786,29 @@ class CoreTest(TmpDir):
         self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
 
+    def test_stream_wakes_gathered_refresh_doesnt_wait(self):
+        """Stream events right after a poll make one poll after poll.stream_gap_seconds,
+        not one each; Refresh (poll_now) goes at once."""
+        core, _w = self.make()
+        core.connect().result()
+        core.cfg["poll"]["stream_gap_seconds"] = 1.0
+        polls = []
+        core.poll_once = lambda: polls.append(time.monotonic())
+        core.start_polling()
+        until = lambda cond, t=3.0: any(cond() or time.sleep(0.02) for _ in range(int(t / 0.02)))
+        self.assertTrue(until(lambda: len(polls) == 1))
+        for _ in range(3):
+            core._poll_soon()
+        time.sleep(0.4)
+        self.assertEqual(len(polls), 1)  # still gathering
+        self.assertTrue(until(lambda: len(polls) == 2))
+        time.sleep(1.3)
+        self.assertEqual(len(polls), 2)  # three events, one poll
+        t = time.monotonic()
+        core.poll_now()
+        self.assertTrue(until(lambda: len(polls) == 3))
+        self.assertLess(polls[2] - t, 0.5)
+
     def test_follow_date_in_private_note(self):
         """The follow date goes at the end of my note on them, my own text stays; editing
         the note keeps the line; unfollowing takes it out."""
