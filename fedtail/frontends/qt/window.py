@@ -58,7 +58,7 @@ from .login import LoginDialog
 from .notify import Notifier, icon_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
-from .social import AccountsWidget, QuotesWidget
+from .social import AccountsWidget, QuotesWidget, ServerInfoDialog, TrendsWidget
 from .viewer import ImageOverlay
 
 log = logging.getLogger(__name__)
@@ -474,6 +474,17 @@ class MainWindow(QMainWindow):
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
         m.addAction(_("my_profile"), self.open_my_profile)
+        people = m.addMenu(_("menu_people"))
+        trends = any(self.core.supports("trends_" + k) for k in ("statuses", "tags", "links"))
+        for feature, label, slot in (
+                ("suggestions", _("suggestions_title"), self.open_suggestions),
+                ("directory", _("directory_title"), lambda: self.open_directory(False)),
+                ("directory", _("directory_local"), lambda: self.open_directory(True)),
+                ("trends", _("trends_title"), self.open_trends)):
+            if self.core.supports(feature) and (feature != "trends" or trends):
+                people.addAction(label, slot)
+        people.setEnabled(not people.isEmpty())
+        m.addAction(_("server_info") + "…", self.show_server_info)
         m.addMenu(self.accounts_menu(m))
         m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
@@ -1000,6 +1011,27 @@ class MainWindow(QMainWindow):
                   "origin_label": _("people_more_from", host=urlparse(origin).hostname)}
         self.open_accounts(f"{kind}:{s['id']}", title,
                            lambda cur: self.core.who_reacted(st, kind, cur), **kw)
+
+    def open_suggestions(self):
+        self.open_accounts("suggestions", _("suggestions_title"), self.core.suggestions,
+                           dismiss=self.core.dismiss_suggestion)
+
+    def open_directory(self, local):
+        key = "directory_local" if local else "directory_title"
+        self.open_accounts(key, _(key), lambda cur: self.core.directory(cur, local))
+
+    def open_trends(self):
+        for w in self.extra_tabs():
+            if isinstance(w, TrendsWidget):
+                self.tabs.setCurrentWidget(w)
+                w.reload()
+                return
+        w = TrendsWidget(self)
+        self._add_tab(w, w.title)
+
+    def show_server_info(self):
+        self.bridge.call(self.core.server_info(),
+                         ok=lambda info: ServerInfoDialog(self, info).exec(), fail=self.error)
 
     def open_quotes(self, st):
         for w in self.extra_tabs():
