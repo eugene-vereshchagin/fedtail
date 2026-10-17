@@ -1579,6 +1579,62 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: len(people.view.rows) > 1)
         self.assertFalse(people._unload_timer.isActive())
 
+    def test_social_tabs_and_dialogs(self):
+        """0.11: who liked (tab), quotes, trends, suggestions, about the server, the
+        post menu entries, a boost shown inside a boost card; nothing falls over."""
+        from PySide6.QtWidgets import QMenu
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        from fedtail.frontends.qt.social import (
+            AccountsWidget,
+            QuotesWidget,
+            ServerInfoDialog,
+            TrendsWidget,
+        )
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        st = self.core.store.get_status("011")
+        self.world.reactions["011"] = {"favourited_by": [NEWS], "reblogged_by": []}
+        st = dict(st, favourites_count=1)
+        self.core.store.put_statuses([st])
+        row = PostRow(CardSpec(key="011", status=st, unread=True), self.win.ctx)
+        texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
+        from fedtail.i18n import _
+        self.assertIn(_("who_favourited_by_n", n=1), texts)
+        self.assertIn(_("mark_one_read"), texts)
+        self.win.on_link("fedtail:favourited_by/011")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountsWidget)
+        self.pump(until=lambda: tab.count == 1)
+        self.win.on_link("fedtail:readone/011")
+        self.assertNotIn("011", self.core.unread_ids([(None, st)]))
+        # quotes of my post, trends, suggestions, the server
+        mine = self.core.store.get_status("010")
+        self.world.quotes["010"] = []
+        self.win.open_quotes(mine)
+        self.assertIsInstance(self.win.tabs.currentWidget(), QuotesWidget)
+        self.world.trends = {"statuses": [], "tags": [{"name": "linux", "history": []}],
+                             "links": []}
+        self.win.open_trends()
+        self.assertIsInstance(self.win.tabs.currentWidget(), TrendsWidget)
+        self.world.suggested = [NEWS]
+        self.win.open_suggestions()
+        sugg = self.win.tabs.currentWidget()
+        self.pump(until=lambda: sugg.count == 1)
+        dlg = ServerInfoDialog(self.win, self.core.server_info().result())
+        dlg.show()
+        dlg.close()
+        # a boost of the post shows the like/boost made on the post
+        boost = {"id": "rb9", "account": ME, "reblog": st, "created_at": st["created_at"],
+                 "content": "", "media_attachments": []}
+        view = self.win.lane_widgets.get("people")
+        if view is not None:
+            view = view.view
+            view.set_specs([CardSpec(key="rb9", status=boost)])
+            self.win.on_event("status_updated", dict(st, reblogged=True))
+            self.assertTrue(view.model[0].status["reblog"]["reblogged"])
+
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes
         cfg, _ = config.validate({"ui": {"theme": "terminal"}})
