@@ -2,6 +2,8 @@
 
 ## 0.11.0 — in progress
 
+- The player has a ⤓ download button (key S), for gifs too; right click on a video or a
+  gif in a post says "Download". Big files go to disk a piece at a time.
 - A profile from another server: once my server has nothing older, "▼ further back —
   from their server" reads on in their own outbox, a page at a time (`feed.remote_profiles`).
 - Putting someone just followed into a list: the server refuses until the follow is

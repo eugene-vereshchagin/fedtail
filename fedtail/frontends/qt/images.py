@@ -226,16 +226,28 @@ class Images:
             from ...core import saving
             folder.mkdir(parents=True, exist_ok=True)
             cached = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
-            ctype = ""
+            t = time.monotonic()
             if cached.exists():
                 data = cached.read_bytes()
+                path = saving.free_path(folder, saving.file_name(url, ""))
+                path.write_bytes(data)
+                size = len(data)
             else:
-                r = self.http.get(url, timeout=120)
-                r.raise_for_status()
-                data, ctype = r.content, r.headers.get("Content-Type", "")
-            path = saving.free_path(folder, saving.file_name(url, ctype))
-            path.write_bytes(data)
-            log.info("saved %s -> %s (%d B)", url, path, len(data))
+                # straight to the file a piece at a time: a video can be big
+                with self.http.get(url, timeout=120, stream=True) as r:
+                    r.raise_for_status()
+                    path = saving.free_path(folder, saving.file_name(
+                        url, r.headers.get("Content-Type", "")))
+                    size = 0
+                    try:
+                        with open(path, "wb") as f:
+                            for chunk in r.iter_content(1 << 16):
+                                f.write(chunk)
+                                size += len(chunk)
+                    except BaseException:
+                        path.unlink(missing_ok=True)  # no half files left behind
+                        raise
+            log.info("saved %s -> %s (%d B, %.1f s)", url, path, size, time.monotonic() - t)
             return path
         return self.big_pool.submit(job)
 

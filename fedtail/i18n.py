@@ -203,7 +203,8 @@ _STRINGS = {
         "viewer_title": "Картинка",
         "viewer_keys": "← → или колесо — листать · двойной клик/Z — 1:1 · "
                        "S — сохранить · O — в браузере · Esc/клик — закрыть",
-        "save_image": "Сохранить картинку", "saved_to": "Сохранено: {path}",
+        "save_image": "Сохранить картинку", "save_media": "Скачать",
+        "saved_to": "Сохранено: {path}",
         "save_failed": "Не сохранилось: {err}",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
@@ -347,10 +348,10 @@ _STRINGS = {
         "filter_gifv": "Гифки", "filter_video": "Видео", "filter_audio": "Аудио",
         "filter_all": "Показать всё",
         "player_pause_tip": "Пауза / играть (пробел)",
-        "gif_keys": "клик или Esc — закрыть · O — в браузере",
+        "gif_keys": "клик или Esc — закрыть · S — скачать · O — в браузере",
         "player_mute_tip": "Звук (M)",
-        "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · O — в браузере · Esc — "
-                       "закрыть",
+        "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · S — скачать · "
+                       "O — в браузере · Esc — закрыть",
         "player_failed": "Не играется: {err}. O — открыть в браузере",
         "browse_empty": "Сервер отдаёт эту ленту пустой: похоже, живые ленты у него "
                         "выключены (так на mastodon.social)",
@@ -696,7 +697,7 @@ _STRINGS = {
         "viewer_title": "Image",
         "viewer_keys": "← → or wheel: flip · double-click/Z: 1:1 · "
                        "S: save · O: browser · Esc/click: close",
-        "save_image": "Save picture", "saved_to": "Saved: {path}",
+        "save_image": "Save picture", "save_media": "Download", "saved_to": "Saved: {path}",
         "save_failed": "Couldn't save: {err}",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
@@ -831,9 +832,10 @@ _STRINGS = {
         "filter_gifv": "Gifs", "filter_video": "Video", "filter_audio": "Audio",
         "filter_all": "Show everything",
         "player_pause_tip": "Pause / play (Space)",
-        "gif_keys": "click or Esc to close · O for the browser",
+        "gif_keys": "click or Esc to close · S to download · O for the browser",
         "player_mute_tip": "Sound (M)",
-        "player_keys": "Space pause · ← → 5 seconds · M sound · O browser · Esc close",
+        "player_keys": "Space pause · ← → 5 seconds · M sound · S download · O browser · "
+                       "Esc close",
         "player_failed": "Can't play it: {err}. O opens it in the browser",
         "browse_empty": "The server gives this feed empty: its live feeds seem to be off "
                         "(as on mastodon.social)",

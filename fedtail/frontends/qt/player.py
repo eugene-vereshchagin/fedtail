@@ -79,6 +79,8 @@ class VideoOverlay(QWidget):
         lay.setSpacing(10)
         top = QHBoxLayout()
         top.addStretch(1)
+        if ctx.save_image:
+            top.addWidget(self._button("⤓", _("save_media") + " (S)", self.save))
         top.addWidget(self._button("↗", _("open_browser") + " (O)", self.to_browser))
         top.addWidget(self._button("✕", _("close") + " (Esc)", self.close_player))
         lay.addLayout(top)
@@ -211,8 +213,15 @@ class VideoOverlay(QWidget):
             self.toggle_mute()
         elif k == Qt.Key.Key_O:
             self.to_browser()
+        elif k == Qt.Key.Key_S:
+            self.save()
         else:
             super().keyPressEvent(e)
+
+    def save(self):
+        if self.ctx.save_image:
+            self.win.statusBar().showMessage(_("saving"), 30000)
+            self.ctx.save_image(self.m)
 
 
 class _Loops:

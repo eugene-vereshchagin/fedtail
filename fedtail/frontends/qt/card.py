@@ -1052,7 +1052,8 @@ class PostRow(QWidget):
         menu = QMenu(lab)
         url = m.get("url") or m.get("remote_url") or ""
         if self.ctx.save_image:
-            menu.addAction(_("save_image"), lambda: self.ctx.save_image(m))
+            menu.addAction(_("save_image") if m.get("type") == "image" else _("save_media"),
+                           lambda: self.ctx.save_image(m))
         menu.addAction(_("open_browser"), lambda: self.ctx.open_url(url))
         menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
         menu.exec(lab.mapToGlobal(pos))
