@@ -287,6 +287,8 @@ class FakeApi:
         self.w.lists.pop(list_id)
 
     def list_add(self, list_id, acc_id):
+        if acc_id in self.w.list_refuse:  # just followed, not confirmed yet
+            raise ApiError(404, "Record not found")
         self.w.lists[list_id]["members"].add(acc_id)
 
     def list_remove(self, list_id, acc_id):
@@ -551,6 +553,7 @@ class World:
         self.fail_auth = False
         self.profile = {}
         self.lists = {}
+        self.list_refuse = set()
         self.activity = []
         self.following = set()
         self.followed_tags = set()

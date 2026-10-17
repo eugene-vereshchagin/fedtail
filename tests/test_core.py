@@ -771,6 +771,30 @@ class CoreTest(TmpDir):
         self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
 
+    def test_list_add_before_follow_confirmed(self):
+        """The server refuses someone just followed: they go into the list here at once
+        and into the server's list on a later lists refresh."""
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("Новые").result()
+        w.list_refuse.add("N")
+        self.assertEqual(core.set_in_list(x["id"], "N", True).result(), "pending")
+        self.assertIn(x["id"], core.lists_of("N"))
+        self.assertNotIn("N", w.lists[x["id"]]["members"])
+        core._refresh_lists()  # still refused: still waiting, still in here
+        self.assertIn(x["id"], core.lists_of("N"))
+        w.list_refuse.clear()
+        core._refresh_lists()
+        self.assertIn("N", w.lists[x["id"]]["members"])
+        self.assertEqual(core.store.kv_get("list_pending"), [])
+        # taken out before the server took them: forgotten, not added later
+        w.list_refuse.add("B")
+        core.set_in_list(x["id"], "B", True).result()
+        core.set_in_list(x["id"], "B", False).result()
+        w.list_refuse.clear()
+        core._refresh_lists()
+        self.assertNotIn("B", w.lists[x["id"]]["members"])
+
     def test_tag_suggestions(self):
         core, w = self.make()
         core.connect().result()

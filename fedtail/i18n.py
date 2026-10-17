@@ -335,6 +335,8 @@ _STRINGS = {
         "menu_people": "Кого почитать",
         "mark_one_read": "Прочитано",
         "copy": "Копировать",
+        "list_pending": "Сервер пока не берёт его в список (подписка ещё не подтверждена) — "
+                        "добавлю сам, как только сможет",
         "media_filter": "Что показывать",
         "media_filter_tip": "Показывать только посты с картинками, гифками, видео… "
                             "(до перезапуска)",
@@ -818,6 +820,8 @@ _STRINGS = {
         "menu_people": "Find people",
         "mark_one_read": "Mark read",
         "copy": "Copy",
+        "list_pending": "The server won't take them into the list yet (the follow isn't "
+                        "confirmed) — I'll add them as soon as it does",
         "media_filter": "Show",
         "media_filter_tip": "Show only posts with pictures, gifs, video… (until restart)",
         "media_filter_info": ["{n} post shown by the filter", "{n} posts shown by the filter"],

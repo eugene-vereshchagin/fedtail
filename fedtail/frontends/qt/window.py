@@ -741,8 +741,10 @@ class MainWindow(QMainWindow):
             a.setChecked(x["id"] in inside)
             a.toggled.connect(lambda on, lid=x["id"], acc=account["id"]: self.bridge.call(
                 self.core.set_in_list(lid, acc, on),
-                ok=lambda _r, on=on: self.statusBar().showMessage(
-                    _("list_added" if on else "list_removed"), 4000)))
+                ok=lambda r, on=on: self.statusBar().showMessage(
+                    _("list_pending") if r == "pending" else
+                    _("list_added" if on else "list_removed"), 6000),
+                fail=self.error))
         if self.core.lists:
             menu.addSeparator()
         menu.addAction(_("list_new"), lambda: self.new_list(add=account["id"]))

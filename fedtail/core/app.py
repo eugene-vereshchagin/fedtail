@@ -643,9 +643,12 @@ class Core(SocialMixin):
 
     def _refresh_lists(self):
         """Lists and who is in them, from the server; lanes follow."""
+        self._retry_list_pending()
         got = [{"id": x["id"], "title": x.get("title", ""), "exclusive": bool(x.get("exclusive"))}
                for x in self.api.lists()]
         members = {x["id"]: {a["id"] for a in self.api.list_accounts(x["id"])} for x in got}
+        for list_id, acc_id, _since in self._list_pending():  # still waiting: in, here
+            members.setdefault(list_id, set()).add(acc_id)
         self._lists_checked = time.monotonic()
         if got == self.lists and members == self.list_members:
             return
@@ -695,13 +698,56 @@ class Core(SocialMixin):
             self._refresh_lists()
         return self.submit(job)
 
+    LIST_PENDING_DAYS = 30
+
     def set_in_list(self, list_id, acc_id, on):
+        """Into a list or out. A server takes only people I follow into lists; someone
+        just followed (a locked account that hasn't approved yet, or a server slow to
+        record it) is refused — then fedtail remembers it and puts them in by itself
+        once it can. Returns "pending" in that case."""
         def job():
-            (self.api.list_add if on else self.api.list_remove)(list_id, acc_id)
-            self._refresh_lists()
+            pending = self._list_pending()
+            pending = [p for p in pending if (p[0], p[1]) != (list_id, acc_id)]
+            try:
+                (self.api.list_add if on else self.api.list_remove)(list_id, acc_id)
+                result = "done"
+            except ApiError as e:
+                if not on or e.status not in (403, 404, 422):
+                    raise
+                pending.append([list_id, acc_id, time.time()])
+                log.info("list %s: %s not followed yet (%s), will add later", list_id, acc_id,
+                         e.status)
+                result = "pending"
+            self.store.kv_set("list_pending", pending)
+            if result == "pending":  # in the list here at once: lanes treat them so
+                members = {k: set(v) for k, v in self.list_members.items()}
+                members.setdefault(list_id, set()).add(acc_id)
+                self._apply_lists(list(self.lists), members)
+            else:
+                self._refresh_lists()
             # who is hidden where changed: every lane may look different now
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+            return result
         return self.submit(job)
+
+    def _list_pending(self):
+        return [p for p in self.store.kv_get("list_pending", []) or []
+                if time.time() - p[2] < self.LIST_PENDING_DAYS * 86400]
+
+    def _retry_list_pending(self):
+        """People waiting to go into lists: try again (on every lists refresh)."""
+        pending = self._list_pending()
+        if not pending:
+            return
+        left = []
+        for list_id, acc_id, since in pending:
+            try:
+                self.api.list_add(list_id, acc_id)
+                log.info("list %s: %s added after all", list_id, acc_id)
+            except ApiError as e:  # not yet (or the server is down): next time
+                log.debug("list %s pending %s: %s", list_id, acc_id, e)
+                left.append([list_id, acc_id, since])
+        self.store.kv_set("list_pending", left)
 
     # ---- thread subscriptions ------------------------------------------------------
     def subscribed(self, status):
