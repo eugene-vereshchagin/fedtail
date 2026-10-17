@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.12.0 — in progress
+## 0.12.0 — 2026-10-18
+
+**In short:** tabs stop jumping (to the lanes, to the bots, from under the curtain); the
+player goes between a post's gifs and videos; older posts of a profile from servers that
+hide their outbox; `--update-config` puts new options where they belong; less memory for
+pictures and fewer polls on a busy stream; old logs of the first versions cleaned up.
 
 - Less memory and CPU for pictures: a feed picture is decoded at the size of its box
   (times the screen's pixel density), not at 1200 px — most of a lane's memory was

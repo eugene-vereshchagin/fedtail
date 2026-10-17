@@ -2,7 +2,7 @@
 
 [English summary below](#english)
 
-Состояние на версию **0.11.0** (18.10.2026). Рядом — что умеют другие клиенты: **M** — Mastodon
+Состояние на версию **0.12.0** (18.10.2026). Рядом — что умеют другие клиенты: **M** — Mastodon
 web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** — Tokodon. Про чужие
 клиенты — по знаниям на середину 2026 года, без проверки каждого вживую. Что из этого
 поддерживает конкретный сервер (особенно GoToSocial), проверяй на своей ноде: fedtail
@@ -187,7 +187,7 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 <a id="english"></a>
 ## English
 
-The state of things as of **0.11.0**, next to Mastodon web, Tusky, Ivory, Phanpy, Elk and
+The state of things as of **0.12.0**, next to Mastodon web, Tusky, Ivory, Phanpy, Elk and
 Tokodon. Every behaviour has its config switch, named in the tables (`section.key`; the full
 reference is `config.example.toml`).
 

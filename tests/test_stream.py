@@ -195,7 +195,7 @@ class CoreStreamTest(TmpDir):
             core.api.has_stream = True
             core.caps.streaming = f"ws://127.0.0.1:{srv.port}"
             woke = []
-            core.poll_now = lambda w=woke: w.append(1)
+            core._poll_soon = lambda w=woke: w.append(1)
             core._start_stream()
             if wakes:
                 self.assertTrue(wait(lambda w=woke: len(w) == 1))
