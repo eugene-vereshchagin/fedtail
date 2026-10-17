@@ -36,6 +36,15 @@
   seconds: every such card made, and threw away, a native window of its own while it was
   built (the log showed a 16 s freeze for a list of 300 posts). Word-wrapped text also no
   longer lays itself out twice for every resize.
+- Threads from other servers come whole faster: where the post's server keeps a list of
+  the whole conversation (its "context", Mastodon 4.5 and others), it is read in one go
+  instead of walking replies of replies; the missing posts are fetched four at a time.
+- Someone from another server with no pins known here: their pins as their own server
+  lists them (`feed.remote_profiles`).
+- Honest counters (`feed.honest_counters`): when the author's server won't tell a
+  stranger, the numbers are asked as one of your other accounts — on the author's server
+  if you have one there, or on another server that already has the post
+  (`feed.counters_via_accounts`, on). Each token goes only to its own server.
 - `activity.types = ["all"]`: every kind of activity, now and those added later.
 - The config reference reads easier: a blank line between options, and every launch key
   (`--profile`, `--ui`, `--debug`, `--bug-report`…) listed at the top of the file.

@@ -1033,18 +1033,28 @@ class Core(SocialMixin):
         self._completed[root["id"]] = now
         from . import replies
         t = time.monotonic()
-        uris = replies.reply_uris(self._origin_json, root["uri"])
+        # the whole conversation in one list where the server keeps one; else walk
+        # the replies of replies
+        uris = replies.context_uris(self._origin_json, root["uri"])
+        how = "context"
+        if not uris:
+            uris, how = replies.reply_uris(self._origin_json, root["uri"]), "replies"
         missing = [u for u in uris if u not in known]
-        got = []
-        for uri in missing[:30]:
+
+        def resolve(uri):
             try:
                 found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
             except Exception as e:  # not reachable, not public, gone: skip it
                 log.debug("resolve %s: %s", uri, e)
-                continue
-            got += (found or {}).get("statuses") or []
-        log.info("thread %s: origin lists %d replies, %d missing here, %d fetched (%.1f s)",
-                 root["id"], len(uris), len(missing), len(got), time.monotonic() - t)
+                return []
+            return (found or {}).get("statuses") or []
+        # my server fetches each from its home: a few at once, not one after another
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-resolve") as ex:
+            got = [st for page in ex.map(resolve, missing[:30]) for st in page]
+        log.info("thread %s: origin lists %d posts (%s), %d missing here, %d fetched "
+                 "(%.1f s)", root["id"], len(uris), how, len(missing), len(got),
+                 time.monotonic() - t)
         if got:
             self.store.put_statuses(got)
             self.emit("thread_grew", root["id"])
@@ -1103,16 +1113,75 @@ class Core(SocialMixin):
                 continue
             self._honest_checked[sid] = now
             try:
-                better = counters.merge(st, self._origin_get(url))
+                origin = self._origin_get(url)
             except Exception as e:  # their server, their problems
                 log.debug("honest counters %s: %s", url, e)
-                continue
+                origin = None
+            if origin is None and self.cfg["feed"].get("counters_via_accounts", True):
+                # their server won't tell a stranger: ask as one of my other accounts
+                origin = self._counts_via_accounts(st, url)
+            better = counters.merge(st, origin)
             if better:
                 fresh.append(better)
         if fresh:
             self.store.put_statuses(fresh)
             for st in fresh:  # each its own: the window redoes only the cards of each
                 self.emit("status_updated", st)
+
+    def _other_accounts(self):
+        """[(server, token)] of my other logged-in profiles (not this one), looked up
+        once in ten minutes."""
+        now = time.monotonic()
+        cached = getattr(self, "_others_cache", None)
+        if cached and now - cached[0] < 600:
+            return cached[1]
+        from . import paths as paths_module
+        from . import profiles
+        out = []
+        try:
+            for prof in profiles.listing():
+                if prof["name"] == self.paths.profile or not prof["logged_in"]:
+                    continue
+                a = auth.load(paths_module.resolve(prof["name"]).auth_file)
+                if a and a.get("server") and a.get("token"):
+                    out.append((a["server"].rstrip("/"), a["token"]))
+        except Exception as e:  # noqa: BLE001 — a nicety
+            log.debug("other accounts: %s", e)
+        self._others_cache = (now, out)
+        return out
+
+    def _counts_via_accounts(self, status, origin_url):
+        """The post as my other accounts' servers see it — the post's own server when
+        one of my accounts lives there (it knows every like), or another server that
+        already has the post. Each token goes only to its own server."""
+        from urllib.parse import urlparse
+
+        import requests
+        st = real(status)
+        host = urlparse(origin_url).hostname
+        best = None
+        for server, token in self._other_accounts():
+            head = {"User-Agent": USER_AGENT, "Authorization": f"Bearer {token}"}
+            try:
+                if urlparse(server).hostname == host:  # my account on the post's server
+                    r = requests.get(origin_url, headers=head, timeout=8)
+                    got = r.json() if r.status_code == 200 else None
+                else:  # another server: only if it has the post already (no fetching)
+                    r = requests.get(server + "/api/v2/search", headers=head, timeout=8,
+                                     params={"q": st.get("uri"), "type": "statuses",
+                                             "resolve": "false", "limit": 1})
+                    found = (r.json() or {}).get("statuses") if r.status_code == 200 else []
+                    got = found[0] if found else None
+            except (requests.RequestException, ValueError) as e:
+                log.debug("counters via %s: %s", urlparse(server).hostname, e)
+                continue
+            if not isinstance(got, dict) or got.get("uri") != st.get("uri"):
+                continue
+            if best is None or sum(got.get(k) or 0 for k in ("favourites_count",
+                                                             "reblogs_count")) > \
+                    sum(best.get(k) or 0 for k in ("favourites_count", "reblogs_count")):
+                best = got
+        return best
 
     def account_statuses(self, acc_id, max_id=None):
         def job():
@@ -1544,12 +1613,44 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def pinned(self, acc_id):
-        """The posts someone pinned to the top of their profile (a future of a list)."""
+        """The posts someone pinned to the top of their profile (a future of a list).
+        Someone from another server my server knows little about: their pins as their
+        own server lists them (the actor's "featured" collection, read without my
+        token), each fetched through my server (feed.remote_profiles)."""
         def job():
-            page = self.api.pinned(acc_id)
+            page = self.api.pinned(acc_id) or []
+            if not page and self.cfg["feed"].get("remote_profiles", True):
+                page = self._pinned_from_origin(acc_id)
             self.store.put_statuses(page)
             return page
         return self.submit(job)
+
+    def _pinned_from_origin(self, acc_id, limit=10):
+        from . import replies
+        try:
+            acc = self.api.get(f"/api/v1/accounts/{acc_id}") or {}
+        except ApiError:
+            return []
+        if "@" not in (acc.get("acct") or "") or not acc.get("uri"):
+            return []  # one of my server's own: it knows their pins
+        try:
+            actor = self._origin_json(acc["uri"])
+            featured = actor.get("featured") if isinstance(actor, dict) else None
+            uris = replies.collection_items(self._origin_json, featured, pages=1) \
+                if featured else []
+        except Exception as e:  # noqa: BLE001 — someone else's server
+            log.debug("pins of %s at their server: %s", acc_id, e)
+            return []
+        got = []
+        for uri in uris[:limit]:
+            try:
+                found = self.api.search(uri, kind="statuses", resolve=True, limit=1)
+            except ApiError as e:
+                log.debug("resolve pin %s: %s", uri, e)
+                continue
+            got += [dict(st, pinned=True) for st in (found or {}).get("statuses") or []]
+        log.info("pins of %s: %d at their server, %d found here", acc_id, len(uris), len(got))
+        return got
 
     def pin(self, status, on=True):
         """Pin my post to my profile, or take it off."""

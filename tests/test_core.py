@@ -601,6 +601,29 @@ class CoreTest(TmpDir):
         time.sleep(0.2)
         self.assertEqual(asked, [])
 
+    def test_thread_completed_from_the_context_collection(self):
+        """A server that lists the whole conversation (the post's "context"): read in
+        one go, activities and posts alike, paged."""
+        from fedtail.core import replies
+        objs = {
+            "https://far.example/objects/1": {
+                "id": "https://far.example/objects/1",
+                "context": "https://far.example/contexts/1",
+                "replies": {"type": "Collection", "items": ["https://far.example/never"]}},
+            "https://far.example/contexts/1": {
+                "type": "OrderedCollection", "first": "https://far.example/contexts/1?p=1",
+                "orderedItems": [{"type": "Create",
+                                  "object": {"id": "https://far.example/objects/2"}}]},
+            "https://far.example/contexts/1?p=1": {
+                "type": "OrderedCollectionPage",
+                "orderedItems": ["https://far.example/objects/1",
+                                 "https://far.example/objects/3"]},
+        }
+        got = replies.context_uris(objs.get, "https://far.example/objects/1")
+        self.assertEqual(got, ["https://far.example/objects/2", "https://far.example/objects/3"])
+        # no context list: [] (the replies walk takes over)
+        self.assertEqual(replies.context_uris(objs.get, "https://far.example/objects/2"), [])
+
     def test_polls_vote_and_refresh(self):
         core, w = self.make()
         st = w.add(status("120", BOB, minute=1, text="чай или кофе?"), home=True)

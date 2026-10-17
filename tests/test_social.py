@@ -154,6 +154,55 @@ class SocialTest(TmpDir):
         self.assertEqual(st["quote"]["state"], "revoked")
         self.assertEqual(core.quotes_of(mine).result()[0], [])
 
+    def test_pins_from_their_own_server(self):
+        """Someone my server knows little about: their pins as their server lists them."""
+        core, w = self.make()
+        pin = dict(status("160", BOB, minute=1, vis="public"),
+                   uri="https://social.example/objects/160")
+        w.remote[pin["uri"]] = pin
+        core.api.get = lambda path, params=None: dict(BOB, uri="https://social.example/u/bob")
+        objs = {"https://social.example/u/bob": {"featured": "https://social.example/u/bob/f"},
+                "https://social.example/u/bob/f": {"type": "OrderedCollection",
+                                                   "orderedItems": [pin["uri"]]}}
+        core._origin_json = objs.get
+        got = core.pinned("B").result()
+        self.assertEqual([st["id"] for st in got], ["160"])
+        self.assertTrue(got[0]["pinned"])
+        core.cfg["feed"]["remote_profiles"] = False
+        self.assertEqual(core.pinned("B").result(), [])
+
+    def test_counters_through_my_other_accounts(self):
+        """The author's server won't tell a stranger: ask as my account there, or as an
+        account on a server that has the post; each token only to its own server."""
+        from unittest import mock
+        core, w = self.make(feed={"honest_counters": True})
+        st = w.add(dict(status("170", BOB, minute=1, vis="public"),
+                        uri="https://social.example/users/bob/statuses/170",
+                        favourites_count=1), home=True)
+        core.poll_once()
+        core._origin_get = lambda url: None  # anonymous: refused
+        core._other_accounts = lambda: [("https://social.example", "T1"),
+                                        ("https://other.example", "T2")]
+        sent = []
+
+        class R:
+            def __init__(self, data):
+                self.status_code, self._d = 200, data
+
+            def json(self):
+                return self._d
+
+        def get(url, headers=None, params=None, timeout=None):
+            sent.append((url.split("/")[2], headers["Authorization"]))
+            if url.startswith("https://social.example/"):
+                return R(dict(st, favourites_count=7))
+            return R({"statuses": [dict(st, favourites_count=4)]})
+        with mock.patch("requests.get", get):
+            core._honest_counts([st])
+        self.assertEqual(core.store.get_status("170")["favourites_count"], 7)
+        self.assertEqual(sorted(sent), [("other.example", "Bearer T2"),
+                                        ("social.example", "Bearer T1")])
+
     def test_a_server_without_it(self):
         """404: the feature is remembered as missing and frontends are told."""
         core, w = self.make()

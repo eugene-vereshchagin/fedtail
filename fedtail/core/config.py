@@ -53,6 +53,7 @@ DEFAULTS = {
         "render_limit": 300,
         "first_run_mark_read": True,
         "honest_counters": False,
+        "counters_via_accounts": True,
         "remember_choices": False,
         "complete_threads": True,
         "link_cards": 'full',

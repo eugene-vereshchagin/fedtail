@@ -80,6 +80,58 @@ def reply_uris(get_json, root_uri, limit=40, depth=3):
     return found
 
 
+def _object_id(x):
+    """A collection item as the post it stands for: an activity (Create) gives its
+    object, a post gives itself."""
+    if isinstance(x, dict) and x.get("type") in ("Create", "Update", "Announce") \
+            and x.get("object") is not None:
+        return _id(x["object"])
+    return _id(x)
+
+
+def context_uris(get_json, root_uri, limit=60, pages=5):
+    """Addresses of the posts in the conversation of root_uri, as its server lists it
+    in the post's "context" collection (Mastodon 4.5+, FEP-7888 and others): the
+    whole conversation at once, where the replies walk needs a request per post.
+    [] where the server keeps no such list."""
+    try:
+        obj = get_json(root_uri)
+    except Exception as e:  # noqa: BLE001 — someone else's server
+        log.debug("context of %s: %s", root_uri, e)
+        return []
+    ctx = obj.get("context") if isinstance(obj, dict) else None
+    if isinstance(ctx, str) and urlparse(ctx).scheme in ("https", "http"):
+        try:
+            ctx = get_json(ctx)
+        except Exception as e:  # noqa: BLE001
+            log.debug("context collection %s: %s", ctx, e)
+            return []
+    if not isinstance(ctx, dict) or "Collection" not in str(ctx.get("type", "")):
+        return []
+    out, page, seen = [], ctx.get("first"), 0
+    raw = list(ctx.get("orderedItems") or ctx.get("items") or [])
+    while True:
+        for item in raw:
+            uri = _object_id(item)
+            if uri and uri != root_uri and uri not in out and \
+                    urlparse(uri).scheme in ("https", "http"):
+                out.append(uri)
+        if len(out) >= limit or page is None or seen >= pages:
+            break
+        if isinstance(page, str):
+            try:
+                page = get_json(page)
+            except Exception as e:  # noqa: BLE001
+                log.debug("context page: %s", e)
+                break
+        if not isinstance(page, dict):
+            break
+        seen += 1
+        raw = list(page.get("orderedItems") or page.get("items") or [])
+        page = page.get("next")
+    return out[:limit]
+
+
 PUBLIC = {"https://www.w3.org/ns/activitystreams#Public", "as:Public", "Public"}
 
 
