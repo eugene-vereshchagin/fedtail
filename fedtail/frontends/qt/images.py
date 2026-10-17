@@ -15,6 +15,7 @@ from PySide6.QtCore import QBuffer, QByteArray, QIODevice, Qt, QTimer
 from PySide6.QtGui import QImage, QImageReader, QPixmap
 from requests.adapters import HTTPAdapter
 
+from ... import diag
 from ...core.api import USER_AGENT
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,11 @@ def decode(data, max_side):
     if img.isNull():  # some plugins can't read scaled: the plain way
         img = QImage.fromData(data)
     return img
+
+
+def _short(url):
+    """The end of a picture's address: enough to find it, short enough to read."""
+    return url if len(url) <= 60 else "…" + url[-57:]
 
 
 class Images:
@@ -87,6 +93,39 @@ class Images:
         adapter = HTTPAdapter(pool_connections=16, pool_maxsize=conns)
         self.http.mount("https://", adapter)
         self.http.mount("http://", adapter)
+        # timings for the log and the stats line: where the time of a picture goes
+        self._t = threading.local()  # this worker's last download: bytes, seconds
+        self._stats_lock = threading.Lock()
+        self._reset_stats()
+
+    def _reset_stats(self):
+        self._st = {"done": 0, "failed": 0, "big": 0, "cached": 0, "wait_max_s": 0.0,
+                    "dl_n": 0, "dl_s": 0.0, "dl_max_s": 0.0, "dec_n": 0, "dec_ms": 0.0,
+                    "dec_max_ms": 0.0, "gui_max_ms": 0.0, "gui_ms": 0.0}
+
+    def _note(self, **kw):
+        with self._stats_lock:
+            st = self._st
+            for k, v in kw.items():
+                if k.endswith("_max_s") or k.endswith("_max_ms"):
+                    st[k] = max(st[k], v)
+                else:
+                    st[k] += v
+
+    def counts(self):
+        """For the stats line (every few minutes): what happened since the last one."""
+        with self._stats_lock:
+            st, _ = self._st, self._reset_stats()
+        with self._stack_lock:
+            feed_q, big_q = len(self._stacks[False]), len(self._stacks[True])
+        return {"done": st["done"], "failed": st["failed"], "originals": st["big"],
+                "from_disk": st["cached"], "queued": feed_q, "queued_originals": big_q,
+                "wait_max_s": round(st["wait_max_s"], 1),
+                "download_avg_s": round(st["dl_s"] / st["dl_n"], 2) if st["dl_n"] else 0,
+                "download_max_s": round(st["dl_max_s"], 1),
+                "decode_avg_ms": round(st["dec_ms"] / st["dec_n"]) if st["dec_n"] else 0,
+                "decode_max_ms": round(st["dec_max_ms"]),
+                "gui_total_ms": round(st["gui_ms"]), "gui_max_ms": round(st["gui_max_ms"])}
 
     def shutdown(self):
         for pool in (self.pool, self.big_pool):
@@ -108,10 +147,25 @@ class Images:
         if waited > 2:
             log.info("image waited %.1f s for a worker (%d more waiting%s)", waited, left,
                      ", originals" if big else "")
+        self._note(wait_max_s=waited, big=1 if big else 0)
+        self._t.got = None
+        t = time.monotonic()
         try:
-            return (url, max_side), self._download(url, max_side, patient, big)
+            img = self._download(url, max_side, patient, big)
         except Exception:  # noqa: BLE001 — said in the log by _download; the card says it
+            self._note(failed=1)
             return (url, max_side), None
+        total = time.monotonic() - t
+        got = getattr(self._t, "got", None)  # (bytes, download s) or None: from disk
+        dl = got[1] if got else 0.0
+        dec_ms = (total - dl) * 1000
+        self._note(done=1, cached=0 if got else 1, dec_n=1, dec_ms=dec_ms, dec_max_ms=dec_ms,
+                   **({"dl_n": 1, "dl_s": dl, "dl_max_s": dl} if got else {}))
+        log.debug("image %s %s: queue %.2f s, %s, decode %.0f ms -> %dx%d", "big" if big
+                  else "feed", _short(url), waited,
+                  f"download {got[0]} B {dl:.2f} s" if got else "from disk", dec_ms,
+                  img.width(), img.height())
+        return (url, max_side), img
 
     def _download(self, url, max_side, patient=False, big=False):
         p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
@@ -140,9 +194,10 @@ class Images:
                             time.monotonic() - t)
                 self.why[url] = ("network", e.__class__.__name__)
                 raise
+            self._t.got = (len(r.content), time.monotonic() - t)
             img = decode(r.content, max_side)
-            log.debug("image %s %d B %.2f s%s", url, len(r.content), time.monotonic() - t,
-                      "" if not img.isNull() else " (not an image)")
+            if img.isNull():
+                log.debug("image %s %d B: not an image", url, len(r.content))
             if img.isNull():  # downloaded fine, but Qt can't read it (webp, avif, heic…)
                 kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
                 self.why[url] = ("format", kind or "?")
@@ -297,12 +352,19 @@ class Images:
         self.asked.pop(key, None)
         self.patient.discard(key)
         callbacks = [cb for cb, _f in self.waiting.pop(key, [])]
-        pm = QPixmap.fromImage(img)
-        self._remember(key, pm)
-        for cb in callbacks:
-            try:
-                cb(pm)
-            except RuntimeError:  # its widget is gone
-                pass
-            except Exception:  # noqa: BLE001 — one bad card mustn't keep the others waiting
-                log.exception("image handler")
+        t = time.monotonic()
+        with diag.busy(f"picture in ({len(callbacks)} cards)"):
+            pm = QPixmap.fromImage(img)
+            self._remember(key, pm)
+            for cb in callbacks:
+                try:
+                    cb(pm)
+                except RuntimeError:  # its widget is gone
+                    pass
+                except Exception:  # noqa: BLE001 — one bad card mustn't keep the others waiting
+                    log.exception("image handler")
+        ms = (time.monotonic() - t) * 1000
+        self._note(gui_ms=ms, gui_max_ms=ms)
+        if ms > 50:
+            log.debug("image %s: %.0f ms in the window for %d cards (%dx%d)", _short(key[0]),
+                      ms, len(callbacks), img.width(), img.height())

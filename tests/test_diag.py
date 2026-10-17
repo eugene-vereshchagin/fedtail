@@ -161,6 +161,25 @@ class DiagTest(unittest.TestCase):
             diag.OLD_LOG_DIR = keep
             diag._state["dir"] = None
 
+    def test_stall_meter_says_where_the_gui_froze(self):
+        meter = diag.StallMeter(100, interval=0.02)
+        meter.start()
+        try:
+            meter.tick()
+            with self.assertLogs("fedtail.diag", "WARNING") as caught:
+                with diag.busy("lane home: draw"):
+                    time.sleep(0.5)  # the "GUI thread" (this one) is stuck in our code
+                meter.tick()
+            line = caught.output[0]
+            self.assertIn("GUI froze", line)
+            self.assertIn("lane home: draw", line)
+            self.assertIn("test_diag.py", line)  # where in the code it was
+            self.assertEqual(meter.counts()["count"], 1)
+            meter.tick()  # quick ticks: nothing more said
+            self.assertEqual(meter.counts()["count"], 1)
+        finally:
+            meter.stop()
+
     def test_session_files_split_and_capped(self):
         folder = Path(self._tmp.name) / "split"
         folder.mkdir()

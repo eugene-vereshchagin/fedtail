@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ... import diag
 from ...core.model import real, snippet
 from ...i18n import _
 from .card import CardSpec, PostRow, SeparatorRow
@@ -597,6 +598,10 @@ class LaneWidget(QWidget):
         if not self.isVisible() and not force and (self.positioned or self.unloaded):
             self.dirty = True
             return
+        with diag.busy(f"lane {self.name}: draw"):
+            self._refresh()
+
+    def _refresh(self):
         self.dirty = False
         self.unloaded = False
         t0 = time.monotonic()

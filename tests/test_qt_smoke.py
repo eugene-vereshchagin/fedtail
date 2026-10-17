@@ -830,6 +830,10 @@ class QtSmokeTest(unittest.TestCase):
             self.pump(until=lambda: got, timeout=5)
             self.assertLessEqual(max(got[0].width(), got[0].height()), imgmod.FEED_SIDE)
             self.assertTrue(im.waiting)  # the previews are still stuck meanwhile
+            c = im.counts()  # the stats line: what happened, where it waits
+            self.assertEqual((c["done"], c["originals"]), (1, 1))
+            self.assertGreaterEqual(c["queued"], 1)
+            self.assertEqual(im.counts()["done"], 0)  # since the last stats line
         finally:
             release.set()
             im.shutdown()

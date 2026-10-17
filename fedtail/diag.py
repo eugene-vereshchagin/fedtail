@@ -468,6 +468,117 @@ class Watchdog:
                 dump_stacks(f"GUI thread hasn't answered for {idle:.1f} s")
 
 
+# ---- freezes of the GUI thread ----------------------------------------------------------
+EVENT_LOOP = "frontends/qt/__init__.py"  # where app.exec() runs: Qt's own work
+_busy = []  # what the GUI thread is doing now, outermost first (labels from busy())
+
+
+class busy:
+    """with diag.busy("lane home: draw"): …  — names what the GUI thread is doing, so
+    a freeze in the log says which of our jobs it fell into."""
+
+    def __init__(self, label):
+        self.label = label
+
+    def __enter__(self):
+        _busy.append(self.label)
+        return self
+
+    def __exit__(self, *_):
+        if _busy and _busy[-1] == self.label:
+            _busy.pop()
+        return False
+
+
+def _short_stack(frame, depth=10):
+    """The innermost frames as "file.py:123 func", innermost last."""
+    out = []
+    for fs in traceback.extract_stack(frame)[-depth:]:
+        name = fs.filename.replace("\\", "/")
+        if "/fedtail/" in name:
+            name = "fedtail/" + name.rsplit("/fedtail/", 1)[1]
+        else:
+            name = name.rsplit("/", 1)[-1]
+        out.append(f"{name}:{fs.lineno} {fs.name}")
+    return out
+
+
+class StallMeter:
+    """Freezes shorter than the watchdog's seconds: the GUI thread calls tick() from a
+    timer every `interval` s; a thread of its own notices when the ticks stop for more
+    than `stall_ms` and looks at what the GUI thread is busy with right then — the
+    Python stack and the busy() labels — a few times during a long one. When the ticks
+    come back, one line says how long the window froze and where. A stack that ends
+    in the event loop means Qt itself was busy: laying out, painting, shaping text."""
+
+    SAMPLES_AT = (1, 3, 8)  # in units of stall_ms into the freeze
+
+    def __init__(self, stall_ms, interval=0.1):
+        self.stall = stall_ms / 1000.0
+        self.interval = interval
+        self.last = time.monotonic()
+        self.gui = threading.get_ident()
+        self.samples = []
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self.count = 0
+        self.total_ms = 0.0
+        self.worst_ms = 0.0
+
+    def start(self):
+        if self.stall <= 0:
+            return
+        self.gui = threading.get_ident()
+        threading.Thread(target=self._run, name="fedtail-stalls", daemon=True).start()
+
+    def stop(self):
+        self._stop.set()
+
+    def tick(self):
+        now = time.monotonic()
+        gap = now - self.last - self.interval
+        self.last = now
+        with self._lock:
+            samples, self.samples = self.samples, []
+        if self.stall <= 0 or gap < self.stall:
+            return
+        ms = gap * 1000
+        self.count += 1
+        self.total_ms += ms
+        self.worst_ms = max(self.worst_ms, ms)
+        where, seen = [], set()
+        for labels, stack in samples:
+            key = (tuple(labels), tuple(stack[-4:]))
+            if key in seen:
+                continue
+            seen.add(key)
+            inside = " > ".join(labels) or "-"
+            frames = " <- ".join(reversed(stack)) if stack else "?"
+            if stack and not labels and EVENT_LOOP in stack[-1]:
+                inside = "Qt itself (layout, painting, text)"
+            where.append(f"[{inside}] {frames}")
+        log.warning("GUI froze %.0f ms%s", ms,
+                    (": " + " || ".join(where)) if where else " (not caught in the act)")
+
+    def _run(self):
+        taken = 0
+        while not self._stop.wait(0.05):
+            late = time.monotonic() - self.last - self.interval
+            if late < self.stall:
+                taken = 0
+                continue
+            if taken < len(self.SAMPLES_AT) and late >= self.stall * self.SAMPLES_AT[taken]:
+                taken += 1
+                frame = sys._current_frames().get(self.gui)
+                sample = (list(_busy), _short_stack(frame) if frame is not None else [])
+                with self._lock:
+                    self.samples.append(sample)
+
+    def counts(self):
+        return {"count": self.count, "total_ms": round(self.total_ms),
+                "worst_ms": round(self.worst_ms)}
+
+
 # ---- timing helper ------------------------------------------------------------------------------
 class timed:
     """with timed("poll", warn_s=30): …  — debug line with the duration, a warning

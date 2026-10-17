@@ -5,6 +5,7 @@ import logging
 import requests
 from PySide6.QtCore import QObject, Signal
 
+from ... import diag
 from ...core.api import ApiError
 
 log = logging.getLogger(__name__)
@@ -34,6 +35,10 @@ class Bridge(QObject):
     def _finish(self, future, ok, fail):
         if future.cancelled():
             return
+        with diag.busy("result " + getattr(ok or fail, "__qualname__", "?")):
+            self._handle(future, ok, fail)
+
+    def _handle(self, future, ok, fail):
         exc = future.exception()
         try:
             if exc is not None:

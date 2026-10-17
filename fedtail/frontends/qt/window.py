@@ -832,7 +832,8 @@ class MainWindow(QMainWindow):
     def on_event(self, name, payload):
         t = time.monotonic()
         try:
-            self._on_event(name, payload)
+            with diag.busy(f"event {name}"):
+                self._on_event(name, payload)
         finally:
             ms = (time.monotonic() - t) * 1000
             if ms > 300:

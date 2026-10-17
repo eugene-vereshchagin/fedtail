@@ -47,7 +47,22 @@
   картинок. По этим строкам видно утечку: что растёт со временем;
 * сообщения самого Qt (раньше сыпались в терминал);
 * если окно не отвечает дольше `debug.watchdog_seconds` секунд — стеки всех
-  потоков (на чём именно висит) и потом «responsive again after N s».
+  потоков (на чём именно висит) и потом «responsive again after N s»;
+* фризы короче — от `debug.stall_ms` (250 мс): строка `GUI froze N ms: [ярлык] стек`.
+  Ярлык — чем было занято окно: `event lanes_updated`, `lane home: draw`,
+  `picture in (3 cards)`, `result …` (ответ сервера дошёл до окна). `Qt itself` —
+  наш код не работал, Qt сам раскладывал и рисовал (длинные тексты, много карточек).
+  В строке `stats` — `freezes.count`, `freezes.total_ms`, `freezes.worst_ms`;
+* каждая картинка (на уровне debug): `image feed|big …: queue 0.10 s, download
+  52002 B 0.26 s, decode 12 ms -> 400x300` — сколько ждала воркера, качалась,
+  разжималась; `… ms in the window for N cards` — если вставка в карточки дольше
+  50 мс. В `stats` — `img.*`: сколько скачано и сломалось, из кэша, очереди, средние
+  и худшие времена закачки и разжатия, время в окне.
+
+**Где тормоза, по журналу.** Ищи `GUI froze`: ярлык и стек скажут, отрисовка это,
+событие или картинка. Картинки медленно появляются, а фризов нет — значит, ждут сети:
+смотри `queue` (не хватает воркеров) и `download` (медленный сервер), `ReadTimeout`
+и `second try`.
 
 ## Если что-то случилось
 
@@ -80,6 +95,7 @@ log_mb = 10                # размер одного файла журнала
 keep = 5                   # сколько старых хранить
 stats_minutes = 5          # 0 — не писать статистику
 watchdog_seconds = 8       # 0 — не следить за зависаниями окна
+stall_ms = 250             # фризы окна короче сторожа; 0 — не следить
 slow_request_seconds = 5
 rss_warn_mb = 1500
 ```
@@ -109,7 +125,11 @@ request bodies); every poll with its timing and what came; errors with full
 tracebacks from any thread; a `stats` line every `debug.stats_minutes` (memory,
 CPU, threads, fds, database size and rows, pool queues, caches, Qt widgets and
 rows, image cache) — growth over time shows a leak; Qt's own messages; when the
-GUI thread doesn't answer for `debug.watchdog_seconds`, the stacks of all threads.
+GUI thread doesn't answer for `debug.watchdog_seconds`, the stacks of all threads;
+shorter freezes (over `debug.stall_ms`): `GUI froze N ms: [label] stack` — the label
+says which job of ours (an event, a lane drawing, a picture coming in), `Qt itself`
+that Qt was laying out or painting; every picture's queue, download and decode time,
+and `img.*` / `freezes.*` in the stats line.
 
 **When something happens:** `python3 -m fedtail --bug-report` makes
 `~/fedtail-report-<profile>-<date>.tar.gz` with the logs, crash and stack files,

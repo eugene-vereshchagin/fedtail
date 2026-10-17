@@ -38,6 +38,18 @@ def install(app, win, cfg):
     dog.start()
     app.aboutToQuit.connect(dog.stop)
 
+    # freezes too short for the watchdog: how long, and what the GUI thread was doing
+    stall_ms = int(cfg["debug"].get("stall_ms", 0)) if diag.is_on() else 0
+    meter = diag.StallMeter(stall_ms)
+    if stall_ms:
+        tick = QTimer(app)
+        tick.setInterval(int(meter.interval * 1000))
+        tick.timeout.connect(meter.tick)
+        tick.start()
+        meter.start()
+        app.aboutToQuit.connect(meter.stop)
+        diag.add_stats("freezes", meter.counts)
+
     def counts():
         views = [w.view for w in list(win.lane_widgets.values()) + win.extra_tabs()
                  if getattr(w, "view", None) is not None]
@@ -48,4 +60,5 @@ def install(app, win, cfg):
                 "images_mb": round(win.images.mem_bytes / 1024 / 1024, 1),
                 "images_waiting": len(win.images.waiting)}
     diag.add_stats("qt", counts)
+    diag.add_stats("img", win.images.counts)
     return dog, beat

@@ -32,6 +32,11 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- The log tells where a freeze is: any freeze of the window over `debug.stall_ms` (250 ms)
+  gets a line with how long it was and what the window was busy with — an event, a
+  lane being drawn, a picture coming in, or Qt itself laying out and painting — with the
+  stack. Every picture gets its queue, download and decode time; the stats line counts
+  freezes (`freezes.*`) and pictures (`img.*`).
 
 ## 0.10.0 — 2026-10-17
 
