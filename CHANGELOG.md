@@ -2,6 +2,9 @@
 
 ## 0.12.0 — in progress
 
+- With every lane closed (the curtain), Enter in the sidebar search box opened the search
+  and then the last lane on top of it: the box let its Enter go on to the window, where
+  Enter on the curtain means "back to the lane". A tab opened from the curtain now shows.
 - `--update-config`: a new option went under the next chapter's banner (inside the next
   section's comments) instead of at the end of its own section; and a file without blank
   lines between options stayed packed. Now options sit where they belong, a blank line

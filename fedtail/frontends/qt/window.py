@@ -977,6 +977,8 @@ class MainWindow(QMainWindow):
     def _add_tab(self, w, title):
         log.info("tab opened: %s", type(w).__name__)
         i = self.tabs.addTab(w, title)
+        if self.curtain_shown():  # a tab opened from the curtain: show it, not the curtain
+            self.right_stack.setCurrentIndex(0)
         self.tabs.setCurrentIndex(i)
 
     def open_thread(self, sid):
@@ -1003,6 +1005,8 @@ class MainWindow(QMainWindow):
     def open_search(self, query=""):
         for w in self.extra_tabs():
             if isinstance(w, SearchWidget):
+                if self.curtain_shown():
+                    self.right_stack.setCurrentIndex(0)
                 self.tabs.setCurrentWidget(w)
                 w.edit.setText(query)
                 w.run(query)
@@ -1492,7 +1496,12 @@ class MainWindow(QMainWindow):
             elif not self.curtain_shown():
                 self.close_all()
             return
-        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.curtain_shown():
+        from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
+        typing = isinstance(QApplication.focusWidget(), (QLineEdit, QTextEdit))
+        # Enter on the curtain opens the last lane — but not the Enter of a field (the
+        # sidebar search box lets its Enter go on up here after searching)
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.curtain_shown() \
+                and not typing:
             self.select_lane(self.core.get_state("lane") or "people")
             return
         super().keyPressEvent(e)
