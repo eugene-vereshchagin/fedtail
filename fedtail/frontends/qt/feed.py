@@ -388,11 +388,18 @@ class FeedView(QScrollArea):
             self.refresh_from_store(store)
             return
         ids = {st["id"], real(st)["id"]}
+        changed = real(st)
         for i, spec in enumerate(self.model):
             if not spec.status or (spec.status.get("id") not in ids and
                                    real(spec.status).get("id") not in ids):
                 continue
-            fresh = store.get_status(spec.status["id"])
+            if real(spec.status).get("id") == changed["id"]:
+                # the post itself changed: on its own card, and inside every boost of it
+                # (a boost's stored copy still holds the post as it was)
+                fresh = dict(spec.status, reblog=changed) if spec.status.get("reblog") \
+                    else changed
+            else:
+                fresh = store.get_status(spec.status["id"])
             if not fresh or fresh == spec.status:
                 continue
             new = CardSpec(**{**spec.__dict__, "status": fresh})

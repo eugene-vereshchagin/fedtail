@@ -225,6 +225,7 @@ class Core(SocialMixin):
             first_run = not self.store.kv_get("initialized", False)
             fc = self.cfg["feed"]
             new_by_source = {}
+            browse_changed = set()  # browse sources that turned empty or stopped being so
             every = self.cfg["lists"]["refresh_minutes"] * 60
             if _due(self._silence_checked, every):
                 try:
@@ -262,10 +263,10 @@ class Core(SocialMixin):
                         self.store.prune(name, KEEP_PER_SOURCE // 3)
                         # the server answered, and with nothing: its live feeds are off
                         # (mastodon.social and others do that) — the lane says so
-                        if self.store.newest_item(name) is None:
-                            self.browse_empty.add(name)
-                        else:
-                            self.browse_empty.discard(name)
+                        empty = self.store.newest_item(name) is None
+                        if empty != (name in self.browse_empty):
+                            (self.browse_empty.add if empty else self.browse_empty.discard)(name)
+                            browse_changed.add(name)  # its lane says so (see below)
                     except Exception as e:
                         self.emit("error", f"{name}: {e}")
                     continue
@@ -325,6 +326,9 @@ class Core(SocialMixin):
             per_lane = self._split_by_lane(new_by_source)
             if any(per_lane.values()):
                 self.emit("lanes_updated", per_lane)
+            if browse_changed:  # an empty answer brings no news, but the lane must say why
+                self.emit("lanes_updated", {lane.name: [] for lane in self.lanes
+                                            if lane.source in browse_changed})
             if new_statuses and not first_run:
                 self.emit("arrived", [(real(st)["id"], real(st).get("in_reply_to_id"))
                                       for st in new_statuses])
