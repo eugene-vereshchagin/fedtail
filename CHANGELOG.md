@@ -4,7 +4,11 @@
 
 - A search, thread or profile tab no longer jumps back to the lanes: when the sidebar was
   rebuilt (lists refreshed, say), choosing the lane again brought the lanes tab to the
-  front. Enter in the search field stays in the search field.
+  front. The lanes tab comes forward only when I choose a lane (a click, the sidebar
+  keys, Alt+N, start-up). Enter in the search field stays in the search field.
+- Older posts of a profile from a server that won't show its outbox to strangers
+  (GoToSocial, Mastodon with authorized fetch): read through that server's public API
+  instead, when it answers without a token.
 
 ## 0.11.0 — 2026-10-18
 

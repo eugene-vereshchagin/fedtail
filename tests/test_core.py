@@ -902,6 +902,20 @@ class CoreTest(TmpDir):
         self.assertEqual(cur, f"{base}?page=3")
         got, cur = core.older_from_origin(far, cur, have).result()
         self.assertEqual(([st["id"] for st in got], cur), (["82", "81"], None))
+        # no outbox for strangers (GoToSocial): their public API instead
+        core._origin_json = lambda url: None
+        far["url"] = "https://far.example/@fay"
+        far["username"] = "fay"
+        api = {"https://far.example/api/v1/accounts/lookup?acct=fay": {"id": "99"},
+               "https://far.example/api/v1/accounts/99/statuses?limit=40&exclude_reblogs=true":
+                   [{"id": "6", "uri": "https://far.example/n/6", "visibility": "public"},
+                    {"id": "4", "uri": "https://far.example/n/4", "visibility": "public"},
+                    {"id": "3", "uri": "https://far.example/n/3", "visibility": "private"}],
+               "https://far.example/api/v1/accounts/99/statuses?limit=40&exclude_reblogs=true"
+               "&max_id=3": []}
+        core._origin_get = api.get
+        got, cur = core.older_from_origin(far, None, have).result()
+        self.assertEqual(([st["id"] for st in got], cur), (["84"], None))  # read to the end
         mine = dict(far, acct="fay")  # someone from my own server: nothing elsewhere
         self.assertEqual(core.older_from_origin(mine).result(), ([], None))
 

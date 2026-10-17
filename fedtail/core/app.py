@@ -1266,15 +1266,16 @@ class Core(SocialMixin):
             from . import replies
             t = time.monotonic()
             outbox = self._outbox_of(acc)
-            if not outbox:
-                return []
             limit = min(40, int(fc.get("remote_posts", 20)))
+            uris = []
             try:
-                uris = replies.outbox_post_uris(self._origin_json, outbox, limit)
+                if outbox:
+                    uris = replies.outbox_post_uris(self._origin_json, outbox, limit)
             except Exception as e:  # noqa: BLE001 — their server, anything goes
                 log.info("profile %s: outbox: %s", acc.get("id"), e)
-                return []
             have = set(have_uris)
+            if not uris:  # no outbox for strangers: their public API, maybe
+                uris = self._older_via_api(acc, None, have, limit, pages=1)[0]
             got = self._resolve_statuses([u for u in uris if u not in have])
             log.info("profile %s: outbox lists %d posts, %d new here, fetched in %.1f s",
                      acc.get("id"), len(uris), len(got), time.monotonic() - t)
@@ -1292,22 +1293,65 @@ class Core(SocialMixin):
                 return [], None
             from . import replies
             t = time.monotonic()
-            where = cursor or self._outbox_of(acc)
-            if not where:
-                return [], None
             limit = min(40, int(self.cfg["feed"].get("remote_posts", 20)))
-            try:
-                uris, nxt = replies.outbox_page(self._origin_json, where, limit, pages=5,
-                                                skip=have_uris)
-            except Exception as e:  # noqa: BLE001 — their server, anything goes
-                log.info("profile %s: outbox page: %s", acc.get("id"), e)
-                return [], None
+            uris, nxt, how = [], None, "outbox"
+            if not (cursor or "").startswith("api:"):
+                where = cursor or self._outbox_of(acc)
+                try:
+                    if where:
+                        uris, nxt = replies.outbox_page(self._origin_json, where, limit,
+                                                        pages=5, skip=have_uris)
+                except Exception as e:  # noqa: BLE001 — their server, anything goes
+                    log.info("profile %s: outbox page: %s", acc.get("id"), e)
+            if not uris and not nxt and (cursor is None or cursor.startswith("api:")):
+                # no outbox for strangers (GoToSocial, Mastodon with authorized fetch):
+                # their server's public API, if it answers without a token
+                how = "api"
+                uris, nxt = self._older_via_api(acc, cursor, set(have_uris), limit)
+            log.info("profile %s: older from origin via %s", acc.get("id"), how)
             got = self._resolve_statuses(uris)
             log.info("profile %s: older from origin: %d listed, %d fetched in %.1f s, %s",
                      acc.get("id"), len(uris), len(got), time.monotonic() - t,
                      "more there" if nxt else "that's all")
             return got, nxt
         return self.bg.submit(job)
+
+    def _older_via_api(self, acc, cursor, have, limit, pages=5):
+        """Someone's public posts from their server's Mastodon API, without my token:
+        (addresses, cursor "api:<their id>:<max id>" or None)."""
+        from urllib.parse import quote, urlparse
+        host = next((urlparse(u).netloc for u in (acc.get("url"), acc.get("uri")) if u), "")
+        if not host:
+            return [], None
+        try:
+            if cursor:
+                _api, their_id, max_id = cursor.split(":", 2)
+            else:
+                found = self._origin_get(f"https://{host}/api/v1/accounts/lookup?acct="
+                                         + quote(acc.get("username") or ""))
+                their_id, max_id = (found or {}).get("id"), ""
+                if not their_id:
+                    log.info("profile %s: %s won't look them up", acc.get("id"), host)
+                    return [], None
+            uris = []
+            for _ in range(pages):
+                url = (f"https://{host}/api/v1/accounts/{quote(str(their_id))}/statuses"
+                       f"?limit=40&exclude_reblogs=true"
+                       + (f"&max_id={quote(max_id)}" if max_id else ""))
+                page = self._origin_get(url)
+                if not isinstance(page, list) or not page:
+                    log.info("profile %s: %s gave %s", acc.get("id"), host,
+                             "nothing more" if page == [] else "no posts to a stranger")
+                    return uris, None
+                max_id = str(page[-1].get("id") or "")
+                uris += [s["uri"] for s in page if s.get("uri") and s["uri"] not in have
+                         and s.get("visibility") in ("public", "unlisted")]
+                if len(uris) >= limit or not max_id:
+                    break
+            return uris, (f"api:{their_id}:{max_id}" if max_id else None)
+        except Exception as e:  # noqa: BLE001 — their server, anything goes
+            log.info("profile %s: %s api: %s", acc.get("id"), host, e)
+            return [], None
 
     def _outbox_of(self, acc):
         for url in (acc.get("uri"), acc.get("url")):

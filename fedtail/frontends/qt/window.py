@@ -392,6 +392,9 @@ class MainWindow(QMainWindow):
         self.lane_items = {}
         self.lane_order = []
         self.lanes.currentItemChanged.connect(self._lane_clicked)
+        # a click on the lane already chosen: no change signal, but its tab comes forward
+        self.lanes.itemClicked.connect(lambda it: self._lane_clicked(it, None, show=True))
+        self._show_lane_tab = False
         self.lanes.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.lanes.customContextMenuRequested.connect(self._lane_menu)
         self._rebuild_sidebar()
@@ -681,18 +684,14 @@ class MainWindow(QMainWindow):
         for g in self.group_heads:
             self._show_fold(g)
         if current:
-            # the sidebar rebuilt (lists changed…) while a search, thread or profile tab
-            # is in front: the lane is chosen again, but that tab stays in front
-            front = self.tabs.currentWidget()
+            # the sidebar rebuilt (lists changed…): the lane is chosen again, but a
+            # search, thread or profile tab in front stays in front
             if current in self.lane_items:
-                self.select_lane(current)
+                self.select_lane(current, show=False)
                 self.lane_items[current].set_current(True)
             else:
                 self.select_lane("people" if "people" in self.lane_items
-                                 else self.lane_order[0])
-            if front is not None and front is not self.stack and \
-                    self.tabs.indexOf(front) >= 0:
-                self.tabs.setCurrentWidget(front)
+                                 else self.lane_order[0], show=False)
         self.update_badges()
 
     def _lane_menu(self, pos):
@@ -755,9 +754,14 @@ class MainWindow(QMainWindow):
             menu.addSeparator()
         menu.addAction(_("list_new"), lambda: self.new_list(add=account["id"]))
 
-    def _lane_clicked(self, cur, _prev):
+    def _lane_clicked(self, cur, _prev, show=False):
+        """A lane chosen. Its tab comes to the front only when I chose it (a click, keys
+        in the sidebar, Alt+N, start-up) — never because the sidebar changed under it
+        while I'm reading a search, a thread or a profile."""
         if not cur or not self.core.me:
             return
+        show = show or self._show_lane_tab or self.lanes.hasFocus() or \
+            self.tabs.currentWidget() is self.stack
         name = cur.data(Qt.ItemDataRole.UserRole)
         if name is None:
             return
@@ -776,10 +780,14 @@ class MainWindow(QMainWindow):
             self.lane_widgets[name] = w
             self.stack.addWidget(w)
         self.stack.setCurrentWidget(w)
-        self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
+        if show:
+            self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
+        else:
+            log.info("lane %s chosen behind the %s tab", name,
+                     type(self.tabs.currentWidget()).__name__)
         if isinstance(w, LaneWidget) and w.dirty:
             w.draw_shown()
-        if isinstance(w, LaneWidget):
+        if isinstance(w, LaneWidget) and show:
             w.view.setFocus()  # j / k work right away
         self.tabs.setTabText(self.tabs.indexOf(self.stack), self.lane_title(name))
         self.core.set_state("lane", name)
@@ -819,15 +827,20 @@ class MainWindow(QMainWindow):
                     if n in self.lane_items)
         head.set_folded(group in self.folded_groups(), total)
 
-    def select_lane(self, name):
-        for i in range(self.lanes.count()):
-            if self.lanes.item(i).data(Qt.ItemDataRole.UserRole) == name:
-                if self.lanes.currentRow() == i:
-                    # already the current row (e.g. after rows were removed under it):
-                    # no change signal will come, so show the lane ourselves
-                    self._lane_clicked(self.lanes.item(i), None)
-                else:
-                    self.lanes.setCurrentRow(i)
+    def select_lane(self, name, show=True):
+        """Choose a lane; show=False: behind whatever tab is in front."""
+        self._show_lane_tab = show
+        try:
+            for i in range(self.lanes.count()):
+                if self.lanes.item(i).data(Qt.ItemDataRole.UserRole) == name:
+                    if self.lanes.currentRow() == i:
+                        # already the current row (e.g. after rows were removed under
+                        # it): no change signal will come, so show the lane ourselves
+                        self._lane_clicked(self.lanes.item(i), None)
+                    else:
+                        self.lanes.setCurrentRow(i)
+        finally:
+            self._show_lane_tab = False
 
     def update_badges(self):
         total = 0
