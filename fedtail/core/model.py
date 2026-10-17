@@ -121,3 +121,27 @@ def reply_mentions(parent, my_acct):
         seen.add(a)
         out.append("@" + acct)
     return " ".join(out) + " " if out else ""
+
+
+# Since when I follow someone: servers don't keep it, so fedtail writes it at the end of
+# my private note on that person — a line of its own, readable in any client.
+FOLLOWED_RE = re.compile(r"\n*\[fedtail followed (\d{4}-\d{2}-\d{2})\]\s*$")
+
+
+def note_followed(note):
+    """The follow date written in a private note (YYYY-MM-DD), or None."""
+    m = FOLLOWED_RE.search(note or "")
+    return m.group(1) if m else None
+
+
+def note_text(note):
+    """The note as I wrote it, without fedtail's line."""
+    return FOLLOWED_RE.sub("", note or "").rstrip()
+
+
+def note_with_followed(text, day):
+    """My text with fedtail's line at the end (day None: without it)."""
+    text = note_text(text)
+    if not day:
+        return text
+    return (text + "\n\n" if text else "") + f"[fedtail followed {day}]"

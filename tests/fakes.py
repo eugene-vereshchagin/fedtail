@@ -177,7 +177,8 @@ class FakeApi:
 
     def relationship(self, acc_id):
         return {"id": acc_id, "following": acc_id in self.w.following,
-                "followed_by": False, "requested": False}
+                "followed_by": False, "requested": False,
+                "note": self.w.notes.get(acc_id, "")}
 
     def follow(self, acc_id, on=True):
         (self.w.following.add if on else self.w.following.discard)(acc_id)

@@ -4,7 +4,10 @@
 
 - Likes & boosts: each row says when (for a group, from when to when; the tooltip lists
   everyone with their time). A profile says "following since …" for people followed
-  through fedtail — the server itself doesn't keep that date.
+  through fedtail — the server itself doesn't keep that date, so fedtail writes it as the
+  last line of my private note on them, `[fedtail followed YYYY-MM-DD]`: seen on every
+  device and in other clients, hidden in fedtail and kept when the note is edited, taken
+  out on unfollow (`feed.follow_date_note`).
 - The player has a ⤓ download button (key S), for gifs too; right click on a video or a
   gif in a post says "Download". Big files go to disk a piece at a time.
 - A profile from another server: once my server has nothing older, "▼ further back —

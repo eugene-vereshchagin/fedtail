@@ -64,6 +64,7 @@ DEFAULTS = {
         "custom_emoji": True,
         "quotes": 'card',
         "remote_profiles": True,
+        "follow_date_note": True,
         "remote_posts": 20,
         "remote_people": True,
         "sensitive_media": 'hide',

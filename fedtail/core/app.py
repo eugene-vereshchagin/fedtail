@@ -605,8 +605,11 @@ class Core(SocialMixin):
     def cancel_scheduled(self, sid):
         return self.submit(self.api.cancel_scheduled, sid)
 
-    def set_note(self, acc_id, text):
-        return self.submit(self.api.set_note, acc_id, text)
+    def set_note(self, acc_id, text, old=""):
+        """My private note on them; fedtail's follow-date line (in `old`) stays on."""
+        from .model import note_followed, note_with_followed
+        return self.submit(self.api.set_note, acc_id,
+                           note_with_followed(text, note_followed(old)))
 
     def filters(self):
         return self.submit(self.api.filters)
@@ -1353,12 +1356,42 @@ class Core(SocialMixin):
             else:
                 since.pop(acc_id, None)
             self.store.kv_set("followed_at", since)
+            if self.cfg["feed"].get("follow_date_note", True):
+                rel = self._note_follow(acc_id, rel, since.get(acc_id) if on else None)
             return rel
         return self.submit(job)
 
-    def followed_since(self, acc_id):
-        """When I followed them through fedtail (ISO time), or None: not known."""
-        return (self.store.kv_get("followed_at", {}) or {}).get(acc_id)
+    def _note_follow(self, acc_id, rel, when):
+        """The follow date into (or out of) my private note on them, on the server — so
+        every device and client of mine sees it. A server without notes: just here."""
+        from .model import note_followed, note_with_followed
+        rel = rel or {}
+        old = rel.get("note")
+        if old is None:
+            try:
+                old = self.api.relationship(acc_id).get("note") or ""
+            except ApiError:
+                return rel
+        day = when[:10] if when else None
+        if when and note_followed(old):
+            return rel  # followed before, unfollowed elsewhere: the first date stays
+        new = note_with_followed(old, day)
+        if new == (old or "").rstrip():
+            return rel
+        try:
+            self.api.set_note(acc_id, new)
+            log.info("follow date %s in the note on %s", day or "taken out", acc_id)
+            return dict(rel, note=new)
+        except ApiError as e:
+            log.info("note on %s: %s", acc_id, e)
+            return rel
+
+    def followed_since(self, acc_id, rel=None):
+        """Since when I follow them — from my note on them (any client of mine wrote it
+        there through fedtail) or from what this profile saw. ISO date or None."""
+        from .model import note_followed
+        return note_followed((rel or {}).get("note")) or \
+            (self.store.kv_get("followed_at", {}) or {}).get(acc_id)
 
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification

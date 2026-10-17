@@ -772,6 +772,27 @@ class CoreTest(TmpDir):
         self.assertNotIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lane_entries(f"list:{x['id']}"), [])
 
+    def test_follow_date_in_private_note(self):
+        """The follow date goes at the end of my note on them, my own text stays; editing
+        the note keeps the line; unfollowing takes it out."""
+        from fedtail.core.model import note_followed, note_text
+        core, w = self.make()
+        core.connect().result()
+        w.notes["B"] = "знакомый с форума"
+        rel = core.follow("B").result()
+        day = note_followed(w.notes["B"])
+        self.assertTrue(day)
+        self.assertEqual(note_text(w.notes["B"]), "знакомый с форума")
+        self.assertEqual(core.followed_since("B", rel), day)
+        core.set_note("B", "знакомый с форума, байкер", w.notes["B"]).result()
+        self.assertEqual(note_followed(w.notes["B"]), day)
+        self.assertEqual(note_text(w.notes["B"]), "знакомый с форума, байкер")
+        core.follow("B", False).result()
+        self.assertEqual(w.notes["B"], "знакомый с форума, байкер")
+        core.cfg["feed"]["follow_date_note"] = False
+        core.follow("N").result()
+        self.assertNotIn("N", w.notes)
+
     def test_list_add_before_follow_confirmed(self):
         """The server refuses someone just followed: they go into the list here at once
         and into the server's list on a later lists refresh."""

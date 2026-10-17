@@ -1479,7 +1479,8 @@ class AccountWidget(_PagedTab):
             bits.append(_("acc_since", date=f"{d}.{m}.{y}"))
         if self.relation.get("followed_by"):
             bits.append("<b>" + _("acc_follows_you") + "</b>")
-        since = self.relation.get("following") and self.core.followed_since(acc["id"])
+        since = self.relation.get("following") and \
+            self.core.followed_since(acc["id"], self.relation)
         if since:
             bits.append(esc(_("acc_followed_since", when=self.win.theme.date(since))))
         meta = QLabel(" · ".join(bits))
@@ -1575,7 +1576,8 @@ class AccountWidget(_PagedTab):
             buttons.addWidget(_button(_("note_edit"), self.edit_note))
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
         lay.addLayout(buttons)
-        note = (self.relation.get("note") or "").strip()
+        from ...core.model import note_text
+        note = note_text(self.relation.get("note")).strip()
         if note and not self.mine:
             label = QLabel("📝 " + esc(note).replace("\n", "<br>"))
             label.setObjectName("muted")
@@ -1586,12 +1588,15 @@ class AccountWidget(_PagedTab):
     def edit_note(self):
         """My private note on this person — only I see it, on my server."""
         from PySide6.QtWidgets import QInputDialog
+
+        from ...core.model import note_text
+        old = self.relation.get("note") or ""
         text, ok = QInputDialog.getMultiLineText(self, _("note_title", acct=self.acc["acct"]),
-                                                 _("note_tip"), self.relation.get("note") or "")
+                                                 _("note_tip"), note_text(old))
         if ok:
-            self.win.bridge.call(self.core.set_note(self.acc_id, text.strip()),
+            self.win.bridge.call(self.core.set_note(self.acc_id, text.strip(), old),
                                  ok=lambda r: self._relation(dict(self.relation,
-                                                                  note=text.strip())),
+                                                                  note=r.get("note", ""))),
                                  fail=self.win.error)
 
     def _toggle_bell(self):
