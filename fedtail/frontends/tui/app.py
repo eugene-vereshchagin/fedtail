@@ -24,6 +24,15 @@ STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "unread": "bold green"}
 
 
+def _cmd_line():
+    """The command line. Focusing it must not select what "r" put there (Textual
+    selects on focus by default): what's typed goes after "#a3f ", not over it."""
+    try:
+        return Input(placeholder=_("tui_cmd_hint"), id="cmd", select_on_focus=False)
+    except TypeError:  # an older Textual, which doesn't select anyway
+        return Input(placeholder=_("tui_cmd_hint"), id="cmd")
+
+
 def render(shown):
     """Shown → one rich Text block."""
     t = Text()
@@ -150,7 +159,7 @@ class ThreadScreen(Screen, PostsMixin):
     def compose(self) -> ComposeResult:
         yield Static(_("tui_thread_loading"), id="title")
         yield ListView(id="posts")
-        yield Input(placeholder=_("tui_cmd_hint"), id="cmd")
+        yield _cmd_line()
         yield Footer()
 
     def on_mount(self):
@@ -251,7 +260,7 @@ class FedtailApp(App, PostsMixin):
             with Vertical(id="main"):
                 yield Static("fedtail", id="title")
                 yield ListView(id="posts")
-        yield Input(placeholder=_("tui_cmd_hint"), id="cmd")
+        yield _cmd_line()
         yield Footer()
 
     def on_mount(self):
