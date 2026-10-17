@@ -77,6 +77,19 @@ def _host(url):
     return host[4:] if host.startswith("www.") else host
 
 
+def emoji_reactions(st):
+    """[{name, count}] — emoji reactions where the server passes them on (Akkoma and
+    Pleroma: pleroma.emoji_reactions; Fedibird, Iceshrimp and kin: emoji_reactions or
+    reactions). Mastodon and GoToSocial have none."""
+    raw = ((st.get("pleroma") or {}).get("emoji_reactions") or st.get("emoji_reactions")
+           or st.get("reactions") or [])
+    out = []
+    for r in raw if isinstance(raw, list) else []:
+        if isinstance(r, dict) and r.get("name") and int(r.get("count") or 0) > 0:
+            out.append({"name": str(r["name"]), "count": int(r["count"])})
+    return sorted(out, key=lambda r: -r["count"])
+
+
 def _set_prop(w, name, value):
     if w.property(name) != value:
         w.setProperty(name, value)
@@ -345,6 +358,13 @@ class PostRow(QWidget):
                 cv.addWidget(card)
         if st.get("poll"):
             cv.addWidget(self._poll(st))
+        reacted = emoji_reactions(st)
+        if reacted:
+            line = self._label(" ".join(
+                f"{esc(r['name'] if len(r['name']) <= 4 else ':' + r['name'].strip(':') + ':')}"
+                f"\u00a0{r['count']}" for r in reacted[:12]), "reactions")
+            line.setToolTip(_("reactions_tip"))
+            cv.addWidget(line)
 
         # a server filter that says "warn": folded like a content warning, closed
         warned = [(f.get("filter") or {}).get("title") or "?" for f in st.get("filtered") or []
@@ -624,6 +644,28 @@ class PostRow(QWidget):
             menu.addAction(_("translate"), self._translate)
         menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
                        lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
+        # who liked, who boosted; quotes of my post; my post out of someone's quote
+        s = real(st)
+        sup = self.ctx.supports
+        for kind, count in (("favourited_by", "favourites_count"),
+                            ("reblogged_by", "reblogs_count")):
+            if sup(kind) and s.get(count):
+                menu.addAction(_("who_" + kind + "_n", n=s[count]),
+                               lambda i=st["id"], k=kind: self.ctx.on_link(f"fedtail:{k}/{i}"))
+        if s["account"]["id"] == self.ctx.me_id and sup("quotes") and \
+                s.get("visibility") in ("public", "unlisted"):
+            menu.addAction(_("quotes_of"), lambda i=st["id"]:
+                           self.ctx.on_link(f"fedtail:quotes/{i}"))
+        quoted = ((s.get("quote") or {}).get("quoted_status") or {})
+        if quoted.get("account", {}).get("id") == self.ctx.me_id and sup("quotes") and \
+                s["account"]["id"] != self.ctx.me_id:
+            menu.addAction(_("revoke_quote"), lambda i=st["id"]:
+                           self.ctx.on_link(f"fedtail:revokequote/{i}"))
+        if sup("mute_thread") and s.get("muted") is not None:  # only threads I'm in
+            muted = bool(s.get("muted"))
+            menu.addAction(_("unmute_thread" if muted else "mute_thread"),
+                           lambda i=st["id"], m=muted:
+                           self.ctx.on_link(f"fedtail:{'unmute' if m else 'mute'}thread/{i}"))
         if self.ctx.subscribed is not None:
             menu.addSeparator()
             on = self.ctx.subscribed(st)

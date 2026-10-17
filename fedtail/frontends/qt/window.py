@@ -58,6 +58,7 @@ from .login import LoginDialog
 from .notify import Notifier, icon_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
+from .social import AccountsWidget, QuotesWidget, ServerInfoDialog, TrendsWidget
 from .viewer import ImageOverlay
 
 log = logging.getLogger(__name__)
@@ -183,6 +184,7 @@ class ViewContext:
     vote: object = None            # (status, [option indexes]) -> vote in its poll
     refresh_poll: object = None    # set when "refresh" next to a poll's results works
     translate: object = None       # (status, done(translation)) -> ask the server
+    supports: object = lambda _feature: True  # can my server do this (core.supports)
 
 
 class MainWindow(QMainWindow):
@@ -194,6 +196,7 @@ class MainWindow(QMainWindow):
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
         self.ctx.subscribed = core.subscribed
+        self.ctx.supports = core.supports
         self.ctx.save_image = self.save_image
         self.ctx.vote = self.vote
         self.ctx.refresh_poll = True
@@ -471,6 +474,17 @@ class MainWindow(QMainWindow):
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
         m.addAction(_("my_profile"), self.open_my_profile)
+        people = m.addMenu(_("menu_people"))
+        for feature, label, slot in (
+                ("suggestions", _("suggestions_title"), self.open_suggestions),
+                ("directory", _("directory_title"), lambda: self.open_directory(False)),
+                ("directory", _("directory_local"), lambda: self.open_directory(True)),
+                ("trends", _("trends_title"), self.open_trends)):
+            if self.core.supports(feature) and \
+                    (feature != "trends" or any(self.core.supports("trends_" + k)
+                                                for k in ("statuses", "tags", "links"))):
+                people.addAction(label, slot)
+        m.addAction(_("server_info") + "…", self.show_server_info)
         m.addMenu(self.accounts_menu(m))
         m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
@@ -973,6 +987,60 @@ class MainWindow(QMainWindow):
         w = PeopleWidget(self, acc, which)
         self._add_tab(w, w.title)
 
+    def open_accounts(self, key, title, fetch, **kw):
+        """A tab with a list of people (who liked, suggestions, the directory…)."""
+        for w in self.extra_tabs():
+            if isinstance(w, AccountsWidget) and w.key == key:
+                self.tabs.setCurrentWidget(w)
+                return
+        w = AccountsWidget(self, key, title, fetch, **kw)
+        self._add_tab(w, title)
+
+    def open_reactions(self, st, kind):
+        """Who liked (kind="favourited_by") or boosted ("reblogged_by") a post: as my
+        server knows, then — for a post from elsewhere — as its own server knows."""
+        from urllib.parse import urlparse
+
+        from ...core import counters
+        s = real(st)
+        title = _("who_" + kind, text=snippet(s, 30))
+        origin = counters.origin_api_url(s, (self.core.auth or {}).get("server", ""))
+        kw = {}
+        if origin and self.cfg["feed"].get("remote_people", True):
+            kw = {"origin": lambda have: self.core.who_reacted_from_origin(st, kind, have),
+                  "origin_label": _("people_more_from", host=urlparse(origin).hostname)}
+        self.open_accounts(f"{kind}:{s['id']}", title,
+                           lambda cur: self.core.who_reacted(st, kind, cur), **kw)
+
+    def open_suggestions(self):
+        self.open_accounts("suggestions", _("suggestions_title"), self.core.suggestions,
+                           dismiss=self.core.dismiss_suggestion)
+
+    def open_directory(self, local):
+        key = "directory_local" if local else "directory_title"
+        self.open_accounts(key, _(key), lambda cur: self.core.directory(cur, local))
+
+    def open_quotes(self, st):
+        for w in self.extra_tabs():
+            if isinstance(w, QuotesWidget) and w.status["id"] == real(st)["id"]:
+                self.tabs.setCurrentWidget(w)
+                return
+        w = QuotesWidget(self, st)
+        self._add_tab(w, w.title)
+
+    def open_trends(self):
+        for w in self.extra_tabs():
+            if isinstance(w, TrendsWidget):
+                self.tabs.setCurrentWidget(w)
+                w.reload()
+                return
+        w = TrendsWidget(self)
+        self._add_tab(w, w.title)
+
+    def show_server_info(self):
+        self.bridge.call(self.core.server_info(),
+                         ok=lambda info: ServerInfoDialog(self, info).exec(), fail=self.error)
+
     def open_tag(self, tag):
         for w in self.extra_tabs():
             if isinstance(w, TagWidget) and w.tag.lower() == tag.lower():
@@ -1111,6 +1179,27 @@ class MainWindow(QMainWindow):
                                  fail=self.error)
         elif action == "quote":
             Compose(self, quote=st).show()
+        elif action in ("favourited_by", "reblogged_by"):
+            self.open_reactions(st, action)
+        elif action in ("mutethread", "unmutethread"):
+            on = action == "mutethread"
+            self.bridge.call(self.core.mute_thread(st, on),
+                             ok=lambda _s: self.statusBar().showMessage(
+                                 _("thread_muted" if on else "thread_unmuted"), 5000),
+                             fail=self.error)
+        elif action == "quotes":
+            self.open_quotes(st)
+        elif action == "revokequote":
+            q = real(st).get("quote") or {}
+            mine = q.get("quoted_status")
+            if mine and QMessageBox.question(
+                    self, _("revoke_quote"),
+                    _("revoke_quote_q", acct=real(st)["account"]["acct"])) \
+                    == QMessageBox.StandardButton.Yes:
+                self.bridge.call(self.core.revoke_quote(mine, st),
+                                 ok=lambda _s: self.statusBar().showMessage(
+                                     _("quote_revoked"), 5000),
+                                 fail=self.error)
         elif action in ("pin", "unpin"):
             on = action == "pin"
             self.bridge.call(self.core.pin(st, on), ok=lambda _s: self.statusBar().showMessage(

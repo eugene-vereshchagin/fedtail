@@ -1036,6 +1036,7 @@ class AccountWidget(_PagedTab):
         self._origin_asked = False
         self.pinned = []
         self.featured = {}
+        self.familiar = []  # of the people I follow, who follows this one
         self.reload_account()
         self.more()
         if self.core.cfg["feed"].get("profile_pinned", True):
@@ -1132,6 +1133,14 @@ class AccountWidget(_PagedTab):
         self.win.retitle(self)
         self._fill()
         self._from_origin()
+        if not self.mine and self.core.supports("familiar"):
+            self.win.bridge.call(self.core.familiar(self.acc_id), ok=self._familiar,
+                                 fail=lambda _e: None)
+
+    def _familiar(self, accounts):
+        self.familiar = accounts or []
+        if self.familiar and self.acc:
+            self._fill()
 
     def _fill(self):
         from ...core import links
@@ -1215,6 +1224,17 @@ class AccountWidget(_PagedTab):
                 for t in self.featured.get("tags") or [] if t.get("name")]
         people = [link("account", a["id"], "@" + esc(a["acct"]), theme.css("link"))
                   for a in self.featured.get("people") or [] if a.get("id")]
+        known = [link("account", a["id"], "@" + esc(a["acct"]), theme.css("link"))
+                 for a in self.familiar[:5] if a.get("id")]
+        if known:
+            more = len(self.familiar) - len(known)
+            row = QLabel(_("familiar", who=", ".join(known) +
+                           (" " + _("act_more", n=more) if more > 0 else "")))
+            row.setObjectName("featured")
+            row.setTextFormat(Qt.TextFormat.RichText)
+            row.setWordWrap(True)
+            row.linkActivated.connect(self.win.on_link)
+            col.addWidget(row)
         for key, items in (("featured_tags", tags), ("featured_people", people)):
             if items:
                 row = QLabel(f"<b>{_(key)}</b> " + ", ".join(items))
@@ -1245,6 +1265,12 @@ class AccountWidget(_PagedTab):
                                       self._toggle_mute))
             buttons.addWidget(_button(_("unblock") if self.relation.get("blocking")
                                       else _("block"), self._toggle_block))
+            if self.relation.get("followed_by") and self.core.supports("remove_follower"):
+                buttons.addWidget(_button(_("remove_follower"), self._remove_follower))
+            if following and self.core.supports("endorse"):
+                buttons.addWidget(_button(
+                    _("unendorse") if self.relation.get("endorsed") else _("endorse"),
+                    self._toggle_endorse, tip=_("endorse_tip")))
             if self.win.ctx.fill_list_menu is not None:
                 from PySide6.QtWidgets import QMenu
                 lb = _button(_("add_to_list"), lambda: None)
@@ -1307,6 +1333,27 @@ class AccountWidget(_PagedTab):
         on = not (self.relation.get("following") or self.relation.get("requested"))
         self.win.bridge.call(self.core.follow(self.acc_id, on), ok=self._relation)
 
+    def _remove_follower(self):
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(self, _("remove_follower"),
+                                _("remove_follower_q", acct=self.acc["acct"])) \
+                != QMessageBox.StandardButton.Yes:
+            return
+        self.win.bridge.call(self.core.remove_follower(self.acc_id),
+                             ok=lambda r: (self._relation(dict(self.relation, followed_by=False,
+                                                               **(r or {}))),
+                                           self.win.statusBar().showMessage(
+                                               _("follower_removed", acct=self.acc["acct"]),
+                                               6000)),
+                             fail=self.win.error)
+
+    def _toggle_endorse(self):
+        on = not self.relation.get("endorsed")
+        self.win.bridge.call(self.core.endorse(self.acc_id, on),
+                             ok=lambda r: self._relation(dict(self.relation, endorsed=on,
+                                                              **(r or {}))),
+                             fail=self.win.error)
+
 
 class TagWidget(_PagedTab):
     """Posts with a hashtag, as your server knows them."""
@@ -1318,8 +1365,29 @@ class TagWidget(_PagedTab):
         self.follow_btn = self.header.add(_button(_("tag_follow"), self._toggle_follow))
         self.follow_btn.setToolTip(_("tag_follow_tip"))
         self.following = False
+        self.featured = None  # is it on my profile (featured tags); None: not known yet
+        self.feature_btn = None
+        if self.core.supports("featured_tags"):
+            self.feature_btn = self.header.add(_button(_("tag_feature"), self._toggle_feature,
+                                                       tip=_("tag_feature_tip")))
+            self.feature_btn.setEnabled(False)
+            win.bridge.call(self.core.featured_tag_names(), ok=self._featured,
+                            fail=lambda _e: self.feature_btn.hide())
         win.bridge.call(self.core.tag_info(tag), ok=self._info, fail=lambda _e: None)
         self.more()
+
+    def _featured(self, names):
+        self.featured = self.tag.lower() in (names or set())
+        self.feature_btn.setText(_("tag_unfeature") if self.featured else _("tag_feature"))
+        self.feature_btn.setEnabled(True)
+
+    def _toggle_feature(self):
+        on = not self.featured
+        self.feature_btn.setEnabled(False)
+        self.win.bridge.call(self.core.feature_tag(self.tag, on),
+                             ok=lambda _r: self._featured({self.tag.lower()} if on else set()),
+                             fail=lambda e: (self.feature_btn.setEnabled(True),
+                                             self.win.error(e)))
 
     def _info(self, t):
         self.following = bool((t or {}).get("following"))
@@ -1441,6 +1509,8 @@ class ActivityWidget(QWidget):
         self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
         self.header.add(_button(_("mark_all_read"), self.core.mark_activity_seen,
                                 icon="mail-mark-read"))
+        if self.core.supports("dismiss"):
+            self.header.add(_button(_("activity_clear"), self._clear, icon="edit-clear-all"))
         lay.addWidget(self.header)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -1511,7 +1581,18 @@ class ActivityWidget(QWidget):
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
         top.linkActivated.connect(self.win.on_link)
-        v.addWidget(top)
+        if self.core.supports("dismiss"):
+            line = QHBoxLayout()
+            line.addWidget(top, 1)
+            x = QPushButton("×")
+            x.setObjectName("tool")
+            x.setFixedWidth(28)
+            x.setToolTip(_("activity_dismiss_tip"))
+            x.clicked.connect(lambda _c=False, ids=[e["id"] for e in es]: self._dismiss(ids))
+            line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
+            v.addLayout(line)
+        else:
+            v.addWidget(top)
         if st:
             post = QLabel(f'<a href="fedtail:thread/{esc(real(st)["id"])}" '
                           f'style="text-decoration:none;color:{self.win.theme.c["muted"].name()};">'
@@ -1526,6 +1607,17 @@ class ActivityWidget(QWidget):
     def _mark_seen(self):
         if self.isVisible() and self.window().isActiveWindow():
             self.core.mark_activity_seen()
+
+    def _dismiss(self, ids):
+        """A row gone: each notification in it, here and on the server."""
+        for nid in ids:
+            self.win.bridge.call(self.core.dismiss_activity(nid), fail=self.win.error)
+
+    def _clear(self):
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(self, _("activity_clear"), _("activity_clear_q")) \
+                == QMessageBox.StandardButton.Yes:
+            self.win.bridge.call(self.core.clear_activity(), fail=self.win.error)
 
     def showEvent(self, e):
         super().showEvent(e)
