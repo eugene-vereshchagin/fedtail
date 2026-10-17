@@ -337,6 +337,10 @@ _STRINGS = {
         "mark_one_read": "Прочитано",
         "copy": "Копировать",
         "older_from_origin": "▼ ещё раньше — с {host}",
+        "acc_followed_since": "подписан с {when}",
+        "older_from_origin_tip": "Мой сервер знает его посты только с тех пор, как они до "
+                                 "него дошли (обычно — с подписки). Более старые — с {host}",
+        "older_from_origin_note": "старые посты, могут быть ещё до подписки",
         "list_pending": "Сервер пока не берёт его в список (подписка ещё не подтверждена) — "
                         "добавлю сам, как только сможет",
         "media_filter": "Что показывать",
@@ -823,6 +827,10 @@ _STRINGS = {
         "mark_one_read": "Mark read",
         "copy": "Copy",
         "older_from_origin": "▼ further back — from {host}",
+        "acc_followed_since": "following since {when}",
+        "older_from_origin_tip": "My server knows their posts only since they reached it "
+                                 "(usually since the follow). Older ones come from {host}",
+        "older_from_origin_note": "old posts, maybe from before the follow",
         "list_pending": "The server won't take them into the list yet (the follow isn't "
                         "confirmed) — I'll add them as soon as it does",
         "media_filter": "Show",

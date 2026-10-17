@@ -1325,6 +1325,7 @@ class AccountWidget(_PagedTab):
             return
         self._older_origin = True
         self.btn_more.setText(_("older_from_origin", host=host))
+        self.btn_more.setToolTip(_("older_from_origin_tip", host=host))
         self.btn_more.setEnabled(True)
 
     def more(self):
@@ -1349,7 +1350,9 @@ class AccountWidget(_PagedTab):
                 self.btn_more.setEnabled(True)
             else:
                 self.btn_more.setText(_("no_older"))
-            self.win.statusBar().showMessage(_("origin_got", n=len(new), host=host), 5000)
+            self.win.statusBar().showMessage(
+                _("origin_got", n=len(new), host=host) + " · " + _("older_from_origin_note"),
+                8000)
 
         def failed(e):
             self.btn_more.setText(_("older_from_origin", host=host))
@@ -1476,6 +1479,9 @@ class AccountWidget(_PagedTab):
             bits.append(_("acc_since", date=f"{d}.{m}.{y}"))
         if self.relation.get("followed_by"):
             bits.append("<b>" + _("acc_follows_you") + "</b>")
+        since = self.relation.get("following") and self.core.followed_since(acc["id"])
+        if since:
+            bits.append(esc(_("acc_followed_since", when=self.win.theme.date(since))))
         meta = QLabel(" · ".join(bits))
         meta.setObjectName("muted")
         meta.setTextFormat(Qt.TextFormat.RichText)
@@ -1860,8 +1866,18 @@ class ActivityWidget(QWidget):
         more = len(names) - self.MAX_NAMES
         who = ", ".join(names[:self.MAX_NAMES]) + \
             (" " + _("act_more", n=more) if more > 0 else "")
-        top = QLabel(f'{who} <span style="color:{self.win.theme.c["muted"].name()};">— '
-                     f'{_("act_" + kind) if kind in ACT_KINDS else kind}</span>')
+        # when: the newest of the group, and since when if they came over a while
+        theme = self.win.theme
+        times = sorted((e.get("created_at") or "" for e in es), reverse=True)
+        when = theme.date(times[0]) if times and times[0] else ""
+        if len(times) > 1 and times[-1] and theme.date(times[-1]) != when:
+            when = f"{theme.date(times[-1])} … {when}"
+        top = QLabel(f'{who} <span style="color:{theme.c["muted"].name()};">— '
+                     f'{_("act_" + kind) if kind in ACT_KINDS else kind}'
+                     + (f' · {esc(when)}' if when else "") + '</span>')
+        if len(es) > 1:
+            top.setToolTip("\n".join(f'{theme.date(e.get("created_at") or "")}  '
+                                      f'{e["account"].get("acct", "")}' for e in es[:30]))
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
         top.linkActivated.connect(self.win.on_link)

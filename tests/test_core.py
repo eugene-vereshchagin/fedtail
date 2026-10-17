@@ -465,6 +465,7 @@ class CoreTest(TmpDir):
         core.connect().result()
         self.assertFalse(core.relationship("B").result()["following"])
         self.assertTrue(core.follow("B").result()["following"])
+        self.assertTrue(core.followed_since("B"))  # the server won't say: written down here
         self.assertEqual([s["id"] for s in core.tag_timeline("linux").result()], ["070"])
         self.assertEqual(core.resolve(st["url"]).result()[0], "status")
         self.assertEqual(core.resolve(BOB["url"]).result()[0], "account")

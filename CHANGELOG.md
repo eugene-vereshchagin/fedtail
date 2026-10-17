@@ -2,6 +2,9 @@
 
 ## 0.11.0 — in progress
 
+- Likes & boosts: each row says when (for a group, from when to when; the tooltip lists
+  everyone with their time). A profile says "following since …" for people followed
+  through fedtail — the server itself doesn't keep that date.
 - The player has a ⤓ download button (key S), for gifs too; right click on a video or a
   gif in a post says "Download". Big files go to disk a piece at a time.
 - A profile from another server: once my server has nothing older, "▼ further back —

@@ -1343,7 +1343,22 @@ class Core(SocialMixin):
         return self.submit(self.api.relationship, acc_id)
 
     def follow(self, acc_id, on=True):
-        return self.submit(self.api.follow, acc_id, on)
+        """Follow or not. The server doesn't say since when I follow someone, so the
+        moment it happens through fedtail is written down here (followed_since)."""
+        def job():
+            rel = self.api.follow(acc_id, on)
+            since = dict(self.store.kv_get("followed_at", {}) or {})
+            if on:
+                since.setdefault(acc_id, now_iso())
+            else:
+                since.pop(acc_id, None)
+            self.store.kv_set("followed_at", since)
+            return rel
+        return self.submit(job)
+
+    def followed_since(self, acc_id):
+        """When I followed them through fedtail (ISO time), or None: not known."""
+        return (self.store.kv_get("followed_at", {}) or {}).get(acc_id)
 
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification
