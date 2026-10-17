@@ -89,6 +89,18 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("escape")
             await self.wait(pilot, lambda: not isinstance(app.screen, ThreadScreen))
 
+            # p: the author's profile, with their posts; F follows
+            from fedtail.frontends.tui.app import ProfileScreen
+            posts.focus()
+            posts.index = [i.status["id"] for i in posts.children].index("003")
+            await pilot.press("p")
+            await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
+            await self.wait(pilot, lambda: len(app.screen.query_one("#posts").children) >= 1)
+            await pilot.press("F")
+            await self.wait(pilot, lambda: "B" in w.following)
+            await pilot.press("escape")
+            await self.wait(pilot, lambda: not isinstance(app.screen, ProfileScreen))
+
             # another lane from the list
             lanes = app.query_one("#lanes", ListView)
             names = [i.lane for i in lanes.children]

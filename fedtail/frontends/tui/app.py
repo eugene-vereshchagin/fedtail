@@ -134,6 +134,11 @@ class PostsMixin(Ui):
         if st:
             self.app.push_screen(ThreadScreen(real(st)["id"]))
 
+    def action_profile(self):
+        st = self.current()
+        if st:
+            self.app.push_screen(ProfileScreen(real(st)["account"]["id"]))
+
     def action_browser(self):
         st = self.current()
         url = real(st).get("url") if st else None
@@ -150,6 +155,7 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
                 Binding("o", "browser", _("open_browser"), show=False),
+                Binding("p", "profile", _("tui_profile")),
                 Binding("colon", "command", ":", show=False)]
 
     def __init__(self, status_id):
@@ -207,6 +213,104 @@ class ThreadScreen(Screen, PostsMixin):
         await self.app.run_line(e.input, self)
 
 
+class ProfileScreen(Screen, PostsMixin):
+    """Someone's profile: who, the bio, follows you or not; F — follow / unfollow;
+    their posts below (Enter — a thread)."""
+
+    BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
+                Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
+                Binding("F", "follow", _("follow")),
+                Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
+                Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
+                Binding("o", "browser", _("open_browser"), show=False),
+                Binding("colon", "command", ":", show=False)]
+
+    def __init__(self, acc_id):
+        super().__init__()
+        self.acc_id = acc_id
+        self.acc, self.rel = None, {}
+
+    def compose(self) -> ComposeResult:
+        yield Static(_("tui_thread_loading"), id="title")
+        yield Static("", id="about")
+        yield ListView(id="posts")
+        yield _cmd_line()
+        yield Footer()
+
+    def on_mount(self):
+        core = self.app.core
+        self.query_one("#posts", ListView).focus()
+        self.later(core.account(self.acc_id), ok=self.got_account)
+        if not core.me or self.acc_id != core.me["id"]:
+            self.later(core.relationship(self.acc_id), ok=self.got_relation,
+                       fail=lambda _e: None)
+        self.later(core.account_statuses(self.acc_id), ok=self.fill)
+
+    def got_account(self, acc):
+        self.acc = acc
+        self.show_about()
+
+    def got_relation(self, rel):
+        self.rel = rel or {}
+        self.show_about()
+
+    def show_about(self):
+        acc = self.acc
+        if not acc:
+            return
+        from ...core.model import html_to_text
+        head = Text(acc.get("display_name") or acc.get("username", ""), style="bold")
+        head.append(f"  @{acc.get('acct', '')}", style="cyan")
+        self.query_one("#title", Static).update(head)
+        t = Text()
+        bits = [_(key, n=acc[field]) for key, field in
+                (("posts_n", "statuses_count"), ("followers_n", "followers_count"),
+                 ("following_n", "following_count")) if field in acc]
+        if self.rel.get("followed_by"):
+            bits.append(_("acc_follows_you"))
+        if self.rel.get("following"):
+            bits.append("✓ " + _("tui_you_follow"))
+        t.append(" · ".join(bits), style="dim")
+        note = html_to_text(acc.get("note") or "").strip()
+        if note:
+            t.append("\n" + note)
+        for f in acc.get("fields") or []:
+            t.append("\n" + f.get("name", "") + ": ", style="bold")
+            t.append(html_to_text(f.get("value", "")))
+        self.query_one("#about", Static).update(t)
+
+    async def fill(self, page):
+        core = self.app.core
+        lv = self.query_one("#posts", ListView)
+        width = max(30, self.size.width - 6)
+        short = core.short_ids(page)
+        items = [PostItem(st, render(show_post(core, st, short.get(real(st)["id"]), width=width,
+                                               parent=core.parent_of(st))), key=st["id"])
+                 for st in page]
+        await lv.clear()
+        await lv.extend(items)
+        if items:
+            lv.index = 0
+
+    def action_follow(self):
+        on = not self.rel.get("following")
+        self.later(self.app.core.follow(self.acc_id, on),
+                   ok=lambda _r: (self.app.notify(_("cmd_followed" if on else "cmd_unfollowed",
+                                                    who=(self.acc or {}).get("acct", "?"))),
+                                  self.later(self.app.core.relationship(self.acc_id),
+                                             ok=self.got_relation)))
+
+    def action_command(self):
+        self.query_one("#cmd", Input).focus()
+
+    def status_changed(self, st):
+        self.later(self.app.core.account_statuses(self.acc_id), ok=self.fill)
+
+    async def on_input_submitted(self, e: Input.Submitted):
+        e.stop()
+        await self.app.run_line(e.input, self)
+
+
 class FedtailApp(App, PostsMixin):
     CSS = """
     #lanes { width: 26; border-right: solid $primary-background; }
@@ -223,6 +327,7 @@ class FedtailApp(App, PostsMixin):
                 Binding("n", "new", _("write")), Binding("x", "all_read", _("tui_all_read")),
                 Binding("R", "refresh", _("refresh"), show=False),
                 Binding("o", "browser", _("open_browser"), show=False),
+                Binding("p", "profile", _("tui_profile")),
                 Binding("tab", "switch", _("tui_switch"), show=False),
                 Binding("colon", "command", ":", show=False),
                 Binding("escape", "escape", show=False)]
@@ -390,9 +495,10 @@ class FedtailApp(App, PostsMixin):
         if e.list_view.id == "lanes" and isinstance(e.item, LaneItem):
             await self.select_lane(e.item.lane)
             self.query_one("#posts", ListView).focus()
-        elif e.list_view.id == "posts" and isinstance(self.screen, Screen) and \
-                self.screen is self.screen_stack[0]:
+        elif e.list_view.id == "posts" and self.screen is self.screen_stack[0]:
             self.action_open()
+        elif e.list_view.id == "posts" and isinstance(self.screen, ProfileScreen):
+            self.screen.action_open()
 
     def on_list_view_highlighted(self, e: ListView.Highlighted):
         if e.list_view.id != "posts" or not isinstance(e.item, PostItem):
@@ -424,7 +530,7 @@ class FedtailApp(App, PostsMixin):
             if isinstance(result, tuple) and result[0] == "thread":
                 self.push_screen(ThreadScreen(result[1]))
             elif isinstance(result, tuple) and result[0] == "profile":
-                self.notify("@" + result[1]["acct"] + " — " + _("tui_no_profiles"))
+                self.push_screen(ProfileScreen(result[1]["id"]))
             elif isinstance(result, tuple) and result[0] == "delete":
                 self.later(self.core.delete(result[1]), ok=lambda _r: self.notify(_("deleted")))
             elif isinstance(result, str):

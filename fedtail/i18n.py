@@ -79,7 +79,7 @@ _STRINGS = {
         "tui_all_read": "Прочитано", "tui_switch": "Ленты/посты",
         "tui_connecting": "Подключаюсь…", "tui_connect_failed": "Не подключиться: {err}",
         "tui_unread": ["{n} непрочитанный", "{n} непрочитанных", "{n} непрочитанных"],
-        "tui_no_profiles": "профили в терминале пока не открываются; в окне — да",
+        "tui_profile": "Профиль", "tui_you_follow": "ты подписан",
         "tui_login_server": "Твой сервер (адрес):",
         "tui_login_code": "Открой ссылку ниже (браузер, наверное, уже открыл), войди и вставь код:",
         "tui_code": "код",
@@ -494,7 +494,7 @@ _STRINGS = {
         "tui_all_read": "All read", "tui_switch": "Lanes/posts",
         "tui_connecting": "Connecting…", "tui_connect_failed": "Can't connect: {err}",
         "tui_unread": ["{n} unread", "{n} unread"],
-        "tui_no_profiles": "profiles don't open in the terminal yet; in the window they do",
+        "tui_profile": "Profile", "tui_you_follow": "you follow",
         "tui_login_server": "Your server (its address):",
         "tui_login_code": "Open the link below (the browser may have done it already), log in, "
                           "paste the code:",
