@@ -346,6 +346,14 @@ class CoreTest(TmpDir):
         self.addCleanup(core.shutdown)
         return core, FakeApi.world
 
+    def test_featured_tags_and_people(self):
+        core, w = self.make()
+        core.connect().result()
+        self.assertEqual(core.featured("B").result(), {"tags": [], "people": []})
+        w.featured["B"] = {"tags": [{"name": "x"}], "people": [NEWS]}
+        got = core.featured("B").result()
+        self.assertEqual((got["tags"][0]["name"], got["people"][0]["id"]), ("x", "N"))
+
     def test_filtered_notifications(self):
         core, w = self.make()
         core.connect().result()

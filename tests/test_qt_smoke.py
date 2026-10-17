@@ -912,6 +912,24 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(tab.view.order[0], "pin:011")
         self.assertNotIn("011", tab.view.rows)  # not twice
 
+    def test_featured_on_profile(self):
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.feed import AccountWidget
+        self.world.featured["B"] = {"tags": [{"name": "fediverse", "statuses_count": "12"}],
+                                    "people": [fakes.NEWS]}
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.on_link("fedtail:account/B")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountWidget)
+        rows = lambda: [w.text() for w in tab.info.findChildren(QLabel)
+                        if w.objectName() == "featured"]
+        self.pump(until=lambda: len(rows()) == 2)
+        self.assertIn("fedtail:tag/fediverse", rows()[0])
+        self.assertIn("(12)", rows()[0])
+        self.assertIn("fedtail:account/N", rows()[1])
+
     def test_sensitive_media_covered(self):
         from PySide6.QtWidgets import QLabel
 

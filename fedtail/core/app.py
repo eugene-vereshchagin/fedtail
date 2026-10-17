@@ -1459,6 +1459,20 @@ class Core:
         return self.submit(self.api.report, s["account"]["id"], [s["id"]], comment,
                            forward, category)
 
+    def featured(self, acc_id):
+        """What someone puts forward on their profile: {"tags": [featured tags],
+        "people": [accounts they recommend]}. A server without one of these gives []."""
+        def job():
+            out = {}
+            for key, fn in (("tags", self.api.featured_tags), ("people", self.api.endorsements)):
+                try:
+                    out[key] = fn(acc_id) or []
+                except ApiError as e:
+                    log.debug("featured %s: %s", key, e)
+                    out[key] = []
+            return out
+        return self.submit(job)
+
     def pinned(self, acc_id):
         """The posts someone pinned to the top of their profile (a future of a list)."""
         def job():

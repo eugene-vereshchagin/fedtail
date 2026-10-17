@@ -11,6 +11,8 @@
 - Filtered notifications (Mastodon 4.3+): ≡ → Filtered notifications… — the senders held back
   (let through, dismiss, open the profile) and the policy for each kind of sender;
   `notify.filtered` = `"remind"` (also a line at start when someone waits), `"menu"`, `"off"`.
+- A profile shows the person's featured tags and the people they recommend
+  (`feed.profile_featured`).
 
 ## 0.8.0 — 2026-10-17
 

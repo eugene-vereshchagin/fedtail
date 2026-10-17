@@ -143,6 +143,14 @@ class FakeApi:
         self.w.reports.append((acc_id, list(status_ids), comment, forward, category))
         return {"id": "r1"}
 
+    def featured_tags(self, acc_id):
+        if acc_id not in self.w.featured:
+            raise ApiError(404, "not found")
+        return self.w.featured[acc_id].get("tags", [])
+
+    def endorsements(self, acc_id):
+        return self.w.featured.get(acc_id, {}).get("people", [])
+
     def pinned(self, acc_id):
         return [s for s in self.w.statuses.values()
                 if s["account"]["id"] == acc_id and s.get("pinned")]
@@ -416,6 +424,7 @@ class World:
         self.requests = []
         self.posted = []
         self.announcements = []
+        self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.policy = None  # notification policy: None — the server has none (404)
         self.held, self.answered = [], []  # notification requests; answers to them
         self.me = ME

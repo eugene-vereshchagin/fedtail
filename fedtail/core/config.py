@@ -60,6 +60,7 @@ DEFAULTS = {
         "sensitive_media": 'hide',
         "profile_pinned": True,
         "translate": True,
+        "profile_featured": True,
     },
     "read": {
         "mark_read": "on_scroll",

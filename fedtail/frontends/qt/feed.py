@@ -954,11 +954,20 @@ class AccountWidget(_PagedTab):
         self._first_page = None
         self._origin_asked = False
         self.pinned = []
+        self.featured = {}
         self.reload_account()
         self.more()
         if self.core.cfg["feed"].get("profile_pinned", True):
             self.win.bridge.call(self.core.pinned(self.acc_id), ok=self._pinned,
                                  fail=lambda _e: None)
+        if self.core.cfg["feed"].get("profile_featured", True):
+            self.win.bridge.call(self.core.featured(self.acc_id), ok=self._featured,
+                                 fail=lambda _e: None)
+
+    def _featured(self, got):
+        self.featured = got or {}
+        if self.acc and (self.featured.get("tags") or self.featured.get("people")):
+            self._fill()
 
     def _pinned(self, statuses):
         self.pinned = statuses or []
@@ -1118,6 +1127,21 @@ class AccountWidget(_PagedTab):
             row.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             row.linkActivated.connect(self.win.on_link)
             col.addWidget(row)
+        from .text import link
+        tags = [link("tag", t["name"], "#" + esc(t["name"]), theme.css("link"))
+                + (f" <small>({int(t['statuses_count'])})</small>"
+                   if t.get("statuses_count") else "")
+                for t in self.featured.get("tags") or [] if t.get("name")]
+        people = [link("account", a["id"], "@" + esc(a["acct"]), theme.css("link"))
+                  for a in self.featured.get("people") or [] if a.get("id")]
+        for key, items in (("featured_tags", tags), ("featured_people", people)):
+            if items:
+                row = QLabel(f"<b>{_(key)}</b> " + ", ".join(items))
+                row.setObjectName("featured")
+                row.setTextFormat(Qt.TextFormat.RichText)
+                row.setWordWrap(True)
+                row.linkActivated.connect(self.win.on_link)
+                col.addWidget(row)
         top.addLayout(col, 1)
         lay.addLayout(top)
 

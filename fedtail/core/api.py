@@ -253,6 +253,12 @@ class Api:
     def pinned(self, acc_id):
         return self.get(f"/api/v1/accounts/{acc_id}/statuses", {"pinned": "true"}) or []
 
+    def featured_tags(self, acc_id):
+        return self.get(f"/api/v1/accounts/{acc_id}/featured_tags") or []
+
+    def endorsements(self, acc_id):
+        return self.get(f"/api/v1/accounts/{acc_id}/endorsements", {"limit": 40}) or []
+
     def pin(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'pin' if on else 'unpin'}")
 

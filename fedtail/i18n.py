@@ -59,6 +59,7 @@ _STRINGS = {
                              "«Отфильтрованные уведомления…»",
                              "{n} отправителей ждут в отфильтрованных уведомлениях: ≡ → "
                              "«Отфильтрованные уведомления…»"],
+        "featured_tags": "Часто пишет о:", "featured_people": "Рекомендует:",
         "announce_title": "Объявление сервера", "announce_ok": "Понятно",
         "tip_announce_ok": "Больше не показывать (сервер запомнит и для других клиентов)",
         "announce_more": ["ещё {n}", "ещё {n}", "ещё {n}"],
@@ -452,6 +453,7 @@ _STRINGS = {
                              "\"Filtered notifications…\"",
                              "{n} senders are waiting in filtered notifications: ≡ → "
                              "\"Filtered notifications…\""],
+        "featured_tags": "Often writes about:", "featured_people": "Recommends:",
         "announce_title": "Server announcement", "announce_ok": "Got it",
         "tip_announce_ok": "Don't show it again (the server remembers it for other apps too)",
         "announce_more": ["{n} more", "{n} more"],

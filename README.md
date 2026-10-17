@@ -295,6 +295,9 @@ counts and an "Edit profile" button — name, about, avatar, header, profile fie
 whether to approve followers by hand, mark the account as a bot, show it in the directory.
 Only what you changed is sent to the server.
 
+A profile also shows what its owner puts forward: the tags they feature and the people they
+recommend (`feed.profile_featured`).
+
 ## Notifications
 
 **Activity** is a lane of its own: who favourited or boosted your posts and who followed you,
