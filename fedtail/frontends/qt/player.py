@@ -115,8 +115,15 @@ class VideoOverlay(QWidget):
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
         self.player.setVideoOutput(self.video)
+        self.gif = loop
         if loop:
+            # a gif: just the picture, big and looping — no player bar, no sound;
+            # a click anywhere or Esc closes it, as in the image viewer
             self.player.setLoops(INFINITE)
+            self.audio.setMuted(True)
+            for w in (self.btn, self.slider, self.time, self.mute):
+                w.hide()
+            keys.setText(_("gif_keys"))
         self.player.durationChanged.connect(lambda d: self.slider.setRange(0, int(d)))
         self.player.positionChanged.connect(self._position)
         self.player.errorOccurred.connect(self._error)
@@ -183,6 +190,12 @@ class VideoOverlay(QWidget):
         self.win.removeEventFilter(self)
         self.hide()
         self.deleteLater()
+
+    def mousePressEvent(self, e):
+        if self.gif:
+            self.close_player()
+        else:
+            super().mousePressEvent(e)
 
     def keyPressEvent(self, e):
         k = e.key()

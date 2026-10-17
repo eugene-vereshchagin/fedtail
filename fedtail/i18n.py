@@ -344,6 +344,7 @@ _STRINGS = {
         "filter_gifv": "Гифки", "filter_video": "Видео", "filter_audio": "Аудио",
         "filter_all": "Показать всё",
         "player_pause_tip": "Пауза / играть (пробел)",
+        "gif_keys": "клик или Esc — закрыть · O — в браузере",
         "player_mute_tip": "Звук (M)",
         "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · O — в браузере · Esc — "
                        "закрыть",
@@ -824,6 +825,7 @@ _STRINGS = {
         "filter_gifv": "Gifs", "filter_video": "Video", "filter_audio": "Audio",
         "filter_all": "Show everything",
         "player_pause_tip": "Pause / play (Space)",
+        "gif_keys": "click or Esc to close · O for the browser",
         "player_mute_tip": "Sound (M)",
         "player_keys": "Space pause · ← → 5 seconds · M sound · O browser · Esc close",
         "player_failed": "Can't play it: {err}. O opens it in the browser",
