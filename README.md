@@ -320,6 +320,11 @@ For the icon in the launcher and in notifications, install a menu entry once:
 python3 -m fedtail --install-desktop          # or --profile work --install-desktop
 ```
 
+Filtered notifications (Mastodon 4.3+ holds back mentions from strangers, new accounts and
+the like): ≡ → Filtered notifications… shows who is waiting — let them through or dismiss —
+and what to hold back. `notify.filtered`: `"remind"` also says at start that someone waits,
+`"menu"` only the menu item, `"off"` neither.
+
 Server announcements (what the admins post: updates, rules, maintenance) come as a strip
 above the lanes until "Got it" — the server remembers that for its web interface and other
 apps too. `ui.announcements = "off"` hides them.

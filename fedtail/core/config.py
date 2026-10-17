@@ -98,6 +98,7 @@ DEFAULTS = {
         "privacy": "full",
         "when_focused": False,
         "backend": "auto",
+        "filtered": 'remind',
     },
     "activity": {
         "types": ["favourite", "reblog", "follow"],
@@ -136,6 +137,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("notify", "filtered"): {'menu', 'remind', 'off'},
     ("ui", "announcements"): {'off', 'banner'},
     ("post", "who_can_like"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "who_can_boost"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},

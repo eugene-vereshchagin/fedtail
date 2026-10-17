@@ -466,6 +466,8 @@ class MainWindow(QMainWindow):
         m.addAction(_("refresh") + "\tF5", self.refresh)
         m.addAction(_("search_title") + "\tCtrl+K", lambda: self.open_search(""))
         m.addAction(_("silence_title") + "…", lambda: SilenceDialog(self).exec())
+        if self.cfg["notify"]["filtered"] != "off":
+            m.addAction(_("filtered_title") + "…", self.show_filtered)
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
         m.addAction(_("my_profile"), self.open_my_profile)
@@ -552,6 +554,8 @@ class MainWindow(QMainWindow):
         self._open_start_lane()
         self.core.start_polling()
         self.announce_bar.start()
+        if self.cfg["notify"]["filtered"] == "remind":
+            QTimer.singleShot(12_000, self._remind_filtered)
 
     def _open_start_lane(self):
         """ui.start_lane: "none" — every lane closed behind the curtain (nothing gets
@@ -1151,6 +1155,19 @@ class MainWindow(QMainWindow):
             self.error(_("translate_none"))
             return
         self.bridge.call(self.core.translate(st), ok=done, fail=self.error)
+
+    def show_filtered(self):
+        from .filtered import FilteredDialog
+        dlg = FilteredDialog(self)
+        dlg.show()
+        return dlg
+
+    def _remind_filtered(self):
+        """notify.filtered = "remind": say once at start if someone is held back."""
+        def got(res):
+            if res and res["pending"]:
+                self.statusBar().showMessage(_("filtered_waiting", n=res["pending"]), 30_000)
+        self.bridge.call(self.core.filtered(), ok=got, fail=lambda _e: None)
 
     def show_scheduled(self):
         """Posts waiting on the server to go out at their time; any can be cancelled."""

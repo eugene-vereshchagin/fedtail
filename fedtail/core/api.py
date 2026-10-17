@@ -204,6 +204,19 @@ class Api:
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
 
+    def notification_policy(self):
+        return self.get("/api/v2/notifications/policy")
+
+    def set_notification_policy(self, **fields):
+        return self.patch("/api/v2/notifications/policy", data=fields)
+
+    def notification_requests(self):
+        return self.get("/api/v1/notifications/requests", {"limit": 40}) or []
+
+    def answer_notification_request(self, rid, accept):
+        return self.post(f"/api/v1/notifications/requests/{rid}/"
+                         + ("accept" if accept else "dismiss"))
+
     def announcements(self):
         return self.get("/api/v1/announcements") or []
 

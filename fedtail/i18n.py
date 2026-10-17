@@ -33,6 +33,32 @@ _STRINGS = {
         "cli_no_post": "не знаю пост {alias}",
         "cli_posted": "отправлено {alias} ({vis}) {url}",
         "cli_login_first": "этот профиль не вошёл на сервер: сначала открой окно (fedtail) и войди",
+        "filtered_title": "Отфильтрованные уведомления",
+        "filtered_loading": "Спрашиваю сервер…",
+        "filtered_unsupported": "Этот сервер не придерживает уведомления "
+                                "(так умеет Mastodon с 4.3).",
+        "filtered_note": ["Сервер придержал уведомления от {n} отправителя. «Пустить» — "
+                          "они придут, и дальше от него тоже.",
+                          "Сервер придержал уведомления от {n} отправителей. «Пустить» — "
+                          "они придут, и дальше от него тоже.",
+                          "Сервер придержал уведомления от {n} отправителей. «Пустить» — "
+                          "они придут, и дальше от него тоже."],
+        "filtered_count": ["{n} уведомление", "{n} уведомления", "{n} уведомлений"],
+        "filtered_accept": "Пустить", "filtered_dismiss": "Отклонить",
+        "filtered_profile": "Профиль",
+        "filtered_policy": "Что придерживать",
+        "policy_accept": "пускать", "policy_filter": "придержать", "policy_drop": "выбросить",
+        "filtered_for_not_following": "От тех, на кого я не подписан",
+        "filtered_for_not_followers": "От тех, кто не подписан на меня",
+        "filtered_for_new_accounts": "От аккаунтов младше 30 дней",
+        "filtered_for_private_mentions": "Личные сообщения без моего упоминания раньше",
+        "filtered_for_limited_accounts": "От ограниченных модераторами",
+        "filtered_waiting": ["{n} отправитель ждёт в отфильтрованных уведомлениях: ≡ → "
+                             "«Отфильтрованные уведомления…»",
+                             "{n} отправителя ждут в отфильтрованных уведомлениях: ≡ → "
+                             "«Отфильтрованные уведомления…»",
+                             "{n} отправителей ждут в отфильтрованных уведомлениях: ≡ → "
+                             "«Отфильтрованные уведомления…»"],
         "announce_title": "Объявление сервера", "announce_ok": "Понятно",
         "tip_announce_ok": "Больше не показывать (сервер запомнит и для других клиентов)",
         "announce_more": ["ещё {n}", "ещё {n}", "ещё {n}"],
@@ -404,6 +430,28 @@ _STRINGS = {
         "cli_posted": "sent {alias} ({vis}) {url}",
         "cli_login_first": "this profile is not logged in: open the window (fedtail), "
                            "log in first",
+        "filtered_title": "Filtered notifications",
+        "filtered_loading": "Asking the server…",
+        "filtered_unsupported": "This server doesn't hold notifications back (Mastodon does "
+                                "since 4.3).",
+        "filtered_note": ["The server held back notifications from {n} sender. "
+                          "\"Let through\" — they arrive, and so will later ones.",
+                          "The server held back notifications from {n} senders. "
+                          "\"Let through\" — they arrive, and so will later ones."],
+        "filtered_count": ["{n} notification", "{n} notifications"],
+        "filtered_accept": "Let through", "filtered_dismiss": "Dismiss",
+        "filtered_profile": "Profile",
+        "filtered_policy": "What to hold back",
+        "policy_accept": "let through", "policy_filter": "hold back", "policy_drop": "drop",
+        "filtered_for_not_following": "From people I don't follow",
+        "filtered_for_not_followers": "From people who don't follow me",
+        "filtered_for_new_accounts": "From accounts younger than 30 days",
+        "filtered_for_private_mentions": "Unsolicited private mentions",
+        "filtered_for_limited_accounts": "From accounts limited by moderators",
+        "filtered_waiting": ["{n} sender is waiting in filtered notifications: ≡ → "
+                             "\"Filtered notifications…\"",
+                             "{n} senders are waiting in filtered notifications: ≡ → "
+                             "\"Filtered notifications…\""],
         "announce_title": "Server announcement", "announce_ok": "Got it",
         "tip_announce_ok": "Don't show it again (the server remembers it for other apps too)",
         "announce_more": ["{n} more", "{n} more"],

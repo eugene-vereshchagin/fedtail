@@ -505,6 +505,41 @@ class Core:
             return domain
         return self.submit(job)
 
+    FILTER_POLICY = ("for_not_following", "for_not_followers", "for_new_accounts",
+                     "for_private_mentions", "for_limited_accounts")
+
+    def filtered(self):
+        """Notifications my server holds back (Mastodon 4.3+). Future:
+        {"policy": {key: "accept"|"filter"|"drop"} or None, "requests": [...]};
+        None when the server has no such thing (GoToSocial, older Mastodon)."""
+        def job():
+            try:
+                policy = self.api.notification_policy() or {}
+                requests = self.api.notification_requests()
+            except ApiError as e:
+                log.debug("filtered notifications: %s", e)
+                return None
+            return {"policy": {k: policy[k] for k in self.FILTER_POLICY if k in policy},
+                    "pending": (policy.get("summary") or {}).get("pending_requests_count",
+                                                                 len(requests)),
+                    "requests": requests}
+        return self.submit(job)
+
+    def answer_filtered(self, rid, accept):
+        """Let one held-back sender through (their notifications arrive) or drop them."""
+        def job():
+            self.api.answer_notification_request(rid, accept)
+            if accept:
+                self.poll_now()
+        return self.submit(job)
+
+    def set_filter_policy(self, **changes):
+        bad = {k: v for k, v in changes.items()
+               if k not in self.FILTER_POLICY or v not in ("accept", "filter", "drop")}
+        if bad:
+            raise ValueError(f"filter policy: {bad}")
+        return self.submit(self.api.set_notification_policy, **changes)
+
     def announcements(self):
         """The server's announcements not dismissed yet, oldest first; [] when
         ui.announcements is "off" or the server has none (GoToSocial: no such API)."""

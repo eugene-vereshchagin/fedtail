@@ -1259,3 +1259,27 @@ if __name__ == "__main__":
         self.assertFalse(bar.isVisible())
         self.core.cfg["ui"]["announcements"] = "off"
         self.assertEqual(self.bridge_wait(self.core.announcements()), [])
+
+    def test_filtered_notifications_dialog(self):
+        self.world.policy = {"for_not_following": "accept", "for_not_followers": "accept",
+                             "for_new_accounts": "filter", "for_private_mentions": "filter",
+                             "for_limited_accounts": "filter"}
+        self.world.held = [{"id": "r1", "account": BOB, "notifications_count": "3",
+                            "last_status": {"content": "<p>здравствуйте</p>"}}]
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        dlg = self.win.show_filtered()
+        self.pump(until=lambda: dlg.list.count() == 1)
+        self.assertIn("здравствуйте", dlg.list.item(0).text())
+        self.assertEqual(dlg.combos["for_new_accounts"].currentData(), "filter")
+        dlg.combos["for_not_following"].setCurrentIndex(2)  # drop
+        self.pump(until=lambda: self.world.policy["for_not_following"] == "drop")
+        dlg.list.setCurrentRow(0)
+        dlg.accept_btn.click()
+        self.pump(until=lambda: self.world.answered == [("r1", True)])
+        self.pump(until=lambda: dlg.list.count() == 0)
+        dlg.close()
+        self.world.policy = None
+        dlg = self.win.show_filtered()
+        self.pump(until=lambda: not dlg.accept_btn.isEnabled())
+        dlg.close()

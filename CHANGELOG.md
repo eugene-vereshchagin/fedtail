@@ -8,6 +8,9 @@
   `max_lines`, `tail_lanes`.
 - Server announcements: a strip above the lanes, one at a time, until "Got it" (dismissed on
   the server, so for other apps too). `ui.announcements = "off"` hides them.
+- Filtered notifications (Mastodon 4.3+): ≡ → Filtered notifications… — the senders held back
+  (let through, dismiss, open the profile) and the policy for each kind of sender;
+  `notify.filtered` = `"remind"` (also a line at start when someone waits), `"menu"`, `"off"`.
 
 ## 0.8.0 — 2026-10-17
 

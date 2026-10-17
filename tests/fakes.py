@@ -93,6 +93,25 @@ class FakeApi:
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
         return _page(mine, limit, max_id, min_id)
 
+    def notification_policy(self):
+        if self.w.policy is None:
+            raise ApiError(404, "not found")
+        return dict(self.w.policy, summary={"pending_requests_count": len(self.w.held)})
+
+    def set_notification_policy(self, **fields):
+        self.w.policy.update(fields)
+        return self.notification_policy()
+
+    def notification_requests(self):
+        if self.w.policy is None:
+            raise ApiError(404, "not found")
+        return list(self.w.held)
+
+    def answer_notification_request(self, rid, accept):
+        self.w.answered.append((rid, accept))
+        self.w.held = [r for r in self.w.held if r["id"] != rid]
+        return {}
+
     def announcements(self):
         return [dict(a) for a in self.w.announcements]
 
@@ -397,6 +416,8 @@ class World:
         self.requests = []
         self.posted = []
         self.announcements = []
+        self.policy = None  # notification policy: None — the server has none (404)
+        self.held, self.answered = [], []  # notification requests; answers to them
         self.me = ME
         self.remote = {}  # uri -> status my server hasn't got yet (search resolves it)
         self.languages = []  # the language of each post, "" — none given

@@ -346,6 +346,22 @@ class CoreTest(TmpDir):
         self.addCleanup(core.shutdown)
         return core, FakeApi.world
 
+    def test_filtered_notifications(self):
+        core, w = self.make()
+        core.connect().result()
+        self.assertIsNone(core.filtered().result())  # no such API: nothing to show
+        w.policy = {"for_not_following": "accept", "for_new_accounts": "filter"}
+        w.held = [{"id": "r1", "account": BOB, "notifications_count": "2"}]
+        got = core.filtered().result()
+        self.assertEqual(got["pending"], 1)
+        self.assertEqual(got["policy"]["for_new_accounts"], "filter")
+        core.answer_filtered("r1", True).result()
+        self.assertEqual(w.answered, [("r1", True)])
+        core.set_filter_policy(for_not_following="drop").result()
+        self.assertEqual(w.policy["for_not_following"], "drop")
+        with self.assertRaises(ValueError):
+            core.set_filter_policy(for_everyone="drop")
+
     def test_announcements_not_read_oldest_first(self):
         core, w = self.make()
         w.announcements = [{"id": "2", "read": False, "published_at": "2099-01-02"},
