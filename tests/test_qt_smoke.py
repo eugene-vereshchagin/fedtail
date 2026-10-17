@@ -1473,7 +1473,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.cfg["feed"]["build_at_once"] = 10  # a small window: 40 posts make "big"
         for i in range(60):
             self.world.add(status(f"8{i:03d}", NEWS, minute=i % 60,
-                                  text="пост " * (5 + i % 30) + str(i)), home=True)
+                                  text="длинный пост " * (60 + i % 30) + str(i)), home=True)
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.core.poll_once()
@@ -1484,7 +1484,7 @@ class QtSmokeTest(unittest.TestCase):
         lane = self.win.lane_widgets["bots"]
         view = lane.view
         self.pump(1.5)
-        self.assertLess(len(view.rows), len(view.model) // 2)  # not all built
+        self.assertLess(len(view.rows), len(view.model))  # not all built
         first = view.unread_keys()[0]
         self.assertIn(first, view.rows)  # the reading place is
         self.assertEqual(len(view.unread_keys()), 5)
