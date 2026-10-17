@@ -776,6 +776,12 @@ class LaneWidget(QWidget):
             if jump and any(s.key not in had for s in specs):
                 self.view.scroll_to_end(not self.newest_first)
         self.update_strip()
+        lane = self.core.lane_by_name.get(self.name)
+        if lazy and not specs and lane is not None and \
+                lane.source in getattr(self.core, "browse_empty", ()):
+            self.header.info.setText(_("browse_empty"))
+        elif lazy and self.filter_seg is None:
+            self.header.info.setText("")
         log.debug("lane %s drawn: %d rows, %d unread, %.0f ms", self.name, len(specs),
                   len(unread), (time.monotonic() - t0) * 1000)
 

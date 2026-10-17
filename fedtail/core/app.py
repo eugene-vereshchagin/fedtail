@@ -61,6 +61,7 @@ class Core(SocialMixin):
         self.unsupported = set()  # features the server said it hasn't got (social.py)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (/api/v1/preferences)
+        self.browse_empty = set()  # browse sources (local, federated) the server gave nothing
         self.sources = {}
         self.lists = []           # [{"id", "title", "exclusive"}] from the server
         self.list_members = {}    # list id -> {account ids}
@@ -259,6 +260,12 @@ class Core(SocialMixin):
                         new_by_source[name] = sources.refresh_top(
                             self.store, self.sources[name], fc["page_size"])
                         self.store.prune(name, KEEP_PER_SOURCE // 3)
+                        # the server answered, and with nothing: its live feeds are off
+                        # (mastodon.social and others do that) — the lane says so
+                        if self.store.newest_item(name) is None:
+                            self.browse_empty.add(name)
+                        else:
+                            self.browse_empty.discard(name)
                     except Exception as e:
                         self.emit("error", f"{name}: {e}")
                     continue

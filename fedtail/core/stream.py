@@ -76,7 +76,12 @@ class WebSocket:
         got = {k.strip().lower(): v.strip() for k, _s, v in
                (line.partition(":") for line in head.split("\r\n")[1:]) if k}
         if got.get("sec-websocket-accept") != want:
-            raise StreamError("handshake: wrong Sec-WebSocket-Accept")
+            # Some servers' front proxies (a CDN before mastodon.social's streaming) answer
+            # with an accept of their own. The 101 says the upgrade happened; if the stream
+            # isn't really one, the first frame fails and the poll carries on as before.
+            log.info("stream handshake: Sec-WebSocket-Accept %r, expected %r (server %s) — "
+                     "going on", got.get("sec-websocket-accept"), want,
+                     got.get("server") or got.get("via") or "?")
         self.sock.settimeout(timeout)
 
     def _read_until(self, end):

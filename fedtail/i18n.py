@@ -334,6 +334,8 @@ _STRINGS = {
         "menu_people": "Кого почитать",
         "mark_one_read": "Прочитано",
         "copy": "Копировать",
+        "browse_empty": "Сервер отдаёт эту ленту пустой: похоже, живые ленты у него "
+                        "выключены (так на mastodon.social)",
         "activity_clear": "Очистить",
         "activity_clear_tip": "Удалить все уведомления — здесь и на сервере",
         "activity_clear_q": "Удалить все уведомления — здесь и на сервере (в веб-интерфейсе и "
@@ -800,6 +802,8 @@ _STRINGS = {
         "menu_people": "Find people",
         "mark_one_read": "Mark read",
         "copy": "Copy",
+        "browse_empty": "The server gives this feed empty: its live feeds seem to be off "
+                        "(as on mastodon.social)",
         "activity_clear": "Clear",
         "activity_clear_tip": "Delete every notification, here and on the server",
         "activity_clear_q": "Delete every notification, here and on the server (they'll be gone "
