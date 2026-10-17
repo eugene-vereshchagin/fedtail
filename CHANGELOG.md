@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.11.0 — in progress
+## 0.11.0 — 2026-10-18
+
+**In short:** no more freezes when a lane opens (cards are built around where you read,
+the rest as you scroll); video, audio and gifs play in the window, with a download button;
+who liked and boosted, quotes of your posts, muted threads, trends, suggestions, the
+directory, server info; a media filter next to Refresh; older posts of a profile straight
+from the author's server; lists right after a follow; times in Likes & boosts and the
+follow date in your private note; logs in the profile's folder, much more detailed.
+Video needs `python3-pyside6.qtmultimedia` and `python3-pyside6.qtmultimediawidgets`.
+
+Everything in detail:
 
 - Likes & boosts: each row says when (for a group, from when to when; the tooltip lists
   everyone with their time). A profile says "following since …" for people followed

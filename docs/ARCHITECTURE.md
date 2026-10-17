@@ -69,6 +69,8 @@ fedtail/
   sysenv.py          the one-file build: start other programs with the system's environment
   core/              everything that is not GUI
     app.py           Core: the facade the frontends talk to (see §4, §9)
+    social.py        SocialMixin of Core: who reacted, quotes, trends, suggestions, directory,
+                     server info; a 404 marks a feature missing (Core.supports, NotSupported)
     stream.py        the live stream: a stdlib WebSocket client that wakes the poller
     api.py           Mastodon REST client (blocking, requests) + request logging
     auth.py          token file (JSON, 0600)
@@ -124,6 +126,8 @@ fedtail/
       theme.py       Theme object, palette, the generated QSS
       images.py      avatars/pictures: disk+memory cache, own thread pool, save
       viewer.py      picture viewer drawn over the main window
+      player.py      QtMultimedia: video/gif overlay, gifvs looping in cards, audio bar
+      social.py      tabs for people lists, quotes, trends; the server info dialog
       find.py        Ctrl+F bar
       notify.py      desktop notifications (notify-send, tray fallback)
       profile.py     "edit my profile" dialog
@@ -466,6 +470,7 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `me_updated` | me | profile saved | sidebar name/avatar, my profile tab |
 | `notify` | [(lane, obj)] | after a poll | `Notifier` (desktop notifications) |
 | `error` | text | recoverable failure | status bar (and the log) |
+| `unsupported` | feature name | the server answered 404 to it | its menu items and buttons hide |
 | `auth_failed` | text | 401/403 | re-login dialog |
 
 ## 14. The Qt frontend

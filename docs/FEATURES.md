@@ -2,7 +2,7 @@
 
 [English summary below](#english)
 
-Состояние на версию **0.10.0** (17.10.2026). Рядом — что умеют другие клиенты: **M** — Mastodon
+Состояние на версию **0.11.0** (18.10.2026). Рядом — что умеют другие клиенты: **M** — Mastodon
 web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** — Tokodon. Про чужие
 клиенты — по знаниям на середину 2026 года, без проверки каждого вживую. Что из этого
 поддерживает конкретный сервер (особенно GoToSocial), проверяй на своей ноде: fedtail
@@ -55,6 +55,8 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | Закреплённые посты в профиле | есть | `feed.profile_pinned` | statuses?pinned=true | все |
 | Рекомендуемые теги и люди в профиле | есть | `feed.profile_featured` | featured_tags, endorsements | M |
 | ⭐ Профиль малознакомого человека дополняется с его сервера | есть | `feed.remote_profiles`, `feed.remote_posts` | ActivityPub outbox | — |
+| ⭐ Посты старше тех, что знает мой сервер (до подписки) — постранично с сервера автора | есть | `feed.remote_profiles` | ActivityPub outbox | — |
+| ⭐ «Подписан с …»: дата подписки строкой в личной заметке | есть | `feed.follow_date_note` | accounts/:id/note | — |
 | ⭐ Подписчики и подписки с сервера человека | есть | `feed.remote_people` | ActivityPub followers / following | — |
 | ⭐ Честные счётчики лайков и бустов | есть | `feed.honest_counters` (выкл.) | API сервера автора без токена | — |
 | Объявления сервера | есть | `ui.announcements` | /api/v1/announcements | M P E |
@@ -64,13 +66,15 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | Картинки: просмотрщик, сохранение, сетка | есть | `ui.image_viewer`, `ui.save_dir`, `ui.media_grid` | — | все |
 | Подписи к картинкам (alt) | есть | `ui.alt_text` | `description` | все |
 | Видео и аудио внутри окна; гифки крутятся в ленте | есть | `ui.video_player`, `ui.gifv` | media_attachments | все |
+| Скачать видео, гифку, картинку (кнопка ⤓, клавиша S, ПКМ) | есть | `ui.save_dir` | — | T I |
+| ⭐ Фильтр ленты по медиа: текст, картинки, гифки, видео (до перезапуска) | есть | — | своё | — |
+| Время у лайков, бустов и подписок в «Лайки и бусты» | есть | — | notification.created_at | все |
 | Сгруппированные уведомления | частично | `activity.types` | /api/v2/notifications | M I P |
 | Коллекции (Mastodon 4.6) | нет | — | /api/v1/collections | M 4.6 |
-| Тренды, рекомендации, каталог | не будем | — | trends, suggestions, directory | M I P E |
 
-Видео сейчас показывается кадром с ▶, играет браузер. Уведомления о лайках и бустах fedtail
-группирует сам в ленте «Лайки и бусты», серверную группировку v2 не использует.
-Тренды — не наш стиль: в ленте то, на что подписался.
+Видео играет внутри окна, если стоят `python3-pyside6.qtmultimedia` и
+`python3-pyside6.qtmultimediawidgets`; без них — кадр с ▶ и браузер. Уведомления о лайках и
+бустах fedtail группирует сам в ленте «Лайки и бусты», серверную группировку v2 не использует.
 
 ## Писать
 
@@ -104,6 +108,7 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | Заблокировать целый сервер | есть | — | /api/v1/domain_blocks | M I P |
 | Пожаловаться модераторам | есть | `post.report_forward` | /api/v1/reports | все |
 | Личная заметка о человеке | есть | — | accounts/:id/note | M I |
+| ⭐ В список сразу после подписки: сервер возьмёт, когда подтвердит | есть | `lists.refresh_minutes` | lists/:id/accounts | — |
 | Колокольчик на посты человека | есть | `activity.types` | follow notify=true | M T I |
 | Уведомления от незнакомцев — отдельно | есть | `notify.filtered` | /api/v2/notifications/policy, requests | M 4.3+ |
 | Свой профиль: имя, о себе, поля, аватар | есть | — | update_credentials | M I P E K |
@@ -182,7 +187,7 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 <a id="english"></a>
 ## English
 
-The state of things as of **0.10.0**, next to Mastodon web, Tusky, Ivory, Phanpy, Elk and
+The state of things as of **0.11.0**, next to Mastodon web, Tusky, Ivory, Phanpy, Elk and
 Tokodon. Every behaviour has its config switch, named in the tables (`section.key`; the full
 reference is `config.example.toml`).
 
@@ -198,12 +203,15 @@ focus point, completion of #tags, @names and :emoji:, CamelCase hint, languages,
 posts, GoToSocial interaction policies; a Point-style command line; mutes, blocks, filters,
 server blocks, reports, notes, the bell, filtered notifications; desktop notifications with
 privacy levels; unread counts on the icon; several accounts in one window; themes as files;
+who liked and boosted, quotes of my posts, muted threads, trends, suggestions, the directory,
+server info, endorsements, familiar followers; video, audio and gifs in the window with a
+download button; a media filter per lane; older posts of a profile from the author's own
+server; list membership right after a follow; the follow date kept in my private note;
 j/k keys; a config in chapters; the Qt window, terminal commands, a Textual TUI and a web UI
 on localhost; Linux one-file, deb and Windows .exe builds.
 
-**Partly:** video and audio play in the browser; notification grouping is fedtail's own;
+**Partly:** notification grouping is fedtail's own;
 screen readers not tested live.
 
 **Planned:** GTK4 and Toga front ends, an apt repository, a Windows installer and signing,
-in-window media, Mastodon 4.6 collections. **Not planned:** trends and suggestions, an XMPP
-gateway.
+Mastodon 4.6 collections. **Not planned:** an XMPP gateway.
