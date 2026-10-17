@@ -974,6 +974,12 @@ class MainWindow(QMainWindow):
         return [self.tabs.widget(i) for i in range(self.tabs.count())
                 if self.tabs.widget(i) is not self.stack]
 
+    def _front(self, w):
+        """An open tab to the front — and out from under the curtain, if it's down."""
+        if self.curtain_shown():
+            self.right_stack.setCurrentIndex(0)
+        self.tabs.setCurrentWidget(w)
+
     def _add_tab(self, w, title):
         log.info("tab opened: %s", type(w).__name__)
         i = self.tabs.addTab(w, title)
@@ -987,7 +993,7 @@ class MainWindow(QMainWindow):
             sid = real(st)["id"]
         for w in self.extra_tabs():
             if isinstance(w, ThreadWidget) and sid in w.statuses:
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 w.focus_on(sid)
                 return
         self._add_tab(ThreadWidget(self, sid), _("thread_loading"))
@@ -995,19 +1001,17 @@ class MainWindow(QMainWindow):
     def open_account(self, acc_id):
         for w in self.extra_tabs():
             if isinstance(w, AccountWidget) and w.acc_id == acc_id:
-                if self.tabs.currentWidget() is w:
+                if self.tabs.currentWidget() is w and not self.curtain_shown():
                     w.show_info()  # already here: back up to who this is
                 else:
-                    self.tabs.setCurrentWidget(w)
+                    self._front(w)
                 return
         self._add_tab(AccountWidget(self, acc_id), "@…")
 
     def open_search(self, query=""):
         for w in self.extra_tabs():
             if isinstance(w, SearchWidget):
-                if self.curtain_shown():
-                    self.right_stack.setCurrentIndex(0)
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 w.edit.setText(query)
                 w.run(query)
                 return
@@ -1016,7 +1020,7 @@ class MainWindow(QMainWindow):
     def open_people(self, acc, which):
         for w in self.extra_tabs():
             if isinstance(w, PeopleWidget) and w.acc_id == acc["id"] and w.which == which:
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 return
         w = PeopleWidget(self, acc, which)
         self._add_tab(w, w.title)
@@ -1025,7 +1029,7 @@ class MainWindow(QMainWindow):
         """A tab with a list of people (who liked, suggestions, the directory…)."""
         for w in self.extra_tabs():
             if isinstance(w, AccountsWidget) and w.key == key:
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 return
         w = AccountsWidget(self, key, title, fetch, **kw)
         self._add_tab(w, title)
@@ -1057,7 +1061,7 @@ class MainWindow(QMainWindow):
     def open_trends(self):
         for w in self.extra_tabs():
             if isinstance(w, TrendsWidget):
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 w.reload()
                 return
         w = TrendsWidget(self)
@@ -1070,7 +1074,7 @@ class MainWindow(QMainWindow):
     def open_quotes(self, st):
         for w in self.extra_tabs():
             if isinstance(w, QuotesWidget) and w.status["id"] == real(st)["id"]:
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 return
         w = QuotesWidget(self, st)
         self._add_tab(w, w.title)
@@ -1078,7 +1082,7 @@ class MainWindow(QMainWindow):
     def open_tag(self, tag):
         for w in self.extra_tabs():
             if isinstance(w, TagWidget) and w.tag.lower() == tag.lower():
-                self.tabs.setCurrentWidget(w)
+                self._front(w)
                 return
         self._add_tab(TagWidget(self, tag), "#" + tag)
 

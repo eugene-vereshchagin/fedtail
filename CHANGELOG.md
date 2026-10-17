@@ -2,6 +2,9 @@
 
 ## 0.12.0 — in progress
 
+- With every lane closed (Esc, the curtain), opening something whose tab was already open
+  (my own profile from my name, a thread, a search) did nothing visible: the tab came to
+  the front under the curtain. It now lifts the curtain.
 - Several gifs or videos in a post: ‹ › at the top right of the player and the keys go
   between them without closing it (← → or the wheel for gifs; PgUp / PgDn for videos, where
   ← → seek), with "2 / 3" next to them and the keys in a faint line at the bottom.
