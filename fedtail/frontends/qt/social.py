@@ -195,9 +195,10 @@ class ServerInfoDialog(QDialog):
         lay = QVBoxLayout(self)
         css = win.theme.css("link")
         parts = [f"<h2>{esc(inst.get('title') or inst.get('domain') or '')}</h2>"]
-        if inst.get("description") or inst.get("short_description"):
-            parts.append(f"<p>{esc(inst.get('description') or inst.get('short_description'))}"
-                         "</p>")
+        desc = inst.get("description") or inst.get("short_description") or ""
+        if desc:
+            # HTML on GoToSocial and older Mastodon, plain text on Mastodon 4
+            parts.append(clean(desc, css) if "<" in desc else f"<p>{esc(desc)}</p>")
         contact = (inst.get("contact") or {}).get("account") or \
             inst.get("contact_account") or {}
         email = (inst.get("contact") or {}).get("email") or inst.get("email") or ""
