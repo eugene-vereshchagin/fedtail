@@ -37,6 +37,7 @@ DEFAULTS = {
         "icon_count": ["comments", "mentions", "subs", "requests"],
         "actions": "both",
         "post_keys": True,
+        "announcements": 'banner',
     },
     "feed": {
         "order": "oldest_first",
@@ -135,6 +136,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("ui", "announcements"): {'off', 'banner'},
     ("post", "who_can_like"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "who_can_boost"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "who_can_reply"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},

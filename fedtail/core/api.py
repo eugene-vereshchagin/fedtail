@@ -204,6 +204,12 @@ class Api:
         return self.get(f"/api/v1/accounts/{acc_id}/statuses",
                         self._page(limit, max_id, min_id))
 
+    def announcements(self):
+        return self.get("/api/v1/announcements") or []
+
+    def dismiss_announcement(self, aid):
+        return self.post(f"/api/v1/announcements/{aid}/dismiss")
+
     def scheduled(self):
         return self.get("/api/v1/scheduled_statuses", {"limit": 40}) or []
 

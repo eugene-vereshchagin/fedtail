@@ -1239,3 +1239,23 @@ class QtSmokeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_announcements_banner(self):
+        self.world.announcements = [
+            {"id": "a1", "content": "<p>Обновление в полночь</p>", "read": False,
+             "published_at": "2099-10-14T09:00:00.000Z"},
+            {"id": "a2", "content": "<p>Новые правила</p>", "read": False,
+             "published_at": "2099-10-14T10:00:00.000Z"},
+            {"id": "a0", "content": "<p>старое</p>", "read": True}]
+        self.win.start()
+        bar = self.win.announce_bar
+        self.pump(until=lambda: bar.isVisible())
+        self.assertIn("полночь", bar.body.text())
+        self.assertIn("ещё 1", bar.head.text())
+        bar.ok.click()
+        self.assertIn("правила", bar.body.text())
+        self.pump(until=lambda: self.world.announcements[0]["read"])
+        bar.ok.click()
+        self.assertFalse(bar.isVisible())
+        self.core.cfg["ui"]["announcements"] = "off"
+        self.assertEqual(self.bridge_wait(self.core.announcements()), [])

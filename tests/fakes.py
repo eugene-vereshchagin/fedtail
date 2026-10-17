@@ -93,6 +93,15 @@ class FakeApi:
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
         return _page(mine, limit, max_id, min_id)
 
+    def announcements(self):
+        return [dict(a) for a in self.w.announcements]
+
+    def dismiss_announcement(self, aid):
+        for a in self.w.announcements:
+            if a["id"] == aid:
+                a["read"] = True
+        return {}
+
     def scheduled(self):
         return list(self.w.scheduled)
 
@@ -387,6 +396,7 @@ class World:
         self.statuses, self.home, self.local, self.notifications = {}, [], [], []
         self.requests = []
         self.posted = []
+        self.announcements = []
         self.me = ME
         self.remote = {}  # uri -> status my server hasn't got yet (search resolves it)
         self.languages = []  # the language of each post, "" — none given

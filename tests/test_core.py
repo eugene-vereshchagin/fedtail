@@ -346,6 +346,20 @@ class CoreTest(TmpDir):
         self.addCleanup(core.shutdown)
         return core, FakeApi.world
 
+    def test_announcements_not_read_oldest_first(self):
+        core, w = self.make()
+        w.announcements = [{"id": "2", "read": False, "published_at": "2099-01-02"},
+                           {"id": "1", "read": False, "published_at": "2099-01-01"},
+                           {"id": "0", "read": True}]
+        core.connect().result()
+        self.assertEqual([a["id"] for a in core.announcements().result()], ["1", "2"])
+        core.dismiss_announcement("1").result()
+        self.assertEqual([a["id"] for a in core.announcements().result()], ["2"])
+        core.api.announcements = lambda: (_ for _ in ()).throw(ApiError(404, "no"))
+        self.assertEqual(core.announcements().result(), [])
+        core.cfg["ui"]["announcements"] = "off"
+        self.assertEqual(core.announcements().result(), [])
+
     def test_catch_up_forward_without_holes(self):
         core, w = self.make()
         for i in range(1, 5):

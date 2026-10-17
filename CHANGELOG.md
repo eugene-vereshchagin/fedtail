@@ -6,6 +6,8 @@
   `fedtail post [--reply ALIAS] TEXT|-`, `fedtail read LANE` — the same profile, database and
   read marks as the window, no Qt needed. New config chapter `[cli]`: `enabled`, `color`,
   `max_lines`, `tail_lanes`.
+- Server announcements: a strip above the lanes, one at a time, until "Got it" (dismissed on
+  the server, so for other apps too). `ui.announcements = "off"` hides them.
 
 ## 0.8.0 — 2026-10-17
 

@@ -38,6 +38,7 @@ from ...i18n import _
 from .. import themefile
 from . import badge
 from . import feed as feed_module
+from .announce import AnnounceBar
 from .card import _round
 from .cmdline import CommandBar
 from .compose import Compose, media_paths, save_image
@@ -248,6 +249,8 @@ class MainWindow(QMainWindow):
         rv = QVBoxLayout(right)
         rv.setContentsMargins(0, 0, 0, 0)
         rv.setSpacing(0)
+        self.announce_bar = AnnounceBar(self)
+        rv.addWidget(self.announce_bar)
         rv.addWidget(self.tabs, 1)
         self.find_bar = FindBar(self)
         rv.addWidget(self.find_bar)
@@ -548,6 +551,7 @@ class MainWindow(QMainWindow):
             self.tray.setToolTip(tip)
         self._open_start_lane()
         self.core.start_polling()
+        self.announce_bar.start()
 
     def _open_start_lane(self):
         """ui.start_lane: "none" — every lane closed behind the curtain (nothing gets

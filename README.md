@@ -320,6 +320,10 @@ For the icon in the launcher and in notifications, install a menu entry once:
 python3 -m fedtail --install-desktop          # or --profile work --install-desktop
 ```
 
+Server announcements (what the admins post: updates, rules, maintenance) come as a strip
+above the lanes until "Got it" — the server remembers that for its web interface and other
+apps too. `ui.announcements = "off"` hides them.
+
 ## Writing
 
 A new post opens as a panel in the middle of the window (`ui.compose = "window"` for a separate

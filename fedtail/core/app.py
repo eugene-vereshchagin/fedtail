@@ -505,6 +505,24 @@ class Core:
             return domain
         return self.submit(job)
 
+    def announcements(self):
+        """The server's announcements not dismissed yet, oldest first; [] when
+        ui.announcements is "off" or the server has none (GoToSocial: no such API)."""
+        def job():
+            if self.cfg["ui"]["announcements"] == "off" or not self.api:
+                return []
+            try:
+                got = self.api.announcements()
+            except ApiError as e:
+                log.debug("announcements: %s", e)
+                return []
+            fresh = [a for a in got if not a.get("read")]
+            return sorted(fresh, key=lambda a: a.get("published_at") or "")
+        return self.submit(job)
+
+    def dismiss_announcement(self, aid):
+        return self.submit(self.api.dismiss_announcement, aid)
+
     def scheduled(self):
         return self.submit(self.api.scheduled)
 
