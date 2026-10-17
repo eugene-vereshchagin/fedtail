@@ -20,5 +20,7 @@ for b in blocks[1:]:
     found += 1
     if found >= 9:
         break
-tail = "\n".join(text.strip().splitlines()[-40:])
+# a hung run is killed with SIGABRT: faulthandler prints every thread's stack, keep them
+hung = "Fatal Python error" in text
+tail = "\n".join(text.strip().splitlines()[-(160 if hung else 40):])
 print("::warning title=test output tail::" + tail.replace("%", "%25").replace("\n", "%0A"))

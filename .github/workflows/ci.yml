@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+          timeout -s ABRT 900 python -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
       - name: Failures as annotations
         if: failure()
         run: python .github/annotate.py test-output.txt
@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+          python -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
       - name: Failures as annotations
         if: failure()
         shell: bash
@@ -140,7 +140,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+          timeout -s ABRT 900 python3 -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
       - name: Failures as annotations
         if: failure()
         run: python3 .github/annotate.py test-output.txt
