@@ -32,6 +32,9 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- A funnel next to Refresh in lanes, profiles and tags: show only posts with pictures,
+  gifs, video, audio or plain text; for this run only.
+- "To new" with nothing unread scrolls to the newest end instead of going grey.
 - Video, gifv and audio in the window (`ui.video_player`, QtMultimedia): a video plays over
   the window (Space, ← →, M, O for the browser, Esc); gifvs loop in their cards, muted,
   only while on screen and at most three at once (`ui.gifv`); audio gets a player in its

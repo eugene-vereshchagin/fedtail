@@ -480,6 +480,68 @@ READING_S = 5  # s after a scroll by hand that a window without focus still coun
 ICONS = True  # set from the theme by the window: dark custom themes want words only
 
 
+MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
+
+
+def media_kinds(st):
+    """What a post shows: {"image", "gifv", "video", "audio"} from its attachments
+    (a video a server called a picture counts as a video), or {"text"} without any."""
+    from .card import _true_kind
+    kinds = {_true_kind(m).get("type") for m in real(st).get("media_attachments") or []}
+    kinds &= set(MEDIA_KINDS)
+    return kinds or {"text"}
+
+
+class MediaFilter:
+    """The funnel next to Refresh: show only posts with pictures, gifs, video… —
+    for this run only (never saved: posts that vanish after a restart drive one mad).
+    on_change() redraws the view."""
+
+    def __init__(self, header, on_change):
+        from PySide6.QtWidgets import QMenu
+        self.wanted = set(MEDIA_KINDS)
+        self.on_change = on_change
+        self.btn = _button("", lambda: None, icon="view-filter", tip=_("media_filter_tip"))
+        if self.btn.icon().isNull():
+            self.btn.setText("⏷ " + _("media_filter"))
+        menu = QMenu(self.btn)
+        self.actions = {}
+        for kind in MEDIA_KINDS:
+            a = menu.addAction(_("filter_" + kind))
+            a.setCheckable(True)
+            a.setChecked(True)
+            a.toggled.connect(lambda on, k=kind: self._toggle(k, on))
+            self.actions[kind] = a
+        menu.addSeparator()
+        menu.addAction(_("filter_all"), self.reset)
+        self.btn.setMenu(menu)
+        from PySide6.QtWidgets import QToolButton
+        if isinstance(self.btn, QToolButton):
+            self.btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        header.add(self.btn)
+
+    def active(self):
+        return self.wanted != set(MEDIA_KINDS)
+
+    def keeps(self, st):
+        return not self.active() or bool(media_kinds(st) & self.wanted)
+
+    def _toggle(self, kind, on):
+        (self.wanted.add if on else self.wanted.discard)(kind)
+        self.btn.setProperty("active", "true" if self.active() else "false")
+        self.btn.style().unpolish(self.btn)
+        self.btn.style().polish(self.btn)
+        self.on_change()
+
+    def reset(self):
+        for a in self.actions.values():
+            a.blockSignals(True)
+            a.setChecked(True)
+            a.blockSignals(False)
+        self.wanted = set(MEDIA_KINDS)
+        self._toggle("text", True)
+
+
 def _button(text, slot, name="tool", icon=None, tip=None):
     b = QPushButton(text)
     b.setObjectName(name)
@@ -619,6 +681,7 @@ class LaneWidget(QWidget):
                                                  tip=_("to_new_tip")))
         self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
                                                icon="mail-mark-read"))
+        self.media_filter = MediaFilter(self.header, lambda: self.refresh(force=True))
         self.header.add(_button("", self.refresh_now, icon="view-refresh",
                                 tip=_("refresh") + " (F5)"))
         lay.addWidget(self.header)
@@ -742,6 +805,9 @@ class LaneWidget(QWidget):
                                      else _("unread_only_none"))
         elif self.filter_seg is not None:
             self.header.info.setText("")
+        if self.media_filter.active():
+            entries = [e for e in entries if self.media_filter.keeps(e[1])]
+            self.header.info.setText(_("media_filter_info", n=len(entries)))
         statuses = [st for _, st in entries]
         parents = self.core.parents_for(statuses)
         answers = self.core.my_replies(statuses)
@@ -1132,6 +1198,11 @@ class _PagedTab(QWidget):
         lay.addWidget(self.view, 1)
         self.btn_more = _button(_("older_down"), self.more, name="older")
         self.view.footer.addWidget(self.btn_more)
+        self.media_filter = MediaFilter(self.header, lambda: self.render())
+
+    def shown(self, statuses):
+        """The posts the funnel lets through."""
+        return [st for st in statuses if self.media_filter.keeps(st)]
 
     def fetch(self, max_id):  # -> future with a page of statuses
         raise NotImplementedError
@@ -1152,10 +1223,11 @@ class _PagedTab(QWidget):
         self.render()
 
     def render(self):
-        short = self.core.short_ids(self.items)
+        items = self.shown(self.items)
+        short = self.core.short_ids(items)
         specs = [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
                           extra={"short_id": short.get(real(st)["id"])})
-                 for st in self.items]
+                 for st in items]
         self.view.set_specs(specs, keep_position=True)
 
     def apply_read(self, ids):
@@ -1214,11 +1286,12 @@ class AccountWidget(_PagedTab):
     def render(self):
         """Pinned posts first (marked 📌), then the rest by time."""
         top = {st["id"] for st in self.pinned}
-        rest = [st for st in self.items if st["id"] not in top]
-        short = self.core.short_ids(self.pinned + rest)
+        rest = self.shown([st for st in self.items if st["id"] not in top])
+        pinned = self.shown(self.pinned)
+        short = self.core.short_ids(pinned + rest)
         specs = [CardSpec(key="pin:" + st["id"], status=st, parent=self.core.parent_of(st),
                           extra={"short_id": short.get(real(st)["id"]), "pinned": True})
-                 for st in self.pinned]
+                 for st in pinned]
         specs += [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
                            extra={"short_id": short.get(real(st)["id"])}) for st in rest]
         self.view.set_specs(specs, keep_position=True)

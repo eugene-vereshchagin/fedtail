@@ -171,10 +171,11 @@ class TrendsWidget(_PagedTab):
         self.render()
 
     def render(self):
-        short = self.core.short_ids(self.items)
+        items = self.shown(self.items)
+        short = self.core.short_ids(items)
         self.view.set_specs([CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
                                       extra={"short_id": short.get(real(st)["id"])})
-                             for st in self.items], keep_position=True)
+                             for st in items], keep_position=True)
 
 
 def _section(text):
