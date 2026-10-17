@@ -1346,6 +1346,51 @@ class QtSmokeTest(unittest.TestCase):
                       f"positioned={lane.positioned} unread={len(view.unread_keys())} "
                       f"rows={len(view.rows)} active={self.win.isActiveWindow()}")
 
+    def test_posts_scrolled_past_count_as_read(self):
+        """read.mark_read = on_scroll: a post that was on screen and that the reader went
+        on past is read, even if it was never all on screen while the feed stood still —
+        and in a window without focus too, as long as the reader scrolls it by hand."""
+        for i in range(40):
+            self.world.add(status(f"7{i:02d}", NEWS, minute=i % 60,
+                                  text="пост " * 40 + str(i)), home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(until=lambda: len(view.unread_keys()) > 10)
+        self.pump(2.0)  # the opening position settles
+        view._drop_target()
+        seen = []
+        view.seen.connect(seen.extend)
+        sb = view.verticalScrollBar()
+        keys = [k for k in view.unread_keys() if view.rows[k].height() < view.viewport().height()]
+        row = view.rows[keys[len(keys) // 2]]
+        top = view._top(row)
+        view._touched()
+        sb.setValue(top + 10)  # its head already gone above: never all on screen
+        view._emit_seen()
+        self.assertNotIn(row.status_id, seen)
+        sb.setValue(top + row.height() + 5)  # and on past it
+        view._emit_seen()
+        self.assertIn(row.status_id, seen)
+
+        # a post that never was on screen (jumped over) stays unread
+        far = view.rows[keys[-1]]
+        if view._top(far) > sb.value() + view.viewport().height():
+            self.assertNotIn(far.status_id, seen)
+
+        # without focus and without the reader's hand: nothing counts
+        view._touched_at = 0.0
+        view._window_active = lambda: False
+        seen.clear()
+        sb.setValue(view._top(far) - 5)
+        view._emit_seen()
+        self.assertEqual(seen, [])
+        view._touched()  # the wheel over the window: it's being read
+        view._emit_seen()
+        self.assertIn(far.status_id, seen)
+
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes
         cfg, _ = config.validate({"ui": {"theme": "terminal"}})

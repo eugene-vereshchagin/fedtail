@@ -11,6 +11,10 @@
 - Logs live in the profile's data folder, `logs/` (≡ → Debugging → Open the log folder),
   not in `~/fedtail-logs` any more; `debug.log_dir` still sends them elsewhere. A new
   version deletes the old version's logs at its first start, and the old home folder ones.
+- Read on scroll (`read.mark_read = "on_scroll"`) marks what you actually scrolled through:
+  a post that was on screen and that you went on past counts as read even if it never
+  stood all on screen at a pause; scrolling a window without focus with the wheel (KDE
+  does that) counts too; and pictures still arriving no longer hold the marks back.
 
 ## 0.10.0 — 2026-10-17
 

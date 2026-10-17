@@ -68,8 +68,14 @@ class FeedView(QScrollArea):
         self.order = []
         self._seen_timer = QTimer(self, singleShot=True, interval=350)
         self._seen_timer.timeout.connect(self._emit_seen)
+        # while the feed keeps moving the quiet moment never comes: look every so often
+        # anyway, so posts that went by under the reader's eyes count too
+        self._seen_tick = QTimer(self, singleShot=True, interval=300)
+        self._seen_tick.timeout.connect(self._emit_seen)
+        self._glimpsed = set()  # unread rows that have been on screen at some point
+        self._touched_at = 0.0  # when the reader last scrolled by hand (monotonic)
         sb = self.verticalScrollBar()
-        sb.valueChanged.connect(lambda _v: self._seen_timer.start())
+        sb.valueChanged.connect(self._scrolled)
         # Word-wrapped posts get their real height only after Qt lays them out,
         # sometimes several passes later. So "where to stand" is kept as a target
         # and re-applied every time the scroll range changes, until the reader
@@ -78,7 +84,7 @@ class FeedView(QScrollArea):
         self._target_timer = QTimer(self, singleShot=True, interval=1500)
         self._target_timer.timeout.connect(self._drop_target)
         sb.rangeChanged.connect(lambda *_: self._apply_target())
-        sb.actionTriggered.connect(lambda _a: self._drop_target())
+        sb.actionTriggered.connect(lambda _a: self._touched())
 
     # ---- geometry ---------------------------------------------------------------
     def resizeEvent(self, e):
@@ -141,8 +147,22 @@ class FeedView(QScrollArea):
         self._target_timer.start()  # still settling: keep the target a bit longer
 
     def wheelEvent(self, e):
-        self._drop_target()
+        self._touched()
         super().wheelEvent(e)
+
+    def _touched(self):
+        """The reader moved the feed (wheel, keys, scroll bar): what comes on screen now
+        is being read, even in a window without focus (KDE scrolls those too)."""
+        self._touched_at = time.monotonic()
+        self._drop_target()
+
+    def _window_active(self):
+        return self.window().isActiveWindow()
+
+    def _scrolled(self, _value):
+        self._seen_timer.start()
+        if not self._seen_tick.isActive():
+            self._seen_tick.start()
 
     # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys)
     POST_KEYS = {Qt.Key.Key_R: "reply", Qt.Key.Key_F: "fav", Qt.Key.Key_B: "boost",
@@ -155,7 +175,7 @@ class FeedView(QScrollArea):
         if plain and self.ctx.cfg["ui"].get("post_keys", True) and self._post_key(e.key()):
             e.accept()
             return
-        self._drop_target()
+        self._touched()
         super().keyPressEvent(e)
 
     def _posts(self):
@@ -274,26 +294,40 @@ class FeedView(QScrollArea):
 
     # ---- what the reader saw --------------------------------------------------------
     def _emit_seen(self):
-        if not self.isVisible() or not self.window().isActiveWindow():
+        if not self.isVisible() or self.window().isMinimized():
             return
-        if self._target is not None:
-            return  # still settling: what's on screen now is not what the reader sees
+        # a window in the background isn't being read — unless the reader scrolls it
+        if not self._window_active() and time.monotonic() - self._touched_at > READING_S:
+            return
+        if self._target is not None and self._target[0] != "anchor":
+            return  # still on its way somewhere: what's on screen is not what's read
+        # (an anchor only holds the post on top in place while pictures come in: the
+        # reader sees exactly that, so it doesn't stop anything)
         sb = self.verticalScrollBar()
         vtop, vh = sb.value(), self.viewport().height()
         vbot = vtop + vh
         at_end = sb.value() >= sb.maximum()
         ids = []
+        glimpsed = set()
         for key in self.order:
             row = self.rows[key]
             if not row.spec.unread:
                 continue
             top = self._top(row)
             bottom = top + row.height()
+            on_screen = top < vbot and bottom > vtop
             fully = top >= vtop - 2 and bottom <= vbot + 2
             tall_and_done = row.height() > vh and bottom <= vbot + 2 and bottom > vtop
-            tail = at_end and top < vbot and bottom > vtop
-            if fully or tall_and_done or tail:
+            tail = at_end and on_screen
+            # it was on screen and the reader went on past it: read, though it was never
+            # all on screen at a moment the feed stood still
+            passed = bottom <= vtop + 2 and key in self._glimpsed
+            if fully or tall_and_done or tail or passed:
                 ids.append(row.status_id)
+            elif on_screen:
+                glimpsed.add(key)
+        self._glimpsed = (self._glimpsed & {k for k in self.order
+                                             if self.rows[k].spec.unread}) | glimpsed
         if ids:
             log.debug("seen on screen: %d", len(ids))
             self.seen.emit(ids)
@@ -302,6 +336,8 @@ class FeedView(QScrollArea):
         super().showEvent(e)
         self._seen_timer.start()
 
+
+READING_S = 5  # s after a scroll by hand that a window without focus still counts as read
 
 ICONS = True  # set from the theme by the window: dark custom themes want words only
 
