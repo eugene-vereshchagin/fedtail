@@ -14,7 +14,7 @@
 что он отвечает; под чужим комментом — что ты сам на него сказал; тред открывается деревом на
 том месте, откуда ты пришёл; лента помнит, где ты остановился, и не прыгает.
 
-**Скачать:** один файл, ничего не надо ставить — [последний релиз](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` для Linux, `fedtail-…-windows.exe` для Windows ([как запустить](#одним-файлом-без-установки)). Или [из исходников](#запуск-из-исходников).
+**Скачать:** один файл, ничего не надо ставить — [последний релиз](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` для Linux, `fedtail-…-windows.exe` для Windows ([как запустить](#одним-файлом-без-установки)); для Debian 13 и родни — `fedtail_…_all.deb`: `sudo apt install ./fedtail_…_all.deb` поставит Qt из Debian и добавит fedtail в меню. Или [из исходников](#запуск-из-исходников).
 
 [English version](README.md)
 

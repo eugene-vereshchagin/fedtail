@@ -145,6 +145,31 @@ jobs:
         if: failure()
         run: python3 .github/annotate.py test-output.txt
 
+  # the .deb for Debian 13: built, installed with apt (so its dependencies resolve),
+  # started; attached to a release next to the one-file builds
+  deb:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v5
+      - run: apt-get update && apt-get install -y --no-install-recommends python3 dpkg-dev
+      - run: python3 packaging/deb.py
+      - name: Installs with apt, starts
+        run: |
+          apt-get install -y ./dist/fedtail_*_all.deb
+          cd /tmp
+          fedtail --version
+          python3 -c "import fedtail.frontends.qt, fedtail.frontends.web.server"
+          test -f /usr/share/applications/fedtail.desktop
+          test -f /usr/share/icons/hicolor/scalable/apps/fedtail.svg
+          apt-get install -y python3-textual && python3 -c "import fedtail.frontends.tui.app" || echo "::warning::no python3-textual in this Debian"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-deb
+          path: dist/fedtail_*_all.deb
+
   # real screenshots of the window with made-up data, published to the
   # `screenshots` branch so the look can be reviewed without running the app
   screenshots:
@@ -186,7 +211,7 @@ jobs:
   # with that version's CHANGELOG section as the notes
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, test, debian, windows-build, linux-build]
+    needs: [lint, test, debian, windows-build, linux-build, deb]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -217,5 +242,6 @@ jobs:
           git push origin "v$VER"
           cp built/fedtail-windows/fedtail.exe "fedtail-$VER-windows.exe"
           cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
+          cp built/fedtail-deb/fedtail_*_all.deb .
           gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag \
-            "fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64"
+            "fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64" fedtail_*_all.deb

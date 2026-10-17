@@ -12,6 +12,8 @@
   only. A link with a key (kept in the profile, `web.key`) lets you in; the page loads scripts
   from fedtail only, server HTML is cleaned before it gets there. New `[web]`: `host`, `port`,
   `open_browser`.
+- A Debian package with every release: `fedtail_<version>_all.deb` — `sudo apt install ./…`
+  brings Qt and requests from Debian and puts fedtail in the menu (`packaging/deb.py`).
 
 ## 0.9.0 — 2026-10-17
 

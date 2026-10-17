@@ -14,7 +14,7 @@ being discussed. So the whole point is giving that context back: every reply sho
 answers; under someone's comment you see what you said back; a thread opens as a tree right
 where you came from; a lane remembers where you stopped and never jumps.
 
-**Download:** one file, nothing to install — [the latest release](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` for Linux, `fedtail-…-windows.exe` for Windows ([how](#one-file-no-installing)). Or [run it from the source](#running-from-source).
+**Download:** one file, nothing to install — [the latest release](https://github.com/eugene-vereshchagin/fedtail/releases/latest): `fedtail-…-linux-x86_64` for Linux, `fedtail-…-windows.exe` for Windows ([how](#one-file-no-installing)); for Debian 13 and the like, `fedtail_…_all.deb` — `sudo apt install ./fedtail_…_all.deb` brings Qt from Debian and puts fedtail in the menu. Or [run it from the source](#running-from-source).
 
 [Русскоязычная версия](README.ru.md)
 
