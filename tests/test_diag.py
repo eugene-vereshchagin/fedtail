@@ -50,10 +50,17 @@ class DiagTest(unittest.TestCase):
         time.sleep(1.6)  # no beats: the GUI "hangs"
         dog.beat()
         dog.stop()
-        for h in logging.getLogger().handlers:
-            h.flush()
         self.assertEqual(folder, tmp_logs := Path(self._tmp.name) / "logs" / "t")
-        text = (tmp_logs / "latest.log").read_text("utf-8")
+        # the watchdog's own thread writes its dump: on a slow machine that may still be
+        # going on when the beat comes
+        end = time.time() + 10
+        while True:
+            for h in logging.getLogger().handlers:
+                h.flush()
+            text = (tmp_logs / "latest.log").read_text("utf-8")
+            if "hasn't answered" in text or time.time() > end:
+                break
+            time.sleep(0.05)
         self.assertIn("session start", text)
         self.assertIn('"demo.things": 3', text)
         self.assertIn("hasn't answered", text)
