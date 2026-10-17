@@ -204,6 +204,27 @@ class PostRow(QWidget):
         if self._menu is not None:
             self._menu.exec(self.card.mapToGlobal(pos))
 
+    def _text_menu(self, lab, pos):
+        """A right click on the post's text: the post's menu too (a long post is all
+        text, and its own menu used to stand in the way), with Copy on top when
+        something is selected."""
+        if self._menu is None:
+            return
+        menu = QMenu(lab)
+        if lab.hasSelectedText():
+            sel = lab.selectedText()
+            menu.addAction(_("copy"), lambda: QGuiApplication.clipboard().setText(sel))
+            menu.addSeparator()
+        menu.addActions(self._menu.actions())
+        menu.exec(lab.mapToGlobal(pos))
+
+    def _route_text_menus(self):
+        for lab in self.body.findChildren(QLabel):
+            if lab.contextMenuPolicy() == Qt.ContextMenuPolicy.DefaultContextMenu:
+                lab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+                lab.customContextMenuRequested.connect(
+                    lambda pos, w=lab: self._text_menu(w, pos))
+
     # ---- public -----------------------------------------------------------------
     @property
     def status_id(self):
@@ -273,6 +294,10 @@ class PostRow(QWidget):
         return lab
 
     def _build(self):
+        self._build_body()
+        self._route_text_menus()  # every time: a rebuilt card has new labels
+
+    def _build_body(self):
         if self.body is not None:
             self.lay.removeWidget(self.body)
             self.body.deleteLater()
