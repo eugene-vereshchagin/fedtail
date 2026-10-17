@@ -681,12 +681,18 @@ class MainWindow(QMainWindow):
         for g in self.group_heads:
             self._show_fold(g)
         if current:
+            # the sidebar rebuilt (lists changed…) while a search, thread or profile tab
+            # is in front: the lane is chosen again, but that tab stays in front
+            front = self.tabs.currentWidget()
             if current in self.lane_items:
                 self.select_lane(current)
                 self.lane_items[current].set_current(True)
             else:
                 self.select_lane("people" if "people" in self.lane_items
                                  else self.lane_order[0])
+            if front is not None and front is not self.stack and \
+                    self.tabs.indexOf(front) >= 0:
+                self.tabs.setCurrentWidget(front)
         self.update_badges()
 
     def _lane_menu(self, pos):

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0 — in progress
+
+- A search, thread or profile tab no longer jumps back to the lanes: when the sidebar was
+  rebuilt (lists refreshed, say), choosing the lane again brought the lanes tab to the
+  front. Enter in the search field stays in the search field.
+
 ## 0.11.0 — 2026-10-18
 
 **In short:** no more freezes when a lane opens (cards are built around where you read,

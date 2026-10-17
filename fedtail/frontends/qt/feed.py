@@ -182,6 +182,11 @@ class FeedView(QScrollArea):
                  Qt.Key.Key_Return: "thread", Qt.Key.Key_Enter: "thread"}
 
     def keyPressEvent(self, e):
+        from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
+        if isinstance(QApplication.focusWidget(), (QLineEdit, QTextEdit)):
+            # a field in the header (Search): its Enter is its own, not "open the post"
+            e.accept()
+            return
         plain = e.modifiers() in (Qt.KeyboardModifier.NoModifier,
                                   Qt.KeyboardModifier.KeypadModifier)
         if plain and self.ctx.cfg["ui"].get("post_keys", True) and self._post_key(e.key()):
@@ -2062,7 +2067,7 @@ class SearchWidget(QWidget):
         self.edit = QLineEdit()
         self.edit.setPlaceholderText(_("search_placeholder"))
         self.edit.setClearButtonEnabled(True)
-        self.edit.returnPressed.connect(lambda: self.run(self.edit.text()))
+        self.edit.installEventFilter(self)
         self.view.header.addWidget(self.edit)
         self.box = QWidget()
         self.box_lay = QVBoxLayout(self.box)
@@ -2075,6 +2080,17 @@ class SearchWidget(QWidget):
     def focus(self):
         self.edit.setFocus()
         self.edit.selectAll()
+
+    def eventFilter(self, obj, e):
+        """Enter in the search field searches and stops there: a line edit lets the key
+        go on to its parents, and up there Enter means other things (open a post, go
+        back to the lane)."""
+        from PySide6.QtCore import QEvent
+        if obj is self.edit and e.type() == QEvent.Type.KeyPress and \
+                e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.run(self.edit.text())
+            return True
+        return super().eventFilter(obj, e)
 
     def _section(self, text):
         lab = QLabel(text)
