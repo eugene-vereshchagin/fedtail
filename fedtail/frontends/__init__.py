@@ -16,6 +16,7 @@ FRONTENDS = {
             "The terminal interface needs Textual.\n"
             "  Debian 13:  sudo apt install python3-textual\n"
             "  elsewhere:  pip install 'textual>=0.86'"),
+    "web": ("fedtail.frontends.web", ""),
 }
 
 

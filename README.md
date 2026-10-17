@@ -26,7 +26,7 @@ where you came from; a lane remembers where you stopped and never jumps.
 **Contents**
 
 - *Start:* [What's different](#whats-different) · [For Juick and Point.im people](#for-juick-and-pointim-people) · [One file, no installing](#one-file-no-installing) · [Running from source](#running-from-source) · [Accounts, profiles and files](#accounts-profiles-and-files)
-- *Reading:* [Lanes](#lanes) · [Posts](#posts) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [In the terminal](#in-the-terminal) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
+- *Reading:* [Lanes](#lanes) · [Posts](#posts) · [Lists](#lists) · [Finding people and tags](#finding-people-and-tags) · [Command line, like on Point](#command-line-like-on-point) · [In the terminal](#in-the-terminal) · [In a browser](#in-a-browser) · [Silence](#silence) · [Links stay inside](#links-stay-inside) · [Honest counters and readable hashtags](#honest-counters-and-readable-hashtags) · [Notifications](#notifications)
 - *Writing and you:* [Writing](#writing) · [Your profile](#your-profile) · [Themes](#themes) · [Keys](#keys)
 - *More:* [If it breaks](#if-it-breaks) · [Development](#development) · [Who wrote it](#who-wrote-it) · [License](#license)
 
@@ -283,6 +283,16 @@ left, posts with what they answer, threads as trees, the same command line at th
 new post, `p` — the author's profile (`F` there follows), `x` — the lane read, `Tab` — lanes / posts, `Esc` — back, `q` — quit. It needs
 [Textual](https://textual.textualize.io/): `sudo apt install python3-textual` on Debian 13, or
 `pip install textual`. `[tui]` in the config: `theme`, `lanes_width`, `show_context`.
+
+## In a browser
+
+`fedtail --ui web` (or `ui.frontend = "web"`) runs fedtail as a page in your browser: lanes,
+posts with what they answer, threads, profiles, writing and the command line, live updates, the
+same read marks; `j` / `k`, `r`, `f`, `b`, `m`, `p`, `x`, `Enter`, `Esc` as in the window. It
+needs nothing beyond Python. At start it prints a link with a key (and opens it): the key is
+kept in the profile's data folder (`web.key` — delete it for a new one). `[web]` in the config:
+`host` (`"127.0.0.1"` — this computer only; `"0.0.0.0"` — a phone on your home network too,
+unencrypted, so only there), `port`, `open_browser`.
 
 ## Silence
 

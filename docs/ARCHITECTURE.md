@@ -97,6 +97,10 @@ fedtail/
     threads.py       context → flat tree with depth and /N numbers
   frontends/
     __init__.py      registry: name -> module with run(core, instance, argv)
+    web/             the browser interface: server.py — http.server + a JSON API over the
+                     Core, key in a cookie, CSP; the page is data/web/ (index.html, app.js,
+                     app.css)
+    richtext.py      server HTML → the safe subset shown (QLabel, the web page); no Qt
     tui/             the terminal interface (Textual): model.py — posts as lines and the
                      command line, no Textual (tested alone); app.py — the screens
     cli.py           terminal commands (lanes/show/tail/post/read): plain stdout,

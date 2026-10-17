@@ -142,6 +142,11 @@ DEFAULTS = {
         "lanes_width": 26,
         "show_context": True,
     },
+    "web": {
+        "host": "127.0.0.1",
+        "port": 8765,
+        "open_browser": True,
+    },
     "cli": {
         "enabled": True,
         "color": "auto",
@@ -164,7 +169,7 @@ CHOICES = {
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},
-    ("ui", "frontend"): {"qt", "tui"},
+    ("ui", "frontend"): {"qt", "tui", "web"},
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "image_viewer"): {"internal", "browser"},
     ("ui", "actions"): {"both", "icons", "text"},

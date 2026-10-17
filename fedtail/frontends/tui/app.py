@@ -15,7 +15,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
 from ...core.model import real
 from ...i18n import _
-from .model import Commands, lane_label, show_post
+from .model import Commands, lane_label, ordered_lanes, show_post, start_lane
 
 log = logging.getLogger(__name__)
 
@@ -395,19 +395,19 @@ class FedtailApp(App, PostsMixin):
         self.sub_title = "@" + me["acct"]
         await self.fill_lanes()
         self.core.start_polling()
-        want = self.core.get_state("lane")
-        names = list(self.core.lane_by_name)
-        if names:
-            await self.select_lane(want if want in names else names[0])
+        first = start_lane(self.core, self._lane_names())
+        if first:
+            await self.select_lane(first)
         self.query_one("#posts", ListView).focus()
 
     async def fill_lanes(self):
         lv = self.query_one("#lanes", ListView)
         await lv.clear()
         items = []
-        for name in self.core.lane_by_name:
-            title, n = lane_label(self.core, name, self.lanes_width - 2)
-            items.append(LaneItem(name, title, n))
+        for _group, names in ordered_lanes(self.core):
+            for name in names:
+                title, n = lane_label(self.core, name, self.lanes_width - 2)
+                items.append(LaneItem(name, title, n))
         await lv.extend(items)
 
     def update_lane_counts(self):

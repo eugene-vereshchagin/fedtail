@@ -169,3 +169,25 @@ def lane_label(core, name, width=22):
     if len(title) > room:
         title = title[:room - 1] + "…"
     return title, n
+
+
+def ordered_lanes(core):
+    """[(group title or None, [lane names])] in the window's sidebar order
+    (ui.sidebar_groups: with section titles, or without)."""
+    from ...core import lanes as lanes_module
+    groups = lanes_module.grouped(core.lanes)
+    if not core.cfg["ui"]["sidebar_groups"]:
+        return [(None, [n for _g, names in groups for n in names])]
+    out = []
+    for group, names in groups:
+        if names:
+            out.append((_("lists_header") if group == "lists" else _("grp_" + group), names))
+    return out
+
+
+def start_lane(core, names):
+    """The lane to open first: the one of last time, else Home, else the first."""
+    want = core.get_state("lane")
+    if want in names:
+        return want
+    return "people" if "people" in names else (names[0] if names else None)

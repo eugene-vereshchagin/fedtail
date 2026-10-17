@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>fedtail</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div id="app">
+  <nav id="lanes" aria-label="lanes"></nav>
+  <main id="main">
+    <header id="bar">
+      <button id="menu" class="icon" aria-label="lanes" title="lanes">☰</button>
+      <h1 id="title">fedtail</h1>
+      <span id="count"></span>
+      <button id="allread" class="tool"></button>
+    </header>
+    <div id="posts" tabindex="0"></div>
+  </main>
+  <aside id="side" hidden>
+    <header class="sidebar-head">
+      <button id="back" class="tool"></button>
+      <h2 id="side-title"></h2>
+    </header>
+    <div id="side-body"></div>
+  </aside>
+</div>
+<form id="compose" autocomplete="off">
+  <div id="reply-line" hidden><span id="reply-to"></span> <button type="button" id="reply-cancel" class="link"></button></div>
+  <input id="cw" type="text" hidden>
+  <div class="row">
+    <textarea id="text" rows="2"></textarea>
+    <div class="col">
+      <select id="vis"></select>
+      <button id="send" type="submit" class="primary"></button>
+    </div>
+  </div>
+</form>
+<div id="toast" role="status" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>
