@@ -1257,6 +1257,42 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(self.win.curtain_shown())
         self.assertIn("comments", self.win.lane_widgets)
 
+    def test_tabs_and_the_curtain(self):
+        """A tab already open, called from under the curtain, comes out of it (my own
+        profile from my name); Enter in the sidebar search opens the search, not the last
+        lane; a sidebar rebuild (lists refreshed) leaves the tab in front where it is."""
+        from PySide6.QtCore import QEvent, Qt
+        from PySide6.QtGui import QKeyEvent
+
+        from fedtail.frontends.qt.feed import AccountWidget, SearchWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.pump(until=lambda: "people" in self.win.lane_items)
+        me = self.core.me["id"]
+        self.win.open_account(me)
+        prof = self.win.tabs.currentWidget()
+        self.assertIsInstance(prof, AccountWidget)
+        self.win.close_all()  # Esc: the curtain
+        self.assertTrue(self.win.curtain_shown())
+        self.win.open_account(me)  # a click on my name
+        self.assertFalse(self.win.curtain_shown())
+        self.assertIs(self.win.tabs.currentWidget(), prof)
+        # Enter in the sidebar search, from the curtain
+        self.win.close_all()
+        box = self.win.search_box
+        box.setFocus()
+        box.setText("linux")
+        for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+            self.app.sendEvent(box, QKeyEvent(kind, Qt.Key.Key_Return,
+                                              Qt.KeyboardModifier.NoModifier))
+        self.pump(0.05)
+        self.assertFalse(self.win.curtain_shown())
+        self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
+        # the sidebar built again behind the search tab: the search stays in front
+        self.win._rebuild_sidebar()
+        self.pump(0.05)
+        self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
+
     def test_new_pill_agrees_with_the_store(self):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)

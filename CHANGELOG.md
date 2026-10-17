@@ -2,6 +2,9 @@
 
 ## 0.12.0 — in progress
 
+- The log of the first versions (`fedtail.log`, `fedtail.log.1`…) now goes with the other
+  old logs when a new version starts. Tabs coming to the front, the curtain lifting and
+  Enter on the curtain are in the log.
 - With every lane closed (Esc, the curtain), opening something whose tab was already open
   (my own profile from my name, a thread, a search) did nothing visible: the tab came to
   the front under the curtain. It now lifts the curtain.

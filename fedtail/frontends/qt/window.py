@@ -976,14 +976,18 @@ class MainWindow(QMainWindow):
 
     def _front(self, w):
         """An open tab to the front — and out from under the curtain, if it's down."""
-        if self.curtain_shown():
+        lifted = self.curtain_shown()
+        if lifted:
             self.right_stack.setCurrentIndex(0)
         self.tabs.setCurrentWidget(w)
+        log.info("tab to the front: %s%s", type(w).__name__,
+                 " (curtain lifted)" if lifted else "")
 
     def _add_tab(self, w, title):
-        log.info("tab opened: %s", type(w).__name__)
+        lifted = self.curtain_shown()
+        log.info("tab opened: %s%s", type(w).__name__, " (curtain lifted)" if lifted else "")
         i = self.tabs.addTab(w, title)
-        if self.curtain_shown():  # a tab opened from the curtain: show it, not the curtain
+        if lifted:  # a tab opened from the curtain: show it, not the curtain
             self.right_stack.setCurrentIndex(0)
         self.tabs.setCurrentIndex(i)
 
@@ -1002,6 +1006,7 @@ class MainWindow(QMainWindow):
         for w in self.extra_tabs():
             if isinstance(w, AccountWidget) and w.acc_id == acc_id:
                 if self.tabs.currentWidget() is w and not self.curtain_shown():
+                    log.info("profile %s: already in front, back to the top", acc_id)
                     w.show_info()  # already here: back up to who this is
                 else:
                     self._front(w)
@@ -1508,6 +1513,7 @@ class MainWindow(QMainWindow):
         # sidebar search box lets its Enter go on up here after searching)
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.curtain_shown() \
                 and not typing:
+            log.info("Enter on the curtain: back to the lane")
             self.select_lane(self.core.get_state("lane") or "people")
             return
         super().keyPressEvent(e)

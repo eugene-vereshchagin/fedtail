@@ -93,7 +93,9 @@ def logs_dir(paths, cfg=None):
 DEFAULT_LOG_DIR = ""
 OLD_LOG_DIR = "~/fedtail-logs"
 # what a log folder holds that is ours to delete (nothing else in it is touched)
-OUR_LOGS = ("2[0-9][0-9][0-9]-*.log", "latest.log", "crash.log", "stacks.log", "version")
+# (fedtail.log*: the single log file of the first versions)
+OUR_LOGS = ("2[0-9][0-9][0-9]-*.log", "latest.log", "crash.log", "stacks.log", "version",
+            "fedtail.log", "fedtail.log.[0-9]*")
 
 
 def _remove_ours(folder):
