@@ -1146,6 +1146,31 @@ class QtSmokeTest(unittest.TestCase):
             cfg["ui"]["arts_mode"] = False
             cfg["ui"]["expand_cw"] = True
 
+    def test_cw_card_makes_no_window_of_its_own(self):
+        """A post under a CW: its folded part is shown or hidden while the card is being
+        built — it must have its parent by then, or Qt makes a native window for it."""
+        from PySide6.QtWidgets import QWidget
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        st = status("098", BOB, minute=1, text="под катом")
+        st["spoiler_text"] = "осторожно"
+        orphans = []
+        real_set = QWidget.setVisible
+
+        def watch(w, on):
+            if on and w.parent() is None:
+                orphans.append(w)
+            real_set(w, on)
+        QWidget.setVisible = watch
+        try:
+            for open_ in (True, False):
+                self.win.ctx.cfg["ui"]["expand_cw"] = open_
+                PostRow(CardSpec(key="098", status=st), self.win.ctx)
+        finally:
+            QWidget.setVisible = real_set
+            self.win.ctx.cfg["ui"]["expand_cw"] = True
+        self.assertEqual(orphans, [])
+
     def test_custom_emoji(self):
         """:blobcat: in a post and a name: a picture once it's downloaded."""
         from PySide6.QtWidgets import QLabel

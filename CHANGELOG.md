@@ -32,6 +32,10 @@
 - `ui.unload_hidden_minutes` (10): a lane not opened that long lets its cards go; opened
   again, it's drawn anew at the first unread. A client kept open for days held over a
   gigabyte in cards and their pictures. The lane in front is never unloaded; 0 keeps all.
+- Lanes with many posts under content warnings opened in seconds instead of tens of
+  seconds: every such card made, and threw away, a native window of its own while it was
+  built (the log showed a 16 s freeze for a list of 300 posts). Word-wrapped text also no
+  longer lays itself out twice for every resize.
 - The log tells where a freeze is: any freeze of the window over `debug.stall_ms` (250 ms)
   gets a line with how long it was and what the window was busy with — an event, a
   lane being drawn, a picture coming in, or Qt itself laying out and painting — with the

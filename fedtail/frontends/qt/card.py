@@ -97,12 +97,21 @@ class WrapLabel(QLabel):
     width it actually got. Plain QLabel, deep in nested layouts, sometimes gets
     a height computed for another width, and the last lines get cut off."""
 
+    _fit_for = None  # (width, text) the minimum height was last worked out for
+
     def resizeEvent(self, e):
         super().resizeEvent(e)
-        if self.wordWrap():
-            h = self.heightForWidth(self.width())
-            if h > 0 and h != self.minimumHeight():
-                self.setMinimumHeight(h)
+        if not self.wordWrap():
+            return
+        # laying out rich text is the costly part, and a resize that only changes the
+        # height (the one setMinimumHeight itself causes) can't change the answer
+        key = (self.width(), self.text())
+        if key == self._fit_for:
+            return
+        self._fit_for = key
+        h = self.heightForWidth(self.width())
+        if h > 0 and h != self.minimumHeight():
+            self.setMinimumHeight(h)
 
 
 class SeparatorRow(QWidget):
@@ -292,7 +301,11 @@ class PostRow(QWidget):
                 self.ctx.cfg["feed"]["show_reply_context"]:
             v.addWidget(self._label(self._context_html(st), "ctx"))
 
-        content = QWidget()
+        # with its parent from the start: a widget without one becomes a window of its own
+        # when shown — the CW switch below shows or hides it before it goes into the
+        # layout, and every card under a CW made (and threw away) a native window: tens
+        # of milliseconds each, 16 s for a lane of 300 such posts
+        content = QWidget(self.body)
         cv = QVBoxLayout(content)
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(8)
