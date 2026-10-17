@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0 — in progress
+## 0.9.0 — 2026-10-17
 
 - In the terminal: `fedtail lanes`, `fedtail show LANE`, `fedtail tail [LANE…]`,
   `fedtail post [--reply ALIAS] TEXT|-`, `fedtail read LANE` — the same profile, database and
