@@ -354,6 +354,12 @@ _STRINGS = {
         "filter_all": "Показать всё",
         "player_pause_tip": "Пауза / играть (пробел)",
         "gif_keys": "клик или Esc — закрыть · S — скачать · O — в браузере",
+        "gif_keys_many": "← → или колесо — листать · клик или Esc — закрыть · S — скачать · "
+                         "O — в браузере",
+        "player_keys_many": "PgUp/PgDn — соседнее видео · пробел — пауза · ← → — 5 секунд · "
+                            "M — звук · S — скачать · Esc — закрыть",
+        "player_prev_tip": "Предыдущее в посте (←, PgUp)",
+        "player_next_tip": "Следующее в посте (→, PgDn)",
         "player_mute_tip": "Звук (M)",
         "player_keys": "пробел — пауза · ← → — 5 секунд · M — звук · S — скачать · "
                        "O — в браузере · Esc — закрыть",
@@ -843,6 +849,12 @@ _STRINGS = {
         "filter_all": "Show everything",
         "player_pause_tip": "Pause / play (Space)",
         "gif_keys": "click or Esc to close · S to download · O for the browser",
+        "gif_keys_many": "← → or the wheel to go on · click or Esc to close · S download · "
+                         "O browser",
+        "player_keys_many": "PgUp/PgDn next video · Space pause · ← → 5 seconds · M sound · "
+                            "S download · Esc close",
+        "player_prev_tip": "Previous in the post (←, PgUp)",
+        "player_next_tip": "Next in the post (→, PgDn)",
         "player_mute_tip": "Sound (M)",
         "player_keys": "Space pause · ← → 5 seconds · M sound · S download · O browser · "
                        "Esc close",

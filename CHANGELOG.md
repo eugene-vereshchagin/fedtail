@@ -2,6 +2,9 @@
 
 ## 0.12.0 — in progress
 
+- Several gifs or videos in a post: ‹ › at the top right of the player and the keys go
+  between them without closing it (← → or the wheel for gifs; PgUp / PgDn for videos, where
+  ← → seek), with "2 / 3" next to them and the keys in a faint line at the bottom.
 - With every lane closed (the curtain), Enter in the sidebar search box opened the search
   and then the last lane on top of it: the box let its Enter go on to the window, where
   Enter on the curtain means "back to the lane". A tab opened from the curtain now shows.

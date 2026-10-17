@@ -67,18 +67,27 @@ QLabel { color: rgba(255, 255, 255, 210); }
 class VideoOverlay(QWidget):
     """A video over the main window, with sound and the usual keys."""
 
-    def __init__(self, window, ctx, m, loop=False):
+    def __init__(self, window, ctx, m, loop=False, items=None):
         from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
         from PySide6.QtMultimediaWidgets import QVideoWidget
         super().__init__(window)
         self.win, self.ctx, self.m = window, ctx, m
+        self.items = [x for x in (items or [m])]
+        self.i = next((n for n, x in enumerate(self.items) if x is m or x == m), 0)
+        if not self.items or self.items[self.i] != m:
+            self.items, self.i = [m], 0
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setStyleSheet(BUTTONS_CSS)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(24, 24, 24, 16)
         lay.setSpacing(10)
         top = QHBoxLayout()
+        self.counter = QLabel()
         top.addStretch(1)
+        if len(self.items) > 1:  # several in the post: go between them right here
+            top.addWidget(self.counter)
+            top.addWidget(self._button("‹", _("player_prev_tip"), lambda: self.go(-1)))
+            top.addWidget(self._button("›", _("player_next_tip"), lambda: self.go(1)))
         if ctx.save_image:
             top.addWidget(self._button("⤓", _("save_media") + " (S)", self.save))
         top.addWidget(self._button("↗", _("open_browser") + " (O)", self.to_browser))
@@ -103,15 +112,17 @@ class VideoOverlay(QWidget):
         bar.addWidget(self.mute)
         lay.addLayout(bar)
         desc = (m.get("description") or "").replace("\n", " ")
-        if desc:
-            cap = QLabel(desc)
-            cap.setWordWrap(True)
-            cap.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lay.addWidget(cap)
+        cap = QLabel(desc)  # the alt text; changes as I go between the post's videos
+        cap.setWordWrap(True)
+        cap.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        cap.setVisible(bool(desc))
+        lay.addWidget(cap)
+        self.desc_label = cap
         keys = QLabel(_("player_keys"))
         keys.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        keys.setStyleSheet("color: #888;")
+        keys.setStyleSheet("color: rgba(255, 255, 255, 110);")  # as faint as the viewer's
         lay.addWidget(keys)
+        self.keys = keys
 
         self.player = QMediaPlayer(self)
         self.audio = QAudioOutput(self)
@@ -125,7 +136,7 @@ class VideoOverlay(QWidget):
             self.audio.setMuted(True)
             for w in (self.btn, self.slider, self.time, self.mute):
                 w.hide()
-            keys.setText(_("gif_keys"))
+        self._hint()
         self.player.durationChanged.connect(lambda d: self.slider.setRange(0, int(d)))
         self.player.positionChanged.connect(self._position)
         self.player.errorOccurred.connect(self._error)
@@ -135,9 +146,47 @@ class VideoOverlay(QWidget):
         self.show()
         self.raise_()
         self.setFocus()
-        log.info("video: playing in the window (%s)", m.get("type"))
+        self._start()
+
+    def _hint(self):
+        many = len(self.items) > 1
+        key = ("gif_keys" if self.gif else "player_keys") + ("_many" if many else "")
+        self.keys.setText(_(key))
+        self.counter.setText(f"{self.i + 1} / {len(self.items)}" if many else "")
+
+    def _start(self):
+        m = self.m
+        log.info("video: playing in the window (%s, %d of %d)", m.get("type"), self.i + 1,
+                 len(self.items))
+        self.problem.hide()
         self.player.setSource(QUrl(media_url(m)))
         self.player.play()
+
+    def go(self, step):
+        """The next (or previous) video or gif of the post, in this same overlay."""
+        if len(self.items) < 2:
+            return
+        self.i = (self.i + step) % len(self.items)
+        self.m = self.items[self.i]
+        self.gif = self.m.get("type") == "gifv"
+        self.player.stop()
+        self.player.setLoops(INFINITE if self.gif else 1)
+        self.audio.setMuted(self.gif)
+        self.mute.setText("🔇" if self.gif else "🔊")
+        for w in (self.btn, self.slider, self.time, self.mute):
+            w.setVisible(not self.gif)
+        desc = (self.m.get("description") or "").replace("\n", " ")
+        self.desc_label.setText(desc)
+        self.desc_label.setVisible(bool(desc))
+        self._hint()
+        self._start()
+
+    def wheelEvent(self, e):
+        if self.gif and len(self.items) > 1:  # as in the picture viewer: wheel goes on
+            self.go(1 if e.angleDelta().y() < 0 else -1)
+            e.accept()
+        else:
+            super().wheelEvent(e)
 
     def _button(self, text, tip, fn):
         b = QToolButton()
@@ -203,6 +252,12 @@ class VideoOverlay(QWidget):
         k = e.key()
         if k == Qt.Key.Key_Escape:
             self.close_player()
+        elif k in (Qt.Key.Key_PageDown, Qt.Key.Key_N) or \
+                (self.gif and k in (Qt.Key.Key_Right, Qt.Key.Key_Space)):
+            self.go(1)
+        elif k in (Qt.Key.Key_PageUp, Qt.Key.Key_P, Qt.Key.Key_Backspace) or \
+                (self.gif and k == Qt.Key.Key_Left):
+            self.go(-1)
         elif k in (Qt.Key.Key_Space, Qt.Key.Key_K):
             self.toggle()
         elif k == Qt.Key.Key_Left:

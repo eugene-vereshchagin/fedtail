@@ -1259,12 +1259,14 @@ class MainWindow(QMainWindow):
                     == QMessageBox.StandardButton.Yes:
                 self.bridge.call(self.core.delete(st))
 
-    def play_video(self, m):
-        """A video or a gifv: over the window (ui.video_player), or in the browser."""
+    def play_video(self, m, items=None):
+        """A video or a gifv: over the window (ui.video_player), or in the browser.
+        items: all the videos and gifs of the post, to go between them there."""
         from . import player
         if self.cfg["ui"].get("video_player", "internal") == "internal" and \
                 player.available():
-            player.VideoOverlay(self, self.ctx, m, loop=m.get("type") == "gifv")
+            player.VideoOverlay(self, self.ctx, m, loop=m.get("type") == "gifv",
+                                items=items)
         else:
             self.open_url(player.media_url(m))
 

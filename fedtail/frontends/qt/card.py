@@ -851,6 +851,7 @@ class PostRow(QWidget):
         visual = [m for m in atts if m.get("type") in ("image", "gifv", "video")
                   and (m.get("preview_url") or m.get("url"))]
         images = [x for x in visual if x.get("type") == "image"]
+        moving = [x for x in visual if x.get("type") in ("gifv", "video")]
         single = len(visual) == 1
         big_h = self.ctx.cfg["ui"]["image_height"]
         big_w = max(200, (self.ctx.cfg["ui"]["max_width"] or 900) - 60)
@@ -908,7 +909,7 @@ class PostRow(QWidget):
                 else:  # gifv / video: a still frame here, played over the window on a click
                     upgrade = None
                     lab.setToolTip(_("media_" + m["type"]) + " ▶ " + (m.get("description") or ""))
-                    lab.clicked.connect(lambda mm=m: self.ctx.play_video(mm))
+                    lab.clicked.connect(lambda mm=m: self.ctx.play_video(mm, moving))
                     src = m.get("preview_url")
                     if m["type"] == "gifv" and self.ctx.loop_gifv is not None:
                         self.ctx.loop_gifv(lab, m, lambda pm, a=tw, b=th, r=radius, f=focus:
