@@ -37,6 +37,7 @@ Changelog = "https://github.com/eugene-vereshchagin/fedtail/blob/main/CHANGELOG.
 
 [project.optional-dependencies]
 qt = ["PySide6-Essentials>=6.5"]
+tui = ["textual>=0.86"]
 
 [project.scripts]
 fedtail = "fedtail.__main__:main"

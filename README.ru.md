@@ -284,6 +284,13 @@ fedtail -p work show people           # другой профиль
 в конфиге `[cli]`: `color`, `max_lines`, `tail_lanes` и `enabled = false`, чтобы команды
 выключить.
 
+Весь интерфейс в терминале: `fedtail --ui tui` (или `ui.frontend = "tui"`) — слева ленты,
+справа посты с тем, на что они отвечают, треды деревом, внизу та же командная строка. Клавиши:
+`j` / `k`, `Enter` — тред, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `n` — новый
+пост, `x` — лента прочитана, `Tab` — ленты / посты, `Esc` — назад, `q` — выход. Нужен
+[Textual](https://textual.textualize.io/): `sudo apt install python3-textual` в Debian 13 или
+`pip install textual`. В конфиге `[tui]`: `theme`, `lanes_width`, `show_context`.
+
 ## Тишина
 
 Меню ⋯ у поста (или профиль) — заглушить или заблокировать автора: его посты сразу пропадают

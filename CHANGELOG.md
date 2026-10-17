@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 — in progress
+
+- The whole interface in a terminal: `fedtail --ui tui` (or `ui.frontend = "tui"`) — lanes,
+  posts with what they answer, threads as trees, the command line; keys as in the window
+  (`j` / `k`, `Enter`, `r`, `f`, `b`, `m`, `n`, `x`, `Esc`, `q`); log in from it too. Needs
+  Textual (`python3-textual`, or `pip install fedtail[tui]`). New `[tui]`: `theme`,
+  `lanes_width`, `show_context`.
+
 ## 0.9.0 — 2026-10-17
 
 - In the terminal: `fedtail lanes`, `fedtail show LANE`, `fedtail tail [LANE…]`,

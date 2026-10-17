@@ -277,6 +277,13 @@ with the window, so it works with the window open. Colour only on a terminal (`N
 respected); `[cli]` in the config: `color`, `max_lines`, `tail_lanes`, and `enabled = false`
 to turn the commands off.
 
+The whole interface in a terminal: `fedtail --ui tui` (or `ui.frontend = "tui"`) — lanes on the
+left, posts with what they answer, threads as trees, the same command line at the bottom. Keys:
+`j` / `k`, `Enter` — the thread, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `n` — a
+new post, `x` — the lane read, `Tab` — lanes / posts, `Esc` — back, `q` — quit. It needs
+[Textual](https://textual.textualize.io/): `sudo apt install python3-textual` on Debian 13, or
+`pip install textual`. `[tui]` in the config: `theme`, `lanes_width`, `show_context`.
+
 ## Silence
 
 A post's ⋯ menu (or the profile) mutes or blocks its author: their posts vanish from every

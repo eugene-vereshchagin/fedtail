@@ -137,6 +137,11 @@ DEFAULTS = {
         "slow_request_seconds": 5,
         "rss_warn_mb": 1500,
     },
+    "tui": {
+        "theme": "",
+        "lanes_width": 26,
+        "show_context": True,
+    },
     "cli": {
         "enabled": True,
         "color": "auto",
@@ -159,7 +164,7 @@ CHOICES = {
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},
-    ("ui", "frontend"): {"qt"},
+    ("ui", "frontend"): {"qt", "tui"},
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "image_viewer"): {"internal", "browser"},
     ("ui", "actions"): {"both", "icons", "text"},

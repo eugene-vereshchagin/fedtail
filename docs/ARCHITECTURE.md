@@ -97,6 +97,8 @@ fedtail/
     threads.py       context → flat tree with depth and /N numbers
   frontends/
     __init__.py      registry: name -> module with run(core, instance, argv)
+    tui/             the terminal interface (Textual): model.py — posts as lines and the
+                     command line, no Textual (tested alone); app.py — the screens
     cli.py           terminal commands (lanes/show/tail/post/read): plain stdout,
                      no Qt, no single-instance lock; `fedtail COMMAND …`
     notifytext.py    what a desktop notification says (no Qt, tested)
