@@ -36,6 +36,10 @@
   seconds: every such card made, and threw away, a native window of its own while it was
   built (the log showed a 16 s freeze for a list of 300 posts). Word-wrapped text also no
   longer lays itself out twice for every resize.
+- `activity.types = ["all"]`: every kind of activity, now and those added later.
+- The config reference reads easier: a blank line between options, and every launch key
+  (`--profile`, `--ui`, `--debug`, `--bug-report`…) listed at the top of the file.
+  `--rebuild-config` lays your file out the new way, with your values kept.
 - The log tells where a freeze is: any freeze of the window over `debug.stall_ms` (250 ms)
   gets a line with how long it was and what the window was busy with — an event, a
   lane being drawn, a picture coming in, or Qt itself laying out and painting — with the

@@ -157,7 +157,8 @@ def update(user_text, example_text, report=None):
         add = [block for key, block in opts if key not in have.get(sec, set())]
         if not add:
             continue
-        chunk = [line for block in add for line in block]
+        # a blank line between options, as in the reference: one block, one option
+        chunk = [line for block in add for line in [""] + block]
         if sec in ends:
             inserts.setdefault(ends[sec], []).extend(chunk)
         else:

@@ -34,6 +34,27 @@ class ConfigTest(TmpDir):
         self.assertEqual(cfg["post"]["default_visibility"], "private")
         self.assertEqual(warns, [])
 
+    def test_activity_all_and_the_reference_layout(self):
+        cfg, _ = config.validate({"activity": {"types": ["all"]}})
+        self.assertEqual(set(cfg["activity"]["types"]), config.ACTIVITY_TYPES)
+        text = config.example_text()
+        # every launch key of this version is listed at the top of the reference
+        import re
+
+        import fedtail.__main__ as main_mod
+        src = Path(main_mod.__file__).read_text("utf-8")
+        for key in re.findall(r'add_argument\((?:"-\w", )?"(--[a-z-]+)"', src):
+            self.assertIn(key, text.split("[ui]")[0], key)
+        # one option, one block: a blank line before the next explanation
+        lines = text.splitlines()
+        for i, line in enumerate(lines[:-1]):
+            if re.match(r"^[a-z_]+ = ", line) and lines[i + 1].startswith("# "):
+                self.fail(f"no blank line after {line!r}")
+        # --update-config adds missing options the same way
+        from fedtail.core import config_update
+        out = config_update.update("[activity]\n", text)
+        self.assertIn("\n\n# Что показывать в «Активности»", out)
+
     def test_example_is_all_defaults(self):
         # every option in the example is set to the real default
         import tomllib

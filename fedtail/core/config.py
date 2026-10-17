@@ -283,6 +283,8 @@ def validate(user):
                     and x.startswith("list:") and len(x) > 5)]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
+    if "all" in cfg["activity"]["types"]:  # everything there is, now and later
+        cfg["activity"]["types"] = sorted(ACTIVITY_TYPES)
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]
     if bad_types:
         errors.append(f"activity.types: unknown {bad_types}; "
