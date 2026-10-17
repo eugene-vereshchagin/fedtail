@@ -809,6 +809,17 @@ class CoreTest(TmpDir):
         self.assertTrue(until(lambda: len(polls) == 3))
         self.assertLess(polls[2] - t, 0.5)
 
+    def test_list_pending_given_up_after_a_month(self):
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("Старые").result()
+        old = time.time() - (core.LIST_PENDING_DAYS + 1) * 86400
+        core.store.kv_set("list_pending", [[x["id"], "N", old], [x["id"], "B", time.time()]])
+        self.assertEqual([p[1] for p in core._list_pending()], ["B"])
+        core._refresh_lists()  # the server takes B now; N was given up, never tried
+        self.assertEqual(w.lists[x["id"]]["members"], {"B"})
+        self.assertEqual(core.store.kv_get("list_pending"), [])
+
     def test_follow_date_in_private_note(self):
         """The follow date goes at the end of my note on them, my own text stays; editing
         the note keeps the line; unfollowing takes it out."""

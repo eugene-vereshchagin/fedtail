@@ -74,5 +74,38 @@ class NoteLineTest(unittest.TestCase):
         self.assertEqual(note_text(n), n)
 
 
+try:
+    import PySide6  # noqa: F401
+    HAVE_QT = True
+except ImportError:
+    HAVE_QT = False
+
+
+@unittest.skipUnless(HAVE_QT, "PySide6 is not installed")
+class DecodeSideTest(unittest.TestCase):
+    """A feed picture is decoded for its box, not at 1200 px."""
+
+    class Lab:
+        def __init__(self, dpr):
+            self.dpr = dpr
+
+        def devicePixelRatioF(self):
+            return self.dpr
+
+    def test_box_size(self):
+        from fedtail.frontends.qt.card import _decode_side
+        cfg = {"ui": {"image_decode": "box"}}
+        # a 4000x3000 photo in a 560x420 box: 560 wide is enough, in steps of 100
+        self.assertEqual(_decode_side(self.Lab(1.0), 560, 420, 4000, 3000, cfg), 600)
+        # a HiDPI screen needs twice the pixels; never past 1200
+        self.assertEqual(_decode_side(self.Lab(2.0), 560, 420, 4000, 3000, cfg), 1200)
+        # filling a square cell with a wide picture: the short side reaches the box
+        self.assertEqual(_decode_side(self.Lab(1.0), 150, 150, 3000, 1000, cfg), 500)
+        # sizes unknown: room to spare
+        self.assertEqual(_decode_side(self.Lab(1.0), 150, 230, None, None, cfg), 500)
+        self.assertIsNone(_decode_side(self.Lab(1.0), 560, 420, 4000, 3000,
+                                       {"ui": {"image_decode": "full"}}))
+
+
 if __name__ == "__main__":
     unittest.main()
