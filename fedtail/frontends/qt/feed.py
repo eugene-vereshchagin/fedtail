@@ -580,6 +580,7 @@ class LaneWidget(QWidget):
         self.positioned = False
         self.dirty = False
         self.unloaded = False  # its cards let go while it was hidden (ui.unload_hidden_minutes)
+        self.empty_note = None  # "the server gives this lane empty" (live feeds off)
         self.separator = None  # (key of the first unread when the lane opened, count)
         self._unload_timer = QTimer(self, singleShot=True)
         self._unload_timer.timeout.connect(self._unload)
@@ -784,11 +785,22 @@ class LaneWidget(QWidget):
                 self.view.scroll_to_end(not self.newest_first)
         self.update_strip()
         lane = self.core.lane_by_name.get(self.name)
-        if lazy and not specs and lane is not None and \
-                lane.source in getattr(self.core, "browse_empty", ()):
-            self.header.info.setText(_("browse_empty"))
-        elif lazy and self.filter_seg is None:
-            self.header.info.setText("")
+        empty = lazy and not specs and lane is not None and \
+            lane.source in getattr(self.core, "browse_empty", ())
+        if empty and self.empty_note is None:
+            # in the lane itself, big and wrapped: the header's info line is small and
+            # gives way to the buttons
+            self.empty_note = QLabel(_("browse_empty"))
+            self.empty_note.setObjectName("emptyNote")
+            self.empty_note.setWordWrap(True)
+            self.empty_note.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            f = self.empty_note.font()
+            f.setPointSizeF(f.pointSizeF() * 1.25)
+            self.empty_note.setFont(f)
+            self.empty_note.setContentsMargins(24, 48, 24, 24)
+            self.view.header.addWidget(self.empty_note)
+        if self.empty_note is not None:
+            self.empty_note.setVisible(empty)
         log.debug("lane %s drawn: %d rows, %d unread, %.0f ms", self.name, len(specs),
                   len(unread), (time.monotonic() - t0) * 1000)
 
