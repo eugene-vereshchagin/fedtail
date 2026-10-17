@@ -118,7 +118,9 @@ def _fill_empty(store, source, page_size, limit):
 def refresh_top(store, source, page_size):
     """For lanes you browse rather than read through (local, federated): just the
     newest page. A hole between it and what we had is fine there."""
-    return store.put_items(source.name, _entries(source, source.fetch(limit=page_size)))
+    page = source.fetch(limit=page_size)
+    source.last_count = len(page or [])  # 0: the server gave nothing (its live feeds off)
+    return store.put_items(source.name, _entries(source, page))
 
 
 def fetch_older(store, source, page_size):

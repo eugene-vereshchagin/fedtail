@@ -263,7 +263,7 @@ class Core(SocialMixin):
                         self.store.prune(name, KEEP_PER_SOURCE // 3)
                         # the server answered, and with nothing: its live feeds are off
                         # (mastodon.social and others do that) — the lane says so
-                        empty = self.store.newest_item(name) is None
+                        empty = getattr(self.sources[name], "last_count", 1) == 0
                         if empty != (name in self.browse_empty):
                             (self.browse_empty.add if empty else self.browse_empty.discard)(name)
                             browse_changed.add(name)  # its lane says so (see below)
