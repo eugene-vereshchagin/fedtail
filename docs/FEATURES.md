@@ -28,6 +28,14 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | «Мои лайки» | есть | `"favourites"` в `lanes.enabled` | /api/v1/favourites | M T I |
 | Личные сообщения отдельной лентой | есть | `"direct"` в `lanes.enabled`, `lanes.direct_apart` | visibility=direct | все |
 | ⭐ Тред деревом, комменты с номерами `/1 /2` | есть | — | statuses/:id/context | P — отступами |
+| ⭐ Карточки строятся только вокруг места чтения, остальное — по мере прокрутки | есть | `feed.build_at_once` | своё | — |
+| ⭐ Отметка прочитанного руками: пост, «до сюда» | есть | `read.mark_read = "manual"`, `read.read_button` | своё | — |
+| Кто лайкнул / бустнул (и с сервера автора) | есть | — | favourited_by, reblogged_by | M T I P E |
+| Заглушить тред | есть | — | statuses/:id/mute | M T I |
+| Кто процитировал мой пост; убрать мой пост из цитаты | есть | — | statuses/:id/quotes, …/revoke | M 4.5+ |
+| Тренды: теги, ссылки, посты | есть | — | /api/v1/trends | M T I P E |
+| Эмодзи-реакции (Akkoma, Pleroma и др.) | частично — показ | — | pleroma.emoji_reactions | P E |
+| ⭐ Пустая «живая» лента говорит, что сервер её выключил | есть | — | timelines/public | — |
 | ⭐ Тред целиком: ответы с сервера автора | есть | `feed.complete_threads` | ActivityPub replies + search resolve | M 4.5+ на сервере |
 | Тред дорастает, когда Mastodon 4.5+ дособрал ответы | есть | `feed.complete_threads` | заголовок `Mastodon-Async-Refresh` | M |
 | ⭐ Подписки на треды, как `S #abc` на Point | есть | `[subs]` | своё | — |
@@ -99,6 +107,15 @@ web, **T** — Tusky, **I** — Ivory, **P** — Phanpy, **E** — Elk, **K** �
 | Колокольчик на посты человека | есть | `activity.types` | follow notify=true | M T I |
 | Уведомления от незнакомцев — отдельно | есть | `notify.filtered` | /api/v2/notifications/policy, requests | M 4.3+ |
 | Свой профиль: имя, о себе, поля, аватар | есть | — | update_credentials | M I P E K |
+| Убрать из подписчиков (без блока) | есть | — | remove_from_followers | M I |
+| Рекомендовать людей и теги на своём профиле | есть | — | endorse, featured_tags | M |
+| «Из твоих подписок на него подписаны» | есть | — | familiar_followers | M |
+| Рекомендации сервера, каталог профилей | есть | — | /api/v2/suggestions, /api/v1/directory | M T I |
+| О сервере: правила, описание, политика | есть | — | instance/rules, extended_description | M I P |
+| Уведомления: убрать одно, очистить все | есть | — | notifications/:id/dismiss, clear | все |
+| Реакции на анонсы сервера | есть | — | announcements/:id/reactions | M |
+| ⭐ ЛС, прочитанные здесь, прочитаны и на сервере | есть | `"direct"` в `lanes.enabled` | /api/v1/conversations | — |
+| Видимость поста как в настройках сервера | есть | `post.default_visibility = "server"` | /api/v1/preferences | M I |
 
 ## Приложение
 
