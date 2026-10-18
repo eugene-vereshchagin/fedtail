@@ -116,7 +116,7 @@ for the code the server shows you.
 An account is a profile: its own config (so its own theme), its own data, its own window.
 
 ```sh
-python3 -m fedtail                        # profile "default"
+python3 -m fedtail                        # the main profile (★; at first "default")
 python3 -m fedtail --profile croco        # another account (the first time: the login window)
 python3 -m fedtail --profiles             # which profiles there are, and who they are
 python3 -m fedtail --install-desktop --profile croco   # a menu entry of its own
@@ -125,7 +125,10 @@ python3 -m fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
 
 In the window, right-click your avatar (or ≡ → Accounts): the other accounts are listed;
 pick one and its window opens with its theme, this one closes (`ui.switch_closes = false`
-keeps both). "Add an account…" asks for a profile name and opens the login window.
+keeps both). "Add an account…" asks for a profile name and opens the login window. The same
+menu has "My profile", "Make it the main one ★" (the profile started without `--profile`),
+"Log in anew…" (same account only; the old token stays until you're in) and "Log out…"
+(the main profile's ★ moves to another one you're logged in to). Both ask first.
 
 Or all accounts in one window (the same menu, "All accounts in one window", or
 `ui.merge = ["all"]`): lanes of the same name become one (both Homes are one Home), the
@@ -214,7 +217,7 @@ many messages and how many new, who wrote last; a click opens the whole thread.
 must have, `-#tag` — without) and "＋ to lanes" keeps it in the sidebar, under Tags; or
 describe it in the config, `[[lanes.tag_groups]]`.
 
-**Columns side by side:** ❯ right of the menu puts the lanes in columns, TweetDeck-style; a
+**Columns side by side:** ❯ at the top left puts the lanes in columns, TweetDeck-style; a
 lane clicked on the left comes as a column, ✕ takes it away, ‹ › move it, and the set is
 remembered. That's for now: the window starts as `ui.layout` says (`"single"` or
 `"columns"`).

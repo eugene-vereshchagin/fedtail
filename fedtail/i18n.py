@@ -232,7 +232,7 @@ _STRINGS = {
         # window
         "write": "Написать", "menu_file": "&Файл", "menu_help": "&Справка",
         "open_config": "Открыть конфиг", "open_data": "Открыть папку данных",
-        "relogin": "Перелогиниться…", "quit": "Выход", "about": "О программе", "show": "Показать",
+        "relogin": "Войти заново…", "quit": "Выход", "about": "О программе", "show": "Показать",
         "connecting": "Подключаюсь…", "connected": "@{acct} на {server}",
         "server_down": "Сервер не отвечает: {err}. Попробую ещё раз через 20 секунд.",
         "auth_failed_title": "Сервер не пускает",
@@ -348,7 +348,6 @@ _STRINGS = {
         "copy": "Копировать",
         "older_from_origin": "▼ ещё раньше — с {host}",
         "acc_followed_since": "подписан с {when}",
-        "full_width": "Посты во всю ширину",
         "preview": "Предпросмотр", "preview_tip": "Как это будет выглядеть, до отправки",
         "preview_back": "Править", "preview_md": "Markdown", "preview_plain": "простой текст",
         "preview_media": ["{n} картинка", "{n} картинки", "{n} картинок"],
@@ -462,7 +461,34 @@ _STRINGS = {
         "made_by_long": "Код написан нейросетью Claude (Anthropic) — от первой строки до "
                         "иконки. Кожаный мешок придумывал, тестировал и ругался.",
         "about_build": "Сборка: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
-        "about_profile": "Профиль «{profile}»: {acct} на {server}",
+        "about_links": 'Код: <a href="{repo}">GitHub</a><br>Автор в федиверсе: '
+                       '<a href="{author_link}">{author}</a> — откроется здесь, '
+                       'с кнопкой «Подписаться»',
+        "footer_profile": "профиль «{profile}»",
+        "footer_profile_tip": "Профиль — папка с конфигом и данными этого аккаунта; "
+                              "★ — главный, он запускается без --profile.",
+        "full_width_tip": "Посты во всю ширину окна (или колонкой ui.max_width); "
+                          "запоминается до следующего запуска",
+        "make_main": "Сделать главным ★",
+        "make_main_tip": "Этот профиль будет запускаться без --profile и из пункта меню "
+                         "«fedtail»",
+        "made_main": "Профиль «{profile}» теперь главный.",
+        "relogin_title": "Войти заново",
+        "relogin_q": "Войти в {acct} заново — через браузер, как в первый раз?<br><br>"
+                     "Нужно, если токен отозвали на сервере или поменялись разрешения. "
+                     "Старый токен остаётся, пока не войдёшь; отмена ничего не меняет. "
+                     "Войти так можно только в этот же аккаунт — другой добавляй "
+                     "через «Добавить аккаунт…».",
+        "login_other_account": "Это {got}, а профиль — {want}. Ничего не сохранено: войди "
+                               "в {want} или добавь {got} отдельным аккаунтом.",
+        "logout": "Выйти из аккаунта…", "logout_title": "Выйти из аккаунта",
+        "logout_yes": "Выйти",
+        "logout_q": "Выйти из <b>{acct}</b>?<br>Токен будет удалён с этого компьютера; "
+                    "прочитанное, черновики и конфиг профиля останутся. Вернуться — через "
+                    "вход в браузере.",
+        "logout_main_moves": "Это главный профиль: ★ перейдёт к {to}.",
+        "logout_switch": "Окно переключится на {to}.",
+        "logout_last": "Других аккаунтов нет: откроется окно входа (отмена закроет fedtail).",
         "edit": "Редактировать", "compose_edit": "Правка поста",
         "edit_hint": "Правишь текст и предупреждение; картинки и видимость остаются как были.",
         "edit_media_kept": "При правке картинки и видимость не меняются",
@@ -806,7 +832,7 @@ _STRINGS = {
         "login_browser_opened": "Browser opened. If it didn't, here's the link:\n{url}",
         "write": "Write", "menu_file": "&File", "menu_help": "&Help",
         "open_config": "Open config", "open_data": "Open data folder",
-        "relogin": "Log in again…", "quit": "Quit", "about": "About", "show": "Show",
+        "relogin": "Log in anew…", "quit": "Quit", "about": "About", "show": "Show",
         "connecting": "Connecting…", "connected": "@{acct} on {server}",
         "server_down": "Server is not answering: {err}. Retrying in 20 seconds.",
         "auth_failed_title": "Access denied",
@@ -916,7 +942,6 @@ _STRINGS = {
         "copy": "Copy",
         "older_from_origin": "▼ further back — from {host}",
         "acc_followed_since": "following since {when}",
-        "full_width": "Posts across the full width",
         "preview": "Preview", "preview_tip": "How it will look, before sending",
         "preview_back": "Edit", "preview_md": "Markdown", "preview_plain": "plain text",
         "preview_media": ["{n} picture", "{n} pictures"],
@@ -1027,7 +1052,32 @@ _STRINGS = {
         "made_by_long": "The code is written by Claude (Anthropic), an AI — from the first "
                         "line to the icon. A meatbag came up with it, tested it and swore.",
         "about_build": "Build: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
-        "about_profile": "Profile “{profile}”: {acct} at {server}",
+        "about_links": 'Code: <a href="{repo}">GitHub</a><br>The author in the fediverse: '
+                       '<a href="{author_link}">{author}</a> — opens here, with Follow',
+        "footer_profile": "profile “{profile}”",
+        "footer_profile_tip": "A profile is this account's folder of config and data; "
+                              "★ — the main one, started without --profile.",
+        "full_width_tip": "Posts across the full width (or a column of ui.max_width); "
+                          "remembered till the next start",
+        "make_main": "Make it the main one ★",
+        "make_main_tip": "This profile will start without --profile and from the "
+                         "“fedtail” menu entry",
+        "made_main": "Profile “{profile}” is the main one now.",
+        "relogin_title": "Log in anew",
+        "relogin_q": "Log in to {acct} anew — through the browser, as the first time?<br><br>"
+                     "For a token revoked on the server or changed permissions. The old "
+                     "token stays until you're in; cancel changes nothing. Only this same "
+                     "account — add another one with “Add an account…”.",
+        "login_other_account": "That's {got}, and this profile is {want}. Nothing saved: log "
+                               "in to {want}, or add {got} as another account.",
+        "logout": "Log out…", "logout_title": "Log out",
+        "logout_yes": "Log out",
+        "logout_q": "Log out of <b>{acct}</b>?<br>The token is deleted from this computer; "
+                    "read marks, drafts and the profile's config stay. Coming back means "
+                    "logging in through the browser.",
+        "logout_main_moves": "This is the main profile: ★ goes to {to}.",
+        "logout_switch": "The window switches to {to}.",
+        "logout_last": "No other accounts: the login window opens (cancel closes fedtail).",
         "edit": "Edit", "compose_edit": "Edit post",
         "edit_hint": "You change the text and the warning; pictures and visibility stay.",
         "edit_media_kept": "An edit keeps the pictures and the visibility",

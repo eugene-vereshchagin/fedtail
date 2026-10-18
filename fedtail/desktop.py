@@ -8,20 +8,21 @@ import sys
 from importlib import resources
 from pathlib import Path
 
-from .core.paths import DEFAULT_PROFILE
+from .core.paths import main_profile
 
 
 def _data_home():
     return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
 
 
-def entry_text(profile=DEFAULT_PROFILE, source_dir=None, icon="fedtail"):
+def entry_text(profile=None, source_dir=None, icon="fedtail"):
     """The .desktop file. From a git checkout it runs `python3 -m fedtail` there.
 
     icon is best a full path: KWin and the task manager take the icon of a window
     from its .desktop entry, and a bare name has to be found in the icon theme —
     which Plasma caches, so a freshly installed one often shows as a blank page."""
-    args = "" if profile == DEFAULT_PROFILE else f" --profile {profile}"
+    profile = profile or main_profile()
+    args = "" if profile == main_profile() else f" --profile {profile}"
     if getattr(sys, "frozen", False):  # the one-file build: the file itself
         exec_line = f'"{sys.executable}"{args}'
         path_line = ""
@@ -31,7 +32,7 @@ def entry_text(profile=DEFAULT_PROFILE, source_dir=None, icon="fedtail"):
     else:
         exec_line = f"fedtail{args}"
         path_line = ""
-    name = "fedtail" if profile == DEFAULT_PROFILE else f"fedtail ({profile})"
+    name = "fedtail" if profile == main_profile() else f"fedtail ({profile})"
     return (
         "[Desktop Entry]\n"
         "Type=Application\n"
@@ -65,10 +66,10 @@ def handler_text(entry):
     return "\n".join(out) + "\n"
 
 
-def desktop_id(profile=DEFAULT_PROFILE):
+def desktop_id(profile=None):
     """The .desktop file's name without .desktop: what the window says it is, so
     the task bar finds its icon and the unread count lands on the right button."""
-    return "fedtail" if profile == DEFAULT_PROFILE else f"fedtail-{profile}"
+    return "fedtail" if (profile or main_profile()) == main_profile() else f"fedtail-{profile}"
 
 
 def source_dir():
@@ -84,7 +85,7 @@ def _windows_install(profile):
         "Microsoft/Windows/Start Menu/Programs"
     menu.mkdir(parents=True, exist_ok=True)
     link = menu / f"{stem}.lnk"
-    args = "" if profile == DEFAULT_PROFILE else f"--profile {profile}"
+    args = "" if profile == main_profile() else f"--profile {profile}"
     if getattr(sys, "frozen", False):  # fedtail.exe from the zip
         target, workdir, icon = sys.executable, str(Path(sys.executable).parent), sys.executable
     else:  # from the source: pythonw — no console window
@@ -103,7 +104,8 @@ def _windows_install(profile):
     return link, Path(icon)
 
 
-def install(profile=DEFAULT_PROFILE):
+def install(profile=None):
+    profile = profile or main_profile()
     if os.name == "nt":
         return _windows_install(profile)
     data = _data_home()

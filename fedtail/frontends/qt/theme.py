@@ -157,6 +157,7 @@ QLabel#accountName {{ font-weight: 700; font-size: {round(base_pt * 1.1, 1)}pt; 
 QLabel#sideFooter {{ font-size: {round(base_pt * 0.8, 1)}pt; }}
 QToolButton#menu {{ border: 0; border-radius: {br}px; padding: 6px; }}
 QToolButton#menu:hover {{ background: {k('selected')}; }}
+QToolButton#menu:checked {{ background: {k('selected')}; color: {k('accent')}; }}
 QToolButton#menu::menu-indicator {{ image: none; width: 0; }}
 QPushButton#compose {{ background: {k('accent')}; color: {k('on_accent')}; border: 0;
     border-radius: {br}px; padding: 11px; font-weight: 600; font-size: {round(base_pt * 1.05, 1)}pt; }}

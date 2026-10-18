@@ -2,6 +2,24 @@
 
 ## 0.14.0 — in progress
 
+- The ≡ menu is shorter: no Write, Refresh and Search (they are on screen, and their keys
+  stay), no My profile / Edit profile (My profile is under Accounts; the Edit button is on
+  your profile page), no "Posts across the full width" — that is a button now, ⇔ between ≡
+  and ❯.
+- ≡ ⇔ ❯ at the top left are one size, icons from one set (or all glyphs), centred; ≡ no
+  longer reserves room for a popup arrow that pushed its icon aside. ⇔ and ❯ show when on.
+- The main profile ★ is a mark, not a folder named "default": `~/.config/fedtail/main-profile`
+  names the profile started without `--profile` (none: "default", as before). Accounts →
+  "Make it the main one ★"; `--profiles` marks it with *.
+- "Log in again" was dangerous: it threw the token away at once, and a cancelled login left
+  the main profile logged out. Now, under Accounts, with a question first: "Log in anew…"
+  keeps the old token until the new one is in and refuses another account; "Log out…"
+  deletes the token, hands the main profile's ★ to another logged-in profile and switches
+  the window there (none left: the login window).
+- About links to the code on GitHub and to the author in the fediverse — that one opens
+  in fedtail, with Follow. The profile moved from About to the sidebar footer, under the
+  version.
+
 - Lanes side by side, in columns: ❯ right of the menu switches for now, `ui.layout` says how
   the window starts. A lane clicked on the left comes as one more column (or is scrolled
   to), ✕ takes one away, ‹ › move it; the set is remembered (`ui.columns` at first,

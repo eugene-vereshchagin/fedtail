@@ -87,7 +87,8 @@ fedtail/
     merged.py        MergedCore: several Cores behind one face (all accounts in one window);
                      other accounts' ids are prefixed "profile~id", actions routed by it
     profiles.py      the profiles there are (profile.json: acct + server, no token), how to
-                     start another one (the account switcher, --profiles)
+                     start another one (the account switcher, --profiles); the main one
+                     (paths.main_profile: the main-profile mark) handed over on logout
     lanes.py         Lane = source + filter; built-in lanes; list lanes
     model.py         helpers over status/account dicts (real(), snippet(), …)
     paths.py         where a profile's files live (XDG)

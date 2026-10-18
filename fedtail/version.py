@@ -20,6 +20,12 @@ from . import __version__
 
 ROOT = Path(__file__).resolve().parent.parent
 
+HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"
+# the author in the fediverse: About links to him, to follow (his own wish — the one
+# place the repository names his server; nothing else depends on it)
+AUTHOR = "@veresk@dmesg.online"
+AUTHOR_URL = "https://dmesg.online/@veresk"
+
 
 def _git(*args):
     r = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True,

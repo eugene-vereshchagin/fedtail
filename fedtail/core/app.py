@@ -43,6 +43,12 @@ def _due(last, every):
     return last is None or time.monotonic() - last > every
 
 
+class OtherAccount(ValueError):
+    """Logging in anew brought another account than this profile's: nothing saved.
+    The message is PREFIX + "@acct" (results reach the window as text)."""
+    PREFIX = "other account: "
+
+
 class Core(SocialMixin):
     def __init__(self, cfg, paths, api_class=Api):
         self.cfg = cfg
@@ -141,11 +147,17 @@ class Core(SocialMixin):
             return api.authorize_url(app["client_id"])
         return self.submit(job)
 
-    def finish_login(self, code):
+    def finish_login(self, code, expect=None):
+        """expect: (server, acct) this profile already is — logging in anew must not
+        put another account into its data (read marks, drafts, lists are that one's)."""
         def job():
             api, app = self._pending_login
             token = api.get_token(app["client_id"], app["client_secret"], code)
             me = self.api_class(api.base, token).me()
+            if expect and (api.base.rstrip("/"), me["acct"]) != \
+                    (expect[0].rstrip("/"), expect[1]):
+                log.warning("login anew: another account, not saved")
+                raise OtherAccount(f"{OtherAccount.PREFIX}@{me['acct']}")
             data = {"server": api.base, "client_id": app["client_id"],
                     "client_secret": app["client_secret"], "token": token, "acct": me["acct"]}
             auth.save(self.paths.auth_file, data)

@@ -1,4 +1,6 @@
-"""First login: register the app, open the browser, paste the code."""
+"""Login: register the app, open the browser, paste the code. Logging in anew
+(expect=the account this profile is) keeps the old token until the new one is in,
+and refuses another account."""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout
@@ -7,14 +9,17 @@ from ...i18n import _
 
 
 class LoginDialog(QDialog):
-    def __init__(self, win):
+    def __init__(self, win, expect=None):
         super().__init__(win)
         self.win, self.core = win, win.core
+        self.expect = expect  # (server, acct) or None
         self.setWindowTitle(_("login_title", profile=self.core.paths.profile))
         lay = QVBoxLayout(self)
         lay.addWidget(QLabel(_("login_server")))
         self.server = QLineEdit()
         self.server.setPlaceholderText("example.social")
+        if expect:
+            self.server.setText(expect[0].split("://")[-1].rstrip("/"))
         lay.addWidget(self.server)
         self.b1 = QPushButton(_("login_step1"))
         self.b1.clicked.connect(self.step1)
@@ -59,10 +64,15 @@ class LoginDialog(QDialog):
         if not self.code.text().strip():
             return
         self.b2.setEnabled(False)
-        self.win.bridge.call(self.core.finish_login(self.code.text()),
+        self.win.bridge.call(self.core.finish_login(self.code.text(), expect=self.expect),
                              ok=lambda _me: self.accept(), fail=self._fail)
 
     def _fail(self, err):
-        self.msg.setText(_("error", err=err))
+        from ...core.app import OtherAccount
+        if err.startswith(OtherAccount.PREFIX):
+            self.msg.setText(_("login_other_account", got=err[len(OtherAccount.PREFIX):],
+                               want="@" + self.expect[1]))
+        else:
+            self.msg.setText(_("error", err=err))
         self.b1.setEnabled(True)
         self.b2.setEnabled(self.url is not None)

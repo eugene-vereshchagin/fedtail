@@ -23,8 +23,8 @@ def parse_args(argv):
     p = argparse.ArgumentParser(
         prog="fedtail",
         description="Desktop fediverse client. One profile = one account = one window.")
-    p.add_argument("-p", "--profile", help="profile name (default: %(default)s)",
-                   default=paths.DEFAULT_PROFILE)
+    p.add_argument("-p", "--profile",
+                   help="profile name (default: the main one, marked * in --profiles)")
     p.add_argument("-c", "--config", help="config file (overrides the profile's one)")
     p.add_argument("-d", "--data", help="data directory (overrides the profile's one)")
     p.add_argument("--ui", choices=sorted(frontends.FRONTENDS), help="frontend to use")
@@ -60,11 +60,12 @@ def main(argv=None):
         from .core import profiles
         for prof in profiles.listing():
             state = "" if prof["logged_in"] else "  (not logged in)"
-            print(f"{prof['name']:<16} {profiles.label(prof)}{state}")
+            mark = "*" if prof["main"] else " "
+            print(f"{mark} {prof['name']:<16} {profiles.label(prof)}{state}")
         return 0
     if args.install_desktop:
         from .desktop import install
-        entry, icon = install(args.profile)
+        entry, icon = install(args.profile or paths.main_profile())
         print(f"fedtail: menu entry {entry}\nfedtail: icon {icon}")
         return 0
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.WARNING,

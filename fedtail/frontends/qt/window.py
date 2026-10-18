@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from urllib.parse import unquote
 
-from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QIcon, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -241,10 +241,7 @@ class MainWindow(QMainWindow):
         bridge.raise_requested.connect(self.show_raise)
         bridge.open_requested.connect(self.open_from_outside)
 
-        title = "fedtail" if core.paths.profile == "default" else \
-            f"fedtail [{core.paths.profile}]"
-        self.base_title = title
-        self.setWindowTitle(title)
+        self._set_title()
         self.setWindowIcon(QIcon(icon_path()))
         self._build()
         self._debug_corner()
@@ -366,26 +363,24 @@ class MainWindow(QMainWindow):
         names.addWidget(self.account_name)
         names.addWidget(self.account_sub)
         acc.addLayout(names, 1)
-        menu_btn = QToolButton()
-        menu_btn.setObjectName("menu")
-        menu_btn.setToolTip(_("menu"))
-        ic = QIcon.fromTheme("application-menu", QIcon.fromTheme("open-menu-symbolic")) \
-            if t.shape["icons"] else QIcon()
-        if ic.isNull():
-            menu_btn.setText("≡")
-        else:
-            menu_btn.setIcon(ic)
-        menu_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        menu_btn.setMenu(self._app_menu())
-        # ❯ right of the menu: lanes side by side, for now (the start: as ui.layout says)
-        self.columns_btn = QToolButton()
-        self.columns_btn.setObjectName("menu")
-        self.columns_btn.setText("❯")
+        # ≡ the menu, ⇔ posts across the full width (remembered), ❯ lanes side by side
+        # (for now; the start: as ui.layout says). One size, icons from one set — or all
+        # three as glyphs — each centred: a menu's own popup arrow would push it aside,
+        # so ≡ opens its menu by a plain click.
+        menu_btn = self._side_button(("application-menu", "open-menu-symbolic"), "≡",
+                                     _("menu"))
+        menu_btn.clicked.connect(lambda: self._pop_app_menu(menu_btn))
+        self.wide_btn = self._side_button(("zoom-fit-width", "view-fullscreen"), "⇔",
+                                          _("full_width_tip"))
+        self.wide_btn.setCheckable(True)
+        self.wide_btn.setChecked(not self.cfg["ui"]["max_width"])
+        self.wide_btn.toggled.connect(self.set_full_width)
+        self.columns_btn = self._side_button(("view-split-left-right",), "❯",
+                                             _("columns_tip"))
         self.columns_btn.setCheckable(True)
-        self.columns_btn.setToolTip(_("columns_tip"))
         self.columns_btn.toggled.connect(self.set_columns)
-        acc.addWidget(menu_btn, 0, Qt.AlignmentFlag.AlignTop)
-        acc.addWidget(self.columns_btn, 0, Qt.AlignmentFlag.AlignTop)
+        for b in (menu_btn, self.wide_btn, self.columns_btn):
+            acc.addWidget(b, 0, Qt.AlignmentFlag.AlignTop)
         # a right click on who I am: the other accounts (profiles), to switch to
         for w in (self.account_avatar, self.account_name, self.account_sub):
             w.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -430,18 +425,60 @@ class MainWindow(QMainWindow):
         self._rebuild_sidebar()
         v.addWidget(self.lanes, 1)
         if self.cfg["ui"]["sidebar_footer"]:
-            info = version.info()
-            build = info["version"] + (f" · {info['date']}" if info["date"] else "")
-            self.footer = QLabel(f"fedtail {build}<br>{_('made_by')}")
+            self.footer = QLabel()
+            self._footer_text()
             self.footer.setObjectName("sideFooter")
             self.footer.setWordWrap(True)
             self.footer.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.footer.setToolTip(_("about"))
             self.footer.installEventFilter(self)
             v.addWidget(self.footer)
         self.sidebar = self.lanes  # older name, still used around
         self.update_badges()
         return side
+
+    def _side_button(self, icons, glyph, tip):
+        """A square button at the top of the sidebar: the first theme icon found of
+        icons, else (or with a theme without icons) the glyph — centred either way."""
+        b = QToolButton()
+        b.setObjectName("menu")
+        b.setToolTip(tip)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setFixedSize(32, 32)
+        b.setIconSize(QSize(18, 18))
+        ic = QIcon()
+        if self.theme.shape["icons"]:
+            for name in icons:
+                ic = QIcon.fromTheme(name)
+                if not ic.isNull():
+                    break
+        if ic.isNull():
+            b.setText(glyph)
+        else:
+            b.setIcon(ic)
+        return b
+
+    def _pop_app_menu(self, btn):
+        m = self._app_menu()
+        m.exec(btn.mapToGlobal(QPoint(0, btn.height())))
+        m.deleteLater()
+
+    def _set_title(self):
+        """"fedtail" for the main profile, "fedtail [work]" for another one."""
+        from ...core import paths
+        me = self.core.paths.profile
+        self.base_title = "fedtail" if me == paths.main_profile() else f"fedtail [{me}]"
+        self.setWindowTitle(self.base_title)
+
+    def _footer_text(self):
+        """Version and build, under it the profile (★ the main one), then who made it."""
+        from ...core import paths
+        info = version.info()
+        build = info["version"] + (f" · {info['date']}" if info["date"] else "")
+        me = self.core.paths.profile
+        where = _("footer_profile", profile=me) + \
+            (" ★" if me == paths.main_profile() else "")
+        self.footer.setText(f"fedtail {build}<br>{where}<br>{_('made_by')}")
+        self.footer.setToolTip(_("about") + "\n" + _("footer_profile_tip"))
 
     # ---- accounts: one profile each, switched by starting the other one ------------------
     def accounts_menu(self, parent=None):
@@ -456,8 +493,8 @@ class MainWindow(QMainWindow):
         m.clear()
         me = self.core.paths.profile
         for p in profiles.listing():
-            a = m.addAction(profiles.label(p) + ("" if p["logged_in"] else
-                                                 "  " + _("not_logged_in")))
+            a = m.addAction(profiles.label(p) + (" ★" if p.get("main") else "")
+                            + ("" if p["logged_in"] else "  " + _("not_logged_in")))
             a.setCheckable(True)
             a.setChecked(p["name"] == me)
             if p["name"] == me:
@@ -465,6 +502,7 @@ class MainWindow(QMainWindow):
             else:
                 a.triggered.connect(lambda _c=False, n=p["name"]: self.switch_profile(n))
         m.addSeparator()
+        m.addAction(_("my_profile"), self.open_my_profile).setEnabled(bool(self.core.me))
         merged = m.addAction(_("accounts_merge"))
         merged.setCheckable(True)
         merged.setChecked(bool(getattr(self.core, "others", None)))
@@ -472,6 +510,26 @@ class MainWindow(QMainWindow):
         merged.setEnabled(not self.cfg["ui"]["merge"])  # the config decides then
         merged.toggled.connect(self.set_merged)
         m.addAction(_("account_add"), self.add_profile)
+        # what this profile can do with its own login: dangerous things last, with a
+        # question first; in the all-in-one window they'd mix the accounts up, so not there
+        m.addSeparator()
+        alone = not getattr(self.core, "others", None)
+        if me != profiles.paths.main_profile():
+            m.addAction(_("make_main"), self.make_main).setToolTip(_("make_main_tip"))
+        again = m.addAction(_("relogin"), self.relogin)
+        again.setEnabled(alone and bool(self.core.auth))
+        out = m.addAction(_("logout"), self.log_out)
+        out.setEnabled(alone and bool(self.core.auth))
+        m.setToolTipsVisible(True)
+
+    def make_main(self):
+        from ...core import paths
+        paths.set_main(self.core.paths.profile)
+        log.info("main profile: %s (from the menu)", self.core.paths.profile)
+        self._set_title()
+        if getattr(self, "footer", None) is not None:
+            self._footer_text()
+        self.statusBar().showMessage(_("made_main", profile=self.core.paths.profile), 8000)
 
     def switch_profile(self, name):
         """The other account in its own window, with its own theme and config; this
@@ -507,19 +565,11 @@ class MainWindow(QMainWindow):
 
     def _app_menu(self):
         m = QMenu(self)
-        m.addAction(_("write") + "\tCtrl+N", lambda: self.compose())
-        m.addAction(_("refresh") + "\tF5", self.refresh)
-        m.addAction(_("search_title") + "\tCtrl+K", lambda: self.open_search(""))
         m.addAction(_("silence_title") + "…", lambda: SilenceDialog(self).exec())
         if self.cfg["notify"]["filtered"] != "off":
             m.addAction(_("filtered_title") + "…", self.show_filtered)
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
-        wide = m.addAction(_("full_width"))
-        wide.setCheckable(True)
-        wide.setChecked(not self.cfg["ui"]["max_width"])
-        wide.toggled.connect(self.set_full_width)
-        m.addAction(_("my_profile"), self.open_my_profile)
         people = m.addMenu(_("menu_people"))
         trends = any(self.core.supports("trends_" + k) for k in ("statuses", "tags", "links"))
         for feature, label, slot in (
@@ -532,7 +582,6 @@ class MainWindow(QMainWindow):
         people.setEnabled(not people.isEmpty())
         m.addAction(_("server_info") + "…", self.show_server_info)
         m.addMenu(self.accounts_menu(m))
-        m.addAction(_("edit_profile"), self.edit_profile)
         m.addSeparator()
         m.addAction(_("open_config"), lambda: self.open_url(
             QUrl.fromLocalFile(str(self.core.paths.config_file)).toString()))
@@ -551,7 +600,6 @@ class MainWindow(QMainWindow):
                                                   diag.log_stats(),
                                                   self.statusBar().showMessage(
                                                       _("debug_stacks_done"), 5000)))
-        m.addAction(_("relogin"), self.relogin)
         m.addAction(_("about"), self.about)
         m.addSeparator()
         m.addAction(_("quit") + "\tCtrl+Q", self.quit)
@@ -635,14 +683,62 @@ class MainWindow(QMainWindow):
     def _connect_failed(self, err):
         if "HTTP 401" in err or "HTTP 403" in err:
             QMessageBox.warning(self, _("auth_failed_title"), _("auth_failed"))
-            self.relogin()
+            self.core.logout()  # the token is dead anyway: the login window, from scratch
+            self.start()
             return
         self.statusBar().showMessage(_("server_down", err=err))
         QTimer.singleShot(20_000, self.start)
 
     def relogin(self):
+        """Log in to this same account anew (new permissions, a token revoked on the
+        server). The old token stays until the new one is in; cancel changes nothing,
+        another account is refused."""
+        auth = self.core.auth or {}
+        if not auth:
+            return
+        acct = "@" + auth.get("acct", "?")
+        if QMessageBox.question(self, _("relogin_title"), _("relogin_q", acct=acct)) \
+                != QMessageBox.StandardButton.Yes:
+            return
+        log.info("login anew: asked")
+        if LoginDialog(self, expect=(auth["server"], auth.get("acct", ""))).exec() \
+                == QDialog.DialogCode.Accepted:
+            log.info("login anew: done, reconnecting")
+            self.start()
+
+    def log_out(self):
+        """Forget this profile's token. The main profile hands its ★ to another one
+        logged in; the window goes over to that one, or (none left) to the login."""
+        from ...core import profiles
+        me = self.core.paths.profile
+        acct = "@" + (self.core.me or {}).get("acct", (self.core.auth or {}).get("acct", me))
+        others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
+        main = profiles.paths.main_profile()
+        text = [_("logout_q", acct=acct)]
+        if others:
+            target = next((p for p in others if p["name"] == main), others[0])
+            if me == main:
+                text.append(_("logout_main_moves", to=profiles.label(target)))
+            text.append(_("logout_switch", to=profiles.label(target)))
+        else:
+            target = None
+            text.append(_("logout_last"))
+        box = QMessageBox(QMessageBox.Icon.Warning, _("logout_title"), "<br><br>".join(text),
+                          QMessageBox.StandardButton.Cancel, self)
+        go = box.addButton(_("logout_yes"), QMessageBox.ButtonRole.DestructiveRole)
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        box.exec()
+        if box.clickedButton() is not go:
+            return
+        log.info("logout: profile %s", me)
         self.core.logout()
-        self.start()
+        profiles.hand_over_main(me)
+        if target:
+            profiles.launch(target["name"])
+            QTimer.singleShot(300, self.quit)
+        else:
+            self._set_title()
+            self.start()  # the login window; cancel there closes fedtail
 
     # ---- lanes ------------------------------------------------------------------------
     # ---- lists in the sidebar -----------------------------------------------------------
@@ -1806,10 +1902,22 @@ class MainWindow(QMainWindow):
             lines.append(_("about_build", commit=info["commit"], date=info["date"]))
         lines.append(_("about_env", py=platform.python_version(), qt=pyside))
         lines.append(_("made_by_long"))
-        if self.core.me:
-            lines.append(_("about_profile", profile=self.core.paths.profile,
-                           acct="@" + self.core.me["acct"], server=self.core.auth["server"]))
-        QMessageBox.about(self, "fedtail", "<br>".join(lines))
+        from urllib.parse import quote
+        author = "fedtail:resolve/" + quote(version.AUTHOR_URL, safe="")
+        lines.append(_("about_links", repo=version.HOMEPAGE, author_link=author,
+                       author=version.AUTHOR))
+        box = QMessageBox(self)
+        box.setWindowTitle("fedtail")
+        box.setIconPixmap(QIcon(icon_path()).pixmap(64, 64))
+        box.setTextFormat(Qt.TextFormat.RichText)
+        box.setText("<br>".join(lines))
+        # links: the code to the browser; the author opens here, with Follow on the page
+        label = box.findChild(QLabel, "qt_msgbox_label")
+        if label is not None:
+            label.setOpenExternalLinks(False)
+            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+            label.linkActivated.connect(lambda url: (box.accept(), self.on_link(url)))
+        box.exec()
 
     def show_raise(self):
         self.showNormal()

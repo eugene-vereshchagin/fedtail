@@ -1475,6 +1475,32 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "040" not in lane.view.rows)
         self.assertEqual(self.win.lane_items["people"].count, len(lane.view.unread_keys()))
 
+    def test_menu_keeps_only_what_is_not_on_screen(self):
+        _ = i18n._
+        texts = [a.text().split("\t")[0] for a in self.win._app_menu().actions()]
+        for gone in ("write", "refresh", "search_title", "my_profile", "edit_profile",
+                     "relogin"):
+            self.assertNotIn(_(gone), texts)
+        self.assertIn(_("about"), texts)
+        # full width is a button next to ≡ and ❯ now, of their size
+        self.assertTrue(self.win.wide_btn.isCheckable())
+        self.assertEqual(self.win.wide_btn.size(), self.win.columns_btn.size())
+        acc = [a.text() for a in self.win.accounts_menu().actions()]
+        for here in ("my_profile", "relogin", "logout"):
+            self.assertIn(_(here), acc)
+
+    def test_log_in_anew_cancelled_keeps_the_token(self):
+        from PySide6.QtWidgets import QMessageBox
+        before = dict(self.win.core.auth)
+        keep = QMessageBox.question
+        QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.No
+        try:
+            self.win.relogin()
+        finally:
+            QMessageBox.question = keep
+        self.assertEqual(self.win.core.auth, before)
+        self.assertTrue(self.win.core.paths.auth_file.exists())
+
     def test_accounts_menu_switches_profiles(self):
         from fedtail.core import profiles
         fake = [{"name": "default", "acct": "mira", "display_name": "", "logged_in": True,

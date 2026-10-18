@@ -17,7 +17,7 @@ from . import paths
 log = logging.getLogger(__name__)
 
 CARD = "profile.json"
-NOT_PROFILES = {"themes"}  # ~/.config/fedtail/themes: shared by all profiles
+NOT_PROFILES = {"themes", paths.MAIN_FILE}  # themes/: shared by all; main-profile: a mark
 
 
 def data_root():
@@ -41,8 +41,8 @@ def remember(where, me, server):
 
 
 def listing():
-    """[{"name", "acct", "server", "display_name", "logged_in"}] for every profile
-    found in the data and config folders, the default first, then by name."""
+    """[{"name", "acct", "server", "display_name", "logged_in", "main"}] for every
+    profile found in the data and config folders, the main one first, then by name."""
     # a profile is a config folder with config.toml or a data folder with a login or a
     # database in it — not just any folder there (themes/ lives next to the profiles)
     marks = {config_root(): ("config.toml",), data_root(): ("auth.json", "state.db")}
@@ -53,6 +53,7 @@ def listing():
                       and p.name not in NOT_PROFILES and paths._PROFILE_RE.match(p.name)
                       and any((p / f).exists() for f in files)}
     out = []
+    main = paths.main_profile()
     for name in names:
         d = data_root() / name
         card = {}
@@ -63,9 +64,24 @@ def listing():
         out.append({"name": name, "acct": card.get("acct", ""),
                     "display_name": card.get("display_name", ""),
                     "server": card.get("server", ""),
-                    "logged_in": (d / "auth.json").exists()})
-    out.sort(key=lambda p: (p["name"] != paths.DEFAULT_PROFILE, p["name"].lower()))
+                    "logged_in": (d / "auth.json").exists(), "main": name == main})
+    out.sort(key=lambda p: (not p["main"], p["name"].lower()))
     return out
+
+
+def hand_over_main(name):
+    """This profile has just logged out: if it was the main one, the first other profile
+    still logged in becomes main (else it stays: there is no better one). The main
+    profile's name after it."""
+    main = paths.main_profile()
+    if main != name:
+        return main
+    others = [p["name"] for p in listing() if p["logged_in"] and p["name"] != name]
+    if not others:
+        return main
+    paths.set_main(others[0])
+    log.info("main profile: %s -> %s (logged out)", name, others[0])
+    return others[0]
 
 
 def label(p):
@@ -74,7 +90,8 @@ def label(p):
     who = f"@{p['acct']}" + (f"@{host}" if host and "@" not in p["acct"] else "") \
         if p["acct"] else ""
     if who:
-        return who if p["name"] == paths.DEFAULT_PROFILE else f"{who} ({p['name']})"
+        return who if p.get("main", p["name"] == paths.main_profile()) \
+            else f"{who} ({p['name']})"
     return p["name"]
 
 

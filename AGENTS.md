@@ -32,7 +32,9 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
 * Strings go to both `ru` and `en` in `fedtail/i18n.py` (a test checks).
 * Never log or send the token; requests to other servers go without it; the bug
   report excludes `auth.json` and `state.db`.
-* The repository never names the author's own server; nothing is hardcoded.
+* The repository never names the author's own server; nothing is hardcoded. One
+  exception, the author's wish: `version.AUTHOR` / `AUTHOR_URL`, his fediverse address
+  linked from About — nothing else may use them.
 * Comments and commit messages in English; user-facing config reference and
   README.ru.md in Russian.
 * Versions: releases are tags `vX.Y.Z`; in the tagged commit `fedtail/__init__.py`

@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 APP = "fedtail"
-DEFAULT_PROFILE = "default"
+DEFAULT_PROFILE = "default"  # the first profile's folder name, and the main one until set
+MAIN_FILE = "main-profile"  # in config_base(): the main profile's name (no --profile)
 _PROFILE_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
@@ -64,9 +65,33 @@ class Paths:
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
 
 
+def main_profile():
+    """The profile started without --profile: the one named in config_base()/main-profile,
+    as long as its folders are there; else "default" (the first profile ever made)."""
+    try:
+        name = (config_base() / MAIN_FILE).read_text("utf-8").strip()
+    except OSError:
+        name = ""
+    if name and name != MAIN_FILE and _PROFILE_RE.match(name) and \
+            ((config_base() / name).is_dir() or (data_base() / name).is_dir()):
+        return name
+    return DEFAULT_PROFILE
+
+
+def set_main(name):
+    """Make this profile the one started without --profile."""
+    if not _PROFILE_RE.match(name) or name == MAIN_FILE:
+        raise ValueError(f"bad profile name {name!r}")
+    config_base().mkdir(parents=True, exist_ok=True)
+    (config_base() / MAIN_FILE).write_text(name + "\n", "utf-8")
+
+
 def resolve(profile=None, config=None, data=None):
-    """--profile NAME picks both dirs; --config / --data override each one."""
-    profile = profile or DEFAULT_PROFILE
+    """--profile NAME picks both dirs; --config / --data override each one; no name:
+    the main profile."""
+    profile = profile or main_profile()
+    if profile == MAIN_FILE:
+        raise ValueError(f"bad profile name {profile!r}: the name is taken by fedtail")
     if not _PROFILE_RE.match(profile):
         raise ValueError(f"bad profile name {profile!r}: use letters, digits, _ . -")
     cfg = Path(config).expanduser() if config else \

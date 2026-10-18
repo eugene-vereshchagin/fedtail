@@ -323,6 +323,45 @@ class PathsAuthTest(TmpDir):
         argv, _cwd = profiles.command("work")
         self.assertEqual(argv[-2:], ["--profile", "work"])
 
+    def test_main_profile_mark(self):
+        from fedtail import desktop
+        from fedtail.core import profiles
+        os.environ["XDG_CONFIG_HOME"] = str(self.tmp / "cfg")
+        os.environ["XDG_DATA_HOME"] = str(self.tmp / "data")
+        self.addCleanup(os.environ.pop, "XDG_CONFIG_HOME")
+        self.addCleanup(os.environ.pop, "XDG_DATA_HOME")
+        self.assertEqual(paths.main_profile(), "default")  # no mark: the first profile
+        for name, acct in (("default", "mira"), ("work", "w"), ("old", "o")):
+            p = paths.resolve(name)
+            p.ensure()
+            auth.save(p.auth_file, {"server": "https://social.example", "token": "T"})
+            profiles.remember(p, {"acct": acct}, "https://social.example")
+        paths.set_main("work")
+        self.assertEqual(paths.resolve().profile, "work")  # no --profile: the main one
+        got = profiles.listing()
+        self.assertEqual([p["name"] for p in got], ["work", "default", "old"])
+        self.assertEqual(profiles.label(got[0]), "@w@social.example")
+        self.assertEqual(profiles.label(got[1]), "@mira@social.example (default)")
+        self.assertEqual(desktop.desktop_id("work"), "fedtail")
+        self.assertEqual(desktop.desktop_id("default"), "fedtail-default")
+        self.assertNotIn("--profile", desktop.entry_text("work"))
+        # not the main one logs out: the mark stays
+        auth.forget(paths.resolve("old").auth_file)
+        self.assertEqual(profiles.hand_over_main("old"), "work")
+        # the main one logs out: the mark goes to the first one still logged in
+        auth.forget(paths.resolve("work").auth_file)
+        self.assertEqual(profiles.hand_over_main("work"), "default")
+        self.assertEqual(paths.main_profile(), "default")
+        # the last one: nobody to hand it to, it stays
+        auth.forget(paths.resolve("default").auth_file)
+        self.assertEqual(profiles.hand_over_main("default"), "default")
+        # a mark naming a profile that's gone: back to "default"; the mark's name is no profile
+        paths.set_main("gone")
+        self.assertEqual(paths.main_profile(), "default")
+        with self.assertRaises(ValueError):
+            paths.resolve(paths.MAIN_FILE)
+        self.assertNotIn(paths.MAIN_FILE, [p["name"] for p in profiles.listing()])
+
     def test_profiles(self):
         os.environ["XDG_CONFIG_HOME"] = str(self.tmp / "cfg")
         os.environ["XDG_DATA_HOME"] = str(self.tmp / "data")
@@ -1677,6 +1716,19 @@ class CoreTest(TmpDir):
             core.finish_login("bad").result()
         core.finish_login("good").result()
         self.assertEqual(auth.load(core.paths.auth_file)["acct"], "mira")
+
+    def test_login_anew_keeps_to_this_account(self):
+        from fedtail.core.app import OtherAccount
+        core, w = self.make()
+        before = auth.load(core.paths.auth_file)
+        core.begin_login("example.test").result()
+        with self.assertRaises(OtherAccount) as e:  # another account: refused, nothing saved
+            core.finish_login("good", expect=("https://example.test", "someone")).result()
+        self.assertTrue(str(e.exception).startswith(OtherAccount.PREFIX))
+        self.assertIn("@mira", str(e.exception))
+        self.assertEqual(auth.load(core.paths.auth_file), before)
+        core.finish_login("good", expect=("https://example.test/", "mira")).result()
+        self.assertEqual(auth.load(core.paths.auth_file)["token"], "tok")
 
     def test_auth_failure_event(self):
         core, w = self.make()

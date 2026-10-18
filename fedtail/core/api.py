@@ -14,7 +14,7 @@ from urllib.parse import quote, urlencode
 
 import requests
 
-from .. import __version__
+from .. import __version__, version
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
@@ -154,7 +154,7 @@ class Api:
             "client_name": "fedtail",
             "redirect_uris": OOB,
             "scopes": SCOPES,
-            "website": "https://github.com/eugene-vereshchagin/fedtail",
+            "website": version.HOMEPAGE,
         })
 
     def authorize_url(self, client_id):
