@@ -43,4 +43,8 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   `release` job tags the commit and publishes a GitHub release once tests are green.
 * Add a test with every fix (tests/fakes.py is an in-memory Mastodon), and keep
   `CHANGELOG.md` and the docs in step with the code — a new feature or switch also
-  gets its row in `docs/FEATURES.md`.
+  gets its row in `docs/FEATURES.md`, in the same commit. FEATURES.md is the one list of
+  what fedtail does *now* (not a history: that's the CHANGELOG's job) — a changed
+  behaviour rewrites its entry, a removed one goes, a planned one moves to "есть" when
+  done. A new or changed option in `config.example.toml` means `python3
+  tools/config_doc.py` too (a test fails otherwise).
