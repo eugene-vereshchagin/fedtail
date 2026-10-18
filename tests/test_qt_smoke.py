@@ -600,7 +600,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.2)
         keys = [k for k in lane.view.order if not k.startswith("__")]
         self.assertTrue(keys and all(k.startswith("conv:") for k in keys))
-        self.assertTrue(self.core.choice("conversations.comments"))
+        self.assertTrue(self.core.choice("conversations.replies"))
         lane.set_view("feed")
         self.pump(0.2)
         self.assertFalse(any(k.startswith("conv:") for k in lane.view.order))
@@ -995,7 +995,7 @@ class QtSmokeTest(unittest.TestCase):
 
         from fedtail.frontends.qt.feed import AccountWidget
         self.world.featured["B"] = {"tags": [{"name": "fediverse", "statuses_count": "12"}],
-                                    "home": [fakes.NEWS]}
+                                    "people": [fakes.NEWS]}
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.win.on_link("fedtail:account/B")
@@ -1232,8 +1232,8 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.1)
         self.win.select_lane("home")
         self.pump(until=lambda: "014" not in lane.view.rows)
-        self.assertEqual(self.core.choice("unread_only.people"), True)  # kept for this run
-        self.assertIsNone(self.core.get_state("unread_only.people"))  # not past it
+        self.assertEqual(self.core.choice("unread_only.home"), True)  # kept for this run
+        self.assertIsNone(self.core.get_state("unread_only.home"))  # not past it
 
     def test_compose_inline_panel(self):
         """The post window lives inside the main one (the keyboard layout stays)."""
