@@ -185,28 +185,3 @@ def outbox_page(get_json, where, limit=20, pages=3, skip=()):
         items = list(page.get("orderedItems") or page.get("items") or [])
         page = page.get("next")
     return found, page if isinstance(page, str) else None
-    page = col.get("first")
-    items = list(col.get("orderedItems") or col.get("items") or [])
-    seen = 0
-    while len(found) < limit:
-        for it in items:
-            if not isinstance(it, dict) or it.get("type") != "Create":
-                continue
-            obj = it.get("object")
-            target = obj if isinstance(obj, dict) else it
-            if not (_audience(target) | _audience(it)) & PUBLIC:
-                continue
-            uri = _id(obj)
-            if uri and urlparse(uri).scheme in ("https", "http") and uri not in found:
-                found.append(uri)
-            if len(found) >= limit:
-                break
-        if page is None or seen >= pages or len(found) >= limit:
-            break
-        page = get_json(page) if isinstance(page, str) else page
-        if not isinstance(page, dict):
-            break
-        seen += 1
-        items = list(page.get("orderedItems") or page.get("items") or [])
-        page = page.get("next")
-    return found

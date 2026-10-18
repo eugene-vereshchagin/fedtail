@@ -2,6 +2,23 @@
 
 ## 0.15.0 — in progress
 
+- Security: a post's link could wrap anything in `fedtail:resolve/…` — a local file (the
+  token's `auth.json` too), a network share, `javascript:` — and a click on its text opened it
+  when the server found nothing. Now that wrapper holds web addresses only, and nothing from
+  a post or another server goes to the desktop but web, mail, XMPP, Gemini and magnet links:
+  on Windows opening `file://host/share` alone hands the login's NTLM hash to that host.
+  Profile, thread and account links from a post take an id, never a path.
+- Security: someone else's words are shown as text, not markup — the content warning in an
+  edited post's history, the alt text under a video and in picture tooltips, a link card's
+  picture description, a cut name's tooltip, a link's hover address (it could show one
+  address and lead to another). Desktop notifications too: a post saying `<a href=…>` in
+  plain letters no longer becomes a link there; a name starting with `--` is a name.
+- Links whose address has `&not=`, `&copy=`, `&para=`… in it are no longer garbled
+  (`?a=1&not=2` became `?a=1¬=2`).
+- The web interface: a POST with a negative Content-Length is refused instead of read to
+  the end of the connection; a fediverse link it can't find opens in the browser only when
+  it is a web address.
+
 - "Activity" follows `feed.order` like every other lane: with "oldest_first" the newest
   is at the bottom, it opens where the unseen begins (`feed.start_at`) and stays put when
   more comes (`feed.on_new`). It used to be newest-on-top whatever the config said.

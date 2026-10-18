@@ -59,6 +59,7 @@ from .find import FindBar
 from .images import Images
 from .login import LoginDialog
 from .notify import Notifier, icon_path
+from .opener import open_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
 from .social import AccountsWidget, QuotesWidget, ServerInfoDialog, TrendsWidget
@@ -761,17 +762,13 @@ class MainWindow(QMainWindow):
         people.setEnabled(not people.isEmpty())
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
-        m.addAction(_("open_config"), lambda: self.open_url(
-            QUrl.fromLocalFile(str(self.core.paths.config_file)).toString()))
-        m.addAction(_("open_themes"), lambda: self.open_url(
-            QUrl.fromLocalFile(str(themefile.user_dir())).toString()))
+        m.addAction(_("open_config"), lambda: open_path(self.core.paths.config_file))
+        m.addAction(_("open_themes"), lambda: open_path(themefile.user_dir()))
         m.addMenu(self._try_theme_menu(m))
-        m.addAction(_("open_data"), lambda: self.open_url(
-            QUrl.fromLocalFile(str(self.core.paths.data_dir)).toString()))
+        m.addAction(_("open_data"), lambda: open_path(self.core.paths.data_dir))
         m.addSeparator()
         dbg = m.addMenu(_("debug_menu"))
-        dbg.addAction(_("debug_logs"), lambda: self.open_url(
-            QUrl.fromLocalFile(str(diag.logs_dir(self.core.paths))).toString()))
+        dbg.addAction(_("debug_logs"), lambda: open_path(diag.logs_dir(self.core.paths)))
         dbg.addAction(_("debug_report"), self.bug_report)
         dbg.addAction(_("debug_notify"), lambda: self.statusBar().showMessage(
             _("debug_notify_sent", backend=self.notifier.test()), 8000))
@@ -1676,8 +1673,10 @@ class MainWindow(QMainWindow):
 
     # ---- links & actions --------------------------------------------------------------
     def open_url(self, url):
+        """Someone else's address: only the web (and mail, XMPP…); see opener."""
         from .opener import open_link
-        open_link(url)
+        if url and not open_link(url):
+            self.statusBar().showMessage(_("link_refused"), 6000)
 
     def open_from_outside(self, url):
         """`fedtail open URL` (a browser, a terminal): the post or profile here, in front."""
@@ -2029,7 +2028,7 @@ class MainWindow(QMainWindow):
         """The versions of an edited post, oldest first, as the server keeps them."""
         from PySide6.QtWidgets import QTextBrowser
 
-        from .text import clean
+        from ..richtext import history_html
         dlg = QDialog(self)
         dlg.setWindowTitle(_("history_title"))
         dlg.resize(560, 480)
@@ -2040,13 +2039,8 @@ class MainWindow(QMainWindow):
         view.setPlainText(_("loading"))
 
         def got(versions):
-            parts = []
-            for i, v in enumerate(versions, 1):
-                when = self.theme.date(v.get("created_at", ""))
-                cw = f"<p><i>⚠ {v['spoiler_text']}</i></p>" if v.get("spoiler_text") else ""
-                parts.append(f"<h4>{_('history_version', n=i)} · {when}</h4>{cw}"
-                             f"{clean(v.get('content', ''), self.theme.css('link'))}")
-            view.setHtml("<hr>".join(parts) or _("history_none"))
+            view.setHtml(history_html(versions, self.theme.date, self.theme.css("link"))
+                         or _("history_none"))
         self.bridge.call(self.core.history(st), ok=got,
                          fail=lambda e: view.setPlainText(_("load_failed", err=e)))
         dlg.show()
@@ -2107,7 +2101,7 @@ class MainWindow(QMainWindow):
             self.error(e)
             return
         self.statusBar().showMessage(_("debug_report_done", path=str(out)), 15000)
-        self.open_url(QUrl.fromLocalFile(str(out.parent)).toString())
+        open_path(out.parent)
 
     def about(self):
         import platform

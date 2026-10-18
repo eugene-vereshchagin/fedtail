@@ -390,12 +390,14 @@ document.addEventListener("click", async (e) => {
     if (kind === "account") openAccount(arg);
     else if (kind === "thread") openThread(arg);
     else if (kind === "resolve") {
+      // not found here: to the browser — a web address only, never file:, javascript:…
+      const web = /^https?:\/\//i.test(arg);
       try {
         const r = await api("/api/resolve?url=" + encodeURIComponent(arg));
         if (r.found === "thread") openThread(r.id);
         else if (r.found === "account") openAccount(r.id);
-        else window.open(arg, "_blank", "noopener");
-      } catch (err) { window.open(arg, "_blank", "noopener"); }
+        else if (web) window.open(arg, "_blank", "noopener");
+      } catch (err) { if (web) window.open(arg, "_blank", "noopener"); }
     }
     return;
   }

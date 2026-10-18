@@ -1,12 +1,9 @@
 import unittest
 
-try:
-    from fedtail.frontends.qt.text import ZWSP, clean
-except ImportError:  # no PySide6 here
-    clean = None
+# the sanitizer has no Qt in it: these run everywhere, with or without PySide6
+from fedtail.frontends.richtext import ZWSP, clean
 
 
-@unittest.skipIf(clean is None, "PySide6 is not installed")
 class CleanTest(unittest.TestCase):
     def test_long_link_text_is_shortened_href_kept(self):
         url = "https://freesoftwareextremist.com/objects/21d20787-5fba-491f-8c3e-0123456789ab"
@@ -45,9 +42,81 @@ class CleanTest(unittest.TestCase):
         self.assertIn('href="https://ok.example/"', h)
 
     def test_entities_and_breaks_survive_sanitizing(self):
-        from fedtail.frontends.qt.text import sanitize
+        from fedtail.frontends.richtext import sanitize
         self.assertEqual(sanitize('<p>a &amp; b<br/>c &#39;d&#39; &lt;x&gt;</p>'),
                          "<p>a &amp; b<br>c &#x27;d&#x27; &lt;x&gt;</p>")
+
+    def test_inside_links_cannot_wrap_other_things(self):
+        # fedtail:resolve/ is a web address found through my server: never a file (on
+        # Windows file://host/share hands the login's hash to that host), a script or a
+        # share; the other inside links take an id, not a path into the API
+        for href in ("fedtail:resolve/file:///etc/passwd",
+                     "fedtail:resolve/file:///home/u/.local/share/fedtail/default/auth.json",
+                     "fedtail:resolve/file://attacker.example/share/x.png",
+                     "fedtail:resolve/javascript:alert(1)",
+                     "fedtail:resolve/JavaScript:alert(1)",
+                     "fedtail:resolve/data:text/html,hi",
+                     "fedtail:resolve/smb://attacker.example/share",
+                     "fedtail:resolve/&#x66;ile:///etc/passwd",
+                     "fedtail:resolve/file%3A%2F%2F%2Fetc%2Fpasswd",
+                     "fedtail:account/1/follow", "fedtail:account/1%2Ffollow",
+                     "fedtail:thread/1/../../accounts/2/follow", "fedtail:thread/1?x",
+                     "Fedtail:delete/1", "fedtail:boost/1", "fedtail:account/",
+                     "https://ok.example/\x01", "smb://attacker.example/share"):
+            out = clean(f'<a href="{href}">кот</a>')
+            self.assertNotIn("href", out, href)
+            self.assertIn("кот", out)
+
+    def test_inside_links_that_only_go_somewhere_stay(self):
+        for href in ("fedtail:resolve/https%3A%2F%2Fsocial.example%2F%40a",
+                     "fedtail:resolve/https://social.example/@a",
+                     "fedtail:account/42", "fedtail:thread/110", "fedtail:tag/linux",
+                     "mailto:a@b.example", "magnet:?xt=urn:btih:abc"):
+            self.assertIn(f'href="{href}"', clean(f'<a href="{href}">x</a>'))
+        # the scheme as fedtail reads it (the window compares it as written)
+        self.assertIn('href="fedtail:account/42"', clean('<a href="Fedtail:Account/42">x</a>'))
+
+    def test_link_query_is_not_decoded_twice(self):
+        # &not= &copy= &para= are also old HTML entities: decoding the parser's result
+        # once more turned ?a=1&not=2 into ?a=1¬=2
+        href = "https://x.example/p?a=1&amp;not=2&amp;copy=3&amp;para=4"
+        self.assertIn('href="https://x.example/p?a=1&amp;not=2&amp;copy=3&amp;para=4"',
+                      clean(f'<a href="{href}">x</a>'))
+
+
+class LinkPolicyTest(unittest.TestCase):
+    def test_openable_is_the_web_and_post_links_only(self):
+        from fedtail.frontends.richtext import openable
+        for ok in ("https://a.example/", "HTTP://a.example", "mailto:a@b.example",
+                   "xmpp:a@b.example", "gemini://g.example/", "magnet:?xt=1"):
+            self.assertTrue(openable(ok), ok)
+        for bad in ("file:///etc/passwd", "file://attacker.example/share/x",
+                    "\\\\attacker.example\\share", "smb://attacker.example/s",
+                    "javascript:alert(1)", "data:text/html,x", "fedtail:delete/1",
+                    "-help", "", None, "https://a.example/\n", "C:\\Windows\\x.exe"):
+            self.assertFalse(openable(bad), bad)
+
+    def test_tooltips_show_someone_elses_words_as_written(self):
+        from fedtail.frontends.richtext import plain_tip
+        tip = plain_tip('<img src="file://attacker.example/s/x.png"> a & b\nnext')
+        self.assertTrue(tip.startswith("<qt>"))  # rich on purpose, so Qt doesn't guess
+        self.assertNotIn("<img", tip)
+        self.assertIn("&lt;img", tip)
+        self.assertIn("a &amp; b<br>next", tip)
+        self.assertEqual(plain_tip(""), "")
+        self.assertEqual(plain_tip(None), "")
+
+    def test_history_warning_is_text(self):
+        from fedtail.frontends.richtext import history_html
+        h = history_html([{"created_at": "", "content": "<p>v1</p>",
+                           "spoiler_text": '<img src="file://attacker.example/s/x.png">'
+                                           '<a href="fedtail:delete/1">x</a>'},
+                          {"created_at": "", "content": "<p>v2</p>"}], lambda _iso: "")
+        self.assertNotIn("<img", h)
+        self.assertNotIn('href="fedtail:delete', h)
+        self.assertIn("&lt;img", h)
+        self.assertIn("<p>v1</p>", h)
+        self.assertEqual(h.count("<hr>"), 1)
 
 
 if __name__ == "__main__":
@@ -76,10 +145,9 @@ class SnippetBlocksTest(unittest.TestCase):
         self.assertEqual(snippet(st), "@anna quote AO3 Кто")
 
 
-@unittest.skipIf(clean is None, "PySide6 is not installed")
 class EmojiTest(unittest.TestCase):
     def test_shortcodes_become_pictures_outside_tags(self):
-        from fedtail.frontends.qt.text import emojify
+        from fedtail.frontends.richtext import emojify
         emojis = [{"shortcode": "blobcat", "url": "https://s/blobcat.gif",
                    "static_url": "https://s/blobcat.png"},
                   {"shortcode": "nope", "url": "https://s/nope.png"}]

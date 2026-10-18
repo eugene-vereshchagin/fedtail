@@ -58,6 +58,20 @@ class NotifyTextTest(unittest.TestCase):
         self.assertIn("bob", fav.body.lower())
         [_f, fav] = notifytext.build(items, "count")
         self.assertEqual((fav.title, fav.body), ("fedtail", "★ 2 в избранное"))
+    def test_desktop_body_is_text_not_markup(self):
+        # a post that says "<a href=…>" in plain letters: the desktop shows those letters,
+        # it doesn't get a link (or, on some desktops, a picture from a share)
+        st = status("3", BOB, "p", "ME", text='&lt;a href="file:///etc/passwd"&gt;click'
+                                              '&lt;/a&gt; &lt;img src="https://x.example/p"&gt;')
+        [n] = notifytext.build([("replies", st)], "full")
+        self.assertIn('<a href="file:///etc/passwd">', n.body)  # what the post says
+        argv = notifytext.desktop_argv(["notify-send", "--wait"], n)
+        self.assertEqual(argv[:3], ["notify-send", "--wait", "--"])  # a name is no option
+        self.assertEqual(argv[3], n.title)
+        self.assertNotIn("<a", argv[4])
+        self.assertNotIn("<img", argv[4])
+        self.assertIn("&lt;a href=", argv[4])
+
 
 if __name__ == "__main__":
     unittest.main()

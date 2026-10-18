@@ -585,6 +585,13 @@ class QtSmokeTest(unittest.TestCase):
         self.win.show_history(edited)
         self.pump(0.3)
 
+        # someone else's file or share address never reaches the desktop (on Windows
+        # file://host/share alone hands the login's hash to that host)
+        from fedtail.frontends.qt import opener
+        self.assertFalse(opener.open_link("file://attacker.example/share/x.png"))
+        self.win.open_url("file:///etc/passwd")
+        self.assertEqual(self.win.statusBar().currentMessage(), i18n._("link_refused"))
+
         # conversations view: one card per thread, the line about the rest
         self.win.select_lane("replies")
         lane = self.win.lane_widgets["replies"]

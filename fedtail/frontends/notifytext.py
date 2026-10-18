@@ -6,6 +6,7 @@ privacy:
   count  — only how many ("2 new comments"), no names at all
 """
 
+import html
 from dataclasses import dataclass
 
 from ..core.model import real, snippet
@@ -35,6 +36,14 @@ def _who(obj):
 
 
 _titles = None
+
+
+def desktop_argv(base, note):
+    """notify-send's arguments for a note. Its body is markup to the desktop (links,
+    bold, on some desktops pictures), and a post's text may say "<a href=…>" in plain
+    letters: escaped, so it shows as written. "--" first: a name that begins with "--"
+    is a name, not an option."""
+    return base + ["--", note.title, html.escape(note.body, quote=False)]
 
 
 def _lane_title(lane):

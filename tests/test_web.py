@@ -82,6 +82,21 @@ class WebTest(TmpDir):
         # a POST without the header: refused even with the cookie (a form elsewhere)
         self.assertEqual(self.req("/api/read", {"ids": ["001"]}, header=False)[0], 403)
 
+    def test_negative_length_is_refused_not_read_to_the_end(self):
+        # read(-1) reads until the client closes: the 1 MB limit would be gone
+        import http.client
+        port = self.srv.server_address[1]
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+        c.putrequest("POST", "/api/read")
+        c.putheader("Cookie", f"{web.COOKIE}={self.key}")
+        c.putheader("X-Fedtail", "1")
+        c.putheader("Content-Length", "-1")
+        c.endheaders()
+        c.send(b'{"ids": ["001"]}')  # and the connection stays open
+        r = c.getresponse()
+        self.assertEqual(r.status, 400)
+        c.close()
+
     def test_page_and_headers(self):
         code, headers, body = self.req("/")
         self.assertEqual(code, 200)

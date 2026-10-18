@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from ... import diag
 from ...core.model import real, snippet
 from ...i18n import _
+from ..richtext import plain_tip
 from .card import CardSpec, PostRow, SeparatorRow
 from .card import _set_prop as _mark
 from .text import display_name, esc
@@ -697,7 +698,7 @@ class _ElidedLabel(QLabel):
         parts = [self._full] if cut else []
         if self._tip:
             parts.append(self._tip)
-        QLabel.setToolTip(self, "\n\n".join(parts))
+        QLabel.setToolTip(self, plain_tip("\n\n".join(parts)))  # names, titles: not ours
 
     def text(self):
         return self._full

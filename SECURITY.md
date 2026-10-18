@@ -12,7 +12,10 @@ What fedtail promises, so you know what counts as a hole:
 * Requests to other servers (honest counters, filling in threads, pictures) carry no token —
   only your IP address shows.
 * Post HTML is rebuilt from an allow-list before display; no browser engine, no scripts. A post
-  can't hold a link that acts on your behalf (deleting, boosting, following).
+  can't hold a link that acts on your behalf (deleting, boosting, following), and nothing from
+  a post or another server opens a local file or a network share: fedtail hands the desktop
+  only web addresses (and mail, XMPP, Gemini, magnet links). Someone else's text — names, alt
+  text, content warnings, notifications — is shown as text, never as markup.
 * Logs hold API paths, ids, timings and errors — not post texts. `--bug-report` leaves out the
   token and the database.
 

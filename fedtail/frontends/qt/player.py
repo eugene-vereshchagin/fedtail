@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import _
+from ..richtext import plain_tip
 
 log = logging.getLogger(__name__)
 
@@ -135,6 +136,7 @@ class VideoOverlay(QWidget):
         lay.addLayout(bar)
         desc = (m.get("description") or "").replace("\n", " ")
         cap = QLabel(desc)  # the alt text; changes as I go between the post's videos
+        cap.setTextFormat(Qt.TextFormat.PlainText)  # someone else's words, never HTML
         cap.setWordWrap(True)
         cap.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cap.setVisible(bool(desc))
@@ -401,8 +403,8 @@ class AudioBar(QWidget):
         self.btn = QToolButton()
         self.btn.setText("▶")
         self.btn.setAutoRaise(True)
-        self.btn.setToolTip(_("media_audio") + (": " + m["description"]
-                                                if m.get("description") else ""))
+        self.btn.setToolTip(plain_tip(_("media_audio") + (": " + m["description"]
+                                                          if m.get("description") else "")))
         self.btn.clicked.connect(self.toggle)
         h.addWidget(self.btn)
         self.slider = QSlider(Qt.Orientation.Horizontal)

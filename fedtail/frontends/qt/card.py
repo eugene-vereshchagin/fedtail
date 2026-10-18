@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from ...core import config, links
 from ...core.model import QUOTE_SHOWN, is_bot, quoted, real, snippet, without_quote_fallback
 from ...i18n import _, current_language
+from ..richtext import plain_tip
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
 RAIL_W = 20
@@ -285,7 +286,7 @@ class PostRow(QWidget):
         lab.setTextInteractionFlags(flags)
         lab.linkActivated.connect(self.ctx.on_link)
         # shortened links show the whole address on hover
-        lab.linkHovered.connect(lambda url: lab.setToolTip(_hover_text(url)))
+        lab.linkHovered.connect(lambda url: lab.setToolTip(plain_tip(_hover_text(url))))
         if name:
             lab.setObjectName(name)
         return lab
@@ -956,7 +957,7 @@ class PostRow(QWidget):
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
                 w, h = _dims(m)
                 lab.setFixedSize(*_thumb_box(w, h, *((big_h, big_w) if single else (150, 230))))
-                lab.setToolTip(m.get("description") or "")
+                lab.setToolTip(plain_tip(m.get("description")))
                 lab.clicked.connect(self._reveal_media)
                 grid.addWidget(lab, pos // 3, pos % 3)
                 pos += 1
@@ -966,7 +967,7 @@ class PostRow(QWidget):
                 pos += 1
                 lab = ClickLabel(_("image_loading"))
                 lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                lab.setToolTip(m.get("description") or "")
+                lab.setToolTip(plain_tip(m.get("description")))
                 lab.setAccessibleName(_("media_" + m["type"]))
                 lab.setAccessibleDescription(m.get("description") or _("a11y_no_alt"))
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -993,7 +994,8 @@ class PostRow(QWidget):
                     upgrade = full if single and full and full != src else None
                 else:  # gifv / video: a still frame here, played over the window on a click
                     upgrade = None
-                    lab.setToolTip(_("media_" + m["type"]) + " ▶ " + (m.get("description") or ""))
+                    lab.setToolTip(plain_tip(_("media_" + m["type"]) + " ▶ "
+                                             + (m.get("description") or "")))
                     lab.clicked.connect(lambda mm=m: self.ctx.play_video(mm, moving))
                     src = m.get("preview_url")
                     if m["type"] == "gifv" and self.ctx.loop_gifv is not None:
@@ -1083,7 +1085,7 @@ class PostRow(QWidget):
         box = ClickFrame()
         box.setObjectName("linkCard")
         box.setCursor(Qt.CursorShape.PointingHandCursor)
-        box.setToolTip(_hover_text(url))
+        box.setToolTip(plain_tip(_hover_text(url)))
         box.clicked.connect(lambda: self.ctx.on_link(url))
         h = QHBoxLayout(box)
         h.setContentsMargins(0, 0, 10, 0)
@@ -1093,7 +1095,7 @@ class PostRow(QWidget):
             pic = QLabel()
             pic.setObjectName("linkCardImage")
             pic.setFixedSize(side, side)
-            pic.setToolTip(c.get("image_description") or "")
+            pic.setToolTip(plain_tip(c.get("image_description")))
 
             def got(pm, lab=pic):
                 _set(lab, _fit(pm, side, side, 0))

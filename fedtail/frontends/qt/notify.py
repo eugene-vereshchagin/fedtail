@@ -126,15 +126,15 @@ class Notifier(QObject):
                 "--hint=string:desktop-entry:fedtail", "--category=im.received"]
         try:
             # with --wait, notify-send prints the chosen action when "Open" is pressed
-            r = subprocess.run(base + [f"--action=open={_('open_action')}", "--wait",
-                                       note.title, note.body],
+            wait = base + [f"--action=open={_('open_action')}", "--wait"]
+            r = subprocess.run(notifytext.desktop_argv(wait, note),
                                capture_output=True, text=True, timeout=600,
                                env=sysenv.child_env())
             log.debug("notify-send exit %s, out %r, err %r", r.returncode,
                       r.stdout.strip()[:80], r.stderr.strip()[:200])
             if r.returncode != 0:
                 # an old notify-send without --action/--wait: show it plainly
-                r2 = subprocess.run(base + [note.title, note.body], capture_output=True,
+                r2 = subprocess.run(notifytext.desktop_argv(base, note), capture_output=True,
                                     text=True, timeout=30, env=sysenv.child_env())
                 if r2.returncode != 0:
                     log.warning("notify-send failed (%s): %s", r2.returncode,

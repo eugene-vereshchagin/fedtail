@@ -348,6 +348,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._forbidden()
         try:
             n = int(self.headers.get("Content-Length") or 0)
+            if n < 0:  # read(-1) would read to the end: no limit at all
+                raise ValueError(n)
             body = json.loads(self.rfile.read(min(n, 1_000_000)) or b"{}")
         except ValueError:
             return self._json({"error": "bad json"}, HTTPStatus.BAD_REQUEST)

@@ -15,6 +15,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
 from ...core.model import real
 from ...i18n import _
+from ..richtext import openable
 from .model import Commands, lane_label, ordered_lanes, show_post, start_lane
 
 log = logging.getLogger(__name__)
@@ -145,8 +146,10 @@ class PostsMixin(Ui):
     def action_browser(self):
         st = self.current()
         url = real(st).get("url") if st else None
-        if url:
+        if url and openable(url):  # the web only: never a file or a share from a post
             webbrowser.open(url)
+        elif url:
+            self.app.notify(_("link_refused"))
 
     def status_changed(self, st):
         self.app.refresh_lane()

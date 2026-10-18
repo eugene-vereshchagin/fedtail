@@ -65,9 +65,56 @@ AS_PARAGRAPH = {"h1", "h2", "h3", "h4", "h5", "h6", "div", "section", "article",
                 "footer", "aside", "table", "figure", "figcaption", "details", "summary"}
 AS_BREAK = {"tr", "hr", "dt", "dd"}
 AS_SPACE = {"td", "th"}
-SAFE_SCHEMES = ("http://", "https://", "mailto:", "xmpp:", "gemini://", "magnet:",
-                # links.in_app's own: going somewhere inside is fine, doing things is not
-                "fedtail:account/", "fedtail:tag/", "fedtail:resolve/", "fedtail:thread/")
+# Links to the outside a post may hold, and what fedtail hands to the desktop to open.
+# Never file: (on Windows, file://host/share sends the login's NTLM hash to that host),
+# smb:, data:, javascript: or anything else a desktop might act on.
+OUTSIDE_SCHEMES = ("http://", "https://", "mailto:", "xmpp:", "gemini://", "magnet:")
+# links.in_app's own: going somewhere inside is fine, doing things is not
+INSIDE_ACTIONS = ("account", "tag", "resolve", "thread")
+SAFE_SCHEMES = OUTSIDE_SCHEMES + tuple(f"fedtail:{a}/" for a in INSIDE_ACTIONS)
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def openable(url):
+    """True for an address fedtail may hand to the browser or the desktop: the web and
+    the few link kinds a post may hold. Folders and files of our own go another way."""
+    return isinstance(url, str) and not _CONTROL.search(url) and \
+        url.strip().lower().startswith(OUTSIDE_SCHEMES)
+
+
+def safe_href(href):
+    """The href a post's link may keep — exactly as it will be written, entities already
+    decoded — or None. fedtail:resolve/ may wrap only a web address; the other inside
+    links take one path segment (an id, a tag), never a path into the API."""
+    from urllib.parse import unquote
+    href = (href or "").strip()
+    if not href or _CONTROL.search(href):
+        return None
+    low = href.lower()
+    if low.startswith(OUTSIDE_SCHEMES):
+        return href
+    if not low.startswith("fedtail:"):
+        return None
+    action, sep, arg = href[len("fedtail:"):].partition("/")
+    action = action.lower()
+    if not sep or not arg or action not in INSIDE_ACTIONS:
+        return None
+    inner = unquote(arg)
+    if action == "resolve":
+        if not inner.lower().startswith(("http://", "https://")) or _CONTROL.search(inner):
+            return None
+    elif any(c in inner for c in "/\\?#") or _CONTROL.search(inner):
+        return None
+    return f"fedtail:{action}/{arg}"
+
+
+def plain_tip(text):
+    """A tooltip from someone else's words (alt text, a name, a link): Qt takes a
+    tooltip with a tag in it for HTML and draws it (pictures from file paths too), so
+    the text is escaped and the tooltip made rich on purpose."""
+    if not text:
+        return ""
+    return "<qt>" + html.escape(text, quote=False).replace("\n", "<br>") + "</qt>"
 
 
 class _Sanitizer(HTMLParser):
@@ -93,11 +140,9 @@ class _Sanitizer(HTMLParser):
         if tag not in ALLOWED_TAGS:
             return
         if tag == "a":
-            href = (dict(attrs).get("href") or "").strip()
-            if href.lower().startswith(SAFE_SCHEMES):
-                self.out.append(f'<a href="{esc(html.unescape(href))}">')
-            else:
-                self.out.append("<a>")
+            # the parser has decoded the entities already: checked as it is written
+            href = safe_href(dict(attrs).get("href"))
+            self.out.append(f'<a href="{esc(href)}">' if href else "<a>")
             return
         self.out.append(f"<{tag}>")
 
@@ -268,3 +313,15 @@ def link(action, arg, label, color=None, bold=False):
     if bold:
         style += "font-weight:700;"
     return f'<a href="fedtail:{action}/{esc(str(arg))}" style="{style}">{label}</a>'
+
+
+def history_html(versions, date, link_color=None):
+    """An edited post's versions for the history dialog. The warning (spoiler_text) is
+    the author's plain text like the rest: escaped, never markup."""
+    from ..i18n import _
+    parts = []
+    for i, v in enumerate(versions or (), 1):
+        cw = f"<p><i>⚠ {esc(v.get('spoiler_text'))}</i></p>" if v.get("spoiler_text") else ""
+        parts.append(f"<h4>{_('history_version', n=i)} · {esc(date(v.get('created_at', '')))}"
+                     f"</h4>{cw}{clean(v.get('content', ''), link_color)}")
+    return "<hr>".join(parts)
