@@ -37,7 +37,7 @@ class NotifyTextTest(unittest.TestCase):
         notes = notifytext.build([("requests", ME), ("comments", self.c1),
                                   ("people", self.c2)], "full")
         self.assertEqual([n.lane for n in notes], ["comments", "requests", "people"])
-        self.assertIn("Вереск", notes[1].title)
+        self.assertIn("Мира", notes[1].title)
         self.assertIn("«Лента»", notes[2].title)
 
 
