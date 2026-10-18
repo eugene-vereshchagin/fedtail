@@ -498,6 +498,8 @@ class Core(SocialMixin):
         types = list(self.cfg["activity"]["types"])
         if self.cfg["activity"].get("approvals", True):  # GoToSocial: waiting for my yes
             types += ["pending.reply", "pending.favourite", "pending.reblog"]
+        if self.cfg["activity"].get("server_notices", True):  # Mastodon 4.3+
+            types += ["severed_relationships", "moderation_warning"]
         fc = self.cfg["feed"]
         newest, _sort = self.store.activity_newest()
         if newest is None:

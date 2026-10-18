@@ -918,6 +918,17 @@ class CoreTest(TmpDir):
         self.assertNotIn("300", w.statuses)
         self.assertIsNone(core.store.get_status("300"))
 
+    def test_server_notices_kept_with_their_details(self):
+        core, w = self.make()
+        core.connect().result()
+        core.poll_once()  # the first fetch is history
+        n = w.act("s1", "severed_relationships", ME, minute=5)
+        n["event"] = {"type": "domain_block", "target_name": "bad.example",
+                      "followers_count": 3, "following_count": 2}
+        core.poll_once()
+        got = [x for x in core.store.activity_recent(10) if x["id"] == "s1"]
+        self.assertEqual(got[0]["account"]["_notice"]["target_name"], "bad.example")
+
     def test_the_same_error_once(self):
         core, _w = self.make()
         shown = []

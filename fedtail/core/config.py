@@ -21,6 +21,7 @@ DEFAULTS = {
         "switch_closes": True,
         "compose": "inline",
         "compose_size": 0,
+        "account_colors": True,
         "start_lane": "none",
         "merge": [],
         "sidebar_footer": True,
@@ -129,6 +130,7 @@ DEFAULTS = {
     "activity": {
         "types": ["favourite", "reblog", "follow"],
         "approvals": True,
+        "server_notices": True,
     },
     "lists": {
         "enabled": True,

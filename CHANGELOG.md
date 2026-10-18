@@ -2,6 +2,11 @@
 
 ## 0.14.0 — in progress
 
+- The server's own notices in Likes & boosts (Mastodon 4.3+): follows cut because a server
+  was blocked — which, why, how many — and warnings from the moderators
+  (`activity.server_notices`).
+- All accounts in one window: the "→ @nick" mark of each account has a colour of its own,
+  the same every time (`ui.account_colors`).
 - A picture bigger than the server takes is made to fit before the upload (its pixel
   limit, then JPEG — PNG with transparency — under its size limit), instead of a refusal
   after it; your file stays as it is, gifs are never flattened (`post.resize_images`).

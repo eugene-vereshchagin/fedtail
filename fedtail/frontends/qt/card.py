@@ -599,6 +599,12 @@ class PostRow(QWidget):
             lab = QLabel("→ " + via)
             lab.setObjectName("via")
             lab.setToolTip(_("via_tip", acct=via))
+            if self.ctx.cfg["ui"].get("account_colors", True):
+                # one colour per account of mine, the same every time: whose it is at a
+                # glance, without reading "→ @nick"
+                color = account_color(via)
+                lab.setStyleSheet(f"QLabel {{ color: white; background: {color}; "
+                                  "border-radius: 6px; padding: 0 6px; }")
             row.addWidget(lab)
 
     def _context_html(self, st):
@@ -1262,6 +1268,15 @@ class _ActionsBox(QWidget):
         self.is_short = go_short
 
 
+
+
+def account_color(name):
+    """A colour of its own for each account, from its name: steady, readable on white."""
+    import hashlib
+
+    from PySide6.QtGui import QColor
+    h = int(hashlib.sha1(name.lower().encode()).hexdigest()[:4], 16) % 360
+    return QColor.fromHsl(h, 150, 105).name()
 
 def _age_days(st, cfg):
     """How many days old a post is, when that's more than feed.old_days; else 0."""

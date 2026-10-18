@@ -2057,6 +2057,10 @@ class ActivityWidget(QWidget):
         when = theme.date(times[0]) if times and times[0] else ""
         if len(times) > 1 and times[-1] and theme.date(times[-1]) != when:
             when = f"{theme.date(times[-1])} … {when}"
+        notice = es[0]["account"].get("_notice") if kind in (
+            "severed_relationships", "moderation_warning") else None
+        if notice is not None:  # from the server itself: what happened, not who did it
+            who = "<b>⚠ " + esc(_notice_text(kind, notice)) + "</b>"
         top = QLabel(f'{who} <span style="color:{theme.c["muted"].name()};">— '
                      f'{_("act_" + kind) if kind in ACT_KINDS else kind}'
                      + (f' · {esc(when)}' if when else "") + '</span>')
@@ -2133,7 +2137,22 @@ class ActivityWidget(QWidget):
 
 
 ACT_KINDS = ("favourite", "reblog", "follow", "poll", "update", "status",
-             "pending.reply", "pending.favourite", "pending.reblog")
+             "pending.reply", "pending.favourite", "pending.reblog",
+             "severed_relationships", "moderation_warning")
+
+
+def _notice_text(kind, notice):
+    """What the server's own notice says: follows cut by a block, a moderators' warning."""
+    n = notice or {}
+    if kind == "severed_relationships":
+        target = n.get("target_name") or "?"
+        lost = int(n.get("followers_count") or 0) + int(n.get("following_count") or 0)
+        return _("act_severed", target=target, n=lost,
+                 why=_("severed_" + str(n.get("type") or "domain_block")))
+    if kind == "moderation_warning":
+        return _("act_warning", action=_("warn_" + str(n.get("action") or "none")),
+                 text=str(n.get("text") or "")[:300])
+    return ""
 
 
 class AccountRow(QFrame):

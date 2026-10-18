@@ -215,7 +215,7 @@
 | Эмодзи серверов картинками | есть | `feed.custom_emoji` | `emojis` у поста и аккаунта | у всех |
 | Цитаты: показ | есть | `feed.quotes` | `status.quote` | Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Опросы: смотреть и голосовать | есть | — | `polls/:id`, `polls/:id/votes` | у всех |
-| Результаты опроса без голосования | в планах | `feed.poll_peek` | — | Fedilab |
+| Результаты опроса без голосования | есть | — (кнопка «Результаты» у опроса) | — | Fedilab |
 | История правок | есть | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Перевод поста сервером | есть | `feed.translate` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Эмодзи-реакции | частично — показ | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
@@ -245,7 +245,7 @@
 
 **Опросы: смотреть и голосовать.** Варианты, проценты, срок; голосование одним или несколькими вариантами, как задал автор.
 
-**Результаты опроса без голосования.** Кнопка «показать результаты», чтобы посмотреть, не голосуя.
+**Результаты опроса без голосования.** Кнопка «Результаты» рядом с «Голосовать» — посмотреть, не голосуя.
 
 **История правок.** У отредактированного поста — пометка и все прошлые версии.
 
@@ -453,7 +453,7 @@
 | Группировка уведомлений | частично | `activity.types` | fedtail группирует сам, `/api/v2/notifications` не использует | Mastodon web, Ivory, Phanpy, Ice Cubes |
 | Одобрить ответ, лайк, буст (GoToSocial) | есть | `activity.approvals` | `/api/v1/interaction_requests` | только в fedtail |
 | Уведомления от незнакомцев отдельно | есть | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ |
-| Порванные связи и предупреждения модераторов | в планах | новые типы в `activity.types` | уведомления `severed_relationships`, `moderation_warning` | Mastodon web |
+| Порванные связи и предупреждения модераторов | есть | `activity.server_notices` | уведомления `severed_relationships`, `moderation_warning` | Mastodon web |
 | Убрать уведомление, очистить все | есть | — | `notifications/:id/dismiss`, `notifications/clear` | у всех |
 | Объявления сервера | есть | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon |
 | Число непрочитанного на иконке | есть | `ui.icon_count`, `ui.themed_icon` | своё | Tokodon |
@@ -487,7 +487,7 @@
 |---|---|---|---|---|
 | Профили и переключатель | есть | `ui.switch_closes`, ключ запуска `--profile` | — | у всех многоаккаунтных |
 | Все аккаунты в одном окне | есть | `ui.merge` | своё | Ivory, Phanpy, Elk, Tokodon, Sengi, Whalebird |
-| Цвет аккаунта в общем окне | в планах | `ui.account_colors` | своё | Fedilab |
+| Цвет аккаунта в общем окне | есть | `ui.account_colors` | своё | Fedilab |
 | Действие от другого аккаунта | в планах | `ui.act_as` | `search?resolve=true` на другом сервере | Sengi, Tokodon |
 
 <details><summary>Подробнее</summary>
@@ -625,9 +625,6 @@
 
 | Что | Раздел | Ключ (предварительно) | Размер |
 |---|---|---|---|
-| Цвет аккаунта в общем окне | Аккаунты | `ui.account_colors` | малый |
-| Порванные связи, предупреждения модераторов | Уведомления | `activity.types` | малый |
-| Результаты опроса без голосования | Карточка | `feed.poll_peek` | малый |
 | Предпросмотр перед отправкой | Писать | `post.preview` | средний |
 | Тред цепочкой | Писать | `post.chain` | средний |
 | Сворачивать набивку хэштегами | Карточка | `feed.collapse_tags` | средний |

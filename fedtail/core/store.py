@@ -467,9 +467,15 @@ class Store:
         new = []
         with self._tx() as db:
             for n in notifications:
+                acc = n.get("account") or {}
+                # the server's own notices carry their details: kept with the account
+                notice = n.get("event") or n.get("relationship_severance_event") or \
+                    n.get("moderation_warning")
+                if notice:
+                    acc = dict(acc, _notice=notice)
                 cur = db.execute(
                     "INSERT OR IGNORE INTO activity VALUES (?, ?, ?, ?, ?)",
-                    (n["id"], n["type"], json.dumps(n["account"]),
+                    (n["id"], n["type"], json.dumps(acc),
                      (n.get("status") or {}).get("id"), sort_key(n.get("created_at"), n["id"])))
                 if cur.rowcount:
                     new.append(n)
