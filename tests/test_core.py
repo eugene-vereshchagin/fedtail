@@ -84,6 +84,13 @@ class ConfigTest(TmpDir):
             config.validate({"lanes": {"enabled": ["people", "tiktok"]}})
         with self.assertRaises(config.ConfigError):
             config.validate({"ui": {"close_to_tray": 1}})  # int is not bool
+        with self.assertRaises(config.ConfigError):
+            config.validate({"ui": {"layout": "tiles"}})
+        with self.assertRaises(config.ConfigError):
+            config.validate({"ui": {"column_width": 100}})
+        cfg, _ = config.validate({"ui": {"layout": "columns",
+                                         "columns": ["people", "list:Друзья"]}})
+        self.assertEqual(cfg["ui"]["columns"], ["people", "list:Друзья"])
 
 
 class ConfigUpdateTest(unittest.TestCase):
@@ -257,6 +264,16 @@ class MergedTest(TmpDir):
         nodes = m.thread("work~501").result()
         self.assertTrue(all(n.status["id"].startswith("work~") for n in nodes))
         self.assertEqual(m.relationship("work~B").result()["id"], "B")
+
+    def test_columns_tell_each_account_its_lanes(self):
+        m = self.m
+        for core in (m.primary, m.others["work"]):
+            core.connect().result()
+        m.set_active_lanes(["people", "global"])
+        self.assertEqual(m.primary._active_lanes, {"people", "global"})
+        self.assertEqual(m.others["work"]._active_lanes, {"people", "global"})
+        m.set_active_lanes([])
+        self.assertEqual(m.others["work"]._active_lanes, set())
 
     def test_act_as_the_other_account(self):
         """A post my main account got, liked from work: looked up on work's server."""

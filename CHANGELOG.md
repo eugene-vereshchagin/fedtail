@@ -2,7 +2,7 @@
 
 ## 0.14.0 — in progress
 
-- Lanes side by side, in columns: ❯ next to the menu switches for now, `ui.layout` says how
+- Lanes side by side, in columns: ❯ right of the menu switches for now, `ui.layout` says how
   the window starts. A lane clicked on the left comes as one more column (or is scrolled
   to), ✕ takes one away, ‹ › move it; the set is remembered (`ui.columns` at first,
   `ui.column_width` each). The same lane widgets move over: place, filters and read marks

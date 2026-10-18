@@ -377,15 +377,15 @@ class MainWindow(QMainWindow):
             menu_btn.setIcon(ic)
         menu_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu_btn.setMenu(self._app_menu())
-        # ❯: lanes side by side, for now (the start is always as ui.layout says)
+        # ❯ right of the menu: lanes side by side, for now (the start: as ui.layout says)
         self.columns_btn = QToolButton()
         self.columns_btn.setObjectName("menu")
         self.columns_btn.setText("❯")
         self.columns_btn.setCheckable(True)
         self.columns_btn.setToolTip(_("columns_tip"))
         self.columns_btn.toggled.connect(self.set_columns)
-        acc.addWidget(self.columns_btn, 0, Qt.AlignmentFlag.AlignTop)
         acc.addWidget(menu_btn, 0, Qt.AlignmentFlag.AlignTop)
+        acc.addWidget(self.columns_btn, 0, Qt.AlignmentFlag.AlignTop)
         # a right click on who I am: the other accounts (profiles), to switch to
         for w in (self.account_avatar, self.account_name, self.account_sub):
             w.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

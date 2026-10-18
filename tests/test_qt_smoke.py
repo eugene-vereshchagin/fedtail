@@ -1293,6 +1293,40 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
 
+    def test_remote_post_menu_whole_text_and_tildes(self):
+        """A post from another server: "Read it whole" in ⋯, the dialog from what its
+        server gave; "From another account" when the window has one; ~~x~~ struck."""
+        from PySide6.QtWidgets import QDialog, QLabel, QMenu
+
+        from fedtail.frontends.qt.card import CardSpec, PostRow
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        st = status("098", BOB, minute=30, text="свой ~~плагин~~ тропу")
+        st["uri"] = "https://social.example/statuses/98"
+        self.win.ctx.act_as = lambda s: [("work", "@w")]
+        self.win.ctx.do_act_as = lambda s, t, a: done.append((t, a))
+        done = []
+        row = PostRow(CardSpec(key="098", status=st), self.win.ctx)
+        texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
+        self.assertIn("📄 Читать целиком (с сервера автора)", texts)
+        self.assertIn("От другого аккаунта", texts)
+        sub = next(m for m in row.findChildren(QMenu) if m.title() == "От другого аккаунта")
+        next(a for a in sub.actions() if a.text() == "★ Лайк от @w").trigger()
+        self.assertEqual(done, [("work", "fav")])
+        self.assertTrue(any("<s>плагин</s>" in w.text() for w in row.findChildren(QLabel)))
+        self.win.cfg["feed"]["text_markup"] = False
+        plain = PostRow(CardSpec(key="098", status=st), self.win.ctx)
+        self.assertFalse(any("<s>" in w.text() for w in plain.findChildren(QLabel)))
+        self.win._show_whole(st, {"type": "Event", "name": "Встреча", "summary": "",
+                                  "content": "<p>приходите</p>", "url": "https://e.example/1",
+                                  "start": "2026-11-01T18:00:00Z", "end": "",
+                                  "location": "Библиотека"})
+        dlg = [d for d in self.win.findChildren(QDialog) if d.windowTitle() == "Встреча"]
+        self.assertEqual(len(dlg), 1)
+        dlg[0].close()
+        self.win._show_whole(st, None)  # the server said nothing: a line, no dialog
+        self.assertIn("не отдал", self.win.statusBar().currentMessage())
+
     def test_columns_side_by_side(self):
         """❯: the lanes in columns, the same widgets moved over; a lane clicked on the
         left comes as one more column; ✕ takes it away; back to one lane where I was."""
