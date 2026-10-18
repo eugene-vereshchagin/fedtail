@@ -219,15 +219,15 @@ def run(app, out, label, palette, theme_name, extras):
     core.poll_once()
     # some of it is already read, so the "new below" divider shows
     core.mark_read(["100", "101", "102", "103"])
-    win.select_lane("people")
-    lane = win.lane_widgets["people"]
+    win.select_lane("home")
+    lane = win.lane_widgets["home"]
     lane.positioned = False
     lane.separator = None
     lane.refresh(force=True)
     pump(app, 2.0)  # the lane stands on "new below" by itself
     shoot(win, out, f"{label}-people")
 
-    win.select_lane("comments")
+    win.select_lane("replies")
     pump(app, 1.5)
     shoot(win, out, f"{label}-comments")
 
@@ -245,7 +245,7 @@ def run(app, out, label, palette, theme_name, extras):
         shoot(dlg, out, f"{label}-compose")
         dlg.reject()
         win.close_tab(win.tabs.currentIndex())
-        win.select_lane("people")
+        win.select_lane("home")
         pump(app, 0.5)
         pics = core.store.get_status("104")["media_attachments"]
         win.show_images(pics, 0)
@@ -260,7 +260,7 @@ def run(app, out, label, palette, theme_name, extras):
         pump(app, 1.0)
         shoot(win, out, f"{label}-find")
         win.find_bar.close_bar()
-        win.lane_widgets["people"].view.scroll_to("106", "top")
+        win.lane_widgets["home"].view.scroll_to("106", "top")
         pump(app, 1.0)
         shoot(win, out, f"{label}-poll")
         win.select_lane("activity")
@@ -274,7 +274,7 @@ def run(app, out, label, palette, theme_name, extras):
         pump(app, 1.2)
         shoot(win, out, f"{label}-search")
         win.close_tab(win.tabs.currentIndex())
-        win.select_lane("people")
+        win.select_lane("home")
         from fedtail.frontends.qt.profile import ProfileDialog
         dlg = ProfileDialog(win)
         dlg.show()
