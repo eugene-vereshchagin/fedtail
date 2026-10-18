@@ -74,6 +74,7 @@ DEFAULTS = {
         "show_moved": True,
         "old_days": 30,
         "collapse_tags": True,
+        "server_info": True,
         "follow_date_note": True,
         "remote_posts": 20,
         "remote_people": True,

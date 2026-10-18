@@ -480,6 +480,27 @@ class CoreTest(TmpDir):
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
+    def test_server_software_from_nodeinfo(self):
+        core, _w = self.make()
+        asked = []
+        docs = {"https://far.example/.well-known/nodeinfo": {"links": [
+                    {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
+                     "href": "https://far.example/nodeinfo/2.0"}]},
+                "https://far.example/nodeinfo/2.0": {"software": {"name": "gotosocial",
+                                                                  "version": "0.17.3"}}}
+
+        def origin(url):
+            asked.append(url)
+            return docs.get(url)
+        core._origin_get = origin
+        self.assertEqual(core.server_software("far.example").result(), "GoToSocial 0.17.3")
+        self.assertEqual(core.server_software("far.example").result(), "GoToSocial 0.17.3")
+        self.assertEqual(len(asked), 2)  # the second time from the week's memory
+        self.assertEqual(core.server_software("silent.example").result(), "")
+        core.cfg["feed"]["server_info"] = False
+        self.assertEqual(core.server_software("other.example").result(), "")
+        self.assertEqual(len(asked), 3)  # off: nobody asked
+
     def test_honest_counters_on_thread_open(self):
         core, w = self.make(feed={"honest_counters": True})
         st = w.add(status("050", BOB, vis="public"), home=True)

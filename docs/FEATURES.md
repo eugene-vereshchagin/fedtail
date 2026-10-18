@@ -315,7 +315,7 @@
 | Подписчики и подписки с сервера человека | есть | `feed.remote_people` | ActivityPub `followers`, `following` | Megalodon |
 | «Подписан с …» | есть | `feed.follow_date_note` | `accounts/:id/note` | только в fedtail |
 | Человек переехал | есть | `feed.show_moved` | `account.moved`, ActivityPub `Move` | Mastodon web |
-| Софт сервера автора | в планах | `feed.server_info` | nodeinfo | — |
+| Софт сервера автора | есть | `feed.server_info` | nodeinfo, в профиле «🖥 GoToSocial 0.17» | — |
 
 <details><summary>Подробнее</summary>
 
@@ -600,7 +600,7 @@
 | Честные счётчики с сервера автора | есть | `feed.honest_counters` |
 | Переезд аккаунта (`Move`, `movedTo`) | есть | `feed.show_moved` |
 | Длинные тексты и события (`Article`, `Page`, `Event`) | в планах | `feed.long_form` |
-| Софт сервера автора (nodeinfo) | в планах | `feed.server_info` |
+| Софт сервера автора (nodeinfo) | есть | `feed.server_info` |
 
 ---
 
@@ -626,7 +626,6 @@
 | Что | Раздел | Ключ (предварительно) | Размер |
 |---|---|---|---|
 | Длинные тексты и события | Треды | `feed.long_form` | средний |
-| Софт сервера автора | Профили | `feed.server_info` | средний |
 | Действие от другого аккаунта | Аккаунты | `ui.act_as` | средний |
 | Колонки рядом | Ленты | `ui.layout` | крупный |
 | Коллекции Mastodon 4.6 | Ленты | — | когда будут в GoToSocial |

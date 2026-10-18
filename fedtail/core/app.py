@@ -1305,6 +1305,43 @@ class Core(SocialMixin):
                                                   "Accept": AP_ACCEPT})
         return r.json() if r.status_code == 200 else None
 
+    NODEINFO_KEEP_S = 7 * 86400
+
+    def server_software(self, host):
+        """What a server runs, from its nodeinfo (no token): "GoToSocial 0.17.3", or ""
+        when it doesn't say. Kept a week per server (feed.server_info)."""
+        def job():
+            if not host or not self.cfg["feed"].get("server_info", True):
+                return ""
+            cache = self.store.kv_get("nodeinfo", {}) or {}
+            got = cache.get(host)
+            if got and time.time() - got[0] < self.NODEINFO_KEEP_S:
+                return got[1]
+            name = ""
+            try:
+                links = self._origin_get(f"https://{host}/.well-known/nodeinfo") or {}
+                href = next((x.get("href") for x in reversed(links.get("links") or [])
+                             if "nodeinfo" in (x.get("rel") or "")), None)
+                info = self._origin_get(href) if href else None
+                sw = (info or {}).get("software") or {}
+                if sw.get("name"):
+                    pretty = {"gotosocial": "GoToSocial", "mastodon": "Mastodon",
+                              "akkoma": "Akkoma", "pleroma": "Pleroma", "misskey": "Misskey",
+                              "sharkey": "Sharkey", "lemmy": "Lemmy", "pixelfed": "Pixelfed",
+                              "peertube": "PeerTube", "friendica": "Friendica",
+                              "writefreely": "WriteFreely", "mobilizon": "Mobilizon",
+                              "iceshrimp": "Iceshrimp", "hometown": "Hometown"}
+                    n = str(sw["name"]).lower()
+                    name = f"{pretty.get(n, sw['name'])} {sw.get('version') or ''}".strip()
+            except Exception as e:  # noqa: BLE001 — their server, anything goes
+                log.debug("nodeinfo %s: %s", host, e)
+            cache[host] = (time.time(), name)
+            if len(cache) > 2000:
+                cache = dict(sorted(cache.items(), key=lambda kv: kv[1][0])[-1000:])
+            self.store.kv_set("nodeinfo", cache)
+            return name
+        return self.bg.submit(job)
+
     # ---- the command line (core/commands.py parses, the frontend runs) --------------
     def by_alias(self, alias):
         """The stored status behind a short id like a3f, or None."""

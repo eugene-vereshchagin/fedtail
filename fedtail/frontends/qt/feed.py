@@ -1514,11 +1514,23 @@ class AccountWidget(_PagedTab):
         self.win.retitle(self)
         self._fill()
         self._from_origin()
+        if not hasattr(self, "software"):  # what their server runs (feed.server_info)
+            from urllib.parse import urlparse
+            host = urlparse(acc.get("url") or acc.get("uri") or "").netloc
+            self.software = ""
+            if host:
+                self.win.bridge.call(self.core.server_software(host), ok=self._software,
+                                     fail=lambda _e: None)
         if self._mine_done:  # the empty page came before who this is
             self._offer_origin()
         if not self.mine and self.core.supports("familiar"):
             self.win.bridge.call(self.core.familiar(self.acc_id), ok=self._familiar,
                                  fail=lambda _e: None)
+
+    def _software(self, name):
+        if name:
+            self.software = name
+            self._fill()
 
     def _familiar(self, accounts):
         self.familiar = accounts or []
@@ -1579,6 +1591,8 @@ class AccountWidget(_PagedTab):
             bits.append(_("acc_since", date=f"{d}.{m}.{y}"))
         if self.relation.get("followed_by"):
             bits.append("<b>" + _("acc_follows_you") + "</b>")
+        if getattr(self, "software", ""):
+            bits.append("🖥 " + esc(self.software))
         since = self.relation.get("following") and \
             self.core.followed_since(acc["id"], self.relation)
         if since:

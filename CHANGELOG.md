@@ -2,6 +2,8 @@
 
 ## 0.14.0 — in progress
 
+- A profile says what the person's server runs, "🖥 GoToSocial 0.17.3", from its nodeinfo
+  (asked without your token, kept a week per server; `feed.server_info`).
 - `docs/FEATURES.md`: the boost carousel moves to "won't do", with the reasons.
 - A post as a chain: a line of just `---` splits it into posts sent at once, each answering
   the one before (pictures and the poll with the first); the counter counts each part
