@@ -18,6 +18,7 @@ EXPECTED = (requests.RequestException, ApiError, TimeoutError, ConnectionError)
 class Bridge(QObject):
     event = Signal(str, object)          # core events, already in the GUI thread
     raise_requested = Signal()           # another instance asked us to show up
+    open_requested = Signal(str)         # …or to open a link (`fedtail open URL`)
     _done = Signal(object, object, object)
 
     def __init__(self, core):

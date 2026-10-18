@@ -349,6 +349,8 @@ _STRINGS = {
         "older_from_origin": "▼ ещё раньше — с {host}",
         "acc_followed_since": "подписан с {when}",
         "full_width": "Посты во всю ширину",
+        "old_post": ["старый, {n} день", "старый, {n} дня", "старый, {n} дней"],
+        "old_post_tip": "Старше feed.old_days дней — не новость",
         "redraft": "Удалить и переписать",
         "redraft_q": "Удалить пост и открыть его заново черновиком? Лайки, бусты и ответы "
                      "останутся у удалённого.\n\n«{text}»",
@@ -888,6 +890,8 @@ _STRINGS = {
         "older_from_origin": "▼ further back — from {host}",
         "acc_followed_since": "following since {when}",
         "full_width": "Posts across the full width",
+        "old_post": ["old, {n} day", "old, {n} days"],
+        "old_post_tip": "Older than feed.old_days days — not news",
         "redraft": "Delete and redraft",
         "redraft_q": "Delete the post and open it again as a draft? Its likes, boosts and "
                      "replies stay with the deleted one.\n\n“{text}”",

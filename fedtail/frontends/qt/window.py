@@ -230,6 +230,7 @@ class MainWindow(QMainWindow):
         bridge.on_error = self.error
         bridge.event.connect(self.on_event)
         bridge.raise_requested.connect(self.show_raise)
+        bridge.open_requested.connect(self.open_from_outside)
 
         title = "fedtail" if core.paths.profile == "default" else \
             f"fedtail [{core.paths.profile}]"
@@ -1277,6 +1278,22 @@ class MainWindow(QMainWindow):
     def open_url(self, url):
         from .opener import open_link
         open_link(url)
+
+    def open_from_outside(self, url):
+        """`fedtail open URL` (a browser, a terminal): the post or profile here, in front."""
+        from urllib.parse import quote
+        log.info("open from outside: %s", QUrl(url).host() or "?")
+        self.show_raise()
+        if url.startswith("web+ap://"):
+            url = "https://" + url[len("web+ap://"):]
+        self.on_link("fedtail:resolve/" + quote(url, safe=""))
+
+    def open_when_ready(self, url, tries=60):
+        """The window was started by `fedtail open URL`: open it once connected."""
+        if self.core.me:
+            self.open_from_outside(url)
+        elif tries:
+            QTimer.singleShot(500, lambda: self.open_when_ready(url, tries - 1))
 
     def on_link(self, url):
         if not url.startswith("fedtail:"):

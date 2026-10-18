@@ -45,7 +45,7 @@ def parse_args(argv):
                    help="pack logs, crash traces and system info into an archive in your home "
                         "folder (no token, no database) and exit")
     p.add_argument("-V", "--version", action="version", version=f"fedtail {version.full()}")
-    p.add_argument("command", nargs="?", choices=cli.COMMANDS, metavar="COMMAND",
+    p.add_argument("command", nargs="?", choices=(*cli.COMMANDS, "open"), metavar="COMMAND",
                    help="work in the terminal instead of opening the window: "
                         + ", ".join(cli.COMMANDS) + " (`fedtail COMMAND -h` for each)")
     p.add_argument("rest", nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
@@ -136,10 +136,20 @@ def main(argv=None):
 
     i18n.setup(cfg["ui"]["language"])
 
-    if args.command:
+    open_url = None
+    if args.command == "open":  # `fedtail open URL`: in the window, running or not
+        if not args.rest:
+            print("fedtail: open what? fedtail open https://server/@someone/123",
+                  file=sys.stderr)
+            return 2
+        open_url = args.rest[0]
+    elif args.command:
         return _terminal(args, cfg, where)
 
     instance = SingleInstance(where.socket_file)
+    if open_url and instance.poke_existing("open " + open_url):
+        print(f"fedtail: opened in the running '{where.profile}'.", file=sys.stderr)
+        return 0
     if instance.poke_existing():
         print(f"fedtail: profile '{where.profile}' is already running — brought it to front.",
               file=sys.stderr)
@@ -156,6 +166,7 @@ def main(argv=None):
         diag.quiet_console()
     core = Core(cfg, where)
     core.new_options = new_options
+    core.open_at_start = open_url  # `fedtail open URL` with no window yet: once it's up
     core, held = merge_accounts(core, where.profile)
     try:
         code = frontend.run(core, instance, sys.argv[:1])

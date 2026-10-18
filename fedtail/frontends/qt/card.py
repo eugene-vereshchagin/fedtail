@@ -516,6 +516,9 @@ class PostRow(QWidget):
         line.addWidget(vis_label)
         if st.get("edited_at"):
             line.addWidget(self._edited_mark(st))
+        old = self._old_mark(st)
+        if old:
+            line.addWidget(old)
         self._via_mark(line)
         line.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
         self._pinned_mark(line)
@@ -527,6 +530,17 @@ class PostRow(QWidget):
         h.addLayout(line, 1)
         self._short_id(h)
         return h
+
+    def _old_mark(self, st):
+        """An old post (feed.old_days): pulled from someone's outbox, or a thread from
+        long ago — "old" in the header, so it isn't read as news."""
+        days = _age_days(st, self.ctx.cfg)
+        if not days:
+            return None
+        lab = QLabel(_("old_post", n=days))
+        lab.setObjectName("meta")
+        lab.setToolTip(_("old_post_tip"))
+        return lab
 
     def _header_compact(self, st):
         acc = st["account"]
@@ -552,11 +566,13 @@ class PostRow(QWidget):
                                      bold=True), "name", wrap=False))
         vis = st.get("visibility", "public")
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
+        days = _age_days(st, self.ctx.cfg)
         meta = " · ".join(x for x in (esc(host) + esc(bot),
                                       link("thread", st["id"],
                                            self.theme.date(st.get("created_at", "")),
                                            self.theme.css("muted")),
-                                      VIS_WORD.get(vis, vis)) if x)
+                                      VIS_WORD.get(vis, vis),
+                                      _("old_post", n=days) if days else "") if x)
         h.addWidget(self._label(meta, "meta", wrap=False))
         if st.get("edited_at"):
             h.addWidget(self._edited_mark(st))
@@ -1245,6 +1261,20 @@ class _ActionsBox(QWidget):
                 b.setToolButtonStyle(full_style)
         self.is_short = go_short
 
+
+
+def _age_days(st, cfg):
+    """How many days old a post is, when that's more than feed.old_days; else 0."""
+    limit = int(cfg["feed"].get("old_days", 30) or 0)
+    if not limit:
+        return 0
+    from datetime import UTC, datetime
+    try:
+        when = datetime.fromisoformat((st.get("created_at") or "").replace("Z", "+00:00"))
+    except ValueError:
+        return 0
+    days = (datetime.now(UTC) - when).days
+    return days if days > limit else 0
 
 def _dims(m):
     meta = m.get("meta") or {}

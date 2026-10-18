@@ -71,6 +71,7 @@ DEFAULTS = {
         "prefetch": 'all',
         "per_person_follow": True,
         "show_moved": True,
+        "old_days": 30,
         "follow_date_note": True,
         "remote_posts": 20,
         "remote_people": True,
@@ -113,6 +114,7 @@ DEFAULTS = {
         "schedule": True,
         "alt_reminder": True,
         "redraft": True,
+        "resize_images": True,
         "complete_emoji": True,
         "focus_point": True,
     },
@@ -239,6 +241,7 @@ MINIMUM = {
     ("ui", "compose_size"): 0,
     ("ui", "image_disk_mb"): 0,
     ("ui", "video_disk_mb"): 0,
+    ("feed", "old_days"): 0,
     ("ui", "image_height"): 80,
     ("ui", "image_upscale"): 1,
 }

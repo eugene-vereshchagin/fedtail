@@ -24,13 +24,15 @@ class SingleInstance:
         self.listener = None
         self.on_message = None
 
-    def poke_existing(self):
-        """True if another instance answered (and was asked to show itself)."""
+    def poke_existing(self, message="raise"):
+        """True if another instance answered (and was asked to show itself — or, with
+        "open URL", to open that link)."""
+        data = message.encode("utf-8")[:4000]
         if WINDOWS:
             from multiprocessing.connection import Client
             try:
                 with Client(_pipe_name(self.path), family="AF_PIPE") as c:
-                    c.send_bytes(b"raise")
+                    c.send_bytes(data)
                 return True
             except OSError:
                 return False
@@ -38,7 +40,7 @@ class SingleInstance:
         s.settimeout(2)
         try:
             s.connect(self.path)
-            s.sendall(b"raise\n")
+            s.sendall(data + b"\n")
             return True
         except (TimeoutError, FileNotFoundError, ConnectionRefusedError, OSError):
             return False
@@ -67,7 +69,7 @@ class SingleInstance:
         while self.listener is not None:
             try:
                 with self.listener.accept() as conn:
-                    msg = conn.recv_bytes(64).decode("utf-8", "replace").strip()
+                    msg = conn.recv_bytes(4096).decode("utf-8", "replace").strip()
             except (OSError, EOFError):
                 if self.listener is None:
                     return
@@ -84,7 +86,7 @@ class SingleInstance:
             with conn:
                 conn.settimeout(2)
                 try:
-                    msg = conn.recv(64).decode("utf-8", "replace").strip()
+                    msg = conn.recv(4096).decode("utf-8", "replace").strip()
                 except OSError:
                     continue
             if msg and self.on_message:

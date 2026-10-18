@@ -40,7 +40,15 @@ def run(core, instance, argv):
         app.font().pointSizeF(), screen.name() if screen else "-",
         screen.devicePixelRatio() if screen else 0, screen.logicalDotsPerInch() if screen else 0,
         "one-file build" if getattr(sys, "frozen", False) else "from source")
-    instance.listen(lambda _msg: bridge.raise_requested.emit())
+    def message(msg):
+        if msg.startswith("open "):
+            bridge.open_requested.emit(msg[5:].strip())
+        else:
+            bridge.raise_requested.emit()
+    instance.listen(message)
+    url = getattr(core, "open_at_start", None)
+    if url:
+        win.open_when_ready(url)
 
     # Ctrl+C in the terminal should quit, not be swallowed by the Qt loop
     signal.signal(signal.SIGINT, lambda *_: win.quit())

@@ -2,6 +2,13 @@
 
 ## 0.14.0 — in progress
 
+- A picture bigger than the server takes is made to fit before the upload (its pixel
+  limit, then JPEG — PNG with transparency — under its size limit), instead of a refusal
+  after it; your file stays as it is, gifs are never flattened (`post.resize_images`).
+- An old post says so next to its date — "old, 45 days" — when it's older than
+  `feed.old_days` (30): ones pulled from an outbox or an old thread aren't read as news.
+- `fedtail open URL` opens a post or a profile in the running window (or starts it and
+  opens it there); `--install-desktop` also makes fedtail the handler of `web+ap://` links.
 - In the profile of someone you follow: "♻ hide their boosts" and "🌐 languages" (only their
   posts in these) — kept by the server, for every client (`feed.per_person_follow`).
 - A moved account says so: "📦 Moved to @new" on the profile, with Open and Follow there

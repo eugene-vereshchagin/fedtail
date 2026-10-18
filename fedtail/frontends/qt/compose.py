@@ -37,6 +37,52 @@ MEDIA_FILTER = " ".join("*" + e for e in MEDIA_EXT)
 log = logging.getLogger(__name__)
 
 
+
+def fit_for_server(path, caps, folder):
+    """A picture bigger than the server takes (caps.image_bytes, caps.image_pixels) as a
+    smaller copy, so it isn't refused after the upload: scaled down to the pixel limit,
+    saved as JPEG (PNG when it has transparency) until it's under the size. Anything
+    else — a video, a picture that fits, a server that doesn't say — goes as it is."""
+    import os
+
+    from PySide6.QtGui import QImage, QImageReader
+    max_b, max_px = int(caps.image_bytes or 0), int(caps.image_pixels or 0)
+    if not max_b and not max_px or str(path).lower().endswith((".gif", ".webp")):
+        return path  # nothing said; or it may move: never flatten an animation
+    reader = QImageReader(str(path))
+    if not reader.canRead():
+        return path
+    size = reader.size()
+    big_px = max_px and size.isValid() and size.width() * size.height() > max_px
+    big_b = max_b and os.path.getsize(path) > max_b
+    if not big_px and not big_b:
+        return path
+    img = QImage(str(path))
+    if img.isNull():
+        return path
+    if big_px:
+        k = (max_px / float(img.width() * img.height())) ** 0.5 * 0.98
+        img = img.scaled(int(img.width() * k), int(img.height() * k),
+                         Qt.AspectRatioMode.KeepAspectRatio,
+                         Qt.TransformationMode.SmoothTransformation)
+    alpha = img.hasAlphaChannel()
+    out = Path(folder) / ("upload-" + Path(path).stem + (".png" if alpha else ".jpg"))
+    quality = 90
+    while True:
+        img.save(str(out), "PNG" if alpha else "JPG", -1 if alpha else quality)
+        if not max_b or out.stat().st_size <= max_b or quality <= 40:
+            break
+        if alpha:  # a PNG can't get lighter by quality: smaller instead
+            img = img.scaled(int(img.width() * 0.8), int(img.height() * 0.8),
+                             Qt.AspectRatioMode.KeepAspectRatio,
+                             Qt.TransformationMode.SmoothTransformation)
+        else:
+            quality -= 15
+    log.info("compose: %s made to fit the server: %dx%d, %d KB → %dx%d, %d KB", Path(path).name,
+             size.width(), size.height(), os.path.getsize(path) // 1024, img.width(),
+             img.height(), out.stat().st_size // 1024)
+    return str(out)
+
 def media_paths(mime):
     """Local media files in a drag or the clipboard (Dolphin, browser, file dialog)."""
     out = []
@@ -745,6 +791,9 @@ class Compose(QDialog):
     def send(self, scheduled_at=None, alt_checked=False):
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
+        if self.core.cfg["post"].get("resize_images", True):
+            media = [(fit_for_server(m[0], self.core.caps, self.core.paths.cache_dir),) +
+                     tuple(m[1:]) for m in media]
         if not text and not media:
             return
         bare = [i for i in range(self.media.count())

@@ -51,6 +51,20 @@ def entry_text(profile=DEFAULT_PROFILE, source_dir=None, icon="fedtail"):
     )
 
 
+def handler_text(entry):
+    """The desktop entry for web+ap:// links: the same fedtail, `open %u`, not in the
+    menu."""
+    out = []
+    for line in entry.splitlines():
+        if line.startswith("Exec="):
+            line += " open %u"
+        elif line.startswith("Name="):
+            line += " (links)"
+        out.append(line)
+    out += ["NoDisplay=true", "MimeType=x-scheme-handler/web+ap;"]
+    return "\n".join(out) + "\n"
+
+
 def desktop_id(profile=DEFAULT_PROFILE):
     """The .desktop file's name without .desktop: what the window says it is, so
     the task bar finds its icon and the unread count lands on the right button."""
@@ -101,8 +115,16 @@ def install(profile=DEFAULT_PROFILE):
     (icons / "fedtail.svg").write_bytes(icon_src.read_bytes())
     stem = desktop_id(profile)
     entry = apps / f"{stem}.desktop"
-    entry.write_text(entry_text(profile, source_dir(), icon=str(icons / "fedtail.svg")),
-                     "utf-8")
+    text = entry_text(profile, source_dir(), icon=str(icons / "fedtail.svg"))
+    entry.write_text(text, "utf-8")
+    # web+ap:// links (a "open in your app" button on a server's page) and
+    # `xdg-open web+ap://…` go to `fedtail open URL`: into the running window
+    opener = apps / f"{stem}-open.desktop"
+    opener.write_text(handler_text(text), "utf-8")
+    if shutil.which("xdg-mime"):
+        from . import sysenv
+        subprocess.run(["xdg-mime", "default", opener.name, "x-scheme-handler/web+ap"],
+                       capture_output=True, env=sysenv.child_env())
     # let the desktop notice right away (best effort)
     for cmd in (["update-desktop-database", str(apps)],
                 ["gtk-update-icon-cache", "-q", "-t", str(data / "icons" / "hicolor")],

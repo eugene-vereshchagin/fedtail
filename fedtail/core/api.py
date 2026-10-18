@@ -60,6 +60,8 @@ class Capabilities:
     max_poll_options: int = 4
     translation: bool = False
     streaming: str = ""  # wss://… of the live stream, "" — not said
+    image_bytes: int = 0   # the largest picture the server takes, bytes (0 — not said)
+    image_pixels: int = 0  # …and in pixels, width × height
 
 
 def capabilities_from_instance(inst):
@@ -79,6 +81,8 @@ def capabilities_from_instance(inst):
         markdown=md,
         streaming=str((inst.get("urls") or {}).get("streaming_api") or
                       ((conf.get("urls") or {}).get("streaming")) or ""),
+        image_bytes=int((conf.get("media_attachments") or {}).get("image_size_limit") or 0),
+        image_pixels=int((conf.get("media_attachments") or {}).get("image_matrix_limit") or 0),
     )
 
 
