@@ -265,6 +265,18 @@ class FeedView(QScrollArea):
                 lo = 0  # it reached the top: what came in above comes in too
             if self.order and old_keys and self.order[-1] == old_keys[-1]:
                 hi = len(keys)  # …and the bottom
+            cap = 3 * self.build_at_once
+            if hi - lo > cap:
+                # never everything at once: a filter switched off (or on) brings back
+                # hundreds of posts between the cards built — building them all froze the
+                # window for seconds and took gigabytes. Around the post on screen instead.
+                anchor = self._anchor() if self.order else None
+                c = index.get(anchor[0]) if anchor else None
+                if c is None:
+                    c = have[0] if have else len(keys) - 1
+                lo = max(lo, c - self.build_at_once)
+                hi = min(hi, lo + cap)
+                lo = max(0, min(lo, hi - cap))
             return self.model[lo:hi]
         c = index.get(around, len(keys) - 1)
         before = max(4, self.build_at_once // 4)
@@ -583,6 +595,10 @@ def _button(text, slot, name="tool", icon=None, tip=None):
     b = QPushButton(text)
     b.setObjectName(name)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
+    # focus by Tab only, never by a click: a clicked button inside the feed that then
+    # waits disabled ("older…") handed the focus to the next card, and the scroll jumped
+    # to show it; and j / k stay with the feed after a click
+    b.setFocusPolicy(Qt.FocusPolicy.TabFocus)
     if icon:
         ic = QIcon.fromTheme(icon) if ICONS else QIcon()
         if not ic.isNull():

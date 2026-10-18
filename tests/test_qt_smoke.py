@@ -1659,6 +1659,33 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn(top, view.rows)
         self.assertLessEqual(abs(view._top(view.rows[top]) - sb.value() - y), 2)
 
+    def test_media_filter_off_doesnt_build_everything(self):
+        """A big lane filtered to the few posts with pictures, then the filter off: the
+        hundreds back are not all built at once (it froze for seconds), only around the
+        post on screen."""
+        self.win.cfg["feed"]["build_at_once"] = 10
+        pic = [{"id": "m", "type": "image", "url": "https://x/p.png",
+                "preview_url": "https://x/p.png", "meta": {}}]
+        for i in range(80):
+            st = status(f"6{i:03d}", NEWS, minute=i % 60, text=f"пост {i}")
+            if i in (3, 77):  # the first and the last have pictures: the old window
+                st["media_attachments"] = pic  # then spans the whole lane
+            self.world.add(st, home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("bots")
+        lane = self.win.lane_widgets["bots"]
+        self.pump(1.0)
+        for kind in ("text", "gifv", "video", "audio"):
+            lane.media_filter.actions[kind].setChecked(False)  # pictures only
+        self.pump(0.3)
+        self.assertLessEqual(len(lane.view.model), 2)
+        lane.media_filter.reset()
+        self.pump(0.3)
+        self.assertEqual(len(lane.view.model), 80)
+        self.assertLessEqual(len(lane.view.rows), 3 * 10)
+
     def test_posts_scrolled_past_count_as_read(self):
         """read.mark_read = on_scroll: a post that was on screen and that the reader went
         on past is read, even if it was never all on screen while the feed stood still —

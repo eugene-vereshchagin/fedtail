@@ -2,6 +2,11 @@
 
 ## 0.13.0 — in progress
 
+- Switching the media filter (or "unread only") on a big lane froze the window for six
+  seconds and took gigabytes: the lane decided the cards built reached both ends and built
+  all of them. It now builds around the post on screen, as when it opens.
+- A click on "older" at the very top ("nothing older") no longer jumps a few posts down:
+  the button took the focus, and handed it to a card further down while it waited.
 - My own posts are never unread, from whatever client: ones written in Tusky overnight came
   in as unread when they reached fedtail some other way than a lane (a catch-up after a
   restart, a thread). Ones stored before are put right on connect.
