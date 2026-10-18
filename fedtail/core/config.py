@@ -72,6 +72,7 @@ DEFAULTS = {
         "complete_threads": True,
         "link_cards": 'full',
         "custom_emoji": True,
+        "emoji": True,
         "quotes": 'card',
         "remote_profiles": True,
         "prefetch": 'all',

@@ -2,6 +2,13 @@
 
 ## 0.15.0 — in progress
 
+- `feed.emoji = false`: no emoji in the feed at all — no server pictures (:blobcat:), no
+  Unicode ones (🔥 🇬🇪 👨‍👩‍👧), no reactions line; a name made only of emoji shows the login.
+  fedtail's own glyphs (⚠ ↔ ❯) stay.
+- ≡ → "Try a theme", next to "Open themes folder": any theme at once, until restart — the
+  sidebar and every card are drawn again in place, the reading place kept. `ui.theme` in
+  the config stays what the next start brings.
+
 ## 0.14.0 — 2026-10-18
 
 - Leak hunting for days-long runs. With every stats line a "trend" line: memory, Python

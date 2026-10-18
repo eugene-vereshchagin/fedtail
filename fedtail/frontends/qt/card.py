@@ -1,5 +1,6 @@
 """One post on screen, and the "new below" divider."""
 
+import re
 from dataclasses import dataclass, field
 from urllib.parse import unquote
 
@@ -25,7 +26,7 @@ from PySide6.QtWidgets import (
 from ...core import config, links
 from ...core.model import QUOTE_SHOWN, is_bot, quoted, real, snippet, without_quote_fallback
 from ...i18n import _, current_language
-from .text import clean, display_name, emojify, esc, link
+from .text import clean, display_name, emojify, esc, link, strip_emoji
 
 RAIL_W = 20
 MAX_DEPTH_INDENT = 8
@@ -289,9 +290,17 @@ class PostRow(QWidget):
             lab.setObjectName(name)
         return lab
 
-    def _emoji_label(self, html, emojis, name=None, selectable=False, wrap=True):
+    def _emoji_label(self, html, emojis, name=None, selectable=False, wrap=True,
+                     fallback=None):
         """A label whose :shortcodes: become the server's emoji pictures; the ones not
-        downloaded yet are fetched and put in when they come (feed.custom_emoji)."""
+        downloaded yet are fetched and put in when they come (feed.custom_emoji).
+        feed.emoji = false: no emoji at all, neither pictures nor Unicode ones; a name
+        that was nothing but emoji falls back to the html given as fallback."""
+        if not self.ctx.cfg["feed"].get("emoji", True):
+            out = strip_emoji(html, emojis)
+            if fallback is not None and not re.sub(r"<[^>]*>|\s|&nbsp;", "", out):
+                out = fallback
+            return self._label(out, name, selectable, wrap)
         lab = self._label(html, name, selectable, wrap)
         if not emojis or not self.ctx.cfg["feed"].get("custom_emoji", True):
             return lab
@@ -400,7 +409,7 @@ class PostRow(QWidget):
                 cv.addWidget(card)
         if st.get("poll"):
             cv.addWidget(self._poll(st))
-        reacted = emoji_reactions(st)
+        reacted = emoji_reactions(st) if self.ctx.cfg["feed"].get("emoji", True) else []
         if reacted:
             line = self._label(" ".join(
                 (esc(r["name"]) if len(r["name"]) <= 4 else ":" + esc(r["name"].strip(":"))
@@ -501,7 +510,10 @@ class PostRow(QWidget):
             line.addWidget(num)
         line.addWidget(self._emoji_label(link("account", acc["id"], display_name(acc),
                                               self.theme.css("text"), bold=True),
-                                         acc.get("emojis"), "name", wrap=False))
+                                         acc.get("emojis"), "name", wrap=False,
+                                         fallback=link("account", acc["id"],
+                                                       esc(acc.get("username") or acc["acct"]),
+                                                       self.theme.css("text"), bold=True)))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc["acct"])}{esc(bot)} · '
@@ -1047,7 +1059,7 @@ class PostRow(QWidget):
             + esc(self.theme.date(q.get("created_at", ""))), acc.get("emojis"), "quoteHead",
             wrap=False))
         if q.get("spoiler_text"):
-            v.addWidget(self._label("⚠ " + esc(q["spoiler_text"]), "cw"))
+            v.addWidget(self._emoji_label("⚠ " + esc(q["spoiler_text"]), q.get("emojis"), "cw"))
         else:
             html = q.get("content") or ""
             if self.ctx.cfg["ui"]["links_in_app"]:

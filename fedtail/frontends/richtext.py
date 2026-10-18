@@ -212,6 +212,37 @@ def emojify(h, emojis, px, local):
     return "".join(parts), missing
 
 
+# Emoji, for feed.emoji = false. Pictographs drawn as emoji by default (U+1F000 and up,
+# the BMP ones with Emoji_Presentation), any symbol asked to be one by U+FE0F, and the
+# glue around them: joiners, skin tones, keycaps, tag sequences (subdivision flags).
+# Symbols drawn as text by default (⚠ ❤ ✓ ↔ ❯ …) stay unless an FE0F follows: the app's
+# own glyphs and plain typography are not emoji.
+_EMOJI_BMP = ("⌚⌛⏩-⏬⏰⏳◽◾☔☕♈-♓"
+              "♿⚓⚡⚪⚫⚽⚾⛄⛅⛎⛔⛪"
+              "⛲⛳⛵⛺⛽✅✊✋✨❌❎"
+              "❓-❕❗➕-➗➰➿⬛⬜⭐⭕")
+_EMOJI = re.compile(
+    "(?:[\U0001F000-\U0001FAFF" + _EMOJI_BMP + "]"
+    "|[^\\s<>&;]️⃣?"          # a text symbol (or a keycap digit) made emoji
+    "|[\U0001F3FB-\U0001F3FF‍️⃣\U000E0020-\U000E007F])+")
+_ALONE_SHORTCODE = re.compile(r"(?:(?<=\s)|^):[A-Za-z0-9_]{2,}:(?=\s|$|[.,!?;)])")
+
+
+def strip_emoji(h, emojis=()):
+    """h (sanitized HTML) without emoji: Unicode ones, the server's :shortcodes: this
+    post names, and a :shortcode: standing alone as a word (a remote server's emoji the
+    post didn't list). Only text between tags is touched; spaces left doubled are one."""
+    known = {e.get("shortcode") for e in emojis or () if e.get("shortcode")}
+    parts = _TAG_SPLIT.split(h)
+    for i in range(0, len(parts), 2):
+        t = _EMOJI.sub("", parts[i])
+        if known:
+            t = _SHORTCODE.sub(lambda m: "" if m.group(1) in known else m.group(0), t)
+        t = _ALONE_SHORTCODE.sub("", t)
+        parts[i] = re.sub(r"[  ]{2,}", " ", t)
+    return "".join(parts)
+
+
 def display_name(account):
     return esc(account.get("display_name") or account.get("username") or account.get("acct"))
 

@@ -94,3 +94,18 @@ class EmojiTest(unittest.TestCase):
         self.assertIn(":other:", h)
         self.assertEqual(missing, ["https://s/nope.png"])
         self.assertEqual(emojify("plain", [], 18, have.get), ("plain", []))
+
+
+class NoEmojiTest(unittest.TestCase):
+    """feed.emoji = false: no emoji at all in the feed."""
+
+    def test_unicode_and_server_emoji_go_text_and_app_glyphs_stay(self):
+        from fedtail.frontends.richtext import strip_emoji
+        h = strip_emoji('<a title=":blob: 🔥">hi 🔥🔥 there 👨‍👩‍👧 ok ❤️ ⚠ ↔ '
+                        'warn 🇬🇪 1️⃣ x :blob: y</a>', [{"shortcode": "blob"}])
+        self.assertEqual(h, '<a title=":blob: 🔥">hi there ok ⚠ ↔ warn x y</a>')
+
+    def test_unlisted_shortcode_alone_goes_but_times_stay(self):
+        from fedtail.frontends.richtext import strip_emoji
+        self.assertEqual(strip_emoji("must die :bloberika_wtf_knife:"), "must die ")
+        self.assertEqual(strip_emoji("at 10:30:00, a:b:c"), "at 10:30:00, a:b:c")

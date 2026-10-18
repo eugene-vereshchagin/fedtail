@@ -328,16 +328,28 @@ def _families(spec):
     return out
 
 
-def apply(app, cfg):
-    """Load the configured theme (falling back to 'system'), style the app."""
-    name = cfg["ui"]["theme"]
-    from . import kde
-    adopted = kde.adopt(app)
-    if adopted:
-        import logging
-        logging.getLogger(__name__).info("Qt has no KDE integration here (one-file build?): "
-                                         "%s from kdeglobals", adopted)
-    themefile.install_copies()
+# the desktop's own palette and font, as they were before any theme touched them: a
+# theme tried from the menu (≡ → Try a theme) starts from these, not from the last one
+_desktop = None
+
+
+def apply(app, cfg, name=None):
+    """Load the configured theme — or `name`, tried for this run only — falling back to
+    'system', and style the app. Called again, it restyles the running app."""
+    global _desktop
+    name = name or cfg["ui"]["theme"]
+    if _desktop is None:
+        from . import kde
+        adopted = kde.adopt(app)
+        if adopted:
+            import logging
+            logging.getLogger(__name__).info("Qt has no KDE integration here (one-file "
+                                             "build?): %s from kdeglobals", adopted)
+        themefile.install_copies()
+        _desktop = (QPalette(app.palette()), QFont(app.font()))
+    else:
+        app.setPalette(QPalette(_desktop[0]))
+        app.setFont(QFont(_desktop[1]))
     try:
         data, warnings = themefile.load(name)
     except themefile.ThemeError as e:

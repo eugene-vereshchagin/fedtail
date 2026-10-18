@@ -427,6 +427,34 @@ class FeedView(QScrollArea):
     def clear(self):
         self.set_specs([], keep_position=False)
 
+    def rebuild_rows(self):
+        """Every card built again from what it holds, in its place, the reading place
+        kept (another theme tried from the menu: new colours, shapes and words)."""
+        anchor = self._reading_anchor()
+        self.setUpdatesEnabled(False)
+        try:
+            for key in self.order:
+                old = self.rows[key]
+                spec = old.spec
+                row = (SeparatorRow if spec.extra.get("separator") else PostRow)(spec, self.ctx)
+                # an opened warning and a shown translation stay as they were
+                kept = [a for a in ("cw_open", "translation", "show_translation")
+                        if hasattr(old, a) and getattr(row, a, None) != getattr(old, a)]
+                for a in kept:
+                    setattr(row, a, getattr(old, a))
+                if kept:
+                    row._build()
+                self.col.insertWidget(self.col.indexOf(old), row)
+                self.col.removeWidget(old)
+                old.deleteLater()
+                self.rows[key] = row
+                if key == self.cursor_key and hasattr(row, "card"):
+                    _mark(row.card, "keyed", True)
+        finally:
+            self.setUpdatesEnabled(True)
+        if anchor and anchor[0] in self.rows:
+            self._set_target(("anchor", anchor[0], anchor[1]))
+
     def scroll_to(self, key, where="top"):
         if self._bring(key):
             self._set_target(("row", key, where))

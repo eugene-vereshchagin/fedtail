@@ -553,6 +553,83 @@ class MainWindow(QMainWindow):
             t.addAction(_("filtered_title") + "…", self.show_filtered)
         return t
 
+    def _try_theme_menu(self, parent):
+        """≡ → Try a theme: any theme at once, for this run; ui.theme in the config is
+        what the next start brings."""
+        t = QMenu(_("try_theme"), parent)
+        t.setToolTip(_("try_theme_tip"))
+        t.setToolTipsVisible(True)
+        configured = self.cfg["ui"]["theme"]
+        for name in themefile.available():
+            label = name + ("  · " + _("theme_in_config") if name == configured else "")
+            act = t.addAction(label, lambda n=name: self.try_theme(n))
+            act.setCheckable(True)
+            act.setChecked(name == self.theme.id)
+        return t
+
+    def try_theme(self, name):
+        """Restyle the running window in another theme; the config stays as it is."""
+        from . import notify as notify_module
+        from . import theme as themes
+        if name == self.theme.id:
+            return
+        app = QApplication.instance()
+        old = self.theme
+        theme = themes.apply(app, self.cfg, name)
+        log.info("theme tried: %s (was %s, config says %s)", theme.id, old.id,
+                 self.cfg["ui"]["theme"])
+        self._retheme(old, theme)
+        if self.cfg["ui"]["themed_icon"]:
+            notify_module.use_theme_icon(theme, self.core.paths.cache_dir)
+            self.setWindowIcon(QIcon(icon_path()))
+            app.setWindowIcon(QIcon(icon_path()))
+            if self.tray:
+                self.tray.setIcon(self.windowIcon())
+            self.update_badges()
+        for w in theme.warnings:
+            self.error(w)
+        self.statusBar().showMessage(
+            _("theme_tried", name=theme.id, configured=self.cfg["ui"]["theme"]), 12_000)
+
+    def _retheme(self, old, theme):
+        """Everything drawn in the old theme, drawn again in the new one: the sidebar
+        built anew, every card rebuilt where it stands, the titles reworded."""
+        self.theme = theme
+        self.ctx.theme = theme
+        feed_module.ICONS = bool(theme.shape["icons"])
+        for w in self.findChildren(QWidget):
+            if getattr(w, "theme", None) is old:
+                w.theme = theme
+        # the sidebar: built again, at the width it had, the same lane chosen
+        current = self.lanes.currentItem()
+        current = current.data(Qt.ItemDataRole.UserRole) if current else None
+        sizes = self.split.sizes()
+        side = self.split.widget(0)
+        self.split.replaceWidget(0, self._build_sidebar())
+        side.deleteLater()
+        self.split.setSizes(sizes)
+        self.columns_btn.blockSignals(True)
+        self.columns_btn.setChecked(self.columns is not None)
+        self.columns_btn.blockSignals(False)
+        if self.core.me:
+            self._show_me(self.core.me)
+        if current in self.lane_items:
+            self.lanes.blockSignals(True)
+            for i in range(self.lanes.count()):
+                if self.lanes.item(i).data(Qt.ItemDataRole.UserRole) == current:
+                    self.lanes.setCurrentRow(i)
+            self.lanes.blockSignals(False)
+            self.lane_items[current].set_current(True)
+        # the lanes' titles, then every card
+        for name, w in self.lane_widgets.items():
+            header = getattr(w, "header", None)
+            if header is not None and isinstance(w, LaneWidget):
+                header.title.setText(theme.word("lane_title", self.lane_title(name)))
+        from .feed import FeedView
+        for view in self.findChildren(FeedView):
+            view.rebuild_rows()
+        self.update_badges()
+
     def _pop_app_menu(self, btn):
         m = self._app_menu()
         m.exec(btn.mapToGlobal(QPoint(0, btn.height())))
@@ -677,6 +754,7 @@ class MainWindow(QMainWindow):
             QUrl.fromLocalFile(str(self.core.paths.config_file)).toString()))
         m.addAction(_("open_themes"), lambda: self.open_url(
             QUrl.fromLocalFile(str(themefile.user_dir())).toString()))
+        m.addMenu(self._try_theme_menu(m))
         m.addAction(_("open_data"), lambda: self.open_url(
             QUrl.fromLocalFile(str(self.core.paths.data_dir)).toString()))
         m.addSeparator()

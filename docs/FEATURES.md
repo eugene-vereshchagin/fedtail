@@ -214,6 +214,7 @@
 | Чувствительные картинки | есть | `feed.sensitive_media` | `status.sensitive` | у всех |
 | Карточки ссылок | есть | `feed.link_cards` | `status.card` | у всех |
 | Эмодзи серверов картинками | есть | `feed.custom_emoji` | `emojis` у поста и аккаунта | у всех |
+| Без эмодзи вовсе | есть | `feed.emoji = false` — ни картинок серверов, ни юникодных, ни реакций; имя из одних эмодзи — логином | — | Tusky (только анимацию), Fedilab (только свои эмодзи серверов) |
 | Цитаты: показ | есть | `feed.quotes` | `status.quote` | Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Опросы: смотреть и голосовать | есть | — | `polls/:id`, `polls/:id/votes` | у всех |
 | Результаты опроса без голосования | есть | — (кнопка «Результаты» у опроса) | — | Fedilab |
@@ -518,6 +519,7 @@
 | Что | Статус | Конфиг | API / протокол | У других |
 |---|---|---|---|---|
 | Темы файлами | есть | `ui.theme`, `ui.font_size`, `ui.max_width`, `ui.sidebar_width`, `ui.actions` | свой формат TOML | у других — светлая и тёмная, у Ice Cubes и Megalodon — свои цвета |
+| Попробовать тему без перезапуска | есть | ≡ → «Попробовать тему»; насовсем — `ui.theme` | — | Phanpy, Elk, Ice Cubes (их немного) |
 | Конфиг файлом по главам | есть | ключи запуска `--update-config`, `--rebuild-config` | — | tut — тоже TOML, но без сборки по главам |
 | Справочник настроек | есть | — | `tools/config_doc.py` | tut (man-страница и сайт), MediaWiki (статья на каждую настройку) |
 | Окно, трей, клавиши | есть | `ui.close_to_tray`, `ui.post_keys` | — | клавиши — Mastodon web, Phanpy, Elk, Ivory, tut |

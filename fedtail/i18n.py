@@ -183,6 +183,12 @@ _STRINGS = {
         "find_archive_none": "и в архиве нет; «Ещё старее» внизу ленты подтянет с сервера",
         "to_new": "К новому", "show_all": "Всё", "new_n": ["{n} новое", "{n} новых", "{n} новых"],
         "new_below": "дальше новое", "menu": "Меню", "open_themes": "Открыть папку тем",
+        "try_theme": "Попробовать тему",
+        "try_theme_tip": "Сразу, до перезапуска; насовсем — ui.theme в конфиге",
+        "theme_in_config": "в конфиге",
+        "theme_tried": "Тема «{name}» — до перезапуска. Насовсем: theme = \"{name}\" в [ui] "
+                       "(сейчас там «{configured}»). Кнопки над лентой примут её вид "
+                       "после перезапуска.",
         "you_replied": "ты ответил {when}: «{text}»",
         "fav": "В избранное", "unfav": "Убрать из избранного", "boost": "Продвинуть",
         "unboost": "Отменить продвижение", "open_browser": "Открыть в браузере",
@@ -802,6 +808,12 @@ _STRINGS = {
                              "the server",
         "to_new": "To new", "show_all": "All", "new_n": ["{n} new", "{n} new"],
         "new_below": "new below", "menu": "Menu", "open_themes": "Open themes folder",
+        "try_theme": "Try a theme",
+        "try_theme_tip": "Right away, until restart; for good — ui.theme in the config",
+        "theme_in_config": "in config",
+        "theme_tried": "Theme \"{name}\" until restart. For good: theme = \"{name}\" in [ui] "
+                       "(it says \"{configured}\" now). The buttons above a lane take "
+                       "its look after a restart.",
         "you_replied": "you replied {when}: “{text}”",
         "fav": "Favourite", "unfav": "Unfavourite", "boost": "Boost",
         "unboost": "Undo boost", "open_browser": "Open in browser",
