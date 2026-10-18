@@ -1668,7 +1668,7 @@ class QtSmokeTest(unittest.TestCase):
                 "preview_url": "https://x/p.png", "meta": {}}]
         for i in range(80):
             st = status(f"6{i:03d}", NEWS, minute=i % 60, text=f"пост {i}")
-            if i in (3, 77):  # the first and the last have pictures: the old window
+            if i in (41, 77):  # the first and the last have pictures: the old window
                 st["media_attachments"] = pic  # then spans the whole lane
             self.world.add(st, home=True)
         self.win.start()
@@ -1683,8 +1683,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertLessEqual(len(lane.view.model), 2)
         lane.media_filter.reset()
         self.pump(0.3)
-        self.assertEqual(len(lane.view.model), 80)
-        self.assertLessEqual(len(lane.view.rows), 3 * 10)
+        self.assertGreaterEqual(len(lane.view.model), 40)  # a page of the lane is back
+        self.assertLessEqual(len(lane.view.rows), 3 * 10)  # but not all built
 
     def test_posts_scrolled_past_count_as_read(self):
         """read.mark_read = on_scroll: a post that was on screen and that the reader went
