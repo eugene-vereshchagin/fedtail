@@ -160,15 +160,38 @@ class Core(SocialMixin):
                 raise OtherAccount(f"{OtherAccount.PREFIX}@{me['acct']}")
             data = {"server": api.base, "client_id": app["client_id"],
                     "client_secret": app["client_secret"], "token": token, "acct": me["acct"]}
+            old = self.auth
             auth.save(self.paths.auth_file, data)
             self.auth = data
+            if old and old.get("token") != token and \
+                    old.get("server", "").rstrip("/") == api.base.rstrip("/"):
+                self._revoke(old, wait=True)  # logged in anew: the old token is let go
             return me
         return self.submit(job)
 
     def logout(self):
+        """The token off this computer and, best effort, dead on the server too: a copy of
+        auth.json left in a backup is worth nothing then."""
+        old = self.auth
         auth.forget(self.paths.auth_file)
         self.auth = None
         self.api = None
+        if old:
+            self._revoke(old)
+
+    def _revoke(self, data, wait=False):
+        def job():
+            try:
+                self.api_class(data["server"]).revoke(data.get("client_id", ""),
+                                                      data.get("client_secret", ""),
+                                                      data["token"])
+                log.info("token revoked on the server")
+            except Exception as e:  # noqa: BLE001 — offline, or a server without it
+                log.warning("token not revoked on the server: %s", e.__class__.__name__)
+        if wait:
+            job()
+        else:  # not a daemon: a window closing right after still lets it finish
+            threading.Thread(target=job, name="fedtail-revoke").start()
 
     # ---- connect & poll ----------------------------------------------------------
     def connect(self):

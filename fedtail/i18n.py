@@ -493,9 +493,9 @@ _STRINGS = {
                                "в {want} или добавь {got} отдельным аккаунтом.",
         "logout": "Выйти из аккаунта…", "logout_title": "Выйти из аккаунта",
         "logout_yes": "Выйти",
-        "logout_q": "Выйти из <b>{acct}</b>?<br>Токен будет удалён с этого компьютера; "
-                    "прочитанное, черновики и конфиг профиля останутся. Вернуться — через "
-                    "вход в браузере.",
+        "logout_q": "Выйти из <b>{acct}</b>?<br>Токен будет удалён с этого компьютера "
+                    "и отозван на сервере; прочитанное, черновики и конфиг профиля "
+                    "останутся. Вернуться — через вход в браузере.",
         "logout_main_moves": "Это главный профиль: ★ перейдёт к {to}.",
         "logout_switch": "Окно переключится на {to}.",
         "logout_last": "Других аккаунтов нет: откроется окно входа (отмена закроет fedtail).",
@@ -1103,9 +1103,9 @@ _STRINGS = {
                                "in to {want}, or add {got} as another account.",
         "logout": "Log out…", "logout_title": "Log out",
         "logout_yes": "Log out",
-        "logout_q": "Log out of <b>{acct}</b>?<br>The token is deleted from this computer; "
-                    "read marks, drafts and the profile's config stay. Coming back means "
-                    "logging in through the browser.",
+        "logout_q": "Log out of <b>{acct}</b>?<br>The token is deleted from this computer "
+                    "and revoked on the server; read marks, drafts and the profile's config "
+                    "stay. Coming back means logging in through the browser.",
         "logout_main_moves": "This is the main profile: ★ goes to {to}.",
         "logout_switch": "The window switches to {to}.",
         "logout_last": "No other accounts: the login window opens (cancel closes fedtail).",

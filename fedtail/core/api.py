@@ -173,6 +173,12 @@ class Api:
         })
         return res["access_token"]
 
+    def revoke(self, client_id, client_secret, token):
+        """The token is no good any more, on the server too (logging out, logging in
+        anew). Short: nobody waits on it."""
+        return self._req("POST", "/oauth/revoke", timeout=(5, 5), data={
+            "client_id": client_id, "client_secret": client_secret, "token": token})
+
     # ---- reading ------------------------------------------------------------
     def verify_credentials(self):
         """My account with `source`: the bio and fields as I typed them."""

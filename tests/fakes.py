@@ -61,6 +61,9 @@ class FakeApi:
     def authorize_url(self, client_id):
         return f"{self.base}/oauth/authorize?client_id={client_id}"
 
+    def revoke(self, cid, sec, token):
+        self.w.revoked.append(token)
+
     def get_token(self, cid, sec, code):
         if code.strip() != "good":
             raise ApiError(400, "bad code")
@@ -562,6 +565,7 @@ class World:
         self.uploads = []  # (path, description, focus)
         self.emoji = []  # the server's custom emoji
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
+        self.revoked = []  # tokens revoked through /oauth/revoke
         self.policy = None  # notification policy: None — the server has none (404)
         self.held, self.answered = [], []  # notification requests; answers to them
         self.me = ME

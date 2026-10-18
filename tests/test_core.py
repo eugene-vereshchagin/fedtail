@@ -1832,19 +1832,31 @@ class CoreTest(TmpDir):
             core.finish_login("bad").result()
         core.finish_login("good").result()
         self.assertEqual(auth.load(core.paths.auth_file)["acct"], "mira")
+        self.assertEqual(w.revoked, [])  # nothing was there before
+        core.logout()  # out: off the disk, and dead on the server
+        self.assertIsNone(auth.load(core.paths.auth_file))
+        for _ in range(100):
+            if w.revoked:
+                break
+            time.sleep(0.02)
+        self.assertEqual(w.revoked, ["tok"])
 
     def test_login_anew_keeps_to_this_account(self):
         from fedtail.core.app import OtherAccount
         core, w = self.make()
-        before = auth.load(core.paths.auth_file)
+        auth.save(core.paths.auth_file, dict(auth.load(core.paths.auth_file), token="old",
+                                             acct="mira"))
+        core.auth = before = auth.load(core.paths.auth_file)
         core.begin_login("example.test").result()
         with self.assertRaises(OtherAccount) as e:  # another account: refused, nothing saved
             core.finish_login("good", expect=("https://example.test", "someone")).result()
         self.assertTrue(str(e.exception).startswith(OtherAccount.PREFIX))
         self.assertIn("@mira", str(e.exception))
         self.assertEqual(auth.load(core.paths.auth_file), before)
+        self.assertEqual(w.revoked, [])  # refused: the old one stays and stays good
         core.finish_login("good", expect=("https://example.test/", "mira")).result()
         self.assertEqual(auth.load(core.paths.auth_file)["token"], "tok")
+        self.assertEqual(w.revoked, ["old"])  # the new one in: the old one let go
 
     def test_auth_failure_event(self):
         core, w = self.make()
