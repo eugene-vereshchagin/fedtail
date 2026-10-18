@@ -159,6 +159,8 @@ QToolButton#menu {{ border: 0; border-radius: {br}px; padding: 6px; }}
 QToolButton#menu:hover {{ background: {k('selected')}; }}
 QToolButton#menu:checked {{ background: {k('selected')}; color: {k('accent')}; }}
 QToolButton#menu::menu-indicator {{ image: none; width: 0; }}
+QSplitter#sideSplit::handle {{ background: transparent; }}
+QSplitter#sideSplit::handle:hover {{ background: {k('selected')}; }}
 QPushButton#compose {{ background: {k('accent')}; color: {k('on_accent')}; border: 0;
     border-radius: {br}px; padding: 11px; font-weight: 600; font-size: {round(base_pt * 1.05, 1)}pt; }}
 QPushButton#compose:hover {{ background: {self.c['accent'].lighter(110).name()}; }}

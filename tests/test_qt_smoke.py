@@ -1489,6 +1489,15 @@ class QtSmokeTest(unittest.TestCase):
         for here in ("my_profile", "relogin", "logout"):
             self.assertIn(_(here), acc)
 
+    def test_profile_in_the_status_bar_and_sidebar_width(self):
+        self.assertTrue(self.win.profile_label.text().startswith("t"))  # this profile
+        self.assertEqual(self.win._sidebar_width(), self.core.cfg["ui"]["sidebar_width"])
+        self.core.set_state("sidebar_width", {"cfg": self.core.cfg["ui"]["sidebar_width"],
+                                              "width": 400})
+        self.assertEqual(self.win._sidebar_width(), 400)  # dragged: kept
+        self.core.set_state("sidebar_width", {"cfg": 999, "width": 400})
+        self.assertEqual(self.win._sidebar_width(), self.core.cfg["ui"]["sidebar_width"])
+
     def test_log_in_anew_cancelled_keeps_the_token(self):
         from PySide6.QtWidgets import QMessageBox
         before = dict(self.win.core.auth)

@@ -464,7 +464,6 @@ _STRINGS = {
         "about_links": 'Код: <a href="{repo}">GitHub</a><br>Автор в федиверсе: '
                        '<a href="{author_link}">{author}</a> — откроется здесь, '
                        'с кнопкой «Подписаться»',
-        "footer_profile": "профиль «{profile}»",
         "footer_profile_tip": "Профиль — папка с конфигом и данными этого аккаунта; "
                               "★ — главный, он запускается без --profile.",
         "full_width_tip": "Посты во всю ширину окна (или колонкой ui.max_width); "
@@ -1054,7 +1053,6 @@ _STRINGS = {
         "about_build": "Build: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Code: <a href="{repo}">GitHub</a><br>The author in the fediverse: '
                        '<a href="{author_link}">{author}</a> — opens here, with Follow',
-        "footer_profile": "profile “{profile}”",
         "footer_profile_tip": "A profile is this account's folder of config and data; "
                               "★ — the main one, started without --profile.",
         "full_width_tip": "Posts across the full width (or a column of ui.max_width); "

@@ -4,10 +4,13 @@
 
 - The ≡ menu is shorter: no Write, Refresh and Search (they are on screen, and their keys
   stay), no My profile / Edit profile (My profile is under Accounts; the Edit button is on
-  your profile page), no "Posts across the full width" — that is a button now, ⇔ between ≡
-  and ❯.
-- ≡ ⇔ ❯ at the top left are one size, icons from one set (or all glyphs), centred; ≡ no
-  longer reserves room for a popup arrow that pushed its icon aside. ⇔ and ❯ show when on.
+  your profile page), no "Posts across the full width" — that is a button now, ↔ between ≡
+  and ❯, a drawn ↔ (icon themes have no plain one).
+- The sidebar's edge drags: a long name gets room. `ui.sidebar_width` (272) is the start;
+  a dragged width is kept till the config's number changes. A long name is cut, not
+  pushing the sidebar wider.
+- ≡ ↔ ❯ at the top left are one size, icons from one set (or all glyphs), centred; ≡ no
+  longer reserves room for a popup arrow that pushed its icon aside. ↔ and ❯ show when on.
 - The main profile ★ is a mark, not a folder named "default": `~/.config/fedtail/main-profile`
   names the profile started without `--profile` (none: "default", as before). Accounts →
   "Make it the main one ★"; `--profiles` marks it with *.
@@ -17,8 +20,8 @@
   deletes the token, hands the main profile's ★ to another logged-in profile and switches
   the window there (none left: the login window).
 - About links to the code on GitHub and to the author in the fediverse — that one opens
-  in fedtail, with Follow. The profile moved from About to the sidebar footer, under the
-  version.
+  in fedtail, with Follow. Which profile and account this is moved from About to the left
+  of the status bar: "default: @me@server ★".
 
 - Lanes side by side, in columns: ❯ right of the menu switches for now, `ui.layout` says how
   the window starts. A lane clicked on the left comes as one more column (or is scrolled

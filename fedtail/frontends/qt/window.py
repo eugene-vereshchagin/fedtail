@@ -6,8 +6,8 @@ import time
 from dataclasses import dataclass
 from urllib.parse import unquote
 
-from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QIcon, QImage, QKeySequence, QShortcut
+from PySide6.QtCore import QPoint, QPointF, QSize, Qt, QTimer, QUrl
+from PySide6.QtGui import QIcon, QImage, QKeySequence, QPainter, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -22,6 +22,8 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
+    QSplitter,
     QStackedWidget,
     QSystemTrayIcon,
     QTabBar,
@@ -265,7 +267,13 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(central)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        row.addWidget(self._build_sidebar())
+        # the sidebar and the rest: its edge drags (a long name needs room), the width is
+        # remembered while ui.sidebar_width stays what it was
+        self.split = QSplitter(Qt.Orientation.Horizontal)
+        self.split.setObjectName("sideSplit")
+        self.split.setChildrenCollapsible(False)
+        self.split.setHandleWidth(4)
+        self.split.addWidget(self._build_sidebar())
 
         self.stack = QStackedWidget()
         self.tabs = QTabWidget()
@@ -295,9 +303,24 @@ class MainWindow(QMainWindow):
         self.right_stack.addWidget(right)
         self.curtain = self._build_curtain()
         self.right_stack.addWidget(self.curtain)
-        row.addWidget(self.right_stack, 1)
+        self.split.addWidget(self.right_stack)
+        self.split.setStretchFactor(0, 0)
+        self.split.setStretchFactor(1, 1)
+        self.split.setSizes([self._sidebar_width(), 10_000])
+        self._side_save = QTimer(self)  # a drag moves it a hundred times: save once
+        self._side_save.setSingleShot(True)
+        self._side_save.setInterval(500)
+        self._side_save.timeout.connect(self._sidebar_moved)
+        self.split.splitterMoved.connect(lambda _pos, _i: self._side_save.start())
+        row.addWidget(self.split, 1)
         self.setCentralWidget(central)
         self.menuBar().hide()
+        # left in the status bar: which profile this is and who (★ the main one)
+        self.profile_label = QLabel()
+        self.profile_label.setObjectName("muted")
+        self.profile_label.setToolTip(_("footer_profile_tip"))
+        self.statusBar().addWidget(self.profile_label)
+        self._profile_text()
 
         for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
                         ("Ctrl+Q", self.quit),
@@ -343,7 +366,8 @@ class MainWindow(QMainWindow):
         side = QWidget()
         side.setObjectName("sidebar")
         side.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        side.setFixedWidth(272)
+        side.setMinimumWidth(180)
+        side.setMaximumWidth(640)
         v = QVBoxLayout(side)
         v.setContentsMargins(14, 16, 14, 14)
         v.setSpacing(16)
@@ -360,18 +384,21 @@ class MainWindow(QMainWindow):
         self.account_name.setObjectName("accountName")
         self.account_sub = QLabel("")
         self.account_sub.setObjectName("accountSub")
+        for w in (self.account_name, self.account_sub):
+            w.setMinimumWidth(1)
+            w.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         names.addWidget(self.account_name)
         names.addWidget(self.account_sub)
         acc.addLayout(names, 1)
-        # ≡ the menu, ⇔ posts across the full width (remembered), ❯ lanes side by side
+        # ≡ the menu, ↔ posts across the full width (remembered), ❯ lanes side by side
         # (for now; the start: as ui.layout says). One size, icons from one set — or all
         # three as glyphs — each centred: a menu's own popup arrow would push it aside,
         # so ≡ opens its menu by a plain click.
         menu_btn = self._side_button(("application-menu", "open-menu-symbolic"), "≡",
                                      _("menu"))
         menu_btn.clicked.connect(lambda: self._pop_app_menu(menu_btn))
-        self.wide_btn = self._side_button(("zoom-fit-width", "view-fullscreen"), "⇔",
-                                          _("full_width_tip"))
+        self.wide_btn = self._side_button((), "↔", _("full_width_tip"),
+                                          drawn=self._arrows_icon)
         self.wide_btn.setCheckable(True)
         self.wide_btn.setChecked(not self.cfg["ui"]["max_width"])
         self.wide_btn.toggled.connect(self.set_full_width)
@@ -436,9 +463,10 @@ class MainWindow(QMainWindow):
         self.update_badges()
         return side
 
-    def _side_button(self, icons, glyph, tip):
+    def _side_button(self, icons, glyph, tip, drawn=None):
         """A square button at the top of the sidebar: the first theme icon found of
-        icons, else (or with a theme without icons) the glyph — centred either way."""
+        icons (or drawn(), when the icon theme has none to fit), else — or with a theme
+        without icons — the glyph; centred either way."""
         b = QToolButton()
         b.setObjectName("menu")
         b.setToolTip(tip)
@@ -451,11 +479,60 @@ class MainWindow(QMainWindow):
                 ic = QIcon.fromTheme(name)
                 if not ic.isNull():
                     break
+            if ic.isNull() and drawn:
+                ic = drawn(18)
         if ic.isNull():
             b.setText(glyph)
         else:
             b.setIcon(ic)
         return b
+
+    def _arrows_icon(self, size):
+        """<-> in the sidebar's text colour, a line icon of the same weight as the
+        theme's: no icon theme has a plain one for "full width"."""
+        ratio = self.devicePixelRatioF() or 1.0
+        pm = QPixmap(round(size * ratio), round(size * ratio))
+        pm.setDevicePixelRatio(ratio)
+        pm.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(self.theme.c["sidebar_text"], 1.5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        p.setPen(pen)
+        y, left, right, head = size / 2, 2.5, size - 2.5, size * 0.22
+        p.drawLine(QPointF(left, y), QPointF(right, y))
+        for x, d in ((left, 1), (right, -1)):
+            p.drawLine(QPointF(x, y), QPointF(x + d * head, y - head))
+            p.drawLine(QPointF(x, y), QPointF(x + d * head, y + head))
+        p.end()
+        return QIcon(pm)
+
+    def _sidebar_width(self):
+        """ui.sidebar_width, or the width dragged to while the config said the same."""
+        want = self.cfg["ui"]["sidebar_width"]
+        got = self.core.get_state("sidebar_width")
+        if isinstance(got, dict) and got.get("cfg") == want and isinstance(got.get("width"), int):
+            return got["width"]
+        return want
+
+    def _sidebar_moved(self):
+        width = self.split.sizes()[0]
+        self.core.set_state("sidebar_width", {"cfg": self.cfg["ui"]["sidebar_width"],
+                                              "width": width})
+        log.info("sidebar width %d", width)
+
+    def _profile_text(self):
+        """"default: @me@server ★" at the left of the status bar."""
+        from ...core import paths
+        me = self.core.paths.profile
+        who = ""
+        if self.core.me:
+            host = (self.core.auth or {}).get("server", "").split("://")[-1].rstrip("/")
+            acct = self.core.me["acct"]
+            who = "@" + acct + (f"@{host}" if host and "@" not in acct else "")
+        text = f"{me}: {who}" if who else me
+        self.profile_label.setText(text + (" ★" if me == paths.main_profile() else ""))
 
     def _pop_app_menu(self, btn):
         m = self._app_menu()
@@ -470,15 +547,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self.base_title)
 
     def _footer_text(self):
-        """Version and build, under it the profile (★ the main one), then who made it."""
-        from ...core import paths
+        """Version and build, then who made it."""
         info = version.info()
         build = info["version"] + (f" · {info['date']}" if info["date"] else "")
-        me = self.core.paths.profile
-        where = _("footer_profile", profile=me) + \
-            (" ★" if me == paths.main_profile() else "")
-        self.footer.setText(f"fedtail {build}<br>{where}<br>{_('made_by')}")
-        self.footer.setToolTip(_("about") + "\n" + _("footer_profile_tip"))
+        self.footer.setText(f"fedtail {build}<br>{_('made_by')}")
+        self.footer.setToolTip(_("about"))
 
     # ---- accounts: one profile each, switched by starting the other one ------------------
     def accounts_menu(self, parent=None):
@@ -527,8 +600,7 @@ class MainWindow(QMainWindow):
         paths.set_main(self.core.paths.profile)
         log.info("main profile: %s (from the menu)", self.core.paths.profile)
         self._set_title()
-        if getattr(self, "footer", None) is not None:
-            self._footer_text()
+        self._profile_text()
         self.statusBar().showMessage(_("made_main", profile=self.core.paths.profile), 8000)
 
     def switch_profile(self, name):
@@ -642,6 +714,7 @@ class MainWindow(QMainWindow):
 
     def _show_me(self, me):
         self.ctx.me_id = me["id"]
+        self._profile_text()
         t = self.theme
         fields = {"display_name": me.get("display_name") or me["username"],
                   "username": me["username"], "acct": me["acct"]}
