@@ -43,6 +43,27 @@ def _due(last, every):
     return last is None or time.monotonic() - last > every
 
 
+class Pool(ThreadPoolExecutor):
+    """A pool that, once shut down, takes no more work quietly: a late job (a window
+    timer, a badge count at exit) gets a cancelled future instead of RuntimeError."""
+
+    def submit(self, fn, /, *args, **kwargs):
+        try:
+            return super().submit(fn, *args, **kwargs)
+        except RuntimeError:
+            if not self._shutdown:
+                raise
+            from concurrent.futures import Future
+            fut = Future()
+            fut.cancel()
+            return fut
+
+    def join(self, deadline):
+        """Wait for running jobs until deadline (time.monotonic)."""
+        for t in list(getattr(self, "_threads", ())):
+            t.join(max(0.0, deadline - time.monotonic()))
+
+
 class OtherAccount(ValueError):
     """Logging in anew brought another account than this profile's: nothing saved.
     The message is PREFIX + "@acct" (results reach the window as text)."""
@@ -58,8 +79,8 @@ class Core(SocialMixin):
         self.store = Store(paths.db_file)
         self.events = Events()
         # user actions never wait behind background work
-        self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail")
-        self.bg = ThreadPoolExecutor(max_workers=2, thread_name_prefix="fedtail-bg")
+        self.pool = Pool(max_workers=4, thread_name_prefix="fedtail")
+        self.bg = Pool(max_workers=2, thread_name_prefix="fedtail-bg")
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
@@ -2383,6 +2404,11 @@ class Core(SocialMixin):
         self.bg.shutdown(wait=False, cancel_futures=True)
         if self._poller:
             self._poller.join(timeout=3)
+        # what is running already finishes (a little while) before the database closes
+        # under it: no "closed database" from a badge count or a reminder at exit
+        deadline = time.monotonic() + 3
+        for pool in (self.pool, self.bg):
+            pool.join(deadline)
         # a poll stuck in a slow request must not hold the exit: what's written is
         # committed already, an unclosed database is fine
         if self._poll_lock.acquire(timeout=3):

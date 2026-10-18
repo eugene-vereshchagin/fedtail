@@ -958,6 +958,25 @@ class CoreTest(TmpDir):
         self.assertIn("003", [st["id"] for _, st in core.lane_entries("home")])
         self.assertEqual(core.deep_find("home", "нету").result(), {"total": 0, "more": False})
 
+    def test_work_after_shutdown_is_turned_away_quietly(self):
+        # a window timer or a badge count at exit: no RuntimeError, no closed database
+        import threading
+        core, _w = self.make()
+        core.connect().result()
+        running = threading.Event()
+        done = []
+
+        def slow():
+            running.set()
+            time.sleep(0.3)
+            done.append(core.store.kv_get("x"))  # the database is still open meanwhile
+        core.bg.submit(slow)
+        running.wait(2)
+        core.shutdown()
+        self.assertEqual(done, [None])
+        self.assertTrue(core.submit(lambda: 1).cancelled())
+        self.assertTrue(core.bg.submit(lambda: 1).cancelled())
+
     def test_boosts_do_not_bring_old_posts_again(self):
         core, w = self.make()
         core.connect().result()
