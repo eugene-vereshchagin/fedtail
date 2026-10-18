@@ -895,6 +895,14 @@ class CoreTest(TmpDir):
         self.assertNotIn("N", w.lists[x["id"]]["members"])
         core._refresh_lists()  # still refused: still waiting, still in here
         self.assertIn(x["id"], core.lists_of("N"))
+        real_add = core.api.list_add
+
+        def slow(*_a):  # the server too slow to answer: no error, try again later
+            raise TimeoutError("read timed out")
+        core.api.list_add = slow
+        core._refresh_lists()
+        self.assertIn(x["id"], core.lists_of("N"))
+        core.api.list_add = real_add
         w.list_refuse.clear()
         core._refresh_lists()
         self.assertIn("N", w.lists[x["id"]]["members"])

@@ -2,6 +2,8 @@
 
 ## 0.13.0 — in progress
 
+- A list add waiting for a follow to be confirmed, retried while the server was slow, showed
+  "Read timed out" as an error; it now just waits for the next try.
 - Approving: only the very request is answered — the same person, the same post, still
   waiting. It used to fall back to "something similar" and once approved a like for a
   reply. A request already answered elsewhere says so instead of an error; a miss logs what

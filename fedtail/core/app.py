@@ -764,7 +764,7 @@ class Core(SocialMixin):
             try:
                 self.api.list_add(list_id, acc_id)
                 log.info("list %s: %s added after all", list_id, acc_id)
-            except ApiError as e:  # not yet (or the server is down): next time
+            except Exception as e:  # noqa: BLE001 — not yet, or slow, or down: next time
                 log.debug("list %s pending %s: %s", list_id, acc_id, e)
                 left.append([list_id, acc_id, since])
         self.store.kv_set("list_pending", left)
