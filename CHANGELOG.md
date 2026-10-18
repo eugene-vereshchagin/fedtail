@@ -2,6 +2,7 @@
 
 ## 0.13.0 — in progress
 
+- "♻ boosted by …" over a boost: the name opens the booster's profile.
 - A boost's ⋯ menu says whom it puts in a list: "Author to a list (@…)" and "Booster to a
   list (@…)" (a relay bot, say), each its own submenu.
 - A new list made from a post's menu with someone not followed stayed invisible until a

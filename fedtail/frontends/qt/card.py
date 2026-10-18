@@ -328,8 +328,12 @@ class PostRow(QWidget):
         st = real(wrapper)
 
         if wrapper.get("reblog"):
+            # the booster's name opens their profile (a relay bot: who is behind it)
+            booster = wrapper["account"]
+            name = (f'<a href="fedtail:account/{esc(booster["id"])}" style="color:inherit;'
+                    f'text-decoration:none;">{display_name(booster)}</a>')
             v.addWidget(self._emoji_label(
-                _("boosted_by", name=display_name(wrapper["account"])) + " · " +
+                _("boosted_by", name=name) + " · " +
                 _("boost_time", when=self.theme.date(wrapper.get("created_at", ""))),
                 wrapper["account"].get("emojis"), "boost"))
 
