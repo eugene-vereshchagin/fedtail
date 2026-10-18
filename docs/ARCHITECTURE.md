@@ -166,7 +166,7 @@ docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md
    session header and the stats thread.
 9. `frontends.load(name)` imports the frontend module; `Core(cfg, paths)` opens
    the store and creates the thread pools (no network yet).
-    A terminal command (`fedtail show comments`) stops before the lock:
+    A terminal command (`fedtail show replies`) stops before the lock:
     `__main__._terminal()` → `cli.run(core, argv)`, which connects, polls once,
     prints, and leaves.
 10. `frontend.run(core, instance, argv)` — for Qt (`frontends/qt/__init__.py`):
@@ -266,29 +266,36 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 
 | lane | source | keeps |
 |---|---|---|
-| `people` ("Home") | home | not bots, not in an exclusive list |
-| `comments` ("replies to me") | mentions | replies to my posts/comments |
+| `home` ("Home") | home | not bots, not in an exclusive list |
+| `replies` ("Replies to me") | mentions | replies to my posts/comments |
 | `mentions` | mentions | other mentions (`lanes.mentions_all` → all) |
 | `subs` ("Subscriptions") | subs (local) | new comments in followed threads, minus replies to me |
 | `bookmarks` | bookmarks | still bookmarked; *lazy*; paged by the Link header (`sources._Cursor`); `core.bookmark()` adds/removes at once |
-| `activity` ("Likes & boosts") | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
+| `activity` ("Activity") | — (own table) | favourites, boosts, follows (`ActivityWidget`) |
 | `bots` | home | bots, not in an exclusive list |
-| `mine` | mine | everything |
+| `my_posts` | mine | everything |
 | `local` | local | everything; *lazy* |
-| `global` ("Federated") | federated | everything; *lazy* |
+| `federated` ("Federated") | federated | everything; *lazy* |
+| `my_likes` ("My likes") | favourites | still liked; *lazy* |
 | `requests` | — | follow requests (`RequestsWidget`) |
 | `list:<id>` | list:<id> | everything (one per server list, appended after the built-ins) |
 
-* **Lazy (browse) lanes** — `local`, `global`: fetched only while on screen
+* **Lazy (browse) lanes** — `local`, `federated`: fetched only while on screen
   (`core.set_active_lane`, called by the window on every lane switch), newest page
   only (`sources.refresh_top`; a hole is fine there), no unread marks or badges.
 * **Sidebar sections** — `lanes.GROUPS` / `lanes.grouped()`: Timelines, from the
-  widest down (global, people, local, bots), Personal (mine, mentions, comments,
+  widest down (federated, home, local, bots), Personal (my_posts, mentions, replies,
   subs, bookmarks, activity, requests), Lists at the bottom; the configured order holds inside
   a section
   (`ui.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
   builds it (again on `lists_changed`); Alt+1…9 follow `lane_order`, not rows.
 
+* **Names** — a built-in lane's name is the word its title translates (0.15:
+  `people`→`home`, `comments`→`replies`, `global`→`federated`, `mine`→`my_posts`,
+  `favourites`→`my_likes`; sources keep their API names). `lanes.RENAMED` /
+  `lanes.canonical()` read the old names wherever a lane is named: `config.LANE_LISTS`
+  options, the CLI, the web API; `Store._rename_lanes()` (schema 3) moves the window's
+  remembered lane, columns and per-lane choices once.
 * `lanes.enabled(cfg, lists)` builds the list from `lanes.enabled` plus list lanes.
   `Core._apply_lists()` replaces `Core.lanes`/`lane_by_name` when lists change.
 * `Core.lane_entries(name)` returns `[(item_id, status)]` oldest → newest, at most
@@ -298,7 +305,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * List members leave the general lanes: `Core._hidden_authors()` collects members of
   every list (`lists.hide_members = "all"`; or only exclusive lists, or none) and
   `lanes.keeps()` drops their posts and boosts from the lanes in `lists.hide_in`
-  (people, bots, global, local by default); their list lane shows them.
+  (home, bots, federated, local by default); their list lane shows them.
 
 ## 9. One poll, step by step (`Core._poll_once`)
 
@@ -314,7 +321,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
    to (from any client) is read.
 7. My new posts/comments are auto-subscribed (`subs.auto`).
 8. New items are split per lane → event `lanes_updated {lane: [item ids]}`.
-9. Desktop notifications for the lanes in `notify.lanes` (unread ones only) →
+9. Desktop notifications for the lanes in `notify.lanes` (`"all"`: every lane) and not in
+   `notify.except` (`Core._notify_wanted`; unread ones only) →
    event `notify [(lane, status|account|notification)]`.
 10. Parents of new replies fetched in the background (event `parents`).
 11. A log line with what came and how long it took.
@@ -340,7 +348,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   queries. Unknown parents are fetched by `ensure_parents` (bg); refusals go to
   `missing`. Cards show the quote above the text (`card._context_html`).
 * `core.my_replies(statuses)` → my replies per post from the `reply_to/author`
-  columns. `check_my_replies` (comments/mentions lanes) fetches the context of
+  columns. `check_my_replies` (replies/mentions lanes) fetches the context of
   posts with replies we don't know, once per reply count, so answers made from
   other clients show up as "you replied".
 
@@ -436,7 +444,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   collection, resolved likewise, on the "more — from their server" button
   (`feed.remote_people`).
 * **Direct** — lane `direct` = source mentions, visibility direct; with
-  `lanes.direct_apart` such posts leave comments/mentions (`LaneContext.direct_apart`).
+  `lanes.direct_apart` such posts leave replies/mentions (`LaneContext.direct_apart`).
 * **Posting extras** — `Core.post(..., sensitive, poll, quote, scheduled_at)`: polls
   (`Compose._build_poll`), `quoted_status_id` + `post.quote_policy`, GoToSocial
   `interaction_policy` from `post.who_can_*` (`model.interaction_policy`, sent only to

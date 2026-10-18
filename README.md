@@ -292,12 +292,12 @@ The same profile without the window — over ssh, in a script, in a pipe:
 
 ```
 fedtail lanes                         # the lanes and how much is unread in each
-fedtail show comments -n 20           # the newest posts of a lane (--unread, --mark-read)
-fedtail tail comments mentions        # new posts as they arrive, until Ctrl+C
+fedtail show replies -n 20           # the newest posts of a lane (--unread, --mark-read)
+fedtail tail replies mentions        # new posts as they arrive, until Ctrl+C
 fedtail post "text"                   # a new post; "-" or no text: read it from stdin
 fedtail post --reply a3f "text"       # a reply to #a3f (#a3f/2: to comment /2)
-fedtail read comments                 # mark a lane read
-fedtail -p work show people           # another profile
+fedtail read replies                 # mark a lane read
+fedtail -p work show home             # another profile
 ```
 
 Lists go by their title (`fedtail show Friends`). It shares the database and the read marks
@@ -366,7 +366,8 @@ Which lanes notify, and how much a notification tells, is set in `[notify]`:
 
 ```toml
 [notify]
-lanes = ["comments", "mentions", "requests", "list:Friends"]   # one list by its title
+lanes = ["replies", "mentions", "requests", "list:Friends"]   # one list by its title
+# lanes = ["all"] and except = ["bots", "federated"]: everything but these
 privacy = "full"     # "sender": only who, never the text; "count": only "3 new comments"
 ```
 

@@ -67,16 +67,16 @@ from .viewer import ImageOverlay
 log = logging.getLogger(__name__)
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
-LANE_ICON = {"tags": "tag", "people": "system-users", "comments": "mail-replied",
+LANE_ICON = {"tags": "tag", "home": "system-users", "replies": "mail-replied",
              "mentions": "mail-mark-important", "subs": "mail-thread-watch",
              "bots": "applications-system",
-             "mine": "document-edit", "local": "go-home", "global": "applications-internet",
+             "my_posts": "document-edit", "local": "go-home", "federated": "applications-internet",
              "requests": "list-add-user", "list": "view-list-details",
              "activity": "rating", "bookmarks": "bookmarks", "direct": "mail-message",
-             "favourites": "starred-symbolic"}
+             "my_likes": "starred-symbolic"}
 
 
-BADGE_KIND = {"comments": "hot", "bots": "quiet", "activity": "quiet"}
+BADGE_KIND = {"replies": "hot", "bots": "quiet", "activity": "quiet"}
 
 
 
@@ -94,7 +94,10 @@ class LaneItem(QWidget):
         self.current = False
         tip = _("tip_" + name) if not name.startswith("list:") else ""
         tip = "" if tip == "tip_" + name else tip
-        self.setToolTip(" ".join(x for x in (tip, f"(Alt+{number})" if number <= 9 else "") if x))
+        tip = " ".join(x for x in (tip, f"(Alt+{number})" if number <= 9 else "") if x)
+        if name in lanes_module.LANES:  # the word to find it by in the config
+            tip = "\n".join(x for x in (tip, _("lane_codeword", name=name)) if x)
+        self.setToolTip(tip)
         h = QHBoxLayout(self)
         h.setContentsMargins(10, 8, 10, 8)
         h.setSpacing(10)
@@ -859,7 +862,7 @@ class MainWindow(QMainWindow):
             return
         name = self.core.get_state("lane") if want == "last" else want
         if name not in self.lane_items:  # the first time, or a lane that's off
-            name = "people" if "people" in self.lane_items else self.lane_order[0]
+            name = "home" if "home" in self.lane_items else self.lane_order[0]
         self.select_lane(name)
 
     def _connect_failed(self, err):
@@ -1008,7 +1011,7 @@ class MainWindow(QMainWindow):
                 self.select_lane(current, show=False)
                 self.lane_items[current].set_current(True)
             else:
-                self.select_lane("people" if "people" in self.lane_items
+                self.select_lane("home" if "home" in self.lane_items
                                  else self.lane_order[0], show=False)
         self.update_badges()
 
@@ -2157,7 +2160,7 @@ class MainWindow(QMainWindow):
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.curtain_shown() \
                 and not typing:
             log.info("Enter on the curtain: back to the lane")
-            self.select_lane(self.core.get_state("lane") or "people")
+            self.select_lane(self.core.get_state("lane") or "home")
             return
         super().keyPressEvent(e)
 

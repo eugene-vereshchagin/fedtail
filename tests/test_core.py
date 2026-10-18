@@ -81,7 +81,7 @@ class ConfigTest(TmpDir):
         cfg, _ = config.validate({"lists": {"exclusive_hides": False}})
         self.assertEqual(cfg["lists"]["hide_members"], "off")
         with self.assertRaises(config.ConfigError):
-            config.validate({"lanes": {"enabled": ["people", "tiktok"]}})
+            config.validate({"lanes": {"enabled": ["home", "tiktok"]}})
         with self.assertRaises(config.ConfigError):
             config.validate({"ui": {"close_to_tray": 1}})  # int is not bool
         with self.assertRaises(config.ConfigError):
@@ -89,8 +89,8 @@ class ConfigTest(TmpDir):
         with self.assertRaises(config.ConfigError):
             config.validate({"ui": {"column_width": 100}})
         cfg, _ = config.validate({"ui": {"layout": "columns",
-                                         "columns": ["people", "list:Друзья"]}})
-        self.assertEqual(cfg["ui"]["columns"], ["people", "list:Друзья"])
+                                         "columns": ["home", "list:Друзья"]}})
+        self.assertEqual(cfg["ui"]["columns"], ["home", "list:Друзья"])
 
 
 class ConfigUpdateTest(unittest.TestCase):
@@ -170,7 +170,7 @@ class ConfigUpdateTest(unittest.TestCase):
         parsed = tomllib.loads(new)
         self.assertEqual(parsed["ui"]["theme"], "bnw")
         self.assertEqual(parsed["ui"]["font_size"], 0)  # commented out: the default
-        self.assertEqual(parsed["notify"]["lanes"], ["comments", "list:Друзья"])
+        self.assertEqual(parsed["notify"]["lanes"], ["comments", "list:Друзья"])  # kept as written
         self.assertEqual(parsed["ui"]["whatever"], 3)
         self.assertEqual(parsed["mystery"], {"x": "y"})
         self.assertEqual(sorted(report["kept"]), ["notify.lanes", "ui.theme"])
@@ -241,12 +241,12 @@ class MergedTest(TmpDir):
         for core in (m.primary, m.others["work"]):
             core.connect().result()
             core.poll_once()
-        got = m.lane_entries("people")
+        got = m.lane_entries("home")
         self.assertEqual([st["id"] for _i, st in got], ["010", "work~501"])  # bob, no dup
         self.assertEqual(got[1][1]["_via"], "@w")
         self.assertEqual(got[1][1]["account"]["id"], "work~B")
         self.assertEqual(m.unread_ids(got), {"010", "work~501"})
-        self.assertEqual(m.unread_count("people"), 2)
+        self.assertEqual(m.unread_count("home"), 2)
         m.mark_read(["work~501"])
         self.assertEqual(m.unread_ids(got), {"010"})
         self.assertIn(("read_changed", ["work~501"]), self.events)  # translated back
@@ -269,9 +269,9 @@ class MergedTest(TmpDir):
         m = self.m
         for core in (m.primary, m.others["work"]):
             core.connect().result()
-        m.set_active_lanes(["people", "global"])
-        self.assertEqual(m.primary._active_lanes, {"people", "global"})
-        self.assertEqual(m.others["work"]._active_lanes, {"people", "global"})
+        m.set_active_lanes(["home", "federated"])
+        self.assertEqual(m.primary._active_lanes, {"home", "federated"})
+        self.assertEqual(m.others["work"]._active_lanes, {"home", "federated"})
         m.set_active_lanes([])
         self.assertEqual(m.others["work"]._active_lanes, set())
 
@@ -438,6 +438,45 @@ class StoreTest(TmpDir):
         s.close()
 
 
+class LaneRenameTest(TmpDir):
+    """0.15: lanes are named as they show ("people" is "home"…); the old names still
+    work in the config, and what the window remembered follows them."""
+
+    def test_old_names_in_the_config(self):
+        cfg, warns = config.validate({
+            "lanes": {"enabled": ["global", "people", "mine", "comments", "favourites"]},
+            "notify": {"lanes": ["people", "list:Друзья"], "except": ["global"]},
+            "ui": {"start_lane": "comments", "icon_count": ["comments"],
+                   "columns": ["people", "home"]}})
+        self.assertEqual(warns, [])
+        self.assertEqual(cfg["lanes"]["enabled"],
+                         ["federated", "home", "my_posts", "replies", "my_likes"])
+        self.assertEqual(cfg["notify"]["lanes"], ["home", "list:Друзья"])
+        self.assertEqual(cfg["notify"]["except"], ["federated"])
+        self.assertEqual(cfg["ui"]["start_lane"], "replies")
+        self.assertEqual(cfg["ui"]["columns"], ["home"])  # the same lane once
+
+    def test_remembered_state_follows(self):
+        s = Store(self.tmp / "s.db")
+        s.kv_set("schema", 2)
+        s.kv_set("ui.lane", "comments")
+        s.kv_set("ui.columns", ["people", "activity"])
+        s.kv_set("ui.conversations.comments", True)
+        s.kv_set("ui.posts_only.people", True)
+        s.close()
+        s = Store(self.tmp / "s.db")
+        self.assertEqual(s.kv_get("ui.lane"), "replies")
+        self.assertEqual(s.kv_get("ui.columns"), ["home", "activity"])
+        self.assertTrue(s.kv_get("ui.conversations.replies"))
+        self.assertTrue(s.kv_get("ui.posts_only.home"))
+        self.assertIsNone(s.kv_get("ui.conversations.comments"))
+        s.kv_set("ui.lane", "comments")  # a v3 database is left alone
+        s.close()
+        s = Store(self.tmp / "s.db")
+        self.assertEqual(s.kv_get("ui.lane"), "comments")
+        s.close()
+
+
 class AliasTest(TmpDir):
     def test_aliases(self):
         from fedtail.core.store import alias_number, alias_text
@@ -544,15 +583,15 @@ class CoreTest(TmpDir):
             w.add(status(f"{i:03d}", BOB, minute=i), home=True)
         core.connect().result()
         core.poll_once()
-        self.assertEqual(len(core.lane_entries("people")), 3)  # first fetch = one page
+        self.assertEqual(len(core.lane_entries("home")), 3)  # first fetch = one page
         for i in range(5, 13):
             w.add(status(f"{i:03d}", BOB, minute=i), home=True)
         core.poll_once()
-        ids = [st["id"] for _, st in core.lane_entries("people")]
+        ids = [st["id"] for _, st in core.lane_entries("home")]
         self.assertEqual(ids, [f"{i:03d}" for i in range(2, 13)])  # 005..012 fetched in pages
         self.assertTrue(any(c[2] for c in w.calls if c[0] == "home"))  # used min_id
-        core.load_older("people").result()
-        ids = [st["id"] for _, st in core.lane_entries("people")]
+        core.load_older("home").result()
+        ids = [st["id"] for _, st in core.lane_entries("home")]
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
@@ -648,14 +687,14 @@ class CoreTest(TmpDir):
         w.add(status("090", BOB), home=True)
         core.connect().result()
         core.poll_once()
-        self.assertEqual(core.lane_entries("global"), [])  # not open: not fetched
-        core.set_active_lane("global")
+        self.assertEqual(core.lane_entries("federated"), [])  # not open: not fetched
+        core.set_active_lane("federated")
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("global")], ["090"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("federated")], ["090"])
         from fedtail.core import lanes
         groups = dict(lanes.grouped(core.lanes))
-        self.assertEqual(groups["standard"], ["global", "people", "local", "bots"])
-        self.assertEqual(groups["personal"][:4], ["mine", "direct", "mentions", "comments"])
+        self.assertEqual(groups["standard"], ["federated", "home", "local", "bots"])
+        self.assertEqual(groups["personal"][:4], ["my_posts", "direct", "mentions", "replies"])
         self.assertEqual([g for g, _n in lanes.grouped(core.lanes)][-1], "lists")
 
     def test_browse_lane_in_a_column(self):
@@ -664,14 +703,14 @@ class CoreTest(TmpDir):
         core, w = self.make()
         w.add(status("091", BOB), home=True)
         core.connect().result()
-        core.set_active_lane("people")
-        core.set_active_lanes(["people", "global"])
+        core.set_active_lane("home")
+        core.set_active_lanes(["home", "federated"])
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("global")], ["091"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("federated")], ["091"])
         core.set_active_lanes([])
         w.add(status("092", BOB, minute=9), home=True)
         core.poll_once()
-        self.assertNotIn("092", [st["id"] for _, st in core.lane_entries("global")])
+        self.assertNotIn("092", [st["id"] for _, st in core.lane_entries("federated")])
 
     def test_bookmarks(self):
         core, w = self.make()
@@ -829,9 +868,9 @@ class CoreTest(TmpDir):
                              "keyword_matches": ["крипта"]}]
         core.connect().result()
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["100"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["100"])
         core.mute("B").result()  # gone from every lane at once
-        self.assertEqual(core.lane_entries("people"), [])
+        self.assertEqual(core.lane_entries("home"), [])
         core.mute("B", False).result()
         core.block("N").result()
         self.assertEqual(core.lane_entries("bots"), [])
@@ -843,7 +882,7 @@ class CoreTest(TmpDir):
         w.muted.add("B")  # muted from another client: picked up on refresh
         core._silence_checked = None
         core.poll_once()
-        self.assertEqual(core.lane_entries("people"), [])
+        self.assertEqual(core.lane_entries("home"), [])
         # arts mode: a server filter hides nothing; your own mutes and blocks still do
         self.assertTrue(core.silenced(spam))
         core.cfg["ui"]["arts_mode"] = True
@@ -869,11 +908,11 @@ class CoreTest(TmpDir):
                   home=True)
         core.connect().result()
         core.poll_once()  # all 40 stored, the lane shows the newest 20
-        self.assertNotIn("003", [st["id"] for _, st in core.lane_entries("people")])
-        res = core.deep_find("people", "ИГОЛКА").result()
+        self.assertNotIn("003", [st["id"] for _, st in core.lane_entries("home")])
+        res = core.deep_find("home", "ИГОЛКА").result()
         self.assertEqual(res, {"total": 1, "more": True})
-        self.assertIn("003", [st["id"] for _, st in core.lane_entries("people")])
-        self.assertEqual(core.deep_find("people", "нету").result(), {"total": 0, "more": False})
+        self.assertIn("003", [st["id"] for _, st in core.lane_entries("home")])
+        self.assertEqual(core.deep_find("home", "нету").result(), {"total": 0, "more": False})
 
     def test_activity_favourites_boosts_follows(self):
         core, w = self.make()
@@ -912,30 +951,30 @@ class CoreTest(TmpDir):
         self.assertEqual([st["id"] for _, st in core.lane_entries("list:L1")], ["011"])
         # in an exclusive list: gone from "bots", only its list shows it
         self.assertEqual(core.lane_entries("bots"), [])
-        self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["010"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["010"])
         # somebody boosts a post of the list's member: that stays out of Home too
         boost = status("012", fakes.acct("Z", "zed@example.org"), minute=12)
         boost["reblog"] = w.statuses["011"]
         w.add(boost, home=True)
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("people")], ["010"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["010"])
 
         # a new list with bob in it, from a post's menu
         x = core.create_list("Друзья", add="B").result()
         self.assertIn(f"list:{x['id']}", core.lane_by_name)
         self.assertEqual(core.lists_of("B"), {x["id"]})
         # in any list (lists.hide_members = "all"): gone from Home too, read in the list
-        self.assertEqual(core.lane_entries("people"), [])
+        self.assertEqual(core.lane_entries("home"), [])
         core.poll_once()  # the new list's timeline comes with the next poll
         self.assertEqual([st["id"] for _, st in core.lane_entries(f"list:{x['id']}")], ["010"])
         core.cfg["lists"]["hide_members"] = "exclusive"  # only exclusive lists hide
         core._lists_version += 1
-        self.assertIn("010", [st["id"] for _, st in core.lane_entries("people")])
+        self.assertIn("010", [st["id"] for _, st in core.lane_entries("home")])
         core.cfg["lists"]["hide_members"] = "all"
         core.cfg["lists"]["hide_in"] = ["bots"]  # hidden only where asked
         core._lists_version += 1
-        self.assertIn("010", [st["id"] for _, st in core.lane_entries("people")])
-        core.cfg["lists"]["hide_in"] = ["people", "bots", "global", "local"]
+        self.assertIn("010", [st["id"] for _, st in core.lane_entries("home")])
+        core.cfg["lists"]["hide_in"] = ["home", "bots", "federated", "local"]
         core._lists_version += 1
         core.set_in_list("L1", "N", False).result()
         self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
@@ -1161,7 +1200,7 @@ class CoreTest(TmpDir):
         w.add(status("061", ME, minute=2), home=True)
         w.add(status("062", BOB, minute=3), home=True)
         core.poll_once()
-        unread = core.unread_ids(core.lane_entries("people"))
+        unread = core.unread_ids(core.lane_entries("home"))
         self.assertNotIn("061", unread)
         self.assertIn("062", unread)
         core.store.put_statuses([status("063", ME, minute=4)])  # a thread, a context…
@@ -1375,7 +1414,7 @@ class CoreTest(TmpDir):
         w.add(status("040", BOB, minute=1), home=True)
         w.add(status("041", NEWS, minute=2), home=True)
         core.poll_once()
-        ids = lambda: [st["id"] for _, st in core.lane_entries("people")] + \
+        ids = lambda: [st["id"] for _, st in core.lane_entries("home")] + \
             [st["id"] for _, st in core.lane_entries("bots")]
         self.assertIn("040", ids())
         core.block_domain("Social.Example", True).result()
@@ -1388,13 +1427,13 @@ class CoreTest(TmpDir):
         self.assertEqual(w.notes["B"], "знакомый по Point")
 
     def test_my_likes_lane_and_bell(self):
-        core, w = self.make(lanes={"enabled": ["people", "favourites"]})
+        core, w = self.make(lanes={"enabled": ["home", "my_likes"]})
         core.connect().result()
         liked = w.add(status("050", BOB, minute=1), home=True)
         liked["favourited"] = True
-        core.set_active_lane("favourites")
+        core.set_active_lane("my_likes")
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("favourites")], ["050"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("my_likes")], ["050"])
         core.notify_posts("B", True).result()
         self.assertTrue(w.bells["B"])
 
@@ -1417,10 +1456,10 @@ class CoreTest(TmpDir):
         core.poll_once()
         ids = lambda lane: [st["id"] for _, st in core.lane_entries(lane)]
         self.assertEqual(ids("direct"), ["020"])
-        self.assertEqual(ids("comments"), ["021"])  # the private one lives apart
+        self.assertEqual(ids("replies"), ["021"])  # the private one lives apart
         core.cfg["lanes"]["direct_apart"] = False
         core._lists_version += 1
-        self.assertEqual(ids("comments"), ["020", "021"])
+        self.assertEqual(ids("replies"), ["020", "021"])
 
     def test_people_from_origin(self):
         core, w = self.make()
@@ -1470,7 +1509,7 @@ class CoreTest(TmpDir):
             w.add(status(f"0{i}", BOB, minute=i), home=True)
         core.poll_once()
         core.poll_once()
-        self.assertEqual(core.unread_count("people"), 5)
+        self.assertEqual(core.unread_count("home"), 5)
         # read on the phone up to 012: those are read here too
         w.markers["home"] = "012"
         core.poll_once()
@@ -1505,7 +1544,7 @@ class CoreTest(TmpDir):
         core, w = self.make()
         w.lists["L1"] = {"title": "Новости", "exclusive": True, "members": {"N"}}
         w.lists["L2"] = {"title": "Друзья", "exclusive": True, "members": {"B"}}
-        core.cfg["notify"]["lanes"] = ["comments", "list:друзья"]
+        core.cfg["notify"]["lanes"] = ["replies", "list:друзья"]
         core.connect().result()
         core.poll_once()
         w.add(status("010", BOB, minute=10), home=True)
@@ -1530,7 +1569,7 @@ class CoreTest(TmpDir):
         w.add(status("101", BOB, "100", "ME", minute=21), mention=True)
         w.add(status("102", alice, "101", "B", minute=22))  # alice answers bob, no @me
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("comments")], ["101"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("replies")], ["101"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("subs")], ["102"])
         notes = [e for e in self.events if e[0] == "notify"]
         self.assertIn("102", [s["id"] for lane, s in notes[-1][1] if lane == "subs"])
@@ -1573,10 +1612,10 @@ class CoreTest(TmpDir):
         w.add(status("013", BOB, mine["id"], "ME", minute=13), home=True, mention=True)
         w.add(status("014", BOB, "xxx", "SOMEONE", minute=14), mention=True)
         core.poll_once()
-        people = [st["id"] for _, st in core.lane_entries("people")]
+        people = [st["id"] for _, st in core.lane_entries("home")]
         self.assertEqual(people, ["010", "012", "013"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
-        self.assertEqual([st["id"] for _, st in core.lane_entries("comments")], ["013"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("replies")], ["013"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("mentions")], ["014"])
         core.cfg["lanes"]["mentions_all"] = True  # replies to me show in mentions too
         core._lane_cache.clear()
@@ -1596,6 +1635,18 @@ class CoreTest(TmpDir):
         self.assertEqual(core.parent_of(core.store.get_status("014")), "missing")
         self.assertEqual(core.parent_of(core.store.get_status("013"))["id"], "012")
 
+    def test_notify_all_but_the_except_list(self):
+        core, w = self.make(notify={"lanes": ["all"], "except": ["bots", "mentions"]})
+        core.connect().result()
+        core.poll_once()
+        w.add(status("010", BOB, minute=10), home=True)
+        w.add(status("011", NEWS, minute=11), home=True)  # a bot: in "bots", excepted
+        w.add(status("014", BOB, "xxx", "SOMEONE", minute=14), mention=True)  # excepted
+        w.requests = [BOB]
+        core.poll_once()
+        got = sorted((lane, x["id"]) for e in self.events if e[0] == "notify" for lane, x in e[1])
+        self.assertEqual(got, [("home", "010"), ("requests", BOB["id"])])
+
     def test_mentions_ordered_by_post_time(self):
         core, w = self.make()
         core.connect().result()
@@ -1607,17 +1658,17 @@ class CoreTest(TmpDir):
         w.notifications[-2]["created_at"] = "2099-10-14T10:06:00.000Z"
         w.notifications[-1]["created_at"] = "2099-10-14T10:07:00.000Z"
         core.poll_once()
-        self.assertEqual([st["id"] for _, st in core.lane_entries("comments")], ["022", "021"])
+        self.assertEqual([st["id"] for _, st in core.lane_entries("replies")], ["022", "021"])
 
     def test_lane_cache_invalidates(self):
         core, w = self.make()
         core.connect().result()
         w.add(status("030", BOB, minute=1), home=True)
         core.poll_once()
-        first = core.lane_entries("people")
-        self.assertIs(core.lane_entries("people"), first)  # cached
+        first = core.lane_entries("home")
+        self.assertIs(core.lane_entries("home"), first)  # cached
         core.favourite(first[0][1]).result()
-        self.assertTrue(core.lane_entries("people")[0][1]["favourited"])
+        self.assertTrue(core.lane_entries("home")[0][1]["favourited"])
 
     def test_my_replies_are_found(self):
         core, w = self.make()
@@ -1664,12 +1715,12 @@ class CoreTest(TmpDir):
         w.add(status("001", BOB, minute=1), home=True)
         core.connect().result()
         core.poll_once()
-        self.assertEqual(core.unread_count("people"), 0)
+        self.assertEqual(core.unread_count("home"), 0)
         w.add(status("002", BOB, minute=2), home=True)
         core.poll_once()
-        self.assertEqual(core.unread_count("people"), 1)
+        self.assertEqual(core.unread_count("home"), 1)
         core.mark_read(["002"])
-        self.assertEqual(core.unread_count("people"), 0)
+        self.assertEqual(core.unread_count("home"), 0)
 
     def test_post_reply_visibility_and_actions(self):
         core, w = self.make()

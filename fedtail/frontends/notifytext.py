@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from ..core.model import real, snippet
 from ..i18n import _
 
-ORDER = ["comments", "mentions", "requests"]  # the rest come after, by name
+ORDER = ["replies", "mentions", "requests"]  # the rest come after, by name
 ACTIVITY_ORDER = ["follow", "favourite", "reblog"]
 MAX_LINES = 3
 
@@ -78,7 +78,7 @@ def _activity_note(kind, notifs, privacy):
 
 def _note(lane, objs, privacy):
     n = len(objs)
-    kind = lane if lane in ("comments", "mentions", "requests") else "lane"
+    kind = lane if lane in ("replies", "mentions", "requests") else "lane"
     count_title = _(f"notify_{kind}_n", n=n, lane=_lane_title(lane))
     if privacy == "count":
         return Note("fedtail", count_title, lane)

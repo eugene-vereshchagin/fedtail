@@ -98,7 +98,10 @@ def _entries(core, lane, ids=None):
 
 
 def _lane_name(core, name):
-    """A lane by its name, or a list by its title ("Друзья" or "list:Друзья")."""
+    """A lane by its name (an old one too: "comments"), or a list by its title
+    ("Друзья" or "list:Друзья")."""
+    from ..core.lanes import canonical
+    name = canonical(name)
     if name in core.lane_by_name:
         return name
     title = name[5:] if name.startswith("list:") else name
@@ -143,9 +146,12 @@ def cmd_read(core, out, args):
 
 def cmd_tail(core, out, args, stop=None):
     default = core.cfg["cli"]["tail_lanes"] or core.cfg["notify"]["lanes"]
+    if "all" in default:  # notify.lanes = ["all"]: every lane but notify.except
+        never = set(core.cfg["notify"].get("except") or ())
+        default = [n for n in core.lane_by_name if n not in never]
     wanted = [_lane_name(core, n) for n in args.lanes] or \
         [_lane_name(core, n) for n in default if n in core.lane_by_name
-         or n.startswith("list:")] or ["people"]
+         or n.startswith("list:")] or ["home"]
     got = queue.Queue()
     core.events.on("lanes_updated", lambda _n, per_lane: got.put(per_lane))
     if args.n:
@@ -220,7 +226,7 @@ def parser():
 
 
 def run(core, argv, stream=None):
-    """argv: the command and its arguments ("show", "comments", "-n", "5")."""
+    """argv: the command and its arguments ("show", "replies", "-n", "5")."""
     args = parser().parse_args(argv)
     out = Out(core.cfg.get("cli", {}), stream)
     if not core.logged_in:

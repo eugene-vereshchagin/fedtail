@@ -103,13 +103,13 @@ class QtSmokeTest(unittest.TestCase):
         from fedtail.frontends.qt.feed import LaneWidget, ThreadWidget
 
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
-        lane = self.win.lane_widgets["people"]
+        lane = self.win.lane_widgets["home"]
         posts = lambda v: [r for r in v.rows.values() if r.status_id is not None]
-        self.pump(until=lambda: len(posts(lane.view)) == 4)  # bot is not in "people"
+        self.pump(until=lambda: len(posts(lane.view)) == 4)  # bot is not in "home"
         self.assertIn("__sep__", lane.view.rows)  # "new below" after my own (read) post
-        badge = self.win.lane_items["people"].badge
+        badge = self.win.lane_items["home"].badge
         self.assertTrue(badge.isVisible() or badge.text())  # unread badge
         self.assertEqual(badge.text(), "3")
         from PySide6.QtWidgets import QToolButton
@@ -124,8 +124,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(bots, LaneWidget)
         self.assertEqual(len(bots.view.rows), 1)
 
-        self.win.select_lane("comments")
-        self.assertEqual(len(self.win.lane_widgets["comments"].view.rows), 1)
+        self.win.select_lane("replies")
+        self.assertEqual(len(self.win.lane_widgets["replies"].view.rows), 1)
         self.win.select_lane("requests")
 
         # thread opens as a tab, as a tree
@@ -141,7 +141,7 @@ class QtSmokeTest(unittest.TestCase):
 
         # mark all read
         lane.mark_all_read()
-        self.pump(until=lambda: self.core.unread_count("people") == 0)
+        self.pump(until=lambda: self.core.unread_count("home") == 0)
 
         # reply with a draft that survives closing the window
         # (the dialogs are really shown: a hidden QDialog closes differently,
@@ -301,7 +301,7 @@ class QtSmokeTest(unittest.TestCase):
 
         def esc():
             key(Qt.Key.Key_Escape)
-        self.win.select_lane("people")
+        self.win.select_lane("home")
         self.win.find_bar.open()
         esc()
         self.assertFalse(self.win.find_bar.isVisible())
@@ -311,15 +311,15 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(self.win.curtain_shown())
         self.assertTrue(self.win.isVisible())
         self.assertIsNone(self.core._active_lane)
-        self.assertFalse(self.win.lane_widgets["people"].view.isVisible())  # nothing "seen"
+        self.assertFalse(self.win.lane_widgets["home"].view.isVisible())  # nothing "seen"
         key(Qt.Key.Key_Return)
         self.pump(0.1)
         self.assertFalse(self.win.curtain_shown())
         esc()
-        self.win.select_lane("comments")
+        self.win.select_lane("replies")
         self.pump(0.1)
         self.assertFalse(self.win.curtain_shown())
-        self.assertEqual(self.win.current_lane(), "comments")
+        self.assertEqual(self.win.current_lane(), "replies")
         self.win.cfg["ui"]["esc"] = "tray"  # the old way, by a flag
         esc()
         self.pump(0.1)
@@ -327,7 +327,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.cfg["ui"]["esc"] = "curtain"
         self.win.showNormal()
         self.pump(0.1)
-        self.win.select_lane("people")
+        self.win.select_lane("home")
 
         # a picture that won't load: the preview is tried, then the card says so
         from PySide6.QtGui import QImage
@@ -424,7 +424,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual([(a.text(), a.isChecked()) for a in ticks], [("Друзья", True)])
         self.bridge_wait(self.core.delete_list(name[len("list:"):]))
         self.pump(until=lambda: name not in self.win.lane_items)
-        self.win.select_lane("people")
+        self.win.select_lane("home")
 
         # activity: favourites of one post gather in one row
         from fedtail.frontends.qt.feed import ActivityWidget
@@ -443,7 +443,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.select_lane("activity")
         self.pump(0.2)
         self.assertIsInstance(self.win.lane_widgets["activity"], ActivityWidget)
-        self.win.select_lane("people")
+        self.win.select_lane("home")
 
         # diagnostics: Qt messages into the log, widget counts in the stats line
         from PySide6.QtCore import qInstallMessageHandler
@@ -502,12 +502,12 @@ class QtSmokeTest(unittest.TestCase):
         self.win.close_tab(self.win.tabs.indexOf(search))
 
         # the sidebar in sections; Alt+N counts lanes, not headers; browse lanes
-        self.assertEqual(self.win.lane_order[:4], ["global", "people", "local", "bots"])
-        self.assertIn("global", self.win.lane_order)
-        self.win.select_lane("global")
+        self.assertEqual(self.win.lane_order[:4], ["federated", "home", "local", "bots"])
+        self.assertIn("federated", self.win.lane_order)
+        self.win.select_lane("federated")
         self.pump(0.2)
-        self.assertEqual(self.core._active_lane, "global")
-        self.win.select_lane("people")
+        self.assertEqual(self.core._active_lane, "federated")
+        self.win.select_lane("home")
 
         if os.name != "nt":  # the fake notify-send is a shell script
             # notifications go out through notify-send (a fake one here that records its
@@ -520,23 +520,23 @@ class QtSmokeTest(unittest.TestCase):
             n = self.win.notifier
             n.notify_send, n.backend = str(fake), "desktop"
             reply = self.core.store.get_status("013")
-            n.notify([("comments", reply)])
+            n.notify([("replies", reply)])
             self.pump(until=lambda: rec.exists() and "--wait" in rec.read_text("utf-8"))
             args = rec.read_text("utf-8").splitlines()
             self.assertIn("--app-name=fedtail", args)
             self.assertTrue(any(a.startswith("--action=open=") for a in args))
             rec.unlink()
-            self.win.select_lane("comments")
+            self.win.select_lane("replies")
             self.pump(0.1)
             self.win.isActiveWindow = lambda: True  # the reader is looking at that lane
-            n.notify([("comments", reply)])
+            n.notify([("replies", reply)])
             n.notify([("mentions", reply)])
             self.pump(until=lambda: rec.exists())
             self.pump(0.3)
             text = rec.read_text("utf-8")
             self.assertEqual(text.count("--wait"), 1)  # only the mention
             del self.win.isActiveWindow
-            self.win.select_lane("people")
+            self.win.select_lane("home")
 
         # silence: a filter added in the dialog, a mute from a post's menu, a post folded
         # by a "warn" filter
@@ -581,8 +581,8 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.3)
 
         # conversations view: one card per thread, the line about the rest
-        self.win.select_lane("comments")
-        lane = self.win.lane_widgets["comments"]
+        self.win.select_lane("replies")
+        lane = self.win.lane_widgets["replies"]
         self.pump(0.2)
         lane.set_view("conversations")
         self.pump(0.2)
@@ -592,7 +592,7 @@ class QtSmokeTest(unittest.TestCase):
         lane.set_view("feed")
         self.pump(0.2)
         self.assertFalse(any(k.startswith("conv:") for k in lane.view.order))
-        self.win.select_lane("people")
+        self.win.select_lane("home")
 
         # the command line, Point-style
         bar = self.win.cmdline
@@ -650,11 +650,11 @@ class QtSmokeTest(unittest.TestCase):
         self.win.close_tab(self.win.tabs.currentIndex())
 
         # Ctrl+F finds posts in the lane on screen and marks the one it stands on
-        self.win.select_lane("people")
+        self.win.select_lane("home")
         self.pump(0.2)
         from fedtail.core.model import snippet
         view = self.win.current_view()
-        self.assertIs(view, self.win.lane_widgets["people"].view)
+        self.assertIs(view, self.win.lane_widgets["home"].view)
         key = next(k for k in view.order if view.rows[k].status_id)
         word = snippet(view.rows[key].spec.status).split()[0]
         bar = self.win.find_bar
@@ -670,12 +670,12 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(bar.isVisible())
 
         # "posts only" hides replies, and remembers it
-        self.win.select_lane("people")
-        people = self.win.lane_widgets["people"]
+        self.win.select_lane("home")
+        people = self.win.lane_widgets["home"]
         people.set_filter("posts")
         self.pump(0.1)
         self.assertNotIn("013", [r.status_id for r in people.view.rows.values()])
-        self.assertTrue(self.core.posts_only("people"))
+        self.assertTrue(self.core.posts_only("home"))
         people.set_filter("all")
         self.pump(0.1)
         self.assertIn("013", [r.status_id for r in people.view.rows.values()])
@@ -750,8 +750,8 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: self.core.me is not None and other.me is not None)
         self.core.poll_once()
         other.poll_once()
-        win.select_lane("people")
-        lane = win.lane_widgets["people"]
+        win.select_lane("home")
+        lane = win.lane_widgets["home"]
         self.pump(until=lambda: "work~700" in lane.view.rows and "011" in lane.view.rows)
         marks = [w.text() for w in lane.view.rows["work~700"].findChildren(QLabel)
                  if w.objectName() == "via"]
@@ -926,10 +926,10 @@ class QtSmokeTest(unittest.TestCase):
         from PySide6.QtGui import QKeyEvent
         from PySide6.QtWidgets import QApplication
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
-        self.win.select_lane("people")
-        view = self.win.lane_widgets["people"].view
+        self.win.select_lane("home")
+        view = self.win.lane_widgets["home"].view
         self.pump(until=lambda: "011" in view.rows)
 
         def key(k):
@@ -983,7 +983,7 @@ class QtSmokeTest(unittest.TestCase):
 
         from fedtail.frontends.qt.feed import AccountWidget
         self.world.featured["B"] = {"tags": [{"name": "fediverse", "statuses_count": "12"}],
-                                    "people": [fakes.NEWS]}
+                                    "home": [fakes.NEWS]}
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.win.on_link("fedtail:account/B")
@@ -1201,11 +1201,11 @@ class QtSmokeTest(unittest.TestCase):
     def test_unread_only(self):
         """Unread: what was unread on opening stays while you read it; leaving thins it."""
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
         self.core.mark_read(["011"])
-        self.win.select_lane("people")
-        lane = self.win.lane_widgets["people"]
+        self.win.select_lane("home")
+        lane = self.win.lane_widgets["home"]
         self.pump(until=lambda: "014" in lane.view.rows)
         posts = lambda: sorted(k for k in lane.view.rows if not k.startswith("__"))
         lane.set_filter("unread")
@@ -1216,9 +1216,9 @@ class QtSmokeTest(unittest.TestCase):
         self.core.mark_read(["014"])  # read while looking at it: stays, greyed
         self.pump(0.1)
         self.assertIn("014", posts())
-        self.win.select_lane("comments")  # leave and come back: it's gone
+        self.win.select_lane("replies")  # leave and come back: it's gone
         self.pump(0.1)
-        self.win.select_lane("people")
+        self.win.select_lane("home")
         self.pump(until=lambda: "014" not in lane.view.rows)
         self.assertEqual(self.core.choice("unread_only.people"), True)  # kept for this run
         self.assertIsNone(self.core.get_state("unread_only.people"))  # not past it
@@ -1251,11 +1251,11 @@ class QtSmokeTest(unittest.TestCase):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.pump(until=self.win.curtain_shown)
-        self.assertNotIn("people", self.win.lane_widgets)  # not even built, nothing read
-        self.win.cfg["ui"]["start_lane"] = "comments"
+        self.assertNotIn("home", self.win.lane_widgets)  # not even built, nothing read
+        self.win.cfg["ui"]["start_lane"] = "replies"
         self.win._open_start_lane()
         self.assertFalse(self.win.curtain_shown())
-        self.assertIn("comments", self.win.lane_widgets)
+        self.assertIn("replies", self.win.lane_widgets)
 
     def test_tabs_and_the_curtain(self):
         """A tab already open, called from under the curtain, comes out of it (my own
@@ -1267,7 +1267,7 @@ class QtSmokeTest(unittest.TestCase):
         from fedtail.frontends.qt.feed import AccountWidget, SearchWidget
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
-        self.pump(until=lambda: "people" in self.win.lane_items)
+        self.pump(until=lambda: "home" in self.win.lane_items)
         me = self.core.me["id"]
         self.win.open_account(me)
         prof = self.win.tabs.currentWidget()
@@ -1332,16 +1332,16 @@ class QtSmokeTest(unittest.TestCase):
         left comes as one more column; ✕ takes it away; back to one lane where I was."""
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
-        self.pump(until=lambda: "people" in self.win.lane_items)
-        self.win.select_lane("people")
-        people = self.win.lane_widgets["people"]
+        self.pump(until=lambda: "home" in self.win.lane_items)
+        self.win.select_lane("home")
+        people = self.win.lane_widgets["home"]
         self.win.columns_btn.setChecked(True)
         cols = self.win.columns
         self.assertIsNotNone(cols)
-        self.assertEqual(cols.names(), ["people", "comments", "activity"])
-        self.assertIs(self.win.lane_widgets["people"], people)  # moved, not built anew
-        self.assertTrue(self.win.lane_on_screen("comments"))
-        self.assertEqual(self.core._active_lanes, {"people", "comments", "activity"})
+        self.assertEqual(cols.names(), ["home", "replies", "activity"])
+        self.assertIs(self.win.lane_widgets["home"], people)  # moved, not built anew
+        self.assertTrue(self.win.lane_on_screen("replies"))
+        self.assertEqual(self.core._active_lanes, {"home", "replies", "activity"})
         self.win.select_lane("mentions")
         self.assertEqual(cols.names()[-1], "mentions")
         self.assertEqual(cols.focused, "mentions")
@@ -1349,9 +1349,9 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.core.get_state("columns")[-1], "mentions")
         cols.move("mentions", -1)
         self.assertEqual(cols.names()[-2], "mentions")
-        self.win.close_column("comments")
-        self.assertNotIn("comments", cols.names())
-        self.assertFalse(self.win.lane_on_screen("comments"))
+        self.win.close_column("replies")
+        self.assertNotIn("replies", cols.names())
+        self.assertFalse(self.win.lane_on_screen("replies"))
         self.win.columns_btn.setChecked(False)
         self.pump(0.05)
         self.assertIsNone(self.win.columns)
@@ -1360,7 +1360,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.core._active_lanes, set())
         # the next time: as left
         self.win.set_columns(True)
-        self.assertEqual(self.win.columns.names(), ["people", "mentions", "activity"])
+        self.assertEqual(self.win.columns.names(), ["home", "mentions", "activity"])
 
     def test_disk_cache_keeps_to_its_size(self):
         """Over ui.image_disk_mb the pictures used longest ago go; other files stay."""
@@ -1456,10 +1456,10 @@ class QtSmokeTest(unittest.TestCase):
 
     def test_new_pill_agrees_with_the_store(self):
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
-        lane = self.win.lane_widgets["people"]
-        self.win.select_lane("people")
+        lane = self.win.lane_widgets["home"]
+        self.win.select_lane("home")
         self.pump(until=lambda: lane.pill.text() and not lane.pill.isHidden())
         # read by a road that sends no event (another client, an old bug): the pill
         # follows the store the next time it's drawn
@@ -1473,7 +1473,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "040" in lane.view.rows)
         self.bridge_wait(self.core.create_list("Друзья", add="B"))
         self.pump(until=lambda: "040" not in lane.view.rows)
-        self.assertEqual(self.win.lane_items["people"].count, len(lane.view.unread_keys()))
+        self.assertEqual(self.win.lane_items["home"].count, len(lane.view.unread_keys()))
 
     def test_menu_keeps_only_what_is_not_on_screen(self):
         _ = i18n._
@@ -1564,9 +1564,9 @@ class QtSmokeTest(unittest.TestCase):
                       "options": [{"title": "чай", "votes_count": 2},
                                   {"title": "кофе", "votes_count": 1}]}
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
-        lane = self.win.lane_widgets["people"]
+        lane = self.win.lane_widgets["home"]
         self.pump(until=lambda: "030" in lane.view.rows)
         row = lane.view.rows["030"]
         radios = row.findChildren(QRadioButton)
@@ -1585,21 +1585,21 @@ class QtSmokeTest(unittest.TestCase):
 
     def test_sidebar_sections_fold(self):
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
-        self.pump(until=lambda: self.win.lane_items["comments"].count == 1)
+        self.pump(until=lambda: self.win.lane_items["replies"].count == 1)
         rows = {self.win.lanes.item(i).data(0x0100): self.win.lanes.item(i)
                 for i in range(self.win.lanes.count())}
         head = self.win.group_heads["personal"]
         self.win.fold_group("personal")
-        self.assertTrue(rows["comments"].isHidden())
-        self.assertFalse(rows["people"].isHidden())
+        self.assertTrue(rows["replies"].isHidden())
+        self.assertFalse(rows["home"].isHidden())
         self.assertEqual((head.arrow.text(), head.badge.text()), ("▸", "1"))
         self.assertFalse(head.badge.isHidden())
         # kept across a rebuild (lists change) and a restart
         self.win._rebuild_sidebar()
         row = next(self.win.lanes.item(i) for i in range(self.win.lanes.count())
-                   if self.win.lanes.item(i).data(0x0100) == "comments")
+                   if self.win.lanes.item(i).data(0x0100) == "replies")
         self.assertTrue(row.isHidden())
         self.assertEqual(self.core.get_state("folded_groups"), ["personal"])
         self.win.fold_group("personal")
@@ -1617,7 +1617,7 @@ class QtSmokeTest(unittest.TestCase):
         plain = base.pixmap(64, 64).toImage()
         self.assertNotEqual(drawn, plain)  # the badge is painted in
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
         # the comment on my post counts (comments is in ui.icon_count), Home doesn't
         self.pump(until=lambda: getattr(self.win, "_tray_count", 0) == 1)
@@ -1633,7 +1633,7 @@ class QtSmokeTest(unittest.TestCase):
 
         self.world.following.add("B")
         self.win.start()
-        self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
         self.core.poll_once()
         self.win.on_link("fedtail:thread/011")
         tab = self.win.tabs.currentWidget()
@@ -1915,8 +1915,8 @@ class QtSmokeTest(unittest.TestCase):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.core.poll_once()
-        self.win.select_lane("people")
-        people = self.win.lane_widgets["people"]
+        self.win.select_lane("home")
+        people = self.win.lane_widgets["home"]
         self.pump(until=lambda: len(people.view.rows) > 1)
         people._unload()  # in front: kept
         self.assertTrue(people.view.rows)
@@ -1928,7 +1928,7 @@ class QtSmokeTest(unittest.TestCase):
         self.core.poll_once()  # updates while unloaded: still nothing drawn while hidden
         self.pump(0.2)
         self.assertEqual(people.view.rows, {})
-        self.win.select_lane("people")
+        self.win.select_lane("home")
         self.pump(until=lambda: len(people.view.rows) > 1)
         self.assertFalse(people._unload_timer.isActive())
 
@@ -1981,7 +1981,7 @@ class QtSmokeTest(unittest.TestCase):
         # a boost of the post shows the like/boost made on the post
         boost = {"id": "rb9", "account": ME, "reblog": st, "created_at": st["created_at"],
                  "content": "", "media_attachments": []}
-        view = self.win.lane_widgets.get("people")
+        view = self.win.lane_widgets.get("home")
         if view is not None:
             view = view.view
             view.set_specs([CardSpec(key="rb9", status=boost)])
@@ -1994,6 +1994,38 @@ class QtSmokeTest(unittest.TestCase):
         t = themes.apply(self.app, cfg)
         self.assertEqual(t.bg, "#000000")
 
+
+    def test_try_theme_and_no_emoji(self):
+        """≡ → Try a theme: the window restyled at once, the cards rebuilt where they
+        are, the config untouched; feed.emoji = false: no emoji, no reactions."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QLabel
+        self.world.statuses["011"]["content"] = "<p>привет 🔥 :blob:</p>"
+        self.world.statuses["011"]["emojis"] = [{"shortcode": "blob", "url": "https://e/b.png"}]
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
+        self.core.poll_once()
+        lane = self.win.lane_widgets["home"]
+        self.pump(until=lambda: "011" in lane.view.rows)
+        before = lane.view.rows["011"]
+        self.win.try_theme("terminal")
+        self.assertEqual(self.win.theme.id, "terminal")
+        self.assertEqual(self.win.cfg["ui"]["theme"], "system")  # the config stays
+        self.assertIsNot(lane.view.rows["011"], before)  # rebuilt in place
+        self.assertIs(lane.view.rows["011"].theme, self.win.theme)
+        self.assertIn("home", self.win.lane_items)  # the sidebar built anew
+        self.assertEqual(self.win.lanes.currentItem().data(Qt.ItemDataRole.UserRole), "home")
+        self.win.try_theme("system")
+        self.cfg_emoji_off()
+        texts = " ".join(x.text() for x in lane.view.rows["011"].findChildren(QLabel))
+        self.assertIn("привет", texts)
+        self.assertNotIn("🔥", texts)
+        self.assertNotIn(":blob:", texts)
+
+    def cfg_emoji_off(self):
+        self.win.cfg["feed"]["emoji"] = False
+        lane = self.win.lane_widgets["home"]
+        lane.view.rebuild_rows()
 
 if __name__ == "__main__":
     unittest.main()

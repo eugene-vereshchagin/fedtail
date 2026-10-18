@@ -104,14 +104,14 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             # another lane from the list
             lanes = app.query_one("#lanes", ListView)
             names = [i.lane for i in lanes.children]
-            self.assertIn("comments", names)
-            await app.select_lane("comments")
+            self.assertIn("replies", names)
+            await app.select_lane("replies")
             await self.wait(pilot, lambda: any("a reply to me" in i.status["content"]
                                                for i in app.query_one("#posts").children))
 
             # x: the whole lane read
             await pilot.press("x")
-            await self.wait(pilot, lambda: core.unread_count("comments") == 0)
+            await self.wait(pilot, lambda: core.unread_count("replies") == 0)
 
             # a bad command says so, a plain line is a post
             cmd.focus()

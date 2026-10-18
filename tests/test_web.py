@@ -94,7 +94,7 @@ class WebTest(TmpDir):
     def test_lanes_and_posts_cleaned(self):
         _c, _h, body = self.req("/api/lanes")
         lanes = {x["name"]: x for x in json.loads(body)}
-        self.assertEqual(lanes["comments"]["unread"], 1)
+        self.assertEqual(lanes["replies"]["unread"], 1)
         _c, _h, body = self.req("/api/lane?name=comments")
         data = json.loads(body)
         post = data["posts"][0]
@@ -108,7 +108,7 @@ class WebTest(TmpDir):
     def test_read_act_post_command(self):
         code, _h, _b = self.req("/api/read", {"ids": ["002"]})
         self.assertEqual(code, 200)
-        self.assertEqual(self.core.unread_count("comments"), 0)
+        self.assertEqual(self.core.unread_count("replies"), 0)
         _c, _h, body = self.req("/api/act", {"action": "fav", "id": "002"})
         self.assertTrue(json.loads(body)["favourited"])
         before = len(self.w.posted)
@@ -171,10 +171,10 @@ class WebTest(TmpDir):
         _c, _h, body = self.req("/api/lanes")
         lanes = json.loads(body)
         self.assertTrue(lanes[0]["group"])  # a section title over the first lane
-        self.assertEqual([x["name"] for x in lanes if x["start"]], ["people"])
+        self.assertEqual([x["name"] for x in lanes if x["start"]], ["home"])
         self.req("/api/lane?name=comments")
         _c, _h, body = self.req("/api/lanes")
-        self.assertEqual([x["name"] for x in json.loads(body) if x["start"]], ["comments"])
+        self.assertEqual([x["name"] for x in json.loads(body) if x["start"]], ["replies"])
 
     def test_registered_as_a_frontend(self):
         from fedtail import frontends

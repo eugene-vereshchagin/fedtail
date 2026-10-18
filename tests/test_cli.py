@@ -37,7 +37,7 @@ class CliTest(TmpDir):
         core, w = self.make()
         w.add(status("001", BOB, minute=1, text="hello there"), home=True)
         w.add(status("002", BOB, minute=2, text="second"), home=True)
-        got = self.run_cli(core, "show", "people")
+        got = self.run_cli(core, "show", "home")
         self.assertIn("@bob@social.example", got)
         self.assertIn("hello there", got)
         self.assertLess(got.index("hello there"), got.index("second"))  # oldest first
@@ -48,13 +48,13 @@ class CliTest(TmpDir):
         core, w = self.make()
         for i in range(1, 4):
             w.add(status(f"00{i}", BOB, minute=i, text=f"post{i}"), home=True)
-        got = self.run_cli(core, "show", "people", "-n", "1")
+        got = self.run_cli(core, "show", "home", "-n", "1")
         self.assertIn("post3", got)
         self.assertNotIn("post1", got)
         core2, _w = self._again(core)
-        self.run_cli(core2, "read", "people")
+        self.run_cli(core2, "read", "home")
         core3, _w = self._again(core2)
-        self.assertNotIn("post", self.run_cli(core3, "show", "people", "--unread"))
+        self.assertNotIn("post", self.run_cli(core3, "show", "home", "--unread"))
 
     def _again(self, core):
         """A second run of the command, as from the shell: a new Core on the same data."""
@@ -68,21 +68,21 @@ class CliTest(TmpDir):
         st = status("001", BOB, minute=1, text="the spoiler")
         st["spoiler_text"] = "careful"
         w.add(st, home=True)
-        got = self.run_cli(core, "show", "people")
+        got = self.run_cli(core, "show", "home")
         self.assertIn("careful", got)
         self.assertNotIn("the spoiler", got)
         core2, w = self.make(ui={"expand_cw": True, "arts_mode": False})
         w.add(st, home=True)
-        self.assertIn("the spoiler", self.run_cli(core2, "show", "people"))
+        self.assertIn("the spoiler", self.run_cli(core2, "show", "home"))
         # arts mode opens it whatever expand_cw says
         core3, w = self.make(ui={"expand_cw": False, "arts_mode": True})
         w.add(st, home=True)
-        self.assertIn("the spoiler", self.run_cli(core3, "show", "people"))
+        self.assertIn("the spoiler", self.run_cli(core3, "show", "home"))
 
     def test_max_lines_and_color(self):
         core, w = self.make(cli={"max_lines": 1, "color": "always"})
         w.add(status("001", BOB, minute=1, text="one<br>two<br>three"), home=True)
-        got = self.run_cli(core, "show", "people")
+        got = self.run_cli(core, "show", "home")
         self.assertIn("\033[", got)
         self.assertNotIn("three", got)
         self.assertIn("…", got)
@@ -90,7 +90,7 @@ class CliTest(TmpDir):
     def test_post_and_reply(self):
         core, w = self.make()
         w.add(status("001", BOB, minute=1, vis="public"), home=True)
-        got = self.run_cli(core, "show", "people")
+        got = self.run_cli(core, "show", "home")
         alias = got.split()[0]  # "#a3f"
         core2, w = self._again(core)
         out = self.run_cli(core2, "post", "--reply", alias, "-v", "unlisted", "a reply")
@@ -110,13 +110,13 @@ class CliTest(TmpDir):
         core, _w = self.make()
         with self.assertRaises(SystemExit) as e:
             self.run_cli(core, "show", "nosuch")
-        self.assertIn("people", str(e.exception.code))
+        self.assertIn("home", str(e.exception.code))
 
     def test_lanes_lists_counts(self):
         core, w = self.make()
         w.add(status("001", BOB, minute=1), home=True)
         got = self.run_cli(core, "lanes")
-        line = next(x for x in got.splitlines() if x.startswith("people "))
+        line = next(x for x in got.splitlines() if x.startswith("home "))
         self.assertTrue(line.rstrip().endswith("1"))
 
     def test_tail_prints_what_arrives(self):
@@ -125,7 +125,7 @@ class CliTest(TmpDir):
         core.connect().result()
         core.poll_once()
         out, stop = io.StringIO(), threading.Event()
-        args = cli.parser().parse_args(["tail", "people"])
+        args = cli.parser().parse_args(["tail", "home"])
         t = threading.Thread(target=cli.cmd_tail, args=(core, cli.Out({}, out), args, stop))
         t.start()
         try:
@@ -142,7 +142,7 @@ class CliTest(TmpDir):
         self.assertNotIn("old one", out.getvalue())
 
     def test_disabled_and_entry_args(self):
-        args = entry.parse_args(["-p", "x", "show", "comments", "-n", "5"])
+        args = entry.parse_args(["-p", "x", "show", "replies", "-n", "5"])
         self.assertEqual((args.profile, args.command, args.rest), ("x", "show",
-                                                                 ["comments", "-n", "5"]))
+                                                                 ["replies", "-n", "5"]))
         self.assertIsNone(entry.parse_args([]).command)

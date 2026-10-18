@@ -20,7 +20,7 @@ from ...i18n import _
 
 log = logging.getLogger("fedtail.qt")
 
-DEFAULT = ["people", "comments", "activity"]
+DEFAULT = ["home", "replies", "activity"]
 
 
 def start_names(cfg, remembered, known, list_titles=None):

@@ -191,4 +191,4 @@ def start_lane(core, names):
     want = core.get_state("lane")
     if want in names:
         return want
-    return "people" if "people" in names else (names[0] if names else None)
+    return "home" if "home" in names else (names[0] if names else None)

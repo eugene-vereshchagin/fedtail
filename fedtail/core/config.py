@@ -49,7 +49,7 @@ DEFAULTS = {
         "video_disk_mb": 10000,
         "unload_hidden_minutes": 10,
         "themed_icon": True,
-        "icon_count": ["comments", "mentions", "subs", "requests"],
+        "icon_count": ["replies", "mentions", "subs", "requests"],
         "actions": "both",
         "post_keys": True,
         "announcements": 'banner',
@@ -97,8 +97,8 @@ DEFAULTS = {
         "sync_markers": True,
     },
     "lanes": {
-        "enabled": ["global", "people", "local", "bots", "mine", "direct", "mentions", "comments",
-                    "subs", "bookmarks", "activity", "requests"],
+        "enabled": ["federated", "home", "local", "bots", "my_posts", "direct", "mentions",
+                    "replies", "subs", "bookmarks", "activity", "requests"],
         "extra_bots": [],
         "posts_only": [],
         "mentions_all": False,
@@ -133,7 +133,8 @@ DEFAULTS = {
     },
     "notify": {
         "enabled": True,
-        "lanes": ["direct", "comments", "mentions", "subs", "activity", "requests"],
+        "lanes": ["direct", "replies", "mentions", "subs", "activity", "requests"],
+        "except": [],
         "privacy": "full",
         "when_focused": False,
         "backend": "auto",
@@ -147,7 +148,7 @@ DEFAULTS = {
     "lists": {
         "enabled": True,
         "hide_members": "all",
-        "hide_in": ["people", "bots", "global", "local"],
+        "hide_in": ["home", "bots", "federated", "local"],
         "refresh_minutes": 10,
     },
     "subs": {
@@ -233,8 +234,13 @@ CHOICES = {
     ("ui", "compose"): {"inline", "window"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
 }
-LANE_NAMES = {"people", "comments", "mentions", "subs", "bookmarks", "activity", "bots", "mine",
-              "local", "global", "requests", "direct", "favourites"}
+LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
+              "local", "federated", "requests", "direct", "my_likes"}
+# options that name lanes: their old names are read as the new ones
+LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
+              ("notify", "except"),
+              ("ui", "icon_count"), ("ui", "columns"), ("ui", "start_lane"),
+              ("lists", "hide_in"), ("cli", "tail_lanes")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 MINIMUM = {
@@ -327,11 +333,23 @@ def validate(user):
                 continue
             cfg[section][key] = val
 
+    # lanes by their names before 0.15 ("people", "comments"…) are the same lanes now
+    from .lanes import canonical
+    for section, key in LANE_LISTS:
+        val = cfg[section][key]
+        if isinstance(val, list) and all(isinstance(x, str) for x in val):
+            cfg[section][key] = list(dict.fromkeys(canonical(x) for x in val))
+        else:
+            cfg[section][key] = canonical(val)
+    notify_names = cfg["notify"]["lanes"] + cfg["notify"]["except"]
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
-           cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] + cfg["lists"]["hide_in"]
+           notify_names + cfg["ui"]["icon_count"] + cfg["lists"]["hide_in"]
            if x not in LANE_NAMES | {"lists"}
-           # notify.lanes may name one list: "list:Друзья" (its title, or its id)
-           and not (x in cfg["notify"]["lanes"] and isinstance(x, str)
+           # notify.lanes = ["all"]: everything, the except list takes away
+           and not (x == "all" and x in cfg["notify"]["lanes"])
+           # notify.lanes and notify.except may name one list: "list:Друзья" (its title,
+           # or its id)
+           and not (x in notify_names and isinstance(x, str)
                     and x.startswith("list:") and len(x) > 5)]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")

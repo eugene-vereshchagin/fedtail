@@ -31,11 +31,11 @@ from .text import display_name, esc
 
 log = logging.getLogger(__name__)
 
-POSTS_ONLY_LANES = ("people", "bots", "mine", "local")
+POSTS_ONLY_LANES = ("home", "bots", "my_posts", "local")
 # where Feed | Conversations means something: lanes made of replies, many of them to the
 # same few threads. In Home almost every post is a conversation of its own — the two
 # views would look the same there, so the switch isn't offered.
-CONVERSATION_LANES = ("comments", "mentions", "subs")
+CONVERSATION_LANES = ("replies", "mentions", "subs")
 
 
 class FeedView(QScrollArea):
@@ -934,7 +934,7 @@ class LaneWidget(QWidget):
                                          "short_id": short.get(real(st)["id"])}))
         if self.conversations_on():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
-        if self.name in ("comments", "mentions"):
+        if self.name in ("replies", "mentions"):
             self.core.check_my_replies(statuses)
         if unknown:
             self.core.ensure_parents(unknown)

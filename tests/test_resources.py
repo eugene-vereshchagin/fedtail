@@ -79,7 +79,7 @@ class LongRunTest(unittest.TestCase):
 
         # the lane keeps what the prune limit says, not everything that came
         self.assertLessEqual(counts["items"], KEEP * 3, counts)
-        self.assertLessEqual(len(core.lane_entries("people")), KEEP, d)
+        self.assertLessEqual(len(core.lane_entries("home")), KEEP, d)
         # nothing waiting or in flight once the polls are done
         self.assertEqual((d["pool_queue"], d["bg_queue"]), (0, 0), d)
         self.assertEqual((d["parents_inflight"], d["replies_inflight"]), (0, 0), d)
@@ -138,12 +138,12 @@ class LongRunTest(unittest.TestCase):
         core, w = self.make()
         for _ in range(20):
             self.cycle(core, w)
-        ids = [st["id"] for _, st in core.lane_entries("people")]
+        ids = [st["id"] for _, st in core.lane_entries("home")]
         t = time.monotonic()
         for _ in range(50):
             core.mark_read(ids)
         self.assertLess(time.monotonic() - t, 3.0)
-        self.assertEqual(core.unread_ids(core.lane_entries("people")), set())
+        self.assertEqual(core.unread_ids(core.lane_entries("home")), set())
 
 
 if __name__ == "__main__":

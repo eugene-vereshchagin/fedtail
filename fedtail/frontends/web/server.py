@@ -163,6 +163,8 @@ class Web:
 
     def lane(self, name):
         core = self.core
+        from ...core.lanes import canonical
+        name = canonical(name)  # an old name ("comments") still finds its lane
         if name not in core.lane_by_name:
             raise KeyError(name)
         core.set_active_lane(name)

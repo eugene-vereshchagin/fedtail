@@ -74,6 +74,6 @@ class TuiModelTest(TmpDir):
         w.add(status("001", BOB, minute=1), home=True)
         core.connect().result()
         core.poll_once()
-        self.assertEqual(model.lane_label(core, "people"), ("Home", 1))
-        title, _n = model.lane_label(core, "people", width=4)
+        self.assertEqual(model.lane_label(core, "home"), ("Home", 1))
+        title, _n = model.lane_label(core, "home", width=4)
         self.assertLessEqual(len(title), 4)

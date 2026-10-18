@@ -8,6 +8,17 @@
 - ≡ → "Try a theme", next to "Open themes folder": any theme at once, until restart — the
   sidebar and every card are drawn again in place, the reading place kept. `ui.theme` in
   the config stays what the next start brings.
+- Lanes are named in the config as their titles say: `people` → `home`, `comments` →
+  `replies`, `global` → `federated`, `mine` → `my_posts`, `favourites` → `my_likes`. The old
+  names still work everywhere (config, command line, web API); the lane open, the columns
+  and the choices over a lane that the window remembered move over by themselves. A lane's
+  tooltip in the sidebar names its word. "Likes & boosts" is "Activity" now — it was always
+  the follows and polls too, and its word was `activity` all along.
+- `notify.lanes = ["all"]`: notifications about everything that arrives, in any lane; and
+  `notify.except` — lanes never to notify about, whatever `notify.lanes` says (`"bots"`,
+  `"federated"`, `"lists"`, `"list:News"`…).
+- Why a notification didn't come is in the log at the normal level now: "not asked for"
+  (notify.lanes / notify.except) or "that lane is on screen" (notify.when_focused).
 
 ## 0.14.0 — 2026-10-18
 

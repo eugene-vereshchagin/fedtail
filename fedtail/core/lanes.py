@@ -82,33 +82,44 @@ def _bookmarked(st, ctx):
 
 
 def _subs(st, ctx):
-    # replies to me are already in "comments"; here goes the rest of the talk
+    # replies to me are already in "replies"; here goes the rest of the talk
     return ctx.subs_replies_to_me or not is_comment_to_me(real(st), ctx.me_id)
 
 
 LANES = {
-    "people": Lane("people", "home", _people),
-    "comments": Lane("comments", "mentions", _comments, by_status_time=True),
+    "home": Lane("home", "home", _people),
+    "replies": Lane("replies", "mentions", _comments, by_status_time=True),
     "mentions": Lane("mentions", "mentions", _other_mentions, by_status_time=True),
     "subs": Lane("subs", "subs", _subs, by_status_time=True),
     "bookmarks": Lane("bookmarks", "bookmarks", _bookmarked, lazy=True),
-    "favourites": Lane("favourites", "favourites", _liked, lazy=True),
+    "my_likes": Lane("my_likes", "favourites", _liked, lazy=True),
     "bots": Lane("bots", "home", _bots),
-    "mine": Lane("mine", "mine", _all),
+    "my_posts": Lane("my_posts", "mine", _all),
     # private messages to me: the mentions stream, only what was sent to the named
     "direct": Lane("direct", "mentions", _direct, by_status_time=True),
     "local": Lane("local", "local", _all, lazy=True),
-    "global": Lane("global", "federated", _all, lazy=True),
+    "federated": Lane("federated", "federated", _all, lazy=True),
     "requests": Lane("requests", None, _all),
     "activity": Lane("activity", None, _all),
 }
 
 
+# lanes once named otherwise (before 0.15): the old names still work wherever a lane is
+# named — the config, the command line, what a window remembered
+RENAMED = {"people": "home", "comments": "replies", "global": "federated",
+           "favourites": "my_likes", "mine": "my_posts"}
+
+
+def canonical(name):
+    """A lane's name as it is now ("people" -> "home"); anything else as it was."""
+    return RENAMED.get(name, name) if isinstance(name, str) else name
+
+
 # the sidebar's sections, in order; a lane goes to the first section that names it,
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
-    ("standard", ["global", "people", "local", "bots"]),        # from the widest down
-    ("personal", ["mine", "direct", "mentions", "comments", "subs", "bookmarks", "favourites",
+    ("standard", ["federated", "home", "local", "bots"]),        # from the widest down
+    ("personal", ["my_posts", "direct", "mentions", "replies", "subs", "bookmarks", "my_likes",
                   "activity", "requests"]),
     ("lists", []),
     ("tags", []),  # lanes of several hashtags (core/taggroups.py)

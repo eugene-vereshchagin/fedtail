@@ -9,7 +9,7 @@ import sqlite3
 import threading
 from datetime import UTC, datetime
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS statuses (
@@ -141,7 +141,27 @@ class Store:
                 "UPDATE statuses SET reply_to = json_extract(data, '$.in_reply_to_id'), "
                 "author = json_extract(data, '$.account.id')")
         self.db.execute("CREATE INDEX IF NOT EXISTS statuses_reply_to ON statuses (reply_to)")
+        if (self.kv_get("schema") or SCHEMA_VERSION) < 3:
+            self._rename_lanes()
         self.kv_set("schema", SCHEMA_VERSION)
+
+    def _rename_lanes(self):
+        """v3: lanes got the names they show ("people" is "home"…); what the window
+        remembered about them — the lane open, the columns, the choices over a lane —
+        follows them."""
+        from .lanes import RENAMED, canonical
+        lane = self.kv_get("ui.lane")
+        if lane in RENAMED:
+            self.kv_set("ui.lane", canonical(lane))
+        cols = self.kv_get("ui.columns")
+        if isinstance(cols, list):
+            self.kv_set("ui.columns", [canonical(x) for x in cols])
+        for kind in ("unread_only", "conversations", "posts_only"):
+            for old, new in RENAMED.items():
+                value = self.kv_get(f"ui.{kind}.{old}")
+                if value is not None:
+                    self.kv_set(f"ui.{kind}.{new}", value)
+                    self.db.execute("DELETE FROM kv WHERE key=?", (f"ui.{kind}.{old}",))
 
     def close(self):
         with self.lock:

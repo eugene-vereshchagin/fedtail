@@ -98,13 +98,14 @@ class Notifier(QObject):
         notes = notifytext.build(items, self.cfg["privacy"], self.win.lane_title)
         for note in notes:
             if not self.cfg["when_focused"] and self.on_screen(note.lane):
-                log.debug("notify: %s skipped, that lane is on screen", note.lane)
+                log.info("notify: %s skipped, that lane is on screen (notify.when_focused)",
+                         note.lane)
                 continue
             self._show(note)
 
     def test(self):
         """Debug menu: show a sample right now, whatever has focus."""
-        note = notifytext.Note("fedtail", _("notify_test_body"), "people")
+        note = notifytext.Note("fedtail", _("notify_test_body"), "home")
         self._show(note)
         return self.backend
 

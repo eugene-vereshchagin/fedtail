@@ -501,16 +501,13 @@ class Core(SocialMixin):
     def _notify(self, per_lane, new_requests=(), new_activity=()):
         """Emit 'notify' with [(lane, status-or-account)] for lanes the user wants."""
         wanted = set(self.cfg["notify"]["lanes"])
-        # one list by its title: "list:Друзья" (the id works too)
-        titled = {x[5:].casefold() for x in wanted if lanes.is_list(x)}
+        never = set(self.cfg["notify"].get("except") or ())
         out, quiet = [], []
         for name, ids in per_lane.items():
             lane = self.lane_by_name[name]
             if not ids:
                 continue
-            if name not in wanted and not (lanes.is_list(name) and (
-                    "lists" in wanted or self.lane_title(name).casefold() in titled
-                    or name[len(lanes.LIST_PREFIX):].casefold() in titled)):
+            if not self._notify_wanted(name, wanted, never):
                 quiet.append(f"{name}+{len(ids)}")
                 continue
             id_set = set(ids)
@@ -518,14 +515,29 @@ class Core(SocialMixin):
                    if item_id in id_set]
             unread = self.store.read_set(st["id"] for st in sts)
             out += [(name, st) for st in sts if st["id"] not in unread and not self.silenced(st)]
-        if "requests" in wanted:
+        if new_requests and self._notify_wanted("requests", wanted, never):
             out += [("requests", acc) for acc in new_requests]
-        if "activity" in wanted:
+        if new_activity and self._notify_wanted("activity", wanted, never):
             out += [("activity", n) for n in new_activity]
         if quiet:  # "why no notification?" — answered by the log
-            log.debug("notify: not asked for (notify.lanes): %s", ", ".join(quiet))
+            log.info("notify: not asked for (notify.lanes / notify.except): %s",
+                     ", ".join(quiet))
         if out:
             self.emit("notify", out)
+
+    def _notify_wanted(self, name, wanted, never):
+        """notify.lanes names this lane ("all" names every one) and notify.except
+        doesn't. Either may name a list by its title — "list:Друзья" — or all of them
+        at once: "lists"."""
+        def named(names):
+            if name in names or "all" in names and names is wanted:
+                return True
+            if not lanes.is_list(name):
+                return False
+            titled = {x[5:].casefold() for x in names if lanes.is_list(x)}
+            return "lists" in names or self.lane_title(name).casefold() in titled \
+                or name[len(lanes.LIST_PREFIX):].casefold() in titled
+        return named(wanted) and not named(never)
 
     def _ctx(self):
         return lanes.LaneContext(self.me["id"] if self.me else "",
@@ -1196,7 +1208,7 @@ class Core(SocialMixin):
 
     def check_my_replies(self, statuses):
         """Find my replies the cache doesn't know about yet (older than what the
-        'mine' lane fetched). Only for posts that have replies at all, and each
+        'my_posts' lane fetched). Only for posts that have replies at all, and each
         post only once per reply count, so this stays cheap."""
         want = []
         for st in statuses:
