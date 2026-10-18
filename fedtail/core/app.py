@@ -265,14 +265,32 @@ class Core(SocialMixin):
         if not self.api:
             return
         t = time.monotonic()
+        self._steps = {}
+        self._step_at = t
         try:
             return self._poll_once()
         finally:
             took = time.monotonic() - t
             self._poll_count += 1
             self._last_poll_s = round(took, 2)
-            log.log(logging.WARNING if took > 60 else logging.DEBUG,
-                    "poll #%d took %.2f s", self._poll_count, took)
+            self._poll_max_s = max(getattr(self, "_poll_max_s", 0.0), took)
+            slow = float(self.cfg.get("debug", {}).get("slow_request_seconds", 5) or 5)
+            # a slow poll says where the time went: which source, the store, markers…
+            steps = ", ".join(f"{k} {v:.2f}" for k, v in
+                              sorted(self._steps.items(), key=lambda kv: -kv[1])[:6]
+                              if v >= 0.05)
+            level = logging.WARNING if took > 60 else logging.INFO if took > slow \
+                else logging.DEBUG
+            log.log(level, "poll #%d took %.2f s%s", self._poll_count, took,
+                    f" ({steps})" if steps and took > slow else "")
+
+    def _step(self, name):
+        """Poll timing: the time since the last step goes to name (summed)."""
+        now = time.monotonic()
+        steps = getattr(self, "_steps", None)
+        if steps is not None:
+            steps[name] = steps.get(name, 0.0) + now - getattr(self, "_step_at", now)
+        self._step_at = now
 
     def _poll_once(self):
         with self._poll_lock:
@@ -281,6 +299,7 @@ class Core(SocialMixin):
             new_by_source = {}
             browse_changed = set()  # browse sources that turned empty or stopped being so
             every = self.cfg["lists"]["refresh_minutes"] * 60
+            self._step("start")
             if _due(self._silence_checked, every):
                 try:
                     self._refresh_silence()
@@ -293,8 +312,10 @@ class Core(SocialMixin):
                 except Exception as e:  # try again next round, not every poll
                     self._lists_checked = time.monotonic()
                     self.emit("error", f"lists: {e}")
+            self._step("silence+lists")
             if "direct" in self.lane_by_name:
                 self.sync_conversations()  # read here = read on the server (social.py)
+                self._step("conversations")
             if "subs" in self.lane_by_name:
                 try:
                     sc = self.cfg["subs"]
@@ -303,6 +324,7 @@ class Core(SocialMixin):
                         sc["active_days"], sc["max_threads"])
                 except Exception as e:
                     self.emit("error", f"subs: {e}")
+                self._step("subs")
             lazy = {lane.source for lane in self.lanes if lane.lazy}
             open_sources = {self.lane_by_name[n].source
                             for n in {self._active_lane, *self._active_lanes}
@@ -329,7 +351,9 @@ class Core(SocialMixin):
                 try:
                     new_by_source[name] = sources.catch_up(
                         self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"])
+                    self._step(name)
                     self.store.prune(name, KEEP_PER_SOURCE)
+                    self._step("prune")
                 except ApiError as e:
                     if e.status in (401, 403):
                         self.emit("auth_failed", str(e))
@@ -338,6 +362,7 @@ class Core(SocialMixin):
                 except Exception as e:  # network down etc.
                     self.emit("error", f"{name}: {e}")
 
+            self._step("sources")
             new_requests = []
             if "requests" in self.lane_by_name:
                 try:
@@ -362,6 +387,7 @@ class Core(SocialMixin):
                 except Exception as e:
                     self.emit("error", f"activity: {e}")
 
+            self._step("requests+activity")
             new_statuses = self._new_statuses(new_by_source)
             self._ask_prefetch(new_statuses)
             mine = [st["id"] for st in new_statuses if st["account"]["id"] == self.me["id"]]
@@ -380,6 +406,7 @@ class Core(SocialMixin):
                 self._auto_subscribe([st for st in new_statuses
                                       if st["account"]["id"] == self.me["id"]])
 
+            self._step("read marks")
             per_lane = self._split_by_lane(new_by_source)
             if any(per_lane.values()):
                 self.emit("lanes_updated", per_lane)
@@ -389,10 +416,14 @@ class Core(SocialMixin):
             if new_statuses and not first_run:
                 self.emit("arrived", [(real(st)["id"], real(st).get("in_reply_to_id"))
                                       for st in new_statuses])
+            self._step("lanes")
             if not first_run:
                 self._notify(per_lane, new_requests, new_activity)
+                self._step("notify")
                 self._sync_markers()
+                self._step("markers")
             self._fetch_parents(new_statuses)
+            self._step("parents")
             got = {k: len(v) for k, v in new_by_source.items() if v}
             if got or new_activity or new_requests:
                 log.info("new: %s%s%s", got or "-",
@@ -2249,6 +2280,7 @@ class Core(SocialMixin):
     def diag_stats(self):
         """For the periodic stats line: what could grow or get stuck."""
         out = {"polls": self._poll_count, "last_poll_s": self._last_poll_s,
+               "max_poll_s": round(getattr(self, "_poll_max_s", 0.0), 2),  # since last
                "pool_queue": self.pool._work_queue.qsize(),
                "bg_queue": self.bg._work_queue.qsize(),
                "lane_cache": len(self._lane_cache),
@@ -2257,6 +2289,7 @@ class Core(SocialMixin):
                "honest_checked": len(self._honest_checked),
                "lists": len(self.lists)}
         out.update(self.store.diag_counts())
+        self._poll_max_s = 0.0
         return out
 
     def shutdown(self):

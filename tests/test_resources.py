@@ -89,9 +89,38 @@ class LongRunTest(unittest.TestCase):
         grown = len(gc.get_objects()) - objects0
         # (900 posts went by: a dict per post kept would be +900 at least)
         self.assertLess(grown, 600, f"{grown} more Python objects after 60 polls")
-        # a poll stays quick however many posts went by (generous: CI machines vary)
-        self.assertLess(max(times), 2.0, times)
-        self.assertLess(sum(times[-10:]) / 10, 3 * (sum(times[:10]) / 10) + 0.05, times)
+        # a poll stays quick however many posts went by. Generous, and by the 90th
+        # percentile: CI machines (Windows above all) stall a poll now and then for
+        # seconds on things that aren't ours — the disk, the antivirus, the collector
+        ordered = sorted(times)
+        self.assertLess(ordered[int(len(ordered) * 0.9)], 0.5, times)
+        self.assertLess(max(times), 15.0, times)
+        early, late = sorted(times[:20])[10], sorted(times[-20:])[10]  # medians
+        self.assertLess(late, 3 * early + 0.05, times)  # not slower as posts pile up
+
+    def test_a_slow_poll_says_where_the_time_went(self):
+        import logging
+        core, w = self.make(debug={"slow_request_seconds": 1})
+        lines = []
+        h = logging.Handler()
+        h.emit = lambda r: lines.append(r.getMessage())
+        lg = logging.getLogger("fedtail.core.app")
+        lg.addHandler(h)
+        old_level = lg.level
+        lg.setLevel(logging.INFO)
+        self.addCleanup(lambda: (lg.removeHandler(h), lg.setLevel(old_level)))
+        slow_markers = core.api.markers
+
+        def markers(*a, **k):
+            time.sleep(1.05)
+            return slow_markers(*a, **k)
+        self.cycle(core, w)  # the first poll marks nothing: no markers yet
+        core.api.markers = markers
+        self.cycle(core, w)
+        said = [x for x in lines if x.startswith("poll #")]
+        self.assertTrue(said and "markers" in said[-1], said)
+        self.assertGreaterEqual(core.diag_stats()["max_poll_s"], 1.0)
+        self.assertEqual(core.diag_stats()["max_poll_s"], 0.0)  # since the last stats line
 
     def test_event_handlers_do_not_pile_up(self):
         core, w = self.make()
