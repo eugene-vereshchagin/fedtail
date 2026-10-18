@@ -595,6 +595,8 @@ class MainWindow(QMainWindow):
                 a.triggered.connect(lambda _c=False, n=p["name"]: self.switch_profile(n))
         m.addSeparator()
         m.addAction(_("my_profile"), self.open_my_profile).setEnabled(bool(self.core.me))
+        m.addAction(_("server_info") + "…", self.show_server_info).setEnabled(
+            bool(self.core.me))
         merged = m.addAction(_("accounts_merge"))
         merged.setCheckable(True)
         merged.setChecked(bool(getattr(self.core, "others", None)))
@@ -669,7 +671,6 @@ class MainWindow(QMainWindow):
             if self.core.supports(feature) and (feature != "trends" or trends):
                 people.addAction(label, slot)
         people.setEnabled(not people.isEmpty())
-        m.addAction(_("server_info") + "…", self.show_server_info)
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
         m.addAction(_("open_config"), lambda: self.open_url(

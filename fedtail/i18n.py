@@ -137,7 +137,7 @@ _STRINGS = {
                          "S — сохранить, O — в браузере; для webp/avif поставь "
                          "qt6-image-formats-plugins",
         "viewer_unreachable": "Оригинал не загрузился ({err}). R — ещё раз, O — в браузере",
-        "accounts": "Аккаунты", "accounts_tip": "Правый клик — другие аккаунты",
+        "accounts": "Аккаунт и сервер", "accounts_tip": "Правый клик — другие аккаунты",
         "accounts_merge": "Все аккаунты в одном окне",
         "accounts_merge_tip": "Ленты всех аккаунтов вместе, у чужих постов — от кого получено. "
                               "fedtail перезапустится",
@@ -747,7 +747,7 @@ _STRINGS = {
                          "S — save, O — browser; for webp/avif install "
                          "qt6-image-formats-plugins",
         "viewer_unreachable": "The original didn't load ({err}). R — again, O — browser",
-        "accounts": "Accounts", "accounts_tip": "Right click — other accounts",
+        "accounts": "Account and server", "accounts_tip": "Right click — other accounts",
         "accounts_merge": "All accounts in one window",
         "accounts_merge_tip": "Every account's lanes together, each post saying who got it. "
                               "fedtail restarts",
@@ -835,7 +835,7 @@ _STRINGS = {
         "login_browser_opened": "Browser opened. If it didn't, here's the link:\n{url}",
         "write": "Write", "menu_file": "&File", "menu_help": "&Help",
         "open_config": "Open config", "open_data": "Open data folder",
-        "relogin": "Log in anew…", "quit": "Quit", "about": "About", "show": "Show",
+        "relogin": "Log in again…", "quit": "Quit", "about": "About", "show": "Show",
         "connecting": "Connecting…", "connected": "@{acct} on {server}",
         "server_down": "Server is not answering: {err}. Retrying in 20 seconds.",
         "auth_failed_title": "Access denied",
@@ -1069,8 +1069,8 @@ _STRINGS = {
         "make_main_tip": "This profile will start without --profile and from the "
                          "“fedtail” menu entry",
         "made_main": "Profile “{profile}” is the main one now.",
-        "relogin_title": "Log in anew",
-        "relogin_q": "Log in to {acct} anew — through the browser, as the first time?<br><br>"
+        "relogin_title": "Log in again",
+        "relogin_q": "Log in to {acct} again — through the browser, as the first time?<br><br>"
                      "For a token revoked on the server or changed permissions. The old "
                      "token stays until you're in; cancel changes nothing. Only this same "
                      "account — add another one with “Add an account…”.",

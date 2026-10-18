@@ -123,11 +123,11 @@ python3 -m fedtail --install-desktop --profile croco   # a menu entry of its own
 python3 -m fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
 ```
 
-In the window, right-click your avatar (or ≡ → Accounts): the other accounts are listed;
+In the window, right-click your avatar (or ≡ → Account and server): the other accounts are listed;
 pick one and its window opens with its theme, this one closes (`ui.switch_closes = false`
 keeps both). "Add an account…" asks for a profile name and opens the login window. The same
 menu has "My profile", "Make it the main one ★" (the profile started without `--profile`),
-"Log in anew…" (same account only; the old token stays until you're in) and "Log out…"
+"Log in again…" (same account only; the old token stays until you're in) and "Log out…"
 (the main profile's ★ moves to another one you're logged in to). Both ask first.
 
 Or all accounts in one window (the same menu, "All accounts in one window", or

@@ -1492,8 +1492,9 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(self.win.wide_btn.isCheckable())
         self.assertEqual(self.win.wide_btn.size(), self.win.columns_btn.size())
         acc = [a.text() for a in self.win.accounts_menu().actions()]
-        for here in ("my_profile", "relogin", "logout"):
-            self.assertIn(_(here), acc)
+        for here in ("my_profile", "server_info", "relogin", "logout"):
+            self.assertIn(_(here) + ("…" if here == "server_info" else ""), acc)
+        self.assertNotIn(_("server_info") + "…", texts)
 
     def test_profile_in_the_status_bar_and_sidebar_width(self):
         self.assertTrue(self.win.profile_label.text().startswith("t"))  # this profile

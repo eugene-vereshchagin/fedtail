@@ -2,6 +2,8 @@
 
 ## 0.14.0 — in progress
 
+- ≡ → "Account and server" (was "Accounts") also holds "About the server…": one place for
+  this account, its server and the other profiles.
 - ≡ → "For the tender and sensitive": word filters, muted, blocked, blocked servers and
   filtered notifications in one submenu, each opening where it is; with `ui.arts_mode` on, a
   line on top says server filters don't apply there (mutes and blocks still do).
@@ -18,7 +20,7 @@
   names the profile started without `--profile` (none: "default", as before). Accounts →
   "Make it the main one ★"; `--profiles` marks it with *.
 - "Log in again" was dangerous: it threw the token away at once, and a cancelled login left
-  the main profile logged out. Now, under Accounts, with a question first: "Log in anew…"
+  the main profile logged out. Now, under "Account and server", with a question first: "Log in again…"
   keeps the old token until the new one is in and refuses another account; "Log out…"
   deletes the token, hands the main profile's ★ to another logged-in profile and switches
   the window there (none left: the login window).
