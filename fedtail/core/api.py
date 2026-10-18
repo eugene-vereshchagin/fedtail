@@ -26,6 +26,25 @@ log = logging.getLogger("fedtail.api")
 _SAFE_PARAMS = {"limit", "max_id", "min_id", "since_id", "local", "types[]"}
 
 
+def error_text(r):
+    """What went wrong, in a line: the server's own "error", or — for a page from a proxy
+    in front of it (a 502 from Cloudflare when the server is down) — the reason, not the
+    HTML of that page."""
+    try:
+        msg = r.json().get("error")
+        if msg:
+            return str(msg)[:300]
+    except (ValueError, AttributeError):
+        pass
+    text = (r.text or "").strip()
+    if text.startswith("<") or "<html" in text[:200].lower():
+        reason = getattr(r, "reason", "") or ""
+        hint = {502: "the server is down or not answering", 503: "the server is overloaded",
+                504: "the server took too long"}.get(r.status_code, "")
+        return " — ".join(x for x in (reason, hint) if x) or "an HTML page instead of JSON"
+    return text[:300]
+
+
 class ApiError(Exception):
     def __init__(self, status, message):
         super().__init__(f"HTTP {status}: {message}")
@@ -95,11 +114,7 @@ class Api:
                 r.status_code, took, len(r.content or b""))
         self._last.headers = r.headers
         if r.status_code >= 400:
-            try:
-                msg = r.json().get("error") or r.text
-            except ValueError:
-                msg = r.text
-            raise ApiError(r.status_code, str(msg)[:300])
+            raise ApiError(r.status_code, error_text(r))
         if not r.content:
             return None
         return r.json()
@@ -321,7 +336,7 @@ class Api:
         returns (items, max_id for the next page or None)."""
         r = self.s.get(self.base + path, params=params, timeout=30)
         if r.status_code >= 400:
-            raise ApiError(r.status_code, r.text[:300])
+            raise ApiError(r.status_code, error_text(r))
         log.debug("GET %s -> %s %d B", path, r.status_code, len(r.content or b""))
         nxt = (r.links or {}).get("next", {}).get("url", "")
         m = re.search(r"[?&]max_id=([^&]+)", nxt)

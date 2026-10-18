@@ -2,6 +2,8 @@
 
 ## 0.13.0 — in progress
 
+- A server behind a proxy that's down (a 502 from Cloudflare) showed the proxy's whole HTML
+  page as the error; now "Bad Gateway — the server is down or not answering".
 - "Add to list" for someone you don't follow: the lists are greyed out under "lists take
   only people you follow: follow first", with Follow right there (the server is asked when
   the menu opens, and the answer kept a few minutes).
