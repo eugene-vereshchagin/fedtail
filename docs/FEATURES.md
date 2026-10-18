@@ -2,7 +2,7 @@
 
 [English summary below](#english)
 
-Состояние на версию **0.13.0** (в работе, 18.10.2026). Это полный перечень возможностей fedtail: что
+Состояние на версию **0.13.0** (18.10.2026). Это полный перечень возможностей fedtail: что
 делает каждая, чем включается и выключается, на каком API или протоколе стоит и как то же
 самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с причинами.
 
@@ -1055,7 +1055,7 @@ fedtail во вкладке браузера, вход по ключу из па
 <a id="english"></a>
 ## English
 
-The full list of what fedtail does as of **0.12.0**: every feature with its config switch
+The full list of what fedtail does as of **0.13.0**: every feature with its config switch
 (`section.key`, the full reference is `config.example.toml`), the API or protocol behind it,
 and how other clients (Mastodon web, Tusky, Ivory, Phanpy, Elk, Tokodon, Ice Cubes, Fedilab,
 Sengi, Megalodon, tut, Tuba, Whalebird) do the same.

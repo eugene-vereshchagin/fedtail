@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.13.0 — in progress
+## 0.13.0 — 2026-10-18
+
+**In short:** GoToSocial approvals of replies, likes and boosts; lists — who is in them,
+your own order, author or booster, only people you follow; pictures and videos fetched
+ahead to a disk cache with its own limits (1 GB pictures, 10 GB videos); a big lane lets go
+of cards far behind and never builds them all at once (no more 6-second freezes and
+gigabytes on a filter); freed memory goes back to the system; your own posts are always
+read; the player goes between a post's videos; full-width posts, any post language,
+a bigger compose panel, a boosts filter; errors in one line and once; `docs/CONFIG.md`
+and a rewritten `docs/FEATURES.md`.
+
+Everything in detail:
 
 - `docs/CONFIG.md`: every option in tables by chapter, with its default — built from
   `config.example.toml` by `tools/config_doc.py` (a test keeps it in step).
