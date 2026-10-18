@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.15.0 — in progress
+
 ## 0.14.0 — 2026-10-18
 
 - Leak hunting for days-long runs. With every stats line a "trend" line: memory, Python
