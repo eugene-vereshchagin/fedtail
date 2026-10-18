@@ -74,6 +74,23 @@ class NoteLineTest(unittest.TestCase):
         self.assertEqual(note_text(n), n)
 
 
+class ConfigDocTest(unittest.TestCase):
+    def test_config_md_is_up_to_date(self):
+        """docs/CONFIG.md is built from config.example.toml: a new option, a changed
+        explanation — run python3 tools/config_doc.py."""
+        import importlib.util
+        from pathlib import Path
+        root = Path(__file__).resolve().parent.parent
+        spec = importlib.util.spec_from_file_location("config_doc",
+                                                      root / "tools" / "config_doc.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        built = mod.build(mod.EXAMPLE.read_text("utf-8"))
+        self.assertEqual((root / "docs" / "CONFIG.md").read_text("utf-8"), built,
+                         "docs/CONFIG.md is out of date: python3 tools/config_doc.py")
+        self.assertIn("`feed.prefetch`", built)
+
+
 try:
     import PySide6  # noqa: F401
     HAVE_QT = True

@@ -421,6 +421,8 @@ ruff check .
 * [docs/DEBUGGING.md](docs/DEBUGGING.md) — логи и что присылать, если сломалось.
 * [docs/FEATURES.md](docs/FEATURES.md) — что умеет и чего нет, рядом с другими клиентами, и где
   каждое включается в конфиге.
+* [docs/CONFIG.md](docs/CONFIG.md) — все настройки таблицами по главам, с умолчаниями
+  (собирается из `config.example.toml`: `python3 tools/config_doc.py`).
 * [docs/DESIGN.md](docs/DESIGN.md) — ТЗ и очередь планов.
 * [AGENTS.md](AGENTS.md) — правила на одну страницу, для нейросетей и торопящихся людей.
 * [CONTRIBUTING.md](CONTRIBUTING.md) — как сообщить об ошибке, предложить изменение, запустить тесты.

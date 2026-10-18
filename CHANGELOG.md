@@ -2,6 +2,10 @@
 
 ## 0.13.0 — in progress
 
+- `docs/CONFIG.md`: every option in tables by chapter, with its default — built from
+  `config.example.toml` by `tools/config_doc.py` (a test keeps it in step).
+  `docs/FEATURES.md` rewritten: every feature with its switch, API and the other clients,
+  the plans and what won't be done, with reasons.
 - Pictures of new posts are fetched to disk as soon as the posts come, by workers of their
   own: a lane opens with its pictures there, not loading for seconds from a slow server
   (`feed.prefetch`: "all" — the default, originals, videos and gifs too; "previews";
