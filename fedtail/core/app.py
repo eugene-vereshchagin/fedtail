@@ -1305,6 +1305,18 @@ class Core(SocialMixin):
                                                   "Accept": AP_ACCEPT})
         return r.json() if r.status_code == 200 else None
 
+    def long_form(self, st):
+        """The whole post from the author's server (feed.long_form): an article, a page,
+        an event with its time and place. No token goes there."""
+        from .model import long_form_of, real
+        uri = real(st).get("uri") or ""
+
+        def job():
+            if not uri.startswith("https://"):
+                return None
+            return long_form_of(self._origin_json(uri))
+        return self.bg.submit(job)
+
     NODEINFO_KEEP_S = 7 * 86400
 
     def server_software(self, host):

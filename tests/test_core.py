@@ -480,6 +480,22 @@ class CoreTest(TmpDir):
         self.assertEqual(ids[0], "001")
         self.assertIn("001", core.store.read_set(["001"]))  # history counts as read
 
+    def test_long_form_from_the_authors_server(self):
+        core, w = self.make()
+        st = w.add(status("060", BOB, vis="public"), home=True)
+        st["uri"] = "https://blog.example/p/1"
+        asked = []
+
+        def origin(url):
+            asked.append(url)
+            return {"type": "Article", "name": "Длинное", "content": "<p>всё</p>"}
+        core._origin_json = origin
+        got = core.long_form(st).result()
+        self.assertEqual((got["name"], got["content"]), ("Длинное", "<p>всё</p>"))
+        self.assertEqual(asked, ["https://blog.example/p/1"])
+        st["uri"] = "tag:odd"  # nothing to ask
+        self.assertIsNone(core.long_form(st).result())
+
     def test_server_software_from_nodeinfo(self):
         core, _w = self.make()
         asked = []

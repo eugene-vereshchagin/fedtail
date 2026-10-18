@@ -74,6 +74,28 @@ class NoteLineTest(unittest.TestCase):
         self.assertEqual(note_text(n), n)
 
 
+class LongFormTest(unittest.TestCase):
+    def test_article_and_event(self):
+        from fedtail.core.model import long_form_of
+        art = long_form_of({"type": "Create", "object": {
+            "type": "Article", "id": "https://blog.example/p/1", "name": "Заголовок",
+            "contentMap": {"ru": "<p>Весь текст</p>"},
+            "url": [{"type": "Link", "mediaType": "text/html",
+                     "href": "https://blog.example/hello"}]}})
+        self.assertEqual((art["type"], art["name"], art["content"], art["url"]),
+                         ("Article", "Заголовок", "<p>Весь текст</p>",
+                          "https://blog.example/hello"))
+        ev = long_form_of({"type": "Event", "id": "https://events.example/e/7",
+                           "name": "Встреча", "startTime": "2026-11-01T18:00:00Z",
+                           "location": {"type": "Place", "name": "Библиотека",
+                                        "address": {"addressLocality": "Город"}}})
+        self.assertEqual(ev["start"], "2026-11-01T18:00:00Z")
+        self.assertEqual(ev["location"], "Библиотека, Город")
+        self.assertEqual(ev["url"], "https://events.example/e/7")
+        for junk in (None, "html", {"type": "Person"}, {"type": "Create"}):
+            self.assertIsNone(long_form_of(junk))
+
+
 class ConfigDocTest(unittest.TestCase):
     def test_config_md_is_up_to_date(self):
         """docs/CONFIG.md is built from config.example.toml: a new option, a changed

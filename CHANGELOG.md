@@ -2,6 +2,9 @@
 
 ## 0.14.0 — in progress
 
+- "📄 Read it whole" in the ⋯ menu of a post from another server: the post as the author's
+  server keeps it — an article whole, not a title and a link; an event with its time and
+  place (asked without your token; `feed.long_form`).
 - A profile says what the person's server runs, "🖥 GoToSocial 0.17.3", from its nodeinfo
   (asked without your token, kept a week per server; `feed.server_info`).
 - `docs/FEATURES.md`: the boost carousel moves to "won't do", with the reasons.

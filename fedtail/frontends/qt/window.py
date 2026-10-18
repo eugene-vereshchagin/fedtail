@@ -194,6 +194,7 @@ class ViewContext:
     play_video: object = None      # media attachment -> play it (or open in the browser)
     loop_gifv: object = None       # (label, attachment, fit) -> loop a gifv in its card
     audio_bar: object = None       # attachment -> a small audio player widget
+    long_form: object = None       # status -> the whole of it from the author's server
 
 
 class MainWindow(QMainWindow):
@@ -225,6 +226,8 @@ class MainWindow(QMainWindow):
             else None
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
+        self.ctx.long_form = self.read_whole if self.cfg["feed"].get("long_form", True) \
+            else None
         self.lane_widgets = {}
         self.quitting = False
         bridge.on_error = self.error
@@ -1420,6 +1423,56 @@ class MainWindow(QMainWindow):
         dlg.show()
         if d.get("media"):
             self.statusBar().showMessage(_("redraft_media", n=d["media"]), 8000)
+
+    def read_whole(self, st):
+        """📄 The whole text from the author's server: an article your server cut to a
+        title and a link, an event with its time and place."""
+        self.statusBar().showMessage(_("long_form_wait"), 4000)
+        self.bridge.call(self.core.long_form(st), ok=lambda d: self._show_whole(st, d),
+                         fail=self.error)
+
+    def _show_whole(self, st, d):
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser
+
+        from ..richtext import esc, sanitize
+
+        def fmt_time(iso):
+            from datetime import datetime
+            try:
+                t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+                return (t.astimezone() if t.tzinfo else t).strftime("%d.%m.%Y %H:%M")
+            except ValueError:
+                return esc(iso)
+        if not d:
+            self.error(_("long_form_none"))
+            return
+        dlg = QDialog(self)
+        dlg.setWindowTitle(d["name"] or _("long_form_title"))
+        dlg.resize(min(820, self.width() - 60), min(760, self.height() - 60))
+        lay = QVBoxLayout(dlg)
+        parts = []
+        if d["name"]:
+            parts.append(f"<h2>{esc(d['name'])}</h2>")
+        event = [x for x in (
+            "🗓 " + " — ".join(fmt_time(t) for t in (d["start"], d["end"]) if t)
+            if d["start"] else "", "📍 " + esc(d["location"]) if d["location"] else "") if x]
+        if event:
+            parts.append("<p><b>" + "<br>".join(event) + "</b></p>")
+        if d["summary"]:
+            parts.append(f"<p><i>{sanitize(d['summary'])}</i></p>")
+        parts.append(sanitize(d["content"]) or esc(snippet(st, 2000)))
+        view = QTextBrowser()
+        view.setOpenLinks(False)
+        view.anchorClicked.connect(lambda u: self.on_link(u.toString()))
+        view.setHtml("".join(parts))
+        lay.addWidget(view, 1)
+        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        if d["url"]:
+            b = box.addButton(_("open_browser"), QDialogButtonBox.ButtonRole.ActionRole)
+            b.clicked.connect(lambda: self.open_url(d["url"]))
+        box.rejected.connect(dlg.reject)
+        lay.addWidget(box)
+        dlg.show()
 
     def play_video(self, m, items=None):
         """A video or a gifv: over the window (ui.video_player), or in the browser.

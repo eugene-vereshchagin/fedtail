@@ -175,3 +175,52 @@ _CHAIN = re.compile(r"(?m)^[ \t]*---[ \t]*$")
 def chain_parts(text):
     """A post written as a chain: parts split by a line of just "---" (post.chain)."""
     return [p.strip() for p in _CHAIN.split(text or "") if p.strip()]
+
+
+LONG_TYPES = ("Article", "Page", "Event", "Note", "Question", "Video")
+
+
+def long_form_of(obj):
+    """The whole of an ActivityPub object as its server keeps it (an Article, a Page, an
+    Event): {"type", "name", "summary", "content", "url", "start", "end", "location"},
+    or None when it isn't one. Your server may show only a title and a link of it."""
+    if not isinstance(obj, dict):
+        return None
+    if obj.get("type") in ("Create", "Update") and isinstance(obj.get("object"), dict):
+        obj = obj["object"]
+    kind = obj.get("type")
+    if isinstance(kind, list):
+        kind = next((k for k in kind if k in LONG_TYPES), kind[0] if kind else None)
+    if kind not in LONG_TYPES:
+        return None
+
+    def text(key):
+        v = obj.get(key)
+        if not v and isinstance(obj.get(key + "Map"), dict):
+            v = next(iter(obj[key + "Map"].values()), "")
+        return v if isinstance(v, str) else ""
+
+    url = obj.get("url")
+    if isinstance(url, list):
+        url = next((u.get("href") if isinstance(u, dict) else u for u in url
+                    if (u.get("mediaType", "text/html") if isinstance(u, dict) else True)
+                    == "text/html"), None) or (url[0] if url else None)
+    if isinstance(url, dict):
+        url = url.get("href")
+    place = obj.get("location")
+    if isinstance(place, list):
+        place = place[0] if place else None
+    where = ""
+    if isinstance(place, dict):
+        addr = place.get("address")
+        if isinstance(addr, dict):
+            addr = ", ".join(str(addr[k]) for k in ("streetAddress", "postalCode",
+                                                    "addressLocality", "addressCountry")
+                             if addr.get(k))
+        where = ", ".join(x for x in (place.get("name"), addr) if isinstance(x, str) and x)
+    elif isinstance(place, str):
+        where = place
+    return {"type": kind, "name": text("name"), "summary": text("summary"),
+            "content": text("content"), "url": url or obj.get("id") or "",
+            "start": obj.get("startTime") or "", "end": obj.get("endTime") or "",
+            "location": where}
