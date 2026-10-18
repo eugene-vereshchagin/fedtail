@@ -1,12 +1,5 @@
 # Changelog
 
-## 0.14.0 — in progress
-
-- Arts mode is called by its name: it is named after @arts, the founder of Point.im, and
-  is not translated as «искусство» any more (config reference, docs).
-- `docs/FEATURES.md`: each chapter is a table — feature, status, setting, API, other
-  clients — with the details folded under it.
-
 ## 0.13.0 — 2026-10-18
 
 **In short:** GoToSocial approvals of replies, likes and boosts; lists — who is in them,
@@ -20,6 +13,10 @@ and a rewritten `docs/FEATURES.md`.
 
 Everything in detail:
 
+- Arts mode is called by its name: it is named after @arts, the founder of Point.im, and
+  is not translated as «искусство» any more (config reference, docs).
+- `docs/FEATURES.md`: each chapter is a table — feature, status, setting, API, other
+  clients — with the details folded under it.
 - `docs/CONFIG.md`: every option in tables by chapter, with its default — built from
   `config.example.toml` by `tools/config_doc.py` (a test keeps it in step).
   `docs/FEATURES.md` rewritten: every feature with its switch, API and the other clients,

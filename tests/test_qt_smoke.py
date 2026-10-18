@@ -169,7 +169,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.text.setPlainText("новый пост")
         self.assertEqual(dlg.lang.currentData(), "")  # post.language = "": as in settings
         self.assertEqual([dlg.lang.itemData(i) for i in range(dlg.lang.count())],
-                         ["", "ru", "en", "ka", "uk"])
+                         ["", "ru", "en", "ka", "uk", "\x00other"])  # "Another…" last
         dlg.set_language("ka")
         dlg.send()
         self.pump(until=lambda: gone(dlg))
