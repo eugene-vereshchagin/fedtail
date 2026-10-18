@@ -1330,7 +1330,8 @@ class MainWindow(QMainWindow):
                 n = 0  # browse lanes have no "unread"
             else:
                 n = self.core.unread_count(name)
-            if name in self.cfg["ui"]["icon_count"]:
+            if self.core.lane_chosen(name, self.cfg["ui"]["icon_count"],
+                                     self.cfg["ui"].get("icon_count_except", [])):
                 total += n
             item.set_count(n)
         for g in getattr(self, "group_heads", {}):

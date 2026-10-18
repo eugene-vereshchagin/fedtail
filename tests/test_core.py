@@ -456,6 +456,18 @@ class LaneRenameTest(TmpDir):
         self.assertEqual(cfg["ui"]["start_lane"], "replies")
         self.assertEqual(cfg["ui"]["columns"], ["home"])  # the same lane once
 
+    def test_icon_count_picks_like_notify(self):
+        # the icon's count takes "all", "lists" and "list:Друзья", and an except list,
+        # the same way as notifications
+        cfg, warns = config.validate({"ui": {"icon_count": ["all"],
+                                             "icon_count_except": ["people", "list:Новости"]}})
+        self.assertEqual(warns, [])
+        self.assertEqual(cfg["ui"]["icon_count_except"], ["home", "list:Новости"])
+        with self.assertRaises(config.ConfigError):
+            config.validate({"ui": {"icon_count_except": ["all"]}})  # "all" only picks
+        with self.assertRaises(config.ConfigError):
+            config.validate({"ui": {"icon_count": ["nonsense"]}})
+
     def test_remembered_state_follows(self):
         s = Store(self.tmp / "s.db")
         s.kv_set("schema", 2)
@@ -945,6 +957,15 @@ class CoreTest(TmpDir):
         core.connect().result()
         self.assertIn("list:L1", core.lane_by_name)
         self.assertEqual(core.lane_title("list:L1"), "Новости")
+        # lists picked by an option pair (notify.lanes, ui.icon_count): all, by title, by id
+        for wanted, never, want in ((["lists"], [], True), (["all"], [], True),
+                                    (["list:новости"], [], True), (["list:L1"], [], True),
+                                    (["list:Друзья"], [], False), (["replies"], [], False),
+                                    (["all"], ["lists"], False),
+                                    (["lists"], ["list:Новости"], False)):
+            self.assertEqual(core.lane_chosen("list:L1", wanted, never), want, (wanted, never))
+        self.assertTrue(core.lane_chosen("home", ["all"], ["list:Новости"]))
+        self.assertFalse(core.lane_chosen("home", ["lists"]))
         w.add(status("010", BOB, minute=10), home=True)
         w.add(status("011", NEWS, minute=11), home=True)
         core.poll_once()

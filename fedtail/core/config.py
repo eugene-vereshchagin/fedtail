@@ -50,6 +50,7 @@ DEFAULTS = {
         "unload_hidden_minutes": 10,
         "themed_icon": True,
         "icon_count": ["replies", "mentions", "subs", "requests"],
+        "icon_count_except": [],
         "actions": "both",
         "post_keys": True,
         "announcements": 'banner',
@@ -239,7 +240,8 @@ LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "b
 # options that name lanes: their old names are read as the new ones
 LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
               ("notify", "except"),
-              ("ui", "icon_count"), ("ui", "columns"), ("ui", "start_lane"),
+              ("ui", "icon_count"), ("ui", "icon_count_except"), ("ui", "columns"),
+              ("ui", "start_lane"),
               ("lists", "hide_in"), ("cli", "tail_lanes")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
@@ -341,15 +343,16 @@ def validate(user):
             cfg[section][key] = list(dict.fromkeys(canonical(x) for x in val))
         else:
             cfg[section][key] = canonical(val)
-    notify_names = cfg["notify"]["lanes"] + cfg["notify"]["except"]
+    # pairs that pick lanes (lanes.chosen): "all" in the first, "list:Друзья" in both
+    wanted = cfg["notify"]["lanes"] + cfg["ui"]["icon_count"]
+    picking = wanted + cfg["notify"]["except"] + cfg["ui"]["icon_count_except"]
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
-           notify_names + cfg["ui"]["icon_count"] + cfg["lists"]["hide_in"]
+           picking + cfg["lists"]["hide_in"]
            if x not in LANE_NAMES | {"lists"}
            # notify.lanes = ["all"]: everything, the except list takes away
-           and not (x == "all" and x in cfg["notify"]["lanes"])
-           # notify.lanes and notify.except may name one list: "list:Друзья" (its title,
-           # or its id)
-           and not (x in notify_names and isinstance(x, str)
+           and not (x == "all" and x in wanted)
+           # one list: "list:Друзья" (its title, or its id)
+           and not (x in picking and isinstance(x, str)
                     and x.startswith("list:") and len(x) > 5)]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")

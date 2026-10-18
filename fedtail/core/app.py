@@ -526,18 +526,13 @@ class Core(SocialMixin):
             self.emit("notify", out)
 
     def _notify_wanted(self, name, wanted, never):
-        """notify.lanes names this lane ("all" names every one) and notify.except
-        doesn't. Either may name a list by its title — "list:Друзья" — or all of them
-        at once: "lists"."""
-        def named(names):
-            if name in names or "all" in names and names is wanted:
-                return True
-            if not lanes.is_list(name):
-                return False
-            titled = {x[5:].casefold() for x in names if lanes.is_list(x)}
-            return "lists" in names or self.lane_title(name).casefold() in titled \
-                or name[len(lanes.LIST_PREFIX):].casefold() in titled
-        return named(wanted) and not named(never)
+        """notify.lanes names this lane and notify.except doesn't (see lanes.chosen)."""
+        return self.lane_chosen(name, wanted, never)
+
+    def lane_chosen(self, name, wanted, never=()):
+        """lanes.chosen with this lane's title: "list:Друзья" finds the list by name."""
+        return lanes.chosen(name, wanted, never,
+                            self.lane_title(name) if lanes.is_list(name) else None)
 
     def _ctx(self):
         return lanes.LaneContext(self.me["id"] if self.me else "",

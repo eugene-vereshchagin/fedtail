@@ -162,6 +162,22 @@ def is_list(name):
     return name.startswith(LIST_PREFIX)
 
 
+def chosen(name, wanted, never=(), title=None):
+    """A lane picked by an option pair such as notify.lanes / notify.except or
+    ui.icon_count / ui.icon_count_except: `wanted` names it ("all" names every lane)
+    and `never` doesn't. Either may name all the lists at once — "lists" — or one by
+    its title or id: "list:Друзья". title: this lane's title (a list's), if any."""
+    def named(names, everything):
+        if name in names or everything and "all" in names:
+            return True
+        if not is_list(name):
+            return False
+        picked = {x[len(LIST_PREFIX):].casefold() for x in names if is_list(x)}
+        return "lists" in names or (title or "").casefold() in picked \
+            or name[len(LIST_PREFIX):].casefold() in picked
+    return named(wanted, True) and not named(never, False)
+
+
 def tag_lane(spec):
     """Several hashtags as one lane: browsed while open, like Federated (no counts)."""
     name = taggroups.lane_name(spec)

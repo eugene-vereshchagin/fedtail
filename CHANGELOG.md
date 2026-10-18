@@ -2,6 +2,11 @@
 
 ## 0.15.0 — in progress
 
+- The unread number on the icon (`ui.icon_count`) picks lanes the way notifications do:
+  `"lists"` (all lists — it was accepted and counted nothing), `"list:Друзья"`, `"all"`,
+  and the new `ui.icon_count_except` takes lanes away. The config's comments for both
+  name every lane in the sidebar.
+
 - Security: a post's link could wrap anything in `fedtail:resolve/…` — a local file (the
   token's `auth.json` too), a network share, `javascript:` — and a click on its text opened it
   when the server found nothing. Now that wrapper holds web addresses only, and nothing from
