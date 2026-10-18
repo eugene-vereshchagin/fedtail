@@ -1338,6 +1338,31 @@ class QtSmokeTest(unittest.TestCase):
             fut.result()
         self.assertEqual(sorted(f.name for f in folder.iterdir()), [path.name])
 
+    def test_activity_rows_say_when_and_approve(self):
+        """A row in Likes & boosts says when; one waiting for my approval has the two
+        buttons, and ✔ answers the server's request."""
+        from PySide6.QtWidgets import QLabel, QPushButton
+
+        from fedtail.i18n import _
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        mine = self.world.add(status("190", ME, minute=1, vis="public"), home=True)
+        reply = dict(status("191", BOB, minute=2, vis="public"), in_reply_to_id="190")
+        self.world.act("q1", "favourite", NEWS, mine, minute=1)
+        self.world.act("q2", "pending.reply", BOB, reply, minute=2)
+        self.world.interactions = [{"id": "rq", "type": "reply", "account": BOB,
+                                    "status": mine, "reply": reply}]
+        self.core.poll_once()
+        self.win.select_lane("activity")
+        self.pump(0.2)
+        w = self.win.lane_widgets["activity"]
+        when = self.theme.date("2099-10-14T11:01:00.000Z")
+        self.assertTrue(any(when in lab.text() for lab in w.findChildren(QLabel)))
+        ok = [b for b in w.findChildren(QPushButton) if b.text() == _("ok_interaction")]
+        self.assertEqual(len(ok), 1)
+        ok[0].click()
+        self.pump(until=lambda: self.world.answered == [("rq", True)])
+
     def test_new_pill_agrees_with_the_store(self):
         self.win.start()
         self.pump(until=lambda: self.core.me is not None and "people" in self.win.lane_widgets)
