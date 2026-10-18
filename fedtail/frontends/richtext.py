@@ -57,7 +57,7 @@ def _fit_text(h):
 # a link to fedtail's own actions (fedtail:delete/…) or to a local file; links that
 # only go somewhere inside (a profile, a tag, a thread) stay.
 ALLOWED_TAGS = {"p", "br", "a", "span", "b", "strong", "i", "em", "u", "s", "del",
-                "code", "pre", "blockquote", "ul", "ol", "li"}
+                "code", "pre", "blockquote", "ul", "ol", "li", "small"}
 VOID_TAGS = {"br"}
 DROP_WITH_CONTENT = {"script", "style", "iframe", "object", "embed", "template", "noscript",
                      "svg", "math", "head", "title", "textarea", "select"}

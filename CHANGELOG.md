@@ -2,6 +2,14 @@
 
 ## 0.14.0 — in progress
 
+- A post as a chain: a line of just `---` splits it into posts sent at once, each answering
+  the one before (pictures and the poll with the first); the counter counts each part
+  (`post.chain`).
+- "👁 Preview" in the compose panel: the Markdown made into text (when the server takes
+  it), the CW, who sees it, each part of a chain; Send or back to Edit from there
+  (`post.preview`).
+- A paragraph of nothing but hashtags (more than three) folds into the first three and
+  "… +N", small, in a lane; whole but small in a thread (`feed.collapse_tags`).
 - The server's own notices in Likes & boosts (Mastodon 4.3+): follows cut because a server
   was blocked — which, why, how many — and warnings from the moderators
   (`activity.server_notices`).

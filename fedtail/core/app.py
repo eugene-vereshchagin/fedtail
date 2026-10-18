@@ -1890,6 +1890,13 @@ class Core(SocialMixin):
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
         lang = self.cfg["post"]["language"] if language is None else language
+        from .model import chain_parts
+        parts = chain_parts(text) if self.cfg["post"].get("chain", True) and \
+            not scheduled_at else [text]
+        if len(parts) > 1:
+            text, rest = parts[0], parts[1:]
+        else:
+            rest = []
 
         def job():
             ids = [self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None)["id"]
@@ -1917,17 +1924,30 @@ class Core(SocialMixin):
             st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
                                       **extra)
             log.debug("posted %s", st.get("id"))
+            chain, prev = [st], st
+            for i, part in enumerate(rest):  # the rest of a chain: each answering the last
+                try:
+                    prev = self.api.post_status(part, visibility, prev["id"], spoiler, [],
+                                                self.markdown,
+                                                **({"language": lang} if lang else {}))
+                    chain.append(prev)
+                except ApiError as e:
+                    log.warning("chain: part %d of %d failed: %s", i + 2, len(rest) + 1, e)
+                    self.emit("error", f"{len(chain)} / {len(rest) + 1}: {e}")
+                    break
+            if rest:
+                log.info("chain: %d posts", len(chain))
             # the post is out; nothing below may turn that into a reported failure
             try:
                 if draft_key:
                     self.store.delete_draft(draft_key)
-                self.store.put_statuses([st])
-                self.mark_read([st["id"]] + ([reply_to] if reply_to else []))
+                self.store.put_statuses(chain)
+                self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
                 self._auto_subscribe([st])
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()
-            return st
+            return dict(st, chain=len(chain)) if rest else st
         return self.submit(job)
 
     def edit(self, status, text, spoiler="", draft_key=None):

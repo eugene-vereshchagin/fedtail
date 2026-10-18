@@ -303,6 +303,12 @@ class Compose(QDialog):
         self.later_btn.clicked.connect(self.ask_schedule)
         self.later_btn.setVisible(not self.edit and self.core.cfg["post"].get("schedule", True))
         row.addWidget(self.later_btn)
+        if self.core.cfg["post"].get("preview", True):
+            pv = QPushButton("👁 " + _("preview"))
+            pv.setObjectName("tool")
+            pv.setToolTip(_("preview_tip"))
+            pv.clicked.connect(self.preview)
+            row.addWidget(pv)
         self.send_btn = QPushButton(_("send"))
         self.send_btn.setObjectName("primary")
         self.send_btn.setDefault(True)
@@ -744,11 +750,65 @@ class Compose(QDialog):
         dlg.open()
         return dlg
 
+    # ---- preview ----------------------------------------------------------------------
+    def preview(self):
+        """How it will look: Markdown made into text the way a Markdown server does (when
+        this one is), the CW, who sees it, each post of a chain, the pictures; Send or
+        back to editing from here."""
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser
+
+        from ...core.model import chain_parts
+        text = self.text.toPlainText().strip()
+        parts = chain_parts(text) if self.core.cfg["post"].get("chain", True) else [text]
+        parts = parts or [text]
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_("preview"))
+        dlg.resize(min(720, self.win.width() - 80), min(600, self.win.height() - 80))
+        lay = QVBoxLayout(dlg)
+        head = " · ".join(x for x in (
+            self.vis.currentText(), self.lang.currentText() if self._language() else "",
+            _("chain_count", n=len(parts)) if len(parts) > 1 else "",
+            _("preview_media", n=self.media.count()) if self.media.count() else "",
+            _("preview_md") if self.core.markdown else _("preview_plain")) if x)
+        info = QLabel(head)
+        info.setObjectName("meta")
+        info.setWordWrap(True)
+        lay.addWidget(info)
+        for i, part in enumerate(parts):
+            if self.cw.text().strip():
+                cw = QLabel("⚠ " + esc(self.cw.text().strip()))
+                cw.setWordWrap(True)
+                lay.addWidget(cw)
+            view = QTextBrowser()
+            view.setOpenExternalLinks(False)
+            if self.core.markdown:
+                view.setMarkdown(part)
+            else:
+                view.setPlainText(part)
+            lay.addWidget(view, 1)
+            if i < len(parts) - 1:
+                lay.addWidget(QLabel("↳"))
+        box = QDialogButtonBox()
+        send = box.addButton(_("send"), QDialogButtonBox.ButtonRole.AcceptRole)
+        box.addButton(_("preview_back"), QDialogButtonBox.ButtonRole.RejectRole)
+        box.rejected.connect(dlg.reject)
+        send.clicked.connect(lambda: (dlg.accept(), self.send()))
+        lay.addWidget(box)
+        dlg.open()
+        return dlg
+
     # ---- sending --------------------------------------------------------------------
     def _count(self):
-        n = len(self.text.toPlainText()) + len(self.cw.text())
+        from ...core.model import chain_parts
         lim = self.core.caps.max_characters
-        self.counter.setText(f"{n} / {lim}")
+        parts = chain_parts(self.text.toPlainText()) \
+            if self.core.cfg["post"].get("chain", True) else []
+        if len(parts) > 1:  # a chain: each part counts on its own
+            n = max(len(x) for x in parts) + len(self.cw.text())
+            self.counter.setText(_("chain_count", n=len(parts)) + f" · {n} / {lim}")
+        else:
+            n = len(self.text.toPlainText()) + len(self.cw.text())
+            self.counter.setText(f"{n} / {lim}")
         over = "true" if n > lim else "false"
         if self.counter.property("over") != over:
             self.counter.setProperty("over", over)

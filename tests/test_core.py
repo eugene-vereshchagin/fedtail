@@ -929,6 +929,29 @@ class CoreTest(TmpDir):
         got = [x for x in core.store.activity_recent(10) if x["id"] == "s1"]
         self.assertEqual(got[0]["account"]["_notice"]["target_name"], "bad.example")
 
+    def test_chain_and_tag_stuffing(self):
+        from fedtail.core.model import chain_parts, collapse_tag_stuffing
+        self.assertEqual(chain_parts("раз\n---\nдва\n  ---  \nтри"), ["раз", "два", "три"])
+        self.assertEqual(chain_parts("a --- b"), ["a --- b"])  # only a line of its own
+        core, w = self.make()
+        core.connect().result()
+        st = core.post("первый\n---\nвторой\n---\nтретий", "unlisted").result()
+        self.assertEqual(st["chain"], 3)
+        posted = sorted((x for x in w.statuses.values() if x["account"]["id"] == ME["id"]),
+                        key=lambda x: x["id"])[-3:]
+        self.assertEqual([x.get("in_reply_to_id") for x in posted],
+                         [None, posted[0]["id"], posted[1]["id"]])
+        self.assertEqual({x["visibility"] for x in posted}, {"unlisted"})
+        core.cfg["post"]["chain"] = False
+        self.assertNotIn("chain", core.post("a\n---\nb", "private").result())
+        tag = lambda t: f'<a href="/tags/{t}">#<span>{t}</span></a>'
+        html = "<p>текст #внутри</p><p>" + " ".join(tag(t) for t in "abcde") + "</p>"
+        out = collapse_tag_stuffing(html)
+        self.assertIn("… +2", out)
+        self.assertIn("<p>текст #внутри</p>", out)  # tags in the text: untouched
+        self.assertNotIn("…", collapse_tag_stuffing("<p>" + tag("a") + " " + tag("b") + "</p>"))
+        self.assertNotIn("…", collapse_tag_stuffing(html, full=True))  # in a thread: all
+
     def test_the_same_error_once(self):
         core, _w = self.make()
         shown = []

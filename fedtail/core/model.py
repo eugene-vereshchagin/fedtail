@@ -145,3 +145,33 @@ def note_with_followed(text, day):
     if not day:
         return text
     return (text + "\n\n" if text else "") + f"[fedtail followed {day}]"
+
+
+_PARA = re.compile(r"<p>(.*?)</p>", re.S)
+_ANCHOR = re.compile(r"<a\b[^>]*>.*?</a>", re.S)
+
+
+def collapse_tag_stuffing(content, keep=3, full=False):
+    """A paragraph of nothing but hashtags (more than keep): in a lane the first few and
+    "… +N", small (feed.collapse_tags); in a thread (full) all of them, small. Tags
+    inside the text are left alone."""
+    def one(m):
+        inner = m.group(1)
+        words = html_to_text(inner).split()
+        if len(words) <= keep or not all(w.startswith("#") for w in words):
+            return m.group(0)
+        tags = _ANCHOR.findall(inner)
+        if len(tags) != len(words):
+            return m.group(0)  # some written without a link: not touched
+        if full:
+            return f"<p><small>{' '.join(tags)}</small></p>"
+        return f"<p><small>{' '.join(tags[:keep])} … +{len(tags) - keep}</small></p>"
+    return _PARA.sub(one, content or "")
+
+
+_CHAIN = re.compile(r"(?m)^[ \t]*---[ \t]*$")
+
+
+def chain_parts(text):
+    """A post written as a chain: parts split by a line of just "---" (post.chain)."""
+    return [p.strip() for p in _CHAIN.split(text or "") if p.strip()]

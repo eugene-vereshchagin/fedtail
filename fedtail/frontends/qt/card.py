@@ -380,6 +380,9 @@ class PostRow(QWidget):
                 html = tr["content"]
             if quote:
                 html = without_quote_fallback(html)
+            if self.ctx.cfg["feed"].get("collapse_tags", True):
+                from ...core.model import collapse_tag_stuffing
+                html = collapse_tag_stuffing(html, full=bool(self.spec.in_thread))
             if self.ctx.cfg["ui"]["links_in_app"]:
                 html = links.in_app(html, st)  # @mentions, #tags, fediverse links stay inside
             text = self._emoji_label(clean(html, self.theme.css("link")), st.get("emojis"),
