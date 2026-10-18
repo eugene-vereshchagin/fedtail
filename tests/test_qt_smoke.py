@@ -1645,11 +1645,19 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(view.order[-1], view.model[-1].key)  # read to the end
         self.assertLessEqual(most, 3 * 10 + 10)  # never all 80 built
         self.assertLess(len(view.rows), len(view.model))
-        # the post on top stays where it is when the ones behind go
+        # the post on top stays where it is when the ones behind go: build more behind
+        # it (as scrolling up does), let it settle, then let them go again
+        sb.setValue(max(0, sb.value() - 2 * view.viewport().height()))
+        view._touched()
+        self.pump(1.8)  # grown above, laid out, the scroll target let go
+        view.build_at_once = 4  # a smaller window: the next trim has something to drop
         top, y = view._anchor()
+        before = len(view.rows)
         view._trim()
-        self.pump(0.2)
-        self.assertEqual(view._top(view.rows[top]) - sb.value(), y)
+        self.pump(0.5)
+        self.assertLess(len(view.rows), before)
+        self.assertIn(top, view.rows)
+        self.assertLessEqual(abs(view._top(view.rows[top]) - sb.value() - y), 2)
 
     def test_posts_scrolled_past_count_as_read(self):
         """read.mark_read = on_scroll: a post that was on screen and that the reader went
