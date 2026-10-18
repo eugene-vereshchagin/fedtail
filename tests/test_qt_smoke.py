@@ -823,11 +823,24 @@ class QtSmokeTest(unittest.TestCase):
         class Resp:
             content = data
             headers = {"Content-Type": "image/jpeg"}
+            is_redirect = False
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_a):
+                return False
 
             def raise_for_status(self):
                 pass
 
-        def fake_http(url, timeout):
+            def iter_content(self, _size):
+                yield data
+
+            def close(self):
+                pass
+
+        def fake_http(url, timeout, **_kw):
             if "slow" in url:
                 release.wait(10)
             return Resp()
@@ -1404,9 +1417,14 @@ class QtSmokeTest(unittest.TestCase):
         folder = Path(self._tmp.name) / "dl"
 
         class Resp:
+            is_redirect = False
+
             def __init__(self, chunks, fail=False):
                 self.chunks, self.fail = chunks, fail
                 self.headers = {"Content-Type": "video/mp4"}
+
+            def close(self):
+                pass
 
             def __enter__(self):
                 return self

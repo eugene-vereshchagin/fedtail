@@ -1556,7 +1556,7 @@ class AccountWidget(_PagedTab):
         self._from_origin()
         if not hasattr(self, "software"):  # what their server runs (feed.server_info)
             from urllib.parse import urlparse
-            host = urlparse(acc.get("url") or acc.get("uri") or "").netloc
+            host = urlparse(acc.get("url") or acc.get("uri") or "").hostname or ""
             self.software = ""
             if host:
                 self.win.bridge.call(self.core.server_software(host), ok=self._software,

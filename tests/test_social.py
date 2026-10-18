@@ -192,7 +192,8 @@ class SocialTest(TmpDir):
             def json(self):
                 return self._d
 
-        def get(url, headers=None, params=None, timeout=None):
+        def get(url, headers=None, params=None, timeout=None, allow_redirects=True):
+            self.assertFalse(allow_redirects)  # a token never follows a redirect
             sent.append((url.split("/")[2], headers["Authorization"]))
             if url.startswith("https://social.example/"):
                 return R(dict(st, favourites_count=7))

@@ -17,11 +17,19 @@ from PySide6.QtGui import QImage, QImageReader, QPixmap
 from requests.adapters import HTTPAdapter
 
 from ... import diag
+from ...core import remote
 from ...core.api import USER_AGENT
 
 log = logging.getLogger(__name__)
 FEED_SIDE = 1200
 MEM_MB = 128  # default memory budget for decoded pictures (ui.image_cache_mb)
+# the most one answer may bring: a picture's address comes from someone else's post, and
+# an answer that never ends must not fill the memory or the disk
+PICTURE_MAX = 20 * 1024 * 1024    # a preview, an avatar, a picture in the feed
+ORIGINAL_MAX = 100 * 1024 * 1024  # a full-size original
+VIDEO_MAX = 300 * 1024 * 1024     # one video or sound on disk
+SAVE_MAX = 2 * 1024 * 1024 * 1024  # "save": asked for, and written piece by piece
+MEDIA_SCHEMES = ("https", "http")
 
 
 def decode(data, max_side):
@@ -45,6 +53,13 @@ def decode(data, max_side):
 def _short(url):
     """The end of a picture's address: enough to find it, short enough to read."""
     return url if len(url) <= 60 else "…" + url[-57:]
+
+
+def _where(url):
+    """A picture in the normal log (and so in bug reports): its server and the name of
+    its cache file — not the address, which may carry a signature."""
+    from urllib.parse import urlsplit
+    return f"{urlsplit(url).hostname or '?'}/{hashlib.sha1(url.encode()).hexdigest()[:8]}"
 
 
 class Images:
@@ -205,30 +220,38 @@ class Images:
                     slow = 60
                 else:
                     slow = 12
-                r = self.http.get(url, timeout=(6, slow))
-                r.raise_for_status()
+                with self._open(url, (6, slow)) as r:
+                    r.raise_for_status()
+                    kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+                    data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
             except requests.RequestException as e:
-                log.warning("image %s: %s after %.1f s", url, e.__class__.__name__,
-                            time.monotonic() - t)
+                log.warning("image %s: %s after %.1f s", _where(url),
+                            f"refused ({e})" if isinstance(e, remote.Refused)
+                            else e.__class__.__name__, time.monotonic() - t)
                 self.why[url] = ("network", e.__class__.__name__)
                 raise
-            self._t.got = (len(r.content), time.monotonic() - t)
-            img = decode(r.content, max_side)
+            self._t.got = (len(data), time.monotonic() - t)
+            img = decode(data, max_side)
             if img.isNull():
-                log.debug("image %s %d B: not an image", url, len(r.content))
+                log.debug("image %s %d B: not an image", url, len(data))
             if img.isNull():  # downloaded fine, but Qt can't read it (webp, avif, heic…)
-                kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
                 self.why[url] = ("format", kind or "?")
                 log.warning("image %s: %s, %d B — Qt can't show this format "
-                            "(qt6-image-formats-plugins?)", url, kind or "unknown type",
-                            len(r.content))
+                            "(qt6-image-formats-plugins?)", _where(url), kind or "unknown type",
+                            len(data))
             if not img.isNull():  # never keep an error page or half a file
-                p.write_bytes(r.content)
+                p.write_bytes(data)
                 self._count_write()
         if not img.isNull() and max(img.width(), img.height()) > max_side:
             img = img.scaled(max_side, max_side, Qt.AspectRatioMode.KeepAspectRatio,
                              Qt.TransformationMode.SmoothTransformation)
         return img
+
+    def _open(self, url, timeout):
+        """A streamed answer for a picture or video (see core.remote): no token, public
+        addresses only (my own server excepted), redirects checked one by one."""
+        return remote.open_url(self.http, url, timeout=timeout, schemes=MEDIA_SCHEMES,
+                               own_hosts=self.core._own_hosts())
 
     # ---- the disk cache: fetched ahead, kept within a size ----------------------------
     def prefetch(self, urls):
@@ -248,17 +271,20 @@ class Images:
             return
         t = time.monotonic()
         try:
-            r = self.http.get(url, timeout=(6, 30))
-            r.raise_for_status()
+            with self._open(url, (6, 30)) as r:
+                r.raise_for_status()
+                kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+                if not kind.startswith("image/"):
+                    return  # an error page, a video: not for the picture cache
+                data = remote.read(r, PICTURE_MAX)
         except requests.RequestException as e:
             log.debug("prefetch %s: %s", url, e.__class__.__name__)
             return
-        kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
-        if not kind.startswith("image/") or not r.content:
-            return  # an error page, a video: not for the picture cache
-        p.write_bytes(r.content)
+        if not data:
+            return
+        p.write_bytes(data)
         self._count_write()
-        log.debug("prefetch %s: %d B in %.1f s", url, len(r.content), time.monotonic() - t)
+        log.debug("prefetch %s: %d B in %.1f s", url, len(data), time.monotonic() - t)
 
     # ---- videos on disk: fetched ahead ("all"), and every one played ------------------
     def _video_path(self, url):
@@ -294,12 +320,17 @@ class Images:
         t = time.monotonic()
         size = 0
         try:
-            with self.http.get(url, timeout=(6, 60), stream=True) as r:
+            with self._open(url, (6, 60)) as r:
                 r.raise_for_status()
+                said = r.headers.get("Content-Length") or ""
+                if said.isdigit() and int(said) > VIDEO_MAX:
+                    raise remote.Refused(f"video over {VIDEO_MAX >> 20} MB")
                 with open(part, "wb") as f:
                     for chunk in r.iter_content(1 << 16):
                         f.write(chunk)
                         size += len(chunk)
+                        if size > VIDEO_MAX:
+                            raise remote.Refused(f"video over {VIDEO_MAX >> 20} MB")
             part.replace(p)  # whole or not at all: the player never gets half a file
         except (requests.RequestException, OSError) as e:
             part.unlink(missing_ok=True)
@@ -390,7 +421,7 @@ class Images:
                 size = len(data)
             else:
                 # straight to the file a piece at a time: a video can be big
-                with self.http.get(url, timeout=120, stream=True) as r:
+                with self._open(url, 120) as r:
                     r.raise_for_status()
                     path = saving.free_path(folder, saving.file_name(
                         url, r.headers.get("Content-Type", "")))
@@ -400,6 +431,8 @@ class Images:
                             for chunk in r.iter_content(1 << 16):
                                 f.write(chunk)
                                 size += len(chunk)
+                                if size > SAVE_MAX:
+                                    raise remote.Refused("over the size a file may have")
                     except BaseException:
                         path.unlink(missing_ok=True)  # no half files left behind
                         raise
@@ -446,7 +479,7 @@ class Images:
             if since < self.STUCK_AFTER:
                 return
             # no answer for minutes (a lost result?): ask again rather than wait forever
-            log.warning("image %s: no answer for %.0f s, asking again", url, since)
+            log.warning("image %s: no answer for %.0f s, asking again", _where(url), since)
         else:
             self.waiting[key] = [(callback, failed)]
         self._ask(key)

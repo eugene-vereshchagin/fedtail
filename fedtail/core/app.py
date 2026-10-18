@@ -1381,15 +1381,21 @@ class Core(SocialMixin):
             self.store.put_statuses(got)
             self.emit("thread_grew", root["id"])
 
-    def _origin_json(self, url):
-        """An ActivityPub object from someone else's server: no token, short timeout."""
-        import requests
+    def _own_hosts(self):
+        """My servers' hostnames: exempt from remote's public-address rule (a server
+        at home on a private address still shows its own pictures)."""
+        from urllib.parse import urlparse
+        server = (self.auth or {}).get("server") or ""
+        return {(urlparse(server).hostname or "").lower()} - {""}
 
+    def _origin_json(self, url):
+        """An ActivityPub object from someone else's server: no token, short timeout,
+        public https addresses only, the size capped (see remote)."""
+        from . import remote
         from .api import USER_AGENT
         from .replies import AP_ACCEPT
-        r = requests.get(url, timeout=8, headers={"User-Agent": USER_AGENT,
-                                                  "Accept": AP_ACCEPT})
-        return r.json() if r.status_code == 200 else None
+        return remote.get_json(url, headers={"User-Agent": USER_AGENT, "Accept": AP_ACCEPT},
+                               own_hosts=self._own_hosts())
 
     def long_form(self, st):
         """The whole post from the author's server (feed.long_form): an article, a page,
@@ -1420,6 +1426,11 @@ class Core(SocialMixin):
                 links = self._origin_get(f"https://{host}/.well-known/nodeinfo") or {}
                 href = next((x.get("href") for x in reversed(links.get("links") or [])
                              if "nodeinfo" in (x.get("rel") or "")), None)
+                # the document itself on that same server: never an address it names
+                from urllib.parse import urlparse
+                if not isinstance(href, str) or \
+                        (urlparse(href).hostname or "").lower() != host.lower():
+                    href = None
                 info = self._origin_get(href) if href else None
                 sw = (info or {}).get("software") or {}
                 if sw.get("name"):
@@ -1465,12 +1476,11 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def _origin_get(self, url):
-        """GET from someone else's server: no token, short timeout."""
-        import requests
-
+        """GET from someone else's server: no token, short timeout (see remote)."""
+        from . import remote
         from .api import USER_AGENT
-        r = requests.get(url, timeout=8, headers={"User-Agent": USER_AGENT})
-        return r.json() if r.status_code == 200 else None
+        return remote.get_json(url, headers={"User-Agent": USER_AGENT},
+                               own_hosts=self._own_hosts())
 
     def _honest_counts(self, statuses):
         now = time.monotonic()
@@ -1535,12 +1545,14 @@ class Core(SocialMixin):
             head = {"User-Agent": USER_AGENT, "Authorization": f"Bearer {token}"}
             try:
                 if urlparse(server).hostname == host:  # my account on the post's server
-                    r = requests.get(origin_url, headers=head, timeout=8)
+                    r = requests.get(origin_url, headers=head, timeout=8,
+                                     allow_redirects=False)  # the token goes nowhere else
                     got = r.json() if r.status_code == 200 else None
                 else:  # another server: only if it has the post already (no fetching)
                     r = requests.get(server + "/api/v2/search", headers=head, timeout=8,
                                      params={"q": st.get("uri"), "type": "statuses",
-                                             "resolve": "false", "limit": 1})
+                                             "resolve": "false", "limit": 1},
+                                     allow_redirects=False)
                     found = (r.json() or {}).get("statuses") if r.status_code == 200 else []
                     got = found[0] if found else None
             except (requests.RequestException, ValueError) as e:
