@@ -169,27 +169,38 @@ class SocialMixin:
 
         def job():
             reqs = self._api("interactions", self.api.interaction_requests)
-            match = None
-            for r in reqs:
-                if r.get("type") != kind or (r.get("account") or {}).get("id") != who:
-                    continue
-                theirs = (r.get("reply") or {}).get("id") if kind == "reply" else None
-                mine = (r.get("status") or {}).get("id")
-                if st.get("id") in (theirs, mine) or match is None:
-                    match = r
+            # only the ones still waiting, and only the very one: same person, same post
+            # (their reply, or my post they liked or boosted) — never "something similar"
+            waiting = [r for r in reqs if not r.get("accepted_at") and not r.get("rejected_at")]
+            match = next((r for r in waiting
+                          if (r.get("account") or {}).get("id") == who
+                          and st.get("id") in ((r.get("reply") or {}).get("id"),
+                                               (r.get("status") or {}).get("id"))), None)
+            found = False
             if match is None:
-                log.info("interaction %s: no request waiting any more", entry["id"])
+                log.info("interaction %s (%s by %s on %s): no request waiting; the server "
+                         "lists %d, waiting %s", entry["id"], kind, who, st.get("id"),
+                         len(reqs), [(r.get("type"), (r.get("account") or {}).get("id"),
+                                      (r.get("status") or {}).get("id"),
+                                      (r.get("reply") or {}).get("id")) for r in waiting][:10])
             else:
-                self.api.answer_interaction(match["id"], approve)
-                log.info("interaction %s %s: %s", match["id"], kind,
-                         "approved" if approve else "rejected")
-            try:
-                self.api.dismiss_notification(entry["id"])
-            except ApiError as e:
-                log.debug("dismiss %s: %s", entry["id"], e)
+                try:
+                    self.api.answer_interaction(match["id"], approve)
+                    found = True
+                    log.info("interaction %s %s: %s", match["id"], kind,
+                             "approved" if approve else "rejected")
+                except ApiError as e:
+                    if e.status != 404:
+                        raise
+                    log.info("interaction %s: answered elsewhere already", match["id"])
+            if self.supports("dismiss"):
+                try:
+                    self._api("dismiss", self.api.dismiss_notification, entry["id"])
+                except ApiError as e:  # gone with the answer, or no such call here
+                    log.debug("dismiss %s: %s", entry["id"], e)
             self.store.activity_delete([entry["id"]])
             self.emit("activity_updated", None)
-            return bool(match)
+            return found
         return self.submit(job)
 
     def clear_activity(self):

@@ -2,6 +2,13 @@
 
 ## 0.13.0 — in progress
 
+- Approving: only the very request is answered — the same person, the same post, still
+  waiting. It used to fall back to "something similar" and once approved a like for a
+  reply. A request already answered elsewhere says so instead of an error; a miss logs what
+  the server listed.
+- Memory freed by fedtail goes back to the system every few minutes (glibc keeps it
+  otherwise: a client open all night stayed at 1.3 GB holding almost nothing);
+  `debug.trim_memory`. The stats show how much came back and open files by kind.
 - Replies, likes and boosts waiting for my approval (GoToSocial interaction policies) come
   to Likes & boosts — "reply waiting for your approval" — with ✔ approve and ✘ reject
   right on the row; the server's request is answered and the notification goes. They came

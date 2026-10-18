@@ -145,6 +145,7 @@ DEFAULTS = {
         "log_mb": 10,
         "keep_mb": 500,
         "stats_minutes": 5,
+        "trim_memory": True,
         "watchdog_seconds": 8,
         "stall_ms": 250,
         "slow_request_seconds": 5,

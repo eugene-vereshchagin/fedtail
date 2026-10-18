@@ -266,6 +266,23 @@ class SocialTest(TmpDir):
             core.answer_interaction(entry, True).result()
         self.assertFalse(core.supports("interactions"))
 
+    def test_approve_only_the_very_request(self):
+        """The same person's like on another post, or the request already accepted, is
+        never answered in its place (it once approved a like for a reply)."""
+        core, w = self.make()
+        mine = w.add(status("183", ME, minute=1, vis="public"), home=True)
+        other = w.add(status("184", ME, minute=2, vis="public"), home=True)
+        reply = dict(status("185", BOB, minute=3, vis="public"), in_reply_to_id="183")
+        w.act("p6", "pending.reply", BOB, reply, minute=3)
+        w.interactions = [
+            {"id": "x1", "type": "favourite", "account": BOB, "status": other},
+            {"id": "x2", "type": "reply", "account": BOB, "status": mine, "reply": reply,
+             "accepted_at": "2099-10-14T11:04:00.000Z"}]
+        core.poll_once()
+        entry = core.store.activity_recent(10)[0]
+        self.assertFalse(core.answer_interaction(entry, True).result())
+        self.assertEqual(w.answered, [])
+
     def test_no_preferences_no_trouble(self):
         core, _w = self.make(missing={"preferences"})
         self.assertEqual(core.server_prefs, {})

@@ -1,5 +1,6 @@
 import faulthandler
 import logging
+import os
 import sys
 import tarfile
 import tempfile
@@ -204,6 +205,15 @@ class DiagTest(unittest.TestCase):
         h.emit(rec)
         self.assertNotEqual(h.path, before)
         h.close()
+
+    def test_memory_back_and_files_by_kind(self):
+        freed = diag.trim_memory()
+        self.assertTrue(freed is None or isinstance(freed, float))  # not glibc: None
+        if os.path.isdir("/proc/self/fd"):
+            with open(__file__, encoding="utf-8"):
+                kinds = diag._fd_kinds()
+            self.assertGreaterEqual(kinds.get("file", 0), 1)
+            self.assertIn("fds_by_kind", diag.stats())
 
     def test_timed(self):
         with self.assertLogs("fedtail.diag", level="WARNING") as got:

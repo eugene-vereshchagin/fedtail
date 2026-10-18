@@ -359,6 +359,37 @@ def _windows_memory():
     return {"VmRSS": c.WorkingSetSize // 1024, "VmHWM": c.PeakWorkingSetSize // 1024}
 
 
+def _fd_kinds():
+    """Open files by kind (socket, pipe, anon_inode, file…): sockets piling up is a
+    connection not closed, files piling up a file not closed."""
+    kinds = {}
+    for fd in os.listdir("/proc/self/fd"):
+        try:
+            target = os.readlink(f"/proc/self/fd/{fd}")
+        except OSError:
+            continue
+        kind = target.split(":", 1)[0] if ":" in target and not target.startswith("/") \
+            else ("dev" if target.startswith("/dev/") else "file")
+        kinds[kind] = kinds.get(kind, 0) + 1
+    return kinds
+
+
+def trim_memory():
+    """Memory Python and Qt freed back to the system (glibc keeps it otherwise: after a
+    night of lanes built and let go, the process stays at its peak). Returns the MB the
+    resident size went down by, or None where there's no such call (not glibc)."""
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+    except (OSError, AttributeError):
+        return None
+    before = _proc_status().get("VmRSS") or 0
+    gc.collect()
+    libc.malloc_trim(0)
+    after = _proc_status().get("VmRSS") or 0
+    return round((before - after) / 1024, 1)
+
+
 def _proc_status():
     out = {}
     if os.name == "nt":
@@ -395,6 +426,7 @@ def stats():
     }
     try:
         out["fds"] = len(os.listdir("/proc/self/fd"))
+        out["fds_by_kind"] = _fd_kinds()
     except OSError:
         pass
     for name, fn in list(_state["providers"].items()):
@@ -420,7 +452,20 @@ def log_stats(rss_warn_mb=1500):
 def start_stats(cfg):
     d = cfg.get("debug", {})
     minutes = float(d.get("stats_minutes", 5))
-    if minutes <= 0 or _state["stats_thread"] or not _state.get("on", True):
+    if _state["stats_thread"]:
+        return
+    if minutes <= 0 or not _state.get("on", True):
+        if d.get("trim_memory", True):  # no stats, but the memory still goes back
+            def trim_loop():
+                while True:
+                    time.sleep(600)
+                    try:
+                        trim_memory()
+                    except Exception:  # noqa: BLE001 — a nicety, never a crash
+                        log.debug("trim failed", exc_info=True)
+            t = threading.Thread(target=trim_loop, name="fedtail-trim", daemon=True)
+            _state["stats_thread"] = t
+            t.start()
         return
 
     def loop():
@@ -428,6 +473,10 @@ def start_stats(cfg):
         while True:
             time.sleep(minutes * 60)
             try:
+                if d.get("trim_memory", True):
+                    freed = trim_memory()
+                    if freed:
+                        log.info("memory: %.1f MB given back to the system", freed)
                 log_stats(int(d.get("rss_warn_mb", 1500)))
             except Exception:
                 log.exception("stats failed")
