@@ -144,12 +144,39 @@ def esc(s):
     return html.escape(s or "", quote=True)
 
 
-def clean(content, link_color=None):
+_STRIKE = re.compile(r"(?<![~\w])~~(?=\S)([^~]+?)(?<=\S)~~(?![~\w])")
+_RAW = {"a", "code", "pre"}
+
+
+def strike_tildes(h):
+    """~~text~~ typed in a client with no Markdown, on a server with none (Mastodon):
+    struck out, as the writer meant. Not inside links or code; not across tags."""
+    if "~~" not in h:
+        return h
+    out, raw = [], 0
+    for part in _TAG.split(h):
+        if part.startswith("<"):
+            name = part[1:].lstrip("/").split(None, 1)[0].rstrip(">/").lower() if \
+                len(part) > 2 else ""
+            if name in _RAW and not part.endswith("/>"):
+                raw = max(0, raw + (-1 if part.startswith("</") else 1))
+            out.append(part)
+        elif raw or "~~" not in part:
+            out.append(part)
+        else:
+            out.append(_STRIKE.sub(r"<s>\1</s>", part))
+    return "".join(out)
+
+
+def clean(content, link_color=None, markup=False):
+    """markup: ~~text~~ struck out too (feed.text_markup)."""
     h = _SCRIPTY.sub("", content or "")
     h = _INVISIBLE.sub("", h)
     h = _ELLIPSIS.sub(r"\1…", h)
     h = _IMG.sub(lambda m: esc(m.group(1) or ""), h)  # custom emoji → :shortcode:
     h = sanitize(h)
+    if markup:
+        h = strike_tildes(h)
     h = _fit_text(h)
     style = "text-decoration:none;" + (f"color:{link_color};" if link_color else "")
     return h.replace("<a ", f'<a style="{style}" ')

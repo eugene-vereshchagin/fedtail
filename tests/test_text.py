@@ -54,6 +54,20 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class StrikeTildesTest(unittest.TestCase):
+    def test_struck_where_meant(self):
+        from fedtail.frontends.richtext import clean, strike_tildes
+        h = "<p>свой ~~плагин~~ тропу</p>"
+        self.assertEqual(strike_tildes(h), "<p>свой <s>плагин</s> тропу</p>")
+        self.assertIn("<s>плагин</s>", clean(h, markup=True))
+        self.assertNotIn("<s>", clean(h))  # off: as it came
+        self.assertEqual(strike_tildes("<p>~~два слова~~!</p>"), "<p><s>два слова</s>!</p>")
+        for keep in ("<p>a~~b~~c</p>", "<p>~~ пробел ~~</p>", "<p>~~~ три ~~~</p>",
+                     '<p><a href="https://x.example/~~a~~">~~a~~</a></p>',
+                     "<pre><code>x = ~~y~~</code></pre>", "<p>~ одна ~</p>"):
+            self.assertEqual(strike_tildes(keep), keep)
+
+
 class SnippetBlocksTest(unittest.TestCase):
     def test_quote_and_paragraph_are_not_glued(self):
         from fedtail.core.model import snippet

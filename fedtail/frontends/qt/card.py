@@ -385,7 +385,8 @@ class PostRow(QWidget):
                 html = collapse_tag_stuffing(html, full=bool(self.spec.in_thread))
             if self.ctx.cfg["ui"]["links_in_app"]:
                 html = links.in_app(html, st)  # @mentions, #tags, fediverse links stay inside
-            text = self._emoji_label(clean(html, self.theme.css("link")), st.get("emojis"),
+            mk = self.ctx.cfg["feed"].get("text_markup", True)
+            text = self._emoji_label(clean(html, self.theme.css("link"), mk), st.get("emojis"),
                                      "postText", selectable=True)
             cv.addWidget(text)
         media = self._media(st)
@@ -1051,7 +1052,8 @@ class PostRow(QWidget):
             html = q.get("content") or ""
             if self.ctx.cfg["ui"]["links_in_app"]:
                 html = links.in_app(html, q)
-            v.addWidget(self._emoji_label(clean(html, self.theme.css("link")),
+            mk = self.ctx.cfg["feed"].get("text_markup", True)
+            v.addWidget(self._emoji_label(clean(html, self.theme.css("link"), mk),
                                           q.get("emojis"), "quoteText", selectable=True))
             n = len(q.get("media_attachments") or [])
             if n:

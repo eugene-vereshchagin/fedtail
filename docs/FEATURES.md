@@ -223,6 +223,7 @@
 | Честные счётчики | есть | `feed.honest_counters` (выключен), `feed.counters_via_accounts` | API сервера автора без токена | только в fedtail |
 | Кто процитировал мой пост | есть | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Сворачивать набивку хэштегами | есть | `feed.collapse_tags` | своё | Phanpy |
+| `~~текст~~` зачёркнутым, когда сервер Markdown не знает | есть | `feed.text_markup` | своё | — |
 | Карусель бустов | не будем | `feed.boost_carousel` (по умолчанию выключена) | своё | Phanpy |
 | Метки на карточке | есть | `feed.old_days`; «бот» — всегда | своё | Sengi |
 

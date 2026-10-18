@@ -2,6 +2,8 @@
 
 ## 0.14.0 — in progress
 
+- `~~text~~` that came as it was typed (a Mastodon server knows no Markdown) is shown
+  struck out, as the writer meant; not in links or code (`feed.text_markup`).
 - All accounts in one window: "From another account" in a post's ⋯ menu — like, boost or
   reply as an account that didn't receive it; the post is looked up on that account's
   server by its address and the action goes from there (`ui.act_as`).
