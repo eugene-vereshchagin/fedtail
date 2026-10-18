@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.16.0 — in progress
+
 ## 0.15.0 — 2026-10-19
 
 - `feed.prefetch` is `"previews"` by default: new posts' previews, avatars and link
