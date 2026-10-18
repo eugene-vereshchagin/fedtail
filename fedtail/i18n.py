@@ -108,6 +108,8 @@ _STRINGS = {
         "list_exclusive": "Исключающий",
         "list_exclusive_tip": "Кто в этом списке, того нет в «Ленте» и «Ботах» — только здесь",
         "list_created": "Список «{title}» создан", "add_to_list": "В список",
+        "add_to_list_author": "Автора в список ({acct})",
+        "add_to_list_booster": "Бустнувшего в список ({acct})",
         "list_added": "Добавил в список", "list_removed": "Убрал из списка",
         "sub_thread": "Подписаться на тред", "unsub_thread": "Отписаться от треда",
         "subscribed": "Подписан", "subbed": "Подписался: новое в треде будет в «Подписках»",
@@ -356,8 +358,8 @@ _STRINGS = {
         "older_from_origin_tip": "Мой сервер знает его посты только с тех пор, как они до "
                                  "него дошли (обычно — с подписки). Более старые — с {host}",
         "older_from_origin_note": "старые посты, могут быть ещё до подписки",
-        "list_pending": "Сервер пока не берёт его в список (подписка ещё не подтверждена) — "
-                        "добавлю сам, как только сможет",
+        "list_pending": "Сервер берёт в списки только тех, на кого ты подписан: как подпишешься "
+                        "(и подписку подтвердят) — добавлю сам",
         "media_filter": "Что показывать",
         "media_filter_tip": "Показывать только посты с картинками, гифками, видео… "
                             "(до перезапуска)",
@@ -632,6 +634,8 @@ _STRINGS = {
         "list_exclusive": "Exclusive",
         "list_exclusive_tip": "Whoever is in this list is not in Home and Bots — only here",
         "list_created": "List “{title}” created", "add_to_list": "Add to list",
+        "add_to_list_author": "Author to a list ({acct})",
+        "add_to_list_booster": "Booster to a list ({acct})",
         "list_added": "Added to the list", "list_removed": "Removed from the list",
         "sub_thread": "Follow thread", "unsub_thread": "Unfollow thread",
         "subscribed": "Following", "subbed": "Following: new comments go to Subscriptions",
@@ -867,8 +871,8 @@ _STRINGS = {
         "older_from_origin_tip": "My server knows their posts only since they reached it "
                                  "(usually since the follow). Older ones come from {host}",
         "older_from_origin_note": "old posts, maybe from before the follow",
-        "list_pending": "The server won't take them into the list yet (the follow isn't "
-                        "confirmed) — I'll add them as soon as it does",
+        "list_pending": "The server takes into lists only people you follow: once you follow "
+                        "them (and it's confirmed), I'll add them myself",
         "media_filter": "Show",
         "media_filter_tip": "Show only posts with pictures, gifs, video… (until restart)",
         "media_filter_info": ["{n} post shown by the filter", "{n} posts shown by the filter"],

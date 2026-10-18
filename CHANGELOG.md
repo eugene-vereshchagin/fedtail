@@ -2,6 +2,14 @@
 
 ## 0.13.0 — in progress
 
+- A boost's ⋯ menu says whom it puts in a list: "Author to a list (@…)" and "Booster to a
+  list (@…)" (a relay bot, say), each its own submenu.
+- A new list made from a post's menu with someone not followed stayed invisible until a
+  restart (and a second try said it already exists): the refused add stopped the job
+  before the lists were read again. The list now shows at once and the person waits to go
+  in — the message says the server takes only people you follow.
+- The short-buttons check measured every button on every resize of every card (a second's
+  freeze when a lane opened); it measures once.
 - Buttons under a post too wide for the card go short — icon (or glyph) and the count —
   instead of a label cut in half ("В избран…"); the full label stays in the tooltip.
 - ≡ → "Posts across the full width": the column of posts takes the whole window (or back

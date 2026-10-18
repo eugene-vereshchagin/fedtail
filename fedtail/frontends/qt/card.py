@@ -679,9 +679,18 @@ class PostRow(QWidget):
             menu.addAction(_("copy_id", id="#" + sid),
                            lambda s=sid: QGuiApplication.clipboard().setText("#" + s))
         author = real(st)["account"]
-        if self.ctx.fill_list_menu is not None and author["id"] != self.ctx.me_id:
-            lists = menu.addMenu(_("add_to_list"))
-            lists.aboutToShow.connect(lambda m=lists, a=author: self.ctx.fill_list_menu(m, a))
+        if self.ctx.fill_list_menu is not None:
+            # a boost has two people: the one who wrote it and the one who boosted it (a
+            # relay bot, say) — each by name, so it's clear who goes into the list
+            who = [(author, "add_to_list_author")]
+            if st.get("reblog") and st["account"]["id"] != author["id"]:
+                who.append((st["account"], "add_to_list_booster"))
+            for acc, key in who:
+                if acc["id"] == self.ctx.me_id:
+                    continue
+                lists = menu.addMenu(_(key, acct="@" + acc.get("acct", "")) if len(who) > 1
+                                     else _("add_to_list"))
+                lists.aboutToShow.connect(lambda m=lists, a=acc: self.ctx.fill_list_menu(m, a))
         approval = (real(st).get("quote_approval") or {}).get("current_user")
         if self.ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
             quote_url = f"fedtail:quote/{real(st)['id']}"
@@ -1190,16 +1199,15 @@ class _ActionsBox(QWidget):
     def resizeEvent(self, e):
         super().resizeEvent(e)
         if self.full is None:
+            # measured once: asking every button its size on every resize of every card
+            # froze the window for a second when a lane opened
             self.full = [(b.text(), b.toolButtonStyle()) for b, _t, _i in self.short]
-        lay = self.layout()
-        need = sum(b.sizeHint().width() for b, _t, _i in self.short) if not self.is_short \
-            else self._full_width
-        need += lay.spacing() * (lay.count() + 1) + 40  # the ⋯ button and some air
-        go_short = need > self.width()
+            lay = self.layout()
+            self._full_width = sum(b.sizeHint().width() for b, _t, _i in self.short) + \
+                lay.spacing() * (lay.count() + 1) + 40  # the ⋯ button and some air
+        go_short = self._full_width > self.width()
         if go_short == self.is_short:
             return
-        if go_short:
-            self._full_width = sum(b.sizeHint().width() for b, _t, _i in self.short)
         for (b, text, ic), (full_text, full_style) in zip(self.short, self.full,
                                                           strict=False):
             if go_short:

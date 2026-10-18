@@ -838,6 +838,20 @@ class CoreTest(TmpDir):
         self.assertTrue(until(lambda: len(polls) == 3))
         self.assertLess(polls[2] - t, 0.5)
 
+    def test_new_list_with_someone_not_followed(self):
+        """"New list" from a boost's menu with its author, whom I don't follow: the list
+        is there all the same (it used to vanish until a restart, and a second try said
+        it already exists), the author waits to go in; taking them out is no error."""
+        core, w = self.make()
+        core.connect().result()
+        w.list_refuse.add("N")
+        x = core.create_list("Ретрансляторы", add="N").result()
+        self.assertIn(f"list:{x['id']}", core.lane_by_name)
+        self.assertIn(x["id"], core.lists_of("N"))  # waiting, here
+        self.assertEqual(core.set_in_list(x["id"], "N", False).result(), "done")
+        self.assertNotIn(x["id"], core.lists_of("N"))
+        self.assertEqual(core.store.kv_get("list_pending"), [])
+
     def test_list_pending_given_up_after_a_month(self):
         core, w = self.make()
         core.connect().result()

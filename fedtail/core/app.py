@@ -704,9 +704,11 @@ class Core(SocialMixin):
     def create_list(self, title, exclusive=False, add=None):
         def job():
             x = self.api.create_list(title, exclusive)
-            if add:
-                self.api.list_add(x["id"], add)
-            self._refresh_lists()
+            try:
+                if add:  # refused (not followed yet): waits, as with an existing list
+                    self._list_add_or_wait(x["id"], add)
+            finally:
+                self._refresh_lists()  # the new list shows whatever happened to the add
             return x
         return self.submit(job)
 
@@ -730,19 +732,17 @@ class Core(SocialMixin):
         record it) is refused — then fedtail remembers it and puts them in by itself
         once it can. Returns "pending" in that case."""
         def job():
-            pending = self._list_pending()
-            pending = [p for p in pending if (p[0], p[1]) != (list_id, acc_id)]
-            try:
-                (self.api.list_add if on else self.api.list_remove)(list_id, acc_id)
+            if on:
+                result = self._list_add_or_wait(list_id, acc_id)
+            else:
+                self.store.kv_set("list_pending", [p for p in self._list_pending()
+                                                   if (p[0], p[1]) != (list_id, acc_id)])
+                try:
+                    self.api.list_remove(list_id, acc_id)
+                except ApiError as e:  # it was only waiting here, never on the server
+                    if e.status != 404:
+                        raise
                 result = "done"
-            except ApiError as e:
-                if not on or e.status not in (403, 404, 422):
-                    raise
-                pending.append([list_id, acc_id, time.time()])
-                log.info("list %s: %s not followed yet (%s), will add later", list_id, acc_id,
-                         e.status)
-                result = "pending"
-            self.store.kv_set("list_pending", pending)
             if result == "pending":  # in the list here at once: lanes treat them so
                 members = {k: set(v) for k, v in self.list_members.items()}
                 members.setdefault(list_id, set()).add(acc_id)
@@ -753,6 +753,23 @@ class Core(SocialMixin):
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
             return result
         return self.submit(job)
+
+    def _list_add_or_wait(self, list_id, acc_id):
+        """Into the list on the server, or — refused for someone not followed (yet) —
+        remembered and tried again on each lists refresh. "done" or "pending"."""
+        pending = [p for p in self._list_pending() if (p[0], p[1]) != (list_id, acc_id)]
+        try:
+            self.api.list_add(list_id, acc_id)
+            result = "done"
+        except ApiError as e:
+            if e.status not in (403, 404, 422):
+                raise
+            pending.append([list_id, acc_id, time.time()])
+            log.info("list %s: %s not followed yet (%s), will add later", list_id, acc_id,
+                     e.status)
+            result = "pending"
+        self.store.kv_set("list_pending", pending)
+        return result
 
     def _list_pending(self):
         return [p for p in self.store.kv_get("list_pending", []) or []
