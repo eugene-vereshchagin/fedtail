@@ -2,6 +2,13 @@
 
 ## 0.15.0 — in progress
 
+- A boost no longer brings an old post into the feed again and again: a post comes into a
+  lane once — as itself or with its first boost. A boost of a post the lane has had already,
+  or of one read already (in a thread, in another lane), is not shown, not counted as
+  unread and not notified about. `feed.repeat_boosts = true` shows every boost again, as
+  other clients do. (The server drops a repeat only while the post is among the last
+  few dozen of the feed.)
+
 - The unread number on the icon (`ui.icon_count`) picks lanes the way notifications do:
   `"lists"` (all lists — it was accepted and counted nothing), `"list:Друзья"`, `"all"`,
   and the new `ui.icon_count_except` takes lanes away. The config's comments for both

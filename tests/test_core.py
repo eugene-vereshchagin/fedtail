@@ -489,6 +489,21 @@ class LaneRenameTest(TmpDir):
         s.close()
 
 
+class RepeatBoostsTest(TmpDir):
+    def test_v4_knows_where_stored_posts_first_came(self):
+        s = Store(self.tmp / "s.db")
+        orig = status("010", BOB, minute=10)
+        again = dict(status("020", NEWS, minute=20), reblog=orig)
+        s.put_items("home", [("010", orig, orig["created_at"]),
+                             ("020", again, again["created_at"])])
+        s.db.execute("DELETE FROM first_seen")  # as a v3 database had it
+        s.kv_set("schema", 3)
+        s.close()
+        s = Store(self.tmp / "s.db")
+        self.assertEqual(s.first_seen("home", ["010"]), {"010": "010"})
+        s.close()
+
+
 class AliasTest(TmpDir):
     def test_aliases(self):
         from fedtail.core.store import alias_number, alias_text
@@ -925,6 +940,35 @@ class CoreTest(TmpDir):
         self.assertEqual(res, {"total": 1, "more": True})
         self.assertIn("003", [st["id"] for _, st in core.lane_entries("home")])
         self.assertEqual(core.deep_find("home", "нету").result(), {"total": 0, "more": False})
+
+    def test_boosts_do_not_bring_old_posts_again(self):
+        core, w = self.make()
+        core.connect().result()
+        w.add(status("010", BOB, minute=10), home=True)
+        core.poll_once()
+
+        zed = fakes.acct("Z", "zed@example.org")
+
+        def boost(sid, of, minute, who=zed):
+            b = status(sid, who, minute=minute)
+            b["reblog"] = w.statuses.setdefault(of, status(of, BOB, minute=1))
+            w.add(b, home=True)
+
+        boost("020", "010", 20)                  # a post I have here, boosted
+        boost("021", "005", 21)                  # an old post, first time here: shows
+        boost("022", "005", 22, who=fakes.ME)    # …and the same again
+        core.store.mark_read(["006"])            # read in a thread somewhere
+        boost("023", "006", 23)
+        core.poll_once()
+        shown = lambda: [i for i, _ in core.lane_entries("home")]
+        self.assertEqual(shown(), ["010", "021"])
+        self.assertEqual(core.unread_count("home"), 2)
+        boost("030", "005", 30)                  # a week later, boosted once more
+        boost("031", "010", 31)
+        core.poll_once()
+        self.assertEqual(shown(), ["010", "021"])
+        core.cfg["feed"]["repeat_boosts"] = True  # like everyone else: every boost shows
+        self.assertEqual(shown(), ["010", "020", "021", "022", "023", "030", "031"])
 
     def test_activity_favourites_boosts_follows(self):
         core, w = self.make()

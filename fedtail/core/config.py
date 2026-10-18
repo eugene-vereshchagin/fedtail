@@ -65,6 +65,7 @@ DEFAULTS = {
         "page_size": 40,
         "catch_up_limit": 400,
         "render_limit": 300,
+        "repeat_boosts": False,
         "build_at_once": 40,
         "first_run_mark_read": True,
         "honest_counters": False,

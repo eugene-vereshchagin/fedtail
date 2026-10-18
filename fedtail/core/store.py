@@ -9,7 +9,7 @@ import sqlite3
 import threading
 from datetime import UTC, datetime
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS statuses (
@@ -69,6 +69,14 @@ CREATE TABLE IF NOT EXISTS activity (
     sort       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS activity_sort ON activity (sort);
+-- where a post first came into a source, as itself or boosted: a later boost of it is a
+-- repeat (feed.repeat_boosts). item_id "" — it came boosted when already read.
+CREATE TABLE IF NOT EXISTS first_seen (
+    source  TEXT NOT NULL,
+    real_id TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    PRIMARY KEY (source, real_id)
+);
 CREATE TABLE IF NOT EXISTS kv (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -141,9 +149,20 @@ class Store:
                 "UPDATE statuses SET reply_to = json_extract(data, '$.in_reply_to_id'), "
                 "author = json_extract(data, '$.account.id')")
         self.db.execute("CREATE INDEX IF NOT EXISTS statuses_reply_to ON statuses (reply_to)")
-        if (self.kv_get("schema") or SCHEMA_VERSION) < 3:
+        schema = self.kv_get("schema") or SCHEMA_VERSION
+        if schema < 3:
             self._rename_lanes()
+        if schema < 4:
+            self._fill_first_seen()
         self.kv_set("schema", SCHEMA_VERSION)
+
+    def _fill_first_seen(self):
+        """v4: for what is stored already, the oldest entry of each post in a source
+        is its first coming (inserted oldest first: OR IGNORE keeps that one)."""
+        self.db.execute(
+            "INSERT OR IGNORE INTO first_seen (source, real_id, item_id) "
+            "SELECT i.source, COALESCE(json_extract(s.data, '$.reblog.id'), s.id), i.item_id "
+            "FROM items i JOIN statuses s ON s.id = i.status_id ORDER BY i.sort ASC")
 
     def _rename_lanes(self):
         """v3: lanes got the names they show ("people" is "home"…); what the window
@@ -354,14 +373,37 @@ class Store:
         self.put_statuses([st for _, st, _ in entries])
         new = []
         with self._tx() as db:
-            for item_id, st, created in entries:
+            # oldest first: where a post came in first is where it stays
+            for item_id, st, created in sorted(entries, key=lambda e: sort_key(e[2], e[0])):
                 cur = db.execute("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)",
                                  (source, item_id, st["id"], sort_key(created, item_id)))
                 if cur.rowcount:
                     new.append(item_id)
+                self._first_seen(db, source, item_id, st)
             if new:
                 self._bump(source)
         return new
+
+    @staticmethod
+    def _first_seen(db, source, item_id, st):
+        real_id = (st.get("reblog") or st)["id"]
+        if st.get("reblog") and db.execute("SELECT 1 FROM read WHERE status_id=?",
+                                           (real_id,)).fetchone():
+            item_id = ""  # read already (in a thread, another lane): a boost brings it again
+        db.execute("INSERT OR IGNORE INTO first_seen VALUES (?, ?, ?)",
+                   (source, real_id, item_id))
+
+    def first_seen(self, source, real_ids):
+        """{real id: the item it first came as in this source ("" — read already)}."""
+        ids = list(dict.fromkeys(real_ids))
+        out = {}
+        with self.lock:
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                q = (f"SELECT real_id, item_id FROM first_seen WHERE source=? AND real_id IN "
+                     f"({','.join('?' * len(chunk))})")
+                out.update(self.db.execute(q, [source, *chunk]).fetchall())
+        return out
 
     def _bump(self, source):
         self.items_version[source] = self.items_version.get(source, 0) + 1
@@ -414,6 +456,11 @@ class Store:
                 (source, source, keep))
             if cur.rowcount:
                 self._bump(source)
+            # what came is remembered far longer than the lane is kept: an old post
+            # boosted again a month later is still a repeat
+            db.execute("DELETE FROM first_seen WHERE source=? AND rowid NOT IN "
+                       "(SELECT rowid FROM first_seen WHERE source=? "
+                       "ORDER BY rowid DESC LIMIT ?)", (source, source, keep * 10))
 
     # ---- thread subscriptions ----------------------------------------------------
     def sub_add(self, root_id, since, last_activity, auto, members):

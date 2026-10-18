@@ -511,8 +511,10 @@ class Core(SocialMixin):
                 quiet.append(f"{name}+{len(ids)}")
                 continue
             id_set = set(ids)
-            sts = [st for item_id, st in self.store.items(lane.source, len(ids) + 50)
-                   if item_id in id_set]
+            rows = self.store.items(lane.source, len(ids) + 50)
+            if not self.cfg["feed"].get("repeat_boosts", False):  # not shown: no news
+                rows = self._without_repeats(lane.source, rows)
+            sts = [st for item_id, st in rows if item_id in id_set]
             unread = self.store.read_set(st["id"] for st in sts)
             out += [(name, st) for st in sts if st["id"] not in unread and not self.silenced(st)]
         if new_requests and self._notify_wanted("requests", wanted, never):
@@ -1076,16 +1078,19 @@ class Core(SocialMixin):
             return []
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
         only_posts = self.posts_only(name)
+        repeats = self.cfg["feed"].get("repeat_boosts", False)
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
                self.me["id"] if self.me else None, only_posts, self._lists_version,
-               self._silence_version)
+               self._silence_version, repeats)
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]
         ctx = self._ctx()
         kept = []
-        for item_id, st in self.store.iter_items(lane.source,
-                                                 max_rows=max(FILTER_WINDOW, limit)):
+        rows = self.store.iter_items(lane.source, max_rows=max(FILTER_WINDOW, limit))
+        if not repeats:
+            rows = self._without_repeats(lane.source, rows)
+        for item_id, st in rows:
             if only_posts and real(st).get("in_reply_to_id"):
                 continue
             if self.silenced(st):
@@ -1099,6 +1104,25 @@ class Core(SocialMixin):
             kept.sort(key=lambda e: (real(e[1]).get("created_at", ""), real(e[1])["id"]))
         self._lane_cache[name] = (key, kept)
         return kept
+
+    def _without_repeats(self, source, rows, chunk=200):
+        """feed.repeat_boosts = false: a boost shows only if it is how the post first came
+        into this lane — not an old post boosted again (and again), not one read already.
+        The post itself, come as itself, always shows."""
+        batch = []
+
+        def flush():
+            firsts = self.store.first_seen(source, [st["reblog"]["id"] for _, st in batch
+                                                    if st.get("reblog")])
+            for item_id, st in batch:
+                if not st.get("reblog") or firsts.get(st["reblog"]["id"], item_id) == item_id:
+                    yield item_id, st
+        for row in rows:
+            batch.append(row)
+            if len(batch) >= chunk:
+                yield from flush()
+                batch = []
+        yield from flush()
 
     def deep_find(self, name, query):
         """Ctrl+F past what the lane shows: look through everything stored for it.
