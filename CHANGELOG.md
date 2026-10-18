@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.15.0 — in progress
+## 0.15.0 — 2026-10-19
 
 - `feed.prefetch` is `"previews"` by default: new posts' previews, avatars and link
   pictures come ahead of time; the videos themselves and full originals only with
