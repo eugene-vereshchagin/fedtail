@@ -332,10 +332,16 @@ class PostRow(QWidget):
             booster = wrapper["account"]
             name = (f'<a href="fedtail:account/{esc(booster["id"])}" style="color:inherit;'
                     f'text-decoration:none;">{display_name(booster)}</a>')
-            v.addWidget(self._emoji_label(
+            line = self._emoji_label(
                 _("boosted_by", name=name) + " · " +
                 _("boost_time", when=self.theme.date(wrapper.get("created_at", ""))),
-                wrapper["account"].get("emojis"), "boost"))
+                wrapper["account"].get("emojis"), "boost")
+            # right click: the booster's profile, or into a list (a relay bot into
+            # "Morning", say)
+            line.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            line.customContextMenuRequested.connect(
+                lambda pos, w=line, a=booster: self._booster_menu(w, a, pos))
+            v.addWidget(line)
 
         if self.theme.shape["card_header"] == "compact":
             v.addLayout(self._header_compact(st))
@@ -660,6 +666,15 @@ class PostRow(QWidget):
         h.addStretch(1)
         h.addWidget(self._more_button(st))
         return box
+
+    def _booster_menu(self, lab, acc, pos):
+        menu = QMenu(lab)
+        menu.addAction(_("open_profile"),
+                       lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
+        if self.ctx.fill_list_menu is not None and acc["id"] != self.ctx.me_id:
+            lists = menu.addMenu(_("add_to_list"))
+            lists.aboutToShow.connect(lambda m=lists, a=acc: self.ctx.fill_list_menu(m, a))
+        menu.exec(lab.mapToGlobal(pos))
 
     def _more_button(self, st):
         b = QToolButton()

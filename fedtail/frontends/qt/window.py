@@ -745,11 +745,20 @@ class MainWindow(QMainWindow):
             self.bridge.call(self.core.delete_list(x["id"]))
 
     def fill_list_menu(self, menu, account):
-        """"Add to list" submenu of a post: every list, ticked where the author is."""
+        """"Add to list" submenu of a post: every list, ticked where the author is. A
+        server takes only people I follow into lists: for someone else the lists are
+        greyed out under "follow first", with Follow right there."""
         menu.clear()
         inside = self.core.lists_of(account["id"])
+        note = menu.addAction(_("list_follow_first"))
+        note.setEnabled(False)
+        follow = menu.addAction(_("follow"))
+        follow.triggered.connect(lambda _c=False, a=account: self._follow_from_menu(a))
+        head = menu.addSeparator()
+        list_actions = []
         for x in self.core.lists:
             a = menu.addAction(x["title"])
+            list_actions.append(a)
             a.setCheckable(True)
             a.setChecked(x["id"] in inside)
             a.toggled.connect(lambda on, lid=x["id"], acc=account["id"]: self.bridge.call(
@@ -760,7 +769,32 @@ class MainWindow(QMainWindow):
                 fail=self.error))
         if self.core.lists:
             menu.addSeparator()
-        menu.addAction(_("list_new"), lambda: self.new_list(add=account["id"]))
+        list_actions.append(menu.addAction(_("list_new"),
+                                           lambda: self.new_list(add=account["id"])))
+
+        def apply(rel):
+            try:
+                ok = bool(rel) and bool(rel.get("following") or rel.get("requested")) \
+                    or bool(inside)  # already in one: taking out is always fine
+                for a in list_actions:
+                    a.setEnabled(ok)
+                for a in (note, follow, head):
+                    a.setVisible(not ok)
+            except RuntimeError:  # the menu closed meanwhile
+                pass
+        rel = self.core.relation_known(account["id"])
+        if rel is not None:
+            apply(rel)
+        else:
+            apply({"following": True})  # as if, until the server says (no flicker)
+            self.bridge.call(self.core.relationship(account["id"]), ok=apply,
+                             fail=lambda _e: None)
+
+    def _follow_from_menu(self, account):
+        self.bridge.call(self.core.follow(account["id"]), ok=lambda rel: self.statusBar(
+            ).showMessage(_("followed_now", acct="@" + account.get("acct", ""))
+                          if rel.get("following") else _("follow_asked_list"), 6000),
+                         fail=self.error)
 
     def _lane_clicked(self, cur, _prev, show=False):
         """A lane chosen. Its tab comes to the front only when I chose it (a click, keys

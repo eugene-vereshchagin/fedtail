@@ -2,6 +2,10 @@
 
 ## 0.13.0 — in progress
 
+- "Add to list" for someone you don't follow: the lists are greyed out under "lists take
+  only people you follow: follow first", with Follow right there (the server is asked when
+  the menu opens, and the answer kept a few minutes).
+- A right click on "♻ boosted by …": the booster's profile, or into a list.
 - "♻ boosted by …" over a boost: the name opens the booster's profile.
 - A boost's ⋯ menu says whom it puts in a list: "Author to a list (@…)" and "Booster to a
   list (@…)" (a relay bot, say), each its own submenu.

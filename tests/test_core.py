@@ -838,6 +838,16 @@ class CoreTest(TmpDir):
         self.assertTrue(until(lambda: len(polls) == 3))
         self.assertLess(polls[2] - t, 0.5)
 
+    def test_relation_kept_for_menus(self):
+        """A menu opening at once can ask what was learnt lately: following or not."""
+        core, w = self.make()
+        core.connect().result()
+        self.assertIsNone(core.relation_known("B"))
+        self.assertFalse(core.relationship("B").result()["following"])
+        self.assertFalse(core.relation_known("B")["following"])
+        core.follow("B").result()
+        self.assertTrue(core.relation_known("B")["following"])  # the follow updated it
+
     def test_new_list_with_someone_not_followed(self):
         """"New list" from a boost's menu with its author, whom I don't follow: the list
         is there all the same (it used to vanish until a restart, and a second try said

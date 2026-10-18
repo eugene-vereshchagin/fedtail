@@ -57,6 +57,7 @@ class Core(SocialMixin):
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
+        self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
         self.unsupported = set()  # features the server said it hasn't got (social.py)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
@@ -1431,14 +1432,29 @@ class Core(SocialMixin):
         return got
 
     def relationship(self, acc_id):
-        """following, followed_by, requested, … between me and an account."""
-        return self.submit(self.api.relationship, acc_id)
+        """following, followed_by, requested, … between me and an account (and kept a
+        few minutes for relation_known)."""
+        def job():
+            rel = self.api.relationship(acc_id)
+            self._relations[acc_id] = (time.monotonic(), rel)
+            return rel
+        return self.submit(job)
+
+    RELATION_KEEP_S = 300
+
+    def relation_known(self, acc_id):
+        """The relationship asked for lately, or None — for menus that open at once."""
+        got = getattr(self, "_relations", {}).get(acc_id)
+        if got and time.monotonic() - got[0] < self.RELATION_KEEP_S:
+            return got[1]
+        return None
 
     def follow(self, acc_id, on=True):
         """Follow or not. The server doesn't say since when I follow someone, so the
         moment it happens through fedtail is written down here (followed_since)."""
         def job():
             rel = self.api.follow(acc_id, on)
+            self._relations[acc_id] = (time.monotonic(), rel)
             since = dict(self.store.kv_get("followed_at", {}) or {})
             if on:
                 since.setdefault(acc_id, now_iso())
