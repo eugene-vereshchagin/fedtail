@@ -711,6 +711,15 @@ class MainWindow(QMainWindow):
             x = next((x for x in self.core.lists if x["id"] == lid), None)
             if x is None:
                 return
+            m.addAction(_("list_people"), lambda: self.open_list_people(x))
+            up = m.addAction(_("list_up"), lambda: self.bridge.call(
+                self.core.submit(self.core.move_list, x["id"], -1)))
+            down = m.addAction(_("list_down"), lambda: self.bridge.call(
+                self.core.submit(self.core.move_list, x["id"], 1)))
+            ids = [y["id"] for y in self.core.lists]
+            up.setEnabled(ids.index(x["id"]) > 0)
+            down.setEnabled(ids.index(x["id"]) < len(ids) - 1)
+            m.addSeparator()
             m.addAction(_("list_rename"), lambda: self.rename_list(x))
             ex = m.addAction(_("list_exclusive"))
             ex.setCheckable(True)
@@ -725,6 +734,14 @@ class MainWindow(QMainWindow):
         else:
             return
         m.exec(self.lanes.mapToGlobal(pos))
+
+    def open_list_people(self, x):
+        """Who is in a list, a tab of people; each can be taken out right there."""
+        def out(acc_id):
+            return self.core.set_in_list(x["id"], acc_id, False)
+        self.open_accounts(f"list-people:{x['id']}", _("list_people_title", title=x["title"]),
+                           lambda _cursor: self.core.list_people(x["id"]), dismiss=out,
+                           dismiss_label=_("list_take_out"))
 
     def new_list(self, add=None):
         title, ok = QInputDialog.getText(self, _("list_new").rstrip("…"), _("list_name_q"))

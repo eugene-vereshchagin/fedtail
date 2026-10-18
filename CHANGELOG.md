@@ -2,6 +2,9 @@
 
 ## 0.13.0 — in progress
 
+- Right click on a list in the sidebar: "Who is in it…" opens its people (the ones waiting
+  to go in too), each with "Take out of the list"; "Move up" / "Move down" put the lists in
+  your own order, kept by fedtail (servers have none) — new lists come at the end.
 - The same error from every poll while a server is down is shown and logged once, again
   only when it changes or ten minutes later.
 - A server behind a proxy that's down (a 502 from Cloudflare) showed the proxy's whole HTML

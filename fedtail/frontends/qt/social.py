@@ -29,11 +29,13 @@ class AccountsWidget(QWidget):
     (the post's own server) once the pages run out. dismiss(acc_id): a "don't
     suggest" button on each row."""
 
-    def __init__(self, win, key, title, fetch, origin=None, origin_label="", dismiss=None):
+    def __init__(self, win, key, title, fetch, origin=None, origin_label="", dismiss=None,
+                 dismiss_label=None):
         super().__init__()
         self.win, self.core, self.key = win, win.core, key
         self.title, self.fetch, self.origin = title, fetch, origin
         self.origin_label, self.dismiss = origin_label, dismiss
+        self.dismiss_label = dismiss_label or _("dismiss_suggestion")
         self.next = None
         self.count = 0
         self.shown_ids = set()
@@ -72,7 +74,7 @@ class AccountsWidget(QWidget):
                 continue
             row = AccountRow(self.win, a, res["relations"].get(a["id"]))
             if self.dismiss is not None:
-                b = _button(_("dismiss_suggestion"), lambda _c=False, r=row: self._drop(r))
+                b = _button(self.dismiss_label, lambda _c=False, r=row: self._drop(r))
                 row.layout().addWidget(b, 0, Qt.AlignmentFlag.AlignTop)
             self.box_lay.addWidget(row)
             self.shown_ids.add(a["id"])

@@ -850,6 +850,29 @@ class CoreTest(TmpDir):
         core.emit("error", "home: timed out")  # a while later: said again
         self.assertEqual(len(shown), 3)
 
+    def test_lists_in_my_order_and_who_is_in_them(self):
+        core, w = self.make()
+        core.connect().result()
+        ids = [core.create_list(t).result()["id"] for t in ("Сиськи", "Новости", "Котики")]
+        core.move_list(ids[2], -1)
+        core.move_list(ids[2], -1)  # Котики on top
+        core.move_list(ids[0], 1)   # Сиськи under Новости
+        order = [x["id"] for x in core.lists]
+        self.assertEqual(order, [ids[2], ids[1], ids[0]])
+        self.assertEqual([n for n in (lane.name for lane in core.lanes) if n.startswith("list:")],
+                         [f"list:{i}" for i in order])  # the sidebar follows
+        core._refresh_lists()  # the server's order doesn't undo mine
+        self.assertEqual([x["id"] for x in core.lists], order)
+        new = core.create_list("Мемы").result()["id"]  # a new one: at the end
+        self.assertEqual(core.lists[-1]["id"], new)
+        # who is in a list, including someone still waiting to go in
+        core.set_in_list(ids[1], "B", True).result()
+        w.list_refuse.add("N")
+        core.set_in_list(ids[1], "N", True).result()
+        got, nxt = core.list_people(ids[1]).result()
+        self.assertEqual(nxt, None)
+        self.assertEqual(len(got["accounts"]), 2)
+
     def test_relation_kept_for_menus(self):
         """A menu opening at once can ask what was learnt lately: following or not."""
         core, w = self.make()

@@ -695,6 +695,7 @@ class Core(SocialMixin):
         self._apply_lists(got, members)
 
     def _apply_lists(self, got, members):
+        got = self._ordered_lists(got)
         self.lists, self.list_members = got, members
         for x in got:
             name = f"list:{x['id']}"
@@ -706,6 +707,42 @@ class Core(SocialMixin):
         self._lists_version += 1
         self.emit("lists_changed", list(got))
         self.poll_now()
+
+    def _ordered_lists(self, got):
+        """Lists in my order (moved up and down in the sidebar, kept here: servers have
+        no order of lists); the ones not placed yet keep the server's order, at the end."""
+        order = self.store.kv_get("list_order", []) or []
+        rank = {lid: i for i, lid in enumerate(order)}
+        return sorted(got, key=lambda x: rank.get(x["id"], len(order) + got.index(x)))
+
+    def move_list(self, list_id, step):
+        """A list one place up (step -1) or down (+1) in the sidebar."""
+        ids = [x["id"] for x in self.lists]
+        if list_id not in ids:
+            return
+        i = ids.index(list_id)
+        j = max(0, min(len(ids) - 1, i + step))
+        if i == j:
+            return
+        ids.insert(j, ids.pop(i))
+        self.store.kv_set("list_order", ids)
+        self._apply_lists(list(self.lists), self.list_members)
+
+    def list_people(self, list_id):
+        """Who is in a list (and who waits to go in), for a tab of people: a future of
+        ({accounts, relations}, None)."""
+        def job():
+            accounts = self.api.list_accounts(list_id)
+            waiting = [p[1] for p in self._list_pending() if p[0] == list_id]
+            have = {a["id"] for a in accounts}
+            for acc_id in waiting:
+                if acc_id not in have:
+                    try:
+                        accounts.append(self.api.get(f"/api/v1/accounts/{acc_id}"))
+                    except ApiError:
+                        pass
+            return self._with_relations(accounts), None
+        return self.submit(job)
 
     def lane_title(self, name):
         """A list's title; None for the built-in lanes (their names are translated)."""
