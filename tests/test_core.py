@@ -400,6 +400,48 @@ class PathsAuthTest(TmpDir):
         auth.forget(f)
         self.assertIsNone(auth.load(f))
 
+    def test_database_is_private(self):
+        if os.name == "nt":
+            return
+        s = Store(self.tmp / "state.db")
+        s.kv_set("x", 1)
+        self.assertEqual(stat.S_IMODE((self.tmp / "state.db").stat().st_mode), 0o600)
+        s.close()
+
+    def test_one_window_per_profile_and_strangers_kept_out(self):
+        from fedtail.core import instance
+        got = []
+        first = instance.SingleInstance(self.tmp / "fedtail.sock")
+        first.listen(got.append)
+        self.addCleanup(first.close)
+        second = instance.SingleInstance(self.tmp / "fedtail.sock")
+        self.assertTrue(second.poke_existing("open https://x.example/@a"))
+        for _ in range(100):
+            if got:
+                break
+            time.sleep(0.02)
+        self.assertEqual(got, ["open https://x.example/@a"])
+        if instance.WINDOWS:  # the pipe: only who has the key in the profile's folder
+            from multiprocessing import AuthenticationError
+            from multiprocessing.connection import Client
+            with self.assertRaises((AuthenticationError, EOFError, OSError)):
+                with Client(instance._pipe_name(first.path), family="AF_PIPE",
+                            authkey=b"x" * 32) as c:
+                    c.send_bytes(b"open file:///C:/Windows")
+            time.sleep(0.2)
+            self.assertEqual(len(got), 1)
+        else:  # the socket: the owner's only
+            self.assertEqual(stat.S_IMODE(os.stat(first.path).st_mode), 0o600)
+
+    def test_plain_http_only_at_home(self):
+        from fedtail.core.api import cleartext_ok
+        for ok in ("https://social.example", "social.example", "http://localhost:8080",
+                   "http://127.0.0.1", "http://192.168.1.10", "http://[::1]:3000",
+                   "http://gts.lan", "http://box.local", "http://pi.home.arpa"):
+            self.assertTrue(cleartext_ok(ok), ok)
+        for bad in ("http://social.example", "http://8.8.8.8", "HTTP://social.example"):
+            self.assertFalse(cleartext_ok(bad), bad)
+
 
 class ModelTest(unittest.TestCase):
     def test_visibility_and_mentions(self):
@@ -1862,6 +1904,8 @@ class CoreTest(TmpDir):
         core, w = self.make()
         auth.forget(core.paths.auth_file)
         core.auth = None
+        with self.assertRaises(ValueError):  # the token in the clear over the internet: no
+            core.begin_login("http://example.test").result()
         url = core.begin_login("example.test").result()
         self.assertIn("oauth/authorize", url)
         with self.assertRaises(ApiError):

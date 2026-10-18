@@ -621,6 +621,9 @@ _STRINGS = {
         "tag_info": "посты с этим тегом, какие знает твой сервер",
         "resolving": "Ищу через свой сервер: {url}",
         "resolve_browser": "Не нашлось — открываю в браузере",
+        "login_insecure": "http:// без шифрования — токен пошёл бы по сети открытым текстом. "
+                          "Нужен https:// (http можно только для сервера дома: localhost, "
+                          "локальный адрес, .local/.lan).",
         "link_refused": "Не открываю: это не веб-адрес (файл, сетевая папка или что-то ещё)",
         "my_profile": "Мой профиль", "edit_profile": "Редактировать профиль",
         "profile_title": "Профиль", "profile_name": "Имя", "profile_bio": "О себе",
@@ -1231,6 +1234,9 @@ _STRINGS = {
         "tag_info": "posts with this tag that your server knows",
         "resolving": "Looking it up through your server: {url}",
         "resolve_browser": "Not found — opening in the browser",
+        "login_insecure": "http:// has no encryption — the token would cross the network in "
+                          "the clear. Use https:// (http only for a server at home: localhost, "
+                          "a local address, .local/.lan).",
         "link_refused": "Not opened: not a web address (a file, a network share or the like)",
         "my_profile": "My profile", "edit_profile": "Edit profile",
         "profile_title": "Profile", "profile_name": "Name", "profile_bio": "About me",

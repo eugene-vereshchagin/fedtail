@@ -9,12 +9,40 @@ import hashlib
 import os
 import socket
 import threading
+from multiprocessing import AuthenticationError
 
 WINDOWS = os.name == "nt"
 
 
 def _pipe_name(path):
     return r"\\.\pipe\fedtail-" + hashlib.sha1(str(path).lower().encode()).hexdigest()[:16]
+
+
+def _pipe_key(path, make=False):
+    """Windows: the pipe's secret, next to where the socket would be (the profile's own
+    data folder). Only who can read that folder can talk to the window — another user
+    of the computer can't send it "open <file>", nor pose as it."""
+    import os
+    import secrets
+    from pathlib import Path
+    f = Path(str(path)).with_name("instance.key")
+    try:
+        key = f.read_bytes()
+        if len(key) >= 32:
+            return key
+    except OSError:
+        pass
+    if not make:
+        return None
+    key = secrets.token_bytes(32)
+    try:
+        f.unlink(missing_ok=True)
+        fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as out:
+            out.write(key)
+    except OSError:
+        return None
+    return key
 
 
 class SingleInstance:
@@ -31,10 +59,11 @@ class SingleInstance:
         if WINDOWS:
             from multiprocessing.connection import Client
             try:
-                with Client(_pipe_name(self.path), family="AF_PIPE") as c:
+                with Client(_pipe_name(self.path), family="AF_PIPE",
+                            authkey=_pipe_key(self.path)) as c:
                     c.send_bytes(data)
                 return True
-            except OSError:
+            except (OSError, EOFError, AuthenticationError):
                 return False
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.settimeout(2)
@@ -51,7 +80,8 @@ class SingleInstance:
         self.on_message = on_message
         if WINDOWS:
             from multiprocessing.connection import Listener
-            self.listener = Listener(_pipe_name(self.path), family="AF_PIPE")
+            self.listener = Listener(_pipe_name(self.path), family="AF_PIPE",
+                                     authkey=_pipe_key(self.path, make=True))
             threading.Thread(target=self._pipe_loop, name="fedtail-instance",
                              daemon=True).start()
             return
@@ -68,9 +98,9 @@ class SingleInstance:
     def _pipe_loop(self):
         while self.listener is not None:
             try:
-                with self.listener.accept() as conn:
+                with self.listener.accept() as conn:  # a wrong key fails in accept()
                     msg = conn.recv_bytes(4096).decode("utf-8", "replace").strip()
-            except (OSError, EOFError):
+            except (OSError, EOFError, AuthenticationError):
                 if self.listener is None:
                     return
                 continue

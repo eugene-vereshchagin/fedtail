@@ -138,6 +138,20 @@ class Store:
         with self.lock:
             self.db.executescript(SCHEMA)
             self._migrate()
+        self._private(path)
+
+    @staticmethod
+    def _private(path):
+        """The database holds direct messages and what was read: the owner's only, like
+        auth.json — not left to the umask (0644) and the folder's 0700 alone."""
+        import os
+        if os.name == "nt":
+            return
+        for p in (str(path), f"{path}-wal", f"{path}-shm"):
+            try:
+                os.chmod(p, 0o600)
+            except OSError:
+                pass
 
     def _migrate(self):
         """Bring an older state.db up to date in place; never loses data."""

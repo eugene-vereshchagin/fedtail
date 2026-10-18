@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .. import diag
 from . import api as api_module
 from . import auth, counters, lanes, search, sources, subs, taggroups, threads
-from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance
+from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance, seg
 from .events import Events
 from .model import id_after, interaction_policy, narrower, real
 from .social import SocialMixin
@@ -162,6 +162,11 @@ class Core(SocialMixin):
     # ---- login -----------------------------------------------------------------
     def begin_login(self, server):
         def job():
+            if not api_module.cleartext_ok(server):
+                # the token would cross the internet in the clear: only a server here,
+                # at home (localhost, a private address, .local/.lan) may be http://
+                from ..i18n import _
+                raise ValueError(_("login_insecure"))
             api = self.api_class(server)
             app = api.register_app()
             self._pending_login = (api, app)
@@ -217,6 +222,9 @@ class Core(SocialMixin):
     # ---- connect & poll ----------------------------------------------------------
     def connect(self):
         def job():
+            if not api_module.cleartext_ok(self.auth["server"]):
+                log.warning("server is plain http on the internet: the token goes in the "
+                            "clear (log in anew with https://)")
             api = self.api_class(self.auth["server"], self.auth["token"])
             me = api.me()
             try:
@@ -869,7 +877,7 @@ class Core(SocialMixin):
             for acc_id in waiting:
                 if acc_id not in have:
                     try:
-                        accounts.append(self.api.get(f"/api/v1/accounts/{acc_id}"))
+                        accounts.append(self.api.get(f"/api/v1/accounts/{seg(acc_id)}"))
                     except ApiError:
                         pass
             return self._with_relations(accounts), None
@@ -1635,7 +1643,7 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def account(self, acc_id):
-        return self.submit(self.api.get, f"/api/v1/accounts/{acc_id}")
+        return self.submit(self.api.get, f"/api/v1/accounts/{seg(acc_id)}")
 
     def posts_from_origin(self, acc, have_uris=()):
         """Someone from another server my server knows little about: their newest public
@@ -2254,7 +2262,7 @@ class Core(SocialMixin):
     def _pinned_from_origin(self, acc_id, limit=10):
         from . import replies
         try:
-            acc = self.api.get(f"/api/v1/accounts/{acc_id}") or {}
+            acc = self.api.get(f"/api/v1/accounts/{seg(acc_id)}") or {}
         except ApiError:
             return []
         if "@" not in (acc.get("acct") or "") or not acc.get("uri"):

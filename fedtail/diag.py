@@ -33,6 +33,7 @@ import logging
 import logging.handlers
 import os
 import platform
+import re
 import shutil
 import signal
 import sys
@@ -213,6 +214,26 @@ class SessionLog(logging.Handler):
 
 
 # ---- setup ---------------------------------------------------------------------------
+_QUERY = re.compile(r"((?:https?://|url: |\s/)[^\s?'\"<>]*)\?[^\s'\"<>)]+")
+
+
+def hide_queries(text):
+    """An address's query out of a log line: what a request's error says ("…with url:
+    /api/v2/search?q=what I looked for") or a picture's signed address. The API's own
+    lines show their few paging parameters on their own (api._SAFE_PARAMS)."""
+    return _QUERY.sub(r"\1?…", text)
+
+
+class NoQueries(logging.Filter):
+    """Every log line, whoever wrote it, without query strings (see hide_queries)."""
+
+    def filter(self, record):
+        msg = record.getMessage()
+        if "?" in msg:
+            record.msg, record.args = hide_queries(msg), None
+        return True
+
+
 def setup(paths, cfg, console_debug=False):
     """Logging to session files (and warnings to the terminal), crash traces,
     stack dumps on SIGUSR1, uncaught exceptions of every thread into the log.
@@ -239,11 +260,13 @@ def setup(paths, cfg, console_debug=False):
         fh = SessionLog(folder, max_mb=1, keep_mb=5)
         fh.setLevel(logging.WARNING)
     fh.setFormatter(fmt)
+    fh.addFilter(NoQueries())
     root.addHandler(fh)
 
     ch = logging.StreamHandler(sys.stderr)
     ch.setLevel(logging.DEBUG if console_debug else logging.WARNING)
     ch.setFormatter(logging.Formatter("fedtail: %(levelname)s %(name)s: %(message)s"))
+    ch.addFilter(NoQueries())
     root.addHandler(ch)
     _state["console"] = ch
     # chatty libraries: their debug lines say nothing we don't log ourselves

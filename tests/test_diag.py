@@ -224,3 +224,41 @@ class DiagTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PrivacyInLogsTest(unittest.TestCase):
+    def test_queries_never_reach_the_log(self):
+        # a request's error names its whole address: a search's words, a signature
+        from fedtail.diag import NoQueries, hide_queries
+        for line, gone in (
+                ("Max retries exceeded with url: /api/v2/search?q=my+secret&type=statuses",
+                 "my+secret"),
+                ("resolve https://x.example/media/a.png?X-Amz-Signature=abc: timeout", "abc"),
+                ("web GET /api/lane?name=home -> 200", "name=home")):
+            self.assertNotIn(gone, hide_queries(line))
+        self.assertEqual(hide_queries("is this fine? yes"), "is this fine? yes")
+        rec = logging.LogRecord("x", logging.WARNING, __file__, 1, "failed: %s", (
+            "with url: /api/v2/search?q=secret",), None)
+        NoQueries().filter(rec)
+        self.assertNotIn("secret", rec.getMessage())
+
+
+class ApiPathTest(unittest.TestCase):
+    def test_an_id_is_one_segment(self):
+        from fedtail.core.api import Api, seg
+
+        class Session:
+            headers = {}
+
+            def request(self, method, url, **kw):
+                self.url = url
+                raise RuntimeError("stop here")
+        s = Session()
+        api = Api("https://srv.example", "tok", session=s)
+        with self.assertRaises(RuntimeError):
+            api.favourite("1/../../accounts/2/follow")
+        self.assertEqual(s.url, "https://srv.example/api/v1/statuses/"
+                                "1%2F..%2F..%2Faccounts%2F2%2Ffollow/favourite")
+        self.assertEqual(seg("01HXYZ"), "01HXYZ")
+        with self.assertRaises(ValueError):
+            seg("..")

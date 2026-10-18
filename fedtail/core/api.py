@@ -86,6 +86,36 @@ def capabilities_from_instance(inst):
     )
 
 
+def seg(value):
+    """An id as one segment of an API path: whatever it holds ("1/../../statuses/2/
+    reblog", "?x", "#") can't become another path. Server ids (digits, ULIDs) pass as
+    they are."""
+    from urllib.parse import quote
+    value = str(value)
+    if value in ("", ".", ".."):
+        raise ValueError(f"bad id {value!r}")
+    return quote(value, safe="")
+
+
+def cleartext_ok(server):
+    """May a token go to this server: https always; http only to a server here or at
+    home — localhost, a loopback or private address, a .local/.lan/.home.arpa name."""
+    import ipaddress
+    from urllib.parse import urlsplit
+    server = (server or "").strip()
+    if not server.lower().startswith("http://"):
+        return True  # https://, or no scheme: Api makes it https
+    host = (urlsplit(server).hostname or "").rstrip(".").lower()
+    if host == "localhost" or host.endswith((".localhost", ".local", ".lan", ".home.arpa",
+                                             ".internal")):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return ip.is_loopback or ip.is_private or ip.is_link_local
+
+
 class Api:
     has_stream = True  # a live stream to connect to (core/stream.py); fakes say no
     def __init__(self, server, token=None, session=None):
@@ -230,7 +260,7 @@ class Api:
         return self.get("/api/v1/timelines/public", self._page(limit, max_id, min_id))
 
     def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None):
-        return self.get(f"/api/v1/accounts/{acc_id}/statuses",
+        return self.get(f"/api/v1/accounts/{seg(acc_id)}/statuses",
                         self._page(limit, max_id, min_id))
 
     def notification_policy(self):
@@ -243,20 +273,20 @@ class Api:
         return self.get("/api/v1/notifications/requests", {"limit": 40}) or []
 
     def answer_notification_request(self, rid, accept):
-        return self.post(f"/api/v1/notifications/requests/{rid}/"
+        return self.post(f"/api/v1/notifications/requests/{seg(rid)}/"
                          + ("accept" if accept else "dismiss"))
 
     def announcements(self):
         return self.get("/api/v1/announcements") or []
 
     def dismiss_announcement(self, aid):
-        return self.post(f"/api/v1/announcements/{aid}/dismiss")
+        return self.post(f"/api/v1/announcements/{seg(aid)}/dismiss")
 
     def scheduled(self):
         return self.get("/api/v1/scheduled_statuses", {"limit": 40}) or []
 
     def cancel_scheduled(self, sid):
-        return self.delete(f"/api/v1/scheduled_statuses/{sid}")
+        return self.delete(f"/api/v1/scheduled_statuses/{seg(sid)}")
 
     def domain_blocks(self):
         return self.get("/api/v1/domain_blocks", {"limit": 200}) or []
@@ -267,11 +297,11 @@ class Api:
 
     def set_note(self, acc_id, text):
         """My private note on someone (only I see it)."""
-        return self.post(f"/api/v1/accounts/{acc_id}/note", json={"comment": text})
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/note", json={"comment": text})
 
     def translate(self, sid, lang=None):
         """{content, spoiler_text, detected_source_language, provider} in my language."""
-        return self.post(f"/api/v1/statuses/{sid}/translate",
+        return self.post(f"/api/v1/statuses/{seg(sid)}/translate",
                          json={"lang": lang} if lang else None)
 
     def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
@@ -280,19 +310,19 @@ class Api:
         return self.post("/api/v1/reports", json=body)
 
     def pinned(self, acc_id):
-        return self.get(f"/api/v1/accounts/{acc_id}/statuses", {"pinned": "true"}) or []
+        return self.get(f"/api/v1/accounts/{seg(acc_id)}/statuses", {"pinned": "true"}) or []
 
     def custom_emojis(self):
         return self.get("/api/v1/custom_emojis") or []
 
     def featured_tags(self, acc_id):
-        return self.get(f"/api/v1/accounts/{acc_id}/featured_tags") or []
+        return self.get(f"/api/v1/accounts/{seg(acc_id)}/featured_tags") or []
 
     def endorsements(self, acc_id):
-        return self.get(f"/api/v1/accounts/{acc_id}/endorsements", {"limit": 40}) or []
+        return self.get(f"/api/v1/accounts/{seg(acc_id)}/endorsements", {"limit": 40}) or []
 
     def pin(self, sid, on=True):
-        return self.post(f"/api/v1/statuses/{sid}/{'pin' if on else 'unpin'}")
+        return self.post(f"/api/v1/statuses/{seg(sid)}/{'pin' if on else 'unpin'}")
 
     def mentions(self, limit=40, max_id=None, min_id=None):
         p = self._page(limit, max_id, min_id)
@@ -305,10 +335,10 @@ class Api:
         return self.get("/api/v1/notifications", p)
 
     def status(self, sid):
-        return self.get(f"/api/v1/statuses/{sid}")
+        return self.get(f"/api/v1/statuses/{seg(sid)}")
 
     def context(self, sid):
-        return self.get(f"/api/v1/statuses/{sid}/context")
+        return self.get(f"/api/v1/statuses/{seg(sid)}/context")
 
     def last_async_refresh(self):
         """After a request in this thread: Mastodon 4.5+'s "I'm fetching more of this
@@ -335,7 +365,7 @@ class Api:
         return got[0] if got else {}
 
     def follow(self, acc_id, on=True):
-        return self.post(f"/api/v1/accounts/{acc_id}/{'follow' if on else 'unfollow'}")
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'follow' if on else 'unfollow'}")
 
     def tag_timeline(self, tag, limit=40, max_id=None, min_id=None):
         return self.get(f"/api/v1/timelines/tag/{quote(tag, safe='')}",
@@ -353,11 +383,11 @@ class Api:
         return r.json() or [], (m.group(1) if m else None)
 
     def following(self, acc_id, max_id=None):
-        return self.get_page(f"/api/v1/accounts/{acc_id}/following",
+        return self.get_page(f"/api/v1/accounts/{seg(acc_id)}/following",
                              self._page(40, max_id))
 
     def followers(self, acc_id, max_id=None):
-        return self.get_page(f"/api/v1/accounts/{acc_id}/followers",
+        return self.get_page(f"/api/v1/accounts/{seg(acc_id)}/followers",
                              self._page(40, max_id))
 
     def relationships(self, ids):
@@ -392,10 +422,10 @@ class Api:
 
     # ---- silence: mute, block, filters ------------------------------------------
     def mute(self, acc_id, on=True):
-        return self.post(f"/api/v1/accounts/{acc_id}/{'mute' if on else 'unmute'}")
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'mute' if on else 'unmute'}")
 
     def block(self, acc_id, on=True):
-        return self.post(f"/api/v1/accounts/{acc_id}/{'block' if on else 'unblock'}")
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'block' if on else 'unblock'}")
 
     def _all_pages(self, path, pages=10):
         out, cursor = [], None
@@ -424,19 +454,19 @@ class Api:
         return self.post("/api/v2/filters", data=data)
 
     def delete_filter(self, filter_id):
-        return self.delete(f"/api/v2/filters/{filter_id}")
+        return self.delete(f"/api/v2/filters/{seg(filter_id)}")
 
     # ---- lists --------------------------------------------------------------
     def lists(self):
         return self.get("/api/v1/lists") or []
 
     def list_timeline(self, list_id, limit=40, max_id=None, min_id=None):
-        return self.get(f"/api/v1/timelines/list/{list_id}", self._page(limit, max_id, min_id))
+        return self.get(f"/api/v1/timelines/list/{seg(list_id)}", self._page(limit, max_id, min_id))
 
     def list_accounts(self, list_id):
         """Everyone in a list. limit=0 asks for all at once; a server that answers that
         with nothing (some versions do, for some lists) is asked again page by page."""
-        path = f"/api/v1/lists/{list_id}/accounts"
+        path = f"/api/v1/lists/{seg(list_id)}/accounts"
         got = self.get(path, {"limit": 0}) or []
         if got:
             return got
@@ -456,17 +486,17 @@ class Api:
                                                 "exclusive": "true" if exclusive else "false"})
 
     def update_list(self, list_id, title, exclusive):
-        return self.put(f"/api/v1/lists/{list_id}",
+        return self.put(f"/api/v1/lists/{seg(list_id)}",
                         data={"title": title, "exclusive": "true" if exclusive else "false"})
 
     def delete_list(self, list_id):
-        return self.delete(f"/api/v1/lists/{list_id}")
+        return self.delete(f"/api/v1/lists/{seg(list_id)}")
 
     def list_add(self, list_id, acc_id):
-        return self.post(f"/api/v1/lists/{list_id}/accounts", data={"account_ids[]": [acc_id]})
+        return self.post(f"/api/v1/lists/{seg(list_id)}/accounts", data={"account_ids[]": [acc_id]})
 
     def list_remove(self, list_id, acc_id):
-        return self._req("DELETE", f"/api/v1/lists/{list_id}/accounts",
+        return self._req("DELETE", f"/api/v1/lists/{seg(list_id)}/accounts",
                          data={"account_ids[]": [acc_id]})
 
     # ---- writing ------------------------------------------------------------
@@ -490,7 +520,7 @@ class Api:
             if media.get("url"):
                 break
             time.sleep(1)
-            media = self.get(f"/api/v1/media/{media['id']}")
+            media = self.get(f"/api/v1/media/{seg(media['id'])}")
         return media
 
     def post_status(self, text, visibility="private", in_reply_to_id=None,
@@ -529,30 +559,30 @@ class Api:
         body = {"status": text, "spoiler_text": spoiler_text, "media_ids": list(media_ids)}
         if markdown:
             body["content_type"] = "text/markdown"
-        return self._req("PUT", f"/api/v1/statuses/{sid}", json=body)
+        return self._req("PUT", f"/api/v1/statuses/{seg(sid)}", json=body)
 
     def status_source(self, sid):
         """{text, spoiler_text} as I typed them (Markdown and all)."""
-        return self.get(f"/api/v1/statuses/{sid}/source")
+        return self.get(f"/api/v1/statuses/{seg(sid)}/source")
 
     def status_history(self, sid):
-        return self.get(f"/api/v1/statuses/{sid}/history") or []
+        return self.get(f"/api/v1/statuses/{seg(sid)}/history") or []
 
     def delete_status(self, sid):
-        return self.delete(f"/api/v1/statuses/{sid}")
+        return self.delete(f"/api/v1/statuses/{seg(sid)}")
 
     def favourite(self, sid, on=True):
-        return self.post(f"/api/v1/statuses/{sid}/{'favourite' if on else 'unfavourite'}")
+        return self.post(f"/api/v1/statuses/{seg(sid)}/{'favourite' if on else 'unfavourite'}")
 
     def poll(self, pid):
-        return self.get(f"/api/v1/polls/{pid}")
+        return self.get(f"/api/v1/polls/{seg(pid)}")
 
     def vote(self, pid, choices):
         """choices: option indexes. Returns the poll with my votes and new counts."""
-        return self.post(f"/api/v1/polls/{pid}/votes", json={"choices": list(choices)})
+        return self.post(f"/api/v1/polls/{seg(pid)}/votes", json={"choices": list(choices)})
 
     def bookmark(self, sid, on=True):
-        return self.post(f"/api/v1/statuses/{sid}/{'bookmark' if on else 'unbookmark'}")
+        return self.post(f"/api/v1/statuses/{seg(sid)}/{'bookmark' if on else 'unbookmark'}")
 
     def bookmarks(self, limit=40, max_id=None, min_id=None):
         """Bookmarks page by the Link header (their ids aren't status ids), so
@@ -569,7 +599,7 @@ class Api:
 
     def notify_posts(self, acc_id, on=True):
         """The bell: a notification for each new post of someone I follow."""
-        return self.post(f"/api/v1/accounts/{acc_id}/follow", json={"notify": bool(on)})
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/follow", json={"notify": bool(on)})
 
     def follow_options(self, acc_id, reblogs=None, languages=None):
         """For someone I follow: their boosts in my Home or not; only posts in these
@@ -579,47 +609,47 @@ class Api:
             body["reblogs"] = bool(reblogs)
         if languages is not None:
             body["languages"] = list(languages)
-        return self.post(f"/api/v1/accounts/{acc_id}/follow", json=body)
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/follow", json=body)
 
     def reblog(self, sid, on=True):
-        return self.post(f"/api/v1/statuses/{sid}/{'reblog' if on else 'unreblog'}")
+        return self.post(f"/api/v1/statuses/{seg(sid)}/{'reblog' if on else 'unreblog'}")
 
     def authorize_follow(self, acc_id):
-        return self.post(f"/api/v1/follow_requests/{acc_id}/authorize")
+        return self.post(f"/api/v1/follow_requests/{seg(acc_id)}/authorize")
 
     def reject_follow(self, acc_id):
-        return self.post(f"/api/v1/follow_requests/{acc_id}/reject")
+        return self.post(f"/api/v1/follow_requests/{seg(acc_id)}/reject")
 
     # ---- 0.11: who reacted, quiet threads, conversations, people, trends, server ----
     def favourited_by(self, sid, max_id=None):
         """Who liked a post: (accounts, cursor of the next page or None)."""
-        return self.get_page(f"/api/v1/statuses/{sid}/favourited_by", self._page(80, max_id))
+        return self.get_page(f"/api/v1/statuses/{seg(sid)}/favourited_by", self._page(80, max_id))
 
     def reblogged_by(self, sid, max_id=None):
         """Who boosted a post: (accounts, cursor of the next page or None)."""
-        return self.get_page(f"/api/v1/statuses/{sid}/reblogged_by", self._page(80, max_id))
+        return self.get_page(f"/api/v1/statuses/{seg(sid)}/reblogged_by", self._page(80, max_id))
 
     def quotes(self, sid, max_id=None):
         """Posts quoting my post: (statuses, cursor of the next page or None)."""
-        return self.get_page(f"/api/v1/statuses/{sid}/quotes", self._page(40, max_id))
+        return self.get_page(f"/api/v1/statuses/{seg(sid)}/quotes", self._page(40, max_id))
 
     def revoke_quote(self, sid, quoting_id):
         """Take my post out of someone's quote of it (I'm the quoted post's author)."""
-        return self.post(f"/api/v1/statuses/{sid}/quotes/{quoting_id}/revoke")
+        return self.post(f"/api/v1/statuses/{seg(sid)}/quotes/{seg(quoting_id)}/revoke")
 
     def mute_conversation(self, sid, on=True):
         """No more notifications from the thread this post is in (I take part in it)."""
-        return self.post(f"/api/v1/statuses/{sid}/{'mute' if on else 'unmute'}")
+        return self.post(f"/api/v1/statuses/{seg(sid)}/{'mute' if on else 'unmute'}")
 
     def conversations(self, limit=40):
         """Direct conversations, newest first: [{id, unread, accounts, last_status}]."""
         return self.get("/api/v1/conversations", {"limit": limit}) or []
 
     def read_conversation(self, cid):
-        return self.post(f"/api/v1/conversations/{cid}/read")
+        return self.post(f"/api/v1/conversations/{seg(cid)}/read")
 
     def dismiss_notification(self, nid):
-        return self.post(f"/api/v1/notifications/{nid}/dismiss")
+        return self.post(f"/api/v1/notifications/{seg(nid)}/dismiss")
 
     def clear_notifications(self):
         """Every notification gone, on the server (for every app)."""
@@ -631,16 +661,16 @@ class Api:
 
     def remove_from_followers(self, acc_id):
         """They no longer follow me — without blocking them."""
-        return self.post(f"/api/v1/accounts/{acc_id}/remove_from_followers")
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/remove_from_followers")
 
     def endorse(self, acc_id, on=True):
         """Recommend someone on my profile (Mastodon 4.4+; older ones call it pin)."""
         try:
-            return self.post(f"/api/v1/accounts/{acc_id}/{'endorse' if on else 'unendorse'}")
+            return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'endorse' if on else 'unendorse'}")
         except ApiError as e:
             if e.status != 404:
                 raise
-            return self.post(f"/api/v1/accounts/{acc_id}/{'pin' if on else 'unpin'}")
+            return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'pin' if on else 'unpin'}")
 
     def my_featured_tags(self):
         return self.get("/api/v1/featured_tags") or []
@@ -649,7 +679,7 @@ class Api:
         return self.post("/api/v1/featured_tags", data={"name": name.lstrip("#")})
 
     def unfeature_tag(self, tag_id):
-        return self.delete(f"/api/v1/featured_tags/{tag_id}")
+        return self.delete(f"/api/v1/featured_tags/{seg(tag_id)}")
 
     def familiar_followers(self, ids):
         """[{id, accounts}] — of the people I follow, who follows each of these."""
@@ -660,7 +690,7 @@ class Api:
         return self.get("/api/v2/suggestions", {"limit": limit}) or []
 
     def dismiss_suggestion(self, acc_id):
-        return self.delete(f"/api/v1/suggestions/{acc_id}")
+        return self.delete(f"/api/v1/suggestions/{seg(acc_id)}")
 
     def directory(self, offset=0, local=False, limit=40):
         """The profile directory: people who chose to be listed, recently active first."""
@@ -686,7 +716,7 @@ class Api:
         return self.get("/api/v1/preferences") or {}
 
     def react_announcement(self, aid, name, on=True):
-        path = f"/api/v1/announcements/{aid}/reactions/{quote(name, safe='')}"
+        path = f"/api/v1/announcements/{seg(aid)}/reactions/{quote(name, safe='')}"
         return self.put(path) if on else self.delete(path)
 
     # ---- interaction requests (GoToSocial): replies, likes, boosts waiting for my yes
@@ -697,5 +727,5 @@ class Api:
         return self.get("/api/v1/interaction_requests", p) or []
 
     def answer_interaction(self, req_id, approve):
-        return self.post(f"/api/v1/interaction_requests/{req_id}/"
+        return self.post(f"/api/v1/interaction_requests/{seg(req_id)}/"
                          + ("authorize" if approve else "reject"))
