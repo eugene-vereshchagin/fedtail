@@ -35,6 +35,20 @@
 - The web interface: a POST with a negative Content-Length is refused instead of read to
   the end of the connection; a fediverse link it can't find opens in the browser only when
   it is a web address.
+- Security: what other servers and posts point at — ActivityPub objects, nodeinfo,
+  pictures, videos — is fetched from public addresses only (not this computer, the home
+  network, a cloud's metadata service; your own server is exempt), each redirect checked
+  again, and only so much: 2 MB of JSON, 20 MB a picture, 100 MB an original, 300 MB a
+  video on disk. A server's nodeinfo is read only from that server.
+- Security: logging out revokes the token on the server too (it used to stay good there);
+  logging in anew revokes the old one.
+- `D #id` asks first in the web interface (a "sure?" in the page) and in the terminal
+  (Enter again within half a minute), as the window always did.
+- The live stream goes through the same proxy as everything else (HTTPS_PROXY; a SOCKS
+  proxy means polling only), only to your server's own site and only over TLS.
+- Profile names start with a letter, a digit or `_`: `..` pointed outside the profiles.
+  A broken `auth.json` or profile card means "log in", not a crash; the token's file is
+  private even when a crash left a temp file behind.
 
 - "Activity" follows `feed.order` like every other lane: with "oldest_first" the newest
   is at the bottom, it opens where the unseen begins (`feed.start_at`) and stays put when

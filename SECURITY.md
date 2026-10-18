@@ -10,7 +10,9 @@ What fedtail promises, so you know what counts as a hole:
   and is sent only to your own server. It never goes into logs, bug reports or requests to
   other servers.
 * Requests to other servers (honest counters, filling in threads, pictures) carry no token —
-  only your IP address shows.
+  only your IP address shows. They go to public addresses only (never this computer or the
+  local network, your own server excepted), every redirect checked, every answer size-capped.
+* Logging out revokes the token on the server as well as deleting it here.
 * Post HTML is rebuilt from an allow-list before display; no browser engine, no scripts. A post
   can't hold a link that acts on your behalf (deleting, boosting, following), and nothing from
   a post or another server opens a local file or a network share: fedtail hands the desktop
