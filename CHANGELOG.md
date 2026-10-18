@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.14.0 — in progress
+
 ## 0.13.0 — 2026-10-18
 
 **In short:** GoToSocial approvals of replies, likes and boosts; lists — who is in them,
