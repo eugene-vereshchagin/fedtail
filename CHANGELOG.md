@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.14.0 — in progress
+## 0.14.0 — 2026-10-18
 
 - Leak hunting for days-long runs. With every stats line a "trend" line: memory, Python
   objects, widgets, cards, pictures, threads, files — at start, now, per hour; a number that
