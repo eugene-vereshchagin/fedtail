@@ -496,7 +496,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: bool(row.relation.get("following")) != was)
         search.run("#lin")
         self.pump(until=lambda: search.box.findChildren(TagRow))
-        self.win.open_people({"id": "ME", "acct": "veresk"}, "followers")
+        self.win.open_people({"id": "ME", "acct": "mira"}, "followers")
         self.assertIsInstance(self.win.tabs.currentWidget(), PeopleWidget)
         self.win.close_tab(self.win.tabs.currentIndex())
         self.win.close_tab(self.win.tabs.indexOf(search))
@@ -630,12 +630,12 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(dlg.bio.toPlainText(), "о себе")
         self.assertEqual(dlg.field_edits[0][1].text(), "x.org")
         self.assertEqual(dlg.changes(), {})
-        dlg.name.setText("Вереск Новый")
+        dlg.name.setText("Мира Новый")
         dlg.locked.setChecked(True)
-        self.assertEqual(dlg.changes(), {"display_name": "Вереск Новый", "locked": True})
+        self.assertEqual(dlg.changes(), {"display_name": "Мира Новый", "locked": True})
         dlg.save()
         self.pump(until=lambda: self.world.profile_updates and gone(dlg))
-        self.pump(until=lambda: "Вереск Новый" in self.win.account_name.text())
+        self.pump(until=lambda: "Мира Новый" in self.win.account_name.text())
         self.win.close_tab(self.win.tabs.currentIndex())
 
         # a thread can be followed from its header
@@ -1386,7 +1386,7 @@ class QtSmokeTest(unittest.TestCase):
 
     def test_accounts_menu_switches_profiles(self):
         from fedtail.core import profiles
-        fake = [{"name": "default", "acct": "veresk", "display_name": "", "logged_in": True,
+        fake = [{"name": "default", "acct": "mira", "display_name": "", "logged_in": True,
                  "server": "https://example.test"},
                 {"name": "t", "acct": "me", "display_name": "", "logged_in": True,
                  "server": "https://example.test"},
@@ -1399,7 +1399,7 @@ class QtSmokeTest(unittest.TestCase):
         try:
             m = self.win.accounts_menu()
             acts = [a for a in m.actions() if a.text()]
-            self.assertEqual(acts[0].text(), "@veresk@example.test")
+            self.assertEqual(acts[0].text(), "@mira@example.test")
             current = acts[1]  # this window's profile is "t"
             self.assertTrue(current.isChecked() and not current.isEnabled())
             self.assertIn("work", acts[2].text())

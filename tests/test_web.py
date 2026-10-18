@@ -102,7 +102,7 @@ class WebTest(TmpDir):
         self.assertNotIn("<script", post["html"])
         self.assertNotIn("javascript:", post["html"])
         self.assertTrue(post["unread"])
-        self.assertEqual(post["context"]["acct"], "veresk")  # what it answers
+        self.assertEqual(post["context"]["acct"], "mira")  # what it answers
         self.assertEqual(self.req("/api/lane?name=nosuch")[0], 400)
 
     def test_read_act_post_command(self):

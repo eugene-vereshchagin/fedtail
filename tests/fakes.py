@@ -2,8 +2,8 @@
 
 from fedtail.core.api import ApiError
 
-ME = {"id": "ME", "acct": "veresk", "username": "veresk", "display_name": "Вереск",
-      "bot": False, "avatar_static": "", "url": "https://example.test/@veresk", "note": ""}
+ME = {"id": "ME", "acct": "mira", "username": "mira", "display_name": "Мира",
+      "bot": False, "avatar_static": "", "url": "https://example.test/@mira", "note": ""}
 
 
 def acct(i, name, bot=False):

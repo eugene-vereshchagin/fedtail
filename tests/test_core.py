@@ -269,7 +269,7 @@ class PathsAuthTest(TmpDir):
         home = paths.resolve()
         home.ensure()
         auth.save(home.auth_file, {"server": "https://social.example", "token": "SECRET"})
-        profiles.remember(home, {"acct": "veresk", "display_name": "V"},
+        profiles.remember(home, {"acct": "mira", "display_name": "V"},
                           "https://social.example")
         work = paths.resolve("work")
         work.ensure()  # made, not logged in yet
@@ -278,7 +278,7 @@ class PathsAuthTest(TmpDir):
         (self.tmp / "cfg/fedtail/stray").mkdir()    # an empty folder: not one either
         got = profiles.listing()
         self.assertEqual([p["name"] for p in got], ["default", "work"])
-        self.assertEqual(profiles.label(got[0]), "@veresk@social.example")
+        self.assertEqual(profiles.label(got[0]), "@mira@social.example")
         self.assertEqual(profiles.label(got[1]), "work")
         self.assertEqual([p["logged_in"] for p in got], [True, False])
         card = (home.data_dir / profiles.CARD).read_text("utf-8")
@@ -313,8 +313,8 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(model.narrower("public", "private"), "private")
         self.assertEqual(model.narrower("direct", "private"), "direct")
         p = status("1", BOB)
-        p["mentions"] = [{"acct": "veresk"}, {"acct": "alice@x.y"}, {"acct": "BOB@social.example"}]
-        self.assertEqual(model.reply_mentions(p, "veresk"), "@bob@social.example @alice@x.y ")
+        p["mentions"] = [{"acct": "mira"}, {"acct": "alice@x.y"}, {"acct": "BOB@social.example"}]
+        self.assertEqual(model.reply_mentions(p, "mira"), "@bob@social.example @alice@x.y ")
         self.assertTrue(model.is_bot(NEWS))
         self.assertTrue(model.is_bot(BOB, ["@Bob@Social.example"]))
 
@@ -1247,7 +1247,7 @@ class CoreTest(TmpDir):
         core, w = self.make()
         core.connect().result()
         a = status("010", BOB, minute=10)
-        a["mentions"] = [{"acct": "bonnie@far.example"}, {"acct": "veresk"}]
+        a["mentions"] = [{"acct": "bonnie@far.example"}, {"acct": "mira"}]
         w.add(a, home=True)
         w.add(status("011", BOB, minute=11), home=True)
         core.poll_once()
@@ -1256,7 +1256,7 @@ class CoreTest(TmpDir):
         got = core.mention_suggestions("bo")
         self.assertEqual(got[0][0], "bob@social.example")  # seen most
         self.assertIn("bonnie@far.example", [x[0] for x in got])
-        self.assertEqual(core.mention_suggestions("veresk"), [])  # never yourself
+        self.assertEqual(core.mention_suggestions("mira"), [])  # never yourself
         self.assertEqual(core.search_people("bob").result()[0][0], "bob@social.example")
 
     def test_notify_about_one_list_by_title(self):
@@ -1473,7 +1473,7 @@ class CoreTest(TmpDir):
         with self.assertRaises(ApiError):
             core.finish_login("bad").result()
         core.finish_login("good").result()
-        self.assertEqual(auth.load(core.paths.auth_file)["acct"], "veresk")
+        self.assertEqual(auth.load(core.paths.auth_file)["acct"], "mira")
 
     def test_auth_failure_event(self):
         core, w = self.make()

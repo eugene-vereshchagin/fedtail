@@ -26,7 +26,7 @@ class TuiModelTest(TmpDir):
         self.assertEqual(kinds["alias"], "#a3f")
         self.assertEqual(kinds["who"], "@bob@social.example")
         self.assertIn("unread", kinds)
-        self.assertEqual(shown.context, "↳ @veresk: what do you think?")
+        self.assertEqual(shown.context, "↳ @mira: what do you think?")
         self.assertEqual(shown.body, ["I think yes", "and more"])
         self.assertIn("[1 attachment]", shown.foot)
         self.assertIn("☆ 3", shown.foot)
