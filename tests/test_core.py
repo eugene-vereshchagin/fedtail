@@ -929,6 +929,28 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["remote_profiles"] = False
         self.assertEqual(core.posts_from_origin(far).result(), [])
 
+    def test_newest_posts_through_the_api_without_outbox(self):
+        """A server that hides its outbox (GoToSocial, authorized fetch): the profile's
+        newest posts come through its public API instead; private ones stay out."""
+        core, w = self.make()
+        core.connect().result()
+        far = dict(fakes.acct("F", "fay@far.example"), username="fay",
+                   url="https://far.example/@fay", uri="https://far.example/users/fay")
+        core._origin_json = lambda url: None  # no actor, no outbox
+        for n in (1, 2):
+            st = dict(status(f"9{n}", far, minute=n, vis="public"),
+                      uri=f"https://far.example/n/{n}")
+            w.remote[st["uri"]] = st
+        api = {"https://far.example/api/v1/accounts/lookup?acct=fay": {"id": "7"},
+               "https://far.example/api/v1/accounts/7/statuses?limit=40&exclude_reblogs=true":
+                   [{"id": "2", "uri": "https://far.example/n/2", "visibility": "public"},
+                    {"id": "1", "uri": "https://far.example/n/1", "visibility": "direct"}]}
+        core._origin_get = api.get
+        got = core.posts_from_origin(far).result()
+        self.assertEqual([st["id"] for st in got], ["92"])
+        core._origin_get = lambda url: None  # won't answer strangers either: nothing
+        self.assertEqual(core.posts_from_origin(far).result(), [])
+
     def test_older_posts_from_origin_page_by_page(self):
         """My server ran out of someone's posts: further back from their outbox, a page
         at a time, leaving out what's already here."""
