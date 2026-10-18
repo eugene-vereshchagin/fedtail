@@ -7,7 +7,8 @@
   fedtail's own glyphs (⚠ ↔ ❯) stay.
 - ≡ → "Try a theme", next to "Open themes folder": any theme at once, until restart — the
   sidebar and every card are drawn again in place, the reading place kept. `ui.theme` in
-  the config stays what the next start brings.
+  the config stays what the next start brings. (The first cut lost the sidebar on the
+  way: the new one was handed to the splitter so that nothing owned it.)
 - Lanes are named in the config as their titles say: `people` → `home`, `comments` →
   `replies`, `global` → `federated`, `mine` → `my_posts`, `favourites` → `my_likes`. The old
   names still work everywhere (config, command line, web API); the lane open, the columns

@@ -607,9 +607,17 @@ class MainWindow(QMainWindow):
         current = self.lanes.currentItem()
         current = current.data(Qt.ItemDataRole.UserRole) if current else None
         sizes = self.split.sizes()
-        side = self.split.widget(0)
-        self.split.replaceWidget(0, self._build_sidebar())
-        side.deleteLater()
+        old_side = self.split.widget(0)
+        old_side.hide()
+        old_side.setParent(None)
+        old_side.deleteLater()
+        # insertWidget, not replaceWidget: PySide gives the splitter ownership only
+        # through insert/add — a sidebar handed to replaceWidget belonged to nobody and
+        # Python deleted it as soon as this line was done (the panel vanished)
+        self.side_panel = self._build_sidebar()
+        self.split.insertWidget(0, self.side_panel)
+        self.split.setStretchFactor(0, 0)
+        self.split.setStretchFactor(1, 1)
         self.split.setSizes(sizes)
         self.columns_btn.blockSignals(True)
         self.columns_btn.setChecked(self.columns is not None)
