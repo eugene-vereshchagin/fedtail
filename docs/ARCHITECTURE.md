@@ -81,10 +81,13 @@ fedtail/
     counters.py      honest counters: ask the post's own server
     replies.py       ActivityPub reading without my token: a post's replies collection,
                      an actor's outbox (newest public posts), followers/following lists
+    remote.py        the one way to GET what other servers and posts point at: allowed
+                     schemes, public addresses only (my server exempt), redirects checked
+                     one by one, the body capped; never a token
     events.py        tiny event bus (handlers run in the emitting thread)
     hashtags.py      one-case hashtags for the CamelCase hint
     links.py         @mentions, #tags, fediverse links → in-app links
-    instance.py      one window per profile (unix socket)
+    instance.py      one window per profile (unix socket 0600; Windows: a pipe with a key)
     merged.py        MergedCore: several Cores behind one face (all accounts in one window);
                      other accounts' ids are prefixed "profile~id", actions routed by it
     profiles.py      the profiles there are (profile.json: acct + server, no token), how to
@@ -138,7 +141,8 @@ fedtail/
   data/
     config.example.toml  the full config in chapters (Russian), the reference
     themes/*.toml        built-in themes (system.toml lists every key)
-    icons/fedtail.svg    app icon
+    icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
+    icons/fedtail.svg    the drawn bubble (ui.app_icon = "bubble"; iconart.py themes it)
 tests/               unittest; fakes.py is an in-memory Mastodon
 tools/screenshots.py renders the window with made-up data (CI publishes PNGs)
 .github/             CI workflow; annotate.py turns test failures into annotations

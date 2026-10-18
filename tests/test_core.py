@@ -1158,19 +1158,21 @@ class CoreTest(TmpDir):
             {"type": "image", "preview_url": "https://x/s.png", "url": "https://x/o.png"},
             {"type": "video", "preview_url": "https://x/v.png", "url": "https://x/v.mp4"}])
         st["account"] = dict(BOB, avatar_static="https://x/bob.png")
+        self.assertEqual(core.cfg["feed"]["prefetch"], "previews")  # the default
         w.add(st, home=True)
-        core.poll_once()  # "all", the default: pictures, originals, the video apart
-        self.assertTrue({"https://x/s.png", "https://x/bob.png", "https://x/o.png",
-                         "https://x/v.png"} <= set(asked))
-        self.assertEqual(videos, ["https://x/v.mp4"])
-        core.cfg["feed"]["prefetch"] = "previews"
+        core.poll_once()  # previews: the pictures small, the video's still, no video
+        self.assertTrue({"https://x/s.png", "https://x/bob.png", "https://x/v.png"}
+                        <= set(asked))
+        self.assertNotIn("https://x/o.png", asked)
+        self.assertEqual(videos, [])
+        core.cfg["feed"]["prefetch"] = "all"
         asked.clear()
         videos.clear()
         w.add(dict(st, id="092"), home=True)
-        core.poll_once()
-        self.assertIn("https://x/s.png", asked)
-        self.assertNotIn("https://x/o.png", asked)
-        self.assertEqual(videos, [])
+        core.poll_once()  # all: the originals too, the video apart
+        self.assertTrue({"https://x/s.png", "https://x/o.png", "https://x/v.png"}
+                        <= set(asked))
+        self.assertEqual(videos, ["https://x/v.mp4"])
         core.cfg["feed"]["prefetch"] = "off"
         asked.clear()
         w.add(dict(st, id="091"), home=True)

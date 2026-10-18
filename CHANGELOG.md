@@ -2,6 +2,20 @@
 
 ## 0.15.0 — in progress
 
+- `feed.prefetch` is `"previews"` by default: new posts' previews, avatars and link
+  pictures come ahead of time; the videos themselves and full originals only with
+  `"all"` (it fetched every new post's video before).
+- Logging in to a plain `http://` server is refused unless it is at home (localhost, a
+  private address, `.local`/`.lan`): the token would travel in the clear.
+- The web interface prints and opens a one-time link (good for 15 minutes) instead of one
+  with its key; at most 32 connections, a silent client dropped after a minute; `#tag`
+  links open the tag's page on your server.
+- Leaving fedtail no longer throws "cannot schedule new futures" and "closed database"
+  into the log: late jobs are turned away, running ones finish first.
+- `state.db` is private (0600) like the token's file; on Windows the single-instance pipe
+  needs the profile's key; no query string (search words, signed addresses) reaches the
+  log.
+
 - fedtail has a face: an opossum holding its own tail — the icon of the window, the tray,
   notifications and the menu entry (`--install-desktop`, the .deb, the Windows .exe), and
   the picture in About. `ui.app_icon = "bubble"` brings back the drawn thread bubble

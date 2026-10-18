@@ -78,7 +78,7 @@ DEFAULTS = {
         "emoji": True,
         "quotes": 'card',
         "remote_profiles": True,
-        "prefetch": 'all',
+        "prefetch": 'previews',
         "per_person_follow": True,
         "show_moved": True,
         "old_days": 30,

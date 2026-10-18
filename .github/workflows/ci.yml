@@ -15,6 +15,20 @@ jobs:
       - run: pip install ruff
       - run: ruff check --output-format=github .
 
+  # known vulnerabilities in what fedtail runs on (requests, urllib3, PySide6, textual):
+  # reported as warnings, never holding a release — a new CVE upstream is news, not a
+  # broken build
+  audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install pip-audit && pip install ".[qt]" textual
+      - run: pip-audit --skip-editable --progress-spinner off
+
   test:
     runs-on: ubuntu-latest
     strategy:
