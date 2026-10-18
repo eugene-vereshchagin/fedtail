@@ -126,6 +126,17 @@ class FeedView(QScrollArea):
                 return key, top - v
         return None
 
+    def _reading_anchor(self):
+        """The post that holds the reading place: the anchor being held, while one is
+        (cards just built above move everything down, and the scroll bar catches up only
+        when the layout has settled — read from it in between, "the post on top" is a
+        card just built, and the place jumped by thousands of pixels), else the post on
+        top of the screen."""
+        t = self._target
+        if t is not None and t[0] == "anchor" and t[1] in self.rows:
+            return t[1], t[2]
+        return self._anchor()
+
     # ---- scroll targets -------------------------------------------------------------
     def _set_target(self, target):
         self._target = target
@@ -275,7 +286,7 @@ class FeedView(QScrollArea):
                 # never everything at once: a filter switched off (or on) brings back
                 # hundreds of posts between the cards built — building them all froze the
                 # window for seconds and took gigabytes. Around the post on screen instead.
-                anchor = self._anchor() if self.order else None
+                anchor = self._reading_anchor() if self.order else None
                 c = index.get(anchor[0]) if anchor else None
                 if c is None:
                     c = have[0] if have else len(keys) - 1
@@ -343,7 +354,7 @@ class FeedView(QScrollArea):
         n = self.build_at_once
         if self._all_at_once() or not n or len(self.order) <= 3 * n:
             return
-        anchor = self._anchor()
+        anchor = self._reading_anchor()
         if anchor is None or anchor[0] not in self.rows:
             return
         keys = self.keys()
@@ -380,7 +391,7 @@ class FeedView(QScrollArea):
         return key in self.rows
 
     def _set_specs(self, specs, keep_position=True):
-        anchor = self._anchor() if keep_position else None
+        anchor = self._reading_anchor() if keep_position else None
         keys = [s.key for s in specs]
         wanted = set(keys)
         for key in [k for k in self.order if k not in wanted]:

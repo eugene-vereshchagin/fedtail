@@ -2,6 +2,10 @@
 
 ## 0.14.0 — in progress
 
+- Scrolling up a big lane no longer jumps: while cards are built above the screen, the
+  next step took the place from the scroll bar before it had caught up, so a card just
+  built became "the post on top" and the reading place moved by thousands of pixels. The
+  held anchor decides until it is let go (CI caught it, one run in two).
 - ≡ → "Account and server" (was "Accounts") also holds "About the server…": one place for
   this account, its server and the other profiles.
 - ≡ → "For the tender and sensitive": word filters, muted, blocked, blocked servers and
