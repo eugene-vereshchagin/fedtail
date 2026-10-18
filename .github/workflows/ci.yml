@@ -163,7 +163,7 @@ jobs:
           fedtail --version
           python3 -c "import fedtail.frontends.qt, fedtail.frontends.web.server"
           test -f /usr/share/applications/fedtail.desktop
-          test -f /usr/share/icons/hicolor/scalable/apps/fedtail.svg
+          test -f /usr/share/icons/hicolor/512x512/apps/fedtail.png
           apt-get install -y python3-textual && python3 -c "import fedtail.frontends.tui.app" || echo "::warning::no python3-textual in this Debian"
       - uses: actions/upload-artifact@v4
         with:
