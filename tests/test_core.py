@@ -122,6 +122,22 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertIn("profile_featured = true\n\n#", new)
         self.assertEqual(cu.update(new, example), new)
 
+    def test_new_options_checked(self):
+        """The options of this version say what's wrong with a bad value, all at once."""
+        with self.assertRaises(config.ConfigError) as e:
+            config.validate({"ui": {"image_decode": "huge"},
+                             "poll": {"stream_gap_seconds": -5},
+                             "activity": {"approvals": "yes"},
+                             "feed": {"follow_date_note": 1}})
+        text = str(e.exception)
+        for name in ("ui.image_decode", "poll.stream_gap_seconds", "activity.approvals",
+                     "feed.follow_date_note"):
+            self.assertIn(name, text)
+        cfg, _w = config.validate({})
+        self.assertEqual((cfg["ui"]["image_decode"], cfg["poll"]["stream_gap_seconds"],
+                          cfg["activity"]["approvals"], cfg["feed"]["follow_date_note"]),
+                         ("box", 10, True, True))
+
     def test_update_keeps_my_notes(self):
         """My own comments next to my values stay word for word; a blank line goes in
         only after an option, never inside my note."""
