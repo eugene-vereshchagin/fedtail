@@ -2,7 +2,7 @@
 
 [English summary below](#english)
 
-Состояние на версию **0.13.0** (18.10.2026). Это полный перечень возможностей fedtail: что
+Состояние на версию **0.14.0** (18.10.2026). Это полный перечень возможностей fedtail: что
 делает каждая, чем включается и выключается, на каком API или протоколе стоит и как то же
 самое сделано у других клиентов. Здесь же — планы и то, от чего отказались, с причинами.
 
@@ -528,6 +528,8 @@
 | Опрос сервера и живой поток | есть | `[poll]`: `interval_seconds`, `stream`, `stream_gap_seconds` | streaming (WebSocket) | Mastodon web, Phanpy, Elk, Tokodon, Whalebird, Ice Cubes |
 | Ошибки по-человечески и без спама | есть | — | своё | — |
 | Подробный журнал для отчётов об ошибках | есть | `[debug]`, ключи запуска `--debug`, `--bug-report` | своё | — |
+| Поиск утечек: тренды, перепись объектов, снимки памяти | есть | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → «Отладка» | своё (gc, tracemalloc) | — |
+| Чистка базы от постов, которых нет ни в одной ленте | в планах | — | SQLite | — |
 | Экранные дикторы | частично | `ui.alt_text` | — | Mastodon web, Tusky, Ivory |
 | Язык интерфейса | есть | `ui.language` | — | у всех |
 
@@ -552,6 +554,10 @@
 **Ошибки по-человечески и без спама.** Сервер за прокси лежит — вместо HTML-страницы Cloudflare одна строка «Bad Gateway — the server is down or not answering»; одна и та же ошибка каждого опроса показывается и пишется в журнал один раз, снова — только если изменилась или через десять минут.
 
 **Подробный журнал для отчётов об ошибках.** В режиме отладки (`mode = "auto"` — включён в версиях для разработки, выключен в релизах): журнал запросов, опросов, действий (без текстов постов), ошибки с трассировкой, статистика памяти и потоков раз в `stats_minutes`, сторож зависаний (`watchdog_seconds`, `stall_ms`), медленные запросы, рост памяти. `crash.log` — стеки при падении, `kill -USR1` — стеки по запросу. Логи прошлой версии новая удаляет сама. `--bug-report` собирает архив за двое суток без токена и базы. Подробно — [DEBUGGING.md](DEBUGGING.md).
+
+**Поиск утечек: тренды, перепись объектов, снимки памяти.** Для запусков на сутки. С каждой строкой статистики — строка `trend`: память, объекты Python, виджеты, карточки, картинки, потоки, файлы — сколько при запуске, сколько сейчас, сколько в час. Что-то росло на каждой из последних `leak_samples` проверок (12 — это час) и не на крохи — предупреждение `possible leak` с цифрами; первые полчаса не считаются. В режиме отладки — перепись: какие объекты Python и виджеты Qt прибавились с прошлой проверки и с запуска (`object_census`). `tracemalloc = true` — трассировка памяти с запуска; снимок — ≡ → «Отладка» → «Снимок памяти»: файл с тем, кто держит больше всего и что выросло, по строкам кода. Там же: «Что растёт: статистика и перепись сейчас», «Отдать свободную память системе», трассировка вкл/выкл. Последняя строка сессии — `session summary`: часы, память, пик, фризы, опросы. Как оставить на ночь — [DEBUGGING.md](DEBUGGING.md#ночной-прогон-поиск-утечек).
+
+**Чистка базы от постов, которых нет ни в одной ленте.** Ленты обрезаются (по 3000 на источник), но сами посты — и родители ответов, и открытые треды — остаются в базе навсегда: она растёт на диске (в памяти это не держится). Нужна чистка старых постов, на которые ничто не ссылается, так, чтобы родителей видимых ответов не пришлось качать заново. Рост видно в `trend` как `core.statuses` и `core.db_mb`.
 
 **Экранные дикторы.** Подписи к картинкам и имена кнопок для дикторов есть, но вживую с Orca интерфейс не проверяли.
 
@@ -633,6 +639,7 @@
 
 | Что | Раздел | Ключ (предварительно) | Размер |
 |---|---|---|---|
+| Чистка базы от постов вне лент | Приложение | — | средний |
 | Коллекции Mastodon 4.6 | Ленты | — | когда будут в GoToSocial |
 | GTK4, Toga | Интерфейсы | `ui.frontend` | крупный |
 | apt-репозиторий, установщик для Windows | Сборки | — | — |
@@ -674,7 +681,7 @@
 <a id="english"></a>
 ## English
 
-The full list of what fedtail does as of **0.13.0**: every feature with its config switch
+The full list of what fedtail does as of **0.14.0**: every feature with its config switch
 (`section.key`, the full reference is `config.example.toml`), the API or protocol behind it,
 and how other clients (Mastodon web, Tusky, Ivory, Phanpy, Elk, Tokodon, Ice Cubes, Fedilab,
 Sengi, Megalodon, tut, Tuba, Whalebird) do the same.
@@ -696,21 +703,26 @@ polls, quotes, GoToSocial interaction policies, scheduled posts; a Point-style c
 mutes, blocks, filters, server blocks, reports, notes, the bell; desktop notifications with
 privacy levels; GoToSocial approvals; filtered notifications; announcements; unread counts on
 the icon; profiles and all accounts in one window; themes as files; a config in chapters;
-memory kept in check for days-long sessions; detailed logs and bug reports; Qt, terminal
+memory kept in check for days-long sessions; detailed logs and bug reports; a leak watch
+for days-long runs (trends with "possible leak" warnings, a census of Python objects and Qt
+widgets, tracemalloc snapshots, from the Debug menu too); lanes side by side in columns;
+acting as another account in the merged window; long-form posts and events and the author's
+server software over ActivityPub; moved accounts; multi-tag lanes; a main profile (★) with
+safe "log in again" and "log out"; a resizable sidebar; Qt, terminal
 commands, a Textual TUI and a web UI on localhost; Linux one-file, deb and Windows .exe builds.
 
 **Partly:** emoji reactions (shown only), notification grouping (fedtail's own), screen
 readers (not tested live).
 
-**Planned, each one switchable:** hide a person's boosts and pick follow languages,
-multi-tag lanes, moved accounts, delete and redraft, resizing images to the server limit,
-account colours in the merged window, post labels, opening links in the running fedtail,
-severed-relationship and moderation-warning notices, poll results without voting, a
-generated config reference, a post preview, posting a chain, collapsing hashtag stuffing, a
-boost carousel, long-form posts and events over ActivityPub, the author's server software via
-nodeinfo, acting as another account, side-by-side columns, Mastodon 4.6 collections, GTK4 and
-Toga, an apt repository, a Windows installer.
+**Planned, each one switchable:** cleaning the database of posts no lane holds any more,
+Mastodon 4.6 collections (once GoToSocial has them), GTK4 and Toga frontends, an apt
+repository, a Windows installer.
+
+**Not decided:** spell checking, the token from an external command, another server's
+public timeline, link timelines, sending emoji reactions, the server's grouped
+notifications.
 
 **Not planned:** a node admin panel (a client logged in as admin is irresponsible; a
-separate tool if ever), card templates (themes already shape the whole app), push, AI
-helpers, the annual report, an XMPP gateway, batch subscriptions to old threads.
+separate tool if ever), card templates (themes already shape the whole app), a boost
+carousel, push, AI helpers, the annual report, an XMPP gateway, batch subscriptions to old
+threads.

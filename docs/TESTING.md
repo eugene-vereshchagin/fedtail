@@ -40,6 +40,9 @@ python3 -m fedtail --install-desktop    # пункт в меню и иконка
 - **Командная строка** внизу (`Ctrl+L`, `?` — справка), как на Point.
 - **Несколько аккаунтов**: правый клик по своей аватарке.
 - **Темы**: `ui.theme` в конфиге (≡ → «Открыть конфиг»), список — там же в пояснении.
+- **Сутки без перезапуска.** Оставь окно на ночь — утром пришли журнал: в нём строки
+  `trend` и, если что-то утекает, `possible leak`. Как поставить охоту на утечку всерьёз
+  (трассировка памяти, снимки) — [DEBUGGING.md](DEBUGGING.md#ночной-прогон-поиск-утечек).
 
 ## Нашёл проблему
 
@@ -71,7 +74,9 @@ trace to fix it by.
 **Try first:** whole threads (a tree, numbered, filled from other servers); nothing lost
 (Esc closes the lanes, new things wait unread); replies to me and thread subscriptions;
 notifications (≡ → Debugging → Send a test notification); the command line (`Ctrl+L`,
-`?`); several accounts (right-click your avatar); themes (`ui.theme`).
+`?`); several accounts (right-click your avatar); themes (`ui.theme`); a night without a
+restart — send the log in the morning: its `trend` and `possible leak` lines say what grew
+(a full leak hunt: DEBUGGING.md, "A night run").
 
 **Found a problem:** say what you did, expected and got (a screenshot helps), and attach
 `latest.log` from the log folder (menu ≡ → Debugging → Open the log folder; usually

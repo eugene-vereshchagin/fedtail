@@ -84,7 +84,49 @@ crash.log, stacks.log, config.toml и сводка о системе. Файла
 (что ответила система). Без пакета `libnotify-bin` уведомления идут через трей.
 
 **Ест память или процессор.** Достаточно `--bug-report` через какое-то время
-работы: в журнале строки `stats` за всё время.
+работы: в журнале строки `stats` за всё время. Подробнее — следующий раздел.
+
+## Ночной прогон: поиск утечек
+
+Оставить окно на ночь (или на сутки) и утром понять, что росло, и чего именно.
+
+1. Версия для разработки (из git) — режим отладки включён сам. Релиз — `debug.mode = "on"`.
+2. Для охоты всерьёз — в конфиг `debug.tracemalloc = true` (или ≡ → «Отладка» →
+   «Трассировка памяти» после запуска). Медленнее и до двух раз больше памяти: только
+   на время охоты. Без неё всё остальное тоже работает.
+3. Запустить, открыть свои обычные ленты, пару тредов и профилей, закрыть их — как днём.
+   Через минуту ≡ → «Отладка» → «Снимок памяти» (если трассировка включена) — точка отсчёта.
+4. Оставить. Утром: «Снимок памяти» ещё раз, «Что растёт: статистика и перепись объектов
+   сейчас», потом `--bug-report` (или просто папка логов) — и прислать.
+
+Что читать в журнале (`grep` по началу строки):
+
+* `stats {…}` — раз в `stats_minutes`: `rss_mb` (память процесса), `py_objects`,
+  `qt.widgets`, `qt.rows` (построенных карточек), `qt.model` (постов в лентах),
+  `qt.images_mb`, `threads`, `fds`, `gc.uncollectable`, `core.*` (очереди, кэши, строки
+  базы, `db_mb`);
+* `trend over N h {…}` — следом: по каждому из этих чисел «при запуске → сейчас (±в час)»;
+* `possible leak: X rose on each of the last 12 checks: A -> B (+N/h over H h; +M since
+  start)` — число росло на каждой проверке последний час и не на крохи. Первые полчаса
+  молчит (ленты наполняются), повторяет, когда рост с запуска удвоился;
+* `census python: … since last: dict +1200, fedtail.frontends.qt.card.PostRow +40 …;
+  since start: …` — какие объекты Python прибавились (в режиме отладки, с каждой
+  статистикой); `census qt_widgets: …` — то же для виджетов Qt по классам. Растёт
+  `PostRow`/`QLabel` при неизменном `qt.rows` — виджеты не удаляются; растут `dict`/`list`
+  при ровных виджетах — что-то копит данные;
+* `memory: N MB given back to the system` — сколько память ушло обратно после чистки:
+  если rss растёт, а здесь отдаётся много — это не утечка, а пики;
+* `session summary {…}` и `session trend {…}` — последние строки сессии: часы, память, пик,
+  фризы, опросы и итог по трендам.
+
+Снимки памяти — файлы `memory-<время>.txt` в папке логов: «top by size» — какие строки кода
+держат больше всего памяти сейчас, «grew most since the first snapshot» — что выросло с
+первого снимка, и откуда выделялся главный растущий кусок. В них только места в коде —
+ни текстов постов, ни токена. Уходят вместе со старыми логами.
+
+Важно: **rss растёт и в норме** первые полчаса–час (ленты, картинки, кэши) и прыгает при
+открытии больших лент. Утечка — это когда растёт ровно и всё время, при одних и тех же
+действиях; trend и possible leak для этого и сделаны.
 
 ## Настройки — секция `[debug]`
 
@@ -92,12 +134,16 @@ crash.log, stacks.log, config.toml и сводка о системе. Файла
 [debug]
 level = "debug"            # "debug" | "info" | "warning" — подробность журнала
 log_mb = 10                # размер одного файла журнала
-keep = 5                   # сколько старых хранить
+keep_mb = 500              # сколько МБ журналов держать
 stats_minutes = 5          # 0 — не писать статистику
+trim_memory = true         # отдавать освобождённую память системе
 watchdog_seconds = 8       # 0 — не следить за зависаниями окна
 stall_ms = 250             # фризы окна короче сторожа; 0 — не следить
 slow_request_seconds = 5
 rss_warn_mb = 1500
+leak_samples = 12          # «possible leak»: рост на стольких проверках подряд
+object_census = true       # перепись объектов и виджетов (в режиме отладки)
+tracemalloc = false        # трассировка памяти с запуска (для охоты на утечку)
 ```
 
 `--debug` дополнительно выводит весь журнал в терминал.
@@ -137,8 +183,21 @@ the config and a system summary — without `auth.json` and `state.db`. For a ha
 first dump the stacks: menu → Debugging → Write thread stacks, or
 `kill -USR1 <pid>` (works even when the window is frozen).
 
-**Settings:** the `[debug]` section (level, log size and count, stats interval,
-watchdog, slow request and memory thresholds). `--debug` also prints the whole
-log to the terminal.
+**A night run, hunting leaks:** a development build (or `debug.mode = "on"`); for a real
+hunt `debug.tracemalloc = true` too (or ≡ → Debugging → Memory tracing; slower, up to twice
+the memory). Use it as by day, take a "Memory snapshot" after a minute, leave it; in the
+morning another snapshot, "What grows: stats and object census now", then `--bug-report`.
+In the log: `stats` lines; `trend over N h` (each watched number at start → now, ± per
+hour); `possible leak: X rose on each of the last 12 checks …` (not in the first half hour;
+again when the growth since start doubles); `census python` / `census qt_widgets` — which
+Python types and Qt widget classes grew since the last check and since the start;
+`session summary` / `session trend` at exit. `memory-<time>.txt` next to the logs: the lines
+of code holding the most memory and what grew since the first snapshot (code locations
+only). Memory does grow for the first half hour or so (lanes, pictures, caches): a leak is
+steady growth under the same use.
+
+**Settings:** the `[debug]` section (level, log size, stats interval, trimming, watchdog,
+freezes, slow requests, memory threshold, `leak_samples`, `object_census`, `tracemalloc`).
+`--debug` also prints the whole log to the terminal.
 
 For how the diagnostics are built, see ARCHITECTURE.md §18.

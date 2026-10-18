@@ -64,6 +64,7 @@ fedtail/
   version.py         the displayed version: 0.2.0.devN+gSHA from git, or _build.py
   diag.py            logs, crash traces, stack dumps, stats, freeze watchdog,
                      bug-report archive (no Qt)
+  leaks.py           the leak watch: trends, census by type, tracemalloc snapshots (§18)
   desktop.py         --install-desktop: .desktop entry + icon in ~/.local/share
   i18n.py            interface strings, ru/en, Russian plural forms
   sysenv.py          the one-file build: start other programs with the system's environment
@@ -554,6 +555,26 @@ routes Qt messages into the log and drives the `Watchdog` from a 1 s timer.
 `api.py` logs every request (method, path, paging params, status, time, size —
 never the token or bodies). Use `logging.getLogger(__name__)` in new modules.
 
+**Leak watch** (`fedtail/leaks.py`, no Qt). The stats thread runs `diag.check_now()`
+every `debug.stats_minutes`: `log_stats()` (the `stats` line, now with `gc.*`), then
+`trend()` — a `leaks.Trend` keeps a window of `debug.leak_samples` values per watched
+metric (`leaks.WATCH`: name → the growth over the window that is still noise), logs a
+`trend` summary (start → now, least-squares rate per hour) and a `possible leak` warning
+when a metric rose on every sample of the window by more than its noise floor (none in
+the first 30 min; again when the growth since start doubles). Store rows
+(`leaks.SUMMARY_ONLY`) grow on purpose and are only summarised. In the debugging mode
+(`debug.object_census`) `leaks.python_objects()` (a `gc.get_objects()` walk by type, a few
+hundred ms) goes through `diag.census("python", …)`, a `leaks.Census` comparing with the
+last and the first count. Qt widgets are **only** touched on the GUI thread:
+`qt/diagnostics.py` counts them on a 30 s window-owned timer into a dict the `qt` stats
+provider returns a copy of, and feeds `census("qt_widgets", …)` by class every stats
+interval. tracemalloc: `leaks.start_tracing()` / `stop_tracing()` / `snapshot(folder)`
+writes `memory-<time>.txt` (top lines by size, growth since the first snapshot, the
+biggest grower's traceback); `debug.tracemalloc` starts it at launch, the Debug menu
+toggles it. `diag.session_summary()` is the last line before `session end`.
+To watch a new number: return it from a stats provider and add its name and noise floor
+to `leaks.WATCH`.
+
 ## 19. Tests and CI
 
 * `python3 -m unittest discover -s tests -t .` — no network, no display needed.
@@ -566,7 +587,12 @@ never the token or bodies). Use `logging.getLogger(__name__)` in new modules.
   `test_qt_smoke.py` — one long walk through the window (open lanes, compose,
   threads, find, Esc, profile, lists, activity, images, diagnostics).
   Others: config/CLI, themes, notifications text, search, text cleaning, saving,
-  diagnostics.
+  diagnostics. `test_leaks.py` — trend verdicts with a fake clock, census, tracemalloc
+  snapshots, the stats loop. `test_resources.py` — "a night in seconds": 70 polls and
+  1000+ posts through a core with a small prune limit; store rows, caches, queues,
+  in-flight maps, threads and Python objects must stay bounded and polls quick (the fake
+  server forgets old posts, so what's measured is fedtail's). The Qt walk checks that
+  closed thread and profile tabs leave no widgets behind.
 * CI (`.github/workflows/ci.yml`): ruff; tests on Python 3.11–3.13 with pip
   PySide6; tests on Debian 13 with Qt from apt (the real target; it has no
   QtTest); `tools/screenshots.py` renders every theme with made-up data and
