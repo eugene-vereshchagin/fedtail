@@ -20,6 +20,7 @@ DEFAULTS = {
         "esc": "curtain",
         "switch_closes": True,
         "compose": "inline",
+        "compose_size": 0,
         "start_lane": "none",
         "merge": [],
         "sidebar_footer": True,
@@ -227,6 +228,7 @@ MINIMUM = {
     ("feed", "build_at_once"): 0,
     ("ui", "font_size"): 0,
     ("ui", "max_width"): 0,
+    ("ui", "compose_size"): 0,
     ("ui", "image_height"): 80,
     ("ui", "image_upscale"): 1,
 }

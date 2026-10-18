@@ -100,10 +100,15 @@ class FeedView(QScrollArea):
     # ---- geometry ---------------------------------------------------------------
     def resizeEvent(self, e):
         super().resizeEvent(e)
+        self.apply_width()
+        self._seen_timer.start()
+
+    def apply_width(self):
+        """The column of posts: ui.max_width wide at most, or the whole width (0, or
+        "full width" ticked in the ≡ menu)."""
         maxw = self.ctx.cfg["ui"]["max_width"]
         w = self.viewport().width()
         self.column.setFixedWidth(min(w, maxw) if maxw else w)
-        self._seen_timer.start()
 
     def _settle(self):
         self.col.activate()
@@ -562,6 +567,14 @@ class MediaFilter:
             a.toggled.connect(lambda on, k=kind: self._toggle(k, on))
             self.actions[kind] = a
         menu.addSeparator()
+        # boosts apart from the kinds: someone who boosts a lot hides their own posts
+        self.boosts = True
+        b = menu.addAction(_("filter_boosts"))
+        b.setCheckable(True)
+        b.setChecked(True)
+        b.toggled.connect(self._toggle_boosts)
+        self.actions["boosts"] = b
+        menu.addSeparator()
         menu.addAction(_("filter_all"), self.reset)
         self.btn.setMenu(menu)
         from PySide6.QtWidgets import QToolButton
@@ -570,10 +583,16 @@ class MediaFilter:
         header.add(self.btn)
 
     def active(self):
-        return self.wanted != set(MEDIA_KINDS)
+        return self.wanted != set(MEDIA_KINDS) or not self.boosts
 
     def keeps(self, st):
-        return not self.active() or bool(media_kinds(st) & self.wanted)
+        if not self.boosts and st.get("reblog"):
+            return False
+        return self.wanted == set(MEDIA_KINDS) or bool(media_kinds(st) & self.wanted)
+
+    def _toggle_boosts(self, on):
+        self.boosts = on
+        self._toggle("text", "text" in self.wanted)  # restyle and redraw
 
     def _toggle(self, kind, on):
         (self.wanted.add if on else self.wanted.discard)(kind)
@@ -588,6 +607,7 @@ class MediaFilter:
             a.setChecked(True)
             a.blockSignals(False)
         self.wanted = set(MEDIA_KINDS)
+        self.boosts = True
         self._toggle("text", True)
 
 

@@ -195,6 +195,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.core, self.bridge, self.theme = core, bridge, theme
         self.cfg = core.cfg
+        wide = core.get_state("full_width")  # ≡ → full width, as left last time
+        if wide is not None:
+            self._column_width = self.cfg["ui"]["max_width"] or 760
+            self.cfg["ui"]["max_width"] = 0 if wide else self._column_width
         self.images = Images(core, bridge)
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
@@ -485,6 +489,10 @@ class MainWindow(QMainWindow):
             m.addAction(_("filtered_title") + "…", self.show_filtered)
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
+        wide = m.addAction(_("full_width"))
+        wide.setCheckable(True)
+        wide.setChecked(not self.cfg["ui"]["max_width"])
+        wide.toggled.connect(self.set_full_width)
         m.addAction(_("my_profile"), self.open_my_profile)
         people = m.addMenu(_("menu_people"))
         trends = any(self.core.supports("trends_" + k) for k in ("statuses", "tags", "links"))
@@ -982,6 +990,18 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentWidget(w)
         log.info("tab to the front: %s%s", type(w).__name__,
                  " (curtain lifted)" if lifted else "")
+
+    def set_full_width(self, on):
+        """Posts across the whole width, or in a column of ui.max_width (remembered for
+        the next start; the config's value stays what it is)."""
+        if not hasattr(self, "_column_width"):
+            self._column_width = self.cfg["ui"]["max_width"] or 760
+        self.cfg["ui"]["max_width"] = 0 if on else self._column_width
+        self.core.set_state("full_width", bool(on))
+        from .feed import FeedView
+        for view in self.findChildren(FeedView):
+            view.apply_width()
+        log.info("posts: %s", "full width" if on else f"{self._column_width} px column")
 
     def _add_tab(self, w, title):
         lifted = self.curtain_shown()

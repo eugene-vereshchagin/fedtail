@@ -590,7 +590,7 @@ class PostRow(QWidget):
     def _actions(self, st):
         """Flat buttons under a post: icon, text or both (ui.actions)."""
         style = self.ctx.cfg["ui"]["actions"]
-        box = QWidget()
+        box = _ActionsBox()
         box.setObjectName("actions")
         h = QHBoxLayout(box)
         h.setContentsMargins(0, 0, 0, 0)
@@ -623,6 +623,11 @@ class PostRow(QWidget):
             b.setToolTip(label)
             b.setAccessibleName(label + count)
             ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
+            # the short form, for when the row doesn't fit: the icon (or the glyph) and
+            # the count — never a label cut in half ("В избран…")
+            short = count.replace(" · ", "")
+            box.short.append((b, (glyph + (" " + short if short else "")) if ic.isNull()
+                              else short, ic))
             if style == "text" or ic.isNull():
                 b.setText((glyph if style == "icons" else label) + count)
                 b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
@@ -1168,6 +1173,47 @@ def _decode_side(lab, tw, th, w, h, cfg):
         need = max(tw, th) * 2
     need = int(-(-need * dpr // 100) * 100)
     return max(100, min(FEED_SIDE, need))
+
+
+
+class _ActionsBox(QWidget):
+    """The row of buttons under a post. Too narrow for the labels (a narrow window, a
+    long word in a translation): the buttons go short — icon or glyph and the count —
+    instead of Qt cutting the words; wide again, the labels come back."""
+
+    def __init__(self):
+        super().__init__()
+        self.short = []   # (button, short text, icon)
+        self.full = None  # (text, style) of each button as built
+        self.is_short = False
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if self.full is None:
+            self.full = [(b.text(), b.toolButtonStyle()) for b, _t, _i in self.short]
+        lay = self.layout()
+        need = sum(b.sizeHint().width() for b, _t, _i in self.short) if not self.is_short \
+            else self._full_width
+        need += lay.spacing() * (lay.count() + 1) + 40  # the ⋯ button and some air
+        go_short = need > self.width()
+        if go_short == self.is_short:
+            return
+        if go_short:
+            self._full_width = sum(b.sizeHint().width() for b, _t, _i in self.short)
+        for (b, text, ic), (full_text, full_style) in zip(self.short, self.full,
+                                                          strict=False):
+            if go_short:
+                b.setText(text)
+                b.setToolButtonStyle(
+                    Qt.ToolButtonStyle.ToolButtonTextOnly if ic.isNull() else
+                    (Qt.ToolButtonStyle.ToolButtonTextBesideIcon if text
+                     else Qt.ToolButtonStyle.ToolButtonIconOnly))
+                if not ic.isNull():
+                    b.setIcon(ic)
+            else:
+                b.setText(full_text)
+                b.setToolButtonStyle(full_style)
+        self.is_short = go_short
 
 
 def _dims(m):

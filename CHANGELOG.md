@@ -2,6 +2,16 @@
 
 ## 0.13.0 — in progress
 
+- Buttons under a post too wide for the card go short — icon (or glyph) and the count —
+  instead of a label cut in half ("В избран…"); the full label stays in the tooltip.
+- ≡ → "Posts across the full width": the column of posts takes the whole window (or back
+  to `ui.max_width`), remembered for the next start.
+- The language list of a post has "Another language…" at the bottom: any ISO 639 code (eo,
+  es, cv, jbo, tok…), kept on the list after that; Toki Pona, Lojban and a few others
+  get their names.
+- The compose panel's size follows the window: `ui.compose_size` in % of it, and a ⤢
+  button in the panel for normal / big (90 %), remembered.
+- The filter next to Refresh can hide boosts too (for this run, like the rest of it).
 - Switching the media filter (or "unread only") on a big lane froze the window for six
   seconds and took gigabytes: the lane decided the cards built reached both ends and built
   all of them. It now builds around the post on screen, as when it opens.

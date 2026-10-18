@@ -56,6 +56,20 @@ def save_image(core, image):
     return str(path) if image.save(str(path), "PNG") else None
 
 
+
+OTHER_LANG = "\x00other"
+BIG_PCT = 90  # the ⤢ button: this share of the main window
+# languages Qt has no name of their own for
+LANG_NAMES = {"tok": "toki pona", "jbo": "la .lojban.", "eo": "Esperanto",
+              "ia": "Interlingua", "vo": "Volapük", "ie": "Interlingue"}
+
+
+def _lang_label(code, qlocale):
+    name = LANG_NAMES.get(code) or qlocale(code).nativeLanguageName()
+    if not name or (qlocale(code).language() == qlocale.Language.C and code != "c"):
+        name = LANG_NAMES.get(code, code)
+    return f"{name[:1].upper()}{name[1:]} ({code})"
+
 class Compose(QDialog):
     def __init__(self, win, reply_to=None, attach=(), text="", edit=None, quote=None):
         super().__init__(win)
@@ -175,6 +189,12 @@ class Compose(QDialog):
         self.lang.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._fill_languages()
         row.addWidget(self.lang)
+        if self.inline:  # bigger / smaller, remembered (ui.compose_size)
+            self.size_btn = QPushButton("⤢")
+            self.size_btn.setObjectName("tool")
+            self.size_btn.setToolTip(_("compose_bigger_tip"))
+            self.size_btn.clicked.connect(self._toggle_big)
+            row.addWidget(self.size_btn)
         add = QPushButton(QIcon.fromTheme("mail-attachment"), _("attach"))
         self.attach_btn = add
         add.setObjectName("tool")
@@ -257,7 +277,11 @@ class Compose(QDialog):
         self.cw.textChanged.connect(self._changed)
         self.vis.currentIndexChanged.connect(self._changed)
         self._count()
-        self.resize(720, 500)
+        pct = self._size_pct()
+        if pct and not self.inline:  # a window of its own: the same share of the main one
+            self.resize(int(win.width() * pct / 100), int(win.height() * pct / 100))
+        else:
+            self.resize(720, 500)
         if self.inline:
             self._place()
         self.text.setFocus()
@@ -270,13 +294,41 @@ class Compose(QDialog):
         not among them — each by its own name (Русский, ქართული…)."""
         from PySide6.QtCore import QLocale
         cfg = self.core.cfg["post"]
+        added = list(self.core.get_state("languages_added", []) or [])
         codes = list(dict.fromkeys(cfg["languages"] + ([cfg["language"]] if cfg["language"]
-                                                       else [])))
+                                                       else []) + added))
         self.lang.addItem(_("lang_default"), "")
         for code in codes:
-            name = QLocale(code).nativeLanguageName() or code
-            self.lang.addItem(f"{name[:1].upper()}{name[1:]} ({code})", code)
+            self.lang.addItem(_lang_label(code, QLocale), code)
+        # one more at the bottom: any language by its code, kept for the next posts
+        self.lang.addItem(_("lang_other"), OTHER_LANG)
         self.set_language(cfg["language"])
+        self._lang_before = self.lang.currentIndex()
+        self.lang.activated.connect(self._lang_picked)
+
+    def _language(self):
+        code = self.lang.currentData()
+        return "" if code == OTHER_LANG else code
+
+    def _lang_picked(self, i):
+        if self.lang.itemData(i) != OTHER_LANG:
+            self._lang_before = i
+            return
+        from PySide6.QtCore import QLocale
+        from PySide6.QtWidgets import QInputDialog
+        code, ok = QInputDialog.getText(self, _("lang_other_title"), _("lang_other_ask"))
+        code = (code or "").strip().lower()
+        if not ok or not re.fullmatch(r"[a-z]{2,3}(-[a-z0-9]{2,8})?", code):
+            self.lang.setCurrentIndex(self._lang_before)
+            return
+        if self.lang.findData(code) < 0:
+            self.lang.insertItem(self.lang.count() - 1, _lang_label(code, QLocale), code)
+            added = list(self.core.get_state("languages_added", []) or [])
+            if code not in added:
+                self.core.set_state("languages_added", added + [code])
+                log.info("compose: language %s added to the list", code)
+        self.set_language(code)
+        self._lang_before = self.lang.currentIndex()
 
     def set_language(self, code):
         i = self.lang.findData(code or "")
@@ -356,7 +408,7 @@ class Compose(QDialog):
     def _snapshot(self):
         return {"text": self.text.toPlainText(), "cw": self.cw.text(),
                 "visibility": self.vis.currentData(), "media": self._media_list(),
-                "language": self.lang.currentData(),
+                "language": self._language(),
                 "sensitive": self.sensitive_btn.isChecked(), "poll": self.poll_data()}
 
     # ---- a poll -------------------------------------------------------------------
@@ -703,7 +755,7 @@ class Compose(QDialog):
         self.save_draft()  # whatever happens next, the text is safe
         log.info("send: %s, reply to %s, %s, language %s, %d chars, %d pictures",
                  "edit" if self.edit else "post", self.reply_to["id"] if self.reply_to else "-",
-                 self.vis.currentData(), self.lang.currentData() or "-", len(text), len(media))
+                 self.vis.currentData(), self._language() or "-", len(text), len(media))
         self.send_btn.setEnabled(False)
         self.send_btn.setText(_("sending"))
         if self.edit:
@@ -713,7 +765,7 @@ class Compose(QDialog):
         fut = self.core.post(text, self.vis.currentData(),
                              self.reply_to["id"] if self.reply_to else None,
                              self.cw.text().strip(), media, draft_key=self.key,
-                             language=self.lang.currentData(),
+                             language=self._language(),
                              sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data(),
                              quote=self.quote["id"] if self.quote else None,
                              scheduled_at=scheduled_at)
@@ -777,10 +829,29 @@ class Compose(QDialog):
         self._leave()
 
     # ---- the inline panel: over the lanes, in the middle, following the window ------
+    def _size_pct(self):
+        """How big, in % of the main window: the ⤢ choice if made, else ui.compose_size
+        (0: as before — at most 820 × 540)."""
+        big = self.core.get_state("compose_big")
+        if big:
+            return BIG_PCT
+        if big is False:
+            return 0
+        return min(100, int(self.win.cfg["ui"].get("compose_size", 0) or 0))
+
+    def _toggle_big(self):
+        self.core.set_state("compose_big", not self._size_pct())
+        self._place()
+
     def _place(self):
         win = self.win
-        w = min(820, max(420, win.width() - 80))
-        h = min(540, max(320, win.height() - 120))
+        pct = self._size_pct()
+        if pct:
+            w = max(420, int(win.width() * pct / 100) - 20)
+            h = max(320, int(win.height() * pct / 100) - 20)
+        else:
+            w = min(820, max(420, win.width() - 80))
+            h = min(540, max(320, win.height() - 120))
         x = max(10, (win.width() - w) // 2)
         y = max(10, (win.height() - h) // 2)
         self.setGeometry(x, y, w, h)
