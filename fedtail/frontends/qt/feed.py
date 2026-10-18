@@ -2073,19 +2073,53 @@ class ActivityWidget(QWidget):
         return out
 
     def refresh(self):
+        built = self.lay.count() > 0
+        kept = self.scroll.verticalScrollBar().value() if built else None
         while self.lay.count():
             item = self.lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         seen = self.core.activity_seen_mark()
-        entries = self.core.activity_entries()
+        entries = self.core.activity_entries()  # newest first
         if not entries:
             self.lay.addWidget(QLabel(_("activity_none")))
-        for g in self.groups(entries):
-            self.lay.addWidget(self._row(g, any(e["sort"] > seen for e in g["entries"])))
+        groups = self.groups(entries)
+        # feed.order, like every other lane: "oldest_first" — the new comes in below
+        oldest_first = self.win.cfg["feed"]["order"] == "oldest_first"
+        if oldest_first:
+            groups.reverse()
+        first_new = None
+        for g in groups:
+            unread = any(e["sort"] > seen for e in g["entries"])
+            row = self._row(g, unread)
+            self.lay.addWidget(row)
+            if unread and first_new is None:
+                first_new = row
         self.lay.addStretch(1)
+        if oldest_first:
+            if self.isVisible():
+                QTimer.singleShot(0, lambda r=first_new, v=kept: self._place(r, v))
+            else:  # built hidden (at start, or behind another lane): placed when shown
+                self._unplaced = (first_new, kept)
         if self.isVisible():
             self._seen_timer.start()
+
+    def _place(self, first_new, kept):
+        """The first time: where the new begins (feed.start_at), else the newest, below.
+        Later rebuilds (new activity came): stay put, or go down to it with
+        feed.on_new = "jump_to_newest"."""
+        try:
+            bar = self.scroll.verticalScrollBar()
+            fc = self.win.cfg["feed"]
+            if kept is not None and fc["on_new"] == "keep_position":
+                bar.setValue(kept)
+            elif kept is None and first_new is not None and fc["start_at"] == "first_unread":
+                bar.setValue(max(0, first_new.mapTo(self.scroll.widget(), QPoint(0, 0)).y()
+                                 - 14))
+            else:
+                bar.setValue(bar.maximum())
+        except RuntimeError:  # rebuilt or closed meanwhile
+            pass
 
     def _row(self, group, unread):
         es = group["entries"]
@@ -2093,6 +2127,7 @@ class ActivityWidget(QWidget):
         st = es[0].get("status")
         card = QFrame()
         card.setObjectName("card")
+        card.setProperty("kind", kind)  # what it is about, for tests and stylesheets
         card.setProperty("unread", "true" if unread else "false")
         v = QVBoxLayout(card)
         v.setContentsMargins(16, 10, 16, 10)
@@ -2184,6 +2219,9 @@ class ActivityWidget(QWidget):
     def showEvent(self, e):
         super().showEvent(e)
         self._seen_timer.start()
+        unplaced, self._unplaced = getattr(self, "_unplaced", None), None
+        if unplaced:
+            QTimer.singleShot(0, lambda: self._place(*unplaced))
 
     def apply_read(self, ids):
         pass

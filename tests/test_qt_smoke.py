@@ -442,7 +442,12 @@ class QtSmokeTest(unittest.TestCase):
                          [("reblog", 1), ("follow", 1), ("favourite", 2)])
         self.win.select_lane("activity")
         self.pump(0.2)
-        self.assertIsInstance(self.win.lane_widgets["activity"], ActivityWidget)
+        aw = self.win.lane_widgets["activity"]
+        self.assertIsInstance(aw, ActivityWidget)
+        # feed.order = "oldest_first" here too: the newest comes last, below
+        kinds = [aw.lay.itemAt(i).widget().property("kind") for i in range(aw.lay.count())
+                 if aw.lay.itemAt(i).widget() is not None]
+        self.assertEqual(kinds, ["favourite", "follow", "reblog"])
         self.win.select_lane("home")
 
         # diagnostics: Qt messages into the log, widget counts in the stats line

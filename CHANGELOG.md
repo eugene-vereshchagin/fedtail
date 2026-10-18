@@ -2,6 +2,10 @@
 
 ## 0.15.0 — in progress
 
+- "Activity" follows `feed.order` like every other lane: with "oldest_first" the newest
+  is at the bottom, it opens where the unseen begins (`feed.start_at`) and stays put when
+  more comes (`feed.on_new`). It used to be newest-on-top whatever the config said.
+
 - `feed.emoji = false`: no emoji in the feed at all — no server pictures (:blobcat:), no
   Unicode ones (🔥 🇬🇪 👨‍👩‍👧), no reactions line; a name made only of emoji shows the login.
   fedtail's own glyphs (⚠ ↔ ❯) stay.
