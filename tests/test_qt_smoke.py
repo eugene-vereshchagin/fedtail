@@ -1750,6 +1750,51 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.2)
         self.assertEqual(self.core.unread_ids(self.core.lane_entries("bots")), set())
 
+    def test_tabs_opened_and_closed_leave_no_widgets(self):
+        """A day of opening threads and profiles and closing them: the widgets go with
+        the tab (a leak here is a few hundred widgets per tab, pictures and all)."""
+        from PySide6.QtCore import QCoreApplication, QEvent
+        from PySide6.QtWidgets import QApplication
+
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.pump(0.5)
+
+        def settle():
+            for _ in range(5):
+                QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+                self.pump(0.05)
+
+        def round_trip():
+            for open_it in (lambda: self.win.open_thread("013"),
+                            lambda: self.win.open_account(BOB["id"])):
+                open_it()
+                self.pump(0.4)
+                self.win.close_tab(self.win.tabs.currentIndex())
+            settle()
+
+        round_trip()  # the first time builds what stays (caches, styles)
+        base = len(QApplication.allWidgets())
+        for _ in range(6):
+            round_trip()
+        grown = len(QApplication.allWidgets()) - base
+        self.assertLess(grown, 40, f"{grown} widgets left behind by 12 closed tabs")
+        self.assertEqual(self.win.tabs.count(), 1)
+
+    def test_widget_counts_come_from_the_gui_thread(self):
+        """The stats thread reads the window's numbers from a snapshot the GUI thread
+        took: Qt widgets must never be walked from another thread."""
+        from fedtail import diag
+        provider = diag._state["providers"].get("qt")
+        if provider is None:
+            self.skipTest("diagnostics not installed in this window")
+        got = {}
+        t = __import__("threading").Thread(target=lambda: got.update(provider()))
+        t.start()
+        t.join(5)
+        self.assertIn("widgets", got)
+
     def test_cards_far_behind_are_let_go(self):
         """Reading a long lane from the oldest to the newest: cards far behind go again,
         so a few hundred read posts don't stay built, and the post on top stays put."""

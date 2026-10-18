@@ -4,6 +4,7 @@ stats line gets widget and image-cache counts — the usual places where a
 long-running Qt program leaks."""
 
 import logging
+from collections import Counter
 
 from PySide6.QtCore import QTimer, QtMsgType, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication
@@ -50,15 +51,42 @@ def install(app, win, cfg):
         app.aboutToQuit.connect(meter.stop)
         diag.add_stats("freezes", meter.counts)
 
-    def counts():
-        views = [w.view for w in list(win.lane_widgets.values()) + win.extra_tabs()
-                 if getattr(w, "view", None) is not None]
-        return {"widgets": len(QApplication.allWidgets()),
-                "rows": sum(len(v.rows) for v in views),
-                "tabs": win.tabs.count(),
-                "images_mem": len(win.images.mem),
-                "images_mb": round(win.images.mem_bytes / 1024 / 1024, 1),
-                "images_waiting": len(win.images.waiting)}
-    diag.add_stats("qt", counts)
+    # Qt's widgets may only be looked at from the GUI thread: it counts them on a timer
+    # and the stats thread reads the last count (walking them from there could crash)
+    seen = {}
+
+    def count():
+        with diag.busy("diag: count widgets"):
+            views = [w.view for w in list(win.lane_widgets.values()) + win.extra_tabs()
+                     if getattr(w, "view", None) is not None]
+            widgets = QApplication.allWidgets()
+            seen.update({"widgets": len(widgets),
+                         "rows": sum(len(v.rows) for v in views),
+                         "model": sum(len(v.model) for v in views),
+                         "tabs": win.tabs.count(),
+                         "images_mem": len(win.images.mem),
+                         "images_mb": round(win.images.mem_bytes / 1024 / 1024, 1),
+                         "images_waiting": len(win.images.waiting)})
+            return widgets
+
+    def census():
+        widgets = count()
+        if diag._state.get("census_on"):
+            diag.census("qt_widgets", Counter(type(w).__name__ for w in widgets))
+
+    count()
+    every = QTimer(win)  # dies with the window it counts
+    every.setInterval(30_000)
+    every.timeout.connect(count)
+    every.start()
+    minutes = float(cfg["debug"].get("stats_minutes", 5))
+    if minutes > 0 and diag.is_on():
+        census_timer = QTimer(win)
+        census_timer.setInterval(int(minutes * 60_000))
+        census_timer.timeout.connect(census)
+        census_timer.start()
+        QTimer.singleShot(60_000, win, census)  # the baseline, once the window has settled
+    win.widget_census = census  # the Debug menu: now
+    diag.add_stats("qt", lambda: dict(seen))
     diag.add_stats("img", win.images.counts)
     return dog, beat

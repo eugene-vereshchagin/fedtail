@@ -55,7 +55,8 @@ DATEFMT = "%Y-%m-%d %H:%M:%S"
 LEVELS = {"debug": logging.DEBUG, "info": logging.INFO, "warning": logging.WARNING}
 
 _state = {"dir": None, "stacks": None, "crash": None, "providers": {}, "stats_thread": None,
-          "cpu": None, "rss_warned": 0, "on": True}
+          "cpu": None, "rss_warned": 0, "on": True, "trend": None, "census": {},
+          "census_on": False, "started": time.monotonic(), "last_stats": None}
 
 
 def is_on():
@@ -96,7 +97,7 @@ OLD_LOG_DIR = "~/fedtail-logs"
 # what a log folder holds that is ours to delete (nothing else in it is touched)
 # (fedtail.log*: the single log file of the first versions)
 OUR_LOGS = ("2[0-9][0-9][0-9]-*.log", "latest.log", "crash.log", "stacks.log", "version",
-            "fedtail.log", "fedtail.log.[0-9]*")
+            "fedtail.log", "fedtail.log.[0-9]*", "memory-*.txt")
 
 
 def _remove_ours(folder):
@@ -424,6 +425,9 @@ def stats():
         "cpu_pct": round(100 * (cpu - prev[1]) / max(now - prev[0], 1e-6), 1) if prev else None,
         "threads": threading.active_count(),
     }
+    from . import leaks
+    for k, v in leaks.gc_stats().items():
+        out[f"gc.{k}"] = v
     try:
         out["fds"] = len(os.listdir("/proc/self/fd"))
         out["fds_by_kind"] = _fd_kinds()
@@ -440,6 +444,7 @@ def stats():
 
 def log_stats(rss_warn_mb=1500):
     s = stats()
+    _state["last_stats"] = s
     log.info("stats %s", json.dumps(s, ensure_ascii=False))
     rss = s["rss_mb"]
     # warn once per doubling past the threshold, so a leak is visible but not spammy
@@ -449,11 +454,67 @@ def log_stats(rss_warn_mb=1500):
     return s
 
 
+def census(name, counts):
+    """Counts by kind (see leaks.Census): logged against the last and the first count
+    of that name. The window feeds its widget classes here from the GUI thread."""
+    from . import leaks
+    c = _state["census"].get(name)
+    if c is None:
+        c = _state["census"][name] = leaks.Census(name)
+    return c.take(counts)
+
+
+def trend(s):
+    """One stats snapshot into the leak watch: warnings (logged) and a summary line."""
+    t = _state["trend"]
+    if t is None:
+        return []
+    warnings = t.add(s)
+    log.info("trend over %.1f h %s", t.hours(), json.dumps(t.summary(), ensure_ascii=False))
+    return warnings
+
+
+def check_now(rss_warn_mb=1500, objects=None):
+    """Stats, trend and (in the debugging mode, or when asked) the Python object census,
+    now — the stats thread's job, also run from the Debug menu."""
+    from . import leaks
+    s = log_stats(rss_warn_mb)
+    trend(s)
+    if objects if objects is not None else _state["census_on"]:
+        t = time.monotonic()
+        census("python", leaks.python_objects())
+        log.debug("census python took %.0f ms", (time.monotonic() - t) * 1000)
+    return s
+
+
+def session_summary():
+    """The last line of a session: how long, how big it got, what grew."""
+    t = _state["trend"]
+    s = _state["last_stats"] or {}
+    st = _proc_status()
+    hours = (time.monotonic() - _state["started"]) / 3600
+    bits = {"hours": round(hours, 2), "rss_mb": round((st.get("VmRSS") or 0) / 1024, 1),
+            "peak_mb": round((st.get("VmHWM") or 0) / 1024, 1),
+            "cpu_s": round(time.process_time(), 1)}
+    for k in ("freezes.count", "freezes.worst_ms", "core.polls"):
+        if k in s:
+            bits[k] = s[k]
+    log.info("session summary %s", json.dumps(bits, ensure_ascii=False))
+    if t is not None and t.history:
+        log.info("session trend %s", json.dumps(t.summary(), ensure_ascii=False))
+    return bits
+
+
 def start_stats(cfg):
     d = cfg.get("debug", {})
     minutes = float(d.get("stats_minutes", 5))
     if _state["stats_thread"]:
         return
+    from . import leaks
+    _state["trend"] = leaks.Trend(int(d.get("leak_samples", 12)))
+    _state["census_on"] = bool(d.get("object_census", True)) and is_on()
+    if d.get("tracemalloc", False):
+        leaks.start_tracing()
     if minutes <= 0 or not _state.get("on", True):
         if d.get("trim_memory", True):  # no stats, but the memory still goes back
             def trim_loop():
@@ -477,7 +538,7 @@ def start_stats(cfg):
                     freed = trim_memory()
                     if freed:
                         log.info("memory: %.1f MB given back to the system", freed)
-                log_stats(int(d.get("rss_warn_mb", 1500)))
+                check_now(int(d.get("rss_warn_mb", 1500)))
             except Exception:
                 log.exception("stats failed")
 

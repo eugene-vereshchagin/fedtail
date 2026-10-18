@@ -212,6 +212,11 @@ def _leave(code):
             if t is not threading.current_thread() and not t.daemon and t.is_alive()]
     if busy:
         log.info("exit: not waiting for %s", ", ".join(sorted(busy)))
+    try:
+        from . import diag
+        diag.session_summary()
+    except Exception:  # noqa: BLE001 — a last log line is never worth a crash
+        log.debug("session summary failed", exc_info=True)
     log.info("==== session end, exit code %s", code)
     logging.shutdown()
     sys.stdout.flush()

@@ -173,6 +173,9 @@ DEFAULTS = {
         "stall_ms": 250,
         "slow_request_seconds": 5,
         "rss_warn_mb": 1500,
+        "leak_samples": 12,
+        "object_census": True,
+        "tracemalloc": False,
     },
     "tui": {
         "theme": "",
@@ -243,6 +246,7 @@ MINIMUM = {
     ("ui", "unload_hidden_minutes"): 0,
     ("debug", "keep_mb"): 20,
     ("debug", "stall_ms"): 0,
+    ("debug", "leak_samples"): 3,
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,

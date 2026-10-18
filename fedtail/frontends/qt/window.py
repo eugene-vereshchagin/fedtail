@@ -690,6 +690,19 @@ class MainWindow(QMainWindow):
                                                   diag.log_stats(),
                                                   self.statusBar().showMessage(
                                                       _("debug_stacks_done"), 5000)))
+        # hunting a leak: what grows, where the memory is, give the free part back
+        dbg.addSeparator()
+        dbg.addAction(_("debug_census"), self.debug_census)
+        dbg.addAction(_("debug_trim"), self.debug_trim)
+        from ... import leaks
+        tracing = dbg.addAction(_("debug_tracing"))
+        tracing.setCheckable(True)
+        tracing.setChecked(leaks.tracing())
+        tracing.setToolTip(_("debug_tracing_tip"))
+        tracing.toggled.connect(lambda on: leaks.start_tracing() if on else leaks.stop_tracing())
+        snap = dbg.addAction(_("debug_snapshot"), self.debug_snapshot)
+        snap.setEnabled(leaks.tracing())
+        dbg.setToolTipsVisible(True)
         m.addAction(_("about"), self.about)
         m.addSeparator()
         m.addAction(_("quit") + "\tCtrl+Q", self.quit)
@@ -1971,6 +1984,31 @@ class MainWindow(QMainWindow):
                          ok=lambda p: self.statusBar().showMessage(_("saved_to", path=str(p)),
                                                                    8000),
                          fail=lambda e: self.error(_("save_failed", err=e)))
+
+    def debug_census(self):
+        """Stats, trend and the census of Python objects and Qt widgets, now."""
+        with diag.busy("diag: census from the menu"):
+            s = diag.check_now(int(self.cfg["debug"].get("rss_warn_mb", 1500)), objects=True)
+            census = getattr(self, "widget_census", None)
+            if census:
+                census()
+        self.statusBar().showMessage(_("debug_census_done", rss=s["rss_mb"],
+                                       objects=s["py_objects"]), 8000)
+
+    def debug_trim(self):
+        freed = diag.trim_memory()
+        log.info("memory: %s MB given back (from the menu)", freed)
+        self.statusBar().showMessage(_("debug_trim_none") if freed is None else
+                                     _("debug_trim_done", mb=freed), 6000)
+
+    def debug_snapshot(self):
+        from ... import leaks
+        try:
+            out = leaks.snapshot(diag.logs_dir(self.core.paths))
+        except (OSError, RuntimeError) as e:
+            self.error(e)
+            return
+        self.statusBar().showMessage(_("debug_snapshot_done", path=str(out)), 15000)
 
     def bug_report(self):
         try:

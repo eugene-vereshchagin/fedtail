@@ -2,6 +2,20 @@
 
 ## 0.14.0 — in progress
 
+- Leak hunting for days-long runs. With every stats line a "trend" line: memory, Python
+  objects, widgets, cards, pictures, threads, files — at start, now, per hour; a number that
+  rose on each of the last `debug.leak_samples` checks (12: an hour), by more than noise,
+  gets a "possible leak" warning (the first half hour doesn't count). In the debugging mode
+  a census of Python objects by type and Qt widgets by class says what grew since the last
+  check and since the start (`debug.object_census`). `debug.tracemalloc` traces every
+  allocation from the start. The session ends with a summary line: hours, memory, peak,
+  freezes, polls. Memory snapshots go next to the logs and leave with them.
+- ≡ → Debugging: "What grows: stats and object census now", "Give free memory back to the
+  system", "Memory tracing (tracemalloc)" on and off, "Memory snapshot" — who holds the
+  most and what grew since the first snapshot, by line of code.
+- The stats thread no longer walks Qt's widgets itself (from another thread that could
+  crash a window kept open for days): the window counts them every 30 s and the stats
+  line reads that.
 - Scrolling up a big lane no longer jumps: while cards are built above the screen, the
   next step took the place from the scroll bar before it had caught up, so a card just
   built became "the post on top" and the reading place moved by thousands of pixels. The
