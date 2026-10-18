@@ -137,6 +137,18 @@ class WebTest(TmpDir):
         self.assertEqual(json.loads(body)["open"], {"thread": "002"})
         _c, _h, body = self.req("/api/command", {"line": "#zzz9 hi"})
         self.assertFalse(json.loads(body)["ok"])
+        # D #id: asked first ("sure?" on the page), deleted only on the second request
+        mine = self.core.short_ids([self.core.store.get_status("001")])["001"]
+        _c, _h, body = self.req("/api/command", {"line": f"D #{mine}"})
+        got = json.loads(body)
+        self.assertFalse(got["ok"])
+        self.assertIn("my post", got["confirm"])
+        self.assertIn("001", self.w.statuses)  # still there
+        _c, _h, body = self.req("/api/command", {"line": f"D #{mine}", "confirm": "yes"})
+        self.assertIn("001", self.w.statuses)  # only true is a yes
+        _c, _h, body = self.req("/api/command", {"line": f"D #{mine}", "confirm": True})
+        self.assertTrue(json.loads(body)["ok"])
+        self.assertNotIn("001", self.w.statuses)
 
     def test_thread_and_account(self):
         _c, _h, body = self.req("/api/thread?id=002")

@@ -13,10 +13,10 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
-from ...core.model import real
+from ...core.model import real, snippet
 from ...i18n import _
 from ..richtext import openable
-from .model import Commands, lane_label, ordered_lanes, show_post, start_lane
+from .model import Commands, DeleteGuard, lane_label, ordered_lanes, show_post, start_lane
 
 log = logging.getLogger(__name__)
 
@@ -343,6 +343,7 @@ class FedtailApp(App, PostsMixin):
         self.core = core
         self._instance = instance
         self.cmds = Commands(core)
+        self.delete_guard = DeleteGuard()
         self.lane = None
         self._ui_thread = None
         tcfg = core.cfg.get("tui", {})
@@ -545,7 +546,13 @@ class FedtailApp(App, PostsMixin):
             elif isinstance(result, tuple) and result[0] == "profile":
                 self.push_screen(ProfileScreen(result[1]["id"]))
             elif isinstance(result, tuple) and result[0] == "delete":
-                self.later(self.core.delete(result[1]), ok=lambda _r: self.notify(_("deleted")))
+                st = result[1]
+                if self.delete_guard.confirmed(real(st)["id"]):
+                    self.later(self.core.delete(st), ok=lambda _r: self.notify(_("deleted")))
+                else:  # asked first: the line stays, Enter again deletes
+                    field.value = line
+                    self.notify(_("tui_delete_again", text=snippet(st, 120)),
+                                severity="warning", timeout=15)
             elif isinstance(result, str):
                 self.notify(result)
             elif isinstance(result, dict):  # a post went out

@@ -1,5 +1,7 @@
 """The terminal interface's text side (no Textual needed): posts as lines, commands."""
 
+import unittest
+
 from fedtail import i18n
 from fedtail.frontends.tui import model
 
@@ -77,3 +79,17 @@ class TuiModelTest(TmpDir):
         self.assertEqual(model.lane_label(core, "home"), ("Home", 1))
         title, _n = model.lane_label(core, "home", width=4)
         self.assertLessEqual(len(title), 4)
+
+
+class DeleteGuardTest(unittest.TestCase):
+    def test_deleted_only_when_said_twice(self):
+        now = [100.0]
+        g = model.DeleteGuard(clock=lambda: now[0])
+        self.assertFalse(g.confirmed("1"))  # asks
+        self.assertTrue(g.confirmed("1"))   # Enter again: yes
+        self.assertFalse(g.confirmed("1"))  # and a third time asks anew
+        self.assertFalse(g.confirmed("2"))  # another post: asks about that one
+        now[0] += g.WINDOW + 1
+        self.assertFalse(g.confirmed("2"))  # too late: asks again
+        self.assertTrue(g.confirmed("2"))
+

@@ -361,7 +361,11 @@ async function send(e) {
   $("#send").disabled = true;
   try {
     if (!state.replyTo && /^([#@!~?]|[SUD] [#@])/.test(text)) {
-      const r = await api("/api/command", { line: text });
+      let r = await api("/api/command", { line: text });
+      if (r.confirm) {  // D #id: deleted only when asked twice
+        if (!window.confirm(r.confirm)) return;
+        r = await api("/api/command", { line: text, confirm: true });
+      }
       if (r.message) toast(r.message);
       if (!r.ok) return;
       if (r.open && r.open.thread) openThread(r.open.thread);

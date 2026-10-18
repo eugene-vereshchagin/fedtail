@@ -88,6 +88,25 @@ def show_post(core, wrapper, alias=None, unread=False, number=None, width=80, pa
     return out
 
 
+class DeleteGuard:
+    """D #id deletes when it is said twice in a row about the same post, within a
+    little while: the first time only asks (Enter again — gone)."""
+    WINDOW = 30  # s
+
+    def __init__(self, clock=None):
+        import time
+        self.clock = clock or time.monotonic
+        self.asked = None  # (status id, when)
+
+    def confirmed(self, sid):
+        now = self.clock()
+        if self.asked and self.asked[0] == sid and now - self.asked[1] <= self.WINDOW:
+            self.asked = None
+            return True
+        self.asked = (sid, now)
+        return False
+
+
 class Commands:
     """The command line (core/commands.py), carried out on the core. Each method
     returns a future; done(message) is how the interface hears back."""

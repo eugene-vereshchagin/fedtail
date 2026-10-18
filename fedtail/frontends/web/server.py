@@ -241,7 +241,9 @@ class Web:
                        (body.get("cw") or "").strip()).result()
         return {"id": st.get("id"), "url": st.get("url")}
 
-    def command(self, line):
+    def command(self, line, confirmed=False):
+        """confirmed: D #id deletes only when asked twice — the page asks "sure?" in
+        between; a typo or a stray request alone deletes nothing."""
         fut, message = self.cmds.run(line)
         if fut is None:
             return {"ok": False, "message": message}
@@ -253,6 +255,8 @@ class Web:
             if kind == "profile":
                 return {"ok": True, "open": {"account": what["id"]}}
             if kind == "delete":
+                if not confirmed:
+                    return {"ok": False, "confirm": _("delete_q", text=snippet(what, 200))}
                 self.core.delete(what).result()
                 return {"ok": True, "message": _("deleted")}
         return {"ok": True, "message": result if isinstance(result, str) else message}
@@ -363,7 +367,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
-            "/api/command": lambda: web.command(str(body.get("line", ""))),
+            "/api/command": lambda: web.command(str(body.get("line", "")),
+                                                body.get("confirm") is True),
         }
         self._run(routes.get(path))
 
