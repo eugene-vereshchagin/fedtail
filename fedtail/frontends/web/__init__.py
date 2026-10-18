@@ -26,13 +26,16 @@ def run(core, instance, argv):
     srv = make_server(core, wcfg["host"], wcfg["port"], key)
     host, port = srv.server_address[:2]
     shown = "127.0.0.1" if host in ("0.0.0.0", "") else host
-    url = f"http://{shown}:{port}/?k={key}"
+    base = f"http://{shown}:{port}"
+    # a one-time link, good for a quarter of an hour: the key itself stays in the cookie
+    # and out of the browser's history, the terminal and journald
+    url = srv.web.login_link(base)
     print("fedtail: " + _("web_open", url=url), flush=True)
     if host not in ("127.0.0.1", "localhost", "::1"):
         print("fedtail: " + _("web_lan", host=host), flush=True)
     log.info("web: listening on %s:%s", host, port)
-    if instance is not None:
-        instance.listen(lambda _m: webbrowser.open(url))
+    if instance is not None:  # started again: a fresh link, opened here
+        instance.listen(lambda _m: webbrowser.open(srv.web.login_link(base)))
     core.start_polling()
     if wcfg["open_browser"]:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()

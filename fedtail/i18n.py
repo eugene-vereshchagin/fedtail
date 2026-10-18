@@ -93,8 +93,9 @@ _STRINGS = {
         "web_sensitive": "Чувствительное — нажми, чтобы показать",
         "web_parent_gone": "ответ на удалённое или скрытое",
         "web_mark_read": "Всё прочитано",
-        "web_open": "fedtail в браузере: {url}", "web_lan": "Открыто для сети ({host}): ключ "
-        "в ссылке идёт по сети открытым текстом — только для своей домашней сети.",
+        "web_open": "fedtail в браузере (ссылка одноразовая, 15 минут): {url}",
+        "web_lan": "Открыто для сети ({host}) без шифрования: вход и всё, что ты делаешь, "
+        "видно по дороге — только для своей сети; снаружи — через VPN или прокси с TLS.",
         "featured_tags": "Часто пишет о:", "featured_people": "Рекомендует:",
         "announce_title": "Объявление сервера", "announce_ok": "Понятно",
         "tip_announce_ok": "Больше не показывать (сервер запомнит и для других клиентов)",
@@ -722,8 +723,9 @@ _STRINGS = {
         "web_sensitive": "Sensitive — click to show",
         "web_parent_gone": "a reply to something deleted or hidden",
         "web_mark_read": "All read",
-        "web_open": "fedtail in the browser: {url}", "web_lan": "Open to the network ({host}): "
-        "the key in the link travels unencrypted — for your own home network only.",
+        "web_open": "fedtail in the browser (a one-time link, 15 minutes): {url}",
+        "web_lan": "Open to the network ({host}) without encryption: the login and all you do "
+        "can be seen on the way — your own network only; from outside, a VPN or a TLS proxy.",
         "featured_tags": "Often writes about:", "featured_people": "Recommends:",
         "announce_title": "Server announcement", "announce_ok": "Got it",
         "tip_announce_ok": "Don't show it again (the server remembers it for other apps too)",

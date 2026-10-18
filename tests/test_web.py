@@ -6,6 +6,7 @@ import stat
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from fedtail import i18n
@@ -75,6 +76,45 @@ class WebTest(TmpDir):
             self.assertIn("SameSite=Strict", cookie)
         code, _h, _b = self.req("/?k=wrong", cookie=False)
         self.assertEqual(code, 403)
+
+    def test_one_time_link(self):
+        # what fedtail prints: a link that logs in once, with no key in it
+        link = self.srv.web.login_link(self.base)
+        self.assertNotIn(self.key, link)
+        opener = urllib.request.build_opener(NoRedirect)
+        path = link[len(self.base):]
+        with self.assertRaises(urllib.error.HTTPError) as e:
+            opener.open(self.base + path, timeout=10)
+        self.assertEqual(e.exception.code, 303)
+        self.assertIn(f"{web.COOKIE}={self.key}", e.exception.headers["Set-Cookie"])
+        self.assertEqual(self.req(path, cookie=False)[0], 403)  # used: dead
+        old = self.srv.web.login_link(self.base)
+        token = old.split("t=")[1]
+        self.srv.web.links[token] = time.monotonic() - 1  # a quarter of an hour later
+        self.assertEqual(self.req(old[len(self.base):], cookie=False)[0], 403)
+
+    def test_reading_changes_nothing_and_ids_are_ids(self):
+        self.core.set_state("lane", "replies")
+        self.assertEqual(self.req("/api/lane?name=home")[0], 200)
+        self.assertEqual(self.core.get_state("lane"), "replies")  # a GET only reads
+        self.assertEqual(self.req("/api/active", {"name": "home"})[0], 200)
+        self.assertEqual(self.core.get_state("lane"), "home")
+        self.assertEqual(self.req("/api/resolve?url=https%3A%2F%2Fx.example%2F1")[0], 404)
+        for bad in ("1/../../statuses/2/reblog", "..", "a?b", ""):
+            self.assertEqual(self.req("/api/follow", {"id": bad, "on": True})[0], 400, bad)
+            self.assertEqual(self.req("/api/account?id=" + urllib.parse.quote(bad))[0], 400)
+
+    def test_connections_are_capped(self):
+        import socket
+        import threading as th
+        self.srv.slots = th.BoundedSemaphore(1)
+        held = socket.create_connection(self.srv.server_address[:2], timeout=5)
+        self.addCleanup(held.close)
+        time.sleep(0.2)  # the server has taken it (and waits for its request)
+        extra = socket.create_connection(self.srv.server_address[:2], timeout=5)
+        extra.sendall(b"GET / HTTP/1.0\r\n\r\n")
+        self.assertEqual(extra.recv(100), b"")  # closed at the door
+        extra.close()
 
     def test_no_key_no_entry(self):
         for path in ("/", "/app.js", "/api/lanes", "/api/lane?name=people"):
@@ -200,6 +240,7 @@ class WebTest(TmpDir):
         self.assertTrue(lanes[0]["group"])  # a section title over the first lane
         self.assertEqual([x["name"] for x in lanes if x["start"]], ["home"])
         self.req("/api/lane?name=comments")
+        self.req("/api/active", {"name": "comments"})  # what the page does after it
         _c, _h, body = self.req("/api/lanes")
         self.assertEqual([x["name"] for x in json.loads(body) if x["start"]], ["replies"])
 

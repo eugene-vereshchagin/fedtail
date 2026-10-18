@@ -183,8 +183,11 @@ async function selectLane(name, keep) {
   for (const a of document.querySelectorAll("#lanes a"))
     a.classList.toggle("on", decodeURIComponent(a.hash.slice(1)) === name);
   let data;
-  try { data = await api("/api/lane?name=" + encodeURIComponent(name)); }
-  catch (e) { toast(w("web_load_error", { err: e.message })); return; }
+  try {
+    data = await api("/api/lane?name=" + encodeURIComponent(name));
+    // what is open is remembered by a POST: a GET only ever reads
+    api("/api/active", { name: data.name }).catch(() => {});
+  } catch (e) { toast(w("web_load_error", { err: e.message })); return; }
   if (state.me.order === "newest_first") data.posts.reverse();
   const box = $("#posts");
   const anchor = keep ? firstVisible() : null;
@@ -393,11 +396,17 @@ document.addEventListener("click", async (e) => {
     const arg = decodeURIComponent(rest.join("/"));
     if (kind === "account") openAccount(arg);
     else if (kind === "thread") openThread(arg);
+    else if (kind === "tag") {  // the tag's page on my server
+      const server = state.me.server || "";
+      if (/^https:\/\//i.test(server))
+        window.open(server.replace(/\/$/, "") + "/tags/" + encodeURIComponent(arg),
+                    "_blank", "noopener");
+    }
     else if (kind === "resolve") {
       // not found here: to the browser — a web address only, never file:, javascript:…
       const web = /^https?:\/\//i.test(arg);
       try {
-        const r = await api("/api/resolve?url=" + encodeURIComponent(arg));
+        const r = await api("/api/resolve", { url: arg });  // my server fetches it: a POST
         if (r.found === "thread") openThread(r.id);
         else if (r.found === "account") openAccount(r.id);
         else if (web) window.open(arg, "_blank", "noopener");
