@@ -89,6 +89,7 @@ DEFAULTS = {
         "posts_only": [],
         "mentions_all": False,
         "direct_apart": True,
+        "tag_groups": [],
     },
     "post": {
         "default_visibility": "private",

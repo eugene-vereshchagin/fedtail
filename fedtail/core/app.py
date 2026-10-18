@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .. import diag
 from . import api as api_module
-from . import auth, counters, lanes, search, sources, subs, threads
+from . import auth, counters, lanes, search, sources, subs, taggroups, threads
 from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance
 from .events import Events
 from .model import id_after, interaction_policy, narrower, real
@@ -69,6 +69,7 @@ class Core(SocialMixin):
         self._lists_version = 0
         self._lists_checked = None  # monotonic time of the last check; None: never
         self.lanes = lanes.enabled(cfg)
+        self.tag_groups = []  # [{"any", "all", "none", "name", "saved"}], see taggroups
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
         self._limits = {}
@@ -174,11 +175,16 @@ class Core(SocialMixin):
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
+            done = False
             if self.cfg["lists"]["enabled"]:
                 try:
                     self._refresh_lists()
+                    done = True
                 except Exception as e:  # lists are a nicety; the rest must start
                     log.warning("lists: %s", e)
+            if not done and (self.cfg["lanes"].get("tag_groups") or
+                             self.store.kv_get("tag_groups")):
+                self._apply_lists([], {})  # the tag lanes come all the same
             self.emit("ready", me)
             return me
         return self.submit(job)
@@ -702,7 +708,12 @@ class Core(SocialMixin):
             name = f"list:{x['id']}"
             if name not in self.sources:
                 self.sources[name] = sources.list_source(self.api, x["id"])
-        new_lanes = lanes.enabled(self.cfg, got)
+        self.tag_groups = self._tag_groups()
+        for g in self.tag_groups:
+            name = taggroups.lane_name(g)
+            if name not in self.sources:
+                self.sources[name] = sources.tag_group_source(self.api, g)
+        new_lanes = lanes.enabled(self.cfg, got, self.tag_groups)
         self.lane_by_name = {lane.name: lane for lane in new_lanes}
         self.lanes = new_lanes
         self._lists_version += 1
@@ -747,8 +758,49 @@ class Core(SocialMixin):
             return self._with_relations(accounts), None
         return self.submit(job)
 
+    def _tag_groups(self):
+        """Lanes of several tags: the config's ([[lanes.tag_groups]]) and the ones saved
+        from a search (kept here). Each {"any", "all", "none", "name", "saved"}."""
+        out = []
+        for g in self.cfg["lanes"].get("tag_groups") or []:
+            out.append(dict(taggroups.normal(g), name=g.get("name") or "", saved=False))
+        for g in self.store.kv_get("tag_groups", []) or []:
+            out.append(dict(taggroups.normal(g), name=g.get("name") or "", saved=True))
+        return out
+
+    def tag_group_timeline(self, spec, max_id=None):
+        """A page of several tags at once, for a search tab."""
+        def job():
+            page = taggroups.fetch(self.api.tag_timeline, spec,
+                                   limit=self.cfg["feed"]["page_size"], max_id=max_id)
+            self.store.put_statuses(page)
+            return page
+        return self.submit(job)
+
+    def save_tag_group(self, spec, name=""):
+        """A search of several tags kept as a lane in the sidebar (group "Теги")."""
+        def job():
+            saved = [g for g in self.store.kv_get("tag_groups", []) or []
+                     if taggroups.key(g) != taggroups.key(spec)]
+            saved.append(dict(taggroups.normal(spec), name=name))
+            self.store.kv_set("tag_groups", saved)
+            self._apply_lists(list(self.lists), self.list_members)
+            return taggroups.lane_name(spec)
+        return self.submit(job)
+
+    def drop_tag_group(self, lane_name):
+        def job():
+            saved = [g for g in self.store.kv_get("tag_groups", []) or []
+                     if taggroups.lane_name(g) != lane_name]
+            self.store.kv_set("tag_groups", saved)
+            self._apply_lists(list(self.lists), self.list_members)
+        return self.submit(job)
+
     def lane_title(self, name):
         """A list's title; None for the built-in lanes (their names are translated)."""
+        if taggroups.is_tags(name):
+            g = next((g for g in self.tag_groups if taggroups.lane_name(g) == name), None)
+            return (g or {}).get("name") or taggroups.title(taggroups.spec_of(name) or {})
         if lanes.is_list(name):
             lid = name[len(lanes.LIST_PREFIX):]
             return next((x["title"] for x in self.lists if x["id"] == lid), "?")

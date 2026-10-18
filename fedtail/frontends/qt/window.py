@@ -49,6 +49,7 @@ from .feed import (
     PeopleWidget,
     RequestsWidget,
     SearchWidget,
+    TagGroupWidget,
     TagWidget,
     ThreadWidget,
 )
@@ -64,7 +65,7 @@ from .viewer import ImageOverlay
 log = logging.getLogger(__name__)
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
-LANE_ICON = {"people": "system-users", "comments": "mail-replied",
+LANE_ICON = {"tags": "tag", "people": "system-users", "comments": "mail-replied",
              "mentions": "mail-mark-important", "subs": "mail-thread-watch",
              "bots": "applications-system",
              "mine": "document-edit", "local": "go-home", "global": "applications-internet",
@@ -75,6 +76,11 @@ LANE_ICON = {"people": "system-users", "comments": "mail-replied",
 
 BADGE_KIND = {"comments": "hot", "bots": "quiet", "activity": "quiet"}
 
+
+
+def _tags_key(g):
+    from ...core import taggroups
+    return taggroups.key(g)
 
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
@@ -674,8 +680,10 @@ class MainWindow(QMainWindow):
                 it = QListWidgetItem()
                 it.setData(Qt.ItemDataRole.UserRole, name)
                 lst = titles.get(name[len("list:"):]) if lanes_module.is_list(name) else None
-                w = LaneItem(name, self.theme, len(self.lane_order) + 1,
-                             title=lst["title"] if lst else None)
+                title = lst["title"] if lst else None
+                if name.startswith("tags:"):
+                    title = self.core.lane_title(name)
+                w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title)
                 if lst and lst.get("exclusive"):
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())
@@ -731,6 +739,14 @@ class MainWindow(QMainWindow):
                 self.core.update_list(x["id"], x["title"], on)))
             m.addSeparator()
             m.addAction(_("list_delete"), lambda: self.delete_list(x))
+        elif name and name.startswith("tags:"):
+            g = next((g for g in self.core.tag_groups
+                      if f"tags:{_tags_key(g)}" == name), None)
+            drop = m.addAction(_("tags_drop"), lambda: self.bridge.call(
+                self.core.drop_tag_group(name)))
+            if g is not None and not g.get("saved"):
+                drop.setEnabled(False)
+                drop.setToolTip(_("tags_in_config"))
         elif self.cfg["lists"]["enabled"]:
             m.addAction(_("list_new"), lambda: self.new_list())
         else:
@@ -1090,7 +1106,26 @@ class MainWindow(QMainWindow):
                 return
         self._add_tab(AccountWidget(self, acc_id), "@…")
 
+    def open_tag_group(self, spec):
+        """Several hashtags as one tab (from the search); saved ones live in the sidebar."""
+        from ...core import taggroups
+        lane = taggroups.lane_name(spec)
+        if lane in self.lane_items:
+            self.select_lane(lane)
+            return
+        for w in self.extra_tabs():
+            if isinstance(w, TagGroupWidget) and w.key == taggroups.key(spec):
+                self._front(w)
+                return
+        w = TagGroupWidget(self, spec)
+        self._add_tab(w, w.title)
+
     def open_search(self, query=""):
+        from ...core import taggroups
+        spec = taggroups.parse(query.strip())
+        if spec:
+            self.open_tag_group(spec)
+            return
         for w in self.extra_tabs():
             if isinstance(w, SearchWidget):
                 self._front(w)

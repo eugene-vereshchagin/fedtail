@@ -2,6 +2,12 @@
 
 ## 0.14.0 — in progress
 
+- Several hashtags as one lane: `#georgia #грузия -#politics` in the search (`+#tag` must
+  have, `-#tag` without) opens one lane of them; "＋ to lanes" keeps it in the sidebar's new
+  Tags group, browsed while open like Federated (right click: remove). Or in the config,
+  `[[lanes.tag_groups]]` with name, any, all, none. Each tag is asked for on its own
+  (GoToSocial reads one at a time) and put together by fedtail, each post once.
+
 ## 0.13.0 — 2026-10-18
 
 **In short:** GoToSocial approvals of replies, likes and boosts; lists — who is in them,

@@ -1746,6 +1746,36 @@ class AccountWidget(_PagedTab):
                              fail=self.win.error)
 
 
+class TagGroupWidget(_PagedTab):
+    """Several hashtags at once — any of them, "+" ones all, "-" ones none (typed into
+    the search); "＋ to lanes" keeps it in the sidebar, group "Tags"."""
+
+    def __init__(self, win, spec):
+        from ...core import taggroups
+        self.spec = taggroups.normal(spec)
+        self.key = taggroups.key(self.spec)
+        super().__init__(win, self.key)
+        self.header.info.setText(_("tags_info"))
+        lane = taggroups.lane_name(self.spec)
+        if lane not in self.core.lane_by_name:
+            self.save_btn = self.header.add(_button(_("tags_save"), self._save,
+                                                    tip=_("tags_save_tip")))
+        self.more()
+
+    def fetch(self, max_id):
+        return self.core.tag_group_timeline(self.spec, max_id)
+
+    def _save(self):
+        self.save_btn.setEnabled(False)
+
+        def done(name):
+            self.save_btn.hide()
+            self.win.statusBar().showMessage(_("tags_saved", tags=self.key), 6000)
+            QTimer.singleShot(300, lambda: self.win.select_lane(name))
+        self.win.bridge.call(self.core.save_tag_group(self.spec), ok=done,
+                             fail=lambda e: (self.save_btn.setEnabled(True), self.win.error(e)))
+
+
 class TagWidget(_PagedTab):
     """Posts with a hashtag, as your server knows them."""
 
@@ -2212,6 +2242,11 @@ class SearchWidget(QWidget):
 
     def run(self, query):
         query = query.strip()
+        from ...core import taggroups
+        spec = taggroups.parse(query)
+        if spec:  # several tags: a lane of them, not a search
+            self.win.open_tag_group(spec)
+            return
         _clear(self.box_lay)
         self.view.set_specs([], keep_position=False)
         if not query:

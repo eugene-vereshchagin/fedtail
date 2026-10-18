@@ -867,6 +867,37 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertEqual(asked, [])
 
+    def test_lanes_of_several_tags(self):
+        """"#a #b -#c" from the search: one lane of any of them, without c; saved, it's a
+        lane in the sidebar's Tags group, browsed while open; the config's too."""
+        from fedtail.core import lanes, taggroups
+        self.assertIsNone(taggroups.parse("#один"))  # one tag: its ordinary lane
+        self.assertIsNone(taggroups.parse("#a hello"))  # not only tags: a search
+        spec = taggroups.parse("#Georgia #грузия -#politics +#photo")
+        self.assertEqual(spec, {"any": ["georgia", "грузия"], "all": ["photo"],
+                                "none": ["politics"]})
+        tagged = lambda sid, *tags: dict(status(sid, BOB, minute=int(sid[-1])),
+                                         tags=[{"name": t} for t in tags])
+        pages = {"georgia": [tagged("201", "georgia", "photo"),
+                             tagged("202", "georgia", "politics", "photo")],
+                 "грузия": [tagged("201", "georgia", "photo"), tagged("203", "грузия")]}
+        got = taggroups.fetch(lambda t, **kw: pages.get(t, []), spec)
+        self.assertEqual([st["id"] for st in got], ["201"])  # once; +photo; -politics
+        core, w = self.make()
+        core.connect().result()
+        name = core.save_tag_group({"any": ["georgia", "грузия"]}).result()
+        self.assertIn(name, core.lane_by_name)
+        self.assertTrue(core.lane_by_name[name].lazy)
+        self.assertIn("tags", [g for g, _n in lanes.grouped(core.lanes)])
+        self.assertEqual(core.lane_title(name), "#georgia #грузия")
+        core.drop_tag_group(name).result()
+        self.assertNotIn(name, core.lane_by_name)
+        core.cfg["lanes"]["tag_groups"] = [{"name": "Грузия", "any": ["georgia"],
+                                            "none": ["politics"]}]
+        core._apply_lists([], {})
+        name = taggroups.lane_name({"any": ["georgia"], "none": ["politics"]})
+        self.assertEqual(core.lane_title(name), "Грузия")
+
     def test_the_same_error_once(self):
         core, _w = self.make()
         shown = []

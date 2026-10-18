@@ -56,6 +56,12 @@ def make_sources(api, me_id):
     }
 
 
+def tag_group_source(api, spec):
+    from . import taggroups
+    return Source(taggroups.lane_name(spec),
+                  lambda **kw: taggroups.fetch(api.tag_timeline, spec, **kw), _status_entry)
+
+
 def list_source(api, list_id):
     name = f"list:{list_id}"
     return Source(name, lambda **kw: api.list_timeline(list_id, **kw), _status_entry)

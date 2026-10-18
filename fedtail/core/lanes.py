@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from . import taggroups
 from .model import is_bot, is_comment_to_me, real
 
 
@@ -110,6 +111,7 @@ GROUPS = [
     ("personal", ["mine", "direct", "mentions", "comments", "subs", "bookmarks", "favourites",
                   "activity", "requests"]),
     ("lists", []),
+    ("tags", []),  # lanes of several hashtags (core/taggroups.py)
 ]
 
 
@@ -121,11 +123,16 @@ def grouped(lanes):
     for group, members in GROUPS:
         if group == "lists":
             got = [n for n in names if is_list(n)]
+        elif group == "tags":
+            got = [n for n in names if taggroups.is_tags(n)]
+            if not got:
+                continue  # no tag lanes: no "Теги" heading either
         else:
             got = [n for n in names if n in members]
             if group == "standard":
                 got += [n for n in names if n not in placed and n not in got
-                        and not is_list(n) and not any(n in m for _g, m in GROUPS)]
+                        and not is_list(n) and not taggroups.is_tags(n)
+                        and not any(n in m for _g, m in GROUPS)]
         placed.update(got)
         out.append((group, got))
     return out
@@ -144,10 +151,22 @@ def is_list(name):
     return name.startswith(LIST_PREFIX)
 
 
-def enabled(cfg, lists=()):
+def tag_lane(spec):
+    """Several hashtags as one lane: browsed while open, like Federated (no counts)."""
+    name = taggroups.lane_name(spec)
+    return Lane(name, name, _all, lazy=True)
+
+
+def enabled(cfg, lists=(), tag_groups=()):
     out = [LANES[n] for n in cfg["lanes"]["enabled"]]
     if cfg["lists"]["enabled"]:
         out += [list_lane(x["id"]) for x in lists]
+    seen = set()
+    for g in tag_groups:
+        lane = tag_lane(g)
+        if lane.name not in seen:
+            seen.add(lane.name)
+            out.append(lane)
     return out
 
 

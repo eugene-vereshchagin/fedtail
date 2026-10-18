@@ -210,6 +210,10 @@ the lane, staying put while you read it). **Feed | Conversations** over Replies 
 and Subscriptions: Conversations shows a thread's replies as one card — where it started, how
 many messages and how many new, who wrote last; a click opens the whole thread.
 
+**Several tags as one lane:** type `#georgia #грузия -#politics` into the search (`+#tag` —
+must have, `-#tag` — without) and "＋ to lanes" keeps it in the sidebar, under Tags; or
+describe it in the config, `[[lanes.tag_groups]]`.
+
 ## Posts
 
 A post shows what's in it the way its server meant: the server's own emoji (`:blobcat:`) as
