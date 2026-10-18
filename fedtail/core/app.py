@@ -734,6 +734,8 @@ class Core(SocialMixin):
         def job():
             accounts = self.api.list_accounts(list_id)
             waiting = [p[1] for p in self._list_pending() if p[0] == list_id]
+            log.info("list %s: %d on the server, %d waiting to go in", list_id,
+                     len(accounts), len(waiting))
             have = {a["id"] for a in accounts}
             for acc_id in waiting:
                 if acc_id not in have:

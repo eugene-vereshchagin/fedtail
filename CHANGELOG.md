@@ -2,6 +2,8 @@
 
 ## 0.13.0 — in progress
 
+- Who is in a list: a server that answers "everyone at once" (limit=0) with nobody is asked
+  again page by page; the log says how many came each way.
 - Right click on a list in the sidebar: "Who is in it…" opens its people (the ones waiting
   to go in too), each with "Take out of the list"; "Move up" / "Move down" put the lists in
   your own order, kept by fedtail (servers have none) — new lists come at the end.

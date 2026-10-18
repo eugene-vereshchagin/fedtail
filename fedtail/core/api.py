@@ -424,8 +424,22 @@ class Api:
         return self.get(f"/api/v1/timelines/list/{list_id}", self._page(limit, max_id, min_id))
 
     def list_accounts(self, list_id):
-        # limit=0: everyone at once (Mastodon and GoToSocial both understand it)
-        return self.get(f"/api/v1/lists/{list_id}/accounts", {"limit": 0}) or []
+        """Everyone in a list. limit=0 asks for all at once; a server that answers that
+        with nothing (some versions do, for some lists) is asked again page by page."""
+        path = f"/api/v1/lists/{list_id}/accounts"
+        got = self.get(path, {"limit": 0}) or []
+        if got:
+            return got
+        out, max_id = [], None
+        for _ in range(50):  # 50 pages of 80: four thousand people is plenty
+            page, max_id = self.get_page(path, {"limit": 80, **({"max_id": max_id}
+                                                                 if max_id else {})})
+            out += page or []
+            if not max_id or not page:
+                break
+        if out:
+            log.info("list %s: limit=0 gave nobody, pages gave %d", list_id, len(out))
+        return out
 
     def create_list(self, title, exclusive=False):
         return self.post("/api/v1/lists", data={"title": title,
