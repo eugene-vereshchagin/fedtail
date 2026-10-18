@@ -200,6 +200,8 @@ class MainWindow(QMainWindow):
             self._column_width = self.cfg["ui"]["max_width"] or 760
             self.cfg["ui"]["max_width"] = 0 if wide else self._column_width
         self.images = Images(core, bridge)
+        from . import player
+        player.set_cache(self.images)  # videos played from disk once they're there
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
         self.ctx.subscribed = core.subscribed
@@ -1014,6 +1016,8 @@ class MainWindow(QMainWindow):
             self._notify(payload)
         elif name == "prefetch":  # pictures of posts just come: to disk, ahead of time
             self.images.prefetch(payload)
+        elif name == "prefetch_video":  # their videos too (feed.prefetch = "all")
+            self.images.prefetch_video(payload)
         elif name == "error":
             self.statusBar().showMessage(_("error", err=payload), 10_000)
         elif name == "auth_failed":

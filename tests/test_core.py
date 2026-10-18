@@ -841,16 +841,26 @@ class CoreTest(TmpDir):
     def test_pictures_of_new_posts_asked_ahead(self):
         core, w = self.make()
         core.connect().result()
-        asked = []
+        asked, videos = [], []
         core.events.on("prefetch", lambda _n, p: asked.extend(p))
+        core.events.on("prefetch_video", lambda _n, p: videos.extend(p))
         st = dict(status("090", BOB, minute=1), media_attachments=[
-            {"type": "image", "preview_url": "https://x/s.png", "url": "https://x/o.png"}])
+            {"type": "image", "preview_url": "https://x/s.png", "url": "https://x/o.png"},
+            {"type": "video", "preview_url": "https://x/v.png", "url": "https://x/v.mp4"}])
         st["account"] = dict(BOB, avatar_static="https://x/bob.png")
         w.add(st, home=True)
+        core.poll_once()  # "all", the default: pictures, originals, the video apart
+        self.assertTrue({"https://x/s.png", "https://x/bob.png", "https://x/o.png",
+                         "https://x/v.png"} <= set(asked))
+        self.assertEqual(videos, ["https://x/v.mp4"])
+        core.cfg["feed"]["prefetch"] = "previews"
+        asked.clear()
+        videos.clear()
+        w.add(dict(st, id="092"), home=True)
         core.poll_once()
         self.assertIn("https://x/s.png", asked)
-        self.assertIn("https://x/bob.png", asked)
-        self.assertNotIn("https://x/o.png", asked)  # originals only with "all"
+        self.assertNotIn("https://x/o.png", asked)
+        self.assertEqual(videos, [])
         core.cfg["feed"]["prefetch"] = "off"
         asked.clear()
         w.add(dict(st, id="091"), home=True)

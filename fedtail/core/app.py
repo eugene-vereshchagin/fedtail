@@ -812,8 +812,8 @@ class Core(SocialMixin):
 
     def _ask_prefetch(self, statuses):
         """The pictures of posts just come, for the frontend to fetch ahead
-        (feed.prefetch): "previews" — previews and avatars; "all" — the originals too;
-        "off" — nothing ahead, as before."""
+        (feed.prefetch): "previews" — previews and avatars; "all" — the originals, the
+        videos and gifs too; "off" — nothing ahead, as before."""
         mode = self.cfg["feed"].get("prefetch", "previews")
         if mode == "off" or not statuses:
             return
@@ -831,6 +831,12 @@ class Core(SocialMixin):
         urls = [u for u in dict.fromkeys(urls) if u]
         if urls:
             self.emit("prefetch", urls)
+        if mode == "all":  # videos, gifs, sounds: to their own cache (ui.video_disk_mb)
+            videos = [m.get("url") for st in statuses
+                      for m in real(st).get("media_attachments") or []
+                      if m.get("type") in ("video", "gifv", "audio") and m.get("url")]
+            if videos:
+                self.emit("prefetch_video", list(dict.fromkeys(videos)))
 
     def _list_add_or_wait(self, list_id, acc_id):
         """Into the list on the server, or — refused for someone not followed (yet) —

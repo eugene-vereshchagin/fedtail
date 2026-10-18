@@ -3,8 +3,12 @@
 ## 0.13.0 — in progress
 
 - Pictures of new posts are fetched to disk as soon as the posts come, by workers of their
-  own: a lane opens with its previews and avatars there, not loading for seconds from a
-  slow server (`feed.prefetch`: "previews", "all" with the originals, "off").
+  own: a lane opens with its pictures there, not loading for seconds from a slow server
+  (`feed.prefetch`: "all" — the default, originals, videos and gifs too; "previews";
+  "off").
+- Videos, gifs and sounds have a disk cache of their own (`ui.video_disk_mb`, 10 GB): a
+  video played once plays from disk the next time; with "all" they're fetched ahead, one
+  at a time.
 - The picture cache on disk keeps to `ui.image_disk_mb` (1000 MB): the ones not used the
   longest go, at start and along the way. It only grew before.
 - Who is in a list: a server that answers "everyone at once" (limit=0) with nobody is asked

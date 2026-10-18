@@ -101,9 +101,15 @@ class Images:
         # pictures of posts just arrived, fetched to disk ahead of time (feed.prefetch)
         # by workers of their own, so the ones on screen never wait behind them
         self.pre_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="fedtail-pre")
+        # videos one at a time: big, and never in the way of the pictures
+        self.video_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fedtail-vid")
+        self.video_dir = self.cache_dir / "video"
+        self.video_dir.mkdir(exist_ok=True)
+        self._video_seen = set()
         self._pre_seen = set()
         self._since_prune = 0
         self.big_pool.submit(self.prune_disk)
+        self.big_pool.submit(self.prune_videos)
 
     def _reset_stats(self):
         self._st = {"done": 0, "failed": 0, "big": 0, "cached": 0, "wait_max_s": 0.0,
@@ -254,6 +260,64 @@ class Images:
         self._count_write()
         log.debug("prefetch %s: %d B in %.1f s", url, len(r.content), time.monotonic() - t)
 
+    # ---- videos on disk: fetched ahead ("all"), and every one played ------------------
+    def _video_path(self, url):
+        from urllib.parse import urlparse
+        ext = os.path.splitext(urlparse(url).path)[1].lower()
+        ext = ext if ext in (".mp4", ".webm", ".m4v", ".mov", ".mp3", ".ogg", ".m4a",
+                             ".opus", ".wav", ".flac") else ".bin"
+        return self.video_dir / (hashlib.sha1(url.encode()).hexdigest() + ext)
+
+    def video_local(self, url):
+        p = self._video_path(url)
+        if p.exists() and p.stat().st_size:
+            try:
+                os.utime(p)  # used: the cleanup keeps it
+            except OSError:
+                pass
+            return str(p)
+        return None
+
+    def prefetch_video(self, urls):
+        if int(self.core.cfg["ui"].get("video_disk_mb", 10000)) <= 0:
+            return
+        for url in urls:
+            if url and url not in self._video_seen:
+                self._video_seen.add(url)
+                self.video_pool.submit(self._fetch_video, url)
+
+    def _fetch_video(self, url):
+        p = self._video_path(url)
+        if p.exists():
+            return
+        part = p.with_suffix(p.suffix + ".part")
+        t = time.monotonic()
+        size = 0
+        try:
+            with self.http.get(url, timeout=(6, 60), stream=True) as r:
+                r.raise_for_status()
+                with open(part, "wb") as f:
+                    for chunk in r.iter_content(1 << 16):
+                        f.write(chunk)
+                        size += len(chunk)
+            part.replace(p)  # whole or not at all: the player never gets half a file
+        except (requests.RequestException, OSError) as e:
+            part.unlink(missing_ok=True)
+            log.debug("video %s: %s", url, e.__class__.__name__)
+            return
+        log.info("video to disk: %.1f MB in %.1f s", size / 2**20, time.monotonic() - t)
+        self._videos_written = getattr(self, "_videos_written", 0) + 1
+        if self._videos_written % 10 == 0:
+            self.prune_videos()
+
+    def prune_videos(self):
+        """The video cache within ui.video_disk_mb (10 GB): the ones not played the
+        longest go first."""
+        limit = int(self.core.cfg["ui"].get("video_disk_mb", 10000)) * 1024 * 1024
+        return self._prune(self.video_dir, limit,
+                           lambda p: len(p.stem) == 40 and p.suffix != ".part",
+                           "video cache")
+
     def _count_write(self):
         self._since_prune += 1
         if self._since_prune >= 300:  # every few hundred new files: still within size?
@@ -265,19 +329,24 @@ class Images:
         first (a cache that only grew held gigabytes after a few weeks). Only our
         picture files are touched — names of 40 hex digits."""
         limit = int(self.core.cfg["ui"].get("image_disk_mb", 1000)) * 1024 * 1024
+        return self._prune(self.cache_dir, limit,
+                           lambda p: len(p.name) == 40 and
+                           all(c in "0123456789abcdef" for c in p.name), "image cache")
+
+    def _prune(self, folder, limit, ours, what):
         if limit <= 0:
             return 0
-        files = []
-        total = 0
+        files, total = [], 0
         try:
-            for p in self.cache_dir.iterdir():
-                if len(p.name) == 40 and all(c in "0123456789abcdef" for c in p.name):
-                    try:
-                        st = p.stat()
-                    except OSError:
-                        continue
-                    files.append((st.st_mtime, st.st_size, p))
-                    total += st.st_size
+            for p in folder.iterdir():
+                if not p.is_file() or not ours(p):
+                    continue
+                try:
+                    st = p.stat()
+                except OSError:
+                    continue
+                files.append((st.st_mtime, st.st_size, p))
+                total += st.st_size
         except OSError:
             return 0
         if total <= limit:
@@ -294,7 +363,7 @@ class Images:
                 gone += 1
             except OSError:
                 pass
-        log.info("image cache: %d files, %.0f MB let go (%.0f MB kept, limit %d MB)", gone,
+        log.info("%s: %d files, %.0f MB let go (%.0f MB kept, limit %d MB)", what, gone,
                  freed / 2**20, (total - freed) / 2**20, limit // 2**20)
         return gone
 

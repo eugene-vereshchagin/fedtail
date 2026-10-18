@@ -50,6 +50,28 @@ def media_url(m):
     return m.get("url") or m.get("remote_url") or ""
 
 
+_cache = None  # the window's Images: videos kept on disk (ui.video_disk_mb)
+
+
+def set_cache(images):
+    global _cache
+    _cache = images
+
+
+def source(m):
+    """What the player plays: the copy on disk if there is one (fetched ahead, or
+    played before), else the server's — and then it's fetched to disk for next time."""
+    from PySide6.QtCore import QUrl
+    url = media_url(m)
+    if _cache is not None and url:
+        local = _cache.video_local(url)
+        if local:
+            log.info("video: from disk (%s)", m.get("type"))
+            return QUrl.fromLocalFile(local)
+        _cache.prefetch_video([url])
+    return QUrl(url)
+
+
 def _clock(ms):
     s = max(0, int(ms // 1000))
     return f"{s // 3600}:{s // 60 % 60:02d}:{s % 60:02d}" if s >= 3600 else \
@@ -159,7 +181,7 @@ class VideoOverlay(QWidget):
         log.info("video: playing in the window (%s, %d of %d)", m.get("type"), self.i + 1,
                  len(self.items))
         self.problem.hide()
-        self.player.setSource(QUrl(media_url(m)))
+        self.player.setSource(source(m))
         self.player.play()
 
     def go(self, step):
@@ -338,7 +360,7 @@ class InlineLoop(QObject):
             self.player.errorOccurred.connect(
                 lambda _e, t="": (log.info("gifv: %s", t or self.player.errorString()),
                                   self.timer.stop()))
-            self.player.setSource(QUrl(media_url(self.m)))
+            self.player.setSource(source(self.m))
         if self.player.playbackState() != self._QMediaPlayer.PlaybackState.PlayingState:
             _Loops.start(self)
             self.player.play()
@@ -403,7 +425,7 @@ class AudioBar(QWidget):
                                                      err=t or self.player.errorString())))
             self.slider.sliderMoved.connect(lambda v: self.player.setPosition(v))
             self.slider.setEnabled(True)
-            self.player.setSource(QUrl(media_url(self.m)))
+            self.player.setSource(source(self.m))
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.player.pause()
             self.btn.setText("▶")
