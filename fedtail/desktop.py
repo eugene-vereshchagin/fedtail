@@ -110,14 +110,16 @@ def install(profile=None):
         return _windows_install(profile)
     data = _data_home()
     apps = data / "applications"
-    icons = data / "icons" / "hicolor" / "scalable" / "apps"
+    icons = data / "icons" / "hicolor" / "512x512" / "apps"
     apps.mkdir(parents=True, exist_ok=True)
     icons.mkdir(parents=True, exist_ok=True)
-    icon_src = resources.files("fedtail").joinpath("data/icons/fedtail.svg")
-    (icons / "fedtail.svg").write_bytes(icon_src.read_bytes())
+    # the opossum holding its own tail (the bubble of before goes: one icon by that name)
+    icon_src = resources.files("fedtail").joinpath("data/icons/fedtail.png")
+    (icons / "fedtail.png").write_bytes(icon_src.read_bytes())
+    (data / "icons" / "hicolor" / "scalable" / "apps" / "fedtail.svg").unlink(missing_ok=True)
     stem = desktop_id(profile)
     entry = apps / f"{stem}.desktop"
-    text = entry_text(profile, source_dir(), icon=str(icons / "fedtail.svg"))
+    text = entry_text(profile, source_dir(), icon=str(icons / "fedtail.png"))
     entry.write_text(text, "utf-8")
     # web+ap:// links (a "open in your app" button on a server's page) and
     # `xdg-open web+ap://…` go to `fedtail open URL`: into the running window
@@ -134,4 +136,4 @@ def install(profile=None):
         if shutil.which(cmd[0]):
             from . import sysenv
             subprocess.run(cmd, capture_output=True, env=sysenv.child_env())
-    return entry, icons / "fedtail.svg"
+    return entry, icons / "fedtail.png"

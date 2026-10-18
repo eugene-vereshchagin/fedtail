@@ -2,6 +2,11 @@
 
 ## 0.15.0 — in progress
 
+- fedtail has a face: an opossum holding its own tail — the icon of the window, the tray,
+  notifications and the menu entry (`--install-desktop`, the .deb, the Windows .exe), and
+  the picture in About. `ui.app_icon = "bubble"` brings back the drawn thread bubble
+  (in the theme's colours with `ui.themed_icon`).
+
 - A boost no longer brings an old post into the feed again and again: a post comes into a
   lane once — as itself or with its first boost. A boost of a post the lane has had already,
   or of one read already (in a thread, in another lane), is not shown, not counted as
