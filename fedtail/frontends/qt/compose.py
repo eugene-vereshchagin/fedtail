@@ -106,8 +106,8 @@ class Compose(QDialog):
             self.setObjectName("composePanel")
             self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             top = QHBoxLayout()
-            # bigger / smaller at the top left, as ✕ is at the top right
-            self.size_btn = QPushButton("⤢")
+            # bigger / smaller (⤡) at the top left, as ✕ is at the top right
+            self.size_btn = QPushButton("⤡")
             self.size_btn.setObjectName("tool")
             self.size_btn.setToolTip(_("compose_bigger_tip"))
             self.size_btn.setCursor(Qt.CursorShape.PointingHandCursor)
