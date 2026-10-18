@@ -854,6 +854,19 @@ class CoreTest(TmpDir):
         core.follow("N").result()
         self.assertNotIn("N", w.notes)
 
+    def test_follow_date_without_notes_on_the_server(self):
+        from fedtail.core.api import ApiError
+        core, w = self.make()
+        core.connect().result()
+
+        def refuse(acc_id, text):
+            raise ApiError(404, "no notes here")
+        core.api.set_note = refuse
+        rel = core.follow("B").result()
+        self.assertTrue(rel["following"])  # the follow itself went through
+        self.assertTrue(core.followed_since("B", rel))  # remembered here instead
+        self.assertNotIn("B", w.notes)
+
     def test_list_add_before_follow_confirmed(self):
         """The server refuses someone just followed: they go into the list here at once
         and into the server's list on a later lists refresh."""
