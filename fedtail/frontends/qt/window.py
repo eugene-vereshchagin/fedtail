@@ -195,6 +195,8 @@ class ViewContext:
     loop_gifv: object = None       # (label, attachment, fit) -> loop a gifv in its card
     audio_bar: object = None       # attachment -> a small audio player widget
     long_form: object = None       # status -> the whole of it from the author's server
+    act_as: object = None          # status -> [(account tag, "@acct")] that could act on it
+    do_act_as: object = None       # (status, tag, "fav" | "boost" | "reply") -> do it
 
 
 class MainWindow(QMainWindow):
@@ -226,6 +228,9 @@ class MainWindow(QMainWindow):
             else None
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
+        if hasattr(core, "act_as") and self.cfg["ui"].get("act_as", True):
+            self.ctx.act_as = core.act_accounts
+            self.ctx.do_act_as = self.act_as
         self.ctx.long_form = self.read_whole if self.cfg["feed"].get("long_form", True) \
             else None
         self.lane_widgets = {}
@@ -1423,6 +1428,20 @@ class MainWindow(QMainWindow):
         dlg.show()
         if d.get("media"):
             self.statusBar().showMessage(_("redraft_media", n=d["media"]), 8000)
+
+    def act_as(self, st, tag, action):
+        """★ / ♻ / ↩ from another account of the window: the post found on its server."""
+        self.statusBar().showMessage(_("act_as_wait"), 4000)
+
+        def done(got):
+            if action == "reply":
+                self.compose(got)
+            else:
+                self.statusBar().showMessage(_("act_as_done", acct=got.get("_via") or
+                                               "@" + (self.core.me or {}).get("acct", "")),
+                                             5000)
+        self.bridge.call(self.core.act_as(st, tag, "find" if action == "reply" else action),
+                         ok=done, fail=self.error)
 
     def read_whole(self, st):
         """📄 The whole text from the author's server: an article your server cut to a

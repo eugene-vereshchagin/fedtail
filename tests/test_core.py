@@ -258,6 +258,26 @@ class MergedTest(TmpDir):
         self.assertTrue(all(n.status["id"].startswith("work~") for n in nodes))
         self.assertEqual(m.relationship("work~B").result()["id"], "B")
 
+    def test_act_as_the_other_account(self):
+        """A post my main account got, liked from work: looked up on work's server."""
+        m = self.m
+        mine = self.home.add(status("020", BOB, minute=20), home=True)
+        self.work.remote[mine["uri"]] = dict(mine, id="777")  # work's server fetches it
+        for core in (m.primary, m.others["work"]):
+            core.connect().result()
+            core.poll_once()
+        st = m.store.get_status("020")
+        self.assertEqual(m.act_accounts(st), [("work", "@w")])
+        got = m.act_as(st, "work", "fav").result()
+        self.assertEqual(got["id"], "work~777")
+        self.assertTrue(self.work.statuses["777"]["favourited"])
+        self.assertFalse(self.home.statuses["020"].get("favourited"))
+        found = m.act_as(st, "work", "find").result()  # a reply: found, nothing done
+        self.assertEqual(found["id"], "work~777")
+        self.assertEqual(m.act_accounts(found)[0][0], None)  # and back: the main one
+        with self.assertRaises(LookupError):
+            m.act_as(dict(st, uri="https://nowhere.example/1"), "work", "boost").result()
+
 
 class PathsAuthTest(TmpDir):
     def test_profiles_listing(self):

@@ -22,6 +22,7 @@ DEFAULTS = {
         "compose": "inline",
         "compose_size": 0,
         "account_colors": True,
+        "act_as": True,
         "start_lane": "none",
         "merge": [],
         "sidebar_footer": True,

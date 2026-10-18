@@ -341,6 +341,38 @@ class MergedCore:
         return self._then(core.thread(own), lambda nodes: [
             Node(self.wrap(tag, n.status), n.depth, n.number) for n in nodes])
 
+    # ---- the same post from another account (ui.act_as) ------------------------------
+    def act_accounts(self, status):
+        """[(tag, "@acct")]: the accounts that could act on this post besides the one that
+        received it (tag None is this window's own account)."""
+        _core, mine, _own = self.own(status)
+        me = self.primary.me
+        out = [] if mine is None else [(None, "@" + me["acct"] if me else "")]
+        return out + [(t, self.via(t)) for t in self.others if t != mine]
+
+    def act_as(self, status, tag, action):
+        """Like ("fav"), boost ("boost") or find for a reply ("find") the post from
+        another account: it is looked up on that account's server by its address, and
+        the action goes from there. The result is the post in this window's terms."""
+        from .model import real
+        _core, _mine, own = self.own(status)
+        uri = real(own).get("uri") or real(own).get("url")
+        target = self.primary if tag is None else self.others[tag]
+
+        def job():
+            if not uri:
+                raise RuntimeError("no address")
+            got = target.resolve(uri).result()
+            if not got or got[0] != "status":
+                raise LookupError(f"{self.via(tag) if tag else 'this account'}: not found")
+            st = got[1]
+            if action == "fav" and not real(st).get("favourited"):
+                st = target.favourite(st).result()
+            elif action == "boost" and not real(st).get("reblogged"):
+                st = target.boost(st).result()
+            return self.wrap(tag, st)
+        return self.primary.bg.submit(job)
+
     # ---- people of another account: through that account ---------------------------
     def _acc(self, method, acc_id, *a, **kw):
         core, tag, own = self.split(acc_id)

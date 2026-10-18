@@ -2,6 +2,9 @@
 
 ## 0.14.0 — in progress
 
+- All accounts in one window: "From another account" in a post's ⋯ menu — like, boost or
+  reply as an account that didn't receive it; the post is looked up on that account's
+  server by its address and the action goes from there (`ui.act_as`).
 - "📄 Read it whole" in the ⋯ menu of a post from another server: the post as the author's
   server keeps it — an article whole, not a title and a link; an event with its time and
   place (asked without your token; `feed.long_form`).

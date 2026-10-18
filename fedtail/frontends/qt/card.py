@@ -741,6 +741,15 @@ class PostRow(QWidget):
             menu.addAction(_("quote") if approval == "automatic" else _("quote_ask"),
                            lambda u=quote_url: self.ctx.on_link(u))
         lang = (real(st).get("language") or "").split("-")[0]
+        if self.ctx.act_as is not None:
+            others = self.ctx.act_as(st)
+            if others:
+                sub = menu.addMenu(_("act_as"))
+                for tag, label in others:
+                    for action, key in (("fav", "act_as_fav"), ("boost", "act_as_boost"),
+                                        ("reply", "act_as_reply")):
+                        sub.addAction(_(key, acct=label), lambda s=st, t=tag, a=action:
+                                      self.ctx.do_act_as(s, t, a))
         if self.ctx.long_form and "@" in (author.get("acct") or "") and real(st).get("uri"):
             menu.addAction(_("long_form"), lambda s=st: self.ctx.long_form(s))
         if self.ctx.translate and lang and lang != current_language() and real(st).get("content"):
