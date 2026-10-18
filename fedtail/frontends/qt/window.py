@@ -234,6 +234,7 @@ class MainWindow(QMainWindow):
         self.ctx.long_form = self.read_whole if self.cfg["feed"].get("long_form", True) \
             else None
         self.lane_widgets = {}
+        self.columns = None  # the lanes side by side, while they are (columns.py)
         self.quitting = False
         bridge.on_error = self.error
         bridge.event.connect(self.on_event)
@@ -376,6 +377,14 @@ class MainWindow(QMainWindow):
             menu_btn.setIcon(ic)
         menu_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu_btn.setMenu(self._app_menu())
+        # ❯: lanes side by side, for now (the start is always as ui.layout says)
+        self.columns_btn = QToolButton()
+        self.columns_btn.setObjectName("menu")
+        self.columns_btn.setText("❯")
+        self.columns_btn.setCheckable(True)
+        self.columns_btn.setToolTip(_("columns_tip"))
+        self.columns_btn.toggled.connect(self.set_columns)
+        acc.addWidget(self.columns_btn, 0, Qt.AlignmentFlag.AlignTop)
         acc.addWidget(menu_btn, 0, Qt.AlignmentFlag.AlignTop)
         # a right click on who I am: the other accounts (profiles), to switch to
         for w in (self.account_avatar, self.account_name, self.account_sub):
@@ -602,6 +611,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tip)
         if self.tray:
             self.tray.setToolTip(tip)
+        if self.cfg["ui"].get("layout") == "columns" and self.lane_order:
+            self.set_columns(True)
         self._open_start_lane()
         self.core.start_polling()
         self.announce_bar.start()
@@ -704,6 +715,8 @@ class MainWindow(QMainWindow):
         # lanes of lists that are gone
         for name in [n for n in self.lane_widgets if n.startswith("list:")
                      and n not in self.core.lane_by_name]:
+            if self.columns is not None:
+                self.columns.drop(name)
             w = self.lane_widgets.pop(name)
             self.stack.removeWidget(w)
             w.deleteLater()
@@ -854,16 +867,11 @@ class MainWindow(QMainWindow):
         log.info("lane opened: %s", name)
         if self.curtain_shown():
             self.right_stack.setCurrentIndex(0)
-        w = self.lane_widgets.get(name)
-        if w is None:
-            if name == "requests":
-                w = RequestsWidget(self)
-            elif name == "activity":
-                w = ActivityWidget(self)
-            else:
-                w = LaneWidget(self, name)
-                w.dirty = True  # drawn right after the switch, under "loading…"
-            self.lane_widgets[name] = w
+        w = self._lane_widget(name)
+        if self.columns is not None:
+            self._show_in_columns(name, w, show)
+            return
+        if self.stack.indexOf(w) < 0:
             self.stack.addWidget(w)
         self.stack.setCurrentWidget(w)
         if show:
@@ -880,6 +888,101 @@ class MainWindow(QMainWindow):
         self.core.set_active_lane(name)
         for lane_name, item in self.lane_items.items():
             item.set_current(lane_name == name)
+
+    def _lane_widget(self, name):
+        w = self.lane_widgets.get(name)
+        if w is None:
+            if name == "requests":
+                w = RequestsWidget(self)
+            elif name == "activity":
+                w = ActivityWidget(self)
+            else:
+                w = LaneWidget(self, name)
+                w.dirty = True  # drawn right after the switch, under "loading…"
+            self.lane_widgets[name] = w
+            self.stack.addWidget(w)
+        return w
+
+    # ---- columns side by side (ui.layout, ❯) --------------------------------------------
+    def set_columns(self, on):
+        """Lanes side by side, or one at a time. The same lane widgets move over, so
+        each keeps its place and its filters."""
+        on = bool(on)
+        if self.columns_btn.isChecked() != on:
+            self.columns_btn.setChecked(on)  # comes back here through toggled
+            return
+        if on == (self.columns is not None):
+            return
+        from .columns import ColumnsArea, start_names
+        if on:
+            titles = {x["title"]: "list:" + x["id"] for x in self.core.lists}
+            names = start_names(self.cfg, self.core.get_state("columns"), self.lane_order,
+                                titles)
+            self.columns = ColumnsArea(self)
+            for name in names:
+                self.columns.add(name, self._lane_widget(name))
+            self.stack.addWidget(self.columns)
+            self.stack.setCurrentWidget(self.columns)
+            focus = self.core.get_state("lane")
+            self.columns.focus(focus if focus in names else names[0])
+            self._columns_shown()
+            log.info("columns: %s", ", ".join(names))
+        else:
+            focused = self.columns.focused
+            for _name, w in self.columns.release():
+                self.stack.addWidget(w)
+            self.stack.removeWidget(self.columns)
+            self.columns.deleteLater()
+            self.columns = None
+            self.core.set_active_lanes([])
+            log.info("columns off")
+            if focused:
+                self.select_lane(focused)
+
+    def _show_in_columns(self, name, w, show):
+        if name not in self.columns.frames:
+            self.columns.add(name, w)
+            self.columns_changed()
+        self.stack.setCurrentWidget(self.columns)
+        if show:
+            self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
+        self.columns.focus(name, keys=show)
+        if isinstance(w, LaneWidget) and w.dirty:
+            w.draw_shown()
+        self.core.set_state("lane", name)
+        self.column_focused(name)
+        self._columns_shown()
+
+    def _columns_shown(self):
+        self.tabs.setTabText(self.tabs.indexOf(self.stack), _("columns"))
+        self.core.set_active_lanes(self.columns.names())
+
+    def column_focused(self, name):
+        """The column in focus: the one the sidebar marks, and the one keys go to."""
+        self.core.set_active_lane(name)
+        for lane_name, item in self.lane_items.items():
+            item.set_current(lane_name == name)
+
+    def columns_changed(self):
+        if self.columns is not None:
+            self.core.set_state("columns", self.columns.names())
+            self.core.set_active_lanes(self.columns.names())
+
+    def close_column(self, name):
+        if self.columns is None or len(self.columns.order) <= 1:
+            return  # the last one stays: ❯ goes back to one lane
+        w = self.columns.drop(name)
+        if w is not None:
+            self.stack.addWidget(w)
+        self.columns_changed()
+        if self.columns.focused:
+            self.column_focused(self.columns.focused)
+
+    def lane_on_screen(self, name):
+        if self.columns is not None and self.tabs.currentWidget() is self.stack \
+                and not self.curtain_shown():
+            return name in self.columns.frames
+        return self.current_lane() == name
 
     def current_lane(self):
         """The lane on screen, or None when a thread/profile tab is in front."""
@@ -1787,6 +1890,7 @@ class MainWindow(QMainWindow):
         for item in self.lane_items.values():
             item.set_current(False)
         self.core.set_active_lane(None)
+        self.core.set_active_lanes([])
         self._curtain_text()
         log.info("all lanes closed (Esc)")
 

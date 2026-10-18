@@ -1293,6 +1293,41 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
 
+    def test_columns_side_by_side(self):
+        """❯: the lanes in columns, the same widgets moved over; a lane clicked on the
+        left comes as one more column; ✕ takes it away; back to one lane where I was."""
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.pump(until=lambda: "people" in self.win.lane_items)
+        self.win.select_lane("people")
+        people = self.win.lane_widgets["people"]
+        self.win.columns_btn.setChecked(True)
+        cols = self.win.columns
+        self.assertIsNotNone(cols)
+        self.assertEqual(cols.names(), ["people", "comments", "activity"])
+        self.assertIs(self.win.lane_widgets["people"], people)  # moved, not built anew
+        self.assertTrue(self.win.lane_on_screen("comments"))
+        self.assertEqual(self.core._active_lanes, {"people", "comments", "activity"})
+        self.win.select_lane("mentions")
+        self.assertEqual(cols.names()[-1], "mentions")
+        self.assertEqual(cols.focused, "mentions")
+        self.assertEqual(self.win.current_lane(), "mentions")
+        self.assertEqual(self.core.get_state("columns")[-1], "mentions")
+        cols.move("mentions", -1)
+        self.assertEqual(cols.names()[-2], "mentions")
+        self.win.close_column("comments")
+        self.assertNotIn("comments", cols.names())
+        self.assertFalse(self.win.lane_on_screen("comments"))
+        self.win.columns_btn.setChecked(False)
+        self.pump(0.05)
+        self.assertIsNone(self.win.columns)
+        self.assertEqual(self.win.current_lane(), "mentions")
+        self.assertIs(self.win.stack.currentWidget(), self.win.lane_widgets["mentions"])
+        self.assertEqual(self.core._active_lanes, set())
+        # the next time: as left
+        self.win.set_columns(True)
+        self.assertEqual(self.win.columns.names(), ["people", "mentions", "activity"])
+
     def test_disk_cache_keeps_to_its_size(self):
         """Over ui.image_disk_mb the pictures used longest ago go; other files stay."""
         import hashlib

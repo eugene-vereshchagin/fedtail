@@ -232,6 +232,14 @@ class MergedCore:
             for core in [self.primary, *self.others.values()]:
                 core.set_active_lane(None)
 
+    def set_active_lanes(self, names):
+        per = {id(c): (c, []) for c in [self.primary, *self.others.values()]}
+        for name in names or ():
+            for core, _tag, own in self._own_lane(name):
+                per[id(core)][1].append(own)
+        for core, own in per.values():
+            core.set_active_lanes(own)
+
     def load_older(self, name):
         futs = [core.load_older(own) for core, _t, own in self._own_lane(name)
                 if own in core.lane_by_name]

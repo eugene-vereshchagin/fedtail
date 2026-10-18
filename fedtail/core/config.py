@@ -32,6 +32,9 @@ DEFAULTS = {
         "bookmark_button": True,
         "arts_mode": True,
         "max_width": 760,
+        "layout": "single",
+        "columns": [],
+        "column_width": 460,
         "image_height": 360,
         "image_viewer": "internal",
         "video_player": "internal",
@@ -189,6 +192,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("ui", "layout"): {'single', 'columns'},
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},
     ("feed", "prefetch"): {'previews', 'all', 'off'},
@@ -247,6 +251,7 @@ MINIMUM = {
     ("feed", "build_at_once"): 0,
     ("ui", "font_size"): 0,
     ("ui", "max_width"): 0,
+    ("ui", "column_width"): 280,
     ("ui", "compose_size"): 0,
     ("ui", "image_disk_mb"): 0,
     ("ui", "video_disk_mb"): 0,

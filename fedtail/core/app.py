@@ -92,6 +92,7 @@ class Core(SocialMixin):
         self._silence_checked = None
         self._poll_count = 0
         self._active_lane = None  # the lane on screen: browse lanes are fetched only then
+        self._active_lanes = set()  # all of them on screen, side by side (ui.layout)
         self._last_poll_s = None
         api_module.SLOW_SECONDS = float(cfg["debug"]["slow_request_seconds"])
         diag.add_stats("core", self.diag_stats)
@@ -291,12 +292,14 @@ class Core(SocialMixin):
                 except Exception as e:
                     self.emit("error", f"subs: {e}")
             lazy = {lane.source for lane in self.lanes if lane.lazy}
-            active = self.lane_by_name.get(self._active_lane)
+            open_sources = {self.lane_by_name[n].source
+                            for n in {self._active_lane, *self._active_lanes}
+                            if n in self.lane_by_name}
             for name in lanes.sources_needed(self.lanes):
                 if name not in self.sources:
                     continue
                 if name in lazy:  # browse lanes: only while open, newest page only
-                    if active is None or active.source != name:
+                    if name not in open_sources:
                         continue
                     try:
                         new_by_source[name] = sources.refresh_top(
@@ -978,6 +981,15 @@ class Core(SocialMixin):
         self._active_lane = name
         lane = self.lane_by_name.get(name)
         if lane is not None and lane.lazy:
+            self.poll_now()
+
+    def set_active_lanes(self, names):
+        """Columns side by side: every lane on screen at once (the browse ones among
+        them fetched while they stay)."""
+        new = set(names or ())
+        fresh = new - self._active_lanes
+        self._active_lanes = new
+        if any(getattr(self.lane_by_name.get(n), "lazy", False) for n in fresh):
             self.poll_now()
 
     # ---- choices over a lane (posts only, new only, conversations) -----------------

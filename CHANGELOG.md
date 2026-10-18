@@ -2,6 +2,11 @@
 
 ## 0.14.0 — in progress
 
+- Lanes side by side, in columns: ❯ next to the menu switches for now, `ui.layout` says how
+  the window starts. A lane clicked on the left comes as one more column (or is scrolled
+  to), ✕ takes one away, ‹ › move it; the set is remembered (`ui.columns` at first,
+  `ui.column_width` each). The same lane widgets move over: place, filters and read marks
+  as they were; browse lanes keep fetching while they stand in a column.
 - `~~text~~` that came as it was typed (a Mastodon server knows no Markdown) is shown
   struck out, as the writer meant; not in links or code (`feed.text_markup`).
 - All accounts in one window: "From another account" in a post's ⋯ menu — like, boost or

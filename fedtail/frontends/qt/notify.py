@@ -86,7 +86,7 @@ class Notifier(QObject):
     def on_screen(self, lane):
         """Is this lane what the reader is looking at right now?"""
         return self.win.isActiveWindow() and self.win.isVisible() and \
-            self.win.current_lane() == lane
+            self.win.lane_on_screen(lane)
 
     def notify(self, items):
         """items: [(lane, status or account or notification)] from the core."""

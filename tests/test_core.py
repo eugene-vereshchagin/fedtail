@@ -602,6 +602,21 @@ class CoreTest(TmpDir):
         self.assertEqual(groups["personal"][:4], ["mine", "direct", "mentions", "comments"])
         self.assertEqual([g for g, _n in lanes.grouped(core.lanes)][-1], "lists")
 
+    def test_browse_lane_in_a_column(self):
+        """Columns side by side: a browse lane among them is fetched though another
+        lane is the one in focus."""
+        core, w = self.make()
+        w.add(status("091", BOB), home=True)
+        core.connect().result()
+        core.set_active_lane("people")
+        core.set_active_lanes(["people", "global"])
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("global")], ["091"])
+        core.set_active_lanes([])
+        w.add(status("092", BOB, minute=9), home=True)
+        core.poll_once()
+        self.assertNotIn("092", [st["id"] for _, st in core.lane_entries("global")])
+
     def test_bookmarks(self):
         core, w = self.make()
         st = w.add(status("095", BOB), home=True)
