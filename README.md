@@ -218,7 +218,9 @@ pictures; a link as the page's card (site, title, a line of description, its pic
 can't be shown. Each is a switch in `[feed]`: `custom_emoji`, `link_cards`, `quotes`.
 
 Where you stopped reading is shared with your other clients (`read.sync_markers`): Home and
-mentions read on the phone are read here too, and the other way round.
+mentions read on the phone are read here too, and the other way round — as far as the other
+client tells the server (Mastodon web, Ivory, Phanpy do; Tusky keeps Home's place to itself
+and shares only the notifications). Your own posts are read here whatever wrote them.
 
 Someone from another server your server knows little about: their profile fills in with their
 newest public posts read from their own server, and their followers and follows can be read
@@ -241,6 +243,20 @@ list is read there and leaves the general lanes — Home, Bots, Local, Federated
 boosts and other people's boosts of their posts: sort the bots into "Memes", "News" and the
 rest, and Home is people again. `lists.hide_members = "exclusive"` keeps that to exclusive
 lists, `"off"` to nothing. `[lists]` in the config.
+
+### A morning "global": relay bots
+
+The fediverse has relay bots: follow one and it boosts, to all its followers, the posts of
+whoever follows it (often by language — Russian-speaking ones, say, set up when people moved
+over from Twitter). The result is a random but living circle of people, without the noise of
+the real Federated lane. Such bots land in the Bots lane, which then works as a hand-picked
+global one.
+
+To read it apart: make a list ("Morning", say), put the relays in it (right-click a boost of
+theirs → "Add to list") and make it exclusive — they leave Bots and Home for a lane of their
+own, for the morning coffee. Someone who came that way is worth following: follow them from
+their profile (click the name in the boost). The filter next to Refresh does the opposite
+too: untick "Boosts" to see people's own posts only.
 
 ## Finding people and tags
 
