@@ -193,7 +193,7 @@ class CoreStreamTest(TmpDir):
             self.addCleanup(core.shutdown)
             core.connect().result()
             core.api.has_stream = True
-            core.caps.streaming = f"ws://127.0.0.1:{srv.port}"
+            core._stream_url = lambda: f"ws://127.0.0.1:{srv.port}"  # this test's server
             woke = []
             core._poll_soon = lambda w=woke: w.append(1)
             core._start_stream()
@@ -204,6 +204,79 @@ class CoreStreamTest(TmpDir):
                 time.sleep(0.3)
                 self.assertIsNone(getattr(core, "_stream", None))
             self.assertEqual(len(woke), wakes)  # filters_changed wakes nothing
+
+
+class StreamPlaceTest(TmpDir):
+    def test_the_token_goes_to_my_server_over_tls_only(self):
+        from . import fakes
+        from .fakes import FakeApi
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({})
+        p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
+        auth.save(p.auth_file, {"server": "https://example.org", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(core.shutdown)
+        for announced, want in (("", "wss://example.org"),
+                                ("wss://streaming.example.org", "wss://streaming.example.org"),
+                                ("https://example.org", "wss://example.org"),
+                                ("ws://example.org", "wss://example.org"),  # never plain
+                                ("wss://attacker.example", "wss://example.org")):
+            core.caps.streaming = announced
+            self.assertEqual(core._stream_url(), want, announced)
+        core.auth = dict(core.auth, server="http://example.org")
+        self.assertIsNone(core._stream_url())  # a plain-http server: polling only
+        self.assertTrue(stream.same_site("wss://streaming.example.org", "https://social.example.org"))
+        self.assertFalse(stream.same_site("wss://example.net", "https://example.org"))
+
+    def test_the_stream_goes_through_the_proxy(self):
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"https_proxy": "http://u:p%40@127.0.0.1:1",
+                                          "no_proxy": "nearby.example"}, clear=True):
+            self.assertEqual(stream.proxy_for("wss", "far.example"),
+                             "http://u:p%40@127.0.0.1:1")
+            self.assertIsNone(stream.proxy_for("wss", "nearby.example"))
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(stream.proxy_for("wss", "far.example"))
+        with self.assertRaises(stream.StreamError):  # SOCKS: not this way
+            stream._tunnel("socks5://127.0.0.1:1", "far.example", 443)
+        # a CONNECT proxy: asked to open the way, with the login from its address
+        got = []
+
+        def proxy(conn):
+            got.append(conn.recv(4096).decode())
+            conn.sendall(b"HTTP/1.1 200 Connection established\r\n\r\n")
+        srv = Plain(proxy)
+        srv.start()
+        self.addCleanup(srv.close)
+        sock = stream._tunnel(f"http://u:p%40@127.0.0.1:{srv.port}", "far.example", 443)
+        sock.close()
+        self.assertTrue(got[0].startswith("CONNECT far.example:443 HTTP/1.1"))
+        self.assertIn("Proxy-Authorization: Basic " + base64.b64encode(b"u:p@").decode(),
+                      got[0])
+
+
+class Plain(threading.Thread):
+    """A bare TCP server: script(conn) once."""
+
+    def __init__(self, script):
+        super().__init__(daemon=True)
+        self.sock = socket.socket()
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen()
+        self.port = self.sock.getsockname()[1]
+        self.script = script
+
+    def run(self):
+        try:
+            conn, _a = self.sock.accept()
+        except OSError:
+            return
+        with conn:
+            self.script(conn)
+
+    def close(self):
+        self.sock.close()
 
 
 if __name__ == "__main__":

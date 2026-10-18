@@ -49,7 +49,8 @@ def load_key(data_dir):
         pass
     key = secrets.token_urlsafe(24)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    path.unlink(missing_ok=True)  # O_CREAT would keep an old file's mode
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(key)
     return key
@@ -72,6 +73,13 @@ def web_clean(html):
     """Server HTML, cleaned (richtext.clean) — minus the inline styles meant for Qt,
     which the page's CSP refuses anyway."""
     return clean(html).replace(' style="text-decoration:none;"', "")
+
+
+def _api_error(e):
+    """What the page may show of a failure: the server's own answer ("HTTP 422: …"),
+    or just what kind of failure it was — never a request's address."""
+    from ...core.api import ApiError
+    return str(e)[:300] if isinstance(e, ApiError) else e.__class__.__name__
 
 
 def _https(url):
@@ -381,8 +389,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": f"{e.__class__.__name__}: {e}"},
                               HTTPStatus.BAD_REQUEST)
         except Exception as e:  # noqa: BLE001 — the page says what failed
-            log.warning("web %s: %s", urlsplit(self.path).path, e)
-            return self._json({"error": str(e)[:300]}, HTTPStatus.BAD_GATEWAY)
+            # the kind of failure only: a request's error text carries its whole address
+            # (a search's words in the query), and the log goes into bug reports
+            log.warning("web %s: %s", urlsplit(self.path).path, e.__class__.__name__)
+            return self._json({"error": _api_error(e)}, HTTPStatus.BAD_GATEWAY)
 
 
 def make_server(core, host, port, key):

@@ -61,6 +61,8 @@ def listing():
             card = json.loads((d / CARD).read_text("utf-8"))
         except (OSError, ValueError):
             pass
+        if not isinstance(card, dict):  # a broken card: the profile by its name
+            card = {}
         out.append({"name": name, "acct": card.get("acct", ""),
                     "display_name": card.get("display_name", ""),
                     "server": card.get("server", ""),

@@ -41,13 +41,75 @@ def _ssl_context():
         return ssl.create_default_context()
 
 
+def same_site(url, server):
+    """The stream the server announces is its own: the same host, one under it
+    (streaming.example.org for example.org) or a sibling (example.org's streaming and
+    social hosts). Anything else gets no token."""
+    a = (urlsplit(url if "://" in url else "x://" + url).hostname or "").lower()
+    b = (urlsplit(server).hostname or "").lower()
+    if not a or not b:
+        return False
+    if a == b or a.endswith("." + b):
+        return True
+    pa, pb = a.split(".", 1)[-1], b.split(".", 1)[-1]
+    return pa == pb and "." in pa
+
+
+def proxy_for(scheme, host):
+    """The proxy the rest of fedtail goes through for this host (requests honours
+    HTTPS_PROXY / ALL_PROXY / NO_PROXY, and on Windows the system's setting): the
+    stream must not go around it straight from this IP. None: no proxy."""
+    import urllib.request
+    try:
+        if urllib.request.proxy_bypass(host):
+            return None
+    except OSError:
+        pass
+    found = urllib.request.getproxies()
+    return found.get("https" if scheme == "wss" else "http") or found.get("all") or None
+
+
+def _tunnel(proxy, host, port):
+    """A connection to host:port through an HTTP proxy (CONNECT). A SOCKS proxy the
+    standard library can't speak: no stream then (polling goes on, through it)."""
+    from urllib.parse import unquote
+    p = urlsplit(proxy if "://" in proxy else "http://" + proxy)
+    if p.scheme not in ("http", "https"):
+        raise StreamError(f"{p.scheme} proxy: the stream can't go through it")
+    raw = socket.create_connection((p.hostname, p.port or (443 if p.scheme == "https"
+                                                           else 80)), timeout=15)
+    try:
+        if p.scheme == "https":
+            raw = _ssl_context().wrap_socket(raw, server_hostname=p.hostname)
+        lines = [f"CONNECT {host}:{port} HTTP/1.1", f"Host: {host}:{port}"]
+        if p.username is not None:
+            cred = f"{unquote(p.username)}:{unquote(p.password or '')}".encode()
+            lines.append("Proxy-Authorization: Basic " + base64.b64encode(cred).decode())
+        raw.sendall(("\r\n".join(lines) + "\r\n\r\n").encode())
+        head = b""
+        while b"\r\n\r\n" not in head:
+            chunk = raw.recv(4096)
+            if not chunk or len(head) > 16384:
+                raise StreamError("proxy: no answer to CONNECT")
+            head += chunk
+        status = head.split(b"\r\n", 1)[0].decode("latin-1")
+        if " 200 " not in status + " ":
+            raise StreamError(f"proxy refused: {status[:60]}")
+    except BaseException:
+        raw.close()
+        raise
+    return raw
+
+
 class WebSocket:
     def __init__(self, url, headers, timeout=IDLE_PING):
         u = urlsplit(url)
         if u.scheme not in ("ws", "wss"):
             raise StreamError(f"not a websocket url: {u.scheme}")
         port = u.port or (443 if u.scheme == "wss" else 80)
-        raw = socket.create_connection((u.hostname, port), timeout=15)
+        proxy = proxy_for(u.scheme, u.hostname)
+        raw = _tunnel(proxy, u.hostname, port) if proxy else \
+            socket.create_connection((u.hostname, port), timeout=15)
         if u.scheme == "wss":
             raw = _ssl_context().wrap_socket(raw, server_hostname=u.hostname)
         self.sock = raw

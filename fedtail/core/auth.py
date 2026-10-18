@@ -11,15 +11,17 @@ def load(path):
         return None
     except (OSError, ValueError):
         return None
-    if not data.get("token") or not data.get("server"):
-        return None
+    if not isinstance(data, dict) or not isinstance(data.get("token"), str) or \
+            not isinstance(data.get("server"), str) or not data["token"] or not data["server"]:
+        return None  # a broken file: "log in", not a crash
     return data
 
 
 def save(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    tmp.unlink(missing_ok=True)  # O_CREAT keeps the mode of a file left over: start anew
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, path)

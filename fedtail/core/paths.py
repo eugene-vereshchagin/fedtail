@@ -8,7 +8,7 @@ from pathlib import Path
 APP = "fedtail"
 DEFAULT_PROFILE = "default"  # the first profile's folder name, and the main one until set
 MAIN_FILE = "main-profile"  # in config_base(): the main profile's name (no --profile)
-_PROFILE_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+_PROFILE_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$")  # not ".", "..", "-x"
 
 
 WINDOWS = os.name == "nt"

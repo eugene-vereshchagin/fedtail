@@ -249,10 +249,9 @@ class Core(SocialMixin):
                 not getattr(self.api, "has_stream", False):  # a test's fake API has none
             return
         from . import stream
-        base = self.caps.streaming or self.auth["server"]
-        base = base.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
-        if not base.startswith(("wss://", "ws://")):
-            base = "wss://" + base.split("://")[-1]
+        base = self._stream_url()
+        if not base:
+            return
 
         def on_event(name):
             if name in stream.WAKE_ON:
@@ -261,6 +260,23 @@ class Core(SocialMixin):
         self._stream = stream.Stream(base, self.auth["token"], on_event,
                                      user_agent=USER_AGENT)
         self._stream.start()
+
+    def _stream_url(self):
+        """Where the stream is, with the token: my server's own (or the host it names
+        for it, on the same site), over TLS only. None: no stream, polling does it."""
+        from . import stream
+        server = self.auth["server"]
+        if not server.startswith("https://"):  # the token in the clear: polling only
+            log.warning("stream: off, the server is not https")
+            return None
+        base = self.caps.streaming or server
+        if not stream.same_site(base, server):  # the token goes to my server only
+            log.warning("stream: the server names another site for it; using its own")
+            base = server
+        base = base.replace("https://", "wss://", 1)
+        if not base.startswith("wss://"):  # http://, ws://, no scheme: never in the clear
+            base = "wss://" + base.split("://")[-1]
+        return base
 
     def _poll_loop(self):
         while not self._stop.is_set():

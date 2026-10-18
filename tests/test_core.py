@@ -371,8 +371,25 @@ class PathsAuthTest(TmpDir):
         self.assertEqual(p.data_dir, self.tmp / "data/fedtail/croco")
         p = paths.resolve("x", config=str(self.tmp / "my.toml"), data=str(self.tmp / "d"))
         self.assertEqual(p.data_dir, self.tmp / "d")
-        with self.assertRaises(ValueError):
-            paths.resolve("../etc")
+        for bad in ("../etc", "..", ".", ".hidden", "-x", "a/b", "a\\b", "x" * 65):
+            with self.assertRaises(ValueError, msg=bad):
+                paths.resolve(bad)
+
+    def test_auth_file_odd_contents(self):
+        f = self.tmp / "auth.json"
+        for text in ("[]", "null", "123", '"x"', "{}", '{"token": 5, "server": "s"}',
+                     '{"token": "t", "server": ["s"]}', "{not json"):
+            f.write_text(text, "utf-8")
+            self.assertIsNone(auth.load(f), text)  # not a crash: "log in"
+
+    def test_auth_file_is_private_even_over_a_leftover(self):
+        f = self.tmp / "auth.json"
+        if os.name != "nt":  # a temp file left by a crash, readable by all
+            leftover = f.with_suffix(".tmp")
+            leftover.write_text("{}", "utf-8")
+            leftover.chmod(0o644)
+            auth.save(f, {"server": "https://x", "token": "t"})
+            self.assertEqual(stat.S_IMODE(f.stat().st_mode), 0o600)
 
     def test_auth_file_is_private(self):
         f = self.tmp / "auth.json"
