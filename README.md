@@ -325,7 +325,7 @@ unencrypted, so only there), `port`, `open_browser`.
 ## Silence
 
 A post's ⋯ menu (or the profile) mutes or blocks its author: their posts vanish from every
-lane at once. ≡ → Silence… keeps word filters on your server — "fold" shows a post folded with
+lane at once. ≡ → For the tender and sensitive → Word filters… keeps word filters on your server — "fold" shows a post folded with
 a note, "hide" drops it — and lists who you muted or blocked, with undo.
 
 ## Links stay inside
@@ -380,7 +380,7 @@ python3 -m fedtail --install-desktop          # or --profile work --install-desk
 ```
 
 Filtered notifications (Mastodon 4.3+ holds back mentions from strangers, new accounts and
-the like): ≡ → Filtered notifications… shows who is waiting — let them through or dismiss —
+the like): ≡ → For the tender and sensitive → Filtered notifications… shows who is waiting — let them through or dismiss —
 and what to hold back. `notify.filtered`: `"remind"` also says at start that someone waits,
 `"menu"` only the menu item, `"off"` neither.
 

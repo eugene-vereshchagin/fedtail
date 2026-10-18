@@ -2,6 +2,9 @@
 
 ## 0.14.0 — in progress
 
+- ≡ → "For the tender and sensitive": word filters, muted, blocked, blocked servers and
+  filtered notifications in one submenu, each opening where it is; with `ui.arts_mode` on, a
+  line on top says server filters don't apply there (mutes and blocks still do).
 - The ≡ menu is shorter: no Write, Refresh and Search (they are on screen, and their keys
   stay), no My profile / Edit profile (My profile is under Accounts; the Edit button is on
   your profile page), no "Posts across the full width" — that is a button now, ↔ between ≡

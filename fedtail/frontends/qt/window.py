@@ -534,6 +534,25 @@ class MainWindow(QMainWindow):
         text = f"{me}: {who}" if who else me
         self.profile_label.setText(text + (" ★" if me == paths.main_profile() else ""))
 
+    def _tender_menu(self, parent):
+        """"For the tender and sensitive": everything that hides people and words —
+        word filters, mutes, blocks, blocked servers, filtered notifications. With
+        arts_mode on, a line on top says what still works."""
+        t = QMenu(_("tender_menu"), parent)
+        t.setToolTipsVisible(True)
+        if self.cfg["ui"]["arts_mode"]:
+            note = t.addAction(_("tender_arts"))
+            note.setEnabled(False)
+            note.setToolTip(_("tender_arts_tip"))
+            t.addSeparator()
+        for tab, key in (("filters", "silence_filters"), ("muted", "silence_muted"),
+                         ("blocked", "silence_blocked"), ("domains", "tender_domains")):
+            t.addAction(_(key) + "…", lambda _c=False, x=tab: SilenceDialog(self, x).exec())
+        if self.cfg["notify"]["filtered"] != "off":
+            t.addSeparator()
+            t.addAction(_("filtered_title") + "…", self.show_filtered)
+        return t
+
     def _pop_app_menu(self, btn):
         m = self._app_menu()
         m.exec(btn.mapToGlobal(QPoint(0, btn.height())))
@@ -637,9 +656,7 @@ class MainWindow(QMainWindow):
 
     def _app_menu(self):
         m = QMenu(self)
-        m.addAction(_("silence_title") + "…", lambda: SilenceDialog(self).exec())
-        if self.cfg["notify"]["filtered"] != "off":
-            m.addAction(_("filtered_title") + "…", self.show_filtered)
+        m.addMenu(self._tender_menu(m))
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
         people = m.addMenu(_("menu_people"))

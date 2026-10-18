@@ -1482,6 +1482,12 @@ class QtSmokeTest(unittest.TestCase):
                      "relogin"):
             self.assertNotIn(_(gone), texts)
         self.assertIn(_("about"), texts)
+        self.assertNotIn(_("silence_title") + "…", texts)  # in the tender submenu now
+        tender = next(a.menu() for a in self.win._app_menu().actions()
+                      if a.text() == _("tender_menu"))
+        sub = [a.text() for a in tender.actions()]
+        for key in ("silence_filters", "silence_muted", "silence_blocked", "tender_domains"):
+            self.assertIn(_(key) + "…", sub)
         # full width is a button next to ≡ and ❯ now, of their size
         self.assertTrue(self.win.wide_btn.isCheckable())
         self.assertEqual(self.win.wide_btn.size(), self.win.columns_btn.size())

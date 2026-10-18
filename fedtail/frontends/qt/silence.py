@@ -24,7 +24,9 @@ CONTEXTS = ["home", "notifications", "public", "thread", "account"]
 
 
 class SilenceDialog(QDialog):
-    def __init__(self, win):
+    TABS = ("filters", "muted", "blocked", "domains")  # in this order; tab= picks one
+
+    def __init__(self, win, tab="filters"):
         super().__init__(win)
         self.win, self.core = win, win.core
         self.setWindowTitle(_("silence_title"))
@@ -39,6 +41,7 @@ class SilenceDialog(QDialog):
         tabs.addTab(self._people_tab(self.blocked_list, "block"), _("silence_blocked"))
         self.domain_list = QListWidget()
         tabs.addTab(self._people_tab(self.domain_list, "domain"), _("silence_domains"))
+        tabs.setCurrentIndex(self.TABS.index(tab) if tab in self.TABS else 0)
         close = QPushButton(_("close"))
         close.setObjectName("tool")
         close.clicked.connect(self.accept)

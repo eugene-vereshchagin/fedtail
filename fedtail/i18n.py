@@ -442,6 +442,10 @@ _STRINGS = {
                           "между тобой и ими отменятся. Продолжить?",
         "domain_blocked": "Сервер {domain} заблокирован.",
         "silence_domains": "Серверы",
+        "tender_menu": "Для нежных и ранимых", "tender_domains": "Заблокированные серверы",
+        "tender_arts": "Режим arts: фильтры по словам не действуют",
+        "tender_arts_tip": "ui.arts_mode = true: фильтры сервера не прячут и не сворачивают "
+                           "посты. Заглушённые и заблокированные работают как обычно.",
         "silence_domains_hint": "Заблокированные серверы: никого оттуда не видно.",
         "note_edit": "Заметка…", "note_title": "Заметка о @{acct}",
         "note_tip": "Видишь только ты — хранится на твоём сервере",
@@ -1032,6 +1036,10 @@ _STRINGS = {
                           "follows between you and them end. Go on?",
         "domain_blocked": "Server {domain} blocked.",
         "silence_domains": "Servers",
+        "tender_menu": "For the tender and sensitive", "tender_domains": "Blocked servers",
+        "tender_arts": "arts mode: word filters don't apply",
+        "tender_arts_tip": "ui.arts_mode = true: the server's filters neither hide nor fold "
+                           "posts. Mutes and blocks work as usual.",
         "silence_domains_hint": "Blocked servers: nobody from there shows.",
         "note_edit": "Note…", "note_title": "Note on @{acct}",
         "note_tip": "Only you see it — kept on your server",
