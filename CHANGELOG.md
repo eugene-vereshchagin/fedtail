@@ -2,6 +2,13 @@
 
 ## 0.13.0 — in progress
 
+- My own posts are never unread, from whatever client: ones written in Tusky overnight came
+  in as unread when they reached fedtail some other way than a lane (a catch-up after a
+  restart, a thread). Ones stored before are put right on connect.
+- A long lane lets go of the cards far behind the reading place (past 3 × build_at_once:
+  back to that many behind and twice ahead; the post on top stays put). Reading a night's
+  hundred posts kept every card built — over a megabyte each, pictures included — and took
+  the client from 700 MB to 1.1 GB.
 - A list add waiting for a follow to be confirmed, retried while the server was slow, showed
   "Read timed out" as an error; it now just waits for the next try.
 - Approving: only the very request is answered — the same person, the same post, still

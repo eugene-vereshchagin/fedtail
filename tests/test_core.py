@@ -849,6 +849,23 @@ class CoreTest(TmpDir):
         self.assertEqual(w.lists[x["id"]]["members"], {"B"})
         self.assertEqual(core.store.kv_get("list_pending"), [])
 
+    def test_my_posts_are_read_however_they_come(self):
+        """Posts I wrote in another client (Tusky at night) are never unread here: not
+        through a lane, not stored some other way, not those stored before the rule."""
+        core, w = self.make()
+        core.store.put_statuses([status("060", ME, minute=1)])  # stored before connecting
+        self.assertEqual(core.store.read_set(["060"]), set())
+        core.connect().result()
+        self.assertEqual(core.store.read_set(["060"]), {"060"})  # fixed on connect
+        w.add(status("061", ME, minute=2), home=True)
+        w.add(status("062", BOB, minute=3), home=True)
+        core.poll_once()
+        unread = core.unread_ids(core.lane_entries("people"))
+        self.assertNotIn("061", unread)
+        self.assertIn("062", unread)
+        core.store.put_statuses([status("063", ME, minute=4)])  # a thread, a context…
+        self.assertEqual(core.store.read_set(["063"]), {"063"})
+
     def test_follow_date_in_private_note(self):
         """The follow date goes at the end of my note on them, my own text stays; editing
         the note keeps the line; unfollowing takes it out."""

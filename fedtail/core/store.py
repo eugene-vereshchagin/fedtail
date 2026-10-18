@@ -116,6 +116,7 @@ def sort_key(created_at, item_id):
 
 class Store:
     def __init__(self, path):
+        self.me_id = None  # set once connected: my own posts go in as read
         self.lock = threading.RLock()
         self.db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
         self.db.execute("PRAGMA busy_timeout=5000")
@@ -179,9 +180,14 @@ class Store:
             for s in ([st["reblog"]] if st.get("reblog") else []) + [st]:
                 rows.append((s["id"], json.dumps(s), s.get("created_at", ""),
                              s.get("in_reply_to_id"), (s.get("account") or {}).get("id")))
+        # a post of mine is read: I wrote it — from this client or any other, come by a
+        # lane, a thread, a catch-up after a restart
+        mine = [r[0] for r in rows if self.me_id and r[4] == self.me_id]
         with self._tx() as db:
             db.executemany("INSERT OR REPLACE INTO statuses (id, data, created_at, reply_to, "
                            "author) VALUES (?, ?, ?, ?, ?)", rows)
+            if mine:
+                db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in mine])
             self.status_version += 1
             if self._tags is not None:
                 for st in statuses:
@@ -506,6 +512,15 @@ class Store:
     def mark_read(self, status_ids):
         with self._tx() as db:
             db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in status_ids])
+
+    def mark_mine_read(self):
+        """Every stored post of mine read (ones stored before this rule). How many."""
+        if not self.me_id:
+            return 0
+        with self._tx() as db:
+            cur = db.execute("INSERT OR IGNORE INTO read SELECT id FROM statuses "
+                             "WHERE author = ?", (self.me_id,))
+            return cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
 
     def read_set(self, status_ids):
         ids = list(status_ids)

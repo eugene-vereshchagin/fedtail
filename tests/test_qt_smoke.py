@@ -1617,6 +1617,40 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.2)
         self.assertEqual(self.core.unread_ids(self.core.lane_entries("bots")), set())
 
+    def test_cards_far_behind_are_let_go(self):
+        """Reading a long lane from the oldest to the newest: cards far behind go again,
+        so a few hundred read posts don't stay built, and the post on top stays put."""
+        self.win.cfg["feed"]["build_at_once"] = 10
+        for i in range(80):
+            self.world.add(status(f"7{i:03d}", NEWS, minute=i % 60,
+                                  text="пост " * (40 + i % 20) + str(i)), home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(1.0)
+        view.scroll_to(view.model[0].key, "top")
+        self.pump(0.3)
+        sb = view.verticalScrollBar()
+        most = 0
+        for _ in range(60):  # down, a screen at a time, as a reader would
+            sb.setValue(sb.value() + view.viewport().height())
+            view._touched()
+            self.pump(0.08)
+            most = max(most, len(view.rows))
+            if view.order and view.order[-1] == view.model[-1].key and \
+                    sb.value() >= sb.maximum():
+                break
+        self.assertEqual(view.order[-1], view.model[-1].key)  # read to the end
+        self.assertLessEqual(most, 3 * 10 + 10)  # never all 80 built
+        self.assertLess(len(view.rows), len(view.model))
+        # the post on top stays where it is when the ones behind go
+        top, y = view._anchor()
+        view._trim()
+        self.pump(0.2)
+        self.assertEqual(view._top(view.rows[top]) - sb.value(), y)
+
     def test_posts_scrolled_past_count_as_read(self):
         """read.mark_read = on_scroll: a post that was on screen and that the reader went
         on past is read, even if it was never all on screen while the feed stood still —

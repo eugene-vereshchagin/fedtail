@@ -303,6 +303,7 @@ class FeedView(QScrollArea):
         elif hi < len(keys) and sb.value() > sb.maximum() - reach:
             new_hi = min(len(keys), hi + step)
         if (new_lo, new_hi) == (lo, hi):
+            self._trim()
             return
         t = time.monotonic()
         self.setUpdatesEnabled(False)
@@ -313,7 +314,38 @@ class FeedView(QScrollArea):
         log.debug("feed: %d more cards built (%d of %d), %.0f ms",
                   (lo - new_lo) + (new_hi - hi), new_hi - new_lo, len(keys),
                   (time.monotonic() - t) * 1000)
+        self._trim()
         self._grow_timer.start()  # still near an edge? the next few
+
+    def _trim(self):
+        """Cards far behind the reading place go again (their spec stays: scrolling back
+        builds them anew). Reading a night's hundred posts built every one of them and
+        kept them all, pictures and all: over a megabyte a card. Past 3 × build_at_once
+        cards, back to build_at_once behind the post on top and twice that ahead; the
+        post on top stays exactly where it is."""
+        n = self.build_at_once
+        if self._all_at_once() or not n or len(self.order) <= 3 * n:
+            return
+        anchor = self._anchor()
+        if anchor is None or anchor[0] not in self.rows:
+            return
+        keys = self.keys()
+        index = {k: i for i, k in enumerate(keys)}
+        if anchor[0] not in index:
+            return
+        a = index[anchor[0]]
+        lo = max(index[self.order[0]], a - n)
+        hi = min(index[self.order[-1]] + 1, a + 2 * n)
+        if hi - lo >= len(self.order):
+            return
+        before = len(self.order)
+        self.setUpdatesEnabled(False)
+        try:
+            self._set_specs(self.model[lo:hi], keep_position=True)
+        finally:
+            self.setUpdatesEnabled(True)
+        log.debug("feed: %d cards far from the reading place let go (%d left)",
+                  before - len(self.order), len(self.order))
 
     def _bring(self, key):
         """Make sure the card of key is built: if it isn't, build the window around it

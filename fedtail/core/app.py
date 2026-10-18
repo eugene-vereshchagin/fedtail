@@ -150,6 +150,10 @@ class Core(SocialMixin):
             except Exception:  # instance info is a nicety, not a must
                 caps = Capabilities()
             self.api, self.me, self.caps = api, me, caps
+            self.store.me_id = (me or {}).get("id")  # my posts are read, however they come
+            n = self.store.mark_mine_read()
+            if n:
+                log.info("read: %d posts of mine were unread (written elsewhere)", n)
             self.load_preferences()
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
