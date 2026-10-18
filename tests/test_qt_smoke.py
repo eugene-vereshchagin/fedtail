@@ -1293,6 +1293,28 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertIsInstance(self.win.tabs.currentWidget(), SearchWidget)
 
+    def test_disk_cache_keeps_to_its_size(self):
+        """Over ui.image_disk_mb the pictures used longest ago go; other files stay."""
+        import hashlib
+
+        from fedtail.frontends.qt.images import Images
+        imgs = Images(self.core, self.win.bridge)
+        self.core.cfg["ui"]["image_disk_mb"] = 1
+        old = time.time() - 3600
+        for i in range(6):  # 6 × 300 KB: over a megabyte
+            p = imgs.cache_dir / hashlib.sha1(f"u{i}".encode()).hexdigest()
+            p.write_bytes(b"x" * 300_000)
+            os.utime(p, (old + i, old + i))
+        other = imgs.cache_dir / "notify-icon.png"
+        other.write_bytes(b"x" * 400_000)
+        gone = imgs.prune_disk()
+        self.assertGreaterEqual(gone, 3)
+        left = sorted(p.name for p in imgs.cache_dir.iterdir() if len(p.name) == 40)
+        newest = hashlib.sha1(b"u5").hexdigest()
+        self.assertIn(newest, left)  # the newest stays
+        self.assertNotIn(hashlib.sha1(b"u0").hexdigest(), left)  # the oldest goes
+        self.assertTrue(other.exists())  # not ours: never touched
+
     def test_download_in_pieces_no_half_files(self):
         """Saving a video not in the cache: written a piece at a time under its own name;
         a download cut off halfway leaves nothing behind."""

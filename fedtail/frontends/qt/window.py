@@ -1012,6 +1012,8 @@ class MainWindow(QMainWindow):
             self.update_badges()
         elif name == "notify":
             self._notify(payload)
+        elif name == "prefetch":  # pictures of posts just come: to disk, ahead of time
+            self.images.prefetch(payload)
         elif name == "error":
             self.statusBar().showMessage(_("error", err=payload), 10_000)
         elif name == "auth_failed":

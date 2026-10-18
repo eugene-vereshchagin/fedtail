@@ -2,6 +2,11 @@
 
 ## 0.13.0 — in progress
 
+- Pictures of new posts are fetched to disk as soon as the posts come, by workers of their
+  own: a lane opens with its previews and avatars there, not loading for seconds from a
+  slow server (`feed.prefetch`: "previews", "all" with the originals, "off").
+- The picture cache on disk keeps to `ui.image_disk_mb` (1000 MB): the ones not used the
+  longest go, at start and along the way. It only grew before.
 - Who is in a list: a server that answers "everyone at once" (limit=0) with nobody is asked
   again page by page; the log says how many came each way.
 - Right click on a list in the sidebar: "Who is in it…" opens its people (the ones waiting

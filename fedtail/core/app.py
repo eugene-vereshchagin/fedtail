@@ -342,6 +342,7 @@ class Core(SocialMixin):
                     self.emit("error", f"activity: {e}")
 
             new_statuses = self._new_statuses(new_by_source)
+            self._ask_prefetch(new_statuses)
             mine = [st["id"] for st in new_statuses if st["account"]["id"] == self.me["id"]]
             if first_run and fc["first_run_mark_read"]:
                 self.store.mark_read([st["id"] for st in new_statuses])
@@ -808,6 +809,28 @@ class Core(SocialMixin):
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
             return result
         return self.submit(job)
+
+    def _ask_prefetch(self, statuses):
+        """The pictures of posts just come, for the frontend to fetch ahead
+        (feed.prefetch): "previews" — previews and avatars; "all" — the originals too;
+        "off" — nothing ahead, as before."""
+        mode = self.cfg["feed"].get("prefetch", "previews")
+        if mode == "off" or not statuses:
+            return
+        urls = []
+        for st in statuses:
+            for s in (st, real(st)):
+                acc = s.get("account") or {}
+                urls.append(acc.get("avatar_static") or acc.get("avatar"))
+            for m in real(st).get("media_attachments") or []:
+                urls.append(m.get("preview_url"))
+                if mode == "all" and m.get("type") == "image":
+                    urls.append(m.get("url"))
+            card = real(st).get("card") or {}
+            urls.append(card.get("image"))
+        urls = [u for u in dict.fromkeys(urls) if u]
+        if urls:
+            self.emit("prefetch", urls)
 
     def _list_add_or_wait(self, list_id, acc_id):
         """Into the list on the server, or — refused for someone not followed (yet) —

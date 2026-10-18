@@ -5,6 +5,7 @@ The auth token is never sent along: media often lives on other servers.
 
 import hashlib
 import logging
+import os
 import threading
 import time
 from collections import OrderedDict
@@ -97,6 +98,12 @@ class Images:
         self._t = threading.local()  # this worker's last download: bytes, seconds
         self._stats_lock = threading.Lock()
         self._reset_stats()
+        # pictures of posts just arrived, fetched to disk ahead of time (feed.prefetch)
+        # by workers of their own, so the ones on screen never wait behind them
+        self.pre_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="fedtail-pre")
+        self._pre_seen = set()
+        self._since_prune = 0
+        self.big_pool.submit(self.prune_disk)
 
     def _reset_stats(self):
         self._st = {"done": 0, "failed": 0, "big": 0, "cached": 0, "wait_max_s": 0.0,
@@ -174,6 +181,11 @@ class Images:
             img = decode(p.read_bytes(), max_side)
             if img.isNull():
                 p.unlink(missing_ok=True)  # a broken file from before: fetch again
+            else:
+                try:  # used now: the cache cleanup keeps what's used, drops what's not
+                    os.utime(p)
+                except OSError:
+                    pass
         if img.isNull():
             t = time.monotonic()
             try:
@@ -206,10 +218,85 @@ class Images:
                             len(r.content))
             if not img.isNull():  # never keep an error page or half a file
                 p.write_bytes(r.content)
+                self._count_write()
         if not img.isNull() and max(img.width(), img.height()) > max_side:
             img = img.scaled(max_side, max_side, Qt.AspectRatioMode.KeepAspectRatio,
                              Qt.TransformationMode.SmoothTransformation)
         return img
+
+    # ---- the disk cache: fetched ahead, kept within a size ----------------------------
+    def prefetch(self, urls):
+        """Pictures of posts that just came: into the disk cache now, so the lane shows
+        them at once when it opens (feed.prefetch). Never decoded here, never twice."""
+        for url in urls:
+            if not url or url in self._pre_seen:
+                continue
+            self._pre_seen.add(url)
+            self.pre_pool.submit(self._prefetch_one, url)
+        if len(self._pre_seen) > 20000:
+            self._pre_seen.clear()
+
+    def _prefetch_one(self, url):
+        p = self.cache_dir / hashlib.sha1(url.encode()).hexdigest()
+        if p.exists():
+            return
+        t = time.monotonic()
+        try:
+            r = self.http.get(url, timeout=(6, 30))
+            r.raise_for_status()
+        except requests.RequestException as e:
+            log.debug("prefetch %s: %s", url, e.__class__.__name__)
+            return
+        kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+        if not kind.startswith("image/") or not r.content:
+            return  # an error page, a video: not for the picture cache
+        p.write_bytes(r.content)
+        self._count_write()
+        log.debug("prefetch %s: %d B in %.1f s", url, len(r.content), time.monotonic() - t)
+
+    def _count_write(self):
+        self._since_prune += 1
+        if self._since_prune >= 300:  # every few hundred new files: still within size?
+            self._since_prune = 0
+            self.big_pool.submit(self.prune_disk)
+
+    def prune_disk(self):
+        """The disk cache within ui.image_disk_mb: the pictures not used the longest go
+        first (a cache that only grew held gigabytes after a few weeks). Only our
+        picture files are touched — names of 40 hex digits."""
+        limit = int(self.core.cfg["ui"].get("image_disk_mb", 1000)) * 1024 * 1024
+        if limit <= 0:
+            return 0
+        files = []
+        total = 0
+        try:
+            for p in self.cache_dir.iterdir():
+                if len(p.name) == 40 and all(c in "0123456789abcdef" for c in p.name):
+                    try:
+                        st = p.stat()
+                    except OSError:
+                        continue
+                    files.append((st.st_mtime, st.st_size, p))
+                    total += st.st_size
+        except OSError:
+            return 0
+        if total <= limit:
+            return 0
+        files.sort()  # oldest used first
+        target = int(limit * 0.8)  # some room, so it isn't pruned again right away
+        freed = gone = 0
+        for _mtime, size, p in files:
+            if total - freed <= target:
+                break
+            try:
+                p.unlink()
+                freed += size
+                gone += 1
+            except OSError:
+                pass
+        log.info("image cache: %d files, %.0f MB let go (%.0f MB kept, limit %d MB)", gone,
+                 freed / 2**20, (total - freed) / 2**20, limit // 2**20)
+        return gone
 
     def local(self, url):
         """The cached file of a picture already downloaded, or None (for rich text that

@@ -39,6 +39,7 @@ DEFAULTS = {
         "links_in_app": True,
         "image_cache_mb": 128,
         "image_decode": 'box',
+        "image_disk_mb": 1000,
         "unload_hidden_minutes": 10,
         "themed_icon": True,
         "icon_count": ["comments", "mentions", "subs", "requests"],
@@ -66,6 +67,7 @@ DEFAULTS = {
         "custom_emoji": True,
         "quotes": 'card',
         "remote_profiles": True,
+        "prefetch": 'previews',
         "follow_date_note": True,
         "remote_posts": 20,
         "remote_people": True,
@@ -173,6 +175,7 @@ DEFAULTS = {
 CHOICES = {
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},
+    ("feed", "prefetch"): {'previews', 'all', 'off'},
     ("ui", "alt_text"): {'caption', 'tooltip'},
     ("ui", "media_grid"): {'natural', 'square'},
     ("notify", "filtered"): {'menu', 'remind', 'off'},
@@ -229,6 +232,7 @@ MINIMUM = {
     ("ui", "font_size"): 0,
     ("ui", "max_width"): 0,
     ("ui", "compose_size"): 0,
+    ("ui", "image_disk_mb"): 0,
     ("ui", "image_height"): 80,
     ("ui", "image_upscale"): 1,
 }

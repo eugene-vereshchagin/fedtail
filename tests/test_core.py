@@ -838,6 +838,25 @@ class CoreTest(TmpDir):
         self.assertTrue(until(lambda: len(polls) == 3))
         self.assertLess(polls[2] - t, 0.5)
 
+    def test_pictures_of_new_posts_asked_ahead(self):
+        core, w = self.make()
+        core.connect().result()
+        asked = []
+        core.events.on("prefetch", lambda _n, p: asked.extend(p))
+        st = dict(status("090", BOB, minute=1), media_attachments=[
+            {"type": "image", "preview_url": "https://x/s.png", "url": "https://x/o.png"}])
+        st["account"] = dict(BOB, avatar_static="https://x/bob.png")
+        w.add(st, home=True)
+        core.poll_once()
+        self.assertIn("https://x/s.png", asked)
+        self.assertIn("https://x/bob.png", asked)
+        self.assertNotIn("https://x/o.png", asked)  # originals only with "all"
+        core.cfg["feed"]["prefetch"] = "off"
+        asked.clear()
+        w.add(dict(st, id="091"), home=True)
+        core.poll_once()
+        self.assertEqual(asked, [])
+
     def test_the_same_error_once(self):
         core, _w = self.make()
         shown = []
