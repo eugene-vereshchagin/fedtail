@@ -214,6 +214,11 @@ many messages and how many new, who wrote last; a click opens the whole thread.
 must have, `-#tag` — without) and "＋ to lanes" keeps it in the sidebar, under Tags; or
 describe it in the config, `[[lanes.tag_groups]]`.
 
+**Columns side by side:** ❯ right of the menu puts the lanes in columns, TweetDeck-style; a
+lane clicked on the left comes as a column, ✕ takes it away, ‹ › move it, and the set is
+remembered. That's for now: the window starts as `ui.layout` says (`"single"` or
+`"columns"`).
+
 ## Posts
 
 A post shows what's in it the way its server meant: the server's own emoji (`:blobcat:`) as
