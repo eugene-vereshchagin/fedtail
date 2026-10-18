@@ -838,6 +838,18 @@ class CoreTest(TmpDir):
         self.assertTrue(until(lambda: len(polls) == 3))
         self.assertLess(polls[2] - t, 0.5)
 
+    def test_the_same_error_once(self):
+        core, _w = self.make()
+        shown = []
+        core.events.on("error", lambda _n, p: shown.append(p))
+        for _ in range(5):
+            core.emit("error", "list:L1: HTTP 502: Bad Gateway")
+        core.emit("error", "home: timed out")
+        self.assertEqual(shown, ["list:L1: HTTP 502: Bad Gateway", "home: timed out"])
+        core._errors_seen = {k: v - core.ERROR_QUIET_S for k, v in core._errors_seen.items()}
+        core.emit("error", "home: timed out")  # a while later: said again
+        self.assertEqual(len(shown), 3)
+
     def test_relation_kept_for_menus(self):
         """A menu opening at once can ask what was learnt lately: following or not."""
         core, w = self.make()

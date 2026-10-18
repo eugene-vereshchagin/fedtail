@@ -99,8 +99,23 @@ class Core(SocialMixin):
     def submit(self, fn, *a, **kw):
         return self.pool.submit(fn, *a, **kw)
 
+    ERROR_QUIET_S = 600
+
     def emit(self, name, payload=None):
         if name == "error":
+            # the same error from every poll while a server is down: shown and logged
+            # once, again only when it changes or after ERROR_QUIET_S of it
+            now = time.monotonic()
+            seen = getattr(self, "_errors_seen", None)
+            if seen is None:
+                seen = self._errors_seen = {}
+            last = seen.get(str(payload))
+            if last is not None and now - last < self.ERROR_QUIET_S:
+                log.debug("error again (not shown): %s", str(payload)[:200])
+                return
+            seen[str(payload)] = now
+            if len(seen) > 200:
+                seen.clear()
             log.warning("error shown to the user: %s", payload)
         else:
             log.debug("event %s", name)

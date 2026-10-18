@@ -2,6 +2,8 @@
 
 ## 0.13.0 — in progress
 
+- The same error from every poll while a server is down is shown and logged once, again
+  only when it changes or ten minutes later.
 - A server behind a proxy that's down (a 502 from Cloudflare) showed the proxy's whole HTML
   page as the error; now "Bad Gateway — the server is down or not answering".
 - "Add to list" for someone you don't follow: the lists are greyed out under "lists take
