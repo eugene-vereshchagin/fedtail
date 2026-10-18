@@ -410,6 +410,15 @@ class FakeApi:
         self.favourites_next = None
         return sorted(liked, key=_sid, reverse=True)[:limit]
 
+    def follow_options(self, acc_id, reblogs=None, languages=None):
+        opts = self.w.follow_opts.setdefault(acc_id, {"showing_reblogs": True,
+                                                       "languages": None})
+        if reblogs is not None:
+            opts["showing_reblogs"] = reblogs
+        if languages is not None:
+            opts["languages"] = list(languages) or None
+        return dict(self.relationship(acc_id), **opts)
+
     def notify_posts(self, acc_id, on=True):
         self.w.bells[acc_id] = on
         return {"id": acc_id, "following": True, "notifying": on}
@@ -565,6 +574,7 @@ class World:
         self.lists = {}
         self.list_refuse = set()
         self.interactions, self.answered = [], []
+        self.follow_opts = {}
         self.activity = []
         self.following = set()
         self.followed_tags = set()

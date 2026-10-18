@@ -775,6 +775,9 @@ class PostRow(QWidget):
                 menu.addAction(_("unpin") if pinned else _("pin"),
                                lambda u=pin_url: self.ctx.on_link(u))
             menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
+            if self.ctx.cfg["post"].get("redraft", True):
+                menu.addAction(_("redraft"),
+                               lambda i=st["id"]: self.ctx.on_link(f"fedtail:redraft/{i}"))
         b.setMenu(menu)
         self._menu = menu  # also shown on a right click on the card (see __init__)
         b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)

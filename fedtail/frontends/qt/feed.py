@@ -1553,6 +1553,9 @@ class AccountWidget(_PagedTab):
                     pass
             self.win.images.get(header, got)
             lay.addWidget(banner)
+        moved = acc.get("moved")
+        if moved and self.core.cfg["feed"].get("show_moved", True):
+            lay.addWidget(self._moved_banner(moved))
         name = QLabel(esc(acc.get("display_name") or acc["username"]))
         name.setObjectName("profileName")
         lay.addWidget(name)
@@ -1646,6 +1649,16 @@ class AccountWidget(_PagedTab):
                 bell = self.relation.get("notifying")
                 buttons.addWidget(_button("🔔 " + (_("bell_off") if bell else _("bell_on")),
                                           self._toggle_bell, tip=_("bell_tip")))
+                if self.core.cfg["feed"].get("per_person_follow", True):
+                    # what of theirs comes to Home: boosts or not, which languages
+                    boosts = self.relation.get("showing_reblogs", True)
+                    buttons.addWidget(_button(
+                        "♻ " + (_("boosts_hide") if boosts else _("boosts_show")),
+                        self._toggle_boosts, tip=_("boosts_person_tip")))
+                    langs = self.relation.get("languages") or []
+                    buttons.addWidget(_button(
+                        "🌐 " + (", ".join(langs) if langs else _("langs_all")),
+                        self._pick_languages, tip=_("langs_person_tip")))
             buttons.addWidget(_button(_("mention"), lambda: self.win.compose(
                 text=f"@{acc['acct']} ")))
             buttons.addWidget(_button(_("unmute") if self.relation.get("muting") else _("mute"),
@@ -1695,6 +1708,46 @@ class AccountWidget(_PagedTab):
                                  ok=lambda r: self._relation(dict(self.relation,
                                                                   note=r.get("note", ""))),
                                  fail=self.win.error)
+
+    def _moved_banner(self, new):
+        """The account moved: where to, with "open" and "follow there"."""
+        box = QFrame()
+        box.setObjectName("card")
+        h = QHBoxLayout(box)
+        h.setContentsMargins(12, 8, 12, 8)
+        text = QLabel(_("moved_to", acct="@" + esc(new.get("acct", ""))))
+        text.setTextFormat(Qt.TextFormat.RichText)
+        text.setWordWrap(True)
+        h.addWidget(text, 1)
+        h.addWidget(_button(_("moved_open"), lambda: self.win.open_account(new["id"])))
+        if self.relation.get("following"):
+            h.addWidget(_button(_("moved_follow"), lambda: self.win.bridge.call(
+                self.core.follow(new["id"]), ok=lambda _r: self.win.statusBar().showMessage(
+                    _("followed_now", acct="@" + new.get("acct", "")), 6000),
+                fail=self.win.error), name="primary"))
+        return box
+
+    def _toggle_boosts(self):
+        on = not self.relation.get("showing_reblogs", True)
+        self.win.bridge.call(self.core.follow_options(self.acc_id, reblogs=on),
+                             ok=lambda r: self._relation(dict(self.relation, **(r or {}),
+                                                              showing_reblogs=on)),
+                             fail=self.win.error)
+
+    def _pick_languages(self):
+        """Only their posts in these languages come to Home ("" — all of them)."""
+        from PySide6.QtWidgets import QInputDialog
+        now = ", ".join(self.relation.get("languages") or [])
+        text, ok = QInputDialog.getText(self, _("langs_person_title", acct=self.acc["acct"]),
+                                        _("langs_person_ask"), text=now)
+        if not ok:
+            return
+        langs = [x.strip().lower() for x in text.replace(";", ",").replace(" ", ",").split(",")
+                 if x.strip()]
+        self.win.bridge.call(self.core.follow_options(self.acc_id, languages=langs),
+                             ok=lambda r: self._relation(dict(self.relation, **(r or {}),
+                                                              languages=langs or None)),
+                             fail=self.win.error)
 
     def _toggle_bell(self):
         on = not self.relation.get("notifying")

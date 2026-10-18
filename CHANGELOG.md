@@ -2,6 +2,13 @@
 
 ## 0.14.0 — in progress
 
+- In the profile of someone you follow: "♻ hide their boosts" and "🌐 languages" (only their
+  posts in these) — kept by the server, for every client (`feed.per_person_follow`).
+- A moved account says so: "📦 Moved to @new" on the profile, with Open and Follow there
+  (`feed.show_moved`).
+- "Delete and redraft" in the ⋯ menu of a post of mine: deleted, and its text as typed,
+  CW, visibility, language and what it answered open as a new draft; pictures go with the
+  post on the server and are added again (`post.redraft`).
 - Several hashtags as one lane: `#georgia #грузия -#politics` in the search (`+#tag` must
   have, `-#tag` without) opens one lane of them; "＋ to lanes" keeps it in the sidebar's new
   Tags group, browsed while open like Federated (right click: remove). Or in the config,

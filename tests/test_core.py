@@ -898,6 +898,26 @@ class CoreTest(TmpDir):
         name = taggroups.lane_name({"any": ["georgia"], "none": ["politics"]})
         self.assertEqual(core.lane_title(name), "Грузия")
 
+    def test_follow_options_and_redraft(self):
+        """Their boosts off and only their Russian posts — kept by the server; my post
+        deleted and given back as typed, for a new draft."""
+        core, w = self.make()
+        core.connect().result()
+        core.follow("B").result()
+        rel = core.follow_options("B", reblogs=False).result()
+        self.assertFalse(rel["showing_reblogs"])
+        rel = core.follow_options("B", languages=["ru"]).result()
+        self.assertEqual((rel["showing_reblogs"], rel["languages"]), (False, ["ru"]))
+        self.assertEqual(core.relation_known("B")["languages"], ["ru"])
+        mine = w.add(dict(status("300", ME, minute=1, text="старый текст", vis="unlisted"),
+                          spoiler_text="кат", language="ru"), home=True)
+        core.poll_once()
+        got = core.redraft(mine).result()
+        self.assertEqual((got["text"], got["cw"], got["visibility"], got["language"]),
+                         ("старый текст", "кат", "unlisted", "ru"))
+        self.assertNotIn("300", w.statuses)
+        self.assertIsNone(core.store.get_status("300"))
+
     def test_the_same_error_once(self):
         core, _w = self.make()
         shown = []

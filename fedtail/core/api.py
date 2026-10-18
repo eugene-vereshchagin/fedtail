@@ -561,6 +561,16 @@ class Api:
         """The bell: a notification for each new post of someone I follow."""
         return self.post(f"/api/v1/accounts/{acc_id}/follow", json={"notify": bool(on)})
 
+    def follow_options(self, acc_id, reblogs=None, languages=None):
+        """For someone I follow: their boosts in my Home or not; only posts in these
+        languages ([] — all). Kept by the server, for every client."""
+        body = {}
+        if reblogs is not None:
+            body["reblogs"] = bool(reblogs)
+        if languages is not None:
+            body["languages"] = list(languages)
+        return self.post(f"/api/v1/accounts/{acc_id}/follow", json=body)
+
     def reblog(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{sid}/{'reblog' if on else 'unreblog'}")
 

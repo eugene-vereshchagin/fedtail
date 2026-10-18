@@ -1633,6 +1633,16 @@ class Core(SocialMixin):
         return note_followed((rel or {}).get("note")) or \
             (self.store.kv_get("followed_at", {}) or {}).get(acc_id)
 
+    def follow_options(self, acc_id, reblogs=None, languages=None):
+        """Their boosts shown or not, the languages read (feed.per_person_follow)."""
+        def job():
+            rel = self.api.follow_options(acc_id, reblogs, languages)
+            self._relations[acc_id] = (time.monotonic(), rel)
+            log.info("follow %s: boosts %s, languages %s", acc_id,
+                     (rel or {}).get("showing_reblogs"), (rel or {}).get("languages"))
+            return rel
+        return self.submit(job)
+
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification
         (in Likes & boosts, with activity.types including "status")."""
@@ -2081,6 +2091,30 @@ class Core(SocialMixin):
             self.api.delete_status(s["id"])
             self.store.delete_status(s["id"])
             self.emit("status_deleted", s["id"])
+        return self.submit(job)
+
+    def redraft(self, status):
+        """Delete my post and give back what it was made of, for a new draft: its text as
+        I typed it (the source, not the server's HTML), CW, who sees it, language, what it
+        answers. Pictures don't come back (servers drop them with the post)."""
+        s = real(status)
+
+        def job():
+            src = {}
+            try:
+                src = self.api.status_source(s["id"]) or {}
+            except ApiError as e:
+                log.info("redraft %s: no source (%s), the text from the card", s["id"], e)
+            self.api.delete_status(s["id"])
+            self.store.delete_status(s["id"])
+            self.emit("status_deleted", s["id"])
+            from .model import html_to_text
+            return {"text": src.get("text") or html_to_text(s.get("content") or ""),
+                    "cw": src.get("spoiler_text", s.get("spoiler_text") or ""),
+                    "visibility": s.get("visibility") or "private",
+                    "language": s.get("language") or "",
+                    "in_reply_to_id": s.get("in_reply_to_id"),
+                    "media": len(s.get("media_attachments") or [])}
         return self.submit(job)
 
     def answer_follow(self, acc_id, approve):

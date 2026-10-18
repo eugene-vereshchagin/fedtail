@@ -1379,6 +1379,30 @@ class MainWindow(QMainWindow):
                                     _("delete_q", text=snippet(st, 200))) \
                     == QMessageBox.StandardButton.Yes:
                 self.bridge.call(self.core.delete(st))
+        elif action == "redraft":
+            n = len(real(st).get("media_attachments") or [])
+            q = _("redraft_q", text=snippet(st, 200)) + (
+                "\n\n" + _("redraft_media", n=n) if n else "")
+            if QMessageBox.question(self, _("redraft"), q) == QMessageBox.StandardButton.Yes:
+                self.bridge.call(self.core.redraft(st), ok=self._redrafted, fail=self.error)
+
+    def _redrafted(self, d):
+        """The deleted post back in the composer, as it was typed."""
+        parent = self.core.store.get_status(d["in_reply_to_id"]) if d.get(
+            "in_reply_to_id") else None
+        dlg = Compose(self, reply_to=parent)
+        dlg.text.setPlainText(d["text"])
+        if d.get("cw"):
+            dlg.cw.setText(d["cw"])
+            dlg.cw.setVisible(True)
+        from ...core.model import VISIBILITIES
+        if d.get("visibility") in VISIBILITIES:
+            dlg.vis.setCurrentIndex(VISIBILITIES.index(d["visibility"]))
+        if d.get("language"):
+            dlg.set_language(d["language"])
+        dlg.show()
+        if d.get("media"):
+            self.statusBar().showMessage(_("redraft_media", n=d["media"]), 8000)
 
     def play_video(self, m, items=None):
         """A video or a gifv: over the window (ui.video_player), or in the browser.
