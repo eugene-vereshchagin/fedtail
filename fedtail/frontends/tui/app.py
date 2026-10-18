@@ -60,7 +60,10 @@ class PostItem(ListItem):
 
 class LaneItem(ListItem):
     def __init__(self, name, title, n):
-        super().__init__(Label(self._text(title, n)))
+        # kept by reference: a count can come before the item is mounted, when a query
+        # for its Label finds nothing yet (and that error took the whole app down)
+        self.label = Label(self._text(title, n))
+        super().__init__(self.label)
         self.lane = name
 
     @staticmethod
@@ -71,7 +74,7 @@ class LaneItem(ListItem):
         return t
 
     def update(self, title, n):
-        self.query_one(Label).update(self._text(title, n))
+        self.label.update(self._text(title, n))
 
 
 class Ui:

@@ -13,6 +13,8 @@
 - ≡ → Debugging: "What grows: stats and object census now", "Give free memory back to the
   system", "Memory tracing (tracemalloc)" on and off, "Memory snapshot" — who holds the
   most and what grew since the first snapshot, by line of code.
+- TUI: new counts arriving before a lane's line was on screen no longer crash it (CI caught
+  it now and then).
 - A poll slower than `debug.slow_request_seconds` says where the time went: `poll #N took
   6.20 s (markers 5.80, home 0.30, …)`; the stats line has `core.max_poll_s` since the
   last one.
