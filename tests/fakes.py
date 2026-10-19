@@ -306,7 +306,14 @@ class FakeApi:
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
                     media_ids=(), markdown=False, language="", sensitive=False, poll=None,
                     quoted_status_id=None, quote_policy="", interaction_policy=None,
-                    scheduled_at=None):
+                    scheduled_at=None, idempotency_key=None, timeout=30):
+        if self.w.send_timeouts:  # the server makes the post, but the answer is lost
+            self.w.send_timeouts -= 1
+            if self.w.send_lands:
+                self._make(text, visibility, in_reply_to_id, markdown)
+            import requests
+            raise requests.ReadTimeout("read timed out")
+        self.w.send_keys.append(idempotency_key)
         if scheduled_at:
             item = {"id": f"s{len(self.w.scheduled) + 1}", "scheduled_at": scheduled_at,
                     "params": {"text": text, "visibility": visibility}}
@@ -316,6 +323,9 @@ class FakeApi:
         self.w.extras.append({"sensitive": sensitive, "poll": poll,
                               "quote": quoted_status_id, "quote_policy": quote_policy,
                               "interaction_policy": interaction_policy})
+        return self._make(text, visibility, in_reply_to_id, markdown)
+
+    def _make(self, text, visibility, in_reply_to_id, markdown):
         self.w.seq += 1
         reply_acc = self.w.statuses[in_reply_to_id]["account"]["id"] if in_reply_to_id else None
         st = status(str(self.w.seq), ME, in_reply_to_id, reply_acc, minute=59, vis=visibility,
@@ -562,6 +572,7 @@ class World:
         self.statuses, self.home, self.local, self.notifications = {}, [], [], []
         self.requests = []
         self.posted = []
+        self.send_timeouts, self.send_lands, self.send_keys = 0, True, []
         self.announcements = []
         self.uploads = []  # (path, description, focus)
         self.emoji = []  # the server's custom emoji

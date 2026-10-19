@@ -1980,6 +1980,32 @@ class CoreTest(TmpDir):
         nodes = core.thread("050").result()
         self.assertEqual(nodes[0].status["id"], "050")
 
+    def test_send_timeout_looks_before_saying_not_sent(self):
+        from fedtail.core.app import MaybeSent
+        core, w = self.make()
+        w.add(status("050", BOB, minute=1), home=True)
+        core.connect().result()
+        # the answer is lost, but the post was made: it's found, the draft goes
+        core.save_draft("reply:050", {"text": "@bob тонкий слой в раковине"})
+        w.send_timeouts, w.send_lands = 1, True
+        st = core.post("@bob тонкий слой в раковине", "private", reply_to="050",
+                       draft_key="reply:050").result()
+        self.assertEqual(st["in_reply_to_id"], "050")
+        self.assertIsNone(core.get_draft("reply:050"))
+        self.assertEqual(len(w.posted), 1)  # once, not twice
+        # it didn't get there: "maybe sent", the draft stays
+        core.save_draft("new", {"text": "совсем другое"})
+        w.send_timeouts, w.send_lands = 1, False
+        with self.assertRaises(MaybeSent) as e:
+            core.post("совсем другое", "private", draft_key="new").result()
+        self.assertTrue(e.exception.maybe_sent)
+        self.assertIsNotNone(core.get_draft("new"))
+        # a retry carries the same Idempotency-Key as the try before would have
+        core.post("совсем другое", "private", draft_key="new").result()
+        core.post("совсем другое", "private").result()
+        self.assertEqual(w.send_keys[-1], w.send_keys[-2])
+        self.assertTrue(w.send_keys[-1].startswith("fedtail-"))
+
     def test_post_language(self):
         core, w = self.make(post={"language": "ka"})
         core.connect().result()

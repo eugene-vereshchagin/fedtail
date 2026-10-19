@@ -238,3 +238,38 @@ def long_form_of(obj):
             "content": text("content"), "url": url or obj.get("id") or "",
             "start": obj.get("startTime") or "", "end": obj.get("endTime") or "",
             "location": where}
+
+
+def send_key(me_id, text, reply_to, visibility, spoiler):
+    """The Idempotency-Key of a post: the same words to the same place give the same key,
+    so sending them again after a lost answer gives back the post already made (Mastodon
+    keeps keys for an hour) rather than a second one. Pictures aren't part of it: they
+    are uploaded anew, with new ids, on every try."""
+    import hashlib
+    raw = "\x1f".join(str(x or "") for x in (me_id, reply_to, visibility, spoiler, text))
+    return "fedtail-" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:40]
+
+
+_WORD = re.compile(r"\w{3,}")
+
+
+def looks_sent(status, text, reply_to, since, slack_s=120):
+    """Is this (one of my latest posts) the one I just tried to send: the same parent,
+    made since then (give or take the clocks), with the words of the text? The server
+    turns markdown and mentions into HTML, so words are compared, not the text."""
+    from datetime import datetime
+    st = status or {}
+    if st.get("reblog") or (st.get("in_reply_to_id") or None) != (reply_to or None):
+        return False
+    try:
+        made = datetime.fromisoformat(st.get("created_at", "").replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if made.timestamp() < since - slack_s:
+        return False
+    fold = lambda s: (s or "").casefold().replace("ё", "е")  # noqa: E731
+    hay = fold(html_to_text(st.get("content", "")))
+    words = [w for w in _WORD.findall(fold(re.sub(r"(@\S+|https?://\S+)", " ", text)))]
+    if not words:
+        return fold(text).strip() in hay or not hay.strip()
+    return sum(w in hay for w in words) >= max(1, round(len(words) * 0.8))

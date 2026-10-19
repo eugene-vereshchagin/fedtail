@@ -245,6 +245,10 @@ _STRINGS = {
         "alt_title": "Подпись", "alt_prompt": "Что на картинке (для тех, кто её не видит):",
         "send_failed": "Не отправилось",
         "send_failed_text": "{err}\n\nТекст сохранён в черновике, можно повторить.",
+        "post_maybe_sent": "Сервер не ответил вовремя ({err}) и не говорит, ушёл ли пост. "
+                           "Загляни в «Мои посты», прежде чем отправлять снова — "
+                           "иначе выйдет дубль.",
+        "send_maybe": "Может, и ушло",
         # login
         "login_title": "Вход — профиль {profile}", "login_server": "Адрес сервера:",
         "login_step1": "1. Открыть страницу входа в браузере",
@@ -941,6 +945,10 @@ _STRINGS = {
         "alt_prompt": "What's in the image (for those who can't see it):",
         "send_failed": "Not sent",
         "send_failed_text": "{err}\n\nThe text is kept as a draft, you can retry.",
+        "post_maybe_sent": "The server didn't answer in time ({err}) and can't say whether "
+                           "the post went out. Look in \"My posts\" before sending again, or it "
+                           "may go out twice.",
+        "send_maybe": "Maybe sent",
         "login_title": "Log in — profile {profile}", "login_server": "Server address:",
         "login_step1": "1. Open the login page in the browser",
         "login_hint": "Log in there, allow access and paste the code you get here:",

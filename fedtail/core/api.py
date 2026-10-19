@@ -159,11 +159,12 @@ class Api:
             return None
         return r.json()
 
-    def get(self, path, params=None):
-        return self._req("GET", path, params=params)
+    def get(self, path, params=None, timeout=30):
+        return self._req("GET", path, params=params, timeout=timeout)
 
-    def post(self, path, json=None, data=None, files=None):
-        return self._req("POST", path, json=json, data=data, files=files)
+    def post(self, path, json=None, data=None, files=None, headers=None, timeout=30):
+        return self._req("POST", path, json=json, data=data, files=files, headers=headers,
+                         timeout=timeout)
 
     def delete(self, path):
         return self._req("DELETE", path)
@@ -532,9 +533,12 @@ class Api:
     def post_status(self, text, visibility="private", in_reply_to_id=None,
                     spoiler_text="", media_ids=(), markdown=False, language="",
                     sensitive=False, poll=None, quoted_status_id=None, quote_policy="",
-                    interaction_policy=None, scheduled_at=None):
+                    interaction_policy=None, scheduled_at=None, idempotency_key=None,
+                    timeout=30):
         """poll: {"options": [...], "expires_in": seconds, "multiple": bool}.
-        quoted_status_id: the post this one quotes; quote_policy: who may quote this one."""
+        quoted_status_id: the post this one quotes; quote_policy: who may quote this one.
+        idempotency_key: the same key sent again (a retry after a timeout) gives back the
+        post already made instead of a second one — on servers that honour it (Mastodon)."""
         body = {"status": text, "visibility": visibility}
         if quoted_status_id:
             body["quoted_status_id"] = quoted_status_id
@@ -558,7 +562,8 @@ class Api:
             body["spoiler_text"] = spoiler_text
         if media_ids:
             body["media_ids"] = list(media_ids)
-        return self.post("/api/v1/statuses", json=body)
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        return self.post("/api/v1/statuses", json=body, headers=headers, timeout=timeout)
 
     def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False):
         """Change my post. Media ids must be passed again, or they go away."""

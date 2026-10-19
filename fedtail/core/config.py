@@ -110,6 +110,7 @@ DEFAULTS = {
     },
     "post": {
         "default_visibility": "private",
+        "send_timeout": 90,
         "reply_never_wider": True,
         "drafts_autosave": True,
         "cw_field": False,
@@ -274,6 +275,7 @@ MINIMUM = {
     ("ui", "compose_size"): 0,
     ("ui", "image_disk_mb"): 0,
     ("ui", "video_disk_mb"): 0,
+    ("post", "send_timeout"): 10,
     ("feed", "old_days"): 0,
     ("ui", "image_height"): 80,
     ("ui", "image_upscale"): 1,

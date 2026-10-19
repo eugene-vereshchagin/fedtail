@@ -940,7 +940,9 @@ class Compose(QDialog):
     def _failed(self, err):
         self.send_btn.setEnabled(True)
         self.send_btn.setText(_("send"))
-        QMessageBox.warning(self, _("send_failed"), _("send_failed_text", err=err))
+        maybe = getattr(err, "maybe_sent", False)  # no answer: the post may be out
+        QMessageBox.warning(self, _("send_maybe" if maybe else "send_failed"),
+                            _("send_failed_text", err=err))
 
     # Every way out (Esc, the window's X, Close, after sending) goes through
     # reject(): QDialog.closeEvent itself calls reject(), so reject() must

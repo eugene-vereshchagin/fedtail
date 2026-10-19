@@ -22,14 +22,26 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import requests
+
 from .. import diag
 from . import api as api_module
 from . import auth, counters, lanes, search, sources, subs, taggroups, threads
 from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance, seg
 from .events import Events
-from .model import id_after, interaction_policy, narrower, real
+from .model import id_after, interaction_policy, looks_sent, narrower, real, send_key
 from .social import SocialMixin
 from .store import Store, now_iso, sort_key
+
+
+class MaybeSent(Exception):
+    """The server didn't answer a send in time, and couldn't say whether the post was
+    made: it may be out, or not. Retrying blindly may post it twice."""
+    maybe_sent = True
+
+    def __init__(self, cause):
+        from ..i18n import _
+        super().__init__(_("post_maybe_sent", err=cause.__class__.__name__))
 
 log = logging.getLogger(__name__)
 
@@ -2216,8 +2228,22 @@ class Core(SocialMixin):
                     self.store.delete_draft(draft_key)
                 log.info("scheduled for %s", scheduled_at)
                 return dict(st or {}, scheduled=True)
-            st = self.api.post_status(text, visibility, reply_to, spoiler, ids, self.markdown,
-                                      **extra)
+            started = time.time()
+            wait = max(10, int(self.cfg["post"].get("send_timeout", 90)))
+            try:
+                st = self.api.post_status(
+                    text, visibility, reply_to, spoiler, ids, self.markdown,
+                    idempotency_key=send_key(self.me and self.me["id"], text, reply_to,
+                                             visibility, spoiler),
+                    timeout=(10, wait), **extra)
+            except (requests.Timeout, requests.ConnectionError) as e:
+                # the request may well have got there and the post been made, only the
+                # answer was lost: look before saying "not sent" (a retry = a double)
+                st = self._find_sent(text, reply_to, started)
+                if st is None:
+                    raise MaybeSent(e) from e
+                log.info("send: no answer (%s), but the post is there: %s",
+                         e.__class__.__name__, st.get("id"))
             log.debug("posted %s", st.get("id"))
             chain, prev = [st], st
             for i, part in enumerate(rest):  # the rest of a chain: each answering the last
@@ -2244,6 +2270,19 @@ class Core(SocialMixin):
             self.poll_now()
             return dict(st, chain=len(chain)) if rest else st
         return self.submit(job)
+
+    def _find_sent(self, text, reply_to, since):
+        """My post with this text (and this parent) made since then — or None, also when
+        the server can't say right now either."""
+        if not self.me:
+            return None
+        try:
+            mine = self.api.account_statuses(self.me["id"], limit=10) or []
+        except (requests.RequestException, ApiError) as e:
+            log.warning("send: can't check whether the post got there: %s",
+                        e.__class__.__name__)
+            return None
+        return next((st for st in mine if looks_sent(st, text, reply_to, since)), None)
 
     def edit(self, status, text, spoiler="", draft_key=None):
         """Change my post's text and warning; its pictures stay as they are."""

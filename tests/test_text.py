@@ -119,10 +119,6 @@ class LinkPolicyTest(unittest.TestCase):
         self.assertEqual(h.count("<hr>"), 1)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class StrikeTildesTest(unittest.TestCase):
     def test_struck_where_meant(self):
         from fedtail.frontends.richtext import clean, strike_tildes
@@ -177,3 +173,24 @@ class NoEmojiTest(unittest.TestCase):
         from fedtail.frontends.richtext import strip_emoji
         self.assertEqual(strip_emoji("must die :bloberika_wtf_knife:"), "must die ")
         self.assertEqual(strip_emoji("at 10:30:00, a:b:c"), "at 10:30:00, a:b:c")
+
+
+class LooksSentTest(unittest.TestCase):
+    def test_words_parent_and_time(self):
+        import time
+
+        from fedtail.core.model import looks_sent
+        now = time.time()
+        made = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(now))
+        st = {"id": "1", "in_reply_to_id": "50", "created_at": made,
+              "content": '<p><span class="h-card"><a href="x">@<span>Linda</span></a></span> '
+                         "потому что <strong>тонкий</strong> слой в раковине</p>"}
+        text = "@Linda-chan@juick.com потому что **тонкий** слой в раковине"
+        self.assertTrue(looks_sent(st, text, "50", now))
+        self.assertFalse(looks_sent(st, text, None, now))  # another parent
+        self.assertFalse(looks_sent(st, "совсем другие слова тут", "50", now))
+        self.assertFalse(looks_sent(st, text, "50", now + 3600))  # made long before
+
+
+if __name__ == "__main__":
+    unittest.main()

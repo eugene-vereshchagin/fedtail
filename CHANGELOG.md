@@ -2,6 +2,13 @@
 
 ## 0.16.0 — in progress
 
+- Sending no longer gives up after 30 seconds on a slow server: it waits `post.send_timeout`
+  (90 s). When the answer still doesn't come, fedtail looks among your latest posts first —
+  the post was usually made, only the answer lost — and treats it as sent if it's there.
+  If it can't tell, the message says "maybe sent: look before retrying" instead of a raw
+  "Read timed out". Each post carries an Idempotency-Key: Mastodon gives back the post
+  already made instead of a double when the same text is sent again.
+
 - Ctrl+F "In every lane": a tick in the find bar searches everything stored in every lane
   at once; the counter says which lane the match is in, and the next match opens its lane
   and loads it down to the post. Ctrl+F pressed again in the find bar goes to the next
