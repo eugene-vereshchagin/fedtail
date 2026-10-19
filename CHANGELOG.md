@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.17.0 — in progress
+
 ## 0.16.0 — 2026-10-19
 
 - Faster reading deep into big lanes: stored posts are paged from where the last page
