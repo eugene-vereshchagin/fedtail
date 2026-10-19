@@ -585,6 +585,16 @@ class QtSmokeTest(unittest.TestCase):
         self.win.show_history(edited)
         self.pump(0.3)
 
+        # Debug → Federation status: my server, what keeps failing, live while open
+        self.win.federation_status()
+        fed = self.win._fed_dlg
+        from PySide6.QtWidgets import QTextBrowser
+        view = fed.findChild(QTextBrowser)
+        self.pump(until=lambda: "Моя нода" in view.toPlainText())
+        self.win.federation_status()  # asked again: the same window, in front
+        self.assertIs(self.win._fed_dlg, fed)
+        fed.close()
+
         # someone else's file or share address never reaches the desktop (on Windows
         # file://host/share alone hands the login's hash to that host)
         from fedtail.frontends.qt import opener

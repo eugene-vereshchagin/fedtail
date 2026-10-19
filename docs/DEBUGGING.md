@@ -86,6 +86,15 @@ crash.log, stacks.log, config.toml и сводка о системе. Файла
 **Ест память или процессор.** Достаточно `--bug-report` через какое-то время
 работы: в журнале строки `stats` за всё время. Подробнее — следующий раздел.
 
+## Состояние федерации
+
+≡ → «Отладка» → «Состояние федерации» — сводка того, что не зависит от клиента: как отвечает
+твоя нода (сколько, как быстро, сколько с ошибкой), опрос и живой поток, чего сервер не умеет,
+кто ждёт в списках, и какие запросы раз за разом получают 404/410/401/таймаут — у твоей ноды и
+у других серверов, с подписью «что значит». «Копировать» кладёт то же текстом — можно
+приложить к отчёту вместо поиска по логам. Это память одного запуска: после перезапуска счёт
+идёт заново.
+
 ## Ночной прогон: поиск утечек
 
 Оставить окно на ночь (или на сутки) и утром понять, что росло, и чего именно.
@@ -153,6 +162,12 @@ tracemalloc = false        # трассировка памяти с запуск
 
 <a name="english"></a>
 ## English
+
+Debug → Federation status: how your server answers (count, failures, usual and slow times),
+polling and the live stream, what the server can't do, who waits to go into a list, and which
+requests keep failing (404/410/401/timeouts) on your server and on others, grouped with ids
+folded and a word on what each means. "Copy" gives it as text for an issue. Memory of one
+run, nothing asked of the network for it.
 
 A development version (from git, numbered like `0.7.0.dev0`) keeps a detailed log by
 itself (`debug.mode = "auto"`). It's meant to stay open for days, so when it crashes, hangs

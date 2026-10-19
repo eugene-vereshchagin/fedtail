@@ -121,6 +121,9 @@ class Core(SocialMixin):
         self._active_lane = None  # the lane on screen: browse lanes are fetched only then
         self._active_lanes = set()  # all of them on screen, side by side (ui.layout)
         self._last_poll_s = None
+        self._poll_failures = 0     # for the federation status
+        self._last_poll_ok = None   # time.time()
+        self._last_poll_error = ""
         api_module.SLOW_SECONDS = float(cfg["debug"]["slow_request_seconds"])
         diag.add_stats("core", self.diag_stats)
 
@@ -315,6 +318,8 @@ class Core(SocialMixin):
                 if self._stop.is_set():
                     return
                 log.exception("poll failed")
+                self._poll_failures += 1
+                self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
                 self.emit("error", str(e))
             done = time.monotonic()
             self._wake.wait(self.cfg["poll"]["interval_seconds"])
@@ -336,7 +341,9 @@ class Core(SocialMixin):
         self._steps = {}
         self._step_at = t
         try:
-            return self._poll_once()
+            got = self._poll_once()
+            self._last_poll_ok = time.time()
+            return got
         finally:
             took = time.monotonic() - t
             self._poll_count += 1
@@ -2411,6 +2418,42 @@ class Core(SocialMixin):
         self.store.kv_set(f"ui.{key}", value)
 
     # ---- shutdown ----------------------------------------------------------------
+    def federation_status(self):
+        """What the Debug → Federation status window shows (a future of plain data): my
+        server (what it runs, how fast it answers, the stream, the polls), what keeps
+        failing on it and on other servers (core.health), what it hasn't got, who waits
+        to go into a list. Nothing here is asked of the network: it's what this run saw."""
+        def job():
+            from . import health
+            snap = health.REC.snapshot()
+            stream = getattr(self, "_stream", None)
+            waiting = []
+            for list_id, acc_id, since in self._list_pending():
+                acc = self.store.account_of(acc_id) or {}
+                waiting.append({"list": next((x["title"] for x in self.lists
+                                              if x["id"] == list_id), list_id),
+                                "account": acc.get("acct") or acc_id, "since": since})
+            caps = getattr(self, "caps", None)
+            return {
+                "server": (self.auth or {}).get("server", ""),
+                "software": getattr(caps, "software", "") if caps else "",
+                "version": getattr(caps, "version", "") if caps else "",
+                "me": (self.me or {}).get("acct", ""),
+                "polls": {"count": self._poll_count, "last_s": self._last_poll_s,
+                          "last_ok": self._last_poll_ok, "failures": self._poll_failures,
+                          "last_error": self._last_poll_error,
+                          "interval_s": self.cfg["poll"]["interval_seconds"]},
+                "stream": None if stream is None else {
+                    "open": stream.connected.is_set(), "since": stream.opened_at,
+                    "last_event": stream.last_event_at, "drops": stream.drops,
+                    "last_error": stream.last_error},
+                "stream_mode": self.cfg["poll"].get("stream", "auto"),
+                "unsupported": sorted(self.unsupported),
+                "list_waiting": waiting,
+                **snap,
+            }
+        return self.bg.submit(job)
+
     def diag_stats(self):
         """For the periodic stats line: what could grow or get stuck."""
         out = {"polls": self._poll_count, "last_poll_s": self._last_poll_s,

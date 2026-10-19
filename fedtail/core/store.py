@@ -609,6 +609,14 @@ class Store:
                              "WHERE author = ?", (self.me_id,))
             return cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
 
+    def account_of(self, acc_id):
+        """Someone's account as one of their stored posts has it (None: no post of
+        theirs here)."""
+        with self.lock:
+            row = self.db.execute("SELECT data FROM statuses WHERE author=? LIMIT 1",
+                                  (acc_id,)).fetchone()
+        return json.loads(row[0]).get("account") if row else None
+
     def read_set(self, status_ids):
         ids = list(status_ids)
         out = set()

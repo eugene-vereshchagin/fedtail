@@ -81,6 +81,9 @@ fedtail/
     counters.py      honest counters: ask the post's own server
     replies.py       ActivityPub reading without my token: a post's replies collection,
                      an actor's outbox (newest public posts), followers/following lists
+    health.py        the run's record of answers (Api._req, remote.open_url): failures
+                     grouped by host + folded path + outcome, latencies; read by
+                     Core.federation_status() for Debug → Federation status (fedstatus.py)
     remote.py        the one way to GET what other servers and posts point at: allowed
                      schemes, public addresses only (my server exempt), redirects checked
                      one by one, the body capped; never a token

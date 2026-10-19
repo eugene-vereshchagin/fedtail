@@ -7,7 +7,16 @@ from dataclasses import dataclass
 from urllib.parse import unquote
 
 from PySide6.QtCore import QPoint, QPointF, QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QIcon, QImage, QKeySequence, QPainter, QPen, QPixmap, QShortcut
+from PySide6.QtGui import (
+    QGuiApplication,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+    QShortcut,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -768,6 +777,7 @@ class MainWindow(QMainWindow):
         m.addAction(_("open_data"), lambda: open_path(self.core.paths.data_dir))
         m.addSeparator()
         dbg = m.addMenu(_("debug_menu"))
+        dbg.addAction(_("debug_federation"), self.federation_status)
         dbg.addAction(_("debug_logs"), lambda: open_path(diag.logs_dir(self.core.paths)))
         dbg.addAction(_("debug_report"), self.bug_report)
         dbg.addAction(_("debug_notify"), lambda: self.statusBar().showMessage(
@@ -2078,6 +2088,67 @@ class MainWindow(QMainWindow):
                 census()
         self.statusBar().showMessage(_("debug_census_done", rss=s["rss_mb"],
                                        objects=s["py_objects"]), 8000)
+
+    def federation_status(self):
+        """Debug → Federation status: how my server is doing and what keeps failing,
+        here and on other servers (core.health; fedstatus draws it). One window, brought
+        to the front when asked again."""
+        from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser
+
+        from .. import fedstatus
+        dlg = getattr(self, "_fed_dlg", None)
+        if dlg is not None and dlg.isVisible():
+            dlg.raise_()
+            dlg.activateWindow()
+            dlg.refresh()
+            return
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_("fed_title"))
+        dlg.resize(min(980, self.width() - 40), min(760, self.height() - 40))
+        lay = QVBoxLayout(dlg)
+        view = QTextBrowser()
+        view.setOpenLinks(False)
+        view.setPlainText(_("loading"))
+        lay.addWidget(view, 1)
+        box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        refresh = box.addButton(_("fed_refresh"), QDialogButtonBox.ButtonRole.ActionRole)
+        copy = box.addButton(_("fed_copy"), QDialogButtonBox.ButtonRole.ActionRole)
+        reset = box.addButton(_("fed_reset"), QDialogButtonBox.ButtonRole.ResetRole)
+        box.rejected.connect(dlg.close)
+        lay.addWidget(box)
+        dlg.data = None
+
+        def show(data):
+            dlg.data = data
+            pos = view.verticalScrollBar().value()
+            view.setHtml(fedstatus.html(data))
+            view.verticalScrollBar().setValue(pos)  # a refresh keeps the place
+
+        def again():
+            self.bridge.call(self.core.federation_status(), ok=show,
+                             fail=lambda e: view.setPlainText(_("load_failed", err=e)))
+
+        def to_clipboard():
+            if dlg.data is not None:
+                QGuiApplication.clipboard().setText(fedstatus.text(dlg.data))
+                self.statusBar().showMessage(_("fed_copied"), 5000)
+
+        def count_anew():
+            from ...core import health
+            health.REC.clear()
+            log.info("federation status: counting anew")
+            again()
+        refresh.clicked.connect(again)
+        copy.clicked.connect(to_clipboard)
+        reset.clicked.connect(count_anew)
+        dlg.refresh = again
+        timer = QTimer(dlg)  # live while open: the numbers move as polls come
+        timer.timeout.connect(again)
+        timer.start(15000)
+        self._fed_dlg = dlg
+        log.info("federation status: opened")
+        again()
+        dlg.show()
 
     def debug_trim(self):
         freed = diag.trim_memory()

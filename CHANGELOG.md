@@ -2,6 +2,14 @@
 
 ## 0.16.0 — in progress
 
+- ≡ → Debug → "Federation status": how your server is doing — what it runs, how many answers
+  and how fast, polls and the live stream — and what keeps failing that isn't the client's
+  doing: what the server can't do, who waits to go into a list, and every request that
+  keeps getting 404/410/401/timeouts, on your server and on other servers, grouped (ids
+  folded), counted, with when it last happened and what it most likely means. Live while
+  open; "Copy" as text for an issue; "Count anew". Only what this run saw: nothing is asked
+  of the network for it, no queries or tokens are kept.
+
 - A slow answer about direct conversations no longer fails the whole poll ("Read timed
   out" on screen, the lanes not fetched): it is only a nicety, skipped till next time.
 - Someone waiting to go into a list is tried only once they're followed; while the follow

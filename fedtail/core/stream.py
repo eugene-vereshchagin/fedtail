@@ -19,6 +19,7 @@ import socket
 import ssl
 import struct
 import threading
+import time
 from urllib.parse import urlsplit
 
 log = logging.getLogger(__name__)
@@ -242,6 +243,11 @@ class Stream(threading.Thread):
         self.ws = None
         self.connected = threading.Event()
         self.failures = 0
+        # for the federation status: since when open, how often it dropped, why last
+        self.opened_at = None    # time.time() of the last successful open
+        self.last_event_at = None
+        self.drops = 0
+        self.last_error = ""
 
     def stop(self):
         self.stop_event.set()
@@ -258,6 +264,8 @@ class Stream(threading.Thread):
                 if self.stop_event.is_set():
                     return
                 self.failures += 1
+                self.drops += 1
+                self.last_error = f"{e.__class__.__name__}: {str(e)[:80]}"
                 log.info("stream %s: %s (%s), again in %d s", host, e.__class__.__name__,
                          str(e)[:120], BACKOFF[min(self.failures, len(BACKOFF)) - 1])
             finally:
@@ -276,6 +284,7 @@ class Stream(threading.Thread):
             self.ws.send(0x1, json.dumps({"type": "subscribe", "stream": name}).encode())
         self.connected.set()
         self.failures = 0
+        self.opened_at = time.time()
         log.info("stream %s: open (%s)", urlsplit(self.url).hostname, ", ".join(self.streams))
         idle = 0
         while not self.stop_event.is_set():
@@ -298,4 +307,5 @@ class Stream(threading.Thread):
                 continue
             event = msg.get("event") if isinstance(msg, dict) else None
             if event:
+                self.last_event_at = time.time()
                 self.on_event(event)

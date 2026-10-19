@@ -17,6 +17,7 @@ No token is ever attached here: callers pass no Authorization and none is added.
 import ipaddress
 import logging
 import socket
+import time
 from urllib.parse import urljoin, urlsplit
 
 import requests
@@ -70,10 +71,20 @@ def check(url, schemes=("https",), own_hosts=()):
 def open_url(session, url, *, timeout, schemes=("https",), own_hosts=(), headers=None):
     """A streamed response for url, its redirects followed by hand and each checked.
     The caller closes it (with ... as r:)."""
+    from . import health
     for _ in range(MAX_REDIRECTS + 1):
-        check(url, schemes, own_hosts)
-        r = session.get(url, timeout=timeout, headers=headers, stream=True,
-                        allow_redirects=False)
+        u = urlsplit(url)
+        t = time.monotonic()
+        try:
+            check(url, schemes, own_hosts)
+            r = session.get(url, timeout=timeout, headers=headers, stream=True,
+                            allow_redirects=False)
+        except requests.RequestException as e:  # Refused too: what keeps failing, where
+            health.REC.note(u.hostname, "GET", u.path, health.outcome_of(e), kind="remote")
+            raise
+        if not getattr(r, "is_redirect", False):
+            health.REC.note(u.hostname, "GET", u.path, getattr(r, "status_code", 200),
+                            time.monotonic() - t, kind="remote")
         if r.is_redirect and r.headers.get("Location"):
             r.close()
             url = urljoin(url, r.headers["Location"])

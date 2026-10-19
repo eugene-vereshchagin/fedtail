@@ -10,11 +10,12 @@ import re
 import threading
 import time
 from dataclasses import dataclass
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 import requests
 
 from .. import __version__, version
+from . import health
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
@@ -54,6 +55,7 @@ class ApiError(Exception):
 @dataclass
 class Capabilities:
     software: str = ""
+    version: str = ""  # what the server says it runs ("4.3.0", "0.17.3 git-…")
     max_characters: int = 500
     max_media: int = 4
     markdown: bool = False
@@ -74,6 +76,7 @@ def capabilities_from_instance(inst):
     software = next((s for s in MARKDOWN_SERVERS if s in version), "mastodon")
     return Capabilities(
         software=software,
+        version=str(inst.get("version", ""))[:80],
         max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or 500),
         max_media=int(st.get("max_media_attachments") or 4),
         max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
@@ -123,6 +126,7 @@ class Api:
         if not server.startswith(("http://", "https://")):
             server = "https://" + server
         self.base = server
+        self.host = (urlsplit(server).hostname or "?").lower()  # for health.REC
         self._last = threading.local()  # the latest response's headers, per thread
         self.s = session or requests.Session()
         self.s.headers["User-Agent"] = USER_AGENT
@@ -140,8 +144,10 @@ class Api:
         except requests.RequestException as e:
             log.warning("%s %s %s -> %s after %.2f s", method, path, shown,
                         e.__class__.__name__, time.monotonic() - t)
+            health.REC.note(self.host, method, path, health.outcome_of(e))
             raise
         took = time.monotonic() - t
+        health.REC.note(self.host, method, path, r.status_code, took)
         # path, paging and timing only: never the token, a body or a post's text
         log.log(logging.WARNING if took > SLOW_SECONDS or r.status_code >= 400
                 else logging.DEBUG, "%s %s %s -> %s %.2f s %d B", method, path, shown,
