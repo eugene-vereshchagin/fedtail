@@ -117,20 +117,26 @@ def _lang_label(code, qlocale):
     return f"{name[:1].upper()}{name[1:]} ({code})"
 
 class Compose(QDialog):
-    def __init__(self, win, reply_to=None, attach=(), text="", edit=None, quote=None):
+    def __init__(self, win, reply_to=None, attach=(), text="", edit=None, quote=None,
+                 invite=False):
+        """invite: "Call into the thread" — a reply to reply_to that is only "@" at first,
+        the people list open: the one named gets a notification and the thread with it."""
         super().__init__(win)
         self.win, self.core = win, win.core
         self.edit = real(edit) if edit else None  # my post being corrected
         self.reply_to = real(reply_to) if reply_to else None
         self.quote = real(quote) if quote else None  # the post this one quotes
+        self.invite = bool(invite and self.reply_to)
         if self.edit:
             self.key = f"edit:{self.edit['id']}"
+        elif self.invite:  # not the reply's draft: a call has its own
+            self.key = f"invite:{self.reply_to['id']}"
         else:
             self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None,
                                            self.quote["id"] if self.quote else None)
         self.start_text = text  # "@someone " from a profile's Mention button
         self.sent = False
-        title = _("compose_edit") if edit else \
+        title = _("compose_edit") if edit else _("compose_invite") if self.invite else \
             _("compose_reply") if reply_to else _("compose_quote") if quote else _("compose_new")
         self.setWindowTitle(title)
         # ui.compose = "inline": a panel inside the main window, not a window of its own.
@@ -341,6 +347,8 @@ class Compose(QDialog):
         cur = self.text.textCursor()
         cur.movePosition(cur.MoveOperation.End)
         self.text.setTextCursor(cur)
+        if self.invite and self.text.toPlainText() == "@":  # who to call: the list at once
+            QTimer.singleShot(0, self._suggest_tags)
 
     def _fill_languages(self):
         """"As in settings" first, then post.languages, then post.language if it's
@@ -420,7 +428,12 @@ class Compose(QDialog):
         else:
             if self.start_text:
                 self.text.setPlainText(self.start_text)
-            if self.reply_to:
+            if self.invite:  # only the one called: the thread's people aren't bothered
+                self.text.setPlainText("@")
+                self.hint.setText(_("invite_hint"))
+                if self.reply_to.get("spoiler_text"):
+                    self.cw.setText(self.reply_to["spoiler_text"])
+            elif self.reply_to:
                 self.text.setPlainText(reply_mentions(self.reply_to, self.core.me["acct"]))
                 if self.reply_to.get("spoiler_text"):
                     self.cw.setText(self.reply_to["spoiler_text"])

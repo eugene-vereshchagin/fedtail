@@ -1730,6 +1730,9 @@ class MainWindow(QMainWindow):
             self.bridge.call(self.core.refresh_poll(st), fail=self.error)
         elif action == "reply":
             self.compose(st)
+        elif action == "invite":  # call someone into this thread: a reply naming them
+            if self.core.me:
+                Compose(self, reply_to=st, invite=True).show()
         elif action == "edit":
             Compose(self, edit=st).show()
         elif action == "history":

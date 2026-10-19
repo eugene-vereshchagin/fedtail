@@ -2000,6 +2000,24 @@ class QtSmokeTest(unittest.TestCase):
         from fedtail.i18n import _
         self.assertIn(_("who_favourited_by_n", n=1), texts)
         self.assertIn(_("mark_one_read"), texts)
+        # call someone into the thread: a reply to 011 that is only "@" so far, with a
+        # draft of its own (the ordinary reply's draft is left alone)
+        self.assertIn(_("invite"), texts)
+        from fedtail.frontends.qt.compose import Compose
+        self.win.on_link("fedtail:invite/011")
+        self.pump(0.1)
+        call = next(c for c in self.win.findChildren(Compose) if c.isVisible())
+        self.assertTrue(call.invite)
+        self.assertEqual(call.text.toPlainText(), "@")
+        self.assertEqual(call.key, "invite:011")
+        self.assertEqual(call.reply_to["id"], "011")
+        call.reject()
+        self.pump(0.1)
+        self.win.ctx.cfg["post"]["invite"] = False  # off: not in the menu
+        row = PostRow(CardSpec(key="011b", status=st), self.win.ctx)
+        row.ensure_menu()
+        self.assertNotIn(_("invite"), [a.text() for a in row._menu.actions()])
+        self.win.ctx.cfg["post"]["invite"] = True
         self.win.on_link("fedtail:favourited_by/011")
         tab = self.win.tabs.currentWidget()
         self.assertIsInstance(tab, AccountsWidget)

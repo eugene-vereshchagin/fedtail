@@ -207,6 +207,10 @@ _STRINGS = {
         "approve": "✔ пустить", "reject": "✘ отказать",
         # compose
         "compose_new": "Новый пост", "compose_reply": "Ответ",
+        "compose_invite": "Позвать в тред", "invite": "Позвать в тред…",
+        "invite_hint": "Кого позвать: @ник (можно нескольких) и пару слов. Ему придёт "
+                       "уведомление с этим тредом. Если тред не публичный, он увидит твой "
+                       "ответ, а остальное — только то, что ему и так видно.",
         "cw_placeholder": "Предупреждение / заголовок под катом (можно пусто)",
         "text_placeholder": "Пиши.", "text_placeholder_md": "Пиши. Markdown работает.",
         "media_tip": "Двойной клик — подпись к картинке (alt). "
@@ -890,6 +894,10 @@ _STRINGS = {
         "no_requests": "No follow requests.", "profile": "profile",
         "approve": "✔ accept", "reject": "✘ reject",
         "compose_new": "New post", "compose_reply": "Reply",
+        "compose_invite": "Call into the thread", "invite": "Call into the thread…",
+        "invite_hint": "Who to call: @name (one or more) and a word or two. They get a "
+                       "notification with this thread. If the thread isn't public, they see "
+                       "your reply, and of the rest only what they could see anyway.",
         "cw_placeholder": "Content warning / summary (optional)",
         "text_placeholder": "Write.", "text_placeholder_md": "Write. Markdown works.",
         "media_tip": "Double-click to describe (alt text). Drop pictures here or paste with Ctrl+V",

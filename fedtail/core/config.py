@@ -122,6 +122,7 @@ DEFAULTS = {
         "report_forward": True,
         "quote_policy": '',
         "quote_action": True,
+        "invite": True,
         "who_can_reply": '',
         "who_can_boost": '',
         "who_can_like": '',

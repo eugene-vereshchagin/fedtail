@@ -786,6 +786,8 @@ class PostRow(QWidget):
             menu.addAction(_("long_form"), lambda s=st: self.ctx.long_form(s))
         if self.ctx.translate and lang and lang != current_language() and real(st).get("content"):
             menu.addAction(_("translate"), self._translate)
+        if self.ctx.cfg["post"].get("invite", True):
+            menu.addAction(_("invite"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:invite/{i}"))
         menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
                        lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
         if self.spec.unread:  # by hand, whatever read.mark_read says

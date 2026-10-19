@@ -2,6 +2,11 @@
 
 ## 0.16.0 — in progress
 
+- ⋯ → "Call into the thread…": a reply to that post with only "@" in it and the people list
+  open — pick who, add a word, send. They get a notification and open the thread at home;
+  no links with service ids. The thread's others aren't mentioned; the call has its own
+  draft. `post.invite = false` hides the item.
+
 - ≡ → Debug → "Federation status": how your server is doing — what it runs, how many answers
   and how fast, polls and the live stream — and what keeps failing that isn't the client's
   doing: what the server can't do, who waits to go into a list, and every request that
