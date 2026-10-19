@@ -144,8 +144,7 @@ fedtail/
   data/
     config.example.toml  the full config in chapters (Russian), the reference
     themes/*.toml        built-in themes (system.toml lists every key)
-    icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
-    icons/fedtail.svg    the drawn bubble (ui.app_icon = "bubble"; iconart.py themes it)
+    icons/fedtail.svg    app icon (iconart.py draws it in the theme's colours)
 tests/               unittest; fakes.py is an in-memory Mastodon
 tools/screenshots.py renders the window with made-up data (CI publishes PNGs)
 .github/             CI workflow; annotate.py turns test failures into annotations

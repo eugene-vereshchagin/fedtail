@@ -2,6 +2,11 @@
 
 ## 0.16.0 — in progress
 
+- The opossum is gone from the icon and About: it comes from an official Telegram sticker
+  pack, and its artist says the rights are Telegram's, not theirs to give. The drawn
+  thread bubble is the icon again (in the theme's colours with `ui.themed_icon`);
+  `ui.app_icon` is gone with it.
+
 - "Activity" counts as seen what came on screen, like the other lanes, checked when you
   scroll or come back to the window. It used to mark everything once, on opening — rows
   far off screen too — and a window in the background at that moment left the newest

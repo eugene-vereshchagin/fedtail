@@ -49,9 +49,9 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
     apps = work / "usr/share/applications"
     apps.mkdir(parents=True)
     (apps / "fedtail.desktop").write_text(entry_text(icon="fedtail"), "utf-8")
-    icons = work / "usr/share/icons/hicolor/512x512/apps"
+    icons = work / "usr/share/icons/hicolor/scalable/apps"
     icons.mkdir(parents=True)
-    shutil.copy(ROOT / "fedtail/data/icons/fedtail.png", icons / "fedtail.png")
+    shutil.copy(ROOT / "fedtail/data/icons/fedtail.svg", icons / "fedtail.svg")
     doc = work / "usr/share/doc/fedtail"
     doc.mkdir(parents=True)
     (doc / "copyright").write_text(

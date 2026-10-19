@@ -85,10 +85,10 @@ class CliTest(unittest.TestCase):
             self.assertIn("-m fedtail --profile croco", entry)
             self.assertIn(f"Path={ROOT}", entry)
             # a full path: Plasma doesn't have to find it in a cached icon theme
-            self.assertIn("Icon=" + str(Path(d) / "icons/hicolor/512x512/apps/fedtail.png"),
+            self.assertIn("Icon=" + str(Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"),
                           entry)
-            png = Path(d) / "icons/hicolor/512x512/apps/fedtail.png"
-            self.assertTrue(png.read_bytes().startswith(b"\x89PNG"))  # the opossum
+            svg = Path(d) / "icons/hicolor/scalable/apps/fedtail.svg"
+            self.assertTrue(svg.read_text("utf-8").startswith("<svg"))
 
     def test_bug_report_flag(self):
         import os

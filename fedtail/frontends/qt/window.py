@@ -67,7 +67,7 @@ from .feed import (
 from .find import FindBar
 from .images import Images
 from .login import LoginDialog
-from .notify import Notifier, icon_path, mascot_path
+from .notify import Notifier, icon_path
 from .opener import open_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
@@ -592,7 +592,7 @@ class MainWindow(QMainWindow):
         log.info("theme tried: %s (was %s, config says %s)", theme.id, old.id,
                  self.cfg["ui"]["theme"])
         self._retheme(old, theme)
-        if self.cfg["ui"]["themed_icon"] and self.cfg["ui"].get("app_icon") == "bubble":
+        if self.cfg["ui"]["themed_icon"]:
             notify_module.use_theme_icon(theme, self.core.paths.cache_dir)
             self.setWindowIcon(QIcon(icon_path()))
             app.setWindowIcon(QIcon(icon_path()))
@@ -2207,8 +2207,7 @@ class MainWindow(QMainWindow):
                        author=version.AUTHOR))
         box = QMessageBox(self)
         box.setWindowTitle("fedtail")
-        # the opossum holding its own tail — whatever the window's icon is
-        box.setIconPixmap(QIcon(mascot_path()).pixmap(160, 160))
+        box.setIconPixmap(QIcon(icon_path()).pixmap(64, 64))
         box.setTextFormat(Qt.TextFormat.RichText)
         box.setText("<br>".join(lines))
         # links: the code to the browser; the author opens here, with Follow on the page

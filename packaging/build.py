@@ -64,7 +64,7 @@ def main():
         icon = ROOT / "build" / "fedtail.ico"
         icon.parent.mkdir(exist_ok=True)
         subprocess.run([sys.executable, str(ROOT / "packaging" / "make_icon.py"),
-                        str(ROOT / "fedtail" / "data" / "icons" / "fedtail.png"), str(icon)],
+                        str(ROOT / "fedtail" / "data" / "icons" / "fedtail.svg"), str(icon)],
                        check=True)
     spec = ROOT / "build" / "fedtail.spec"
     spec.parent.mkdir(exist_ok=True)
