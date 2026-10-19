@@ -440,19 +440,26 @@ class Store:
                                    (source,)).fetchone()[0]
 
     def iter_items(self, source, chunk=200, max_rows=None):
-        """Items newest → oldest, parsed lazily chunk by chunk."""
-        offset = 0
-        while max_rows is None or offset < max_rows:
+        """Items newest → oldest, parsed lazily chunk by chunk. Each chunk starts where
+        the last one ended (sort, item_id), not at an OFFSET: going deep into a big
+        source stays linear instead of re-walking everything before each chunk."""
+        done, last = 0, None
+        base = ("SELECT i.item_id, s.data, i.sort FROM items i JOIN statuses s "
+                "ON s.id = i.status_id WHERE i.source=? ")
+        order = "ORDER BY i.sort DESC, i.item_id DESC LIMIT ?"
+        while max_rows is None or done < max_rows:
             with self.lock:
-                rows = self.db.execute(
-                    "SELECT i.item_id, s.data FROM items i JOIN statuses s "
-                    "ON s.id = i.status_id WHERE i.source=? ORDER BY i.sort DESC "
-                    "LIMIT ? OFFSET ?", (source, chunk, offset)).fetchall()
+                if last is None:
+                    rows = self.db.execute(base + order, (source, chunk)).fetchall()
+                else:
+                    rows = self.db.execute(base + "AND (i.sort, i.item_id) < (?, ?) " + order,
+                                           (source, last[0], last[1], chunk)).fetchall()
             for r in rows:
                 yield r[0], json.loads(r[1])
             if len(rows) < chunk:
                 return
-            offset += chunk
+            done += chunk
+            last = (rows[-1][2], rows[-1][0])
 
     def items(self, source, limit):
         """Newest `limit` items of a source, returned oldest → newest."""

@@ -717,24 +717,21 @@ class QtSmokeTest(unittest.TestCase):
         bar.edit.setText("нет-такого-слова-нигде")
         bar.search(jump=True)
         self.assertEqual(bar.hits, [])
-        # in every lane: from another lane, the match in home is found and shown there
-        other = next(n for n, x in self.win.lane_widgets.items()
-                     if n != "home" and hasattr(x, "load_older")) \
-            if any(n != "home" and hasattr(x, "load_older")
-                   for n, x in self.win.lane_widgets.items()) else None
-        if other:
-            self.win.select_lane(other)
-            self.pump(0.1)
+        # in every lane: from another lane, a match is found and shown in its own lane
         bar.everywhere.setChecked(True)
         bar.edit.setText(word)
         bar.search(jump=False)
         self.pump(until=lambda: bar.all_hits)
-        at = next(i for i, h in enumerate(bar.all_hits) if h["lane"] == "home")
-        bar.all_pos = at - 1
+        at, hit = 0, bar.all_hits[0]
+        away = next(n for n in self.win.lane_items if n != hit["lane"] and
+                    getattr(self.core.lane_by_name.get(n), "source", None))
+        self.win.select_lane(away)
+        self.pump(0.1)
+        bar.all_pos = -1
         bar.step(1)  # Ctrl+F again / ↓
         self.pump(0.2)
-        self.assertIs(self.win.current_view(), self.win.lane_widgets["home"].view)
-        self.assertIn(self.win.lane_title("home"), bar.count.text())
+        self.assertIs(self.win.current_view(), self.win.lane_widgets[hit["lane"]].view)
+        self.assertIn(self.win.lane_title(hit["lane"]), bar.count.text())
         key = bar._key_in_view(bar.all_hits[at])
         self.assertEqual(bar.view.rows[key].card.property("found"), "true")
         bar.edit.hasFocus = lambda: True  # offscreen: the window may not be active

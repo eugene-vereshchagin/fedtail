@@ -1270,33 +1270,46 @@ class Core(SocialMixin):
         """Ctrl+F with "in every lane": everything stored, lane by lane in the sidebar's
         order, each lane's posts newest first. A post found in one lane isn't repeated
         for the next. [{"lane", "item", "status_id", "index"}] — index: its place in the
-        lane counting from the newest, for reveal_in_lane."""
+        lane counting from the newest, for reveal_in_lane.
+
+        Lanes sharing a source (home, bots, replies…) are gone through together: each
+        stored post is parsed and matched once, not once per lane."""
         def job():
             ctx = self._ctx()
             repeats = self.cfg["feed"].get("repeat_boosts", False)
-            seen, out = set(), []
+            by_source = {}
             for lane in self.lanes:
-                if not lane.source or len(out) >= self.FIND_EVERYWHERE_MAX:
-                    continue
-                only_posts = self.posts_only(lane.name)
-                rows = self.store.iter_items(lane.source)
+                if lane.source:
+                    by_source.setdefault(lane.source, []).append(lane)
+            found = {}  # lane name -> its hits, newest first
+            for source, group in by_source.items():
+                only = {lane.name: self.posts_only(lane.name) for lane in group}
+                count = dict.fromkeys(only, 0)
+                rows = self.store.iter_items(source)
                 if not repeats:
-                    rows = self._without_repeats(lane.source, rows)
-                i = 0
+                    rows = self._without_repeats(source, rows)
                 for item_id, st in rows:
-                    if only_posts and real(st).get("in_reply_to_id"):
+                    if self.silenced(st):
                         continue
-                    if self.silenced(st) or not lanes.keeps(lane, st, ctx):
-                        continue
-                    i += 1
-                    rid = real(st)["id"]
-                    if rid in seen or not search.matches(query, search.haystack(st)):
-                        continue
-                    seen.add(rid)
-                    out.append({"lane": lane.name, "item": item_id, "status_id": st["id"],
-                                "index": i})
-                    if len(out) >= self.FIND_EVERYWHERE_MAX:
-                        break
+                    reply = bool(real(st).get("in_reply_to_id"))
+                    hit = None  # matched lazily: only if some lane keeps the post
+                    for lane in group:
+                        if (only[lane.name] and reply) or not lanes.keeps(lane, st, ctx):
+                            continue
+                        count[lane.name] += 1
+                        if hit is None:
+                            hit = search.matches(query, search.haystack(st))
+                        if hit:
+                            found.setdefault(lane.name, []).append(
+                                {"lane": lane.name, "item": item_id, "status_id": st["id"],
+                                 "index": count[lane.name], "_rid": real(st)["id"]})
+            seen, out = set(), []
+            for lane in self.lanes:  # the sidebar's order; each post once
+                for h in found.get(lane.name, ()):
+                    rid = h.pop("_rid")
+                    if rid not in seen and len(out) < self.FIND_EVERYWHERE_MAX:
+                        seen.add(rid)
+                        out.append(h)
             return out
         return self.submit(job)
 

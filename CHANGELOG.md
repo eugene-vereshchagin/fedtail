@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.16.0 — in progress
+## 0.16.0 — 2026-10-19
+
+- Faster reading deep into big lanes: stored posts are paged from where the last page
+  ended instead of skipping the newer ones again each time, and text is pulled out of a
+  post's HTML with patterns compiled once. Ctrl+F "in every lane" goes through lanes that
+  share a source together, each post parsed and matched once — on 20 000 stored posts
+  it takes 0.4 s instead of 0.9 s; "Deeper" and long lanes gain the same way.
 
 - A click on the time slider of a video or an audio jumps right there; it used to move
   only one step towards the click, and only dragging the handle really seeked.

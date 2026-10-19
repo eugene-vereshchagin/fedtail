@@ -12,12 +12,23 @@ def real(st):
     return st.get("reblog") or st
 
 
+_H2T_BR = re.compile(r"<br\s*/?>", re.I)
+_H2T_PARA = re.compile(r"</p>\s*<p[^>]*>", re.I)
+# other blocks (a quote, a list) are lines of their own too — not glued to the next
+_H2T_BLOCK = re.compile(r"</?(p|blockquote|li|ul|ol|div|pre|h[1-6])\b[^>]*>", re.I)
+_H2T_TAG = re.compile(r"<[^>]+>")
+
+
 def html_to_text(h):
-    h = re.sub(r"<br\s*/?>", "\n", h or "", flags=re.I)
-    h = re.sub(r"</p>\s*<p[^>]*>", "\n\n", h, flags=re.I)
-    # other blocks (a quote, a list) are lines of their own too — not glued to the next
-    h = re.sub(r"</?(p|blockquote|li|ul|ol|div|pre|h[1-6])\b[^>]*>", "\n", h, flags=re.I)
-    h = re.sub(r"<[^>]+>", "", h)
+    """Called for every post Ctrl+F looks through: the patterns are compiled once."""
+    if not h:
+        return ""
+    if "<" not in h:
+        return html.unescape(h).strip() if "&" in h else h.strip()
+    h = _H2T_BR.sub("\n", h)
+    h = _H2T_PARA.sub("\n\n", h)
+    h = _H2T_BLOCK.sub("\n", h)
+    h = _H2T_TAG.sub("", h)
     return html.unescape(h).strip()
 
 
