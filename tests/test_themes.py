@@ -78,7 +78,9 @@ class ThemeFileTest(unittest.TestCase):
         system = themefile.load("system")[0]["shape"]
         self.assertEqual((system["avatar_shape"], system["short_id"]), ("circle", "header"))
         self.assertEqual((shape["rule"], shape["header_stripes"]), ("solid", True))
-        self.assertEqual((system["rule"], system["header_stripes"]), ("dashed", False))
+        self.assertEqual((system["rule"], system["header_stripes"]), ("solid", False))
+        self.assertEqual((shape["header_bar"], colors["header_bar"]), (8, "#474747"))
+        self.assertEqual(themefile.load("terminal")[0]["shape"]["rule"], "dashed")
 
     def test_install_copies(self):
         themefile.install_copies()

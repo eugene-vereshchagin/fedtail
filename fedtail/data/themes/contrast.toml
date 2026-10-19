@@ -13,6 +13,7 @@ sidebar_border = "#000000"
 selected = "#000000"
 selected_text = "#ffffff"
 view = "#ffffff"
+header = "#ffffff"  # as plain as the rest
 header_border = "#000000"
 card = "#ffffff"
 card_border = "#000000"

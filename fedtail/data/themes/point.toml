@@ -51,6 +51,7 @@ name = "#2c4a6e"
 primary = "#3c3c3c"
 on_primary = "#ffffff"
 header = "#efefef"
+header_bar = "#474747"
 
 [shape]
 radius = 0
@@ -58,6 +59,7 @@ button_radius = 3
 card_style = "rule"
 rule = "solid"
 header_stripes = true
+header_bar = 8
 card_avatars = true
 avatar = 40
 avatar_shape = "square"

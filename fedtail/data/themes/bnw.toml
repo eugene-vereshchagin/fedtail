@@ -18,6 +18,7 @@ panel = "#e5e5e5"
 selected = "#00dd00"
 selected_text = "#000000"
 view = "#ffffff"
+header = "#ffffff"  # black and white: no tint
 header_border = "#000000"
 card = "#e5e5e5"
 card_border = "#9a9a9a"

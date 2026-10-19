@@ -86,8 +86,10 @@ def _auto_colors(pal):
 # colours that, left at "auto", copy another one of the same theme (not the desktop):
 # a theme with its own text colour gets it in the sidebar too
 FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
-           "primary": "accent", "on_primary": "on_accent", "header": "view",
-           "name": "text"}
+           "primary": "accent", "on_primary": "on_accent", "name": "text"}
+# "auto" mixed from two colours of the same theme: (from, towards, how far)
+TINTS = {"header": ("view", "accent", 0.08),       # the title strip: a touch of the theme
+         "header_bar": ("header_border", "text", 0.45)}
 
 
 class Theme:
@@ -104,7 +106,7 @@ class Theme:
         follow = []
         for key, val in data["colors"].items():
             val = val.strip()
-            if val == "auto" and key in FOLLOWS:
+            if val == "auto" and (key in FOLLOWS or key in TINTS):
                 follow.append(key)
                 continue
             if val == "auto":
@@ -121,7 +123,12 @@ class Theme:
                     col.setAlpha(int(val[7:], 16))
             self.c[key] = col
         for key in follow:  # "auto" here means "the same as the colour it stands for"
-            self.c[key] = QColor(self.c[FOLLOWS[key]])
+            if key in FOLLOWS:
+                self.c[key] = QColor(self.c[FOLLOWS[key]])
+        for key in follow:  # …or a mix of two of them (after the plain ones are known)
+            if key in TINTS:
+                a, b, t = TINTS[key]
+                self.c[key] = _mix(self.c[a], self.c[b], t)
         # the old flat attributes some widgets still use
         self.muted = self.c["muted"].name()
         self.bg = self.c["view"].name()
@@ -158,6 +165,12 @@ class Theme:
             return ""
         path = stripe_tile(self.c["header"])
         return f"background-image: url({path}); background-repeat: repeat-xy;" if path else ""
+
+    def _bar_css(self):
+        """shape.header_bar: a band of colors.header_bar above the title strip (the dark
+        top bar of point.im over its hatched header), that many pixels high."""
+        px = int(self.shape.get("header_bar") or 0)
+        return f"border-top: {px}px solid {self.css('header_bar')};" if px > 0 else ""
 
     def stylesheet(self, base_pt, mono_family):
         k = self.css
@@ -225,8 +238,8 @@ QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
 QWidget#composeHead {{ background: {k('header') if s.get('header_stripes') else 'transparent'};
-    {self._stripes_css()} border-radius: {br}px; }}
-QWidget#laneHeader {{ background: {k('header')}; {self._stripes_css()} border-bottom: 1px solid {k('header_border')}; }}
+    {self._stripes_css()} {self._bar_css()} border-radius: {br}px; }}
+QWidget#laneHeader {{ background: {k('header')}; {self._stripes_css()} {self._bar_css()} border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
 QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};

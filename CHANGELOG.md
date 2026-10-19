@@ -8,8 +8,12 @@
   and the new post's title, solid and clearer lines between posts, a dark "Create"
   button. New theme keys for any theme: `shape.avatar_shape` (circle,
   square, rounded), `shape.card_header = "stacked"`, `shape.short_id` (header, footer),
-  `shape.actions_align` (left, right), `shape.rule` (dashed, solid), `shape.header_stripes`,
-  `colors.primary` / `on_primary`, `colors.header`, `colors.name`.
+  `shape.actions_align` (left, right), `shape.rule` (solid, dashed), `shape.header_stripes`,
+  `shape.header_bar` (a band above the title strip, point.im's dark top bar),
+  `colors.primary` / `on_primary`, `colors.header`, `colors.header_bar`, `colors.name`.
+- The lane's title strip takes a touch of the theme's accent in every theme (`colors.header`
+  left at "auto"); bnw and contrast stay plain white. Lines between posts in "rule" style
+  are solid by default (`terminal` keeps its dashes).
 
 - The opossum is gone from the icon and About: it comes from an official Telegram sticker
   pack, and its artist says the rights are Telegram's, not theirs to give. The drawn
