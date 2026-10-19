@@ -66,6 +66,15 @@ def hint(p):
     return ""
 
 
+def who_link(w):
+    """Someone waiting for a list: their name, a link to their profile here (fedtail:
+    account/<id>, the window opens it in a tab) — with Follow on it."""
+    from urllib.parse import quote
+    shown = ("@" + w["account"]) if w.get("account") else w["id"]
+    name = f"{esc(w['name'])} " if w.get("name") else ""
+    return f'{name}<a href="fedtail:account/{quote(w["id"], safe="")}">{esc(shown)}</a>'
+
+
 def _ms(v):
     return "—" if v is None else f"{v} ms"
 
@@ -123,9 +132,10 @@ def html(data, now=None):
                   f"<p>{esc(', '.join(data['unsupported']))}</p>"]
     if data["list_waiting"]:
         parts += [f"<h3>{esc(_('fed_waiting'))}</h3>",
-                  _table((_("fed_col_who"), _("fed_col_list"), _("fed_col_since")),
-                         [(esc("@" + w["account"]), esc(w["list"]), esc(ago(w["since"], now)))
-                          for w in data["list_waiting"]])]
+                  _table((_("fed_col_who"), _("fed_col_list"), _("fed_col_why"),
+                          _("fed_col_since")),
+                         [(who_link(w), esc(w["list"]), esc(_("fed_wait_" + w["state"])),
+                           esc(ago(w["since"], now))) for w in data["list_waiting"]])]
     for kind, title in (("mine", "fed_problems_mine"), ("remote", "fed_problems_remote")):
         rows = [p for p in data["problems"] if p["kind"] == kind][:SHOW_PROBLEMS]
         parts.append(f"<h3>{esc(_(title))}</h3>")
@@ -159,7 +169,9 @@ def text(data, now=None):
         lines += ["", f"== {_('fed_unsupported')}", ", ".join(data["unsupported"])]
     if data["list_waiting"]:
         lines += ["", f"== {_('fed_waiting')}"] + [
-            f"@{w['account']} → {w['list']} ({ago(w['since'], now)})"
+            f"{('@' + w['account']) if w.get('account') else w['id']}"
+            f"{(' ' + w['url']) if w.get('url') else ''} → {w['list']}: "
+            f"{_('fed_wait_' + w['state'])} ({ago(w['since'], now)})"
             for w in data["list_waiting"]]
     for kind, title in (("mine", "fed_problems_mine"), ("remote", "fed_problems_remote")):
         rows = [p for p in data["problems"] if p["kind"] == kind][:SHOW_PROBLEMS]

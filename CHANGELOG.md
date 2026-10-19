@@ -9,6 +9,10 @@
   folded), counted, with when it last happened and what it most likely means. Live while
   open; "Copy" as text for an issue; "Count anew". Only what this run saw: nothing is asked
   of the network for it, no queries or tokens are kept.
+- Federation status: who waits to go into a list is named (my server is asked who an id
+  is when no post of theirs is here), linked to their profile in a tab, with why they
+  wait — a follow request unanswered, not followed (refused or withdrawn), or followed and
+  going in with the next refresh.
 
 - A slow answer about direct conversations no longer fails the whole poll ("Read timed
   out" on screen, the lanes not fetched): it is only a nicety, skipped till next time.

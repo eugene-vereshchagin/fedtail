@@ -2108,6 +2108,8 @@ class MainWindow(QMainWindow):
         lay = QVBoxLayout(dlg)
         view = QTextBrowser()
         view.setOpenLinks(False)
+        # someone waiting for a list: their profile opens in a tab here (Follow on it)
+        view.anchorClicked.connect(lambda u: self.on_link(u.toString()))
         view.setPlainText(_("loading"))
         lay.addWidget(view, 1)
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)

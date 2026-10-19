@@ -2418,6 +2418,39 @@ class Core(SocialMixin):
         self.store.kv_set(f"ui.{key}", value)
 
     # ---- shutdown ----------------------------------------------------------------
+    def _list_waiting(self):
+        """Who waits to go into a list, by name, and why: the one thing the status
+        window asks my server (who those ids are, the follow between us)."""
+        pending = self._list_pending()
+        if not pending:
+            return []
+        ids = list(dict.fromkeys(p[1] for p in pending))
+        try:
+            rel = {r["id"]: r for r in self.api.relationships(ids)}
+        except Exception as e:  # noqa: BLE001 — offline: names only
+            log.debug("list waiting: relationships: %s", e)
+            rel = {}
+        people = {}
+        for acc_id in ids:
+            acc = self.store.account_of(acc_id)
+            if acc is None:  # no post of theirs here: my server knows who it is
+                try:
+                    acc = self.api.get(f"/api/v1/accounts/{seg(acc_id)}")
+                except Exception as e:  # noqa: BLE001 — gone, or offline
+                    log.debug("list waiting: account %s: %s", acc_id, e)
+            people[acc_id] = acc if isinstance(acc, dict) else {}
+        out = []
+        for list_id, acc_id, since in pending:
+            acc, r = people[acc_id], rel.get(acc_id)
+            state = "unknown" if r is None else "following" if r.get("following") else \
+                "requested" if r.get("requested") else "not_following"
+            out.append({"id": acc_id, "account": acc.get("acct") or "",
+                        "name": acc.get("display_name") or acc.get("username") or "",
+                        "url": acc.get("url") or "", "state": state,
+                        "list": next((x["title"] for x in self.lists if x["id"] == list_id),
+                                     list_id), "since": since})
+        return out
+
     def federation_status(self):
         """What the Debug → Federation status window shows (a future of plain data): my
         server (what it runs, how fast it answers, the stream, the polls), what keeps
@@ -2427,12 +2460,7 @@ class Core(SocialMixin):
             from . import health
             snap = health.REC.snapshot()
             stream = getattr(self, "_stream", None)
-            waiting = []
-            for list_id, acc_id, since in self._list_pending():
-                acc = self.store.account_of(acc_id) or {}
-                waiting.append({"list": next((x["title"] for x in self.lists
-                                              if x["id"] == list_id), list_id),
-                                "account": acc.get("acct") or acc_id, "since": since})
+            waiting = self._list_waiting()
             caps = getattr(self, "caps", None)
             return {
                 "server": (self.auth or {}).get("server", ""),

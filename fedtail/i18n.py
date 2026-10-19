@@ -601,6 +601,12 @@ _STRINGS = {
         "fed_problems_remote": "Что не получается у других серверов (без токена)",
         "fed_hosts": "Другие серверы: кто как отвечает", "fed_none": "Ничего — всё отвечает.",
         "fed_col_who": "Кто", "fed_col_list": "Список", "fed_col_since": "С каких пор",
+        "fed_col_why": "Почему ждёт",
+        "fed_wait_requested": "заявка на подписку ещё без ответа",
+        "fed_wait_not_following": "подписки нет: отклонили или отозвана — подпишись снова "
+                                  "или убери из списка",
+        "fed_wait_following": "подписан: добавится при следующем обновлении списков",
+        "fed_wait_unknown": "не удалось спросить сервер",
         "fed_col_n": "Раз", "fed_col_host": "Сервер", "fed_col_what": "Запрос",
         "fed_col_answer": "Ответ", "fed_col_last": "Последний", "fed_col_means": "Что значит",
         "fed_col_answers": "Ответов", "fed_col_failed": "Ошибок", "fed_col_median": "Обычно",
@@ -623,8 +629,9 @@ _STRINGS = {
         "fed_hint_down": "тот сервер или его прокси лежат",
         "fed_hint_down_mine": "моя нода или её прокси (Cloudflare?) не ответили",
         "fed_hint_server_error": "ошибка внутри того сервера",
-        "fed_note": "Только то, что видел этот запуск fedtail: в сеть ради этого окна не "
-                    "ходит. Адреса без параметров, токенов здесь нет.",
+        "fed_note": "Только то, что видел этот запуск fedtail; ради окна спрашивается лишь "
+                    "свой сервер — кто ждёт в списках. Адреса без параметров, токенов нет. "
+                    "Ник — ссылка на профиль.",
         "debug_census_done": "Записано в журнал: {rss} МБ, объектов Python — {objects}",
         "debug_trim": "Отдать свободную память системе",
         "debug_trim_done": "Отдано системе: {mb} МБ",
@@ -1260,6 +1267,12 @@ _STRINGS = {
         "fed_problems_remote": "What fails on other servers (no token)",
         "fed_hosts": "Other servers: how they answer", "fed_none": "Nothing — all answer.",
         "fed_col_who": "Who", "fed_col_list": "List", "fed_col_since": "Since",
+        "fed_col_why": "Why waiting",
+        "fed_wait_requested": "the follow request has no answer yet",
+        "fed_wait_not_following": "not followed: refused or withdrawn — follow again or "
+                                  "take them out of the list",
+        "fed_wait_following": "followed: goes in with the next lists refresh",
+        "fed_wait_unknown": "couldn't ask the server",
         "fed_col_n": "Times", "fed_col_host": "Server", "fed_col_what": "Request",
         "fed_col_answer": "Answer", "fed_col_last": "Last", "fed_col_means": "Means",
         "fed_col_answers": "Answers", "fed_col_failed": "Failed", "fed_col_median": "Usually",
@@ -1283,8 +1296,9 @@ _STRINGS = {
         "fed_hint_down": "that server or its proxy is down",
         "fed_hint_down_mine": "my server or its proxy (Cloudflare?) didn't answer",
         "fed_hint_server_error": "an error inside that server",
-        "fed_note": "Only what this run of fedtail saw: this window asks the network nothing. "
-                    "Addresses without their queries; no tokens here.",
+        "fed_note": "Only what this run of fedtail saw; for this window only my own server is "
+                    "asked — who waits for a list. Addresses without queries, no tokens. A "
+                    "name links to the profile.",
         "debug_census_done": "Written to the log: {rss} MB, Python objects: {objects}",
         "debug_trim": "Give free memory back to the system",
         "debug_trim_done": "Given back: {mb} MB",

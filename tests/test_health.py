@@ -95,10 +95,12 @@ class StatusTest(test_core.TmpDir):
         self.assertEqual(data["polls"]["count"], 1)
         self.assertIsNotNone(data["polls"]["last_ok"])
         self.assertIn("domain_blocks", data["unsupported"])
-        self.assertEqual([(wt["account"], wt["list"]) for wt in data["list_waiting"]],
-                         [("bob@social.example", "Ждут")])
+        self.assertEqual([(wt["account"], wt["list"], wt["state"])
+                          for wt in data["list_waiting"]],
+                         [("bob@social.example", "Ждут", "requested")])
         page = fedstatus.html(data)
-        for bit in ("Моя нода", "bob@social.example", "domain_blocks",
+        for bit in ("Моя нода", 'href="fedtail:account/B">@bob@social.example</a>',
+                    "заявка на подписку ещё без ответа", "domain_blocks",
                     "/api/v1/lists/:id/accounts", "в список берут только тех",
                     "far.example", "authorized fetch"):
             self.assertIn(bit, page, bit)
@@ -106,13 +108,36 @@ class StatusTest(test_core.TmpDir):
         self.assertIn("POST /api/v1/lists/:id/accounts -> 404", plain)
         self.assertNotIn("<", plain)
 
+    def test_someone_with_no_post_here_is_named_by_my_server(self):
+        i18n.setup("en")
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("Tits").result()
+        w.list_refuse.add("Q")
+        core.set_in_list(x["id"], "Q", True).result()
+        w.list_refuse.discard("Q")  # refused since: not followed, not requested
+        core.api.get = lambda path, params=None: (
+            {"id": "Q", "acct": "birdhater@far.example", "display_name": "Ворона",
+             "url": "https://far.example/@birdhater"} if path == "/api/v1/accounts/Q" else None)
+        [row] = core.federation_status().result()["list_waiting"]
+        self.assertEqual((row["account"], row["name"], row["state"]),
+                         ("birdhater@far.example", "Ворона", "not_following"))
+        page = fedstatus.html(core.federation_status().result())
+        self.assertIn('Ворона <a href="fedtail:account/Q">@birdhater@far.example</a>', page)
+        self.assertIn("refused or withdrawn", page)
+        self.assertIn("https://far.example/@birdhater",
+                      fedstatus.text(core.federation_status().result()))
+
     def test_hostile_server_text_is_escaped(self):
         i18n.setup("en")
         data = {"server": "https://x", "software": "", "version": "<img src=x>", "me": "",
                 "polls": {"count": 0, "last_s": None, "last_ok": None, "failures": 0,
                           "last_error": "", "interval_s": 90},
                 "stream": None, "stream_mode": "auto", "unsupported": [],
-                "list_waiting": [], "since": time.time(),
+                "list_waiting": [{"id": '"><script>x', "account": "<img src=y>",
+                                  "name": "<img src=z>", "url": "", "state": "unknown",
+                                  "list": "<i>l</i>", "since": 0}],
+                "since": time.time(),
                 "hosts": [{"host": "<b>h</b>", "kind": "remote", "answers": 1,
                            "failures": 1, "median_ms": None, "p95_ms": None}],
                 "problems": [{"host": "<b>h</b>", "method": "GET", "path": "/<script>",
@@ -122,6 +147,8 @@ class StatusTest(test_core.TmpDir):
         self.assertNotIn("<img", page)
         self.assertNotIn("<script", page)
         self.assertNotIn("<b>h</b>", page)
+        self.assertNotIn("<i>l</i>", page)
+        self.assertIn('href="fedtail:account/%22%3E%3Cscript%3Ex"', page)
 
 
 if __name__ == "__main__":
