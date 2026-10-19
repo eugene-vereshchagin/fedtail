@@ -4,11 +4,12 @@
 
 - The `point` theme closer to point.im: square avatars, the name bold in dark blue with
   @address · date under it, the post's #id under the text on the left with the number of
-  replies (`#a3f | 4`), the buttons on the right, a grey strip with the lane's title, a
-  dark "Create" button. New theme keys for any theme: `shape.avatar_shape` (circle,
+  replies (`#a3f | 4`), the buttons on the right, a hatched grey band behind the lane's
+  and the new post's title, solid and clearer lines between posts, a dark "Create"
+  button. New theme keys for any theme: `shape.avatar_shape` (circle,
   square, rounded), `shape.card_header = "stacked"`, `shape.short_id` (header, footer),
-  `shape.actions_align` (left, right), `colors.primary` / `on_primary`, `colors.header`,
-  `colors.name`.
+  `shape.actions_align` (left, right), `shape.rule` (dashed, solid), `shape.header_stripes`,
+  `colors.primary` / `on_primary`, `colors.header`, `colors.name`.
 
 - The opossum is gone from the icon and About: it comes from an official Telegram sticker
   pack, and its artist says the rights are Telegram's, not theirs to give. The drawn

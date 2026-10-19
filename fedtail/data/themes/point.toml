@@ -2,7 +2,8 @@
 # by thin lines, a square avatar, the name bold in dark blue with @address · date under
 # it, the post's #id under the text on the left (with the number of replies: #a3f | 4)
 # and quiet word buttons on the right, a grey strip with the lane's title, a dark
-# "Create" button. Open Sans.
+# "Create" button, a hatched band behind the titles (the lane's, the new post's). Open
+# Sans.
 name = "Point"
 inherit = "system"
 
@@ -20,8 +21,8 @@ selected_text = "#2c3e5c"
 view = "#ffffff"
 header_border = "#e6e8eb"
 card = "#ffffff"
-card_border = "#e6e8eb"
-card_border_unread = "#e6e8eb"
+card_border = "#c9ced5"
+card_border_unread = "#c9ced5"
 text = "#222222"
 muted = "#a3aab4"
 link = "#3c5a8a"
@@ -49,12 +50,14 @@ dot = "#3c5a8a"
 name = "#2c4a6e"
 primary = "#3c3c3c"
 on_primary = "#ffffff"
-header = "#f2f2f2"
+header = "#efefef"
 
 [shape]
 radius = 0
 button_radius = 3
 card_style = "rule"
+rule = "solid"
+header_stripes = true
 card_avatars = true
 avatar = 40
 avatar_shape = "square"

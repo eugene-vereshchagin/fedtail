@@ -10,6 +10,30 @@ from .. import themefile
 EMOJI_FONTS = ("Noto Color Emoji", "Twemoji", "JoyPixels")
 
 
+def stripe_tile(color, size=10, width=3):
+    """A small square of diagonal stripes (45°, seamless when repeated) in a shade a
+    little darker than color, as a PNG in the temp folder; its path, or "" if it can't
+    be written."""
+    import tempfile
+    from pathlib import Path
+
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QImage, QPainter, QPen
+    path = Path(tempfile.gettempdir()) / f"fedtail-stripes-{color.name()[1:]}-{size}.png"
+    if not path.exists():
+        img = QImage(size, size, QImage.Format.Format_ARGB32)
+        img.fill(color)
+        p = QPainter(img)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QPen(color.darker(108), width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+        for off in (-size, 0, size):  # the line and its neighbours, so the edges meet
+            p.drawLine(QPointF(off, size), QPointF(off + size, 0))
+        p.end()
+        if not img.save(str(path), "PNG"):
+            return ""
+    return path.as_posix()
+
+
 def _mix(a, b, t):
     a, b = QColor(a), QColor(b)
     return QColor(round(a.red() * (1 - t) + b.red() * t),
@@ -127,6 +151,14 @@ class Theme:
             return f"rgba({c.red()},{c.green()},{c.blue()},{c.alpha()})"
         return c.name()
 
+    def _stripes_css(self):
+        """shape.header_stripes: a hatched band behind titles (point.im's header), a
+        tile drawn in the theme's header colour and kept in the temp folder."""
+        if not self.shape.get("header_stripes"):
+            return ""
+        path = stripe_tile(self.c["header"])
+        return f"background-image: url({path}); background-repeat: repeat-xy;" if path else ""
+
     def stylesheet(self, base_pt, mono_family):
         k = self.css
         s = self.shape
@@ -134,9 +166,10 @@ class Theme:
         post_pt = round(base_pt * float(self.font["post_scale"]), 1)
         title_pt = round(base_pt * 1.55, 1)
         if s["card_style"] == "rule":
+            line = "solid" if s.get("rule") == "solid" else "dashed"
             card = (f"background: transparent; border: 0; border-radius: 0; "
-                    f"border-bottom: 1px dashed {k('card_border')};")
-            card_unread = "border-bottom: 1px dashed " + k("card_border")
+                    f"border-bottom: 1px {line} {k('card_border')};")
+            card_unread = f"border-bottom: 1px {line} " + k("card_border")
             card_focus = (f"background: {k('focus')}; border: 1px solid {k('focus_border')}; "
                           f"border-radius: {r}px;")
             card_found = f"border: 2px solid {k('accent')}; border-radius: {r}px;"
@@ -191,7 +224,9 @@ QTabWidget::pane {{ border: 0; }}
 QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px; border: 0;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
-QWidget#laneHeader {{ background: {k('header')}; border-bottom: 1px solid {k('header_border')}; }}
+QWidget#composeHead {{ background: {k('header') if s.get('header_stripes') else 'transparent'};
+    {self._stripes_css()} border-radius: {br}px; }}
+QWidget#laneHeader {{ background: {k('header')}; {self._stripes_css()} border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
 QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};

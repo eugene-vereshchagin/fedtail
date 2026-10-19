@@ -21,6 +21,7 @@ CHOICES = {
     ("shape", "avatar_shape"): {"circle", "square", "rounded"},
     ("shape", "short_id"): {"header", "footer"},
     ("shape", "actions_align"): {"left", "right"},
+    ("shape", "rule"): {"dashed", "solid"},
     ("shape", "unread_mark"): {"dot", "star"},
     ("shape", "posts_only"): {"segmented", "check"},
     ("icon", "style"): {"bubble", "terminal"},

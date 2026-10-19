@@ -77,6 +77,8 @@ class ThemeFileTest(unittest.TestCase):
         self.assertEqual(colors["primary"], "#3c3c3c")  # the dark "Create" button
         system = themefile.load("system")[0]["shape"]
         self.assertEqual((system["avatar_shape"], system["short_id"]), ("circle", "header"))
+        self.assertEqual((shape["rule"], shape["header_stripes"]), ("solid", True))
+        self.assertEqual((system["rule"], system["header_stripes"]), ("dashed", False))
 
     def test_install_copies(self):
         themefile.install_copies()
@@ -86,6 +88,27 @@ class ThemeFileTest(unittest.TestCase):
         self.assertEqual(themefile.available(),
                          ["bnw", "contrast", "debug", "juick", "juick-classic", "night", "nord",
                           "paper", "pink", "point", "solarized", "system", "terminal"])
+
+
+try:
+    import PySide6.QtGui  # noqa: F401
+except ImportError:
+    PySide6 = None
+
+
+@unittest.skipIf(PySide6 is None, "PySide6 is not installed")
+class StripesTest(unittest.TestCase):
+    def test_tile_is_drawn_once_in_the_header_colour(self):
+        from PySide6.QtGui import QColor, QGuiApplication, QImage
+        QGuiApplication.instance() or QGuiApplication([])
+        from fedtail.frontends.qt.theme import stripe_tile
+        path = stripe_tile(QColor("#efefef"))
+        img = QImage(path)
+        self.assertEqual((img.width(), img.height()), (10, 10))
+        colors = {img.pixelColor(x, y).name() for x in range(10) for y in range(10)}
+        self.assertIn("#efefef", colors)  # the band itself
+        self.assertGreater(len(colors), 1)  # and the stripes on it
+        self.assertEqual(stripe_tile(QColor("#efefef")), path)  # not drawn again
 
 
 if __name__ == "__main__":

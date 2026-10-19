@@ -157,7 +157,12 @@ class Compose(QDialog):
             self.setWindowFlags(Qt.WindowType.Widget)
             self.setObjectName("composePanel")
             self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-            top = QHBoxLayout()
+            # the title strip (shape.header_stripes: point.im's hatched band)
+            head_box = QWidget(self)
+            head_box.setObjectName("composeHead")
+            head_box.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            top = QHBoxLayout(head_box)
+            top.setContentsMargins(10, 6, 6, 6)
             # bigger / smaller (⤡) at the top left, as ✕ is at the top right
             self.size_btn = QPushButton("⤡")
             self.size_btn.setObjectName("tool")
@@ -174,7 +179,7 @@ class Compose(QDialog):
             close.setCursor(Qt.CursorShape.PointingHandCursor)
             close.clicked.connect(self.reject)
             top.addWidget(close)
-            lay.addLayout(top)
+            lay.addWidget(head_box)
             win.installEventFilter(self)
 
         if self.reply_to:
