@@ -183,6 +183,11 @@ _STRINGS = {
         "find_prev": "Предыдущее (Shift+Enter, Shift+F3)",
         "find_next": "Следующее (Enter, F3)", "find_close": "Закрыть (Esc)",
         "find_none": "не найдено в загруженном", "find_count": "{i} из {n}",
+        "find_everywhere": "Во всех лентах",
+        "find_everywhere_tip": "Искать во всём, что сохранено, во всех лентах сразу: ↓, "
+                               "Enter или Ctrl+F ещё раз — к следующему, хоть в другой ленте",
+        "find_none_anywhere": "нет ни в одной ленте",
+        "find_count_lane": "{i} из {n} · {lane}",
         "find_deeper": "Глубже", "find_searching": "ищу в архиве…",
         "find_deeper_tip": "Искать во всём, что сохранено для этой ленты, и подгрузить "
                            "ленту до найденного",
@@ -877,6 +882,11 @@ _STRINGS = {
         "find_prev": "Previous (Shift+Enter, Shift+F3)",
         "find_next": "Next (Enter, F3)", "find_close": "Close (Esc)",
         "find_none": "not found in what's loaded", "find_count": "{i} of {n}",
+        "find_everywhere": "In every lane",
+        "find_everywhere_tip": "Search everything stored, in every lane at once: ↓, Enter or "
+                               "Ctrl+F again goes to the next match, in another lane too",
+        "find_none_anywhere": "not in any lane",
+        "find_count_lane": "{i} of {n} · {lane}",
         "find_deeper": "Deeper", "find_searching": "searching the archive…",
         "find_deeper_tip": "Search everything stored for this lane and load the lane down to "
                            "the match",

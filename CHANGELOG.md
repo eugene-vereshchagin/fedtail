@@ -2,6 +2,11 @@
 
 ## 0.16.0 — in progress
 
+- Ctrl+F "In every lane": a tick in the find bar searches everything stored in every lane
+  at once; the counter says which lane the match is in, and the next match opens its lane
+  and loads it down to the post. Ctrl+F pressed again in the find bar goes to the next
+  match, as in a browser (Enter, ↓ and F3 still do too).
+
 - The `point` theme closer to point.im: square avatars, the name bold in dark blue with
   @address · date under it, the post's #id under the text on the left with the number of
   replies (`#a3f | 4`), the buttons on the right, a hatched grey band behind the lane's

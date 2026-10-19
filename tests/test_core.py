@@ -1013,6 +1013,24 @@ class CoreTest(TmpDir):
         self.assertIn("003", [st["id"] for _, st in core.lane_entries("home")])
         self.assertEqual(core.deep_find("home", "нету").result(), {"total": 0, "more": False})
 
+    def test_find_in_every_lane(self):
+        core, w = self.make(feed={"render_limit": 20, "page_size": 40})
+        for i in range(1, 41):
+            w.add(status(f"{i:03d}", BOB, minute=i % 60,
+                         text="иголка" if i in (3, 38) else "сено"), home=True)
+        core.connect().result()
+        core.poll_once()
+        hits = core.find_everywhere("ИГОЛКА").result()
+        home = [h for h in hits if h["lane"] == "home"]
+        # newest first, each with its place in the lane counted from the newest
+        self.assertEqual([(h["status_id"], h["index"]) for h in home],
+                         [("038", 3), ("003", 38)])
+        self.assertEqual(len({h["status_id"] for h in hits}), len(hits))  # once each
+        self.assertFalse(core.reveal_in_lane("home", 3))  # on screen already
+        self.assertTrue(core.reveal_in_lane("home", 38))
+        self.assertIn("003", [st["id"] for _, st in core.lane_entries("home")])
+        self.assertEqual(core.find_everywhere("нету").result(), [])
+
     def test_work_after_shutdown_is_turned_away_quietly(self):
         # a window timer or a badge count at exit: no RuntimeError, no closed database
         import threading

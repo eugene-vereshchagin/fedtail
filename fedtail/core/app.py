@@ -1252,6 +1252,52 @@ class Core(SocialMixin):
             return {"total": len(found), "more": bool(older)}
         return self.submit(job)
 
+    FIND_EVERYWHERE_MAX = 500
+
+    def find_everywhere(self, query):
+        """Ctrl+F with "in every lane": everything stored, lane by lane in the sidebar's
+        order, each lane's posts newest first. A post found in one lane isn't repeated
+        for the next. [{"lane", "item", "status_id", "index"}] — index: its place in the
+        lane counting from the newest, for reveal_in_lane."""
+        def job():
+            ctx = self._ctx()
+            repeats = self.cfg["feed"].get("repeat_boosts", False)
+            seen, out = set(), []
+            for lane in self.lanes:
+                if not lane.source or len(out) >= self.FIND_EVERYWHERE_MAX:
+                    continue
+                only_posts = self.posts_only(lane.name)
+                rows = self.store.iter_items(lane.source)
+                if not repeats:
+                    rows = self._without_repeats(lane.source, rows)
+                i = 0
+                for item_id, st in rows:
+                    if only_posts and real(st).get("in_reply_to_id"):
+                        continue
+                    if self.silenced(st) or not lanes.keeps(lane, st, ctx):
+                        continue
+                    i += 1
+                    rid = real(st)["id"]
+                    if rid in seen or not search.matches(query, search.haystack(st)):
+                        continue
+                    seen.add(rid)
+                    out.append({"lane": lane.name, "item": item_id, "status_id": st["id"],
+                                "index": i})
+                    if len(out) >= self.FIND_EVERYWHERE_MAX:
+                        break
+            return out
+        return self.submit(job)
+
+    def reveal_in_lane(self, name, index):
+        """The lane loaded down to its index-th post from the newest (a match found by
+        find_everywhere further back than the lane shows). True if it grew: the caller
+        redraws the lane (no event — it is about to anyway)."""
+        limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        if index <= limit:
+            return False
+        self._limits[name] = index + 10
+        return True
+
     def unread_ids(self, entries):
         ids = [st["id"] for _, st in entries]
         read = self.store.read_set(ids)

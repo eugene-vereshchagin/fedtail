@@ -1,9 +1,12 @@
-"""Ctrl+F: find in the lane, thread or profile that is open, like in a browser."""
+"""Ctrl+F: find in the lane, thread or profile that is open, like in a browser — or,
+with "in every lane" ticked, in everything stored for every lane: ↓ / Enter / Ctrl+F
+again goes to the next match, into another lane when that's where it is."""
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
+from ...core.model import real
 from ...core.search import haystack, matches
 from ...i18n import _
 
@@ -31,6 +34,12 @@ class FindBar(QWidget):
         self.deeper.clicked.connect(self.search_deeper)
         self.deeper.hide()
         lay.addWidget(self.deeper)
+        self.everywhere = QCheckBox(_("find_everywhere"))
+        self.everywhere.setObjectName("check")
+        self.everywhere.setToolTip(_("find_everywhere_tip"))
+        self.everywhere.setChecked(bool(win.core.choice("find.everywhere", False)))
+        self.everywhere.toggled.connect(self._everywhere_toggled)
+        lay.addWidget(self.everywhere)
         for text, tip, slot in (("↑", _("find_prev"), lambda: self.step(-1)),
                                 ("↓", _("find_next"), lambda: self.step(1)),
                                 ("✕", _("find_close"), self.close_bar)):
@@ -43,6 +52,9 @@ class FindBar(QWidget):
         self.view = None
         self.hits = []
         self.pos = -1
+        # "in every lane": [{"lane", "item", "status_id", "index"}] from the core
+        self.all_hits, self.all_pos, self._all_query, self._req = None, -1, None, 0
+        self._moving = False  # switching lanes ourselves: not "the reader went elsewhere"
         self._timer = QTimer(self, singleShot=True, interval=200)
         self._timer.timeout.connect(lambda: self.search(jump=True))
         self.edit.textChanged.connect(lambda _t: self._timer.start())
@@ -50,6 +62,9 @@ class FindBar(QWidget):
 
     # ---- public ---------------------------------------------------------------------
     def open(self):
+        if self.isVisible() and self.edit.hasFocus() and self.edit.text().strip():
+            self.step(1)  # Ctrl+F once more, as in a browser's bar: the next match
+            return
         self.show()
         self.edit.setFocus()
         self.edit.selectAll()
@@ -63,6 +78,15 @@ class FindBar(QWidget):
 
     def view_changed(self):
         """Another lane or tab came up: look there."""
+        if self._moving:
+            return
+        if self.isVisible() and self.everywhere.isChecked():
+            self._mark(None)  # the matches stay; the current one is marked if it's here
+            self.view = self.win.current_view()
+            hit = self._all_hit()
+            if hit and hit["lane"] == self._lane_name():
+                self._mark(self._key_in_view(hit))
+            return
         if self.isVisible():
             self._mark(None)
             self.search(jump=True)
@@ -70,6 +94,14 @@ class FindBar(QWidget):
     def step(self, delta):
         if not self.isVisible():
             self.open()
+            return
+        if self.everywhere.isChecked():
+            if self.all_hits is None or self._all_query != self.edit.text():
+                self._search_all(jump=True)
+            elif self.all_hits:
+                self.all_pos = (self.all_pos + delta) % len(self.all_hits) \
+                    if self.all_pos >= 0 else (0 if delta > 0 else len(self.all_hits) - 1)
+                self._go_all()
             return
         self.search(jump=False)  # the view may have changed since
         if not self.hits:
@@ -80,6 +112,9 @@ class FindBar(QWidget):
 
     # ---- searching -------------------------------------------------------------------
     def search(self, jump):
+        if self.everywhere.isChecked():
+            self._search_all(jump)
+            return
         view = self.win.current_view()
         if view is not self.view:
             self._mark(None)
@@ -104,6 +139,103 @@ class FindBar(QWidget):
             self.pos = -1
             self._mark(None)
         self._show_count()
+
+    # ---- in every lane ----------------------------------------------------------------
+    def _everywhere_toggled(self, on):
+        self.win.core.set_choice("find.everywhere", bool(on))
+        self._mark(None)
+        self.all_hits, self.all_pos, self._all_query = None, -1, None
+        self.hits, self.pos = [], -1
+        if self.isVisible():
+            self.search(jump=True)
+
+    def _all_hit(self):
+        if self.all_hits and 0 <= self.all_pos < len(self.all_hits):
+            return self.all_hits[self.all_pos]
+        return None
+
+    def _search_all(self, jump):
+        query = self.edit.text()
+        self._req += 1
+        req = self._req
+        if not query.strip():
+            self._mark(None)
+            self.all_hits, self.all_pos, self._all_query = None, -1, None
+            self._show_count()
+            return
+        if query == self._all_query and self.all_hits is not None:
+            self._show_count()  # the same words: the matches found stay
+            return
+        self.count.setText(_("find_searching"))
+
+        def got(res, query=query):
+            if req != self._req:  # typed on meanwhile
+                return
+            here = set(getattr(self.win, "lane_items", {}))
+            self.all_hits = [h for h in res if h["lane"] in here]
+            self._all_query, self.all_pos = query, -1
+            if not self.all_hits:
+                self._mark(None)
+                self._show_count()
+                return
+            # first the matches in the lane on screen, from where the reader is
+            lane = self._lane_name()
+            mine = [i for i, h in enumerate(self.all_hits) if h["lane"] == lane]
+            self.all_pos = mine[0] if mine else 0
+            if jump:
+                self._go_all()
+            else:
+                self._show_count()
+        self.win.bridge.call(self.win.core.find_everywhere(query), ok=got,
+                             fail=self.win.error)
+
+    def _key_in_view(self, hit):
+        """The card key of a match in the view on screen: the item itself, or (posts
+        gathered into conversations) whatever card shows that post."""
+        view = self.view
+        if view is None:
+            return None
+        if view.has(hit["item"]):
+            return hit["item"]
+        want = {hit["status_id"]}
+        for spec in view.model or [view.rows[k].spec for k in view.order]:
+            st = spec.status
+            if st and (st["id"] in want or real(st)["id"] in want):
+                return spec.key
+        return None
+
+    def _go_all(self):
+        hit = self._all_hit()
+        if hit is None:
+            return
+        name = hit["lane"]
+        self._mark(None)
+        if name != self._lane_name():
+            self._moving = True
+            try:
+                self.win.select_lane(name)
+            finally:
+                self._moving = False
+        w = self.win.lane_widgets.get(name)
+        if w is None:
+            return
+        self.view = w.view
+        if self.win.core.reveal_in_lane(name, hit["index"]) or \
+                self._key_in_view(hit) is None:
+            w.refresh(force=True)  # loaded down to the match, or drawn at all
+            self.view = w.view
+        key = self._key_in_view(hit)
+        if key is not None:
+            self.view.scroll_to(key, "top")
+            self._mark(key)
+            # a lane just opened may still settle on its own reading place: be firm
+            QTimer.singleShot(150, lambda h=hit, k=key: self._settle(h, k))
+        self._show_count()
+
+    def _settle(self, hit, key):
+        if self._all_hit() is hit and self.view is not None and self.view.has(key):
+            self.view.scroll_to(key, "top")
+            self._mark(key)
 
     def _lane_name(self):
         """The lane on screen, if the view is a lane (threads have no archive)."""
@@ -175,16 +307,29 @@ class FindBar(QWidget):
                 card.style().polish(card)
 
     def _show_count(self):
-        self.deeper.setVisible(bool(self._lane_name()) and bool(self.edit.text().strip()))
-        if not self.edit.text().strip():
+        everywhere = self.everywhere.isChecked()
+        self.deeper.setVisible(not everywhere and bool(self._lane_name()) and
+                               bool(self.edit.text().strip()))
+        if everywhere:
+            hit, n = self._all_hit(), len(self.all_hits or [])
+            if not self.edit.text().strip() or self.all_hits is None:
+                self.count.setText("")
+            elif not n:
+                self.count.setText(_("find_none_anywhere"))
+            else:
+                self.count.setText(_("find_count_lane", i=self.all_pos + 1, n=n,
+                                     lane=self.win.lane_title(hit["lane"]) if hit else ""))
+            over = bool(self.edit.text().strip()) and self.all_hits == []
+        elif not self.edit.text().strip():
             self.count.setText("")
         elif not self.hits:
             self.count.setText(_("find_none"))
         else:
             self.count.setText(_("find_count", i=self.pos + 1 if self.pos >= 0 else 0,
                                  n=len(self.hits)))
-        self.count.setProperty("over", "true" if self.edit.text().strip() and not self.hits
-                               else "false")
+        if not everywhere:
+            over = bool(self.edit.text().strip()) and not self.hits
+        self.count.setProperty("over", "true" if over else "false")
         self.count.style().unpolish(self.count)
         self.count.style().polish(self.count)
 
