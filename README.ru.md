@@ -1,5 +1,7 @@
 # fedtail
 
+<img src="fedtail/data/icons/fedtail.png" alt="fedtail: опоссум, обнявший свой хвост" width="128" align="right">
+
 [![CI](https://github.com/eugene-vereshchagin/fedtail/actions/workflows/ci.yml/badge.svg)](https://github.com/eugene-vereshchagin/fedtail/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/eugene-vereshchagin/fedtail)](https://github.com/eugene-vereshchagin/fedtail/releases)
 [![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
@@ -462,3 +464,6 @@ ruff check .
 ## Лицензия
 
 GPL-3.0-or-later, см. [LICENSE](LICENSE).
+
+Опоссум (`fedtail/data/icons/fedtail.png`) не под GPL: это стикер из официального
+стикерпака Telegram, используется так же, как стикеры Telegram расходятся везде.

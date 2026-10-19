@@ -21,7 +21,8 @@ def run(core, instance, argv):
     app.setDesktopFileName(desktop_id(core.paths.profile))
     app.setQuitOnLastWindowClosed(False)
     theme = themes.apply(app, core.cfg)
-    if core.cfg["ui"]["themed_icon"]:
+    notify.set_style(core.cfg["ui"].get("app_icon", "possum"))
+    if core.cfg["ui"]["themed_icon"] and core.cfg["ui"].get("app_icon") == "bubble":
         notify.use_theme_icon(theme, core.paths.cache_dir)
     app.setWindowIcon(QIcon(notify.icon_path()))
 

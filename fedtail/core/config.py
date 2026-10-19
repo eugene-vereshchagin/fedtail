@@ -49,6 +49,7 @@ DEFAULTS = {
         "image_disk_mb": 1000,
         "video_disk_mb": 10000,
         "unload_hidden_minutes": 10,
+        "app_icon": "possum",
         "themed_icon": True,
         "icon_count": ["replies", "mentions", "subs", "requests"],
         "icon_count_except": [],
@@ -204,6 +205,7 @@ DEFAULTS = {
 
 CHOICES = {
     ("ui", "layout"): {'single', 'columns'},
+    ("ui", "app_icon"): {'possum', 'bubble'},
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},
     ("feed", "prefetch"): {'previews', 'all', 'off'},

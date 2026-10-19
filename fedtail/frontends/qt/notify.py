@@ -22,11 +22,26 @@ log = logging.getLogger(__name__)
 
 
 _themed = None  # the icon drawn in the current theme's colours, set at start-up
+_style = "possum"  # ui.app_icon
+
+
+def mascot_path():
+    """The opossum holding its own tail: fedtail's picture (About, the menu entry)."""
+    return str(resources.files("fedtail").joinpath("data/icons/fedtail.png"))
+
+
+def set_style(style):
+    """ui.app_icon: "possum" (the picture) or "bubble" (drawn; in the theme's colours
+    with ui.themed_icon)."""
+    global _style, _themed
+    _style, _themed = style, None
 
 
 def icon_path():
-    """The icon for the window, tray and notifications: the theme's own, or the
-    standard one."""
+    """The icon for the window, tray and notifications: the opossum; or the bubble,
+    the theme's own or the standard one."""
+    if _style != "bubble":
+        return mascot_path()
     return _themed or str(resources.files("fedtail").joinpath("data/icons/fedtail.svg"))
 
 

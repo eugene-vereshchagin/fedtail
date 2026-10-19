@@ -474,7 +474,7 @@
 | Порванные связи и предупреждения модераторов | есть | `activity.server_notices` | уведомления `severed_relationships`, `moderation_warning` | Mastodon web |
 | Убрать уведомление, очистить все | есть | — | `notifications/:id/dismiss`, `notifications/clear` | у всех |
 | Объявления сервера | есть | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon |
-| Число непрочитанного на иконке | есть | `ui.icon_count`, `ui.icon_count_except`, `ui.themed_icon` | своё | Tokodon |
+| Число непрочитанного на иконке | есть | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | своё | Tokodon |
 | ЛС, прочитанные здесь, прочитаны и на сервере | есть | `"direct"` в `lanes.enabled` | `/api/v1/conversations/:id/read` | только в fedtail |
 
 <details><summary>Подробнее</summary>
@@ -491,7 +491,7 @@
 
 **Объявления сервера.** `"banner"` — полосой над лентой, пока не нажмёшь «Понятно» (сервер запоминает это и для других клиентов); реакции на объявления. `"off"` — не показывать.
 
-**Число непрочитанного на иконке.** В трее и на кнопке в панели задач (KDE: нужна запись от `--install-desktop` и `python3-pyside6.qtdbus`). Какие ленты считать — списком, как в уведомлениях: `"lists"` — все списки, `"list:Друзья"` — один, `"all"` — всё, плюс `icon_count_except` — что не считать. Иконка в цветах темы — `themed_icon`.
+**Число непрочитанного на иконке.** В трее и на кнопке в панели задач (KDE: нужна запись от `--install-desktop` и `python3-pyside6.qtdbus`). Какие ленты считать — списком, как в уведомлениях: `"lists"` — все списки, `"list:Друзья"` — один, `"all"` — всё, плюс `icon_count_except` — что не считать. Сама иконка — опоссум, обнявший свой хвост (`app_icon = "possum"`, он же в меню и в «О программе»), или нарисованный пузырь-тред (`"bubble"`), который `themed_icon` красит в цвета темы.
 
 **ЛС, прочитанные здесь, прочитаны и на сервере.** ---
 

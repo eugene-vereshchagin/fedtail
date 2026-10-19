@@ -1,4 +1,5 @@
-"""fedtail.svg → fedtail.ico (16…256 px) for the Windows build. Needs PySide6."""
+"""fedtail.png (or an .svg) → fedtail.ico (16…256 px) for the Windows build. Needs
+PySide6."""
 
 import sys
 from pathlib import Path
@@ -11,11 +12,15 @@ SIZES = (16, 24, 32, 48, 64, 128, 256)
 
 
 def png(renderer, side):
-    img = QImage(QSize(side, side), QImage.Format.Format_ARGB32)
-    img.fill(Qt.GlobalColor.transparent)
-    p = QPainter(img)
-    renderer.render(p)
-    p.end()
+    if isinstance(renderer, QImage):  # a picture: scaled down smoothly
+        img = renderer.scaled(side, side, Qt.AspectRatioMode.KeepAspectRatio,
+                              Qt.TransformationMode.SmoothTransformation)
+    else:
+        img = QImage(QSize(side, side), QImage.Format.Format_ARGB32)
+        img.fill(Qt.GlobalColor.transparent)
+        p = QPainter(img)
+        renderer.render(p)
+        p.end()
     buf = QByteArray()
     io = QBuffer(buf)
     io.open(QIODevice.OpenModeFlag.WriteOnly)
@@ -39,7 +44,7 @@ def ico(images):
 def main():
     src, out = Path(sys.argv[1]), Path(sys.argv[2])
     QGuiApplication.instance() or QGuiApplication([])
-    r = QSvgRenderer(str(src))
+    r = QSvgRenderer(str(src)) if src.suffix == ".svg" else QImage(str(src))
     out.write_bytes(ico([(s, png(r, s)) for s in SIZES]))
     print("icon", out, out.stat().st_size, "bytes")
 

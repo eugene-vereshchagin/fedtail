@@ -2,6 +2,9 @@
 
 ## 0.17.0 — in progress
 
+- The opossum holding its own tail is back: the app's icon (`ui.app_icon`) and the picture
+  in About. It is a sticker from an official Telegram sticker pack.
+
 ## 0.16.0 — 2026-10-19
 
 - Faster reading deep into big lanes: stored posts are paged from where the last page

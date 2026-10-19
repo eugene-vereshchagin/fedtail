@@ -1,5 +1,7 @@
 # fedtail
 
+<img src="fedtail/data/icons/fedtail.png" alt="fedtail: an opossum holding its own tail" width="128" align="right">
+
 [![CI](https://github.com/eugene-vereshchagin/fedtail/actions/workflows/ci.yml/badge.svg)](https://github.com/eugene-vereshchagin/fedtail/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/eugene-vereshchagin/fedtail)](https://github.com/eugene-vereshchagin/fedtail/releases)
 [![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
@@ -454,3 +456,6 @@ wrong. Commits carry a `Co-Authored-By: Claude` line.
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+The opossum (`fedtail/data/icons/fedtail.png`) is not under the GPL: it is a sticker from
+an official Telegram sticker pack, used as Telegram's own stickers are shared everywhere.
