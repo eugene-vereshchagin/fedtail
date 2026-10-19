@@ -2432,10 +2432,13 @@ class Core(SocialMixin):
             rel = {}
         people = {}
         for acc_id in ids:
-            acc = self.store.account_of(acc_id)
-            if acc is None:  # no post of theirs here: my server knows who it is
+            known = getattr(self, "_waiting_accounts", None)
+            if known is None:
+                known = self._waiting_accounts = {}
+            acc = self.store.account_of(acc_id) or known.get(acc_id)
+            if acc is None:  # no post of theirs here: my server knows who it is (once)
                 try:
-                    acc = self.api.get(f"/api/v1/accounts/{seg(acc_id)}")
+                    acc = known[acc_id] = self.api.get(f"/api/v1/accounts/{seg(acc_id)}")
                 except Exception as e:  # noqa: BLE001 — gone, or offline
                     log.debug("list waiting: account %s: %s", acc_id, e)
             people[acc_id] = acc if isinstance(acc, dict) else {}
