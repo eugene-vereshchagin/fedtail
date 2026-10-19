@@ -66,6 +66,15 @@ class TrendTest(unittest.TestCase):
         self.feed(t, clock, [100] * 6 + [400] + [100] * 6, step_s=600)
         self.assertLess(abs(t.rate("rss_mb")), 60)  # a spike, not +300 MB/h
 
+    def test_summary_rate_is_over_the_session(self):
+        # a night flat at 245, then a few minutes of scrolling up to 763: the line says
+        # +66/h over the session (and the steep last minutes apart), not "+1950/h"
+        clock = Clock()
+        t = leaks.Trend(samples=3, warmup_s=0, clock=clock)
+        self.feed(t, clock, [245] * 470 + [500, 763], step_s=60)
+        line = t.summary()["rss_mb"]
+        self.assertRegex(line, r"^245->763 \(\+6[56](\.\d)?/h; last 3 min ")
+
 
 class CensusTest(unittest.TestCase):
     def test_says_what_grew(self):

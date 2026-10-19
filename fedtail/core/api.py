@@ -432,7 +432,7 @@ class Api:
         for _ in range(pages):
             items, cursor = self.get_page(path, self._page(80, cursor))
             out += items
-            if not cursor or not items:
+            if not cursor or len(items) < 80:  # a page not full is the last one
                 break
         return out
 

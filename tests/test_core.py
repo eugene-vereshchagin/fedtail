@@ -637,6 +637,8 @@ class CoreTest(TmpDir):
         core, w = self.make()
         core.connect().result()
         self.assertIsNone(core.filtered().result())  # no such API: nothing to show
+        self.assertFalse(core.supports("notification_policy"))  # and not asked again
+        core.unsupported.discard("notification_policy")  # (a server upgraded since)
         w.policy = {"for_not_following": "accept", "for_new_accounts": "filter"}
         w.held = [{"id": "r1", "account": BOB, "notifications_count": "2"}]
         got = core.filtered().result()
@@ -1323,6 +1325,51 @@ class CoreTest(TmpDir):
         self.assertNotIn(x["id"], core.lists_of("N"))
         self.assertEqual(core.store.kv_get("list_pending"), [])
 
+    def test_list_pending_let_go_when_the_follow_is_refused(self):
+        # the logs: a 404 "not currently followed" every ten minutes all night
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("Ждут").result()
+        w.list_refuse.add("N")
+        self.assertEqual(core.set_in_list(x["id"], "N", True).result(), "pending")
+        tried = []
+        real_add = core.api.list_add
+        core.api.list_add = lambda *a: (tried.append(a), real_add(*a))[1]
+        core._refresh_lists()  # still a request: waits, the server isn't asked
+        self.assertEqual(tried, [])
+        self.assertEqual([p[1] for p in core._list_pending()], ["N"])
+        w.list_refuse.discard("N")  # refused: not followed, not requested
+        core._refresh_lists()
+        self.assertEqual(tried, [])
+        self.assertEqual(core.store.kv_get("list_pending"), [])
+
+    def test_a_slow_conversations_answer_doesnt_fail_the_poll(self):
+        import requests
+        core, w = self.make()
+        core.connect().result()
+        w.add(status("010", BOB, minute=10), home=True)
+
+        def slow(*_a, **_k):
+            raise requests.ReadTimeout("read timed out")
+        core.api.conversations = slow
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["010"])
+        self.assertFalse([e for e in self.events if e[0] == "error"])
+
+    def test_missing_endpoints_asked_once(self):
+        core, w = self.make()
+        core.connect().result()
+        asked = []
+
+        def none(*_a):
+            asked.append(1)
+            raise ApiError(404, "Not Found")
+        core.api.domain_blocks = none
+        core._refresh_silence()
+        core._refresh_silence()
+        self.assertEqual(len(asked), 1)
+        self.assertFalse(core.supports("domain_blocks"))
+
     def test_list_pending_given_up_after_a_month(self):
         core, w = self.make()
         core.connect().result()
@@ -1330,6 +1377,7 @@ class CoreTest(TmpDir):
         old = time.time() - (core.LIST_PENDING_DAYS + 1) * 86400
         core.store.kv_set("list_pending", [[x["id"], "N", old], [x["id"], "B", time.time()]])
         self.assertEqual([p[1] for p in core._list_pending()], ["B"])
+        w.following.add("B")  # B accepted the follow
         core._refresh_lists()  # the server takes B now; N was given up, never tried
         self.assertEqual(w.lists[x["id"]]["members"], {"B"})
         self.assertEqual(core.store.kv_get("list_pending"), [])
@@ -1405,7 +1453,8 @@ class CoreTest(TmpDir):
         core._refresh_lists()
         self.assertIn(x["id"], core.lists_of("N"))
         core.api.list_add = real_add
-        w.list_refuse.clear()
+        w.list_refuse.clear()  # the request accepted: followed now
+        w.following.add("N")
         core._refresh_lists()
         self.assertIn("N", w.lists[x["id"]]["members"])
         self.assertEqual(core.store.kv_get("list_pending"), [])

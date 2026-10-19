@@ -105,7 +105,8 @@ crash.log, stacks.log, config.toml и сводка о системе. Файла
   `qt.widgets`, `qt.rows` (построенных карточек), `qt.model` (постов в лентах),
   `qt.images_mb`, `threads`, `fds`, `gc.uncollectable`, `core.*` (очереди, кэши, строки
   базы, `db_mb`);
-* `trend over N h {…}` — следом: по каждому из этих чисел «при запуске → сейчас (±в час)»;
+* `trend over N h {…}` — следом: по каждому из этих чисел «при запуске → сейчас (±в час за
+  всю сессию; last M min ±в час за последние минуты)»;
 * `possible leak: X rose on each of the last 12 checks: A -> B (+N/h over H h; +M since
   start)` — число росло на каждой проверке последний час и не на крохи. Первые полчаса
   молчит (ленты наполняются), повторяет, когда рост с запуска удвоился;
@@ -188,7 +189,7 @@ hunt `debug.tracemalloc = true` too (or ≡ → Debugging → Memory tracing; sl
 the memory). Use it as by day, take a "Memory snapshot" after a minute, leave it; in the
 morning another snapshot, "What grows: stats and object census now", then `--bug-report`.
 In the log: `stats` lines; `trend over N h` (each watched number at start → now, ± per
-hour); `possible leak: X rose on each of the last 12 checks …` (not in the first half hour;
+hour over the session, and over the last minutes apart); `possible leak: X rose on each of the last 12 checks …` (not in the first half hour;
 again when the growth since start doubles); `census python` / `census qt_widgets` — which
 Python types and Qt widget classes grew since the last check and since the start;
 `session summary` / `session trend` at exit. `memory-<time>.txt` next to the logs: the lines

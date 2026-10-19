@@ -226,7 +226,7 @@ class PostRow(QWidget):
         """A right click on the post's text: the post's menu too (a long post is all
         text, and its own menu used to stand in the way), with Copy on top when
         something is selected."""
-        if self._menu is None:
+        if self.ensure_menu() is None:
             return
         menu = QMenu(lab)
         if lab.hasSelectedText():
@@ -727,7 +727,25 @@ class PostRow(QWidget):
             b.setText("⋯")
         else:
             b.setIcon(ic)
+        # the menu is filled when it opens, not with every card: two dozen actions and
+        # submenus per card were most of the widgets a lane held (and what it reads
+        # then — unread, subscribed, pinned — is how things are now)
         menu = QMenu(b)
+        menu.aboutToShow.connect(lambda m=menu, s=st: self._fill_more(m, self.spec.status or s))
+        b.setMenu(menu)
+        self._menu = menu  # also shown on a right click on the card (see __init__)
+        b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        return b
+
+    def ensure_menu(self):
+        """The post's menu with its actions in it (a right click on the text copies
+        them before the menu has ever opened)."""
+        if self._menu is not None and not self._menu.actions():
+            self._fill_more(self._menu, self.spec.status)
+        return self._menu
+
+    def _fill_more(self, menu, st):
+        menu.clear()
         url = st.get("url") or st.get("uri") or ""
         from .opener import open_link
         menu.addAction(_("open_browser"), lambda u=url: open_link(u))
@@ -828,10 +846,6 @@ class PostRow(QWidget):
             if self.ctx.cfg["post"].get("redraft", True):
                 menu.addAction(_("redraft"),
                                lambda i=st["id"]: self.ctx.on_link(f"fedtail:redraft/{i}"))
-        b.setMenu(menu)
-        self._menu = menu  # also shown on a right click on the card (see __init__)
-        b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        return b
 
     # ---- media --------------------------------------------------------------------
     # ---- polls --------------------------------------------------------------------

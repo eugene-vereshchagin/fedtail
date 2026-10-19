@@ -102,11 +102,21 @@ class Trend:
         return sum((t - mt) * (v - mv) for t, v in zip(ts, vs, strict=True)) / den if den else 0.0
 
     def summary(self):
-        """{metric: "start→now (±rate/h)"} for the trend line."""
+        """{metric: "start→now (±per hour over the session; ±per hour lately)"}. The
+        rate beside start→now is over the same span: it used to be the last dozen
+        minutes' (245→763 MB over 7.8 h read "+1950/h" — three minutes of scrolling)."""
         out = {}
+        hours = self.hours()
         for key, h in self.history.items():
-            if h:
-                out[key] = f"{_n(self.start[key])}->{_n(h[-1][1])} ({_signed(self.rate(key))}/h)"
+            if not h:
+                continue
+            first, now = self.start[key], h[-1][1]
+            overall = (now - first) / hours if hours > 0 else 0.0
+            text = f"{_n(first)}->{_n(now)} ({_signed(overall)}/h"
+            mins = (h[-1][0] - h[0][0]) / 60
+            if len(h) > 2 and hours * 60 > mins * 1.5:  # a window shorter than the session
+                text += f"; last {mins:.0f} min {_signed(self.rate(key))}/h"
+            out[key] = text + ")"
         return out
 
     def hours(self):

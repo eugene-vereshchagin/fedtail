@@ -2,6 +2,20 @@
 
 ## 0.16.0 — in progress
 
+- A slow answer about direct conversations no longer fails the whole poll ("Read timed
+  out" on screen, the lanes not fetched): it is only a nicety, skipped till next time.
+- Someone waiting to go into a list is tried only once they're followed; while the follow
+  request waits nothing is asked, and once it's refused or withdrawn they're let go. (A
+  refused follow was retried with a 404 every ten minutes, for a month.)
+- What the server hasn't got — blocked domains on GoToSocial, the notification policy —
+  is asked once a run, not on every silence refresh. Muted and blocked lists no longer
+  ask for an empty second page.
+- A post's ⋯ menu is built when it opens, not with every card: two dozen actions and
+  submenus per card were most of a lane's widgets and of its drawing time; what it shows
+  (unread, subscribed, pinned) is how things are at that moment.
+- The log's trend line gives the rate over the whole session beside start → now (and the
+  last minutes apart): 245 → 763 MB over a night read "+1950/h", the rate of three minutes.
+
 ## 0.15.0 — 2026-10-19
 
 - `feed.prefetch` is `"previews"` by default: new posts' previews, avatars and link

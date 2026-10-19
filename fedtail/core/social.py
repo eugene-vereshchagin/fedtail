@@ -14,6 +14,8 @@ it — and the future fails with NotSupported, a message for people.
 import logging
 from urllib.parse import urlparse
 
+import requests
+
 from . import counters
 from .api import ApiError
 from .model import real
@@ -124,8 +126,10 @@ class SocialMixin:
             return
         try:
             convs = self._api("conversations", self.api.conversations, 40)
-        except ApiError as e:
-            log.debug("conversations: %s", e)
+        except (ApiError, requests.RequestException) as e:
+            # a nicety: a slow answer here must not fail the whole poll (it did, with
+            # "Read timed out" shown to the user, the lanes not fetched at all)
+            log.info("conversations: %s", e.__class__.__name__)
             return
         for c in convs:
             last = c.get("last_status") or {}

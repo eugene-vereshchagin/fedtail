@@ -1151,6 +1151,7 @@ class QtSmokeTest(unittest.TestCase):
 
         def menu_texts(row):
             from PySide6.QtWidgets import QMenu
+            row.ensure_menu()  # filled when it opens
             return [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
 
         asked = []
@@ -1332,6 +1333,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.ctx.do_act_as = lambda s, t, a: done.append((t, a))
         done = []
         row = PostRow(CardSpec(key="098", status=st), self.win.ctx)
+        row.ensure_menu()
         texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
         self.assertIn("📄 Читать целиком (с сервера автора)", texts)
         self.assertIn("От другого аккаунта", texts)
@@ -1982,6 +1984,8 @@ class QtSmokeTest(unittest.TestCase):
         st = dict(st, favourites_count=1)
         self.core.store.put_statuses([st])
         row = PostRow(CardSpec(key="011", status=st, unread=True), self.win.ctx)
+        self.assertEqual(row._menu.actions(), [])  # nothing built until it opens
+        row.ensure_menu()
         texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
         from fedtail.i18n import _
         self.assertIn(_("who_favourited_by_n", n=1), texts)

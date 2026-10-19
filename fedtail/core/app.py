@@ -661,16 +661,23 @@ class Core(SocialMixin):
     def _refresh_silence(self):
         muted = {a["id"] for a in self.api.mutes()}
         blocked = {a["id"] for a in self.api.blocks()}
-        try:
-            domains = {d.lower() for d in self.api.domain_blocks()}
-        except Exception as e:  # noqa: BLE001 — a server without it
-            log.debug("domain blocks: %s", e)
-            domains = self.blocked_domains
+        domains = self._domain_blocks()
         self._silence_checked = time.monotonic()
         if (muted, blocked, domains) != (self.muted, self.blocked, self.blocked_domains):
             self.muted, self.blocked, self.blocked_domains = muted, blocked, domains
             self._silence_version += 1
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+
+    def _domain_blocks(self):
+        """My blocked servers; a server without the endpoint (GoToSocial for users) is
+        asked once a run, not on every silence refresh."""
+        if not self.supports("domain_blocks"):
+            return self.blocked_domains
+        try:
+            return {d.lower() for d in self._api("domain_blocks", self.api.domain_blocks)}
+        except Exception as e:  # noqa: BLE001 — not there, or down: what we had
+            log.debug("domain blocks: %s", e)
+            return self.blocked_domains
 
     def silenced(self, status):
         """Is this post hidden: its author or booster muted/blocked, or a server
@@ -723,8 +730,10 @@ class Core(SocialMixin):
         {"policy": {key: "accept"|"filter"|"drop"} or None, "requests": [...]};
         None when the server has no such thing (GoToSocial, older Mastodon)."""
         def job():
+            if not self.supports("notification_policy"):
+                return None
             try:
-                policy = self.api.notification_policy() or {}
+                policy = self._api("notification_policy", self.api.notification_policy) or {}
                 requests = self.api.notification_requests()
             except ApiError as e:
                 log.debug("filtered notifications: %s", e)
@@ -789,10 +798,7 @@ class Core(SocialMixin):
             muted, blocked = self.api.mutes(), self.api.blocks()
             self.muted = {a["id"] for a in muted}
             self.blocked = {a["id"] for a in blocked}
-            try:
-                self.blocked_domains = {d.lower() for d in self.api.domain_blocks()}
-            except Exception as e:  # noqa: BLE001
-                log.debug("domain blocks: %s", e)
+            self.blocked_domains = self._domain_blocks()
             return {"muted": muted, "blocked": blocked,
                     "domains": sorted(self.blocked_domains)}
         return self.submit(job)
@@ -1041,8 +1047,25 @@ class Core(SocialMixin):
         pending = self._list_pending()
         if not pending:
             return
+        # who is followed now: only they can go in; a request still waiting stays
+        # waiting without asking the server; one refused or withdrawn is let go (it was
+        # tried, and refused with a 404, every ten minutes for a month)
+        try:
+            rel = {r["id"]: r for r in self.api.relationships(
+                list(dict.fromkeys(p[1] for p in pending)))}
+        except Exception as e:  # noqa: BLE001 — can't tell now: try them all
+            log.debug("list pending: relationships: %s", e)
+            rel = None
         left = []
         for list_id, acc_id, since in pending:
+            r = rel.get(acc_id) if rel is not None else None
+            if r is not None and not r.get("following"):
+                if r.get("requested"):
+                    left.append([list_id, acc_id, since])
+                else:
+                    log.info("list %s: %s is not followed (the request refused or "
+                             "withdrawn): not waiting to add them any more", list_id, acc_id)
+                continue
             try:
                 self.api.list_add(list_id, acc_id)
                 log.info("list %s: %s added after all", list_id, acc_id)
