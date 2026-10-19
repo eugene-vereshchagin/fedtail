@@ -422,6 +422,24 @@ class QtSmokeTest(unittest.TestCase):
         self.win.fill_list_menu(menu, {"id": "B"})
         ticks = [a for a in menu.actions() if a.isCheckable()]
         self.assertEqual([(a.text(), a.isChecked()) for a in ticks], [("Друзья", True)])
+        # someone not followed: the ticks are dead, a "click" sends nothing
+        import time as _time
+
+        from fedtail.frontends.qt.window import list_open
+        self.assertFalse(list_open(None, set()))  # not known yet: dead too
+        self.assertTrue(list_open(None, {"l1"}))  # already inside: may be taken out
+        self.core._relations["STRANGER"] = (_time.monotonic(), {"following": False})
+        menu = QMenu()
+        self.win.fill_list_menu(menu, {"id": "STRANGER"})
+        ticks = [a for a in menu.actions() if a.isCheckable()]
+        self.assertTrue(ticks and not any(a.isEnabled() for a in ticks))
+        sent = []
+        real_set = self.core.set_in_list
+        self.core.set_in_list = lambda *a: sent.append(a) or real_set(*a)
+        ticks[0].setChecked(True)
+        self.pump(0.1)
+        self.core.set_in_list = real_set
+        self.assertEqual(sent, [])
         self.bridge_wait(self.core.delete_list(name[len("list:"):]))
         self.pump(until=lambda: name not in self.win.lane_items)
         self.win.select_lane("home")
@@ -2132,6 +2150,24 @@ if __name__ == "__main__":
         self.assertFalse(bar.isVisible())
         self.core.cfg["ui"]["announcements"] = "off"
         self.assertEqual(self.bridge_wait(self.core.announcements()), [])
+
+    def test_video_decoding_choice(self):
+        import os
+
+        from fedtail.frontends.qt import player
+        old = os.environ.pop(player.HW_ENV, None)
+        try:
+            player.choose_decoding("hardware")
+            self.assertNotIn(player.HW_ENV, os.environ)
+            player.choose_decoding("software")
+            self.assertEqual(os.environ[player.HW_ENV], "none")
+            os.environ[player.HW_ENV] = "vaapi"  # set by hand: left alone
+            player.choose_decoding("software")
+            self.assertEqual(os.environ[player.HW_ENV], "vaapi")
+        finally:
+            os.environ.pop(player.HW_ENV, None)
+            if old is not None:
+                os.environ[player.HW_ENV] = old
 
     def test_filtered_notifications_dialog(self):
         self.world.policy = {"for_not_following": "accept", "for_not_followers": "accept",

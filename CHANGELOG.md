@@ -11,9 +11,17 @@
   `shape.actions_align` (left, right), `shape.rule` (solid, dashed), `shape.header_stripes`,
   `shape.header_bar` (a band above the title strip, point.im's dark top bar),
   `colors.primary` / `on_primary`, `colors.header`, `colors.header_bar`, `colors.name`.
-- The lane's title strip takes a touch of the theme's accent in every theme (`colors.header`
-  left at "auto"); bnw and contrast stay plain white. Lines between posts in "rule" style
-  are solid by default (`terminal` keeps its dashes).
+- The lane's and the new post's title strip is tinted with the theme's accent in every
+  theme (`colors.header` left at "auto"), with a 3 px band of the accent above it
+  (`shape.header_bar`, 0 turns it off); bnw and contrast keep a white strip under the band.
+  Lines between posts in "rule" style are solid by default (`terminal` keeps its dashes).
+- "Add to list" for someone you don't follow: the lists are dead now, not just greyed —
+  a click on them does nothing at all (it used to send a request the server refused and
+  stall the window). While fedtail is still asking the server whether you follow them,
+  the lists are dead too, with "Checking…" above them, instead of looking clickable.
+- Video is decoded by the processor by default (`ui.video_decode = "software"`): on some
+  cards Qt's hardware decoding fails ("CUDA_ERROR_INVALID_VALUE", "more than 32 decode
+  surfaces") and the video stutters or stalls. `"hardware"` brings the old way back.
 
 - The opossum is gone from the icon and About: it comes from an official Telegram sticker
   pack, and its artist says the rights are Telegram's, not theirs to give. The drawn

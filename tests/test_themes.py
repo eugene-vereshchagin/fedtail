@@ -81,6 +81,7 @@ class ThemeFileTest(unittest.TestCase):
         self.assertEqual((system["rule"], system["header_stripes"]), ("solid", False))
         self.assertEqual((shape["header_bar"], colors["header_bar"]), (8, "#474747"))
         self.assertEqual(themefile.load("terminal")[0]["shape"]["rule"], "dashed")
+        self.assertEqual(system["header_bar"], 3)  # every theme: a band of its accent
 
     def test_install_copies(self):
         themefile.install_copies()

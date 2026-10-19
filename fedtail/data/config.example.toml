@@ -192,6 +192,13 @@ image_viewer = "internal"
 # python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets); без него — браузер.
 video_player = "internal"
 
+# Чем декодировать видео: "software" — процессором (видео в федиверсе маленькие, ему
+# легко), "hardware" — видеокартой, как решит Qt. На некоторых картах (NVIDIA:
+# "CUDA_ERROR_INVALID_VALUE", "more than 32 decode surfaces" в логе) аппаратное
+# декодирование не заводится, и видео дёргается, встаёт или остаётся чёрным.
+# Переменная QT_FFMPEG_DECODING_HW_DEVICE_TYPES, заданная руками, важнее этого флага.
+video_decode = "software"
+
 # Гифки Мастодона (короткие беззвучные видео): "play" — крутятся прямо в карточке, пока
 # она на экране (не больше трёх разом), "click" — стоп-кадр, клик — поверх окна.
 gifv = "play"

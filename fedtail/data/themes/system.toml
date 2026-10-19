@@ -58,8 +58,8 @@ button_border = "auto"
 dot = "auto"             # unread dot
 primary = "auto"         # Send / Create and other main buttons ("auto": = accent)
 on_primary = "auto"      # their text ("auto": = on_accent)
-header = "auto"          # behind the lane's title strip ("auto": the view, a touch of accent)
-header_bar = "auto"      # the band above it (shape.header_bar); "auto": a quiet grey
+header = "auto"          # behind the lane's title strip ("auto": the view tinted with accent)
+header_bar = "auto"      # the band above it (shape.header_bar); "auto": accent
 name = "auto"            # people's names on posts ("auto": = text)
 
 [shape]
@@ -69,7 +69,7 @@ card_style = "card"      # "card" (framed boxes) or "rule" (posts divided by lin
 rule = "solid"           # the line between posts in "rule": "solid" or "dashed"
 header_stripes = false   # a hatched band behind the lane's and the post window's title
                          # (point.im), in colors.header
-header_bar = 0           # px of a band in colors.header_bar above that title (point.im: 8)
+header_bar = 3           # px of a band in colors.header_bar above that title (0: none; point.im: 8)
 card_avatars = true
 avatar = 40
 avatar_shape = "circle"  # "circle", "square" (point.im) or "rounded"

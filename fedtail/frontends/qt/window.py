@@ -96,6 +96,14 @@ def _tags_key(g):
     from ...core import taggroups
     return taggroups.key(g)
 
+
+def list_open(rel, inside):
+    """May the "add to list" ticks be used: someone I follow (or asked to), or already
+    in a list (taking out is always fine). Not yet known (None): no."""
+    if inside:
+        return True
+    return bool(rel) and bool(rel.get("following") or rel.get("requested"))
+
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
 
@@ -234,6 +242,7 @@ class MainWindow(QMainWindow):
         self.ctx.supports = core.supports
         self.ctx.play_video = self.play_video
         from . import player
+        player.choose_decoding(self.cfg["ui"].get("video_decode", "software"))
         if self.cfg["ui"].get("video_player", "internal") == "internal" and player.available():
             if self.cfg["ui"].get("gifv", "play") == "play":
                 self.ctx.loop_gifv = player.InlineLoop
@@ -1103,8 +1112,9 @@ class MainWindow(QMainWindow):
 
     def fill_list_menu(self, menu, account):
         """"Add to list" submenu of a post: every list, ticked where the author is. A
-        server takes only people I follow into lists: for someone else the lists are
-        greyed out under "follow first", with Follow right there."""
+        server takes only people I follow into lists: for someone else the lists stay
+        dead (not clickable at all) under "follow first", with Follow right there. Until
+        the server says which it is, they are dead too — never "as if followed"."""
         menu.clear()
         inside = self.core.lists_of(account["id"])
         note = menu.addAction(_("list_follow_first"))
@@ -1118,12 +1128,8 @@ class MainWindow(QMainWindow):
             list_actions.append(a)
             a.setCheckable(True)
             a.setChecked(x["id"] in inside)
-            a.toggled.connect(lambda on, lid=x["id"], acc=account["id"]: self.bridge.call(
-                self.core.set_in_list(lid, acc, on),
-                ok=lambda r, on=on: self.statusBar().showMessage(
-                    _("list_pending") if r == "pending" else
-                    _("list_added" if on else "list_removed"), 6000),
-                fail=self.error))
+            a.toggled.connect(lambda on, act=a, lid=x["id"], acc=account["id"]:
+                              self._list_toggled(act, lid, acc, on))
         if self.core.lists:
             menu.addSeparator()
         list_actions.append(menu.addAction(_("list_new"),
@@ -1131,21 +1137,34 @@ class MainWindow(QMainWindow):
 
         def apply(rel):
             try:
-                ok = bool(rel) and bool(rel.get("following") or rel.get("requested")) \
-                    or bool(inside)  # already in one: taking out is always fine
+                ok = list_open(rel, inside)
                 for a in list_actions:
                     a.setEnabled(ok)
-                for a in (note, follow, head):
+                note.setText(_("list_follow_first") if rel is not None else
+                             _("list_checking"))
+                for a in (note, head):
                     a.setVisible(not ok)
+                follow.setVisible(not ok and rel is not None)
             except RuntimeError:  # the menu closed meanwhile
                 pass
         rel = self.core.relation_known(account["id"])
-        if rel is not None:
-            apply(rel)
-        else:
-            apply({"following": True})  # as if, until the server says (no flicker)
+        apply(rel)
+        if rel is None:
             self.bridge.call(self.core.relationship(account["id"]), ok=apply,
-                             fail=lambda _e: None)
+                             fail=lambda _e: apply({}))
+
+    def _list_toggled(self, action, list_id, acc_id, on):
+        try:
+            if not action.isEnabled():  # a dead tick: nothing goes to the server
+                return
+        except RuntimeError:
+            return
+        self.bridge.call(
+            self.core.set_in_list(list_id, acc_id, on),
+            ok=lambda r: self.statusBar().showMessage(
+                _("list_pending") if r == "pending" else
+                _("list_added" if on else "list_removed"), 6000),
+            fail=self.error)
 
     def _follow_from_menu(self, account):
         self.bridge.call(self.core.follow(account["id"]), ok=lambda rel: self.statusBar(

@@ -86,10 +86,10 @@ def _auto_colors(pal):
 # colours that, left at "auto", copy another one of the same theme (not the desktop):
 # a theme with its own text colour gets it in the sidebar too
 FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
-           "primary": "accent", "on_primary": "on_accent", "name": "text"}
+           "primary": "accent", "on_primary": "on_accent", "name": "text",
+           "header_bar": "accent"}  # the band over a title: the theme's own colour
 # "auto" mixed from two colours of the same theme: (from, towards, how far)
-TINTS = {"header": ("view", "accent", 0.08),       # the title strip: a touch of the theme
-         "header_bar": ("header_border", "text", 0.45)}
+TINTS = {"header": ("view", "accent", 0.16)}  # the title strip, tinted with the theme
 
 
 class Theme:
@@ -237,7 +237,7 @@ QTabWidget::pane {{ border: 0; }}
 QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px; border: 0;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
-QWidget#composeHead {{ background: {k('header') if s.get('header_stripes') else 'transparent'};
+QWidget#composeHead {{ background: {k('header')};
     {self._stripes_css()} {self._bar_css()} border-radius: {br}px; }}
 QWidget#laneHeader {{ background: {k('header')}; {self._stripes_css()} {self._bar_css()} border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}

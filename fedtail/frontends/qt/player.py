@@ -13,6 +13,7 @@ python3-pyside6.qtmultimediawidgets): without it — or with ui.video_player =
 
 import functools
 import logging
+import os
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QPainter, QPixmap
@@ -34,6 +35,21 @@ INFINITE = -1  # QMediaPlayer.Loops.Infinite as the int setLoops takes
 MAX_LOOPS = 3      # gifvs playing at once (the ones on screen; the rest show a still)
 VISIBLE_CHECK_MS = 600
 SEEK_MS = 5000
+
+
+HW_ENV = "QT_FFMPEG_DECODING_HW_DEVICE_TYPES"
+
+
+def choose_decoding(how):
+    """ui.video_decode, before the first player is made. "software": Qt's ffmpeg gets
+    no hardware decoders at all — on some cards (NVIDIA: "cuvidCreateDecoder …
+    CUDA_ERROR_INVALID_VALUE", "more than 32 decode surfaces") it tries one, fails and
+    the video stutters, stalls or stays black; fediverse videos are small, the
+    processor plays them easily. "hardware": as Qt likes. A variable already set
+    in the environment by hand wins over both."""
+    if how == "software" and HW_ENV not in os.environ:
+        os.environ[HW_ENV] = "none"  # a name no decoder has: the list ends up empty
+        log.info("video: software decoding (ui.video_decode)")
 
 
 @functools.cache
