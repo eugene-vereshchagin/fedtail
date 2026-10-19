@@ -2,6 +2,9 @@
 
 ## 0.16.0 — in progress
 
+- A click on the time slider of a video or an audio jumps right there; it used to move
+  only one step towards the click, and only dragging the handle really seeked.
+
 - Sending no longer gives up after 30 seconds on a slow server: it waits `post.send_timeout`
   (90 s). When the answer still doesn't come, fedtail looks among your latest posts first —
   the post was usually made, only the answer lost — and treats it as sent if it's there.

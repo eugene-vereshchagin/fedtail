@@ -15,12 +15,14 @@ import functools
 import logging
 import os
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QSlider,
+    QStyle,
+    QStyleOptionSlider,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -35,6 +37,37 @@ INFINITE = -1  # QMediaPlayer.Loops.Infinite as the int setLoops takes
 MAX_LOOPS = 3      # gifvs playing at once (the ones on screen; the rest show a still)
 VISIBLE_CHECK_MS = 600
 SEEK_MS = 5000
+
+
+class SeekSlider(QSlider):
+    """A time slider: a click anywhere goes there at once (a plain QSlider only steps a
+    page towards the click), and the handle can be dragged on from there. seek(ms)."""
+    seek = Signal(int)
+
+    def __init__(self):
+        super().__init__(Qt.Orientation.Horizontal)
+        self.sliderMoved.connect(self.seek.emit)
+
+    def value_at(self, x):
+        opt = QStyleOptionSlider()
+        self.initStyleOption(opt)
+        groove = self.style().subControlRect(QStyle.ComplexControl.CC_Slider, opt,
+                                             QStyle.SubControl.SC_SliderGroove, self)
+        handle = self.style().subControlRect(QStyle.ComplexControl.CC_Slider, opt,
+                                             QStyle.SubControl.SC_SliderHandle, self)
+        span = max(1, groove.width() - handle.width())
+        pos = int(x) - groove.x() - handle.width() // 2
+        return QStyle.sliderValueFromPosition(self.minimum(), self.maximum(),
+                                              max(0, min(pos, span)), span,
+                                              opt.upsideDown)
+
+    def mousePressEvent(self, e):  # noqa: N802
+        if e.button() == Qt.MouseButton.LeftButton and self.isEnabled() and \
+                self.maximum() > self.minimum():
+            v = self.value_at(e.position().x())
+            self.setValue(v)
+            self.seek.emit(v)
+        super().mousePressEvent(e)  # the handle is under the mouse now: drag on
 
 
 HW_ENV = "QT_FFMPEG_DECODING_HW_DEVICE_TYPES"
@@ -142,8 +175,8 @@ class VideoOverlay(QWidget):
         bar = QHBoxLayout()
         self.btn = self._button("⏸", _("player_pause_tip"), self.toggle)
         bar.addWidget(self.btn)
-        self.slider = QSlider(Qt.Orientation.Horizontal)
-        self.slider.sliderMoved.connect(lambda v: self.player.setPosition(v))
+        self.slider = SeekSlider()
+        self.slider.seek.connect(lambda v: self.player.setPosition(v))
         bar.addWidget(self.slider, 1)
         self.time = QLabel("0:00")
         bar.addWidget(self.time)
@@ -423,7 +456,7 @@ class AudioBar(QWidget):
                                                           if m.get("description") else "")))
         self.btn.clicked.connect(self.toggle)
         h.addWidget(self.btn)
-        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider = SeekSlider()
         self.slider.setEnabled(False)
         h.addWidget(self.slider, 1)
         self.time = QLabel("🎵 " + _("media_audio"))
@@ -441,7 +474,7 @@ class AudioBar(QWidget):
             self.player.errorOccurred.connect(
                 lambda _e, t="": self.time.setText(_("player_failed",
                                                      err=t or self.player.errorString())))
-            self.slider.sliderMoved.connect(lambda v: self.player.setPosition(v))
+            self.slider.seek.connect(lambda v: self.player.setPosition(v))
             self.slider.setEnabled(True)
             self.player.setSource(source(self.m))
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:

@@ -2177,6 +2177,23 @@ if __name__ == "__main__":
         self.core.cfg["ui"]["announcements"] = "off"
         self.assertEqual(self.bridge_wait(self.core.announcements()), [])
 
+    def test_time_slider_goes_where_clicked(self):
+        from PySide6.QtCore import QPoint, Qt
+        from PySide6.QtTest import QTest
+
+        from fedtail.frontends.qt.player import SeekSlider
+        sl = SeekSlider()
+        sl.resize(400, 24)
+        sl.setRange(0, 100000)
+        sl.show()
+        got = []
+        sl.seek.connect(got.append)
+        QTest.mouseClick(sl, Qt.MouseButton.LeftButton, pos=QPoint(380, 12))
+        self.assertGreater(got[0], 85000)  # near the end, not one page step on
+        QTest.mouseClick(sl, Qt.MouseButton.LeftButton, pos=QPoint(20, 12))
+        self.assertLess(got[-1], 15000)
+        sl.close()
+
     def test_video_decoding_choice(self):
         import os
 
