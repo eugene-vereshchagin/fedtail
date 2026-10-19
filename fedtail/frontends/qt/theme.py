@@ -61,7 +61,9 @@ def _auto_colors(pal):
 
 # colours that, left at "auto", copy another one of the same theme (not the desktop):
 # a theme with its own text colour gets it in the sidebar too
-FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window"}
+FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
+           "primary": "accent", "on_primary": "on_accent", "header": "view",
+           "name": "text"}
 
 
 class Theme:
@@ -167,9 +169,9 @@ QToolButton#menu:checked {{ background: {k('selected')}; color: {k('accent')}; }
 QToolButton#menu::menu-indicator {{ image: none; width: 0; }}
 QSplitter#sideSplit::handle {{ background: transparent; }}
 QSplitter#sideSplit::handle:hover {{ background: {k('selected')}; }}
-QPushButton#compose {{ background: {k('accent')}; color: {k('on_accent')}; border: 0;
+QPushButton#compose {{ background: {k('primary')}; color: {k('on_primary')}; border: 0;
     border-radius: {br}px; padding: 11px; font-weight: 600; font-size: {round(base_pt * 1.05, 1)}pt; }}
-QPushButton#compose:hover {{ background: {self.c['accent'].lighter(110).name()}; }}
+QPushButton#compose:hover {{ background: {self.c['primary'].lighter(110).name()}; }}
 QListWidget#lanes {{ background: transparent; border: 0; outline: 0; }}
 QListWidget#lanes::item {{ border-radius: {br}px; margin: 1px 0; }}
 QListWidget#lanes::item:selected {{ background: {k('selected')}; }}
@@ -189,7 +191,7 @@ QTabWidget::pane {{ border: 0; }}
 QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px; border: 0;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
-QWidget#laneHeader {{ background: {k('view')}; border-bottom: 1px solid {k('header_border')}; }}
+QWidget#laneHeader {{ background: {k('header')}; border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
 QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};
@@ -219,7 +221,7 @@ QDialog {{ background: {k('panel')}; }}
 QLineEdit, QPlainTextEdit, QComboBox, QListWidget#mediaList {{ background: {k('card')};
     color: {k('text')}; border: 1px solid {k('card_border')}; border-radius: {br}px; padding: 6px 8px; }}
 QLineEdit:focus, QPlainTextEdit:focus {{ border-color: {k('accent')}; }}
-QPushButton#primary {{ background: {k('accent')}; color: {k('on_accent')}; border: 0;
+QPushButton#primary {{ background: {k('primary')}; color: {k('on_primary')}; border: 0;
     border-radius: {br}px; padding: 8px 18px; font-weight: 600; }}
 QPushButton#primary:disabled {{ background: {k('quiet')}; color: {k('muted')}; }}
 QLabel#counter {{ color: {k('muted')}; }}

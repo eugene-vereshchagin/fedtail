@@ -48,6 +48,7 @@ from ...core.model import real, snippet
 from ...i18n import _
 from .. import themefile
 from . import badge
+from . import card as card_module
 from . import feed as feed_module
 from .announce import AnnounceBar
 from .card import _round
@@ -75,6 +76,7 @@ from .social import AccountsWidget, QuotesWidget, ServerInfoDialog, TrendsWidget
 from .viewer import ImageOverlay
 
 log = logging.getLogger(__name__)
+_AVATAR_CORNERS = {"circle": -1, "square": 0, "rounded": 6}  # shape.avatar_shape → px
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
 LANE_ICON = {"tags": "tag", "home": "system-users", "replies": "mail-replied",
@@ -376,6 +378,7 @@ class MainWindow(QMainWindow):
     def _build_sidebar(self):
         t = self.theme
         feed_module.ICONS = bool(t.shape["icons"])
+        card_module.AVATAR_RADIUS = _AVATAR_CORNERS.get(t.shape.get("avatar_shape"), -1)
         side = QWidget()
         side.setObjectName("sidebar")
         side.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -610,6 +613,7 @@ class MainWindow(QMainWindow):
         self.theme = theme
         self.ctx.theme = theme
         feed_module.ICONS = bool(theme.shape["icons"])
+        card_module.AVATAR_RADIUS = _AVATAR_CORNERS.get(theme.shape.get("avatar_shape"), -1)
         for w in self.findChildren(QWidget):
             if getattr(w, "theme", None) is old:
                 w.theme = theme

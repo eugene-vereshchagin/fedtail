@@ -465,16 +465,26 @@ class PostRow(QWidget):
                                          self.theme.css("link")), "ctx"))
 
     # ---- header -------------------------------------------------------------------
-    def _short_id(self, h):
+    def _short_id(self, h, replies=None, where="header"):
+        """#a3f: in the header (where="header") or under the post with the number of
+        replies (shape.short_id = "footer", point.im). Called from both places: each
+        puts it only where the theme wants it."""
+        place = where
+        if (self.theme.shape.get("short_id") or "header") != place:
+            return
         sid = self.spec.extra.get("short_id")
         if sid:
-            lab = QLabel(link("alias", sid, "#" + sid, self.theme.css("muted")))
+            text = link("alias", sid, "#" + sid, self.theme.css("muted"))
+            if place == "footer" and replies:
+                text += f' <span style="color:{self.theme.css("muted")};">| {int(replies)}</span>'
+            lab = QLabel(text)
             lab.setObjectName("shortId")
             lab.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
             lab.setCursor(Qt.CursorShape.PointingHandCursor)
             lab.setToolTip(_("short_id_tip"))
             lab.linkActivated.connect(self.ctx.on_link)
-            h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop)
+            h.addWidget(lab, 0, Qt.AlignmentFlag.AlignTop if place == "header"
+                        else Qt.AlignmentFlag.AlignVCenter)
 
     def _unread_mark(self):
         if self.theme.shape["unread_mark"] == "star":
@@ -505,16 +515,22 @@ class PostRow(QWidget):
                                 lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
         line = QHBoxLayout()
         line.setSpacing(6)
+        # "stacked" (point.im): the name alone on top, @address · time · … under it
+        stacked = self.theme.shape["card_header"] == "stacked"
+        top = line
+        if stacked:
+            top = QHBoxLayout()
+            top.setSpacing(6)
         if self.spec.number:
             num = QLabel(f"/{self.spec.number}")
             num.setObjectName("num")
-            line.addWidget(num)
-        line.addWidget(self._emoji_label(link("account", acc["id"], display_name(acc),
-                                              self.theme.css("text"), bold=True),
-                                         acc.get("emojis"), "name", wrap=False,
-                                         fallback=link("account", acc["id"],
-                                                       esc(acc.get("username") or acc["acct"]),
-                                                       self.theme.css("text"), bold=True)))
+            top.addWidget(num)
+        top.addWidget(self._emoji_label(link("account", acc["id"], display_name(acc),
+                                             self.theme.css("name"), bold=True),
+                                        acc.get("emojis"), "name", wrap=False,
+                                        fallback=link("account", acc["id"],
+                                                      esc(acc.get("username") or acc["acct"]),
+                                                      self.theme.css("name"), bold=True)))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc["acct"])}{esc(bot)} · '
@@ -537,14 +553,22 @@ class PostRow(QWidget):
         if old:
             line.addWidget(old)
         self._via_mark(line)
-        line.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
-        self._pinned_mark(line)
-        line.addStretch(1)
+        top.addWidget(self._unread_mark(), 0, Qt.AlignmentFlag.AlignVCenter)
+        self._pinned_mark(top)
+        top.addStretch(1)
         if self.spec.focus and self.spec.in_thread:
             came = QLabel(_("came_from"))
             came.setObjectName("cameFrom")
-            line.addWidget(came)
-        h.addLayout(line, 1)
+            top.addWidget(came)
+        if stacked:
+            line.addStretch(1)
+            col = QVBoxLayout()
+            col.setSpacing(1)
+            col.addLayout(top)
+            col.addLayout(line)
+            h.addLayout(col, 1)
+        else:
+            h.addLayout(line, 1)
         self._short_id(h)
         return h
 
@@ -644,6 +668,10 @@ class PostRow(QWidget):
         h = QHBoxLayout(box)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(2)
+        if self.theme.shape.get("short_id") == "footer":  # point.im: #a3f | 4, left
+            self._short_id(h, replies=st.get("replies_count"), where="footer")
+        if self.theme.shape.get("actions_align") == "right":
+            h.addStretch(1)
         n = lambda x: f" · {x}" if x else ""
         fav = bool(st.get("favourited"))
         boosted = bool(st.get("reblogged"))
@@ -702,7 +730,8 @@ class PostRow(QWidget):
                 b.customContextMenuRequested.connect(
                     lambda _p, k=who[0], i=st["id"]: self.ctx.on_link(f"fedtail:{k}/{i}"))
             h.addWidget(b)
-        h.addStretch(1)
+        if self.theme.shape.get("actions_align") != "right":
+            h.addStretch(1)
         h.addWidget(self._more_button(st))
         return box
 
@@ -1407,8 +1436,12 @@ def _fit(pm: QPixmap, w, h, radius=0, focus=None):
     return out
 
 
-def _round(pm: QPixmap, size):
-    """Avatar cut to a circle."""
+AVATAR_RADIUS = -1  # shape.avatar_radius of the theme in use (set by the window)
+
+
+def _round(pm: QPixmap, size, radius=None):
+    """An avatar cut to the theme's shape: a circle (-1), a square (0), rounded corners."""
+    radius = AVATAR_RADIUS if radius is None else radius
     scaled = pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                        Qt.TransformationMode.SmoothTransformation)
     out = QPixmap(size, size)
@@ -1416,7 +1449,10 @@ def _round(pm: QPixmap, size):
     p = QPainter(out)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     path = QPainterPath()
-    path.addEllipse(QRectF(0, 0, size, size))
+    if radius is None or radius < 0:
+        path.addEllipse(QRectF(0, 0, size, size))
+    else:
+        path.addRoundedRect(QRectF(0, 0, size, size), radius, radius)
     p.setClipPath(path)
     p.drawPixmap((size - scaled.width()) // 2, (size - scaled.height()) // 2, scaled)
     p.end()

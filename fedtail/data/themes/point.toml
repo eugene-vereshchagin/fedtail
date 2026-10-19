@@ -1,5 +1,8 @@
 # fedtail theme: point — point.im as it looks today: a white page, posts divided
-# by thin lines, a bold name with the date under it, quiet word buttons, Open Sans.
+# by thin lines, a square avatar, the name bold in dark blue with @address · date under
+# it, the post's #id under the text on the left (with the number of replies: #a3f | 4)
+# and quiet word buttons on the right, a grey strip with the lane's title, a dark
+# "Create" button. Open Sans.
 name = "Point"
 inherit = "system"
 
@@ -43,6 +46,10 @@ rail = "#e1e4e8"
 button = "#ffffff"
 button_border = "#e1e4e8"
 dot = "#3c5a8a"
+name = "#2c4a6e"
+primary = "#3c3c3c"
+on_primary = "#ffffff"
+header = "#f2f2f2"
 
 [shape]
 radius = 0
@@ -50,10 +57,13 @@ button_radius = 3
 card_style = "rule"
 card_avatars = true
 avatar = 40
+avatar_shape = "square"
 sidebar_avatar = true
 lane_icons = true
 icons = false
-card_header = "rich"
+card_header = "stacked"
+short_id = "footer"
+actions_align = "right"
 unread_mark = "dot"
 posts_only = "segmented"
 

@@ -56,6 +56,10 @@ rail = "auto"            # thread depth lines
 button = "auto"
 button_border = "auto"
 dot = "auto"             # unread dot
+primary = "auto"         # Send / Create and other main buttons ("auto": = accent)
+on_primary = "auto"      # their text ("auto": = on_accent)
+header = "auto"          # behind the lane's title strip ("auto": = view)
+name = "auto"            # people's names on posts ("auto": = text)
 
 [shape]
 radius = 12              # card corners
@@ -63,11 +67,16 @@ button_radius = 8
 card_style = "card"      # "card" (framed boxes) or "rule" (posts divided by lines)
 card_avatars = true
 avatar = 40
+avatar_shape = "circle"  # "circle", "square" (point.im) or "rounded"
 sidebar_avatar = true
 lane_icons = true
 icons = true             # desktop icons on buttons; false = words only (dark custom themes)
 card_header = "rich"     # "rich": avatar, name, @address · time · icon
                          # "compact": @user host · 13.10 17:22 · priv
+                         # "stacked": the name bold, @address · time under it (point.im)
+short_id = "header"      # where #a3f goes: "header" (right of the name) or "footer" (under
+                         # the post, left, with the number of replies: #a3f | 4)
+actions_align = "left"   # the buttons under a post: "left" or "right" (point.im)
 unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)
 debug = false            # loud marks for testing: unread, the j/k cursor, the post found,
                          # "glimpsed, not yet counted read", keyboard focus, hover (debug.toml)

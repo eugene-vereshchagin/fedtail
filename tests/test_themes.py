@@ -67,6 +67,17 @@ class ThemeFileTest(unittest.TestCase):
         self.assertIs(merged["shape"]["debug"], True)
         self.assertIs(themefile.load("nord")[0]["shape"]["debug"], False)
 
+    def test_point_looks_like_point(self):
+        merged, warnings = themefile.load("point")
+        self.assertEqual(warnings, [])
+        shape, colors = merged["shape"], merged["colors"]
+        self.assertEqual((shape["avatar_shape"], shape["card_header"], shape["short_id"],
+                          shape["actions_align"], shape["card_style"]),
+                         ("square", "stacked", "footer", "right", "rule"))
+        self.assertEqual(colors["primary"], "#3c3c3c")  # the dark "Create" button
+        system = themefile.load("system")[0]["shape"]
+        self.assertEqual((system["avatar_shape"], system["short_id"]), ("circle", "header"))
+
     def test_install_copies(self):
         themefile.install_copies()
         self.assertTrue((self.dir / "builtin" / "terminal.toml").exists())
