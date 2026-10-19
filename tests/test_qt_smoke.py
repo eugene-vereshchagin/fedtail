@@ -448,6 +448,17 @@ class QtSmokeTest(unittest.TestCase):
         kinds = [aw.lay.itemAt(i).widget().property("kind") for i in range(aw.lay.count())
                  if aw.lay.itemAt(i).widget() is not None]
         self.assertEqual(kinds, ["favourite", "follow", "reblog"])
+        # seen is what is on screen: the window in the background — not yet; the reader
+        # looking at it — the new row on screen counts, the lane read
+        aw.window().isActiveWindow = lambda: False
+        aw._touched_at = 0.0
+        aw._mark_seen()
+        self.assertEqual(self.core.activity_unread(), 1)
+        aw.window().isActiveWindow = lambda: True
+        self.assertTrue(aw.seen_upto())  # three short rows: all on screen
+        aw._mark_seen()
+        self.pump(until=lambda: self.core.activity_unread() == 0)
+        del aw.window().isActiveWindow
         self.win.select_lane("home")
 
         # diagnostics: Qt messages into the log, widget counts in the stats line

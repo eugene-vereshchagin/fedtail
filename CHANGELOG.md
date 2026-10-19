@@ -2,6 +2,15 @@
 
 ## 0.16.0 — in progress
 
+- "Activity" counts as seen what came on screen, like the other lanes, checked when you
+  scroll or come back to the window. It used to mark everything once, on opening — rows
+  far off screen too — and a window in the background at that moment left the newest
+  unread for good.
+- The `debug` theme: for finding what's wrong, not for reading. Each state of a post in a
+  loud frame of its own — unread, "on screen but not all of it yet" (not counted read
+  yet), the j/k cursor, what Ctrl+F found, the post you came to — plus the keyboard focus
+  and disabled buttons. `shape.debug = true` turns the same on in any theme of your own.
+
 - "Copy handle": a button in a profile, "Copy handle @…" in a post's ⋯ menu (the author,
   and the booster of a boost) and on the "boosted by" line. Always the full `@user@server`
   — people of your own server come as a bare `user`, your server's name is added.

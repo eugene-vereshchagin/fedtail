@@ -61,14 +61,20 @@ class ThemeFileTest(unittest.TestCase):
         _, warnings = themefile.load("odd")
         self.assertEqual(warnings, ["unknown key colors.sparkle"])
 
+    def test_debug_theme_marks_every_state(self):
+        merged, warnings = themefile.load("debug")
+        self.assertEqual(warnings, [])
+        self.assertIs(merged["shape"]["debug"], True)
+        self.assertIs(themefile.load("nord")[0]["shape"]["debug"], False)
+
     def test_install_copies(self):
         themefile.install_copies()
         self.assertTrue((self.dir / "builtin" / "terminal.toml").exists())
         self.assertTrue((self.dir / "README.txt").exists())
         # copies in builtin/ are not themes of their own
         self.assertEqual(themefile.available(),
-                         ["bnw", "contrast", "juick", "juick-classic", "night", "nord", "paper",
-                          "pink", "point", "solarized", "system", "terminal"])
+                         ["bnw", "contrast", "debug", "juick", "juick-classic", "night", "nord",
+                          "paper", "pink", "point", "solarized", "system", "terminal"])
 
 
 if __name__ == "__main__":

@@ -657,9 +657,13 @@ class Core(SocialMixin):
     def activity_unread(self):
         return self.store.activity_count_after(self.activity_seen_mark())
 
-    def mark_activity_seen(self):
+    def mark_activity_seen(self, upto=None):
+        """Seen up to this entry's sort (what came on screen), or everything (None: the
+        "all read" button). The mark only goes forward."""
         newest = self.store.activity_newest()[1]
-        if newest and newest != self.activity_seen_mark():
+        if upto is not None:
+            newest = min(newest, upto) if newest else ""
+        if newest and newest > self.activity_seen_mark():
             self.store.kv_set("activity_seen", newest)
             self.emit("activity_seen", newest)
 

@@ -144,6 +144,12 @@ class Theme:
             card_unread = f"border-color: {k('card_border_unread')}"
             card_focus = f"background: {k('focus')}; border-color: {k('focus_border')};"
             card_found = f"border: 2px solid {k('accent')};"
+        return self._stylesheet(k, s, r, br, post_pt, title_pt, base_pt, mono_family, card,
+                                card_unread, card_focus, card_found) + \
+            (DEBUG_CSS if s.get("debug") else "")
+
+    def _stylesheet(self, k, s, r, br, post_pt, title_pt, base_pt, mono_family, card,
+                    card_unread, card_focus, card_found):
         return f"""
 QMainWindow, QWidget#central {{ background: {k('window')}; }}
 QWidget {{ color: {k('text')}; }}
@@ -387,3 +393,20 @@ def apply(app, cfg, name=None):
     pt = f.pointSizeF() if f.pointSizeF() > 0 else 10.0
     app.setStyleSheet(theme.stylesheet(pt, mono[0]))
     return theme
+
+
+# shape.debug = true (the "debug" theme): every state a card can be in, loud and each
+# its own, so a mark that doesn't come or doesn't go is seen at once. Last in the
+# stylesheet: it wins over the theme's own rules.
+DEBUG_CSS = """
+QFrame#card[unread="true"] { border: 3px dashed #ff2bd6; }
+QFrame#card[glimpsed="true"] { border: 3px dotted #ffb000; }
+QFrame#card[keyed="true"] { border: 3px solid #39ff14; }
+QFrame#card[found="true"] { border: 3px solid #00e5ff; }
+QFrame#card[focus="true"] { background: #3a3200; border: 3px solid #ffe600; }
+QFrame#card:hover { background: #2a2f3a; }
+QWidget:focus { border: 2px solid #ff3b30; }
+QPushButton:disabled, QToolButton:disabled { color: #ff3b30; text-decoration: line-through; }
+QLabel#muted:hover, QLabel#meta:hover { background: #40263d; }
+"""
+

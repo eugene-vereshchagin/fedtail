@@ -174,6 +174,8 @@ The look is a theme file. Built in:
 - `nord` — the arctic palette: cold blue-grey, frosty links, dark.
 - `solarized` — Solarized light: warm paper, blue links.
 - `paper` — warm paper and a book face, for long threads.
+- `debug` — for finding what's wrong: unread, the j/k cursor, what Ctrl+F found, "on screen
+  but not all of it yet", keyboard focus — each in a loud frame of its own.
 
 Pick one in the config: `[ui] theme = "terminal"`. Your own themes go to
 `~/.config/fedtail/themes/<name>.toml` (shared by all profiles); `builtin/` next to them always

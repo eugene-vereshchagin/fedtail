@@ -1,0 +1,65 @@
+# fedtail theme: debug — for finding what's wrong, not for reading. Calm grey cards, and
+# every state a post can be in drawn loud and in a colour of its own, so a mark that
+# doesn't come (a post you read and that stays unread) or doesn't go is seen at once:
+#   magenta dashed  — unread
+#   amber dotted    — on screen, not all of it yet: "glimpsed", not counted read yet
+#   green solid     — the j / k cursor
+#   cyan solid      — what Ctrl+F found
+#   yellow on olive — the post you came to in a thread
+#   red outline     — the widget with the keyboard focus (where keys go)
+#   red, struck out — a disabled button
+# An asterisk before the name marks unread too (without the border, in rule style).
+name = "Debug"
+inherit = "system"
+
+[colors]
+window = "#1e2127"
+sidebar = "#1b1d22"
+sidebar_border = "#3a3f4b"
+selected = "#3a3f4b"
+selected_text = "#ffffff"
+view = "#1e2127"
+header_border = "#3a3f4b"
+card = "#2b2f38"
+card_border = "#3a3f4b"
+card_border_unread = "#ff2bd6"
+text = "#e6e6e6"
+muted = "#a0a6b4"
+link = "#4fc3ff"
+accent = "#7c4dff"
+on_accent = "#ffffff"
+hot = "#ff3b30"
+on_hot = "#ffffff"
+quiet = "#3a3f4b"
+on_quiet = "#d0d4dc"
+new_pill = "#ff2bd6"
+on_new_pill = "#ffffff"
+ctx = "#24272e"
+ctx_bar = "#ff9f0a"
+focus = "#3a3200"
+focus_border = "#ffe600"
+myreply = "#123d22"
+on_myreply = "#39ff14"
+active = "#00515c"
+on_active = "#00e5ff"
+separator = "#ff9f0a"
+rail = "#ff9f0a"
+button = "#2b2f38"
+button_border = "#5a6070"
+dot = "#ff2bd6"
+
+[shape]
+radius = 4
+button_radius = 4
+icons = false
+lane_icons = false
+unread_mark = "star"
+debug = true
+
+[icon]
+style = "terminal"
+bg_top = "#2b2f38"
+bg_bottom = "#1e2127"
+bubble = "#ff2bd6"
+ink = "#39ff14"
+accent = "#ff2bd6"

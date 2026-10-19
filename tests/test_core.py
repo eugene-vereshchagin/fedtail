@@ -1061,6 +1061,24 @@ class CoreTest(TmpDir):
         core.cfg["feed"]["repeat_boosts"] = True  # like everyone else: every boost shows
         self.assertEqual(shown(), ["010", "020", "021", "022", "023", "030", "031"])
 
+    def test_activity_seen_up_to_a_point(self):
+        core, w = self.make()
+        core.connect().result()
+        mine = w.add(status("100", fakes.ME, minute=1))
+        w.act("a1", "favourite", BOB, mine, minute=1)
+        core.poll_once()  # the first fetch: history, seen
+        w.act("a2", "favourite", NEWS, mine, minute=2)
+        w.act("a3", "follow", NEWS, minute=3)
+        core.poll_once()
+        self.assertEqual(core.activity_unread(), 2)
+        a2 = next(e["sort"] for e in core.activity_entries() if e["id"] == "a2")
+        core.mark_activity_seen(a2)  # only a2 came on screen
+        self.assertEqual(core.activity_unread(), 1)
+        core.mark_activity_seen("")  # never backwards
+        self.assertEqual(core.activity_unread(), 1)
+        core.mark_activity_seen()  # "all read"
+        self.assertEqual(core.activity_unread(), 0)
+
     def test_activity_favourites_boosts_follows(self):
         core, w = self.make()
         mine = w.add(status("100", ME, minute=1), home=True)

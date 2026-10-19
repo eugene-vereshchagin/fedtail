@@ -8,7 +8,7 @@ space before they load.
 import logging
 import time
 
-from PySide6.QtCore import QPoint, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFrame,
@@ -557,8 +557,14 @@ class FeedView(QScrollArea):
                 ids.append(row.status_id)
             elif on_screen:
                 glimpsed.add(key)
+        before = self._glimpsed
         self._glimpsed = (self._glimpsed & {k for k in self.order
                                              if self.rows[k].spec.unread}) | glimpsed
+        # on screen, not all of it yet: still to be read (the debug theme shows it)
+        for key in before ^ self._glimpsed:
+            row = self.rows.get(key)
+            if row is not None and hasattr(row, "card"):
+                _mark(row.card, "glimpsed", key in self._glimpsed)
         if ids:
             log.debug("seen on screen: %d", len(ids))
             self.seen.emit(ids)
@@ -2037,7 +2043,7 @@ class ActivityWidget(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
         self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
-        self.header.add(_button(_("mark_all_read"), self.core.mark_activity_seen,
+        self.header.add(_button(_("mark_all_read"), lambda: self.core.mark_activity_seen(),
                                 icon="mail-mark-read"))
         if self.core.supports("dismiss"):
             self.header.add(_button(_("activity_clear"), self._clear, icon="edit-clear-all",
@@ -2059,8 +2065,16 @@ class ActivityWidget(QWidget):
         self.lay.setSpacing(8)
         self.scroll.setWidget(body)
         lay.addWidget(self.scroll, 1)
-        self._seen_timer = QTimer(self, singleShot=True, interval=1500)
+        # seen is what came on screen, as in the other lanes: checked when the reader
+        # scrolls, comes back to the window, or new rows arrive — not once on opening
+        # (that marked rows far off screen read, and a window in the background at that
+        # moment left the new ones unread for good)
+        self._seen_timer = QTimer(self, singleShot=True, interval=700)
         self._seen_timer.timeout.connect(self._mark_seen)
+        self._touched_at = 0.0
+        bar = self.scroll.verticalScrollBar()
+        bar.valueChanged.connect(self._scrolled)
+        bar.rangeChanged.connect(lambda *_a: self._seen_timer.start())
         self.refresh()
 
     @staticmethod
@@ -2132,6 +2146,7 @@ class ActivityWidget(QWidget):
         card.setObjectName("card")
         card.setProperty("kind", kind)  # what it is about, for tests and stylesheets
         card.setProperty("unread", "true" if unread else "false")
+        card.newest_sort = max(e["sort"] for e in es)  # for what's seen (seen_upto)
         v = QVBoxLayout(card)
         v.setContentsMargins(16, 10, 16, 10)
         v.setSpacing(4)
@@ -2196,9 +2211,47 @@ class ActivityWidget(QWidget):
             v.addWidget(post)
         return card
 
+    def _scrolled(self, _value):
+        self._touched_at = time.monotonic()
+        self._seen_timer.start()
+
     def _mark_seen(self):
-        if self.isVisible() and self.window().isActiveWindow():
-            self.core.mark_activity_seen()
+        """Up to the newest row that is on screen (all of it, or the end of the lane
+        reached): the mark is one point in time, so with the newest below what's above
+        is older and goes with it."""
+        if not self.isVisible() or self.window().isMinimized():
+            return
+        if not self.window().isActiveWindow() and \
+                time.monotonic() - self._touched_at > READING_S:
+            self._seen_timer.start(3000)  # not being looked at: look again in a while
+            return
+        upto = self.seen_upto()
+        if upto:
+            self.core.mark_activity_seen(upto)
+
+    def seen_upto(self):
+        bar = self.scroll.verticalScrollBar()
+        vtop, vh = bar.value(), self.scroll.viewport().height()
+        vbot, at_end = vtop + vh, bar.value() >= bar.maximum()
+        body = self.scroll.widget()
+        best = ""
+        for i in range(self.lay.count()):
+            w = self.lay.itemAt(i).widget()
+            sort = getattr(w, "newest_sort", None) if w is not None else None
+            if not sort or not w.isVisible():
+                continue
+            top = w.mapTo(body, QPoint(0, 0)).y()
+            bottom = top + w.height()
+            fully = top >= vtop - 2 and bottom <= vbot + 2
+            tall = w.height() > vh and top < vbot and bottom > vtop
+            if fully or tall or (at_end and top < vbot and bottom > vtop):
+                best = max(best, sort)
+        return best
+
+    def changeEvent(self, e):
+        super().changeEvent(e)
+        if e.type() == QEvent.Type.ActivationChange:
+            self._seen_timer.start()
 
     def _answer(self, entry, approve):
         self.win.bridge.call(
