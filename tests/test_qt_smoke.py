@@ -2018,6 +2018,16 @@ class QtSmokeTest(unittest.TestCase):
         row.ensure_menu()
         self.assertNotIn(_("invite"), [a.text() for a in row._menu.actions()])
         self.win.ctx.cfg["post"]["invite"] = True
+        # @user@server of the author into the clipboard: the ⋯ menu, the profile
+        from PySide6.QtGui import QGuiApplication
+        handle = next(a for a in row._menu.actions() if a.text().startswith(
+            _("copy_handle_of", acct="")))
+        handle.trigger()
+        from fedtail.core.model import full_handle
+        self.assertEqual(QGuiApplication.clipboard().text(),
+                         full_handle(st["account"]["acct"], "https://example.test"))
+        self.win.copy_handle("mira")
+        self.assertEqual(QGuiApplication.clipboard().text(), "@mira@example.test")
         self.win.on_link("fedtail:favourited_by/011")
         tab = self.win.tabs.currentWidget()
         self.assertIsInstance(tab, AccountsWidget)

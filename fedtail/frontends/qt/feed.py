@@ -1738,6 +1738,8 @@ class AccountWidget(_PagedTab):
                                           lambda _c=False, w=which: self.win.open_people(acc, w)))
         if not self.mine:
             buttons.addWidget(_button(_("note_edit"), self.edit_note))
+        buttons.addWidget(_button(_("copy_handle"), lambda: self.win.copy_handle(acc["acct"]),
+                                  tip=_("copy_handle_tip")))
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
         lay.addLayout(buttons)
         from ...core.model import note_text

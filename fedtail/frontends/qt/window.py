@@ -1683,6 +1683,14 @@ class MainWindow(QMainWindow):
         self.core.poll_now()
 
     # ---- links & actions --------------------------------------------------------------
+    def copy_handle(self, acct):
+        """@user@server into the clipboard: what to paste to mention or find them."""
+        from ...core.model import full_handle
+        handle = full_handle(acct, (self.core.auth or {}).get("server", ""))
+        if handle:
+            QGuiApplication.clipboard().setText(handle)
+            self.statusBar().showMessage(_("handle_copied", handle=handle), 5000)
+
     def open_url(self, url):
         """Someone else's address: only the web (and mail, XMPP…); see opener."""
         from .opener import open_link
@@ -1713,8 +1721,10 @@ class MainWindow(QMainWindow):
         action, _sep, arg = url[len("fedtail:"):].partition("/")
         log.info("action %s %s", action, arg if action not in ("tag", "resolve") else "…")
         st = self.core.store.get_status(arg) \
-            if action not in ("account", "tag", "resolve", "alias") else None
-        if action == "alias":  # a post's #abc: into the command line
+            if action not in ("account", "tag", "resolve", "alias", "copyhandle") else None
+        if action == "copyhandle":  # someone's @user@server, to call them anywhere
+            self.copy_handle(unquote(arg))
+        elif action == "alias":  # a post's #abc: into the command line
             self.cmdline.put_alias(arg)
         elif action == "tag":
             self.open_tag(unquote(arg))

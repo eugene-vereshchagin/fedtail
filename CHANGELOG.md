@@ -2,6 +2,10 @@
 
 ## 0.16.0 — in progress
 
+- "Copy handle": a button in a profile, "Copy handle @…" in a post's ⋯ menu (the author,
+  and the booster of a boost) and on the "boosted by" line. Always the full `@user@server`
+  — people of your own server come as a bare `user`, your server's name is added.
+
 - ⋯ → "Call into the thread…": a reply to that post with only "@" in it and the people list
   open — pick who, add a word, send. They get a notification and open the thread at home;
   no links with service ids. The thread's others aren't mentioned; the call has its own

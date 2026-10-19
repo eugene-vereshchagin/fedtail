@@ -173,6 +173,10 @@ _STRINGS = {
         "reply": "Ответить", "thread": "Тред", "delete": "Удалить",
         "faved": "В избранном", "boosted": "Продвинуто", "more": "Ещё",
         "copy_link": "Скопировать ссылку", "copy_id": "Скопировать {id}",
+        "copy_handle": "Скопировать ник", "copy_handle_of": "Скопировать ник {acct}",
+        "copy_handle_tip": "@ник@сервер — по нему человека найдёт и упомянет любой клиент и "
+                           "любой сервер, как по адресу почты",
+        "handle_copied": "Скопировано: {handle}",
         "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — в командную строку",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
         "find_placeholder": "Найти в ленте: текст, имя, @ник, #id…",
@@ -862,6 +866,10 @@ _STRINGS = {
         "reply": "Reply", "thread": "Thread", "delete": "Delete",
         "faved": "Favourited", "boosted": "Boosted", "more": "More",
         "copy_link": "Copy link", "copy_id": "Copy {id}",
+        "copy_handle": "Copy handle", "copy_handle_of": "Copy handle {acct}",
+        "copy_handle_tip": "@name@server — any client on any server finds and mentions them "
+                           "by it, like an email address",
+        "handle_copied": "Copied: {handle}",
         "short_id_tip": "Short post number, like #abc on Point. Click — into the command line",
         "unread_tip": "New", "came_from": "you came from here",
         "find_placeholder": "Find in this lane: text, name, @handle, #id…",

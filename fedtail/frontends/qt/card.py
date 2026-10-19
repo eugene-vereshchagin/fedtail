@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from PySide6.QtCore import QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
@@ -710,6 +710,8 @@ class PostRow(QWidget):
         menu = QMenu(lab)
         menu.addAction(_("open_profile"),
                        lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
+        link = "fedtail:copyhandle/" + quote(acc.get("acct", ""), safe="")
+        menu.addAction(_("copy_handle"), lambda u=link: self.ctx.on_link(u))
         if self.ctx.fill_list_menu is not None and acc["id"] != self.ctx.me_id:
             lists = menu.addMenu(_("add_to_list"))
             lists.aboutToShow.connect(lambda m=lists, a=acc: self.ctx.fill_list_menu(m, a))
@@ -755,6 +757,13 @@ class PostRow(QWidget):
             menu.addAction(_("copy_id", id="#" + sid),
                            lambda s=sid: QGuiApplication.clipboard().setText("#" + s))
         author = real(st)["account"]
+        # @user@server of who wrote it (and who boosted it): to call them anywhere
+        people = [author] + ([st["account"]] if st.get("reblog") and
+                             st["account"]["id"] != author["id"] else [])
+        for acc in people:
+            link = "fedtail:copyhandle/" + quote(acc.get("acct", ""), safe="")
+            menu.addAction(_("copy_handle_of", acct="@" + acc.get("acct", "")),
+                           lambda u=link: self.ctx.on_link(u))
         if self.ctx.fill_list_menu is not None:
             # a boost has two people: the one who wrote it and the one who boosted it (a
             # relay bot, say) — each by name, so it's clear who goes into the list

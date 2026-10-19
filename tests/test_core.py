@@ -443,6 +443,17 @@ class PathsAuthTest(TmpDir):
             self.assertFalse(cleartext_ok(bad), bad)
 
 
+class HandleTest(unittest.TestCase):
+    def test_full_handle_works_from_anywhere(self):
+        from fedtail.core.model import full_handle
+        self.assertEqual(full_handle("shadeweb@mastodon.ml", "https://my.example"),
+                         "@shadeweb@mastodon.ml")
+        self.assertEqual(full_handle("mira", "https://my.example"), "@mira@my.example")
+        self.assertEqual(full_handle("@mira", "my.example"), "@mira@my.example")
+        self.assertEqual(full_handle("mira", ""), "@mira")
+        self.assertEqual(full_handle("", "https://my.example"), "")
+
+
 class ModelTest(unittest.TestCase):
     def test_visibility_and_mentions(self):
         self.assertEqual(model.narrower("public", "private"), "private")
