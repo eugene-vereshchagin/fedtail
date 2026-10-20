@@ -5,7 +5,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| Cleaning the database of posts no lane holds | The application | — | medium |
 | GTK4 + libadwaita | Interfaces | — | large |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |

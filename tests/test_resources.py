@@ -28,15 +28,15 @@ class LongRunTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.tmp = Path(self._tmp.name)
         self.addCleanup(self._tmp.cleanup)
-        keep = app_module.KEEP_PER_SOURCE
-        app_module.KEEP_PER_SOURCE = KEEP
-        self.addCleanup(setattr, app_module, "KEEP_PER_SOURCE", keep)
+        floor = app_module.KEEP_FLOOR
+        app_module.KEEP_FLOOR = KEEP
+        self.addCleanup(setattr, app_module, "KEEP_FLOOR", floor)
         self.n = 0
 
     def make(self, **over):
         FakeApi.world = fakes.World()
         user = {"feed": {"first_run_mark_read": False, "page_size": 20},
-                "subs": {"enabled": False}}
+                "subs": {"enabled": False}, "storage": {"keep_per_lane": KEEP}}
         for k, v in over.items():
             user.setdefault(k, {}).update(v)
         cfg, _ = config.validate(user)
@@ -97,6 +97,24 @@ class LongRunTest(unittest.TestCase):
         self.assertLess(max(times), 15.0, times)
         early, late = sorted(times[:20])[10], sorted(times[-20:])[10]  # medians
         self.assertLess(late, 3 * early + 0.05, times)  # not slower as posts pile up
+
+    def test_the_store_stays_within_its_budget(self):
+        # 0 MB: always over budget — every gc cuts the lanes, down to the floor (KEEP)
+        core, w = self.make(storage={"keep_per_lane": KEEP * 3, "max_mb": 0,
+                                     "grace_hours": 0, "keep_activity": 5})
+        for _ in range(10):
+            self.cycle(core, w)
+        core.collect_garbage()
+        self.assertEqual(core.keep_per_lane(), KEEP)
+        counts = core.store.diag_counts()
+        self.assertLessEqual(len(core.lane_entries("home")), KEEP)
+        # posts no lane points at are gone: no more than the lanes hold, their
+        # boosted posts and parents
+        self.assertLessEqual(counts["statuses"], counts["items"] * 3, counts)
+        # room again: the lanes may grow back towards what the config wants
+        core.cfg["storage"]["max_mb"] = 1024
+        core.collect_garbage()
+        self.assertGreater(core.keep_per_lane(), KEEP)
 
     def test_a_slow_poll_says_where_the_time_went(self):
         import logging

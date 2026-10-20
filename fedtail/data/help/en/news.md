@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **0.17.0 (in progress):**
 
+- The database doesn't grow for ever: cleanup and a size budget
 - Help inside, in two languages
 - “What's this?”: a longer hint about any button
 
@@ -33,7 +34,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| Cleaning the database of posts no lane holds | The application | — | medium |
 | GTK4 + libadwaita | Interfaces | — | large |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |

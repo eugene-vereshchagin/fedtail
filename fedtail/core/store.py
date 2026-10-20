@@ -5,11 +5,16 @@ method is a short transaction, so contention is negligible.
 """
 
 import json
+import logging
 import sqlite3
 import threading
+import time
 from datetime import UTC, datetime
 
-SCHEMA_VERSION = 4
+log = logging.getLogger(__name__)
+
+SCHEMA_VERSION = 5
+GC_CHUNK = 2000  # rows deleted, pages freed per short step of Store.gc
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS statuses (
@@ -135,6 +140,8 @@ class Store:
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
         self.db.execute("PRAGMA synchronous=NORMAL")
+        # a new file frees its pages as it goes (an old one is converted in _migrate)
+        self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
         with self.lock:
             self.db.executescript(SCHEMA)
             self._migrate()
@@ -163,12 +170,20 @@ class Store:
                 "UPDATE statuses SET reply_to = json_extract(data, '$.in_reply_to_id'), "
                 "author = json_extract(data, '$.account.id')")
         self.db.execute("CREATE INDEX IF NOT EXISTS statuses_reply_to ON statuses (reply_to)")
+        if "touched" not in cols:  # v5: when a post was last stored, for gc()'s grace time
+            self.db.execute("ALTER TABLE statuses ADD COLUMN touched TEXT NOT NULL DEFAULT ''")
+            self.db.execute("UPDATE statuses SET touched=?", (now_iso(),))
         schema = self.kv_get("schema") or SCHEMA_VERSION
         if schema < 3:
             self._rename_lanes()
         if schema < 4:
             self._fill_first_seen()
         self.kv_set("schema", SCHEMA_VERSION)
+        if self.db.execute("PRAGMA auto_vacuum").fetchone()[0] != 2:
+            # once: an older file learns to give freed pages back (gc() → incremental_vacuum)
+            log.info("store: converting to incremental vacuum (once; may take a while)")
+            self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
+            self.db.execute("VACUUM")
 
     def _fill_first_seen(self):
         """v4: for what is stored already, the oldest entry of each post in a source
@@ -216,6 +231,110 @@ class Store:
         out["db_mb"] = round(page / 1024 / 1024, 1)
         return out
 
+    def size_mb(self):
+        """What the data takes in the file, MB (free pages not counted)."""
+        with self.lock:
+            q = self.db.execute
+            pages = q("PRAGMA page_count").fetchone()[0] - q("PRAGMA freelist_count").fetchone()[0]
+            return pages * q("PRAGMA page_size").fetchone()[0] / 1024 / 1024
+
+    def item_sources(self):
+        with self.lock:
+            return [r[0] for r in self.db.execute("SELECT DISTINCT source FROM items")]
+
+    def gc(self, keep_activity=3000, grace_hours=48, drop_read=False):
+        """Forget what nothing points at any more, so the file doesn't grow for ever.
+
+        A post stays while a lane, a followed thread, an activity entry or a reply
+        draft points at it, while it is mine, while a kept post boosts, quotes or answers
+        it (up the whole thread), and for grace_hours after it was last stored (a thread
+        or a profile open on screen). A post that goes is fetched again when needed.
+        drop_read: also read marks of posts no longer stored (under size pressure only:
+        an old post boosted again then shows as unread). Short ids are never forgotten.
+        Returns {what: rows removed}."""
+        cutoff = datetime.fromtimestamp(datetime.now(UTC).timestamp() - grace_hours * 3600,
+                                        UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        out = {}
+        with self._tx() as db:
+            out["activity"] = db.execute(
+                "DELETE FROM activity WHERE id NOT IN "
+                "(SELECT id FROM activity ORDER BY sort DESC LIMIT ?)",
+                (max(0, keep_activity),)).rowcount
+            out["sub_members"] = db.execute(
+                "DELETE FROM sub_members WHERE root_id NOT IN (SELECT root_id FROM subs)"
+            ).rowcount
+            db.execute("CREATE TEMP TABLE IF NOT EXISTS gc_keep (id TEXT PRIMARY KEY)")
+            db.execute("DELETE FROM gc_keep")
+            for q, args in (
+                    ("SELECT status_id FROM items", ()),
+                    ("SELECT status_id FROM sub_members", ()),
+                    ("SELECT root_id FROM subs", ()),
+                    ("SELECT status_id FROM activity WHERE status_id IS NOT NULL", ()),
+                    ("SELECT substr(key, 7) FROM drafts WHERE key LIKE 'reply:%'", ()),
+                    ("SELECT id FROM statuses WHERE author = ?", (self.me_id or "",)),
+                    ("SELECT id FROM statuses WHERE touched >= ?", (cutoff,))):
+                db.execute(f"INSERT OR IGNORE INTO gc_keep {q}", args)
+            # what kept posts lead to: the boosted post, the quoted one, the parent —
+            # level by level (a whole thread up), each level from the posts the last one
+            # added only; each post's JSON parsed once per level (one row, five columns)
+            db.execute("CREATE TEMP TABLE IF NOT EXISTS gc_front (id TEXT PRIMARY KEY)")
+            db.execute("DELETE FROM gc_front")
+            db.execute("INSERT INTO gc_front SELECT id FROM gc_keep")
+            leads = ("WITH f AS MATERIALIZED (SELECT json_extract(s.data, '$.reblog.id', "
+                     "'$.quote.quoted_status_id', '$.quote.quoted_status.id', '$.quote_id') "
+                     "AS j, s.reply_to AS r FROM statuses s JOIN gc_front g ON g.id = s.id) "
+                     "SELECT DISTINCT v FROM (SELECT r AS v FROM f UNION ALL "
+                     "SELECT e.value FROM f, json_each(f.j) AS e) "
+                     "WHERE v IS NOT NULL AND v NOT IN (SELECT id FROM gc_keep)")
+            while True:
+                found = [r[0] for r in db.execute(leads).fetchall()]
+                if not found:
+                    break
+                db.execute("DELETE FROM gc_front")
+                db.executemany("INSERT OR IGNORE INTO gc_front VALUES (?)", [(i,) for i in found])
+                db.executemany("INSERT OR IGNORE INTO gc_keep VALUES (?)", [(i,) for i in found])
+        # then away in short transactions: a first gc on a year-old file deletes
+        # hundreds of MB, and the window must not wait for all of it. A post stored
+        # meanwhile is newer than the cutoff, so it stays.
+        out["statuses"] = 0
+        while True:
+            with self._tx() as db:
+                n = db.execute(
+                    "DELETE FROM statuses WHERE rowid IN (SELECT rowid FROM statuses "
+                    "WHERE touched < ? AND id NOT IN (SELECT id FROM gc_keep) LIMIT ?)",
+                    (cutoff, GC_CHUNK)).rowcount
+            out["statuses"] += n
+            if n < GC_CHUNK:
+                break
+            time.sleep(0.005)  # the lock isn't fair: let a waiting reader in between
+        with self._tx() as db:
+            db.execute("DELETE FROM gc_keep")
+            db.execute("DELETE FROM gc_front")
+            out["missing"] = db.execute(
+                "DELETE FROM missing WHERE status_id NOT IN "
+                "(SELECT reply_to FROM statuses WHERE reply_to IS NOT NULL)").rowcount
+            out["kv"] = db.execute(
+                "DELETE FROM kv WHERE key LIKE 'replies_checked:%' AND substr(key, 17) "
+                "NOT IN (SELECT id FROM statuses)").rowcount
+            if drop_read:
+                out["read"] = db.execute(
+                    "DELETE FROM read WHERE status_id NOT IN (SELECT id FROM statuses)"
+                ).rowcount
+            if out["statuses"]:
+                self.status_version += 1
+            if out["activity"]:
+                self._bump("activity")
+        while True:  # freed pages back to the system, a slice at a time
+            with self.lock:
+                if not self.db.execute("PRAGMA freelist_count").fetchone()[0]:
+                    break
+                # one page per row stepped: fetchall(), or it frees just the first
+                self.db.execute(f"PRAGMA incremental_vacuum({GC_CHUNK // 4})").fetchall()
+            time.sleep(0.005)
+        with self.lock:
+            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        return out
+
     # ---- kv -------------------------------------------------------------------
     def kv_get(self, key, default=None):
         with self.lock:
@@ -229,16 +348,18 @@ class Store:
     # ---- statuses -------------------------------------------------------------
     def put_statuses(self, statuses):
         rows = []
+        touched = now_iso()
         for st in statuses:
             for s in ([st["reblog"]] if st.get("reblog") else []) + [st]:
                 rows.append((s["id"], json.dumps(s), s.get("created_at", ""),
-                             s.get("in_reply_to_id"), (s.get("account") or {}).get("id")))
+                             s.get("in_reply_to_id"), (s.get("account") or {}).get("id"),
+                             touched))
         # a post of mine is read: I wrote it — from this client or any other, come by a
         # lane, a thread, a catch-up after a restart
         mine = [r[0] for r in rows if self.me_id and r[4] == self.me_id]
         with self._tx() as db:
             db.executemany("INSERT OR REPLACE INTO statuses (id, data, created_at, reply_to, "
-                           "author) VALUES (?, ?, ?, ?, ?)", rows)
+                           "author, touched) VALUES (?, ?, ?, ?, ?, ?)", rows)
             if mine:
                 db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in mine])
             self.status_version += 1

@@ -546,7 +546,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A detailed log for bug reports | has | 0.2.0 | `[debug]`, the launch keys `--debug`, `--bug-report` | own | — |
 | Federation status: how my server is doing and what fails | has | 0.16.0 | ≡ → “Debugging” → “Federation status” | own (from what this run saw) | — |
 | Leak hunting: trends, an object census, memory snapshots | has | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging” | own (gc, tracemalloc) | — |
-| Cleaning the database of posts no lane holds | planned | — | — | SQLite | — |
+| The database doesn't grow for ever: cleanup and a size budget | has | 0.17.0 | `[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours` | SQLite, incremental vacuum | — |
 | Screen readers | partly | 0.9.0 | `ui.alt_text` | — | Mastodon web, Tusky, Ivory |
 | Interface language | has | 0.1.0 | `ui.language` | — | everyone |
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
@@ -578,7 +578,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Leak hunting: trends, an object census, memory snapshots.** For days-long runs. With every stats line — a `trend` line: memory, Python objects, widgets, cards, pictures, threads, files — how many at start, how many now, how many an hour. Something that grew on each of the last `leak_samples` checks (12 — an hour) and by more than crumbs — a `possible leak` warning with the numbers; the first half hour doesn't count. In the debugging mode — a census: which Python objects and Qt widgets were added since the last check and since the start (`object_census`). `tracemalloc = true` — memory tracing from the start; a snapshot — ≡ → “Debugging” → “Memory snapshot”: a file with who holds the most and what grew, by line of code. There too: “What grows: stats and census now”, “Give free memory back to the system”, tracing on/off. The session's last line — `session summary`: hours, memory, peak, freezes, polls. How to leave it overnight — [DEBUGGING.md](/docs/DEBUGGING.md).
 
-**Cleaning the database of posts no lane holds.** Lanes are trimmed (3000 per source), but the posts themselves — and the parents of replies, and opened threads — stay in the database for good: it grows on disk (it isn't held in memory). It needs a cleanup of old posts nothing refers to, such that the parents of visible replies needn't be fetched again. The growth shows in `trend` as `core.statuses` and `core.db_mb`.
+**The database doesn't grow for ever: cleanup and a size budget.** Every `gc_hours` (and at the first poll after start) posts nothing points at are forgotten: no lane, followed thread, “Activity” entry or reply draft. My own posts stay, and so do the boosted post, the quoted one and the parents up the whole thread of every post that stays, so visible replies aren't fetched again. Whatever was stored recently (an open thread, a profile) lives `grace_hours` more. “Activity” keeps the latest `keep_activity` entries. The file really shrinks (incremental vacuum). If the database is still over `max_mb` (1 GB by default), lanes get 30 % shorter until it fits (never below 300) and grow back to `keep_per_lane` once there is room. Short ids (`#a3f`) are never forgotten. What was forgotten and how big the database is — the `storage gc` line in the log.
 
 **Screen readers.** Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca.
 
@@ -660,7 +660,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| Cleaning the database of posts no lane holds | The application | — | medium |
 | GTK4 + libadwaita | Interfaces | — | large |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |

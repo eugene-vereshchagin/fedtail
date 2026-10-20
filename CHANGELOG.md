@@ -20,6 +20,15 @@
   one matrix a chapter (`comparison.md`). All of it, the config reference and the shared
   pieces of the READMEs are built by `tools/docs_build.py`; a test keeps them in step.
 
+- The database no longer grows for ever. Every `storage.gc_hours` (6) fedtail forgets posts
+  nothing points at any more — no lane, followed thread, activity entry or reply draft;
+  boosted and quoted posts and parents of kept ones up the thread stay, and so do your own
+  posts and anything stored in the last `storage.grace_hours` (48). A forgotten post is
+  fetched again when needed; short ids are kept for good. The file really shrinks
+  (incremental vacuum; an older file is converted once, at the first start — it may take
+  a moment). If it is still over `storage.max_mb` (1 GB), lanes get shorter until it fits
+  and grow back later. New `[storage]` options; `storage gc:` lines in the log.
+
 ## 0.16.0 — 2026-10-19
 
 - Faster reading deep into big lanes: stored posts are paged from where the last page

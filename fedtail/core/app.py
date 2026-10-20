@@ -45,8 +45,19 @@ class MaybeSent(Exception):
 
 log = logging.getLogger(__name__)
 
-KEEP_PER_SOURCE = 3000
 FILTER_WINDOW = 2000
+KEEP_FLOOR = 300  # under size pressure a lane is never cut below this many entries
+
+
+def next_keep(size_mb, max_mb, keep, wanted):
+    """How many entries a lane keeps next, after a gc left the store at size_mb: over
+    the budget — 30 % fewer (not below KEEP_FLOOR); well under it (60 %) — back up
+    towards what the config wants; else as it is."""
+    if size_mb > max_mb:
+        return max(min(KEEP_FLOOR, wanted), int(keep * 0.7))
+    if size_mb < max_mb * 0.6 and keep < wanted:
+        return min(wanted, max(keep + 1, int(keep * 1.3)))
+    return min(keep, wanted)
 
 
 def _due(last, every):
@@ -129,6 +140,7 @@ class Core(SocialMixin):
         self.blocked_domains = set()
         self._silence_version = 0
         self._silence_checked = None
+        self._gc_done = None  # monotonic time of the last store gc; None: not this run
         self._poll_count = 0
         self._active_lane = None  # the lane on screen: browse lanes are fetched only then
         self._active_lanes = set()  # all of them on screen, side by side (ui.layout)
@@ -425,7 +437,7 @@ class Core(SocialMixin):
                     try:
                         new_by_source[name] = sources.refresh_top(
                             self.store, self.sources[name], fc["page_size"])
-                        self.store.prune(name, KEEP_PER_SOURCE // 3)
+                        self.store.prune(name, self.keep_per_lane() // 3)
                         # the server answered, and with nothing: its live feeds are off
                         # (mastodon.social and others do that) — the lane says so
                         empty = getattr(self.sources[name], "last_count", 1) == 0
@@ -439,7 +451,7 @@ class Core(SocialMixin):
                     new_by_source[name] = sources.catch_up(
                         self.store, self.sources[name], fc["page_size"], fc["catch_up_limit"])
                     self._step(name)
-                    self.store.prune(name, KEEP_PER_SOURCE)
+                    self.store.prune(name, self.keep_per_lane())
                     self._step("prune")
                 except ApiError as e:
                     if e.status in (401, 403):
@@ -511,11 +523,56 @@ class Core(SocialMixin):
                 self._step("markers")
             self._fetch_parents(new_statuses)
             self._step("parents")
+            if _due(self._gc_done, max(1, self.cfg["storage"]["gc_hours"]) * 3600):
+                self.collect_garbage()
+                self._step("gc")
             got = {k: len(v) for k, v in new_by_source.items() if v}
             if got or new_activity or new_requests:
                 log.info("new: %s%s%s", got or "-",
                          f" activity+{len(new_activity)}" if new_activity else "",
                          f" requests+{len(new_requests)}" if new_requests else "")
+
+    # ---- keeping the store in bounds ([storage]) -----------------------------------
+    def keep_per_lane(self):
+        """Entries each lane keeps: storage.keep_per_lane, less while the store is
+        over storage.max_mb (collect_garbage lowers it, and raises it back later)."""
+        wanted = max(KEEP_FLOOR, self.cfg["storage"]["keep_per_lane"])
+        keep = self.store.kv_get("storage.keep")
+        return min(wanted, keep) if isinstance(keep, int) and keep > 0 else wanted
+
+    def collect_garbage(self):
+        """Forget posts nothing points at (Store.gc); over the size budget, cut every
+        lane shorter and collect again, until it fits or lanes reach KEEP_FLOOR."""
+        self._gc_done = time.monotonic()
+        sc = self.cfg["storage"]
+        wanted = max(KEEP_FLOOR, sc["keep_per_lane"])
+        try:
+            t = time.monotonic()
+            total = self.store.gc(sc["keep_activity"], sc["grace_hours"])
+            size, keep = self.store.size_mb(), self.keep_per_lane()
+            while True:
+                nxt = next_keep(size, sc["max_mb"], keep, wanted)
+                if nxt == keep:
+                    break
+                keep = nxt
+                self.store.kv_set("storage.keep", keep)
+                if size <= sc["max_mb"]:
+                    break  # only growing back: the lanes fill up again by themselves
+                for source in self.store.item_sources():
+                    self.store.prune(source, keep)
+                more = self.store.gc(sc["keep_activity"], sc["grace_hours"], drop_read=True)
+                total = {k: total.get(k, 0) + more.get(k, 0) for k in {*total, *more}}
+                size = self.store.size_mb()
+                if keep <= KEEP_FLOOR:
+                    break
+            log.info("storage gc: %s; %.1f MB of %d, %d per lane, %.2f s",
+                     {k: v for k, v in sorted(total.items()) if v} or "nothing",
+                     size, sc["max_mb"], keep, time.monotonic() - t)
+            if size > sc["max_mb"]:
+                log.warning("storage: still %.1f MB after gc (budget %d MB)", size,
+                            sc["max_mb"])
+        except Exception as e:  # noqa: BLE001 — a failed gc must never stop the poll
+            log.warning("storage gc: %s", e, exc_info=True)
 
     # ---- read position shared with other clients (markers) -------------------------
     MARKERS = {"home": "home", "notifications": "mentions"}  # marker timeline -> our source

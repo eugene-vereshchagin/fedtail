@@ -27,4 +27,4 @@ for an issue.
 - Memory grows — ≡ → "Debugging" → "What grows: stats and object census now". For a night,
   turn memory tracing on, make a "Memory snapshot" in the morning and send it.
 
-In detail → [The application](ref/features.md#the-application) · [Logs and debugging](ref/config.md#12-logs-and-debugging)
+In detail → [The application](ref/features.md#the-application) · [Logs and debugging](ref/config.md#debug)

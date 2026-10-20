@@ -198,16 +198,15 @@ details.en = "For days-long runs. With every stats line — a `trend` line: memo
 
 [[feature]]
 id = "db-cleanup"
-status = "planned"
-name.ru = "Чистка базы от постов, которых нет ни в одной ленте"
-name.en = "Cleaning the database of posts no lane holds"
-config = "—"
-api = "SQLite"
+status = "has"
+since = "0.17.0"
+name.ru = "База не растёт без конца: чистка и бюджет места"
+name.en = "The database doesn't grow for ever: cleanup and a size budget"
+config = "`[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours`"
+api = "SQLite, incremental vacuum"
 others = "—"
-size.ru = "средний"
-size.en = "medium"
-details.ru = "Ленты обрезаются (по 3000 на источник), но сами посты — и родители ответов, и открытые треды — остаются в базе навсегда: она растёт на диске (в памяти это не держится). Нужна чистка старых постов, на которые ничто не ссылается, так, чтобы родителей видимых ответов не пришлось качать заново. Рост видно в `trend` как `core.statuses` и `core.db_mb`."
-details.en = "Lanes are trimmed (3000 per source), but the posts themselves — and the parents of replies, and opened threads — stay in the database for good: it grows on disk (it isn't held in memory). It needs a cleanup of old posts nothing refers to, such that the parents of visible replies needn't be fetched again. The growth shows in `trend` as `core.statuses` and `core.db_mb`."
+details.ru = "Раз в `gc_hours` (и в первый опрос после запуска) забываются посты, на которые ничто не ссылается: ни лента, ни подписанный тред, ни «Активность», ни черновик ответа. Остаются мои посты, а у оставшихся — пост внутри буста, цитата и родители вверх по всему треду, так что видимые ответы не качаются заново. Сохранённое недавно (открытый тред, профиль) живёт ещё `grace_hours`. «Активность» держит последние `keep_activity` записей. Файл реально худеет (incremental vacuum). Если база всё равно больше `max_mb` (по умолчанию 1 ГБ), ленты становятся на 30 % короче, пока не влезут (не короче 300), а когда места снова много — отрастают до `keep_per_lane`. Короткие id (`#a3f`) не забываются никогда. Что забыто и сколько весит база — строка `storage gc` в журнале."
+details.en = "Every `gc_hours` (and at the first poll after start) posts nothing points at are forgotten: no lane, followed thread, “Activity” entry or reply draft. My own posts stay, and so do the boosted post, the quoted one and the parents up the whole thread of every post that stays, so visible replies aren't fetched again. Whatever was stored recently (an open thread, a profile) lives `grace_hours` more. “Activity” keeps the latest `keep_activity` entries. The file really shrinks (incremental vacuum). If the database is still over `max_mb` (1 GB by default), lanes get 30 % shorter until it fits (never below 300) and grow back to `keep_per_lane` once there is room. Short ids (`#a3f`) are never forgotten. What was forgotten and how big the database is — the `storage gc` line in the log."
 
 [[feature]]
 id = "screen-readers"

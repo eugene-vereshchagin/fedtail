@@ -242,7 +242,7 @@ Rules:
 
 | table | holds |
 |---|---|
-| `statuses(id, data, created_at, reply_to, author)` | every status we've seen, JSON; `reply_to`/`author` columns for fast "my replies to X" |
+| `statuses(id, data, created_at, reply_to, author, touched)` | statuses we've seen, JSON; `reply_to`/`author` columns for fast "my replies to X"; `touched` — when last stored (gc's grace time) |
 | `items(source, item_id, status_id, sort)` | the entries of each source (a timeline is a list of items pointing at statuses; mentions use notification ids) |
 | `read(status_id)` | read marks |
 | `missing(status_id)` | parents the server refused (404/403/410) — shown as "post unavailable" |
@@ -258,7 +258,21 @@ Rules:
   `Core.lane_entries` uses them as a cache key.
 * Schema changes: `CREATE TABLE IF NOT EXISTS` for new tables; column additions
   go in `Store._migrate()` (see the v2 `reply_to` migration). Never drop data.
-* `prune(source, keep)` keeps the newest `KEEP_PER_SOURCE` (3000) items per source.
+* `prune(source, keep)` keeps the newest `Core.keep_per_lane()` items per source
+  (`storage.keep_per_lane`, 3000; less while the store is over budget).
+* `gc(keep_activity, grace_hours, drop_read)` forgets what nothing points at: a status
+  stays while `items`, `sub_members`/`subs`, `activity`, a `reply:` draft points at it,
+  while it is mine or was stored within `grace_hours`, and while a kept status boosts,
+  quotes or answers it (walked level by level up the thread, in a temp table). It also
+  trims `activity` to the newest `keep_activity`, `sub_members` of left threads,
+  `missing` nobody answers to, stale `replies_checked:` keys, and — `drop_read`, only
+  under size pressure — read marks of statuses no longer stored. `aliases` are never
+  touched. Then `PRAGMA incremental_vacuum` (the file is `auto_vacuum=INCREMENTAL`;
+  schema v5 converts an older file once with `VACUUM`) and a WAL checkpoint.
+* `Core.collect_garbage()` runs it every `storage.gc_hours` from the poll: over
+  `storage.max_mb` it cuts every lane by 30 % (`next_keep`, floor `KEEP_FLOOR` = 300),
+  prunes and collects again until it fits; well under the budget the per-lane keep
+  (kv `storage.keep`) grows back towards the config. A `storage gc:` log line each time.
 
 ## 7. Sources and catch-up (`core/sources.py`)
 
@@ -344,7 +358,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
    `notify.except` (`Core._notify_wanted`; unread ones only) →
    event `notify [(lane, status|account|notification)]`.
 10. Parents of new replies fetched in the background (event `parents`).
-11. A log line with what came and how long it took.
+11. Every `storage.gc_hours`: `collect_garbage()` (see §6).
+12. A log line with what came and how long it took.
 
 ## 10. Read state and "never jump"
 

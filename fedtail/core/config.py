@@ -170,6 +170,13 @@ DEFAULTS = {
         "stream_gap_seconds": 10,
         "stream": 'auto',
     },
+    "storage": {
+        "max_mb": 1024,
+        "keep_per_lane": 3000,
+        "keep_activity": 3000,
+        "gc_hours": 6,
+        "grace_hours": 48,
+    },
     "debug": {
         "level": "debug",
         "mode": "auto",

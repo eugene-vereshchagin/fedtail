@@ -49,7 +49,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 - [9. Thread subscriptions](#9-thread-subscriptions) — `[subs]`
 - [10. Polling the server](#10-polling-the-server) — `[poll]`
 - [11. The server](#11-the-server) — `[account]`
-- [12. Logs and debugging](#12-logs-and-debugging) — `[debug]`
+- [12. Database and logs](#12-database-and-logs) — `[storage]`, `[debug]`
 - [13. In a terminal](#13-in-a-terminal) — `[cli]`, `[tui]`
 - [14. In a browser](#14-in-a-browser) — `[web]`
 
@@ -286,7 +286,17 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 |---|---|---|
 | `account.markdown` | `"auto"` | Whether the server understands Markdown: "auto" (ask the server), "on", "off". GoToSocial / Akkoma do, vanilla Mastodon doesn't. |
 
-## 12. Logs and debugging
+## 12. Database and logs
+
+### `[storage]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `storage.max_mb` | `1024` | How much room the profile's database (state.db) may take, MB. Posts nothing points at any more — no lane, followed thread, activity entry or reply draft — are forgotten by themselves (every gc_hours); when needed, they are fetched from the server again. If the database is still bigger than this, lanes get shorter until it fits (never below 300 posts) and grow back once there is room. Short ids (#a3f) are never forgotten. |
+| `storage.keep_per_lane` | `3000` | How many entries each lane keeps (the newest). "More" below them comes from the server. |
+| `storage.keep_activity` | `3000` | How many of the latest entries "Activity" keeps (favourites, boosts, new followers). |
+| `storage.gc_hours` | `6` | How often to clean the database, hours. The first time — at the first poll after start. |
+| `storage.grace_hours` | `48` | A post stored recently (an open thread, somebody's profile) stays this many hours even if no lane points at it. |
 
 ### `[debug]`
 

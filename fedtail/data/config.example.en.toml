@@ -35,7 +35,7 @@
 #   3. Read marks ............ [read]     9. Thread subscriptions .. [subs]
 #   4. Which lanes ........... [lanes]   10. Polling the server .... [poll]
 #   5. Posts ................. [post]    11. The server ............ [account]
-#   6. Notifications ......... [notify]  12. Logs and debugging .... [debug]
+#   6. Notifications ......... [notify]  12. Database and logs ... [storage] [debug]
 #                                        13. In a terminal ......... [cli] [tui]
 #                                        14. In a browser .......... [web]
 
@@ -797,8 +797,30 @@ markdown = "auto"
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
-#  12. Logs and debugging
+#  12. Database and logs
 # ══════════════════════════════════════════════════════════════════════════════════════
+
+[storage]
+# How much room the profile's database (state.db) may take, MB. Posts nothing points at
+# any more — no lane, followed thread, activity entry or reply draft — are forgotten by
+# themselves (every gc_hours); when needed, they are fetched from the server again. If the
+# database is still bigger than this, lanes get shorter until it fits (never below 300
+# posts) and grow back once there is room. Short ids (#a3f) are never forgotten.
+max_mb = 1024
+
+# How many entries each lane keeps (the newest). "More" below them comes from the server.
+keep_per_lane = 3000
+
+# How many of the latest entries "Activity" keeps (favourites, boosts, new followers).
+keep_activity = 3000
+
+# How often to clean the database, hours. The first time — at the first poll after start.
+gc_hours = 6
+
+# A post stored recently (an open thread, somebody's profile) stays this many hours even
+# if no lane points at it.
+grace_hours = 48
+
 
 [debug]
 # Logs and diagnostics. In the debugging mode everything is detailed: the client is kept open for days,
