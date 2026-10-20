@@ -2381,6 +2381,10 @@ class QtSmokeTest(unittest.TestCase):
                 from PySide6.QtGui import QColor
                 flat = icons._styled((icons.DIR / "emoji.svg").read_text(), "flat",
                                      QColor("#3daee9"))
+                qip = icons._styled((icons.DIR / "send.svg").read_text(), "qip",
+                                    QColor(icons.QIP_COLOURS["send"]))
+                self.assertNotIn("{c}", qip)  # QIP's: its own bright colour, every blank
+                self.assertIn(icons.QIP_COLOURS["send"], qip)  # filled
                 self.assertNotIn("url(#g)", flat)  # flat: plain colour, no shine
                 self.assertNotIn('opacity=".35"', flat)
         finally:

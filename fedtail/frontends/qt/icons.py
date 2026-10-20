@@ -62,7 +62,7 @@ def wanted(theme):
 # a gradient, a white shine, a dark outline), "agent" (the Agent: a brighter shine, a
 # softer outline), "flat" (Psi on KDE: plain colour, no shine) — and the status picture
 # of that messenger: a flower, an "@", a star
-STATUS = {"gloss": "status", "agent": "status-agent", "flat": "status-psi"}
+STATUS = {"gloss": "status", "qip": "status", "agent": "status-agent", "flat": "status-psi"}
 OWN_SET = {"status-agent": "#3aa63a", "status-psi": "#f2c037"}
 _SHINE = re.compile(r'<ellipse[^>]*opacity="\.35"/>')
 
@@ -71,7 +71,27 @@ def icon_set(theme):
     return theme.shape.get("icon_set", "gloss")
 
 
+# QIP's way (shape.icon_set = "qip"): every picture in its own bright colour whatever
+# the theme, a thick near-black outline, a strong shine — the chunky 16 px look of the
+# XP years. Drawn for fedtail, not taken from anyone.
+QIP_COLOURS = {
+    "send": "#2fa82f", "reply": "#2fa82f", "boost": "#2fa82f", "follow": "#2fa82f",
+    "star": "#f5c400", "star_full": "#f5c400", "emoji": "#f5c400",
+    "talk": "#f2c230", "direct": "#f6cf55", "private": "#e3a600", "unlisted": "#e3a600",
+    "public": "#2f86e0", "thread": "#2f6fd6", "profile": "#3b82d4", "accounts": "#3b82d4",
+    "menu": "#2f6fd6", "expand": "#2f6fd6", "bookmark": "#d9342b", "unfollow": "#d9342b",
+    "warning": "#f08c00", "attach": "#6f8fb8", "poll": "#3fae3a", "list": "#8b5fc4",
+    "settings": "#8c8c8c", "status": "#33ad28", "nobody": "#8a96a6",
+}
+_WIDTH = re.compile(r'stroke-width="([\d.]+)"')
+
+
 def _styled(text, style, base):
+    if style == "qip":
+        text = text.replace('opacity=".35"', 'opacity=".55"')
+        text = _WIDTH.sub(lambda m: f'stroke-width="{float(m.group(1)) * 1.35:.2f}"', text)
+        return text.replace("{c}", base.name()).replace("{l}", base.lighter(150).name()) \
+            .replace("{d}", QColor(base).darker(300).name())
     if style == "flat":
         text = _SHINE.sub("", text).replace('fill="url(#g)"', 'fill="{c}"')
         dark = base.darker(140)
@@ -100,7 +120,10 @@ def icon(name, theme, size=16):
         return QIcon()
     if name == "status":
         name = STATUS.get(style, "status")
-    base = QColor(OWN_SET.get(name) or OWN.get(name) or theme.c["accent"])
+    if style == "qip":
+        base = QColor(QIP_COLOURS.get(name) or OWN.get(name) or theme.c["accent"])
+    else:
+        base = QColor(OWN_SET.get(name) or OWN.get(name) or theme.c["accent"])
     key = (name, style, base.name(), size)
     if key in _cache:
         return _cache[key]

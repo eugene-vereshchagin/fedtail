@@ -35,8 +35,9 @@
   face nobody has yet shows a grey silhouette. The `psi` theme brings Psi+'s own
   pictures (the Crystal and Stellar iconsets, GPL; `shape.icon_set = "psi"`). The split layout's buttons (the input line, the bar over a lane, the roster)
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the
-  theme's colours, drawn the theme's way (`shape.icon_set`: "gloss" for QIP with a
-  flower for a person, "agent" for the Agent with an "@", "flat" for Psi with a star):
+  theme's colours, drawn the theme's way (`shape.icon_set`: "qip" for the QIP themes —
+  each picture its own bright colour, a thick dark outline, the XP years' chunky look,
+  a flower for a person; "gloss" in the theme's colour; "agent" for the Agent with an "@", "flat" for Psi with a star):
   who sees a post, a warning, send, follow, lists, a private message,
   the menu; a flower for a person in the roster, a bubble for a talk.
 - The roster's groups say "(15)" when nothing in them is new and "(2/15)" when 2 items

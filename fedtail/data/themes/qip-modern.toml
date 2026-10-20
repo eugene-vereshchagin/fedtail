@@ -69,7 +69,7 @@ card_header = "chat"
 faces = "qip"
 roster_rows = "lines"
 tab_rows = "wrap"
-icon_set = "gloss"
+icon_set = "qip"
 
 [words]
 date = "{dd}/{mm} {clock}"
