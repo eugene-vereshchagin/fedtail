@@ -1473,6 +1473,35 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn(hashlib.sha1(b"u0").hexdigest(), left)  # the oldest goes
         self.assertTrue(other.exists())  # not ours: never touched
 
+    def test_a_failed_picture_comes_later_without_a_restart(self):
+        """The server answered 5xx twice: the picture is asked again by itself later,
+        and the card that gave up on it gets it when it comes."""
+        from PySide6.QtGui import QImage
+
+        from fedtail.frontends.qt.images import Images
+        imgs = Images(self.core, self.win.bridge)
+        url, side = "https://media.example/small/1.jpeg", 400
+        key = (url, side)
+        got, gave_up = [], []
+        asked = []
+        imgs._ask = lambda k: asked.append(k)  # no network: we play the server
+        imgs.why[url] = ("network", "HTTP 503")
+        imgs.waiting[key] = [(got.append, lambda: gave_up.append(1))]
+        imgs.patient.add(key)  # the quick second try is spent already
+        imgs._failed(key)
+        self.assertEqual(gave_up, [1])  # the card shows "no picture" for now
+        self.assertEqual(imgs.tries[url], 1)  # and a later try is planned
+        imgs._again(url)  # the timer fires
+        self.assertEqual(asked, [key])
+        img = QImage(4, 4, QImage.Format.Format_RGB32)
+        img.fill(0)
+        imgs._ready(key, img)
+        self.assertEqual(len(got), 1)  # the card that gave up has its picture
+        self.assertNotIn(url, imgs.tries)
+        # nobody waits any more: a timer firing late asks nothing
+        imgs._again(url)
+        self.assertEqual(asked, [key])
+
     def test_download_in_pieces_no_half_files(self):
         """Saving a video not in the cache: written a piece at a time under its own name;
         a download cut off halfway leaves nothing behind."""

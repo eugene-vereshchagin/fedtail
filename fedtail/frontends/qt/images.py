@@ -69,6 +69,10 @@ class Images:
     # before it counts as broken. A server stuck on one picture is often quick the
     # second time (it has fetched it meanwhile), so the first try gives up early.
     SECOND_TRY_AFTER = 1500  # ms
+    # a picture that failed twice is asked again by itself later, for the cards still
+    # waiting on it: a server briefly answering 4xx/5xx (busy, restarting, still fetching
+    # a remote post's media) must not leave it blank until fedtail is restarted
+    LATER_TRIES = (60, 300, 1800)  # s, then three more at the last one; then it rests
     STUCK_AFTER = 180  # s: a request this old with no answer is asked for again
     STARVING = 6  # s: newest first — but a request waiting this long goes next
     FEED_WORKERS = 8  # previews, avatars, emoji: small, many, on screen now
@@ -91,6 +95,7 @@ class Images:
         # that gave up is asked again (a server that was still fetching it has it now)
         self.related = {}   # original url -> {preview urls}
         self.gave_up = {}   # url -> [(max_side, callback, failed)] whose request failed
+        self.tries = {}     # url -> how many later tries it has had (LATER_TRIES)
         # own pools: a backlog of avatars must never delay sending a post, and a few
         # big originals from a slow server must never hold up the previews on screen
         self.pool = ThreadPoolExecutor(max_workers=self.FEED_WORKERS,
@@ -225,10 +230,12 @@ class Images:
                     kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
                     data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
             except requests.RequestException as e:
-                log.warning("image %s: %s after %.1f s", _where(url),
-                            f"refused ({e})" if isinstance(e, remote.Refused)
-                            else e.__class__.__name__, time.monotonic() - t)
-                self.why[url] = ("network", e.__class__.__name__)
+                code = getattr(getattr(e, "response", None), "status_code", None)
+                what = f"refused ({e})" if isinstance(e, remote.Refused) else \
+                    f"HTTP {code}" if code else e.__class__.__name__
+                log.warning("image %s: %s after %.1f s", _where(url), what,
+                            time.monotonic() - t)
+                self.why[url] = ("network", what)
                 raise
             self._t.got = (len(data), time.monotonic() - t)
             img = decode(data, max_side)
@@ -527,6 +534,8 @@ class Images:
         waiting = self.waiting.pop(key, [])
         for cb, failed in waiting:
             self._give_up(key[0], key[1], cb, failed)
+        if waiting and self.why.get(key[0], ("",))[0] == "network":
+            self._try_later(key[0])
         for _cb, failed in waiting:
             if failed:
                 try:
@@ -536,13 +545,40 @@ class Images:
                 except Exception:  # noqa: BLE001 — one bad card mustn't keep the others waiting
                     log.exception("image failure handler")
 
+    def _try_later(self, url):
+        """Ask a failed picture again in a while (LATER_TRIES), for whoever still waits."""
+        n = self.tries.get(url, 0)
+        if n >= len(self.LATER_TRIES) + 3:
+            log.info("image %s: given up after %d later tries", _where(url), n)
+            return
+        if len(self.tries) > 2000:
+            self.tries.pop(next(iter(self.tries)))
+        self.tries[url] = n + 1
+        delay = self.LATER_TRIES[min(n, len(self.LATER_TRIES) - 1)]
+        log.info("image %s: asking again in %d s (try %d)", _where(url), delay, n + 1)
+        QTimer.singleShot(delay * 1000, lambda: self._again(url))
+
+    def _again(self, url):
+        waiters = self.gave_up.pop(url, [])
+        if not waiters:
+            return  # nobody waits for it any more (cards gone, or it came meanwhile)
+        self.broken.pop(url, None)
+        for max_side, cb, failed in waiters:
+            key = (url, max_side)
+            self.patient.add(key)  # straight to the patient timeout, no quick second try
+            self.get(url, cb, max_side, failed)
+
     def _ready(self, key, img):
         if img.isNull():
             self._failed(key)
             return
         self.broken.pop(key[0], None)
         self.why.pop(key[0], None)
-        self.gave_up.pop(key[0], None)
+        self.tries.pop(key[0], None)
+        again = self.gave_up.pop(key[0], [])  # cards that gave up on it: here it is now
+        for max_side, cb, _failed in again:
+            if max_side == key[1]:
+                self.waiting.setdefault(key, []).append((cb, None))
         for preview in self.related.pop(key[0], ()):
             again = self.gave_up.pop(preview, [])
             if again:
