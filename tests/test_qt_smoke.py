@@ -20,9 +20,12 @@ except ImportError:
 from fedtail import i18n  # noqa: E402
 from fedtail.core import auth, config, paths  # noqa: E402
 from fedtail.core.app import Core  # noqa: E402
+from fedtail.protocols.mastodon import adapter  # noqa: E402
 
 from . import fakes  # noqa: E402
 from .fakes import BOB, ME, NEWS, FakeApi, status  # noqa: E402
+
+E = adapter.post  # a server's status → what the cards are given (fedtail.model)
 
 
 def gone(w):
@@ -431,7 +434,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.win.lane_widgets[name].header.title.text().strip("= "),
                          "Друзья")
         menu = QMenu()
-        self.win.fill_list_menu(menu, {"id": "B"})
+        self.win.fill_list_menu(menu, adapter.account({"id": "B"}))
         ticks = [a for a in menu.actions() if a.isCheckable()]
         self.assertEqual([(a.text(), a.isChecked()) for a in ticks], [("Друзья", True)])
         # someone not followed: the ticks are dead, a "click" sends nothing
@@ -442,7 +445,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(list_open(None, {"l1"}))  # already inside: may be taken out
         self.core._relations["STRANGER"] = (_time.monotonic(), {"following": False})
         menu = QMenu()
-        self.win.fill_list_menu(menu, {"id": "STRANGER"})
+        self.win.fill_list_menu(menu, adapter.account({"id": "STRANGER"}))
         ticks = [a for a in menu.actions() if a.isCheckable()]
         self.assertTrue(ticks and not any(a.isEnabled() for a in ticks))
         sent = []
@@ -606,7 +609,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.accept()
         folded = dict(self.core.store.get_status("013"),
                       filtered=[{"filter": {"title": "шум", "filter_action": "warn"}}])
-        row = PostRow(CardSpec(key="x", status=folded), self.win.ctx)
+        row = PostRow(CardSpec(key="x", entry=E(folded)), self.win.ctx)
         self.assertFalse(row.cw_open)
 
         # editing my post: the editor fetches what I typed, sends the change, the card
@@ -715,11 +718,11 @@ class QtSmokeTest(unittest.TestCase):
         # Ctrl+F finds posts in the lane on screen and marks the one it stands on
         self.win.select_lane("home")
         self.pump(0.2)
-        from fedtail.core.model import snippet
+        from fedtail.model.text import snippet
         view = self.win.current_view()
         self.assertIs(view, self.win.lane_widgets["home"].view)
         key = next(k for k in view.order if view.rows[k].status_id)
-        word = snippet(view.rows[key].spec.status).split()[0]
+        word = snippet(view.rows[key].spec.post).split()[0]
         bar = self.win.find_bar
         bar.open()
         bar.edit.setText(word.upper())
@@ -770,7 +773,7 @@ class QtSmokeTest(unittest.TestCase):
         from PySide6.QtGui import QPixmap
 
         from fedtail.frontends.qt.viewer import ImageOverlay
-        pic = self.core.store.get_status("013")["media_attachments"]
+        pic = [adapter.media(m) for m in self.core.store.get_status("013")["media_attachments"]]
         self.win.show_images(pic, 0)
         ov = self.win.findChild(ImageOverlay)
         self.assertIsNotNone(ov)
@@ -867,7 +870,7 @@ class QtSmokeTest(unittest.TestCase):
         bigs = []
         self.win.images.get = lambda url, cb, *a, **k: (bigs.append(k.get("big", False)),
                                                         fake_get(url, cb))
-        PostRow(CardSpec(key="091", status=st), self.win.ctx)
+        PostRow(CardSpec(key="091", entry=E(st)), self.win.ctx)
         pictures = [u for u in asked if u and "/x/" in u]  # (the avatar has no address)
         self.assertEqual(pictures, ["https://x/small.jpg", "https://x/big.jpg"])
         # the original goes to its own workers, the preview doesn't
@@ -944,11 +947,12 @@ class QtSmokeTest(unittest.TestCase):
         from fedtail.frontends.qt.card import CardSpec, PostRow, _true_kind
         clip = {"type": "image", "url": "https://x.example/media/clip.mp4?x=1",
                 "preview_url": None, "meta": {"original": {"width": 320, "height": 480}}}
-        self.assertEqual(_true_kind(clip)["type"], "video")
-        self.assertEqual(_true_kind(dict(clip, url="https://x/a.png"))["type"], "image")
+        self.assertEqual(_true_kind(adapter.media(clip)).kind, "video")
+        self.assertEqual(_true_kind(adapter.media(dict(clip, url="https://x/a.png"))).kind,
+                         "image")
         st = status("090", BOB, minute=1)
         st["media_attachments"] = [clip]
-        row = PostRow(CardSpec(key="090", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="090", entry=E(st)), self.win.ctx)
         texts = [w.text() for w in row.findChildren(QLabel)]
         self.assertTrue(any(t.startswith("▶") for t in texts), texts)
 
@@ -962,16 +966,16 @@ class QtSmokeTest(unittest.TestCase):
                       "description": "Описание", "image": "https://news.example/a.png"}
         cards = lambda row: row.findChildren(QFrame, "linkCard")
         texts = lambda row: [w.text() for w in row.findChildren(QLabel)]
-        row = PostRow(CardSpec(key="091", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="091", entry=E(st)), self.win.ctx)
         self.assertEqual(len(cards(row)), 1)
         self.assertIn("news.example", texts(row))
         self.assertTrue(any("Описание" in t for t in texts(row)))
         self.win.ctx.cfg["feed"]["link_cards"] = "text"
-        row = PostRow(CardSpec(key="091", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="091", entry=E(st)), self.win.ctx)
         self.assertFalse(row.findChildren(QLabel, "linkCardImage"))
         self.assertFalse(any("Описание" in t for t in texts(row)))
         self.win.ctx.cfg["feed"]["link_cards"] = "off"
-        self.assertEqual(cards(PostRow(CardSpec(key="091", status=st), self.win.ctx)), [])
+        self.assertEqual(cards(PostRow(CardSpec(key="091", entry=E(st)), self.win.ctx)), [])
         self.win.ctx.cfg["feed"]["link_cards"] = "full"
 
     def test_quotes(self):
@@ -984,17 +988,17 @@ class QtSmokeTest(unittest.TestCase):
         st["content"] += '<p class="quote-inline">RE: <a href="x">x</a></p>'
         st["quote"] = {"state": "accepted", "quoted_status": inner}
         texts = lambda row: " ".join(w.text() for w in row.findChildren(QLabel))
-        row = PostRow(CardSpec(key="094", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="094", entry=E(st)), self.win.ctx)
         self.assertEqual(len(row.findChildren(QFrame, "quoteBox")), 1)
         self.assertIn("исходная новость", texts(row))
         self.assertNotIn("RE:", texts(row))
         st["quote"] = {"state": "pending", "quoted_status_id": "093"}
-        row = PostRow(CardSpec(key="094", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="094", entry=E(st)), self.win.ctx)
         self.assertFalse(row.findChildren(QFrame, "quoteBox"))
         self.assertIn("одобрения", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "off"
         st["quote"] = {"state": "accepted", "quoted_status": inner}
-        row = PostRow(CardSpec(key="094", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="094", entry=E(st)), self.win.ctx)
         self.assertIn("RE:", texts(row))
         self.assertNotIn("исходная новость", texts(row))
         self.win.ctx.cfg["feed"]["quotes"] = "card"
@@ -1006,10 +1010,9 @@ class QtSmokeTest(unittest.TestCase):
         st = status("096", BOB, minute=1, text="გამარჯობა")
         st["language"] = "ka"
         asked = []
-        self.win.ctx.translate = lambda s, done: (asked.append(s["id"]), done(
-            {"content": "<p>привет</p>", "detected_source_language": "ka",
-             "provider": "DeepL.com"}))
-        row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+        self.win.ctx.translate = lambda p, done: (asked.append(p.id), done(
+            {"html": "<p>привет</p>", "lang": "ka", "provider": "DeepL.com"}))
+        row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
         text = lambda: " ".join(w.text() for w in row.findChildren(QLabel))
         row._translate()
         self.assertEqual(asked, ["096"])
@@ -1042,7 +1045,7 @@ class QtSmokeTest(unittest.TestCase):
         key(Qt.Key.Key_K)
         self.assertEqual(view.cursor_key, first)
         self.assertEqual(view.rows[first].card.property("keyed"), True)
-        sid = view.rows[first].spec.status["id"]
+        sid = view.rows[first].spec.entry.id
         key(Qt.Key.Key_F)
         self.pump(until=lambda: self.world.statuses[sid].get("favourited"))
         self.win.cfg["ui"]["post_keys"] = False
@@ -1100,9 +1103,10 @@ class QtSmokeTest(unittest.TestCase):
 
         from fedtail.frontends.qt import card as card_module
         from fedtail.frontends.qt.card import CardSpec, PostRow
-        self.assertEqual(card_module._focus({"meta": {"focus": {"x": 2, "y": "-0.5"}}}),
+        self.assertEqual(card_module._focus(adapter.media({"meta": {"focus": {"x": 2,
+                                                                              "y": "-0.5"}}})),
                          (1.0, -0.5))
-        self.assertEqual(card_module._focus({}), (0.0, 0.0))
+        self.assertEqual(card_module._focus(adapter.media({})), (0.0, 0.0))
         # a 300×150 picture into 150×150: focus at the right edge → the right half
         self.assertEqual(card_module._crop_rect(300, 150, 150, 150, (1.0, 0.0)), (150, 0))
         self.assertEqual(card_module._crop_rect(300, 150, 150, 150, (0.0, 0.0)), (75, 0))
@@ -1118,10 +1122,10 @@ class QtSmokeTest(unittest.TestCase):
             for i in range(2)]
         sizes = lambda: [w.size().toTuple() for w in row.findChildren(card_module.ClickLabel)
                          if w.objectName() == "media"]
-        row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
         self.assertNotEqual(sizes()[0], (150, 150))  # natural: its own shape
         self.core.cfg["ui"]["media_grid"] = "square"
-        row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
         self.assertEqual(sizes(), [(150, 150), (150, 150)])
         self.core.cfg["ui"]["media_grid"] = "natural"
 
@@ -1136,9 +1140,9 @@ class QtSmokeTest(unittest.TestCase):
                                     "preview_url": "https://x.example/a_s.png",
                                     "description": "кот на окне"}]
         caps = lambda r: [w for w in r.findChildren(QLabel) if w.objectName() == "altCaption"]
-        self.assertEqual(caps(PostRow(CardSpec(key="097", status=st), self.win.ctx)), [])
+        self.assertEqual(caps(PostRow(CardSpec(key="097", entry=E(st)), self.win.ctx)), [])
         self.core.cfg["ui"]["alt_text"] = "caption"
-        row = PostRow(CardSpec(key="097", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="097", entry=E(st)), self.win.ctx)
         self.assertIn("кот на окне", caps(row)[0].text())
         media = [w for w in row.findChildren(QLabel) if w.objectName() == "media"]
         self.assertEqual(media[0].accessibleDescription(), "кот на окне")
@@ -1194,7 +1198,7 @@ class QtSmokeTest(unittest.TestCase):
                                     "meta": {"small": {"width": 400, "height": 300}}}]
         asked = []
         self.win.images.get = lambda url, cb, *a, **k: asked.append(url)
-        row = PostRow(CardSpec(key="095", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="095", entry=E(st)), self.win.ctx)
         covers = [w for w in row.findChildren(QLabel) if w.text().startswith("⚠")]
         self.assertEqual(len(covers), 1)
         self.assertNotIn("https://x.example/a_s.png", asked)  # not even downloaded
@@ -1202,7 +1206,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("https://x.example/a_s.png", asked)
         self.win.ctx.cfg["feed"]["sensitive_media"] = "show"
         asked.clear()
-        PostRow(CardSpec(key="095", status=st), self.win.ctx)
+        PostRow(CardSpec(key="095", entry=E(st)), self.win.ctx)
         self.assertIn("https://x.example/a_s.png", asked)
         self.win.ctx.cfg["feed"]["sensitive_media"] = "hide"
 
@@ -1231,14 +1235,14 @@ class QtSmokeTest(unittest.TestCase):
         asked = []
         self.win.images.get = lambda url, cb, *a, **k: asked.append(url)
         try:
-            row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+            row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
             self.assertFalse(row.cw_open)  # off: folded as usual
             self.assertIn(_("report"), menu_texts(row))
             cfg["ui"]["arts_mode"] = True
-            row = PostRow(CardSpec(key="096", status=st), self.win.ctx)
+            row = PostRow(CardSpec(key="096", entry=E(st)), self.win.ctx)
             self.assertTrue(row.cw_open)  # neither the CW nor the filter folds it
             self.assertNotIn(_("report"), menu_texts(row))
-            row = PostRow(CardSpec(key="097", status=bare), self.win.ctx)
+            row = PostRow(CardSpec(key="097", entry=E(bare)), self.win.ctx)
             covers = [w for w in row.findChildren(QLabel) if w.text().startswith("⚠")]
             self.assertEqual(covers, [])
             self.assertIn("https://x.example/b_s.png", asked)  # shown straight away
@@ -1265,7 +1269,7 @@ class QtSmokeTest(unittest.TestCase):
         try:
             for open_ in (True, False):
                 self.win.ctx.cfg["ui"]["expand_cw"] = open_
-                PostRow(CardSpec(key="098", status=st), self.win.ctx)
+                PostRow(CardSpec(key="098", entry=E(st)), self.win.ctx)
         finally:
             QWidget.setVisible = real_set
             self.win.ctx.cfg["ui"]["expand_cw"] = True
@@ -1283,7 +1287,7 @@ class QtSmokeTest(unittest.TestCase):
         asked = []
         self.win.images.get = lambda url, cb, *a, **k: asked.append((url, cb))
         self.win.images.local = lambda url: None
-        row = PostRow(CardSpec(key="092", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="092", entry=E(st)), self.win.ctx)
         html = lambda: " ".join(w.text() for w in row.findChildren(QLabel))
         self.assertIn(":blobcat:", html())
         self.assertTrue(asked)
@@ -1294,7 +1298,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn("<img", html())
         self.assertNotIn(">привет :blobcat:", html())
         self.win.ctx.cfg["feed"]["custom_emoji"] = False
-        row = PostRow(CardSpec(key="092", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="092", entry=E(st)), self.win.ctx)
         self.assertNotIn("<img", " ".join(w.text() for w in row.findChildren(QLabel)))
         self.win.ctx.cfg["feed"]["custom_emoji"] = True
 
@@ -1406,7 +1410,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.ctx.act_as = lambda s: [("work", "@w")]
         self.win.ctx.do_act_as = lambda s, t, a: done.append((t, a))
         done = []
-        row = PostRow(CardSpec(key="098", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="098", entry=E(st)), self.win.ctx)
         row.ensure_menu()
         texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
         self.assertIn("📄 Читать целиком (с сервера автора)", texts)
@@ -1416,7 +1420,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(done, [("work", "fav")])
         self.assertTrue(any("<s>плагин</s>" in w.text() for w in row.findChildren(QLabel)))
         self.win.cfg["feed"]["text_markup"] = False
-        plain = PostRow(CardSpec(key="098", status=st), self.win.ctx)
+        plain = PostRow(CardSpec(key="098", entry=E(st)), self.win.ctx)
         self.assertFalse(any("<s>" in w.text() for w in plain.findChildren(QLabel)))
         self.win._show_whole(st, {"type": "Event", "name": "Встреча", "summary": "",
                                   "content": "<p>приходите</p>", "url": "https://e.example/1",
@@ -2086,7 +2090,7 @@ class QtSmokeTest(unittest.TestCase):
         self.world.reactions["011"] = {"favourited_by": [NEWS], "reblogged_by": []}
         st = dict(st, favourites_count=1)
         self.core.store.put_statuses([st])
-        row = PostRow(CardSpec(key="011", status=st, unread=True), self.win.ctx)
+        row = PostRow(CardSpec(key="011", entry=E(st), unread=True), self.win.ctx)
         self.assertEqual(row._menu.actions(), [])  # nothing built until it opens
         row.ensure_menu()
         texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
@@ -2107,7 +2111,7 @@ class QtSmokeTest(unittest.TestCase):
         call.reject()
         self.pump(0.1)
         self.win.ctx.cfg["post"]["invite"] = False  # off: not in the menu
-        row = PostRow(CardSpec(key="011b", status=st), self.win.ctx)
+        row = PostRow(CardSpec(key="011b", entry=E(st)), self.win.ctx)
         row.ensure_menu()
         self.assertNotIn(_("invite"), [a.text() for a in row._menu.actions()])
         self.win.ctx.cfg["post"]["invite"] = True
@@ -2149,9 +2153,9 @@ class QtSmokeTest(unittest.TestCase):
         view = self.win.lane_widgets.get("home")
         if view is not None:
             view = view.view
-            view.set_specs([CardSpec(key="rb9", status=boost)])
+            view.set_specs([CardSpec(key="rb9", entry=E(boost))])
             self.win.on_event("status_updated", dict(st, reblogged=True))
-            self.assertTrue(view.model[0].status["reblog"]["reblogged"])
+            self.assertTrue(view.model[0].entry.post.mine.shared)
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

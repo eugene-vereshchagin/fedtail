@@ -6,9 +6,8 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
-from ...core.model import real
-from ...core.search import haystack, matches
 from ...i18n import _
+from ...model.text import haystack, matches
 
 
 class FindBar(QWidget):
@@ -125,9 +124,9 @@ class FindBar(QWidget):
         if view is not None and query.strip():
             # every post of the lane, also those whose cards aren't built yet
             for spec in view.model or [view.rows[k].spec for k in view.order]:
-                if not spec.status or spec.extra.get("separator"):
+                if spec.entry is None or spec.extra.get("separator"):
                     continue
-                if matches(query, haystack(spec.status, spec.extra.get("short_id"))):
+                if matches(query, haystack(spec.entry, spec.extra.get("short_id"))):
                     self.hits.append(spec.key)
         if old in self.hits:
             self.pos = self.hits.index(old)
@@ -199,8 +198,7 @@ class FindBar(QWidget):
             return hit["item"]
         want = {hit["status_id"]}
         for spec in view.model or [view.rows[k].spec for k in view.order]:
-            st = spec.status
-            if st and (st["id"] in want or real(st)["id"] in want):
+            if spec.entry is not None and (spec.entry.id in want or spec.post.id in want):
                 return spec.key
         return None
 

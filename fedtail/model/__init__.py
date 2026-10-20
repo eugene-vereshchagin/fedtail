@@ -160,6 +160,7 @@ class Card:
     title: str = ""
     description: str = ""
     image: str = ""
+    image_alt: str = ""
     provider: str = ""
     kind: str = "link"             # link, photo, video, rich
     author: str = ""
@@ -199,7 +200,8 @@ class Mine:
     liked: bool = False
     shared: bool = False
     bookmarked: bool = False
-    muted: bool = False            # the thread is muted
+    muted: bool | None = None      # the thread is muted; None: the server didn't say
+                                   #   (it says so only for threads I'm in)
     pinned: bool = False
 
 

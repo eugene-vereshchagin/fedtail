@@ -1,7 +1,7 @@
 """One post on screen, and the "new below" divider."""
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from urllib.parse import quote, unquote
 
 from PySide6.QtCore import QRectF, QSize, Qt, Signal
@@ -23,17 +23,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...core import config, links
-from ...core.model import (
-    QUOTE_SHOWN,
+from ...core import config
+from ...i18n import _, current_language
+from ...model import Share, real
+from ...model.text import (
+    collapse_tag_stuffing,
     html_to_text,
     is_bot,
-    quoted,
-    real,
     snippet,
     without_quote_fallback,
 )
-from ...i18n import _, current_language
 from ..richtext import plain_tip
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
@@ -44,23 +43,53 @@ THUMB_MAX_W = 380
 VIS_ICONS = {
     "public": ("globe", "applications-internet"),
     "unlisted": ("object-unlocked", "unlock"),
-    "private": ("object-locked", "lock"),
+    "followers": ("object-locked", "lock"),
     "direct": ("mail-message", "mail-unread"),
 }
-VIS_WORD = {"public": "pub", "unlisted": "unl", "private": "priv", "direct": "dm"}
+VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
+VIS_KEY = {"followers": "private"}  # the words for it in i18n: vis_private
+QUOTE_SHOWN = {"accepted"}
 
 
 @dataclass
 class CardSpec:
-    key: str                 # unique within a view (item id or status id)
-    status: dict
+    """What one card shows: a post of fedtail.model (a Post, or a Share around one),
+    and where and how. Cards read nothing else of the server (docs/PROTOCOLS.md)."""
+    key: str                   # unique within a view (item id or status id)
+    entry: object = None       # Post | Share; None for the "new below" divider
     depth: int = 0
     number: int | None = None  # /N inside a thread
-    parent: object = None      # parent status, "missing", or None (unknown / not a reply)
+    parent: object = None      # the Post it answers, "missing", or None (unknown / no reply)
     unread: bool = False
     focus: bool = False
     in_thread: bool = False
-    extra: dict = field(default_factory=dict)  # my_replies, short_id, separator
+    extra: dict = field(default_factory=dict)  # my_replies, short_id, separator, via…
+
+    @property
+    def post(self):
+        """The post itself (the one inside a Share), or None."""
+        return real(self.entry) if self.entry is not None else None
+
+
+def spec_of(view, key, raw, parent=None, extra=None, **kw):
+    """A CardSpec from the core's own status (and its parent, my replies to it, the
+    conversation it is in), turned into the model here — the one place the cards'
+    data crosses over until the lanes hand out the model themselves (stage 2)."""
+    entry = view.entry(raw)
+    if parent is not None and parent != "missing":
+        parent = real(view.entry(parent))
+    extra = dict(extra or {})
+    if extra.get("my_replies"):
+        extra["my_replies"] = [real(view.entry(x)) for x in extra["my_replies"]]
+    conv = extra.get("conversation")
+    if conv:
+        extra["conversation"] = {"members": [m["id"] for m in conv["members"]],
+                                 "unread": conv["unread"],
+                                 "last": real(view.entry(conv["last"]))}
+    via = raw.get("_via") if isinstance(raw, dict) else None
+    if via:
+        extra["via"] = via
+    return CardSpec(key=key, entry=entry, parent=parent, extra=extra, **kw)
 
 
 class ClickLabel(QLabel):
@@ -87,20 +116,11 @@ def _host(url):
     return host[4:] if host.startswith("www.") else host
 
 
-def emoji_reactions(st):
-    """[{name, count}] — emoji reactions where the server passes them on (Akkoma and
-    Pleroma: pleroma.emoji_reactions; Fedibird, Iceshrimp and kin: emoji_reactions or
-    reactions). Mastodon and GoToSocial have none."""
-    raw = ((st.get("pleroma") or {}).get("emoji_reactions") or st.get("emoji_reactions")
-           or st.get("reactions") or [])
-    out = []
-    for r in raw if isinstance(raw, list) else []:
-        try:
-            if isinstance(r, dict) and r.get("name") and int(r.get("count") or 0) > 0:
-                out.append({"name": str(r["name"]), "count": int(r["count"])})
-        except (TypeError, ValueError):
-            continue
-    return sorted(out, key=lambda r: -r["count"])
+def emoji_reactions(post):
+    """[(name, count)] — emoji reactions where the server passes them on (Akkoma,
+    Pleroma, Fedibird, Iceshrimp and kin), the most given first."""
+    return sorted(((r.name, r.count) for r in post.reactions if r.count > 0),
+                  key=lambda r: -r[1])
 
 
 def _set_prop(w, name, value):
@@ -219,11 +239,11 @@ class PostRow(QWidget):
         self._build()
         self._flags()
 
-    def _edited_mark(self, st):
+    def _edited_mark(self, p):
         """"· edited", a link to the versions."""
-        mark = link("history", st["id"], _("edited_mark"), self.theme.css("muted"))
+        mark = link("history", p.id, _("edited_mark"), self.theme.css("muted"))
         lab = self._label("· " + mark, "meta", wrap=False)
-        lab.setToolTip(_("edited_tip", when=self.theme.date(st["edited_at"])))
+        lab.setToolTip(_("edited_tip", when=self.theme.date(p.edited)))
         return lab
 
     def _card_menu(self, pos):
@@ -261,11 +281,10 @@ class PostRow(QWidget):
 
     def _quote_reply(self, text=None):
         """↩ with a quote: the text given, what is selected in the post, or all of it."""
-        st = real(self.spec.status)
+        p = self.spec.post
         whole = text is None and not self._selected_text()
-        text = text or self._selected_text() or \
-            html_to_text(without_quote_fallback(st.get("content") or ""))
-        self.ctx.quote_reply(self.spec.status, text, whole)
+        text = text or self._selected_text() or html_to_text(without_quote_fallback(p.text))
+        self.ctx.quote_reply(self.spec.entry, text, whole)
 
     def _route_text_menus(self):
         for lab in self.body.findChildren(QLabel):
@@ -277,16 +296,16 @@ class PostRow(QWidget):
     # ---- public -----------------------------------------------------------------
     @property
     def status_id(self):
-        return self.spec.status["id"]
+        return self.spec.entry.id
 
     @property
     def real_id(self):
-        return real(self.spec.status)["id"]
+        return self.spec.post.id
 
     def update_spec(self, spec):
         old = self.spec
         self.spec = spec
-        if (old.status is not spec.status and old.status != spec.status) \
+        if (old.entry is not spec.entry and old.entry != spec.entry) \
                 or _parent_key(old.parent) != _parent_key(spec.parent) \
                 or old.number != spec.number or old.focus != spec.focus \
                 or old.extra.get("short_id") != spec.extra.get("short_id") \
@@ -365,18 +384,18 @@ class PostRow(QWidget):
         self.lay.addWidget(self.body)
 
         spec = self.spec
-        wrapper = spec.status
-        st = real(wrapper)
+        entry = spec.entry
+        p = spec.post
 
-        if wrapper.get("reblog"):
+        if isinstance(entry, Share):
             # the booster's name opens their profile (a relay bot: who is behind it)
-            booster = wrapper["account"]
-            name = (f'<a href="fedtail:account/{esc(booster["id"])}" style="color:inherit;'
+            booster = entry.by
+            name = (f'<a href="fedtail:account/{esc(booster.id)}" style="color:inherit;'
                     f'text-decoration:none;">{display_name(booster)}</a>')
             line = self._emoji_label(
                 _("boosted_by", name=name) + " · " +
-                _("boost_time", when=self.theme.date(wrapper.get("created_at", ""))),
-                wrapper["account"].get("emojis"), "boost")
+                _("boost_time", when=self.theme.date(entry.created)),
+                booster.emojis, "boost")
             # right click: the booster's profile, or into a list (a relay bot into
             # "Morning", say)
             line.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -385,13 +404,12 @@ class PostRow(QWidget):
             v.addWidget(line)
 
         if self.theme.shape["card_header"] == "compact":
-            v.addLayout(self._header_compact(st))
+            v.addLayout(self._header_compact(p))
         else:
-            v.addLayout(self._header_rich(st))
+            v.addLayout(self._header_rich(p))
 
-        if not spec.in_thread and st.get("in_reply_to_id") and \
-                self.ctx.cfg["feed"]["show_reply_context"]:
-            v.addWidget(self._label(self._context_html(st), "ctx"))
+        if not spec.in_thread and p.reply_to and self.ctx.cfg["feed"]["show_reply_context"]:
+            v.addWidget(self._label(self._context_html(p), "ctx"))
 
         # with its parent from the start: a widget without one becomes a window of its own
         # when shown — the CW switch below shows or hides it before it goes into the
@@ -402,12 +420,11 @@ class PostRow(QWidget):
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(8)
         quote_mode = self.ctx.cfg["feed"].get("quotes", "card")
-        quote = quoted(st) if quote_mode != "off" else None
+        quote = p.quote if quote_mode != "off" else None
         tr = getattr(self, "translation", None)
         if tr and self.show_translation:
-            src = tr.get("detected_source_language") or "?"
             row = QHBoxLayout()
-            row.addWidget(self._label(esc(_("translated_from", lang=src,
+            row.addWidget(self._label(esc(_("translated_from", lang=tr.get("lang") or "?",
                                                provider=tr.get("provider") or "")),
                                       "quoteNote"), 1)
             back = QPushButton(_("show_original"))
@@ -415,51 +432,49 @@ class PostRow(QWidget):
             back.clicked.connect(self._translate)
             row.addWidget(back)
             cv.addLayout(row)
-        if st.get("content"):
-            html = st["content"]
-            if tr and self.show_translation and tr.get("content"):
-                html = tr["content"]
+        if p.text:
+            html = p.text
+            if tr and self.show_translation and tr.get("html"):
+                html = tr["html"]
             if quote:
                 html = without_quote_fallback(html)
             if self.ctx.cfg["feed"].get("collapse_tags", True):
-                from ...core.model import collapse_tag_stuffing
                 html = collapse_tag_stuffing(html, full=bool(self.spec.in_thread))
             if self.ctx.cfg["ui"]["links_in_app"]:
-                html = links.in_app(html, st)  # @mentions, #tags, fediverse links stay inside
+                # @mentions, #tags, fediverse links stay inside
+                html = self.ctx.view.in_app(replace(p, text=html))
             mk = self.ctx.cfg["feed"].get("text_markup", True)
-            text = self._emoji_label(clean(html, self.theme.css("link"), mk), st.get("emojis"),
+            text = self._emoji_label(clean(html, self.theme.css("link"), mk), p.emojis,
                                      "postText", selectable=True)
             cv.addWidget(text)
-        media = self._media(st)
+        media = self._media(p)
         if media:
             cv.addWidget(media)
         if quote:
             cv.addWidget(self._quote(quote, quote_mode))
         elif not media:
-            card = self._link_card(st)
+            card = self._link_card(p)
             if card:
                 cv.addWidget(card)
-        if st.get("poll"):
-            cv.addWidget(self._poll(st))
-        reacted = emoji_reactions(st) if self.ctx.cfg["feed"].get("emoji", True) else []
+        if p.poll:
+            cv.addWidget(self._poll(p))
+        reacted = emoji_reactions(p) if self.ctx.cfg["feed"].get("emoji", True) else []
         if reacted:
             line = self._label(" ".join(
-                (esc(r["name"]) if len(r["name"]) <= 4 else ":" + esc(r["name"].strip(":"))
-                 + ":") + f"\u00a0{r['count']}" for r in reacted[:12]), "reactions")
+                (esc(name) if len(name) <= 4 else ":" + esc(name.strip(":")) + ":")
+                + f" {count}" for name, count in reacted[:12]), "reactions")
             line.setToolTip(_("reactions_tip"))
             cv.addWidget(line)
 
         # a server filter that says "warn": folded like a content warning, closed
-        warned = [(f.get("filter") or {}).get("title") or "?" for f in st.get("filtered") or []
-                  if (f.get("filter") or {}).get("filter_action", "warn") == "warn"
-                  and not self.ctx.cfg["ui"]["arts_mode"]]
+        warned = list(p.filtered) if not self.ctx.cfg["ui"]["arts_mode"] else []
         if warned:
             self.cw_open = False
-        if st.get("spoiler_text") or warned:
+        if p.warning or warned:
             cw_row = QHBoxLayout()
             label = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else []) +
-                               (["⚠ " + st["spoiler_text"]] if st.get("spoiler_text") else []))
-            cw_row.addWidget(self._emoji_label(esc(label), st.get("emojis"), "cw"), 1)
+                               (["⚠ " + p.warning] if p.warning else []))
+            cw_row.addWidget(self._emoji_label(esc(label), p.emojis, "cw"), 1)
             btn = QPushButton()
             btn.setObjectName("tool")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -476,23 +491,22 @@ class PostRow(QWidget):
             btn.clicked.connect(toggle)
             sync()
         v.addWidget(content)
-        v.addWidget(self._actions(st))
+        v.addWidget(self._actions(p))
         answers = spec.extra.get("my_replies") or []
         if answers:
             last = answers[-1]
             more = f" (+{len(answers) - 1})" if len(answers) > 1 else ""
-            v.addWidget(self._label(link("thread", last["id"], "↳ " + _(
-                "you_replied", when=self.theme.date(last.get("created_at", "")),
+            v.addWidget(self._label(link("thread", last.id, "↳ " + _(
+                "you_replied", when=self.theme.date(last.created),
                 text=esc(snippet(last, 120))) + more, self.theme.css("on_myreply")),
                 "myreply"))
         conv = spec.extra.get("conversation")
-        if conv and len(conv["members"]) > 1 or conv and conv["last"]["id"] != st["id"]:
+        if conv and (len(conv["members"]) > 1 or conv["last"].id != p.id):
             last = conv["last"]
-            who = (real(last)["account"].get("display_name") or
-                   real(last)["account"].get("username", ""))
+            who = last.author.name or last.author.username
             text = _("conv_line", n=len(conv["members"]), new=conv["unread"]) + " · " + \
                 _("conv_last", who=esc(who), text=esc(snippet(last, 90)))
-            v.addWidget(self._label(link("thread", real(last)["id"], "💬 " + text,
+            v.addWidget(self._label(link("thread", last.id, "💬 " + text,
                                          self.theme.css("link")), "ctx"))
 
     # ---- header -------------------------------------------------------------------
@@ -529,8 +543,8 @@ class PostRow(QWidget):
         self.mark = m
         return m
 
-    def _header_rich(self, st):
-        acc = st["account"]
+    def _header_rich(self, p):
+        acc = p.author
         h = QHBoxLayout()
         h.setSpacing(12)
         size = int(self.theme.shape["avatar"])
@@ -538,11 +552,11 @@ class PostRow(QWidget):
             avatar = ClickLabel()
             avatar.setFixedSize(QSize(size, size))
             avatar.setCursor(Qt.CursorShape.PointingHandCursor)
-            avatar.setToolTip("@" + acc["acct"])
-            avatar.setAccessibleName(_("a11y_avatar", acct=acc["acct"]))
-            avatar.clicked.connect(lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
+            avatar.setToolTip("@" + acc.handle)
+            avatar.setAccessibleName(_("a11y_avatar", acct=acc.handle))
+            avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
-            self.ctx.images.get(acc.get("avatar_static") or acc.get("avatar"),
+            self.ctx.images.get(acc.avatar_static,
                                 lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
         line = QHBoxLayout()
         line.setSpacing(6)
@@ -556,31 +570,30 @@ class PostRow(QWidget):
             num = QLabel(f"/{self.spec.number}")
             num.setObjectName("num")
             top.addWidget(num)
-        top.addWidget(self._emoji_label(link("account", acc["id"], display_name(acc),
+        top.addWidget(self._emoji_label(link("account", acc.id, display_name(acc),
                                              self.theme.css("name"), bold=True),
-                                        acc.get("emojis"), "name", wrap=False,
-                                        fallback=link("account", acc["id"],
-                                                      esc(acc.get("username") or acc["acct"]),
+                                        acc.emojis, "name", wrap=False,
+                                        fallback=link("account", acc.id,
+                                                      esc(acc.username or acc.handle),
                                                       self.theme.css("name"), bold=True)))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
-            f'@{esc(acc["acct"])}{esc(bot)} · '
-            + link("thread", st["id"], self.theme.date(st.get("created_at", "")),
-                   self.theme.css("muted")),
+            f'@{esc(acc.handle)}{esc(bot)} · '
+            + link("thread", p.id, self.theme.date(p.created), self.theme.css("muted")),
             "meta", wrap=False))
-        vis = st.get("visibility", "public")
+        vis = p.visibility
         icon = _theme_icon(VIS_ICONS.get(vis, ())) if self.theme.shape["icons"] else QIcon()
         vis_label = QLabel()
-        vis_label.setToolTip(_("vis_" + vis))
+        vis_label.setToolTip(_("vis_" + VIS_KEY.get(vis, vis)))
         if icon.isNull():
             vis_label.setText("· " + VIS_WORD.get(vis, vis))
             vis_label.setObjectName("meta")
         else:
             vis_label.setPixmap(icon.pixmap(14, 14))
         line.addWidget(vis_label)
-        if st.get("edited_at"):
-            line.addWidget(self._edited_mark(st))
-        old = self._old_mark(st)
+        if p.edited:
+            line.addWidget(self._edited_mark(p))
+        old = self._old_mark(p)
         if old:
             line.addWidget(old)
         self._via_mark(line)
@@ -603,10 +616,10 @@ class PostRow(QWidget):
         self._short_id(h)
         return h
 
-    def _old_mark(self, st):
+    def _old_mark(self, p):
         """An old post (feed.old_days): pulled from someone's outbox, or a thread from
         long ago — "old" in the header, so it isn't read as news."""
-        days = _age_days(st, self.ctx.cfg)
+        days = _age_days(p, self.ctx.cfg)
         if not days:
             return None
         lab = QLabel(_("old_post", n=days))
@@ -614,8 +627,8 @@ class PostRow(QWidget):
         lab.setToolTip(_("old_post_tip"))
         return lab
 
-    def _header_compact(self, st):
-        acc = st["account"]
+    def _header_compact(self, p):
+        acc = p.author
         h = QHBoxLayout()
         h.setSpacing(8)
         h.addWidget(self._unread_mark())
@@ -628,26 +641,25 @@ class PostRow(QWidget):
             avatar = ClickLabel()
             avatar.setFixedSize(QSize(size, size))
             avatar.setCursor(Qt.CursorShape.PointingHandCursor)
-            avatar.setToolTip("@" + acc["acct"])
-            avatar.clicked.connect(lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
+            avatar.setToolTip("@" + acc.handle)
+            avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar)
-            self.ctx.images.get(acc.get("avatar_static") or acc.get("avatar"),
+            self.ctx.images.get(acc.avatar_static,
                                 lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
-        user, _sep, host = acc["acct"].partition("@")
-        h.addWidget(self._label(link("account", acc["id"], "@" + esc(user), self.theme.css("text"),
+        user, _sep, host = acc.handle.partition("@")
+        h.addWidget(self._label(link("account", acc.id, "@" + esc(user), self.theme.css("text"),
                                      bold=True), "name", wrap=False))
-        vis = st.get("visibility", "public")
+        vis = p.visibility
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
-        days = _age_days(st, self.ctx.cfg)
+        days = _age_days(p, self.ctx.cfg)
         meta = " · ".join(x for x in (esc(host) + esc(bot),
-                                      link("thread", st["id"],
-                                           self.theme.date(st.get("created_at", "")),
+                                      link("thread", p.id, self.theme.date(p.created),
                                            self.theme.css("muted")),
                                       VIS_WORD.get(vis, vis),
                                       _("old_post", n=days) if days else "") if x)
         h.addWidget(self._label(meta, "meta", wrap=False))
-        if st.get("edited_at"):
-            h.addWidget(self._edited_mark(st))
+        if p.edited:
+            h.addWidget(self._edited_mark(p))
         self._via_mark(h)
         self._pinned_mark(h)
         h.addStretch(1)
@@ -666,7 +678,7 @@ class PostRow(QWidget):
 
     def _via_mark(self, row):
         """All accounts in one window: which of mine got this post (and acts on it)."""
-        via = self.spec.status.get("_via") if self.spec.status else None
+        via = self.spec.extra.get("via")
         if via:
             lab = QLabel("→ " + via)
             lab.setObjectName("via")
@@ -679,19 +691,19 @@ class PostRow(QWidget):
                                   "border-radius: 6px; padding: 0 6px; }")
             row.addWidget(lab)
 
-    def _context_html(self, st):
-        p = self.spec.parent
-        if p is None:
+    def _context_html(self, p):
+        parent = self.spec.parent
+        if parent is None:
             body = _("ctx_loading")
-        elif p == "missing":
+        elif parent == "missing":
             body = _("ctx_missing")
         else:
-            body = _("ctx_reply", name="<b>" + display_name(real(p)["account"]) + "</b>",
-                     text=esc(snippet(p, 140)))
-        return link("thread", st["id"], f"↑ {body}", self.theme.css("muted"))
+            body = _("ctx_reply", name="<b>" + display_name(parent.author) + "</b>",
+                     text=esc(snippet(parent, 140)))
+        return link("thread", p.id, f"↑ {body}", self.theme.css("muted"))
 
     # ---- actions ------------------------------------------------------------------
-    def _actions(self, st):
+    def _actions(self, p):
         """Flat buttons under a post: icon, text or both (ui.actions)."""
         style = self.ctx.cfg["ui"]["actions"]
         box = _ActionsBox()
@@ -700,30 +712,31 @@ class PostRow(QWidget):
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(2)
         if self.theme.shape.get("short_id") == "footer":  # point.im: #a3f | 4, left
-            self._short_id(h, replies=st.get("replies_count"), where="footer")
+            self._short_id(h, replies=p.counts.replies, where="footer")
         if self.theme.shape.get("actions_align") == "right":
             h.addStretch(1)
         n = lambda x: f" · {x}" if x else ""
-        fav = bool(st.get("favourited"))
-        boosted = bool(st.get("reblogged"))
+        fav = p.mine.liked
+        boosted = p.mine.shared
         buttons = [("reply", ("mail-reply-sender",), "↩", _("reply"), "", False)]
         buttons.append(("fav", ("rating", "starred-symbolic") if fav else
                         ("rating-unrated", "non-starred-symbolic"), "★" if fav else "☆",
-                        _("faved") if fav else _("fav"), n(st.get("favourites_count")), fav))
-        if st.get("visibility") in ("public", "unlisted"):
+                        _("faved") if fav else _("fav"), n(p.counts.likes), fav))
+        if p.visibility in ("public", "unlisted"):
             buttons.append(("boost", ("media-playlist-repeat", "retweet"), "♻",
                             _("boosted") if boosted else _("boost"),
-                            n(st.get("reblogs_count")), boosted))
+                            n(p.counts.shares), boosted))
         if not self.spec.in_thread:
             buttons.append(("thread", ("view-list-tree", "format-indent-more"), "⤷",
-                            _("thread"), n(st.get("replies_count")), False))
+                            _("thread"), n(p.counts.replies), False))
         if self.ctx.cfg["ui"].get("bookmark_button", True):
-            marked = bool(st.get("bookmarked"))
+            marked = p.mine.bookmarked
             buttons.append(("bookmark", ("bookmark-new", "bookmarks"), "🔖",
                             _("unbookmark") if marked else _("bookmark"), "", marked))
         if self.spec.unread and self.ctx.cfg["read"].get("read_button", False):
             buttons.append(("readone", ("mail-mark-read", "object-select-symbolic"), "✓",
                             _("mark_one_read"), "", False))
+        sid = self.spec.entry.id  # a boost: its own id (the window finds the post in it)
         for action, icons, glyph, label, count, active in buttons:
             b = QToolButton()
             b.setAutoRaise(True)
@@ -750,34 +763,34 @@ class PostRow(QWidget):
                     b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             if active:
                 b.setProperty("active", "true")
-            b.clicked.connect(lambda _c=False, a=action, i=st["id"]:
+            b.clicked.connect(lambda _c=False, a=action, i=sid:
                               self.ctx.on_link(f"fedtail:{a}/{i}"))
             # a right click on the like or the boost: who did it
-            who = {"fav": ("favourited_by", "favourites_count"),
-                   "boost": ("reblogged_by", "reblogs_count")}.get(action)
-            if who and st.get(who[1]) and self.ctx.supports(who[0]):
+            who = {"fav": ("favourited_by", p.counts.likes),
+                   "boost": ("reblogged_by", p.counts.shares)}.get(action)
+            if who and who[1] and self.ctx.supports(who[0]):
                 b.setToolTip(label + "\n" + _("who_right_click"))
                 b.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 b.customContextMenuRequested.connect(
-                    lambda _p, k=who[0], i=st["id"]: self.ctx.on_link(f"fedtail:{k}/{i}"))
+                    lambda _p, k=who[0], i=sid: self.ctx.on_link(f"fedtail:{k}/{i}"))
             h.addWidget(b)
         if self.theme.shape.get("actions_align") != "right":
             h.addStretch(1)
-        h.addWidget(self._more_button(st))
+        h.addWidget(self._more_button())
         return box
 
     def _booster_menu(self, lab, acc, pos):
         menu = QMenu(lab)
         menu.addAction(_("open_profile"),
-                       lambda a=acc["id"]: self.ctx.on_link(f"fedtail:account/{a}"))
-        link = "fedtail:copyhandle/" + quote(acc.get("acct", ""), safe="")
+                       lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
+        link = "fedtail:copyhandle/" + quote(acc.handle, safe="")
         menu.addAction(_("copy_handle"), lambda u=link: self.ctx.on_link(u))
-        if self.ctx.fill_list_menu is not None and acc["id"] != self.ctx.me_id:
+        if self.ctx.fill_list_menu is not None and acc.id != self.ctx.me_id:
             lists = menu.addMenu(_("add_to_list"))
             lists.aboutToShow.connect(lambda m=lists, a=acc: self.ctx.fill_list_menu(m, a))
         menu.exec(lab.mapToGlobal(pos))
 
-    def _more_button(self, st):
+    def _more_button(self):
         b = QToolButton()
         b.setAutoRaise(True)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -793,7 +806,7 @@ class PostRow(QWidget):
         # submenus per card were most of the widgets a lane held (and what it reads
         # then — unread, subscribed, pinned — is how things are now)
         menu = QMenu(b)
-        menu.aboutToShow.connect(lambda m=menu, s=st: self._fill_more(m, self.spec.status or s))
+        menu.aboutToShow.connect(lambda m=menu: self._fill_more(m, self.spec.entry))
         b.setMenu(menu)
         self._menu = menu  # also shown on a right click on the card (see __init__)
         b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -803,150 +816,148 @@ class PostRow(QWidget):
         """The post's menu with its actions in it (a right click on the text copies
         them before the menu has ever opened)."""
         if self._menu is not None and not self._menu.actions():
-            self._fill_more(self._menu, self.spec.status)
+            self._fill_more(self._menu, self.spec.entry)
         return self._menu
 
-    def _fill_more(self, menu, st):
+    def _fill_more(self, menu, entry):
         menu.clear()
-        url = st.get("url") or st.get("uri") or ""
+        p = real(entry)
+        sid = entry.id  # a boost: its own id (the window finds the post in it)
+        url = p.url or p.uri
         from .opener import open_link
         menu.addAction(_("open_browser"), lambda u=url: open_link(u))
         menu.addAction(_("copy_link"), lambda u=url: QGuiApplication.clipboard().setText(u))
-        sid = self.spec.extra.get("short_id")
-        if sid:
-            menu.addAction(_("copy_id", id="#" + sid),
-                           lambda s=sid: QGuiApplication.clipboard().setText("#" + s))
-        author = real(st)["account"]
+        short = self.spec.extra.get("short_id")
+        if short:
+            menu.addAction(_("copy_id", id="#" + short),
+                           lambda s=short: QGuiApplication.clipboard().setText("#" + s))
+        author = p.author
+        booster = entry.by if isinstance(entry, Share) and entry.by.id != author.id else None
         # @user@server of who wrote it (and who boosted it): to call them anywhere
-        people = [author] + ([st["account"]] if st.get("reblog") and
-                             st["account"]["id"] != author["id"] else [])
-        for acc in people:
-            link = "fedtail:copyhandle/" + quote(acc.get("acct", ""), safe="")
-            menu.addAction(_("copy_handle_of", acct="@" + acc.get("acct", "")),
+        for acc in [author] + ([booster] if booster else []):
+            link = "fedtail:copyhandle/" + quote(acc.handle, safe="")
+            menu.addAction(_("copy_handle_of", acct="@" + acc.handle),
                            lambda u=link: self.ctx.on_link(u))
         if self.ctx.fill_list_menu is not None:
             # a boost has two people: the one who wrote it and the one who boosted it (a
             # relay bot, say) — each by name, so it's clear who goes into the list
             who = [(author, "add_to_list_author")]
-            if st.get("reblog") and st["account"]["id"] != author["id"]:
-                who.append((st["account"], "add_to_list_booster"))
+            if booster:
+                who.append((booster, "add_to_list_booster"))
             for acc, key in who:
-                if acc["id"] == self.ctx.me_id:
+                if acc.id == self.ctx.me_id:
                     continue
-                lists = menu.addMenu(_(key, acct="@" + acc.get("acct", "")) if len(who) > 1
+                lists = menu.addMenu(_(key, acct="@" + acc.handle) if len(who) > 1
                                      else _("add_to_list"))
                 lists.aboutToShow.connect(lambda m=lists, a=acc: self.ctx.fill_list_menu(m, a))
-        approval = (real(st).get("quote_approval") or {}).get("current_user")
+        approval = p.policy.can_quote if p.policy else ""
         if self.ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
-            quote_url = f"fedtail:quote/{real(st)['id']}"
+            quote_url = f"fedtail:quote/{p.id}"
             menu.addAction(_("quote") if approval == "automatic" else _("quote_ask"),
                            lambda u=quote_url: self.ctx.on_link(u))
-        lang = (real(st).get("language") or "").split("-")[0]
+        lang = p.lang.split("-")[0]
         if self.ctx.act_as is not None:
-            others = self.ctx.act_as(st)
+            others = self.ctx.act_as(entry)
             if others:
                 sub = menu.addMenu(_("act_as"))
                 for tag, label in others:
                     for action, key in (("fav", "act_as_fav"), ("boost", "act_as_boost"),
                                         ("reply", "act_as_reply")):
-                        sub.addAction(_(key, acct=label), lambda s=st, t=tag, a=action:
-                                      self.ctx.do_act_as(s, t, a))
-        if self.ctx.long_form and "@" in (author.get("acct") or "") and real(st).get("uri"):
-            menu.addAction(_("long_form"), lambda s=st: self.ctx.long_form(s))
-        if self.ctx.translate and lang and lang != current_language() and real(st).get("content"):
+                        sub.addAction(_(key, acct=label), lambda e=entry, t=tag, a=action:
+                                      self.ctx.do_act_as(e, t, a))
+        if self.ctx.long_form and "@" in author.handle and p.uri:
+            menu.addAction(_("long_form"), lambda e=entry: self.ctx.long_form(e))
+        if self.ctx.translate and lang and lang != current_language() and p.text:
             menu.addAction(_("translate"), self._translate)
         if self._can_quote() and self.ctx.me_id:
             menu.addAction(_("reply_quote"), lambda: self._quote_reply())
         if self.ctx.cfg["post"].get("invite", True):
-            menu.addAction(_("invite"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:invite/{i}"))
-        menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),
-                       lambda i=st["id"]: self.ctx.on_link(f"fedtail:bookmark/{i}"))
+            menu.addAction(_("invite"), lambda i=sid: self.ctx.on_link(f"fedtail:invite/{i}"))
+        menu.addAction(_("unbookmark") if p.mine.bookmarked else _("bookmark"),
+                       lambda i=sid: self.ctx.on_link(f"fedtail:bookmark/{i}"))
         if self.spec.unread:  # by hand, whatever read.mark_read says
             menu.addAction(_("mark_one_read"),
-                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:readone/{i}"))
+                           lambda i=sid: self.ctx.on_link(f"fedtail:readone/{i}"))
             menu.addAction(_("mark_read_upto"),
-                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:readupto/{i}"))
+                           lambda i=sid: self.ctx.on_link(f"fedtail:readupto/{i}"))
         # who liked, who boosted; quotes of my post; my post out of someone's quote
-        s = real(st)
         sup = self.ctx.supports
-        for kind, count in (("favourited_by", "favourites_count"),
-                            ("reblogged_by", "reblogs_count")):
-            if sup(kind) and s.get(count):
-                menu.addAction(_("who_" + kind + "_n", n=s[count]),
-                               lambda i=st["id"], k=kind: self.ctx.on_link(f"fedtail:{k}/{i}"))
-        if s["account"]["id"] == self.ctx.me_id and sup("quotes") and \
-                s.get("visibility") in ("public", "unlisted"):
-            menu.addAction(_("quotes_of"), lambda i=st["id"]:
-                           self.ctx.on_link(f"fedtail:quotes/{i}"))
-        quoted = (s.get("quote") or {}).get("quoted_status") or {}
-        if (quoted.get("account") or {}).get("id") == self.ctx.me_id and sup("quotes") and \
-                s["account"]["id"] != self.ctx.me_id:
-            menu.addAction(_("revoke_quote"), lambda i=st["id"]:
+        for kind, count in (("favourited_by", p.counts.likes),
+                            ("reblogged_by", p.counts.shares)):
+            if sup(kind) and count:
+                menu.addAction(_("who_" + kind + "_n", n=count),
+                               lambda i=sid, k=kind: self.ctx.on_link(f"fedtail:{k}/{i}"))
+        if author.id == self.ctx.me_id and sup("quotes") and \
+                p.visibility in ("public", "unlisted"):
+            menu.addAction(_("quotes_of"), lambda i=sid: self.ctx.on_link(f"fedtail:quotes/{i}"))
+        quoted_post = p.quote.post if p.quote else None
+        if quoted_post is not None and quoted_post.author.id == self.ctx.me_id and \
+                sup("quotes") and author.id != self.ctx.me_id:
+            menu.addAction(_("revoke_quote"), lambda i=sid:
                            self.ctx.on_link(f"fedtail:revokequote/{i}"))
         # always offered: a server that can't mute a thread (GoToSocial) gets it done here
         if self.ctx.thread_quiet is not None or sup("mute_thread"):
-            muted = bool(s.get("muted")) or bool(self.ctx.thread_quiet and
-                                                 self.ctx.thread_quiet(st))
+            muted = bool(p.mine.muted) or bool(self.ctx.thread_quiet and
+                                               self.ctx.thread_quiet(entry))
             menu.addAction(_("unmute_thread" if muted else "mute_thread"),
-                           lambda i=st["id"], m=muted:
+                           lambda i=sid, m=muted:
                            self.ctx.on_link(f"fedtail:{'unmute' if m else 'mute'}thread/{i}"))
         if self.ctx.subscribed is not None:
             menu.addSeparator()
-            on = self.ctx.subscribed(st)
+            on = self.ctx.subscribed(entry)
             menu.addAction(_("unsub_thread" if on else "sub_thread"),
-                           lambda i=st["id"], on=on:
+                           lambda i=sid, on=on:
                            self.ctx.on_link(f"fedtail:{'unsub' if on else 'sub'}/{i}"))
-        if author["id"] != self.ctx.me_id:
+        if author.id != self.ctx.me_id:
             menu.addSeparator()
-            menu.addAction(_("mute_acct", acct=author["acct"]),
-                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:mute/{i}"))
-            menu.addAction(_("block_acct", acct=author["acct"]),
-                           lambda i=st["id"]: self.ctx.on_link(f"fedtail:block/{i}"))
-            domain = author["acct"].partition("@")[2]
+            menu.addAction(_("mute_acct", acct=author.handle),
+                           lambda i=sid: self.ctx.on_link(f"fedtail:mute/{i}"))
+            menu.addAction(_("block_acct", acct=author.handle),
+                           lambda i=sid: self.ctx.on_link(f"fedtail:block/{i}"))
+            domain = author.handle.partition("@")[2]
             if domain:
                 menu.addAction(_("block_domain", domain=domain),
-                               lambda i=st["id"]: self.ctx.on_link(f"fedtail:blockdomain/{i}"))
+                               lambda i=sid: self.ctx.on_link(f"fedtail:blockdomain/{i}"))
             if not self.ctx.cfg["ui"]["arts_mode"]:
                 menu.addAction(_("report"),
-                               lambda i=st["id"]: self.ctx.on_link(f"fedtail:report/{i}"))
-        if st["account"]["id"] == self.ctx.me_id:
+                               lambda i=sid: self.ctx.on_link(f"fedtail:report/{i}"))
+        mine = (entry.by if isinstance(entry, Share) else author).id == self.ctx.me_id
+        if mine:
             menu.addSeparator()
-            menu.addAction(_("edit"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:edit/{i}"))
-            if real(st).get("visibility") in ("public", "unlisted"):
-                pinned = bool(real(st).get("pinned"))
-                pin_url = f"fedtail:{'unpin' if pinned else 'pin'}/{real(st)['id']}"
-                menu.addAction(_("unpin") if pinned else _("pin"),
+            menu.addAction(_("edit"), lambda i=sid: self.ctx.on_link(f"fedtail:edit/{i}"))
+            if p.visibility in ("public", "unlisted"):
+                pin_url = f"fedtail:{'unpin' if p.mine.pinned else 'pin'}/{p.id}"
+                menu.addAction(_("unpin") if p.mine.pinned else _("pin"),
                                lambda u=pin_url: self.ctx.on_link(u))
-            menu.addAction(_("delete"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:delete/{i}"))
+            menu.addAction(_("delete"), lambda i=sid: self.ctx.on_link(f"fedtail:delete/{i}"))
             if self.ctx.cfg["post"].get("redraft", True):
                 menu.addAction(_("redraft"),
-                               lambda i=st["id"]: self.ctx.on_link(f"fedtail:redraft/{i}"))
+                               lambda i=sid: self.ctx.on_link(f"fedtail:redraft/{i}"))
 
     # ---- media --------------------------------------------------------------------
     # ---- polls --------------------------------------------------------------------
-    def _poll(self, st):
+    def _poll(self, p):
         """Options to pick and a Vote button; or the results — after voting, when
         it's over, on my own post, or when asked."""
-        poll = st["poll"]
+        poll = p.poll
         box = QFrame()
         box.setObjectName("poll")
         v = QVBoxLayout(box)
         v.setContentsMargins(0, 2, 0, 2)
         v.setSpacing(6)
-        mine = st["account"]["id"] == self.ctx.me_id
-        results = poll.get("voted") or poll.get("expired") or mine or \
+        mine = p.author.id == self.ctx.me_id
+        results = poll.voted or poll.expired or mine or \
             getattr(self, "poll_results", False) or self.ctx.vote is None
-        options = poll.get("options") or []
+        options = poll.options
         if results:
-            total = (poll.get("voters_count") if poll.get("multiple") else None) or \
-                poll.get("votes_count") or 0
-            own = set(poll.get("own_votes") or [])
-            top = max((o.get("votes_count") or 0 for o in options), default=0)
+            total = (poll.voters if poll.multiple else None) or poll.votes or 0
+            own = set(poll.my_votes)
+            top = max((o.votes or 0 for o in options), default=0)
             for i, o in enumerate(options):
-                n = o.get("votes_count")
+                n = o.votes
                 pct = round(100 * (n or 0) / total) if total and n is not None else 0
                 row = QHBoxLayout()
-                title = esc(o.get("title", ""))
+                title = esc(o.title)
                 if i in own:
                     title = "✓ " + title
                 if n is not None and n == top and top > 0:
@@ -963,9 +974,9 @@ class PostRow(QWidget):
                 v.addWidget(bar)
         else:
             group = QButtonGroup(box)
-            group.setExclusive(not poll.get("multiple"))
+            group.setExclusive(not poll.multiple)
             for i, o in enumerate(options):
-                b = (QCheckBox if poll.get("multiple") else QRadioButton)(o.get("title", ""))
+                b = (QCheckBox if poll.multiple else QRadioButton)(o.title)
                 b.setObjectName("pollChoice")
                 b.setCursor(Qt.CursorShape.PointingHandCursor)
                 group.addButton(b, i)
@@ -983,7 +994,7 @@ class PostRow(QWidget):
             def send():
                 vote.setEnabled(False)
                 vote.setText(_("poll_sending"))
-                self.ctx.vote(st, picked())
+                self.ctx.vote(p, picked())
             vote.clicked.connect(send)
             row.addWidget(vote)
             peek = QPushButton(_("poll_results"))
@@ -997,47 +1008,47 @@ class PostRow(QWidget):
             row.addWidget(peek)
             row.addStretch(1)
             v.addLayout(row)
-        v.addWidget(self._label(self._poll_footer(st), "meta"))
+        v.addWidget(self._label(self._poll_footer(p), "meta"))
         return box
 
-    def _poll_footer(self, st):
-        poll = st["poll"]
-        voters = poll.get("voters_count")
-        n = voters if voters is not None else poll.get("votes_count") or 0
+    def _poll_footer(self, p):
+        poll = p.poll
+        voters = poll.voters
+        n = voters if voters is not None else poll.votes
         parts = [_("poll_people" if voters is not None else "poll_votes", n=n)]
-        if poll.get("expired"):
+        if poll.expired:
             parts.append(_("poll_closed"))
-        elif poll.get("expires_at"):
-            parts.append(_("poll_until", when=self.theme.date(poll["expires_at"])))
-        if poll.get("multiple"):
+        elif poll.expires:
+            parts.append(_("poll_until", when=self.theme.date(poll.expires)))
+        if poll.multiple:
             parts.append(_("poll_multiple"))
-        if self.ctx.refresh_poll is not None and not poll.get("expired"):
-            parts.append(link("poll", st["id"], _("poll_refresh")))
+        if self.ctx.refresh_poll is not None and not poll.expired:
+            parts.append(link("poll", p.id, _("poll_refresh")))
         return " · ".join(parts)
 
-    def _media(self, st):
-        atts = [_true_kind(m) for m in st.get("media_attachments") or []]
+    def _media(self, p):
+        atts = [_true_kind(m) for m in p.media]
         if not atts:
             return None
         box = QWidget()
         grid = QGridLayout(box)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setSpacing(6)
-        visual = [m for m in atts if m.get("type") in ("image", "gifv", "video")
-                  and (m.get("preview_url") or m.get("url"))]
-        images = [x for x in visual if x.get("type") == "image"]
-        moving = [x for x in visual if x.get("type") in ("gifv", "video")]
+        visual = [m for m in atts if m.kind in ("image", "gifv", "video")
+                  and (m.preview or m.url)]
+        images = [x for x in visual if x.kind == "image"]
+        moving = [x for x in visual if x.kind in ("gifv", "video")]
         single = len(visual) == 1
         big_h = self.ctx.cfg["ui"]["image_height"]
         big_w = max(200, (self.ctx.cfg["ui"]["max_width"] or 900) - 60)
         pos = 0
         # marked sensitive by the author, with no warning text to hide behind: covered
         # until clicked (feed.sensitive_media); under a CW the whole post is folded anyway
-        covered = bool(st.get("sensitive")) and not st.get("spoiler_text") and \
+        covered = p.sensitive and not p.warning and \
             not getattr(self, "media_revealed", False) and \
             config.sensitive_media(self.ctx.cfg) == "hide"
         for m in atts:
-            full = m.get("url") or m.get("remote_url") or ""
+            full = m.url or m.remote_url
             if m in visual and covered:
                 lab = ClickLabel("⚠ " + _("sensitive_media") + "\n" + _("sensitive_click"))
                 lab.setObjectName("media")
@@ -1046,7 +1057,7 @@ class PostRow(QWidget):
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
                 w, h = _dims(m)
                 lab.setFixedSize(*_thumb_box(w, h, *((big_h, big_w) if single else (150, 230))))
-                lab.setToolTip(plain_tip(m.get("description")))
+                lab.setToolTip(plain_tip(m.alt))
                 lab.clicked.connect(self._reveal_media)
                 grid.addWidget(lab, pos // 3, pos % 3)
                 pos += 1
@@ -1056,9 +1067,9 @@ class PostRow(QWidget):
                 pos += 1
                 lab = ClickLabel(_("image_loading"))
                 lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                lab.setToolTip(plain_tip(m.get("description")))
-                lab.setAccessibleName(_("media_" + m["type"]))
-                lab.setAccessibleDescription(m.get("description") or _("a11y_no_alt"))
+                lab.setToolTip(plain_tip(m.alt))
+                lab.setAccessibleName(_("media_" + m.kind))
+                lab.setAccessibleDescription(m.alt or _("a11y_no_alt"))
                 lab.setCursor(Qt.CursorShape.PointingHandCursor)
                 lab.setObjectName("media")
                 # reserve the final size now, so loading never shifts the text below
@@ -1074,42 +1085,41 @@ class PostRow(QWidget):
                 lab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 lab.customContextMenuRequested.connect(
                     lambda pos, w=lab, mm=m: self._media_menu(w, mm, pos))
-                if m.get("type") == "image":
+                if m.kind == "image":
                     idx = images.index(m)
                     lab.clicked.connect(lambda i=idx: self.ctx.show_images(images, i))
                     # the preview first, at once; a single big picture then gets the full
                     # file, which may take a while (a big photo, a slow server)
-                    src = m.get("preview_url") or full
+                    src = m.preview or full
                     upgrade = full if single and full and full != src else None
                 else:  # gifv / video: a still frame here, played over the window on a click
                     upgrade = None
-                    lab.setToolTip(plain_tip(_("media_" + m["type"]) + " ▶ "
-                                             + (m.get("description") or "")))
+                    lab.setToolTip(plain_tip(_("media_" + m.kind) + " ▶ " + m.alt))
                     lab.clicked.connect(lambda mm=m: self.ctx.play_video(mm, moving))
-                    src = m.get("preview_url")
-                    if m["type"] == "gifv" and self.ctx.loop_gifv is not None:
+                    src = m.preview
+                    if m.kind == "gifv" and self.ctx.loop_gifv is not None:
                         self.ctx.loop_gifv(lab, m, lambda pm, a=tw, b=th, r=radius, f=focus:
                                            _fit(pm, a, b, r, f))
                 if src:
                     self._load_media(lab, src, full if src != full else None, tw, th, radius,
-                                     kind=m["type"], upgrade=upgrade, focus=focus,
+                                     kind=m.kind, upgrade=upgrade, focus=focus,
                                      side=_decode_side(lab, tw, th, w, h, self.ctx.cfg))
-                elif m["type"] != "image":  # a video without a still frame: say what it is
-                    lab.setText("▶ " + _("media_" + m["type"]) + "\n" + _("media_click"))
+                elif m.kind != "image":  # a video without a still frame: say what it is
+                    lab.setText("▶ " + _("media_" + m.kind) + "\n" + _("media_click"))
                 grid.addWidget(lab, *cell)
-            elif m.get("type") == "audio" and self.ctx.audio_bar is not None:
+            elif m.kind == "audio" and self.ctx.audio_bar is not None:
                 row = -(-pos // 3)  # a row of its own, under the pictures
                 grid.addWidget(self.ctx.audio_bar(m), row, 0, 1, 3)
                 pos = (row + 1) * 3
             else:
-                kind = _("media_" + (m.get("type") or "unknown"))
+                kind = _("media_" + (m.kind or "unknown"))
                 grid.addWidget(self._label(f'<a href="{esc(full)}">[{kind}]</a>'),
                                pos // 3, pos % 3)
                 pos += 1
         if self.ctx.cfg["ui"].get("alt_text") == "caption" and not covered:
             row = (pos + 2) // 3
             for i, m in enumerate(visual):
-                desc = (m.get("description") or "").strip()
+                desc = m.alt.strip()
                 if desc:
                     num = f"{i + 1}. " if len(visual) > 1 else ""
                     cap = self._label(esc(num + desc[:400]), "altCaption")
@@ -1121,7 +1131,7 @@ class PostRow(QWidget):
     def _quote(self, quote, mode):
         """The quoted post, framed inside this one (feed.quotes = "card"), or a line
         with a link to it ("link"); a quote that can't be shown says why."""
-        state, q, qid = quote
+        state, q, qid = quote.state, quote.post, quote.id
         if state not in QUOTE_SHOWN or (q is None and not qid):
             why = _("quote_" + state) if _("quote_" + state) != "quote_" + state \
                 else _("quote_unavailable")
@@ -1133,7 +1143,7 @@ class PostRow(QWidget):
         if q is None or mode == "link":
             who = ""
             if q is not None:
-                who = " " + _("quote_by", name=display_name(q["account"])) + ": " + \
+                who = " " + _("quote_by", name=display_name(q.author)) + ": " + \
                     esc(snippet(q, 90))
             return self._label(link("thread", qid, "❝" + who if who else "❝ " +
                                     _("quote_open"), self.theme.css("link")), "quoteNote")
@@ -1144,33 +1154,29 @@ class PostRow(QWidget):
         v = QVBoxLayout(box)
         v.setContentsMargins(12, 8, 12, 10)
         v.setSpacing(4)
-        acc = q["account"]
+        acc = q.author
         v.addWidget(self._emoji_label(
-            f"<b>{display_name(acc)}</b> @{esc(acc.get('acct', ''))} · "
-            + esc(self.theme.date(q.get("created_at", ""))), acc.get("emojis"), "quoteHead",
-            wrap=False))
-        if q.get("spoiler_text"):
-            v.addWidget(self._emoji_label("⚠ " + esc(q["spoiler_text"]), q.get("emojis"), "cw"))
+            f"<b>{display_name(acc)}</b> @{esc(acc.handle)} · " + esc(self.theme.date(q.created)),
+            acc.emojis, "quoteHead", wrap=False))
+        if q.warning:
+            v.addWidget(self._emoji_label("⚠ " + esc(q.warning), q.emojis, "cw"))
         else:
-            html = q.get("content") or ""
-            if self.ctx.cfg["ui"]["links_in_app"]:
-                html = links.in_app(html, q)
+            html = self.ctx.view.in_app(q) if self.ctx.cfg["ui"]["links_in_app"] else q.text
             mk = self.ctx.cfg["feed"].get("text_markup", True)
             v.addWidget(self._emoji_label(clean(html, self.theme.css("link"), mk),
-                                          q.get("emojis"), "quoteText", selectable=True))
-            n = len(q.get("media_attachments") or [])
-            if n:
-                v.addWidget(self._label("🖼 " + _("quote_media", n=n), "quoteHead"))
+                                          q.emojis, "quoteText", selectable=True))
+            if q.media:
+                v.addWidget(self._label("🖼 " + _("quote_media", n=len(q.media)), "quoteHead"))
         return box
 
-    def _link_card(self, st):
+    def _link_card(self, p):
         """The page a post links to, as the server saw it: title, a line or two of
         description, the site, a picture (feed.link_cards)."""
         mode = self.ctx.cfg["feed"].get("link_cards", "full")
-        c = st.get("card") or {}
-        url = c.get("url") or ""
-        if mode == "off" or not url or not (c.get("title") or c.get("image")):
+        c = p.card
+        if mode == "off" or c is None or not c.url or not (c.title or c.image):
             return None
+        url = c.url
         box = ClickFrame()
         box.setObjectName("linkCard")
         box.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1180,26 +1186,26 @@ class PostRow(QWidget):
         h.setContentsMargins(0, 0, 10, 0)
         h.setSpacing(12)
         side = 96
-        if mode == "full" and c.get("image"):
+        if mode == "full" and c.image:
             pic = QLabel()
             pic.setObjectName("linkCardImage")
             pic.setFixedSize(side, side)
-            pic.setToolTip(plain_tip(c.get("image_description")))
+            pic.setToolTip(plain_tip(c.image_alt))
 
             def got(pm, lab=pic):
                 _set(lab, _fit(pm, side, side, 0))
-            self.ctx.images.get(c["image"], got)
+            self.ctx.images.get(c.image, got)
             h.addWidget(pic, 0, Qt.AlignmentFlag.AlignTop)
         else:
             h.setContentsMargins(10, 0, 10, 0)
         col = QVBoxLayout()
         col.setContentsMargins(0, 8, 0, 8)
         col.setSpacing(2)
-        site = c.get("provider_name") or _host(url)
+        site = c.provider or _host(url)
         col.addWidget(self._label(esc(site), "linkCardSite", wrap=False))
-        if c.get("title"):
-            col.addWidget(self._label("<b>" + esc(c["title"][:200]) + "</b>", "linkCardTitle"))
-        desc = (c.get("description") or "").strip()
+        if c.title:
+            col.addWidget(self._label("<b>" + esc(c.title[:200]) + "</b>", "linkCardTitle"))
+        desc = c.description.strip()
         if desc and mode == "full":
             col.addWidget(self._label(esc(desc[:220] + ("…" if len(desc) > 220 else "")),
                                       "linkCardText"))
@@ -1208,7 +1214,7 @@ class PostRow(QWidget):
         return box
 
     def _translate(self):
-        st = real(self.spec.status)
+        p = self.spec.post
 
         def done(result):
             self.translation = result or {}
@@ -1221,7 +1227,7 @@ class PostRow(QWidget):
             self.show_translation = not self.show_translation
             self._build()
         elif self.ctx.translate:
-            self.ctx.translate(st, done)
+            self.ctx.translate(p, done)
 
     def _reveal_media(self):
         self.media_revealed = True
@@ -1229,9 +1235,9 @@ class PostRow(QWidget):
 
     def _media_menu(self, lab, m, pos):
         menu = QMenu(lab)
-        url = m.get("url") or m.get("remote_url") or ""
+        url = m.url or m.remote_url
         if self.ctx.save_image:
-            menu.addAction(_("save_image") if m.get("type") == "image" else _("save_media"),
+            menu.addAction(_("save_image") if m.kind == "image" else _("save_media"),
                            lambda: self.ctx.save_image(m))
         menu.addAction(_("open_browser"), lambda: self.ctx.open_url(url))
         menu.addAction(_("copy_link"), lambda: QGuiApplication.clipboard().setText(url))
@@ -1281,10 +1287,10 @@ VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
 
 def _true_kind(m):
     """Servers sometimes call a video an "image" (a remote one they couldn't sort);
-    the file's name knows better. A copy with the right "type"."""
-    url = (m.get("url") or m.get("remote_url") or "").lower().split("?")[0]
-    if m.get("type") in ("image", "unknown", None) and url.endswith(VIDEO_EXT):
-        return dict(m, type="video")
+    the file's name knows better. A copy with the right kind."""
+    url = (m.url or m.remote_url).lower().split("?")[0]
+    if m.kind in ("image", "unknown") and url.endswith(VIDEO_EXT):
+        return replace(m, kind="video")
     return m
 
 
@@ -1311,7 +1317,7 @@ def _play_mark(pm):
 
 def _conv_key(spec):
     c = spec.extra.get("conversation")
-    return (len(c["members"]), c["unread"], c["last"]["id"]) if c else None
+    return (len(c["members"]), c["unread"], c["last"].id) if c else None
 
 
 def _hover_text(url):
@@ -1397,26 +1403,17 @@ def account_color(name):
     h = int(hashlib.sha1(name.lower().encode()).hexdigest()[:4], 16) % 360
     return QColor.fromHsl(h, 150, 105).name()
 
-def _age_days(st, cfg):
+def _age_days(p, cfg):
     """How many days old a post is, when that's more than feed.old_days; else 0."""
     limit = int(cfg["feed"].get("old_days", 30) or 0)
-    if not limit:
+    if not limit or p.created is None:
         return 0
     from datetime import UTC, datetime
-    try:
-        when = datetime.fromisoformat((st.get("created_at") or "").replace("Z", "+00:00"))
-    except ValueError:
-        return 0
-    days = (datetime.now(UTC) - when).days
+    days = (datetime.now(UTC) - p.created).days
     return days if days > limit else 0
 
 def _dims(m):
-    meta = m.get("meta") or {}
-    for k in ("original", "small"):
-        d = meta.get(k) or {}
-        if d.get("width") and d.get("height"):
-            return d["width"], d["height"]
-    return None, None
+    return (m.width, m.height) if m.width and m.height else (None, None)
 
 
 def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):
@@ -1429,12 +1426,10 @@ def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):
 
 
 def _focus(m):
-    """The author's focus point (Mastodon: x, y in -1…1, y up), (0, 0) if none."""
-    f = (m.get("meta") or {}).get("focus") or {}
-    try:
-        x, y = float(f.get("x", 0)), float(f.get("y", 0))
-    except (TypeError, ValueError):
+    """The author's focus point (x, y in -1…1, y up), (0, 0) if none."""
+    if not m.focus:
         return 0.0, 0.0
+    x, y = m.focus
     return max(-1.0, min(1.0, x)), max(-1.0, min(1.0, y))
 
 
@@ -1494,11 +1489,11 @@ def _round(pm: QPixmap, size, radius=None):
     return out
 
 
-def _ids(statuses):
-    return [s["id"] for s in statuses or ()]
+def _ids(posts):
+    return [p.id for p in posts or ()]
 
 
 def _parent_key(p):
     if p is None or p == "missing":
         return p
-    return (p.get("id"), p.get("content"))
+    return (p.id, p.text)

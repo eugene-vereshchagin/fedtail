@@ -83,6 +83,12 @@ class View:
     def acc(self, raw):
         return adapter.account(raw, self._prof(raw)) if isinstance(raw, dict) else None
 
+    def raw(self, x):
+        """The core's own status for a model object or an id — for core methods not
+        behind the View yet (docs/PROTOCOLS.md, stage 2). Frontends hand it on and never
+        look inside."""
+        return self._raw(x)
+
     def _raw(self, x):
         """The core's status for a model object or an id: from the store, else made up
         from the model (enough for the core's actions: the id and my flags)."""

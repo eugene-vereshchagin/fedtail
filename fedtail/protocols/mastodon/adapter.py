@@ -187,6 +187,7 @@ def card(raw):
         return None
     return Card(url=_str(raw.get("url")), title=_str(raw.get("title")),
                 description=_str(raw.get("description")), image=_str(raw.get("image")),
+                image_alt=_str(raw.get("image_description")),
                 provider=_str(raw.get("provider_name")), kind=_str(raw.get("type")) or "link",
                 author=_str(raw.get("author_name")), width=_int(raw.get("width")),
                 height=_int(raw.get("height")))
@@ -249,8 +250,8 @@ def _filters(raw):
         flt = _dict(_dict(f).get("filter"))
         if flt.get("filter_action") == "hide":
             hide = True
-        elif flt.get("title"):
-            warn.append(_str(flt.get("title")))
+        elif flt:
+            warn.append(_str(flt.get("title")) or "?")
     return tuple(warn), hide
 
 
@@ -306,7 +307,8 @@ def post(raw, profile="", _depth=0):
                       likes=_int(raw.get("favourites_count")),
                       quotes=_int(raw.get("quotes_count"))),
         mine=Mine(liked=bool(raw.get("favourited")), shared=bool(raw.get("reblogged")),
-                  bookmarked=bool(raw.get("bookmarked")), muted=bool(raw.get("muted")),
+                  bookmarked=bool(raw.get("bookmarked")),
+                  muted=raw["muted"] if isinstance(raw.get("muted"), bool) else None,
                   pinned=bool(raw.get("pinned"))),
         policy=policy(raw),
         app=_str(_dict(raw.get("application")).get("name")),

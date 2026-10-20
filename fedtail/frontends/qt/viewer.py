@@ -81,7 +81,7 @@ class ImageOverlay(QWidget):
     # ---- content ------------------------------------------------------------------
     def url(self):
         m = self.media[self.i]
-        return m.get("url") or m.get("remote_url") or m.get("preview_url") or ""
+        return m.url or m.remote_url or m.preview
 
     def load(self, retry=False):
         self.pm = None
@@ -92,9 +92,9 @@ class ImageOverlay(QWidget):
         want = self.i
         self.update()
         m = self.media[self.i]
-        if m.get("preview_url") and m.get("preview_url") != self.url():
+        if m.preview and m.preview != self.url():
             # the feed's small picture first (usually cached already), the original after
-            self.ctx.images.get(m["preview_url"], lambda pm, w=want: self._small(w, pm))
+            self.ctx.images.get(m.preview, lambda pm, w=want: self._small(w, pm))
         self.ctx.images.get(self.url(), lambda pm, w=want: self._loaded(w, pm), FULL_SIDE,
                             failed=lambda w=want: self._failed(w), retry=retry)
 
@@ -163,7 +163,7 @@ class ImageOverlay(QWidget):
         n = f"{self.i + 1} / {len(self.media)}    " if len(self.media) > 1 else ""
         if self.pm is not None and (self.preview or self.problem):
             n += (self.problem or _("viewer_original_coming")) + "    "
-        desc = (m.get("description") or "").replace("\n", " ")
+        desc = m.alt.replace("\n", " ")
         cap = QRectF(MARGIN, self.height() - MARGIN - CAPTION_H, self.width() - 2 * MARGIN,
                      CAPTION_H)
         p.drawText(cap, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop |

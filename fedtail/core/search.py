@@ -1,11 +1,7 @@
 """What Ctrl+F looks through in a post, and how it matches. No Qt: testable."""
 
+from ..model.text import fold, matches  # noqa: F401 — one definition, with the model
 from .model import html_to_text, real
-
-
-def fold(s):
-    """Case- and ё-insensitive, so «ежик» finds «Ёжик»."""
-    return (s or "").casefold().replace("ё", "е")
 
 
 def haystack(status, short_id=None):
@@ -19,9 +15,3 @@ def haystack(status, short_id=None):
     if short_id:
         parts.append("#" + short_id)
     return fold("\n".join(p for p in parts if p))
-
-
-def matches(query, hay):
-    """Every word of the query is somewhere in the post, in any order."""
-    words = fold(query).split()
-    return bool(words) and all(w in hay for w in words)

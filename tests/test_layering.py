@@ -1,7 +1,7 @@
 """Frontends moved to fedtail.model read no protocol fields (docs/PROTOCOLS.md, stage 2).
 
-The Qt frontend is the next batch; it joins MOVED when it is done, and then the list
-goes: every frontend is on the model.
+The Qt frontend moves file by file; when the last one is in, the list goes and the
+test covers frontends/ as a whole.
 """
 
 import re
@@ -11,7 +11,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent / "fedtail"
 
 MOVED = ["frontends/cli.py", "frontends/tui/model.py", "frontends/tui/app.py",
-         "frontends/web/server.py"]
+         "frontends/web/server.py",
+         # Qt, as it moves: the post card and what it opens
+         "frontends/qt/card.py", "frontends/qt/viewer.py", "frontends/qt/player.py",
+         "frontends/qt/find.py"]
 
 # what only a Mastodon status or account has; the model says it differently
 RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'

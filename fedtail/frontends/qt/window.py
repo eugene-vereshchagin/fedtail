@@ -209,22 +209,25 @@ class ViewContext:
     on_link: object
     open_url: object
     show_images: object
+    view: object = None   # core.view.View: the model the cards are drawn from
     me_id: str = ""
-    subscribed: object = None  # status -> is its thread followed
-    thread_quiet: object = None  # status -> is its thread muted here (core/subs.py)
-    fill_list_menu: object = None  # (QMenu, account) -> fill "add to list"
-    save_image: object = None      # media attachment -> save it to disk
-    vote: object = None            # (status, [option indexes]) -> vote in its poll
+    # every post, account and attachment here is fedtail.model's (Post | Share, Account,
+    # Media), never a server's JSON
+    subscribed: object = None  # post -> is its thread followed
+    thread_quiet: object = None  # post -> is its thread muted here (core/subs.py)
+    fill_list_menu: object = None  # (QMenu, Account) -> fill "add to list"
+    save_image: object = None      # Media -> save it to disk
+    vote: object = None            # (Post, [option indexes]) -> vote in its poll
     refresh_poll: object = None    # set when "refresh" next to a poll's results works
-    translate: object = None       # (status, done(translation)) -> ask the server
+    translate: object = None       # (Post, done({"lang", "provider", "html"})) -> ask
     supports: object = lambda _feature: True  # can my server do this (core.supports)
-    play_video: object = None      # media attachment -> play it (or open in the browser)
-    loop_gifv: object = None       # (label, attachment, fit) -> loop a gifv in its card
-    audio_bar: object = None       # attachment -> a small audio player widget
-    long_form: object = None       # status -> the whole of it from the author's server
-    act_as: object = None          # status -> [(account tag, "@acct")] that could act on it
-    do_act_as: object = None       # (status, tag, "fav" | "boost" | "reply") -> do it
-    quote_reply: object = None     # (status, text, whole) -> reply quoting the text
+    play_video: object = None      # Media -> play it (or open in the browser)
+    loop_gifv: object = None       # (label, Media, fit) -> loop a gifv in its card
+    audio_bar: object = None       # Media -> a small audio player widget
+    long_form: object = None       # post -> the whole of it from the author's server
+    act_as: object = None          # post -> [(account tag, "@acct")] that could act on it
+    do_act_as: object = None       # (post, tag, "fav" | "boost" | "reply") -> do it
+    quote_reply: object = None     # (post, text, whole) -> reply quoting the text
 
 
 class MainWindow(QMainWindow):
@@ -241,9 +244,13 @@ class MainWindow(QMainWindow):
         player.set_cache(self.images)  # videos played from disk once they're there
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
-        self.ctx.subscribed = core.subscribed
-        self.ctx.thread_quiet = getattr(core, "thread_quiet", None)
-        self.ctx.quote_reply = self.quote_reply
+        from ...core.view import View
+        self.ctx.view = View(core)
+        self.ctx.subscribed = lambda e: core.subscribed(self.ctx.view.raw(e))
+        quiet = getattr(core, "thread_quiet", None)
+        self.ctx.thread_quiet = (lambda e: quiet(self.ctx.view.raw(e))) if quiet else None
+        self.ctx.quote_reply = lambda e, text, whole=False: self.quote_reply(
+            self.ctx.view.raw(e), text, whole)
         self.ctx.supports = core.supports
         self.ctx.play_video = self.play_video
         from . import player
@@ -260,10 +267,11 @@ class MainWindow(QMainWindow):
         if self.cfg["lists"]["enabled"]:
             self.ctx.fill_list_menu = self.fill_list_menu
         if hasattr(core, "act_as") and self.cfg["ui"].get("act_as", True):
-            self.ctx.act_as = core.act_accounts
-            self.ctx.do_act_as = self.act_as
-        self.ctx.long_form = self.read_whole if self.cfg["feed"].get("long_form", True) \
-            else None
+            self.ctx.act_as = lambda e: core.act_accounts(self.ctx.view.raw(e))
+            self.ctx.do_act_as = lambda e, tag, action: self.act_as(self.ctx.view.raw(e), tag,
+                                                                    action)
+        self.ctx.long_form = (lambda e: self.read_whole(self.ctx.view.raw(e))) \
+            if self.cfg["feed"].get("long_form", True) else None
         self.lane_widgets = {}
         self.columns = None  # the lanes side by side, while they are (columns.py)
         self.quitting = False
@@ -1133,7 +1141,7 @@ class MainWindow(QMainWindow):
         dead (not clickable at all) under "follow first", with Follow right there. Until
         the server says which it is, they are dead too — never "as if followed"."""
         menu.clear()
-        inside = self.core.lists_of(account["id"])
+        inside = self.core.lists_of(account.id)
         note = menu.addAction(_("list_follow_first"))
         note.setEnabled(False)
         follow = menu.addAction(_("follow"))
@@ -1145,12 +1153,12 @@ class MainWindow(QMainWindow):
             list_actions.append(a)
             a.setCheckable(True)
             a.setChecked(x["id"] in inside)
-            a.toggled.connect(lambda on, act=a, lid=x["id"], acc=account["id"]:
+            a.toggled.connect(lambda on, act=a, lid=x["id"], acc=account.id:
                               self._list_toggled(act, lid, acc, on))
         if self.core.lists:
             menu.addSeparator()
         list_actions.append(menu.addAction(_("list_new"),
-                                           lambda: self.new_list(add=account["id"])))
+                                           lambda: self.new_list(add=account.id)))
 
         def apply(rel):
             try:
@@ -1164,10 +1172,10 @@ class MainWindow(QMainWindow):
                 follow.setVisible(not ok and rel is not None)
             except RuntimeError:  # the menu closed meanwhile
                 pass
-        rel = self.core.relation_known(account["id"])
+        rel = self.core.relation_known(account.id)
         apply(rel)
         if rel is None:
-            self.bridge.call(self.core.relationship(account["id"]), ok=apply,
+            self.bridge.call(self.core.relationship(account.id), ok=apply,
                              fail=lambda _e: apply({}))
 
     def _list_toggled(self, action, list_id, acc_id, on):
@@ -1184,8 +1192,8 @@ class MainWindow(QMainWindow):
             fail=self.error)
 
     def _follow_from_menu(self, account):
-        self.bridge.call(self.core.follow(account["id"]), ok=lambda rel: self.statusBar(
-            ).showMessage(_("followed_now", acct="@" + account.get("acct", ""))
+        self.bridge.call(self.core.follow(account.id), ok=lambda rel: self.statusBar(
+            ).showMessage(_("followed_now", acct="@" + account.handle)
                           if rel.get("following") else _("follow_asked_list"), 6000),
                          fail=self.error)
 
@@ -1442,9 +1450,11 @@ class MainWindow(QMainWindow):
                 w.apply_read(payload)
             self.update_badges()
         elif name == "status_updated":
+            changed = self.ctx.view.entry(payload) if isinstance(payload, dict) and \
+                payload.get("id") else None
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:  # Activity has none
-                    w.view.refresh_status(self.core.store, payload)
+                    w.view.refresh_status(self.core.store, changed)
         elif name == "status_deleted":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:
@@ -1683,9 +1693,9 @@ class MainWindow(QMainWindow):
         self.tabs.removeTab(i)
         w.deleteLater()
 
-    def vote(self, st, choices):
-        sid = real(st)["id"]
-        self.bridge.call(self.core.vote(st, choices),
+    def vote(self, post, choices):
+        sid = post.id
+        self.bridge.call(self.core.vote(self.ctx.view.raw(post), choices),
                          ok=lambda _s: self.statusBar().showMessage(_("poll_voted"), 4000),
                          fail=lambda e: (self.error(e), self._rebuild_cards(sid)))
 
@@ -1701,13 +1711,13 @@ class MainWindow(QMainWindow):
     def read_up_to(self, sid):
         """This post and everything older in the view it's in: read."""
         view = self.current_view()
-        specs = [s for s in (view.model if view is not None else []) if s.status]
-        at = next((i for i, s in enumerate(specs) if s.status.get("id") == sid), None)
+        specs = [s for s in (view.model if view is not None else []) if s.entry is not None]
+        at = next((i for i, s in enumerate(specs) if s.entry.id == sid), None)
         if at is None:
             self.core.mark_read([sid])
             return
         older = specs[:at + 1] if self.cfg["feed"]["order"] == "oldest_first" else specs[at:]
-        self.core.mark_read([s.status["id"] for s in older if s.unread])
+        self.core.mark_read([s.entry.id for s in older if s.unread])
 
     def current_view(self):
         """The FeedView on screen: the current lane, thread or profile."""
@@ -1967,7 +1977,7 @@ class MainWindow(QMainWindow):
         from . import player
         if self.cfg["ui"].get("video_player", "internal") == "internal" and \
                 player.available():
-            player.VideoOverlay(self, self.ctx, m, loop=m.get("type") == "gifv",
+            player.VideoOverlay(self, self.ctx, m, loop=m.kind == "gifv",
                                 items=items)
         else:
             self.open_url(player.media_url(m))
@@ -1975,7 +1985,7 @@ class MainWindow(QMainWindow):
     def show_images(self, media, index):
         if self.cfg["ui"]["image_viewer"] == "browser":
             m = media[index]
-            self.open_url(m.get("url") or m.get("remote_url"))
+            self.open_url(m.url or m.remote_url)
             return
         ImageOverlay(self, self.ctx, media, index)
 
@@ -2019,12 +2029,18 @@ class MainWindow(QMainWindow):
             e.acceptProposedAction()
             self.compose(attach=paths)
 
-    def translate_post(self, st, done):
-        """Ask the server for a translation; done(result) in the card, or an error."""
+    def translate_post(self, post, done):
+        """Ask the server for a translation; done({"lang", "provider", "html"}) in the
+        card, or an error."""
         if not self.core.caps.translation:
             self.error(_("translate_none"))
             return
-        self.bridge.call(self.core.translate(st), ok=done, fail=self.error)
+
+        def got(tr):
+            tr = tr or {}
+            done({"lang": tr.get("detected_source_language") or "",
+                  "provider": tr.get("provider") or "", "html": tr.get("content") or ""})
+        self.bridge.call(self.core.translate(self.ctx.view.raw(post)), ok=got, fail=self.error)
 
     def show_filtered(self):
         from .filtered import FilteredDialog
@@ -2154,7 +2170,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(_("error", err=err), 10_000)
 
     def save_image(self, media):
-        url = media.get("url") or media.get("remote_url") or media.get("preview_url")
+        url = media.url or media.remote_url or media.preview
         if not url:
             return
         from ...core import saving

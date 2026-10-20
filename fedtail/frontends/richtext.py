@@ -235,8 +235,7 @@ def emojify(h, emojis, px, local):
     """:shortcode: in the text (never inside a tag) becomes the server's picture, when
     that picture is already on disk; local(url) -> path or None. Our own <img>, after
     sanitizing, pointing only at our own cache. Returns (html, urls still missing)."""
-    table = {e["shortcode"]: e.get("static_url") or e.get("url")
-             for e in emojis or () if e.get("shortcode") and (e.get("static_url") or e.get("url"))}
+    table = {code: url for code, url in map(_emoji_pair, emojis or ()) if code and url}
     if not table or ":" not in h:
         return h, []
     missing = []
@@ -277,7 +276,7 @@ def strip_emoji(h, emojis=()):
     """h (sanitized HTML) without emoji: Unicode ones, the server's :shortcodes: this
     post names, and a :shortcode: standing alone as a word (a remote server's emoji the
     post didn't list). Only text between tags is touched; spaces left doubled are one."""
-    known = {e.get("shortcode") for e in emojis or () if e.get("shortcode")}
+    known = {code for code, _url in map(_emoji_pair, emojis or ()) if code}
     parts = _TAG_SPLIT.split(h)
     for i in range(0, len(parts), 2):
         t = _EMOJI.sub("", parts[i])
@@ -289,7 +288,19 @@ def strip_emoji(h, emojis=()):
 
 
 def display_name(account):
-    return esc(account.get("display_name") or account.get("username") or account.get("acct"))
+    """The name to show, escaped: an Account of fedtail.model (or, from code not moved
+    to the model yet, a server's account dict)."""
+    if isinstance(account, dict):
+        return esc(account.get("display_name") or account.get("username")
+                   or account.get("acct"))
+    return esc(account.name or account.username or account.handle)
+
+
+def _emoji_pair(e):
+    """(shortcode, picture url) of a custom emoji: a model Emoji or a server's dict."""
+    if isinstance(e, dict):
+        return e.get("shortcode"), e.get("static_url") or e.get("url")
+    return e.shortcode, e.static_url or e.url
 
 
 def when(iso, months):

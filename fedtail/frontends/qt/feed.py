@@ -7,6 +7,7 @@ space before they load.
 
 import logging
 import time
+from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
@@ -25,8 +26,10 @@ from PySide6.QtWidgets import (
 from ... import diag
 from ...core.model import real, snippet
 from ...i18n import _
+from ...model import Share
+from ...model import real as real_entry
 from ..richtext import plain_tip
-from .card import CardSpec, PostRow, SeparatorRow
+from .card import CardSpec, PostRow, SeparatorRow, spec_of
 from .card import _set_prop as _mark
 from .text import display_name, esc
 
@@ -214,7 +217,7 @@ class FeedView(QScrollArea):
 
     def _posts(self):
         return [k for k in self.order if getattr(self.rows[k], "spec", None) is not None
-                and self.rows[k].spec.status]
+                and self.rows[k].spec.entry is not None]
 
     def _post_key(self, key):
         posts = self._posts()
@@ -235,8 +238,8 @@ class FeedView(QScrollArea):
         action = self.POST_KEYS.get(key)
         if action is None or self.cursor_key not in posts:
             return False
-        st = real(self.rows[self.cursor_key].spec.status)
-        self.ctx.on_link(f"fedtail:{action}/{st['id']}")
+        p = self.rows[self.cursor_key].spec.post
+        self.ctx.on_link(f"fedtail:{action}/{p.id}")
         return True
 
     def put_cursor(self, key):
@@ -468,35 +471,31 @@ class FeedView(QScrollArea):
     def set_unread(self, status_ids, unread=False):
         ids = set(status_ids)
         for spec in self.model:  # cards not built yet too: they're built as they are now
-            if spec.status and spec.status.get("id") in ids:
+            if spec.entry is not None and spec.entry.id in ids:
                 spec.unread = unread
         for row in self.rows.values():
             if row.status_id in ids:
                 row.set_unread(unread)
 
-    def refresh_status(self, store, st):
+    def refresh_status(self, store, changed):
         """One post changed (a like, a boost, an edit): only its cards are redone. Going
         through every card asks the database for each, and with a few hundred cards
-        open that froze the window for seconds after every click."""
-        if not st or not st.get("id"):
+        open that froze the window for seconds after every click. changed: the Post as
+        it is now (None: look at every card)."""
+        if changed is None:
             self.refresh_from_store(store)
             return
-        ids = {st["id"], real(st)["id"]}
-        changed = real(st)
+        changed = real_entry(changed)
         for i, spec in enumerate(self.model):
-            if not spec.status or (spec.status.get("id") not in ids and
-                                   real(spec.status).get("id") not in ids):
+            if spec.entry is None or spec.post.id != changed.id:
                 continue
-            if real(spec.status).get("id") == changed["id"]:
-                # the post itself changed: on its own card, and inside every boost of it
-                # (a boost's stored copy still holds the post as it was)
-                fresh = dict(spec.status, reblog=changed) if spec.status.get("reblog") \
-                    else changed
-            else:
-                fresh = store.get_status(spec.status["id"])
-            if not fresh or fresh == spec.status:
+            # the post itself changed: on its own card, and inside every boost of it
+            # (a boost's stored copy still holds the post as it was)
+            fresh = replace(spec.entry, post=changed) if isinstance(spec.entry, Share) \
+                else changed
+            if fresh == spec.entry:
                 continue
-            new = CardSpec(**{**spec.__dict__, "status": fresh})
+            new = replace(spec, entry=fresh)
             self.model[i] = new
             row = self.rows.get(spec.key)
             if row is not None:
@@ -506,13 +505,14 @@ class FeedView(QScrollArea):
         for row in self.rows.values():
             if row.status_id is None:
                 continue
-            fresh = store.get_status(row.status_id)
-            if fresh and fresh != row.spec.status:
-                row.update_spec(CardSpec(**{**row.spec.__dict__, "status": fresh}))
+            raw = store.get_status(row.status_id)
+            fresh = self.ctx.view.entry(raw) if raw else None
+            if fresh is not None and fresh != row.spec.entry:
+                row.update_spec(replace(row.spec, entry=fresh))
 
     def remove_status(self, sid):
-        keep = [s for s in self.model if not s.status or
-                (s.status.get("id") != sid and real(s.status).get("id") != sid)]
+        keep = [s for s in self.model if s.entry is None or
+                (s.entry.id != sid and s.post.id != sid)]
         if len(keep) != len(self.model):
             self.set_specs(keep)
 
@@ -521,7 +521,7 @@ class FeedView(QScrollArea):
         return [s.key for s in self.model if s.unread]
 
     def unread_status_ids(self):
-        return [s.status["id"] for s in self.model if s.unread and s.status]
+        return [s.entry.id for s in self.model if s.unread and s.entry is not None]
 
     # ---- what the reader saw --------------------------------------------------------
     def _emit_seen(self):
@@ -583,11 +583,11 @@ ICONS = True  # set from the theme by the window: dark custom themes want words 
 MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
 
 
-def media_kinds(st):
-    """What a post shows: {"image", "gifv", "video", "audio"} from its attachments
-    (a video a server called a picture counts as a video), or {"text"} without any."""
+def media_kinds(entry):
+    """What a post (Post | Share) shows: {"image", "gifv", "video", "audio"} from its
+    attachments (a video a server called a picture counts as a video), or {"text"}."""
     from .card import _true_kind
-    kinds = {_true_kind(m).get("type") for m in real(st).get("media_attachments") or []}
+    kinds = {_true_kind(m).kind for m in real_entry(entry).media}
     kinds &= set(MEDIA_KINDS)
     return kinds or {"text"}
 
@@ -631,10 +631,10 @@ class MediaFilter:
     def active(self):
         return self.wanted != set(MEDIA_KINDS) or not self.boosts
 
-    def keeps(self, st):
-        if not self.boosts and st.get("reblog"):
+    def keeps(self, entry):
+        if not self.boosts and isinstance(entry, Share):
             return False
-        return self.wanted == set(MEDIA_KINDS) or bool(media_kinds(st) & self.wanted)
+        return self.wanted == set(MEDIA_KINDS) or bool(media_kinds(entry) & self.wanted)
 
     def _toggle_boosts(self, on):
         self.boosts = on
@@ -925,7 +925,8 @@ class LaneWidget(QWidget):
         elif self.filter_seg is not None:
             self.header.info.setText("")
         if self.media_filter.active():
-            entries = [e for e in entries if self.media_filter.keeps(e[1])]
+            entries = [e for e in entries
+                       if self.media_filter.keeps(self.view.ctx.view.entry(e[1]))]
             self.header.info.setText(_("media_filter_info", n=len(entries)))
         statuses = [st for _, st in entries]
         parents = self.core.parents_for(statuses)
@@ -936,9 +937,10 @@ class LaneWidget(QWidget):
             parent = parents.get(st["id"])
             if parent is None and real(st).get("in_reply_to_id"):
                 unknown.append(st)
-            specs.append(CardSpec(key=item_id, status=st, parent=parent, unread=st["id"] in unread,
-                                  extra={"my_replies": answers.get(real(st)["id"], []),
-                                         "short_id": short.get(real(st)["id"])}))
+            specs.append(spec_of(self.view.ctx.view, item_id, st, parent=parent,
+                                 unread=st["id"] in unread,
+                                 extra={"my_replies": answers.get(real(st)["id"], []),
+                                        "short_id": short.get(real(st)["id"])}))
         if self.conversations_on():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
         if self.name in ("replies", "mentions"):
@@ -953,7 +955,7 @@ class LaneWidget(QWidget):
         if self.separator and any(s.key == self.separator[0] for s in specs):
             i = next(i for i, s in enumerate(specs) if s.key == self.separator[0])
             text = self.theme.word("separator", _("new_below"), n=self.separator[1])
-            specs.insert(i, CardSpec(key="__sep__", status={}, extra={"separator": text}))
+            specs.insert(i, CardSpec(key="__sep__", extra={"separator": text}))
         if self.newest_first:
             specs.reverse()
         if not self.positioned:
@@ -999,8 +1001,8 @@ class LaneWidget(QWidget):
         specs = []
         for g in groups:
             top = g["top"]
-            specs.append(CardSpec(
-                key="conv:" + g["key"], status=top,
+            specs.append(spec_of(
+                self.view.ctx.view, "conv:" + g["key"], top,
                 parent=parents.get(top["id"]) or self.core.parent_of(top),
                 unread=g["unread"] > 0,
                 extra={"my_replies": answers.get(real(top)["id"], []),
@@ -1114,8 +1116,8 @@ class LaneWidget(QWidget):
     def update_strip(self):
         # the store has the last word: a post marked read by any road (another lane,
         # a thread, another client) loses its mark here too, so "N new" never lies
-        ids = [s.status["id"] for s in self.view.model  # (a conversation card speaks for
-               if s.unread and s.status and not str(s.key).startswith("conv:")]  # many)
+        ids = [s.entry.id for s in self.view.model  # (a conversation card speaks for
+               if s.unread and s.entry is not None and not str(s.key).startswith("conv:")]
         read = self.core.store.read_set(ids) if ids else set()
         if read:
             self.view.set_unread(read, False)
@@ -1255,7 +1257,7 @@ class ThreadWidget(QWidget):
         self.statuses = {n.status["id"] for n in nodes}
         unread = self.core.unread_ids([(n.status["id"], n.status) for n in nodes])
         short = self.core.short_ids([n.status for n in nodes])
-        specs = [CardSpec(key=n.status["id"], status=n.status, depth=n.depth,
+        specs = [spec_of(self.view.ctx.view, n.status["id"], n.status, depth=n.depth,
                           number=n.number or None, in_thread=True,
                           focus=(n.status["id"] == self.focus_id and len(nodes) > 1),
                           unread=n.status["id"] in unread,
@@ -1321,7 +1323,8 @@ class _PagedTab(QWidget):
 
     def shown(self, statuses):
         """The posts the funnel lets through."""
-        return [st for st in statuses if self.media_filter.keeps(st)]
+        return [st for st in statuses
+                if self.media_filter.keeps(self.view.ctx.view.entry(st))]
 
     def fetch(self, max_id):  # -> future with a page of statuses
         raise NotImplementedError
@@ -1344,8 +1347,8 @@ class _PagedTab(QWidget):
     def render(self):
         items = self.shown(self.items)
         short = self.core.short_ids(items)
-        specs = [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
-                          extra={"short_id": short.get(real(st)["id"])})
+        specs = [spec_of(self.view.ctx.view, st["id"], st, parent=self.core.parent_of(st),
+                         extra={"short_id": short.get(real(st)["id"])})
                  for st in items]
         self.view.set_specs(specs, keep_position=True)
 
@@ -1411,11 +1414,12 @@ class AccountWidget(_PagedTab):
         rest = self.shown([st for st in self.items if st["id"] not in top])
         pinned = self.shown(self.pinned)
         short = self.core.short_ids(pinned + rest)
-        specs = [CardSpec(key="pin:" + st["id"], status=st, parent=self.core.parent_of(st),
-                          extra={"short_id": short.get(real(st)["id"]), "pinned": True})
+        v = self.view.ctx.view
+        specs = [spec_of(v, "pin:" + st["id"], st, parent=self.core.parent_of(st),
+                         extra={"short_id": short.get(real(st)["id"]), "pinned": True})
                  for st in pinned]
-        specs += [CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
-                           extra={"short_id": short.get(real(st)["id"])}) for st in rest]
+        specs += [spec_of(v, st["id"], st, parent=self.core.parent_of(st),
+                          extra={"short_id": short.get(real(st)["id"])}) for st in rest]
         self.view.set_specs(specs, keep_position=True)
 
     def fetch(self, max_id):
@@ -1735,7 +1739,8 @@ class AccountWidget(_PagedTab):
                 from PySide6.QtWidgets import QMenu
                 lb = _button(_("add_to_list"), lambda: None)
                 menu = QMenu(lb)
-                menu.aboutToShow.connect(lambda m=menu: self.win.ctx.fill_list_menu(m, acc))
+                menu.aboutToShow.connect(
+                    lambda m=menu: self.win.ctx.fill_list_menu(m, self.win.ctx.view.acc(acc)))
                 lb.setMenu(menu)
                 buttons.addWidget(lb)
         for which, field in (("following", "following_count"), ("followers", "followers_count")):
@@ -2499,8 +2504,9 @@ class SearchWidget(QWidget):
         if sts:
             self._section(_("search_posts"))
             short = self.core.short_ids(sts)
-            self.view.set_specs([CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
-                                          extra={"short_id": short.get(real(st)["id"])})
+            self.view.set_specs([spec_of(self.view.ctx.view, st["id"], st,
+                                         parent=self.core.parent_of(st),
+                                         extra={"short_id": short.get(real(st)["id"])})
                                  for st in sts], keep_position=False)
 
     def apply_read(self, ids):

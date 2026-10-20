@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 
 from ...core.model import real, snippet
 from ...i18n import _
-from .card import CardSpec
+from .card import spec_of
 from .feed import AccountRow, FeedView, TagRow, _button, _Header, _PagedTab
 from .text import clean, esc
 
@@ -175,8 +175,9 @@ class TrendsWidget(_PagedTab):
     def render(self):
         items = self.shown(self.items)
         short = self.core.short_ids(items)
-        self.view.set_specs([CardSpec(key=st["id"], status=st, parent=self.core.parent_of(st),
-                                      extra={"short_id": short.get(real(st)["id"])})
+        self.view.set_specs([spec_of(self.view.ctx.view, st["id"], st,
+                                     parent=self.core.parent_of(st),
+                                     extra={"short_id": short.get(real(st)["id"])})
                              for st in items], keep_position=True)
 
 

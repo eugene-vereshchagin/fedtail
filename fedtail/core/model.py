@@ -2,7 +2,11 @@
 
 import re
 
-from ..model.text import html_to_text  # noqa: F401 — lives with the model now
+from ..model.text import (  # noqa: F401 — they live with the model now
+    collapse_tag_stuffing,
+    html_to_text,
+    without_quote_fallback,
+)
 
 # from most open to most closed
 VISIBILITIES = ["public", "unlisted", "private", "direct"]
@@ -14,7 +18,6 @@ def real(st):
 
 
 QUOTE_SHOWN = {"accepted"}
-_QUOTE_FALLBACK = re.compile(r'<p class="quote-inline">.*?</p>', re.S | re.I)
 
 
 def quoted(st):
@@ -34,11 +37,6 @@ def quoted(st):
     inner = q.get("quoted_status")
     qid = (inner or {}).get("id") or q.get("quoted_status_id")
     return q.get("state") or "accepted", inner, qid
-
-
-def without_quote_fallback(content):
-    """Mastodon adds "RE: <link>" for clients that don't show quotes; we do."""
-    return _QUOTE_FALLBACK.sub("", content or "")
 
 
 def id_after(a, b):
@@ -151,28 +149,6 @@ def note_with_followed(text, day):
     if not day:
         return text
     return (text + "\n\n" if text else "") + f"[fedtail followed {day}]"
-
-
-_PARA = re.compile(r"<p>(.*?)</p>", re.S)
-_ANCHOR = re.compile(r"<a\b[^>]*>.*?</a>", re.S)
-
-
-def collapse_tag_stuffing(content, keep=3, full=False):
-    """A paragraph of nothing but hashtags (more than keep): in a lane the first few and
-    "… +N", small (feed.collapse_tags); in a thread (full) all of them, small. Tags
-    inside the text are left alone."""
-    def one(m):
-        inner = m.group(1)
-        words = html_to_text(inner).split()
-        if len(words) <= keep or not all(w.startswith("#") for w in words):
-            return m.group(0)
-        tags = _ANCHOR.findall(inner)
-        if len(tags) != len(words):
-            return m.group(0)  # some written without a link: not touched
-        if full:
-            return f"<p><small>{' '.join(tags)}</small></p>"
-        return f"<p><small>{' '.join(tags[:keep])} … +{len(tags) - keep}</small></p>"
-    return _PARA.sub(one, content or "")
 
 
 _CHAIN = re.compile(r"(?m)^[ \t]*---[ \t]*$")

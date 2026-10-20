@@ -81,3 +81,66 @@ def join_quote(before, quote):
         return "" if before.endswith("\n") else "\n"
     tail = len(before) - len(before.rstrip("\n"))
     return "\n" * max(0, 2 - tail)
+
+
+# ---- what Ctrl+F looks through -------------------------------------------------------
+def fold(s):
+    """Case- and ё-insensitive, so «ежик» finds «Ёжик»."""
+    return (s or "").casefold().replace("ё", "е")
+
+
+def haystack(entry, short_id=None):
+    """Everything a reader would recognise a post by: text, warning, picture
+    descriptions, author (name and @address), who boosted it, its #id."""
+    from . import Share
+    p = entry.post if isinstance(entry, Share) else entry
+    parts = [html_to_text(p.text), p.warning] + [m.alt for m in p.media]
+    people = [p.author] + ([entry.by] if isinstance(entry, Share) else [])
+    for acc in people:
+        parts += [acc.name, "@" + acc.handle]
+    if short_id:
+        parts.append("#" + short_id)
+    return fold("\n".join(x for x in parts if x))
+
+
+def matches(query, hay):
+    """Every word of the query is somewhere in the post, in any order."""
+    words = fold(query).split()
+    return bool(words) and all(w in hay for w in words)
+
+
+# ---- shaping a post's HTML -----------------------------------------------------------
+_QUOTE_FALLBACK = re.compile(r'<p class="quote-inline">.*?</p>', re.S | re.I)
+
+
+def without_quote_fallback(content):
+    """The "RE: <link>" paragraph servers add for clients that can't show quotes: gone
+    when fedtail shows the quote itself."""
+    return _QUOTE_FALLBACK.sub("", content or "")
+
+
+_PARA = re.compile(r"<p>(.*?)</p>", re.S)
+_ANCHOR = re.compile(r"<a\b[^>]*>.*?</a>", re.S)
+
+
+def collapse_tag_stuffing(content, keep=3, full=False):
+    """A paragraph of nothing but hashtags (more than keep): in a lane the first few and
+    "… +N", small (feed.collapse_tags); in a thread (full) all of them, small. Tags
+    inside the text are left alone."""
+    def one(m):
+        inner = m.group(1)
+        words = html_to_text(inner).split()
+        if len(words) <= keep or not all(w.startswith("#") for w in words):
+            return m.group(0)
+        tags = _ANCHOR.findall(inner)
+        if len(tags) != len(words):
+            return m.group(0)  # some written without a link: not touched
+        if full:
+            return f"<p><small>{' '.join(tags)}</small></p>"
+        return f"<p><small>{' '.join(tags[:keep])} … +{len(tags) - keep}</small></p>"
+    return _PARA.sub(one, content or "")
+
+
+def is_bot(account, extra_bots=()):
+    """A bot: says so itself, or is one of feed's lanes.extra_bots."""
+    return account.bot or norm_handle(account.handle) in {norm_handle(b) for b in extra_bots}

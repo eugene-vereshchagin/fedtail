@@ -141,10 +141,14 @@ class Theme:
         return self.words[key].format(text=text, **kw)
 
     def date(self, iso):
-        try:
-            dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
-        except (ValueError, AttributeError):
-            return ""
+        """A time as the theme writes it: an aware datetime (the model's) or ISO text."""
+        if isinstance(iso, datetime):
+            dt = iso.astimezone()
+        else:
+            try:
+                dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
+            except (ValueError, AttributeError):
+                return ""
         now = datetime.now(UTC).astimezone()
         time = f"{dt:%H:%M}" if dt.year == now.year else str(dt.year)
         return self.words["date"].format(day=dt.day, mon=months()[dt.month - 1],

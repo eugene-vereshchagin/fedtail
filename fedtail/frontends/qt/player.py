@@ -97,7 +97,8 @@ def available():
 
 
 def media_url(m):
-    return m.get("url") or m.get("remote_url") or ""
+    """A media attachment's file (fedtail.model Media)."""
+    return m.url or m.remote_url
 
 
 _cache = None  # the window's Images: videos kept on disk (ui.video_disk_mb)
@@ -116,7 +117,7 @@ def source(m):
     if _cache is not None and url:
         local = _cache.video_local(url)
         if local:
-            log.info("video: from disk (%s)", m.get("type"))
+            log.info("video: from disk (%s)", m.kind)
             return QUrl.fromLocalFile(local)
         _cache.prefetch_video([url])
     return QUrl(url)
@@ -183,7 +184,7 @@ class VideoOverlay(QWidget):
         self.mute = self._button("🔊", _("player_mute_tip"), self.toggle_mute)
         bar.addWidget(self.mute)
         lay.addLayout(bar)
-        desc = (m.get("description") or "").replace("\n", " ")
+        desc = m.alt.replace("\n", " ")
         cap = QLabel(desc)  # the alt text; changes as I go between the post's videos
         cap.setTextFormat(Qt.TextFormat.PlainText)  # someone else's words, never HTML
         cap.setWordWrap(True)
@@ -229,7 +230,7 @@ class VideoOverlay(QWidget):
 
     def _start(self):
         m = self.m
-        log.info("video: playing in the window (%s, %d of %d)", m.get("type"), self.i + 1,
+        log.info("video: playing in the window (%s, %d of %d)", m.kind, self.i + 1,
                  len(self.items))
         self.problem.hide()
         self.player.setSource(source(m))
@@ -241,14 +242,14 @@ class VideoOverlay(QWidget):
             return
         self.i = (self.i + step) % len(self.items)
         self.m = self.items[self.i]
-        self.gif = self.m.get("type") == "gifv"
+        self.gif = self.m.kind == "gifv"
         self.player.stop()
         self.player.setLoops(INFINITE if self.gif else 1)
         self.audio.setMuted(self.gif)
         self.mute.setText("🔇" if self.gif else "🔊")
         for w in (self.btn, self.slider, self.time, self.mute):
             w.setVisible(not self.gif)
-        desc = (self.m.get("description") or "").replace("\n", " ")
+        desc = self.m.alt.replace("\n", " ")
         self.desc_label.setText(desc)
         self.desc_label.setVisible(bool(desc))
         self._hint()
@@ -452,8 +453,7 @@ class AudioBar(QWidget):
         self.btn = QToolButton()
         self.btn.setText("▶")
         self.btn.setAutoRaise(True)
-        self.btn.setToolTip(plain_tip(_("media_audio") + (": " + m["description"]
-                                                          if m.get("description") else "")))
+        self.btn.setToolTip(plain_tip(_("media_audio") + (": " + m.alt if m.alt else "")))
         self.btn.clicked.connect(self.toggle)
         h.addWidget(self.btn)
         self.slider = SeekSlider()
