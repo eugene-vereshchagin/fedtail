@@ -1,6 +1,6 @@
 # fedtail: протоколы и нормализованная модель
 
-Статус: **согласовано 20 окт 2026**. Этап 0 сделан (0.17.0), остальные — по очереди;
+Статус: **согласовано 20 окт 2026**. Этапы 0 и 1 сделаны (0.17.0), остальные — по очереди;
 по мере готовности устройство переезжает в ARCHITECTURE.md.
 
 ## Зачем
@@ -54,7 +54,7 @@
 | `Ref` | `proto`, `profile`, `native_id` | id статуса | `id` объекта (URI) |
 | `Account` | `ref`, `handle`, `name`, `avatar`, `bot`, `locked`, `fields`, `url` | account | `Person` / `Service` (бот) / `Group` |
 | `Post` | `ref`, `author`, `created`, `text` (HTML-подмножество), `plain`, `warning` (CW), `visibility`, `reply_to`, `thread_root`, `media`, `poll`, `quote`, `counts`, `my` (fav/boost/bookmark), `lang`, `url`, `edited` | status | `Note` / `Article` / `Page` |
-| `Share` | `who`, `post`, `when` | boost (`reblog`) | `Announce` |
+| `Share` | `by`, `post`, `created`, `sort` | boost (`reblog`) | `Announce` |
 | `Media` | `kind`, `url`, `preview`, `alt`, `size` | attachment | `Image` / `Video` / `Document` |
 | `Poll` | `options`, `multiple`, `expires`, `voted` | poll | `Question` |
 | `Activity` | `kind` (fav/share/follow/mention/…), `who`, `post`, `when` | notification | `Like` / `Announce` / `Follow` / `Create` с упоминанием |
@@ -157,7 +157,7 @@ classic | qip | columns`) — забота фронтенда; ростер — 
 | этап | что | как проверяем |
 |---|---|---|
 | 0 ✓ | сборка мусора в базе + incremental vacuum | тест: база не растёт на прогоне тысяч постов |
-| 1 | `fedtail/model/` + адаптер Mastodon → модель; никто ещё не пользуется | тесты адаптера на `tests/fakes.py` и реальных JSON GTS/Mastodon |
+| 1 ✓ | `fedtail/model/` + адаптер Mastodon → модель; никто ещё не пользуется | тесты адаптера на `tests/fakes.py` и образцах GTS/Mastodon/Akkoma; `tools/model_check.py` — прогон адаптера по своей базе |
 | 2 | ядро отдаёт фронтендам модель в событиях и futures; фронтенды по одному: cli → tui → web → qt | тест-запрет полей протокола во `frontends/`; smoke Qt |
 | 3 | `api.py` и все `/api/v1` уезжают в `protocols/mastodon/`; ядро зовёт `Protocol` | тест-запрет вне `protocols/` |
 | 4 | `Capabilities` вместо разрозненных `unsupported` | тесты на скрытие кнопок |

@@ -68,6 +68,13 @@ fedtail/
   desktop.py         --install-desktop: .desktop entry + icon in ~/.local/share
   i18n.py            interface strings, ru/en, Russian plural forms
   sysenv.py          the one-file build: start other programs with the system's environment
+  model/             fedtail's own data model: Post, Share, Account, Activity, Media, Poll…
+                     frozen dataclasses in ActivityPub's vocabulary; knows no protocol
+                     (docs/PROTOCOLS.md). Not used by core/frontends yet — stage 2.
+  protocols/         one package per protocol; nothing outside reads a server's JSON
+    mastodon/
+      adapter.py     Mastodon API JSON (GTS, Mastodon, Akkoma, Pleroma) → model:
+                     post() → Post | Share, account(), activity(); forgiving, never raises
   core/              everything that is not GUI
     app.py           Core: the facade the frontends talk to (see §4, §9)
     social.py        SocialMixin of Core: who reacted, quotes, trends, suggestions, directory,
