@@ -679,14 +679,11 @@ class MessageTabs(QWidget):
         self.win = win
         self.setObjectName("messageTabs")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        if win.theme.shape.get("tab_rows", "wrap") == "wrap":
-            self.lay = FlowLayout(self, spacing=2, justify=True)
-            self.lay.setContentsMargins(4, 3, 4, 0)
-        else:
-            self.lay = QHBoxLayout(self)
-            self.lay.setContentsMargins(4, 3, 4, 0)
-            self.lay.setSpacing(2)
-            self.lay.addStretch(1)
+        # always a flow: tabs that don't fit go to the next row and never widen the
+        # window; "wrap" (the Agent) stretches the full rows to the edge, "one" doesn't
+        self.lay = FlowLayout(self, spacing=2,
+                              justify=win.theme.shape.get("tab_rows", "wrap") == "wrap")
+        self.lay.setContentsMargins(4, 3, 4, 0)
         self.chips = []
         self._current = -1
         self._busy = False
@@ -704,10 +701,7 @@ class MessageTabs(QWidget):
         chip = _TabChip(self, text)
         chip.set_text(text)
         self.chips.append(chip)
-        if isinstance(self.lay, QHBoxLayout):
-            self.lay.insertWidget(self.lay.count() - 1, chip)
-        else:
-            self.lay.addWidget(chip)
+        self.lay.addWidget(chip)
         if self._current < 0:
             self.setCurrentIndex(len(self.chips) - 1)
         return len(self.chips) - 1

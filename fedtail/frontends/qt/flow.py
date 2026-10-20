@@ -44,6 +44,8 @@ class FlowLayout(QLayout):
         return self.minimumSize()
 
     def minimumSize(self):  # noqa: N802
+        # the widest item, not all of them side by side: more items wrap, the window
+        # around never has to grow for them
         size = QSize()
         for item in self._items:
             size = size.expandedTo(item.minimumSize())

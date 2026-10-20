@@ -381,8 +381,15 @@ class MainWindow(QMainWindow):
             from .dock import AuthorBar, MessageTabs
             self.dock = InputDock(self)
             self.msg_tabs = MessageTabs(self)
-            self.tabs.tabBar().hide()  # the bar above says which is in front
-            self.tabs.tabBar().setMaximumHeight(0)
+            # the bar above says which is in front; the hidden one must not ask for room
+            # either (Qt counts its tabs into the window's width: the window grew a tab
+            # at a time instead of the tabs going into a second row)
+            inner = self.tabs.tabBar()
+            inner.setUsesScrollButtons(True)
+            inner.setElideMode(Qt.TextElideMode.ElideRight)
+            inner.setExpanding(False)
+            inner.setMaximumSize(0, 0)
+            inner.hide()
             self.tabs.currentChanged.connect(lambda _i: self.msg_tabs.sync())
             if self.cfg["ui"].get("dock_commands", True):
                 self.cmdline.hide()  # the input line takes the commands (Ctrl+L: still here)
@@ -2459,11 +2466,22 @@ class MainWindow(QMainWindow):
             self.roster.refresh_soon()
 
     def _tray_click(self, reason):
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            if self.isVisible() and self.isActiveWindow():
+        if reason != QSystemTrayIcon.ActivationReason.Trigger:
+            return
+        if self.roster is not None:  # the split layout: both windows go and come back
+            if self.roster.isVisible():
+                self.roster.save_place()
+                self.roster.hide()
                 self.hide()
             else:
-                self.show_raise()
+                self.roster.show()
+                self.roster.raise_()
+                self.roster.activateWindow()
+            return
+        if self.isVisible() and self.isActiveWindow():
+            self.hide()
+        else:
+            self.show_raise()
 
     def keyPressEvent(self, e):
         # Esc closes what's on top (the picture viewer and the find bar take it

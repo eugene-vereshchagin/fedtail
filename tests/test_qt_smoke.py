@@ -2292,6 +2292,12 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(talk_with(win.ctx.view, [], who.handle), [])
         win.dock.text.clear()
         win.tabs.setCurrentWidget(thread)
+        # many tabs never widen the window: they go into more rows
+        width = win.minimumSizeHint().width()
+        for sid in ("010", "011"):
+            win.open_thread(sid)
+        win.msg_tabs.sync()
+        self.assertLessEqual(win.minimumSizeHint().width(), width + 2)
         # every lane and thread opened has a tab above; a command in the input line
         win.msg_tabs.sync()
         kinds = {win.msg_tabs.tabData(i)[0] for i in range(win.msg_tabs.count())}
