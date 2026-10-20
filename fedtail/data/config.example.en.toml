@@ -19,6 +19,8 @@
 #   -c, --config FILE    another config instead of the profile's
 #   -d, --data FOLDER    another data folder instead of the profile's
 #   --ui qt|tui|web      a window, a terminal or a browser (for one run; for good — ui.frontend)
+#   --layout single|columns|qip  the window's layout for one run (for good — ui.layout)
+#   --theme NAME         the theme for one run (for good — ui.theme)
 #   --profiles           which profiles there are — and exit
 #   --update-config      add this version's new settings to this file with explanations — and exit
 #   --rebuild-config     rebuild this file by chapters, with your values — and exit
