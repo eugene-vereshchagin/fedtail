@@ -364,7 +364,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual((calls, len(failed)), ([], 2))
         imgs.broken["https://x/broken.png"] -= Images.RETRY_AFTER + 1  # time passed
         imgs.get("https://x/broken.png", got.append, failed=lambda: failed.append(1))
-        self.pump(until=lambda: len(got) == 2)
+        # it comes: to this card, and to the two that had given up on it
+        self.pump(until=lambda: len(got) == 4)
         self.assertNotIn("https://x/broken.png", imgs.broken)
 
         # a network failure gets a second, patient try before it counts as broken
