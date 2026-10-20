@@ -65,6 +65,16 @@ CREATE INDEX IF NOT EXISTS sub_members_root ON sub_members (root_id);
 CREATE TABLE IF NOT EXISTS unsubs (
     root_id TEXT PRIMARY KEY
 );
+-- threads muted here because the server can't (or as well): their mentions never come
+CREATE TABLE IF NOT EXISTS quiet_threads (
+    root_id TEXT PRIMARY KEY
+);
+-- posts known to be in a left or muted thread, to tell its new mentions by their parent
+CREATE TABLE IF NOT EXISTS left_members (
+    status_id TEXT PRIMARY KEY,
+    root_id   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS left_members_root ON left_members (root_id);
 -- favourites, boosts, new followers: who did what to which of my posts
 CREATE TABLE IF NOT EXISTS activity (
     id         TEXT PRIMARY KEY,   -- notification id
@@ -263,6 +273,9 @@ class Store:
             out["sub_members"] = db.execute(
                 "DELETE FROM sub_members WHERE root_id NOT IN (SELECT root_id FROM subs)"
             ).rowcount
+            out["left_members"] = db.execute(
+                "DELETE FROM left_members WHERE root_id NOT IN (SELECT root_id FROM unsubs "
+                "UNION SELECT root_id FROM quiet_threads)").rowcount
             db.execute("CREATE TEMP TABLE IF NOT EXISTS gc_keep (id TEXT PRIMARY KEY)")
             db.execute("DELETE FROM gc_keep")
             for q, args in (
@@ -609,15 +622,23 @@ class Store:
         with self._tx() as db:
             if not auto:
                 db.execute("DELETE FROM unsubs WHERE root_id=?", (root_id,))
+                db.execute("DELETE FROM quiet_threads WHERE root_id=?", (root_id,))
+                db.execute("DELETE FROM left_members WHERE root_id=?", (root_id,))
             db.execute("INSERT OR IGNORE INTO subs (root_id, since, last_activity, checked, auto)"
                        " VALUES (?, ?, ?, '', ?)", (root_id, since, last_activity, int(auto)))
             db.executemany("INSERT OR IGNORE INTO sub_members VALUES (?, ?)",
                            [(m, root_id) for m in members])
 
-    def sub_remove(self, root_id, remember=True):
+    def sub_remove(self, root_id, remember=True, members=()):
         """Leave a thread: its comments vanish from the lane, and (remember)
-        automatic subscription won't come back to it."""
+        automatic subscription won't come back to it; its posts (those followed and
+        `members`) are kept as the left thread's, to know its later mentions."""
         with self._tx() as db:
+            if remember:
+                db.execute("INSERT OR REPLACE INTO left_members SELECT status_id, root_id "
+                           "FROM sub_members WHERE root_id=?", (root_id,))
+                db.executemany("INSERT OR REPLACE INTO left_members VALUES (?, ?)",
+                               [(m, root_id) for m in {root_id, *members}])
             cur = db.execute("DELETE FROM items WHERE source='subs' AND status_id IN "
                              "(SELECT status_id FROM sub_members WHERE root_id=?)", (root_id,))
             if cur.rowcount:
@@ -636,6 +657,49 @@ class Store:
                                 "ON s.root_id = m.root_id WHERE m.status_id=?",
                                 (status_id,)).fetchone()
         return row[0] if row else None
+
+    def quiet_set(self, root_id, on=True):
+        """Mute a thread here (its mentions are dropped), or let it speak again."""
+        with self._tx() as db:
+            if on:
+                db.execute("INSERT OR IGNORE INTO quiet_threads VALUES (?)", (root_id,))
+            else:
+                db.execute("DELETE FROM quiet_threads WHERE root_id=?", (root_id,))
+
+    def quiet_roots(self, left_too=False):
+        """Roots of threads whose mentions don't come: muted here, and (left_too) left."""
+        q = "SELECT root_id FROM quiet_threads"
+        if left_too:
+            q += " UNION SELECT root_id FROM unsubs"
+        with self.lock:
+            return {r[0] for r in self.db.execute(q)}
+
+    def left_root_of(self, status_ids):
+        """The left or muted thread one of these posts is known to be in, or None."""
+        ids = [i for i in status_ids if i]
+        if not ids:
+            return None
+        marks = ",".join("?" * len(ids))
+        with self.lock:
+            row = self.db.execute(
+                f"SELECT root_id FROM left_members WHERE status_id IN ({marks})", ids
+            ).fetchone()
+        return row[0] if row else None
+
+    def left_add(self, root_id, status_ids):
+        with self._tx() as db:
+            db.executemany("INSERT OR REPLACE INTO left_members VALUES (?, ?)",
+                           [(i, root_id) for i in status_ids if i])
+
+    def drop_items_of_thread(self, source, root_id):
+        """Take a muted thread's posts out of a lane (mentions: they came before)."""
+        with self._tx() as db:
+            cur = db.execute("DELETE FROM items WHERE source=? AND status_id IN "
+                             "(SELECT status_id FROM left_members WHERE root_id=?)",
+                             (source, root_id))
+            if cur.rowcount:
+                self._bump(source)
+            return cur.rowcount
 
     def sub_left(self, root_id):
         with self.lock:

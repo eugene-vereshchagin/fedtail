@@ -9,6 +9,12 @@ post, say — lands in the "Subscriptions" lane.
 You are subscribed automatically to your own posts and to threads you
 comment in (flags), and by hand from a post's menu or the thread header.
 Leaving a thread is remembered, so automatic subscription won't drag you back.
+
+A server only stops mentions from a thread if it can mute the thread (GoToSocial
+can't), and replies in a thread tag everyone in it by themselves. So a thread can be
+muted here too (`quiet`), and a left one may count as muted (flag subs.leave_mutes):
+its mentions are dropped as they come, told by their parent post — the posts of such a
+thread are kept in `left_members`, and every dropped mention joins them.
 """
 
 import logging
@@ -53,6 +59,91 @@ def subscribe(store, api, status, auto=False):
 def unsubscribe(store, status_or_root):
     root = store.sub_root_of(status_or_root) or status_or_root
     store.sub_remove(root)
+    return root
+
+
+def leave(store, api, status, quiet=False):
+    """Leave the thread `status` is in: unsubscribe and remember all its posts as
+    the left thread's; `quiet` also mutes it here. Asks the server for the thread
+    (the real root and every post in it); without an answer goes by what it knows.
+    Returns the root id."""
+    st = real(status)
+    root = store.sub_root_of(st["id"]) or \
+        (st.get("in_reply_to_id") and store.sub_root_of(st["in_reply_to_id"])) or None
+    members = [st["id"]]
+    try:
+        ctx = api.context(st["id"])
+        anc, desc = ctx.get("ancestors", []), ctx.get("descendants", [])
+        root = root or (anc[0]["id"] if anc else st["id"])
+        members += [s["id"] for s in anc + desc]
+    except (ApiError, OSError) as e:  # offline: the post itself is the best guess
+        log.info("leave thread %s: no context (%s)", st["id"], e)
+        root = root or store.left_root_of([st["id"], st.get("in_reply_to_id")]) or st["id"]
+    store.sub_remove(root, members=members)
+    if quiet:
+        store.quiet_set(root)
+        store.drop_items_of_thread("mentions", root)
+    return root
+
+
+def unquiet(store, status):
+    """Let a thread muted here speak again (it stays unsubscribed)."""
+    root = quiet_root(store, status)
+    if root:
+        store.quiet_set(root, False)
+    return root
+
+
+def quiet_root(store, status, left_too=False):
+    """The muted (or, left_too, left) thread this post is known to be in, or None."""
+    st = real(status)
+    root = store.left_root_of([st["id"], st.get("in_reply_to_id")])
+    return root if root and root in store.quiet_roots(left_too) else None
+
+
+MAX_HOPS = 50
+
+
+def silenced(store, api, status, left_too):
+    """Is this post (a mention that came) from a muted thread — or a left one, when
+    left_too? Climbs its parents through the store; where the chain breaks, asks the
+    server for the thread once. A post found to be in one joins it, so the next
+    reply under it is told at once. Returns the thread's root or None."""
+    roots = store.quiet_roots(left_too)
+    if not roots:
+        return None
+    st = real(status)
+    seen, cur = [st["id"]], st
+    root = None
+    for _ in range(MAX_HOPS):
+        hit = store.left_root_of([cur["id"]])
+        if hit or cur["id"] in roots:
+            root = hit or cur["id"]
+            break
+        pid = cur.get("in_reply_to_id")
+        if not pid:
+            break
+        nxt = store.get_status(pid)
+        if nxt is None:
+            seen.append(pid)
+            hit = store.left_root_of([pid])
+            if hit or pid in roots:
+                root = hit or pid
+                break
+            try:  # the chain breaks here: the server knows the rest
+                anc = api.context(st["id"]).get("ancestors", [])
+            except (ApiError, OSError) as e:
+                log.debug("silenced? %s: %s", st["id"], e)
+                break
+            ids = [a["id"] for a in anc]
+            root = store.left_root_of(ids) or (ids[0] if ids and ids[0] in roots else None)
+            seen += ids
+            break
+        seen.append(nxt["id"])
+        cur = nxt
+    if root not in roots:
+        return None
+    store.left_add(root, seen)
     return root
 
 

@@ -22,7 +22,7 @@ def _status_entry(st):
     return st["id"], st, st.get("created_at", "")
 
 
-def _notification_entry(n):
+def notification_entry(n):
     st = n.get("status")
     if not st:
         return None
@@ -49,7 +49,7 @@ def make_sources(api, me_id):
         "favourites": Source("favourites", _Cursor(api.favourites, "favourites_next"),
                              _status_entry),
         "home": Source("home", api.home, _status_entry),
-        "mentions": Source("mentions", api.mentions, _notification_entry),
+        "mentions": Source("mentions", api.mentions, notification_entry),
         "mine": Source("mine", lambda **kw: api.account_statuses(me_id, **kw), _status_entry),
         "local": Source("local", api.local, _status_entry),
         "federated": Source("federated", api.federated, _status_entry),

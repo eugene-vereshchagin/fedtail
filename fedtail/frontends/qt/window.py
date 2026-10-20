@@ -211,6 +211,7 @@ class ViewContext:
     show_images: object
     me_id: str = ""
     subscribed: object = None  # status -> is its thread followed
+    thread_quiet: object = None  # status -> is its thread muted here (core/subs.py)
     fill_list_menu: object = None  # (QMenu, account) -> fill "add to list"
     save_image: object = None      # media attachment -> save it to disk
     vote: object = None            # (status, [option indexes]) -> vote in its poll
@@ -240,6 +241,7 @@ class MainWindow(QMainWindow):
         self.ctx = ViewContext(self.cfg, theme, self.images, self.on_link, self.open_url,
                                self.show_images)
         self.ctx.subscribed = core.subscribed
+        self.ctx.thread_quiet = getattr(core, "thread_quiet", None)
         self.ctx.supports = core.supports
         self.ctx.play_video = self.play_video
         from . import player

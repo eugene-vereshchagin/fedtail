@@ -109,6 +109,7 @@ class Core(SocialMixin):
         self.me = None
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
+        self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
         self.unsupported = set()  # features the server said it hasn't got (social.py)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (/api/v1/preferences)
@@ -267,6 +268,8 @@ class Core(SocialMixin):
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
+            self._silence_seen = {}
+            self.sources["mentions"].entry = self._mention_entry
             done = False
             if self.cfg["lists"]["enabled"]:
                 try:
@@ -1173,13 +1176,41 @@ class Core(SocialMixin):
             (parent and self.store.sub_root_of(parent)) or None
 
     def unsubscribe(self, status):
+        """Leave the thread: no more "Subscriptions" from it — and, with
+        subs.leave_mutes, no more mentions either (replies there tag everyone)."""
         def job():
-            root = self._sub_root(status) or real(status)["id"]
-            subs.unsubscribe(self.store, root)
+            quiet = self.cfg["subs"]["leave_mutes"]
+            root = subs.leave(self.store, self.api, status, quiet=quiet)
+            self._silence_seen = {}  # what was let through before may be muted now
             self.emit("subs_changed", root)
-            self.emit("lanes_updated", {"subs": []})
+            self.emit("lanes_updated", {"subs": [], **({"mentions": []} if quiet else {})})
             return root
         return self.submit(job)
+
+    def thread_quiet(self, status):
+        """Is this post's thread muted here? (Knows only the posts it has seen there.)"""
+        return subs.quiet_root(self.store, status) is not None
+
+    def _mention_entry(self, n):
+        """The mentions source's entry: drops mentions from threads muted here."""
+        e = sources.notification_entry(n)
+        if e is None:
+            return None
+        sid = e[1].get("id")
+        if sid in self._silence_seen:
+            return None if self._silence_seen[sid] else e
+        try:
+            root = subs.silenced(self.store, self.api, e[1], False)
+        except Exception as ex:  # noqa: BLE001 — a mention must never be lost to this
+            log.warning("muted thread check %s: %s", sid, ex)
+            root = None
+        if len(self._silence_seen) > 2000:
+            self._silence_seen.clear()
+        self._silence_seen[sid] = root
+        if root:
+            log.info("mention %s dropped: thread %s is muted here", sid, root)
+            return None
+        return e
 
     def _auto_subscribe(self, my_statuses):
         """My new posts and comments: follow their threads (flags subs.auto)."""

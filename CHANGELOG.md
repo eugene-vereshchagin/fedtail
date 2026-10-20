@@ -2,6 +2,14 @@
 
 ## 0.17.0 — in progress
 
+- Muting a thread works on GoToSocial: the server can't, so fedtail mutes it itself — the
+  thread's mentions are dropped as they come (replies there tag everyone in the thread by
+  themselves), even replies under posts fedtail never saw, and what came before leaves
+  the lanes. It used to say "Your server can't do that" and hide the item; now the item
+  is always in the ⋯ menu, and on Mastodon it asks the server as well.
+- Unsubscribing from a thread mutes its mentions too (`subs.leave_mutes`, on): leaving
+  used to stop "Subscriptions" only, while auto-tagged replies kept coming.
+
 - The opossum holding its own tail is back: the app's icon (`ui.app_icon`) and the picture
   in About. It is a sticker from an official Telegram sticker pack.
 - The config's reference comes in English too: `config.example.en.toml` lies next to

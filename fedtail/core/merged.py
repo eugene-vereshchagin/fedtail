@@ -328,6 +328,10 @@ class MergedCore:
         core, _tag, own = self.own(status)
         return core.subscribe(own)
 
+    def thread_quiet(self, status):
+        core, _tag, own = self.own(status)
+        return core.thread_quiet(own)
+
     def unsubscribe(self, status):
         core, _tag, own = self.own(status)
         return core.unsubscribe(own)

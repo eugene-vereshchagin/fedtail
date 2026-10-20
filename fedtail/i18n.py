@@ -358,7 +358,7 @@ _STRINGS = {
         "quote_taken_back": "Твой пост убран из цитаты",
         "mute_thread": "Не уведомлять об этом треде",
         "unmute_thread": "Снова уведомлять об этом треде",
-        "thread_muted": "Тред заглушён: уведомлений из него больше не будет",
+        "thread_muted": "Тред заглушён: ни подписки, ни упоминаний из него больше не будет",
         "thread_unmuted": "Уведомления из треда снова включены",
         "remove_follower": "Убрать из подписчиков",
         "remove_follower_q": "Убрать @{acct} из твоих подписчиков? Это не блок: подписаться "
@@ -1063,7 +1063,7 @@ _STRINGS = {
         "quote_taken_back": "Your post was removed from the quote",
         "mute_thread": "Mute this thread",
         "unmute_thread": "Unmute this thread",
-        "thread_muted": "Thread muted: no more notifications from it",
+        "thread_muted": "Thread muted: no more subscription or mentions from it",
         "thread_unmuted": "Notifications from the thread are back on",
         "remove_follower": "Remove follower",
         "remove_follower_q": "Remove @{acct} from your followers? Not a block: they can follow "

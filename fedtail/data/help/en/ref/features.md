@@ -162,8 +162,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Over a reply — what it answers | has | 0.1.0 | `feed.show_reply_context` | `in_reply_to_id` | Sengi and Megalodon — similar |
 | A whole thread: replies from the author's server | has | 0.3.0 | `feed.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
 | A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `feed.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
-| Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me` | own | only in fedtail |
-| Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` | Mastodon web, Tusky, Ivory |
+| Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
+| Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
 | Long texts and events | has | 0.14.0 | `feed.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
 
 <details><summary>In detail</summary>
@@ -176,9 +176,9 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A thread grows when Mastodon has gathered the replies.** Mastodon 4.5+ gathers missing replies itself and says when it's done; fedtail waits for that signal and rereads the thread.
 
-**Thread subscriptions, as on Point.** The server tells you only of replies that mention you: if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to every `subs.interval_minutes` minutes and puts what's new into the “Subscriptions” lane. Subscribe — in a post's ⋯ menu, with the button in the thread's header or the command `S #a3f` (`U #a3f` — unsubscribe). `subs.auto` — what to subscribe to by itself: `"posts"` — your own posts, `"comments"` — threads you comment in. A thread quiet for `subs.active_days` days is not checked any more; one round checks at most `subs.max_threads` threads. Replies to you come to “Replies to me” anyway; `subs.replies_to_me = true` — show them in “Subscriptions” too.
+**Thread subscriptions, as on Point.** The server tells you only of replies that mention you: if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to every `subs.interval_minutes` minutes and puts what's new into the “Subscriptions” lane. Subscribe — in a post's ⋯ menu, with the button in the thread's header or the command `S #a3f` (`U #a3f` — unsubscribe). `subs.auto` — what to subscribe to by itself: `"posts"` — your own posts, `"comments"` — threads you comment in. A thread quiet for `subs.active_days` days is not checked any more; one round checks at most `subs.max_threads` threads. Replies to you come to “Replies to me” anyway; `subs.replies_to_me = true` — show them in “Subscriptions” too. Unsubscribing mutes the thread's mentions as well (replies there tag everyone in it by themselves); `subs.leave_mutes = false` — leave “Subscriptions” only.
 
-**Mute a thread.** Notifications from the thread stop coming. The server remembers this for all clients.
+**Mute a thread.** Notifications from the thread stop coming and its subscription goes. A server that can do it remembers it for all clients; where it can't (GoToSocial), fedtail mutes the thread itself: its mentions are dropped as they come — even replies to posts of the thread it never saw. The item in a post's ⋯ menu is always there.
 
 **Long texts and events.** Articles from WriteFreely, Ghost, Plume, Lemmy posts, Mobilizon events. The Mastodon API flattens them into an ordinary post with the text cut. The ⋯ menu of such a post has “📄 Read it whole”: fedtail takes the full text straight from the author's server over ActivityPub, for an event — also the time and the place.
 

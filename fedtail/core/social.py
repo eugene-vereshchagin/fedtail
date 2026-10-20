@@ -107,14 +107,33 @@ class SocialMixin:
 
     # ---- quiet threads --------------------------------------------------------------
     def mute_thread(self, status, on=True):
-        """No notifications from this thread any more (or again)."""
+        """No notifications from this thread any more (or again). Asked of the server
+        when it can; fedtail mutes the thread itself as well (core/subs.py) — the only
+        way on a server without it (GoToSocial), and it also leaves the thread's
+        subscription. The status comes back with `muted` as it now is."""
+        from . import subs
         s = real(status)
 
         def job():
-            st = self._api("mute_thread", self.api.mute_conversation, s["id"], on) \
-                or dict(s, muted=on)
+            st = None
+            if self.supports("mute_thread"):
+                try:
+                    st = self._api("mute_thread", self.api.mute_conversation, s["id"], on)
+                except NotSupported:
+                    pass  # remembered; muted here below
+                except ApiError as e:  # not my thread, say: here it still works
+                    log.info("mute thread %s on the server: %s", s["id"], e)
+            if on:
+                subs.leave(self.store, self.api, s, quiet=True)
+            else:
+                subs.unquiet(self.store, s)
+            self._silence_seen = {}  # what was let through before may be muted now
+            st = dict(st or s, muted=on)
             self.store.put_statuses([st])
             self.emit("status_updated", st)
+            self.emit("subs_changed", None)
+            if on:
+                self.emit("lanes_updated", {"subs": [], "mentions": []})
             return st
         return self.submit(job)
 

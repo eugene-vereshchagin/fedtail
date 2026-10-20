@@ -164,6 +164,7 @@ DEFAULTS = {
         "active_days": 14,
         "max_threads": 30,
         "replies_to_me": False,
+        "leave_mutes": True,
     },
     "poll": {
         "interval_seconds": 90,

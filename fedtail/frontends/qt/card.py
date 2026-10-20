@@ -850,8 +850,10 @@ class PostRow(QWidget):
                 s["account"]["id"] != self.ctx.me_id:
             menu.addAction(_("revoke_quote"), lambda i=st["id"]:
                            self.ctx.on_link(f"fedtail:revokequote/{i}"))
-        if sup("mute_thread") and s.get("muted") is not None:  # threads I'm in
-            muted = bool(s.get("muted"))
+        # always offered: a server that can't mute a thread (GoToSocial) gets it done here
+        if self.ctx.thread_quiet is not None or sup("mute_thread"):
+            muted = bool(s.get("muted")) or bool(self.ctx.thread_quiet and
+                                                 self.ctx.thread_quiet(st))
             menu.addAction(_("unmute_thread" if muted else "mute_thread"),
                            lambda i=st["id"], m=muted:
                            self.ctx.on_link(f"fedtail:{'unmute' if m else 'mute'}thread/{i}"))

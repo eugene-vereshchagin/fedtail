@@ -75,6 +75,60 @@ class SocialTest(TmpDir):
         self.assertTrue(core.store.get_status("110")["muted"])
         self.assertEqual(seen, ["110"])
 
+    def test_mute_thread_where_the_server_cant(self):
+        """GoToSocial has no thread mute and replies tag everyone in the thread: fedtail
+        mutes it itself — mentions from it are dropped, others still come."""
+        core, w = self.make(missing={"mute_thread"})
+        alice = fakes.acct("A", "alice@example.org")
+        root = w.add(status("300", BOB, minute=1), home=True)
+        w.add(status("301", ME, "300", "B", minute=2), home=True)
+        w.add(status("302", alice, "301", "ME", minute=3), mention=True)
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("replies")], ["302"])
+        st = core.mute_thread(w.statuses["302"], True).result()  # no error
+        self.assertTrue(st["muted"])
+        self.assertTrue(core.thread_quiet(root))
+        self.assertEqual(core.lane_entries("replies"), [])  # what came before goes
+        self.assertFalse(core.subscribed(root))
+        # the talk goes on, everyone tagged — even under a post fedtail never saw
+        w.add(status("303", BOB, "302", "A", minute=4), mention=True)
+        w.statuses["304"] = status("304", alice, "303", "B", minute=5)  # no @me, unseen
+        w.add(status("305", BOB, "304", "A", minute=6), mention=True)
+        w.add(status("400", alice, minute=7), mention=True)  # another thread: comes
+        core.poll_once()
+        self.assertEqual([st["id"] for _, st in core.lane_entries("mentions")], ["400"])
+        self.assertEqual(core.lane_entries("replies"), [])
+        # unmute: the thread speaks again
+        core.mute_thread(root, False).result()
+        self.assertFalse(core.thread_quiet(root))
+        w.add(status("406", alice, "305", "B", minute=8), mention=True)
+        core.poll_once()
+        self.assertIn("406", [st["id"] for _, st in core.lane_entries("mentions")])
+
+    def test_unsubscribe_mutes_mentions(self):
+        """subs.leave_mutes (default): leaving a thread stops its mentions too."""
+        core, w = self.make()
+        alice = fakes.acct("A", "alice@example.org")
+        w.add(status("500", BOB, minute=1), home=True)
+        w.add(status("501", ME, "500", "B", minute=2), home=True)  # auto-subscribed
+        core.poll_once()
+        core.unsubscribe(w.statuses["501"]).result()
+        w.add(status("502", alice, "501", "ME", minute=3), mention=True)
+        core.poll_once()
+        self.assertEqual(core.lane_entries("replies"), [])
+
+    def test_unsubscribe_leaves_mentions_alone_if_asked(self):
+        """subs.leave_mutes = false: unsubscribing is about "Subscriptions" only."""
+        alice = fakes.acct("A", "alice@example.org")
+        core2, w2 = self.make(subs={"leave_mutes": False})
+        w2.add(status("500", BOB, minute=1), home=True)
+        w2.add(status("501", ME, "500", "B", minute=2), home=True)
+        core2.poll_once()
+        core2.unsubscribe(w2.statuses["501"]).result()
+        w2.add(status("502", alice, "501", "ME", minute=3), mention=True)
+        core2.poll_once()
+        self.assertEqual([st["id"] for _, st in core2.lane_entries("replies")], ["502"])
+
     def test_conversations_read_here_read_there(self):
         core, w = self.make()
         dm = w.add(status("120", BOB, minute=1, vis="direct"), home=True)

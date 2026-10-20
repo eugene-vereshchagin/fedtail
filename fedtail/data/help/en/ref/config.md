@@ -267,6 +267,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `subs.active_days` | `14` | A thread where nothing happened for this many days is not checked any more. |
 | `subs.max_threads` | `30` | How many threads to check in one round (the rest — in the next). |
 | `subs.replies_to_me` | `false` | Replies to you come to "Replies to me" anyway. true — show them in "Subscriptions" too. |
+| `subs.leave_mutes` | `true` | Unsubscribing from a thread mutes its mentions too: replies there tag everyone in it by themselves, and the server (GoToSocial) can't mute a thread. false — leave "Subscriptions" only. |
 
 ## 10. Polling the server
 

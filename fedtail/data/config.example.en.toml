@@ -765,6 +765,10 @@ max_threads = 30
 # Replies to you come to "Replies to me" anyway. true — show them in "Subscriptions" too.
 replies_to_me = false
 
+# Unsubscribing from a thread mutes its mentions too: replies there tag everyone in it
+# by themselves, and the server (GoToSocial) can't mute a thread. false — leave "Subscriptions" only.
+leave_mutes = true
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  10. Polling the server
