@@ -5,6 +5,7 @@ Without Qt's SVG module (a separate package on some systems) there are none and 
 buttons keep their words."""
 
 import logging
+import re
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, Qt
@@ -39,12 +40,42 @@ def wanted(theme):
     return QSvgRenderer is not None and on
 
 
+# a theme's set (shape.icon_set): the same drawings, drawn three ways — "gloss" (QIP:
+# a gradient, a white shine, a dark outline), "agent" (the Agent: a brighter shine, a
+# softer outline), "flat" (Psi on KDE: plain colour, no shine) — and the status picture
+# of that messenger: a flower, an "@", a star
+STATUS = {"gloss": "status", "agent": "status-agent", "flat": "status-psi"}
+OWN_SET = {"status-agent": "#3aa63a", "status-psi": "#f2c037"}
+_SHINE = re.compile(r'<ellipse[^>]*opacity="\.35"/>')
+
+
+def icon_set(theme):
+    return theme.shape.get("icon_set", "gloss")
+
+
+def _styled(text, style, base):
+    if style == "flat":
+        text = _SHINE.sub("", text).replace('fill="url(#g)"', 'fill="{c}"')
+        dark = base.darker(140)
+    elif style == "agent":
+        text = text.replace('opacity=".35"', 'opacity=".6"')
+        dark = base.darker(135)
+    else:
+        dark = base.darker(170)
+    return text.replace("{c}", base.name()).replace("{l}", base.lighter(165).name()) \
+        .replace("{d}", dark.name())
+
+
 def icon(name, theme, size=16):
-    """A QIcon of this picture in the theme's colours (an empty one if there's none)."""
+    """A QIcon of this picture in the theme's colours and the theme's set (an empty one
+    if there's none)."""
     if QSvgRenderer is None:
         return QIcon()
-    base = QColor(OWN.get(name) or theme.c["accent"])
-    key = (name, base.name(), size)
+    style = icon_set(theme)
+    if name == "status":
+        name = STATUS.get(style, "status")
+    base = QColor(OWN_SET.get(name) or OWN.get(name) or theme.c["accent"])
+    key = (name, style, base.name(), size)
     if key in _cache:
         return _cache[key]
     try:
@@ -52,8 +83,7 @@ def icon(name, theme, size=16):
     except OSError as e:
         log.debug("icon %s: %s", name, e)
         return QIcon()
-    svg = text.replace("{c}", base.name()).replace("{l}", base.lighter(165).name()) \
-        .replace("{d}", base.darker(170).name())
+    svg = _styled(text, style, base)
     renderer = QSvgRenderer(QByteArray(svg.encode()))
     out = QIcon()
     for scale in (1, 2):

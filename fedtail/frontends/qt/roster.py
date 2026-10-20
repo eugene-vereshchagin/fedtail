@@ -72,6 +72,8 @@ class RosterRow(QWidget):
         top.setSpacing(6)
         self.name = QLabel()
         self.name.setObjectName("rosterName")
+        # always rich text: an escaped title without tags ("&quot;") was taken for plain
+        self.name.setTextFormat(Qt.TextFormat.RichText)
         top.addWidget(self.name, 1)
         self.badge = QLabel()
         self.badge.setObjectName("badge")
@@ -198,12 +200,18 @@ class RosterHeader(QWidget):
         h.addWidget(self.label, 1)
 
     def show_counts(self, group, folded):
+        """The title with how many: "(15)" — nothing new; "(2/15)" — something new in 2,
+        the 2 in the theme's colour of the new."""
         lit = sum(1 for i in group.items if i.unread)
         title = _("lists_header") if group.name == "lists" else _("grp_" + group.name)
         from .card import _fill_html
-        word = self.roster.win.theme.words.get("roster_group", "{arrow} {title} ({lit}/{n})")
+        theme = self.roster.win.theme
+        key = "roster_group" if lit else "roster_group_quiet"
+        word = theme.words.get(key, "{arrow} {title} ({lit}/{n})" if lit
+                               else "{arrow} {title} ({n})")
+        lit_html = f'<span style="color:{theme.css("dot")}">{lit}</span>'
         self.label.setText(_fill_html(word, arrow="▸" if folded else "▾", title=esc(title),
-                                      lit=str(lit), n=str(len(group.items))))
+                                      lit=lit_html, n=str(len(group.items))))
 
     def mousePressEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:

@@ -67,12 +67,14 @@ card_header = "chat"
 faces = "qip"
 roster_rows = "lines"
 tab_rows = "wrap"
+icon_set = "gloss"
 
 [words]
 date = "{dd}/{mm} {clock}"
 chat = "{name} ({when})"
 chat_date = "{secs} {dd}/{mm}/{yyyy}"
 roster_group = "{arrow} {title} - {lit}/{n}"
+roster_group_quiet = "{arrow} {title} - {n}"
 
 [icon]
 bg_top = "#7fb2ec"

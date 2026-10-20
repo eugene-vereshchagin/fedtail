@@ -30,8 +30,14 @@
 - `ui.button_icons = "theme" | "on" | "off"`: pictures on buttons whatever the theme
   says. The split layout's buttons (the input line, the bar over a lane, the roster)
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the
-  theme's colours: who sees a post, a warning, send, follow, lists, a private message,
+  theme's colours, drawn the theme's way (`shape.icon_set`: "gloss" for QIP with a
+  flower for a person, "agent" for the Agent with an "@", "flat" for Psi with a star):
+  who sees a post, a warning, send, follow, lists, a private message,
   the menu; a flower for a person in the roster, a bubble for a talk.
+- The roster's groups say "(15)" when nothing in them is new and "(2/15)" when 2 items
+  have something new, the 2 in colour (`words.roster_group_quiet`); a private post to no
+  one but me is "Notes to myself", two talks with the same people are told apart by how
+  they begin, and a title with quotes no longer shows "&quot;".
 - `ui.split_tabs = "keep" | "close"`: whether the closed messages window keeps its tabs
   for next time. A private talk's tab no longer breaks read marks (an error on every
   one stopped the counts from going down).

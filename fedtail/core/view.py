@@ -593,9 +593,16 @@ class View:
                     entries, self.unread(entries)))))
             convs = cache[lane][1][:keep]
             me = self.me
-            items = tuple(RosterItem(kind, g["key"], _conv_title(g["top"], kind, me),
-                                     g["unread"], len(g["members"]), g["last"],
-                                     tuple(g["members"])) for g in convs)
+            titles = [_conv_title(g["top"], kind, me) for g in convs]
+            if kind == "talk":  # two talks with the same people: told apart by how they begin
+                from collections import Counter
+                from ..model.text import snippet
+                twice = {t for t, n in Counter(titles).items() if n > 1}
+                titles = [f"{t}: {snippet(real(g['top']), 30)}" if t in twice else t
+                          for t, g in zip(titles, convs, strict=True)]
+            items = tuple(RosterItem(kind, g["key"], t, g["unread"], len(g["members"]),
+                                     g["last"], tuple(g["members"]))
+                          for t, g in zip(titles, convs, strict=True))
             out.append(RosterGroup(group, items))
         # people I follow who follow me back: a double click — our private talk, or a
         # private message to them (asked of the server once a day: refresh_mutuals)
@@ -739,7 +746,10 @@ def _conv_title(top, kind, me):
         people = [top.author] if norm_handle(top.author.handle) != mine else []
         names = [p.name or p.username for p in people] + \
             [m.username or m.handle for m in top.mentions if norm_handle(m.handle) != mine]
-        return ", ".join(dict.fromkeys(n for n in names if n)) or who
+        if not names:  # nobody but me: a note to myself
+            from ..i18n import _
+            return _("talk_self")
+        return ", ".join(dict.fromkeys(n for n in names if n))
     return f"{who}: {snippet(top, 40)}"
 
 

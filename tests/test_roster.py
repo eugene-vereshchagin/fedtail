@@ -92,6 +92,8 @@ class TalkTitleTest(TmpDir):
                     mentions=[{"id": "B", "acct": BOB["acct"], "username": BOB["username"]}])
         self.assertEqual(_conv_title(adapter.post(mine), "talk", me), BOB["username"])
         self.assertTrue(_conv_title(adapter.post(dm), "thread", me).endswith(": привет"))
+        alone = dict(status("7", fakes.ME, text="купить хлеба"), visibility="direct")
+        self.assertEqual(_conv_title(adapter.post(alone), "talk", me), i18n._("talk_self"))
 
 
 class PeopleTest(RosterTest):

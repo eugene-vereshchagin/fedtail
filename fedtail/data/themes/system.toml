@@ -102,6 +102,9 @@ roster_rows = "lines"    # the roster's items: "lines" — the name, a line of t
                          # a small face on the right; "faces" — a big face on the left and
                          # three lines beside it (the Agent, Psi)
 roster_face = 40         # px of that face ("faces")
+icon_set = "gloss"       # fedtail's own button pictures (ui.button_icons): "gloss" (QIP: a
+                         # gradient and a shine, a flower for a person), "agent" (the
+                         # Agent: brighter, an "@"), "flat" (Psi on KDE: plain, a star)
 tab_rows = "wrap"        # the messages window's tabs: "wrap" — into more rows when they
                          # don't fit (the Agent); "one" — one row, scrolled
 posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Conversations): "segmented" — buttons stuck together, "check" — round marks
@@ -119,8 +122,9 @@ account_subtitle = "@{acct}"
 date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"; {yyyy} {yy} {clock} {secs} too
 chat = "{name} ({when})"           # card_header = "chat": the line over a post
 chat_date = "{secs} {dd}/{mm}/{yyyy}"  # … its {when}
-roster_group = "{arrow} {title} ({lit}/{n})"  # a roster group's title: {lit} groups' items
-                                   # with something new, of {n}
+roster_group = "{arrow} {title} ({lit}/{n})"  # a roster group's title: {lit} of its {n}
+                                   # items have something new
+roster_group_quiet = "{arrow} {title} ({n})"  # … when none has
 
 [icon]
 # The window, tray and notification icon in this theme's colours.

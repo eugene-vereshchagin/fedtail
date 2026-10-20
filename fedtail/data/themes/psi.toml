@@ -62,6 +62,7 @@ faces = "qip"
 roster_rows = "faces"
 roster_face = 32
 tab_rows = "one"
+icon_set = "flat"
 
 [words]
 date = "{dd}.{mm} {clock}"

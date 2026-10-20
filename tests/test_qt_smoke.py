@@ -2362,6 +2362,15 @@ class QtSmokeTest(unittest.TestCase):
             t = themes.apply(self.app, config.validate({"ui": {"button_icons": "on"}})[0])
             self.assertFalse(icons.icon("send", t).isNull())
             self.assertTrue(icons.icon("no-such-picture", t).isNull())
+            for theme_name in ("psi", "mra-green"):  # each messenger its set and status
+                cfg = config.validate({"ui": {"button_icons": "on", "theme": theme_name}})[0]
+                t = themes.apply(self.app, cfg)
+                self.assertFalse(icons.icon("status", t).isNull(), theme_name)
+            from PySide6.QtGui import QColor
+            flat = icons._styled((icons.DIR / "emoji.svg").read_text(), "flat",
+                                 QColor("#3daee9"))
+            self.assertNotIn("url(#g)", flat)  # Psi's: plain colour, no shine
+            self.assertNotIn('opacity=".35"', flat)
             themes.apply(self.app, config.validate({})[0])
 
     def test_terminal_theme(self):
