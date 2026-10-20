@@ -49,6 +49,7 @@ header_bar = "#3daee9"
 chat_me = "#2e6fc4"
 chat_them = "#b0207a"
 tab_mark = "#3daee9"
+button_end = "#eceded"
 
 [shape]
 radius = 3

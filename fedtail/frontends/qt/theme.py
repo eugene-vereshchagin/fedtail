@@ -88,7 +88,8 @@ def _auto_colors(pal):
 FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
            "primary": "accent", "on_primary": "on_accent", "name": "text",
            "header_bar": "accent", "chat_me": "link", "chat_them": "hot",
-           "view_end": "view", "tab_mark": "accent"}  # the band over a title: the theme's own colour
+           "view_end": "view", "tab_mark": "accent", "window_end": "window",
+           "button_end": "button", "header_end": "header"}  # the band over a title: the theme's own colour
 # "auto" mixed from two colours of the same theme: (from, towards, how far)
 TINTS = {"header": ("view", "accent", 0.16)}  # the title strip, tinted with the theme
 
@@ -180,6 +181,16 @@ class Theme:
         px = int(self.shape.get("header_bar") or 0)
         return f"border-top: {px}px solid {self.css('header_bar')};" if px > 0 else ""
 
+    def _bg(self, key):
+        """A background: the colour, or — with colors.<key>_end other than it — a
+        vertical gradient down to that (the Agent's and QIP's glossy windows, bars and
+        buttons)."""
+        end = self.c.get(key + "_end")
+        if end is None or end == self.c[key]:
+            return self.css(key)
+        return (f"qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {self.css(key)}, "
+                f"stop:1 {end.name()})")
+
     def _view_gradient_css(self):
         """colors.view_end other than view: the posts and the input line on a pale
         diagonal gradient, as QIP Infium had them (white top right, tinted lower left)."""
@@ -218,7 +229,7 @@ class Theme:
     def _stylesheet(self, k, s, r, br, post_pt, title_pt, base_pt, mono_family, card,
                     card_unread, card_focus, card_found):
         return f"""
-QMainWindow, QWidget#central {{ background: {k('window')}; }}
+QMainWindow, QWidget#central {{ background: {self._bg('window')}; }}
 QWidget {{ color: {k('text')}; }}
 QToolTip {{ color: {k('text')}; background: {k('card')}; border: 1px solid {k('card_border')}; }}
 QFrame#hintPopup {{ background: {k('card')}; border: 1px solid {k('accent')}; border-radius: 4px; }}
@@ -269,8 +280,9 @@ QTabWidget::pane {{ border: 0; }}
 QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px; border: 0;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
-QWidget#messageTabs {{ background: {k('window')}; }}
-QFrame#msgTab {{ background: {k('button')}; border: 1px solid {k('button_border')};
+QWidget#roster {{ background: {self._bg('window')}; }}
+QWidget#messageTabs {{ background: {self._bg('window')}; }}
+QFrame#msgTab {{ background: {self._bg('button')}; border: 1px solid {k('button_border')};
     border-bottom: 0; border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QFrame#msgTab:hover {{ background: {k('selected')}; }}
 QFrame#msgTab[current="true"] {{ background: {k('view')}; border-top: 2px solid {k('tab_mark')}; }}
@@ -279,10 +291,10 @@ QFrame#msgTab[current="true"] QLabel#msgTabText {{ font-weight: 600; }}
 QToolButton#msgTabClose {{ border: 0; background: transparent; color: {k('hot')};
     font-weight: 700; padding: 0 2px; }}
 QToolButton#msgTabClose:hover {{ background: {k('hot')}; color: {k('on_hot')}; border-radius: 2px; }}
-QWidget#authorBar {{ background: {k('header')}; border-bottom: 1px solid {k('header_border')}; }}
+QWidget#authorBar {{ background: {self._bg('header')}; border-bottom: 1px solid {k('header_border')}; }}
 QSplitter#readWrite::handle {{ background: {k('header_border')}; margin: 1px 0; }}
 QSplitter#readWrite::handle:hover {{ background: {k('selected')}; }}
-QWidget#inputDock {{ background: {k('header')}; }}
+QWidget#inputDock {{ background: {self._bg('header')}; }}
 QWidget#contactCard {{ background: {k('card')}; border: 1px solid {k('accent')};
     border-radius: {br}px; }}
 QWidget#agentFace {{ background: {k('panel')}; border-left: 1px solid {k('card_border')}; }}
@@ -294,19 +306,19 @@ QTabBar#messageTabs::tab {{ background: {k('button')}; color: {k('text')};
 QTabBar#messageTabs::tab:selected {{ background: {k('view')}; margin-top: 0;
     padding-bottom: 7px; font-weight: 600; }}
 QTabBar#messageTabs::tab:hover:!selected {{ background: {k('selected')}; }}
-QWidget#composeHead {{ background: {k('header')};
+QWidget#composeHead {{ background: {self._bg('header')};
     {self._stripes_css()} {self._bar_css()} border-radius: {br}px; }}
-QWidget#laneHeader {{ background: {k('header')}; {self._stripes_css()} {self._bar_css()} border-bottom: 1px solid {k('header_border')}; }}
+QWidget#laneHeader {{ background: {self._bg('header')}; {self._stripes_css()} {self._bar_css()} border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
 QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};
     border: 1px solid {k('header_border')}; border-radius: 12px; padding: 8px 18px; }}
 QLabel#newPill {{ background: {k('new_pill')}; color: {k('on_new_pill')}; border-radius: 11px;
     padding: 2px 10px; font-weight: 600; }}
-QPushButton#tool, QToolButton#tool {{ background: {k('button')}; color: {k('text')};
+QPushButton#tool, QToolButton#tool {{ background: {self._bg('button')}; color: {k('text')};
     border: 1px solid {k('button_border')}; border-radius: {br}px; padding: 6px 12px; }}
 QPushButton#tool:hover, QToolButton#tool:hover {{ border-color: {k('accent')}; }}
-QPushButton#seg {{ background: {k('button')}; color: {k('text')}; border: 1px solid {k('button_border')};
+QPushButton#seg {{ background: {self._bg('button')}; color: {k('text')}; border: 1px solid {k('button_border')};
     padding: 6px 14px; }}
 QPushButton#seg[pos="first"] {{ border-top-left-radius: {br}px; border-bottom-left-radius: {br}px;
     border-right: 0; }}
@@ -404,7 +416,7 @@ QFrame#sepLine {{ background: {k('separator')}; max-height: 1px; min-height: 1px
 QPushButton#older {{ background: transparent; color: {k('muted')}; border: 1px dashed {k('button_border')};
     border-radius: {br}px; padding: 8px; }}
 
-QStatusBar {{ background: {k('window')}; color: {k('muted')}; }}
+QStatusBar {{ background: {self._bg('window')}; color: {k('muted')}; }}
 QStatusBar::item {{ border: 0; }}
 """
 

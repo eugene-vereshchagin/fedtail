@@ -154,3 +154,7 @@ class MessengerThemesTest(unittest.TestCase):
             self.assertEqual(d["shape"]["faces"], "qip", name)
             self.assertLessEqual(d["shape"]["radius"], 3, name)
         self.assertNotEqual(themefile.load("qip-modern")[0]["colors"]["view_end"], "auto")
+        for name in ("mra", "mra-green", "qip-modern"):  # glossy, as the originals were
+            c = themefile.load(name)[0]["colors"]
+            for key in ("window", "button", "header"):
+                self.assertNotIn(c[key + "_end"], ("auto", c[key]), (name, key))

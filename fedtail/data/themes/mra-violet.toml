@@ -15,7 +15,7 @@ post_scale = 1.05
 files = ["fonts/Arimo-Variable.ttf", "fonts/Arimo-Italic-Variable.ttf"]
 
 [colors]
-window = "#d9c9ec"
+window = "#ebe0f5"
 sidebar = "#f3eef9"
 sidebar_border = "#9d86bd"
 panel = "#f3eef9"
@@ -45,14 +45,17 @@ myreply = "#f3eef9"
 on_myreply = "#333333"
 separator = "#8a5cc2"
 rail = "#9d86bd"
-button = "#f4f1f7"
+button = "#faf7fc"
 button_border = "#9d86bd"
 dot = "#2e9a2e"
-header = "#d3c2e8"
+header = "#f3ecf9"
 header_bar = "#8a5cc2"
 chat_me = "#1d34c8"
 chat_them = "#e0201b"
 tab_mark = "#8a5cc2"
+header_end = "#cab4e5"
+button_end = "#d8c9ea"
+window_end = "#c4aae2"
 
 [shape]
 radius = 0

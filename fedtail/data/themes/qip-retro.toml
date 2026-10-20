@@ -15,7 +15,7 @@ files = ["fonts/PT_Sans-Web-Regular.ttf", "fonts/PT_Sans-Web-Bold.ttf",
          "fonts/PT_Mono-Regular.ttf"]
 
 [colors]
-window = "#ece9d8"
+window = "#efece0"
 sidebar = "#ffffff"
 sidebar_border = "#7f9db9"
 panel = "#ece9d8"
@@ -45,14 +45,17 @@ myreply = "#f1efe4"
 on_myreply = "#3b3a30"
 separator = "#316ac5"
 rail = "#c7c4b4"
-button = "#f6f5f0"
+button = "#ffffff"
 button_border = "#003c74"
 dot = "#3fb53a"
-header = "#f3f1e6"
+header = "#f7f5ec"
 header_bar = "#316ac5"
 chat_me = "#1d2fd0"
 chat_them = "#d0221b"
 tab_mark = "#f2a227"
+header_end = "#e6e2d2"
+button_end = "#e3dfd2"
+window_end = "#e2ddc8"
 sidebar_muted = "#2b4f8c"
 
 [shape]

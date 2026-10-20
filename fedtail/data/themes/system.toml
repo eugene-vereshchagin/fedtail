@@ -67,6 +67,10 @@ chat_me = "auto"         # card_header = "chat": my name ("auto": = link)
 chat_them = "auto"       # … everyone else's ("auto": = hot)
 view_end = "auto"        # behind the posts and the input line, the lower-left end of a
                          # gradient from colors.view (QIP Infium); "auto": = view, flat
+window_end = "auto"      # the bottom of a gradient from colors.window down (the roster's
+                         # and the windows' glossy frames in the Agent); "auto": flat
+button_end = "auto"      # … from colors.button (glossy buttons)
+header_end = "auto"      # … from colors.header (the bars over the posts and the input line)
 tab_mark = "auto"        # the line over the tab in front (Windows XP: orange); "auto": accent
 
 [shape]
