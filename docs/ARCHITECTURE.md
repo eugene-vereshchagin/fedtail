@@ -71,24 +71,28 @@ fedtail/
   model/             fedtail's own data model: Post, Share, Account, Activity, Media, Poll…
                      frozen dataclasses in ActivityPub's vocabulary; knows no protocol
                      (docs/PROTOCOLS.md); text.py: html_to_text, snippet, reply_mentions
-  protocols/         one package per protocol; nothing outside reads a server's JSON
+  protocols/         one package per protocol; get(name) → its Protocol
+    base.py          Protocol (client, error, capabilities, adapter, stream), CLIENT — the
+                     client methods the core calls, ServerError (tests/test_protocols.py)
     mastodon/
       adapter.py     Mastodon API JSON (GTS, Mastodon, Akkoma, Pleroma) → model:
                      post() → Post | Share, account(), activity(); forgiving, never raises
+      api.py         Mastodon REST client (blocking, requests) + request logging; the only
+                     place with /api/v… paths
+      stream.py      the live stream: a stdlib WebSocket client that wakes the poller
+      counters.py    honest counters: ask the post's own server
+      probe.py       Server info → What it can do: harmless GETs, one per feature
   core/              everything that is not GUI
     view.py          View: the core as frontends see it — model in, model out (Post,
                      Share, Account, ThreadItem…), cached per lane; cli, tui and web use
-                     it (tests/test_layering.py keeps them off raw JSON); Qt — next
+                     it, Qt too (tests/test_layering.py keeps frontends/ off raw JSON)
     app.py           Core: the facade the frontends talk to (see §4, §9)
     social.py        SocialMixin of Core: who reacted, quotes, trends, suggestions, directory,
                      server info; a 404 marks a feature missing (Core.supports, NotSupported)
-    stream.py        the live stream: a stdlib WebSocket client that wakes the poller
-    api.py           Mastodon REST client (blocking, requests) + request logging
     auth.py          token file (JSON, 0600)
     config.py        DEFAULTS, validation (types, choices, minimums)
     config_update.py --update-config: adds missing options; refreshes our
                      explanations above existing ones; drops commented-out options that are gone
-    counters.py      honest counters: ask the post's own server
     replies.py       ActivityPub reading without my token: a post's replies collection,
                      an actor's outbox (newest public posts), followers/following lists
     health.py        the run's record of answers (Api._req, remote.open_url): failures
@@ -213,7 +217,7 @@ docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md, TES
 |---|---|
 | GUI (main) | all Qt objects; Bridge slots; never blocks on the network |
 | `fedtail-poll` | `Core._poll_loop`: `poll_once()` every `poll.interval_seconds` or when woken (`poll_now()`) |
-| `fedtail-stream` | `core/stream.py`: the server's WebSocket stream (`poll.stream`); an `update` / `notification` only calls `poll_now()` — the poll still fetches, so a dropped stream loses nothing; reconnects with backoff 5 s…5 min; the token goes in the handshake headers, never the URL or the log |
+| `fedtail-stream` | `protocols/mastodon/stream.py`: the server's WebSocket stream (`poll.stream`); an `update` / `notification` only calls `poll_now()` — the poll still fetches, so a dropped stream loses nothing; reconnects with backoff 5 s…5 min; the token goes in the handshake headers, never the URL or the log |
 | `fedtail_*` pool (4) | user actions: post, favourite, open thread, profile… (`core.submit`) |
 | `fedtail-bg` pool (2) | background work: parents, "did I reply?", subscriptions on demand, honest counters |
 | `fedtail-img` pool (4) | image downloads and saving (in `Images`) — a backlog of avatars never delays sending a post |
@@ -417,7 +421,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   texts, author name and @handle, booster, `#id`); every query word must occur.
   `FindBar` searches the rows on screen; `core.deep_find()` walks everything
   stored for the lane and raises its render limit down to the next match.
-* **Honest counters** — `core/counters.py`: for public posts from other servers,
+* **Honest counters** — `protocols/mastodon/counters.py`: for public posts from other servers,
   GET `https://<origin>/api/v1/statuses/<id>` *without the token*, keep the bigger
   numbers; once per post per 10 minutes; off by default (`feed.honest_counters`).
 * **Whole threads** — `Core._thread_nodes()` reads the context of the *top* post (a

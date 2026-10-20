@@ -1,4 +1,4 @@
-"""Conversation tree from /api/v1/statuses/:id/context."""
+"""Conversation tree from the server's context of a post (ancestors, descendants)."""
 
 from dataclasses import dataclass
 

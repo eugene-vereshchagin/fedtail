@@ -18,7 +18,7 @@ from requests.adapters import HTTPAdapter
 
 from ... import diag
 from ...core import remote
-from ...core.api import USER_AGENT
+from ...version import USER_AGENT
 
 log = logging.getLogger(__name__)
 FEED_SIDE = 1200

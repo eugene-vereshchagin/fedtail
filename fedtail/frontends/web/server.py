@@ -124,8 +124,8 @@ def with_emojis(html, emojis):
 def _api_error(e):
     """What the page may show of a failure: the server's own answer ("HTTP 422: …"),
     or just what kind of failure it was — never a request's address."""
-    from ...core.api import ApiError
-    return str(e)[:300] if isinstance(e, ApiError) else e.__class__.__name__
+    from ...protocols.base import ServerError
+    return str(e)[:300] if isinstance(e, ServerError) else e.__class__.__name__
 
 
 def media_json(m):

@@ -1,9 +1,9 @@
-"""core/probe.py: asking the server what it can do — with GETs only."""
+"""protocols/mastodon/probe.py: asking the server what it can do — with GETs only."""
 
 import unittest
 
-from fedtail.core import probe
-from fedtail.core.api import ApiError, Capabilities
+from fedtail.protocols.mastodon import probe
+from fedtail.protocols.mastodon.api import ApiError, Capabilities
 
 
 class _Api:

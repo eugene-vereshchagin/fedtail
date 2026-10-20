@@ -16,8 +16,8 @@ from urllib.parse import urlparse
 
 import requests
 
-from . import counters
-from .api import ApiError
+from ..protocols.mastodon import counters
+from ..protocols.mastodon.api import ApiError
 from .model import real
 
 log = logging.getLogger(__name__)
@@ -347,7 +347,7 @@ class SocialMixin:
     def probe_server(self):
         """Ask my server what it can do (core/probe.py). Future: the round's result,
         kept for next time; the features it answered for are offered — or not — from now."""
-        from . import probe
+        from ..protocols.mastodon import probe
 
         def job():
             got = probe.run(self.api, self.caps)
@@ -363,7 +363,7 @@ class SocialMixin:
 
     def last_probe(self):
         """The last round of probe_server, or None (never checked)."""
-        from . import probe
+        from ..protocols.mastodon import probe
         return self.store.kv_get(probe.KV)
 
     def load_preferences(self):

@@ -9,8 +9,9 @@ import threading
 import time
 import unittest
 
-from fedtail.core import auth, config, paths, stream
+from fedtail.core import auth, config, paths
 from fedtail.core.app import Core
+from fedtail.protocols.mastodon import stream
 
 from .test_core import TmpDir
 
@@ -166,7 +167,7 @@ class StreamTest(unittest.TestCase):
             stream.WebSocket(f"ws://127.0.0.1:{sock.getsockname()[1]}/x", {})
 
     def test_streaming_url_from_instance(self):
-        from fedtail.core.api import Capabilities, capabilities_from_instance
+        from fedtail.protocols.mastodon.api import Capabilities, capabilities_from_instance
         caps = capabilities_from_instance({"urls": {"streaming_api": "wss://s.example"}})
         self.assertEqual(caps.streaming, "wss://s.example")
         self.assertEqual(Capabilities().streaming, "")

@@ -6,7 +6,7 @@ but with your IP address)."""
 import re
 from urllib.parse import urlparse
 
-from .model import real
+from ...core.model import real
 
 _URI_ID = re.compile(r"/statuses/([^/?#]+)/?$")      # Mastodon, GoToSocial, Akkoma uri
 _URL_ID = re.compile(r"/@[^/]+/([^/?#]+)/?$")        # Mastodon web url

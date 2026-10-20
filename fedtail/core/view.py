@@ -321,6 +321,16 @@ class View:
         st = self._core.store.get_status(post_id)
         return real(self.entry(st)) if st else None
 
+    def origin_host(self, post):
+        """The post's own server, when it is another one and can be asked about the post
+        without my token (public, from elsewhere); "" otherwise."""
+        from urllib.parse import urlparse
+
+        from ..protocols.mastodon import counters
+        url = counters.origin_api_url(self._raw(real(post)),
+                                      (self._core.auth or {}).get("server", ""))
+        return (urlparse(url).hostname or "") if url else ""
+
     def stored(self, post_id):
         """A stored entry as it is (a Post, or a Share for a boost's id), or None."""
         st = self._core.store.get_status(post_id)
@@ -507,8 +517,8 @@ class View:
     def _fetch_media(self, url):
         import requests
 
+        from ..version import USER_AGENT
         from . import remote
-        from .api import USER_AGENT
         cache = self._core.paths.cache_dir
         path = cache / hashlib.sha1(url.encode()).hexdigest()
         if path.exists():

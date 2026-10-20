@@ -1,7 +1,7 @@
 import unittest
 
-from fedtail.core.counters import merge, origin_api_url
 from fedtail.core.hashtags import flat_tags
+from fedtail.protocols.mastodon.counters import merge, origin_api_url
 
 from .fakes import BOB, status
 

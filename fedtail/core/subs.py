@@ -20,7 +20,7 @@ thread are kept in `left_members`, and every dropped mention joins them.
 import logging
 from datetime import UTC, datetime, timedelta
 
-from .api import ApiError
+from ..protocols.mastodon.api import ApiError
 from .model import real
 from .store import now_iso
 

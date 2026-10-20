@@ -30,6 +30,7 @@ class FakeCore:
         self.store = _Store([status("1", BOB, text="one"), status("2", ME, text="two")])
         self.paths = _Paths()
         self.me = ME
+        self.auth = {"server": "https://mine.example"}
         self.got = []
 
     def people(self, acc_id, which, max_id=None):
@@ -133,6 +134,15 @@ class ViewTest(unittest.TestCase):
         self.assertTrue(all(isinstance(i, ThreadItem) for i in items))
         self.assertEqual([(i.post.id, i.depth, i.number) for i in items],
                          [("1", 0, 0), ("2", 1, 1)])
+
+    def test_origin_host(self):
+        far = status("9", BOB, text="far", vis="public")
+        far["uri"] = "https://far.example/users/bob/statuses/9"
+        self.core.store.statuses["9"] = far
+        self.assertEqual(self.v.origin_host(self.v.entry(far)), "far.example")
+        near = dict(far, id="10", uri="https://mine.example/users/me/statuses/10")
+        self.core.store.statuses["10"] = near
+        self.assertEqual(self.v.origin_host(self.v.entry(near)), "")
 
     def test_other_shapes_pass_and_the_store_stays_inside(self):
         self.assertEqual(self.v.list_people("l")["title"], "My list")

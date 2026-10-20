@@ -21,6 +21,7 @@ from . import __version__
 ROOT = Path(__file__).resolve().parent.parent
 
 HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"
+USER_AGENT = f"fedtail/{__version__}"  # every request fedtail makes says so
 # the author in the fediverse: About links to him, to follow (his own wish — the one
 # place the repository names his server; nothing else depends on it)
 AUTHOR = "@veresk@dmesg.online"

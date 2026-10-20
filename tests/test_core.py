@@ -9,9 +9,9 @@ import unittest
 from pathlib import Path
 
 from fedtail.core import auth, config, model, paths, threads
-from fedtail.core.api import ApiError, capabilities_from_instance
 from fedtail.core.app import Core
 from fedtail.core.store import Store
+from fedtail.protocols.mastodon.api import ApiError, capabilities_from_instance
 
 from . import fakes
 from .fakes import BOB, ME, NEWS, FakeApi, status
@@ -473,7 +473,7 @@ class PathsAuthTest(TmpDir):
             self.assertEqual(stat.S_IMODE(os.stat(first.path).st_mode), 0o600)
 
     def test_plain_http_only_at_home(self):
-        from fedtail.core.api import cleartext_ok
+        from fedtail.protocols.mastodon.api import cleartext_ok
         for ok in ("https://social.example", "social.example", "http://localhost:8080",
                    "http://127.0.0.1", "http://192.168.1.10", "http://[::1]:3000",
                    "http://gts.lan", "http://box.local", "http://pi.home.arpa"):
@@ -1507,7 +1507,7 @@ class CoreTest(TmpDir):
         self.assertNotIn("N", w.notes)
 
     def test_follow_date_without_notes_on_the_server(self):
-        from fedtail.core.api import ApiError
+        from fedtail.protocols.mastodon.api import ApiError
         core, w = self.make()
         core.connect().result()
 

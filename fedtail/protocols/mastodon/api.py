@@ -14,12 +14,13 @@ from urllib.parse import quote, urlencode, urlsplit
 
 import requests
 
-from .. import __version__, version
-from . import health
+from ... import version
+from ...core import health
+from ..base import ServerError
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
-USER_AGENT = f"fedtail/{__version__}"
+USER_AGENT = version.USER_AGENT
 MARKDOWN_SERVERS = ("gotosocial", "akkoma", "pleroma", "glitch")
 SLOW_SECONDS = 5.0  # set from [debug] slow_request_seconds
 log = logging.getLogger("fedtail.api")
@@ -46,10 +47,8 @@ def error_text(r):
     return text[:300]
 
 
-class ApiError(Exception):
-    def __init__(self, status, message):
-        super().__init__(f"HTTP {status}: {message}")
-        self.status = status
+class ApiError(ServerError):
+    """An error answer of the Mastodon API."""
 
 
 @dataclass
@@ -98,6 +97,25 @@ def seg(value):
     if value in ("", ".", ".."):
         raise ValueError(f"bad id {value!r}")
     return quote(value, safe="")
+
+
+# ---- someone else's server, asked without my token (core: honest counters, profiles) ----
+def search_url(server):
+    """Another server of mine: the search there (for a post it already has)."""
+    return server.rstrip("/") + "/api/v2/search"
+
+
+def lookup_url(host, username):
+    """A stranger's server: who is username there."""
+    from urllib.parse import quote
+    return f"https://{host}/api/v1/accounts/lookup?acct=" + quote(username or "")
+
+
+def statuses_url(host, their_id, max_id=""):
+    """A stranger's server: someone's public posts, own ones only, page after max_id."""
+    from urllib.parse import quote
+    return (f"https://{host}/api/v1/accounts/{quote(str(their_id))}/statuses"
+            "?limit=40&exclude_reblogs=true" + (f"&max_id={quote(max_id)}" if max_id else ""))
 
 
 def cleartext_ok(server):
@@ -419,6 +437,9 @@ class Api:
 
     def followed_tags(self):
         return self.get("/api/v1/followed_tags", {"limit": 200}) or []
+
+    def account(self, acc_id):
+        return self.get(f"/api/v1/accounts/{seg(acc_id)}")
 
     def search(self, q, kind=None, resolve=True, limit=5):
         """Ask my server to find (and fetch from its home, if needed) an address."""

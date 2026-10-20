@@ -5,8 +5,7 @@ can't be asked without changing something is told from what the server says it r
 The answers also tell the core which features to offer (Core.unsupported), and the last
 round is kept, so the dialog shows it at once next time.
 
-The paths are Mastodon's API (GoToSocial, Akkoma and others speak it); with stage 3 of
-docs/PROTOCOLS.md this moves into protocols/mastodon.
+The paths are Mastodon's API (GoToSocial, Akkoma and others speak it).
 """
 
 import logging

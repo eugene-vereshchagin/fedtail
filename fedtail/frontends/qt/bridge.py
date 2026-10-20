@@ -6,13 +6,13 @@ import requests
 from PySide6.QtCore import QObject, Signal
 
 from ... import diag
-from ...core.api import ApiError
+from ...protocols.base import ServerError
 
 log = logging.getLogger(__name__)
 
 # The network or the server said no: one line is the whole story (the request is
 # logged by api.py with its timing). Anything else gets its traceback.
-EXPECTED = (requests.RequestException, ApiError, TimeoutError, ConnectionError)
+EXPECTED = (requests.RequestException, ServerError, TimeoutError, ConnectionError)
 
 
 class Bridge(QObject):

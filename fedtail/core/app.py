@@ -24,10 +24,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
-from .. import diag
-from . import api as api_module
-from . import auth, counters, lanes, search, sources, subs, taggroups, threads
-from .api import USER_AGENT, Api, ApiError, Capabilities, capabilities_from_instance, seg
+from .. import diag, protocols
+from ..protocols.mastodon import api as api_module
+from ..protocols.mastodon import counters
+from ..protocols.mastodon.api import ApiError, Capabilities
+from ..version import USER_AGENT
+from . import auth, lanes, search, sources, subs, taggroups, threads
 from .events import Events
 from .model import id_after, interaction_policy, looks_sent, narrower, real, send_key
 from .social import SocialMixin
@@ -94,10 +96,13 @@ class OtherAccount(ValueError):
 
 
 class Core(SocialMixin):
-    def __init__(self, cfg, paths, api_class=Api):
+    def __init__(self, cfg, paths, api_class=None):
         self.cfg = cfg
         self.paths = paths
-        self.api_class = api_class
+        # what this account's server speaks (docs/PROTOCOLS.md): the client, its errors,
+        # its live stream, its objects → fedtail.model
+        self.proto = protocols.get()
+        self.api_class = api_class or self.proto.client
         paths.ensure()
         self.store = Store(paths.db_file)
         self.events = Events()
@@ -112,7 +117,7 @@ class Core(SocialMixin):
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
         self.unsupported = set()  # features the server said it hasn't got (social.py)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
-        self.server_prefs = {}    # what I set on the server's web side (/api/v1/preferences)
+        self.server_prefs = {}    # what I set on the server's web side (its preferences)
         self.browse_empty = set()  # browse sources (local, federated) the server gave nothing
         self.sources = {}
         self.lists = []           # [{"id", "title", "exclusive"}] from the server
@@ -256,7 +261,7 @@ class Core(SocialMixin):
             api = self.api_class(self.auth["server"], self.auth["token"])
             me = api.me()
             try:
-                caps = capabilities_from_instance(api.instance())
+                caps = self.proto.capabilities(api.instance())
             except Exception:  # instance info is a nicety, not a must
                 caps = Capabilities()
             self.api, self.me, self.caps = api, me, caps
@@ -307,7 +312,7 @@ class Core(SocialMixin):
         if self.cfg["poll"].get("stream", "auto") == "off" or not self.auth or \
                 not getattr(self.api, "has_stream", False):  # a test's fake API has none
             return
-        from . import stream
+        stream = self.proto.stream
         base = self._stream_url()
         if not base:
             return
@@ -323,7 +328,7 @@ class Core(SocialMixin):
     def _stream_url(self):
         """Where the stream is, with the token: my server's own (or the host it names
         for it, on the same site), over TLS only. None: no stream, polling does it."""
-        from . import stream
+        stream = self.proto.stream
         server = self.auth["server"]
         if not server.startswith("https://"):  # the token in the clear: polling only
             log.warning("stream: off, the server is not https")
@@ -966,7 +971,7 @@ class Core(SocialMixin):
             for acc_id in waiting:
                 if acc_id not in have:
                     try:
-                        accounts.append(self.api.get(f"/api/v1/accounts/{seg(acc_id)}"))
+                        accounts.append(self.api.account(acc_id))
                     except ApiError:
                         pass
             return self._with_relations(accounts), None
@@ -1652,8 +1657,8 @@ class Core(SocialMixin):
     def _origin_json(self, url):
         """An ActivityPub object from someone else's server: no token, short timeout,
         public https addresses only, the size capped (see remote)."""
+        from ..protocols.mastodon.api import USER_AGENT
         from . import remote
-        from .api import USER_AGENT
         from .replies import AP_ACCEPT
         return remote.get_json(url, headers={"User-Agent": USER_AGENT, "Accept": AP_ACCEPT},
                                own_hosts=self._own_hosts())
@@ -1738,8 +1743,8 @@ class Core(SocialMixin):
 
     def _origin_get(self, url):
         """GET from someone else's server: no token, short timeout (see remote)."""
+        from ..protocols.mastodon.api import USER_AGENT
         from . import remote
-        from .api import USER_AGENT
         return remote.get_json(url, headers={"User-Agent": USER_AGENT},
                                own_hosts=self._own_hosts())
 
@@ -1810,7 +1815,7 @@ class Core(SocialMixin):
                                      allow_redirects=False)  # the token goes nowhere else
                     got = r.json() if r.status_code == 200 else None
                 else:  # another server: only if it has the post already (no fetching)
-                    r = requests.get(server + "/api/v2/search", headers=head, timeout=8,
+                    r = requests.get(api_module.search_url(server), headers=head, timeout=8,
                                      params={"q": st.get("uri"), "type": "statuses",
                                              "resolve": "false", "limit": 1},
                                      allow_redirects=False)
@@ -1836,7 +1841,7 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def account(self, acc_id):
-        return self.submit(self.api.get, f"/api/v1/accounts/{seg(acc_id)}")
+        return self.submit(self.api.account, acc_id)
 
     def posts_from_origin(self, acc, have_uris=()):
         """Someone from another server my server knows little about: their newest public
@@ -1906,7 +1911,7 @@ class Core(SocialMixin):
     def _older_via_api(self, acc, cursor, have, limit, pages=5):
         """Someone's public posts from their server's Mastodon API, without my token:
         (addresses, cursor "api:<their id>:<max id>" or None)."""
-        from urllib.parse import quote, urlparse
+        from urllib.parse import urlparse
         host = next((urlparse(u).netloc for u in (acc.get("url"), acc.get("uri")) if u), "")
         if not host:
             return [], None
@@ -1914,18 +1919,14 @@ class Core(SocialMixin):
             if cursor:
                 _api, their_id, max_id = cursor.split(":", 2)
             else:
-                found = self._origin_get(f"https://{host}/api/v1/accounts/lookup?acct="
-                                         + quote(acc.get("username") or ""))
+                found = self._origin_get(api_module.lookup_url(host, acc.get("username")))
                 their_id, max_id = (found or {}).get("id"), ""
                 if not their_id:
                     log.info("profile %s: %s won't look them up", acc.get("id"), host)
                     return [], None
             uris = []
             for _ in range(pages):
-                url = (f"https://{host}/api/v1/accounts/{quote(str(their_id))}/statuses"
-                       f"?limit=40&exclude_reblogs=true"
-                       + (f"&max_id={quote(max_id)}" if max_id else ""))
-                page = self._origin_get(url)
+                page = self._origin_get(api_module.statuses_url(host, their_id, max_id))
                 if not isinstance(page, list) or not page:
                     log.info("profile %s: %s gave %s", acc.get("id"), host,
                              "nothing more" if page == [] else "no posts to a stranger")
@@ -2482,7 +2483,7 @@ class Core(SocialMixin):
     def _pinned_from_origin(self, acc_id, limit=10):
         from . import replies
         try:
-            acc = self.api.get(f"/api/v1/accounts/{seg(acc_id)}") or {}
+            acc = self.api.account(acc_id) or {}
         except ApiError:
             return []
         if "@" not in (acc.get("acct") or "") or not acc.get("uri"):
@@ -2628,7 +2629,7 @@ class Core(SocialMixin):
             acc = self.store.account_of(acc_id) or known.get(acc_id)
             if acc is None:  # no post of theirs here: my server knows who it is (once)
                 try:
-                    acc = known[acc_id] = self.api.get(f"/api/v1/accounts/{seg(acc_id)}")
+                    acc = known[acc_id] = self.api.account(acc_id)
                 except Exception as e:  # noqa: BLE001 — gone, or offline
                     log.debug("list waiting: account %s: %s", acc_id, e)
             people[acc_id] = acc if isinstance(acc, dict) else {}

@@ -1,6 +1,6 @@
 """In-memory fake of the Mastodon API, good enough for core and smoke tests."""
 
-from fedtail.core.api import ApiError
+from fedtail.protocols.mastodon.api import ApiError
 
 ME = {"id": "ME", "acct": "mira", "username": "mira", "display_name": "Мира",
       "bot": False, "avatar_static": "", "url": "https://example.test/@mira", "note": ""}
@@ -81,6 +81,9 @@ class FakeApi:
 
     def get(self, path, params=None, timeout=30):
         return BOB
+
+    def account(self, acc_id):
+        return self.get(f"/api/v1/accounts/{acc_id}")
 
     def home(self, limit=40, max_id=None, min_id=None):
         self.w.calls.append(("home", max_id, min_id))

@@ -6,8 +6,8 @@ import unittest
 
 from fedtail import i18n
 from fedtail.core import health
-from fedtail.core.api import ApiError
 from fedtail.frontends import fedstatus
+from fedtail.protocols.mastodon.api import ApiError
 
 from . import test_core
 from .fakes import BOB, status

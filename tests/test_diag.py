@@ -245,7 +245,7 @@ class PrivacyInLogsTest(unittest.TestCase):
 
 class ApiPathTest(unittest.TestCase):
     def test_an_id_is_one_segment(self):
-        from fedtail.core.api import Api, seg
+        from fedtail.protocols.mastodon.api import Api, seg
 
         class Session:
             headers = {}

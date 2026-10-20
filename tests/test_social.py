@@ -6,9 +6,9 @@ and preferences, quotes of my posts — and what happens on a server without the
 import unittest
 
 from fedtail.core import config, paths
-from fedtail.core.api import ApiError
 from fedtail.core.app import Core
 from fedtail.core.social import NotSupported
+from fedtail.protocols.mastodon.api import ApiError
 
 from . import fakes
 from .fakes import BOB, ME, NEWS, FakeApi, status

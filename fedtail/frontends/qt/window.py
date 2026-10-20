@@ -1619,16 +1619,12 @@ class MainWindow(QMainWindow):
     def open_reactions(self, st, kind):
         """Who liked (kind="favourited_by") or boosted ("reblogged_by") a post: as my
         server knows, then — for a post from elsewhere — as its own server knows."""
-        from urllib.parse import urlparse
-
-        from ...core import counters
-        s = self.ctx.view.raw(st)  # counters still read the server's own record
         title = _("who_" + kind, text=snippet(st, 30))
-        origin = counters.origin_api_url(s, (self.core.auth or {}).get("server", ""))
+        host = self.ctx.view.origin_host(st)
         kw = {}
-        if origin and self.cfg["feed"].get("remote_people", True):
+        if host and self.cfg["feed"].get("remote_people", True):
             kw = {"origin": lambda have: self.ctx.view.who_reacted_from_origin(st, kind, have),
-                  "origin_label": _("people_more_from", host=urlparse(origin).hostname)}
+                  "origin_label": _("people_more_from", host=host)}
         self.open_accounts(f"{kind}:{st.id}", title,
                            lambda cur: self.ctx.view.who_reacted(st, kind, cur), **kw)
 
