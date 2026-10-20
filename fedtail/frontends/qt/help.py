@@ -12,7 +12,7 @@ window. The help comes from ≡ → Help only.
 import logging
 
 from PySide6.QtCore import QEvent, QRectF, Qt
-from PySide6.QtGui import QPainter, QTextCursor, QTextTable
+from PySide6.QtGui import QIcon, QPainter, QTextCursor, QTextTable
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPushButton,
     QSplitter,
+    QStackedWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -33,6 +34,10 @@ from .. import helpdocs
 log = logging.getLogger(__name__)
 
 PCT = 90  # of the main window, as the compose panel's big size
+# the app's own pages below the help's: (name, title word, icon)
+APP_PAGES = [("app:server", "server_info", "network-server"),
+             ("app:probe", "probe_tab", "dialog-information"),
+             ("app:federation", "fed_title", "network-workgroup")]
 NAME_ROLE = Qt.ItemDataRole.UserRole
 
 
@@ -164,7 +169,11 @@ class HelpPanel(QDialog):
         self.view.setOpenLinks(False)
         self.view.anchorClicked.connect(lambda url: self.follow(url.toString()))
         self.sticky = StickyHeader(self.view)
-        split.addWidget(self.view)
+        # the right side: a help page, or one of the app's own (APP_PAGES)
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self.view)
+        self.app_pages = {}
+        split.addWidget(self.pages)
         split.setStretchFactor(0, 0)
         split.setStretchFactor(1, 1)
         split.setSizes([240, 760])
@@ -203,7 +212,45 @@ class HelpPanel(QDialog):
             if p.about:
                 it.setToolTip(p.about)
             self.toc.addItem(it)
+        if only is None:  # what the app itself knows: my server, the federation
+            head = QListWidgetItem(_("info_head"))
+            head.setFlags(Qt.ItemFlag.NoItemFlags)
+            f = head.font()
+            f.setBold(True)
+            head.setFont(f)
+            self.toc.addItem(head)
+            for name, word, icon in APP_PAGES:
+                it = QListWidgetItem("    " + _(word))
+                it.setData(NAME_ROLE, name)
+                ic = QIcon.fromTheme(icon)
+                if not ic.isNull():
+                    it.setIcon(ic)
+                self.toc.addItem(it)
         self._mark_current()
+
+    def _app_page(self, name):
+        """The widget of one of the app's pages, made the first time it's asked for."""
+        page = self.app_pages.get(name)
+        if page is not None:
+            return page
+        from .social import FederationWidget, ProbeWidget, server_html
+        win = self.win
+        if name == "app:server":
+            page = QTextBrowser()
+            page.setOpenExternalLinks(True)
+            page.setPlainText(_("loading"))
+            win.bridge.call(win.ctx.view.server_info(),
+                            ok=lambda info, p=page: p.setHtml(server_html(win, info)),
+                            fail=lambda e, p=page: p.setPlainText(_("load_failed", err=e)))
+        elif name == "app:probe":
+            from urllib.parse import urlparse
+            host = urlparse((win.core.auth or {}).get("server", "")).hostname or ""
+            page = ProbeWidget(win, host)
+        else:
+            page = FederationWidget(win)
+        self.pages.addWidget(page)
+        self.app_pages[name] = page
+        return page
 
     def _mark_current(self):
         for i in range(self.toc.count()):
@@ -221,6 +268,14 @@ class HelpPanel(QDialog):
 
     # ---- pages ----------------------------------------------------------------------
     def show_page(self, name, anchor="", record=True):
+        if name.startswith("app:"):
+            if name not in {n for n, _w, _i in APP_PAGES}:
+                return False
+            self.pages.setCurrentWidget(self._app_page(name))
+            self.current = name
+            self._record(name, anchor, record)
+            return True
+        self.pages.setCurrentIndex(0)
         text = helpdocs.page(self.lang, name)
         if text is None:
             log.info("help: no page %s", name)
@@ -230,16 +285,19 @@ class HelpPanel(QDialog):
             self.view.setMarkdown(text)
             self.current = name
             self.sticky.reload()
+        self._scroll_to(anchor)
+        self._record(name, anchor, record)
+        return True
+
+    def _record(self, name, anchor, record):
         if record:
             del self.history[self.at + 1:]
             self.history.append((name, anchor))
             self.at = len(self.history) - 1
-        self._scroll_to(anchor)
         self._mark_current()
         self.back_btn.setEnabled(self.at > 0)
         self.fwd_btn.setEnabled(self.at < len(self.history) - 1)
         log.info("help: %s%s", name, f"#{anchor}" if anchor else "")
-        return True
 
     def _scroll_to(self, anchor):
         bar = self.view.verticalScrollBar()

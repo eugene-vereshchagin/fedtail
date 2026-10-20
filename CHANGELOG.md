@@ -2,6 +2,10 @@
 
 ## 0.17.0 — in progress
 
+- Help gets a "Server and federation" part under its contents: About the server, What it
+  can do (the probe) and Federation status open on its right side, as pages of the same
+  panel — the settings-like window of Psi or QIP, only for what to read, not to set
+  (settings stay a file).
 - `ui.layout = "qip"`, the first step of a messenger-style layout (docs/LAYOUTS.md): the
   lanes in a narrow roster window of their own, as in QIP, Psi or the Mail.ru Agent — who
   I am and what's new in Activity on top, a search line, the lanes in folding groups

@@ -184,51 +184,67 @@ def _section(text):
     return label
 
 
+def server_html(win, info):
+    """What my server says about itself (a ServerInfo), as a page."""
+    css = win.theme.css("link")
+    parts = [f"<h2>{esc(info.title or info.domain)}</h2>"]
+    desc = info.description
+    if desc:
+        # HTML on GoToSocial and older Mastodon, plain text on Mastodon 4
+        parts.append(clean(desc, css) if "<" in desc else f"<p>{esc(desc)}</p>")
+    who = ", ".join(x for x in ("@" + info.contact.handle if info.contact else "",
+                                info.email) if x)
+    if who:
+        parts.append(f"<p>{esc(_('server_contact', who=who))}</p>")
+    if info.about:
+        parts.append(clean(info.about, css))
+    if info.rules:
+        parts.append(f"<h3>{esc(_('server_rules'))}</h3><ol>" +
+                     "".join(f"<li>{esc(text)}"
+                             + (f"<br><small>{esc(hint)}</small>" if hint else "")
+                             + "</li>" for text, hint in info.rules)
+                     + "</ol>")
+    if info.privacy:
+        parts.append(f"<h3>{esc(_('server_privacy'))}</h3>" + clean(info.privacy, css))
+    return "".join(parts)
+
+
 class ServerInfoDialog(QDialog):
-    """My server about itself (a ServerInfo): description, contact, rules, privacy."""
+    """My server about itself (a ServerInfo): description, contact, rules, privacy;
+    and what it can do (ProbeWidget)."""
 
     def __init__(self, win, info):
         super().__init__(win)
         self.setWindowTitle(_("server_info") + " — " + (info.title or info.domain))
-        self.domain = info.domain or info.title
         self.resize(640, 560)
         lay = QVBoxLayout(self)
-        css = win.theme.css("link")
-        parts = [f"<h2>{esc(info.title or info.domain)}</h2>"]
-        desc = info.description
-        if desc:
-            # HTML on GoToSocial and older Mastodon, plain text on Mastodon 4
-            parts.append(clean(desc, css) if "<" in desc else f"<p>{esc(desc)}</p>")
-        who = ", ".join(x for x in ("@" + info.contact.handle if info.contact else "",
-                                    info.email) if x)
-        if who:
-            parts.append(f"<p>{esc(_('server_contact', who=who))}</p>")
-        if info.about:
-            parts.append(clean(info.about, css))
-        if info.rules:
-            parts.append(f"<h3>{esc(_('server_rules'))}</h3><ol>" +
-                         "".join(f"<li>{esc(text)}"
-                                 + (f"<br><small>{esc(hint)}</small>" if hint else "")
-                                 + "</li>" for text, hint in info.rules)
-                         + "</ol>")
-        if info.privacy:
-            parts.append(f"<h3>{esc(_('server_privacy'))}</h3>" + clean(info.privacy, css))
         view = QTextBrowser()
         view.setOpenExternalLinks(True)
-        view.setHtml("".join(parts))
+        view.setHtml(server_html(win, info))
+        self.probe = ProbeWidget(win, info.domain or info.title)
+        for name in ("probe_table", "probe_btn", "copy_btn", "save_btn", "probe_note",
+                     "probe_text"):
+            setattr(self, name, getattr(self.probe, name))
         self.tabs = QTabWidget()
         self.tabs.addTab(view, _("server_about_tab"))
-        self.tabs.addTab(self._can_tab(win), _("probe_tab"))
+        self.tabs.addTab(self.probe, _("probe_tab"))
         lay.addWidget(self.tabs, 1)
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         box.rejected.connect(self.reject)
         lay.addWidget(box)
 
-    # ---- what it can do: asked by a button, a few seconds, in the background --------
-    def _can_tab(self, win):
-        self.win = win
-        tab = QWidget()
-        v = QVBoxLayout(tab)
+
+class ProbeWidget(QWidget):
+    """What my server can do: asked by a button, a few seconds, in the background; the
+    last round shown at once; copied or saved as a Markdown table."""
+
+    def __init__(self, win, domain):
+        super().__init__()
+        self.win, self.domain = win, domain
+        self._build(win)
+
+    def _build(self, win):
+        v = QVBoxLayout(self)
         v.setContentsMargins(0, 8, 0, 0)
         top = QHBoxLayout()
         self.probe_note = QLabel()
@@ -254,9 +270,7 @@ class ServerInfoDialog(QDialog):
                   context=Qt.ShortcutContext.WidgetShortcut,
                   activated=lambda: self._copy(selected=True))
         v.addWidget(self.probe_table, 1)
-        self.domain = getattr(self, "domain", "")
         self._show_probe(win.ctx.view.last_probe())
-        return tab
 
     def _probe(self):
         self.probe_btn.setEnabled(False)
@@ -342,6 +356,69 @@ class ServerInfoDialog(QDialog):
                 item.setToolTip(1, _("probe_known_tip"))
             self.probe_table.addTopLevelItem(item)
         self.probe_table.resizeColumnToContents(0)
+
+
+class FederationWidget(QWidget):
+    """How my server is doing and what keeps failing, here and on other servers
+    (core.health; fedstatus draws it): live while shown, copied as text, counted anew."""
+
+    def __init__(self, win):
+        super().__init__()
+        from PySide6.QtCore import QTimer
+        self.win, self.data = win, None
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        self.view = QTextBrowser()
+        self.view.setOpenLinks(False)
+        # someone waiting for a list: their profile opens in a tab here (Follow on it)
+        self.view.anchorClicked.connect(lambda u: win.on_link(u.toString()))
+        self.view.setPlainText(_("loading"))
+        v.addWidget(self.view, 1)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        for word, fn in (("fed_refresh", self.refresh), ("fed_copy", self.copy),
+                         ("fed_reset", self.count_anew)):
+            row.addWidget(_button(_(word), fn))
+        v.addLayout(row)
+        self.timer = QTimer(self)  # live while shown: the numbers move as polls come
+        self.timer.timeout.connect(self.refresh)
+        self.timer.setInterval(15000)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self.refresh()
+        self.timer.start()
+
+    def hideEvent(self, e):
+        super().hideEvent(e)
+        self.timer.stop()
+
+    def refresh(self):
+        def show(data):
+            try:
+                self.data = data
+                from .. import fedstatus
+                pos = self.view.verticalScrollBar().value()
+                self.view.setHtml(fedstatus.html(data))
+                self.view.verticalScrollBar().setValue(pos)  # a refresh keeps the place
+            except RuntimeError:  # closed meanwhile
+                pass
+        self.win.bridge.call(self.win.core.federation_status(), ok=show,
+                             fail=lambda e: self.view.setPlainText(_("load_failed", err=e)))
+
+    def copy(self):
+        from PySide6.QtGui import QGuiApplication
+
+        from .. import fedstatus
+        if self.data is not None:
+            QGuiApplication.clipboard().setText(fedstatus.text(self.data))
+            self.win.statusBar().showMessage(_("fed_copied"), 5000)
+
+    def count_anew(self):
+        from ...core import health
+        health.REC.clear()
+        log.info("federation status: counting anew")
+        self.refresh()
 
 
 PROBE_MARKS = {"yes": "✓", "no": "✗", "closed": "🔒", "error": "⚠", "self": "◐", "info": "·"}

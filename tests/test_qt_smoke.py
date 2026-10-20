@@ -2432,6 +2432,23 @@ if __name__ == "__main__":
         self.assertEqual(again.current, "ref/features")  # where it was left
         self.win.open_help("keys")
         self.assertEqual(panel.current, "keys")
+        # below the help: what the app itself knows — my server, what it can do, the
+        # federation — on the same right side, Back and Forward as for pages
+        from fedtail.frontends.qt.social import FederationWidget, ProbeWidget
+        names = [panel.toc.item(i).data(NAME_ROLE) for i in range(panel.toc.count())]
+        self.assertTrue({"app:server", "app:probe", "app:federation"} <= set(names))
+        self.assertTrue(panel.show_page("app:probe"))
+        self.assertIsInstance(panel.pages.currentWidget(), ProbeWidget)
+        panel.show_page("app:federation")
+        self.assertIsInstance(panel.pages.currentWidget(), FederationWidget)
+        panel.back()
+        self.assertEqual(panel.current, "app:probe")
+        panel.show_page("app:server")
+        server = panel.pages.currentWidget()
+        self.pump(until=lambda: server.toPlainText() != i18n._("loading"))
+        self.assertFalse(panel.show_page("app:nope"))
+        panel.show_page("keys")
+        self.assertIs(panel.pages.currentWidget(), panel.view)
         # the comparison matrix: scrolled into a table, its header row stays on top
         self.win.open_help("ref/comparison")
         self.pump(0.05)

@@ -2219,9 +2219,9 @@ class MainWindow(QMainWindow):
         """Debug → Federation status: how my server is doing and what keeps failing,
         here and on other servers (core.health; fedstatus draws it). One window, brought
         to the front when asked again."""
-        from PySide6.QtWidgets import QDialogButtonBox, QTextBrowser
+        from PySide6.QtWidgets import QDialogButtonBox
 
-        from .. import fedstatus
+        from .social import FederationWidget
         dlg = getattr(self, "_fed_dlg", None)
         if dlg is not None and dlg.isVisible():
             dlg.raise_()
@@ -2232,50 +2232,15 @@ class MainWindow(QMainWindow):
         dlg.setWindowTitle(_("fed_title"))
         dlg.resize(min(980, self.width() - 40), min(760, self.height() - 40))
         lay = QVBoxLayout(dlg)
-        view = QTextBrowser()
-        view.setOpenLinks(False)
-        # someone waiting for a list: their profile opens in a tab here (Follow on it)
-        view.anchorClicked.connect(lambda u: self.on_link(u.toString()))
-        view.setPlainText(_("loading"))
-        lay.addWidget(view, 1)
+        page = FederationWidget(self)
+        lay.addWidget(page, 1)
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        refresh = box.addButton(_("fed_refresh"), QDialogButtonBox.ButtonRole.ActionRole)
-        copy = box.addButton(_("fed_copy"), QDialogButtonBox.ButtonRole.ActionRole)
-        reset = box.addButton(_("fed_reset"), QDialogButtonBox.ButtonRole.ResetRole)
         box.rejected.connect(dlg.close)
         lay.addWidget(box)
-        dlg.data = None
-
-        def show(data):
-            dlg.data = data
-            pos = view.verticalScrollBar().value()
-            view.setHtml(fedstatus.html(data))
-            view.verticalScrollBar().setValue(pos)  # a refresh keeps the place
-
-        def again():
-            self.bridge.call(self.core.federation_status(), ok=show,
-                             fail=lambda e: view.setPlainText(_("load_failed", err=e)))
-
-        def to_clipboard():
-            if dlg.data is not None:
-                QGuiApplication.clipboard().setText(fedstatus.text(dlg.data))
-                self.statusBar().showMessage(_("fed_copied"), 5000)
-
-        def count_anew():
-            from ...core import health
-            health.REC.clear()
-            log.info("federation status: counting anew")
-            again()
-        refresh.clicked.connect(again)
-        copy.clicked.connect(to_clipboard)
-        reset.clicked.connect(count_anew)
-        dlg.refresh = again
-        timer = QTimer(dlg)  # live while open: the numbers move as polls come
-        timer.timeout.connect(again)
-        timer.start(15000)
+        dlg.refresh = page.refresh
+        dlg.page = page
         self._fed_dlg = dlg
         log.info("federation status: opened")
-        again()
         dlg.show()
 
     def debug_trim(self):
