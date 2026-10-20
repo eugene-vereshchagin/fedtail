@@ -89,6 +89,8 @@ class RosterRow(QWidget):
         self.face.setFixedSize(FACE, FACE)
         h.addWidget(self.face, 0, Qt.AlignmentFlag.AlignTop)
         self._face_url = None
+        from .dock import HoverCard  # a person: their card on hover, as QIP had it
+        HoverCard(win, self, lambda: self.item.who)
         self.compact = roster.look["compact"]
         if self.compact:
             h.setContentsMargins(6, 1, 6, 1)
@@ -126,9 +128,8 @@ class RosterRow(QWidget):
                 self.roster.win.images.get(
                     url, lambda pm, w=self.face: _alive(w) and w.setPixmap(_round(pm, FACE)))
         tip = item.title + (f" — {_('roster_unread', n=item.unread)}" if new else "")
-        if item.kind == "person":
-            tip += "\n" + _("roster_person_tip")
-        self.setToolTip(tip)
+        # a person has the card instead of a tooltip
+        self.setToolTip("" if item.kind == "person" else tip)
 
     def matches(self, text):
         t = text.casefold()

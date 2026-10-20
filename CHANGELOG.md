@@ -11,7 +11,9 @@
   our private messages (the Direct lane holds everyone's), written to by the input
   line; the bar over a lane is one line with a small face and stays put; the input
   line attaches pictures and picks the language (⤢ and the big window are gone from
-  it); `--layout` / `--theme` carry over to an account switched to.
+  it); hovering a person in the roster, or a face, shows their card as QIP did — the
+  face, the @address, how we stand, the bio's first lines, how much they post and
+  since when; `--layout` / `--theme` carry over to an account switched to.
 - `ui.button_icons = "theme" | "on" | "off"`: pictures on buttons whatever the theme
   says. The split layout's buttons (the input line, the bar over a lane, the roster)
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the

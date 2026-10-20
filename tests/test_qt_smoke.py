@@ -2278,6 +2278,14 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(win.tabs.currentWidget(), TalkWidget)
         self.assertEqual(win.dock.visibility, "direct")
         self.assertIn("@" + who.handle, win.dock.text.toPlainText())
+        from PySide6.QtCore import QPoint
+
+        from fedtail.frontends.qt.dock import card_for  # who it is, as a card on hover
+        card = card_for(win)
+        card.soon(who, QPoint(100, 100))
+        card._show_now()
+        self.assertIn(who.handle, card.lines.text())
+        card.away()
         win.write_to(who)  # again: the same tab
         self.assertEqual(sum(isinstance(w, TalkWidget) for w in win.extra_tabs()), 1)
         self.assertEqual(talk_with(win.ctx.view, [], who.handle), [])

@@ -259,6 +259,8 @@ QWidget#authorBar {{ background: {k('header')}; border-bottom: 1px solid {k('hea
 QSplitter#readWrite::handle {{ background: {k('header_border')}; margin: 1px 0; }}
 QSplitter#readWrite::handle:hover {{ background: {k('selected')}; }}
 QWidget#inputDock {{ background: {k('header')}; }}
+QWidget#contactCard {{ background: {k('card')}; border: 1px solid {k('accent')};
+    border-radius: {br}px; }}
 QLabel#faceName {{ font-weight: 600; background: transparent; }}
 QTabBar#messageTabs::tab {{ background: {k('button')}; color: {k('text')};
     border: 1px solid {k('button_border')}; border-bottom: 0; margin: 3px 1px 0 1px;

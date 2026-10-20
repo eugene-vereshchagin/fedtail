@@ -98,6 +98,7 @@ class InputDock(QWidget):
                                   self.win.open_account(self._to.id))
         self.face.hide()
         self._to = self._face_url = None
+        HoverCard(win, self.face, lambda: self._to)
         row.addWidget(self.face, 0, Qt.AlignmentFlag.AlignTop)
         self.send_btn = QPushButton(_("dock_send"))
         self.send_btn.setObjectName("compose")
@@ -419,6 +420,8 @@ class AuthorBar(QWidget):
         self.face.setCursor(Qt.CursorShape.PointingHandCursor)
         self.face.clicked.connect(self._profile)
         h.addWidget(self.face)
+        for w in (self.face, self.name):
+            HoverCard(win, w, lambda: self.who)
         self.hide()
         self.dress()
         self._timer = QTimer(self, interval=500)
@@ -701,3 +704,117 @@ class TalkWidget(QWidget):
     def _seen(self, ids):
         if self.win.cfg["read"]["mark_read"] != "manual":
             self.win.ctx.view.mark_read(ids)
+
+
+class ContactCard(QWidget):
+    """Who this is, as QIP showed a contact on hover: a card of its own beside the
+    pointer — the face, the name, the @address, how we stand, the bio's first lines, how
+    much they post and since when, a link to the whole profile. One for the window."""
+
+    def __init__(self, win):
+        super().__init__(None, Qt.WindowType.ToolTip)
+        from .card import ClickLabel
+        self.win, self.who = win, None
+        self.setObjectName("contactCard")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setFixedWidth(340)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(10, 8, 10, 8)
+        v = QVBoxLayout()
+        v.setSpacing(2)
+        self.name = QLabel()
+        self.name.setObjectName("faceName")
+        self.name.setTextFormat(Qt.TextFormat.PlainText)
+        v.addWidget(self.name)
+        self.lines = QLabel()
+        self.lines.setWordWrap(True)
+        self.lines.setTextFormat(Qt.TextFormat.RichText)
+        v.addWidget(self.lines)
+        v.addStretch(1)
+        h.addLayout(v, 1)
+        self.face = ClickLabel()
+        self.face.setFixedSize(FACE + 16, FACE + 16)
+        h.addWidget(self.face, 0, Qt.AlignmentFlag.AlignTop)
+        self._url = None
+        self._timer = QTimer(self, singleShot=True, interval=600)
+        self._timer.timeout.connect(self._show_now)
+        self._at = None
+
+    def soon(self, account, pos):
+        """Shown a moment after the pointer stays (pos: global, where to put it)."""
+        self.who, self._at = account, pos
+        self._timer.start()
+
+    def away(self):
+        self._timer.stop()
+        self.hide()
+
+    def _show_now(self):
+        from PySide6.QtGui import QTextDocumentFragment
+
+        from .text import esc
+        who, win = self.who, self.win
+        if who is None:
+            return
+        self.name.setText(who.name or who.username)
+        rel = win.ctx.view.relation_known(who.id)
+        stand = ""
+        if rel is not None:
+            stand = _("faces_mutual") if rel.following and rel.followed_by else \
+                _("faces_follows_me") if rel.followed_by else \
+                _("following_them") if rel.following else ""
+        bio = QTextDocumentFragment.fromHtml(who.note or "").toPlainText().strip()
+        bio = bio[:220] + ("…" if len(bio) > 220 else "")
+        muted = win.theme.css("muted")
+        rows = [f"<span style='color:{muted}'>@{esc(who.handle)}</span>"]
+        if stand:
+            rows.append(f"<b>{esc(stand)}</b>")
+        if bio:
+            rows.append(esc(bio).replace("\n", "<br>"))
+        if who.posts or who.followers:
+            rows.append(esc(_("card_counts", posts=who.posts, followers=who.followers,
+                              following=who.following)))
+        if who.created:
+            rows.append(esc(_("card_since", when=win.theme.date(who.created.isoformat()))))
+        if who.bot:
+            rows.append(esc(_("bot")))
+        self.lines.setText("<br>".join(rows))
+        set_face(win, self.face, who.avatar_static, self, "_url")
+        self.adjustSize()
+        x, y = self._at.x() + 16, self._at.y() + 8
+        screen = self.screen().availableGeometry() if self.screen() else None
+        if screen is not None:
+            if x + self.width() > screen.right():
+                x = self._at.x() - self.width() - 16
+            y = min(y, screen.bottom() - self.height())
+        self.move(x, y)
+        self.show()
+
+
+def card_for(win):
+    if getattr(win, "contact_card", None) is None:
+        win.contact_card = ContactCard(win)
+    return win.contact_card
+
+
+class HoverCard:
+    """An event filter: hovering a widget shows the contact card of who(), leaving it
+    hides it."""
+
+    def __init__(self, win, widget, who):
+        from PySide6.QtCore import QObject
+
+        class _F(QObject):
+            def eventFilter(_s, obj, e):
+                from PySide6.QtCore import QEvent
+                t = e.type()
+                if t == QEvent.Type.Enter:
+                    acc = who()
+                    if acc is not None:
+                        from PySide6.QtGui import QCursor
+                        card_for(win).soon(acc, QCursor.pos())
+                elif t in (QEvent.Type.Leave, QEvent.Type.MouseButtonPress, QEvent.Type.Hide):
+                    card_for(win).away()
+                return False
+        self.f = _F(widget)
+        widget.installEventFilter(self.f)

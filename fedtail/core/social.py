@@ -114,7 +114,9 @@ class SocialMixin:
                     continue
                 back |= {r["id"] for r in rel if r.get("followed_by")}
             keep = ("id", "username", "acct", "display_name", "avatar", "avatar_static",
-                    "url", "uri", "emojis", "bot", "note")
+                    "url", "uri", "emojis", "bot", "note", "locked", "created_at",
+                    "last_status_at", "statuses_count", "followers_count",
+                    "following_count")
             out = [{k: a.get(k) for k in keep} for a in following if a["id"] in back]
             out.sort(key=lambda a: (a.get("display_name") or a.get("username") or "").casefold())
             self.store.kv_set(MUTUALS_KV, {"me": me, "at": time.time(), "accounts": out})
