@@ -291,6 +291,29 @@ class AdapterActivityTest(unittest.TestCase):
         self.assertEqual(a.post.id, "1")
 
 
+class SmallShapesTest(unittest.TestCase):
+    """Lists, my profile's source, held-back senders, through View the same way."""
+
+    def test_list_profile_held_back(self):
+        from fedtail.protocols.mastodon import adapter
+        lst = adapter.user_list({"id": "L1", "title": "Друзья", "exclusive": True,
+                                 "replies_policy": "list"}, "main")
+        self.assertEqual((lst.id, lst.title, lst.exclusive, lst.replies, lst.ref.profile),
+                         ("L1", "Друзья", True, "list", "main"))
+        prof = adapter.my_profile({"id": "M", "acct": "me", "username": "me",
+                                   "display_name": "Мира", "header": "/headers/missing.png",
+                                   "source": {"note": "о себе", "fields": [
+                                       {"name": "web", "value": "x.org"}]}})
+        self.assertEqual((prof.bio, prof.fields, prof.account.header),
+                         ("о себе", (("web", "x.org"),), ""))
+        held = adapter.held_back({"id": "R1", "notifications_count": "3",
+                                  "account": {"id": "B", "acct": "b@x", "username": "b"},
+                                  "last_status": {"id": "9", "content": "<p>hi</p>",
+                                                  "account": {"id": "B"}}})
+        self.assertEqual((held.id, held.count, held.who.handle, held.last.id),
+                         ("R1", 3, "b@x", "9"))
+
+
 class LayeringTest(unittest.TestCase):
     def test_the_model_knows_no_protocol(self):
         import ast

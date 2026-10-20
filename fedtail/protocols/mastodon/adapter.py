@@ -427,7 +427,7 @@ def held_back(raw, profile=""):
     """A notification request → HeldBack."""
     raw = _dict(raw)
     acc, last = raw.get("account"), raw.get("last_status")
-    return HeldBack(Ref(profile, _str(raw.get("id"))),
+    return HeldBack(_ref(profile, raw.get("id")),
                     account(acc, profile) if isinstance(acc, dict) else None,
                     _int(raw.get("notifications_count")),
                     real(post(last, profile)) if isinstance(last, dict) and last.get("id")
@@ -452,7 +452,7 @@ PROFILE_KEYS = {"name": "display_name", "bio": "note", "fields": "fields", "lock
 def user_list(raw, profile=""):
     """A list of mine → UserList."""
     raw = _dict(raw)
-    return UserList(Ref(profile, _str(raw.get("id"))), _str(raw.get("title")),
+    return UserList(_ref(profile, raw.get("id")), _str(raw.get("title")),
                     exclusive=raw.get("exclusive") is True,
                     replies=_str(raw.get("replies_policy")))
 
