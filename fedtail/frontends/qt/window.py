@@ -364,7 +364,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         # ui.layout = "split": the lanes in a roster window of their own (roster.py); this
         # window is the messages window — no sidebar, the lanes and threads in tabs
-        self.roster = self.dock = None
+        self.roster = self.dock = self.faces = None
         if self.cfg["ui"].get("layout") in ("split", "qip"):
             from .dock import InputDock
             from .roster import RosterWindow
@@ -373,6 +373,24 @@ class MainWindow(QMainWindow):
             # the input line, always under the tabs (dock.py)
             self.dock = InputDock(self)
             rv.insertWidget(rv.indexOf(self.tabs) + 1, self.dock)
+            # and the faces beside them (ui.faces): theirs on top, mine by the input
+            if self.cfg["ui"].get("faces", True):
+                from .dock import FaceColumn
+                outer = QHBoxLayout()
+                outer.setContentsMargins(0, 0, 0, 0)
+                outer.setSpacing(0)
+                inner = QWidget()
+                inner.setLayout(QVBoxLayout())
+                inner.layout().setContentsMargins(0, 0, 0, 0)
+                inner.layout().setSpacing(0)
+                at = rv.indexOf(self.tabs)
+                for w in (self.tabs, self.dock):
+                    rv.removeWidget(w)
+                    inner.layout().addWidget(w, 1 if w is self.tabs else 0)
+                outer.addWidget(inner, 1)
+                self.faces = FaceColumn(self)
+                outer.addWidget(self.faces)
+                rv.insertLayout(at, outer, 1)
             self.tabs.currentChanged.connect(lambda _i: self.dock.follow(
                 self.tabs.currentWidget()))
         self.menuBar().hide()

@@ -2244,6 +2244,9 @@ class QtSmokeTest(unittest.TestCase):
         thread = win.tabs.currentWidget()
         self.pump(until=lambda: win.dock.target is not None)
         self.assertEqual(win.dock.target.id, thread.posts[-1].id)
+        win.faces.update_faces()  # the other side's face: whom I answer
+        self.assertTrue(win.faces.them_name.text() or win.dock.target.author.id ==
+                        self.core.me["id"])
         win.select_lane("home")
         self.assertIsNone(win.dock.target)  # a lane: a new post
         win.tabs.setCurrentWidget(thread)
@@ -2277,6 +2280,13 @@ class QtSmokeTest(unittest.TestCase):
         win.close()
         self.assertFalse(win.isVisible())
         self.assertTrue(roster.isVisible())
+
+    def test_button_icons_override_the_theme(self):
+        from fedtail.frontends.qt import theme as themes
+        for say, want in (("off", False), ("on", True)):
+            cfg, _ = config.validate({"ui": {"button_icons": say}})
+            self.assertIs(themes.apply(self.app, cfg).shape["icons"], want)
+        themes.apply(self.app, config.validate({})[0])
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

@@ -40,6 +40,8 @@ DEFAULTS = {
         "layout": "single",
         "roster_on_top": False,
         "roster_threads": 15,
+        "faces": True,
+        "button_icons": "theme",
         "columns": [],
         "column_width": 460,
         "image_height": 360,
@@ -223,6 +225,7 @@ DEFAULTS = {
 CHOICES = {
     ("ui", "layout"): {'single', 'columns', 'split', 'qip'},
     ("ui", "app_icon"): {'possum', 'bubble'},
+    ("ui", "button_icons"): {'theme', 'on', 'off'},
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},
     ("feed", "prefetch"): {'previews', 'all', 'off'},

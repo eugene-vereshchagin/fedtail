@@ -112,6 +112,14 @@ roster_on_top = false
 # items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only.
 roster_threads = 15
 
+# With layout = "split": the faces beside the messages — the other side's on top (whose
+# post the cursor is on, or whom I answer), mine by the input line.
+faces = true
+
+# Pictures on buttons (visibility, actions, the roster's): "theme" — as the theme says,
+# "on" — always, "off" — words only.
+button_icons = "theme"
+
 # Which lanes stand as columns, left to right, until you change them in the window (a click
 # on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is
 # remembered). Names — as in lanes.enabled; "list:Friends" — a list by its title. [] — Home,

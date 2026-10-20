@@ -7,7 +7,7 @@ schedule)."""
 
 import logging
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -189,3 +189,86 @@ class InputDock(QWidget):
         self.target = None
         self.win.compose(target, (), text)
         self.follow(self.win.tabs.currentWidget())
+
+
+FACE = 64  # the faces beside the messages, as in the Mail.ru Agent
+
+
+class FaceColumn(QWidget):
+    """Beside the messages: the other side's face on top (whose post the cursor is on,
+    else the one answered, else the post on top of the screen), mine at the bottom,
+    beside the input line. Looked at twice a second: cheap, and no signal to miss."""
+
+    def __init__(self, win):
+        super().__init__()
+        self.win = win
+        self.setObjectName("faceColumn")
+        self.setFixedWidth(FACE + 12)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(6, 6, 6, 6)
+        self.them = self._face()
+        self.them_name = QLabel()
+        self.them_name.setObjectName("muted")
+        self.them_name.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.them_name.setWordWrap(True)
+        v.addWidget(self.them, 0, Qt.AlignmentFlag.AlignHCenter)
+        v.addWidget(self.them_name)
+        v.addStretch(1)
+        self.me = self._face()
+        v.addWidget(self.me, 0, Qt.AlignmentFlag.AlignHCenter)
+        self._urls = {}
+        self._timer = QTimer(self, interval=500)
+        self._timer.timeout.connect(self.update_faces)
+        self._timer.start()
+
+    def _face(self):
+        lab = QLabel()
+        lab.setFixedSize(FACE, FACE)
+        lab.setObjectName("face")
+        return lab
+
+    def _set(self, lab, url, tip=""):
+        lab.setToolTip(tip)
+        if self._urls.get(id(lab)) == url:
+            return
+        self._urls[id(lab)] = url
+        lab.clear()
+        if url:
+            from .card import _round
+            self.win.images.get(url, lambda pm, w=lab, u=url: (
+                self._urls.get(id(w)) == u and w.setPixmap(_round(pm, FACE))))
+
+    def update_faces(self):
+        if not self.isVisible():
+            return
+        try:
+            me = self.win.ctx.view.me if self.win.core.me else None
+        except Exception:  # noqa: BLE001 — the core going away
+            return
+        self._set(self.me, me.avatar_static if me else "", "@" + me.handle if me else "")
+        who = self._other(me)
+        self._set(self.them, who.avatar_static if who else "",
+                  "@" + who.handle if who else "")
+        self.them_name.setText(who.username if who else "")
+
+    def _other(self, me):
+        """The account on the other side, or None."""
+        from ...model import real
+        view = self.win.current_view()
+        post = None
+        if view is not None:
+            key = view.cursor_key
+            if key not in view.rows:
+                anchor = view._reading_anchor()
+                key = anchor[0] if anchor else None
+            row = view.rows.get(key)
+            spec = getattr(row, "spec", None)
+            if spec is not None and spec.entry is not None:
+                post = real(spec.entry)
+        dock = self.win.dock
+        if (post is None or (me and post.author.id == me.id)) and dock is not None \
+                and dock.target is not None:
+            post = dock.target  # my own post under the cursor: whom I answer
+        if post is None or (me and post.author.id == me.id):
+            return None
+        return post.author

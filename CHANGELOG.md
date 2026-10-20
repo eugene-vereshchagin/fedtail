@@ -7,6 +7,8 @@
   server's window starts anew, and asks nothing while it is spent. One line in the
   status bar says until when — instead of a "429" for every lane, every round (as on
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
+- `ui.button_icons = "theme" | "on" | "off"`: pictures on buttons whatever the theme
+  says.
 - Trying a theme from the menu no longer freezes the window for seconds: the lanes out
   of sight let their cards go first (drawn anew when opened), and the tabs out of sight
   are rebuilt when they come into view.
@@ -36,7 +38,9 @@
   sidebar, its tabs drawn as tabs; closing the last tab closes it. Under the tabs, an
   input line is always there: in a thread's tab it answers the thread (a private talk
   stays private), in a lane's tab it writes a new post; who sees it, a warning, and ⤢ for
-  the full Compose window. At the bottom of the roster, the menu and the accounts
+  the full Compose window. Beside them, the faces (`ui.faces`): the other side's on top
+  — whose post the cursor is on, or whom I answer — and mine by the input line. At the
+  bottom of the roster, the menu and the accounts
   (@me ▾); ⚙ (or a right click on empty space) sets how it looks: compact — a line an
   item, without the header, the search or the buttons, only where there's something new,
   without groups, above other windows (`ui.roster_on_top` says how it starts). Closing
