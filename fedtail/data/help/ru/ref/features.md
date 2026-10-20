@@ -96,7 +96,7 @@
 | Поиск людей, тегов и постов | есть | 0.2.0 | — | `/api/v2/search` | у всех |
 | Лента из нескольких тегов | есть | 0.14.0 | `[[lanes.tag_groups]]`; из поиска — «＋ в ленты» | `timelines/tag/:name` по каждому тегу, склейка у себя | Phanpy, Ice Cubes («группы тегов»), tut (`:tag a b`) |
 | Колонки рядом | есть | 0.14.0 | `ui.layout`, `ui.columns`, `ui.column_width`; кнопка ❯ вверху слева | своё | Sengi, Phanpy, tut, Whalebird, Mastodon web (продвинутый режим) |
-| Ростер, как в аське | частично | 0.17.0 | `ui.layout = "qip"`, `ui.roster_on_top` | своё | — |
+| Ростер, как в аське | частично | 0.17.0 | `ui.layout = "qip"` или на один запуск `fedtail --layout qip`, `ui.roster_on_top`, `ui.roster_threads` | своё | — |
 | Коллекции (Mastodon 4.6) | в планах | — | — | `/api/v1/collections` | Mastodon 4.6, Fedilab |
 
 <details><summary>Подробнее</summary>
