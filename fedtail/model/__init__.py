@@ -311,6 +311,7 @@ class Relationship:
     showing_shares: bool = True    # their boosts come into Home
     endorsed: bool = False         # shown on my profile
     note: str = ""                 # my private note on them
+    languages: tuple[str, ...] | None = None  # only these of theirs come to Home (None: all)
 
 
 @dataclass(frozen=True, slots=True)

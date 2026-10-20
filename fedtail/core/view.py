@@ -6,6 +6,13 @@ server's JSON never leaves the core. Frontends use this and nothing else of the 
 that carries posts or accounts (docs/PROTOCOLS.md, stage 2); a test checks that the
 frontends moved to it read no protocol fields.
 
+Methods written out below have model-shaped signatures of their own. Any other method
+of the core goes through as it is, its arguments and its answer converted on the way:
+a Post, a Share, an Account, a Relationship going in becomes what the core takes, and
+what comes back — statuses, accounts, relationships, notifications, thread nodes,
+inside lists, tuples and dicts, now or in a future — comes back as the model. Shapes
+the model has no type for yet (lists, tags, server info) pass as they are.
+
 Lane entries are converted once per change of the lane (Core.lane_entries caches the
 raw list; this caches what it made of that very list), so scrolling and badge counts
 cost nothing extra.
@@ -16,9 +23,11 @@ from __future__ import annotations
 import hashlib
 import os
 import threading
+from collections import OrderedDict
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import fields, replace
 
-from ..model import Account, Post, Share, ThreadItem, real
+from ..model import Account, Post, Relationship, Share, ThreadItem, real
 from ..protocols.mastodon import adapter
 from . import links
 
@@ -48,24 +57,109 @@ PASS = {
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
 }
+# what never goes through: the server's own data, unconverted
+BLOCKED = {"store", "api", "events", "_core"}
+RAW_KEEP = 4000  # accounts remembered as the core had them, to hand back unchanged
 
 MEDIA_MAX = 20 * 1024 * 1024  # one picture fetched for a frontend (as Qt's previews)
 
 
 class View:
-    """Model-only face of a Core. Unknown attributes are refused, so a frontend can't
-    reach the raw core by accident; PASS lists what goes through unchanged."""
+    """Model-only face of a Core: see the module's words. BLOCKED attributes are
+    refused, so a frontend can't reach the server's data by accident."""
 
     def __init__(self, core):
         self._core = core
         self._cache = {}   # lane -> (the raw list it was made from, converted)
         self._lock = threading.Lock()
         self._media = None  # pictures' own workers, made when first needed
+        self._raw_accounts = OrderedDict()  # (profile, id) -> the core's account dict
 
     def __getattr__(self, name):
         if name in PASS:
             return getattr(self._core, name)
-        raise AttributeError(f"View has no {name!r} (a raw core attribute?)")
+        if name in BLOCKED or name.startswith("__"):
+            raise AttributeError(f"View has no {name!r} (the server's data stays inside)")
+        attr = getattr(self._core, name)
+        if not callable(attr):
+            return self._out(attr)
+
+        def call(*args, **kw):
+            res = attr(*[self._in(a) for a in args], **{k: self._in(v) for k, v in kw.items()})
+            return _then(res, self._out) if isinstance(res, Future) else self._out(res)
+        call.__name__ = name
+        return call
+
+    # ---- converting both ways ------------------------------------------------------
+    def _in(self, x):
+        """Model objects in what's handed to the core become what the core takes."""
+        if isinstance(x, (Post, Share)):
+            return self._raw(x)
+        if isinstance(x, Account):
+            return self._acc_raw(x)
+        if isinstance(x, Relationship):
+            return _rel_raw(x)
+        if isinstance(x, list):
+            return [self._in(v) for v in x]
+        if isinstance(x, tuple):
+            return tuple(self._in(v) for v in x)
+        return x
+
+    def _out(self, x):
+        """What the core gives, with every status, account, relationship, notification
+        and thread node in it made the model."""
+        if isinstance(x, dict):
+            kind = _shape(x)
+            if kind == "status":
+                return self.entry(x)
+            if kind == "account":
+                return self.acc(x)
+            if kind == "relationship":
+                return adapter.relationship(x)
+            if kind == "activity":
+                return self._activity_of(x)
+            return {k: self._out(v) for k, v in x.items()}
+        if isinstance(x, list):
+            return [self._out(v) for v in x]
+        if isinstance(x, tuple):
+            return tuple(self._out(v) for v in x)
+        if type(x).__name__ == "Node" and hasattr(x, "status"):  # core.threads.Node
+            return ThreadItem(real(self.entry(x.status)), x.depth, x.number)
+        return x
+
+    def _acc_raw(self, a):
+        """The core's account for a model one: as it came, else rebuilt from it."""
+        got = self._raw_accounts.get((a.ref.profile, a.id))
+        if got is not None:
+            return got
+        return {"id": a.id, "acct": a.handle, "username": a.username,
+                "display_name": a.name, "url": a.url, "uri": a.uri,
+                "avatar": a.avatar, "avatar_static": a.avatar_static, "bot": a.bot,
+                "locked": a.locked, "note": a.note, "statuses_count": a.posts,
+                "followers_count": a.followers, "following_count": a.following}
+
+    def _activity_of(self, raw):
+        """A notification (or a stored activity entry) → Activity; its order is the
+        one the core keeps (activity marks "seen up to" by it)."""
+        raw = dict(raw)
+        acc = raw.get("account")
+        if isinstance(acc, dict) and acc.get("_notice") is not None:
+            # a server's notice, kept with the account in the store
+            key = "moderation_warning" if raw.get("type") == "moderation_warning" else "event"
+            raw.setdefault(key, acc["_notice"])
+        a = adapter.activity(raw, self._prof(acc if isinstance(acc, dict) else raw))
+        if raw.get("sort"):
+            a = replace(a, sort=raw["sort"])
+        if isinstance(acc, dict) and acc.get("id"):
+            self._remember(acc)
+        return a
+
+    def _remember(self, raw):
+        key = (self._prof(raw), str(raw.get("id")))
+        self._raw_accounts[key] = raw
+        self._raw_accounts.move_to_end(key)
+        while len(self._raw_accounts) > RAW_KEEP:
+            self._raw_accounts.popitem(last=False)
 
     # ---- converting ----------------------------------------------------------------
     @property
@@ -81,7 +175,10 @@ class View:
         return adapter.post(raw, self._prof(raw))
 
     def acc(self, raw):
-        return adapter.account(raw, self._prof(raw)) if isinstance(raw, dict) else None
+        if not isinstance(raw, dict):
+            return None
+        self._remember(raw)
+        return adapter.account(raw, self._prof(raw))
 
     def raw(self, x):
         """The core's own status for a model object or an id — for core methods not
@@ -257,8 +354,7 @@ class View:
     # ---- activity and follow requests (lanes that are not posts) -------------------
     def activity(self, limit=300):
         """[Activity] newest first: who liked, shared, followed, mentioned…"""
-        return [adapter.activity(n, self.profile)
-                for n in self._core.activity_entries(limit)]
+        return [self._activity_of(n) for n in self._core.activity_entries(limit)]
 
     def activity_seen(self):
         """The sort key up to which activity is seen (Activity.sort above it: new)."""
@@ -338,3 +434,30 @@ class View:
 
 def is_entry(x):
     return isinstance(x, (Post, Share))
+
+
+def _shape(d):
+    """What a dict from the core is, by its keys: "status", "account", "relationship",
+    "activity" (a notification or a stored activity entry), or None."""
+    if "id" not in d:
+        return None
+    if "account" in d and ("content" in d or "reblog" in d or "media_attachments" in d):
+        return "status"
+    if "acct" in d and "username" in d:
+        return "account"
+    if "following" in d and "followed_by" in d:
+        return "relationship"
+    if "type" in d and "account" in d and ("status" in d or "created_at" in d):
+        return "activity"
+    return None
+
+
+_REL_KEYS = {"showing_shares": "showing_reblogs"}
+
+
+def _rel_raw(rel):
+    """A Relationship as the core's dict (what it reads back: following, note…)."""
+    out = {_REL_KEYS.get(f.name, f.name): getattr(rel, f.name) for f in fields(rel)}
+    if rel.languages is not None:
+        out["languages"] = list(rel.languages)
+    return out

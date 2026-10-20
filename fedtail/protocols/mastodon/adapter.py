@@ -359,7 +359,9 @@ def relationship(raw):
         muting=bool(raw.get("muting")), blocking=bool(raw.get("blocking")),
         blocked_by=bool(raw.get("blocked_by")), notifying=bool(raw.get("notifying")),
         showing_shares=raw.get("showing_reblogs") is not False,
-        endorsed=bool(raw.get("endorsed")), note=_str(raw.get("note")))
+        endorsed=bool(raw.get("endorsed")), note=_str(raw.get("note")),
+        languages=tuple(str(x) for x in raw["languages"])
+        if isinstance(raw.get("languages"), list) else None)
 
 
 # ours → the API's, for what fedtail sends
