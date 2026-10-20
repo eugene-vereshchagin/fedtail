@@ -202,6 +202,8 @@ class Theme:
 QMainWindow, QWidget#central {{ background: {k('window')}; }}
 QWidget {{ color: {k('text')}; }}
 QToolTip {{ color: {k('text')}; background: {k('card')}; border: 1px solid {k('card_border')}; }}
+QFrame#hintPopup {{ background: {k('card')}; border: 1px solid {k('accent')}; border-radius: 4px; }}
+QLabel#hintText {{ color: {k('text')}; background: transparent; }}
 
 /* ---- sidebar ---- */
 QWidget#sidebar {{ background: {k('sidebar')}; border-right: 1px solid {k('sidebar_border')}; }}

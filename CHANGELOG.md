@@ -15,6 +15,8 @@
 - ≡ → "What's this?": point the mouse at a button and get the longer story — what it
   does, which config key changes it, where the help says more. For the session from the
   menu, or from the start with `ui.whats_this`. Neither has a key: F1 is next to Esc.
+  The hint is a window of its own, beside the cursor and never under it: a long Qt
+  tooltip there was hidden and shown again round and round until the window froze.
 - The docs come in Russian and English, `docs/ru/` and `docs/en/`: the feature list now says
   since which version each feature is there, and fedtail next to thirteen other clients is
   one matrix a chapter (`comparison.md`). All of it, the config reference and the shared

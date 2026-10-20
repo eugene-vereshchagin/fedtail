@@ -15,6 +15,7 @@ clicked link goes) and `search`; the Qt help panel and the hint mode are the fir
 users, the TUI and the web interface may be next.
 """
 
+import functools
 import html
 import posixpath
 import re
@@ -41,7 +42,9 @@ def language(lang=None):
     return lang if lang in LANGS else "en"
 
 
+@functools.lru_cache(maxsize=256)
 def _read(lang, name):
+    """A page's text (cached: the help ships with the program and doesn't change)."""
     f = _root(lang).joinpath(*f"{name}.md".split("/"))
     return f.read_text("utf-8") if f.is_file() else None
 
@@ -68,7 +71,11 @@ class Page:
 
 def pages(lang=None):
     """[Page] in the order of index.md, then the deep dive (ref/)."""
-    lang = language(lang)
+    return list(_pages(language(lang)))
+
+
+@functools.lru_cache(maxsize=4)
+def _pages(lang):
     out = [Page("index", _title(lang, "index"))]
     for line in (_read(lang, "index") or "").splitlines():
         m = _INDEX_LINE.match(line)
@@ -82,7 +89,7 @@ def pages(lang=None):
             if f.name.endswith(".md"):
                 name = f"{REF}/{f.name[:-3]}"
                 out.append(Page(name, _title(lang, name), deep=True))
-    return out
+    return tuple(out)
 
 
 def _title(lang, name):
@@ -103,6 +110,7 @@ def page(lang, name):
     return text
 
 
+@functools.lru_cache(maxsize=256)
 def headings(lang, name):
     """[(level, title, anchor)] of a page — a table of contents, and the anchors links
     may point at."""
@@ -110,7 +118,7 @@ def headings(lang, name):
     for m in _HEADING.finditer(page(lang, name) or ""):
         title = re.sub(r"[`*]", "", m.group(2))
         out.append((len(m.group(1)), title, slug(m.group(2))))
-    return out
+    return tuple(out)
 
 
 @dataclass
@@ -183,7 +191,11 @@ def search(lang, query, limit=50):
 
 def hints(lang=None):
     """{i18n key: {"text", "config"?, "help"?}} from hints.toml of the language."""
-    lang = language(lang)
+    return _hints(language(lang))
+
+
+@functools.lru_cache(maxsize=4)
+def _hints(lang):
     f = _root(lang).joinpath("hints.toml")
     return tomllib.loads(f.read_text("utf-8")) if f.is_file() else {}
 

@@ -2284,7 +2284,7 @@ if __name__ == "__main__":
     def test_whats_this(self):
         """≡ → What's this?: the longer hint instead of the tooltip, found by the tooltip
         itself; off — the usual tooltip; ui.whats_this — on from the start."""
-        from PySide6.QtCore import QEvent, QPoint
+        from PySide6.QtCore import QEvent, QPoint, Qt
         from PySide6.QtGui import QHelpEvent
         from PySide6.QtWidgets import QPushButton
 
@@ -2304,8 +2304,23 @@ if __name__ == "__main__":
         hints.set_on(True)
         self.assertIsNotNone(hints.badge)
         self.assertTrue(hints.eventFilter(b, ask(b)))
+        popup = hints.popup
+        self.assertTrue(popup.isVisible())
+        self.assertIs(popup.target, b)
+        self.assertIn(helpdocs.hints("ru")["reply"]["text"][:20], popup.label.text())
+        self.assertFalse(popup.geometry().contains(b.mapToGlobal(QPoint(1, 1))))  # not under
+        self.assertTrue(popup.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents))
+        shown = popup.geometry()
+        for _i in range(50):  # Qt asking again and again changes nothing (that loop froze)
+            self.assertTrue(hints.eventFilter(b, ask(b)))
+        self.assertEqual(popup.geometry(), shown)
+        hints.eventFilter(b, QEvent(QEvent.Type.Leave))
+        self.assertFalse(popup.isVisible())
         self.assertEqual(hints.hint_text(b), helpdocs.hints("ru")["reply"]["text"])
         self.assertFalse(hints.eventFilter(other, ask(other)))  # nothing more to say
+        hints.eventFilter(b, ask(b))
+        hints.eventFilter(self.win, QEvent(QEvent.Type.WindowDeactivate))
+        self.assertFalse(popup.isVisible())
         hints.set_on(False)
         self.assertIsNone(hints.badge)
         self.assertFalse(hints.eventFilter(b, ask(b)))
@@ -2317,3 +2332,16 @@ if __name__ == "__main__":
         start = HintMode(self.win, on=True)
         self.assertTrue(start.on)
         start.set_on(False)
+
+    def test_hint_never_under_the_cursor(self):
+        from PySide6.QtCore import QPoint, QRect, QSize
+
+        from fedtail.frontends.qt.hints import place
+        area = QRect(0, 0, 1920, 1080)
+        size = QSize(420, 160)
+        for x in (0, 5, 700, 1500, 1910):
+            for y in (0, 5, 500, 950, 1075):
+                cursor = QPoint(x, y)
+                r = place(cursor, size, area)
+                self.assertFalse(r.contains(cursor), (x, y))
+                self.assertTrue(area.contains(r), (x, y))
