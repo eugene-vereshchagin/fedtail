@@ -1,6 +1,6 @@
 # fedtail help
 
-F1 — this help; ≡ → “What's this?” — a hint about any button under the mouse.
+≡ → “Help” — this help; ≡ → “What's this?” — a hint about any button under the mouse. They have no shortcut on purpose: F1 is next to Esc, too easy to hit by mistake.
 
 - [Getting started](start.md) — What fedtail is, how to log in and where things are.
 - [Reading](reading.md) — Lanes, threads, read marks — how reading works here.
