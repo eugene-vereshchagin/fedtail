@@ -39,7 +39,8 @@ The main principles everything else grows from:
 1. **Nothing jumps.** Open a lane and you stand at the first unread. New posts come and your
    place doesn't move, only the counter grows. You read in order, like RSS.
 2. **Every reply knows what it answers.** Over a reply, a strip with the start of the original
-   post; a click opens the whole thread as a tree.
+   post; under someone's comment, what you said back to it: come back to a thread a week later
+   and you see at once where you were. A click opens the whole thread as a tree.
 3. **Lanes are apart.** People apart, bots apart, replies to me apart from other mentions.
 4. **Private by default.** A new post goes to followers only. A reply is never more public than
    the original.
