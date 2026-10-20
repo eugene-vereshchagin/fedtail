@@ -2,6 +2,13 @@
 
 ## 0.17.0 — in progress
 
+- `ui.layout = "qip"`, the first step of a messenger-style layout (docs/LAYOUTS.md): the
+  lanes in a narrow roster window of their own, as in QIP, Psi or the Mail.ru Agent — who
+  I am and what's new in Activity on top, a search line, the lanes in folding groups
+  "▾ Personal (2/9)" (with something new / all), each with its count, a line of its
+  newest post and its author's face. A click opens the lane in the main window, which
+  here is the messages window, without the sidebar. Closing the roster closes fedtail
+  (to the tray with `ui.close_to_tray`); `ui.roster_on_top`.
 - fedtail took GoToSocial 0.22 for Mastodon: its version says only "0.22.1+git-…".
   Now it reads the instance document's `source_url` and GoToSocial's own keys, and asks
   the server's nodeinfo when still unsure — so × in Activity hides here instead of

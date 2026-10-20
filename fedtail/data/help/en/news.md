@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **0.17.0 (in progress):**
 
+- A roster, as in ICQ clients
 - What my server can do
 - Reply with quotes, piece by piece
 - The database doesn't grow for ever: cleanup and a size budget

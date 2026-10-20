@@ -231,6 +231,11 @@ QListWidget#lanes::item:hover:!selected {{ background: {_alpha(self.c['selected'
 QLabel#laneName {{ background: transparent; }}
 QLabel#listsHeader {{ font-weight: 600; background: transparent; }}
 QLabel#laneName[current="true"] {{ font-weight: 600; color: {k('selected_text')}; }}
+QLabel#rosterName[unread="true"] {{ color: {k('hot')}; }}
+QLabel#rosterLine {{ color: {k('muted')}; font-style: italic;
+    font-size: {round(base_pt * 0.85, 1)}pt; }}
+QLabel#rosterGroup {{ color: {k('muted')}; }}
+QLabel#rosterNews {{ font-size: {round(base_pt * 0.85, 1)}pt; }}
 QLabel#badge {{ border-radius: 10px; padding: 0 7px; min-height: 20px; max-height: 20px;
     font-size: {round(base_pt * 0.85, 1)}pt;
     font-weight: 700; background: {k('accent')}; color: {k('on_accent')}; }}

@@ -38,6 +38,7 @@ DEFAULTS = {
         "arts_mode": True,
         "max_width": 760,
         "layout": "single",
+        "roster_on_top": False,
         "columns": [],
         "column_width": 460,
         "image_height": 360,
@@ -219,7 +220,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
-    ("ui", "layout"): {'single', 'columns'},
+    ("ui", "layout"): {'single', 'columns', 'qip'},
     ("ui", "app_icon"): {'possum', 'bubble'},
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},

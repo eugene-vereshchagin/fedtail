@@ -186,7 +186,7 @@ def shoot(widget, out, name):
         ERRORS.append(f"{name}: {msg}")
 
 
-def run(app, out, label, palette, theme_name, extras):
+def run(app, out, label, palette, theme_name, extras, layout="single"):
     from fedtail.frontends.qt import theme as themes
     from fedtail.frontends.qt.bridge import Bridge
     from fedtail.frontends.qt.compose import Compose, save_image
@@ -201,7 +201,7 @@ def run(app, out, label, palette, theme_name, extras):
     app.setFont(f)
 
     FakeApi.world = world()
-    cfg, _ = config.validate({"ui": {"theme": theme_name},
+    cfg, _ = config.validate({"ui": {"theme": theme_name, "layout": layout},
                               "feed": {"first_run_mark_read": False}})
     data = Path(_tmp) / f"profile-{label}"
     p = paths.resolve(label, config=str(data / "c.toml"), data=str(data))
@@ -234,6 +234,10 @@ def run(app, out, label, palette, theme_name, extras):
     win.on_link("fedtail:thread/102")
     pump(app, 1.5)
     shoot(win, out, f"{label}-thread")
+    if win.roster is not None:  # ui.layout = "qip": the roster window beside it
+        win.roster.refresh()
+        pump(app, 0.5)
+        shoot(win.roster, out, f"{label}-roster")
 
     if "extras" in extras:
         pic = QImage(320, 200, QImage.Format.Format_RGB32)
@@ -283,6 +287,8 @@ def run(app, out, label, palette, theme_name, extras):
         dlg.reject()
 
     win.quitting = True
+    if win.roster is not None:
+        win.roster.close()
     win.hide()
     core.shutdown()
     win.deleteLater()
@@ -343,6 +349,7 @@ def main():
     run(app, out, "light", BREEZE_LIGHT, "system", {"extras"})
     run(app, out, "dark", BREEZE_DARK, "system", set())
     run(app, out, "terminal", BREEZE_LIGHT, "terminal", set())
+    run(app, out, "qip", BREEZE_LIGHT, "system", set(), layout="qip")
     for name in ("point", "juick", "juick-classic", "bnw", "night", "paper", "contrast",
                  "pink", "nord", "solarized"):
         run(app, out, name, BREEZE_LIGHT, name, set())

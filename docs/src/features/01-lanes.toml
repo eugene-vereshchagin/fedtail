@@ -354,6 +354,19 @@ details.ru = "Несколько лент на экране одновремен
 details.en = "Several lanes on screen at once, in columns. By default — one lane at a time; the ❯ button at the top left (next to ≡ and ↔) turns columns on for now, and the window starts as `ui.layout` says. A click on a lane on the left adds a column (or scrolls to it), ✕ takes it away, ‹ › move it; the set is remembered. These are the same lanes as in the single view: place, filters and read marks are each their own, and Federated and the other browse lanes keep updating while they stand in a column."
 
 [[feature]]
+id = "roster"
+status = "partly"
+since = "0.17.0"
+name.ru = "Ростер, как в аське"
+name.en = "A roster, as in ICQ clients"
+config = "`ui.layout = \"qip\"`, `ui.roster_on_top`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "Ленты — в узком окне-ростере, как в QIP, Psi или Mail.ru Агенте: сверху я и «N новых в активности», поиск, группы «▾ Личное (2/9)» (с новым / всего), сворачиваются; у каждой ленты число нового, строка последнего поста курсивом и лицо его автора. Клик открывает ленту в главном окне, которое здесь — окно сообщений, без боковой панели. Закрыть ростер — закрыть fedtail (в трей, если `ui.close_to_tray`), окно сообщений — только его. Дальше: треды и беседы пунктами ростера, окно сообщений репликами, темы в духе QIP, Psi и Агента (docs/LAYOUTS.md)."
+details.en = "The lanes in a narrow roster window, as in QIP, Psi or the Mail.ru Agent: me and “N new in Activity” on top, a search line, groups “▾ Personal (2/9)” (with something new / all) that fold; each lane with its count, a line of its newest post in italics and its author's face. A click opens the lane in the main window, which here is the messages window, without the sidebar. Closing the roster closes fedtail (to the tray with `ui.close_to_tray`), the messages window — only itself. Next: threads and conversations as roster items, the messages window as a chat, themes in the spirit of QIP, Psi and the Agent (docs/LAYOUTS.md)."
+
+[[feature]]
 id = "collections"
 status = "planned"
 name.ru = "Коллекции (Mastodon 4.6)"

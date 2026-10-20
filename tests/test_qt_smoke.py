@@ -2178,6 +2178,61 @@ class QtSmokeTest(unittest.TestCase):
             self.win.on_event("status_updated", dict(st, reblogged=True))
             self.assertTrue(view.model[0].entry.post.mine.shared)
 
+    def test_qip_layout_roster(self):
+        """ui.layout = "qip": the lanes in a roster window of their own, the main window
+        is the messages window — no sidebar; the roster says what's new and opens it."""
+        from fedtail.frontends.qt.bridge import Bridge
+        from fedtail.frontends.qt.window import MainWindow
+        self.win.quitting = True
+        self.win.hide()
+        self.core.cfg["ui"]["layout"] = "qip"
+        self.addCleanup(self.core.cfg["ui"].__setitem__, "layout", "single")
+        win = MainWindow(self.core, Bridge(self.core), self.theme)
+        win.images.get = lambda url, cb, *a, **k: None
+        win.tray = None
+        roster = win.roster
+
+        def done():
+            win.quitting = True
+            roster.close()
+            win.hide()
+            win.deleteLater()
+            roster.deleteLater()
+        self.addCleanup(done)
+        win.show()
+        self.assertTrue(roster.isVisible())  # comes with the window
+        self.assertTrue(win.split.widget(0).isHidden())  # no sidebar here
+        win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.pump(until=lambda: "home" in roster.rows and roster.rows["home"].item.unread)
+        home = roster.rows["home"]
+        self.assertTrue(home.badge.isVisibleTo(roster))
+        self.assertIn(":", home.line.text())  # who wrote last: how it begins
+        self.assertIn("@", roster.me_handle.text())
+        roster.open("replies")
+        self.pump(until=lambda: "replies" in win.lane_widgets)
+        self.assertIs(win.stack.currentWidget(), win.lane_widgets["replies"])
+        # a group folds; a search finds through folded groups
+        group = next(g for g, h in roster.heads.items()
+                     if any(roster.list.item(i).data(0x0101) == g and
+                            roster.list.item(i).data(0x0100) == "home"
+                            for i in range(roster.list.count())))
+        roster.toggle(group)
+        hidden = [roster.list.item(i).isHidden() for i in range(roster.list.count())
+                  if roster.list.item(i).data(0x0100) == "home"]
+        self.assertEqual(hidden, [True])
+        roster.search.setText(home.item.title[:3])
+        hidden = [roster.list.item(i).isHidden() for i in range(roster.list.count())
+                  if roster.list.item(i).data(0x0100) == "home"]
+        self.assertEqual(hidden, [False])
+        roster.search.clear()
+        roster.toggle(group)
+        # closing the messages window leaves the roster, as in a messenger
+        win.close()
+        self.assertFalse(win.isVisible())
+        self.assertTrue(roster.isVisible())
+
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes
         cfg, _ = config.validate({"ui": {"theme": "terminal"}})

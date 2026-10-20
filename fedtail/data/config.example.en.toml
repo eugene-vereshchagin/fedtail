@@ -92,8 +92,15 @@ max_width = 760
 
 # How the window opens: "single" — one lane on the right, "columns" — several lanes side
 # by side, in columns, as in TweetDeck. The ❯ button at the top left switches it too, but
-# the window always starts as set here.
+# the window always starts as set here. "qip" — as in QIP, Psi or the Mail.ru Agent:
+# the lanes in a narrow roster window (what's new in each, a line of the newest post and
+# its author's face), and the main window is the messages window, without the sidebar.
+# Closing the roster closes fedtail (to the tray with close_to_tray), the messages
+# window — only itself.
 layout = "single"
+
+# With layout = "qip": the roster stays above other windows.
+roster_on_top = false
 
 # Which lanes stand as columns, left to right, until you change them in the window (a click
 # on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is

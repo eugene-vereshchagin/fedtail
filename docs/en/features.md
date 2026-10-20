@@ -93,6 +93,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Finding people, tags and posts | has | 0.2.0 | — | `/api/v2/search` | everyone |
 | A lane of several tags | has | 0.14.0 | `[[lanes.tag_groups]]`; from the search — “＋ to lanes” | `timelines/tag/:name` for each tag, put together here | Phanpy, Ice Cubes (“tag groups”), tut (`:tag a b`) |
 | Columns side by side | has | 0.14.0 | `ui.layout`, `ui.columns`, `ui.column_width`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
+| A roster, as in ICQ clients | partly | 0.17.0 | `ui.layout = "qip"`, `ui.roster_on_top` | own | — |
 | Collections (Mastodon 4.6) | planned | — | — | `/api/v1/collections` | Mastodon 4.6, Fedilab |
 
 <details><summary>In detail</summary>
@@ -147,6 +148,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **A lane of several tags.** Type `#грузия #georgia -#politics` in the search: one lane of all these tags opens — any of them, `+#tag` must be there, `-#tag` — without. The “＋ to lanes” button keeps it on the left, in the “Tags” group; it is fetched while open, like Federated. The same lanes can be described in the config, `[[lanes.tag_groups]]` (name, any, all, none). The server needs a request per tag (GoToSocial reads only one tag at a time), fedtail puts them together itself, without repeats.
 
 **Columns side by side.** Several lanes on screen at once, in columns. By default — one lane at a time; the ❯ button at the top left (next to ≡ and ↔) turns columns on for now, and the window starts as `ui.layout` says. A click on a lane on the left adds a column (or scrolls to it), ✕ takes it away, ‹ › move it; the set is remembered. These are the same lanes as in the single view: place, filters and read marks are each their own, and Federated and the other browse lanes keep updating while they stand in a column.
+
+**A roster, as in ICQ clients.** The lanes in a narrow roster window, as in QIP, Psi or the Mail.ru Agent: me and “N new in Activity” on top, a search line, groups “▾ Personal (2/9)” (with something new / all) that fold; each lane with its count, a line of its newest post in italics and its author's face. A click opens the lane in the main window, which here is the messages window, without the sidebar. Closing the roster closes fedtail (to the tray with `ui.close_to_tray`), the messages window — only itself. Next: threads and conversations as roster items, the messages window as a chat, themes in the spirit of QIP, Psi and the Agent (docs/LAYOUTS.md).
 
 **Collections (Mastodon 4.6).** Shared sets of accounts. Coming once GoToSocial has them.
 

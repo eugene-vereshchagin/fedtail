@@ -355,6 +355,13 @@ class MainWindow(QMainWindow):
         self.split.splitterMoved.connect(lambda _pos, _i: self._side_save.start())
         row.addWidget(self.split, 1)
         self.setCentralWidget(central)
+        # ui.layout = "qip": the lanes in a roster window of their own (roster.py); this
+        # window is the messages window — no sidebar, the lanes and threads in tabs
+        self.roster = None
+        if self.cfg["ui"].get("layout") == "qip":
+            from .roster import RosterWindow
+            self.split.widget(0).hide()
+            self.roster = RosterWindow(self)
         self.menuBar().hide()
         # left in the status bar: which profile this is and who (★ the main one)
         self.profile_label = QLabel()
@@ -1410,6 +1417,8 @@ class MainWindow(QMainWindow):
         self._tray_count = total
         if self.launcher:
             self.launcher.set(total)
+        if getattr(self, "roster", None) is not None:
+            self.roster.refresh_soon()
 
     # ---- events from the core ---------------------------------------------------------
     def on_event(self, name, payload):
@@ -2328,6 +2337,12 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self.roster is not None and not self.roster.isVisible():
+            self.roster.show()  # the roster comes with the window (and with the tray)
+            self.roster.refresh_soon()
+
     def _tray_click(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             if self.isVisible() and self.isActiveWindow():
@@ -2423,6 +2438,13 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, e):
         self.core.set_state(self._geometry_key(), bytes(self.saveGeometry()).hex())
+        if self.roster is not None:
+            if not self.quitting and self.roster.isVisible():
+                self.hide()  # the messages window goes; the roster stays, as in QIP
+                e.ignore()
+                return
+            self.roster.save_place()
+            self.roster.hide()
         if self.tray and self.cfg["ui"]["close_to_tray"] and not self.quitting:
             self.hide()
             e.ignore()
