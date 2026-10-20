@@ -163,6 +163,17 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: self.core.get_draft("reply:013") is None)
         self.assertEqual(self.world.posted[-1][2], "013")
 
+        # reply with quotes, sentence by sentence: the second goes into the open reply
+        st013 = self.core.store.get_status("013")
+        self.win.quote_reply(st013, "Первое.", False)
+        dlg = self.win.open_composes[-1]
+        self.assertTrue(dlg.text.toPlainText().endswith("\n> Первое.\n\n"))
+        dlg.text.insertPlainText("да")
+        self.win.quote_reply(st013, "Второе.", False)
+        self.assertIs(self.win.open_composes[-1], dlg)  # no second reply
+        self.assertTrue(dlg.text.toPlainText().endswith("> Первое.\n\nда\n\n> Второе.\n\n"))
+        dlg.reject()
+
         # a new post: the dialog closes and the post opens as a thread
         dlg = Compose(self.win)
         dlg.show()

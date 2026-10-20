@@ -647,6 +647,12 @@ complete_emoji = true
 # the main thing is, and the preview (where it's cut) shows exactly that. false — the description only.
 focus_point = true
 
+# "Reply with quote" in a post's ⋯ menu and "Quote in reply" on selected text: the reply
+# gets a quote, every line starting with this (a Markdown quote). With the reply already
+# open, the quote goes where the cursor is: select a sentence, quote, answer, select the
+# next one… "" — no such items.
+quote_prefix = "> "
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  6. Notifications

@@ -5,6 +5,7 @@ import unittest
 
 from fedtail.core import replies
 from fedtail.core.model import note_followed, note_text, note_with_followed
+from fedtail.model.text import join_quote, quote_lines
 
 PUB = "https://www.w3.org/ns/activitystreams#Public"
 BASE = "https://far.example/outbox"
@@ -52,6 +53,22 @@ class OutboxPageTest(unittest.TestCase):
         docs = self.docs()
         self.assertEqual(replies.outbox_post_uris(docs.get, BASE, limit=2),
                          ["https://far.example/n/5", "https://far.example/n/3"])
+
+
+class QuoteReplyTest(unittest.TestCase):
+    def test_quote_lines(self):
+        self.assertEqual(quote_lines("@bob @al@x.org Раз.\n\nДва.", strip_mentions=True),
+                         "> Раз.\n>\n> Два.\n\n")
+        self.assertEqual(quote_lines("@bob тут"), "> @bob тут\n\n")  # a selection: as is
+        self.assertEqual(quote_lines("  "), "")
+        self.assertEqual(quote_lines("a\u2029b", "» "), "» a\n» b\n\n")
+
+    def test_join_quote(self):
+        self.assertEqual(join_quote("", "> q"), "")
+        self.assertEqual(join_quote("@bob@social.example ", "> q"), "\n")
+        self.assertEqual(join_quote("ответ", "> q"), "\n\n")
+        self.assertEqual(join_quote("ответ\n", "> q"), "\n")
+        self.assertEqual(join_quote("ответ\n\n", "> q"), "")
 
 
 class NoteLineTest(unittest.TestCase):

@@ -170,6 +170,21 @@ details.ru = "Меню ⋯ у поста → «Позвать в тред…»: 
 details.en = "A post's ⋯ menu → “Call into the thread…”: a reply to this post with only “@” in it so far and the people list open at once — pick whom (several are fine), write a couple of words. The person gets a notification, a click — and the thread is open on their side, on their server, ready for a reply; no scary links with service ids. The thread's other participants aren't mentioned, the call has its own draft. If the thread isn't public, the person called sees your reply, and the rest only as far as they could anyway. The same from the command line: `#a3f @whom take a look`."
 
 [[feature]]
+id = "quote-reply"
+status = "has"
+since = "0.17.0"
+name.ru = "Ответ с цитатой, по кусочкам"
+name.en = "Reply with quotes, piece by piece"
+config = "`post.quote_prefix`"
+api.ru = "своё (текст ответа)"
+api.en = "own (the reply's text)"
+others.ru = "Thunderbird и почтовики — для писем; в клиентах федиверса нет"
+others.en = "Thunderbird and mail clients — for mail; no fediverse client"
+clients = []
+details.ru = "Меню ⋯ у поста → «Ответить с цитатой»: ответ, в котором уже стоит текст поста цитатой (`> `, без упоминаний в начале), а если в посте что-то выделено — только выделенное. Правый клик по выделенному → «Процитировать в ответ». Ответ на этот пост уже открыт — цитата встаёт туда, где курсор, с пустой строкой после: выделил предложение, процитировал, ответил, выделил следующее — и так по всему посту. Начало строк цитаты — `post.quote_prefix`; `\"\"` — без этих пунктов."
+details.en = "A post's ⋯ menu → “Reply with quote”: a reply with the post's text already in it as a quote (`> `, the leading mentions left out), or only what's selected in the post. A right click on a selection → “Quote in reply”. With a reply to this post already open, the quote goes where its cursor is, an empty line after it: select a sentence, quote, answer, select the next one — and so on through the post. The quote's line start is `post.quote_prefix`; `\"\"` — no such items."
+
+[[feature]]
 id = "copy-handle"
 status = "has"
 since = "0.16.0"

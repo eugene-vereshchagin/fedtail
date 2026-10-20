@@ -6,7 +6,14 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QSize, QStringListModel, Qt, QTimer
-from PySide6.QtGui import QGuiApplication, QIcon, QImage, QKeySequence, QShortcut
+from PySide6.QtGui import (
+    QGuiApplication,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QShortcut,
+    QTextCursor,
+)
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -27,6 +34,7 @@ from PySide6.QtWidgets import (
 
 from ...core.hashtags import flat_tags
 from ...core.model import VISIBILITIES, real, reply_mentions, snippet
+from ...model.text import join_quote, quote_lines
 from ...i18n import _
 from .text import display_name, esc
 
@@ -135,6 +143,15 @@ class Compose(QDialog):
             self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None,
                                            self.quote["id"] if self.quote else None)
         self.start_text = text  # "@someone " from a profile's Mention button
+        # the window finds an open reply here to put a quote into (quote_reply)
+        alive = []
+        for c in getattr(win, "open_composes", []):
+            try:
+                if c.isVisible():
+                    alive.append(c)
+            except RuntimeError:  # closed and gone
+                pass
+        win.open_composes = alive + [self]
         self.sent = False
         title = _("compose_edit") if edit else _("compose_invite") if self.invite else \
             _("compose_reply") if reply_to else _("compose_quote") if quote else _("compose_new")
@@ -402,6 +419,28 @@ class Compose(QDialog):
             self.lang.addItem(code, code)
             i = self.lang.count() - 1
         self.lang.setCurrentIndex(max(i, 0))
+
+    # ---- quoting --------------------------------------------------------------------
+    def insert_quote(self, text, whole=False, at_end=False):
+        """Put `text` in as a quote (post.quote_prefix) where the cursor is (at_end: after
+        what's there), the cursor after it, ready for the answer."""
+        q = quote_lines(text, self.core.cfg["post"].get("quote_prefix", "> ") or "> ",
+                        strip_mentions=whole)
+        if not q:
+            return
+        cur = self.text.textCursor()
+        if at_end:
+            cur.movePosition(QTextCursor.MoveOperation.End)
+        head = QTextCursor(cur)  # the text up to the cursor (positions aren't str indexes)
+        head.clearSelection()
+        head.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.KeepAnchor)
+        before = head.selectedText().replace("\u2029", "\n")
+        cur.insertText(join_quote(before, q) + q)
+        self.text.setTextCursor(cur)
+        self.text.ensureCursorVisible()
+        self.raise_()
+        self.activateWindow()
+        self.text.setFocus()
 
     # ---- drafts -------------------------------------------------------------------
     def _load(self):

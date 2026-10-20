@@ -224,6 +224,7 @@ class ViewContext:
     long_form: object = None       # status -> the whole of it from the author's server
     act_as: object = None          # status -> [(account tag, "@acct")] that could act on it
     do_act_as: object = None       # (status, tag, "fav" | "boost" | "reply") -> do it
+    quote_reply: object = None     # (status, text, whole) -> reply quoting the text
 
 
 class MainWindow(QMainWindow):
@@ -242,6 +243,7 @@ class MainWindow(QMainWindow):
                                self.show_images)
         self.ctx.subscribed = core.subscribed
         self.ctx.thread_quiet = getattr(core, "thread_quiet", None)
+        self.ctx.quote_reply = self.quote_reply
         self.ctx.supports = core.supports
         self.ctx.play_video = self.play_video
         from . import player
@@ -1984,6 +1986,24 @@ class MainWindow(QMainWindow):
         if not self.core.me:
             return
         Compose(self, reply_to, attach, text).show()
+
+    def quote_reply(self, st, text, whole=False):
+        """Reply quoting `text`: into the reply to this post that is already open —
+        where its cursor is, to answer a post sentence by sentence — or a new one."""
+        if not self.core.me:
+            return
+        rid = real(st)["id"]
+        for c in list(getattr(self, "open_composes", [])):
+            try:
+                if c.isVisible() and c.reply_to and c.reply_to["id"] == rid and \
+                        not c.edit and not c.invite:
+                    c.insert_quote(text, whole)
+                    return
+            except RuntimeError:  # closed and gone
+                continue
+        dlg = Compose(self, reply_to=st)
+        dlg.show()
+        dlg.insert_quote(text, whole, at_end=True)
 
     # pictures dropped anywhere on the window start a new post with them
     def dragEnterEvent(self, e):

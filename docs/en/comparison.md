@@ -117,6 +117,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | The post's language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A poll in a post | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Call someone into a thread | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Reply with quotes, piece by piece | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Copy the handle @user@server | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Quoting a post; who may quote mine | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 | A scheduled post | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |   |
@@ -193,4 +194,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ⏳ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **30** features of the 129 compared.
+Only in fedtail — **31** features of the 130 compared.

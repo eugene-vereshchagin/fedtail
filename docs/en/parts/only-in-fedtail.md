@@ -4,5 +4,5 @@
 - **The post card:** Arts mode · Honest counters
 - **Pictures and video:** Video without a hardware decoder (the default) · Pictures and video ahead of time, a disk cache
 - **Profiles:** Posts older than my server knows · “Following since …”
-- **Writing:** Visibility: private by default, a reply never wider than the post · CamelCase hint for hashtags · Call someone into a thread · A command line as on Point
+- **Writing:** Visibility: private by default, a reply never wider than the post · CamelCase hint for hashtags · Call someone into a thread · Reply with quotes, piece by piece · A command line as on Point
 - **Notifications and activity:** Desktop notifications with privacy levels · Approve a reply, like, boost (GoToSocial) · Direct messages read here are read on the server too

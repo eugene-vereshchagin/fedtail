@@ -7,6 +7,10 @@
   themselves), even replies under posts fedtail never saw, and what came before leaves
   the lanes. It used to say "Your server can't do that" and hide the item; now the item
   is always in the ⋯ menu, and on Mastodon it asks the server as well.
+- Reply with quotes: ⋯ → "Reply with quote" puts the post (or what's selected in it) into
+  the reply as a `> ` quote; a right click on selected text → "Quote in reply". With the
+  reply already open the quote goes where the cursor is, so a long post can be answered
+  sentence by sentence without copying. `post.quote_prefix`.
 - Unsubscribing from a thread mutes its mentions too (`subs.leave_mutes`, on): leaving
   used to stop "Subscriptions" only, while auto-tagged replies kept coming.
 

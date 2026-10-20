@@ -375,6 +375,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The post's language | has | 0.3.0 | `post.language`, `post.languages` | `language` | everyone |
 | A poll in a post | has | 0.8.0 | — | `poll[options]` | everyone |
 | Call someone into a thread | has | 0.16.0 | `post.invite` | a reply with a mention | only in fedtail (in others — by hand) |
+| Reply with quotes, piece by piece | has | 0.17.0 | `post.quote_prefix` | own (the reply's text) | Thunderbird and mail clients — for mail; no fediverse client |
 | Copy the handle @user@server | has | 0.16.0 | — | own | Mastodon web (Copy handle) |
 | Quoting a post; who may quote mine | has | 0.8.0 | `post.quote_action`, `post.quote_policy` | `quoted_status_id`, `quote_approval_policy` | Mastodon 4.5+, Ivory, Phanpy |
 | Who may reply, boost, like (GoToSocial) | has | 0.8.0 | `post.who_can_reply`, `post.who_can_boost`, `post.who_can_like` | `interaction_policy` | GoToSocial clients |
@@ -407,6 +408,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **The post's language.** The default language and a list in the post window (any ISO 639 code; “Another language…” adds to the list for good).
 
 **Call someone into a thread.** A post's ⋯ menu → “Call into the thread…”: a reply to this post with only “@” in it so far and the people list open at once — pick whom (several are fine), write a couple of words. The person gets a notification, a click — and the thread is open on their side, on their server, ready for a reply; no scary links with service ids. The thread's other participants aren't mentioned, the call has its own draft. If the thread isn't public, the person called sees your reply, and the rest only as far as they could anyway. The same from the command line: `#a3f @whom take a look`.
+
+**Reply with quotes, piece by piece.** A post's ⋯ menu → “Reply with quote”: a reply with the post's text already in it as a quote (`> `, the leading mentions left out), or only what's selected in the post. A right click on a selection → “Quote in reply”. With a reply to this post already open, the quote goes where its cursor is, an empty line after it: select a sentence, quote, answer, select the next one — and so on through the post. The quote's line start is `post.quote_prefix`; `""` — no such items.
 
 **Copy the handle @user@server.** The “Copy handle” button on a profile, the “Copy handle @…” item in a post's ⋯ menu (the author and, for a boost, the booster) and in the menu of the “♻ boosted by” line. Always the full `@user@server`: people from your server come as just `user`, your server's name is added — any client can find and mention a person by such a handle.
 

@@ -137,6 +137,7 @@ DEFAULTS = {
         "preview": True,
         "complete_emoji": True,
         "focus_point": True,
+        "quote_prefix": "> ",
     },
     "notify": {
         "enabled": True,

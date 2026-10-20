@@ -220,6 +220,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `post.preview` | `true` | The "👁 Preview" button in the post panel: how it will look — the Markdown already rendered (if the server understands it), the CW, visibility, each part of a chain; and from there "Send". false — no button. |
 | `post.complete_emoji` | `true` | Typing :co — suggest the server's emoji (:cookie: and the like), Tab or Enter puts it in. false — no suggestions. |
 | `post.focus_point` | `true` | A double click on a picture in a post — its description and the focus point: click the picture where the main thing is, and the preview (where it's cut) shows exactly that. false — the description only. |
+| `post.quote_prefix` | `"> "` | "Reply with quote" in a post's ⋯ menu and "Quote in reply" on selected text: the reply gets a quote, every line starting with this (a Markdown quote). With the reply already open, the quote goes where the cursor is: select a sentence, quote, answer, select the next one… "" — no such items. |
 
 ## 6. Notifications
 

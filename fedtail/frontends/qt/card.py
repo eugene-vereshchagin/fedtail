@@ -24,7 +24,15 @@ from PySide6.QtWidgets import (
 )
 
 from ...core import config, links
-from ...core.model import QUOTE_SHOWN, is_bot, quoted, real, snippet, without_quote_fallback
+from ...core.model import (
+    QUOTE_SHOWN,
+    html_to_text,
+    is_bot,
+    quoted,
+    real,
+    snippet,
+    without_quote_fallback,
+)
 from ...i18n import _, current_language
 from ..richtext import plain_tip
 from .text import clean, display_name, emojify, esc, link, strip_emoji
@@ -231,10 +239,33 @@ class PostRow(QWidget):
         menu = QMenu(lab)
         if lab.hasSelectedText():
             sel = lab.selectedText()
+            if self._can_quote():
+                menu.addAction(_("quote_in_reply"), lambda: self._quote_reply(sel))
             menu.addAction(_("copy"), lambda: QGuiApplication.clipboard().setText(sel))
             menu.addSeparator()
         menu.addActions(self._menu.actions())
         menu.exec(lab.mapToGlobal(pos))
+
+    def _can_quote(self):
+        return self.ctx.quote_reply is not None and \
+            bool(self.ctx.cfg["post"].get("quote_prefix", "> "))
+
+    def _selected_text(self):
+        """What is selected in the post's text, if anything."""
+        if self.body is None:
+            return ""
+        for lab in self.body.findChildren(QLabel):
+            if lab.hasSelectedText():
+                return lab.selectedText()
+        return ""
+
+    def _quote_reply(self, text=None):
+        """↩ with a quote: the text given, what is selected in the post, or all of it."""
+        st = real(self.spec.status)
+        whole = text is None and not self._selected_text()
+        text = text or self._selected_text() or \
+            html_to_text(without_quote_fallback(st.get("content") or ""))
+        self.ctx.quote_reply(self.spec.status, text, whole)
 
     def _route_text_menus(self):
         for lab in self.body.findChildren(QLabel):
@@ -824,6 +855,8 @@ class PostRow(QWidget):
             menu.addAction(_("long_form"), lambda s=st: self.ctx.long_form(s))
         if self.ctx.translate and lang and lang != current_language() and real(st).get("content"):
             menu.addAction(_("translate"), self._translate)
+        if self._can_quote() and self.ctx.me_id:
+            menu.addAction(_("reply_quote"), lambda: self._quote_reply())
         if self.ctx.cfg["post"].get("invite", True):
             menu.addAction(_("invite"), lambda i=st["id"]: self.ctx.on_link(f"fedtail:invite/{i}"))
         menu.addAction(_("unbookmark") if real(st).get("bookmarked") else _("bookmark"),

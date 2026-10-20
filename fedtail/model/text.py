@@ -1,5 +1,5 @@
 """Text helpers over the model: HTML to plain text, a one-line snippet, the mentions a
-reply starts with. Nothing here knows a protocol."""
+reply starts with, a quote to answer piece by piece. Nothing here knows a protocol."""
 
 import html
 import re
@@ -51,3 +51,33 @@ def reply_mentions(parent, my_handle):
         seen.add(k)
         out.append("@" + h)
     return " ".join(out) + " " if out else ""
+
+
+_LEADING_MENTIONS = re.compile(r"^(?:@[\w.-]+(?:@[\w.-]+)?[\s,]*)+")
+
+
+def quote_lines(text, prefix="> ", strip_mentions=False):
+    """Text to answer piece by piece: every line under `prefix` (Markdown's "> "),
+    empty lines kept as a bare ">", the leading @mentions of a whole post dropped
+    (strip_mentions) — the reply has its own. Ends in an empty line: without it the
+    answer typed next would be read as part of the quote. "" for nothing to quote."""
+    text = (text or "").replace("\u2029", "\n").replace("\r\n", "\n").strip()
+    if strip_mentions:
+        text = _LEADING_MENTIONS.sub("", text).strip()
+    if not text:
+        return ""
+    bare = prefix.rstrip()
+    return "\n".join(prefix + line if line.strip() else bare
+                     for line in text.split("\n")) + "\n\n"
+
+
+def join_quote(before, quote):
+    """What goes between the text up to the cursor and a quote put in there: nothing at
+    the start, a line break after a line of @mentions, an empty line after your own
+    words (a Markdown quote needs it to begin). Returns the separator."""
+    if not before.strip():
+        return ""
+    if "\n" not in before.strip() and _LEADING_MENTIONS.fullmatch(before.strip() + " "):
+        return "" if before.endswith("\n") else "\n"
+    tail = len(before) - len(before.rstrip("\n"))
+    return "\n" * max(0, 2 - tail)
