@@ -188,7 +188,14 @@ class FeedView(QScrollArea):
         self._drop_target()
 
     def _window_active(self):
-        return self.window().isActiveWindow()
+        # any window of fedtail in front counts: in the split layout the roster is the
+        # active one right after a lane is opened from it (and the desktop may refuse
+        # to hand the focus over), while the posts are plainly being read
+        if self.window().isActiveWindow():
+            return True
+        from PySide6.QtWidgets import QApplication
+        front = QApplication.activeWindow()
+        return front is not None and getattr(self.window(), "roster", None) is front
 
     def _scrolled(self, _value):
         self._seen_timer.start()

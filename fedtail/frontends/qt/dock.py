@@ -409,7 +409,8 @@ class AgentFace(QWidget):
         set_face(win, self.face, who.avatar_static if who else "", self, "_url")
         name = (who.name or who.username) if who else ""
         self.name.setText(self.name.fontMetrics().elidedText(
-            name, Qt.TextElideMode.ElideRight, AGENT_FACE + 8))
+            name, Qt.TextElideMode.ElideRight, AGENT_FACE - 2))  # inside the column's margins
+        self.name.setToolTip(name)
         link = win.theme.css("link")
         self.link.setText(f'<a href="#" style="color:{link}">{_("faces_profile")}</a>'
                           if who else "")
@@ -419,6 +420,41 @@ class AgentFace(QWidget):
             self.win.open_account(self.who.id)
 
 
+def _under_pointer(view):
+    from PySide6.QtGui import QCursor
+    vp = view.viewport()
+    at = vp.mapFromGlobal(QCursor.pos())
+    if not vp.rect().contains(at):
+        return None
+    y = view.verticalScrollBar().value() + at.y()
+    for key in view.order:
+        row = view.rows.get(key)
+        if row is not None and getattr(row, "spec", None) is not None:
+            top = view._top(row)
+            if top <= y < top + row.height():
+                return key
+    return None
+
+
+def _lowest_whole(view):
+    sb = view.verticalScrollBar()
+    top, bottom = sb.value(), sb.value() + view.viewport().height()
+    best = None
+    for key in view.order:
+        row = view.rows.get(key)
+        if row is None or getattr(row, "spec", None) is None or row.spec.entry is None:
+            continue
+        y = view._top(row)
+        if y >= top - 2 and y + row.height() <= bottom + 2:
+            best = key
+        elif y > bottom:
+            break
+    if best is None:  # one card taller than the screen: the one on screen
+        a = view._anchor()
+        best = a[0] if a else None
+    return best
+
+
 def other_side(win, me):
     """The account on the other side, or None: whose post the cursor is on (else the
     post on top of the screen); my own post there — whom I answer."""
@@ -426,14 +462,13 @@ def other_side(win, me):
     view = win.current_view()
     post = None
     if view is not None:
-        key = view.cursor_key
+        # the post under the pointer; else the j/k cursor; else the lowest one on
+        # screen whole — where a reader of a messenger's log (newest last) looks
+        key = _under_pointer(view)
+        if key is None:
+            key = view.cursor_key
         if key not in view.rows:
-            anchor = view._reading_anchor()
-            key = anchor[0] if anchor else None
-        if key not in view.rows:  # not scrolled yet: the first card on screen
-            top = view.verticalScrollBar().value()
-            key = next((k for k in view.order if k in view.rows and
-                        view.rows[k].y() + view.rows[k].height() > top), None)
+            key = _lowest_whole(view)
         row = view.rows.get(key)
         spec = getattr(row, "spec", None)
         if spec is not None and spec.entry is not None:

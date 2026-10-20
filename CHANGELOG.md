@@ -43,6 +43,11 @@
   have something new, the 2 in colour (`words.roster_group_quiet`); a private post to no
   one but me is "Notes to myself", two talks with the same people are told apart by how
   they begin, and a title with quotes no longer shows "&quot;".
+- In the split layout a lane opened from the roster is read at once: the roster in
+  front counts as fedtail being looked at (the last post of a lane, never scrolled to,
+  stayed unread). The face over the posts is the author's of the post under the
+  pointer, else of the cursor's, else of the lowest one whole on screen — the newest
+  as you read, not the one on top; the Agent's column cuts a long name inside itself.
 - `ui.split_tabs = "keep" | "close"`: whether the closed messages window keeps its tabs
   for next time. A private talk's tab no longer breaks read marks (an error on every
   one stopped the counts from going down).
