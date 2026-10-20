@@ -7,13 +7,16 @@
   server's window starts anew, and asks nothing while it is spent. One line in the
   status bar says until when — instead of a "429" for every lane, every round (as on
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
+- Trying a theme from the menu no longer freezes the window for seconds: the lanes out
+  of sight let their cards go first (drawn anew when opened), and the tabs out of sight
+  are rebuilt when they come into view.
 - Less freezing after a poll: the lanes and their unread counts are worked out in the
   poll thread before the window hears of news, and unread counts are cached until a
   lane or a read mark changes — the sidebar asked every lane after every event, reading
   thousands of stored posts between two frames (250 ms to a second).
-- `fedtail --layout single|columns|qip` and `--theme NAME`: the layout or the theme for
+- `fedtail --layout single|columns|split` and `--theme NAME`: the layout or the theme for
   one run, the config untouched.
-- Five themes in the spirit of messengers, for `ui.layout = "qip"` above all: `qip-retro`
+- Five themes in the spirit of messengers, for `ui.layout = "split"` above all: `qip-retro`
   (QIP Infium's pale blue), `qip-modern` (QIP 2012, flat), `mra` and `mra-blue` (the
   Mail.ru Agent's orange and blue), `psi`. They write a post as a message: "Name (15:25:43
   23/06/2007)" over it, mine and the others' in colours of their own — `shape.card_header
@@ -23,13 +26,21 @@
   can do (the probe) and Federation status open on its right side, as pages of the same
   panel — the settings-like window of Psi or QIP, only for what to read, not to set
   (settings stay a file).
-- `ui.layout = "qip"`, the first step of a messenger-style layout (docs/LAYOUTS.md): the
+- `ui.layout = "split"` (`"qip"`, its first name, is still understood), the first step of
+  a messenger-style layout (docs/LAYOUTS.md): the
   lanes in a narrow roster window of their own, as in QIP, Psi or the Mail.ru Agent — who
   I am and what's new in Activity on top, a search line, the lanes in folding groups
   "▾ Personal (2/9)" (with something new / all), each with its count, a line of its
-  newest post and its author's face. A click opens the lane in the main window, which
-  here is the messages window, without the sidebar. Closing the roster closes fedtail
-  (to the tray with `ui.close_to_tray`); `ui.roster_on_top`. Followed threads and private
+  newest post and its author's face. fedtail starts with the roster only; a double
+  click (or Enter) opens a lane in the messages window — the main one, without the
+  sidebar, its tabs drawn as tabs; closing the last tab closes it. Under the tabs, an
+  input line is always there: in a thread's tab it answers the thread (a private talk
+  stays private), in a lane's tab it writes a new post; who sees it, a warning, and ⤢ for
+  the full Compose window. At the bottom of the roster, the menu and the accounts
+  (@me ▾); ⚙ (or a right click on empty space) sets how it looks: compact — a line an
+  item, without the header, the search or the buttons, only where there's something new,
+  without groups, above other windows (`ui.roster_on_top` says how it starts). Closing
+  the roster closes fedtail (to the tray with `ui.close_to_tray`). Followed threads and private
   talks stand there as contacts of their own ("Threads", "Talks", the freshest
   `ui.roster_threads`): who began it and how, or who is in it.
 - fedtail took GoToSocial 0.22 for Mastodon: its version says only "0.22.1+git-…".

@@ -650,7 +650,10 @@ class PostRow(QWidget):
         stamp = link("thread", p.id, esc(when), color, bold=True)
         line = _fill_html(self.theme.words.get("chat", "{name} ({when})"),
                           name=name, when=stamp)
-        h.addWidget(self._emoji_label(line, acc.emojis, "chatName"))
+        # one line, as in the originals: a narrow window cuts the name, never wraps it
+        head = self._emoji_label(line, acc.emojis, "chatName", wrap=False)
+        head.setMinimumWidth(60)  # below its width: cut at the edge
+        h.addWidget(head, 0)
         if p.edited:
             h.addWidget(self._edited_mark(p))
         self._via_mark(h)

@@ -568,8 +568,13 @@ class FeedView(QScrollArea):
             log.debug("seen on screen: %d", len(ids))
             self.seen.emit(ids)
 
+    restyle = False  # another theme was tried while this was out of sight
+
     def showEvent(self, e):
         super().showEvent(e)
+        if self.restyle:
+            self.restyle = False
+            self.rebuild_rows()
         self._seen_timer.start()
         self._grow_soon()
 
@@ -1198,7 +1203,7 @@ class ThreadWidget(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
         self.header = _Header(win.theme)
-        self.root = None
+        self.root, self.posts = None, []
         self.sub_btn = self.header.add(_button(_("sub_thread"), self._toggle_sub,
                                                icon="mail-thread-watch", tip=_("sub_tip")))
         self.sub_btn.setCheckable(True)
@@ -1265,7 +1270,10 @@ class ThreadWidget(QWidget):
                            extra={"short_id": short.get(n.post.id)}) for n in items]
         self.view.set_specs(specs, keep_position=self.loaded)
         root = posts[0] if posts else None
-        self.root = root
+        self.root, self.posts = root, posts
+        dock = getattr(self.win, "dock", None)
+        if dock is not None and self.win.tabs.currentWidget() is self:
+            dock.follow(self)  # the input line answers its newest post
         if root is None:
             return
         self.update_sub_button()

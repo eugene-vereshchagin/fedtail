@@ -234,7 +234,7 @@ def run(app, out, label, palette, theme_name, extras, layout="single"):
     win.on_link("fedtail:thread/102")
     pump(app, 1.5)
     shoot(win, out, f"{label}-thread")
-    if win.roster is not None:  # ui.layout = "qip": the roster window beside it
+    if win.roster is not None:  # ui.layout = "split": the roster window beside it
         win.roster.refresh()
         pump(app, 0.5)
         shoot(win.roster, out, f"{label}-roster")
@@ -349,9 +349,9 @@ def main():
     run(app, out, "light", BREEZE_LIGHT, "system", {"extras"})
     run(app, out, "dark", BREEZE_DARK, "system", set())
     run(app, out, "terminal", BREEZE_LIGHT, "terminal", set())
-    run(app, out, "qip", BREEZE_LIGHT, "system", set(), layout="qip")
+    run(app, out, "split", BREEZE_LIGHT, "system", set(), layout="split")
     for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "psi"):
-        run(app, out, name, BREEZE_LIGHT, name, set(), layout="qip")
+        run(app, out, name, BREEZE_LIGHT, name, set(), layout="split")
     for name in ("point", "juick", "juick-classic", "bnw", "night", "paper", "contrast",
                  "pink", "nord", "solarized"):
         run(app, out, name, BREEZE_LIGHT, name, set())

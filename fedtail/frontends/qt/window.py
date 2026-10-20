@@ -317,9 +317,16 @@ class MainWindow(QMainWindow):
         self.tabs.setDocumentMode(True)
         self.tabs.setTabsClosable(True)
         self.tabs.setMovable(True)
-        self.tabs.setTabBarAutoHide(True)  # one tab: no tab bar at all
+        split_layout = self.cfg["ui"].get("layout") in ("split", "qip")
+        # one tab: no tab bar at all — but in the split layout the tabs are the
+        # messages window's conversations, each with its ×, the lanes' one too
+        self.tabs.setTabBarAutoHide(not split_layout)
         self.tabs.addTab(self.stack, "")
-        self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
+        if split_layout:  # tabs that look like tabs, as in the messengers (theme.py)
+            self.tabs.setObjectName("messages")
+            self.tabs.setDocumentMode(False)
+        else:
+            self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.tabs.tabCloseRequested.connect(self.close_tab)
         right = QWidget()
         rv = QVBoxLayout(right)
@@ -355,13 +362,19 @@ class MainWindow(QMainWindow):
         self.split.splitterMoved.connect(lambda _pos, _i: self._side_save.start())
         row.addWidget(self.split, 1)
         self.setCentralWidget(central)
-        # ui.layout = "qip": the lanes in a roster window of their own (roster.py); this
+        # ui.layout = "split": the lanes in a roster window of their own (roster.py); this
         # window is the messages window — no sidebar, the lanes and threads in tabs
-        self.roster = None
-        if self.cfg["ui"].get("layout") == "qip":
+        self.roster = self.dock = None
+        if self.cfg["ui"].get("layout") in ("split", "qip"):
+            from .dock import InputDock
             from .roster import RosterWindow
             self.split.widget(0).hide()
             self.roster = RosterWindow(self)
+            # the input line, always under the tabs (dock.py)
+            self.dock = InputDock(self)
+            rv.insertWidget(rv.indexOf(self.tabs) + 1, self.dock)
+            self.tabs.currentChanged.connect(lambda _i: self.dock.follow(
+                self.tabs.currentWidget()))
         self.menuBar().hide()
         # left in the status bar: which profile this is and who (★ the main one)
         self.profile_label = QLabel()
@@ -624,6 +637,11 @@ class MainWindow(QMainWindow):
             return
         app = QApplication.instance()
         old = self.theme
+        # Qt restyles every widget there is, seen or not: the lanes out of sight let
+        # their cards go first (drawn anew when opened), or a trial took seconds
+        for w in self.lane_widgets.values():
+            if isinstance(w, LaneWidget):
+                w._unload()
         theme = themes.apply(app, self.cfg, name)
         log.info("theme tried: %s (was %s, config says %s)", theme.id, old.id,
                  self.cfg["ui"]["theme"])
@@ -666,6 +684,8 @@ class MainWindow(QMainWindow):
         self.split.setStretchFactor(0, 0)
         self.split.setStretchFactor(1, 1)
         self.split.setSizes(sizes)
+        if self.roster is not None:
+            self.side_panel.hide()  # the split layout has the roster instead
         self.columns_btn.blockSignals(True)
         self.columns_btn.setChecked(self.columns is not None)
         self.columns_btn.blockSignals(False)
@@ -685,8 +705,13 @@ class MainWindow(QMainWindow):
                 header.title.setText(theme.word("lane_title", self.lane_title(name)))
         from .feed import FeedView
         for view in self.findChildren(FeedView):
-            view.rebuild_rows()
+            if view.isVisible() or not view.order:
+                view.rebuild_rows()
+            else:
+                view.restyle = True  # rebuilt when it comes into sight
         self.update_badges()
+        if self.roster is not None:
+            self.roster.refresh()
 
     def _pop_app_menu(self, btn):
         m = self._app_menu()
@@ -1231,6 +1256,7 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(w)
         self.stack.setCurrentWidget(w)
         if show:
+            self.tabs.setTabVisible(self.tabs.indexOf(self.stack), True)
             self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
         else:
             log.info("lane %s chosen behind the %s tab", name,
@@ -1709,11 +1735,17 @@ class MainWindow(QMainWindow):
 
     def close_tab(self, i):
         w = self.tabs.widget(i)
-        if w is None or w is self.stack:
+        if w is None or (w is self.stack and self.roster is None):
             return
-        log.info("tab closed: %s", type(w).__name__)
-        self.tabs.removeTab(i)
-        w.deleteLater()
+        if w is self.stack:  # the split layout: the lanes' tab hides till one is opened
+            self.tabs.setTabVisible(i, False)
+        else:
+            log.info("tab closed: %s", type(w).__name__)
+            self.tabs.removeTab(i)
+            w.deleteLater()
+        if self.roster is not None and not any(
+                self.tabs.isTabVisible(j) for j in range(self.tabs.count())):
+            self.hide()  # the last conversation closed: the messages window goes too
 
     def vote(self, post, choices):
         sid = post.id

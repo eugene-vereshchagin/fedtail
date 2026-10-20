@@ -221,7 +221,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
-    ("ui", "layout"): {'single', 'columns', 'qip'},
+    ("ui", "layout"): {'single', 'columns', 'split', 'qip'},
     ("ui", "app_icon"): {'possum', 'bubble'},
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},

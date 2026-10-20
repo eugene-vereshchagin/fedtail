@@ -134,8 +134,7 @@ class HelpPanel(QDialog):
         top.setContentsMargins(10, 6, 6, 6)
         self.back_btn = self._tool("←", _("help_back"), self.back)
         self.fwd_btn = self._tool("→", _("help_forward"), self.forward)
-        self.home_btn = self._tool("☰", _("help_home"), lambda: self.show_page("index"))
-        for b in (self.back_btn, self.fwd_btn, self.home_btn):
+        for b in (self.back_btn, self.fwd_btn):  # the contents are always on the left
             top.addWidget(b)
         title = QLabel(_("help_title"))
         title.setObjectName("laneTitle")
@@ -156,6 +155,10 @@ class HelpPanel(QDialog):
         sv.setContentsMargins(0, 0, 0, 0)
         self.toc = QListWidget()
         self.toc.setObjectName("helpToc")
+        # a long title is cut with "…" (its whole self in the tooltip), never scrolled
+        self.toc.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.toc.setTextElideMode(Qt.TextElideMode.ElideRight)
+        self.toc.setWordWrap(False)
         self.toc.itemActivated.connect(self._picked)
         self.toc.itemClicked.connect(self._picked)
         sv.addWidget(self.toc, 1)
@@ -209,8 +212,7 @@ class HelpPanel(QDialog):
             label = p.title if only is None else f"{p.title}  ({only[p.name]})"
             it = QListWidgetItem(("    " if p.deep else "") + label)
             it.setData(NAME_ROLE, p.name)
-            if p.about:
-                it.setToolTip(p.about)
+            it.setToolTip(label + (f"\n{p.about}" if p.about else ""))
             self.toc.addItem(it)
         if only is None:  # what the app itself knows: my server, the federation
             head = QListWidgetItem(_("info_head"))

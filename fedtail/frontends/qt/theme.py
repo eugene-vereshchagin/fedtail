@@ -233,6 +233,10 @@ QListWidget#lanes::item:hover:!selected {{ background: {_alpha(self.c['selected'
 QLabel#laneName {{ background: transparent; }}
 QLabel#listsHeader {{ font-weight: 600; background: transparent; }}
 QLabel#laneName[current="true"] {{ font-weight: 600; color: {k('selected_text')}; }}
+QListWidget#rosterList {{ outline: 0; }}
+QListWidget#rosterList::item:selected {{ background: {k('selected')}; color: {k('selected_text')}; }}
+QListWidget#rosterList::item:hover:!selected {{ background: {_alpha(self.c['selected'], 110)}; }}
+QLabel#rosterName, QLabel#rosterLine, QLabel#rosterGroup {{ background: transparent; }}
 QLabel#rosterName[unread="true"] {{ color: {k('hot')}; }}
 QLabel#rosterLine {{ color: {k('muted')}; font-style: italic;
     font-size: {round(base_pt * 0.85, 1)}pt; }}
@@ -250,6 +254,13 @@ QTabWidget::pane {{ border: 0; }}
 QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px; border: 0;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
+QTabWidget#messages QTabBar::tab {{ background: {k('button')}; color: {k('text')};
+    border: 1px solid {k('button_border')}; border-bottom: 0; margin: 2px 1px 0 1px;
+    padding: 4px 10px; }}
+QTabWidget#messages QTabBar::tab:selected {{ background: {k('view')}; margin-top: 0;
+    padding-bottom: 6px; }}
+QTabWidget#messages QTabBar::tab:hover:!selected {{ background: {k('selected')}; }}
+QTabWidget#messages::pane {{ border-top: 1px solid {k('button_border')}; }}
 QWidget#composeHead {{ background: {k('header')};
     {self._stripes_css()} {self._bar_css()} border-radius: {br}px; }}
 QWidget#laneHeader {{ background: {k('header')}; {self._stripes_css()} {self._bar_css()} border-bottom: 1px solid {k('header_border')}; }}

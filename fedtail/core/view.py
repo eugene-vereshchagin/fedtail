@@ -582,9 +582,16 @@ class View:
         for group, lane, kind in (("threads", "subs", "thread"), ("talks", "direct", "talk")):
             if not keep or lane not in c.lane_by_name:
                 continue
-            entries = self.entries(lane)
-            unread = self.unread(entries)
-            convs = list(reversed(self.conversations(entries, unread)))[:keep]
+            # the same entries, nothing read since: the same conversations (grouping
+            # them reads every post's parent from the store — too slow to redo per event)
+            raw = c.lane_entries(lane)
+            key = (lane, id(raw), len(raw), getattr(c.store, "read_version", None))
+            cache = self.__dict__.setdefault("_roster_convs", {})
+            if cache.get(lane, (None,))[0] != key:
+                entries = self.entries(lane)
+                cache[lane] = (key, list(reversed(self.conversations(
+                    entries, self.unread(entries)))))
+            convs = cache[lane][1][:keep]
             me = self.me
             items = tuple(RosterItem(kind, g["key"], _conv_title(g["top"], kind, me),
                                      g["unread"], len(g["members"]), g["last"],

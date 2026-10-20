@@ -19,7 +19,7 @@
 #   -c, --config FILE    another config instead of the profile's
 #   -d, --data FOLDER    another data folder instead of the profile's
 #   --ui qt|tui|web      a window, a terminal or a browser (for one run; for good — ui.frontend)
-#   --layout single|columns|qip  the window's layout for one run (for good — ui.layout)
+#   --layout single|columns|split  the window's layout for one run (for good — ui.layout)
 #   --theme NAME         the theme for one run (for good — ui.theme)
 #   --profiles           which profiles there are — and exit
 #   --update-config      add this version's new settings to this file with explanations — and exit
@@ -64,7 +64,7 @@
 #   "solarized" — Solarized light: warm paper, blue links;
 #   "qip-retro", "qip-modern", "mra", "mra-blue", "psi" — in the spirit of QIP Infium and
 #                QIP 2012, the Mail.ru Agent (orange and blue) and Psi: "Name (time)" over
-#                each post, mine in a colour of its own; best with layout = "qip";
+#                each post, mine in a colour of its own; best with layout = "split";
 #   "paper"    — warm paper and a book typeface, for long threads;
 #   "debug"    — for hunting what's unfinished: unread, the j/k cursor, found, "seen
 #                not whole", the keyboard focus — each in a loud frame of its own.
@@ -97,17 +97,18 @@ max_width = 760
 
 # How the window opens: "single" — one lane on the right, "columns" — several lanes side
 # by side, in columns, as in TweetDeck. The ❯ button at the top left switches it too, but
-# the window always starts as set here. "qip" — as in QIP, Psi or the Mail.ru Agent:
+# the window always starts as set here. "split" — as in QIP, Psi or the Mail.ru Agent:
 # the lanes in a narrow roster window (what's new in each, a line of the newest post and
-# its author's face), and the main window is the messages window, without the sidebar.
-# Closing the roster closes fedtail (to the tray with close_to_tray), the messages
-# window — only itself.
+# its author's face), and the main window is the messages window, without the sidebar,
+# an input line at its bottom; a double click on a roster item opens it, closing its
+# last tab closes it. Closing the roster closes fedtail (to the tray with
+# close_to_tray). The old name "qip" is understood too.
 layout = "single"
 
-# With layout = "qip": the roster stays above other windows.
+# With layout = "split": the roster stays above other windows.
 roster_on_top = false
 
-# With layout = "qip": how many followed threads and private talks stand in the roster as
+# With layout = "split": how many followed threads and private talks stand in the roster as
 # items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only.
 roster_threads = 15
 

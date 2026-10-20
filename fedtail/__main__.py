@@ -42,7 +42,7 @@ def parse_args(argv):
     p.add_argument("-c", "--config", help="config file (overrides the profile's one)")
     p.add_argument("-d", "--data", help="data directory (overrides the profile's one)")
     p.add_argument("--ui", choices=sorted(frontends.FRONTENDS), help="frontend to use")
-    p.add_argument("--layout", choices=("single", "columns", "qip"),
+    p.add_argument("--layout", choices=("single", "columns", "split"),
                    help="the window's layout for this run (ui.layout): one lane, columns "
                         "side by side, or a roster window as in QIP")
     p.add_argument("--theme", metavar="NAME",

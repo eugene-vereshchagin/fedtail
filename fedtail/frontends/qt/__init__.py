@@ -57,7 +57,13 @@ def run(core, instance, argv):
     tick.start(500)
     tick.timeout.connect(lambda: None)
 
-    win.show()
+    if win.roster is not None:
+        # the split layout starts with the roster only: the messages window comes
+        # when something in it is opened
+        win.roster.show()
+        win.roster.refresh_soon()
+    else:
+        win.show()
     QTimer.singleShot(1500, lambda: _log_size(win))
     QTimer.singleShot(0, win.start)
     try:

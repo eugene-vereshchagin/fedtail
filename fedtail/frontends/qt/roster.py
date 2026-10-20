@@ -1,7 +1,7 @@
-"""The roster window of ``ui.layout = "qip"`` (docs/LAYOUTS.md): a narrow window of its
+"""The roster window of ``ui.layout = "split"`` (docs/LAYOUTS.md): a narrow window of its
 own, as in QIP, Psi+ or the Mail.ru Agent — who I am on top, a search line, then the
 lanes in groups, each with its unread count, a line of its newest post and the face of
-its author. A click opens the lane in the main window, which in this layout is the
+its author. A double click (or Enter) opens the lane in the main window, which in this layout is the
 messages window: no sidebar, the lanes and threads as its tabs.
 
 It reads View.roster() only (the model), and refreshes a moment after anything new or
@@ -31,6 +31,10 @@ log = logging.getLogger(__name__)
 AVATAR = 40      # mine, in the header
 FACE = 28        # the newest post's author, beside an item
 REFRESH_MS = 300  # coalesce bursts of events into one rebuild
+# how the roster looks (the ⚙ menu, kept in state): a compact one is a line an item —
+# no status line, no face; the header, the search and the bottom row can go
+LOOK = {"compact": False, "header": True, "search": True, "bottom": True,
+        "only_new": False, "groups": True, "on_top": None}
 
 
 class RosterRow(QWidget):
@@ -77,6 +81,10 @@ class RosterRow(QWidget):
         self.face.setFixedSize(FACE, FACE)
         h.addWidget(self.face, 0, Qt.AlignmentFlag.AlignTop)
         self._face_url = None
+        self.compact = roster.look["compact"]
+        if self.compact:
+            h.setContentsMargins(6, 1, 6, 1)
+            self.face.hide()
         self.update_item(item)
 
     def update_item(self, item):
@@ -96,9 +104,9 @@ class RosterRow(QWidget):
             self.line.setToolTip(snippet(last, 300))
         else:
             self.line.setText("")
-        self.line.setVisible(bool(self.line.text()))
+        self.line.setVisible(bool(self.line.text()) and not self.compact)
         url = last.author.avatar_static if last is not None else ""
-        if url != self._face_url:
+        if url != self._face_url and not self.compact:
             self._face_url = url
             self.face.clear()
             if url:
@@ -163,17 +171,17 @@ class RosterWindow(QWidget):
         self.setObjectName("roster")
         self.setWindowTitle(_("roster_title"))
         self.setWindowIcon(win.windowIcon())
-        if win.cfg["ui"].get("roster_on_top", False):
-            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.resize(280, 640)
         v = QVBoxLayout(self)
         v.setContentsMargins(6, 6, 6, 6)
         v.setSpacing(6)
         # who I am: face, name, @address, and what is new in Activity
-        head = QHBoxLayout()
+        head = QWidget()
+        head_row = QHBoxLayout(head)
+        head_row.setContentsMargins(0, 0, 0, 0)
         self.avatar = QLabel()
         self.avatar.setFixedSize(AVATAR, AVATAR)
-        head.addWidget(self.avatar, 0, Qt.AlignmentFlag.AlignTop)
+        head_row.addWidget(self.avatar, 0, Qt.AlignmentFlag.AlignTop)
         who = QVBoxLayout()
         who.setSpacing(0)
         self.me_name = QLabel()
@@ -186,8 +194,8 @@ class RosterWindow(QWidget):
         self.news.setObjectName("rosterNews")
         self.news.linkActivated.connect(lambda _u: self.open("activity"))
         who.addWidget(self.news)
-        head.addLayout(who, 1)
-        v.addLayout(head)
+        head_row.addLayout(who, 1)
+        v.addWidget(head)
         self.search = QLineEdit()
         self.search.setPlaceholderText(_("roster_search"))
         self.search.setClearButtonEnabled(True)
@@ -198,29 +206,43 @@ class RosterWindow(QWidget):
         self.list = QListWidget()
         self.list.setObjectName("rosterList")
         self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.list.itemActivated.connect(self._activated)
-        self.list.itemClicked.connect(self._activated)
+        # a double click opens, as in every messenger (Enter too); one click selects
+        self.list.itemDoubleClicked.connect(self._activated)
+        self.list.installEventFilter(self)
         self.list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list.customContextMenuRequested.connect(self._menu)
         v.addWidget(self.list, 1)
-        # at the bottom, as in every messenger: the menu, and what I do — write
-        bottom = QHBoxLayout()
+        # at the bottom, as in every messenger: the menu, who I am (the accounts), and
+        # how the roster looks
+        self.bottom = QWidget()
+        bottom = QHBoxLayout(self.bottom)
+        bottom.setContentsMargins(0, 0, 0, 0)
         self.menu_btn = QPushButton(_("menu"))
         self.menu_btn.setObjectName("tool")
         self.menu_btn.clicked.connect(lambda: self.win._pop_app_menu(self.menu_btn))
         bottom.addWidget(self.menu_btn)
-        self.write_btn = QPushButton(win.theme.word("compose", _("write")))
-        self.write_btn.setObjectName("compose")
-        self.write_btn.setToolTip(_("write") + " (Ctrl+N)")
-        self.write_btn.clicked.connect(lambda: self.win.compose())
-        bottom.addWidget(self.write_btn, 1)
-        v.addLayout(bottom)
+        self.account_btn = QPushButton()
+        self.account_btn.setObjectName("tool")
+        self.account_btn.setToolTip(_("accounts"))
+        self.account_btn.clicked.connect(self._pop_accounts)
+        bottom.addWidget(self.account_btn, 1)
+        self.look_btn = QPushButton("⚙")
+        self.look_btn.setObjectName("tool")
+        self.look_btn.setToolTip(_("roster_look"))
+        self.look_btn.clicked.connect(lambda: self._look_menu().exec(
+            self.look_btn.mapToGlobal(QPoint(0, self.look_btn.height()))))
+        bottom.addWidget(self.look_btn)
+        v.addWidget(self.bottom)
+        self.head_box = head
         self.rows, self.heads = {}, {}
         self.folded = set(win.core.get_state("roster_folded", []) or [])
+        got = win.core.get_state("roster_look", {}) or {}
+        self.look = dict(LOOK, **{k: bool(v) for k, v in got.items() if k in LOOK})
         self._shape = None
         self._timer = QTimer(self, singleShot=True, interval=REFRESH_MS)
         self._timer.timeout.connect(self.refresh)
         self._restore_place()
+        self._apply_look()
 
     # ---- contents ------------------------------------------------------------------
     def refresh_soon(self):
@@ -261,19 +283,23 @@ class RosterWindow(QWidget):
                 row = RosterRow(self, item)
                 row_it.setData(Qt.ItemDataRole.UserRole, row.key)
                 row_it.setData(Qt.ItemDataRole.UserRole + 1, g.name)
-                row_it.setSizeHint(QSize(0, max(row.sizeHint().height(), FACE + 8)))
+                tall = row.sizeHint().height()
+                row_it.setSizeHint(QSize(0, tall if row.compact else max(tall, FACE + 8)))
                 self.list.addItem(row_it)
                 self.list.setItemWidget(row_it, row)
                 self.rows[row.key] = row
 
     def _show_me(self, me):
         if me is None:
+            self.account_btn.setText(_("accounts") + " ▾")
             self.me_name.setText(_("roster_offline"))
             self.me_handle.setText("")
             self.news.setText("")
             return
         self.me_name.setText(f"<b>{display_name(me)}</b>")
         self.me_handle.setText("@" + me.handle)
+        self.account_btn.setText("@" + me.handle.partition("@")[0] + " ▾")
+        self.account_btn.setToolTip(f"{_('accounts')}: @{me.handle}")
         n = self.win.core.activity_unread()
         link = self.win.theme.c["link"].name()
         self.news.setText(f'<a href="fedtail:activity" style="color:{link};">'
@@ -289,12 +315,14 @@ class RosterWindow(QWidget):
             it = self.list.item(i)
             key = it.data(Qt.ItemDataRole.UserRole)
             if key is None:  # a group's title: there while searching, else always
-                it.setHidden(False)
+                it.setHidden(not self.look["groups"])
                 continue
             group = it.data(Qt.ItemDataRole.UserRole + 1)
             row = self.rows.get(key)
-            hide = (group in self.folded and not text) or (row is not None and
-                                                           not row.matches(text))
+            folded = group in self.folded and self.look["groups"]
+            hide = (not text and (folded or (self.look["only_new"] and row is not None
+                                             and not row.item.unread))) or \
+                (row is not None and not row.matches(text))
             it.setHidden(hide)
 
     def toggle(self, group):
@@ -332,13 +360,16 @@ class RosterWindow(QWidget):
         from PySide6.QtWidgets import QMenu
         it = self.list.itemAt(pos)
         key = it.data(Qt.ItemDataRole.UserRole) if it else None
-        if not key:
+        if not key:  # empty space or a group's title: how the roster looks
+            self._look_menu().exec(self.list.mapToGlobal(pos))
             return
         m = QMenu(self)
         m.addAction(_("roster_open"), lambda: self.open(key))
         row = self.rows.get(key)
         if row is not None and row.item.unread:
             m.addAction(_("mark_all_read"), lambda: self._read_all(key))
+        m.addSeparator()
+        m.addMenu(self._look_menu()).setText(_("roster_look"))
         m.exec(self.list.mapToGlobal(pos))
 
     def _read_all(self, key):
@@ -351,6 +382,53 @@ class RosterWindow(QWidget):
             ids = [e.id for _item, e in view.entries(key)]
         if ids:
             view.mark_read(ids)
+
+    def _pop_accounts(self):
+        m = self.win.accounts_menu(self)
+        m.exec(self.account_btn.mapToGlobal(QPoint(0, self.account_btn.height())))
+
+    def eventFilter(self, obj, e):
+        from PySide6.QtCore import QEvent
+        if obj is self.list and e.type() == QEvent.Type.KeyPress and \
+                e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self._activated(self.list.currentItem())
+            return True
+        return super().eventFilter(obj, e)
+
+    # ---- how it looks ------------------------------------------------------------
+    def _look_menu(self):
+        from PySide6.QtWidgets import QMenu
+        m = QMenu(self)
+        for key in ("compact", "header", "search", "bottom", "only_new", "groups",
+                    "on_top"):
+            a = m.addAction(_("roster_look_" + key))
+            a.setCheckable(True)
+            a.setChecked(bool(self._on_top() if key == "on_top" else self.look[key]))
+            a.toggled.connect(lambda on, k=key: self.set_look(k, on))
+        return m
+
+    def _on_top(self):
+        on = self.look["on_top"]
+        return self.win.cfg["ui"].get("roster_on_top", False) if on is None else on
+
+    def set_look(self, key, on):
+        self.look[key] = bool(on)
+        self.win.core.set_state("roster_look", self.look)
+        if key == "compact":
+            self._shape = None  # the rows are built anew
+        self._apply_look()
+        self.refresh()
+
+    def _apply_look(self):
+        self.head_box.setVisible(self.look["header"])
+        self.search.setVisible(self.look["search"])
+        self.bottom.setVisible(self.look["bottom"])
+        top = bool(self._on_top())
+        if bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint) != top:
+            shown = self.isVisible()
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, top)
+            if shown:
+                self.show()
 
     # ---- the window ------------------------------------------------------------------
     def _restore_place(self):

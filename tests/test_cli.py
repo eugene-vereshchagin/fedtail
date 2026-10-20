@@ -147,9 +147,9 @@ class CliTest(TmpDir):
     def test_layout_and_theme_for_one_run(self):
         from fedtail.core import config
         cfg, _ = config.validate({})
-        args = entry.parse_args(["--layout", "qip", "--theme", "psi"])
+        args = entry.parse_args(["--layout", "split", "--theme", "psi"])
         self.assertIsNone(entry.for_this_run(args, cfg))
-        self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["theme"]), ("qip", "psi"))
+        self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["theme"]), ("split", "psi"))
         self.assertIn("no theme", entry.for_this_run(entry.parse_args(["--theme", "nope"]), cfg))
         with self.assertRaises(SystemExit):  # argparse: not a layout
             entry.parse_args(["--layout", "sideways"])

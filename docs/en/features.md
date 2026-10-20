@@ -93,7 +93,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Finding people, tags and posts | has | 0.2.0 | — | `/api/v2/search` | everyone |
 | A lane of several tags | has | 0.14.0 | `[[lanes.tag_groups]]`; from the search — “＋ to lanes” | `timelines/tag/:name` for each tag, put together here | Phanpy, Ice Cubes (“tag groups”), tut (`:tag a b`) |
 | Columns side by side | has | 0.14.0 | `ui.layout`, `ui.columns`, `ui.column_width`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
-| A roster, as in ICQ clients | partly | 0.17.0 | `ui.layout = "qip"` or for one run `fedtail --layout qip`, `ui.roster_on_top`, `ui.roster_threads` | own | — |
+| A roster, as in ICQ clients | partly | 0.17.0 | `ui.layout = "qip"` or for one run `fedtail --layout split`, `ui.roster_on_top`, `ui.roster_threads` | own | — |
 | Collections (Mastodon 4.6) | planned | — | — | `/api/v1/collections` | Mastodon 4.6, Fedilab |
 
 <details><summary>In detail</summary>

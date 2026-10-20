@@ -2178,14 +2178,14 @@ class QtSmokeTest(unittest.TestCase):
             self.win.on_event("status_updated", dict(st, reblogged=True))
             self.assertTrue(view.model[0].entry.post.mine.shared)
 
-    def test_qip_layout_roster(self):
-        """ui.layout = "qip": the lanes in a roster window of their own, the main window
+    def test_split_layout_roster(self):
+        """ui.layout = "split": the lanes in a roster window of their own, the main window
         is the messages window — no sidebar; the roster says what's new and opens it."""
         from fedtail.frontends.qt.bridge import Bridge
         from fedtail.frontends.qt.window import MainWindow
         self.win.quitting = True
         self.win.hide()
-        self.core.cfg["ui"]["layout"] = "qip"
+        self.core.cfg["ui"]["layout"] = "split"
         self.addCleanup(self.core.cfg["ui"].__setitem__, "layout", "single")
         win = MainWindow(self.core, Bridge(self.core), self.theme)
         win.images.get = lambda url, cb, *a, **k: None
@@ -2199,11 +2199,11 @@ class QtSmokeTest(unittest.TestCase):
             win.deleteLater()
             roster.deleteLater()
         try:
-            self._qip_roster(win, roster)
+            self._split_roster(win, roster)
         finally:
             done()  # before tearDown shuts the core down
 
-    def _qip_roster(self, win, roster):
+    def _split_roster(self, win, roster):
         win.show()
         self.assertTrue(roster.isVisible())  # comes with the window
         self.assertTrue(win.split.widget(0).isHidden())  # no sidebar here
@@ -2240,6 +2240,39 @@ class QtSmokeTest(unittest.TestCase):
         from fedtail.frontends.qt.feed import ThreadWidget
         roster.open("thread/011")
         self.pump(until=lambda: isinstance(win.tabs.currentWidget(), ThreadWidget))
+        # the input line under the tabs answers the thread's newest post
+        thread = win.tabs.currentWidget()
+        self.pump(until=lambda: win.dock.target is not None)
+        self.assertEqual(win.dock.target.id, thread.posts[-1].id)
+        win.select_lane("home")
+        self.assertIsNone(win.dock.target)  # a lane: a new post
+        win.tabs.setCurrentWidget(thread)
+        # another theme tried: the sidebar stays away, the tab out of sight waits
+        win.try_theme("psi")
+        self.assertTrue(win.split.widget(0).isHidden())
+        win.try_theme("system")
+        # the compact roster: a line an item
+        roster.set_look("compact", True)
+        self.addCleanup(self.core.set_state, "roster_look", {})
+        self.assertFalse(roster.rows["home"].line.isVisibleTo(roster))
+        roster.set_look("only_new", True)
+        roster.set_look("only_new", False)
+        # closing the last tab closes the messages window; the roster stays
+        win.close_tab(win.tabs.indexOf(thread))
+        self.assertTrue(win.isVisible())
+        win.close_tab(win.tabs.indexOf(win.stack))
+        self.assertFalse(win.isVisible())
+        self.assertTrue(roster.isVisible())
+        # Enter on an item opens it (a single click only selects)
+        for i in range(roster.list.count()):
+            if roster.list.item(i).data(0x0100) == "home":
+                roster.list.setCurrentRow(i)
+        from PySide6.QtCore import QEvent, Qt
+        from PySide6.QtGui import QKeyEvent
+        roster.eventFilter(roster.list, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Return,
+                                                  Qt.KeyboardModifier.NoModifier))
+        self.assertTrue(win.isVisible())
+        self.assertIs(win.stack.currentWidget(), win.lane_widgets["home"])
         # closing the messages window leaves the roster, as in a messenger
         win.close()
         self.assertFalse(win.isVisible())
