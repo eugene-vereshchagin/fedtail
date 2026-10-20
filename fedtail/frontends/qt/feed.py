@@ -2150,18 +2150,18 @@ class ActivityWidget(QWidget):
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
         top.linkActivated.connect(self.win.on_link)
-        if self.core.supports("dismiss"):
-            line = QHBoxLayout()
-            line.addWidget(top, 1)
-            x = QPushButton("×")
-            x.setObjectName("tool")
-            x.setFixedWidth(28)
-            x.setToolTip(_("activity_dismiss_tip"))
-            x.clicked.connect(lambda _c=False, ids=[a.id for a in es]: self._dismiss(ids))
-            line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
-            v.addLayout(line)
-        else:
-            v.addWidget(top)
+        # × hides this row: the notifications in it go from the server too where it can
+        # dismiss one (Mastodon), else only from here (GoToSocial) — nothing gets muted
+        line = QHBoxLayout()
+        line.addWidget(top, 1)
+        x = QPushButton("×")
+        x.setObjectName("tool")
+        x.setFixedWidth(28)
+        x.setToolTip(_("activity_dismiss_tip" if self.core.can_dismiss_one()
+                       else "activity_hide_tip"))
+        x.clicked.connect(lambda _c=False, ids=[a.id for a in es]: self._dismiss(ids))
+        line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
+        v.addLayout(line)
         if first.kind == "request":
             # waiting for my yes (GoToSocial): answer right here, one by one
             for a in es:

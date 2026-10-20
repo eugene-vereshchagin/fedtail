@@ -390,6 +390,23 @@ def _families(spec):
     return out
 
 
+_loaded_fonts = set()
+
+
+def _load_fonts(theme_files):
+    """Fonts that come with the theme or lie in ~/.config/fedtail/fonts/: given to Qt for
+    this run, nothing installed. Each file once."""
+    import logging
+    for path in themefile.font_files(theme_files):
+        if path in _loaded_fonts:
+            continue
+        _loaded_fonts.add(path)
+        fid = QFontDatabase.addApplicationFont(path)
+        fams = QFontDatabase.applicationFontFamilies(fid) if fid >= 0 else []
+        logging.getLogger(__name__).info("font %s: %s", path.rsplit("/", 1)[-1],
+                                         ", ".join(fams) or "not readable")
+
+
 # the desktop's own palette and font, as they were before any theme touched them: a
 # theme tried from the menu (≡ → Try a theme) starts from these, not from the last one
 _desktop = None
@@ -433,8 +450,9 @@ def apply(app, cfg, name=None):
             pal.setColor(role, theme.c[key])
         app.setPalette(pal)
 
+    _load_fonts(theme.font.get("files") or ())
     f = QFont(app.font())
-    fam = _families(theme.font["family"])
+    fam = _families(cfg["ui"].get("font") or "") or _families(theme.font["family"])
     if fam:
         f.setFamilies(fam)
     size = cfg["ui"]["font_size"]
@@ -444,7 +462,7 @@ def apply(app, cfg, name=None):
     # emoji and flags come from a colour emoji font when the main one lacks them
     f.setFamilies([x for x in families if x not in EMOJI_FONTS] + list(EMOJI_FONTS))
     app.setFont(f)
-    mono = _families(theme.font["mono"]) or \
+    mono = _families(cfg["ui"].get("mono_font") or "") or _families(theme.font["mono"]) or \
         [QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family()]
     pt = f.pointSizeF() if f.pointSizeF() > 0 else 10.0
     app.setStyleSheet(theme.stylesheet(pt, mono[0]))

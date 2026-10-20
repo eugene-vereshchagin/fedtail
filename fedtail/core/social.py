@@ -175,11 +175,21 @@ class SocialMixin:
         self.bg.submit(job)
 
     # ---- notifications --------------------------------------------------------------
+    def can_dismiss_one(self):
+        """Can the server dismiss a single notification? GoToSocial can't (it only clears
+        them all): there × hides it here only."""
+        return self.supports("dismiss_one") and \
+            getattr(getattr(self, "caps", None), "software", "") != "gotosocial"
+
     def dismiss_activity(self, nid):
-        """One notification gone, here and on the server."""
+        """One notification gone: from Activity always, from the server when it can."""
         def job():
-            self._api("dismiss", self.api.dismiss_notification, nid)
-            self.store.activity_delete([nid])
+            if self.can_dismiss_one():
+                try:
+                    self._api("dismiss_one", self.api.dismiss_notification, nid)
+                except NotSupported:
+                    pass  # hidden here all the same
+            self.store.activity_hide([nid])
             self.emit("activity_updated", None)
         return self.submit(job)
 
@@ -216,12 +226,12 @@ class SocialMixin:
                     if e.status != 404:
                         raise
                     log.info("interaction %s: answered elsewhere already", match["id"])
-            if self.supports("dismiss"):
+            if self.can_dismiss_one():
                 try:
-                    self._api("dismiss", self.api.dismiss_notification, entry["id"])
+                    self._api("dismiss_one", self.api.dismiss_notification, entry["id"])
                 except ApiError as e:  # gone with the answer, or no such call here
                     log.debug("dismiss %s: %s", entry["id"], e)
-            self.store.activity_delete([entry["id"]])
+            self.store.activity_hide([entry["id"]])
             self.emit("activity_updated", None)
             return found
         return self.submit(job)

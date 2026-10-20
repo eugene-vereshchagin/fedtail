@@ -69,6 +69,15 @@ theme = "system"
 # The font size of posts in points, 0 = the system's.
 font_size = 0
 
+# The font of the whole window, over the theme's and the system's: "" — as in the theme
+# (which takes the system's). A list works, the first installed one is taken:
+# "Inter, Noto Sans". Fonts needn't be installed system-wide: .ttf / .otf files in
+# ~/.config/fedtail/fonts/ are picked up at start.
+font = ""
+
+# The fixed-width one, for #ids and /N: "" — as in the theme (which takes the system's).
+mono_font = ""
+
 # The width of the posts column in pixels, 0 = the full width. The ↔ button at the top left
 # switches it for now (remembered until the next start), the config isn't touched.
 max_width = 760

@@ -488,7 +488,11 @@ _STRINGS = {
         "activity_clear_tip": "Удалить все уведомления — здесь и на сервере",
         "activity_clear_q": "Удалить все уведомления — здесь и на сервере (в веб-интерфейсе и "
                             "других приложениях их тоже не станет)?",
-        "activity_dismiss_tip": "Убрать это уведомление (и на сервере)",
+        "activity_dismiss_tip": "Убрать эту строку: её уведомления уйдут и с сервера. "
+                                "Ничего не мьютит — новые такие же придут как обычно",
+        "activity_hide_tip": "Убрать эту строку отсюда. Сервер не умеет убирать уведомления "
+                             "по одному (только «Очистить» все), так что в веб-интерфейсе "
+                             "они останутся. Ничего не мьютит",
         "reactions_tip": "Эмодзи-реакции на пост (с серверов, где они есть)",
         "announce_react_tip": "Реакция на объявление (ещё раз — убрать)",
         "mark_read_upto": "Прочитано до сюда",
@@ -1211,7 +1215,11 @@ _STRINGS = {
         "activity_clear_tip": "Delete every notification, here and on the server",
         "activity_clear_q": "Delete every notification, here and on the server (they'll be gone "
                             "from the web interface and other apps too)?",
-        "activity_dismiss_tip": "Dismiss this notification (on the server too)",
+        "activity_dismiss_tip": "Remove this row: its notifications go from the server too. "
+                                "Mutes nothing — new ones like it still come",
+        "activity_hide_tip": "Remove this row from here. The server can't dismiss "
+                             "notifications one by one (only Clear them all), so the web "
+                             "interface keeps them. Mutes nothing",
         "reactions_tip": "Emoji reactions to the post (from servers that have them)",
         "announce_react_tip": "React to the announcement (again to take it back)",
         "mark_read_upto": "Read up to here",

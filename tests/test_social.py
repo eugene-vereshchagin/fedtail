@@ -144,6 +144,7 @@ class SocialTest(TmpDir):
 
     def test_dismiss_and_clear_activity(self):
         core, w = self.make()
+        core.caps.software = "mastodon"  # it dismisses one; GoToSocial can't (below)
         for i in range(3):
             w.act(f"a{i}", "favourite", BOB, minute=i)
         core.poll_once()
@@ -154,6 +155,28 @@ class SocialTest(TmpDir):
         core.clear_activity().result()
         self.assertEqual(core.store.activity_recent(10), [])
         self.assertEqual(w.activity, [])
+
+    def test_dismiss_on_gotosocial_hides_here(self):
+        """GoToSocial can't dismiss one notification: × hides it here, the server keeps
+        it, and the next fetch doesn't bring it back — the newest one either."""
+        core, w = self.make()
+        core.caps.software = "gotosocial"
+        for i in range(3):
+            w.act(f"a{i}", "favourite", BOB, minute=i)
+        core.poll_once()
+        core.dismiss_activity("a2").result()
+        self.assertEqual({n["id"] for n in w.activity}, {"a0", "a1", "a2"})  # still there
+        self.assertTrue(core.supports("dismiss"))  # Clear stays
+        core.poll_once()
+        self.assertEqual({n["id"] for n in core.store.activity_recent(10)}, {"a0", "a1"})
+        w.act("a3", "favourite", BOB, minute=3)
+        core.poll_once()  # what comes after still comes
+        self.assertEqual({n["id"] for n in core.store.activity_recent(10)}, {"a0", "a1", "a3"})
+        core.dismiss_activity("a0").result()
+        core.dismiss_activity("a1").result()
+        core.dismiss_activity("a3").result()
+        core.poll_once()  # all hidden: no history fetched anew
+        self.assertEqual(core.store.activity_recent(10), [])
 
     def test_people_and_profile(self):
         core, w = self.make()

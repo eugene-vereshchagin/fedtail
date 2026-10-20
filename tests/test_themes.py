@@ -44,6 +44,26 @@ class ThemeFileTest(unittest.TestCase):
         theme, _ = themefile.load("terminal")
         self.assertEqual(theme["colors"]["text"], "#123456")
 
+    def test_fonts_come_with_the_theme_and_the_folder(self):
+        (self.dir / "fonts").mkdir()
+        (self.dir / "fonts" / "Mine.ttf").write_bytes(b"x")
+        self.write("withfont", 'inherit = "system"\n[font]\nfamily = "Mine"\n'
+                               'files = ["fonts/Mine.ttf", "fonts/Gone.ttf"]\n')
+        theme, warnings = themefile.load("withfont")
+        self.assertEqual(warnings, [])
+        self.assertEqual(theme["font"]["files"], [str(self.dir / "fonts" / "Mine.ttf"),
+                                                  str(self.dir / "fonts" / "Gone.ttf")])
+        own = themefile.fonts_dir()
+        own.mkdir()
+        (own / "Other.otf").write_bytes(b"x")
+        (own / "notes.txt").write_text("not a font")
+        # the theme's that exist, then the folder's fonts
+        self.assertEqual(themefile.font_files(theme["font"]["files"]),
+                         [str(self.dir / "fonts" / "Mine.ttf"), str(own / "Other.otf")])
+        self.write("badfont", 'inherit = "system"\n[font]\nfiles = "Mine.ttf"\n')
+        with self.assertRaises(themefile.ThemeError):
+            themefile.load("badfont")
+
     def test_errors(self):
         self.write("bad", 'inherit = "system"\n[colors]\ntext = "green"\n'
                           '[shape]\ncard_style = "blob"\nradius = "big"\n')

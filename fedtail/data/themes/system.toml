@@ -17,6 +17,8 @@ inherit = ""
 family = ""          # "" = the desktop font; otherwise e.g. "Noto Sans"
 mono = ""            # for #ids and /N numbers; "" = the desktop's fixed font
 post_scale = 1.1     # post text size relative to the interface font
+files = []           # font files that come with the theme, next to its .toml (e.g.
+                     # ["fonts/Inter.ttf"]): used without installing them
 
 [colors]
 window = "auto"          # around everything

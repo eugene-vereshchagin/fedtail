@@ -16,6 +16,8 @@ DEFAULTS = {
         "language": "auto",
         "theme": "system",
         "font_size": 0,
+        "font": "",
+        "mono_font": "",
         "close_to_tray": True,
         "esc": "curtain",
         "switch_closes": True,

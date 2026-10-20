@@ -2,6 +2,15 @@
 
 ## 0.17.0 — in progress
 
+- × on a row of Activity on GoToSocial: the server can't dismiss one notification (only
+  clear them all), and fedtail used to ask it anyway — a 404 in the log, the row stayed,
+  and "Clear" went missing until a restart. Now × hides the row here (and stays hidden
+  after the next fetch); on Mastodon it goes from the server too. It never mutes
+  anything: new ones of the kind come as before. The tooltip says which it is.
+- The font over the theme's and the system's: `ui.font` (a list works: the first one
+  installed), `ui.mono_font` for #ids. Fonts needn't be installed: .ttf / .otf in
+  `~/.config/fedtail/fonts/` are picked up at start, and a theme can bring its own
+  (`[font] files`, next to its .toml).
 - Muting a thread works on GoToSocial: the server can't, so fedtail mutes it itself — the
   thread's mentions are dropped as they come (replies there tag everyone in the thread by
   themselves), even replies under posts fedtail never saw, and what came before leaves

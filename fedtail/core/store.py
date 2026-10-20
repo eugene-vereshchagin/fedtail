@@ -137,6 +137,9 @@ def sort_key(created_at, item_id):
     return f"{created_at or ''}|{str(item_id).rjust(32, '0')}"
 
 
+HIDDEN_KEEP = 2000  # notifications hidden by hand, remembered
+
+
 class Store:
     def __init__(self, path):
         self.me_id = None  # set once connected: my own posts go in as read
@@ -738,8 +741,11 @@ class Store:
         if sts:
             self.put_statuses(sts)
         new = []
+        hidden = self.kv_get("activity_hidden", {}) or {}
         with self._tx() as db:
             for n in notifications:
+                if n["id"] in hidden:  # hidden here by hand: it stays hidden
+                    continue
                 acc = n.get("account") or {}
                 # the server's own notices carry their details: kept with the account
                 notice = n.get("event") or n.get("relationship_severance_event") or \
@@ -765,11 +771,31 @@ class Store:
                 db.executemany("DELETE FROM activity WHERE id = ?", [(i,) for i in ids])
             self._bump("activity")
 
+    def activity_hide(self, ids):
+        """Notifications gone from Activity for good, while the server keeps them (it can't
+        dismiss one): remembered, so the next fetch doesn't bring them back."""
+        with self.lock:
+            rows = self.db.execute(
+                f"SELECT id, sort FROM activity WHERE id IN ({','.join('?' * len(ids))})",
+                list(ids)).fetchall() if ids else []
+        hidden = self.kv_get("activity_hidden", {}) or {}
+        hidden.update(dict(rows))
+        if len(hidden) > HIDDEN_KEEP:  # the oldest go: the server won't send them again
+            hidden = dict(sorted(hidden.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
+        self.kv_set("activity_hidden", hidden)
+        self.activity_delete(ids)
+
     def activity_newest(self):
+        """(id, sort) of the newest notification fetched — hidden ones count: the next
+        fetch goes on from there."""
         with self.lock:
             row = self.db.execute("SELECT id, sort FROM activity ORDER BY sort DESC LIMIT 1"
                                   ).fetchone()
-        return (row[0], row[1]) if row else (None, "")
+        best = (row[0], row[1]) if row else (None, "")
+        for nid, sort in (self.kv_get("activity_hidden", {}) or {}).items():
+            if sort > best[1]:
+                best = (nid, sort)
+        return best
 
     def activity_recent(self, limit):
         """Newest first: [{id, type, account, status, created_at, sort}]."""

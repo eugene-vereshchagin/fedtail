@@ -45,6 +45,11 @@ version, so don't edit them in place). The easiest theme changes a few lines:
     text = "#a8ff60"
 
 system.toml in builtin/ lists every key with a comment on what it does.
+
+A theme can bring its own fonts: put the files next to it and name them in
+[font] files = ["fonts/MyFont.ttf"], then family = "My Font". Fonts for every
+theme go to ~/.config/fedtail/fonts/; ui.font in config.toml picks one over
+the theme's.
 """
 
 
@@ -101,15 +106,39 @@ def load(name):
         if current in seen or len(chain) > 8:
             raise ThemeError(f"theme '{name}': inherit loop through '{current}'")
         seen.add(current)
-        data = _read(_find(current))
-        chain.append(data)
+        path = _find(current)
+        data = _read(path)
+        chain.append((path, data))
         current = data.get("inherit") or ""
     ref = reference()
     merged = copy.deepcopy(ref)
-    for data in reversed(chain):
+    files = []
+    for path, data in reversed(chain):
         merged = _merge(merged, data)
+        got = (data.get("font") or {}).get("files")
+        if isinstance(got, list):  # each theme's fonts lie next to its own file
+            files += [str(path.parent / f) for f in got if isinstance(f, str)]
+    warnings = validate(merged, ref)
     merged["id"] = name
-    return merged, validate(merged, ref)
+    merged["font"]["files"] = files
+    return merged, warnings
+
+
+def fonts_dir():
+    """Fonts of my own, used without installing them: ~/.config/fedtail/fonts/."""
+    return user_dir().parent / "fonts"
+
+
+FONT_EXT = {".ttf", ".otf", ".ttc"}
+
+
+def font_files(theme_files=()):
+    """The font files to load: the theme's own (those that exist), then the fonts folder."""
+    out = [f for f in theme_files if Path(f).is_file()]
+    d = fonts_dir()
+    if d.is_dir():
+        out += sorted(str(p) for p in d.rglob("*") if p.suffix.lower() in FONT_EXT)
+    return out
 
 
 def validate(theme, ref):
@@ -129,6 +158,9 @@ def validate(theme, ref):
             if section == "colors" or (section == "icon" and key != "style"):
                 if not isinstance(val, str) or not _COLOR.match(val.strip()):
                     errors.append(f"colors.{key} = {val!r}: use \"#rrggbb\" or \"auto\"")
+            elif isinstance(want, list):
+                if not isinstance(val, list) or not all(isinstance(x, str) for x in val):
+                    errors.append(f"{section}.{key} must be a list of text")
             elif isinstance(want, bool) or isinstance(val, bool):
                 if type(val) is not type(want):
                     errors.append(f"{section}.{key} must be true/false")
