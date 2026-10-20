@@ -528,8 +528,12 @@ class FeedView(QScrollArea):
             return
         # a window in the background isn't being read — unless the reader scrolls it
         if not self._window_active() and time.monotonic() - self._touched_at > READING_S:
+            from PySide6.QtWidgets import QApplication
+            log.debug("seen: not counted, the window is in the background (%s active)",
+                      type(QApplication.activeWindow()).__name__)
             return
         if self._target is not None and self._target[0] != "anchor":
+            log.debug("seen: not counted, on the way to %s", self._target[:2])
             return  # still on its way somewhere: what's on screen is not what's read
         # (an anchor only holds the post on top in place while pictures come in: the
         # reader sees exactly that, so it doesn't stop anything)
