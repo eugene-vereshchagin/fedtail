@@ -99,6 +99,9 @@ class ViewTest(unittest.TestCase):
         self.assertIsInstance(a, Activity)
         self.assertEqual((a.kind, a.sort, a.post.id), ("like", "2099|0001", "2"))
         self.assertEqual((b.kind, b.notice), ("notice", "domain_block bad.example"))
+        self.assertEqual((b.details.kind, b.details.target), ("severed", "bad.example"))
+        # an Activity goes back to the core as the entry it came from
+        self.assertEqual(self.v._in(a)["type"], "favourite")
 
     def test_the_model_goes_in_as_the_core_takes_it(self):
         bob = self.v.acc(BOB)

@@ -14,7 +14,7 @@ MOVED = ["frontends/cli.py", "frontends/tui/model.py", "frontends/tui/app.py",
          "frontends/web/server.py",
          # Qt, as it moves: the post card and what it opens
          "frontends/qt/card.py", "frontends/qt/viewer.py", "frontends/qt/player.py",
-         "frontends/qt/find.py", "frontends/qt/social.py"]
+         "frontends/qt/find.py", "frontends/qt/social.py", "frontends/qt/feed.py"]
 
 # what only a Mastodon status or account has; the model says it differently
 RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'

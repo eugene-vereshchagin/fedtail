@@ -470,7 +470,7 @@ class QtSmokeTest(unittest.TestCase):
         self.core.poll_once()
         self.pump(0.2)
         self.assertEqual(self.core.activity_unread(), 1)
-        groups = ActivityWidget.groups(self.core.activity_entries())
+        groups = ActivityWidget.groups(self.win.ctx.view.activity())
         self.assertEqual([(g["key"][0], len(g["entries"])) for g in groups],
                          [("reblog", 1), ("follow", 1), ("favourite", 2)])
         self.win.select_lane("activity")

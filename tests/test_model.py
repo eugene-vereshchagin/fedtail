@@ -271,6 +271,19 @@ class AdapterActivityTest(unittest.TestCase):
         self.assertEqual(warn.notice, "silence be nice")
         self.assertIsNone(warn.who)
 
+    def test_requests_and_warnings(self):
+        r = adapter.activity({"id": "p", "type": "pending.favourite", "account": BOB,
+                              "status": status("1", ME), "created_at": T})
+        self.assertEqual((r.kind, r.asks), ("request", "like"))
+        w = adapter.activity({"id": "w", "type": "moderation_warning", "created_at": T,
+                              "moderation_warning": {"action": "silence", "text": "x"}})
+        self.assertEqual((w.details.kind, w.details.action, w.details.text),
+                         ("warning", "silence", "x"))
+        sev = adapter.activity({"id": "s", "type": "severed_relationships", "created_at": T,
+                                "event": {"type": "account_suspension", "target_name": "t",
+                                          "followers_count": 2, "following_count": "3"}})
+        self.assertEqual((sev.details.lost, sev.details.reason), (5, "account_suspension"))
+
     def test_a_boosted_post_in_an_activity_is_the_post(self):
         boost = status("2", BOB) | {"reblog": status("1", ME)}
         a = adapter.activity({"id": "n", "type": "reblog", "account": BOB, "status": boost,

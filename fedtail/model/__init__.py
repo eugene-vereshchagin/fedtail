@@ -38,6 +38,7 @@ ACTIVITY_KINDS = (
     "update",          # a post I boosted or quoted was edited
     "post",            # somebody I "ring the bell" for posted
     "reaction",        # an emoji reaction to my post (Akkoma, Misskey)
+    "request",         # somebody asks me to let their reply / like / share through (GTS)
     "notice",          # the server tells me something (moderation, severed follows…)
     "other",
 )
@@ -280,6 +281,21 @@ class Share:
 
 
 @dataclass(frozen=True, slots=True)
+class Notice:
+    """What the server itself tells me, in an Activity of kind "notice":
+    "severed" — follows cut by a block (target: the server or account, lost: how many,
+    reason: domain_block, user_domain_block, account_suspension); "warning" — the
+    moderators about my account (action: none, disable, silence, suspend…, text);
+    "other" — anything else."""
+    kind: str = "other"
+    target: str = ""
+    lost: int = 0
+    reason: str = ""
+    action: str = ""
+    text: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class Activity:
     """Something that happened to me: a like, a follow, a mention… (a notification)."""
     ref: Ref
@@ -290,6 +306,8 @@ class Activity:
     post: Post | None = None
     emoji: str = ""                # for a reaction
     notice: str = ""               # for a notice: what the server says, as text
+    details: Notice | None = None  # for a notice: the parts of it
+    asks: str = ""                 # for a request: "reply", "like" or "share"
     group_key: str = ""            # the server's grouping key, when it groups them
 
     @property

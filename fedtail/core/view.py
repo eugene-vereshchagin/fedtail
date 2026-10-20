@@ -27,7 +27,7 @@ from collections import OrderedDict
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import fields, replace
 
-from ..model import Account, Post, Relationship, Share, ThreadItem, real
+from ..model import Account, Activity, Post, Relationship, Share, ThreadItem, real
 from ..protocols.mastodon import adapter
 from . import links
 
@@ -74,6 +74,7 @@ class View:
         self._lock = threading.Lock()
         self._media = None  # pictures' own workers, made when first needed
         self._raw_accounts = OrderedDict()  # (profile, id) -> the core's account dict
+        self._raw_activity = OrderedDict()  # (profile, id) -> the core's activity entry
 
     def __getattr__(self, name):
         if name in PASS:
@@ -97,6 +98,8 @@ class View:
             return self._raw(x)
         if isinstance(x, Account):
             return self._acc_raw(x)
+        if isinstance(x, Activity):
+            return self._raw_activity.get((x.ref.profile, x.id)) or {"id": x.id}
         if isinstance(x, Relationship):
             return _rel_raw(x)
         if isinstance(x, list):
@@ -161,6 +164,11 @@ class View:
         a = adapter.activity(raw, self._prof(acc if isinstance(acc, dict) else raw))
         if raw.get("sort"):
             a = replace(a, sort=raw["sort"])
+        key = (a.ref.profile, a.id)
+        self._raw_activity[key] = raw
+        self._raw_activity.move_to_end(key)
+        while len(self._raw_activity) > RAW_KEEP:
+            self._raw_activity.popitem(last=False)
         if isinstance(acc, dict) and acc.get("id"):
             self._remember(acc)
         return a

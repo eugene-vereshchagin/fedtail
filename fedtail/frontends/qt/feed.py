@@ -24,11 +24,10 @@ from PySide6.QtWidgets import (
 )
 
 from ... import diag
-from ...core.model import real, snippet
 from ...i18n import _
 from ...model import Relationship, Share
 from ...model import real as real_entry
-from ...model.text import snippet_html
+from ...model.text import snippet, snippet_html
 from ..richtext import plain_tip
 from .card import CardSpec, PostRow, SeparatorRow, make_spec
 from .card import _set_prop as _mark
@@ -1429,7 +1428,7 @@ class AccountWidget(_PagedTab):
         self.view.set_specs(specs, keep_position=True)
 
     def fetch(self, max_id):
-        return self.core.account_statuses(self.acc_id, max_id)
+        return self.core.account_posts(self.acc_id, max_id)
 
     def _page(self, page):
         if self._first_page is None:
@@ -1745,7 +1744,7 @@ class AccountWidget(_PagedTab):
                                   tip=_("copy_handle_tip")))
         buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.url)))
         lay.addLayout(buttons)
-        from ...core.model import note_text
+        from ...model.text import note_text
         note = note_text(rel.note).strip()
         if note and not self.mine:
             label = QLabel("📝 " + esc(note).replace("\n", "<br>"))
@@ -1758,7 +1757,7 @@ class AccountWidget(_PagedTab):
         """My private note on this person — only I see it, on my server."""
         from PySide6.QtWidgets import QInputDialog
 
-        from ...core.model import note_text
+        from ...model.text import note_text
         old = self.relation.note
         text, ok = QInputDialog.getMultiLineText(self, _("note_title", acct=self.acc.handle),
                                                  _("note_tip"), note_text(old))
@@ -2013,7 +2012,7 @@ class ActivityWidget(QWidget):
 
     def __init__(self, win):
         super().__init__()
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view
         self.view = None  # not a FeedView: Ctrl+F has nothing to do here
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -2055,14 +2054,14 @@ class ActivityWidget(QWidget):
 
     @staticmethod
     def groups(entries):
-        """Neighbouring entries of one kind about one post become one row."""
+        """Neighbouring Activity of one kind about one post become one row."""
         out = []
-        for e in entries:
-            key = (e["type"], (e.get("status") or {}).get("id"))
+        for a in entries:
+            key = (act_key(a), a.post.id if a.post else None)
             if out and out[-1]["key"] == key:
-                out[-1]["entries"].append(e)
+                out[-1]["entries"].append(a)
             else:
-                out.append({"key": key, "entries": [e]})
+                out.append({"key": key, "entries": [a]})
         return out
 
     def refresh(self):
@@ -2072,8 +2071,8 @@ class ActivityWidget(QWidget):
             item = self.lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        seen = self.core.activity_seen_mark()
-        entries = self.core.activity_entries()  # newest first
+        seen = self.core.activity_seen()
+        entries = self.core.activity()  # [Activity], newest first
         if not entries:
             self.lay.addWidget(QLabel(_("activity_none")))
         groups = self.groups(entries)
@@ -2083,7 +2082,7 @@ class ActivityWidget(QWidget):
             groups.reverse()
         first_new = None
         for g in groups:
-            unread = any(e["sort"] > seen for e in g["entries"])
+            unread = any(a.sort > seen for a in g["entries"])
             row = self._row(g, unread)
             self.lay.addWidget(row)
             if unread and first_new is None:
@@ -2116,39 +2115,38 @@ class ActivityWidget(QWidget):
 
     def _row(self, group, unread):
         es = group["entries"]
-        kind = es[0]["type"]
-        st = es[0].get("status")
+        first = es[0]
+        kind = act_key(first)  # the words for it (act_favourite…), and the card's kind
         card = QFrame()
         card.setObjectName("card")
         card.setProperty("kind", kind)  # what it is about, for tests and stylesheets
         card.setProperty("unread", "true" if unread else "false")
-        card.newest_sort = max(e["sort"] for e in es)  # for what's seen (seen_upto)
+        card.newest_sort = max(a.sort for a in es)  # for what's seen (seen_upto)
         v = QVBoxLayout(card)
         v.setContentsMargins(16, 10, 16, 10)
         v.setSpacing(4)
         names = list(dict.fromkeys(
-            f'<a href="fedtail:account/{esc(e["account"]["id"])}" style="text-decoration:none;'
-            f'color:{self.win.theme.c["text"].name()};"><b>{display_name(e["account"])}</b></a>'
-            for e in es))
+            f'<a href="fedtail:account/{esc(a.who.id)}" style="text-decoration:none;'
+            f'color:{self.win.theme.c["text"].name()};"><b>{display_name(a.who)}</b></a>'
+            for a in es if a.who is not None))
         more = len(names) - self.MAX_NAMES
         who = ", ".join(names[:self.MAX_NAMES]) + \
             (" " + _("act_more", n=more) if more > 0 else "")
         # when: the newest of the group, and since when if they came over a while
         theme = self.win.theme
-        times = sorted((e.get("created_at") or "" for e in es), reverse=True)
-        when = theme.date(times[0]) if times and times[0] else ""
-        if len(times) > 1 and times[-1] and theme.date(times[-1]) != when:
+        times = sorted((a.created for a in es if a.created), reverse=True)
+        when = theme.date(times[0]) if times else ""
+        if len(times) > 1 and theme.date(times[-1]) != when:
             when = f"{theme.date(times[-1])} … {when}"
-        notice = es[0]["account"].get("_notice") if kind in (
-            "severed_relationships", "moderation_warning") else None
-        if notice is not None:  # from the server itself: what happened, not who did it
-            who = "<b>⚠ " + esc(_notice_text(kind, notice)) + "</b>"
+        if first.kind == "notice" and first.details is not None:
+            # from the server itself: what happened, not who did it
+            who = "<b>⚠ " + esc(_notice_text(first.details)) + "</b>"
         top = QLabel(f'{who} <span style="color:{theme.c["muted"].name()};">— '
                      f'{_("act_" + kind) if kind in ACT_KINDS else kind}'
                      + (f' · {esc(when)}' if when else "") + '</span>')
         if len(es) > 1:
-            top.setToolTip("\n".join(f'{theme.date(e.get("created_at") or "")}  '
-                                      f'{e["account"].get("acct", "")}' for e in es[:30]))
+            top.setToolTip("\n".join(f'{theme.date(a.created) if a.created else ""}  '
+                                      f'{a.who.handle if a.who else ""}' for a in es[:30]))
         top.setTextFormat(Qt.TextFormat.RichText)
         top.setWordWrap(True)
         top.linkActivated.connect(self.win.on_link)
@@ -2159,27 +2157,27 @@ class ActivityWidget(QWidget):
             x.setObjectName("tool")
             x.setFixedWidth(28)
             x.setToolTip(_("activity_dismiss_tip"))
-            x.clicked.connect(lambda _c=False, ids=[e["id"] for e in es]: self._dismiss(ids))
+            x.clicked.connect(lambda _c=False, ids=[a.id for a in es]: self._dismiss(ids))
             line.addWidget(x, 0, Qt.AlignmentFlag.AlignTop)
             v.addLayout(line)
         else:
             v.addWidget(top)
-        if kind.startswith("pending."):
+        if first.kind == "request":
             # waiting for my yes (GoToSocial): answer right here, one by one
-            for e in es:
+            for a in es:
                 line = QHBoxLayout()
                 line.addStretch(1)
                 for approve in (True, False):
                     b = _button(_("ok_interaction") if approve else _("no_interaction"),
-                                lambda _c=False, en=e, a=approve: self._answer(en, a),
+                                lambda _c=False, en=a, ok=approve: self._answer(en, ok),
                                 name="primary" if approve else "tool")
                     b.setToolTip(_("approve_tip") if approve else _("reject_tip"))
                     line.addWidget(b)
                 v.addLayout(line)
-        if st:
-            post = QLabel(f'<a href="fedtail:thread/{esc(real(st)["id"])}" '
+        if first.post is not None:
+            post = QLabel(f'<a href="fedtail:thread/{esc(first.post.id)}" '
                           f'style="text-decoration:none;color:{self.win.theme.c["muted"].name()};">'
-                          f'«{esc(snippet(st, 160))}»</a>')
+                          f'«{esc(snippet(first.post, 160))}»</a>')
             post.setTextFormat(Qt.TextFormat.RichText)
             post.setWordWrap(True)
             post.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -2259,23 +2257,38 @@ class ActivityWidget(QWidget):
         pass
 
 
-ACT_KINDS = ("favourite", "reblog", "follow", "poll", "update", "status",
-             "pending.reply", "pending.favourite", "pending.reblog",
-             "severed_relationships", "moderation_warning")
+# the i18n words a row of activity can say (act_<key>); its card's "kind" is the key
+ACT_KINDS = tuple(k[4:] for k in (
+    "act_favourite", "act_reblog", "act_follow", "act_poll", "act_update", "act_status",
+    "act_pending.reply", "act_pending.favourite", "act_pending.reblog",
+    "act_severed_relationships", "act_moderation_warning"))
 
 
-def _notice_text(kind, notice):
-    """What the server's own notice says: follows cut by a block, a moderators' warning."""
-    n = notice or {}
-    if kind == "severed_relationships":
-        target = n.get("target_name") or "?"
-        lost = int(n.get("followers_count") or 0) + int(n.get("following_count") or 0)
-        return _("act_severed", target=target, n=lost,
-                 why=_("severed_" + str(n.get("type") or "domain_block")))
-    if kind == "moderation_warning":
-        return _("act_warning", action=_("warn_" + str(n.get("action") or "none")),
-                 text=str(n.get("text") or "")[:300])
+def _notice_text(n):
+    """What the server's own notice (a Notice) says: follows cut by a block, a
+    moderators' warning."""
+    if n.kind == "severed":
+        return _("act_severed", target=n.target or "?", n=n.lost,
+                 why=_("severed_" + (n.reason or "domain_block")))
+    if n.kind == "warning":
+        return _("act_warning", action=_("warn_" + (n.action or "none")), text=n.text[:300])
     return ""
+
+
+# fedtail.model's kinds → the words for them in i18n (act_<key>) and a card's "kind"
+_ACT_KEY = {"like": ACT_KINDS[0], "share": ACT_KINDS[1], "follow": ACT_KINDS[2],
+            "poll": ACT_KINDS[3], "update": ACT_KINDS[4], "post": ACT_KINDS[5]}
+_ASKS_KEY = {"reply": ACT_KINDS[6], "like": ACT_KINDS[7], "share": ACT_KINDS[8]}
+_NOTICE_KEY = {"severed": ACT_KINDS[9], "warning": ACT_KINDS[10]}
+
+
+def act_key(a):
+    """An Activity's key among ACT_KINDS (or its model kind, for the others)."""
+    if a.kind == "request":
+        return _ASKS_KEY.get(a.asks, "request")
+    if a.kind == "notice":
+        return _NOTICE_KEY.get(a.details.kind if a.details else "", "notice")
+    return _ACT_KEY.get(a.kind, a.kind)
 
 
 class AccountRow(QFrame):

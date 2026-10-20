@@ -20,6 +20,7 @@ from ...model import (
     Media,
     Mention,
     Mine,
+    Notice,
     Policy,
     Poll,
     PollOption,
@@ -46,6 +47,8 @@ ACTIVITY_KIND = {
     "update": "update", "quote": "quote", "quoted_update": "update",
     "pleroma:emoji_reaction": "reaction", "reaction": "reaction",
     "admin.sign_up": "notice", "admin.report": "notice",
+    # GoToSocial's interaction requests, as fedtail keeps them
+    "pending.reply": "request", "pending.favourite": "request", "pending.reblog": "request",
     "severed_relationships": "notice", "moderation_warning": "notice",
 }
 
@@ -332,6 +335,21 @@ def _notice(raw):
     return ""
 
 
+ASKS = {"pending.reply": "reply", "pending.favourite": "like", "pending.reblog": "share"}
+
+
+def _details(raw):
+    w = raw.get("moderation_warning")
+    if isinstance(w, dict):
+        return Notice("warning", action=_str(w.get("action")) or "none", text=_str(w.get("text")))
+    ev = raw.get("event") or raw.get("relationship_severance_event")
+    if isinstance(ev, dict):
+        return Notice("severed", target=_str(ev.get("target_name")),
+                      lost=_int(ev.get("followers_count")) + _int(ev.get("following_count")),
+                      reason=_str(ev.get("type")) or "domain_block")
+    return None
+
+
 def activity(raw, profile=""):
     """A notification."""
     raw = _dict(raw)
@@ -349,6 +367,8 @@ def activity(raw, profile=""):
         post=p,
         emoji=_str(raw.get("emoji")),
         notice=_notice(raw),
+        details=_details(raw),
+        asks=ASKS.get(raw.get("type"), ""),
         group_key=_str(raw.get("group_key")),
     )
 
