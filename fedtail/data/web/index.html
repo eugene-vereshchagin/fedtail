@@ -2,42 +2,66 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
 <title>fedtail</title>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
 <div id="app">
-  <nav id="lanes" aria-label="lanes"></nav>
+  <nav id="nav">
+    <div id="who"></div>
+    <button id="write" type="button" class="primary wide"></button>
+    <div id="lanes"></div>
+  </nav>
+  <div id="scrim" hidden></div>
   <main id="main">
     <header id="bar">
-      <button id="menu" class="icon" aria-label="lanes" title="lanes">☰</button>
+      <button id="menu" type="button" class="icon" aria-label="lanes">☰</button>
       <h1 id="title">fedtail</h1>
       <span id="count"></span>
-      <button id="allread" class="tool"></button>
+      <button id="refresh" type="button" class="tool" aria-label="refresh">⟳</button>
+      <button id="allread" type="button" class="tool"></button>
+      <button id="write2" type="button" class="icon" aria-label="write">✎</button>
     </header>
     <div id="posts" tabindex="0"></div>
+    <form id="cmdline" autocomplete="off">
+      <input id="cmd" type="text" spellcheck="false" enterkeyhint="send">
+    </form>
   </main>
   <aside id="side" hidden>
-    <header class="sidebar-head">
-      <button id="back" class="tool"></button>
+    <header class="side-head">
+      <button id="back" type="button" class="tool"></button>
       <h2 id="side-title"></h2>
     </header>
     <div id="side-body"></div>
   </aside>
 </div>
-<form id="compose" autocomplete="off">
-  <div id="reply-line" hidden><span id="reply-to"></span> <button type="button" id="reply-cancel" class="link"></button></div>
-  <input id="cw" type="text" hidden>
-  <div class="row">
-    <textarea id="text" rows="2"></textarea>
-    <div class="col">
+
+<dialog id="compose">
+  <form id="compose-form" method="dialog" autocomplete="off">
+    <header class="dlg-head">
+      <h2 id="compose-title"></h2>
+      <button id="compose-close" type="button" class="tool" aria-label="close">✕</button>
+    </header>
+    <div id="reply-line" hidden></div>
+    <input id="cw" type="text" hidden>
+    <textarea id="text" rows="6"></textarea>
+    <div class="dlg-foot">
+      <button id="cw-toggle" type="button" class="tool"></button>
       <select id="vis"></select>
+      <input id="lang" type="text" maxlength="8" size="4">
+      <span id="chars"></span>
       <button id="send" type="submit" class="primary"></button>
     </div>
-  </div>
-</form>
+  </form>
+</dialog>
+
+<div id="viewer" hidden>
+  <img id="viewer-img" alt="">
+  <div id="viewer-bar"><span id="viewer-alt"></span> <a id="viewer-open" target="_blank" rel="noopener noreferrer"></a></div>
+</div>
 <div id="toast" role="status" hidden></div>
 <script src="/app.js"></script>
 </body>

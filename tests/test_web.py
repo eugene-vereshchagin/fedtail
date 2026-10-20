@@ -153,25 +153,30 @@ class WebTest(TmpDir):
         _c, _h, body = self.req("/api/lane?name=comments")
         data = json.loads(body)
         post = data["posts"][0]
-        self.assertEqual(post["account"]["acct"], "bob@social.example")
+        self.assertEqual(post["account"]["handle"], "bob@social.example")
         self.assertNotIn("<script", post["html"])
         self.assertNotIn("javascript:", post["html"])
         self.assertTrue(post["unread"])
-        self.assertEqual(post["context"]["acct"], "mira")  # what it answers
+        self.assertEqual(post["context"]["handle"], "mira")  # what it answers
+        self.assertIn(data["posts"][0]["visibility"], ("public", "unlisted", "followers",
+                                                       "direct"))  # our words, not the API's
         self.assertEqual(self.req("/api/lane?name=nosuch")[0], 400)
 
     def test_read_act_post_command(self):
         code, _h, _b = self.req("/api/read", {"ids": ["002"]})
         self.assertEqual(code, 200)
         self.assertEqual(self.core.unread_count("replies"), 0)
-        _c, _h, body = self.req("/api/act", {"action": "fav", "id": "002"})
-        self.assertTrue(json.loads(body)["favourited"])
+        _c, _h, body = self.req("/api/act", {"action": "like", "id": "002"})
+        self.assertTrue(json.loads(body)["mine"]["liked"])
+        self.assertEqual(self.req("/api/act", {"action": "fav", "id": "002"})[0], 400)
         before = len(self.w.posted)
         _c, _h, body = self.req("/api/post", {"text": "an answer", "reply_to": "002"})
         self.assertEqual(len(self.w.posted), before + 1)
         self.assertEqual(self.w.posted[-1][2], "002")
         self.assertEqual(self.req("/api/post", {"text": "  "})[0], 400)
         self.assertEqual(self.req("/api/post", {"text": "x", "visibility": "everyone"})[0], 400)
+        self.req("/api/post", {"text": "to friends", "visibility": "followers"})
+        self.assertEqual(self.w.posted[-1][1], "private")  # the API's word goes out
         alias = self.core.short_ids([self.core.store.get_status("002")])["002"]
         _c, _h, body = self.req("/api/command", {"line": f"#{alias}"})
         self.assertEqual(json.loads(body)["open"], {"thread": "002"})
@@ -190,6 +195,44 @@ class WebTest(TmpDir):
         self.assertTrue(json.loads(body)["ok"])
         self.assertNotIn("001", self.w.statuses)
 
+    def test_poll_vote_older_and_emojis(self):
+        st = status("003", BOB, minute=3, vis="public", text="pick :blob: <b>one</b>")
+        st["poll"] = {"id": "P1", "options": [{"title": "a", "votes_count": 1},
+                                              {"title": "b", "votes_count": 3}],
+                      "votes_count": 4, "multiple": False, "expired": False, "voted": False,
+                      "own_votes": [], "expires_at": None, "emojis": []}
+        st["emojis"] = [{"shortcode": "blob", "url": "https://x.example/b.png",
+                         "static_url": "https://x.example/b.png"},
+                        {"shortcode": "evil", "url": "javascript:alert(1)"}]
+        self.w.add(st, home=True)
+        self.core.poll_once()
+        _c, _h, body = self.req("/api/lane?name=home")
+        post = next(p for p in json.loads(body)["posts"] if p["sid"] == "003")
+        self.assertIn('<img class="emoji" src="https://x.example/b.png" alt=":blob:"',
+                      post["html"])
+        self.assertEqual([o["share"] for o in post["poll"]["options"]], [25, 75])
+        self.assertIn("4", post["poll"]["summary"])
+        code, _h, body = self.req("/api/vote", {"id": "003", "choices": [1]})
+        self.assertEqual(code, 200, body)
+        self.assertEqual(self.req("/api/vote", {"id": "../x", "choices": [1]})[0], 400)
+        code, _h, body = self.req("/api/older", {"name": "home"})
+        self.assertEqual(code, 200, body)
+        self.assertIn("n", json.loads(body))
+        self.assertEqual(self.req("/api/older", {"name": "nosuch"})[0], 400)
+
+    def test_emojis_stay_out_of_tags(self):
+        from fedtail.model import Emoji
+        html = '<a href="https://h.example/:blob:" title=":blob:">:blob:</a>'
+        got = web.with_emojis(html, (Emoji("blob", "https://x.example/b.png"),))
+        self.assertTrue(got.startswith('<a href="https://h.example/:blob:" title=":blob:">'))
+        self.assertIn('<img class="emoji"', got)
+        self.assertEqual(web.with_emojis(":x:", (Emoji("x", "http://plain.example"),)), ":x:")
+
+    def test_page_words_exist_in_both_languages(self):
+        for lang in ("ru", "en"):
+            missing = [k for k in web.WORDS if k not in i18n._STRINGS[lang]]
+            self.assertEqual(missing, [], lang)
+
     def test_thread_and_account(self):
         _c, _h, body = self.req("/api/thread?id=002")
         nodes = json.loads(body)["posts"]
@@ -197,7 +240,9 @@ class WebTest(TmpDir):
         self.assertEqual(nodes[1]["depth"], 1)
         code, _h, body = self.req("/api/account?id=B")
         self.assertEqual(code, 200)
-        self.assertEqual(json.loads(body)["account"]["acct"], "bob@social.example")
+        got = json.loads(body)
+        self.assertEqual(got["account"]["handle"], "bob@social.example")
+        self.assertIn("following", got["relation"])
 
     def test_wait_answers_on_change(self):
         _c, _h, body = self.req("/api/wait?v=-1")

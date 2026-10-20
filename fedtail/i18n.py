@@ -93,6 +93,9 @@ _STRINGS = {
         "web_sensitive": "Чувствительное — нажми, чтобы показать",
         "web_parent_gone": "ответ на удалённое или скрытое",
         "web_mark_read": "Всё прочитано",
+        "web_new_post": "Новый пост", "web_original": "Оригинал", "web_close": "Закрыть",
+        "web_lanes": "Ленты", "web_edited": "изменён",
+        "web_requested": "Заявка отправлена", "lang_label": "Язык (ru, en…)",
         "web_open": "fedtail в браузере (ссылка одноразовая, 15 минут): {url}",
         "web_lan": "Открыто для сети ({host}) без шифрования: вход и всё, что ты делаешь, "
         "видно по дороге — только для своей сети; снаружи — через VPN или прокси с TLS.",
@@ -807,6 +810,9 @@ _STRINGS = {
         "web_sensitive": "Sensitive — click to show",
         "web_parent_gone": "a reply to something deleted or hidden",
         "web_mark_read": "All read",
+        "web_new_post": "New post", "web_original": "Original", "web_close": "Close",
+        "web_lanes": "Lanes", "web_edited": "edited",
+        "web_requested": "Request sent", "lang_label": "Language (ru, en…)",
         "web_open": "fedtail in the browser (a one-time link, 15 minutes): {url}",
         "web_lan": "Open to the network ({host}) without encryption: the login and all you do "
         "can be seen on the way — your own network only; from outside, a VPN or a TLS proxy.",

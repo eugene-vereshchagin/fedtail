@@ -16,15 +16,18 @@ import re
 import secrets
 import threading
 import time
+from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, urlsplit
 
 from ... import __version__
-from ...core import config, links
-from ...core.model import real, snippet
+from ...core import config
+from ...core.view import View
 from ...i18n import _
+from ...model import Account, Share, real
+from ...model.text import reply_mentions, snippet
 from ..richtext import clean
 from ..tui.model import Commands
 
@@ -76,18 +79,46 @@ def static_text(name):
 
 
 # ---- what the page gets -------------------------------------------------------------
+def _https(url):
+    return url if isinstance(url, str) and url.startswith("https://") else ""
+
+
+def _iso(t):
+    return t.isoformat().replace("+00:00", "Z") if t else ""
+
+
 def account_json(acc):
-    acc = acc or {}
-    return {"id": acc.get("id"), "acct": acc.get("acct", ""),
-            "name": acc.get("display_name") or acc.get("username") or "",
-            "avatar": _https(acc.get("avatar_static") or acc.get("avatar")),
-            "url": _https(acc.get("url")), "bot": bool(acc.get("bot"))}
+    if acc is None:
+        return {"id": None, "handle": "", "name": "", "avatar": "", "url": "", "bot": False}
+    return {"id": acc.id, "handle": acc.handle, "name": acc.name or acc.username,
+            "avatar": _https(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
 
 
 def web_clean(html):
     """Server HTML, cleaned (richtext.clean) — minus the inline styles meant for Qt,
     which the page's CSP refuses anyway."""
     return clean(html).replace(' style="text-decoration:none;"', "")
+
+
+_SHORTCODE = re.compile(r":([A-Za-z0-9_]{1,64}):")
+
+
+def with_emojis(html, emojis):
+    """:shortcode: in cleaned HTML → the emoji's picture (https only; the code and the
+    address are escaped, so nothing of the post becomes markup)."""
+    if not emojis or ":" not in html:
+        return html
+    pics = {e.shortcode: _https(e.static_url or e.url) for e in emojis}
+
+    def one(m):
+        url = pics.get(m.group(1))
+        if not url:
+            return m.group(0)
+        code = escape(m.group(0))
+        return f'<img class="emoji" src="{escape(url)}" alt="{code}" title="{code}">'
+    # outside tags only: a shortcode inside an attribute stays text
+    return re.sub(r"(<[^>]*>)|([^<]+)",
+                  lambda m: m.group(1) or _SHORTCODE.sub(one, m.group(2)), html)
 
 
 def _api_error(e):
@@ -97,60 +128,101 @@ def _api_error(e):
     return str(e)[:300] if isinstance(e, ApiError) else e.__class__.__name__
 
 
-def _https(url):
-    return url if isinstance(url, str) and url.startswith("https://") else ""
+def media_json(m):
+    return {"kind": m.kind, "preview": _https(m.preview), "url": _https(m.url or m.remote_url),
+            "alt": m.alt, "w": m.width, "h": m.height}
 
 
-def post_json(core, wrapper, alias=None, unread=False, parent=None, number=None, depth=None,
+def poll_json(poll):
+    if poll is None:
+        return None
+    total = poll.votes or sum(o.votes or 0 for o in poll.options)
+    return {"id": poll.id if hasattr(poll, "id") else poll.ref.id,
+            "options": [{"title": o.title, "votes": o.votes,
+                         "share": round(100 * (o.votes or 0) / total) if total else 0}
+                        for o in poll.options],
+            "multiple": poll.multiple, "expired": poll.expired, "voted": poll.voted,
+            "mine": list(poll.my_votes),
+            "summary": " · ".join(x for x in (
+                _("poll_votes", n=poll.votes),
+                _("poll_closed") if poll.expired else
+                (_("poll_until", when=poll.expires.astimezone().strftime("%d.%m %H:%M"))
+                 if poll.expires else ""),
+                _("poll_multiple") if poll.multiple and not poll.expired else "") if x)}
+
+
+def card_json(card):
+    if card is None or not _https(card.url):
+        return None
+    return {"url": card.url, "title": card.title, "description": card.description,
+            "image": _https(card.image), "provider": card.provider}
+
+
+def quote_json(view, quote):
+    if quote is None:
+        return None
+    if quote.post is None or quote.state != "accepted":
+        key = "quote_" + quote.state if quote.state in QUOTE_STATES else "quote_unavailable"
+        return {"id": quote.id, "note": _(key)}
+    q = quote.post
+    return {"id": q.id, "account": account_json(q.author), "text": snippet(q, 300),
+            "created": _iso(q.created), "media": len(q.media)}
+
+
+QUOTE_STATES = {"pending", "rejected", "revoked", "deleted", "unauthorized",
+                "blocked_account", "blocked_domain", "muted_account"}
+
+
+def post_json(view, entry, alias=None, unread=False, parent=None, number=None, depth=None,
               item_id=None):
-    st = real(wrapper)
-    html = st.get("content") or ""
-    if core.cfg["ui"]["links_in_app"]:
-        html = links.in_app(html, st)
+    """A lane entry (Post or Share) as the page draws it."""
+    p = real(entry)
+    html = view.in_app(p) if view.cfg["ui"]["links_in_app"] else p.text
+    me = view.me
     out = {
-        "id": wrapper["id"], "item": item_id or wrapper["id"], "sid": st["id"],
-        "alias": alias, "account": account_json(st.get("account")),
-        "created_at": st.get("created_at", ""), "visibility": st.get("visibility", "public"),
-        "spoiler": st.get("spoiler_text") or "", "html": web_clean(html),
-        "url": _https(st.get("url") or st.get("uri")),
-        "media": [{"type": m.get("type"), "preview": _https(m.get("preview_url")),
-                   "url": _https(m.get("url") or m.get("remote_url")),
-                   "desc": m.get("description") or ""}
-                  for m in st.get("media_attachments") or []],
-        "replies": st.get("replies_count") or 0, "boosts": st.get("reblogs_count") or 0,
-        "favs": st.get("favourites_count") or 0, "favourited": bool(st.get("favourited")),
-        "reblogged": bool(st.get("reblogged")), "bookmarked": bool(st.get("bookmarked")),
-        "sensitive": bool(st.get("sensitive")), "poll": bool(st.get("poll")),
-        "unread": bool(unread), "mine": bool(core.me and st["account"]["id"] == core.me["id"]),
-        "reply_to": st.get("in_reply_to_id"),
+        "id": entry.id, "item": item_id or entry.id, "sid": p.id, "alias": alias,
+        "account": account_json(p.author), "created": _iso(p.created),
+        "edited": p.edited is not None, "visibility": p.visibility,
+        "warning": p.warning, "sensitive": p.sensitive,
+        "html": with_emojis(web_clean(html), p.emojis),
+        "url": _https(p.url or p.uri), "media": [media_json(m) for m in p.media],
+        "counts": {"replies": p.counts.replies, "shares": p.counts.shares,
+                   "likes": p.counts.likes},
+        "mine": {"liked": p.mine.liked, "shared": p.mine.shared,
+                 "bookmarked": p.mine.bookmarked},
+        "poll": poll_json(p.poll), "card": card_json(p.card), "quote": quote_json(view, p.quote),
+        "unread": bool(unread), "own": bool(me and p.author.id == me.id),
+        "reply_to": p.reply_to, "lang": p.lang,
+        "reply_prefix": reply_mentions(p, me.handle if me else ""),
     }
-    if wrapper.get("reblog"):
-        out["boosted_by"] = account_json(wrapper.get("account"))
+    if isinstance(entry, Share):
+        out["shared_by"] = account_json(entry.by)
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
-    if st.get("in_reply_to_id") and number is None:
-        if isinstance(parent, dict):
-            out["context"] = {"acct": real(parent)["account"]["acct"],
-                              "text": snippet(parent, 140), "id": real(parent)["id"]}
-        elif parent == "missing":
+    if p.reply_to and number is None:
+        if parent == "missing":
             out["context"] = {"missing": True}
+        elif parent is not None:
+            out["context"] = {"handle": parent.author.handle, "text": snippet(parent, 140),
+                              "id": parent.id}
     return out
 
 
 class Web:
-    """The state behind the handler: the core, the key, a version for long polls."""
+    """The state behind the handler: the core (as a View), the key, a version for long
+    polls."""
 
     def __init__(self, core, key):
-        self.core = core
+        self.core = core if isinstance(core, View) else View(core)
         self.key = key
-        self.cmds = Commands(core)
+        self.cmds = Commands(self.core)
         self.version = 0
         self.changed = threading.Condition()
         self.links = {}  # one-time login token -> good until (time.monotonic)
         self._links_lock = threading.Lock()
         for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
                       "lists_changed"):
-            core.events.on(event, lambda _n, _p: self.bump())
+            self.core.on(event, lambda _n, _p: self.bump())
 
     def login_link(self, base):
         """A link that logs a browser in once, within LINK_SECONDS: what the history,
@@ -178,11 +250,22 @@ class Web:
             self.changed.wait_for(lambda: self.version != since, timeout)
             return self.version
 
+    def _posts(self, entries, parents=True, items=None):
+        core = self.core
+        es = [e for e in entries]
+        unread = core.unread(es)
+        short = core.short_ids(es)
+        par = core.parents(es) if parents else {}
+        return [post_json(core, e, short.get(real(e).id), e.id in unread, par.get(e.id),
+                          item_id=items[i] if items else None)
+                for i, e in enumerate(es)]
+
     # ---- API ---------------------------------------------------------------------
     def me(self):
         c = self.core.cfg
-        return {"acct": (self.core.me or {}).get("acct"), "version": __version__,
-                "server": (self.core.auth or {}).get("server"),
+        me = self.core.me
+        return {"me": account_json(me), "handle": me.handle if me else "",
+                "version": __version__, "server": (self.core.auth or {}).get("server"),
                 "mark_read": c["read"]["mark_read"], "order": c["feed"]["order"],
                 "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
                 "visibility": self.core.default_visibility(),
@@ -202,26 +285,31 @@ class Web:
             x["start"] = x["name"] == first
         return out
 
-    def lane(self, name):
-        core = self.core
+    def _lane_name(self, name):
         from ...core.lanes import canonical
-        name = canonical(name)  # an old name ("comments") still finds its lane
-        if name not in core.lane_by_name:
+        name = canonical(str(name or ""))  # an old name ("comments") still finds its lane
+        if name not in self.core.lane_by_name:
             raise KeyError(name)
-        entries = core.lane_entries(name)  # read only: activate() remembers what's open
-        unread = core.unread_ids(entries)
-        short = core.short_ids([st for _i, st in entries])
-        posts = [post_json(core, st, short.get(real(st)["id"]), st["id"] in unread,
-                           core.parent_of(st), item_id=item) for item, st in entries]
+        return name
+
+    def lane(self, name):
+        name = self._lane_name(name)
+        core = self.core
+        entries = core.entries(name)  # read only: activate() remembers what's open
+        lane = core.lane_by_name[name]
         return {"name": name, "title": core.lane_title(name) or _("lane_" + name),
-                "posts": posts}
+                "posts": self._posts([e for _i, e in entries],
+                                     items=[i for i, _e in entries]),
+                "older": bool(lane.source) and not lane.lazy}
+
+    def older(self, name):
+        """Older posts of a lane from the server (the "More" at its end)."""
+        name = self._lane_name(name)
+        return {"n": self.core.load_older(name).result() or 0}
 
     def activate(self, name):
         """The lane on screen (for notifications and the next start): a POST."""
-        from ...core.lanes import canonical
-        name = canonical(str(name or ""))
-        if name not in self.core.lane_by_name:
-            raise KeyError(name)
+        name = self._lane_name(name)
         self.core.set_active_lane(name)
         self.core.set_state("lane", name)
         return {"ok": True}
@@ -229,68 +317,82 @@ class Web:
     def thread(self, sid):
         core = self.core
         sid = one_id(sid)
-        nodes = core.thread(sid).result()
-        short = core.short_ids([n.status for n in nodes])
-        unread = core.unread_ids([(None, n.status) for n in nodes])
+        items = core.thread(sid).result()
+        posts = [n.post for n in items]
+        short = core.short_ids(posts)
+        unread = core.unread(posts)
         return {"focus": sid,
-                "posts": [post_json(core, n.status, short.get(real(n.status)["id"]),
-                                    n.status["id"] in unread, number=n.number, depth=n.depth)
-                          for n in nodes]}
+                "posts": [post_json(core, n.post, short.get(n.post.id), n.post.id in unread,
+                                    number=n.number, depth=n.depth) for n in items]}
 
     def account(self, acc_id):
         core = self.core
         acc_id = one_id(acc_id)
         acc = core.account(acc_id).result()
+        me = core.me
         try:
-            rel = core.relationship(acc_id).result() if acc_id != (core.me or {}).get("id") \
-                else {}
+            rel = core.relationship(acc_id).result() if not me or acc_id != me.id else None
         except Exception:  # noqa: BLE001 — the profile shows without it
-            rel = {}
-        page = core.account_statuses(acc_id).result()
-        short = core.short_ids(page)
+            rel = None
+        page = core.account_posts(acc_id).result()
         info = account_json(acc)
-        info.update(note=web_clean(acc.get("note") or ""), posts=acc.get("statuses_count"),
-                    followers=acc.get("followers_count"), following=acc.get("following_count"),
-                    fields=[{"name": f.get("name", ""), "value": web_clean(f.get("value", ""))}
-                            for f in acc.get("fields") or []])
+        info.update(note=with_emojis(web_clean(acc.note), acc.emojis) if acc else "",
+                    header=_https(acc.header_static) if acc else "",
+                    counts=" · ".join((_("posts_n", n=acc.posts),
+                                       _("followers_n", n=acc.followers),
+                                       _("following_n", n=acc.following))) if acc else "",
+                    fields=[{"name": f.name, "value": web_clean(f.value),
+                             "verified": f.verified is not None}
+                            for f in (acc.fields if acc else ())],
+                    own=bool(me and acc and acc.id == me.id))
         return {"account": info,
-                "relation": {k: bool(rel.get(k)) for k in ("following", "followed_by",
-                                                           "requested")},
-                "posts": [post_json(core, st, short.get(real(st)["id"]),
-                                    parent=core.parent_of(st)) for st in page]}
+                "relation": {"following": bool(rel and rel.following),
+                             "followed_by": bool(rel and rel.followed_by),
+                             "requested": bool(rel and rel.requested)},
+                "posts": self._posts(page)}
+
+    def _post_by_id(self, sid):
+        p = self.core.by_id(one_id(sid))
+        if p is None:
+            raise KeyError(sid)
+        return p
 
     def act(self, action, sid):
         core = self.core
-        st = core.store.get_status(sid)
-        if st is None:
-            raise KeyError(sid)
-        if action == "fav":
-            got = core.favourite(st).result()
-        elif action == "boost":
-            got = core.boost(st).result()
-        elif action == "bookmark":
-            got = core.bookmark(st).result()
-        else:
+        p = self._post_by_id(sid)
+        fn = {"like": core.like, "share": core.share, "bookmark": core.bookmark}.get(action)
+        if fn is None:
             raise ValueError(action)
-        got = got or core.store.get_status(sid) or st
-        return post_json(core, got, core.short_ids([got]).get(real(got)["id"]))
+        got = fn(p).result() or core.by_id(p.id) or p
+        return post_json(core, got, core.short_ids([got]).get(got.id))
+
+    def vote(self, sid, choices):
+        core = self.core
+        p = self._post_by_id(sid)
+        choices = [int(c) for c in choices or ()][:50]
+        got = core.vote(p, choices).result() or p
+        return post_json(core, got, core.short_ids([got]).get(got.id))
 
     def follow(self, acc_id, on):
-        self.core.follow(one_id(acc_id), bool(on)).result()
-        return {"following": bool(on)}
+        rel = self.core.follow(one_id(acc_id), bool(on)).result()
+        return {"following": bool(rel.following or rel.requested) if rel else bool(on),
+                "requested": bool(rel and rel.requested)}
 
     def post(self, body):
         core = self.core
         text = (body.get("text") or "").strip()
         if not text:
             raise ValueError("empty")
-        parent = core.store.get_status(body["reply_to"]) if body.get("reply_to") else None
+        parent = self._post_by_id(body["reply_to"]) if body.get("reply_to") else None
         vis = body.get("visibility") or core.reply_visibility(parent)
-        if vis not in ("public", "unlisted", "private", "direct"):
+        if vis == "private":  # the API's word, from an older page
+            vis = "followers"
+        if vis not in ("public", "unlisted", "followers", "direct"):
             raise ValueError(vis)
-        st = core.post(text, vis, real(parent)["id"] if parent else None,
-                       (body.get("cw") or "").strip()).result()
-        return {"id": st.get("id"), "url": st.get("url")}
+        lang = (body.get("lang") or "").strip() or None
+        p = core.post(text, vis, parent, (body.get("cw") or "").strip(),
+                      language=lang).result()
+        return {"id": p.id if p else None, "url": p.url if p else ""}
 
     def command(self, line, confirmed=False):
         """confirmed: D #id deletes only when asked twice — the page asks "sure?" in
@@ -304,7 +406,7 @@ class Web:
             if kind == "thread":
                 return {"ok": True, "open": {"thread": what}}
             if kind == "profile":
-                return {"ok": True, "open": {"account": what["id"]}}
+                return {"ok": True, "open": {"account": what.id}}
             if kind == "delete":
                 if not confirmed:
                     return {"ok": False, "confirm": _("delete_q", text=snippet(what, 200))}
@@ -314,11 +416,11 @@ class Web:
 
     def resolve(self, url):
         found = self.core.resolve(url).result()
-        if not found:
+        if found is None:
             return {"found": None}
-        kind, what = found
-        return {"found": "thread" if kind == "status" else "account",
-                "id": real(what)["id"] if kind == "status" else what["id"]}
+        if isinstance(found, Account):
+            return {"found": "account", "id": found.id}
+        return {"found": "thread", "id": found.id}
 
 
 # words the page shows, in the profile's language
@@ -327,7 +429,10 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "acc_follows_you", "web_cw", "web_show", "web_load_error", "web_empty",
          "web_reply_to", "web_cancel", "web_cmd", "web_visibility", "vis_public",
          "vis_unlisted", "vis_private", "vis_direct", "web_media", "web_sensitive",
-         "web_parent_gone", "web_mark_read", "tui_profile", "open_browser")
+         "web_parent_gone", "web_mark_read", "tui_profile", "open_browser", "refresh",
+         "more", "no_older", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",
+         "web_new_post", "web_original", "web_close", "web_lanes", "web_edited",
+         "web_requested", "lang_label")
 
 
 class Server(ThreadingHTTPServer):
@@ -446,6 +551,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/read": lambda: (web.core.mark_read([str(i) for i in body.get("ids", [])
                                                       ][:500]), {"ok": True})[1],
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
+            "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
+            "/api/older": lambda: web.older(body.get("name")),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
             "/api/command": lambda: web.command(str(body.get("line", "")),

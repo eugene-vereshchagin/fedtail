@@ -3,7 +3,9 @@
 import unittest
 
 from fedtail import i18n
+from fedtail.core.view import View
 from fedtail.frontends.tui import model
+from fedtail.protocols.mastodon.adapter import post as to_post
 
 from . import test_cli
 from .fakes import BOB, ME, status
@@ -23,6 +25,8 @@ class TuiModelTest(TmpDir):
         st = status("002", BOB, "001", "ME", minute=2, text="I think yes<br>and more")
         st["media_attachments"] = [{"type": "image"}]
         st["favourites_count"] = 3
+        parent, st = to_post(parent), to_post(st)
+        core = View(core)
         shown = model.show_post(core, st, "a3f", unread=True, parent=parent, width=40)
         kinds = dict(shown.head)
         self.assertEqual(kinds["alias"], "#a3f")
@@ -44,7 +48,7 @@ class TuiModelTest(TmpDir):
         core, _w = self.make(ui={"expand_cw": False, "arts_mode": False})
         st = status("003", BOB, minute=3, text="spoiler")
         st["spoiler_text"] = "careful"
-        shown = model.show_post(core, st)
+        shown = model.show_post(View(core), to_post(st))
         self.assertEqual((shown.cw, shown.body), ("⚠ careful", []))
 
     def test_commands(self):
@@ -53,7 +57,7 @@ class TuiModelTest(TmpDir):
         core.connect().result()
         core.poll_once()
         alias = core.short_ids([core.store.get_status("001")])["001"]
-        c = model.Commands(core)
+        c = model.Commands(View(core))
         fut, _msg = c.run(f"#{alias} hello")
         self.assertEqual(fut.result(), i18n._("sent"))
         self.assertEqual(w.posted[-1][2], "001")

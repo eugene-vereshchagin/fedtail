@@ -111,6 +111,7 @@ class Mention:
     handle: str
     username: str = ""
     url: str = ""
+    uri: str = ""
 
     @property
     def id(self):
@@ -292,6 +293,31 @@ class Activity:
     @property
     def id(self):
         return self.ref.id
+
+
+@dataclass(frozen=True, slots=True)
+class Relationship:
+    """Between me and an account."""
+    following: bool = False
+    followed_by: bool = False
+    requested: bool = False        # I asked to follow, not answered yet
+    requested_by: bool = False     # they asked to follow me
+    muting: bool = False
+    blocking: bool = False
+    blocked_by: bool = False
+    notifying: bool = False        # the bell: their new posts come as notifications
+    showing_shares: bool = True    # their boosts come into Home
+    endorsed: bool = False         # shown on my profile
+    note: str = ""                 # my private note on them
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadItem:
+    """A post in a thread, in reading order: how deep it hangs and its number there
+    (0 for the root, then /1 /2 … like on Point)."""
+    post: Post
+    depth: int
+    number: int
 
 
 def real(entry):

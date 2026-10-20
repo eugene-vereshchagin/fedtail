@@ -27,6 +27,7 @@ from ...model import (
     Quote,
     Reaction,
     Ref,
+    Relationship,
     Share,
 )
 from . import PROTO
@@ -293,7 +294,8 @@ def post(raw, profile="", _depth=0):
         card=card(raw.get("card")),
         quote=quote(raw, profile, _depth),
         mentions=tuple(Mention(_ref(profile, m.get("id")), _str(m.get("acct")),
-                               _str(m.get("username")), _str(m.get("url")))
+                               _str(m.get("username")), _str(m.get("url")),
+                               _str(m.get("uri")))
                        for m in _list(raw.get("mentions")) if isinstance(m, dict)),
         tags=tuple(_str(t.get("name")) for t in _list(raw.get("tags"))
                    if isinstance(t, dict) and t.get("name")),
@@ -345,3 +347,28 @@ def activity(raw, profile=""):
         notice=_notice(raw),
         group_key=_str(raw.get("group_key")),
     )
+
+
+def relationship(raw):
+    raw = _dict(raw)
+    return Relationship(
+        following=bool(raw.get("following")), followed_by=bool(raw.get("followed_by")),
+        requested=bool(raw.get("requested")), requested_by=bool(raw.get("requested_by")),
+        muting=bool(raw.get("muting")), blocking=bool(raw.get("blocking")),
+        blocked_by=bool(raw.get("blocked_by")), notifying=bool(raw.get("notifying")),
+        showing_shares=raw.get("showing_reblogs") is not False,
+        endorsed=bool(raw.get("endorsed")), note=_str(raw.get("note")))
+
+
+# ours → the API's, for what fedtail sends
+VISIBILITY_OUT = {"public": "public", "unlisted": "unlisted", "followers": "private",
+                  "direct": "direct"}
+
+
+def visibility_out(v):
+    """Our visibility as the API names it; the API's own names pass as they are."""
+    return VISIBILITY_OUT.get(v, v if v in VISIBILITY else "public")
+
+
+def visibility_in(v):
+    return VISIBILITY.get(v, v if v in VISIBILITY_OUT else "public")

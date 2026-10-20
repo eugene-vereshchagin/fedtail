@@ -70,12 +70,15 @@ fedtail/
   sysenv.py          the one-file build: start other programs with the system's environment
   model/             fedtail's own data model: Post, Share, Account, Activity, Media, Poll…
                      frozen dataclasses in ActivityPub's vocabulary; knows no protocol
-                     (docs/PROTOCOLS.md). Not used by core/frontends yet — stage 2.
+                     (docs/PROTOCOLS.md); text.py: html_to_text, snippet, reply_mentions
   protocols/         one package per protocol; nothing outside reads a server's JSON
     mastodon/
       adapter.py     Mastodon API JSON (GTS, Mastodon, Akkoma, Pleroma) → model:
                      post() → Post | Share, account(), activity(); forgiving, never raises
   core/              everything that is not GUI
+    view.py          View: the core as frontends see it — model in, model out (Post,
+                     Share, Account, ThreadItem…), cached per lane; cli, tui and web use
+                     it (tests/test_layering.py keeps them off raw JSON); Qt — next
     app.py           Core: the facade the frontends talk to (see §4, §9)
     social.py        SocialMixin of Core: who reacted, quotes, trends, suggestions, directory,
                      server info; a 404 marks a feature missing (Core.supports, NotSupported)

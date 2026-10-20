@@ -42,14 +42,18 @@ def looks_fediverse(url):
     return u.scheme in ("http", "https") and any(p.match(u.path) for p in _FEDI_PATHS)
 
 
-def in_app(html, status=None):
-    """Rewrite hrefs of mentions, hashtags and fediverse-looking links."""
+def in_app(html, status=None, mentions=None):
+    """Rewrite hrefs of mentions, hashtags and fediverse-looking links. mentions:
+    {profile url: account id} instead of a status's own (a model Post's)."""
     st = real(status) if status else {}
-    mentions = {}
-    for m in st.get("mentions") or []:
-        for key in ("url", "uri"):
-            if m.get(key):
-                mentions[m[key].rstrip("/")] = m["id"]
+    if mentions is not None:
+        mentions = {u.rstrip("/"): i for u, i in mentions.items()}
+    else:
+        mentions = {}
+        for m in st.get("mentions") or []:
+            for key in ("url", "uri"):
+                if m.get(key):
+                    mentions[m[key].rstrip("/")] = m["id"]
 
     def fix(match):
         before, href, after = match.groups()

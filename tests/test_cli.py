@@ -7,6 +7,7 @@ import time
 from fedtail import __main__ as entry
 from fedtail.core import auth, config, paths
 from fedtail.core.app import Core
+from fedtail.core.view import View
 from fedtail.frontends import cli
 
 from . import fakes
@@ -101,10 +102,11 @@ class CliTest(TmpDir):
         core, w = self.make()
         args = cli.parser().parse_args(["post", "-"])
         core.connect().result()
-        cli.cmd_post(core, cli.Out({}, io.StringIO()), args, stdin=io.StringIO("from a pipe\n"))
+        cli.cmd_post(View(core), cli.Out({}, io.StringIO()), args,
+                     stdin=io.StringIO("from a pipe\n"))
         self.assertIn("from a pipe", w.posted[-1][0])
         with self.assertRaises(SystemExit):
-            cli.cmd_post(core, cli.Out({}, io.StringIO()), args, stdin=io.StringIO("  "))
+            cli.cmd_post(View(core), cli.Out({}, io.StringIO()), args, stdin=io.StringIO("  "))
 
     def test_unknown_lane_names_the_known(self):
         core, _w = self.make()
@@ -126,7 +128,8 @@ class CliTest(TmpDir):
         core.poll_once()
         out, stop = io.StringIO(), threading.Event()
         args = cli.parser().parse_args(["tail", "home"])
-        t = threading.Thread(target=cli.cmd_tail, args=(core, cli.Out({}, out), args, stop))
+        t = threading.Thread(target=cli.cmd_tail,
+                             args=(View(core), cli.Out({}, out), args, stop))
         t.start()
         try:
             time.sleep(0.3)

@@ -30,6 +30,23 @@
   (incremental vacuum; an older file is converted once, at the first start — it may take
   a moment). If it is still over `storage.max_mb` (1 GB), lanes get shorter until it fits
   and grow back later. New `[storage]` options; `storage gc:` lines in the log.
+- Pictures that didn't come no longer stay blank until a restart. When the server answered
+  with an error twice (busy, restarting, still fetching a remote post's media), fedtail
+  asks again by itself in 1, 5 and 30 minutes for the cards still waiting, and a card
+  that gave up gets the picture when it comes. The log now says the HTTP status
+  ("HTTP 503") instead of just "HTTPError".
+- The web interface, rebuilt: a "Write" button (and ✎ on a phone) opens a composer with a
+  content warning, who sees it, the language and a character count; drafts are kept in
+  the browser. Replies start with the right @names and never go wider than what they
+  answer. Pictures in a grid with a viewer, video, gifs and audio; a picture that doesn't
+  come says so, links to the original and is tried again later. Polls with bars and
+  voting, link cards, quotes, custom emoji, a profile's header, fields with ✓ verified,
+  follow / requested. "More" at the end of a lane loads older posts. The command line has
+  a line of its own. Lanes slide in on a phone; light and dark follow the system.
+- Inside: the terminal, the TUI and the web interface work on fedtail's own data model
+  (`fedtail/model`, `fedtail/core/view.py`) instead of the server's JSON — stage 2 of
+  docs/PROTOCOLS.md; the Qt window follows. Nothing changes in what they show, except
+  that the web page and `fedtail post -v` say "followers" (`private` still works).
 
 ## 0.16.0 — 2026-10-19
 

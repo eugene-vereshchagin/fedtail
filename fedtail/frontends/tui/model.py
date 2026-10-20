@@ -7,8 +7,9 @@ from datetime import datetime
 
 from ...core import config
 from ...core.commands import parse
-from ...core.model import html_to_text, real, reply_mentions, snippet
 from ...i18n import _
+from ...model import Share, real
+from ...model.text import html_to_text, reply_mentions, snippet
 
 
 @dataclass
@@ -22,67 +23,63 @@ class Shown:
     foot: str = ""
 
 
-def when(iso):
-    try:
-        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
-    except (ValueError, AttributeError):
+def when(t):
+    if t is None:
         return ""
+    dt = t.astimezone()
     today = datetime.now().astimezone().date()
     return dt.strftime("%H:%M") if dt.date() == today else dt.strftime("%d.%m %H:%M")
 
 
-def show_post(core, wrapper, alias=None, unread=False, number=None, width=80, parent=None):
-    """parent: the status this one answers (for the context line), "missing", or None."""
-    st = real(wrapper)
-    acc = st.get("account") or {}
+def show_post(core, entry, alias=None, unread=False, number=None, width=80, parent=None):
+    """entry: a Post or a Share (core.view). parent: the Post this one answers (for the
+    context line), "missing", or None."""
+    p = real(entry)
+    acc = p.author
     tcfg = core.cfg.get("tui", {})
     out = Shown()
     if number is not None:
         out.head.append(("num", f"/{number}" if number else "#"))
     if alias:
         out.head.append(("alias", f"#{alias}"))
-    out.head.append(("who", "@" + acc.get("acct", "?")))
-    name = (acc.get("display_name") or "").strip()
-    if name and name != acc.get("username"):
+    out.head.append(("who", "@" + (acc.handle or "?")))
+    name = acc.name.strip()
+    if name and name != acc.username:
         out.head.append(("name", name))
-    out.head.append(("time", when(st.get("created_at", ""))))
-    if wrapper.get("reblog"):
-        out.head.append(("boost", "♻ @" + (wrapper.get("account") or {}).get("acct", "?")))
-    if st.get("visibility") == "direct":
+    out.head.append(("time", when(p.created)))
+    if isinstance(entry, Share):
+        out.head.append(("boost", "♻ @" + (entry.by.handle or "?")))
+    if p.visibility == "direct":
         out.head.append(("direct", "✉"))
-    elif st.get("visibility") == "private":
+    elif p.visibility == "followers":
         out.head.append(("muted", "🔒"))
     if unread:
         out.head.append(("unread", "●"))
-    if st.get("in_reply_to_id") and tcfg.get("show_context", True) and number is None:
-        if isinstance(parent, dict):
-            p = real(parent)
-            out.context = "↳ @" + (p.get("account") or {}).get("acct", "?") + ": " + \
-                snippet(p, max(20, width - 20))
-        elif parent == "missing":
+    if p.reply_to and tcfg.get("show_context", True) and number is None:
+        if parent == "missing":
             out.context = "↳ " + _("tui_parent_gone")
+        elif parent is not None:
+            out.context = "↳ @" + (parent.author.handle or "?") + ": " + \
+                snippet(parent, max(20, width - 20))
         else:
             out.context = "↳ …"
-    expand = config.expand_cw(core.cfg)
-    if st.get("spoiler_text"):
-        out.cw = "⚠ " + st["spoiler_text"]
-    if not st.get("spoiler_text") or expand:
-        text = html_to_text(st.get("content", ""))
-        for para in text.split("\n"):
+    if p.warning:
+        out.cw = "⚠ " + p.warning
+    if not p.warning or config.expand_cw(core.cfg):
+        for para in html_to_text(p.text).split("\n"):
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
             out.body.pop()
     foot = []
-    media = st.get("media_attachments") or []
-    if media:
-        foot.append(_("cli_media", n=len(media)))
-    if st.get("poll"):
+    if p.media:
+        foot.append(_("cli_media", n=len(p.media)))
+    if p.poll:
         foot.append("📊 " + _("tui_poll"))
-    for key, mark in (("replies_count", "↩"), ("reblogs_count", "♻"),
-                      ("favourites_count", "★" if st.get("favourited") else "☆")):
-        if st.get(key):
-            foot.append(f"{mark} {st[key]}")
-    if st.get("bookmarked"):
+    for n, mark in ((p.counts.replies, "↩"), (p.counts.shares, "♻"),
+                    (p.counts.likes, "★" if p.mine.liked else "☆")):
+        if n:
+            foot.append(f"{mark} {n}")
+    if p.mine.bookmarked:
         foot.append("🔖")
     out.foot = "  ".join(foot)
     return out
@@ -108,8 +105,10 @@ class DeleteGuard:
 
 
 class Commands:
-    """The command line (core/commands.py), carried out on the core. Each method
-    returns a future; done(message) is how the interface hears back."""
+    """The command line (core/commands.py), carried out on the core (a core.view.View).
+    Each method returns a future; done(message) is how the interface hears back.
+    Results: a message, ("thread", post id), ("profile", Account), ("delete", Post),
+    or the Post made."""
 
     def __init__(self, core):
         self.core = core
@@ -146,36 +145,36 @@ class Commands:
             if c.kind == "profile":
                 return ("profile", acc)
             on = c.kind == "follow"
-            core.follow(acc["id"], on).result()
-            return _("cmd_followed" if on else "cmd_unfollowed", who=acc["acct"])
+            core.follow(acc.id, on).result()
+            return _("cmd_followed" if on else "cmd_unfollowed", who=acc.handle)
         return core.bg.submit(job)
 
     def _post(self, c):
         core = self.core
 
         def job():
-            st = core.target(c.alias, c.number).result()
-            if st is None:
+            p = core.target(c.alias, c.number).result()
+            if p is None:
                 return _("cmd_no_comment", where=f"#{c.alias}/{c.number}")
-            s = real(st)
             if c.kind == "open":
-                return ("thread", s["id"])
+                return ("thread", p.id)
             if c.kind == "reply":
-                text = reply_mentions(s, core.me["acct"]) + c.text
-                core.post(text, core.reply_visibility(s), s["id"]).result()
+                me = core.me
+                text = reply_mentions(p, me.handle if me else "") + c.text
+                core.post(text, core.reply_visibility(p), p).result()
                 return _("sent")
             if c.kind in ("sub", "unsub"):
-                (core.subscribe if c.kind == "sub" else core.unsubscribe)(s).result()
+                (core.subscribe if c.kind == "sub" else core.unsubscribe)(p).result()
                 return _("subbed" if c.kind == "sub" else "unsubbed")
             if c.kind == "boost":
-                core.boost(s).result()
+                core.share(p).result()
                 return _("cmd_boosted")
             if c.kind == "bookmark":
-                on = not s.get("bookmarked")
-                core.bookmark(s, on).result()
+                on = not p.mine.bookmarked
+                core.bookmark(p, on).result()
                 return _("bookmarked" if on else "unbookmarked")
             if c.kind == "delete":
-                return ("delete", s)
+                return ("delete", p)
             return None
         return core.bg.submit(job)
 

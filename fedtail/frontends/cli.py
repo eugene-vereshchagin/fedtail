@@ -21,8 +21,10 @@ import textwrap
 from datetime import datetime
 
 from ..core import config
-from ..core.model import html_to_text, real
+from ..core.view import View
 from ..i18n import _
+from ..model import Share, real
+from ..model.text import html_to_text
 
 COMMANDS = ("lanes", "show", "tail", "post", "read")
 
@@ -49,40 +51,36 @@ class Out:
         print(text, file=self.stream, flush=True)
 
 
-def _when(iso):
-    try:
-        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
-    except (ValueError, AttributeError):
+def _when(t):
+    if t is None:
         return "?"
+    dt = t.astimezone()
     return dt.strftime("%H:%M") if dt.date() == datetime.now().astimezone().date() \
         else dt.strftime("%d.%m %H:%M")
 
 
-def print_post(out, core, wrapper, alias, unread=False):
-    st = real(wrapper)
-    acc = st["account"]
+def print_post(out, core, entry, alias, unread=False):
+    p = real(entry)
     head = [out.c("id", f"#{alias}") if alias else "",
-            out.c("dim", _when(st.get("created_at", ""))),
-            out.c("who", "@" + acc.get("acct", "?"))]
-    if wrapper.get("reblog"):
-        head.append(out.c("dim", "♻ @" + wrapper["account"].get("acct", "?")))
-    if st.get("in_reply_to_id"):
+            out.c("dim", _when(p.created)),
+            out.c("who", "@" + (p.author.handle or "?"))]
+    if isinstance(entry, Share):
+        head.append(out.c("dim", "♻ @" + (entry.by.handle or "?")))
+    if p.reply_to:
         head.append(out.c("dim", "↳"))
-    if st.get("visibility") == "direct":
+    if p.visibility == "direct":
         head.append(out.c("warn", "✉"))
     if unread:
         head.append(out.c("new", "•"))
     out.line(" ".join(h for h in head if h))
     body = []
-    if st.get("spoiler_text"):
-        body.append(out.c("warn", "⚠ " + st["spoiler_text"]))
-    if not st.get("spoiler_text") or config.expand_cw(core.cfg):
-        text = html_to_text(st.get("content", ""))
-        for para in text.split("\n"):
+    if p.warning:
+        body.append(out.c("warn", "⚠ " + p.warning))
+    if not p.warning or config.expand_cw(core.cfg):
+        for para in html_to_text(p.text).split("\n"):
             body += textwrap.wrap(para, max(20, out.width - 4)) or [""]
-    n = len(st.get("media_attachments") or [])
-    if n:
-        body.append(out.c("dim", _("cli_media", n=n)))
+    if p.media:
+        body.append(out.c("dim", _("cli_media", n=len(p.media))))
     if out.max_lines and len(body) > out.max_lines:
         body = body[:out.max_lines] + [out.c("dim", "…")]
     for b in body:
@@ -91,7 +89,7 @@ def print_post(out, core, wrapper, alias, unread=False):
 
 
 def _entries(core, lane, ids=None):
-    entries = core.lane_entries(lane)
+    entries = core.entries(lane)
     if ids is not None:
         entries = [e for e in entries if e[0] in ids]
     return entries
@@ -125,22 +123,20 @@ def cmd_show(core, out, args):
         core.set_active_lane(lane)
         core.poll_once()
     entries = _entries(core, lane)
-    unread = core.unread_ids(entries)
+    unread = core.unread(entries)
     if args.unread:
-        entries = [e for e in entries if e[1]["id"] in unread]
+        entries = [x for x in entries if x[1].id in unread]
     entries = entries[-args.n:] if args.n else entries
-    short = core.short_ids([st for _i, st in entries])
-    for _item, st in entries:
-        print_post(out, core, st, short.get(real(st)["id"]), st["id"] in unread)
+    short = core.short_ids(entries)
+    for _item, e in entries:
+        print_post(out, core, e, short.get(real(e).id), e.id in unread)
     if args.mark_read:
-        core.mark_read([st["id"] for _i, st in entries])
+        core.mark_read([e.id for _i, e in entries])
 
 
 def cmd_read(core, out, args):
     lane = _lane_name(core, args.lane)
-    entries = _entries(core, lane)
-    ids = sorted(core.unread_ids(entries))
-    core.mark_read(ids)
+    ids = core.mark_lane_read(lane)
     out.line(_("cli_marked", n=len(ids), lane=lane))
 
 
@@ -153,13 +149,13 @@ def cmd_tail(core, out, args, stop=None):
         [_lane_name(core, n) for n in default if n in core.lane_by_name
          or n.startswith("list:")] or ["home"]
     got = queue.Queue()
-    core.events.on("lanes_updated", lambda _n, per_lane: got.put(per_lane))
+    core.on("lanes_updated", lambda _n, per_lane: got.put(per_lane))
     if args.n:
         for lane in wanted:
             entries = _entries(core, lane)[-args.n:]
-            short = core.short_ids([st for _i, st in entries])
-            for _item, st in entries:
-                print_post(out, core, st, short.get(real(st)["id"]))
+            short = core.short_ids(entries)
+            for _item, e in entries:
+                print_post(out, core, e, short.get(real(e).id))
     out.line(out.c("dim", _("cli_tailing", lanes=", ".join(wanted))))
     core.start_polling()
     shown = set()
@@ -172,13 +168,13 @@ def cmd_tail(core, out, args, stop=None):
             ids = set(per_lane.get(lane) or ())
             if not ids:
                 continue
-            entries = [e for e in _entries(core, lane, ids) if e[1]["id"] not in shown]
-            short = core.short_ids([st for _i, st in entries])
-            for _item, st in entries:
-                shown.add(st["id"])
-                print_post(out, core, st, short.get(real(st)["id"]), True)
+            entries = [x for x in _entries(core, lane, ids) if x[1].id not in shown]
+            short = core.short_ids(entries)
+            for _item, e in entries:
+                shown.add(e.id)
+                print_post(out, core, e, short.get(real(e).id), True)
             if args.mark_read:
-                core.mark_read([st["id"] for _i, st in entries])
+                core.mark_read([e.id for _i, e in entries])
 
 
 def cmd_post(core, out, args, stdin=None):
@@ -193,12 +189,13 @@ def cmd_post(core, out, args, stdin=None):
         parent = core.target(alias, int(number) if number.isdigit() else 0).result()
         if parent is None:
             raise SystemExit(_("cli_no_post", alias=args.reply))
-    vis = args.visibility or core.reply_visibility(parent)
-    st = core.post(text, vis, real(parent)["id"] if parent else None, args.cw or "",
-                   language=args.lang).result()
-    alias = core.short_ids([st]).get(st["id"])
-    out.line(_("cli_posted", alias=f"#{alias}" if alias else st["id"], vis=vis,
-               url=st.get("url") or ""))
+    vis = VIS_ALIASES.get(args.visibility, args.visibility) or core.reply_visibility(parent)
+    p = core.post(text, vis, parent, args.cw or "", language=args.lang).result()
+    alias = core.short_ids([p]).get(p.id)
+    out.line(_("cli_posted", alias=f"#{alias}" if alias else p.id, vis=vis, url=p.url))
+
+
+VIS_ALIASES = {"private": "followers"}  # the Mastodon word still works
 
 
 def parser():
@@ -219,7 +216,9 @@ def parser():
     w = sub.add_parser("post", help="a new post or a reply")
     w.add_argument("text", nargs="*", help='the text; "-" or none: from stdin')
     w.add_argument("--reply", help="the post to answer: a3f, #a3f or #a3f/2")
-    w.add_argument("-v", "--visibility", choices=["public", "unlisted", "private", "direct"])
+    w.add_argument("-v", "--visibility",
+                   choices=["public", "unlisted", "followers", "private", "direct"],
+                   help="who sees it (private = followers)")
     w.add_argument("--cw", help="content warning")
     w.add_argument("--lang", help="language code (ru, en, ka…)")
     return p
@@ -228,6 +227,7 @@ def parser():
 def run(core, argv, stream=None):
     """argv: the command and its arguments ("show", "replies", "-n", "5")."""
     args = parser().parse_args(argv)
+    core = core if isinstance(core, View) else View(core)
     out = Out(core.cfg.get("cli", {}), stream)
     if not core.logged_in:
         raise SystemExit(_("cli_login_first"))

@@ -1,7 +1,8 @@
 """Small helpers over Mastodon status/account dicts. No I/O."""
 
-import html
 import re
+
+from ..model.text import html_to_text  # noqa: F401 — lives with the model now
 
 # from most open to most closed
 VISIBILITIES = ["public", "unlisted", "private", "direct"]
@@ -10,26 +11,6 @@ VISIBILITIES = ["public", "unlisted", "private", "direct"]
 def real(st):
     """The status itself, or the one it boosts."""
     return st.get("reblog") or st
-
-
-_H2T_BR = re.compile(r"<br\s*/?>", re.I)
-_H2T_PARA = re.compile(r"</p>\s*<p[^>]*>", re.I)
-# other blocks (a quote, a list) are lines of their own too — not glued to the next
-_H2T_BLOCK = re.compile(r"</?(p|blockquote|li|ul|ol|div|pre|h[1-6])\b[^>]*>", re.I)
-_H2T_TAG = re.compile(r"<[^>]+>")
-
-
-def html_to_text(h):
-    """Called for every post Ctrl+F looks through: the patterns are compiled once."""
-    if not h:
-        return ""
-    if "<" not in h:
-        return html.unescape(h).strip() if "&" in h else h.strip()
-    h = _H2T_BR.sub("\n", h)
-    h = _H2T_PARA.sub("\n\n", h)
-    h = _H2T_BLOCK.sub("\n", h)
-    h = _H2T_TAG.sub("", h)
-    return html.unescape(h).strip()
 
 
 QUOTE_SHOWN = {"accepted"}
