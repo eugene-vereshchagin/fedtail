@@ -2286,6 +2286,7 @@ class QtSmokeTest(unittest.TestCase):
         card._show_now()
         self.assertIn(who.handle, card.lines.text())
         card.away()
+        win._on_event("read_changed", [])  # a talk's tab takes read marks too
         win.write_to(who)  # again: the same tab
         self.assertEqual(sum(isinstance(w, TalkWidget) for w in win.extra_tabs()), 1)
         self.assertEqual(talk_with(win.ctx.view, [], who.handle), [])
@@ -2317,10 +2318,16 @@ class QtSmokeTest(unittest.TestCase):
                                                   Qt.KeyboardModifier.NoModifier))
         self.assertTrue(win.isVisible())
         self.assertIs(win.stack.currentWidget(), win.lane_widgets["home"])
-        # closing the messages window leaves the roster, as in a messenger
+        # closing the messages window leaves the roster, as in a messenger; with
+        # ui.split_tabs = "close" its tabs go with it
+        win.open_thread("011")
+        self.pump(until=lambda: win.extra_tabs())
+        win.cfg["ui"]["split_tabs"] = "close"
+        self.addCleanup(win.cfg["ui"].__setitem__, "split_tabs", "keep")
         win.close()
         self.assertFalse(win.isVisible())
         self.assertTrue(roster.isVisible())
+        self.assertEqual((win.extra_tabs(), win.msg_tabs.count()), ([], 0))
 
     def test_button_icons_override_the_theme(self):
         from fedtail.frontends.qt import theme as themes

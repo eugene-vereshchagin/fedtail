@@ -31,6 +31,9 @@
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the
   theme's colours: who sees a post, a warning, send, follow, lists, a private message,
   the menu; a flower for a person in the roster, a bubble for a talk.
+- `ui.split_tabs = "keep" | "close"`: whether the closed messages window keeps its tabs
+  for next time. A private talk's tab no longer breaks read marks (an error on every
+  one stopped the counts from going down).
 - Less freezing in the split layout: the bar over a lane and the tabs no longer set
   their buttons' pictures and words anew twice a second (each time the whole window was
   laid out again, ~300 ms with a full lane), a new follow request no longer recounts

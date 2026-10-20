@@ -1539,7 +1539,9 @@ class MainWindow(QMainWindow):
                     w.render()
         elif name == "read_changed":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
-                w.apply_read(payload)
+                apply = getattr(w, "apply_read", None)  # a tab without read marks: none
+                if apply is not None:
+                    apply(payload)
             self.update_badges()
         elif name == "status_updated":
             changed = self.ctx.view.entry(payload) if isinstance(payload, dict) and \
@@ -1655,6 +1657,20 @@ class MainWindow(QMainWindow):
                 w.focus_on(sid)
                 return
         self._add_tab(ThreadWidget(self, sid), _("thread_loading"))
+
+    def close_all_tabs(self):
+        """Every tab of the messages window closed (ui.split_tabs = "close"): threads,
+        profiles, talks go, the lanes' tabs too; the window stays hidden."""
+        for w in self.extra_tabs():
+            self.tabs.removeTab(self.tabs.indexOf(w))
+            w.deleteLater()
+        if self.msg_tabs is not None:
+            self.msg_tabs._busy = True
+            try:
+                while self.msg_tabs.count():
+                    self.msg_tabs.removeTab(0)
+            finally:
+                self.msg_tabs._busy = False
 
     def open_talk(self, account):
         """Our private talk with someone, a tab of its own (the split layout)."""
@@ -2542,6 +2558,8 @@ class MainWindow(QMainWindow):
         if self.roster is not None:
             if not self.quitting and self.roster.isVisible():
                 self.hide()  # the messages window goes; the roster stays, as in QIP
+                if self.cfg["ui"].get("split_tabs", "keep") == "close":
+                    self.close_all_tabs()  # opened again empty, from the roster
                 e.ignore()
                 return
             self.roster.save_place()

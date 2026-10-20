@@ -925,6 +925,9 @@ class TalkWidget(QWidget):
         if self.win.cfg["read"]["mark_read"] != "manual":
             self.win.ctx.view.mark_read(ids)
 
+    def apply_read(self, ids):
+        self.view.set_unread(ids, False)
+
 
 class ContactCard(QWidget):
     """Who this is, as QIP showed a contact on hover: a card of its own beside the
