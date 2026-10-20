@@ -9,11 +9,15 @@ privacy:
 import html
 from dataclasses import dataclass
 
-from ..core.model import real, snippet
 from ..i18n import _
+from ..model import Account, Activity, real
+from ..model.text import snippet
 
 ORDER = ["replies", "mentions", "requests"]  # the rest come after, by name
-ACTIVITY_ORDER = ["follow", "favourite", "reblog"]
+ACTIVITY_ORDER = ["follow", "like", "share"]
+# the words for a kind of activity: notify_act_<…>_n
+ACT_WORDS = {"follow": "notify_act_follow_n", "like": "notify_act_favourite_n",
+             "share": "notify_act_reblog_n"}
 MAX_LINES = 3
 
 
@@ -26,13 +30,17 @@ class Note:
 
 
 def _account(obj):
-    """A status's author, or the account itself (follow requests)."""
-    return real(obj)["account"] if "account" in obj else obj
+    """A post's author, an activity's someone, or the account itself (follow requests)."""
+    if isinstance(obj, Account) or obj is None:
+        return obj
+    if isinstance(obj, Activity):
+        return obj.who
+    return real(obj).author
 
 
 def _who(obj):
     acc = _account(obj)
-    return acc.get("display_name") or acc.get("username") or acc.get("acct", "?")
+    return (acc.name or acc.username or acc.handle or "?") if acc else "?"
 
 
 _titles = None
@@ -51,14 +59,14 @@ def _lane_title(lane):
 
 
 def build(items, privacy="full", titles=None):
-    """items: [(lane, status or account)] → one Note per lane.
+    """items: [(lane, Post, Share, Account or Activity)] → one Note per lane.
     titles(lane) names lanes that aren't built in (lists)."""
     global _titles
     _titles = titles
     groups, acts = {}, {}
     for lane, obj in items:
         if lane == "activity":
-            acts.setdefault(obj["type"], []).append(obj)
+            acts.setdefault(obj.kind, []).append(obj)
         else:
             groups.setdefault(lane, []).append(obj)
     lanes = [x for x in ORDER if x in groups] + sorted(x for x in groups if x not in ORDER)
@@ -71,17 +79,16 @@ def build(items, privacy="full", titles=None):
 def _activity_note(kind, notifs, privacy):
     """"★ 3 in favourites" — from whom, and (full) on which post."""
     n = len(notifs)
-    key = kind if kind in ("favourite", "reblog", "follow") else "other"
-    title = _(f"notify_act_{key}_n", n=n)
+    title = _(ACT_WORDS.get(kind, "notify_act_other_n"), n=n)
     if privacy == "count":
         return Note("fedtail", title, "activity")
-    names = list(dict.fromkeys(_who(x["account"]) for x in notifs))
+    names = list(dict.fromkeys(_who(x) for x in notifs))
     shown = ", ".join(names[:5]) + ("…" if len(names) > 5 else "")
     body = _("notify_from", names=shown)
-    posts = list(dict.fromkeys(snippet(x["status"], 80) for x in notifs if x.get("status")))
+    posts = list(dict.fromkeys(snippet(x.post, 80) for x in notifs if x.post))
     if privacy == "full" and posts:
         body += "\n" + "\n".join(f"«{p}»" for p in posts[:2])
-    sids = {real(x["status"])["id"] for x in notifs if x.get("status")}
+    sids = {x.post.id for x in notifs if x.post}
     return Note(title, body, "activity", sids.pop() if len(sids) == 1 else "")
 
 
@@ -96,17 +103,17 @@ def _note(lane, objs, privacy):
     if n == 1:
         obj = objs[0]
         title = _(f"notify_{kind}_one", name=names[0], lane=_lane_title(lane))
-        thread = real(obj)["id"] if lane != "requests" else ""
+        thread = real(obj).id if lane != "requests" else ""
         if privacy == "sender" or lane == "requests":
-            body = "@" + _account(obj).get("acct", "")
+            body = "@" + (_account(obj).handle if _account(obj) else "")
         else:
-            body = snippet(obj, 200)
+            body = snippet(real(obj), 200)
         return Note(title, body, lane, thread)
 
     if privacy == "sender" or lane == "requests":
         shown = ", ".join(names[:5]) + ("…" if len(names) > 5 else "")
         return Note(count_title, _("notify_from", names=shown), lane)
-    lines = [f"{_who(o)}: {snippet(o, 90)}" for o in objs[:MAX_LINES]]
+    lines = [f"{_who(o)}: {snippet(real(o), 90)}" for o in objs[:MAX_LINES]]
     if n > MAX_LINES:
         lines.append(_("notify_more", n=n - MAX_LINES).strip())
     return Note(count_title, "\n".join(lines), lane)

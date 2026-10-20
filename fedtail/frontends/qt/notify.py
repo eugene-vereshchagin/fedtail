@@ -110,6 +110,7 @@ class Notifier(QObject):
         if not self.cfg["enabled"]:
             log.debug("notify: %d new, notifications are off", len(items))
             return
+        items = self.win.ctx.view.model_of(list(items))  # [(lane, Post | Account | Activity)]
         notes = notifytext.build(items, self.cfg["privacy"], self.win.lane_title)
         for note in notes:
             if not self.cfg["when_focused"] and self.on_screen(note.lane):
