@@ -1592,6 +1592,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(w.clear_btn.isHidden())
         self.core._learn("dismiss", False)
         self.pump(until=lambda: w.clear_btn.isHidden())
+        from PySide6.QtCore import QCoreApplication, QEvent
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)  # old rows
         w = self.win.lane_widgets["activity"]
         ok = [b for b in w.findChildren(QPushButton) if b.text() == _("ok_interaction")]
         self.assertEqual(len(ok), 1)
