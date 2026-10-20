@@ -8,14 +8,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QMessageBox, QWidget
 
 from ...core.commands import parse
-from ...core.model import real, reply_mentions, snippet
 from ...i18n import _
+from ...model.text import reply_mentions, snippet
 
 
 class CommandBar(QWidget):
     def __init__(self, win):
         super().__init__()
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view
         self.setObjectName("findBar")
         lay = QHBoxLayout(self)
         lay.setContentsMargins(12, 6, 12, 6)
@@ -55,7 +55,8 @@ class CommandBar(QWidget):
 
     # ---- what Enter would do ------------------------------------------------------
     def _who_sees(self, vis):
-        return _("vis_" + vis)
+        from .card import VIS_KEY
+        return _("vis_" + VIS_KEY.get(vis, vis))
 
     def _preview(self, text):
         c = parse(text)
@@ -69,11 +70,11 @@ class CommandBar(QWidget):
                                   (" " + _("cmd_as_post") if c.kind == "reply" and
                                    self.core.cfg["post"]["plain_posts"] else ""))
                 return
-            who = real(st)["account"].get("acct", "")
+            who = st.author.handle
             where = f"#{c.alias}" + (f"/{c.number}" if c.number else "")
             self._hint(_("cmd_do_" + c.kind, where=where, who=who,
                                 text=snippet(st, 50),
-                                vis=self._who_sees(self.core.reply_visibility(real(st)))))
+                                vis=self._who_sees(self.core.reply_visibility(st))))
         elif c.kind in ("follow", "unfollow", "profile", "direct"):
             self._hint(_("cmd_do_" + c.kind, who=c.user))
         elif c.kind == "post":
@@ -121,40 +122,41 @@ class CommandBar(QWidget):
         if st is None:
             self._hint(_("cmd_no_comment", where=f"#{c.alias}/{c.number}"))
             return
-        s = real(st)
+        s = st
         done = lambda key: (self.edit.clear(), self.win.statusBar().showMessage(_(key), 4000))  # noqa: E731
         if c.kind == "open":
-            self.win.open_thread(s["id"])
+            self.win.open_thread(s.id)
             self.edit.clear()
         elif c.kind == "reply":
-            mentions = reply_mentions(s, self.core.me["acct"])
-            self._send(mentions + c.text, self.core.reply_visibility(s), s["id"])
+            me = self.core.me
+            mentions = reply_mentions(s, me.handle if me else "")
+            self._send(mentions + c.text, self.core.reply_visibility(s), s)
         elif c.kind in ("sub", "unsub"):
             call = self.core.subscribe if c.kind == "sub" else self.core.unsubscribe
             self.win.bridge.call(call(s), ok=lambda _r: done("subbed" if c.kind == "sub"
                                                              else "unsubbed"))
         elif c.kind == "boost":
-            self.win.bridge.call(self.core.boost(s), ok=lambda _r: done("cmd_boosted"))
+            self.win.bridge.call(self.core.share(s), ok=lambda _r: done("cmd_boosted"))
         elif c.kind == "bookmark":
-            on = not s.get("bookmarked")
+            on = not s.mine.bookmarked
             self.win.bridge.call(self.core.bookmark(s, on),
                                  ok=lambda _r: done("bookmarked" if on else "unbookmarked"))
         elif c.kind == "delete":
             self.edit.clear()
-            self.win.on_link(f"fedtail:delete/{s['id']}")
+            self.win.on_link(f"fedtail:delete/{s.id}")
 
     def _user(self, c, acc):
         if acc is None:
             self._hint(_("cmd_no_user", who=c.user))
             return
         if c.kind == "profile":
-            self.win.open_account(acc["id"])
+            self.win.open_account(acc.id)
             self.edit.clear()
         elif c.kind in ("follow", "unfollow"):
             on = c.kind == "follow"
-            self.win.bridge.call(self.core.follow(acc["id"], on), ok=lambda _r: (
+            self.win.bridge.call(self.core.follow(acc.id, on), ok=lambda _r: (
                 self.edit.clear(), self.win.statusBar().showMessage(
-                    _("cmd_followed" if on else "cmd_unfollowed", who=acc["acct"]), 4000)))
+                    _("cmd_followed" if on else "cmd_unfollowed", who=acc.handle), 4000)))
         elif c.kind == "direct":
             self._send(c.text, "direct")
 

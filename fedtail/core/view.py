@@ -27,7 +27,17 @@ from collections import OrderedDict
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import fields, replace
 
-from ..model import Account, Activity, Post, Relationship, Share, ThreadItem, real
+from ..model import (
+    Account,
+    Activity,
+    Post,
+    Redraft,
+    Relationship,
+    Scheduled,
+    Share,
+    ThreadItem,
+    real,
+)
 from ..protocols.mastodon import adapter
 from . import links
 
@@ -463,13 +473,40 @@ class View:
         raw = self._raw(real(parent)) if parent is not None else None
         return adapter.visibility_in(self._core.reply_visibility(raw))
 
-    def post(self, text, visibility, reply_to=None, warning="", language=None, **kw):
-        """A new post or a reply (reply_to: a Post or its id). Future: the Post made."""
-        rid = None if reply_to is None else (reply_to if isinstance(reply_to, str)
-                                             else real(reply_to).id)
-        fut = self._core.post(text, adapter.visibility_out(visibility), rid, warning,
-                              language=language, **kw)
-        return _then(fut, lambda st: real(self.entry(st)) if isinstance(st, dict) else st)
+    def post(self, text, visibility, reply_to=None, warning="", language=None, quote=None,
+             **kw):
+        """A new post or a reply (reply_to, quote: a Post or its id). Future: the Post
+        made, or a Scheduled one (scheduled_at given)."""
+        def pid(x):
+            return None if x is None else x if isinstance(x, str) else real(x).id
+        fut = self._core.post(text, adapter.visibility_out(visibility), pid(reply_to), warning,
+                              language=language, quote=pid(quote), **kw)
+
+        def made(st):
+            if isinstance(st, dict) and st.get("scheduled"):
+                return Scheduled(st.get("id") or "", adapter.when(st.get("scheduled_at")))
+            return real(self.entry(st)) if isinstance(st, dict) else st
+        return _then(fut, made)
+
+    def source(self, post):
+        """Future: (text, warning) — what I typed for my post, to edit it."""
+        return _then(self._core.source(self._raw(real(post))),
+                     lambda d: ((d or {}).get("text") or "",
+                                (d or {}).get("spoiler_text") or ""))
+
+    def edit(self, post, text, warning="", **kw):
+        """My post corrected. Future: the Post as it is now."""
+        return _then(self._core.edit(self._raw(real(post)), text, warning, **kw),
+                     self._post_back)
+
+    def redraft(self, post):
+        """Delete my post; Future: a Redraft — what it was made of, for a new draft."""
+        def made(d):
+            return Redraft(text=d.get("text") or "", warning=d.get("cw") or "",
+                           visibility=adapter.visibility_in(d.get("visibility") or ""),
+                           language=d.get("language") or "",
+                           reply_to=d.get("in_reply_to_id"), media=int(d.get("media") or 0))
+        return _then(self._core.redraft(self._raw(real(post))), made)
 
     # ---- events --------------------------------------------------------------------
     def on(self, name, fn):

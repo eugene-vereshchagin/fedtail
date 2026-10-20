@@ -152,7 +152,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg = Compose(self.win, self.core.store.get_status("013"))
         dlg.show()
         self.assertTrue(dlg.text.toPlainText().startswith("@bob@social.example"))
-        self.assertEqual(dlg.vis.currentData(), "private")
+        self.assertEqual(dlg.vis.currentData(), "followers")
         dlg.text.setPlainText("@bob@social.example ага")
         dlg.close()  # the window's X
         self.assertFalse(dlg.isVisible())
@@ -2107,7 +2107,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(call.invite)
         self.assertEqual(call.text.toPlainText(), "@")
         self.assertEqual(call.key, "invite:011")
-        self.assertEqual(call.reply_to["id"], "011")
+        self.assertEqual(call.reply_to.id, "011")
         call.reject()
         self.pump(0.1)
         self.win.ctx.cfg["post"]["invite"] = False  # off: not in the menu

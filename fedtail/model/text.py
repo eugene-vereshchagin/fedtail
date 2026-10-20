@@ -174,3 +174,25 @@ def note_with_followed(text, day):
     if not day:
         return text
     return (text + "\n\n" if text else "") + f"[fedtail followed {day}]"
+
+
+def full_handle(acct, server=""):
+    """'@user@server' — the address that works from anywhere. My own server gives its
+    people as a bare 'user': my server's name goes after it."""
+    from urllib.parse import urlsplit
+    acct = (acct or "").strip().lstrip("@")
+    if not acct:
+        return ""
+    if "@" not in acct:
+        host = urlsplit(server if "://" in (server or "") else "https://" + (server or ""))
+        if host.hostname:
+            acct += "@" + host.hostname
+    return "@" + acct
+
+
+_CHAIN = re.compile(r"(?m)^[ \t]*---[ \t]*$")
+
+
+def chain_parts(text):
+    """A post written as a chain: parts split by a line of just "---" (post.chain)."""
+    return [p.strip() for p in _CHAIN.split(text or "") if p.strip()]

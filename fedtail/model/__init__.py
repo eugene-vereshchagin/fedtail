@@ -316,6 +316,25 @@ class Activity:
 
 
 @dataclass(frozen=True, slots=True)
+class Scheduled:
+    """A post the server will put out later."""
+    id: str
+    at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Redraft:
+    """A post of mine deleted to be written anew: what it was made of. Its pictures
+    don't come back (servers drop them with the post): media says how many there were."""
+    text: str = ""                 # as I typed it
+    warning: str = ""
+    visibility: str = "public"
+    language: str = ""
+    reply_to: str | None = None    # id of the post it answered
+    media: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class ServerInfo:
     """My server about itself."""
     title: str = ""

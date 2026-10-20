@@ -4,7 +4,9 @@ import re
 
 from ..model.text import (  # noqa: F401 — they live with the model now
     FOLLOWED_RE,
+    chain_parts,
     collapse_tag_stuffing,
+    full_handle,
     html_to_text,
     note_followed,
     note_text,
@@ -80,18 +82,7 @@ def snippet(st, n=160):
     return t if len(t) <= n else t[: n - 1].rstrip() + "…"
 
 
-def full_handle(acct, server=""):
-    """'@user@server' — the address that works from anywhere. My own server gives its
-    people as a bare 'user': my server's name goes after it."""
-    from urllib.parse import urlsplit
-    acct = (acct or "").strip().lstrip("@")
-    if not acct:
-        return ""
-    if "@" not in acct:
-        host = urlsplit(server if "://" in (server or "") else "https://" + (server or ""))
-        if host.hostname:
-            acct += "@" + host.hostname
-    return "@" + acct
+
 
 
 def norm_acct(acct):
@@ -129,14 +120,6 @@ def reply_mentions(parent, my_acct):
         seen.add(a)
         out.append("@" + acct)
     return " ".join(out) + " " if out else ""
-
-
-_CHAIN = re.compile(r"(?m)^[ \t]*---[ \t]*$")
-
-
-def chain_parts(text):
-    """A post written as a chain: parts split by a line of just "---" (post.chain)."""
-    return [p.strip() for p in _CHAIN.split(text or "") if p.strip()]
 
 
 LONG_TYPES = ("Article", "Page", "Event", "Note", "Question", "Video")

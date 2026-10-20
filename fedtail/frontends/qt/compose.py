@@ -33,9 +33,10 @@ from PySide6.QtWidgets import (
 )
 
 from ...core.hashtags import flat_tags
-from ...core.model import VISIBILITIES, real, reply_mentions, snippet
 from ...i18n import _
-from ...model.text import join_quote, quote_lines
+from ...model import VISIBILITIES, Post, Scheduled, Share, real
+from ...model.text import chain_parts, join_quote, quote_lines, reply_mentions, snippet
+from .card import VIS_KEY
 from .text import display_name, esc
 
 MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",
@@ -124,24 +125,29 @@ def _lang_label(code, qlocale):
         name = LANG_NAMES.get(code, code)
     return f"{name[:1].upper()}{name[1:]} ({code})"
 
+# a draft kept before the composer spoke the model's words
+_OLD_VIS = {"private": "followers"}
+
+
 class Compose(QDialog):
     def __init__(self, win, reply_to=None, attach=(), text="", edit=None, quote=None,
                  invite=False):
         """invite: "Call into the thread" — a reply to reply_to that is only "@" at first,
         the people list open: the one named gets a notification and the thread with it."""
         super().__init__(win)
-        self.win, self.core = win, win.core
-        self.edit = real(edit) if edit else None  # my post being corrected
-        self.reply_to = real(reply_to) if reply_to else None
-        self.quote = real(quote) if quote else None  # the post this one quotes
+        self.win, self.core = win, win.ctx.view
+        # Posts (the model); a stored status still comes in from older callers
+        self.edit = self._as_post(edit)  # my post being corrected
+        self.reply_to = self._as_post(reply_to)
+        self.quote = self._as_post(quote)  # the post this one quotes
         self.invite = bool(invite and self.reply_to)
         if self.edit:
-            self.key = f"edit:{self.edit['id']}"
+            self.key = f"edit:{self.edit.id}"
         elif self.invite:  # not the reply's draft: a call has its own
-            self.key = f"invite:{self.reply_to['id']}"
+            self.key = f"invite:{self.reply_to.id}"
         else:
-            self.key = self.core.draft_key(self.reply_to["id"] if self.reply_to else None,
-                                           self.quote["id"] if self.quote else None)
+            self.key = self.core.draft_key(self.reply_to.id if self.reply_to else None,
+                                           self.quote.id if self.quote else None)
         self.start_text = text  # "@someone " from a profile's Mention button
         # the window finds an open reply here to put a quote into (quote_reply)
         alive = []
@@ -200,13 +206,13 @@ class Compose(QDialog):
             win.installEventFilter(self)
 
         if self.reply_to:
-            q = QLabel(f"↑ <b>{display_name(self.reply_to['account'])}</b>: "
+            q = QLabel(f"↑ <b>{display_name(self.reply_to.author)}</b>: "
                        f"{esc(snippet(self.reply_to, 400))}")
             q.setWordWrap(True)
             q.setObjectName("ctx")
             lay.addWidget(q)
         if self.quote:
-            q = QLabel(f"❝ <b>{display_name(self.quote['account'])}</b>: "
+            q = QLabel(f"❝ <b>{display_name(self.quote.author)}</b>: "
                        f"{esc(snippet(self.quote, 400))}")
             q.setWordWrap(True)
             q.setObjectName("ctx")
@@ -263,7 +269,7 @@ class Compose(QDialog):
         self.vis = QComboBox()
         self.vis.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         for v in VISIBILITIES:
-            self.vis.addItem(_("vis_" + v), v)
+            self.vis.addItem(_("vis_" + VIS_KEY.get(v, v)), v)
         row.addWidget(self.vis)
         self.lang = QComboBox()
         self.lang.setToolTip(_("lang_tip"))
@@ -442,6 +448,13 @@ class Compose(QDialog):
         self.activateWindow()
         self.text.setFocus()
 
+    def _as_post(self, x):
+        if x is None:
+            return None
+        if isinstance(x, (Post, Share)):
+            return real(x)
+        return real(self.core.entry(x))  # a stored status
+
     # ---- drafts -------------------------------------------------------------------
     def _load(self):
         if self.edit:
@@ -452,7 +465,7 @@ class Compose(QDialog):
         if d:
             self.text.setPlainText(d.get("text", ""))
             self.cw.setText(d.get("cw", ""))
-            vis = d.get("visibility", vis)
+            vis = _OLD_VIS.get(d.get("visibility"), d.get("visibility") or vis)
             if "language" in d:
                 self.set_language(d["language"])
             for path, desc, *focus in d.get("media", []):
@@ -475,19 +488,20 @@ class Compose(QDialog):
             if self.invite:  # only the one called: the thread's people aren't bothered
                 self.text.setPlainText("@")
                 self.hint.setText(_("invite_hint"))
-                if self.reply_to.get("spoiler_text"):
-                    self.cw.setText(self.reply_to["spoiler_text"])
+                if self.reply_to.warning:
+                    self.cw.setText(self.reply_to.warning)
             elif self.reply_to:
-                self.text.setPlainText(reply_mentions(self.reply_to, self.core.me["acct"]))
-                if self.reply_to.get("spoiler_text"):
-                    self.cw.setText(self.reply_to["spoiler_text"])
+                me = self.core.me
+                self.text.setPlainText(reply_mentions(self.reply_to, me.handle if me else ""))
+                if self.reply_to.warning:
+                    self.cw.setText(self.reply_to.warning)
         self.vis.setCurrentIndex(VISIBILITIES.index(vis) if vis in VISIBILITIES else 2)
         self.initial = self._snapshot()
 
     def _load_edit(self):
-        v = self.edit.get("visibility", "private")
+        v = self.edit.visibility
         self.vis.setCurrentIndex(VISIBILITIES.index(v) if v in VISIBILITIES else 2)
-        self.set_language(self.edit.get("language") or "")
+        self.set_language(self.edit.lang or "")
         self.lang.setEnabled(False)
         self.vis.setEnabled(False)
         self.vis.setToolTip(_("edit_media_kept"))
@@ -502,9 +516,10 @@ class Compose(QDialog):
         self.hint.setText(_("loading"))
 
         def got(src):
+            text, warning = src
             self.text.setEnabled(True)
-            self.text.setPlainText(src.get("text", ""))
-            self.cw.setText(src.get("spoiler_text", ""))
+            self.text.setPlainText(text)
+            self.cw.setText(warning)
             if self.cw.text():
                 self.cw_btn.setChecked(True)
             self.hint.setText(_("edit_hint"))
@@ -814,7 +829,6 @@ class Compose(QDialog):
         back to editing from here."""
         from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser
 
-        from ...core.model import chain_parts
         text = self.text.toPlainText().strip()
         parts = chain_parts(text) if self.core.cfg["post"].get("chain", True) else [text]
         parts = parts or [text]
@@ -856,7 +870,6 @@ class Compose(QDialog):
 
     # ---- sending --------------------------------------------------------------------
     def _count(self):
-        from ...core.model import chain_parts
         lim = self.core.caps.max_characters
         parts = chain_parts(self.text.toPlainText()) \
             if self.core.cfg["post"].get("chain", True) else []
@@ -921,7 +934,7 @@ class Compose(QDialog):
             return
         self.save_draft()  # whatever happens next, the text is safe
         log.info("send: %s, reply to %s, %s, language %s, %d chars, %d pictures",
-                 "edit" if self.edit else "post", self.reply_to["id"] if self.reply_to else "-",
+                 "edit" if self.edit else "post", self.reply_to.id if self.reply_to else "-",
                  self.vis.currentData(), self._language() or "-", len(text), len(media))
         self.send_btn.setEnabled(False)
         self.send_btn.setText(_("sending"))
@@ -929,13 +942,11 @@ class Compose(QDialog):
             fut = self.core.edit(self.edit, text, self.cw.text().strip(), draft_key=self.key)
             self.win.bridge.call(fut, ok=self._edited, fail=self._failed)
             return
-        fut = self.core.post(text, self.vis.currentData(),
-                             self.reply_to["id"] if self.reply_to else None,
-                             self.cw.text().strip(), media, draft_key=self.key,
+        fut = self.core.post(text, self.vis.currentData(), self.reply_to,
+                             self.cw.text().strip(), media=media, draft_key=self.key,
                              language=self._language(),
                              sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data(),
-                             quote=self.quote["id"] if self.quote else None,
-                             scheduled_at=scheduled_at)
+                             quote=self.quote, scheduled_at=scheduled_at)
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _ask_alt(self, bare, scheduled_at):
@@ -961,10 +972,9 @@ class Compose(QDialog):
         self.sent = True
         try:
             self.core.delete_draft(self.key)
-            if st.get("scheduled"):
+            if isinstance(st, Scheduled):
                 self.win.statusBar().showMessage(
-                    _("scheduled_msg", when=self.win.theme.date(st.get("scheduled_at", ""))),
-                    8000)
+                    _("scheduled_msg", when=self.win.theme.date(st.at) if st.at else ""), 8000)
                 return
             self.win.after_post(st, self.reply_to)
         finally:

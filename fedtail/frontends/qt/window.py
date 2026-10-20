@@ -44,9 +44,10 @@ from PySide6.QtWidgets import (
 
 from ... import diag, version
 from ...core import lanes as lanes_module
-from ...core.model import real, snippet
 from ...i18n import _
+from ...model import Account, Post, Share
 from ...model import real as real_entry
+from ...model.text import snippet
 from .. import themefile
 from . import badge
 from . import card as card_module
@@ -250,8 +251,7 @@ class MainWindow(QMainWindow):
         self.ctx.subscribed = lambda e: core.subscribed(self.ctx.view.raw(e))
         quiet = getattr(core, "thread_quiet", None)
         self.ctx.thread_quiet = (lambda e: quiet(self.ctx.view.raw(e))) if quiet else None
-        self.ctx.quote_reply = lambda e, text, whole=False: self.quote_reply(
-            self.ctx.view.raw(e), text, whole)
+        self.ctx.quote_reply = self.quote_reply
         self.ctx.supports = core.supports
         self.ctx.play_video = self.play_video
         from . import player
@@ -269,9 +269,8 @@ class MainWindow(QMainWindow):
             self.ctx.fill_list_menu = self.fill_list_menu
         if hasattr(core, "act_as") and self.cfg["ui"].get("act_as", True):
             self.ctx.act_as = lambda e: core.act_accounts(self.ctx.view.raw(e))
-            self.ctx.do_act_as = lambda e, tag, action: self.act_as(self.ctx.view.raw(e), tag,
-                                                                    action)
-        self.ctx.long_form = (lambda e: self.read_whole(self.ctx.view.raw(e))) \
+            self.ctx.do_act_as = self.act_as
+        self.ctx.long_form = self.read_whole \
             if self.cfg["feed"].get("long_form", True) else None
         self.lane_widgets = {}
         self.columns = None  # the lanes side by side, while they are (columns.py)
@@ -572,7 +571,7 @@ class MainWindow(QMainWindow):
         who = ""
         if self.core.me:
             host = (self.core.auth or {}).get("server", "").split("://")[-1].rstrip("/")
-            acct = self.core.me["acct"]
+            acct = self.ctx.view.me.handle
             who = "@" + acct + (f"@{host}" if host and "@" not in acct else "")
         text = f"{me}: {who}" if who else me
         self.profile_label.setText(text + (" ★" if me == paths.main_profile() else ""))
@@ -864,7 +863,7 @@ class MainWindow(QMainWindow):
 
     def open_my_profile(self):
         if self.core.me:
-            self.open_account(self.core.me["id"])
+            self.open_account(self.ctx.view.me.id)
 
     def edit_profile(self):
         if self.core.me:
@@ -874,27 +873,29 @@ class MainWindow(QMainWindow):
         self._show_me(me)
         for w in self.theme.warnings:
             self.error(w)
-        self.statusBar().showMessage(_("connected", acct=me["acct"],
+        self.statusBar().showMessage(_("connected", acct=self.ctx.view.acc(me).handle,
                                        server=self.core.auth["server"]), 8000)
         self._after_connect(me)
 
     def _show_me(self, me):
-        self.ctx.me_id = me["id"]
+        me = me if isinstance(me, Account) else self.ctx.view.acc(me)
+        self.ctx.me_id = me.id
         self._profile_text()
         t = self.theme
-        fields = {"display_name": me.get("display_name") or me["username"],
-                  "username": me["username"], "acct": me["acct"]}
+        # the theme's words name them as the server does
+        fields = dict(display_name=me.name or me.username, username=me.username,
+                      acct=me.handle)
         self.account_name.setText(t.words["account_title"].format(**fields))
         self.account_sub.setText(t.words["account_subtitle"].format(**fields))
         if t.shape["sidebar_avatar"]:
-            self.images.get(me.get("avatar_static") or me.get("avatar"),
+            self.images.get(me.avatar_static or me.avatar,
                             lambda pm: self.account_avatar.setPixmap(_round(pm, 44)))
 
     def _after_connect(self, me):
         if self.core.new_options:
             QTimer.singleShot(8500, lambda: self.statusBar().showMessage(
                 _("new_options", n=len(self.core.new_options)), 30_000))
-        tip = f"{self.base_title} — @{me['acct']}"
+        tip = f"{self.base_title} — @{self.ctx.view.acc(me).handle}"
         self.setWindowTitle(tip)
         if self.tray:
             self.tray.setToolTip(tip)
@@ -950,7 +951,8 @@ class MainWindow(QMainWindow):
         logged in; the window goes over to that one, or (none left) to the login."""
         from ...core import profiles
         me = self.core.paths.profile
-        acct = "@" + (self.core.me or {}).get("acct", (self.core.auth or {}).get("acct", me))
+        mine = self.ctx.view.me
+        acct = "@" + (mine.handle if mine else (self.core.auth or {}).get("acct", me))
         others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
         main = profiles.paths.main_profile()
         text = [_("logout_q", acct=acct)]
@@ -1545,9 +1547,9 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentIndex(i)
 
     def open_thread(self, sid):
-        st = self.core.store.get_status(sid)
-        if st:
-            sid = real(st)["id"]
+        post = self.ctx.view.by_id(sid)
+        if post:
+            sid = post.id  # a boost's id: the post inside
         for w in self.extra_tabs():
             if isinstance(w, ThreadWidget) and sid in w.statuses:
                 self._front(w)
@@ -1618,15 +1620,15 @@ class MainWindow(QMainWindow):
         from urllib.parse import urlparse
 
         from ...core import counters
-        s = real(st)
-        title = _("who_" + kind, text=snippet(s, 30))
+        s = self.ctx.view.raw(st)  # counters still read the server's own record
+        title = _("who_" + kind, text=snippet(st, 30))
         origin = counters.origin_api_url(s, (self.core.auth or {}).get("server", ""))
         kw = {}
         if origin and self.cfg["feed"].get("remote_people", True):
-            kw = {"origin": lambda have: self.core.who_reacted_from_origin(st, kind, have),
+            kw = {"origin": lambda have: self.ctx.view.who_reacted_from_origin(st, kind, have),
                   "origin_label": _("people_more_from", host=urlparse(origin).hostname)}
-        self.open_accounts(f"{kind}:{s['id']}", title,
-                           lambda cur: self.core.who_reacted(st, kind, cur), **kw)
+        self.open_accounts(f"{kind}:{st.id}", title,
+                           lambda cur: self.ctx.view.who_reacted(st, kind, cur), **kw)
 
     def open_suggestions(self):
         self.open_accounts("suggestions", _("suggestions_title"), self.core.suggestions,
@@ -1649,8 +1651,8 @@ class MainWindow(QMainWindow):
         self.bridge.call(self.ctx.view.server_info(),
                          ok=lambda info: ServerInfoDialog(self, info).exec(), fail=self.error)
 
-    def open_quotes(self, st):
-        post = real_entry(self.ctx.view.entry(st))
+    def open_quotes(self, post):
+        post = self._post(post)
         for w in self.extra_tabs():
             if isinstance(w, QuotesWidget) and w.status.id == post.id:
                 self._front(w)
@@ -1673,13 +1675,13 @@ class MainWindow(QMainWindow):
             if not found:
                 self.statusBar().showMessage(_("resolve_browser"), 4000)
                 self.open_url(url)
-            elif found[0] == "status":
+            elif isinstance(found, Account):
                 self.statusBar().clearMessage()
-                self.open_thread(real(found[1])["id"])
+                self.open_account(found.id)
             else:
                 self.statusBar().clearMessage()
-                self.open_account(found[1]["id"])
-        self.bridge.call(self.core.resolve(url), ok=done,
+                self.open_thread(found.id)
+        self.bridge.call(self.ctx.view.resolve(url), ok=done,
                          fail=lambda _e: (self.statusBar().clearMessage(), self.open_url(url)))
 
     def retitle(self, w):
@@ -1738,7 +1740,7 @@ class MainWindow(QMainWindow):
     # ---- links & actions --------------------------------------------------------------
     def copy_handle(self, acct):
         """@user@server into the clipboard: what to paste to mention or find them."""
-        from ...core.model import full_handle
+        from ...model.text import full_handle
         handle = full_handle(acct, (self.core.auth or {}).get("server", ""))
         if handle:
             QGuiApplication.clipboard().setText(handle)
@@ -1786,7 +1788,8 @@ class MainWindow(QMainWindow):
             return
         action, _sep, arg = url[len("fedtail:"):].partition("/")
         log.info("action %s %s", action, arg if action not in ("tag", "resolve") else "…")
-        st = self.core.store.get_status(arg) \
+        v = self.ctx.view
+        st = v.by_id(arg) \
             if action not in ("account", "tag", "resolve", "alias", "copyhandle") else None
         if action == "copyhandle":  # someone's @user@server, to call them anywhere
             self.copy_handle(unquote(arg))
@@ -1802,133 +1805,142 @@ class MainWindow(QMainWindow):
             self.open_account(arg)
         elif st is None:
             self.error(_("not_in_cache"))
-        elif action == "poll":
-            self.bridge.call(self.core.refresh_poll(st), fail=self.error)
+        else:
+            self._post_action(action, arg, st)
+
+    def _post_action(self, action, arg, st):
+        """on_link's actions on a post (st: the Post)."""
+        v = self.ctx.view
+        if action == "poll":
+            self.bridge.call(v.refresh_poll(st), fail=self.error)
         elif action == "reply":
             self.compose(st)
         elif action == "invite":  # call someone into this thread: a reply naming them
-            if self.core.me:
+            if v.me:
                 Compose(self, reply_to=st, invite=True).show()
         elif action == "edit":
             Compose(self, edit=st).show()
         elif action == "history":
             self.show_history(st)
         elif action in ("mute", "block"):
-            acc = real(st)["account"]
+            acc = st.author
             if action == "block" and QMessageBox.question(
-                    self, _("block"), _("block_q", acct=acc["acct"])) \
+                    self, _("block"), _("block_q", acct=acc.handle)) \
                     != QMessageBox.StandardButton.Yes:
                 return
-            call = self.core.mute if action == "mute" else self.core.block
-            self.bridge.call(call(acc["id"], True), ok=lambda _r: self.statusBar().showMessage(
-                _(action + "d_msg", acct=acc["acct"]), 6000))
+            call = v.mute if action == "mute" else v.block
+            self.bridge.call(call(acc.id, True), ok=lambda _r: self.statusBar().showMessage(
+                _(action + "d_msg", acct=acc.handle), 6000))
         elif action == "bookmark":
-            on = not real(st).get("bookmarked")
-            self.bridge.call(self.core.bookmark(st, on), ok=lambda _s: self.statusBar().showMessage(
+            on = not st.mine.bookmarked
+            self.bridge.call(v.bookmark(st, on), ok=lambda _s: self.statusBar().showMessage(
                 _("bookmarked" if on else "unbookmarked"), 4000))
         elif action == "fav":
-            self.bridge.call(self.core.favourite(st))
+            self.bridge.call(v.like(st))
         elif action == "boost":
-            self.bridge.call(self.core.boost(st))
+            self.bridge.call(v.share(st))
         elif action == "open":
-            s = real(st)
-            self.open_url(s.get("url") or s.get("uri"))
+            self.open_url(st.url or st.uri)
         elif action in ("sub", "unsub"):
             sub = action == "sub"
-            self.bridge.call((self.core.subscribe if sub else self.core.unsubscribe)(st),
+            self.bridge.call((v.subscribe if sub else v.unsubscribe)(st),
                              ok=lambda _r: self.statusBar().showMessage(
                                  _("subbed" if sub else "unsubbed"), 6000))
         elif action == "report":
             self.report(st)
         elif action == "blockdomain":
-            domain = real(st)["account"]["acct"].partition("@")[2]
+            domain = st.author.handle.partition("@")[2]
             if domain and QMessageBox.question(
                     self, _("block_domain", domain=domain), _("block_domain_q", domain=domain)) \
                     == QMessageBox.StandardButton.Yes:
-                self.bridge.call(self.core.block_domain(domain, True),
+                self.bridge.call(v.block_domain(domain, True),
                                  ok=lambda _d: self.statusBar().showMessage(
                                      _("domain_blocked", domain=domain), 6000),
                                  fail=self.error)
         elif action == "quote":
             Compose(self, quote=st).show()
         elif action == "readone":
-            self.core.mark_read([arg])
+            v.mark_read([arg])
         elif action == "readupto":
             self.read_up_to(arg)
         elif action in ("favourited_by", "reblogged_by"):
             self.open_reactions(st, action)
         elif action in ("mutethread", "unmutethread"):
             on = action == "mutethread"
-            self.bridge.call(self.core.mute_thread(st, on),
+            self.bridge.call(v.mute_thread(st, on),
                              ok=lambda _s: self.statusBar().showMessage(
                                  _("thread_muted" if on else "thread_unmuted"), 5000),
                              fail=self.error)
         elif action == "quotes":
             self.open_quotes(st)
         elif action == "revokequote":
-            q = real(st).get("quote") or {}
-            mine = q.get("quoted_status")
+            mine = st.quote.post if st.quote else None
             if mine and QMessageBox.question(
                     self, _("revoke_quote"),
-                    _("revoke_quote_q", acct=real(st)["account"]["acct"])) \
+                    _("revoke_quote_q", acct=st.author.handle)) \
                     == QMessageBox.StandardButton.Yes:
-                self.bridge.call(self.core.revoke_quote(mine, st),
+                self.bridge.call(v.revoke_quote(mine, st),
                                  ok=lambda _s: self.statusBar().showMessage(
                                      _("quote_taken_back"), 5000),
                                  fail=self.error)
         elif action in ("pin", "unpin"):
             on = action == "pin"
-            self.bridge.call(self.core.pin(st, on), ok=lambda _s: self.statusBar().showMessage(
+            self.bridge.call(v.pin(st, on), ok=lambda _s: self.statusBar().showMessage(
                 _("pinned_msg" if on else "unpinned_msg"), 4000), fail=self.error)
         elif action == "delete":
             if QMessageBox.question(self, _("delete_q_title"),
                                     _("delete_q", text=snippet(st, 200))) \
                     == QMessageBox.StandardButton.Yes:
-                self.bridge.call(self.core.delete(st))
+                self.bridge.call(v.delete(st))
         elif action == "redraft":
-            n = len(real(st).get("media_attachments") or [])
+            n = len(st.media)
             q = _("redraft_q", text=snippet(st, 200)) + (
                 "\n\n" + _("redraft_media", n=n) if n else "")
             if QMessageBox.question(self, _("redraft"), q) == QMessageBox.StandardButton.Yes:
-                self.bridge.call(self.core.redraft(st), ok=self._redrafted, fail=self.error)
+                self.bridge.call(v.redraft(st), ok=self._redrafted, fail=self.error)
+
+    def _post(self, x):
+        """A Post from a Post, a Share or (older callers) a stored status."""
+        return real_entry(x if isinstance(x, (Post, Share)) else self.ctx.view.entry(x))
 
     def _redrafted(self, d):
-        """The deleted post back in the composer, as it was typed."""
-        parent = self.core.store.get_status(d["in_reply_to_id"]) if d.get(
-            "in_reply_to_id") else None
+        """The deleted post back in the composer, as it was typed (d: a Redraft)."""
+        parent = self.ctx.view.by_id(d.reply_to) if d.reply_to else None
         dlg = Compose(self, reply_to=parent)
-        dlg.text.setPlainText(d["text"])
-        if d.get("cw"):
-            dlg.cw.setText(d["cw"])
+        dlg.text.setPlainText(d.text)
+        if d.warning:
+            dlg.cw.setText(d.warning)
             dlg.cw.setVisible(True)
-        from ...core.model import VISIBILITIES
-        if d.get("visibility") in VISIBILITIES:
-            dlg.vis.setCurrentIndex(VISIBILITIES.index(d["visibility"]))
-        if d.get("language"):
-            dlg.set_language(d["language"])
+        i = dlg.vis.findData(d.visibility)
+        if i >= 0:
+            dlg.vis.setCurrentIndex(i)
+        if d.language:
+            dlg.set_language(d.language)
         dlg.show()
-        if d.get("media"):
-            self.statusBar().showMessage(_("redraft_media", n=d["media"]), 8000)
+        if d.media:
+            self.statusBar().showMessage(_("redraft_media", n=d.media), 8000)
 
     def act_as(self, st, tag, action):
         """★ / ♻ / ↩ from another account of the window: the post found on its server."""
         self.statusBar().showMessage(_("act_as_wait"), 4000)
+        v = self.ctx.view
 
         def done(got):
             if action == "reply":
                 self.compose(got)
             else:
-                self.statusBar().showMessage(_("act_as_done", acct=got.get("_via") or
-                                               "@" + (self.core.me or {}).get("acct", "")),
-                                             5000)
-        self.bridge.call(self.core.act_as(st, tag, "find" if action == "reply" else action),
+                via = v.via(got) if got is not None else ""
+                self.statusBar().showMessage(
+                    _("act_as_done", acct=via or "@" + (v.me.handle if v.me else "")), 5000)
+        self.bridge.call(v.act_as(self._post(st), tag, "find" if action == "reply" else action),
                          ok=done, fail=self.error)
 
     def read_whole(self, st):
         """📄 The whole text from the author's server: an article your server cut to a
         title and a link, an event with its time and place."""
         self.statusBar().showMessage(_("long_form_wait"), 4000)
-        self.bridge.call(self.core.long_form(st), ok=lambda d: self._show_whole(st, d),
+        st = self._post(st)
+        self.bridge.call(self.ctx.view.long_form(st), ok=lambda d: self._show_whole(st, d),
                          fail=self.error)
 
     def _show_whole(self, st, d):
@@ -2005,10 +2017,10 @@ class MainWindow(QMainWindow):
         where its cursor is, to answer a post sentence by sentence — or a new one."""
         if not self.core.me:
             return
-        rid = real(st)["id"]
+        st = self._post(st)
         for c in list(getattr(self, "open_composes", [])):
             try:
-                if c.isVisible() and c.reply_to and c.reply_to["id"] == rid and \
+                if c.isVisible() and c.reply_to and c.reply_to.id == st.id and \
                         not c.edit and not c.invite:
                     c.insert_quote(text, whole)
                     return
@@ -2100,9 +2112,10 @@ class MainWindow(QMainWindow):
         """Complain about a post to my server's moderators — with why, what kind, and
         whether the author's server should hear too."""
         from PySide6.QtWidgets import QCheckBox, QComboBox, QDialogButtonBox, QPlainTextEdit
-        acc = real(st)["account"]
+        st = self._post(st)
+        acc = st.author
         dlg = QDialog(self)
-        dlg.setWindowTitle(_("report_title", acct=acc["acct"]))
+        dlg.setWindowTitle(_("report_title", acct=acc.handle))
         dlg.resize(480, 320)
         lay = QVBoxLayout(dlg)
         quote = QLabel(snippet(st, 200))
@@ -2117,8 +2130,8 @@ class MainWindow(QMainWindow):
         why = QPlainTextEdit()
         why.setPlaceholderText(_("report_why"))
         lay.addWidget(why, 1)
-        remote = "@" in acc["acct"]
-        fwd = QCheckBox(_("report_forward", host=acc["acct"].split("@")[-1]))
+        remote = "@" in acc.handle
+        fwd = QCheckBox(_("report_forward", host=acc.handle.split("@")[-1]))
         fwd.setChecked(remote and self.cfg["post"].get("report_forward", True))
         fwd.setVisible(remote)
         lay.addWidget(fwd)
@@ -2130,7 +2143,7 @@ class MainWindow(QMainWindow):
 
         def go():
             dlg.accept()
-            self.bridge.call(self.core.report(st, why.toPlainText().strip(), fwd.isChecked(),
+            self.bridge.call(self.ctx.view.report(st, why.toPlainText().strip(), fwd.isChecked(),
                                               kind.currentData()),
                              ok=lambda _r: self.statusBar().showMessage(_("report_sent"), 6000),
                              fail=self.error)
@@ -2155,7 +2168,7 @@ class MainWindow(QMainWindow):
         def got(versions):
             view.setHtml(history_html(versions, self.theme.date, self.theme.css("link"))
                          or _("history_none"))
-        self.bridge.call(self.core.history(st), ok=got,
+        self.bridge.call(self.ctx.view.history(self._post(st)), ok=got,
                          fail=lambda e: view.setPlainText(_("load_failed", err=e)))
         dlg.show()
 
@@ -2163,10 +2176,10 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(_("sent"), 4000)
         if reply_to:
             for w in self.extra_tabs():
-                if isinstance(w, ThreadWidget) and reply_to["id"] in w.statuses:
+                if isinstance(w, ThreadWidget) and reply_to.id in w.statuses:
                     w.reload()
-        else:
-            self.open_thread(st["id"])
+        elif st is not None:
+            self.open_thread(st.id)
 
     # ---- window -------------------------------------------------------------------------
     def error(self, err):
