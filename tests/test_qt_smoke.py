@@ -2198,7 +2198,12 @@ class QtSmokeTest(unittest.TestCase):
             win.hide()
             win.deleteLater()
             roster.deleteLater()
-        self.addCleanup(done)
+        try:
+            self._qip_roster(win, roster)
+        finally:
+            done()  # before tearDown shuts the core down
+
+    def _qip_roster(self, win, roster):
         win.show()
         self.assertTrue(roster.isVisible())  # comes with the window
         self.assertTrue(win.split.widget(0).isHidden())  # no sidebar here

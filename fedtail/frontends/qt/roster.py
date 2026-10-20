@@ -366,7 +366,10 @@ class RosterWindow(QWidget):
             self.move(QPoint(max(0, g.left() - self.width() - 12), g.top()))
 
     def save_place(self):
-        self.win.core.set_state("roster_geometry", bytes(self.saveGeometry()).hex())
+        try:
+            self.win.core.set_state("roster_geometry", bytes(self.saveGeometry()).hex())
+        except Exception as e:  # noqa: BLE001 — closing after the core: nothing to keep in
+            log.debug("roster place: %s", e)
 
     def closeEvent(self, e):
         """Closing the roster is closing fedtail, as in a messenger: to the tray with
