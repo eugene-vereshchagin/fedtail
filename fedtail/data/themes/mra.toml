@@ -1,6 +1,9 @@
-# fedtail theme: mra — in the spirit of the Mail.ru Agent (2008–2010): warm orange frames
-# and buttons, white panes, "Name (18:50) :" in red, mine in blue. Best with
-# ui.layout = "qip"; mra-blue is the same in blue. Own icons and colours only.
+# fedtail theme: mra — in the spirit of the Mail.ru Agent (2008–2011), the orange skin:
+# glossy orange frames and buttons with a white highlight, white panes with square
+# corners, "Name (14.02.26 18:23) :" bold over every message — mine in blue, everyone
+# else's in red; the faces in a column on the right, the roster's items three lines
+# beside a big face. Best with ui.layout = "split". Own icons and colours only: a theme
+# in the spirit, not a copy of anyone's skin.
 name = "Agent (orange)"
 inherit = "system"
 
@@ -13,62 +16,66 @@ files = ["fonts/Arimo-Variable.ttf", "fonts/Arimo-Italic-Variable.ttf"]
 
 [colors]
 window = "#fbe2bd"
-sidebar = "#fdecd3"
-sidebar_border = "#eaa24a"
-panel = "#fff2df"
-selected = "#e3e3e3"
-selected_text = "#111111"
+sidebar = "#fff4e2"
+sidebar_border = "#e3a55a"
+panel = "#fff4e2"
+selected = "#fbd9a6"
+selected_text = "#1a1a1a"
 view = "#ffffff"
-header_border = "#f0c58c"
+header_border = "#e3a55a"
 card = "#ffffff"
-card_border = "#f3d3a6"
-card_border_unread = "#ef8e12"
-text = "#1a1a1a"
-muted = "#8a7a68"
-link = "#1559b8"
-accent = "#f39a1f"
+card_border = "#e3a55a"
+card_border_unread = "#ee8a17"
+text = "#111111"
+muted = "#6b6b6b"
+link = "#1b3fae"
+accent = "#ee8a17"
 on_accent = "#ffffff"
-hot = "#d6201b"
+hot = "#e0201b"
 on_hot = "#ffffff"
-quiet = "#fbe9cf"
-on_quiet = "#7a6346"
+quiet = "#fff4e2"
+on_quiet = "#555555"
 new_pill = "#ffffff"
-on_new_pill = "#d6701b"
-ctx = "#fff6ea"
-ctx_bar = "#f0c58c"
-focus = "#fff8ee"
-focus_border = "#ef8e12"
-myreply = "#fff1dc"
-on_myreply = "#7a5326"
-separator = "#ef8e12"
-rail = "#f3d3a6"
-button = "#fff4e3"
-button_border = "#e8a95c"
-dot = "#3fae3a"
-primary = "#f39a1f"
-on_primary = "#ffffff"
-header = "#fde2b8"
-header_bar = "#ef8e12"
-chat_me = "#1a3fcf"
-chat_them = "#d6201b"
+on_new_pill = "#b25e05"
+ctx = "#fff4e2"
+ctx_bar = "#e3a55a"
+focus = "#fff4e2"
+focus_border = "#ee8a17"
+myreply = "#fff4e2"
+on_myreply = "#333333"
+separator = "#ee8a17"
+rail = "#e3a55a"
+button = "#fff1db"
+button_border = "#e3a55a"
+dot = "#2e9a2e"
+header = "#fcdcae"
+header_bar = "#ee8a17"
+chat_me = "#1d34c8"
+chat_them = "#e0201b"
+tab_mark = "#ee8a17"
 
 [shape]
-radius = 8
-button_radius = 10
+radius = 0
+button_radius = 4
 card_style = "rule"
 rule = "solid"
-header_bar = 3
+header_bar = 0
 card_avatars = false
 card_header = "chat"
+faces = "agent"
+roster_rows = "faces"
+roster_face = 44
+tab_rows = "wrap"
 
 [words]
 date = "{dd}.{mm} {clock}"
 chat = "{name} ({when}) :"
-chat_date = "{clock}"
+chat_date = "{dd}.{mm}.{yy} {clock}"
+roster_group = "{arrow} {title} ({lit}/{n})"
 
 [icon]
 bg_top = "#ffc35c"
-bg_bottom = "#e87d0d"
+bg_bottom = "#ee8a17"
 bubble = "#ffffff"
-ink = "#c4620a"
+ink = "#b25e05"
 accent = "#3fae3a"

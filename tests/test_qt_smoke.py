@@ -2402,7 +2402,8 @@ class QtSmokeTest(unittest.TestCase):
         lane = self.win.lane_widgets["home"]
         self.pump(until=lambda: "011" in lane.view.rows and "010" in lane.view.rows)
         try:
-            for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "psi"):
+            for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "mra-green",
+                         "mra-violet", "psi"):
                 self.win.try_theme(name)
                 self.assertEqual(self.win.theme.id, name)
                 them = [w for w in lane.view.rows["011"].findChildren(QLabel)

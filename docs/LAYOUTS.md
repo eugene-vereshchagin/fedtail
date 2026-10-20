@@ -90,3 +90,10 @@
 Рисунки — свои SVG в духе 2007 года или свободные (MIT, CC BY — с указанием автора в
 `data/icons/LICENSES`), перекрашиваются цветами темы. Цветок ICQ — только как значок
 внутри окон в ретро-темах, с пометкой, что это знак его владельца.
+
+## Тема задаёт вид split (сделано)
+
+`shape.faces` (qip | agent | none), `shape.roster_rows` (lines | faces), `shape.roster_face`,
+`shape.tab_rows` (wrap | one), `colors.view_end` (диагональ за постами, QIP Infium),
+`colors.tab_mark` (полоса над вкладкой спереди, XP), `words.roster_group`. Раскладка лиц и
+вкладок берётся из темы при запуске; «попробовать тему» меняет цвета, но не раскладку.

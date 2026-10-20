@@ -87,7 +87,8 @@ def _auto_colors(pal):
 # a theme with its own text colour gets it in the sidebar too
 FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
            "primary": "accent", "on_primary": "on_accent", "name": "text",
-           "header_bar": "accent", "chat_me": "link", "chat_them": "hot"}  # the band over a title: the theme's own colour
+           "header_bar": "accent", "chat_me": "link", "chat_them": "hot",
+           "view_end": "view", "tab_mark": "accent"}  # the band over a title: the theme's own colour
 # "auto" mixed from two colours of the same theme: (from, towards, how far)
 TINTS = {"header": ("view", "accent", 0.16)}  # the title strip, tinted with the theme
 
@@ -155,7 +156,8 @@ class Theme:
         time = f"{dt:%H:%M}" if dt.year == now.year else str(dt.year)
         return (fmt or self.words["date"]).format(
             day=dt.day, mon=months()[dt.month - 1], dd=f"{dt.day:02d}", mm=f"{dt.month:02d}",
-            yyyy=dt.year, time=time, clock=f"{dt:%H:%M}", secs=f"{dt:%H:%M:%S}")
+            yyyy=dt.year, yy=f"{dt:%y}", time=time, clock=f"{dt:%H:%M}",
+            secs=f"{dt:%H:%M:%S}")
 
     # ---- stylesheet -------------------------------------------------------------------
     def css(self, key):
@@ -177,6 +179,17 @@ class Theme:
         top bar of point.im over its hatched header), that many pixels high."""
         px = int(self.shape.get("header_bar") or 0)
         return f"border-top: {px}px solid {self.css('header_bar')};" if px > 0 else ""
+
+    def _view_gradient_css(self):
+        """colors.view_end other than view: the posts and the input line on a pale
+        diagonal gradient, as QIP Infium had them (white top right, tinted lower left)."""
+        if self.c["view_end"] == self.c["view"]:
+            return ""
+        g = (f"qlineargradient(x1:1, y1:0, x2:0, y2:1, stop:0 {self.css('view')}, "
+             f"stop:1 {self.css('view_end')})")
+        return (f"QScrollArea#feed > QWidget#qt_scrollarea_viewport {{ background: {g}; }}\n"
+                f"QWidget#feedBody {{ background: transparent; }}\n"
+                f"QPlainTextEdit#dockText {{ background: {g}; }}")
 
     def stylesheet(self, base_pt, mono_family):
         k = self.css
@@ -240,7 +253,9 @@ QLabel#rosterName, QLabel#rosterLine, QLabel#rosterGroup {{ background: transpar
 QLabel#rosterName[unread="true"] {{ color: {k('hot')}; }}
 QLabel#rosterLine {{ color: {k('muted')}; font-style: italic;
     font-size: {round(base_pt * 0.85, 1)}pt; }}
-QLabel#rosterGroup {{ color: {k('muted')}; }}
+QLabel#rosterGroup {{ color: {k('sidebar_muted')}; font-weight: 700; }}
+QLabel#rosterStatus {{ color: {k('muted')}; background: transparent;
+    font-size: {round(base_pt * 0.9, 1)}pt; }}
 QLabel#rosterNews {{ font-size: {round(base_pt * 0.85, 1)}pt; }}
 QLabel#badge {{ border-radius: 10px; padding: 0 7px; min-height: 20px; max-height: 20px;
     font-size: {round(base_pt * 0.85, 1)}pt;
@@ -254,13 +269,24 @@ QTabWidget::pane {{ border: 0; }}
 QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px; border: 0;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
-QTabBar#messageTabs {{ background: {k('window')}; }}
+QWidget#messageTabs {{ background: {k('window')}; }}
+QFrame#msgTab {{ background: {k('button')}; border: 1px solid {k('button_border')};
+    border-bottom: 0; border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
+QFrame#msgTab:hover {{ background: {k('selected')}; }}
+QFrame#msgTab[current="true"] {{ background: {k('view')}; border-top: 2px solid {k('tab_mark')}; }}
+QFrame#msgTab QLabel {{ background: transparent; }}
+QFrame#msgTab[current="true"] QLabel#msgTabText {{ font-weight: 600; }}
+QToolButton#msgTabClose {{ border: 0; background: transparent; color: {k('hot')};
+    font-weight: 700; padding: 0 2px; }}
+QToolButton#msgTabClose:hover {{ background: {k('hot')}; color: {k('on_hot')}; border-radius: 2px; }}
 QWidget#authorBar {{ background: {k('header')}; border-bottom: 1px solid {k('header_border')}; }}
 QSplitter#readWrite::handle {{ background: {k('header_border')}; margin: 1px 0; }}
 QSplitter#readWrite::handle:hover {{ background: {k('selected')}; }}
 QWidget#inputDock {{ background: {k('header')}; }}
 QWidget#contactCard {{ background: {k('card')}; border: 1px solid {k('accent')};
     border-radius: {br}px; }}
+QWidget#agentFace {{ background: {k('panel')}; border-left: 1px solid {k('card_border')}; }}
+QLabel#faceFrame {{ border: 1px solid {k('card_border')}; background: {k('card')}; }}
 QLabel#faceName {{ font-weight: 600; background: transparent; }}
 QTabBar#messageTabs::tab {{ background: {k('button')}; color: {k('text')};
     border: 1px solid {k('button_border')}; border-bottom: 0; margin: 3px 1px 0 1px;
@@ -308,6 +334,7 @@ QLabel#counter[over="true"] {{ color: {k('hot')}; font-weight: 700; }}
 
 /* ---- feed ---- */
 QScrollArea#feed, QWidget#feedBody {{ background: {k('view')}; border: 0; }}
+{self._view_gradient_css()}
 QFrame#card {{ {card} }}
 QFrame#card[unread="true"] {{ {card_unread} }}
 QFrame#card[focus="true"] {{ {card_focus} }}

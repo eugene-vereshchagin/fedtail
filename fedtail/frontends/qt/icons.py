@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 DIR = Path(__file__).resolve().parents[2] / "data" / "icons" / "ui"
 # pictures of their own colour, whatever the theme: a status flower is green, as ever
-OWN = {"status": "#3aa63a", "warning": "#e3a21a"}
+OWN = {"status": "#36b02c", "warning": "#f2a400", "emoji": "#f5c400", "send": "#3aa63a"}
 _cache = {}
 
 try:

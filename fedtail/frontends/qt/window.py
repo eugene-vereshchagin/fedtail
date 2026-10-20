@@ -369,6 +369,7 @@ class MainWindow(QMainWindow):
         # ui.layout = "split": the lanes in a roster window of their own (roster.py); this
         # window is the messages window — no sidebar, the lanes and threads in tabs
         self.roster = self.dock = self.author_bar = self.msg_tabs = None
+        self.agent_face = None
         self.lane_now = None
         if self.cfg["ui"].get("layout") in ("split", "qip"):
             from .dock import InputDock
@@ -391,10 +392,21 @@ class MainWindow(QMainWindow):
             rl = QVBoxLayout(reading)
             rl.setContentsMargins(0, 0, 0, 0)
             rl.setSpacing(0)
-            if self.cfg["ui"].get("faces", True):
+            from .dock import AgentFace, faces_mode
+            mode = faces_mode(self)
+            if mode == "qip":  # over a lane: the author under the cursor, in one line
                 self.author_bar = AuthorBar(self)
                 rl.addWidget(self.author_bar)
-            rl.addWidget(self.tabs, 1)
+            if mode == "agent":  # the Agent: their face in a column beside the posts
+                beside = QHBoxLayout()
+                beside.setContentsMargins(0, 0, 0, 0)
+                beside.setSpacing(0)
+                beside.addWidget(self.tabs, 1)
+                self.agent_face = AgentFace(self)
+                beside.addWidget(self.agent_face)
+                rl.addLayout(beside, 1)
+            else:
+                rl.addWidget(self.tabs, 1)
             self.read_write = QSplitter(Qt.Orientation.Vertical)
             self.read_write.setObjectName("readWrite")
             self.read_write.setChildrenCollapsible(False)

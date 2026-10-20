@@ -110,7 +110,8 @@ class ThemeFileTest(unittest.TestCase):
         # copies in builtin/ are not themes of their own
         self.assertEqual(themefile.available(),
                          ["bnw", "contrast", "debug", "juick", "juick-classic", "mra",
-                          "mra-blue", "night", "nord", "paper", "pink", "point", "psi",
+                          "mra-blue", "mra-green", "mra-violet", "night", "nord", "paper",
+                          "pink", "point", "psi",
                           "qip-modern", "qip-retro", "solarized", "system", "terminal"])
 
 
@@ -137,3 +138,19 @@ class StripesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MessengerThemesTest(unittest.TestCase):
+    def test_messenger_themes_set_the_split_layout(self):
+        """The Agent's themes: faces in a column, the roster's items with big faces,
+        tabs in rows; QIP's: the faces of QIP; every one square or nearly."""
+        for name in ("mra", "mra-blue", "mra-green", "mra-violet"):
+            d, warnings = themefile.load(name)
+            self.assertEqual(warnings, [], name)
+            self.assertEqual((d["shape"]["faces"], d["shape"]["roster_rows"]),
+                             ("agent", "faces"), name)
+        for name in ("qip-retro", "qip-modern", "psi"):
+            d, _w = themefile.load(name)
+            self.assertEqual(d["shape"]["faces"], "qip", name)
+            self.assertLessEqual(d["shape"]["radius"], 3, name)
+        self.assertNotEqual(themefile.load("qip-modern")[0]["colors"]["view_end"], "auto")

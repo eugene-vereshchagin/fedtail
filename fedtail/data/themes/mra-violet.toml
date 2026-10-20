@@ -1,0 +1,81 @@
+# fedtail theme: mra-violet — in the spirit of the Mail.ru Agent (2008–2011), the violet skin:
+# glossy violet frames and buttons with a white highlight, white panes with square
+# corners, "Name (14.02.26 18:23) :" bold over every message — mine in blue, everyone
+# else's in red; the faces in a column on the right, the roster's items three lines
+# beside a big face. Best with ui.layout = "split". Own icons and colours only: a theme
+# in the spirit, not a copy of anyone's skin.
+name = "Agent (violet)"
+inherit = "system"
+
+[font]
+family = "Tahoma, Arial, Arimo, DejaVu Sans, sans-serif"
+mono = "DejaVu Sans Mono, monospace"
+post_scale = 1.05
+# Arimo (Arial's metrics) comes with fedtail (SIL OFL 1.1): where Tahoma and Arial are missing
+files = ["fonts/Arimo-Variable.ttf", "fonts/Arimo-Italic-Variable.ttf"]
+
+[colors]
+window = "#d9c9ec"
+sidebar = "#f3eef9"
+sidebar_border = "#9d86bd"
+panel = "#f3eef9"
+selected = "#e0d4ef"
+selected_text = "#1a1a1a"
+view = "#ffffff"
+header_border = "#9d86bd"
+card = "#ffffff"
+card_border = "#9d86bd"
+card_border_unread = "#8a5cc2"
+text = "#111111"
+muted = "#6b6b6b"
+link = "#1b3fae"
+accent = "#8a5cc2"
+on_accent = "#ffffff"
+hot = "#e0201b"
+on_hot = "#ffffff"
+quiet = "#f3eef9"
+on_quiet = "#555555"
+new_pill = "#ffffff"
+on_new_pill = "#5d3a8e"
+ctx = "#f3eef9"
+ctx_bar = "#9d86bd"
+focus = "#f3eef9"
+focus_border = "#8a5cc2"
+myreply = "#f3eef9"
+on_myreply = "#333333"
+separator = "#8a5cc2"
+rail = "#9d86bd"
+button = "#f4f1f7"
+button_border = "#9d86bd"
+dot = "#2e9a2e"
+header = "#d3c2e8"
+header_bar = "#8a5cc2"
+chat_me = "#1d34c8"
+chat_them = "#e0201b"
+tab_mark = "#8a5cc2"
+
+[shape]
+radius = 0
+button_radius = 4
+card_style = "rule"
+rule = "solid"
+header_bar = 0
+card_avatars = false
+card_header = "chat"
+faces = "agent"
+roster_rows = "faces"
+roster_face = 44
+tab_rows = "wrap"
+
+[words]
+date = "{dd}.{mm} {clock}"
+chat = "{name} ({when}) :"
+chat_date = "{dd}.{mm}.{yy} {clock}"
+roster_group = "{arrow} {title} ({lit}/{n})"
+
+[icon]
+bg_top = "#c4a6ea"
+bg_bottom = "#8a5cc2"
+bubble = "#ffffff"
+ink = "#5d3a8e"
+accent = "#3fae3a"

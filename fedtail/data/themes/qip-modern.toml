@@ -1,72 +1,84 @@
-# fedtail theme: qip-modern — in the spirit of QIP 2012: flat white and light blue, a big
-# face on top, "Name 18:09 20.09" in colour over each message. Best with ui.layout = "qip".
-# Own icons and colours only.
+# fedtail theme: qip-modern — in the spirit of QIP Infium (2008–2010): light grey windows,
+# the posts and the input line on a pale white-to-blue diagonal, small corners, the roster's
+# groups "▾ Friends - 3/25" bold blue, the chosen contact pale blue in a thin blue frame,
+# "Name (14:19:59 19/02/2010)" bold — mine in blue, everyone else's in red. Best with
+# ui.layout = "split". Own icons and colours only.
 name = "QIP modern"
 inherit = "system"
 
 [font]
-family = "Segoe UI, Open Sans, Noto Sans, sans-serif"
-mono = "DejaVu Sans Mono, monospace"
-post_scale = 1.05
-# Open Sans comes with fedtail (SIL OFL 1.1): where Segoe UI is missing
-files = ["fonts/OpenSans-Variable.ttf", "fonts/OpenSans-Italic-Variable.ttf"]
+family = "Tahoma, PT Sans, DejaVu Sans, sans-serif"
+mono = "PT Mono, DejaVu Sans Mono, monospace"
+post_scale = 1.0
+# PT Sans and PT Mono (ParaType) come with fedtail (SIL OFL 1.1): where Tahoma is missing
+files = ["fonts/PT_Sans-Web-Regular.ttf", "fonts/PT_Sans-Web-Bold.ttf",
+         "fonts/PT_Mono-Regular.ttf"]
 
 [colors]
-window = "#eef5fb"
-sidebar = "#e3eef8"
-sidebar_border = "#cddff0"
-panel = "#f5f9fd"
-selected = "#2e8de0"
-selected_text = "#ffffff"
+window = "#f2f2f2"
+sidebar = "#f5f9fe"
+sidebar_border = "#a9c7e8"
+sidebar_text = "#1c4fa8"
+sidebar_muted = "#1c4fa8"
+panel = "#f2f2f2"
+selected = "#dcebfb"
+selected_text = "#0f2e66"
 view = "#ffffff"
-header_border = "#d6e4f2"
+view_end = "#d8e8f8"
+header_border = "#a9c7e8"
 card = "#ffffff"
-card_border = "#e1ebf5"
-card_border_unread = "#2e8de0"
-text = "#1f2a37"
-muted = "#7a8a9c"
-link = "#1e7fd6"
-accent = "#2e8de0"
+card_border = "#c9daee"
+card_border_unread = "#3a78c9"
+text = "#111111"
+muted = "#6a7a90"
+link = "#1c4fa8"
+accent = "#3a78c9"
 on_accent = "#ffffff"
-hot = "#e0484f"
+hot = "#e0201b"
 on_hot = "#ffffff"
-quiet = "#e6eef7"
-on_quiet = "#5d6d80"
-new_pill = "#2e8de0"
-on_new_pill = "#ffffff"
-ctx = "#f1f6fb"
-ctx_bar = "#bcd6ef"
-focus = "#eef6ff"
-focus_border = "#2e8de0"
-myreply = "#eaf3fc"
-on_myreply = "#2f5f8f"
-separator = "#2e8de0"
-rail = "#d3e2f1"
-button = "#ffffff"
-button_border = "#c8dbee"
-dot = "#2e8de0"
-header = "#f0f6fc"
-header_bar = "#2e8de0"
-chat_me = "#2e8de0"
-chat_them = "#e0484f"
+quiet = "#e4edf8"
+on_quiet = "#4a5e7c"
+new_pill = "#ffffff"
+on_new_pill = "#1c4fa8"
+ctx = "#eef4fb"
+ctx_bar = "#a9c7e8"
+focus = "#eef5ff"
+focus_border = "#7da2ce"
+myreply = "#e8f0fb"
+on_myreply = "#2b4d82"
+separator = "#e0201b"
+rail = "#c9daee"
+button = "#f7f7f7"
+button_border = "#a7a7a7"
+dot = "#3fb53a"
+header = "#eaf2fc"
+header_bar = "#3a78c9"
+chat_me = "#1d2fd0"
+chat_them = "#e0201b"
+tab_mark = "#3a78c9"
 
 [shape]
-radius = 6
-button_radius = 6
+radius = 2
+button_radius = 2
 card_style = "rule"
-rule = "solid"
+rule = "dashed"
 header_bar = 0
-avatar = 32
-avatar_shape = "rounded"
+card_avatars = false
+avatar_shape = "square"
 card_header = "chat"
+faces = "qip"
+roster_rows = "lines"
+tab_rows = "wrap"
 
 [words]
-chat = "{name} {when}"
-chat_date = "{clock} {dd}.{mm}"
+date = "{dd}/{mm} {clock}"
+chat = "{name} ({when})"
+chat_date = "{secs} {dd}/{mm}/{yyyy}"
+roster_group = "{arrow} {title} - {lit}/{n}"
 
 [icon]
-bg_top = "#5fb0f0"
-bg_bottom = "#1f6fc0"
+bg_top = "#9cc6f2"
+bg_bottom = "#3a78c9"
 bubble = "#ffffff"
-ink = "#1f6fc0"
-accent = "#6cc24a"
+ink = "#2c62b3"
+accent = "#3fb53a"

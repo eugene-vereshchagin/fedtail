@@ -8,16 +8,16 @@ schedule)."""
 import logging
 import re
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
     QPlainTextEdit,
     QPushButton,
-    QTabBar,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 
 FACE = 64  # a face beside the messages, as in QIP: as tall as the input line
 BAR_FACE = 36  # the author's, in the one-line bar over a lane
+AGENT_FACE = 88  # the Agent's, in the column beside the posts
 
 
 class InputDock(QWidget):
@@ -223,12 +224,18 @@ class InputDock(QWidget):
         self.about.setText(self._about)
 
     def show_whom(self, account):
-        """Their face beside the line: whom this goes to (None: nobody in particular)."""
+        """The face beside the line: whom this goes to (None: nobody in particular) —
+        or, as the Agent had it (shape.faces = "agent"), mine whoever it goes to."""
         me = self.win.ctx.view.me if self.win.core.me else None
-        if account is not None and me is not None and account.id == me.id:
+        mode = faces_mode(self.win)
+        if mode == "agent":
+            account = me
+        elif mode == "none":
+            account = None
+        elif account is not None and me is not None and account.id == me.id:
             account = None
         self._to = account
-        self.face.setVisible(account is not None and self.win.cfg["ui"].get("faces", True))
+        self.face.setVisible(account is not None)
         self.face.setToolTip("@" + account.handle if account else "")
         set_face(self.win, self.face, account.avatar_static if account else "", self,
                  "_face_url")
@@ -337,6 +344,79 @@ class InputDock(QWidget):
             kw["media"] = list(self.media)
         self.win.bridge.call(self.win.ctx.view.post(text, self.visibility, target, warning,
                                                     **kw), ok=sent, fail=failed)
+
+
+def faces_mode(win):
+    """How the split layout shows faces: the theme's shape.faces ("qip", "agent",
+    "none"), "none" with ui.faces = false."""
+    if not win.cfg["ui"].get("faces", True):
+        return "none"
+    return win.theme.shape.get("faces", "qip")
+
+
+class AgentFace(QWidget):
+    """The Mail.ru Agent's column beside the posts (shape.faces = "agent"): the other
+    side's face, big, in a frame, the name under it, a click — the profile. In a thread
+    whom I answer, in a talk whom I talk to, over a lane the author under the cursor."""
+
+    def __init__(self, win):
+        super().__init__()
+        from .card import ClickLabel
+        self.win, self.who = win, None
+        self._url = None
+        self.setObjectName("agentFace")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setFixedWidth(AGENT_FACE + 16)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(8, 8, 8, 8)
+        v.setSpacing(3)
+        self.face = ClickLabel()
+        self.face.setObjectName("faceFrame")
+        self.face.setFixedSize(AGENT_FACE, AGENT_FACE)
+        self.face.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.face.clicked.connect(self._profile)
+        v.addWidget(self.face, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.name = QLabel()
+        self.name.setObjectName("faceName")
+        self.name.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.name.setTextFormat(Qt.TextFormat.PlainText)
+        v.addWidget(self.name)
+        self.link = QLabel()
+        self.link.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.link.linkActivated.connect(lambda _u: self._profile())
+        v.addWidget(self.link)
+        v.addStretch(1)
+        HoverCard(win, self.face, lambda: self.who)
+        self._timer = QTimer(self, interval=500)
+        self._timer.timeout.connect(self.update_face)
+        self._timer.start()
+
+    def update_face(self):
+        win = self.win
+        if not win.isVisible():
+            return
+        try:
+            me = win.ctx.view.me if win.core.me else None
+        except Exception:  # noqa: BLE001 — the core going away
+            return
+        if win.dock is not None and me is not None and win.dock._to is None:
+            win.dock.show_whom(None)  # mine by the input line, once I'm known
+        front = win.tabs.currentWidget()
+        who = front.who if isinstance(front, TalkWidget) else other_side(win, me)
+        if who is not None and self.who is not None and who.id == self.who.id:
+            return
+        self.who = who
+        set_face(win, self.face, who.avatar_static if who else "", self, "_url")
+        name = (who.name or who.username) if who else ""
+        self.name.setText(self.name.fontMetrics().elidedText(
+            name, Qt.TextElideMode.ElideRight, AGENT_FACE + 8))
+        link = win.theme.css("link")
+        self.link.setText(f'<a href="#" style="color:{link}">{_("faces_profile")}</a>'
+                          if who else "")
+
+    def _profile(self):
+        if self.who is not None:
+            self.win.open_account(self.who.id)
 
 
 def other_side(win, me):
@@ -527,28 +607,150 @@ def set_face(win, lab, url, owner, attr):
                        lab.setPixmap(_round(pm, lab.width())))
 
 
-class MessageTabs(QTabBar):
+class _TabChip(QFrame):
+    """One tab of MessageTabs: its picture, its title, its ×."""
+
+    def __init__(self, bar, text):
+        super().__init__()
+        self.bar, self.data = bar, None
+        self.setObjectName("msgTab")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(8, 3, 3, 3)
+        h.setSpacing(5)
+        self.icon = QLabel()
+        self.icon.hide()
+        h.addWidget(self.icon)
+        self.label = QLabel(text)
+        self.label.setObjectName("msgTabText")
+        self.label.setTextFormat(Qt.TextFormat.PlainText)
+        self.label.setMaximumWidth(220)
+        h.addWidget(self.label)
+        self.close_btn = QToolButton()
+        self.close_btn.setObjectName("msgTabClose")
+        self.close_btn.setText("×")
+        self.close_btn.setToolTip(_("close_tab"))
+        self.close_btn.clicked.connect(lambda: bar._close_chip(self))
+        h.addWidget(self.close_btn)
+
+    def set_text(self, text):
+        self.full = text
+        self.label.setText(self.label.fontMetrics().elidedText(
+            text, Qt.TextElideMode.ElideRight, 220))
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.bar.setCurrentIndex(self.bar.chips.index(self))
+        elif e.button() == Qt.MouseButton.MiddleButton:
+            self.bar._close_chip(self)
+        e.accept()
+
+
+class MessageTabs(QWidget):
     """The messages window's tabs (the split layout): every lane opened from the roster
-    and every thread, profile or search a tab of its own, as contacts are in a
-    messenger. The window's own QTabWidget keeps holding the widgets (a lane lives in
-    its stack, the rest in tabs) — this bar only says which is in front; closing its
-    last tab closes the window."""
+    and every thread, profile, talk or search a tab of its own, as contacts are in a
+    messenger — in more rows when they don't fit (shape.tab_rows = "wrap", the Agent).
+    The window's own QTabWidget keeps holding the widgets (a lane lives in its stack,
+    the rest in tabs) — this bar only says which is in front; closing its last tab
+    closes the window. It speaks QTabBar's few words the window uses."""
+
+    currentChanged = Signal(int)
+    tabCloseRequested = Signal(int)
 
     def __init__(self, win):
         super().__init__()
+        from .flow import FlowLayout
         self.win = win
         self.setObjectName("messageTabs")
-        self.setTabsClosable(True)
-        self.setMovable(True)
-        self.setExpanding(False)
-        self.setElideMode(Qt.TextElideMode.ElideRight)
-        self.setUsesScrollButtons(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        if win.theme.shape.get("tab_rows", "wrap") == "wrap":
+            self.lay = FlowLayout(self, spacing=2)
+            self.lay.setContentsMargins(4, 3, 4, 0)
+        else:
+            self.lay = QHBoxLayout(self)
+            self.lay.setContentsMargins(4, 3, 4, 0)
+            self.lay.setSpacing(2)
+            self.lay.addStretch(1)
+        self.chips = []
+        self._current = -1
         self._busy = False
         self.currentChanged.connect(self._picked)
         self.tabCloseRequested.connect(self._close)
         self._timer = QTimer(self, interval=1000)
         self._timer.timeout.connect(self.sync)
         self._timer.start()
+
+    # ---- QTabBar's words -------------------------------------------------------------
+    def count(self):
+        return len(self.chips)
+
+    def addTab(self, text):  # noqa: N802 — QTabBar's name
+        chip = _TabChip(self, text)
+        chip.set_text(text)
+        self.chips.append(chip)
+        if isinstance(self.lay, QHBoxLayout):
+            self.lay.insertWidget(self.lay.count() - 1, chip)
+        else:
+            self.lay.addWidget(chip)
+        if self._current < 0:
+            self.setCurrentIndex(len(self.chips) - 1)
+        return len(self.chips) - 1
+
+    def removeTab(self, i):  # noqa: N802
+        if not 0 <= i < len(self.chips):
+            return
+        chip = self.chips.pop(i)
+        self.lay.removeWidget(chip)
+        chip.deleteLater()
+        if not self.chips:
+            self._current = -1
+            self.currentChanged.emit(-1)
+        elif i < self._current:
+            self._current -= 1  # the same one in front, one place to the left
+        elif i == self._current:
+            self._current = -1  # a neighbour comes in front, as in QTabBar
+            self.setCurrentIndex(min(i, len(self.chips) - 1))
+
+    def tabData(self, i):  # noqa: N802
+        return self.chips[i].data if 0 <= i < len(self.chips) else None
+
+    def setTabData(self, i, data):  # noqa: N802
+        self.chips[i].data = data
+
+    def tabText(self, i):  # noqa: N802
+        return getattr(self.chips[i], "full", self.chips[i].label.text())
+
+    def setTabText(self, i, text):  # noqa: N802
+        self.chips[i].set_text(text)
+
+    def setTabToolTip(self, i, text):  # noqa: N802
+        self.chips[i].setToolTip(text)
+
+    def setTabIcon(self, i, icon):  # noqa: N802
+        chip = self.chips[i]
+        if icon is None or icon.isNull():
+            chip.icon.hide()
+        else:
+            chip.icon.setPixmap(icon.pixmap(16, 16))
+            chip.icon.show()
+
+    def currentIndex(self):  # noqa: N802
+        return self._current
+
+    def setCurrentIndex(self, i):  # noqa: N802
+        if i == self._current or not 0 <= i < len(self.chips):
+            return
+        self._current = i
+        for n, chip in enumerate(self.chips):
+            chip.setProperty("current", "true" if n == i else "false")
+            chip.style().unpolish(chip)
+            chip.style().polish(chip)
+        self.currentChanged.emit(i)
+
+    def _close_chip(self, chip):
+        if chip in self.chips:
+            self.tabCloseRequested.emit(self.chips.index(chip))
 
     def _find(self, data):
         for i in range(self.count()):

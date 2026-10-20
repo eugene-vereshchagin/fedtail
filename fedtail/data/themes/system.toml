@@ -65,6 +65,9 @@ header_bar = "auto"      # the band above it (shape.header_bar); "auto": accent
 name = "auto"            # people's names on posts ("auto": = text)
 chat_me = "auto"         # card_header = "chat": my name ("auto": = link)
 chat_them = "auto"       # … everyone else's ("auto": = hot)
+view_end = "auto"        # behind the posts and the input line, the lower-left end of a
+                         # gradient from colors.view (QIP Infium); "auto": = view, flat
+tab_mark = "auto"        # the line over the tab in front (Windows XP: orange); "auto": accent
 
 [shape]
 radius = 12              # card corners
@@ -91,6 +94,16 @@ actions_align = "left"   # the buttons under a post: "left" or "right" (point.im
 unread_mark = "dot"      # "dot" or "star" (an asterisk before the name)
 debug = false            # loud marks for testing: unread, the j/k cursor, the post found,
                          # "glimpsed, not yet counted read", keyboard focus, hover (debug.toml)
+faces = "qip"            # the split layout's faces: "qip" — over a lane the author of the
+                         # post under the cursor, by the input line whom I write to;
+                         # "agent" (the Mail.ru Agent) — a column on the right, theirs by
+                         # the posts, mine by the input line; "none"
+roster_rows = "lines"    # the roster's items: "lines" — the name, a line of the newest post,
+                         # a small face on the right; "faces" — a big face on the left and
+                         # three lines beside it (the Agent, Psi)
+roster_face = 40         # px of that face ("faces")
+tab_rows = "wrap"        # the messages window's tabs: "wrap" — into more rows when they
+                         # don't fit (the Agent); "one" — one row, scrolled
 posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Conversations): "segmented" — buttons stuck together, "check" — round marks
 
 [words]
@@ -103,9 +116,11 @@ lowercase = false
 separator = "{text} · {n}"
 account_title = "{display_name}"
 account_subtitle = "@{acct}"
-date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"; {yyyy} {clock} {secs} too
+date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"; {yyyy} {yy} {clock} {secs} too
 chat = "{name} ({when})"           # card_header = "chat": the line over a post
 chat_date = "{secs} {dd}/{mm}/{yyyy}"  # … its {when}
+roster_group = "{arrow} {title} ({lit}/{n})"  # a roster group's title: {lit} groups' items
+                                   # with something new, of {n}
 
 [icon]
 # The window, tray and notification icon in this theme's colours.

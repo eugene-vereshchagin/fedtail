@@ -25,6 +25,9 @@ CHOICES = {
     ("shape", "unread_mark"): {"dot", "star"},
     ("shape", "posts_only"): {"segmented", "check"},
     ("icon", "style"): {"bubble", "terminal"},
+    ("shape", "faces"): {"qip", "agent", "none"},
+    ("shape", "roster_rows"): {"lines", "faces"},
+    ("shape", "tab_rows"): {"wrap", "one"},
 }
 
 README = """fedtail themes

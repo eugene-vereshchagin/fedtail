@@ -80,6 +80,13 @@ class RosterRow(QWidget):
         self.badge.setMinimumWidth(22)
         top.addWidget(self.badge)
         col.addLayout(top)
+        # shape.roster_rows = "faces" (the Agent, Psi): a status under the name — who it
+        # is, or how much is new — then the line; the face big, on the left
+        self.status = QLabel()
+        self.status.setObjectName("rosterStatus")
+        self.status.setTextFormat(Qt.TextFormat.PlainText)
+        self.status.hide()
+        col.addWidget(self.status)
         self.line = QLabel()
         self.line.setObjectName("rosterLine")
         self.line.setTextFormat(Qt.TextFormat.PlainText)
@@ -92,6 +99,14 @@ class RosterRow(QWidget):
         from .dock import HoverCard  # a person: their card on hover, as QIP had it
         HoverCard(win, self, lambda: self.item.who)
         self.compact = roster.look["compact"]
+        self.faces = win.theme.shape.get("roster_rows") == "faces" and not self.compact
+        if self.faces:
+            size = int(win.theme.shape.get("roster_face", 40))
+            h.removeWidget(self.face)
+            self.face.setFixedSize(size, size)
+            self.face.setObjectName("faceFrame")
+            h.insertWidget(0, self.face, 0, Qt.AlignmentFlag.AlignTop)
+            h.setContentsMargins(4, 3, 8, 3)
         if self.compact:
             h.setContentsMargins(6, 1, 6, 1)
             self.face.hide()
@@ -118,6 +133,17 @@ class RosterRow(QWidget):
         else:
             self.line.setText("")
         self.line.setVisible(bool(self.line.text()) and not self.compact)
+        if self.faces:
+            if item.who is not None:
+                status = "@" + item.who.handle
+                if last is not None:
+                    self.line.setText(snippet(last, 80))
+            elif new:
+                status = _("roster_unread", n=item.unread)
+            else:
+                status = _("roster_total", n=item.total) if item.total else ""
+            self.status.setText(status)
+            self.status.setVisible(bool(status))
         url = item.who.avatar_static if item.who is not None else \
             last.author.avatar_static if last is not None else ""
         if url != self._face_url and not self.compact:
@@ -126,7 +152,8 @@ class RosterRow(QWidget):
             if url:
                 from .card import _round
                 self.roster.win.images.get(
-                    url, lambda pm, w=self.face: _alive(w) and w.setPixmap(_round(pm, FACE)))
+                    url, lambda pm, w=self.face: _alive(w) and w.setPixmap(
+                        _round(pm, w.width())))
         tip = item.title + (f" — {_('roster_unread', n=item.unread)}" if new else "")
         # a person has the card instead of a tooltip
         self.setToolTip("" if item.kind == "person" else tip)
@@ -173,8 +200,10 @@ class RosterHeader(QWidget):
     def show_counts(self, group, folded):
         lit = sum(1 for i in group.items if i.unread)
         title = _("lists_header") if group.name == "lists" else _("grp_" + group.name)
-        self.label.setText(f"{'▸' if folded else '▾'} <b>{esc(title)}</b> "
-                           f"({lit}/{len(group.items)})")
+        from .card import _fill_html
+        word = self.roster.win.theme.words.get("roster_group", "{arrow} {title} ({lit}/{n})")
+        self.label.setText(_fill_html(word, arrow="▸" if folded else "▾", title=esc(title),
+                                      lit=str(lit), n=str(len(group.items))))
 
     def mousePressEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:
@@ -316,10 +345,11 @@ class RosterWindow(QWidget):
                 row = RosterRow(self, item)
                 row_it.setData(Qt.ItemDataRole.UserRole, row.key)
                 row_it.setData(Qt.ItemDataRole.UserRole + 1, g.name)
-                shape = (row.compact, bool(row.line.text()))
+                shape = (row.compact, row.faces, bool(row.line.text()),
+                         row.status.isVisibleTo(row))
                 if shape not in tall:
                     h = row.sizeHint().height()
-                    tall[shape] = h if row.compact else max(h, FACE + 8)
+                    tall[shape] = h if row.compact else max(h, row.face.height() + 8)
                 row_it.setSizeHint(QSize(0, tall[shape]))
                 self.list.addItem(row_it)
                 self.list.setItemWidget(row_it, row)

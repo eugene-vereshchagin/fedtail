@@ -7,6 +7,18 @@
   server's window starts anew, and asks nothing while it is spent. One line in the
   status bar says until when — instead of a "429" for every lane, every round (as on
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
+- The messenger themes made anew from the originals, with square or nearly square
+  corners: `qip-retro` — QIP under Windows XP (beige windows, white panes in grey-blue
+  frames, XP tabs with an orange line); `qip-modern` — QIP Infium (light grey, the posts
+  and the input line on a white-to-blue diagonal, "▾ Friends - 3/25"); `mra` (orange),
+  `mra-blue` and the new `mra-green` and `mra-violet` — the Mail.ru Agent's skins; `psi`
+  — Psi+ on KDE (flat, Breeze blue). In the split layout a theme sets its look too:
+  `shape.faces` ("qip": the author's bar over a lane and whom I write to by the input
+  line; "agent": a column on the right with their face by the posts and mine by the
+  input line), `roster_rows` ("faces": a big face and three lines, as in the Agent and
+  Psi), `tab_rows` ("wrap": the tabs go into more rows, as in the Agent), `colors.view_end`
+  (a diagonal behind the posts) and `tab_mark`, `words.roster_group`. The tabs of the
+  messages window are fedtail's own now, each with its ×, closed by the middle button too.
 - In the split layout a person from "People" opens as a tab of their own with only
   our private messages (the Direct lane holds everyone's), written to by the input
   line; the bar over a lane is one line with a small face and stays put; the input

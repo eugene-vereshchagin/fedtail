@@ -1,35 +1,81 @@
-# fedtail theme: mra-blue — the Agent's blue skin: the same as mra, cold blue instead of
-# orange.
+# fedtail theme: mra-blue — in the spirit of the Mail.ru Agent (2008–2011), the blue skin:
+# glossy blue frames and buttons with a white highlight, white panes with square
+# corners, "Name (14.02.26 18:23) :" bold over every message — mine in blue, everyone
+# else's in red; the faces in a column on the right, the roster's items three lines
+# beside a big face. Best with ui.layout = "split". Own icons and colours only: a theme
+# in the spirit, not a copy of anyone's skin.
 name = "Agent (blue)"
-inherit = "mra"
+inherit = "system"
+
+[font]
+family = "Tahoma, Arial, Arimo, DejaVu Sans, sans-serif"
+mono = "DejaVu Sans Mono, monospace"
+post_scale = 1.05
+# Arimo (Arial's metrics) comes with fedtail (SIL OFL 1.1): where Tahoma and Arial are missing
+files = ["fonts/Arimo-Variable.ttf", "fonts/Arimo-Italic-Variable.ttf"]
 
 [colors]
-window = "#c9dcf6"
-sidebar = "#d9e7f9"
-sidebar_border = "#6f9be0"
-panel = "#e7effb"
-header_border = "#a8c3ec"
-card_border = "#c4d7f2"
-card_border_unread = "#3f74cf"
-accent = "#4a7fd6"
-quiet = "#dde8f8"
-on_quiet = "#45618d"
-on_new_pill = "#3f74cf"
-ctx = "#eef4fc"
-ctx_bar = "#a8c3ec"
-focus = "#f1f6fd"
-focus_border = "#3f74cf"
-myreply = "#e6effb"
-on_myreply = "#34537f"
-separator = "#3f74cf"
-rail = "#c4d7f2"
-button = "#eef3fc"
-button_border = "#86a7df"
-primary = "#4a7fd6"
-header = "#d0e0f7"
-header_bar = "#3f74cf"
+window = "#d3e3f6"
+sidebar = "#eef5fd"
+sidebar_border = "#7fa5d6"
+panel = "#eef5fd"
+selected = "#c6dbf4"
+selected_text = "#1a1a1a"
+view = "#ffffff"
+header_border = "#7fa5d6"
+card = "#ffffff"
+card_border = "#7fa5d6"
+card_border_unread = "#3a76c4"
+text = "#111111"
+muted = "#6b6b6b"
+link = "#1b3fae"
+accent = "#3a76c4"
+on_accent = "#ffffff"
+hot = "#e0201b"
+on_hot = "#ffffff"
+quiet = "#eef5fd"
+on_quiet = "#555555"
+new_pill = "#ffffff"
+on_new_pill = "#1f4f94"
+ctx = "#eef5fd"
+ctx_bar = "#7fa5d6"
+focus = "#eef5fd"
+focus_border = "#3a76c4"
+myreply = "#eef5fd"
+on_myreply = "#333333"
+separator = "#3a76c4"
+rail = "#7fa5d6"
+button = "#eaf2fc"
+button_border = "#7fa5d6"
+dot = "#2e9a2e"
+header = "#cadcf3"
+header_bar = "#3a76c4"
+chat_me = "#1d34c8"
+chat_them = "#e0201b"
+tab_mark = "#3a76c4"
+
+[shape]
+radius = 0
+button_radius = 4
+card_style = "rule"
+rule = "solid"
+header_bar = 0
+card_avatars = false
+card_header = "chat"
+faces = "agent"
+roster_rows = "faces"
+roster_face = 44
+tab_rows = "wrap"
+
+[words]
+date = "{dd}.{mm} {clock}"
+chat = "{name} ({when}) :"
+chat_date = "{dd}.{mm}.{yy} {clock}"
+roster_group = "{arrow} {title} ({lit}/{n})"
 
 [icon]
-bg_top = "#7fa9ec"
-bg_bottom = "#2f5fb8"
-ink = "#2f5fb8"
+bg_top = "#86b6ee"
+bg_bottom = "#3a76c4"
+bubble = "#ffffff"
+ink = "#1f4f94"
+accent = "#3fae3a"
