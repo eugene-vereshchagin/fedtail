@@ -570,8 +570,9 @@ class AuthorBar(QWidget):
         # over a lane it stays, even empty, so the posts under it never jump
         self.setVisible(lane)
         who = other_side(win, me) if lane else None
+        # nobody under the cursor (Activity, an empty lane): the buttons go, the bar stays
         for b in [self.follow_btn, self.lists_btn] + [b for b, _p, _g in self.glyph_btns]:
-            b.setEnabled(who is not None)
+            b.setVisible(who is not None)
         if who is None:
             if self.who is not None:
                 self.who = None

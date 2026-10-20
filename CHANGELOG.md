@@ -51,6 +51,9 @@
   stayed unread). The face over the posts is the author's of the post under the
   pointer, else of the cursor's, else of the lowest one whole on screen — the newest
   as you read, not the one on top; the Agent's column cuts a long name inside itself.
+- Fewer buttons heaped up in the split layout: the lanes' headers are a slim strip with
+  pictures only (the words in tooltips), and the author's bar shows no buttons when
+  nobody's post is under the cursor (Activity, an empty lane).
 - `ui.split_tabs = "keep" | "close"`: whether the closed messages window keeps its tabs
   for next time. A private talk's tab no longer breaks read marks (an error on every
   one stopped the counts from going down).

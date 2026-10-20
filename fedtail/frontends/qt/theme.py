@@ -313,6 +313,7 @@ QWidget#composeHead {{ background: {self._bg('header')};
     {self._stripes_css()} {self._bar_css()} border-radius: {br}px; }}
 QWidget#laneHeader {{ background: {self._bg('header')}; {self._stripes_css()} {self._bar_css()} border-bottom: 1px solid {k('header_border')}; }}
 QLabel#laneTitle {{ font-size: {title_pt}pt; font-weight: 700; }}
+QWidget#laneHeader[slim="true"] QLabel#laneTitle {{ font-size: {round(base_pt * 1.15, 1)}pt; }}
 QLabel#laneInfo {{ color: {k('muted')}; }}
 QLabel#loadingPlate {{ background: {k('view')}; color: {k('muted')};
     border: 1px solid {k('header_border')}; border-radius: 12px; padding: 8px 18px; }}

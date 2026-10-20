@@ -325,6 +325,7 @@ class MainWindow(QMainWindow):
         self.tabs.setTabsClosable(True)
         self.tabs.setMovable(True)
         split_layout = self.cfg["ui"].get("layout") in ("split", "qip")
+        feed_module.COMPACT_HEADERS = split_layout  # slim lane headers under the author's bar
         # one tab: no tab bar at all — but in the split layout the tabs are the
         # messages window's conversations, each with its ×, the lanes' one too
         self.tabs.setTabBarAutoHide(not split_layout)

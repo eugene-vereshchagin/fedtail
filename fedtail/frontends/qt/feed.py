@@ -593,6 +593,7 @@ class FeedView(QScrollArea):
 READING_S = 5  # s after a scroll by hand that a window without focus still counts as read
 
 ICONS = True  # set from the theme by the window: dark custom themes want words only
+COMPACT_HEADERS = False  # set by the window in the split layout: slim lane headers
 
 
 MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
@@ -749,8 +750,13 @@ class _Header(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.theme = theme
         self.h = QHBoxLayout(self)
-        self.h.setContentsMargins(28, 12, 20, 12)
-        self.h.setSpacing(12)
+        if COMPACT_HEADERS:  # the split layout: a slim strip under the author's bar
+            self.setProperty("slim", "true")
+            self.h.setContentsMargins(12, 3, 8, 3)
+            self.h.setSpacing(6)
+        else:
+            self.h.setContentsMargins(28, 12, 20, 12)
+            self.h.setSpacing(12)
         # a long title or a long note must never make the window wider: they give way
         self.title = _ElidedLabel(title)
         self.title.setObjectName("laneTitle")
@@ -762,6 +768,12 @@ class _Header(QWidget):
         self.h.addWidget(self.info, 2)
 
     def add(self, w):
+        # the split layout: a button with a picture shows only the picture, its words
+        # in the tooltip — a row of words over every lane was a heap of buttons
+        if COMPACT_HEADERS and isinstance(w, QPushButton) and not w.icon().isNull() \
+                and w.text() and w.objectName() != "seg":
+            w.setToolTip(w.toolTip() or w.text())
+            w.setText("")
         self.h.addWidget(w)
         return w
 
