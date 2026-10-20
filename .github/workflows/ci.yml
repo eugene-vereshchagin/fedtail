@@ -49,7 +49,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          timeout -s ABRT 900 python -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+          # a hang ends in a stack dump (faulthandler on SIGABRT), not in the job's 6 h;
+          # the whole run takes some 13 min on a hosted runner: room for twice that
+          timeout -s ABRT 1800 python -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
       - name: Failures as annotations
         if: failure()
         run: python .github/annotate.py test-output.txt
@@ -154,7 +156,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          timeout -s ABRT 900 python3 -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
+          timeout -s ABRT 1800 python3 -X faulthandler -m unittest discover -s tests -t . -v 2>&1 | tee test-output.txt
       - name: Failures as annotations
         if: failure()
         run: python3 .github/annotate.py test-output.txt
