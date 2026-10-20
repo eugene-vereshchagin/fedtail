@@ -298,6 +298,31 @@ class Activity:
 
 
 @dataclass(frozen=True, slots=True)
+class ServerInfo:
+    """My server about itself."""
+    title: str = ""
+    domain: str = ""
+    description: str = ""          # HTML, or plain text (some servers)
+    contact: Account | None = None
+    email: str = ""
+    rules: tuple[tuple[str, str], ...] = ()  # (rule, hint)
+    about: str = ""                # HTML: the long description
+    privacy: str = ""              # HTML: the privacy policy
+
+
+@dataclass(frozen=True, slots=True)
+class Tag:
+    """A hashtag: its name (without #), whether I follow it, how much it's used."""
+    name: str
+    url: str = ""
+    following: bool | None = None  # None: the server didn't say
+    posts: int = 0                 # on someone's profile: how many of their posts carry it
+    uses: int = 0                  # these days, in all (the server's history)
+    people: int = 0                # these days, how many people used it
+    last_post: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Relationship:
     """Between me and an account."""
     following: bool = False

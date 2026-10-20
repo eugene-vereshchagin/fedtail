@@ -14,9 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...core.model import real, snippet
 from ...i18n import _
-from .card import spec_of
+from ...model.text import snippet
 from .feed import AccountRow, FeedView, TagRow, _button, _Header, _PagedTab
 from .text import clean, esc
 
@@ -32,7 +31,7 @@ class AccountsWidget(QWidget):
     def __init__(self, win, key, title, fetch, origin=None, origin_label="", dismiss=None,
                  dismiss_label=None):
         super().__init__()
-        self.win, self.core, self.key = win, win.core, key
+        self.win, self.core, self.key = win, win.ctx.view, key
         self.title, self.fetch, self.origin = title, fetch, origin
         self.origin_label, self.dismiss = origin_label, dismiss
         self.dismiss_label = dismiss_label or _("dismiss_suggestion")
@@ -63,21 +62,23 @@ class AccountsWidget(QWidget):
             fut = self.origin(self.shown_ids)
         else:
             fut = self.fetch(self.next)
-        self.win.bridge.call(fut, ok=self._page,
+        # fetch and origin may be the window's calls on the core itself: what they give
+        # is made the model here
+        self.win.bridge.call(fut, ok=lambda got: self._page(self.core.model_of(got)),
                              fail=lambda e: (self.btn_more.setText(_("no_older")),
                                              self.win.error(e)))
 
     def _page(self, got):
         res, nxt = got
         for a in res["accounts"]:
-            if a["id"] in self.shown_ids:
+            if a.id in self.shown_ids:
                 continue
-            row = AccountRow(self.win, a, res["relations"].get(a["id"]))
+            row = AccountRow(self.win, a, res["relations"].get(a.id))
             if self.dismiss is not None:
                 b = _button(self.dismiss_label, lambda _c=False, r=row: self._drop(r))
                 row.layout().addWidget(b, 0, Qt.AlignmentFlag.AlignTop)
             self.box_lay.addWidget(row)
-            self.shown_ids.add(a["id"])
+            self.shown_ids.add(a.id)
             self.count += 1
         info = _("people_shown", n=self.count)
         if res.get("total") is not None:
@@ -94,7 +95,7 @@ class AccountsWidget(QWidget):
             self.btn_more.setText(_("no_older"))
 
     def _drop(self, row):
-        self.win.bridge.call(self.dismiss(row.acc["id"]), ok=lambda _r: row.deleteLater(),
+        self.win.bridge.call(self.dismiss(row.acc.id), ok=lambda _r: row.deleteLater(),
                              fail=self.win.error)
 
     def apply_read(self, ids):
@@ -104,9 +105,9 @@ class AccountsWidget(QWidget):
 class QuotesWidget(_PagedTab):
     """Posts quoting a post of mine; each card's menu can take my post out of it."""
 
-    def __init__(self, win, status):
-        self.status = real(status)
-        super().__init__(win, _("quotes_title", text=snippet(status, 40)))
+    def __init__(self, win, post):
+        self.status = post  # a Post of mine
+        super().__init__(win, _("quotes_title", text=snippet(post, 40)))
         self.cursor = None
         self.header.info.setText(_("quotes_info"))
         self.more()
@@ -154,7 +155,7 @@ class TrendsWidget(_PagedTab):
                 self.top_lay.addWidget(TagRow(self.win, tag))
         if t["links"]:
             self.top_lay.addWidget(_section(_("trends_links")))
-            for ln in t["links"][:10]:
+            for ln in t["links"][:10]:  # links: as the server gives them (no model yet)
                 label = QLabel(f'<a href="{esc(ln.get("url", ""))}" style="color:'
                                f'{theme.c["link"].name()};"><b>{esc(ln.get("title") or "")}'
                                f'</b></a><br><span style="color:{theme.c["muted"].name()};">'
@@ -172,14 +173,6 @@ class TrendsWidget(_PagedTab):
         self.items = list(t["statuses"])
         self.render()
 
-    def render(self):
-        items = self.shown(self.items)
-        short = self.core.short_ids(items)
-        self.view.set_specs([spec_of(self.view.ctx.view, st["id"], st,
-                                     parent=self.core.parent_of(st),
-                                     extra={"short_id": short.get(real(st)["id"])})
-                             for st in items], keep_position=True)
-
 
 def _section(text):
     label = QLabel(text)
@@ -188,39 +181,33 @@ def _section(text):
 
 
 class ServerInfoDialog(QDialog):
-    """My server about itself: description, contact, rules, privacy policy."""
+    """My server about itself (a ServerInfo): description, contact, rules, privacy."""
 
     def __init__(self, win, info):
         super().__init__(win)
-        inst = info.get("instance") or {}
-        self.setWindowTitle(_("server_info") + " — " + (inst.get("title") or
-                                                        inst.get("domain") or ""))
+        self.setWindowTitle(_("server_info") + " — " + (info.title or info.domain))
         self.resize(640, 560)
         lay = QVBoxLayout(self)
         css = win.theme.css("link")
-        parts = [f"<h2>{esc(inst.get('title') or inst.get('domain') or '')}</h2>"]
-        desc = inst.get("description") or inst.get("short_description") or ""
+        parts = [f"<h2>{esc(info.title or info.domain)}</h2>"]
+        desc = info.description
         if desc:
             # HTML on GoToSocial and older Mastodon, plain text on Mastodon 4
             parts.append(clean(desc, css) if "<" in desc else f"<p>{esc(desc)}</p>")
-        contact = (inst.get("contact") or {}).get("account") or \
-            inst.get("contact_account") or {}
-        email = (inst.get("contact") or {}).get("email") or inst.get("email") or ""
-        who = ", ".join(x for x in (("@" + contact["acct"]) if contact.get("acct") else "",
-                                    email) if x)
+        who = ", ".join(x for x in ("@" + info.contact.handle if info.contact else "",
+                                    info.email) if x)
         if who:
             parts.append(f"<p>{esc(_('server_contact', who=who))}</p>")
-        if info.get("about"):
-            parts.append(clean(info["about"], css))
-        rules = info.get("rules") or []
-        if rules:
+        if info.about:
+            parts.append(clean(info.about, css))
+        if info.rules:
             parts.append(f"<h3>{esc(_('server_rules'))}</h3><ol>" +
-                         "".join(f"<li>{esc(r.get('text') or '')}"
-                                 + (f"<br><small>{esc(r['hint'])}</small>"
-                                    if r.get("hint") else "") + "</li>" for r in rules)
+                         "".join(f"<li>{esc(text)}"
+                                 + (f"<br><small>{esc(hint)}</small>" if hint else "")
+                                 + "</li>" for text, hint in info.rules)
                          + "</ol>")
-        if info.get("privacy"):
-            parts.append(f"<h3>{esc(_('server_privacy'))}</h3>" + clean(info["privacy"], css))
+        if info.privacy:
+            parts.append(f"<h3>{esc(_('server_privacy'))}</h3>" + clean(info.privacy, css))
         view = QTextBrowser()
         view.setOpenExternalLinks(True)
         view.setHtml("".join(parts))

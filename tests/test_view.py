@@ -5,7 +5,7 @@ import unittest
 from concurrent.futures import Future
 
 from fedtail.core.view import View
-from fedtail.model import Account, Activity, Post, Relationship, Share, ThreadItem
+from fedtail.model import Account, Activity, Post, Relationship, Share, Tag, ThreadItem
 from fedtail.protocols.mastodon import adapter
 
 from .fakes import BOB, ME, status
@@ -65,8 +65,13 @@ class FakeCore:
         f.set_result([Node(status("1", BOB), 0, 0), Node(status("2", ME, "1"), 1, 1)])
         return f
 
-    def server_info(self):
-        return {"title": "My node", "rules": ["be nice"]}  # nothing of the model: as it is
+    def featured(self, acc_id):
+        return {"tags": [{"id": "1", "name": "еда", "url": "https://x/tags/еда",
+                          "statuses_count": "7", "last_status_at": "2026-10-01"}],
+                "people": [BOB]}
+
+    def list_people(self, list_id):
+        return {"title": "My list", "rules": ["be nice"]}  # nothing of the model: as it is
 
 
 class ViewTest(unittest.TestCase):
@@ -107,6 +112,19 @@ class ViewTest(unittest.TestCase):
         self.v.followed_among([stranger])
         self.assertEqual(self.core.got[-1][0]["acct"], "s@x.example")  # rebuilt
 
+    def test_tags(self):
+        got = self.v.featured("B")
+        t = got["tags"][0]
+        self.assertIsInstance(t, Tag)
+        self.assertEqual((t.name, t.posts, t.following), ("еда", 7, None))
+        self.assertIsInstance(got["people"][0], Account)
+
+    def test_reactions_and_emoji_are_not_tags(self):
+        from fedtail.core.view import _shape
+        self.assertIsNone(_shape({"name": "👍", "count": 2, "me": False, "url": "u"}))
+        self.assertIsNone(_shape({"shortcode": "blob", "url": "u"}))
+        self.assertEqual(_shape({"name": "linux", "history": []}), "tag")
+
     def test_thread_nodes(self):
         items = self.v.thread("1").result()
         self.assertTrue(all(isinstance(i, ThreadItem) for i in items))
@@ -114,7 +132,7 @@ class ViewTest(unittest.TestCase):
                          [("1", 0, 0), ("2", 1, 1)])
 
     def test_other_shapes_pass_and_the_store_stays_inside(self):
-        self.assertEqual(self.v.server_info()["title"], "My node")
+        self.assertEqual(self.v.list_people("l")["title"], "My list")
         with self.assertRaises(AttributeError):
             self.v.store  # noqa: B018
         with self.assertRaises(AttributeError):

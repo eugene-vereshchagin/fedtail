@@ -36,6 +36,12 @@ def snippet(post, n=160):
     return t if len(t) <= n else t[: n - 1].rstrip() + "…"
 
 
+def snippet_html(html, n=160):
+    """Some HTML (a bio) in a line of at most n characters."""
+    t = _SPACE.sub(" ", html_to_text(html))
+    return t if len(t) <= n else t[: n - 1].rstrip() + "…"
+
+
 def norm_handle(handle):
     return (handle or "").lower().lstrip("@")
 

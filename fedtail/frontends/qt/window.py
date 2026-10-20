@@ -46,6 +46,7 @@ from ... import diag, version
 from ...core import lanes as lanes_module
 from ...core.model import real, snippet
 from ...i18n import _
+from ...model import real as real_entry
 from .. import themefile
 from . import badge
 from . import card as card_module
@@ -1436,7 +1437,7 @@ class MainWindow(QMainWindow):
         elif name == "thread_grew":  # replies fetched from other servers
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget) and w.root is not None and \
-                        real(w.root)["id"] == payload:
+                        w.root.id == payload:
                     w.reload(quiet=True)
         elif name == "parents":
             for w in self.lane_widgets.values():
@@ -1594,8 +1595,9 @@ class MainWindow(QMainWindow):
         self._add_tab(SearchWidget(self, query), _("search_title"))
 
     def open_people(self, acc, which):
+        """Whom an Account follows, or who follows them."""
         for w in self.extra_tabs():
-            if isinstance(w, PeopleWidget) and w.acc_id == acc["id"] and w.which == which:
+            if isinstance(w, PeopleWidget) and w.acc_id == acc.id and w.which == which:
                 self._front(w)
                 return
         w = PeopleWidget(self, acc, which)
@@ -1644,15 +1646,16 @@ class MainWindow(QMainWindow):
         self._add_tab(w, w.title)
 
     def show_server_info(self):
-        self.bridge.call(self.core.server_info(),
+        self.bridge.call(self.ctx.view.server_info(),
                          ok=lambda info: ServerInfoDialog(self, info).exec(), fail=self.error)
 
     def open_quotes(self, st):
+        post = real_entry(self.ctx.view.entry(st))
         for w in self.extra_tabs():
-            if isinstance(w, QuotesWidget) and w.status["id"] == real(st)["id"]:
+            if isinstance(w, QuotesWidget) and w.status.id == post.id:
                 self._front(w)
                 return
-        w = QuotesWidget(self, st)
+        w = QuotesWidget(self, post)
         self._add_tab(w, w.title)
 
     def open_tag(self, tag):

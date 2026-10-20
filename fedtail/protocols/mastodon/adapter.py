@@ -28,7 +28,9 @@ from ...model import (
     Reaction,
     Ref,
     Relationship,
+    ServerInfo,
     Share,
+    Tag,
 )
 from . import PROTO
 
@@ -376,3 +378,32 @@ def visibility_out(v):
 
 def visibility_in(v):
     return VISIBILITY.get(v, v if v in VISIBILITY_OUT else "public")
+
+
+def tag(raw):
+    """A hashtag (Tag) or a featured one (on a profile: with its count of posts)."""
+    raw = _dict(raw)
+    hist = [h for h in _list(raw.get("history")) if isinstance(h, dict)]
+    following = raw.get("following")
+    return Tag(name=_str(raw.get("name")), url=_str(raw.get("url")),
+               following=following if isinstance(following, bool) else None,
+               posts=_int(raw.get("statuses_count")),
+               uses=sum(_int(h.get("uses")) for h in hist),
+               people=sum(_int(h.get("accounts")) for h in hist),
+               last_post=when(raw.get("last_status_at")))
+
+
+def server_info(raw, profile=""):
+    """{instance, rules, about, privacy} as the core gathers them → ServerInfo."""
+    raw = _dict(raw)
+    inst = _dict(raw.get("instance"))
+    contact = _dict(inst.get("contact"))
+    acc = contact.get("account") or inst.get("contact_account")
+    return ServerInfo(
+        title=_str(inst.get("title")), domain=_str(inst.get("domain")),
+        description=_str(inst.get("description")) or _str(inst.get("short_description")),
+        contact=account(acc, profile) if isinstance(acc, dict) and acc.get("id") else None,
+        email=_str(contact.get("email")) or _str(inst.get("email")),
+        rules=tuple((_str(r.get("text")), _str(r.get("hint")))
+                    for r in _list(raw.get("rules")) if isinstance(r, dict)),
+        about=_str(raw.get("about")), privacy=_str(raw.get("privacy")))

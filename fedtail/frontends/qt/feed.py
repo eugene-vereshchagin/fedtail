@@ -26,10 +26,11 @@ from PySide6.QtWidgets import (
 from ... import diag
 from ...core.model import real, snippet
 from ...i18n import _
-from ...model import Share
+from ...model import Relationship, Share
 from ...model import real as real_entry
+from ...model.text import snippet_html
 from ..richtext import plain_tip
-from .card import CardSpec, PostRow, SeparatorRow, spec_of
+from .card import CardSpec, PostRow, SeparatorRow, make_spec
 from .card import _set_prop as _mark
 from .text import display_name, esc
 
@@ -754,7 +755,8 @@ class _Header(QWidget):
 class LaneWidget(QWidget):
     def __init__(self, win, name):
         super().__init__()
-        self.win, self.core, self.name = win, win.core, name
+        # the core as the model (core.view): what comes from it is Post, Account…
+        self.win, self.core, self.name = win, win.ctx.view, name
         self.cfg = self.core.cfg
         self.theme = win.theme
         self.newest_first = self.cfg["feed"]["order"] == "newest_first"
@@ -912,12 +914,12 @@ class LaneWidget(QWidget):
         self.dirty = False
         self.unloaded = False
         t0 = time.monotonic()
-        entries = self.core.lane_entries(self.name)
+        entries = self.core.entries(self.name)  # [(item id, Post | Share)]
         # browse lanes (local, federated) have nothing "unread": no marks, no divider
         lazy = getattr(self.core.lane_by_name.get(self.name), "lazy", False)
-        unread = set() if lazy else self.core.unread_ids(entries)
+        unread = set() if lazy else self.core.unread(entries)
         if self.unread_only_on():
-            fresh = {item for item, st in entries if st["id"] in unread}
+            fresh = {item for item, e in entries if e.id in unread}
             self._kept = fresh if self._kept is None else self._kept | fresh
             entries = [e for e in entries if e[0] in self._kept]
             self.header.info.setText(_("unread_only_info", n=len(fresh)) if self._kept
@@ -925,26 +927,25 @@ class LaneWidget(QWidget):
         elif self.filter_seg is not None:
             self.header.info.setText("")
         if self.media_filter.active():
-            entries = [e for e in entries
-                       if self.media_filter.keeps(self.view.ctx.view.entry(e[1]))]
+            entries = [x for x in entries if self.media_filter.keeps(x[1])]
             self.header.info.setText(_("media_filter_info", n=len(entries)))
-        statuses = [st for _, st in entries]
-        parents = self.core.parents_for(statuses)
-        answers = self.core.my_replies(statuses)
-        short = self.core.short_ids(statuses)
+        posts = [e for _, e in entries]
+        parents = self.core.parents(posts)
+        answers = self.core.my_replies(posts)  # {post id: [my replies to it]}
+        short = self.core.short_ids(posts)
         specs, unknown = [], []
-        for item_id, st in entries:
-            parent = parents.get(st["id"])
-            if parent is None and real(st).get("in_reply_to_id"):
-                unknown.append(st)
-            specs.append(spec_of(self.view.ctx.view, item_id, st, parent=parent,
-                                 unread=st["id"] in unread,
-                                 extra={"my_replies": answers.get(real(st)["id"], []),
-                                        "short_id": short.get(real(st)["id"])}))
+        for item_id, e in entries:
+            parent = parents.get(e.id)
+            if parent is None and real_entry(e).reply_to:
+                unknown.append(e)
+            specs.append(make_spec(self.core, item_id, e, parent=parent,
+                                   unread=e.id in unread,
+                                   extra={"my_replies": answers.get(real_entry(e).id, []),
+                                          "short_id": short.get(real_entry(e).id)}))
         if self.conversations_on():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
         if self.name in ("replies", "mentions"):
-            self.core.check_my_replies(statuses)
+            self.core.check_my_replies(posts)
         if unknown:
             self.core.ensure_parents(unknown)
         # "new below": fixed where the reader stood when the lane opened
@@ -993,22 +994,22 @@ class LaneWidget(QWidget):
 
     def _conversation_specs(self, entries, unread, parents, answers, short):
         """One card per conversation: its top post, with a line about the rest."""
-        from ...core.threads import conversations
-        groups = conversations(entries, self.core.store.get_status, unread)
+        groups = self.core.conversations(entries, unread)
         tops = [g["top"] for g in groups]
         more_short = self.core.short_ids(tops)
-        self._conv_members = {g["top"]["id"]: [m["id"] for m in g["members"]] for g in groups}
+        self._conv_members = {g["top"].id: g["members"] for g in groups}
         specs = []
         for g in groups:
             top = g["top"]
-            specs.append(spec_of(
-                self.view.ctx.view, "conv:" + g["key"], top,
-                parent=parents.get(top["id"]) or self.core.parent_of(top),
+            pid = real_entry(top).id
+            specs.append(make_spec(
+                self.core, "conv:" + g["key"], top,
+                parent=parents.get(top.id) or self.core.parent(top),
                 unread=g["unread"] > 0,
-                extra={"my_replies": answers.get(real(top)["id"], []),
-                       "short_id": more_short.get(real(top)["id"]) or
-                       short.get(real(top)["id"]),
-                       "conversation": g}))
+                extra={"my_replies": answers.get(pid, []),
+                       "short_id": more_short.get(pid) or short.get(pid),
+                       "conversation": {"members": g["members"], "unread": g["unread"],
+                                        "last": g["last"]}}))
         return specs
 
     def show_plate(self, on=True):
@@ -1118,7 +1119,7 @@ class LaneWidget(QWidget):
         # a thread, another client) loses its mark here too, so "N new" never lies
         ids = [s.entry.id for s in self.view.model  # (a conversation card speaks for
                if s.unread and s.entry is not None and not str(s.key).startswith("conv:")]
-        read = self.core.store.read_set(ids) if ids else set()
+        read = self.core.read_ids(ids)
         if read:
             self.view.set_unread(read, False)
         n = len(self.view.unread_keys())
@@ -1190,7 +1191,7 @@ class _Segmented(QWidget):
 class ThreadWidget(QWidget):
     def __init__(self, win, sid):
         super().__init__()
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view
         self.focus_id = sid
         self.title = _("thread_loading")
         self.info_text = ""
@@ -1253,42 +1254,46 @@ class ThreadWidget(QWidget):
                 row.update_spec(CardSpec(**{**row.spec.__dict__, "focus": focus}))
         self.view.scroll_to(sid, "top")
 
-    def _loaded(self, nodes):
-        self.statuses = {n.status["id"] for n in nodes}
-        unread = self.core.unread_ids([(n.status["id"], n.status) for n in nodes])
-        short = self.core.short_ids([n.status for n in nodes])
-        specs = [spec_of(self.view.ctx.view, n.status["id"], n.status, depth=n.depth,
-                          number=n.number or None, in_thread=True,
-                          focus=(n.status["id"] == self.focus_id and len(nodes) > 1),
-                          unread=n.status["id"] in unread,
-                          extra={"short_id": short.get(n.status["id"])}) for n in nodes]
+    def _loaded(self, items):
+        """items: [ThreadItem] in reading order, the root first."""
+        posts = [n.post for n in items]
+        self.statuses = {p.id for p in posts}
+        unread = self.core.unread(posts)
+        short = self.core.short_ids(posts)
+        specs = [make_spec(self.core, n.post.id, n.post, depth=n.depth,
+                           number=n.number or None, in_thread=True,
+                           focus=(n.post.id == self.focus_id and len(items) > 1),
+                           unread=n.post.id in unread,
+                           extra={"short_id": short.get(n.post.id)}) for n in items]
         self.view.set_specs(specs, keep_position=self.loaded)
-        root = nodes[0].status
+        root = posts[0] if posts else None
         self.root = root
+        if root is None:
+            return
         self.update_sub_button()
-        self.title = f'{real(root)["account"]["username"]}: {snippet(root, 30)}'
+        self.title = f"{root.author.username}: {snippet(root, 30)}"
         self.header.title.setText(snippet(root, 60))
-        self.info_text = _("thread_info", n=len(nodes) - 1) + \
-            (f" · #{short[root['id']]}" if short.get(root["id"]) else "")
+        self.info_text = _("thread_info", n=len(items) - 1) + \
+            (f" · #{short[root.id]}" if short.get(root.id) else "")
         self.header.info.setText(self.info_text)
-        self._why_it_reaches_me(nodes)
+        self._why_it_reaches_me(posts)
         self.win.retitle(self)
         if not self.loaded:
             self.loaded = True
             self.view.scroll_to(self.focus_id, "top")
 
-    def _why_it_reaches_me(self, nodes):
+    def _why_it_reaches_me(self, posts):
         """Not subscribed, yet the comments come? Say why: the server puts replies
         between people you follow into Home."""
         self.header.info.setToolTip("")
         if self.root is None or self.core.subscribed(self.root):
             return
-        authors = [real(n.status)["account"] for n in nodes]
+        authors = [p.author for p in posts]
 
         def show(followed):
             if not followed or self.core.subscribed(self.root):
                 return
-            names = ", ".join("@" + a["acct"].split("@")[0] for a in followed[:3])
+            names = ", ".join("@" + a.handle.split("@")[0] for a in followed[:3])
             more = len(followed) - 3
             if more > 0:
                 names += " " + _("and_more", n=more)
@@ -1307,9 +1312,9 @@ class _PagedTab(QWidget):
 
     def __init__(self, win, title):
         super().__init__()
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view
         self.title = title
-        self.items = []
+        self.items = []  # Post | Share, newest first
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -1321,23 +1326,22 @@ class _PagedTab(QWidget):
         self.view.footer.addWidget(self.btn_more)
         self.media_filter = MediaFilter(self.header, lambda: self.render())
 
-    def shown(self, statuses):
+    def shown(self, entries):
         """The posts the funnel lets through."""
-        return [st for st in statuses
-                if self.media_filter.keeps(self.view.ctx.view.entry(st))]
+        return [e for e in entries if self.media_filter.keeps(e)]
 
     def fetch(self, max_id):  # -> future with a page of statuses
         raise NotImplementedError
 
     def more(self):
         self.btn_more.setEnabled(False)
-        max_id = self.items[-1]["id"] if self.items else None
+        max_id = self.items[-1].id if self.items else None
         self.win.bridge.call(self.fetch(max_id), ok=self._page,
                              fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
 
     def _page(self, page):
-        known = {st["id"] for st in self.items}
-        self.items += [st for st in page if st["id"] not in known]
+        known = {e.id for e in self.items}
+        self.items += [e for e in page if e.id not in known]
         self.btn_more.setEnabled(bool(page))
         if not page:
             self.btn_more.setText(_("no_older"))
@@ -1347,9 +1351,10 @@ class _PagedTab(QWidget):
     def render(self):
         items = self.shown(self.items)
         short = self.core.short_ids(items)
-        specs = [spec_of(self.view.ctx.view, st["id"], st, parent=self.core.parent_of(st),
-                         extra={"short_id": short.get(real(st)["id"])})
-                 for st in items]
+        parents = self.core.parents(items)
+        specs = [make_spec(self.core, e.id, e, parent=parents.get(e.id),
+                           extra={"short_id": short.get(real_entry(e).id)})
+                 for e in items]
         self.view.set_specs(specs, keep_position=True)
 
     def apply_read(self, ids):
@@ -1364,8 +1369,9 @@ class AccountWidget(_PagedTab):
     def __init__(self, win, acc_id):
         super().__init__(win, "@…")
         self.acc_id = acc_id
-        self.acc = None
-        self.mine = bool(self.core.me) and acc_id == self.core.me["id"]
+        self.acc = None  # Account
+        me = self.core.me
+        self.mine = me is not None and acc_id == me.id
         if self.mine:
             self.header.add(_button(_("edit_profile"), win.edit_profile, icon="document-edit"))
         # who this is: a block of its own, not one more post — the banner, a tinted
@@ -1380,7 +1386,7 @@ class AccountWidget(_PagedTab):
         posts = QLabel(_("profile_posts"))
         posts.setObjectName("sectionTitle")
         self.view.header.addWidget(posts)
-        self.relation = {}
+        self.relation = Relationship()  # between me and them, as last heard
         self._first_page = None
         self._origin_asked = False
         self._older_origin = False  # my server's pages ran out: further back from theirs
@@ -1410,16 +1416,16 @@ class AccountWidget(_PagedTab):
 
     def render(self):
         """Pinned posts first (marked 📌), then the rest by time."""
-        top = {st["id"] for st in self.pinned}
-        rest = self.shown([st for st in self.items if st["id"] not in top])
+        top = {e.id for e in self.pinned}
+        rest = self.shown([e for e in self.items if e.id not in top])
         pinned = self.shown(self.pinned)
         short = self.core.short_ids(pinned + rest)
-        v = self.view.ctx.view
-        specs = [spec_of(v, "pin:" + st["id"], st, parent=self.core.parent_of(st),
-                         extra={"short_id": short.get(real(st)["id"]), "pinned": True})
-                 for st in pinned]
-        specs += [spec_of(v, st["id"], st, parent=self.core.parent_of(st),
-                          extra={"short_id": short.get(real(st)["id"])}) for st in rest]
+        parents = self.core.parents(pinned + rest)
+        specs = [make_spec(self.core, "pin:" + e.id, e, parent=parents.get(e.id),
+                           extra={"short_id": short.get(real_entry(e).id), "pinned": True})
+                 for e in pinned]
+        specs += [make_spec(self.core, e.id, e, parent=parents.get(e.id),
+                            extra={"short_id": short.get(real_entry(e).id)}) for e in rest]
         self.view.set_specs(specs, keep_position=True)
 
     def fetch(self, max_id):
@@ -1435,10 +1441,10 @@ class AccountWidget(_PagedTab):
             self._offer_origin()
 
     def _remote_host(self):
-        acct = (self.acc or {}).get("acct", "")
-        if "@" not in acct or not self.core.cfg["feed"].get("remote_profiles", True):
+        handle = self.acc.handle if self.acc else ""
+        if "@" not in handle or not self.core.cfg["feed"].get("remote_profiles", True):
             return ""
-        return acct.split("@", 1)[1]
+        return handle.split("@", 1)[1]
 
     def _offer_origin(self):
         """My server has nothing older: the button now reads further back from their
@@ -1457,7 +1463,7 @@ class AccountWidget(_PagedTab):
         host = self._remote_host()
         self.btn_more.setEnabled(False)
         self.btn_more.setText(_("origin_asking", host=host))
-        have = [st.get("uri") for st in self.items if st.get("uri")]
+        have = [real_entry(e).uri for e in self.items if real_entry(e).uri]
 
         shown = [0]
 
@@ -1473,13 +1479,12 @@ class AccountWidget(_PagedTab):
         def step(left, total):
             batch, rest = left[:4], left[4:]
 
-            def got(statuses):
-                known = {st["id"] for st in self.items}
-                new = [st for st in statuses if st["id"] not in known]
+            def got(entries):
+                known = {e.id for e in self.items}
+                new = [e for e in entries if e.id not in known]
                 shown[0] += len(new)
                 if new:
-                    self.items = sorted(self.items + new,
-                                        key=lambda st: st.get("created_at", ""), reverse=True)
+                    self.items = sorted(self.items + new, key=lambda e: e.sort, reverse=True)
                     self.core.ensure_parents(new)
                     self.render()
                 if rest:
@@ -1512,23 +1517,22 @@ class AccountWidget(_PagedTab):
         """Someone from another server mine knows little about (fewer posts here than
         their profile counts): read their newest from their own server."""
         acc, page = self.acc, self._first_page
-        if self._origin_asked or acc is None or page is None or "@" not in acc.get("acct", ""):
+        if self._origin_asked or acc is None or page is None or "@" not in acc.handle:
             return
         if not self.core.cfg["feed"].get("remote_profiles", True):
             return
-        if len(page) >= min(acc.get("statuses_count") or 0, self.core.cfg["feed"]["page_size"]):
+        if len(page) >= min(acc.posts, self.core.cfg["feed"]["page_size"]):
             return  # my server has them
         self._origin_asked = True
-        host = acc["acct"].split("@", 1)[1]
+        host = acc.handle.split("@", 1)[1]
         self.header.info.setText(self.header.info.text() + " · " +
                                  _("origin_asking", host=host))
-        have = [st.get("uri") for st in self.items]
+        have = [real_entry(e).uri for e in self.items]
 
-        def got(statuses):
-            known = {st["id"] for st in self.items}
-            new = [st for st in statuses if st["id"] not in known]
-            self.items = sorted(self.items + new, key=lambda st: st.get("created_at", ""),
-                                reverse=True)
+        def got(entries):
+            known = {e.id for e in self.items}
+            new = [e for e in entries if e.id not in known]
+            self.items = sorted(self.items + new, key=lambda e: e.sort, reverse=True)
             info = self.header.info.text().replace(" · " + _("origin_asking", host=host), "")
             self.header.info.setText(info + (" · " + _("origin_got", n=len(new), host=host)
                                              if new else ""))
@@ -1549,24 +1553,23 @@ class AccountWidget(_PagedTab):
         _flash(self.info)
 
     def _relation(self, rel):
-        self.relation = rel or {}
+        self.relation = rel if isinstance(rel, Relationship) else Relationship()
         if self.acc:
             self._fill()
 
     def _account(self, acc):
         self.acc = acc
-        self.title = "@" + acc["acct"]
-        counts = " · ".join(_(key, n=acc[field]) for key, field in
-                            (("posts_n", "statuses_count"), ("followers_n", "followers_count"),
-                             ("following_n", "following_count")) if field in acc)
-        self.header.title.setText(acc.get("display_name") or acc["username"])
-        self.header.info.setText(" · ".join(x for x in (f"@{acc['acct']}", counts) if x))
+        self.title = "@" + acc.handle
+        counts = " · ".join((_("posts_n", n=acc.posts), _("followers_n", n=acc.followers),
+                             _("following_n", n=acc.following)))
+        self.header.title.setText(acc.name or acc.username)
+        self.header.info.setText(" · ".join(x for x in (f"@{acc.handle}", counts) if x))
         self.win.retitle(self)
         self._fill()
         self._from_origin()
         if not hasattr(self, "software"):  # what their server runs (feed.server_info)
             from urllib.parse import urlparse
-            host = urlparse(acc.get("url") or acc.get("uri") or "").hostname or ""
+            host = urlparse(acc.url or acc.uri).hostname or ""
             self.software = ""
             if host:
                 self.win.bridge.call(self.core.server_software(host), ok=self._software,
@@ -1588,16 +1591,17 @@ class AccountWidget(_PagedTab):
             self._fill()
 
     def _fill(self):
-        from ...core import links
         from .text import clean
         acc, lay, theme = self.acc, self._info_layout, self.win.theme
+        rel = self.relation
+        in_app = self.core.cfg["ui"]["links_in_app"]
         while lay.count():
             item = lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
             elif item.layout():
                 _clear(item.layout())
-        header = acc.get("header_static") or acc.get("header") or ""
+        header = acc.header_static
         if header and not header.endswith("/missing.png"):
             banner = QLabel()
             banner.setObjectName("profileBanner")
@@ -1615,10 +1619,9 @@ class AccountWidget(_PagedTab):
                     pass
             self.win.images.get(header, got)
             lay.addWidget(banner)
-        moved = acc.get("moved")
-        if moved and self.core.cfg["feed"].get("show_moved", True):
-            lay.addWidget(self._moved_banner(moved))
-        name = QLabel(esc(acc.get("display_name") or acc["username"]))
+        if acc.moved and self.core.cfg["feed"].get("show_moved", True):
+            lay.addWidget(self._moved_banner(acc.moved))
+        name = QLabel(esc(acc.name or acc.username))
         name.setObjectName("profileName")
         lay.addWidget(name)
         top = QHBoxLayout()
@@ -1626,60 +1629,52 @@ class AccountWidget(_PagedTab):
         avatar = QLabel()
         avatar.setFixedSize(72, 72)
         from .card import _round
-        self.win.images.get(acc.get("avatar_static") or acc.get("avatar"),
-                            lambda pm, w=avatar: w.setPixmap(_round(pm, 72)))
+        self.win.images.get(acc.avatar_static, lambda pm, w=avatar: w.setPixmap(_round(pm, 72)))
         top.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(6)
-        bits = [f"@{esc(acc['acct'])}"]
-        if acc.get("bot"):
+        bits = [f"@{esc(acc.handle)}"]
+        if acc.bot:
             bits.append(_("bot"))
-        if acc.get("locked"):
+        if acc.locked:
             bits.append("🔒 " + _("acc_locked"))
-        if acc.get("created_at"):
-            y, m, d = acc["created_at"][:10].split("-")
-            bits.append(_("acc_since", date=f"{d}.{m}.{y}"))
-        if self.relation.get("followed_by"):
+        if acc.created:
+            bits.append(_("acc_since", date=acc.created.strftime("%d.%m.%Y")))
+        if rel.followed_by:
             bits.append("<b>" + _("acc_follows_you") + "</b>")
         if getattr(self, "software", ""):
             bits.append("🖥 " + esc(self.software))
-        since = self.relation.get("following") and \
-            self.core.followed_since(acc["id"], self.relation)
+        since = rel.following and self.core.followed_since(acc.id, rel)
         if since:
             bits.append(esc(_("acc_followed_since", when=self.win.theme.date(since))))
         meta = QLabel(" · ".join(bits))
         meta.setObjectName("muted")
         meta.setTextFormat(Qt.TextFormat.RichText)
         col.addWidget(meta)
-        note = acc.get("note") or ""
-        if self.core.cfg["ui"]["links_in_app"]:
-            note = links.in_app(note)
+        note = self.core.in_app_html(acc.note) if in_app else acc.note
         bio = QLabel(clean(note, theme.css("link")))
         bio.setTextFormat(Qt.TextFormat.RichText)
         bio.setWordWrap(True)
         bio.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         bio.linkActivated.connect(self.win.on_link)
         col.addWidget(bio)
-        for f in acc.get("fields") or []:
-            value = f.get("value", "")
-            if self.core.cfg["ui"]["links_in_app"]:
-                value = links.in_app(value)
-            row = QLabel(f'<b>{esc(f.get("name", ""))}</b>: {clean(value, theme.css("link"))}'
-                         + (" ✓" if f.get("verified_at") else ""))
+        for f in acc.fields:
+            value = self.core.in_app_html(f.value) if in_app else f.value
+            row = QLabel(f'<b>{esc(f.name)}</b>: {clean(value, theme.css("link"))}'
+                         + (" ✓" if f.verified else ""))
             row.setTextFormat(Qt.TextFormat.RichText)
             row.setWordWrap(True)
             row.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             row.linkActivated.connect(self.win.on_link)
             col.addWidget(row)
         from .text import link
-        tags = [link("tag", t["name"], "#" + esc(t["name"]), theme.css("link"))
-                + (f" <small>({int(t['statuses_count'])})</small>"
-                   if t.get("statuses_count") else "")
-                for t in self.featured.get("tags") or [] if t.get("name")]
-        people = [link("account", a["id"], "@" + esc(a["acct"]), theme.css("link"))
-                  for a in self.featured.get("people") or [] if a.get("id")]
-        known = [link("account", a["id"], "@" + esc(a["acct"]), theme.css("link"))
-                 for a in self.familiar[:5] if a.get("id")]
+        tags = [link("tag", t.name, "#" + esc(t.name), theme.css("link"))
+                + (f" <small>({int(t.posts)})</small>" if t.posts else "")
+                for t in self.featured.get("tags") or [] if t.name]
+        people = [link("account", a.id, "@" + esc(a.handle), theme.css("link"))
+                  for a in self.featured.get("people") or [] if a.id]
+        known = [link("account", a.id, "@" + esc(a.handle), theme.css("link"))
+                 for a in self.familiar[:5] if a.id]
         if known:
             more = len(self.familiar) - len(known)
             row = QLabel(_("familiar", who=", ".join(known) +
@@ -1703,58 +1698,55 @@ class AccountWidget(_PagedTab):
         from .flow import FlowLayout
         buttons = FlowLayout(spacing=8)  # too many for one line: they wrap, not shrink
         if not self.mine:
-            following = self.relation.get("following")
-            requested = self.relation.get("requested")
+            following = rel.following
             label = _("unfollow") if following else \
-                (_("follow_requested") if requested else _("follow"))
+                (_("follow_requested") if rel.requested else _("follow"))
             fb = _button(label, self._toggle_follow, name="primary" if not following else "tool")
             buttons.addWidget(fb)
             if following:
-                bell = self.relation.get("notifying")
-                buttons.addWidget(_button("🔔 " + (_("bell_off") if bell else _("bell_on")),
+                buttons.addWidget(_button("🔔 " + (_("bell_off") if rel.notifying
+                                                   else _("bell_on")),
                                           self._toggle_bell, tip=_("bell_tip")))
                 if self.core.cfg["feed"].get("per_person_follow", True):
                     # what of theirs comes to Home: boosts or not, which languages
-                    boosts = self.relation.get("showing_reblogs", True)
                     buttons.addWidget(_button(
-                        "♻ " + (_("boosts_hide") if boosts else _("boosts_show")),
+                        "♻ " + (_("boosts_hide") if rel.showing_shares else _("boosts_show")),
                         self._toggle_boosts, tip=_("boosts_person_tip")))
-                    langs = self.relation.get("languages") or []
+                    langs = list(rel.languages or ())
                     buttons.addWidget(_button(
                         "🌐 " + (", ".join(langs) if langs else _("langs_all")),
                         self._pick_languages, tip=_("langs_person_tip")))
             buttons.addWidget(_button(_("mention"), lambda: self.win.compose(
-                text=f"@{acc['acct']} ")))
-            buttons.addWidget(_button(_("unmute") if self.relation.get("muting") else _("mute"),
+                text=f"@{acc.handle} ")))
+            buttons.addWidget(_button(_("unmute") if rel.muting else _("mute"),
                                       self._toggle_mute))
-            buttons.addWidget(_button(_("unblock") if self.relation.get("blocking")
-                                      else _("block"), self._toggle_block))
-            if self.relation.get("followed_by") and self.core.supports("remove_follower"):
+            buttons.addWidget(_button(_("unblock") if rel.blocking else _("block"),
+                                      self._toggle_block))
+            if rel.followed_by and self.core.supports("remove_follower"):
                 buttons.addWidget(_button(_("remove_follower"), self._remove_follower))
             if following and self.core.supports("endorse"):
                 buttons.addWidget(_button(
-                    _("unendorse") if self.relation.get("endorsed") else _("endorse"),
+                    _("unendorse") if rel.endorsed else _("endorse"),
                     self._toggle_endorse, tip=_("endorse_tip")))
             if self.win.ctx.fill_list_menu is not None:
                 from PySide6.QtWidgets import QMenu
                 lb = _button(_("add_to_list"), lambda: None)
                 menu = QMenu(lb)
-                menu.aboutToShow.connect(
-                    lambda m=menu: self.win.ctx.fill_list_menu(m, self.win.ctx.view.acc(acc)))
+                menu.aboutToShow.connect(lambda m=menu: self.win.ctx.fill_list_menu(m, acc))
                 lb.setMenu(menu)
                 buttons.addWidget(lb)
-        for which, field in (("following", "following_count"), ("followers", "followers_count")):
-            if acc.get(field):
-                buttons.addWidget(_button(_(f"people_{which}_n", n=acc[field]),
+        for which, n in (("following", acc.following), ("followers", acc.followers)):
+            if n:
+                buttons.addWidget(_button(_(f"people_{which}_n", n=n),
                                           lambda _c=False, w=which: self.win.open_people(acc, w)))
         if not self.mine:
             buttons.addWidget(_button(_("note_edit"), self.edit_note))
-        buttons.addWidget(_button(_("copy_handle"), lambda: self.win.copy_handle(acc["acct"]),
+        buttons.addWidget(_button(_("copy_handle"), lambda: self.win.copy_handle(acc.handle),
                                   tip=_("copy_handle_tip")))
-        buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.get("url"))))
+        buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.url)))
         lay.addLayout(buttons)
         from ...core.model import note_text
-        note = note_text(self.relation.get("note")).strip()
+        note = note_text(rel.note).strip()
         if note and not self.mine:
             label = QLabel("📝 " + esc(note).replace("\n", "<br>"))
             label.setObjectName("muted")
@@ -1767,13 +1759,13 @@ class AccountWidget(_PagedTab):
         from PySide6.QtWidgets import QInputDialog
 
         from ...core.model import note_text
-        old = self.relation.get("note") or ""
-        text, ok = QInputDialog.getMultiLineText(self, _("note_title", acct=self.acc["acct"]),
+        old = self.relation.note
+        text, ok = QInputDialog.getMultiLineText(self, _("note_title", acct=self.acc.handle),
                                                  _("note_tip"), note_text(old))
         if ok:
             self.win.bridge.call(self.core.set_note(self.acc_id, text.strip(), old),
-                                 ok=lambda r: self._relation(dict(self.relation,
-                                                                  note=r.get("note", ""))),
+                                 ok=lambda r: self._relation(
+                                     r if isinstance(r, Relationship) else self.relation),
                                  fail=self.win.error)
 
     def _moved_banner(self, new):
@@ -1782,88 +1774,84 @@ class AccountWidget(_PagedTab):
         box.setObjectName("card")
         h = QHBoxLayout(box)
         h.setContentsMargins(12, 8, 12, 8)
-        text = QLabel(_("moved_to", acct="@" + esc(new.get("acct", ""))))
+        text = QLabel(_("moved_to", acct="@" + esc(new.handle)))
         text.setTextFormat(Qt.TextFormat.RichText)
         text.setWordWrap(True)
         h.addWidget(text, 1)
-        h.addWidget(_button(_("moved_open"), lambda: self.win.open_account(new["id"])))
-        if self.relation.get("following"):
+        h.addWidget(_button(_("moved_open"), lambda: self.win.open_account(new.id)))
+        if self.relation.following:
             h.addWidget(_button(_("moved_follow"), lambda: self.win.bridge.call(
-                self.core.follow(new["id"]), ok=lambda _r: self.win.statusBar().showMessage(
-                    _("followed_now", acct="@" + new.get("acct", "")), 6000),
+                self.core.follow(new.id), ok=lambda _r: self.win.statusBar().showMessage(
+                    _("followed_now", acct="@" + new.handle), 6000),
                 fail=self.win.error), name="primary"))
         return box
 
+    def _changed(self, **now):
+        """What the server answers to a change (the relationship as it is now), or, if it
+        says nothing, the relationship with that change made."""
+        return lambda r: self._relation(r if isinstance(r, Relationship)
+                                        else replace(self.relation, **now))
+
     def _toggle_boosts(self):
-        on = not self.relation.get("showing_reblogs", True)
+        on = not self.relation.showing_shares
         self.win.bridge.call(self.core.follow_options(self.acc_id, reblogs=on),
-                             ok=lambda r: self._relation(dict(self.relation, **(r or {}),
-                                                              showing_reblogs=on)),
-                             fail=self.win.error)
+                             ok=self._changed(showing_shares=on), fail=self.win.error)
 
     def _pick_languages(self):
         """Only their posts in these languages come to Home ("" — all of them)."""
         from PySide6.QtWidgets import QInputDialog
-        now = ", ".join(self.relation.get("languages") or [])
-        text, ok = QInputDialog.getText(self, _("langs_person_title", acct=self.acc["acct"]),
+        now = ", ".join(self.relation.languages or ())
+        text, ok = QInputDialog.getText(self, _("langs_person_title", acct=self.acc.handle),
                                         _("langs_person_ask"), text=now)
         if not ok:
             return
         langs = [x.strip().lower() for x in text.replace(";", ",").replace(" ", ",").split(",")
                  if x.strip()]
         self.win.bridge.call(self.core.follow_options(self.acc_id, languages=langs),
-                             ok=lambda r: self._relation(dict(self.relation, **(r or {}),
-                                                              languages=langs or None)),
+                             ok=self._changed(languages=tuple(langs) or None),
                              fail=self.win.error)
 
     def _toggle_bell(self):
-        on = not self.relation.get("notifying")
+        on = not self.relation.notifying
         self.win.bridge.call(self.core.notify_posts(self.acc_id, on),
-                             ok=lambda r: self._relation(dict(self.relation, notifying=on,
-                                                              **(r or {}))),
-                             fail=self.win.error)
+                             ok=self._changed(notifying=on), fail=self.win.error)
 
     def _toggle_mute(self):
-        on = not self.relation.get("muting")
-        self.win.bridge.call(self.core.mute(self.acc_id, on),
-                             ok=lambda r: self._relation(dict(self.relation, muting=on,
-                                                              **(r or {}))))
+        on = not self.relation.muting
+        self.win.bridge.call(self.core.mute(self.acc_id, on), ok=self._changed(muting=on))
 
     def _toggle_block(self):
-        on = not self.relation.get("blocking")
+        on = not self.relation.blocking
         if on:
             from PySide6.QtWidgets import QMessageBox
-            if QMessageBox.question(self, _("block"), _("block_q", acct=self.acc["acct"])) \
+            if QMessageBox.question(self, _("block"), _("block_q", acct=self.acc.handle)) \
                     != QMessageBox.StandardButton.Yes:
                 return
-        self.win.bridge.call(self.core.block(self.acc_id, on),
-                             ok=lambda r: self._relation(dict(self.relation, blocking=on,
-                                                              **(r or {}))))
+        self.win.bridge.call(self.core.block(self.acc_id, on), ok=self._changed(blocking=on))
 
     def _toggle_follow(self):
-        on = not (self.relation.get("following") or self.relation.get("requested"))
+        on = not (self.relation.following or self.relation.requested)
         self.win.bridge.call(self.core.follow(self.acc_id, on), ok=self._relation)
 
     def _remove_follower(self):
         from PySide6.QtWidgets import QMessageBox
         if QMessageBox.question(self, _("remove_follower"),
-                                _("remove_follower_q", acct=self.acc["acct"])) \
+                                _("remove_follower_q", acct=self.acc.handle)) \
                 != QMessageBox.StandardButton.Yes:
             return
-        acct = self.acc["acct"]
+        acct = self.acc.handle
+        changed = self._changed(followed_by=False)
 
         def done(r):
-            self._relation(dict(self.relation, followed_by=False, **(r or {})))
+            changed(r)
             self.win.statusBar().showMessage(_("follower_removed", acct=acct), 6000)
         self.win.bridge.call(self.core.remove_follower(self.acc_id), ok=done,
                              fail=self.win.error)
 
     def _toggle_endorse(self):
-        on = not self.relation.get("endorsed")
+        on = not self.relation.endorsed
         self.win.bridge.call(self.core.endorse(self.acc_id, on),
-                             ok=lambda r: self._relation(dict(self.relation, endorsed=on,
-                                                              **(r or {}))),
-                             fail=self.win.error)
+                             ok=self._changed(endorsed=on), fail=self.win.error)
 
 
 class TagGroupWidget(_PagedTab):
@@ -1931,25 +1919,8 @@ class TagWidget(_PagedTab):
                                              self.win.error(e)))
 
     def _info(self, t):
-        self.following = bool((t or {}).get("following"))
+        self.following = bool(t and t.following)
         self.follow_btn.setText(_("tag_unfollow") if self.following else _("tag_follow"))
-
-    def _toggle_mute(self):
-        on = not self.relation.get("muting")
-        self.win.bridge.call(self.core.mute(self.acc_id, on),
-                             ok=lambda r: self._relation(dict(self.relation, muting=on,
-                                                              **(r or {}))))
-
-    def _toggle_block(self):
-        on = not self.relation.get("blocking")
-        if on:
-            from PySide6.QtWidgets import QMessageBox
-            if QMessageBox.question(self, _("block"), _("block_q", acct=self.acc["acct"])) \
-                    != QMessageBox.StandardButton.Yes:
-                return
-        self.win.bridge.call(self.core.block(self.acc_id, on),
-                             ok=lambda r: self._relation(dict(self.relation, blocking=on,
-                                                              **(r or {}))))
 
     def _toggle_follow(self):
         self.win.bridge.call(self.core.follow_tag(self.tag, not self.following), ok=self._info,
@@ -2004,7 +1975,7 @@ class RequestsWidget(QScrollArea):
             item = self.lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        reqs = self.win.core.follow_requests
+        reqs = self.win.ctx.view.follow_requests()  # [Account]
         if not reqs:
             self.lay.addWidget(QLabel(_("no_requests")))
         for acc in reqs:
@@ -2012,18 +1983,18 @@ class RequestsWidget(QScrollArea):
             card.setObjectName("card")
             v = QVBoxLayout(card)
             v.setContentsMargins(18, 14, 18, 14)
-            name = QLabel(f'<b>{display_name(acc)}</b> @{esc(acc["acct"])} — '
-                          f'<a href="{esc(acc.get("url", ""))}">{_("profile")} ↗</a>')
+            name = QLabel(f'<b>{display_name(acc)}</b> @{esc(acc.handle)} — '
+                          f'<a href="{esc(acc.url)}">{_("profile")} ↗</a>')
             name.setOpenExternalLinks(True)
             v.addWidget(name)
-            note = QLabel(esc(snippet({"content": acc.get("note", "")}, 300)))
+            note = QLabel(esc(snippet_html(acc.note, 300)))
             note.setWordWrap(True)
             note.setObjectName("muted")
             v.addWidget(note)
             h = QHBoxLayout()
-            h.addWidget(_button(_("approve"), lambda _c=False, a=acc["id"]:
+            h.addWidget(_button(_("approve"), lambda _c=False, a=acc.id:
                                 self.win.answer_follow(a, True), icon="dialog-ok"))
-            h.addWidget(_button(_("reject"), lambda _c=False, a=acc["id"]:
+            h.addWidget(_button(_("reject"), lambda _c=False, a=acc.id:
                                 self.win.answer_follow(a, False), icon="dialog-cancel"))
             h.addStretch(1)
             v.addLayout(h)
@@ -2309,12 +2280,13 @@ def _notice_text(kind, notice):
 
 class AccountRow(QFrame):
     """A person in a list (search results, followers): face, name, a line of
-    bio, and a Follow button that knows the current state."""
+    bio, and a Follow button that knows the current state. acc: an Account,
+    relation: a Relationship (or None: not known)."""
 
     def __init__(self, win, acc, relation=None):
         super().__init__()
-        self.win, self.core, self.acc = win, win.core, acc
-        self.relation = relation or {}
+        self.win, self.core, self.acc = win, win.ctx.view, acc
+        self.relation = relation if isinstance(relation, Relationship) else Relationship()
         self.setObjectName("card")
         h = QHBoxLayout(self)
         h.setContentsMargins(14, 10, 14, 10)
@@ -2322,72 +2294,71 @@ class AccountRow(QFrame):
         avatar = QLabel()
         avatar.setFixedSize(40, 40)
         from .card import _round
-        win.images.get(acc.get("avatar_static") or acc.get("avatar"),
-                       lambda pm, w=avatar: w.setPixmap(_round(pm, 40)))
+        win.images.get(acc.avatar_static, lambda pm, w=avatar: w.setPixmap(_round(pm, 40)))
         h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(2)
-        name = QLabel(f'<a href="fedtail:account/{esc(acc["id"])}" style="text-decoration:none;'
+        name = QLabel(f'<a href="fedtail:account/{esc(acc.id)}" style="text-decoration:none;'
                       f'color:{win.theme.c["text"].name()};"><b>{display_name(acc)}</b></a>'
-                      f' <span style="color:{win.theme.c["muted"].name()};">@{esc(acc["acct"])}'
-                      f'{" · " + _("bot") if acc.get("bot") else ""}</span>')
+                      f' <span style="color:{win.theme.c["muted"].name()};">@{esc(acc.handle)}'
+                      f'{" · " + _("bot") if acc.bot else ""}</span>')
         name.setTextFormat(Qt.TextFormat.RichText)
         name.linkActivated.connect(win.on_link)
         col.addWidget(name)
-        note = snippet({"content": acc.get("note", "")}, 160)
+        note = snippet_html(acc.note, 160)
         if note:
             bio = QLabel(esc(note))
             bio.setObjectName("muted")
             bio.setWordWrap(True)
             col.addWidget(bio)
-        counts = " · ".join(_(key, n=acc[field]) for key, field in
-                            (("posts_n", "statuses_count"), ("followers_n", "followers_count"))
-                            if field in acc)
-        if counts or self.relation.get("followed_by"):
+        counts = " · ".join((_("posts_n", n=acc.posts), _("followers_n", n=acc.followers)))
+        if counts or self.relation.followed_by:
             extra = QLabel(counts + (" · <b>" + _("acc_follows_you") + "</b>"
-                                     if self.relation.get("followed_by") else ""))
+                                     if self.relation.followed_by else ""))
             extra.setObjectName("muted")
             extra.setTextFormat(Qt.TextFormat.RichText)
             col.addWidget(extra)
         h.addLayout(col, 1)
         self.btn = None
-        if not self.core.me or acc["id"] != self.core.me["id"]:
+        me = self.core.me
+        if me is None or acc.id != me.id:
             self.btn = _button("", self._toggle)
             h.addWidget(self.btn, 0, Qt.AlignmentFlag.AlignTop)
             self._paint()
 
     def _paint(self):
         r = self.relation
-        self.btn.setText(_("unfollow") if r.get("following") else
-                         _("follow_requested") if r.get("requested") else _("follow"))
-        self.btn.setObjectName("tool" if r.get("following") or r.get("requested") else "primary")
+        self.btn.setText(_("unfollow") if r.following else
+                         _("follow_requested") if r.requested else _("follow"))
+        self.btn.setObjectName("tool" if r.following or r.requested else "primary")
         self.btn.style().unpolish(self.btn)
         self.btn.style().polish(self.btn)
 
     def _toggle(self):
-        on = not (self.relation.get("following") or self.relation.get("requested"))
+        on = not (self.relation.following or self.relation.requested)
         self.btn.setEnabled(False)
 
         def done(rel):
-            self.relation = rel or {}
+            self.relation = rel if isinstance(rel, Relationship) else Relationship()
             self.btn.setEnabled(True)
             self._paint()
-        self.win.bridge.call(self.core.follow(self.acc["id"], on), ok=done,
+        self.win.bridge.call(self.core.follow(self.acc.id, on), ok=done,
                              fail=lambda e: (self.btn.setEnabled(True), self.win.error(e)))
 
 
 class TagRow(QFrame):
-    """#tag with how many people used it lately, Follow tag, and a click to open it."""
+    """#tag with how many people used it lately, Follow tag, and a click to open it.
+    tag: a Tag."""
 
     def __init__(self, win, tag):
         super().__init__()
-        self.win, self.core, self.tag = win, win.core, tag
+        self.win, self.core, self.tag = win, win.ctx.view, tag
         self.setObjectName("card")
         h = QHBoxLayout(self)
         h.setContentsMargins(14, 8, 14, 8)
-        people = sum(int(d.get("accounts", 0)) for d in (tag.get("history") or [])[:7])
-        label = QLabel(f'<a href="fedtail:tag/{esc(tag["name"])}" style="text-decoration:none;'
-                       f'color:{win.theme.c["link"].name()};"><b>#{esc(tag["name"])}</b></a>'
+        people = tag.people
+        label = QLabel(f'<a href="fedtail:tag/{esc(tag.name)}" style="text-decoration:none;'
+                       f'color:{win.theme.c["link"].name()};"><b>#{esc(tag.name)}</b></a>'
                        + (f' <span style="color:{win.theme.c["muted"].name()};">· '
                           f'{_("tag_people", n=people)}</span>' if people else ""))
         label.setTextFormat(Qt.TextFormat.RichText)
@@ -2398,19 +2369,20 @@ class TagRow(QFrame):
         self._paint()
 
     def _paint(self):
-        on = bool(self.tag.get("following"))
+        on = bool(self.tag.following)
         self.btn.setText(_("tag_unfollow") if on else _("tag_follow"))
         self.btn.setToolTip(_("tag_follow_tip"))
 
     def _toggle(self):
-        on = not self.tag.get("following")
+        on = not self.tag.following
         self.btn.setEnabled(False)
 
         def done(t):
-            self.tag = dict(self.tag, following=bool((t or {}).get("following", on)))
+            now = t.following if t is not None and t.following is not None else on
+            self.tag = replace(self.tag, following=now)
             self.btn.setEnabled(True)
             self._paint()
-        self.win.bridge.call(self.core.follow_tag(self.tag["name"], on), ok=done,
+        self.win.bridge.call(self.core.follow_tag(self.tag.name, on), ok=done,
                              fail=lambda e: (self.btn.setEnabled(True), self.win.error(e)))
 
 
@@ -2421,7 +2393,7 @@ class SearchWidget(QWidget):
 
     def __init__(self, win, query=""):
         super().__init__()
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view
         self.title = _("search_title")
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -2496,7 +2468,7 @@ class SearchWidget(QWidget):
         if accs:
             self._section(_("search_people"))
             for a in accs:
-                self.box_lay.addWidget(AccountRow(self.win, a, res["relations"].get(a["id"])))
+                self.box_lay.addWidget(AccountRow(self.win, a, res["relations"].get(a.id)))
         if tags:
             self._section(_("search_tags"))
             for t in tags:
@@ -2504,10 +2476,10 @@ class SearchWidget(QWidget):
         if sts:
             self._section(_("search_posts"))
             short = self.core.short_ids(sts)
-            self.view.set_specs([spec_of(self.view.ctx.view, st["id"], st,
-                                         parent=self.core.parent_of(st),
-                                         extra={"short_id": short.get(real(st)["id"])})
-                                 for st in sts], keep_position=False)
+            parents = self.core.parents(sts)
+            self.view.set_specs([make_spec(self.core, e.id, e, parent=parents.get(e.id),
+                                           extra={"short_id": short.get(real_entry(e).id)})
+                                 for e in sts], keep_position=False)
 
     def apply_read(self, ids):
         pass
@@ -2519,9 +2491,9 @@ class PeopleWidget(QWidget):
 
     def __init__(self, win, acc, which):
         super().__init__()
-        self.win, self.core, self.acc, self.which = win, win.core, acc, which
-        self.acc_id = acc["id"]
-        self.title = _("people_" + which, acct=acc["acct"])
+        self.win, self.core, self.acc, self.which = win, win.ctx.view, acc, which
+        self.acc_id = acc.id
+        self.title = _("people_" + which, acct=acc.handle)
         self.next = None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -2550,18 +2522,18 @@ class PeopleWidget(QWidget):
     def _page(self, got):
         res, nxt = got
         for a in res["accounts"]:
-            self.box_lay.addWidget(AccountRow(self.win, a, res["relations"].get(a["id"])))
+            self.box_lay.addWidget(AccountRow(self.win, a, res["relations"].get(a.id)))
         self.count += len(res["accounts"])
         self.header.info.setText(_("people_shown", n=self.count))
         self.next = nxt
-        self.shown_ids = getattr(self, "shown_ids", set()) | {a["id"] for a in res["accounts"]}
+        self.shown_ids = getattr(self, "shown_ids", set()) | {a.id for a in res["accounts"]}
         if res.get("total") is not None:
             self.header.info.setText(_("people_shown", n=self.count) + " · " +
                                      _("people_origin_total", n=res["total"]))
         self.btn_more.setEnabled(bool(nxt))
         if nxt:
             return
-        host = self.acc["acct"].split("@", 1)[1] if "@" in self.acc["acct"] else ""
+        host = self.acc.handle.split("@", 1)[1] if "@" in self.acc.handle else ""
         if host and not self.from_origin and \
                 self.core.cfg["feed"].get("remote_people", True):
             # my server knows only part of them: the rest is on theirs

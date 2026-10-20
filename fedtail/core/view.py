@@ -118,6 +118,8 @@ class View:
                 return adapter.relationship(x)
             if kind == "activity":
                 return self._activity_of(x)
+            if kind == "tag":
+                return adapter.tag(x)
             return {k: self._out(v) for k, v in x.items()}
         if isinstance(x, list):
             return [self._out(v) for v in x]
@@ -126,6 +128,15 @@ class View:
         if type(x).__name__ == "Node" and hasattr(x, "status"):  # core.threads.Node
             return ThreadItem(real(self.entry(x.status)), x.depth, x.number)
         return x
+
+    def model_of(self, x):
+        """What a core call gave (a future's result), made the model — for answers of
+        calls made on the core elsewhere (the window's fetchers of people lists)."""
+        return self._out(x)
+
+    def raw_account(self, a):
+        """The core's account for an Account — for core calls not behind the View yet."""
+        return self._acc_raw(a)
 
     def _acc_raw(self, a):
         """The core's account for a model one: as it came, else rebuilt from it."""
@@ -241,15 +252,41 @@ class View:
         return ids
 
     def parents(self, entries):
-        """{entry id: the Post it answers | "missing" | None (not known yet)}."""
-        out = {}
-        for e in self._only(entries):
-            p = real(e)
-            if not p.reply_to:
-                out[e.id] = None
-                continue
-            got = self._core.parent_of({"id": p.id, "in_reply_to_id": p.reply_to})
-            out[e.id] = got if got in (None, "missing") else real(self.entry(got))
+        """{entry id: the Post it answers | "missing" | None (not known yet)}, in two
+        queries for the lot."""
+        es = self._only(entries)
+        got = self._core.parents_for([{"id": e.id, "in_reply_to_id": real(e).reply_to}
+                                      for e in es])
+        return {k: v if v is None or v == "missing" else real(self.entry(v))
+                for k, v in got.items()}
+
+    def parent(self, entry):
+        """The Post this one answers, "missing", or None (not known yet / no reply)."""
+        return self.parents([entry]).get(entry.id)
+
+    def read_ids(self, ids):
+        """Which of these post ids are read."""
+        ids = list(ids)
+        return self._core.store.read_set(ids) if ids else set()
+
+    def via(self, entry):
+        """All accounts in one window: "@me@there" of the account of mine that got this
+        post (and acts on it); "" for the main one."""
+        tag = entry.ref.profile
+        others = getattr(self._core, "others", None)
+        return self._core.via(tag) if others and tag in others else ""
+
+    def conversations(self, entries, unread):
+        """One group per conversation among lane entries, as the lanes' conversation
+        view shows them: [{"key", "top": Post | Share, "members": [ids], "unread": n,
+        "last": Post}], the newest conversation last."""
+        from .threads import conversations
+        raw = [(item, self._raw(e)) for item, e in entries]
+        out = []
+        for g in conversations(raw, self._core.store.get_status, unread):
+            out.append({"key": g["key"], "top": self.entry(g["top"]),
+                        "members": [m["id"] for m in g["members"]],
+                        "unread": g["unread"], "last": real(self.entry(g["last"]))})
         return out
 
     def short_ids(self, entries):
@@ -275,6 +312,10 @@ class View:
         def made(nodes):
             return [ThreadItem(real(self.entry(n.status)), n.depth, n.number) for n in nodes]
         return _then(self._core.thread(post_id), made)
+
+    def in_app_html(self, html):
+        """HTML (a bio, a profile field) with fediverse links pointing into fedtail."""
+        return links.in_app(html)
 
     def in_app(self, post):
         """The post's HTML with mentions, tags and fediverse links pointing into fedtail
@@ -402,6 +443,10 @@ class View:
                 pass
         return data
 
+    def server_info(self):
+        """Future: my server about itself (ServerInfo)."""
+        return _then(self._core.server_info(), lambda r: adapter.server_info(r, self.profile))
+
     # ---- writing -------------------------------------------------------------------
     def default_visibility(self):
         return adapter.visibility_in(self._core.default_visibility())
@@ -438,7 +483,10 @@ def is_entry(x):
 
 def _shape(d):
     """What a dict from the core is, by its keys: "status", "account", "relationship",
-    "activity" (a notification or a stored activity entry), or None."""
+    "activity" (a notification or a stored activity entry), "tag", or None."""
+    if "name" in d and not ("acct" in d or "count" in d or "shortcode" in d) and \
+            ("url" in d or "history" in d or "statuses_count" in d or "following" in d):
+        return "tag"  # (an emoji reaction has a count, an emoji a shortcode: not tags)
     if "id" not in d:
         return None
     if "account" in d and ("content" in d or "reblog" in d or "media_attachments" in d):

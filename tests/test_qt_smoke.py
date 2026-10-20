@@ -515,7 +515,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(prof, AccountWidget)
         self.pump(until=lambda: prof.acc is not None and prof._info_layout.count())
         prof._toggle_follow()
-        self.pump(until=lambda: prof.relation.get("following"))
+        self.pump(until=lambda: prof.relation.following)
         self.win.on_link("fedtail:account/B")  # same tab: no new one
         self.assertIs(self.win.tabs.currentWidget(), prof)
         # a narrow window: the buttons wrap onto more lines, none is squeezed
@@ -540,12 +540,12 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(search, SearchWidget)
         self.pump(until=lambda: search.box.findChildren(AccountRow))
         row = search.box.findChildren(AccountRow)[0]
-        was = bool(row.relation.get("following"))
+        was = row.relation.following
         row._toggle()
-        self.pump(until=lambda: bool(row.relation.get("following")) != was)
+        self.pump(until=lambda: row.relation.following != was)
         search.run("#lin")
         self.pump(until=lambda: search.box.findChildren(TagRow))
-        self.win.open_people({"id": "ME", "acct": "mira"}, "followers")
+        self.win.open_people(adapter.account({"id": "ME", "acct": "mira"}), "followers")
         self.assertIsInstance(self.win.tabs.currentWidget(), PeopleWidget)
         self.win.close_tab(self.win.tabs.currentIndex())
         self.win.close_tab(self.win.tabs.indexOf(search))
@@ -712,7 +712,7 @@ class QtSmokeTest(unittest.TestCase):
         thread.sub_btn.click()
         self.pump(until=lambda: thread.sub_btn.isEnabled() and
                   thread.sub_btn.isChecked() != was)
-        self.assertEqual(self.core.subscribed(thread.root), not was)
+        self.assertEqual(self.win.ctx.view.subscribed(thread.root), not was)
         self.win.close_tab(self.win.tabs.currentIndex())
 
         # Ctrl+F finds posts in the lane on screen and marks the one it stands on
@@ -1808,7 +1808,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "016" in tab.view.rows)
 
         # subscribed: the explanation goes away
-        self.win.bridge.call(self.core.subscribe(tab.root))
+        self.win.bridge.call(self.win.ctx.view.subscribe(tab.root))
         self.pump(until=lambda: "@bob" not in tab.header.info.text())
 
     def test_lane_opens_where_reading_stopped(self):
@@ -2144,7 +2144,7 @@ class QtSmokeTest(unittest.TestCase):
         self.win.open_suggestions()
         sugg = self.win.tabs.currentWidget()
         self.pump(until=lambda: sugg.count == 1)
-        dlg = ServerInfoDialog(self.win, self.core.server_info().result())
+        dlg = ServerInfoDialog(self.win, self.win.ctx.view.server_info().result())
         dlg.show()
         dlg.close()
         # a boost of the post shows the like/boost made on the post

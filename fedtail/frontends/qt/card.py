@@ -71,25 +71,14 @@ class CardSpec:
         return real(self.entry) if self.entry is not None else None
 
 
-def spec_of(view, key, raw, parent=None, extra=None, **kw):
-    """A CardSpec from the core's own status (and its parent, my replies to it, the
-    conversation it is in), turned into the model here — the one place the cards'
-    data crosses over until the lanes hand out the model themselves (stage 2)."""
-    entry = view.entry(raw)
-    if parent is not None and parent != "missing":
-        parent = real(view.entry(parent))
+def make_spec(view, key, entry, extra=None, **kw):
+    """A CardSpec for a lane entry (Post | Share) of the View: with which account of
+    mine got it, when the window shows several."""
     extra = dict(extra or {})
-    if extra.get("my_replies"):
-        extra["my_replies"] = [real(view.entry(x)) for x in extra["my_replies"]]
-    conv = extra.get("conversation")
-    if conv:
-        extra["conversation"] = {"members": [m["id"] for m in conv["members"]],
-                                 "unread": conv["unread"],
-                                 "last": real(view.entry(conv["last"]))}
-    via = raw.get("_via") if isinstance(raw, dict) else None
+    via = view.via(entry)
     if via:
         extra["via"] = via
-    return CardSpec(key=key, entry=entry, parent=parent, extra=extra, **kw)
+    return CardSpec(key=key, entry=entry, extra=extra, **kw)
 
 
 class ClickLabel(QLabel):
