@@ -18,7 +18,8 @@
   input line), `roster_rows` ("faces": a big face and three lines, as in the Agent and
   Psi), `tab_rows` ("wrap": the tabs go into more rows, as in the Agent), `colors.view_end`
   (a diagonal behind the posts) and `tab_mark`, `words.roster_group`. The tabs of the
-  messages window are fedtail's own now, each with its ×, closed by the middle button too.
+  messages window are fedtail's own now, each with its ×, closed by the middle button
+  too; in more rows each full row is stretched to the window's edge, as in the Agent.
 - In the split layout a person from "People" opens as a tab of their own with only
   our private messages (the Direct lane holds everyone's), written to by the input
   line; the bar over a lane is one line with a small face and stays put; the input

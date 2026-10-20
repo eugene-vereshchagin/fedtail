@@ -674,7 +674,7 @@ class MessageTabs(QWidget):
         self.setObjectName("messageTabs")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         if win.theme.shape.get("tab_rows", "wrap") == "wrap":
-            self.lay = FlowLayout(self, spacing=2)
+            self.lay = FlowLayout(self, spacing=2, justify=True)
             self.lay.setContentsMargins(4, 3, 4, 0)
         else:
             self.lay = QHBoxLayout(self)

@@ -2329,6 +2329,28 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(roster.isVisible())
         self.assertEqual((win.extra_tabs(), win.msg_tabs.count()), ([], 0))
 
+    def test_flow_rows_justified(self):
+        """Tabs in rows, as in the Agent: a full row stretched to the edge, the last
+        one as wide as its tabs."""
+        from PySide6.QtCore import QRect
+        from PySide6.QtWidgets import QPushButton, QWidget
+
+        from fedtail.frontends.qt.flow import FlowLayout
+        box = QWidget()
+        lay = FlowLayout(box, spacing=0, justify=True)
+        buttons = []
+        for _i in range(5):
+            b = QPushButton("x")
+            b.setMinimumSize(100, 20)
+            b.setMaximumSize(400, 20)
+            lay.addWidget(b)
+            buttons.append(b)
+        lay.setGeometry(QRect(0, 0, 250, 100))
+        self.assertEqual(lay.heightForWidth(250), 60)  # three rows: 2 + 2 + 1
+        self.assertEqual(buttons[1].geometry().right() + 1, 250)  # a full row: to the edge
+        self.assertEqual(buttons[4].geometry().width(), 100)  # the last: as it is
+        box.deleteLater()
+
     def test_button_icons_override_the_theme(self):
         from fedtail.frontends.qt import theme as themes
         for say, want in (("off", False), ("on", True)):

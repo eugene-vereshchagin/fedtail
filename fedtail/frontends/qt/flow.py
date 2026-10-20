@@ -6,10 +6,13 @@ from PySide6.QtWidgets import QLayout
 
 
 class FlowLayout(QLayout):
-    def __init__(self, parent=None, spacing=6):
+    def __init__(self, parent=None, spacing=6, justify=False):
         super().__init__(parent)
         self._items = []
         self._gap = spacing
+        # justify: once they take more than a row, every full row is stretched to the
+        # edge (the Mail.ru Agent's tabs); the last one keeps its natural widths
+        self._justify = justify
         self.setContentsMargins(0, 0, 0, 0)
 
     def addItem(self, item):  # noqa: N802 — Qt's name
@@ -50,15 +53,30 @@ class FlowLayout(QLayout):
     def _lay_out(self, rect, apply):
         m = self.contentsMargins()
         r = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
-        x, y, line = r.x(), r.y(), 0
+        rows, row, x = [], [], r.x()
         for item in self._items:
             if item.widget() is not None and item.widget().isHidden():
                 continue
             hint = item.sizeHint()
-            if x > r.x() and x + hint.width() > r.right() + 1:
-                x, y, line = r.x(), y + line + self._gap, 0
-            if apply:
-                item.setGeometry(QRect(QPoint(x, y), hint))
+            if row and x + hint.width() > r.right() + 1:
+                rows.append(row)
+                row, x = [], r.x()
+            row.append((item, hint))
             x += hint.width() + self._gap
-            line = max(line, hint.height())
-        return y + line - rect.y() + m.bottom()
+        if row:
+            rows.append(row)
+        y = r.y()
+        for n, row in enumerate(rows):
+            extra = 0
+            if self._justify and len(rows) > 1 and n < len(rows) - 1:
+                used = sum(h.width() for _i, h in row) + self._gap * (len(row) - 1)
+                extra = max(0, r.width() - used) / len(row)
+            x, line = float(r.x()), 0
+            for item, hint in row:
+                w = hint.width() + extra
+                if apply:
+                    item.setGeometry(QRect(QPoint(round(x), y), QSize(round(w), hint.height())))
+                x += w + self._gap
+                line = max(line, hint.height())
+            y += line + self._gap
+        return (y - self._gap if rows else y) - rect.y() + m.bottom()
