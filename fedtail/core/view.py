@@ -572,8 +572,9 @@ class View:
                     unread, total = c.unread_count(name), len(entries)
                     if entries:
                         last = real(self.entry(entries[-1][1]))
-                items.append(RosterItem("lane", name, c.lane_title(name), unread, total,
-                                        last))
+                from ..i18n import _
+                title = c.lane_title(name) or _("lane_" + name)  # the built-in ones: by word
+                items.append(RosterItem("lane", name, title, unread, total, last))
             out.append(RosterGroup(group, tuple(items)))
         # threads I follow and private talks, each a "contact" of its own (as people
         # are in a messenger): the freshest first, ui.roster_threads of each

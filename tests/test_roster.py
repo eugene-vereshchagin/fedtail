@@ -1,5 +1,6 @@
 """View.roster: the lanes as a messenger's roster — groups, unread, the newest post."""
 
+from fedtail import i18n
 from fedtail.core import auth, config, paths
 from fedtail.core.app import Core
 from fedtail.core.view import View
@@ -32,7 +33,9 @@ class RosterTest(TmpDir):
         self.assertTrue(all(isinstance(g, RosterGroup) for g in roster))
         self.assertEqual(roster[0].name, "standard")
         home = next(i for g in roster for i in g.items if i.key == "home")
-        self.assertEqual(home.title, core.lane_title("home"))
+        self.assertEqual(home.title, core.lane_title("home") or i18n._("lane_home"))
+        self.assertTrue(all(isinstance(i.title, str) and i.title
+                            for g in roster for i in g.items))  # every one has a name
         self.assertGreaterEqual(home.unread, 2)
         self.assertIsInstance(home.last, Post)
         self.assertEqual(home.last.id, "2")  # the newest, as a status line
