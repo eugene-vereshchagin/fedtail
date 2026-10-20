@@ -344,6 +344,28 @@ class SocialMixin:
             return out
         return self.submit(job)
 
+    def probe_server(self):
+        """Ask my server what it can do (core/probe.py). Future: the round's result,
+        kept for next time; the features it answered for are offered — or not — from now."""
+        from . import probe
+
+        def job():
+            got = probe.run(self.api, self.caps)
+            for feature, there in probe.features(got).items():
+                if there:
+                    self.unsupported.discard(feature)
+                elif feature not in self.unsupported:
+                    self.unsupported.add(feature)
+                    self.emit("unsupported", feature)
+            self.store.kv_set(probe.KV, got)
+            return got
+        return self.submit(job)
+
+    def last_probe(self):
+        """The last round of probe_server, or None (never checked)."""
+        from . import probe
+        return self.store.kv_get(probe.KV)
+
     def load_preferences(self):
         """The preferences I set on the server's web side, kept in self.server_prefs
         (default visibility for post.default_visibility = "server", and the like)."""

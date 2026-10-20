@@ -117,7 +117,13 @@ def load(name):
         merged = _merge(merged, data)
         got = (data.get("font") or {}).get("files")
         if isinstance(got, list):  # each theme's fonts lie next to its own file
-            files += [str(path.parent / f) for f in got if isinstance(f, str)]
+            for f in got:
+                if not isinstance(f, str):
+                    continue
+                own = path.parent / f
+                # a copy of a built-in theme moved into themes/: its fonts stay built in
+                files.append(str(own if own.exists() or not (BUILTIN_DIR / f).exists()
+                                 else BUILTIN_DIR / f))
     warnings = validate(merged, ref)
     merged["id"] = name
     merged["font"]["files"] = files

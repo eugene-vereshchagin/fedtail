@@ -247,7 +247,7 @@ def run(app, out, label, palette, theme_name, extras):
         win.close_tab(win.tabs.currentIndex())
         win.select_lane("home")
         pump(app, 0.5)
-        pics = core.store.get_status("104")["media_attachments"]
+        pics = list(win.ctx.view.by_id("104").media)  # the model's Media
         win.show_images(pics, 0)
         pump(app, 0.8)
         shoot(win, out, f"{label}-viewer")

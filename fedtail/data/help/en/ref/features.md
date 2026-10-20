@@ -334,6 +334,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | “Following since …” | has | 0.11.0 | `feed.follow_date_note` | `accounts/:id/note` | only in fedtail |
 | The person has moved | has | 0.14.0 | `feed.show_moved` | `account.moved`, ActivityPub `Move` | Mastodon web |
 | The author's server software | has | 0.14.0 | `feed.server_info` | nodeinfo, in the profile “🖥 GoToSocial 0.17” | — |
+| What my server can do | has | 0.17.0 | ≡ → account → “Server info” → “What it can do” → “Check” | one harmless GET with `limit=1` per feature | — |
 
 <details><summary>In detail</summary>
 
@@ -354,6 +355,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **The person has moved.** A moved person's profile has a “📦 Moved to @new” banner with “Open” and “Follow there” buttons.
 
 **The author's server software.** fedtail asks the person's server for its nodeinfo (Mastodon, GoToSocial, Akkoma, Misskey, Lemmy…) and writes “🖥 GoToSocial 0.17.3” in the profile. The answer is kept a week per server.
+
+**What my server can do.** A score of “show me one” requests (nothing changes on the server), a few seconds in the background — the window doesn't freeze. Each feature gets an answer: yes, no, there but closed to me, unclear; limits (characters, attachments, poll options) as numbers. What can't be asked without changing something (dismissing one notification, muting a thread) is told from what server this is. The last check is kept and shown at once; the answers also tell fedtail which buttons to show.
 
 </details>
 

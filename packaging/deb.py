@@ -58,7 +58,9 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
         "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/\n"
         f"Upstream-Name: fedtail\nSource: {HOMEPAGE}\n\n"
         "Files: *\nCopyright: Eugene Vereshchagin\nLicense: GPL-3+\n"
-        " On Debian systems the full text is in /usr/share/common-licenses/GPL-3.\n", "utf-8")
+        " On Debian systems the full text is in /usr/share/common-licenses/GPL-3.\n\n"
+        "Files: */fedtail/data/themes/fonts/*\nCopyright: 2010 ParaType Inc.\n"
+        "License: OFL-1.1\n The full text lies next to the fonts (OFL-*.txt).\n", "utf-8")
     (doc / "changelog.gz").write_bytes(gzip.compress((ROOT / "CHANGELOG.md").read_bytes(),
                                                      mtime=0))
     size = sum(p.stat().st_size for p in work.rglob("*") if p.is_file()) // 1024

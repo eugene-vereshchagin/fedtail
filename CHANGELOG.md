@@ -2,6 +2,14 @@
 
 ## 0.17.0 — in progress
 
+- ≡ → Server info has a "What it can do" tab: "Check" asks the server about two dozen
+  features with harmless one-item GETs (a few seconds, in the background) and lists yes /
+  no / closed to me / unclear, with the limits; the last check is kept. The answers also
+  decide which buttons fedtail offers.
+- Help: in the comparison tables the header row stays on top while the rows scroll under
+  it, so a ✓ always says whose it is.
+- The `paper` theme comes with its fonts: PT Serif and PT Mono (ParaType, SIL OFL 1.1) are
+  in fedtail, nothing to install.
 - × on a row of Activity on GoToSocial: the server can't dismiss one notification (only
   clear them all), and fedtail used to ask it anyway — a 404 in the log, the row stayed,
   and "Clear" went missing until a restart. Now × hides the row here (and stays hidden

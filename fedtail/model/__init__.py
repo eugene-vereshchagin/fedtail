@@ -316,6 +316,25 @@ class Activity:
 
 
 @dataclass(frozen=True, slots=True)
+class Feature:
+    """One answer of the server about what it can do (View.probe_server). state: "yes",
+    "no", "closed" (there, but not open to me), "error" (no clear answer), "info" (detail
+    is a number: max characters…), "self" (the server can't, fedtail does it itself)."""
+    key: str
+    state: str
+    detail: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Probe:
+    """A round of asking my server what it can do."""
+    checked: datetime | None
+    software: str = ""
+    version: str = ""
+    features: tuple[Feature, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class Scheduled:
     """A post the server will put out later."""
     id: str

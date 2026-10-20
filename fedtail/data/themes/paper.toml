@@ -6,6 +6,10 @@ inherit = "system"
 family = "PT Serif, Noto Serif, DejaVu Serif, serif"
 mono = "PT Mono, DejaVu Sans Mono, monospace"
 post_scale = 1.15
+# PT Serif and PT Mono come with fedtail (ParaType, SIL OFL 1.1): no need to install them
+files = ["fonts/PT_Serif-Web-Regular.ttf", "fonts/PT_Serif-Web-Italic.ttf",
+         "fonts/PT_Serif-Web-Bold.ttf", "fonts/PT_Serif-Web-BoldItalic.ttf",
+         "fonts/PT_Mono-Regular.ttf"]
 
 [colors]
 window = "#efe8da"

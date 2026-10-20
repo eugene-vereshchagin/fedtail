@@ -79,7 +79,7 @@ class FakeApi:
                 "configuration": {"statuses": {"max_characters": 5000,
                                                "max_media_attachments": 10}}}
 
-    def get(self, path, params=None):
+    def get(self, path, params=None, timeout=30):
         return BOB
 
     def home(self, limit=40, max_id=None, min_id=None):

@@ -8,8 +8,12 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
+    QTabWidget,
     QTextBrowser,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -211,7 +215,82 @@ class ServerInfoDialog(QDialog):
         view = QTextBrowser()
         view.setOpenExternalLinks(True)
         view.setHtml("".join(parts))
-        lay.addWidget(view, 1)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(view, _("server_about_tab"))
+        self.tabs.addTab(self._can_tab(win), _("probe_tab"))
+        lay.addWidget(self.tabs, 1)
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         box.rejected.connect(self.reject)
         lay.addWidget(box)
+
+    # ---- what it can do: asked by a button, a few seconds, in the background --------
+    def _can_tab(self, win):
+        self.win = win
+        tab = QWidget()
+        v = QVBoxLayout(tab)
+        v.setContentsMargins(0, 8, 0, 0)
+        top = QHBoxLayout()
+        self.probe_note = QLabel()
+        self.probe_note.setObjectName("muted")
+        self.probe_note.setWordWrap(True)
+        top.addWidget(self.probe_note, 1)
+        self.probe_btn = _button(_("probe_run"), self._probe, icon="view-refresh",
+                                 tip=_("probe_tip"))
+        top.addWidget(self.probe_btn, 0, Qt.AlignmentFlag.AlignTop)
+        v.addLayout(top)
+        self.probe_table = QTreeWidget()
+        self.probe_table.setRootIsDecorated(False)
+        self.probe_table.setHeaderLabels([_("probe_what"), _("probe_answer")])
+        self.probe_table.setAlternatingRowColors(True)
+        v.addWidget(self.probe_table, 1)
+        self._show_probe(win.ctx.view.last_probe())
+        return tab
+
+    def _probe(self):
+        self.probe_btn.setEnabled(False)
+        self.probe_note.setText(_("probe_running"))
+
+        def done(got):
+            try:
+                self.probe_btn.setEnabled(True)
+                self._show_probe(got)
+            except RuntimeError:  # closed meanwhile: the result is kept for next time
+                pass
+
+        def failed(e):
+            try:
+                self.probe_btn.setEnabled(True)
+                self.probe_note.setText(_("probe_failed", err=e))
+            except RuntimeError:
+                pass
+        self.win.bridge.call(self.win.ctx.view.probe_server(), ok=done, fail=failed)
+
+    def _show_probe(self, probe):
+        self.probe_table.clear()
+        if probe is None:
+            self.probe_note.setText(_("probe_never"))
+            return
+        when = self.win.theme.date(probe.checked) if probe.checked else "?"
+        self.probe_note.setText(_("probe_checked", when=when,
+                                  software=" ".join(x for x in (probe.software,
+                                                                probe.version) if x)))
+        self.probe_btn.setText(_("probe_again"))
+        order = {"no": 0, "closed": 1, "error": 2, "self": 3, "yes": 4, "info": 5}
+        for f in sorted(probe.features, key=lambda f: order.get(f.state, 9)):
+            mark = PROBE_MARKS.get(f.state, "?")
+            answer = f.detail if f.state == "info" else \
+                _("probe_" + f.state) + (f" ({f.detail})" if f.detail and
+                                         f.detail != "known" else "")
+            item = QTreeWidgetItem([_("probe_" + f.key) if _has("probe_" + f.key)
+                                    else f.key, f"{mark} {answer}"])
+            if f.detail == "known":
+                item.setToolTip(1, _("probe_known_tip"))
+            self.probe_table.addTopLevelItem(item)
+        self.probe_table.resizeColumnToContents(0)
+
+
+PROBE_MARKS = {"yes": "✓", "no": "✗", "closed": "🔒", "error": "⚠", "self": "◐", "info": "·"}
+
+
+def _has(key):
+    return _(key) != key

@@ -11,8 +11,8 @@ window. The help comes from ≡ → Help only.
 
 import logging
 
-from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QTextCursor
+from PySide6.QtCore import QEvent, QRectF, Qt
+from PySide6.QtGui import QPainter, QTextCursor, QTextTable
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -34,6 +34,75 @@ log = logging.getLogger(__name__)
 
 PCT = 90  # of the main window, as the compose panel's big size
 NAME_ROLE = Qt.ItemDataRole.UserRole
+
+
+class StickyHeader(QWidget):
+    """A long table's header row stays at the top while its rows scroll under it (the
+    comparison matrix: without its header row the ✓ say nothing). Drawn from the very
+    document, so it looks exactly like the row it repeats; clicks go through."""
+
+    MIN_ROWS = 6  # a short table is seen whole anyway
+
+    def __init__(self, view):
+        super().__init__(view.viewport())
+        self.view, self.tables, self.shown = view, [], None
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.hide()
+        for bar in (view.verticalScrollBar(), view.horizontalScrollBar()):
+            bar.valueChanged.connect(self.place)
+        view.viewport().installEventFilter(self)
+
+    def eventFilter(self, obj, e):
+        if e.type() == QEvent.Type.Resize:
+            self.place()
+        return False
+
+    def reload(self):
+        """The page changed: find its tables anew."""
+        self.tables = []
+
+        def walk(frame):
+            for child in frame.childFrames():
+                if isinstance(child, QTextTable) and child.rows() >= self.MIN_ROWS:
+                    self.tables.append(child)
+                walk(child)
+        walk(self.view.document().rootFrame())
+        self.place()
+
+    def _header(self, table):
+        """(the table's rect, the header row's height) in the document."""
+        lay = self.view.document().documentLayout()
+        box = lay.frameBoundingRect(table)
+        second = lay.blockBoundingRect(table.cellAt(1, 0).firstCursorPosition().block())
+        return box, max(0.0, second.top() - box.top())
+
+    def place(self, *_a):
+        y = self.view.verticalScrollBar().value()
+        for t in self.tables:
+            box, h = self._header(t)
+            # its header gone above the top, and rows of it still on screen below
+            if h and box.top() < y and box.bottom() - 2 * h > y:
+                self.shown = (box, h)
+                self.setGeometry(0, 0, self.view.viewport().width(), int(h) + 1)
+                self.show()
+                self.raise_()
+                self.update()
+                return
+        self.shown = None
+        self.hide()
+
+    def paintEvent(self, _e):
+        if not self.shown:
+            return
+        box, h = self.shown
+        x = self.view.horizontalScrollBar().value()
+        p = QPainter(self)
+        p.fillRect(self.rect(), self.view.palette().base())
+        p.translate(-x, -box.top())
+        self.view.document().drawContents(p, QRectF(x, box.top(), self.width(), h))
+        p.resetTransform()
+        p.setPen(self.view.palette().mid().color())
+        p.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
 
 
 class HelpPanel(QDialog):
@@ -94,6 +163,7 @@ class HelpPanel(QDialog):
         self.view.setObjectName("helpView")
         self.view.setOpenLinks(False)
         self.view.anchorClicked.connect(lambda url: self.follow(url.toString()))
+        self.sticky = StickyHeader(self.view)
         split.addWidget(self.view)
         split.setStretchFactor(0, 0)
         split.setStretchFactor(1, 1)
@@ -159,6 +229,7 @@ class HelpPanel(QDialog):
         if name != self.current:
             self.view.setMarkdown(text)
             self.current = name
+            self.sticky.reload()
         if record:
             del self.history[self.at + 1:]
             self.history.append((name, anchor))

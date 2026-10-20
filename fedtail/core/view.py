@@ -30,7 +30,9 @@ from dataclasses import fields, replace
 from ..model import (
     Account,
     Activity,
+    Feature,
     Post,
+    Probe,
     Redraft,
     Relationship,
     Scheduled,
@@ -465,6 +467,15 @@ class View:
         """Future: my server about itself (ServerInfo)."""
         return _then(self._core.server_info(), lambda r: adapter.server_info(r, self.profile))
 
+    def probe_server(self):
+        """Future: a Probe — my server asked what it can do (takes a few seconds)."""
+        return _then(self._core.probe_server(), _probe)
+
+    def last_probe(self):
+        """The last Probe, or None: never asked."""
+        got = self._core.last_probe()
+        return _probe(got) if got else None
+
     # ---- writing -------------------------------------------------------------------
     def default_visibility(self):
         return adapter.visibility_in(self._core.default_visibility())
@@ -543,6 +554,14 @@ def _shape(d):
     if "type" in d and "account" in d and ("status" in d or "created_at" in d):
         return "activity"
     return None
+
+
+def _probe(d):
+    from datetime import UTC, datetime
+    t = d.get("checked")
+    return Probe(datetime.fromtimestamp(t, UTC) if isinstance(t, (int, float)) else None,
+                 d.get("software") or "", d.get("version") or "",
+                 tuple(Feature(str(k), str(s), str(x or "")) for k, s, x in d.get("items") or ()))
 
 
 _REL_KEYS = {"showing_shares": "showing_reblogs"}

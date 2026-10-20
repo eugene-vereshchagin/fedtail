@@ -473,3 +473,6 @@ GPL-3.0-or-later, см. [LICENSE](LICENSE).
 
 Опоссум (`fedtail/data/icons/fedtail.png`) не под GPL: это стикер из официального
 стикерпака Telegram, используется так же, как стикеры Telegram расходятся везде.
+
+PT Serif и PT Mono (`fedtail/data/themes/fonts/`, шрифты темы `paper`) — ParaType, под
+SIL Open Font License 1.1 (текст лицензии лежит рядом с ними).

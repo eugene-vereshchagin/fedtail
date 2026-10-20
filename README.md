@@ -465,3 +465,6 @@ GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 The opossum (`fedtail/data/icons/fedtail.png`) is not under the GPL: it is a sticker from
 an official Telegram sticker pack, used as Telegram's own stickers are shared everywhere.
+
+PT Serif and PT Mono (`fedtail/data/themes/fonts/`, the `paper` theme's) are ParaType's,
+under the SIL Open Font License 1.1 (the text lies next to them).

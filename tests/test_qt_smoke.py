@@ -2146,7 +2146,14 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: sugg.count == 1)
         dlg = ServerInfoDialog(self.win, self.win.ctx.view.server_info().result())
         dlg.show()
+        self.assertEqual(dlg.probe_table.topLevelItemCount(), 0)  # never asked yet
+        dlg.probe_btn.click()  # asked in the background: the dialog keeps working
+        self.pump(until=lambda: dlg.probe_table.topLevelItemCount() > 20)
+        self.assertTrue(dlg.probe_btn.isEnabled())
         dlg.close()
+        again = ServerInfoDialog(self.win, self.win.ctx.view.server_info().result())
+        self.assertGreater(again.probe_table.topLevelItemCount(), 20)  # kept from last time
+        again.close()
         # a boost of the post shows the like/boost made on the post
         boost = {"id": "rb9", "account": ME, "reblog": st, "created_at": st["created_at"],
                  "content": "", "media_attachments": []}
@@ -2162,6 +2169,18 @@ class QtSmokeTest(unittest.TestCase):
         cfg, _ = config.validate({"ui": {"theme": "terminal"}})
         t = themes.apply(self.app, cfg)
         self.assertEqual(t.bg, "#000000")
+
+    def test_paper_brings_its_font_and_ui_font_wins(self):
+        from fedtail.frontends.qt import theme as themes
+        try:
+            cfg, _ = config.validate({"ui": {"theme": "paper"}})
+            themes.apply(self.app, cfg)
+            self.assertEqual(self.app.font().families()[0], "PT Serif")  # not installed: its own
+            cfg, _ = config.validate({"ui": {"theme": "paper", "font": "No Such, PT Mono"}})
+            themes.apply(self.app, cfg)
+            self.assertEqual(self.app.font().families()[0], "PT Mono")  # the first one there
+        finally:
+            themes.apply(self.app, self.core.cfg)
 
 
     def test_try_theme_and_no_emoji(self):
@@ -2324,6 +2343,19 @@ if __name__ == "__main__":
         self.assertEqual(again.current, "ref/features")  # where it was left
         self.win.open_help("keys")
         self.assertEqual(panel.current, "keys")
+        # the comparison matrix: scrolled into a table, its header row stays on top
+        self.win.open_help("ref/comparison")
+        self.pump(0.05)
+        self.assertTrue(panel.sticky.tables)
+        self.assertTrue(panel.sticky.isHidden())  # at the top: the real header is seen
+        box, h = panel.sticky._header(panel.sticky.tables[0])
+        self.assertGreater(h, 0)
+        panel.view.verticalScrollBar().setValue(int(box.top() + 3 * h))
+        self.pump(0.05)
+        self.assertFalse(panel.sticky.isHidden())
+        self.assertEqual(panel.sticky.y(), 0)
+        panel.view.verticalScrollBar().setValue(0)
+        self.assertTrue(panel.sticky.isHidden())
         panel.reject()
 
     def test_whats_this(self):
