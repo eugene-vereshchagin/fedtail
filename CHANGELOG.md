@@ -2,6 +2,8 @@
 
 ## 0.17.0 — in progress
 
+- `fedtail --layout single|columns|qip` and `--theme NAME`: the layout or the theme for
+  one run, the config untouched.
 - Five themes in the spirit of messengers, for `ui.layout = "qip"` above all: `qip-retro`
   (QIP Infium's pale blue), `qip-modern` (QIP 2012, flat), `mra` and `mra-blue` (the
   Mail.ru Agent's orange and blue), `psi`. They write a post as a message: "Name (15:25:43

@@ -144,6 +144,16 @@ class CliTest(TmpDir):
         self.assertIn("fresh one", out.getvalue())
         self.assertNotIn("old one", out.getvalue())
 
+    def test_layout_and_theme_for_one_run(self):
+        from fedtail.core import config
+        cfg, _ = config.validate({})
+        args = entry.parse_args(["--layout", "qip", "--theme", "psi"])
+        self.assertIsNone(entry.for_this_run(args, cfg))
+        self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["theme"]), ("qip", "psi"))
+        self.assertIn("no theme", entry.for_this_run(entry.parse_args(["--theme", "nope"]), cfg))
+        with self.assertRaises(SystemExit):  # argparse: not a layout
+            entry.parse_args(["--layout", "sideways"])
+
     def test_disabled_and_entry_args(self):
         args = entry.parse_args(["-p", "x", "show", "replies", "-n", "5"])
         self.assertEqual((args.profile, args.command, args.rest), ("x", "show",

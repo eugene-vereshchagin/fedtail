@@ -19,6 +19,20 @@ from .core.instance import SingleInstance  # noqa: E402
 from .frontends import cli  # noqa: E402
 
 
+def for_this_run(args, cfg):
+    """--layout / --theme: this run only, the config file stays as it is. An error to
+    say, or None."""
+    if getattr(args, "layout", None):
+        cfg["ui"]["layout"] = args.layout
+    if getattr(args, "theme", None):
+        from .frontends import themefile
+        have = themefile.available()
+        if args.theme not in have:
+            return f"no theme {args.theme!r}; there are: {', '.join(have)}"
+        cfg["ui"]["theme"] = args.theme
+    return None
+
+
 def parse_args(argv):
     p = argparse.ArgumentParser(
         prog="fedtail",
@@ -28,6 +42,11 @@ def parse_args(argv):
     p.add_argument("-c", "--config", help="config file (overrides the profile's one)")
     p.add_argument("-d", "--data", help="data directory (overrides the profile's one)")
     p.add_argument("--ui", choices=sorted(frontends.FRONTENDS), help="frontend to use")
+    p.add_argument("--layout", choices=("single", "columns", "qip"),
+                   help="the window's layout for this run (ui.layout): one lane, columns "
+                        "side by side, or a roster window as in QIP")
+    p.add_argument("--theme", metavar="NAME",
+                   help="the theme for this run (ui.theme), the config untouched")
     p.add_argument("--update-config", action="store_true",
                    help="add options your config doesn't mention yet (with explanations; "
                         "a .bak copy is kept) and exit")
@@ -145,6 +164,10 @@ def main(argv=None):
         return 0
 
     i18n.setup(cfg["ui"]["language"])
+    bad = for_this_run(args, cfg)
+    if bad:
+        print(f"fedtail: {bad}", file=sys.stderr)
+        return 2
 
     open_url = None
     if args.command == "open":  # `fedtail open URL`: in the window, running or not
