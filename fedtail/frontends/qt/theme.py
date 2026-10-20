@@ -125,12 +125,15 @@ class Theme:
                     col.setAlpha(int(val[7:], 16))
             self.c[key] = col
         for key in follow:  # "auto" here means "the same as the colour it stands for"
-            if key in FOLLOWS:
+            if key in FOLLOWS and FOLLOWS[key] in self.c:
                 self.c[key] = QColor(self.c[FOLLOWS[key]])
         for key in follow:  # …or a mix of two of them (after the plain ones are known)
             if key in TINTS:
                 a, b, t = TINTS[key]
                 self.c[key] = _mix(self.c[a], self.c[b], t)
+        for key in follow:  # following a mixed one (header_end → header): now it's known
+            if key in FOLLOWS and key not in self.c:
+                self.c[key] = QColor(self.c[FOLLOWS[key]])
         # the old flat attributes some widgets still use
         self.muted = self.c["muted"].name()
         self.bg = self.c["view"].name()
