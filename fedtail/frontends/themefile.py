@@ -138,6 +138,13 @@ def fonts_dir():
 FONT_EXT = {".ttf", ".otf", ".ttc"}
 
 
+def builtin_fonts():
+    """Every font that comes with fedtail (the built-in themes'), by file."""
+    d = BUILTIN_DIR / "fonts"
+    return sorted(str(p) for p in d.glob("*") if p.suffix.lower() in FONT_EXT) \
+        if d.is_dir() else []
+
+
 def font_files(theme_files=()):
     """The font files to load: the theme's own (those that exist), then the fonts folder."""
     out = [f for f in theme_files if Path(f).is_file()]

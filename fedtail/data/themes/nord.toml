@@ -3,6 +3,13 @@
 name = "Nord"
 inherit = "system"
 
+[font]
+family = "IBM Plex Sans, Noto Sans, sans-serif"
+mono = "IBM Plex Mono, DejaVu Sans Mono, monospace"
+# IBM Plex Sans and Mono (IBM) come with fedtail (SIL OFL 1.1): nothing to install
+files = ["fonts/IBMPlexSans-Variable.ttf", "fonts/IBMPlexSans-Italic-Variable.ttf",
+         "fonts/IBMPlexMono-Regular.ttf", "fonts/IBMPlexMono-Bold.ttf"]
+
 [colors]
 window = "#2e3440"
 sidebar = "#2b303b"

@@ -403,7 +403,8 @@ def _load_fonts(theme_files):
         _loaded_fonts.add(path)
         fid = QFontDatabase.addApplicationFont(path)
         fams = QFontDatabase.applicationFontFamilies(fid) if fid >= 0 else []
-        logging.getLogger(__name__).info("font %s: %s", path.rsplit("/", 1)[-1],
+        import os
+        logging.getLogger(__name__).info("font %s: %s", os.path.basename(path),
                                          ", ".join(fams) or "not readable")
 
 
@@ -450,9 +451,21 @@ def apply(app, cfg, name=None):
             pal.setColor(role, theme.c[key])
         app.setPalette(pal)
 
-    _load_fonts(theme.font.get("files") or ())
+    # ui.fonts: "theme" — the theme's (it may bring them along); "system" — the
+    # desktop's, whatever the theme says; "custom" — ui.font / ui.mono_font, from the
+    # system, ~/.config/fedtail/fonts/ or the fonts that come with fedtail
+    mode = cfg["ui"].get("fonts", "theme")
+    if mode == "custom":
+        _load_fonts(themefile.builtin_fonts())
+    elif mode == "theme":
+        _load_fonts(theme.font.get("files") or ())
     f = QFont(app.font())
-    fam = _families(cfg["ui"].get("font") or "") or _families(theme.font["family"])
+    if mode == "custom":
+        fam = _families(cfg["ui"].get("font") or "")
+    elif mode == "theme":
+        fam = _families(theme.font["family"])
+    else:
+        fam = []
     if fam:
         f.setFamilies(fam)
     size = cfg["ui"]["font_size"]
@@ -462,7 +475,8 @@ def apply(app, cfg, name=None):
     # emoji and flags come from a colour emoji font when the main one lacks them
     f.setFamilies([x for x in families if x not in EMOJI_FONTS] + list(EMOJI_FONTS))
     app.setFont(f)
-    mono = _families(cfg["ui"].get("mono_font") or "") or _families(theme.font["mono"]) or \
+    mono = _families({"custom": cfg["ui"].get("mono_font") or "",
+                      "theme": theme.font["mono"]}.get(mode, "")) or \
         [QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family()]
     pt = f.pointSizeF() if f.pointSizeF() > 0 else 10.0
     app.setStyleSheet(theme.stylesheet(pt, mono[0]))

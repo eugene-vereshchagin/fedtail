@@ -15,15 +15,19 @@
   decide which buttons fedtail offers.
 - Help: in the comparison tables the header row stays on top while the rows scroll under
   it, so a ✓ always says whose it is.
-- The `paper` theme comes with its fonts: PT Serif and PT Mono (ParaType, SIL OFL 1.1) are
-  in fedtail, nothing to install.
+- Every built-in theme comes with its fonts (all SIL OFL 1.1, all with Cyrillic, nothing
+  to install): PT Serif in `paper`, IBM Plex Mono in `terminal`, IBM Plex Sans in `nord`,
+  Source Sans 3 and Source Code Pro in `night` and `solarized`, Open Sans in `point`,
+  Arimo in `juick`, Comfortaa and Nunito in `pink`, PT Sans in `contrast`, Fira Mono in
+  `bnw` where DejaVu is missing. `ui.fonts` chooses whose: the theme's (default), the
+  system's, or your own (`ui.font`, `ui.mono_font` — any of these by name too).
 - × on a row of Activity on GoToSocial: the server can't dismiss one notification (only
   clear them all), and fedtail used to ask it anyway — a 404 in the log, the row stayed,
   and "Clear" went missing until a restart. Now × hides the row here (and stays hidden
   after the next fetch); on Mastodon it goes from the server too. It never mutes
   anything: new ones of the kind come as before. The tooltip says which it is.
-- The font over the theme's and the system's: `ui.font` (a list works: the first one
-  installed), `ui.mono_font` for #ids. Fonts needn't be installed: .ttf / .otf in
+- Fonts of your own: `ui.fonts = "custom"` with `ui.font` (a list works: the first one
+  there), `ui.mono_font` for #ids. Fonts needn't be installed: .ttf / .otf in
   `~/.config/fedtail/fonts/` are picked up at start, and a theme can bring its own
   (`[font] files`, next to its .toml).
 - Muting a thread works on GoToSocial: the server can't, so fedtail mutes it itself — the

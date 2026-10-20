@@ -6,6 +6,9 @@ inherit = "system"
 family = "IBM Plex Mono, DejaVu Sans Mono, Hack, monospace"
 mono = "IBM Plex Mono, DejaVu Sans Mono, Hack, monospace"
 post_scale = 1.0
+# IBM Plex Mono (IBM) comes with fedtail (SIL OFL 1.1): nothing to install
+files = ["fonts/IBMPlexMono-Regular.ttf", "fonts/IBMPlexMono-Italic.ttf",
+         "fonts/IBMPlexMono-Bold.ttf", "fonts/IBMPlexMono-BoldItalic.ttf"]
 
 [colors]
 window = "#000000"

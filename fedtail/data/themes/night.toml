@@ -3,6 +3,13 @@
 name = "Night"
 inherit = "system"
 
+[font]
+family = "Source Sans 3, Noto Sans, sans-serif"
+mono = "Source Code Pro, DejaVu Sans Mono, monospace"
+# Source Sans 3 and Source Code Pro (Adobe) come with fedtail (SIL OFL 1.1): nothing to install
+files = ["fonts/SourceSans3-Variable.ttf", "fonts/SourceSans3-Italic-Variable.ttf",
+         "fonts/SourceCodePro-Variable.ttf"]
+
 [colors]
 window = "#14171c"
 sidebar = "#101317"

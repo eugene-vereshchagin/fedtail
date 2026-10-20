@@ -2190,9 +2190,20 @@ class QtSmokeTest(unittest.TestCase):
             cfg, _ = config.validate({"ui": {"theme": "paper"}})
             themes.apply(self.app, cfg)
             self.assertEqual(self.app.font().families()[0], "PT Serif")  # not installed: its own
-            cfg, _ = config.validate({"ui": {"theme": "paper", "font": "No Such, PT Mono"}})
-            themes.apply(self.app, cfg)
-            self.assertEqual(self.app.font().families()[0], "PT Mono")  # the first one there
+            cfg, _ = config.validate({"ui": {"theme": "paper", "fonts": "custom",
+                                             "font": "No Such, IBM Plex Sans"}})
+            themes.apply(self.app, cfg)  # one that comes with fedtail, by name
+            self.assertEqual(self.app.font().families()[0], "IBM Plex Sans")
+            cfg, _ = config.validate({"ui": {"theme": "paper", "fonts": "system"}})
+            themes.apply(self.app, cfg)  # the desktop's, whatever the theme says
+            self.assertNotIn(self.app.font().families()[0], ("PT Serif", "IBM Plex Sans"))
+            for name in ("terminal", "nord", "pink", "solarized", "contrast", "point"):
+                cfg, _ = config.validate({"ui": {"theme": name}})
+                themes.apply(self.app, cfg)  # each theme's own font, there without installing
+                want = {"terminal": "IBM Plex Mono", "nord": "IBM Plex Sans",
+                        "pink": "Comfortaa", "solarized": "Source Sans 3",
+                        "contrast": "PT Sans", "point": "Open Sans"}[name]
+                self.assertEqual(self.app.font().families()[0], want, name)
         finally:
             themes.apply(self.app, self.core.cfg)
 

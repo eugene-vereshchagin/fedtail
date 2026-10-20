@@ -4,9 +4,11 @@ name = "Juick"
 inherit = "system"
 
 [font]
-family = "Arial, Liberation Sans, Arimo, DejaVu Sans, sans-serif"
+family = "Arial, Arimo, Liberation Sans, DejaVu Sans, sans-serif"
 mono = "DejaVu Sans Mono, monospace"
 post_scale = 1.05
+# Arimo (Arial's metrics) comes with fedtail (SIL OFL 1.1): where Arial is missing
+files = ["fonts/Arimo-Variable.ttf", "fonts/Arimo-Italic-Variable.ttf"]
 
 [colors]
 window = "#eeede6"

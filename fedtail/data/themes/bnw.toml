@@ -4,9 +4,11 @@ name = "BnW"
 inherit = "system"
 
 [font]
-family = "DejaVu Sans Mono, Liberation Mono, Hack, monospace"
-mono = "DejaVu Sans Mono, Liberation Mono, Hack, monospace"
+family = "DejaVu Sans Mono, Fira Mono, Liberation Mono, Hack, monospace"
+mono = "DejaVu Sans Mono, Fira Mono, Liberation Mono, Hack, monospace"
 post_scale = 0.95
+# Fira Mono (Mozilla) comes with fedtail (SIL OFL 1.1): where DejaVu Sans Mono is missing
+files = ["fonts/FiraMono-Regular.ttf", "fonts/FiraMono-Bold.ttf"]
 
 [colors]
 window = "#000000"

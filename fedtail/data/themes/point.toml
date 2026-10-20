@@ -11,6 +11,8 @@ inherit = "system"
 family = "Open Sans, Noto Sans, DejaVu Sans, sans-serif"
 mono = "DejaVu Sans Mono, monospace"
 post_scale = 1.0
+# Open Sans comes with fedtail (SIL OFL 1.1): nothing to install
+files = ["fonts/OpenSans-Variable.ttf", "fonts/OpenSans-Italic-Variable.ttf"]
 
 [colors]
 window = "#ffffff"

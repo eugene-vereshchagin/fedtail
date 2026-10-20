@@ -4,7 +4,12 @@ name = "Contrast"
 inherit = "system"
 
 [font]
+family = "PT Sans, Noto Sans, DejaVu Sans, sans-serif"
+mono = "PT Mono, DejaVu Sans Mono, monospace"
 post_scale = 1.35
+# PT Sans and PT Mono (ParaType: wide, open letters) come with fedtail (SIL OFL 1.1)
+files = ["fonts/PT_Sans-Web-Regular.ttf", "fonts/PT_Sans-Web-Bold.ttf",
+         "fonts/PT_Mono-Regular.ttf"]
 
 [colors]
 window = "#ffffff"
