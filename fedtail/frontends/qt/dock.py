@@ -60,7 +60,7 @@ class InputDock(QWidget):
         self.cw_btn.setCheckable(True)
         self.cw_btn.toggled.connect(self._cw_toggled)
         bar.addWidget(self.cw_btn)
-        full = self._mini("⤢", _("dock_full"))
+        full = self.full_btn = self._mini("⤢", _("dock_full"))
         full.clicked.connect(self.open_full)
         bar.addWidget(full)
         self.about = QLabel()
@@ -98,8 +98,17 @@ class InputDock(QWidget):
         row.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignBottom)
         v.addLayout(row)
         self.visibility = win.ctx.view.reply_visibility(None)
-        self._show_visibility()
+        self.dress()
         self._count()
+
+    def dress(self):
+        """Pictures on the buttons, or words (ui.button_icons); again after a theme."""
+        from . import icons
+        t = self.win.theme
+        icons.dress(self.cw_btn, "warning", t, glyph="CW")
+        icons.dress(self.full_btn, "expand", t, glyph="⤢")
+        icons.dress(self.send_btn, "send", t, words=_("dock_send"))
+        self._show_visibility()
 
     def _mini(self, text, tip):
         b = QToolButton()
@@ -186,8 +195,10 @@ class InputDock(QWidget):
         self._show_visibility()
 
     def _show_visibility(self):
+        from . import icons
         vis = self.visibility
-        self.vis_btn.setText(VIS_MARK.get(vis, "?") + " ▾")
+        icons.dress(self.vis_btn, vis, self.win.theme, words="▾",
+                    glyph=VIS_MARK.get(vis, "?") + " ▾")
         self.vis_btn.setToolTip(f"{_('web_visibility')}: "
                                 f"{_('vis_' + VIS_KEY.get(vis, vis))}")
 
@@ -357,13 +368,15 @@ class AuthorBar(QWidget):
                                  self.win.fill_list_menu(menu, self.who))
         self.lists_btn.setMenu(menu)
         row.addWidget(self.lists_btn)
-        for text, tip, fn in (("✉", _("faces_private"), self._write),
-                              ("👤", _("faces_profile"), self._profile)):
+        self.glyph_btns = []
+        for text, pic, tip, fn in (("✉", "direct", _("faces_private"), self._write),
+                                   ("👤", "profile", _("faces_profile"), self._profile)):
             b = QPushButton(text)
             b.setObjectName("tool")
             b.setToolTip(tip)
             b.clicked.connect(fn)
             row.addWidget(b)
+            self.glyph_btns.append((b, pic, text))
         row.addStretch(1)
         col.addLayout(row)
         h.addLayout(col, 1)
@@ -373,9 +386,17 @@ class AuthorBar(QWidget):
         self.face.clicked.connect(self._profile)
         h.addWidget(self.face)
         self.hide()
+        self.dress()
         self._timer = QTimer(self, interval=500)
         self._timer.timeout.connect(self.update_bar)
         self._timer.start()
+
+    def dress(self):
+        from . import icons
+        t = self.win.theme
+        icons.dress(self.lists_btn, "list", t, words=_("add_to_list") + " ▾")
+        for b, pic, glyph in self.glyph_btns:
+            icons.dress(b, pic, t, glyph=glyph)
 
     def update_bar(self):
         from .feed import ThreadWidget
@@ -417,7 +438,9 @@ class AuthorBar(QWidget):
                 bits.append(_("faces_requested"))
         self.about.setText(" · ".join(bits))
         on = bool(rel and (rel.following or rel.requested))
-        self.follow_btn.setText(_("unfollow") if on else _("follow"))
+        from . import icons
+        icons.dress(self.follow_btn, "unfollow" if on else "follow", self.win.theme,
+                    words=_("unfollow") if on else _("follow"))
         self.follow_btn.setEnabled(rel is not None)
 
     def _follow(self):

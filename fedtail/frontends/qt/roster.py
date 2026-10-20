@@ -51,8 +51,12 @@ class RosterRow(QWidget):
         h.setSpacing(8)
         icon = QLabel()
         icon.setFixedWidth(18)
+        from . import icons as pictures
         from .window import LANE_ICON
-        if win.theme.shape["lane_icons"]:
+        own = {"person": "status", "talk": "talk", "thread": "thread"}.get(item.kind)
+        if own and pictures.wanted(win.theme):  # fedtail's own: a flower for a person
+            icon.setPixmap(pictures.icon(own, win.theme).pixmap(16, 16))
+        elif win.theme.shape["lane_icons"]:
             kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(item.kind,
                                                              item.key.split(":")[0])
             pm = _ICONS.get(kind)
@@ -258,6 +262,7 @@ class RosterWindow(QWidget):
         self._timer.timeout.connect(self.refresh)
         self._restore_place()
         self._apply_look()
+        self.dress()
 
     # ---- contents ------------------------------------------------------------------
     def refresh_soon(self):
@@ -420,6 +425,15 @@ class RosterWindow(QWidget):
             ids = [e.id for _item, e in view.entries(key)]
         if ids:
             view.mark_read(ids)
+
+    def dress(self):
+        """Pictures on the bottom buttons (ui.button_icons); again after a theme."""
+        from . import icons
+        t = self.win.theme
+        icons.dress(self.menu_btn, "menu", t, words=_("menu"))
+        icons.dress(self.look_btn, "settings", t, glyph="⚙")
+        self.account_btn.setIcon(icons.icon("accounts", t) if icons.wanted(t)
+                                 else QIcon())
 
     def _pop_accounts(self):
         pop_menu(self.win.accounts_menu(self), self.account_btn, True)

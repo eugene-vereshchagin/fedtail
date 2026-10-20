@@ -8,7 +8,10 @@
   status bar says until when — instead of a "429" for every lane, every round (as on
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
 - `ui.button_icons = "theme" | "on" | "off"`: pictures on buttons whatever the theme
-  says.
+  says. The split layout's buttons (the input line, the bar over a lane, the roster)
+  have pictures of fedtail's own, in the spirit of 2007's messengers and in the
+  theme's colours: who sees a post, a warning, send, follow, lists, a private message,
+  the menu; a flower for a person in the roster, a bubble for a talk.
 - Trying a theme from the menu no longer freezes the window for seconds: the lanes out
   of sight let their cards go first (drawn anew when opened), and the tabs out of sight
   are rebuilt when they come into view.

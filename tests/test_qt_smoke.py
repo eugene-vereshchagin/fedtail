@@ -2308,6 +2308,12 @@ class QtSmokeTest(unittest.TestCase):
             cfg, _ = config.validate({"ui": {"button_icons": say}})
             self.assertIs(themes.apply(self.app, cfg).shape["icons"], want)
         themes.apply(self.app, config.validate({})[0])
+        from fedtail.frontends.qt import icons
+        if icons.QSvgRenderer is not None:  # fedtail's own pictures, in the theme's colours
+            t = themes.apply(self.app, config.validate({"ui": {"button_icons": "on"}})[0])
+            self.assertFalse(icons.icon("send", t).isNull())
+            self.assertTrue(icons.icon("no-such-picture", t).isNull())
+            themes.apply(self.app, config.validate({})[0])
 
     def test_terminal_theme(self):
         from fedtail.frontends.qt import theme as themes

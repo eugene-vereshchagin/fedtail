@@ -743,7 +743,12 @@ class MainWindow(QMainWindow):
                 view.restyle = True  # rebuilt when it comes into sight
         self.update_badges()
         if self.roster is not None:
+            self.roster.dress()
+            self.roster._shape = None  # rows built anew: their pictures in its colours
             self.roster.refresh()
+        for w in (self.dock, self.author_bar):
+            if w is not None:
+                w.dress()
 
     def _pop_app_menu(self, btn, above=False):
         m = self._app_menu()
