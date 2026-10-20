@@ -596,6 +596,7 @@ class View:
             titles = [_conv_title(g["top"], kind, me) for g in convs]
             if kind == "talk":  # two talks with the same people: told apart by how they begin
                 from collections import Counter
+
                 from ..model.text import snippet
                 twice = {t for t, n in Counter(titles).items() if n > 1}
                 titles = [f"{t}: {snippet(real(g['top']), 30)}" if t in twice else t
