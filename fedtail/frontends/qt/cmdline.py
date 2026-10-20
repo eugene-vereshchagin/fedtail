@@ -45,6 +45,10 @@ class CommandBar(QWidget):
     def put_alias(self, alias):
         """A click on a post's #abc: it goes to the start of the line (instead of the
         #number already there, if any), the cursor to the end, ready for the text."""
+        dock = getattr(self.win, "dock", None)
+        if dock is not None and not self.isVisible():
+            dock.put_alias(alias)  # the split layout: the input line takes commands too
+            return
         self.show()
         text = self.edit.text()
         rest = re.sub(r"^\s*#[0-9a-z]+(/\d+)?\s*", "", text) if text.lstrip().startswith("#") \

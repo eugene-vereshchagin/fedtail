@@ -116,6 +116,11 @@ roster_threads = 15
 # post the cursor is on, or whom I answer), mine by the input line.
 faces = true
 
+# With layout = "split": the input line at the bottom takes the command line's commands
+# too ("#a3f text", "! #a3f", "S #a3f", "?" — Enter runs them), and the command line
+# itself is hidden (Ctrl+L brings it). false — the input line only writes.
+dock_commands = true
+
 # Pictures on buttons (visibility, actions, the roster's): "theme" — as the theme says,
 # "on" — always, "off" — words only.
 button_icons = "theme"

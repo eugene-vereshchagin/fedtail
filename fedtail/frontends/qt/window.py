@@ -322,10 +322,7 @@ class MainWindow(QMainWindow):
         # messages window's conversations, each with its ×, the lanes' one too
         self.tabs.setTabBarAutoHide(not split_layout)
         self.tabs.addTab(self.stack, "")
-        if split_layout:  # tabs that look like tabs, as in the messengers (theme.py)
-            self.tabs.setObjectName("messages")
-            self.tabs.setDocumentMode(False)
-        else:
+        if not split_layout:
             self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.tabs.tabCloseRequested.connect(self.close_tab)
         right = QWidget()
@@ -364,15 +361,24 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         # ui.layout = "split": the lanes in a roster window of their own (roster.py); this
         # window is the messages window — no sidebar, the lanes and threads in tabs
-        self.roster = self.dock = self.faces = None
+        self.roster = self.dock = self.faces = self.msg_tabs = None
+        self.lane_now = None
         if self.cfg["ui"].get("layout") in ("split", "qip"):
             from .dock import InputDock
             from .roster import RosterWindow
             self.split.widget(0).hide()
             self.roster = RosterWindow(self)
-            # the input line, always under the tabs (dock.py)
+            # the input line, always under the tabs, and tabs of its own above (dock.py)
+            from .dock import MessageTabs
             self.dock = InputDock(self)
             rv.insertWidget(rv.indexOf(self.tabs) + 1, self.dock)
+            self.msg_tabs = MessageTabs(self)
+            rv.insertWidget(rv.indexOf(self.tabs), self.msg_tabs)
+            self.tabs.tabBar().hide()  # the bar above says which is in front
+            self.tabs.tabBar().setMaximumHeight(0)
+            self.tabs.currentChanged.connect(lambda _i: self.msg_tabs.sync())
+            if self.cfg["ui"].get("dock_commands", True):
+                self.cmdline.hide()  # the input line takes the commands (Ctrl+L: still here)
             # and the faces beside them (ui.faces): theirs on top, mine by the input
             if self.cfg["ui"].get("faces", True):
                 from .dock import FaceColumn
@@ -384,7 +390,7 @@ class MainWindow(QMainWindow):
                 inner.layout().setContentsMargins(0, 0, 0, 0)
                 inner.layout().setSpacing(0)
                 at = rv.indexOf(self.tabs)
-                for w in (self.tabs, self.dock):
+                for w in (self.msg_tabs, self.tabs, self.dock):
                     rv.removeWidget(w)
                     inner.layout().addWidget(w, 1 if w is self.tabs else 0)
                 outer.addWidget(inner, 1)
@@ -1273,9 +1279,11 @@ class MainWindow(QMainWindow):
         if self.stack.indexOf(w) < 0:
             self.stack.addWidget(w)
         self.stack.setCurrentWidget(w)
+        self.lane_now = name
         if show:
-            self.tabs.setTabVisible(self.tabs.indexOf(self.stack), True)
             self.tabs.setCurrentIndex(self.tabs.indexOf(self.stack))
+            if self.msg_tabs is not None and self.isVisible():
+                self.msg_tabs.lane_opened(name)  # a tab of its own above
         else:
             log.info("lane %s chosen behind the %s tab", name,
                      type(self.tabs.currentWidget()).__name__)
@@ -1755,15 +1763,14 @@ class MainWindow(QMainWindow):
         w = self.tabs.widget(i)
         if w is None or (w is self.stack and self.roster is None):
             return
-        if w is self.stack:  # the split layout: the lanes' tab hides till one is opened
-            self.tabs.setTabVisible(i, False)
-        else:
-            log.info("tab closed: %s", type(w).__name__)
-            self.tabs.removeTab(i)
-            w.deleteLater()
-        if self.roster is not None and not any(
-                self.tabs.isTabVisible(j) for j in range(self.tabs.count())):
-            self.hide()  # the last conversation closed: the messages window goes too
+        if w is self.stack:  # the split layout (Ctrl+W): the lane's tab above goes
+            self.msg_tabs.close_current()
+            return
+        log.info("tab closed: %s", type(w).__name__)
+        self.tabs.removeTab(i)
+        w.deleteLater()
+        if self.msg_tabs is not None:
+            self.msg_tabs.after_close()
 
     def vote(self, post, choices):
         sid = post.id
@@ -2077,6 +2084,39 @@ class MainWindow(QMainWindow):
     def compose(self, reply_to=None, attach=(), text=""):
         if not self.core.me:
             return
+        if self.dock is not None and not attach and not (text and reply_to):
+            # the split layout: a reply or a new post goes into the input line
+            self.show_raise()
+            if isinstance(reply_to, str):
+                reply_to = self.ctx.view.by_id(reply_to)
+            if reply_to is not None:
+                self.dock.reply_to(self._post(reply_to))
+            elif text:
+                self.dock.start_with(text)
+            else:
+                self.dock.text.setFocus()
+            return
+        self.compose_window(reply_to, attach, text)
+
+    def write_to(self, account):
+        """A private message to someone: the input line in the split layout, else the
+        Compose window, "@them " and direct."""
+        if self.dock is not None:
+            self.show_raise()
+            if "direct" in self.core.lane_by_name:
+                self.select_lane("direct")
+            self.dock.write_to(account)
+            return
+        dlg = Compose(self, text="@" + account.handle + " ")
+        i = dlg.vis.findData("direct")
+        if i >= 0:
+            dlg.vis.setCurrentIndex(i)
+        dlg.show()
+
+    def compose_window(self, reply_to=None, attach=(), text=""):
+        """The full Compose window, whatever the layout (⤢ from the input line)."""
+        if not self.core.me:
+            return
         Compose(self, reply_to, attach, text).show()
 
     def quote_reply(self, st, text, whole=False):
@@ -2358,6 +2398,10 @@ class MainWindow(QMainWindow):
 
     def showEvent(self, e):
         super().showEvent(e)
+        if self.msg_tabs is not None and not self.msg_tabs.count() and self.lane_now:
+            # shown from the tray with every tab closed: the lane in front gets its tab
+            QTimer.singleShot(0, lambda: self.msg_tabs.lane_opened(self.lane_now)
+                              if not self.msg_tabs.count() else None)
         if self.roster is not None and not self.roster.isVisible():
             self.roster.show()  # the roster comes with the window (and with the tray)
             self.roster.refresh_soon()

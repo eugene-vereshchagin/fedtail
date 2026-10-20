@@ -92,3 +92,29 @@ class TalkTitleTest(TmpDir):
                     mentions=[{"id": "B", "acct": BOB["acct"], "username": BOB["username"]}])
         self.assertEqual(_conv_title(adapter.post(mine), "talk", me), BOB["username"])
         self.assertTrue(_conv_title(adapter.post(dm), "thread", me).endswith(": привет"))
+
+
+class PeopleTest(RosterTest):
+    def test_mutuals_stand_as_people_and_are_asked_once_a_day(self):
+        """Whom I follow and who follows me back: the roster's "People", each a
+        contact to write to in private; asked of the server once a day."""
+        core, w = self.make()
+        w.add(status("1", BOB, minute=1, text="привет"), home=True)
+        w.following.add(BOB["id"])
+        asked = []
+
+        def rel(ids):
+            asked.append(list(ids))
+            return [{"id": i, "followed_by": True} for i in ids]
+        core.api.relationships = rel
+        v = View(core)
+        self.assertEqual(v.mutuals(), [])
+        self.assertEqual(v.refresh_mutuals().result(), 1)
+        self.assertEqual([a.id for a in v.mutuals()], [BOB["id"]])
+        v.refresh_mutuals().result()
+        self.assertEqual(len(asked), 1)  # fresh: not asked again the same day
+        people = next(g for g in v.roster() if g.name == "people")
+        item = people.items[0]
+        self.assertEqual((item.kind, item.key), ("person", BOB["id"]))
+        self.assertEqual(item.who.id, BOB["id"])
+        self.assertTrue(item.title)

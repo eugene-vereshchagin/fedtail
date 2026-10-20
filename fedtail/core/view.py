@@ -597,7 +597,40 @@ class View:
                                      g["unread"], len(g["members"]), g["last"],
                                      tuple(g["members"])) for g in convs)
             out.append(RosterGroup(group, items))
+        # people I follow who follow me back: a double click — our private talk, or a
+        # private message to them (asked of the server once a day: refresh_mutuals)
+        people = self.mutuals()
+        if people:
+            from ..model.text import norm_handle
+            talks = {}
+            convs_seen = self.__dict__.get("_roster_convs", {})
+            for g in reversed(convs_seen.get("direct", (None, []))[1]):
+                top = real(g["top"])
+                mine = norm_handle(self.me.handle) if self.me else ""
+                hs = {norm_handle(top.author.handle)} | {norm_handle(m.handle)
+                                                          for m in top.mentions}
+                hs.discard(mine)
+                if len(hs) == 1:
+                    talks[hs.pop()] = g  # the newest talk with just them wins
+            items = []
+            for a in people:
+                g = talks.get(norm_handle(a.handle))
+                items.append(RosterItem(
+                    "person", a.id, a.name or a.username or a.handle,
+                    g["unread"] if g else 0, len(g["members"]) if g else 0,
+                    g["last"] if g else None, tuple(g["members"]) if g else (),
+                    who=a, talk=g["key"] if g else ""))
+            out.append(RosterGroup("people", tuple(items)))
         return out
+
+    def mutuals(self):
+        """[Account] — whom I follow and who follows me back, as last asked."""
+        got = getattr(self._core, "mutuals", None)  # merged accounts: none
+        return [adapter.account(a, self.profile) for a in (got() if got else ())]
+
+    def refresh_mutuals(self, force=False):
+        """Future: how many mutuals there are now (asked once a day unless force)."""
+        return _then(self._core.refresh_mutuals(force), lambda got: len(got or []))
 
     @property
     def lists(self):

@@ -71,6 +71,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `ui.roster_on_top` | `false` | With layout = "split": the roster stays above other windows. |
 | `ui.roster_threads` | `15` | With layout = "split": how many followed threads and private talks stand in the roster as items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only. |
 | `ui.faces` | `true` | With layout = "split": the faces beside the messages — the other side's on top (whose post the cursor is on, or whom I answer), mine by the input line. |
+| `ui.dock_commands` | `true` | With layout = "split": the input line at the bottom takes the command line's commands too ("#a3f text", "! #a3f", "S #a3f", "?" — Enter runs them), and the command line itself is hidden (Ctrl+L brings it). false — the input line only writes. |
 | `ui.button_icons` | `"theme"` | Pictures on buttons (visibility, actions, the roster's): "theme" — as the theme says, "on" — always, "off" — words only. |
 | `ui.columns` | `[]` | Which lanes stand as columns, left to right, until you change them in the window (a click on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is remembered). Names — as in lanes.enabled; "list:Friends" — a list by its title. [] — Home, Replies to me and Activity. |
 | `ui.column_width` | `460` | The width of one column in pixels (at least 280). They don't fit the window — sideways scrolling. |

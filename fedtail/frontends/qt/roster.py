@@ -52,7 +52,7 @@ class RosterRow(QWidget):
         icon.setFixedWidth(18)
         from .window import LANE_ICON
         if win.theme.shape["lane_icons"]:
-            kind = {"thread": "subs", "talk": "direct"}.get(item.kind,
+            kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(item.kind,
                                                              item.key.split(":")[0])
             ic = QIcon.fromTheme(LANE_ICON.get(kind, ""))
             if not ic.isNull():
@@ -97,7 +97,10 @@ class RosterRow(QWidget):
         self.badge.setText(str(item.unread) if item.unread < 1000 else "999+")
         self.badge.setVisible(new)
         last = item.last
-        if last is not None:
+        if last is None and item.who is not None:
+            self.line.setText("@" + item.who.handle)  # no talk yet: who it is
+            self.line.setToolTip("")
+        elif last is not None:
             a = last.author
             # a status line: who wrote last and how it begins, plain text
             self.line.setText(f"{a.name or a.username or a.handle}: {snippet(last, 80)}")
@@ -105,7 +108,8 @@ class RosterRow(QWidget):
         else:
             self.line.setText("")
         self.line.setVisible(bool(self.line.text()) and not self.compact)
-        url = last.author.avatar_static if last is not None else ""
+        url = item.who.avatar_static if item.who is not None else \
+            last.author.avatar_static if last is not None else ""
         if url != self._face_url and not self.compact:
             self._face_url = url
             self.face.clear()
@@ -114,6 +118,8 @@ class RosterRow(QWidget):
                 self.roster.win.images.get(
                     url, lambda pm, w=self.face: _alive(w) and w.setPixmap(_round(pm, FACE)))
         tip = item.title + (f" — {_('roster_unread', n=item.unread)}" if new else "")
+        if item.kind == "person":
+            tip += "\n" + _("roster_person_tip")
         self.setToolTip(tip)
 
     def matches(self, text):
@@ -239,6 +245,7 @@ class RosterWindow(QWidget):
         got = win.core.get_state("roster_look", {}) or {}
         self.look = dict(LOOK, **{k: bool(v) for k, v in got.items() if k in LOOK})
         self._shape = None
+        self._mutuals_asked = False
         self._timer = QTimer(self, singleShot=True, interval=REFRESH_MS)
         self._timer.timeout.connect(self.refresh)
         self._restore_place()
@@ -253,6 +260,10 @@ class RosterWindow(QWidget):
         me = view.me if self.win.core.me else None
         self._show_me(me)
         groups = view.roster() if me is not None else []
+        if me is not None and not self._mutuals_asked:
+            self._mutuals_asked = True  # whom to write to: asked once a day
+            self.win.bridge.call(view.refresh_mutuals(), ok=lambda _n: self.refresh_soon(),
+                                 fail=lambda e: log.info("mutuals: %s", e))
         shape = [(g.name, tuple(row_key(i) for i in g.items)) for g in groups]
         if shape != self._shape:  # lanes came or went: build anew
             self._build(groups)
@@ -335,8 +346,16 @@ class RosterWindow(QWidget):
         """An item chosen (a row's key): its lane, or its thread, in front in the
         messages window."""
         kind, _sep, post_id = key.partition("/") if "/" in key else ("lane", "", key)
+        self.win.show_raise()  # first: what opens in a shown window gets a tab
         if kind == "lane":
             self.win.select_lane(key)
+        elif kind == "person":
+            row = self.rows.get(key)
+            item = row.item if row is not None else None
+            if item is not None and item.talk:
+                self.win.open_thread(item.talk)  # our private talk
+            elif item is not None and item.who is not None:
+                self.win.write_to(item.who)  # none yet: a private message to them
         else:
             self.win.open_thread(post_id)
         self.win.show_raise()

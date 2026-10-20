@@ -38,8 +38,14 @@
   sidebar, its tabs drawn as tabs; closing the last tab closes it. Under the tabs, an
   input line is always there: in a thread's tab it answers the thread (a private talk
   stays private), in a lane's tab it writes a new post; who sees it, a warning, and ⤢ for
-  the full Compose window. Beside them, the faces (`ui.faces`): the other side's on top
-  — whose post the cursor is on, or whom I answer — and mine by the input line. At the
+  the full Compose window; Reply on a card answers there too, and it takes the command
+  line's commands (`ui.dock_commands`: "#a3f text", "! #a3f", "?" — Enter runs them; the
+  command line itself hides). Every lane opened from the roster and every thread is a
+  tab of its own above. "People" in the roster: whom I follow who follows me back
+  (asked once a day) — a double click opens our private talk or starts a private
+  message. Beside them, the faces (`ui.faces`): the other side's on top
+  — whose post the cursor is on, or whom I answer — with the name, the address and
+  buttons for the profile and a private message, and mine by the input line. At the
   bottom of the roster, the menu and the accounts
   (@me ▾); ⚙ (or a right click on empty space) sets how it looks: compact — a line an
   item, without the header, the search or the buttons, only where there's something new,

@@ -2260,10 +2260,24 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(roster.rows["home"].line.isVisibleTo(roster))
         roster.set_look("only_new", True)
         roster.set_look("only_new", False)
+        # a reply goes into the input line, not a window of its own
+        win.compose(thread.posts[0])
+        self.assertEqual(win.dock.target.id, thread.posts[0].id)
+        win.dock.text.clear()
+        # every lane and thread opened has a tab above; a command in the input line
+        win.msg_tabs.sync()
+        kinds = {win.msg_tabs.tabData(i)[0] for i in range(win.msg_tabs.count())}
+        self.assertEqual(kinds, {"lane", "w"})
+        win.dock.text.setPlainText("?")
+        self.assertEqual(win.dock.command(), "?")
+        win.dock.text.setPlainText("@bob привет")
+        self.assertIsNone(win.dock.command())  # "@…" stays a post here
+        win.dock.text.clear()
         # closing the last tab closes the messages window; the roster stays
         win.close_tab(win.tabs.indexOf(thread))
         self.assertTrue(win.isVisible())
-        win.close_tab(win.tabs.indexOf(win.stack))
+        while win.msg_tabs.count():
+            win.msg_tabs.close_current()
         self.assertFalse(win.isVisible())
         self.assertTrue(roster.isVisible())
         # Enter on an item opens it (a single click only selects)

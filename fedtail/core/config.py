@@ -41,6 +41,7 @@ DEFAULTS = {
         "roster_on_top": False,
         "roster_threads": 15,
         "faces": True,
+        "dock_commands": True,
         "button_icons": "theme",
         "columns": [],
         "column_width": 460,

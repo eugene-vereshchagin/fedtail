@@ -320,13 +320,16 @@ class RosterItem:
     """One "contact" of the roster (the QIP-style layout's list, the sidebar's lanes):
     a lane for now; threads and conversations later. last: its newest post — a line of
     it under the title, its author's face beside, as a status line in a messenger."""
-    kind: str                      # "lane", "thread" (a followed thread), "talk" (private)
+    kind: str                      # "lane", "thread" (a followed thread), "talk" (private),
+    #                                "person" (a mutual: to write to in private)
     key: str                       # what to open: a lane's name, a thread's top post id
     title: str
     unread: int = 0
     total: int = 0                 # entries in it (0: not counted, or empty)
     last: Post | None = None
     ids: tuple[str, ...] = ()      # a thread's or talk's posts here (to mark them read)
+    who: Account | None = None   # "person": whom it is (someone I follow who follows me)
+    talk: str = ""                 # "person": our private talk's top post id, if any
 
 
 @dataclass(frozen=True, slots=True)

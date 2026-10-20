@@ -12,6 +12,7 @@ it — and the future fails with NotSupported, a message for people.
 """
 
 import logging
+import time
 from urllib.parse import urlparse
 
 import requests
@@ -23,6 +24,9 @@ from .model import real
 log = logging.getLogger(__name__)
 
 UNSUPPORTED_STATUS = (404, 405, 410, 501)
+MUTUALS_KV = "mutuals"
+MUTUALS_MAX = 1000       # whom I follow, read at most this many
+MUTUALS_EVERY = 86400    # s: asked again once a day
 
 
 class NotSupported(ApiError):
@@ -73,6 +77,51 @@ class SocialMixin:
             except ApiError as e:
                 log.debug("relationships: %s", e)
         return {"accounts": accounts, "relations": rel}
+
+    # ---- people I follow who follow me back ------------------------------------------
+    def mutuals(self):
+        """[account] — whom I follow and who follows me back, as last asked (a day at
+        most ago); the roster's "People", to write to in private."""
+        got = self.store.kv_get(MUTUALS_KV) or {}
+        me = (self.me or {}).get("id")
+        return list(got.get("accounts") or []) if me and got.get("me") == me else []
+
+    def refresh_mutuals(self, force=False):
+        """Future: the mutuals asked again — whom I follow, page by page (MUTUALS_MAX
+        at most), and which of them follow me; once a day unless force. Emits
+        "mutuals_changed" when asked anew."""
+        def job():
+            me = (self.me or {}).get("id")
+            if not me:
+                return []
+            got = self.store.kv_get(MUTUALS_KV) or {}
+            if not force and got.get("me") == me and \
+                    time.time() - got.get("at", 0) < MUTUALS_EVERY:
+                return got.get("accounts") or []
+            following, max_id = [], None
+            while len(following) < MUTUALS_MAX:
+                page, max_id = self.api.following(me, max_id)
+                following += page or []
+                if not page or not max_id:
+                    break
+            back = set()
+            for i in range(0, len(following), 40):
+                chunk = following[i:i + 40]
+                try:
+                    rel = self.api.relationships([a["id"] for a in chunk])
+                except ApiError as e:
+                    log.debug("mutuals: %s", e)
+                    continue
+                back |= {r["id"] for r in rel if r.get("followed_by")}
+            keep = ("id", "username", "acct", "display_name", "avatar", "avatar_static",
+                    "url", "uri", "emojis", "bot", "note")
+            out = [{k: a.get(k) for k in keep} for a in following if a["id"] in back]
+            out.sort(key=lambda a: (a.get("display_name") or a.get("username") or "").casefold())
+            self.store.kv_set(MUTUALS_KV, {"me": me, "at": time.time(), "accounts": out})
+            log.info("mutuals: %d of %d I follow", len(out), len(following))
+            self.emit("mutuals_changed", len(out))
+            return out
+        return self.submit(job)
 
     # ---- who liked, who boosted -----------------------------------------------------
     def who_reacted(self, status, kind, max_id=None):
