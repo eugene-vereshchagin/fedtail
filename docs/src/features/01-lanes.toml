@@ -1,0 +1,388 @@
+# Lanes — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "lanes"
+title.ru = "Ленты"
+title.en = "Lanes"
+intro.ru = """
+Слева — список лент по группам: «Стандартные» (от самой широкой к своей), «Личные»,
+«Списки». Какие ленты показывать и в каком порядке — `lanes.enabled`. Группировка с
+заголовками выключается `ui.sidebar_groups = false`. Ширина колонки — `ui.sidebar_width`;
+её край тянется мышью, и эта ширина помнится, пока число в конфиге не поменяешь."""
+intro.en = "On the left, the lanes in groups: “Timelines” (from the widest down to your own), “Personal”, “Lists”. Which lanes to show and in what order — `lanes.enabled`. Group headings go with `ui.sidebar_groups = false`. The column's width — `ui.sidebar_width`; its edge drags with the mouse, and the dragged width is kept until the number in the config changes."
+
+[[feature]]
+id = "timelines"
+status = "has"
+since = "0.2.0"
+name.ru = "Федерация, Лента, Локальная"
+name.en = "Federated, Home, Local"
+config = "`lanes.enabled` (`\"federated\"`, `\"home\"`, `\"local\"`)"
+api = "`timelines/home`, `timelines/public`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "«Лента» (`home`) — те, кого ты читаешь, без ботов; открывается по умолчанию. «Локальная» — вся твоя нода. «Федерация» — всё, что нода знает со всех серверов. Федерация и Локальная подгружаются, только пока открыты, и идут без счётчиков непрочитанного: их листают, а не дочитывают. Между свежей страницей и тем, что было раньше, в них допустим разрыв — в отличие от «Ленты», которая догоняется без дыр (см. Догонять без дыр)."
+details.en = "“Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end. A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes)."
+
+[[feature]]
+id = "lane-words"
+status = "has"
+since = "0.15.0"
+name.ru = "Имена лент в конфиге — как их названия"
+name.en = "Lane names in the config match their titles"
+config.ru = "`home`, `replies`, `federated`, `my_posts`, `my_likes`; старые `people`, `comments`, `global`, `mine`, `favourites` тоже понимаются; слово ленты — в подсказке к ней слева"
+config.en = "`home`, `replies`, `federated`, `my_posts`, `my_likes`; the old `people`, `comments`, `global`, `mine`, `favourites` are understood too; a lane's word is in its tooltip on the left"
+others = "—"
+
+[[feature]]
+id = "bots-lane"
+status = "has"
+since = "0.1.0"
+name.ru = "Боты отдельной лентой"
+name.en = "Bots in a lane of their own"
+config = "`lanes.enabled` (`\"bots\"`), `lanes.extra_bots`"
+api.ru = "поле `account.bot`"
+api.en = "the `account.bot` field"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Посты аккаунтов с галкой «бот» уходят из «Ленты» в свою ленту «Боты». Кто бот, но галку не поставил, — допиши в `lanes.extra_bots`: свой сервер — `\"ник\"`, чужой — `\"ник@сервер\"`."
+details.en = "Posts of accounts with the “bot” tick leave Home for a lane of their own, “Bots”. A bot without the tick goes into `lanes.extra_bots`: on your server — `\"nick\"`, on another — `\"nick@server\"`."
+
+[[feature]]
+id = "personal-lanes"
+status = "has"
+since = "0.1.0"
+name.ru = "Личные ленты"
+name.en = "Personal lanes"
+config = "`lanes.enabled`, `lanes.mentions_all`, `lanes.direct_apart`"
+api = "notifications, `visibility=direct`"
+others.ru = "у всех, но разложено иначе"
+others.en = "everyone, but laid out differently"
+clients = ["all"]
+details.ru = """
+- «Мои записи» (`my_posts`) — мои посты и комменты.
+- «Личные» (`direct`) — сообщения с видимостью «только упомянутым». При `lanes.direct_apart = true` (по умолчанию) они живут только здесь и не дублируются в «Ответах мне» и «Упоминаниях».
+- «Ответы мне» (`replies`) — ответы на мои посты и комменты, даже если в них есть @я.
+- «Упоминания» (`mentions`) — где меня тегнули в чужом разговоре. `lanes.mentions_all = true` — показывать здесь вообще всё, где меня упомянули, ответы тоже (они окажутся в обеих лентах).
+- «Подписки» (`subs`) — новое в тредах, на которые я подписан (см. Подписки на треды).
+- «Закладки» (`bookmarks`), «Мои лайки» (`my_likes`, по умолчанию выключена), «Активность» (`activity`), «Заявки» (`requests`) — ниже, каждая в своём разделе.
+Разделение «ответы мне» и «упоминания» — то, чего нет у других: обычно всё валится в одну ленту уведомлений."""
+details.en = """
+- “My posts” (`my_posts`) — my posts and comments.
+- “Direct” (`direct`) — messages visible to the mentioned only. With `lanes.direct_apart = true` (the default) they live only here and don't double up in “Replies to me” and “Mentions”.
+- “Replies to me” (`replies`) — replies to my posts and comments, even if they @ me.
+- “Mentions” (`mentions`) — where I was tagged in someone else's conversation. `lanes.mentions_all = true` — show everything that mentions me here, replies too (they'll be in both lanes).
+- “Subscriptions” (`subs`) — what's new in threads I'm subscribed to (see Thread subscriptions).
+- “Bookmarks” (`bookmarks`), “My likes” (`my_likes`, off by default), “Activity” (`activity`), “Follow requests” (`requests`) — below, each in its own section.
+
+Splitting “replies to me” from “mentions” is what other clients don't do: usually it all lands in one notifications lane."""
+
+[[feature]]
+id = "lists-as-lanes"
+status = "has"
+since = "0.2.0"
+name.ru = "Списки как ленты"
+name.en = "Lists as lanes"
+config = "`[lists]`: `enabled`, `refresh_minutes`"
+api = "`lists`, `timelines/list/:id`"
+others = "Mastodon web, Tusky, Ivory, Phanpy, Elk, Tokodon, Ice Cubes, Megalodon"
+clients = ["Mastodon web", "Tusky", "Ivory", "Phanpy", "Elk", "Tokodon", "Ice Cubes", "Megalodon"]
+details.ru = "Списки с сервера — отдельные ленты в группе «Списки». Завести, переименовать, удалить, сделать исключающим — из меню; добавить человека — правым кликом по его посту. Сами списки и кто в них fedtail перечитывает раз в `lists.refresh_minutes` минут."
+details.en = "The server's lists are lanes of their own in the “Lists” group. Create, rename, delete, make exclusive — from the menu; add a person — with a right click on their post. fedtail rereads the lists and who is in them every `lists.refresh_minutes` minutes."
+
+[[feature]]
+id = "list-members-leave"
+status = "has"
+since = "0.3.0"
+name.ru = "Кто в списке — уходит из общих лент"
+name.en = "Who is in a list leaves the general lanes"
+config = "`lists.hide_members`, `lists.hide_in`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Добавил человека или бота в список — его посты, его бусты и чужие бусты его постов читаются в ленте списка и пропадают из общих лент, чтобы не мусорили. `hide_members`: `\"all\"` — так с любым списком; `\"exclusive\"` — только с исключающими (сервер и сам убирает таких из домашней ленты, fedtail доводит это до остальных лент); `\"off\"` — не убирать. Из каких лент убирать — `lists.hide_in` (по умолчанию Лента, Боты, Федерация, Локальная)."
+details.en = "Put a person or a bot in a list — their posts, their boosts and others' boosts of their posts are read in the list's lane and disappear from the general lanes, so they don't clutter them. `hide_members`: `\"all\"` — so with any list; `\"exclusive\"` — only with exclusive ones (the server itself takes such people out of Home, fedtail carries that to the other lanes); `\"off\"` — don't take out. Which lanes — `lists.hide_in` (by default Home, Bots, Federated, Local)."
+
+[[feature]]
+id = "list-members-order"
+status = "has"
+since = "0.13.0"
+name.ru = "Кто в списке; свой порядок списков"
+name.en = "Who is in a list; your own order of lists"
+config = "—"
+api = "`lists/:id/accounts`"
+others.ru = "Mastodon web, Ivory (кто в списке); порядок — только в fedtail"
+others.en = "Mastodon web, Ivory (who is in a list); the order — only in fedtail"
+clients = ["Mastodon web", "Ivory"]
+details.ru = "Правый клик по списку слева: «Кто в списке…» — вкладка с его людьми (и с теми, кто ждёт подтверждения подписки), у каждого «Убрать из списка»; «Выше» и «Ниже» — свой порядок списков. У серверов порядка списков нет, его помнит fedtail; новые встают в конец."
+details.en = "Right click on a list on the left: “Who is in it…” — a tab with its people (and those waiting for a follow to be confirmed), each with “Take out of the list”; “Move up” and “Move down” — your own order of lists. Servers keep no order of lists; fedtail remembers it, new ones go to the end."
+
+[[feature]]
+id = "list-author-or-booster"
+status = "has"
+since = "0.13.0"
+name.ru = "В список — автора или бустнувшего; только тех, на кого подписан"
+name.en = "Into a list — the author or the booster; only people you follow"
+config = "—"
+api = "`lists/:id/accounts`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "У буста в меню ⋯ два пункта: «Автора в список (@…)» и «Бустнувшего в список (@…)» — бот- ретранслятор тоже человек для списка. Сервер берёт в списки только тех, на кого ты подписан: для остальных списки в подменю мёртвые (не нажимаются вовсе), с подписью «сперва подпишись» и пунктом «Подписаться». Правый клик по строке «♻ boosted by …» — профиль бустнувшего или «В список»; имя в этой строке — ссылка на профиль."
+details.en = "A boost's ⋯ menu has two items: “Author to a list (@…)” and “Booster to a list (@…)” — a relay bot is a person too, as far as a list goes. The server takes into lists only people you follow: for the rest the lists in the submenu are dead (they don't click at all), signed “follow first”, with a “Follow” item. Right click on the “♻ boosted by …” line — the booster's profile or “To a list”; the name on that line links to the profile."
+
+[[feature]]
+id = "list-after-follow"
+status = "has"
+since = "0.11.0"
+name.ru = "Добавить в список сразу после подписки"
+name.en = "Into a list right after a follow"
+config = "`lists.refresh_minutes`"
+api = "`lists/:id/accounts`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Сервер не берёт в список того, на кого ты ещё не подписан (заявка висит у закрытого аккаунта). fedtail запоминает, куда ты хотел его добавить, и добавляет сам, как только подписку подтвердят."
+details.en = "The server won't take into a list someone you don't follow yet (the request waits with a locked account). fedtail remembers which list you wanted them in and adds them itself as soon as the follow is confirmed."
+
+[[feature]]
+id = "tag-lane"
+status = "has"
+since = "0.2.0"
+name.ru = "Лента хэштега, подписка на теги"
+name.en = "Hashtag lane, following tags"
+config = "—"
+api = "`timelines/tag/:name`, `tags/:name/follow`, `followed_tags`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Клик по #тегу открывает его ленту внутри (при `ui.links_in_app`). Подписаться на тег — кнопкой в заголовке его ленты; подписанные теги сервер подмешивает в «Ленту», а fedtail предлагает их первыми при наборе `#`."
+details.en = "A click on a #tag opens its lane inside (with `ui.links_in_app`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`."
+
+[[feature]]
+id = "my-likes"
+status = "has"
+since = "0.8.0"
+name.ru = "Мои лайки"
+name.en = "My likes"
+config.ru = "`\"my_likes\"` в `lanes.enabled`"
+config.en = "`\"my_likes\"` in `lanes.enabled`"
+api = "`/api/v1/favourites`"
+others = "Mastodon web, Tusky, Ivory, Megalodon, tut"
+clients = ["Mastodon web", "Tusky", "Ivory", "Megalodon", "tut"]
+details.ru = "Посты, которые ты лайкнул. По умолчанию лента выключена."
+details.en = "The posts you liked. The lane is off by default."
+
+[[feature]]
+id = "bookmarks"
+status = "has"
+since = "0.3.0"
+name.ru = "Закладки"
+name.en = "Bookmarks"
+config.ru = "`\"bookmarks\"` в `lanes.enabled`, `ui.bookmark_button`"
+config.en = "`\"bookmarks\"` in `lanes.enabled`, `ui.bookmark_button`"
+api = "`/api/v1/bookmarks`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "«В закладки» — кнопкой под постом (`ui.bookmark_button = false` убирает её в меню ⋯), клавишей `m` или командой `~ #a3f`. Закладки хранит сервер, так что они общие с другими клиентами."
+details.en = "“Bookmark” — with the button under a post (`ui.bookmark_button = false` moves it into the ⋯ menu), the `m` key or the command `~ #a3f`. The server keeps bookmarks, so they are shared with other clients."
+
+[[feature]]
+id = "trends"
+status = "has"
+since = "0.11.0"
+name.ru = "Тренды"
+name.en = "Trends"
+config = "—"
+api = "`/api/v1/trends` (tags, links, statuses)"
+others = "Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes"
+clients = ["Mastodon web", "Tusky", "Ivory", "Phanpy", "Elk", "Ice Cubes"]
+details.ru = "Популярные теги, ссылки и посты, как их считает твой сервер. GoToSocial тренды не считает."
+details.en = "Popular tags, links and posts, as your server counts them. GoToSocial doesn't count trends."
+
+[[feature]]
+id = "empty-lane-explains"
+status = "has"
+since = "0.11.0"
+name.ru = "Пустая живая лента объясняет, почему пуста"
+name.en = "An empty live lane says why it's empty"
+config = "—"
+api = "`timelines/public`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Если сервер выключил публичные ленты (или отдаёт их только своим), Федерация и Локальная не висят пустыми молча: fedtail пишет, что их выключил сервер."
+details.en = "If the server turned the public timelines off (or gives them to its own users only), Federated and Local don't hang empty in silence: fedtail says the server turned them off."
+
+[[feature]]
+id = "media-filter"
+status = "has"
+since = "0.11.0"
+name.ru = "Фильтр ленты по медиа и бустам"
+name.en = "Filtering a lane by media and boosts"
+config.ru = "— (держится до перезапуска)"
+config.en = "— (kept until restart)"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Над лентой можно оставить только текст, только картинки, гифки, видео или только бусты. Это быстрый взгляд, а не настройка: после перезапуска всё как было."
+details.en = "Over a lane you can leave only text, only pictures, gifs, video or only boosts. It's a quick look, not a setting: after a restart everything is as it was."
+
+[[feature]]
+id = "repeat-boosts"
+status = "has"
+since = "0.15.0"
+name.ru = "Повторные бусты не поднимают старый пост"
+name.en = "Repeated boosts don't bring an old post up again"
+config = "`feed.repeat_boosts`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail (сервер Mastodon гасит повтор лишь среди свежих)"
+others.en = "only in fedtail (a Mastodon server drops a repeat only among the freshest posts)"
+clients = []
+details.ru = "Пост приходит в ленту один раз — сам или первым бустом. Буст поста, который в этой ленте уже был или уже прочитан (в треде, в другой ленте), не показывается и не считается в непрочитанном; пост стоит там, где пришёл впервые. `repeat_boosts = true` — каждый буст снова, как у всех. Сервер (Mastodon) сам гасит повтор, только если оригинал был среди последних ~40 постов ленты, — поэтому старые посты и всплывали раз за разом."
+details.en = "A post comes into a lane once — as itself or with its first boost. A boost of a post this lane has had already, or one already read (in a thread, in another lane), is not shown and not counted as unread; the post stays where it first came. `repeat_boosts = true` — every boost again, as everyone does. The server (Mastodon) drops a repeat only if the original was among the last ~40 posts of the feed — that's why old posts kept surfacing again and again."
+
+[[feature]]
+id = "all-posts-new"
+status = "has"
+since = "0.3.0"
+name.ru = "Всё / Только посты / Новое; Лентой / Беседами"
+name.en = "All / Posts only / New; Feed / Conversations"
+config = "`lanes.posts_only`, `feed.remember_choices`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Phanpy — похоже на «Беседы»"
+others.en = "Phanpy — similar to “Conversations”"
+clients = ["Phanpy"]
+details.ru = "Над лентой два переключателя. «Всё / Только посты / Новое»: со всеми комментами, только корневые посты или только непрочитанное. «Лентой / Беседами»: «Беседами» собирает тред в одну карточку, как разговоры на Point. В каких лентах «только посты» включено с запуска — `lanes.posts_only`. Помнить выбор между запусками — `feed.remember_choices = true`; по умолчанию каждый запуск с чистого листа."
+details.en = "Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Remember the choice between runs — `feed.remember_choices = true`; by default every run starts afresh."
+
+[[feature]]
+id = "find-in-lane"
+status = "has"
+since = "0.2.0"
+name.ru = "Поиск по ленте"
+name.en = "Find in a lane"
+config = "—"
+api.ru = "своё, по локальной базе"
+api.en = "own, in the local database"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "`Ctrl+F` ищет в открытой ленте по тексту, нику, номеру `#id` и подписям к картинкам. Ищет по своей базе, сервер не спрашивает, так что работает и без сети. `Enter`, `↓`, `F3` или `Ctrl+F` ещё раз — к следующему совпадению, `Shift+Enter` — к предыдущему."
+details.en = "`Ctrl+F` finds in the open lane by text, nick, `#id` and picture captions. It searches its own database and doesn't ask the server, so it works offline too. `Enter`, `↓`, `F3` or `Ctrl+F` again — to the next match, `Shift+Enter` — to the previous one."
+
+[[feature]]
+id = "send-no-doubles"
+status = "has"
+since = "0.16.0"
+name.ru = "Отправка на медленный сервер без дублей"
+name.en = "Sending to a slow server without doubles"
+config = "`post.send_timeout`"
+api = "`Idempotency-Key`, `accounts/:id/statuses`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+
+[[feature]]
+id = "find-everywhere"
+status = "has"
+since = "0.16.0"
+name.ru = "Поиск во всех лентах сразу"
+name.en = "Find in every lane at once"
+config.ru = "галочка в строке `Ctrl+F`"
+config.en = "a tick in the `Ctrl+F` bar"
+api.ru = "своё, по локальной базе"
+api.en = "own, in the local database"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Галочка «Во всех лентах» в строке `Ctrl+F`: вспомнил фразу, а где видел — не помнишь. Ищет во всём сохранённом по всем лентам сразу (в порядке боковой панели, в каждой от новых к старым, один пост — один раз), счётчик пишет, в какой ленте совпадение; следующее совпадение само открывает свою ленту и подгружает её вниз до него. Галочка запоминается."
+details.en = "The “In every lane” tick in the `Ctrl+F` bar: you remember a phrase but not where you saw it. It searches everything stored in every lane at once (in the sidebar's order, newest to oldest in each, a post once), the counter says which lane the match is in; the next match opens its lane by itself and loads it down to the post. The tick is remembered."
+
+[[feature]]
+id = "search"
+status = "has"
+since = "0.2.0"
+name.ru = "Поиск людей, тегов и постов"
+name.en = "Finding people, tags and posts"
+config = "—"
+api = "`/api/v2/search`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Поиск по серверу: люди, теги, посты (насколько сервер их индексирует), а также ссылка на пост или профиль — сервер найдёт и подтянет его."
+details.en = "Search on the server: people, tags, posts (as far as the server indexes them), and a link to a post or a profile — the server finds it and fetches it."
+
+[[feature]]
+id = "tag-groups"
+status = "has"
+since = "0.14.0"
+name.ru = "Лента из нескольких тегов"
+name.en = "A lane of several tags"
+config.ru = "`[[lanes.tag_groups]]`; из поиска — «＋ в ленты»"
+config.en = "`[[lanes.tag_groups]]`; from the search — “＋ to lanes”"
+api.ru = "`timelines/tag/:name` по каждому тегу, склейка у себя"
+api.en = "`timelines/tag/:name` for each tag, put together here"
+others.ru = "Phanpy, Ice Cubes («группы тегов»), tut (`:tag a b`)"
+others.en = "Phanpy, Ice Cubes (“tag groups”), tut (`:tag a b`)"
+clients = ["Phanpy", "Ice Cubes", "tut"]
+details.ru = "Набери в поиске `#грузия #georgia -#политика`: откроется одна лента по всем этим тегам — любой из них, `+#тег` обязательно есть, `-#тег` — кроме. Кнопка «＋ в ленты» держит её слева, в группе «Теги»; подгружается, пока открыта, как Федерация. Те же ленты можно описать в конфиге, `[[lanes.tag_groups]]` (name, any, all, none). Серверу нужен запрос на каждый тег (GoToSocial понимает только один тег за раз), fedtail склеивает их сам, без повторов."
+details.en = "Type `#грузия #georgia -#politics` in the search: one lane of all these tags opens — any of them, `+#tag` must be there, `-#tag` — without. The “＋ to lanes” button keeps it on the left, in the “Tags” group; it is fetched while open, like Federated. The same lanes can be described in the config, `[[lanes.tag_groups]]` (name, any, all, none). The server needs a request per tag (GoToSocial reads only one tag at a time), fedtail puts them together itself, without repeats."
+
+[[feature]]
+id = "columns"
+status = "has"
+since = "0.14.0"
+name.ru = "Колонки рядом"
+name.en = "Columns side by side"
+config.ru = "`ui.layout`, `ui.columns`, `ui.column_width`; кнопка ❯ вверху слева"
+config.en = "`ui.layout`, `ui.columns`, `ui.column_width`; the ❯ button at the top left"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Sengi, Phanpy, tut, Whalebird, Mastodon web (продвинутый режим)"
+others.en = "Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode)"
+clients = ["Mastodon web", "Phanpy", "Sengi", "tut", "Whalebird"]
+details.ru = "Несколько лент на экране одновременно, колонками. По умолчанию — одна лента за раз; кнопка ❯ вверху слева (рядом с ≡ и ↔) включает колонки на время, а при запуске окно такое, как `ui.layout`. Клик по ленте слева добавляет колонку (или прокручивает к ней), ✕ убирает, ‹ › двигают; набор запоминается. Это те же ленты, что и в одиночном виде: позиция, фильтры и прочитанное у каждой свои, лента «Федерация» и прочие обзорные обновляются, пока стоят колонкой."
+details.en = "Several lanes on screen at once, in columns. By default — one lane at a time; the ❯ button at the top left (next to ≡ and ↔) turns columns on for now, and the window starts as `ui.layout` says. A click on a lane on the left adds a column (or scrolls to it), ✕ takes it away, ‹ › move it; the set is remembered. These are the same lanes as in the single view: place, filters and read marks are each their own, and Federated and the other browse lanes keep updating while they stand in a column."
+
+[[feature]]
+id = "collections"
+status = "planned"
+name.ru = "Коллекции (Mastodon 4.6)"
+name.en = "Collections (Mastodon 4.6)"
+config = "—"
+api = "`/api/v1/collections`"
+others = "Mastodon 4.6, Fedilab"
+clients = ["Fedilab"]
+size.ru = "когда будут в GoToSocial"
+size.en = "once GoToSocial has them"
+details.ru = "Подборки аккаунтов, которыми делятся. Делаем, когда появятся в GoToSocial."
+details.en = "Shared sets of accounts. Coming once GoToSocial has them."
+
+[[feature]]
+id = "remote-public-timeline"
+status = "undecided"
+name.ru = "Публичная лента чужого сервера"
+name.en = "Another server's public timeline"
+others = "Ice Cubes"
+clients = ["Ice Cubes"]
+note.ru = "Читать Локальную другого сервера без входа. Многие серверы закрывают её для анонимов."
+note.en = "Reading another server's Local without logging in. Many servers close it to strangers."
+
+[[feature]]
+id = "link-timeline"
+status = "undecided"
+name.ru = "Лента по ссылке (Mastodon 4.3+)"
+name.en = "A link's timeline (Mastodon 4.3+)"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+note.ru = "Все посты о популярной ссылке. GoToSocial не умеет."
+note.en = "Every post about a popular link. GoToSocial can't do it."

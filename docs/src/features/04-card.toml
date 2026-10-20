@@ -1,0 +1,303 @@
+# The post card — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "card"
+title.ru = "Карточка поста"
+title.en = "The post card"
+
+[[feature]]
+id = "arts-mode"
+status = "has"
+since = "0.11.0"
+name.ru = "Режим arts"
+name.en = "Arts mode"
+config.ru = "`ui.arts_mode` (по умолчанию включён, рекомендуется)"
+config.en = "`ui.arts_mode` (on by default, recommended)"
+others.ru = "одним переключателем ни у кого"
+others.en = "nobody has it as one switch"
+clients = []
+details.ru = """
+Всё как автор выложил, без опеки. Включает разом: предупреждения (CW) развёрнуты, «чувствительные» картинки без плашки, фильтры сервера не прячут и не сворачивают посты, пункта «Пожаловаться» нет. Свои мьюты и блоки работают как обычно; то, что режет сам сервер (блоки доменов), до клиента не доходит вовсе — это не обойти. `false` — всё как у всех, и тогда каждая из этих вещей настраивается отдельно (`ui.expand_cw`, `feed.sensitive_media`).
+Назван в честь @arts — основателя Point.im и автора его правил. Принцип оттуда же: на взрослой площадке взрослые разбираются сами. Послать можно любого, хоть админа, — и админ может послать в ответ."""
+details.en = """
+Everything as the author posted it, no nannying. Turns on at once: content warnings (CW) open, “sensitive” pictures without a cover, server filters neither hide nor fold posts, no “Report” item. Your own mutes and blocks work as usual; what the server itself cuts off (domain blocks) never reaches a client — that can't be got round. `false` — everything as everyone has it, and then each of these is set on its own (`ui.expand_cw`, `feed.sensitive_media`).
+Named after @arts — the founder of Point.im and the author of its rules. The principle comes from there too: on a grown-up site grown-ups sort things out themselves. Anyone can be told where to go, an admin too — and the admin can say the same back."""
+
+[[feature]]
+id = "cw"
+status = "has"
+since = "0.1.0"
+name.ru = "Предупреждения (CW)"
+name.en = "Content warnings (CW)"
+config = "`ui.expand_cw`"
+api = "`spoiler_text`"
+others.ru = "настраивается у всех"
+others.en = "everyone can set it"
+clients = ["all"]
+details.ru = "`true` — текст и картинки под CW сразу развёрнуты; `false` — свёрнуты, разворачиваются кнопкой «показать»."
+details.en = "`true` — text and pictures under a CW open at once; `false` — folded, opened with the “show” button."
+
+[[feature]]
+id = "uncw-thread"
+status = "no"
+name.ru = "Снять CW во всём треде разом"
+name.en = "Open every CW in a thread at once"
+config = "—"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Sengi, Megalodon (одинаковые CW в треде)"
+others.en = "Sengi, Megalodon (the same CW across a thread)"
+clients = ["Sengi", "Megalodon"]
+details.ru = "С включённым режимом arts не нужно. Если будут просить те, кто его выключил, — кнопкой в заголовке треда."
+details.en = "Not needed with arts mode on. If people who turned it off ask — a button in the thread's header."
+
+[[feature]]
+id = "sensitive-media"
+status = "has"
+since = "0.8.0"
+name.ru = "Чувствительные картинки"
+name.en = "Sensitive pictures"
+config = "`feed.sensitive_media`"
+api = "`status.sensitive`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Картинки, помеченные автором как чувствительные (без CW): `\"hide\"` — под плашкой, клик — показать; `\"show\"` — сразу видны. Под CW они и так спрятаны вместе с текстом."
+details.en = "Pictures the author marked sensitive (without a CW): `\"hide\"` — under a cover, a click shows them; `\"show\"` — seen at once. Under a CW they are hidden together with the text anyway."
+
+[[feature]]
+id = "link-cards"
+status = "has"
+since = "0.8.0"
+name.ru = "Карточки ссылок"
+name.en = "Link cards"
+config = "`feed.link_cards`"
+api = "`status.card`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Заголовок, описание и картинка страницы, на которую ссылается пост (их собирает сервер): `\"full\"` — с картинкой, `\"text\"` — одной-двумя строчками, `\"off\"` — не показывать. У поста со своими картинками карточки нет."
+details.en = "The title, description and picture of the page a post links to (the server collects them): `\"full\"` — with the picture, `\"text\"` — a line or two, `\"off\"` — not shown. A post with its own pictures has no card."
+
+[[feature]]
+id = "custom-emoji"
+status = "has"
+since = "0.8.0"
+name.ru = "Эмодзи серверов картинками"
+name.en = "Servers' emoji as pictures"
+config = "`feed.custom_emoji`"
+api.ru = "`emojis` у поста и аккаунта"
+api.en = "`emojis` of the post and the account"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "`:blobcat:` и прочие — картинками в постах и именах. `false` — оставить текстом и не качать картинки."
+details.en = "`:blobcat:` and the rest — as pictures in posts and names. `false` — leave them as text and don't fetch the pictures."
+
+[[feature]]
+id = "no-emoji"
+status = "has"
+since = "0.15.0"
+name.ru = "Без эмодзи вовсе"
+name.en = "No emoji at all"
+config.ru = "`feed.emoji = false` — ни картинок серверов, ни юникодных, ни реакций; имя из одних эмодзи — логином"
+config.en = "`feed.emoji = false` — no server pictures, no Unicode ones, no reactions; a name made only of emoji shows the login"
+others.ru = "Tusky (только анимацию), Fedilab (только свои эмодзи серверов)"
+others.en = "Tusky (animation only), Fedilab (only servers' own emoji)"
+clients = ["Tusky", "Fedilab"]
+
+[[feature]]
+id = "quotes-show"
+status = "has"
+since = "0.8.0"
+name.ru = "Цитаты: показ"
+name.en = "Quotes: showing them"
+config = "`feed.quotes`"
+api = "`status.quote`"
+others = "Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
+details.ru = "Пост внутри поста (Mastodon 4.5+, Akkoma, Misskey и другие): `\"card\"` — рамкой внутри, `\"link\"` — строкой со ссылкой, `\"off\"` — как прислал сервер (обычно «RE: ссылка»)."
+details.en = "A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): `\"card\"` — framed inside, `\"link\"` — a line with a link, `\"off\"` — as the server sent it (usually “RE: link”)."
+
+[[feature]]
+id = "polls"
+status = "has"
+since = "0.3.0"
+name.ru = "Опросы: смотреть и голосовать"
+name.en = "Polls: seeing and voting"
+config = "—"
+api = "`polls/:id`, `polls/:id/votes`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Варианты, проценты, срок; голосование одним или несколькими вариантами, как задал автор."
+details.en = "Options, percentages, the deadline; voting for one or several options, as the author set."
+
+[[feature]]
+id = "poll-results"
+status = "has"
+since = "0.3.0"
+name.ru = "Результаты опроса без голосования"
+name.en = "Poll results without voting"
+config.ru = "— (кнопка «Результаты» у опроса)"
+config.en = "— (the “Results” button of a poll)"
+others = "Fedilab"
+clients = ["Fedilab"]
+details.ru = "Кнопка «Результаты» рядом с «Голосовать» — посмотреть, не голосуя."
+details.en = "The “Results” button next to “Vote” — look without voting."
+
+[[feature]]
+id = "edit-history"
+status = "has"
+since = "0.3.0"
+name.ru = "История правок"
+name.en = "Edit history"
+config = "—"
+api = "`statuses/:id/history`"
+others = "Mastodon web, Ivory, Phanpy, Elk, tut"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "tut"]
+details.ru = "У отредактированного поста — пометка и все прошлые версии."
+details.en = "An edited post is marked so and has all its earlier versions."
+
+[[feature]]
+id = "translate"
+status = "has"
+since = "0.8.0"
+name.ru = "Перевод поста сервером"
+name.en = "Translation by the server"
+config = "`feed.translate`"
+api = "`statuses/:id/translate`"
+others = "Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
+details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал»."
+details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button."
+
+[[feature]]
+id = "reactions-show"
+status = "partly"
+since = "0.11.0"
+name.ru = "Эмодзи-реакции"
+name.en = "Emoji reactions"
+status_note.ru = "показ"
+status_note.en = "shown only"
+config = "—"
+api = "`pleroma.emoji_reactions`"
+others = "Phanpy, Elk, Fedilab"
+clients = ["Phanpy", "Elk", "Fedilab"]
+details.ru = "Реакции с Akkoma, Pleroma, Misskey и их форков видны под постом. Ставить свои пока нельзя; GoToSocial их не поддерживает."
+details.en = "Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Adding your own isn't possible yet; GoToSocial doesn't support them."
+
+[[feature]]
+id = "who-liked"
+status = "has"
+since = "0.11.0"
+name.ru = "Кто лайкнул и бустнул"
+name.en = "Who liked and boosted"
+config = "—"
+api.ru = "`favourited_by`, `reblogged_by` (и с сервера автора)"
+api.en = "`favourited_by`, `reblogged_by` (and from the author's server)"
+others = "Mastodon web, Tusky, Ivory, Phanpy, Elk, tut"
+clients = ["Mastodon web", "Tusky", "Ivory", "Phanpy", "Elk", "tut"]
+details.ru = "Списки людей у счётчиков. Если твой сервер знает не всех, — дочитывается с сервера автора."
+details.en = "Lists of people at the counters. If your server doesn't know everyone, the rest is read from the author's server."
+
+[[feature]]
+id = "honest-counters"
+status = "has"
+since = "0.2.0"
+name.ru = "Честные счётчики"
+name.en = "Honest counters"
+config.ru = "`feed.honest_counters` (выключен), `feed.counters_via_accounts`"
+config.en = "`feed.honest_counters` (off), `feed.counters_via_accounts`"
+api.ru = "API сервера автора без токена"
+api.en = "the author's server's API without a token"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+activitypub = true
+details.ru = "Твой сервер знает только те лайки и бусты, что до него дошли, поэтому цифры у чужих постов занижены. С `honest_counters = true` при открытии треда fedtail спрашивает настоящие числа у сервера автора — без токена, но с твоим IP. Если тот не отдаёт числа без входа, а у тебя есть ещё аккаунты (профили), — `counters_via_accounts` разрешает спросить от их имени: у сервера автора, если ты там есть, или у сервера, где пост уже лежит. Токен каждого аккаунта уходит только на его собственный сервер."
+details.en = "Your server knows only the likes and boosts that reached it, so the numbers on other people's posts are low. With `honest_counters = true`, when a thread opens fedtail asks the author's server for the real numbers — without a token, but with your IP. If that server won't give numbers without a login and you have other accounts (profiles), `counters_via_accounts` lets it ask as them: the author's server, if you have an account there, or a server that already has the post. Each account's token goes only to its own server."
+
+[[feature]]
+id = "quoted-by"
+status = "has"
+since = "0.11.0"
+name.ru = "Кто процитировал мой пост"
+name.en = "Who quoted my post"
+config = "—"
+api = "`statuses/:id/quotes`, `…/quotes/:id/revoke`"
+others = "Mastodon 4.5+"
+clients = ["Mastodon web"]
+details.ru = "Список цитат моего поста и «убрать мой пост из этой цитаты»."
+details.en = "The list of quotes of my post and “take my post out of this quote”."
+
+[[feature]]
+id = "collapse-tags"
+status = "has"
+since = "0.14.0"
+name.ru = "Сворачивать набивку хэштегами"
+name.en = "Folding hashtag padding"
+config = "`feed.collapse_tags`"
+api.ru = "своё"
+api.en = "own"
+others = "Phanpy"
+clients = ["Phanpy"]
+details.ru = "Абзац из одних хэштегов (больше трёх) в ленте сворачивается в первые три и «… +N» мелким шрифтом, в открытом треде показан целиком, но тоже мелко. Хэштеги внутри текста не трогаются."
+details.en = "A paragraph of nothing but hashtags (more than three) in a lane folds into the first three and “… +N” in small type; in an open thread it's whole, but small too. Hashtags inside the text aren't touched."
+
+[[feature]]
+id = "strike-markup"
+status = "has"
+since = "0.14.0"
+name.ru = "`~~текст~~` зачёркнутым, когда сервер Markdown не знает"
+name.en = "`~~text~~` struck out when the server knows no Markdown"
+config = "`feed.text_markup`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+
+[[feature]]
+id = "boost-carousel"
+status = "wont"
+name.ru = "Карусель бустов"
+name.en = "Boost carousel"
+api.ru = "своё"
+api.en = "own"
+others = "Phanpy"
+clients = ["Phanpy"]
+why.ru = "Вбок неудобно читать, плохо стыкуется с «ничего не прыгает» и прочитанным. Бусты прячутся фильтром, по человеку или списком."
+why.en = "Sideways is awkward to read, and it fits badly with “nothing jumps” and read marks. Boosts are hidden with the filter, per person or with a list."
+details.ru = "Бусты подряд — одной полосой, которую листают вбок (как в Phanpy). Не будем: вбок неудобно читать, и с «ничего не прыгает» и прочитанным она стыкуется плохо. Ту же задачу решают галка «Бусты» в фильтре, «без его бустов» в профиле и ретрансляторы в своём списке."
+details.en = "Boosts in a row — as one strip scrolled sideways (as in Phanpy). Won't do: sideways is awkward to read, and it fits badly with “nothing jumps” and read marks. The same job is done by the “Boosts” tick in the filter, “without their boosts” on a profile and relays in a list of their own."
+
+[[feature]]
+id = "card-labels"
+status = "has"
+since = "0.14.0"
+name.ru = "Метки на карточке"
+name.en = "Labels on the card"
+config.ru = "`feed.old_days`; «бот» — всегда"
+config.en = "`feed.old_days`; “bot” — always"
+api.ru = "своё"
+api.en = "own"
+others = "Sengi"
+clients = ["Sengi"]
+details.ru = "Рядом с датой: «старый, N дней» — пост старше `feed.old_days` (30) дней, такие приходят из чужого outbox или старого треда; «[бот]» — у ботов. Метки «с чужого сервера» пока нет."
+details.en = "Next to the date: “old, N days” — a post older than `feed.old_days` (30) days; such posts come from someone's outbox or an old thread; “[bot]” — on bots. There is no “from another server” label yet."
+
+[[feature]]
+id = "card-templates"
+status = "wont"
+name.ru = "Шаблоны карточек (как `toot.tmpl` у tut)"
+name.en = "Card templates (like tut's `toot.tmpl`)"
+why.ru = "Тема и так задаёт вид всего приложения; второй слой шаблонов поверх тем ничего не даёт."
+why.en = "A theme already sets the look of the whole app; a second layer of templates over themes adds nothing."
+
+[[feature]]
+id = "reactions-send"
+status = "undecided"
+name.ru = "Ставить эмодзи-реакции"
+name.en = "Sending emoji reactions"
+others = "Phanpy, Elk, Fedilab"
+clients = ["Phanpy", "Elk", "Fedilab"]
+note.ru = "Akkoma, Pleroma, Misskey; GoToSocial не умеет."
+note.en = "Akkoma, Pleroma, Misskey; GoToSocial can't do it."

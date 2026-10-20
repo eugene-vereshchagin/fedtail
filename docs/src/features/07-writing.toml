@@ -1,0 +1,297 @@
+# Writing — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "writing"
+title.ru = "Писать"
+title.en = "Writing"
+
+[[feature]]
+id = "compose"
+status = "has"
+since = "0.1.0"
+name.ru = "Панель поста и черновики"
+name.en = "The compose panel and drafts"
+config = "`ui.compose`, `ui.compose_size`, `post.drafts_autosave`"
+api = "`statuses`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "`ui.compose = \"inline\"` — панелью внутри главного окна (раскладка клавиатуры не сбрасывается: KDE помнит её для каждого окна); `\"window\"` — отдельным окном. Размер панели — в процентах от окна (`compose_size`), кнопка ⤡ переключает обычный и большой. Черновики сохраняются на лету и переживают закрытие."
+details.en = "`ui.compose = \"inline\"` — a panel inside the main window (the keyboard layout isn't reset: KDE keeps it per window); `\"window\"` — a window of its own. The panel's size — in percent of the window (`compose_size`), the ⤡ button switches normal and big. Drafts are saved as you type and survive closing."
+
+[[feature]]
+id = "visibility"
+status = "has"
+since = "0.1.0"
+name.ru = "Видимость: приватно по умолчанию, ответ не шире исходного"
+name.en = "Visibility: private by default, a reply never wider than the post"
+config = "`post.default_visibility`, `post.reply_never_wider`"
+api = "`visibility`, `/api/v1/preferences`"
+others.ru = "только в fedtail (ответ не шире)"
+others.en = "only in fedtail (never wider)"
+clients = []
+details.ru = "Новый пост по умолчанию — подписчикам (`\"private\"`); `\"server\"` — как выставлено на сервере. Ответ никогда не бывает открытее исходного поста."
+details.en = "A new post goes to followers by default (`\"private\"`); `\"server\"` — as set on the server. A reply is never more public than the original post."
+
+[[feature]]
+id = "markdown"
+status = "has"
+since = "0.1.0"
+name = "Markdown"
+config = "`account.markdown`, `post.plain_posts`"
+api = "`content_type`"
+others.ru = "клиенты GoToSocial и Akkoma"
+others.en = "GoToSocial and Akkoma clients"
+clients = []
+details.ru = "`\"auto\"` — спросить у сервера; GoToSocial и Akkoma понимают Markdown, ванильный Mastodon — нет."
+details.en = "`\"auto\"` — ask the server; GoToSocial and Akkoma understand Markdown, vanilla Mastodon doesn't."
+
+[[feature]]
+id = "preview"
+status = "has"
+since = "0.14.0"
+name.ru = "Предпросмотр перед отправкой"
+name.en = "Preview before sending"
+config = "`post.preview`"
+api.ru = "своё"
+api.en = "own"
+others = "Fedilab"
+clients = ["Fedilab"]
+details.ru = "Кнопка «👁 Предпросмотр» в панели: Markdown уже разметкой (если сервер его понимает), CW, видимость, язык, каждая часть цепочки, сколько картинок; оттуда же «Отправить» или «Править»."
+details.en = "The “👁 Preview” button in the panel: the Markdown already rendered (if the server understands it), the CW, visibility, language, each part of a chain, how many pictures; “Send” or “Edit” from there."
+
+[[feature]]
+id = "compose-cw"
+status = "has"
+since = "0.2.0"
+name.ru = "Предупреждение (CW)"
+name.en = "Content warning (CW)"
+config = "`post.cw_field`"
+api = "`spoiler_text`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Поле CW открыто сразу или прячется за кнопкой «⚠ Предупреждение». В ответе CW исходного поста подставляется сам."
+details.en = "The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself."
+
+[[feature]]
+id = "compose-media"
+status = "has"
+since = "0.2.0"
+name.ru = "Картинки: перетащить, вставить, подпись, фокус"
+name.en = "Pictures: drag, paste, description, focus"
+config = "`post.alt_reminder`, `post.focus_point`"
+api = "`/api/v2/media`, `focus`"
+others.ru = "у всех (фокус — Mastodon web, Ivory)"
+others.en = "everyone (focus — Mastodon web, Ivory)"
+clients = ["all"]
+details.ru = "Перетащить файл или вставить из буфера. Двойной клик по картинке — подпись и точка фокуса. Картинка без подписи — перед отправкой спросить «Описать» или «Отправить так». Пометить картинки чувствительными — галкой."
+details.en = "Drag a file in or paste from the clipboard. A double click on a picture — the description and the focus point. A picture without a description — before sending, ask “Describe” or “Send as is”. Marking pictures sensitive — with a tick."
+
+[[feature]]
+id = "resize-images"
+status = "has"
+since = "0.14.0"
+name.ru = "Ужимать картинки под лимит сервера"
+name.en = "Shrinking pictures to the server's limit"
+config = "`post.resize_images`"
+api = "`instance.configuration.media_attachments`"
+others = "Fedilab"
+clients = ["Fedilab"]
+details.ru = "Сервер говорит, какую картинку примет (в пикселях и байтах). Больше — fedtail перед загрузкой уменьшает копию под предел в пикселях и пережимает в JPEG (с прозрачностью — PNG) под предел в байтах, а не получает отказ. Твой файл не трогается, гифки не сплющиваются. `post.resize_images = false` — как есть."
+details.en = "The server says what picture it takes (in pixels and bytes). Bigger — before the upload fedtail shrinks a copy to the pixel limit and recompresses it as JPEG (with transparency — PNG) under the byte limit, instead of being refused. Your file isn't touched, gifs aren't flattened. `post.resize_images = false` — as is."
+
+[[feature]]
+id = "completion"
+status = "has"
+since = "0.7.0"
+name.ru = "Дополнение #тегов, @ников, :эмодзи:"
+name.en = "Completing #tags, @nicks, :emoji:"
+config = "`post.complete_tags`, `post.complete_mentions`, `post.complete_emoji`"
+api = "`accounts/search`, `custom_emojis`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "`#ге` — сначала теги, на которые подписан, потом частые в ленте. `@ар` — сначала люди, что чаще встречаются в ленте, потом найденные сервером. `:ко` — эмодзи сервера, Tab или Enter вставляет."
+details.en = "`#ge` — first the tags you follow, then the frequent ones in the lanes. `@ar` — first the people seen most in the lanes, then those the server finds. `:co` — the server's emoji, Tab or Enter puts it in."
+
+[[feature]]
+id = "camelcase"
+status = "has"
+since = "0.2.0"
+name.ru = "Подсказка CamelCase для хэштегов"
+name.en = "CamelCase hint for hashtags"
+config = "`post.camelcase_hint`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Хэштег одним регистром (`#georgianews`) — подсказка: экранные дикторы читают `#GeorgiaNews` по словам."
+details.en = "A hashtag in one case (`#georgianews`) gets a hint: screen readers read `#GeorgiaNews` word by word."
+
+[[feature]]
+id = "post-language"
+status = "has"
+since = "0.3.0"
+name.ru = "Язык поста"
+name.en = "The post's language"
+config = "`post.language`, `post.languages`"
+api = "`language`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Язык по умолчанию и список в окне поста (любой код ISO 639; «Другой язык…» добавляет в список навсегда)."
+details.en = "The default language and a list in the post window (any ISO 639 code; “Another language…” adds to the list for good)."
+
+[[feature]]
+id = "compose-poll"
+status = "has"
+since = "0.8.0"
+name.ru = "Опрос в посте"
+name.en = "A poll in a post"
+config = "—"
+api = "`poll[options]`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+
+[[feature]]
+id = "invite"
+status = "has"
+since = "0.16.0"
+name.ru = "Позвать в тред"
+name.en = "Call someone into a thread"
+config = "`post.invite`"
+api.ru = "ответ с упоминанием"
+api.en = "a reply with a mention"
+others.ru = "только в fedtail (в других — руками)"
+others.en = "only in fedtail (in others — by hand)"
+clients = []
+details.ru = "Меню ⋯ у поста → «Позвать в тред…»: ответ на этот пост, в котором пока только «@» и сразу открыт список людей — выбираешь кого (можно нескольких), пишешь пару слов. Названному приходит уведомление, клик — и тред открыт у него, на его сервере, можно отвечать; без страшных ссылок со служебными id. Остальных участников треда не упоминает, у приглашения свой черновик. Если тред не публичный, приглашённый увидит твой ответ, а остальное — только то, что ему и так видно. То же из командной строки: `#a3f @кого глянь`."
+details.en = "A post's ⋯ menu → “Call into the thread…”: a reply to this post with only “@” in it so far and the people list open at once — pick whom (several are fine), write a couple of words. The person gets a notification, a click — and the thread is open on their side, on their server, ready for a reply; no scary links with service ids. The thread's other participants aren't mentioned, the call has its own draft. If the thread isn't public, the person called sees your reply, and the rest only as far as they could anyway. The same from the command line: `#a3f @whom take a look`."
+
+[[feature]]
+id = "copy-handle"
+status = "has"
+since = "0.16.0"
+name.ru = "Скопировать ник @user@server"
+name.en = "Copy the handle @user@server"
+config = "—"
+api.ru = "своё"
+api.en = "own"
+others = "Mastodon web (Copy handle)"
+clients = ["Mastodon web"]
+details.ru = "Кнопка «Скопировать ник» в профиле, пункт «Скопировать ник @…» в меню ⋯ у поста (автора и, у буста, бустнувшего) и в меню строки «♻ boosted by». Всегда полный `@user@server`: люди с твоего сервера приходят как просто `user`, к ним дописывается имя твоего сервера — по такому нику человека найдёт и упомянет любой клиент."
+details.en = "The “Copy handle” button on a profile, the “Copy handle @…” item in a post's ⋯ menu (the author and, for a boost, the booster) and in the menu of the “♻ boosted by” line. Always the full `@user@server`: people from your server come as just `user`, your server's name is added — any client can find and mention a person by such a handle."
+
+[[feature]]
+id = "quote"
+status = "has"
+since = "0.8.0"
+name.ru = "Цитировать пост; кто может цитировать мои"
+name.en = "Quoting a post; who may quote mine"
+config = "`post.quote_action`, `post.quote_policy`"
+api = "`quoted_status_id`, `quote_approval_policy`"
+others = "Mastodon 4.5+, Ivory, Phanpy"
+clients = ["Mastodon web", "Ivory", "Phanpy"]
+details.ru = "«Цитировать» в меню ⋯ у поста, который автор разрешил цитировать. Кто может цитировать мои новые посты: `\"public\"`, `\"followers\"`, `\"nobody\"` или `\"\"` — как на сервере."
+details.en = "“Quote” in the ⋯ menu of a post its author lets quote. Who may quote my new posts: `\"public\"`, `\"followers\"`, `\"nobody\"` or `\"\"` — as on the server."
+
+[[feature]]
+id = "interaction-policy"
+status = "has"
+since = "0.8.0"
+name.ru = "Кто может отвечать, бустить, лайкать (GoToSocial)"
+name.en = "Who may reply, boost, like (GoToSocial)"
+config = "`post.who_can_reply`, `post.who_can_boost`, `post.who_can_like`"
+api = "`interaction_policy`"
+others.ru = "клиенты GoToSocial"
+others.en = "GoToSocial clients"
+clients = []
+details.ru = "`\"everyone\"`, `\"followers\"` (и упомянутые), `\"following\"` (и упомянутые), `\"mentioned\"`, `\"me\"` или `\"\"` — как в настройках аккаунта. Другим серверам не отправляется."
+details.en = "`\"everyone\"`, `\"followers\"` (and the mentioned), `\"following\"` (and the mentioned), `\"mentioned\"`, `\"me\"` or `\"\"` — as in the account's settings. Not sent to other servers."
+
+[[feature]]
+id = "schedule"
+status = "has"
+since = "0.8.0"
+name.ru = "Отложенный пост"
+name.en = "A scheduled post"
+config = "`post.schedule`"
+api = "`scheduled_at`, `scheduled_statuses`"
+others = "Mastodon web, Ivory, Phanpy, Megalodon"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Megalodon"]
+details.ru = "Кнопка «⏰ Позже»: пост ждёт на сервере, даже если fedtail закрыт. Список ждущих — ≡ → «Запланированные»."
+details.en = "The “⏰ Later” button: the post waits on the server, even if fedtail is closed. The list of waiting ones — ≡ → “Scheduled”."
+
+[[feature]]
+id = "edit-own"
+status = "has"
+since = "0.3.0"
+name.ru = "Редактировать, удалить, закрепить свой пост"
+name.en = "Edit, delete, pin your own post"
+config = "—"
+api = "`PUT statuses/:id`, `statuses/:id/source`, `statuses/:id/pin`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+
+[[feature]]
+id = "redraft"
+status = "has"
+since = "0.14.0"
+name.ru = "Удалить и переписать"
+name.en = "Delete and redraft"
+config = "`post.redraft`"
+api = "`statuses/:id/source` + `DELETE statuses/:id`"
+others = "Mastodon web, Megalodon"
+clients = ["Mastodon web", "Megalodon"]
+details.ru = "Пункт в меню ⋯ своего поста: пост удаляется, его текст (как набирал), CW, видимость, язык и то, на что он отвечал, открываются в панели новым черновиком; картинки сервер удаляет вместе с постом, их добавляешь заново — для серверов без редактирования и для случаев, когда правка не годится (сменить видимость)."
+details.en = "An item in the ⋯ menu of your own post: the post is deleted, and its text (as typed), CW, visibility, language and what it answered open in the panel as a new draft; the server deletes the pictures with the post, you add them again — for servers without editing and for when an edit won't do (changing visibility)."
+
+[[feature]]
+id = "chain"
+status = "has"
+since = "0.14.0"
+name.ru = "Тред цепочкой"
+name.en = "A thread as a chain"
+config = "`post.chain`"
+api = "`in_reply_to_id`"
+others.ru = "Ice Cubes (до пяти постов)"
+others.en = "Ice Cubes (up to five posts)"
+clients = ["Ice Cubes"]
+details.ru = "Строка из одних `---` делит текст на посты: уходят разом, каждый ответом на предыдущий, с той же видимостью, CW и языком; картинки и опрос — у первого. Счётчик знаков считает каждую часть отдельно. `post.chain = false` — `---` остаётся текстом."
+details.en = "A line of nothing but `---` splits the text into posts: they go at once, each a reply to the one before, with the same visibility, CW and language; pictures and the poll go with the first. The character counter counts each part on its own. `post.chain = false` — `---` stays text."
+
+[[feature]]
+id = "command-line"
+status = "has"
+since = "0.3.0"
+name.ru = "Командная строка как на Point"
+name.en = "A command line as on Point"
+config = "`ui.command_line`, `post.plain_posts`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail (tut — команды vim-стиля)"
+others.en = "only in fedtail (tut — vim-style commands)"
+clients = []
+details.ru = "Внизу окна (`Ctrl+L`): `#a3f` — открыть, `#a3f текст` — ответить, `S`/`U #a3f` — подписка на тред, `S`/`U @ник` — на человека, `!` — продвинуть, `~` — в закладки, `D` — удалить свой, `@ник` — профиль, `?` — справка. Простой текст без команды — новый пост (`post.plain_posts = false` — только команды, без случайных постов)."
+details.en = "At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts)."
+
+[[feature]]
+id = "ai-helpers"
+status = "wont"
+name.ru = "ИИ-помощники в панели поста (как в Ice Cubes)"
+name.en = "AI helpers in the compose panel (as in Ice Cubes)"
+why.ru = "Писать — дело автора."
+why.en = "Writing is the author's job."
+
+[[feature]]
+id = "spellcheck"
+status = "undecided"
+name.ru = "Проверка орфографии в панели поста"
+name.en = "Spell checking in the compose panel"
+others = "Tuba"
+clients = ["Tuba"]
+note.ru = "Не в приоритете. В Qt своей нет: нужна внешняя библиотека (hunspell или enchant) опциональной зависимостью."
+note.en = "Not a priority. Qt has none of its own: it needs an outside library (hunspell or enchant) as an optional dependency."

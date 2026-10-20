@@ -43,13 +43,15 @@ class ConfigTest(TmpDir):
 
         import fedtail.__main__ as main_mod
         src = Path(main_mod.__file__).read_text("utf-8")
-        for key in re.findall(r'add_argument\((?:"-\w", )?"(--[a-z-]+)"', src):
-            self.assertIn(key, text.split("[ui]")[0], key)
-        # one option, one block: a blank line before the next explanation
-        lines = text.splitlines()
-        for i, line in enumerate(lines[:-1]):
-            if re.match(r"^[a-z_]+ = ", line) and lines[i + 1].startswith("# "):
-                self.fail(f"no blank line after {line!r}")
+        for lang in config.EXAMPLE_LANGS:
+            ref = config.example_text(lang)
+            for key in re.findall(r'add_argument\((?:"-\w", )?"(--[a-z-]+)"', src):
+                self.assertIn(key, ref.split("[ui]")[0], f"{lang}: {key}")
+            # one option, one block: a blank line before the next explanation
+            lines = ref.splitlines()
+            for i, line in enumerate(lines[:-1]):
+                if re.match(r"^[a-z_]+ = ", line) and lines[i + 1].startswith("# "):
+                    self.fail(f"{lang}: no blank line after {line!r}")
         # --update-config adds missing options the same way
         from fedtail.core import config_update
         out = config_update.update("[activity]\n", text)
@@ -58,10 +60,47 @@ class ConfigTest(TmpDir):
     def test_example_is_all_defaults(self):
         # every option in the example is set to the real default
         import tomllib
-        parsed = tomllib.loads(config.example_text())
-        cfg, warns = config.validate(parsed)
-        self.assertEqual(warns, [])
-        self.assertEqual(cfg, config.DEFAULTS)
+        for lang in config.EXAMPLE_LANGS:
+            parsed = tomllib.loads(config.example_text(lang))
+            cfg, warns = config.validate(parsed)
+            self.assertEqual(warns, [], lang)
+            self.assertEqual(cfg, config.DEFAULTS, lang)
+
+    def test_examples_are_twins(self):
+        """The Russian and English references hold the same options, values, sections,
+        banners and commented-out options in the same order — only `# comments` differ."""
+        import re
+
+        def skeleton(text):
+            out = []
+            for line in text.splitlines():
+                if re.match(r"^#\s*═{5,}", line):
+                    out.append("═")
+                elif line.strip() and not (line.startswith("# ") or line.strip() == "#"):
+                    out.append(line)
+            return out
+        ru, en = (skeleton(config.example_text(lg)) for lg in ("ru", "en"))
+        self.assertEqual(ru, en)
+        self.assertGreater(len(ru), 100)
+
+    def test_language_of_a_config(self):
+        self.assertEqual(config.language_of(config.example_text("ru")), "ru")
+        self.assertEqual(config.language_of(config.example_text("en")), "en")
+        self.assertEqual(config.language_of("# моя тема\n[ui]\ntheme = 'x'\n"), "ru")
+        self.assertEqual(config.language_of("# my theme\n[ui]\ntheme = 'x'\n"), "en")
+        self.assertEqual(config.language_of("[ui]\ntheme = 'x'\n", "en"), "en")
+        self.assertEqual(config.example_text("de"), config.example_text("en"))
+
+    def test_update_config_keeps_the_files_language(self):
+        """--update-config on an English config brings English explanations, a Russian one
+        Russian — the reference in the user's own language is the one used."""
+        from fedtail.core import config_update
+        for lang, word in (("ru", "# Что показывать в «Активности»"),
+                           ("en", "# What to show in \"Activity\"")):
+            head = config.example_text(lang).split("\n[ui]")[0]
+            ex = config.example_text(config.language_of(head))
+            out = config_update.update(head + "\n[activity]\n", ex)
+            self.assertIn(word, out, lang)
 
     def test_errors_and_warnings(self):
         with self.assertRaises(config.ConfigError) as e:

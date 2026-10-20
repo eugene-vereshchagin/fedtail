@@ -1,0 +1,132 @@
+# Profiles — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "profiles"
+title.ru = "Профили"
+title.en = "Profiles"
+
+[[feature]]
+id = "profile"
+status = "has"
+since = "0.2.0"
+name.ru = "Свой и чужой профиль"
+name.en = "Your own and other people's profiles"
+config = "—"
+api = "`accounts/:id`, `accounts/:id/statuses`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Шапка, о себе, поля, счётчики, посты; «из твоих подписок на него подписаны» (`familiar_followers`); подписки и подписчики."
+details.en = "The header, bio, fields, counts, posts; “followed by people you follow” (`familiar_followers`); follows and followers."
+
+[[feature]]
+id = "pinned"
+status = "has"
+since = "0.8.0"
+name.ru = "Закреплённые посты"
+name.en = "Pinned posts"
+config = "`feed.profile_pinned`"
+api = "`statuses?pinned=true`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Сверху профиля с пометкой 📌. `false` — профиль просто по времени."
+details.en = "At the top of a profile, marked 📌. `false` — the profile simply in time order."
+
+[[feature]]
+id = "featured"
+status = "has"
+since = "0.9.0"
+name.ru = "Избранные теги и рекомендованные люди"
+name.en = "Featured tags and recommended people"
+config = "`feed.profile_featured`"
+api = "`featured_tags`, `endorsements`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "«Часто пишет о: #теги» и кого человек рекомендует (Mastodon 4.4+)."
+details.en = "“Often writes about: #tags” and whom the person recommends (Mastodon 4.4+)."
+
+[[feature]]
+id = "remote-profile"
+status = "has"
+since = "0.8.0"
+name.ru = "Профиль малознакомого человека — с его сервера"
+name.en = "A little-known person's profile — from their server"
+config = "`feed.remote_profiles`, `feed.remote_posts`"
+api = "ActivityPub outbox"
+others.ru = "Megalodon — частично (списки)"
+others.en = "Megalodon — partly (the lists)"
+clients = ["Megalodon"]
+activitypub = true
+details.ru = "Если твой сервер почти ничего не знает о человеке с другого сервера, fedtail читает его последние публичные посты прямо оттуда (`remote_posts` штук, не больше 40) и просит твой сервер подтянуть их. Без токена; серверы, требующие подписи запросов, просто ничего не отдадут."
+details.en = "If your server knows almost nothing about a person from another server, fedtail reads their latest public posts straight from there (`remote_posts` of them, at most 40) and asks your server to fetch them. Without a token; servers that require signed requests simply give nothing."
+
+[[feature]]
+id = "older-posts"
+status = "has"
+since = "0.11.0"
+name.ru = "Посты старше тех, что знает мой сервер"
+name.en = "Posts older than my server knows"
+config = "`feed.remote_profiles`"
+api = "ActivityPub outbox"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+activitypub = true
+details.ru = "Твой сервер знает посты человека только с момента, как кто-то на ноде на него подписался. Более старые fedtail листает постранично прямо с сервера автора."
+details.en = "Your server knows a person's posts only from the moment someone on it followed them. fedtail pages through older ones straight from the author's server."
+
+[[feature]]
+id = "remote-people"
+status = "has"
+since = "0.8.0"
+name.ru = "Подписчики и подписки с сервера человека"
+name.en = "Followers and follows from the person's server"
+config = "`feed.remote_people`"
+api = "ActivityPub `followers`, `following`"
+others = "Megalodon"
+clients = ["Megalodon"]
+activitypub = true
+details.ru = "Внизу таких списков — кнопка «ещё с его сервера»: fedtail читает их оттуда и находит этих людей через твой сервер."
+details.en = "At the bottom of such lists — a “more from their server” button: fedtail reads them there and finds these people through your server."
+
+[[feature]]
+id = "follow-date"
+status = "has"
+since = "0.11.0"
+name.ru = "«Подписан с …»"
+name.en = "“Following since …”"
+config = "`feed.follow_date_note`"
+api = "`accounts/:id/note`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Серверы не хранят, с какого дня ты на кого-то подписан. Подписываясь через fedtail, дата дописывается последней строкой в приватную заметку о человеке (`[fedtail followed 2026-10-18]`): её видно с любого устройства и в других клиентах. В fedtail строка спрятана и при правке заметки сохраняется. `false` — помнить только локально."
+details.en = "Servers don't keep the day you followed someone. When you follow through fedtail, the date is written as the last line of your private note on the person (`[fedtail followed 2026-10-18]`): it's seen from any device and in other clients. In fedtail the line is hidden and kept when the note is edited. `false` — remember it locally only."
+
+[[feature]]
+id = "moved"
+status = "has"
+since = "0.14.0"
+name.ru = "Человек переехал"
+name.en = "The person has moved"
+config = "`feed.show_moved`"
+api = "`account.moved`, ActivityPub `Move`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+activitypub = true
+details.ru = "В профиле переехавшего — плашка «📦 Переехал на @новый» с кнопками «Открыть» и «Подписаться там»."
+details.en = "A moved person's profile has a “📦 Moved to @new” banner with “Open” and “Follow there” buttons."
+
+[[feature]]
+id = "server-info"
+status = "has"
+since = "0.14.0"
+name.ru = "Софт сервера автора"
+name.en = "The author's server software"
+config = "`feed.server_info`"
+api.ru = "nodeinfo, в профиле «🖥 GoToSocial 0.17»"
+api.en = "nodeinfo, in the profile “🖥 GoToSocial 0.17”"
+others = "—"
+activitypub = true
+details.ru = "fedtail спрашивает nodeinfo сервера человека (Mastodon, GoToSocial, Akkoma, Misskey, Lemmy…) и пишет в профиле «🖥 GoToSocial 0.17.3». Ответ помнится неделю на сервер."
+details.en = "fedtail asks the person's server for its nodeinfo (Mastodon, GoToSocial, Akkoma, Misskey, Lemmy…) and writes “🖥 GoToSocial 0.17.3” in the profile. The answer is kept a week per server."

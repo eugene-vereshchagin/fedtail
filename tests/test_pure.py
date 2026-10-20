@@ -96,21 +96,90 @@ class LongFormTest(unittest.TestCase):
             self.assertIsNone(long_form_of(junk))
 
 
-class ConfigDocTest(unittest.TestCase):
-    def test_config_md_is_up_to_date(self):
-        """docs/CONFIG.md is built from config.example.toml: a new option, a changed
-        explanation — run python3 tools/config_doc.py."""
-        import importlib.util
+def _docs_build():
+    import importlib.util
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "tools"))
+    spec = importlib.util.spec_from_file_location("docs_build", root / "tools" / "docs_build.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class DocsBuildTest(unittest.TestCase):
+    """tools/docs_build.py owns the generated docs: the feature list and comparison, the
+    config reference, the generated parts and every include block."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = _docs_build()
+        cls.files = cls.mod.build()
+
+    def test_everything_is_up_to_date(self):
+        """A changed feature, option, explanation or part — run python3 tools/docs_build.py."""
+        stale = [str(p.relative_to(self.mod.ROOT)) for p, text in self.files.items()
+                 if not p.exists() or p.read_text("utf-8") != text]
+        self.assertEqual(stale, [], "out of date: python3 tools/docs_build.py")
+
+    def test_both_languages_are_built(self):
+        root = self.mod.ROOT
+        for lang in ("ru", "en"):
+            for name in ("features.md", "comparison.md", "config.md", "parts/whats-new.md"):
+                self.assertIn(root / "docs" / lang / name, self.files, f"{lang}/{name}")
+            self.assertIn("`feed.prefetch`", self.files[root / "docs" / lang / "config.md"])
+        self.assertIn("| Arts mode |", self.files[root / "docs" / "en" / "features.md"])
+        self.assertIn("| Режим arts |", self.files[root / "docs" / "ru" / "features.md"])
+
+    def test_config_keys_of_features_exist(self):
+        """Every `section.key` in the config column of a feature fedtail has (or lacks)
+        is a real option — planned and turned-down ones may name keys yet to be."""
+        import re
+
+        from fedtail.core import config
+        for ch in self.mod.load_features():
+            for f in ch.get("feature", []):
+                if f["status"] not in ("has", "partly", "no"):
+                    continue
+                for lang in ("ru", "en"):
+                    text = self.mod._t(f.get("config"), lang) or ""
+                    for sec, key in re.findall(r"`([a-z_]+)\.([a-z_]+)", text):
+                        if sec in config.DEFAULTS:
+                            self.assertIn(key, config.DEFAULTS[sec], f"{f['id']}: {sec}.{key}")
+
+    def test_sources_are_checked(self):
+        import tempfile
         from pathlib import Path
-        root = Path(__file__).resolve().parent.parent
-        spec = importlib.util.spec_from_file_location("config_doc",
-                                                      root / "tools" / "config_doc.py")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        built = mod.build(mod.EXAMPLE.read_text("utf-8"))
-        self.assertEqual((root / "docs" / "CONFIG.md").read_text("utf-8"), built,
-                         "docs/CONFIG.md is out of date: python3 tools/config_doc.py")
-        self.assertIn("`feed.prefetch`", built)
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "01-x.toml").write_text(
+                'id = "x"\ntitle.ru = "Икс"\ntitle.en = "X"\n\n[[feature]]\nid = "a"\n'
+                'status = "has"\nname = "Без перевода"\n\n[[feature]]\nid = "a"\n'
+                'status = "planned"\nsince = "0.1.0"\nname.ru = "Б"\n', "utf-8")
+            with self.assertRaises(self.mod.DocsError) as e:
+                self.mod.load_features(Path(d))
+        msg = str(e.exception)
+        self.assertIn("name is Russian", msg)
+        self.assertIn("since — which version", msg)
+        self.assertIn("the id is taken", msg)
+        self.assertIn("since — only for what fedtail has", msg)
+        self.assertIn("name has no en", msg)
+
+    def test_includes(self):
+        from pathlib import Path
+        root = self.mod.ROOT
+        text = "a\n<!-- include: parts/principles shift=1 -->\nSTALE\n<!-- /include -->\nb\n"
+        out = self.mod.expand(text, root / "docs" / "en" / "x.md", {})
+        self.assertNotIn("STALE", out)
+        self.assertIn("Nothing jumps", out)
+        self.assertTrue(out.endswith("<!-- /include -->\nb\n"))
+        ru = self.mod.expand(text, root / "README.ru.md", {})
+        self.assertIn("Ничего не дёргается", ru)
+        with self.assertRaises(self.mod.DocsError):
+            self.mod.expand(text, root / "docs" / "DESIGN.md", {})  # which language?
+        self.assertEqual(self.mod.lang_of(root / "fedtail" / "data" / "help" / "ru" / "a.md"),
+                         "ru")
+        self.assertIsNone(self.mod.lang_of(Path(root / "docs" / "ARCHITECTURE.md")))
 
 
 try:

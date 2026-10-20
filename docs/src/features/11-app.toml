@@ -1,0 +1,261 @@
+# The application — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "app"
+title.ru = "Приложение"
+title.en = "The application"
+
+[[feature]]
+id = "themes"
+status = "has"
+since = "0.1.0"
+name.ru = "Темы файлами"
+name.en = "Themes as files"
+config = "`ui.theme`, `ui.font_size`, `ui.max_width`, `ui.sidebar_width`, `ui.actions`"
+api.ru = "свой формат TOML"
+api.en = "a TOML format of its own"
+others.ru = "у других — светлая и тёмная, у Ice Cubes и Megalodon — свои цвета"
+others.en = "others — light and dark, Ice Cubes and Megalodon — colours of your own"
+clients = ["Ice Cubes", "Megalodon"]
+details.ru = "Встроенные: `system` (как в KDE), `terminal`, `juick`, `juick-classic`, `bnw`, `point`, `night`, `contrast` (для слабого зрения), `pink`, `nord`, `solarized`, `paper`, `debug` (для отладки: каждое состояние поста — непрочитан, курсор j/k, найден, «увиден не целиком, ещё не прочитан», фокус клавиатуры — своей кричащей рамкой; `shape.debug = true` включает то же в любой своей теме). Свои — файлом в `~/.config/fedtail/themes/`. Тема задаёт и раскладку карточки: форму аватарки (`avatar_shape`), шапку в строку или имя над датой (`card_header = \"stacked\"`), где стоит #id (`short_id`: у имени или под постом с числом ответов), с какой стороны кнопки (`actions_align`), линия между постами (`rule`: сплошная или пунктир), штрихованная полоса под заголовками ленты и окна поста (`header_stripes`) и тёмная полоска над ней (`header_bar`), цвет главных кнопок, полоски заголовка ленты и имён. Тема задаёт весь вид приложения, а не только цвета; поэтому отдельные шаблоны карточек не нужны (см. [Не будем](#не-будем)). Ширина колонки постов — `max_width` (`0` — во всю ширину; кнопка ↔ вверху слева переключает на время и помнит выбор до следующего запуска), подписи у кнопок — `actions`."
+details.en = "Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classic`, `bnw`, `point`, `night`, `contrast` (for weak eyes), `pink`, `nord`, `solarized`, `paper`, `debug` (for debugging: each state of a post — unread, the j/k cursor, found, “not seen whole yet, not read yet”, the keyboard focus — in a loud frame of its own; `shape.debug = true` turns the same on in any theme of your own). Your own — a file in `~/.config/fedtail/themes/`. A theme sets the card's layout too: the avatar's shape (`avatar_shape`), the header in a line or the name over the date (`card_header = \"stacked\"`), where the #id stands (`short_id`: by the name or under the post with the reply count), which side the buttons are on (`actions_align`), the line between posts (`rule`: solid or dashed), a hatched band under the titles of the lane and the post window (`header_stripes`) and a dark strip over it (`header_bar`), the colour of the main buttons, of the lane's title strip and of names. A theme sets the look of the whole app, not only colours; that's why separate card templates aren't needed (see Won't do). The width of the posts column — `max_width` (`0` — the full width; the ↔ button at the top left switches it for now and remembers the choice until the next start), labels on buttons — `actions`."
+
+[[feature]]
+id = "try-theme"
+status = "has"
+since = "0.15.0"
+name.ru = "Попробовать тему без перезапуска"
+name.en = "Trying a theme without a restart"
+config.ru = "≡ → «Попробовать тему»; насовсем — `ui.theme`"
+config.en = "≡ → “Try a theme”; for good — `ui.theme`"
+others.ru = "Phanpy, Elk, Ice Cubes (их немного)"
+others.en = "Phanpy, Elk, Ice Cubes (they have few)"
+clients = ["Phanpy", "Elk", "Ice Cubes"]
+
+[[feature]]
+id = "config-chapters"
+status = "has"
+since = "0.6.1"
+name.ru = "Конфиг файлом по главам"
+name.en = "The config as a file in chapters"
+config.ru = "ключи запуска `--update-config`, `--rebuild-config`"
+config.en = "the launch keys `--update-config`, `--rebuild-config`"
+others.ru = "tut — тоже TOML, но без сборки по главам"
+others.en = "tut — TOML too, but not built by chapters"
+clients = ["tut"]
+details.ru = "Программа конфиг только читает. Новая версия принесла настройки — `--update-config` допишет их в нужные главы с пояснениями; `--rebuild-config` пересоберёт файл заново, сохранив твои значения. Значение, вписанное руками, остаётся твоим и при смене умолчания."
+details.en = "The program only reads the config. A new version brought settings — `--update-config` adds them to the right chapters with explanations; `--rebuild-config` rebuilds the file anew, keeping your values. A value written by hand stays yours when the default changes."
+
+[[feature]]
+id = "config-reference"
+status = "has"
+since = "0.13.0"
+name.ru = "Справочник настроек"
+name.en = "The settings reference"
+config = "—"
+api.ru = "`tools/config_doc.py`"
+api.en = "`tools/docs_build.py`"
+others.ru = "tut (man-страница и сайт), MediaWiki (статья на каждую настройку)"
+others.en = "tut (a man page and a site), MediaWiki (an article per setting)"
+clients = ["tut"]
+details.ru = "Справочник конфига, собранный из примеров конфига: каждая настройка с описанием, вариантами и умолчанием, таблицами по главам, по-русски и по-английски. Тест следит, чтобы он не отставал от файлов."
+details.en = "The config reference, built from the example configs: every setting with its description, choices and default, in tables by chapter, in Russian and in English. A test makes sure it keeps up with the files."
+
+[[feature]]
+id = "window-tray-keys"
+status = "has"
+since = "0.8.0"
+name.ru = "Окно, трей, клавиши"
+name.en = "Window, tray, keys"
+config = "`ui.close_to_tray`, `ui.post_keys`"
+others.ru = "клавиши — Mastodon web, Phanpy, Elk, Ivory, tut"
+others.en = "keys — Mastodon web, Phanpy, Elk, Ivory, tut"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "tut"]
+details.ru = "Крестик прячет в трей. `j`/`k` — по постам, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `o`/Enter — тред. `post_keys = false` — буквы ничего не делают."
+details.en = "The cross hides to the tray. `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing."
+
+[[feature]]
+id = "links-inside"
+status = "has"
+since = "0.2.0"
+name.ru = "Ссылки на посты и профили — внутри"
+name.en = "Links to posts and profiles — inside"
+config = "`ui.links_in_app`"
+api = "`search?resolve=true`"
+others = "Ivory, Phanpy, Elk, Megalodon, Fedilab"
+clients = ["Ivory", "Phanpy", "Elk", "Fedilab", "Megalodon"]
+details.ru = "@упоминания, #теги и ссылки на посты и профили федиверса открываются в fedtail. Не нашлось — браузер. Наружу уходят только веб-адреса (и mailto:, xmpp:, gemini://, magnet:): ссылку на файл или сетевую папку из чужого поста fedtail не откроет."
+details.en = "@mentions, #tags and links to fediverse posts and profiles open in fedtail. Not found — the browser. Only web addresses go outside (and mailto:, xmpp:, gemini://, magnet:): fedtail won't open a link to a file or a network share from someone's post."
+
+[[feature]]
+id = "open-url"
+status = "has"
+since = "0.14.0"
+name.ru = "Открыть ссылку в запущенном fedtail"
+name.en = "Open a link in the running fedtail"
+config.ru = "`fedtail open URL`; `--install-desktop` ставит обработчик `web+ap://`"
+config.en = "`fedtail open URL`; `--install-desktop` installs a `web+ap://` handler"
+api.ru = "своё"
+api.en = "own"
+others.ru = "Megalodon (поделиться ссылкой в приложение)"
+others.en = "Megalodon (share a link into the app)"
+clients = ["Megalodon"]
+details.ru = "`fedtail open URL` из терминала или браузера открывает пост или профиль в уже открытом окне (или запускает его и открывает там). `--install-desktop` делает fedtail обработчиком ссылок `web+ap://` — кнопок «открыть в своём приложении» на страницах серверов."
+details.en = "`fedtail open URL` from a terminal or a browser opens a post or a profile in the window already open (or starts it and opens it there). `--install-desktop` makes fedtail the handler of `web+ap://` links — the “open in your app” buttons on servers' pages."
+
+[[feature]]
+id = "local-store"
+status = "has"
+since = "0.1.0"
+name.ru = "Всё хранится локально, читается без сети"
+name.en = "Everything is stored locally, readable offline"
+config = "—"
+api.ru = "SQLite в папке данных профиля"
+api.en = "SQLite in the profile's data folder"
+others.ru = "Tusky — частично, Ice Cubes — кэш Home"
+others.en = "Tusky — partly, Ice Cubes — a Home cache"
+clients = ["Tusky", "Ice Cubes"]
+
+[[feature]]
+id = "days-long"
+status = "has"
+since = "0.11.0"
+name.ru = "Открыт сутками без раздувания"
+name.en = "Open for days without bloating"
+config = "`ui.unload_hidden_minutes`, `ui.image_cache_mb`, `debug.trim_memory`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "Лента, которую не открывали `unload_hidden_minutes` минут, отпускает карточки из памяти; открытая не выгружается никогда. Освобождённую память fedtail отдаёт системе (`trim_memory`: иначе glibc держит пик после ночи лент и картинок)."
+details.en = "A lane not opened for `unload_hidden_minutes` minutes lets its cards go from memory; the one open is never unloaded. fedtail gives the freed memory back to the system (`trim_memory`: otherwise glibc keeps the peak after a night of lanes and pictures)."
+
+[[feature]]
+id = "poll-stream"
+status = "has"
+since = "0.9.0"
+name.ru = "Опрос сервера и живой поток"
+name.en = "Polling the server and the live stream"
+config = "`[poll]`: `interval_seconds`, `stream`, `stream_gap_seconds`"
+api = "streaming (WebSocket)"
+others = "Mastodon web, Phanpy, Elk, Tokodon, Whalebird, Ice Cubes"
+clients = ["Mastodon web", "Phanpy", "Elk", "Tokodon", "Ice Cubes", "Whalebird"]
+details.ru = "Опрос раз в `interval_seconds` (не меньше 30). Живой поток (`\"auto\"`, если сервер его даёт) будит опрос сразу, но не чаще раза в `stream_gap_seconds`. Поток только будит, поэтому если он рвётся (сон ноутбука, прокси), ничего не теряется."
+details.en = "A poll every `interval_seconds` (at least 30). The live stream (`\"auto\"`, if the server offers it) wakes the poll at once, but not more often than every `stream_gap_seconds`. The stream only wakes, so if it drops (a laptop asleep, a proxy) nothing is lost."
+
+[[feature]]
+id = "human-errors"
+status = "has"
+since = "0.13.0"
+name.ru = "Ошибки по-человечески и без спама"
+name.en = "Errors in plain words and without spam"
+config = "—"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "Сервер за прокси лежит — вместо HTML-страницы Cloudflare одна строка «Bad Gateway — the server is down or not answering»; одна и та же ошибка каждого опроса показывается и пишется в журнал один раз, снова — только если изменилась или через десять минут."
+details.en = "A server behind a proxy is down — instead of Cloudflare's HTML page one line “Bad Gateway — the server is down or not answering”; the same error of every poll is shown and logged once, again only when it changes or ten minutes later."
+
+[[feature]]
+id = "debug-log"
+status = "has"
+since = "0.2.0"
+name.ru = "Подробный журнал для отчётов об ошибках"
+name.en = "A detailed log for bug reports"
+config.ru = "`[debug]`, ключи запуска `--debug`, `--bug-report`"
+config.en = "`[debug]`, the launch keys `--debug`, `--bug-report`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "В режиме отладки (`mode = \"auto\"` — включён в версиях для разработки, выключен в релизах): журнал запросов, опросов, действий (без текстов постов), ошибки с трассировкой, статистика памяти и потоков раз в `stats_minutes`, сторож зависаний (`watchdog_seconds`, `stall_ms`), медленные запросы, рост памяти. `crash.log` — стеки при падении, `kill -USR1` — стеки по запросу. Логи прошлой версии новая удаляет сама. `--bug-report` собирает архив за двое суток без токена и базы. Подробно — [DEBUGGING.md](/docs/DEBUGGING.md)."
+details.en = "In the debugging mode (`mode = \"auto\"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself. `--bug-report` packs two days of it, without the token and the database. In detail — [DEBUGGING.md](/docs/DEBUGGING.md)."
+
+[[feature]]
+id = "federation-status"
+status = "has"
+since = "0.16.0"
+name.ru = "Состояние федерации: как живёт моя нода и что не получается"
+name.en = "Federation status: how my server is doing and what fails"
+config.ru = "≡ → «Отладка» → «Состояние федерации»"
+config.en = "≡ → “Debugging” → “Federation status”"
+api.ru = "своё (из того, что видел запуск)"
+api.en = "own (from what this run saw)"
+others = "—"
+details.ru = "≡ → «Отладка» → «Состояние федерации»: проблемы, которые от клиента не зависят. Моя нода — что на ней работает, сколько ответов и сколько с ошибкой, как быстро отвечает (обычно и медленные), опрос (когда последний удачный, сколько раз не удался и почему), живой поток (открыт с каких пор, сколько рвался). Чего сервер не умеет (спросил и получил «нет»). Кто ждёт, чтобы попасть в список: имя со ссылкой на профиль (открывается вкладкой, там «Подписаться») и почему ждёт — заявка без ответа, подписки нет (отклонили или отозвали), или уже подписан и добавится сам. Что не получается у моей ноды и у других серверов — сгруппировано по запросу (id свёрнуты: `/api/v1/lists/:id/accounts`), сколько раз, когда последний, и что это скорее всего значит («удалено на том сервере», «не отдаёт чужим без подписи», «в список берут только тех, на кого подписан»…). Другие серверы — кто сколько ответил и с ошибками. Окно обновляется само, пока открыто; «Копировать» — текстом для issue, «Начать счёт заново» — обнулить. Ради окна спрашивается только свой сервер — кто те, кто ждёт в списках; остальное — то, что видел этот запуск. Адреса без параметров, токенов нет."
+details.en = "≡ → “Debugging” → “Federation status”: problems that don't depend on the client. My server — what it runs, how many answers and how many with errors, how fast it answers (typical and slow ones), polling (the last good one, how many times it failed and why), the live stream (open since when, how many times it dropped). What the server can't do (asked and got “no”). Who waits to go into a list: the name linked to the profile (opens in a tab, with “Follow”) and why they wait — a request unanswered, no follow (refused or withdrawn), or followed and going in by itself. What fails on my server and on other servers — grouped by request (ids folded: `/api/v1/lists/:id/accounts`), how many times, when last, and what it most likely means (“deleted on that server”, “won't give strangers anything without a signature”, “lists take only people you follow”…). Other servers — who answered how much and with what errors. The window updates by itself while open; “Copy” — as text for an issue, “Count anew” — start from zero. For the window only your own server is asked — who those waiting in lists are; the rest is what this run saw. Addresses without parameters, no tokens."
+
+[[feature]]
+id = "leak-hunt"
+status = "has"
+since = "0.14.0"
+name.ru = "Поиск утечек: тренды, перепись объектов, снимки памяти"
+name.en = "Leak hunting: trends, an object census, memory snapshots"
+config.ru = "`debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → «Отладка»"
+config.en = "`debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging”"
+api.ru = "своё (gc, tracemalloc)"
+api.en = "own (gc, tracemalloc)"
+others = "—"
+details.ru = "Для запусков на сутки. С каждой строкой статистики — строка `trend`: память, объекты Python, виджеты, карточки, картинки, потоки, файлы — сколько при запуске, сколько сейчас, сколько в час. Что-то росло на каждой из последних `leak_samples` проверок (12 — это час) и не на крохи — предупреждение `possible leak` с цифрами; первые полчаса не считаются. В режиме отладки — перепись: какие объекты Python и виджеты Qt прибавились с прошлой проверки и с запуска (`object_census`). `tracemalloc = true` — трассировка памяти с запуска; снимок — ≡ → «Отладка» → «Снимок памяти»: файл с тем, кто держит больше всего и что выросло, по строкам кода. Там же: «Что растёт: статистика и перепись сейчас», «Отдать свободную память системе», трассировка вкл/выкл. Последняя строка сессии — `session summary`: часы, память, пик, фризы, опросы. Как оставить на ночь — [DEBUGGING.md](/docs/DEBUGGING.md#ночной-прогон-поиск-утечек)."
+details.en = "For days-long runs. With every stats line — a `trend` line: memory, Python objects, widgets, cards, pictures, threads, files — how many at start, how many now, how many an hour. Something that grew on each of the last `leak_samples` checks (12 — an hour) and by more than crumbs — a `possible leak` warning with the numbers; the first half hour doesn't count. In the debugging mode — a census: which Python objects and Qt widgets were added since the last check and since the start (`object_census`). `tracemalloc = true` — memory tracing from the start; a snapshot — ≡ → “Debugging” → “Memory snapshot”: a file with who holds the most and what grew, by line of code. There too: “What grows: stats and census now”, “Give free memory back to the system”, tracing on/off. The session's last line — `session summary`: hours, memory, peak, freezes, polls. How to leave it overnight — [DEBUGGING.md](/docs/DEBUGGING.md)."
+
+[[feature]]
+id = "db-cleanup"
+status = "planned"
+name.ru = "Чистка базы от постов, которых нет ни в одной ленте"
+name.en = "Cleaning the database of posts no lane holds"
+config = "—"
+api = "SQLite"
+others = "—"
+size.ru = "средний"
+size.en = "medium"
+details.ru = "Ленты обрезаются (по 3000 на источник), но сами посты — и родители ответов, и открытые треды — остаются в базе навсегда: она растёт на диске (в памяти это не держится). Нужна чистка старых постов, на которые ничто не ссылается, так, чтобы родителей видимых ответов не пришлось качать заново. Рост видно в `trend` как `core.statuses` и `core.db_mb`."
+details.en = "Lanes are trimmed (3000 per source), but the posts themselves — and the parents of replies, and opened threads — stay in the database for good: it grows on disk (it isn't held in memory). It needs a cleanup of old posts nothing refers to, such that the parents of visible replies needn't be fetched again. The growth shows in `trend` as `core.statuses` and `core.db_mb`."
+
+[[feature]]
+id = "screen-readers"
+status = "partly"
+since = "0.9.0"
+name.ru = "Экранные дикторы"
+name.en = "Screen readers"
+config = "`ui.alt_text`"
+others = "Mastodon web, Tusky, Ivory"
+clients = ["Mastodon web", "Tusky", "Ivory"]
+details.ru = "Подписи к картинкам и имена кнопок для дикторов есть, но вживую с Orca интерфейс не проверяли."
+details.en = "Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca."
+
+[[feature]]
+id = "ui-language"
+status = "has"
+since = "0.1.0"
+name.ru = "Язык интерфейса"
+name.en = "Interface language"
+config = "`ui.language`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "`\"auto\"` (из LANG), `\"ru\"`, `\"en\"`."
+details.en = "`\"auto\"` (from LANG), `\"ru\"`, `\"en\"`."
+
+[[feature]]
+id = "node-admin"
+status = "wont"
+name.ru = "Админка ноды в клиенте"
+name.en = "A node admin panel in the client"
+why.ru = "Сидеть в клиенте под аккаунтом с правами админа — безответственно. Для настройки ноды, если понадобится, будет отдельная утилита."
+why.en = "Sitting in a client logged in as an admin is irresponsible. If a node ever needs setting up, there'll be a separate tool for it."
+
+[[feature]]
+id = "annual-report"
+status = "wont"
+name.ru = "Годовой отчёт Mastodon"
+name.en = "Mastodon's annual report"
+why.ru = "Не про чтение и не про разговор."
+why.en = "It's about neither reading nor conversation."
+
+[[feature]]
+id = "token-command"
+status = "undecided"
+name.ru = "Токен через внешнюю команду (`pass`, `gopass`)"
+name.en = "The token from an external command (`pass`, `gopass`)"
+others = "tut"
+clients = ["tut"]
+note.ru = "Непонятно, что это даст поверх файла с правами только для владельца."
+note.en = "It's unclear what this would add over a file readable by its owner only."

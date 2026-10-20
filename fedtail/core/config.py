@@ -288,8 +288,45 @@ class ConfigError(Exception):
     pass
 
 
-def example_text():
-    return resources.files("fedtail").joinpath("data/config.example.toml").read_text("utf-8")
+EXAMPLE_LANGS = ("ru", "en")
+
+
+def example_name(lang):
+    """The reference file's name for a language: config.example.ru.toml…"""
+    return f"config.example.{lang}.toml"
+
+
+def example_text(lang="ru"):
+    """The reference config of this version: every option at its default with an
+    explanation, in Russian or in English (the same options, values and order)."""
+    if lang not in EXAMPLE_LANGS:
+        lang = "en"
+    return resources.files("fedtail").joinpath("data", example_name(lang)).read_text("utf-8")
+
+
+_CYRILLIC = re.compile(r"[а-яёА-ЯЁ]")
+
+
+def language_of(text, fallback="ru"):
+    """Which language a config file's explanations are in: the first line says it
+    ("конфиг профиля" / "profile config"); failing that, the comments' letters decide."""
+    head = text.lstrip().split("\n", 1)[0]
+    if "конфиг профиля" in head:
+        return "ru"
+    if "profile config" in head:
+        return "en"
+    comments = "".join(x for x in text.splitlines() if x.lstrip().startswith("#"))
+    if not comments.strip():
+        return fallback
+    cyr = len(_CYRILLIC.findall(comments))
+    return "ru" if cyr > len(comments) * 0.1 else "en"
+
+
+def default_language():
+    """The language a brand-new config is written in: Russian on a Russian desktop,
+    English everywhere else."""
+    from .. import i18n
+    return "ru" if i18n.detect() == "ru" else "en"
 
 
 def _type_name(v):
@@ -415,7 +452,7 @@ def load(path):
     """Read config file (creating the commented example if absent)."""
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(example_text(), "utf-8")
+        path.write_text(example_text(default_language()), "utf-8")
     try:
         with open(path, "rb") as f:
             user = tomllib.load(f)

@@ -1,0 +1,157 @@
+# Notifications and activity — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "notifications"
+title.ru = "Уведомления и активность"
+title.en = "Notifications and activity"
+
+[[feature]]
+id = "desktop-notify"
+status = "has"
+since = "0.2.0"
+name.ru = "Уведомления рабочего стола с уровнями приватности"
+name.en = "Desktop notifications with privacy levels"
+config = "`[notify]`: `enabled`, `lanes`, `except`, `privacy`, `when_focused`, `backend`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail (Tokodon — без приватности)"
+others.en = "only in fedtail (Tokodon — without privacy)"
+clients = []
+details.ru = "О каких лентах уведомлять — `notify.lanes` (те же имена, что в `[lanes]`; `\"lists\"` — все списки, `\"list:Друзья\"` — один, `\"all\"` — обо всём); о каких никогда — `notify.except` (чёрный список поверх `lanes`, например при `[\"all\"]`). `privacy`: `\"full\"` — кто и что, `\"sender\"` — только кто (можно читать при посторонних), `\"count\"` — только сколько. О ленте, открытой перед глазами, по умолчанию молчит (`when_focused`). `backend`: `\"auto\"` (notify-send, иначе трей), `\"desktop\"`, `\"tray\"`."
+details.en = "Which lanes to notify about — `notify.lanes` (the same names as in `[lanes]`; `\"lists\"` — all lists, `\"list:Friends\"` — one, `\"all\"` — everything); which never — `notify.except` (a blacklist over `lanes`, say with `[\"all\"]`). `privacy`: `\"full\"` — who and what, `\"sender\"` — only who (fine to read with others around), `\"count\"` — only how many. About the lane in front of your eyes it keeps quiet by default (`when_focused`). `backend`: `\"auto\"` (notify-send, else the tray), `\"desktop\"`, `\"tray\"`."
+
+[[feature]]
+id = "activity"
+status = "has"
+since = "0.2.0"
+name.ru = "Активность: лайки, бусты, подписки"
+name.en = "Activity: likes, boosts, follows"
+config = "`activity.types`"
+api = "`/api/v1/notifications`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Лента «Активность»: кто лайкнул, продвинул, подписался, закончился опрос, отредактирован пост, который ты продвигал, новый пост под колокольчиком — с временем каждого события. `[\"all\"]` — всё, что есть и что добавится."
+details.en = "The “Activity” lane: who liked, boosted, followed, a poll ended, a post you boosted was edited, a new post under a bell — with the time of each event. `[\"all\"]` — everything there is and what will be added."
+
+[[feature]]
+id = "grouping"
+status = "partly"
+since = "0.2.0"
+name.ru = "Группировка уведомлений"
+name.en = "Grouping notifications"
+config = "`activity.types`"
+api.ru = "fedtail группирует сам, `/api/v2/notifications` не использует"
+api.en = "fedtail groups them itself, it doesn't use `/api/v2/notifications`"
+others = "Mastodon web, Ivory, Phanpy, Ice Cubes"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Ice Cubes"]
+
+[[feature]]
+id = "approvals"
+status = "has"
+since = "0.13.0"
+name.ru = "Одобрить ответ, лайк, буст (GoToSocial)"
+name.en = "Approve a reply, like, boost (GoToSocial)"
+config = "`activity.approvals`"
+api = "`/api/v1/interaction_requests`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Запросы на взаимодействие, ждущие одобрения по твоим настройкам кто-может-что, приходят с кнопками «Одобрить» и «Отклонить»."
+details.en = "Interaction requests waiting for approval under your who-may-do-what settings come with “Approve” and “Reject” buttons."
+
+[[feature]]
+id = "filtered-notify"
+status = "has"
+since = "0.9.0"
+name.ru = "Уведомления от незнакомцев отдельно"
+name.en = "Notifications from strangers apart"
+config = "`notify.filtered`"
+api = "`/api/v2/notifications/policy`, `notifications/requests`"
+others = "Mastodon 4.3+"
+clients = ["Mastodon web"]
+details.ru = "Mastodon придерживает упоминания от незнакомых и новых аккаунтов, пока не разрешишь. ≡ → «Для нежных и ранимых» → «Отфильтрованные уведомления…»: кто ждёт, «Пустить» / «Отклонить», что фильтровать. `\"remind\"` — ещё и строкой при запуске, `\"menu\"` — только в меню, `\"off\"` — никак."
+details.en = "Mastodon holds back mentions from unknown and new accounts until you allow them. ≡ → “For the tender and sensitive” → “Filtered notifications…”: who waits, “Let in” / “Dismiss”, what to filter. `\"remind\"` — also a line at start, `\"menu\"` — in the menu only, `\"off\"` — not at all."
+
+[[feature]]
+id = "server-notices"
+status = "has"
+since = "0.14.0"
+name.ru = "Порванные связи и предупреждения модераторов"
+name.en = "Severed relationships and moderators' warnings"
+config = "`activity.server_notices`"
+api.ru = "уведомления `severed_relationships`, `moderation_warning`"
+api.en = "notifications `severed_relationships`, `moderation_warning`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "Когда твой сервер блокирует чужой (или наоборот) и твои подписки рвутся, Mastodon присылает уведомление со списком потерь; модераторы могут прислать предупреждение. fedtail показывает их в «Активности» (`activity.server_notices`)."
+details.en = "When your server blocks another one (or the other way round) and your follows are cut, Mastodon sends a notification with the list of what was lost; moderators may send a warning. fedtail shows them in “Activity” (`activity.server_notices`)."
+
+[[feature]]
+id = "dismiss"
+status = "has"
+since = "0.11.0"
+name.ru = "Убрать уведомление, очистить все"
+name.en = "Dismiss a notification, clear them all"
+config = "—"
+api = "`notifications/:id/dismiss`, `notifications/clear`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+
+[[feature]]
+id = "announcements"
+status = "has"
+since = "0.9.0"
+name.ru = "Объявления сервера"
+name.en = "Server announcements"
+config = "`ui.announcements`"
+api = "`/api/v1/announcements`"
+others = "Mastodon web, Phanpy, Elk, Megalodon"
+clients = ["Mastodon web", "Phanpy", "Elk", "Megalodon"]
+details.ru = "`\"banner\"` — полосой над лентой, пока не нажмёшь «Понятно» (сервер запоминает это и для других клиентов); реакции на объявления. `\"off\"` — не показывать."
+details.en = "`\"banner\"` — a strip over the lane until you press “Got it” (the server remembers that for other clients too); reactions to announcements. `\"off\"` — not shown."
+
+[[feature]]
+id = "icon-count"
+status = "has"
+since = "0.3.0"
+name.ru = "Число непрочитанного на иконке"
+name.en = "The unread number on the icon"
+config = "`ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon`"
+api.ru = "своё"
+api.en = "own"
+others = "Tokodon"
+clients = ["Tokodon"]
+details.ru = "В трее и на кнопке в панели задач (KDE: нужна запись от `--install-desktop` и `python3-pyside6.qtdbus`). Какие ленты считать — списком, как в уведомлениях: `\"lists\"` — все списки, `\"list:Друзья\"` — один, `\"all\"` — всё, плюс `icon_count_except` — что не считать. Сама иконка — опоссум, обнявший свой хвост (`app_icon = \"possum\"`, он же в меню и в «О программе»), или нарисованный пузырь-тред (`\"bubble\"`), который `themed_icon` красит в цвета темы."
+details.en = "In the tray and on the task bar button (KDE: needs the entry from `--install-desktop` and `python3-pyside6.qtdbus`). Which lanes to count — a list, as for notifications: `\"lists\"` — all lists, `\"list:Friends\"` — one, `\"all\"` — everything, plus `icon_count_except` — what not to count. The icon itself — an opossum holding its own tail (`app_icon = \"possum\"`, also in the menu and in About), or the drawn thread bubble (`\"bubble\"`), which `themed_icon` paints in the theme's colours."
+
+[[feature]]
+id = "dm-read"
+status = "has"
+since = "0.11.0"
+name.ru = "ЛС, прочитанные здесь, прочитаны и на сервере"
+name.en = "Direct messages read here are read on the server too"
+config.ru = "`\"direct\"` в `lanes.enabled`"
+config.en = "`\"direct\"` in `lanes.enabled`"
+api = "`/api/v1/conversations/:id/read`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+
+[[feature]]
+id = "push"
+status = "wont"
+name.ru = "Push-уведомления (Web Push, UnifiedPush)"
+name.en = "Push notifications (Web Push, UnifiedPush)"
+why.ru = "Десктопу хватает живого потока и опроса; push нужен телефонам."
+why.en = "A desktop has enough with the live stream and polling; push is for phones."
+
+[[feature]]
+id = "grouped-v2"
+status = "undecided"
+name.ru = "Сгруппированные уведомления сервера (v2)"
+name.en = "The server's grouped notifications (v2)"
+others = "Mastodon web, Ivory, Phanpy"
+clients = ["Mastodon web", "Ivory", "Phanpy"]
+note.ru = "Своя группировка уже есть."
+note.en = "fedtail's own grouping is there already."

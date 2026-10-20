@@ -1,0 +1,118 @@
+# Read marks and place — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "reading"
+title.ru = "Прочитанное и позиция"
+title.en = "Read marks and place"
+
+[[feature]]
+id = "oldest-first"
+status = "has"
+since = "0.1.0"
+name.ru = "Порядок «старое сверху», ничего не прыгает"
+name.en = "Oldest on top, nothing jumps"
+config = "`feed.order`, `feed.start_at`, `feed.on_new`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "`feed.order = \"oldest_first\"` — старое сверху, читаешь вниз, как RSS или Point (`\"newest_first\"` — как у всех). `feed.start_at = \"first_unread\"` — открыл ленту и стоишь на первом непрочитанном (`\"newest\"` — на самом свежем). `feed.on_new = \"keep_position\"` — пришло новое, а позиция не меняется, растёт только счётчик (`\"jump_to_newest\"` — прыгнуть к новому)."
+details.en = "`feed.order = \"oldest_first\"` — oldest on top, you read downwards, like RSS or Point (`\"newest_first\"` — as everyone does). `feed.start_at = \"first_unread\"` — open a lane and you stand at the first unread (`\"newest\"` — at the freshest). `feed.on_new = \"keep_position\"` — new posts come and the place doesn't move, only the counter grows (`\"jump_to_newest\"` — jump to the new)."
+
+[[feature]]
+id = "catch-up"
+status = "has"
+since = "0.1.0"
+name.ru = "Догонять ленту без дыр"
+name.en = "Catching up with no holes"
+config = "`feed.page_size`, `feed.catch_up_limit`"
+api = "`min_id`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Ленты, которые дочитывают, догоняются вперёд от последнего известного поста, страница за страницей (`page_size` постов за запрос, до `catch_up_limit` за опрос — остальное на следующем). Поэтому в локальной копии нет дыр и читать можно строго по хронологии. Кнопки «загрузить пропущенное», которую чинят другие клиенты (Fedilab в 2026-м — полдюжины исправлений про дыры и прыжки, часть на GoToSocial), здесь не нужно."
+details.en = "Lanes meant to be read to the end catch up forward from the last known post, page by page (`page_size` posts a request, up to `catch_up_limit` a poll — the rest on the next one). So the local copy has no holes and you can read strictly in order. The “load what's missing” button other clients keep fixing (Fedilab in 2026 — half a dozen fixes about holes and jumps, some on GoToSocial) isn't needed here."
+
+[[feature]]
+id = "mark-read"
+status = "has"
+since = "0.1.0"
+name.ru = "Когда пост считается прочитанным"
+name.en = "When a post counts as read"
+config = "`read.mark_read`, `read.read_button`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail (ручной режим)"
+others.en = "only in fedtail (the manual mode)"
+clients = []
+details.ru = "`\"on_scroll\"` — когда прокрутил пост целиком; `\"on_open\"` — вся лента, как только открыл; `\"manual\"` — только руками: «Всё прочитано» над лентой, «Прочитано» и «Прочитано до сюда» (этот и всё старше) в меню ⋯. С ручным режимом лента всегда ждёт ровно там, где ты остановился, хоть читай по одному посту. `read.read_button = true` — кнопка ✓ под каждым непрочитанным. Пункты меню работают при любом режиме."
+details.en = "`\"on_scroll\"` — when you've scrolled past the whole post; `\"on_open\"` — the whole lane as soon as you open it; `\"manual\"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `read.read_button = true` — a ✓ button under each unread post. The menu items work in any mode."
+
+[[feature]]
+id = "own-posts-read"
+status = "has"
+since = "0.13.0"
+name.ru = "Свои посты всегда прочитаны"
+name.en = "Your own posts are always read"
+config = "—"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "Пост, который ты написал, — прочитан, откуда бы он ни пришёл: из Tusky ночью, через тред, догрузкой после перезапуска."
+details.en = "A post you wrote is read, wherever it came from: from Tusky at night, through a thread, fetched after a restart."
+
+[[feature]]
+id = "first-run"
+status = "has"
+since = "0.1.0"
+name.ru = "Первый запуск не начинается с завала"
+name.en = "The first run doesn't start with a pile"
+config = "`feed.first_run_mark_read`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "При самом первом запуске всё загруженное считается прочитанным."
+details.en = "At the very first run, everything fetched counts as read."
+
+[[feature]]
+id = "markers"
+status = "has"
+since = "0.8.0"
+name.ru = "Позиция чтения общая с другими клиентами"
+name.en = "The reading place is shared with other clients"
+config = "`read.sync_markers`"
+api = "`/api/v1/markers`"
+others = "Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes"
+clients = ["Mastodon web", "Tusky", "Ivory", "Phanpy", "Ice Cubes"]
+details.ru = "Дочитал «Ленту» или упоминания на телефоне — здесь это тоже прочитано, и наоборот. Работает с Mastodon, GoToSocial, Akkoma — если тот клиент сообщает место серверу: веб Mastodon, Ivory, Phanpy сообщают, Tusky держит место в «Ленте» у себя и делится только уведомлениями. `false` — прочитанное живёт только в fedtail."
+details.en = "Read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma — if that client tells the server its place: Mastodon's web, Ivory, Phanpy do; Tusky keeps its place in Home to itself and shares only notifications. `false` — read marks live in fedtail only."
+
+[[feature]]
+id = "build-around"
+status = "has"
+since = "0.11.0"
+name.ru = "Карточки строятся вокруг места чтения"
+name.en = "Cards are built around the reading place"
+config = "`feed.build_at_once`, `feed.render_limit`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "При открытии ленты строится `build_at_once` карточек вокруг места, где ты читаешь; остальные — когда подкручиваешь к краю, а далеко позади отпускаются (больше трёх `build_at_once` — обратно до одного позади и двух впереди). То, что ты читаешь, не сдвигается; фильтр и «только непрочитанное» тоже строят только вокруг места чтения. На экране держится не больше `render_limit` последних постов, старые — по кнопке «раньше». `0` в `build_at_once` — строить всё сразу (на сотнях постов это секунды)."
+details.en = "When a lane opens, `build_at_once` cards are built around where you read; the rest — as you scroll near an edge, and far behind they are let go (more than three `build_at_once` — back to one behind and two ahead). What you read doesn't move; a filter and “unread only” also build only around the reading place. At most `render_limit` latest posts are kept on screen, older ones with the “older” button. `0` in `build_at_once` — build everything at once (on hundreds of posts that takes seconds)."
+
+[[feature]]
+id = "esc-curtain"
+status = "has"
+since = "0.3.0"
+name.ru = "Esc — шторка, а не закрытие окна"
+name.en = "Esc draws a curtain instead of closing the window"
+config = "`ui.esc`, `ui.start_lane`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Esc закрывает то, что сверху (картинку, поиск), а последний Esc при `ui.esc = \"curtain\"` задёргивает все ленты шторкой: окно на месте, слева счётчики, справа пусто, и ничего не отмечается прочитанным — утром откроешь, а новое накопилось. `\"tray\"` — убрать в трей, `\"off\"` — ничего. С чего начинать при запуске — `ui.start_lane`: `\"none\"` (шторка, Enter откроет прошлую), `\"last\"` или имя ленты."
+details.en = "Esc closes what's on top (a picture, the search), and the last Esc with `ui.esc = \"curtain\"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `\"tray\"` — off to the tray, `\"off\"` — nothing. What to start with — `ui.start_lane`: `\"none\"` (the curtain, Enter opens the last one), `\"last\"` or a lane's name."

@@ -1,0 +1,199 @@
+# fedtail and other clients
+
+The features of the [full list](/docs/en/features.md), as one matrix a chapter: whether other clients have the same. ✓ — they do, empty — they don't or it's unknown. From their READMEs and release notes (autumn 2026) and general knowledge, without trying each one live; the details and remarks are in the “Others” column of the full list.
+
+fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
+
+## Lanes
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Federated, Home, Local | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Bots in a lane of their own | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Personal lanes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Lists as lanes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |
+| Who is in a list leaves the general lanes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Who is in a list; your own order of lists | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
+| Into a list — the author or the booster; only people you follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Into a list right after a follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Hashtag lane, following tags | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| My likes | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   | ✓ | ✓ |   |   |
+| Bookmarks | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trends | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
+| An empty live lane says why it's empty | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Filtering a lane by media and boosts | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Repeated boosts don't bring an old post up again | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| All / Posts only / New; Feed / Conversations | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
+| Find in a lane | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Sending to a slow server without doubles | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Find in every lane at once | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Finding people, tags and posts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| A lane of several tags | ✓ |   |   |   | ✓ |   |   | ✓ |   |   |   | ✓ |   |   |
+| Columns side by side | ✓ | ✓ |   |   | ✓ |   |   |   |   | ✓ |   | ✓ |   | ✓ |
+| Collections (Mastodon 4.6) | ⏳ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+
+## Threads
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A thread as a tree, comments numbered | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
+| Over a reply — what it answers | ✓ |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| A whole thread: replies from the author's server | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A thread grows when Mastodon has gathered the replies | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Thread subscriptions, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Mute a thread | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
+
+## Read marks and place
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Oldest on top, nothing jumps | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Catching up with no holes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| When a post counts as read | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| The reading place is shared with other clients | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
+| Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+
+## The post card
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Arts mode | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Content warnings (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Open every CW in a thread at once | — |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| Sensitive pictures | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Link cards | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Servers' emoji as pictures | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| No emoji at all | ✓ |   | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Quotes: showing them | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
+| Polls: seeing and voting | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Poll results without voting | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Edit history | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
+| Translation by the server | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
+| Emoji reactions | ◐ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
+| Who liked and boosted | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
+| Honest counters | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Who quoted my post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Folding hashtag padding | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
+| Labels on the card | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |   |
+
+## Pictures and video
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Picture viewer | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Picture grid | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
+| Picture descriptions (alt) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Video, audio, gifs inside the window | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Video without a hardware decoder (the default) | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Save a picture, video, gif | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
+| Pictures and video ahead of time, a disk cache | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+
+## Profiles
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Your own and other people's profiles | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Pinned posts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Featured tags and recommended people | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| A little-known person's profile — from their server | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |   |   |
+| Posts older than my server knows | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Followers and follows from the person's server | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |   |   |
+| “Following since …” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| The person has moved | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+
+## Writing
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| The compose panel and drafts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Visibility: private by default, a reply never wider than the post | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Markdown | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Preview before sending | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Content warning (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Pictures: drag, paste, description, focus | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Shrinking pictures to the server's limit | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Completing #tags, @nicks, :emoji: | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| CamelCase hint for hashtags | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| The post's language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| A poll in a post | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Call someone into a thread | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Copy the handle @user@server | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Quoting a post; who may quote mine | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
+| Who may reply, boost, like (GoToSocial) | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A scheduled post | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |   |
+| Edit, delete, pin your own post | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Delete and redraft | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |
+| A thread as a chain | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
+| A command line as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+
+## People and order
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Follows and follow requests | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Hide a person's boosts; the languages of a follow | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |
+| Mute, block, word filters | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Block a whole server | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
+| Report to the moderators | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| A private note on a person | ✓ | ✓ |   | ✓ |   |   |   | ✓ |   |   |   |   |   |   |
+| A bell on a person's posts | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   | ✓ |   |   |   |
+| Remove from followers without a block | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
+| Recommend people and tags on your own profile | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| The server's suggestions, the profile directory | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
+| About the server | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
+| Your profile | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |
+| Post visibility as set on the server | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
+
+## Notifications and activity
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Desktop notifications with privacy levels | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Activity: likes, boosts, follows | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Grouping notifications | ◐ | ✓ |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
+| Approve a reply, like, boost (GoToSocial) | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Notifications from strangers apart | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Severed relationships and moderators' warnings | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Dismiss a notification, clear them all | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Server announcements | ✓ | ✓ |   |   | ✓ | ✓ |   |   |   |   | ✓ |   |   |   |
+| The unread number on the icon | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |   |   |
+| Direct messages read here are read on the server too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+
+## Several accounts
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Profiles and the switcher | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Log in again, log out | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| All accounts in one window | ✓ |   |   | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   | ✓ |
+| An account's colour in the shared window | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Acting as another account | ✓ |   |   |   |   |   | ✓ |   |   | ✓ |   |   |   |   |
+
+## The application
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Themes as files | ✓ |   |   |   |   |   |   | ✓ |   |   | ✓ |   |   |   |
+| Trying a theme without a restart | ✓ |   |   |   | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
+| The config as a file in chapters | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| The settings reference | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| Window, tray, keys | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
+| Links to posts and profiles — inside | ✓ |   |   | ✓ | ✓ | ✓ |   |   | ✓ |   | ✓ |   |   |   |
+| Open a link in the running fedtail | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |   |   |
+| Everything is stored locally, readable offline | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |
+| Polling the server and the live stream | ✓ | ✓ |   |   | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |
+| Screen readers | ◐ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
+| Interface language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+## Interfaces
+
+| What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A Qt window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Commands in a terminal | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| A terminal interface (Textual) | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
+| GTK4 + libadwaita | ⏳ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
+
+Only in fedtail — **33** features of the 132 compared.

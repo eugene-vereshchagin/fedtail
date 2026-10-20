@@ -1,0 +1,66 @@
+# Builds and installing — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "builds"
+title.ru = "Сборки и установка"
+title.en = "Builds and installing"
+
+[[feature]]
+id = "from-source"
+status = "has"
+since = "0.1.0"
+name.ru = "Из исходников: `python3 -m fedtail`"
+name.en = "From the source: `python3 -m fedtail`"
+note.ru = "PySide6 и requests"
+note.en = "PySide6 and requests"
+
+[[feature]]
+id = "linux-onefile"
+status = "has"
+since = "0.5.0"
+name.ru = "Linux: один файл"
+name.en = "Linux: one file"
+note.ru = "`fedtail-X.Y.Z-linux-x86_64`, собран на Debian 12"
+note.en = "`fedtail-X.Y.Z-linux-x86_64`, built on Debian 12"
+
+[[feature]]
+id = "deb"
+status = "has"
+since = "0.10.0"
+name.ru = "deb-пакет"
+name.en = "A deb package"
+note.ru = "собирается в CI в Debian 13"
+note.en = "built in CI on Debian 13"
+
+[[feature]]
+id = "windows-exe"
+status = "has"
+since = "0.5.0"
+name.ru = "Windows: один .exe"
+name.en = "Windows: one .exe"
+note = "`fedtail-X.Y.Z-windows.exe`"
+
+[[feature]]
+id = "menu-entry"
+status = "has"
+since = "0.2.0"
+name.ru = "Пункт в меню с иконкой"
+name.en = "A menu entry with the icon"
+note = "`--install-desktop`"
+
+[[feature]]
+id = "apt-repo"
+status = "planned"
+name.ru = "Свой apt-репозиторий"
+name.en = "An apt repository of its own"
+note.ru = "из deb-пакетов релизов"
+note.en = "from the releases' deb packages"
+size = "—"
+
+[[feature]]
+id = "windows-installer"
+status = "planned"
+name.ru = "Установщик и подпись для Windows"
+name.en = "An installer and a signature for Windows"
+note.ru = "когда будут пользователи на Windows"
+note.en = "once there are users on Windows"
+size = "—"

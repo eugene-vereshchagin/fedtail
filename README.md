@@ -36,6 +36,7 @@ where you came from; a lane remembers where you stopped and never jumps.
 
 ## What's different
 
+<!-- include: parts/whats-different -->
 - **Nothing jumps.** A lane opens at the first unread post. New posts arrive below and never
   move what you're reading. You read in chronological order, like RSS.
 - **Every reply says what it replies to.** A strip above the reply quotes the start of the
@@ -53,6 +54,7 @@ where you came from; a lane remembers where you stopped and never jumps.
   "like every other client" is one line away.
 - **Several accounts.** One profile per account, each with its own config and theme; switch
   with a right click on your avatar, or put them all in one window.
+<!-- /include -->
 
 ## For Juick and Point.im people
 
@@ -146,12 +148,13 @@ command line, likes & boosts and follow requests are the main account's.
 | images | `~/.local/share/fedtail/<profile>/cache/` |
 
 The config is created on first run as a copy of
-[`fedtail/data/config.example.toml`](fedtail/data/config.example.toml) — in chapters (look &
+[`fedtail/data/config.example.en.toml`](fedtail/data/config.example.en.toml) (or of
+[the Russian one](fedtail/data/config.example.ru.toml) on a Russian desktop) — in chapters (look &
 window, reading, lanes, posts, notifications…), every option set to its default with an
 explanation, so an editor colours it — and never touched again. A value written there stays
 yours even if a later version changes the default; comment it out (or delete it) to follow
-the program's default. `config.example.toml` next to it is always the full reference for the
-running version. When an update brings new options, fedtail says so at start, and
+the program's default. `config.example.en.toml` and `config.example.ru.toml` next to it are
+always the full reference for the running version, in English and in Russian. When an update brings new options, fedtail says so at start, and
 `python3 -m fedtail --update-config` adds them to your file in the right sections, refreshes the
 explanations of the options already there and drops commented-out ones that are gone (a `.bak`
 copy is kept; your values and notes stay). `python3 -m fedtail --rebuild-config` lays the
@@ -429,10 +432,13 @@ ruff check .
 * [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it is built: modules, threads, the store,
   lanes, the poll cycle, events, the Qt frontend, themes, config, tests, recipes.
 * [docs/DEBUGGING.md](docs/DEBUGGING.md) — the logs, and what to send when it breaks.
-* [docs/FEATURES.md](docs/FEATURES.md) — what fedtail does and doesn't, next to other clients,
-  with the config switch for each (Russian tables, English summary).
-* [docs/CONFIG.md](docs/CONFIG.md) — every config option in tables by chapter, with its
-  default (Russian; built from `config.example.toml` by `tools/config_doc.py`).
+* [docs/en/features.md](docs/en/features.md) — what fedtail does and doesn't, since which
+  version, with the config switch for each; [docs/en/comparison.md](docs/en/comparison.md) —
+  next to other clients, as a matrix.
+* [docs/en/config.md](docs/en/config.md) — every config option in tables by chapter, with its
+  default.
+* All of these exist in Russian too (`docs/ru/`) and are built by `python3 tools/docs_build.py`
+  from `docs/src/` and the example configs — edit there, a test keeps them in step.
 * [docs/DESIGN.md](docs/DESIGN.md) — the spec and the queue of planned work (Russian).
 * [AGENTS.md](AGENTS.md) — the rules in one page, for coding agents and humans in a hurry.
 * [CONTRIBUTING.md](CONTRIBUTING.md) — reporting bugs, proposing changes, running the tests.

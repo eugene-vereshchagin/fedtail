@@ -10,7 +10,8 @@
 # Новая версия принесла новые настройки — `python3 -m fedtail --update-config` допишет их
 # в нужные главы (старый файл сохранится как config.toml.bak). Пересобрать файл заново по
 # главам, с твоими значениями — `python3 -m fedtail --rebuild-config`.
-# Полный справочник текущей версии всегда лежит рядом: config.example.toml.
+# Полный справочник текущей версии всегда лежит рядом: config.example.ru.toml
+# (и config.example.en.toml — то же по-английски).
 #
 # Где лежит: ~/.config/fedtail/<профиль>/config.toml  (без --profile — главный профиль, ★)
 #

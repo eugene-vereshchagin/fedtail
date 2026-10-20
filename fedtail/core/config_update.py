@@ -2,9 +2,11 @@
 
 The app never edits config.toml on its own. Instead:
 
-* on every start it writes config.example.toml next to it — the complete reference
-  for this version, in chapters, every option set to its default with an explanation
-  (that file is ours, not the user's);
+* on every start it writes config.example.ru.toml and config.example.en.toml next to
+  it — the complete reference for this version, in Russian and in English, in
+  chapters, every option set to its default with an explanation (those files are
+  ours, not the user's); the one in the language of the user's file (see
+  config.language_of) is what the steps below work from;
 * it tells which options the user's file doesn't mention yet;
 * `python3 -m fedtail --update-config` inserts those options, commented out with their
   explanations, into the right sections of the user's file (a .bak is kept); it also

@@ -1,0 +1,88 @@
+# Interfaces — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "frontends"
+title.ru = "Интерфейсы"
+title.en = "Interfaces"
+intro.ru = """
+Ядро не знает про GUI; интерфейсы — плагины. Какой запускать — `ui.frontend` или `--ui` на
+один раз."""
+intro.en = "The core knows nothing about a GUI; interfaces are plugins. Which one to start — `ui.frontend`, or `--ui` for one run."
+
+[[feature]]
+id = "qt"
+status = "has"
+since = "0.1.0"
+name.ru = "Окно на Qt"
+name.en = "A Qt window"
+config = "`ui.frontend = \"qt\"`"
+others.ru = "основной"
+others.en = "the main one"
+clients = []
+
+[[feature]]
+id = "cli"
+status = "has"
+since = "0.9.0"
+name.ru = "Команды в терминале"
+name.en = "Commands in a terminal"
+config = "`[cli]`: `enabled`, `color`, `max_lines`, `tail_lanes`"
+others = "tut (TUI), toot (CLI)"
+clients = ["tut"]
+details.ru = "`fedtail lanes`, `fedtail show comments -n 20`, `fedtail tail` (новое по мере прихода), `fedtail post \"текст\"`, `fedtail post --reply a3f \"текст\"`, `fedtail read comments`. Тот же профиль, база и прочитанное, что у окна; работает без Qt."
+details.en = "`fedtail lanes`, `fedtail show replies -n 20`, `fedtail tail` (the new as it comes), `fedtail post \"text\"`, `fedtail post --reply a3f \"text\"`, `fedtail read replies`. The same profile, database and read marks as the window; works without Qt."
+
+[[feature]]
+id = "tui"
+status = "has"
+since = "0.10.0"
+name.ru = "Терминальный интерфейс (Textual)"
+name.en = "A terminal interface (Textual)"
+config = "`ui.frontend = \"tui\"`, `[tui]`: `theme`, `lanes_width`, `show_context`"
+others = "tut"
+clients = ["tut"]
+details.ru = "Слева ленты, справа посты, внизу командная строка. Те же клавиши, `x` — лента прочитана, `:` — командная строка. Работает по ssh. Нужен `python3-textual`."
+details.en = "Lanes on the left, posts on the right, the command line at the bottom. The same keys, `x` — the lane is read, `:` — the command line. Works over ssh. Needs `python3-textual`."
+
+[[feature]]
+id = "web"
+status = "has"
+since = "0.10.0"
+name.ru = "Веб на localhost"
+name.en = "Web on localhost"
+config = "`ui.frontend = \"web\"`, `[web]`: `host`, `port`, `open_browser`"
+others.ru = "Phanpy, Elk — веб-клиенты"
+others.en = "Phanpy, Elk — web clients"
+clients = ["Phanpy", "Elk"]
+details.ru = "fedtail во вкладке браузера. При запуске печатается одноразовая ссылка (15 минут); браузер получает ключ из папки профиля в cookie (`web.key`; удалишь — выйдут все браузеры и старые ссылки с ключом). `host = \"0.0.0.0\"` — и с телефона в домашней сети; без шифрования, только для своей сети."
+details.en = "fedtail in a browser tab. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = \"0.0.0.0\"` — from the phone on the home network too; no encryption, for your own network only."
+
+[[feature]]
+id = "gtk"
+status = "planned"
+name = "GTK4 + libadwaita"
+config = "—"
+others = "Tuba"
+clients = ["Tuba"]
+size.ru = "крупный"
+size.en = "large"
+details.ru = "Чтобы выглядело родным в GNOME и прочих GTK-столах."
+details.en = "To look native in GNOME and other GTK desktops."
+
+[[feature]]
+id = "toga"
+status = "planned"
+name = "Toga (BeeWare)"
+config = "—"
+others = "—"
+size.ru = "крупный"
+size.en = "large"
+details.ru = "Нативные виджеты Windows, macOS, GTK, Android из одного кода. На попробовать."
+details.en = "Native widgets of Windows, macOS, GTK, Android from one code. To try out."
+
+[[feature]]
+id = "xmpp-gateway"
+status = "wont"
+name.ru = "XMPP-шлюз"
+name.en = "An XMPP gateway"
+why.ru = "Убран из очереди."
+why.en = "Taken off the queue."

@@ -1,9 +1,13 @@
-"""docs/CONFIG.md from fedtail/data/config.example.toml: every option in tables by
-chapter, with its default and what it does. The example file is the source — edit the
-explanations there and run this again (a test checks the two agree):
+"""The config reference, docs/<lang>/config.md, from fedtail/data/config.example.<lang>.toml:
+every option in tables by chapter, with its default and what it does. The example files
+are the source — edit the explanations there; `tools/docs_build.py` builds this along
+with the other documents (and `--check`s it):
 
-    python3 tools/config_doc.py            # write docs/CONFIG.md
-    python3 tools/config_doc.py --check    # exit 1 if it's out of date
+    python3 tools/docs_build.py            # write docs/ru/config.md, docs/en/config.md…
+    python3 tools/config_doc.py            # the same (kept for habit)
+
+The Russian and English examples hold the very same options, values and order — only the
+comments differ; a test compares them line by line.
 """
 
 import re
@@ -12,8 +16,12 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE = ROOT / "fedtail" / "data" / "config.example.toml"
-OUT = ROOT / "docs" / "CONFIG.md"
+DATA = ROOT / "fedtail" / "data"
+
+
+def example_path(lang):
+    return DATA / f"config.example.{lang}.toml"
+
 
 BANNER = re.compile(r"^#\s*═{5,}\s*$")
 CHAPTER = re.compile(r"^#\s+(\d+)\.\s+(.+?)\s*$")
@@ -22,15 +30,40 @@ SECTION = re.compile(r"^\[([A-Za-z0-9_]+)\]\s*$")
 OPTION = re.compile(r"^#?\s*([A-Za-z0-9_]+)\s*=")
 FLAG = re.compile(r"^#\s{2,}(\S.*?)\s{2,}(\S.*)$")  # "#   -p, --profile ИМЯ    профиль…"
 
-HEAD = """# Настройки fedtail
+L = {
+    "ru": {
+        "head": """# Настройки fedtail
+
+[English](/docs/en/config.md)
 
 Справочник по всем ключам конфига, таблицами по главам. **Файл собирается сам** из
-`fedtail/data/config.example.toml` командой `python3 tools/config_doc.py` — правь
+`fedtail/data/config.example.ru.toml` командой `python3 tools/docs_build.py` — правь
 пояснения там, а не здесь (тест проверяет, что этот файл не отстал).
 
 Что за возможность стоит за ключом и как это у других клиентов —
-[FEATURES.md](FEATURES.md).
-"""
+[список возможностей](/docs/ru/features.md).
+""",
+        "file_title": "конфиг профиля", "flags": "Ключи запуска", "chapters": "Главы",
+        "how": "Как устроен конфиг", "key": "Ключ", "does": "Что делает",
+        "default": "По умолчанию",
+    },
+    "en": {
+        "head": """# fedtail settings
+
+[По-русски](/docs/ru/config.md)
+
+Every key of the config, in tables by chapter. **This file is built** from
+`fedtail/data/config.example.en.toml` by `python3 tools/docs_build.py` — edit the
+explanations there, not here (a test checks this file keeps up).
+
+Which feature stands behind a key and how other clients do it —
+[the feature list](/docs/en/features.md).
+""",
+        "file_title": "profile config", "flags": "Launch keys", "chapters": "Chapters",
+        "how": "How the config works", "key": "Key", "does": "What it does",
+        "default": "Default",
+    },
+}
 
 
 def _toml(value):
@@ -71,7 +104,8 @@ def _anchor(title):
     return a.replace(" ", "-")
 
 
-def build(example_text):
+def build(example_text, lang="ru"):
+    lab = L[lang]
     defaults = tomllib.loads(example_text)
     lines = example_text.splitlines()
     first = next(i for i, x in enumerate(lines) if BANNER.match(x))
@@ -80,16 +114,16 @@ def build(example_text):
     # the file's own header: paragraphs, "where it lives", the start-up keys
     paras, flags, para = [], [], []
     in_flags = False
-    for raw in head[2:] if head and "конфиг профиля" in head[0] else head:
+    for raw in head[2:] if head and lab["file_title"] in head[0] else head:
         t = raw[1:].strip() if raw.startswith("#") else raw.strip()
-        if t.startswith("Ключи запуска"):
+        if t.startswith(lab["flags"]):
             in_flags = True
             if para:
                 paras.append(" ".join(para))
                 para = []
             continue
         if in_flags:
-            if t.startswith("Главы"):
+            if t.startswith(lab["chapters"]):
                 break  # the chapters are listed from the file itself
             m = FLAG.match(raw)
             if m:
@@ -152,14 +186,14 @@ def build(example_text):
             continue
         comments = []
 
-    out = [HEAD, "## Как устроен конфиг", ""]
+    out = [lab["head"], f"## {lab['how']}", ""]
     for p in paras:
         out += [p, ""]
     if flags:
-        out += ["## Ключи запуска", "", "| Ключ | Что делает |", "|---|---|"]
+        out += [f"## {lab['flags']}", "", f"| {lab['key']} | {lab['does']} |", "|---|---|"]
         out += [f"| `{k.replace('|', chr(92) + '|')}` | {v} |" for k, v in flags]
         out.append("")
-    out += ["## Главы", ""]
+    out += [f"## {lab['chapters']}", ""]
     for title, _intro, blocks in chapters:
         secs = [b[0] for b in blocks if b[0].startswith("`[")]
         names = ", ".join(secs) or "`[ui]`"
@@ -174,7 +208,8 @@ def build(example_text):
             if bintro and _text(bintro):
                 out += [_text(bintro).replace("<br>", " "), ""]
             if opts:
-                out += ["| Ключ | По умолчанию | Что делает |", "|---|---|---|"]
+                out += [f"| {lab['key']} | {lab['default']} | {lab['does']} |",
+                        "|---|---|---|"]
                 for key, value, doc in opts:
                     shown = _toml(value) if value is not None else "—"
                     out.append(f"| `{key}` | `{shown}` | {doc} |")
@@ -183,17 +218,10 @@ def build(example_text):
 
 
 def main(argv):
-    sys.path.insert(0, str(ROOT))
-    text = build(EXAMPLE.read_text("utf-8"))
-    if "--check" in argv:
-        if not OUT.exists() or OUT.read_text("utf-8") != text:
-            print("docs/CONFIG.md is out of date: python3 tools/config_doc.py")
-            return 1
-        return 0
-    OUT.write_text(text, "utf-8")
-    print(f"wrote {OUT.relative_to(ROOT)}")
-    return 0
+    import docs_build
+    return docs_build.main(argv)
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, str(ROOT / "tools"))
     sys.exit(main(sys.argv[1:]))

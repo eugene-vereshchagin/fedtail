@@ -1,0 +1,9 @@
+- **Lanes:** Bots in a lane of their own · Who is in a list leaves the general lanes · Into a list — the author or the booster; only people you follow · Into a list right after a follow · An empty live lane says why it's empty · Filtering a lane by media and boosts · Repeated boosts don't bring an old post up again · Find in a lane · Sending to a slow server without doubles · Find in every lane at once
+- **Threads:** A whole thread: replies from the author's server · Thread subscriptions, as on Point
+- **Read marks and place:** Oldest on top, nothing jumps · Catching up with no holes · When a post counts as read · Cards are built around the reading place · Esc draws a curtain instead of closing the window
+- **The post card:** Arts mode · Honest counters
+- **Pictures and video:** Video without a hardware decoder (the default) · Pictures and video ahead of time, a disk cache
+- **Profiles:** Posts older than my server knows · “Following since …”
+- **Writing:** Visibility: private by default, a reply never wider than the post · Markdown · CamelCase hint for hashtags · Call someone into a thread · Who may reply, boost, like (GoToSocial) · A command line as on Point
+- **Notifications and activity:** Desktop notifications with privacy levels · Approve a reply, like, boost (GoToSocial) · Direct messages read here are read on the server too
+- **Interfaces:** A Qt window

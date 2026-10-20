@@ -1,0 +1,90 @@
+# Several accounts — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "accounts"
+title.ru = "Несколько аккаунтов"
+title.en = "Several accounts"
+
+[[feature]]
+id = "profiles-switch"
+status = "has"
+since = "0.3.0"
+name.ru = "Профили и переключатель"
+name.en = "Profiles and the switcher"
+config.ru = "`ui.switch_closes`, ключ запуска `--profile`"
+config.en = "`ui.switch_closes`, the launch key `--profile`"
+others.ru = "у всех многоаккаунтных"
+others.en = "every multi-account client"
+clients = ["all"]
+details.ru = "Один профиль — один аккаунт со своим конфигом, темой, базой и окном. Правый клик по аватарке (или ≡ → «Аккаунт и сервер») — список, «Мой профиль», «О сервере…» (на нём — кнопка «Редактировать профиль»), «Добавить аккаунт…»; `switch_closes` — закрывать ли текущее окно при переключении. Какой профиль и аккаунт сейчас — слева в строке состояния: «default: @ник@сервер ★»."
+details.en = "One profile — one account with its own config, theme, database and window. A right click on the avatar (or ≡ → “Account and server”) — the list, “My profile”, “About the server…” (it has the “Edit profile” button), “Add an account…”; `switch_closes` — whether to close the current window when switching. Which profile and account this is — on the left of the status bar: “default: @nick@server ★”."
+
+[[feature]]
+id = "main-profile"
+status = "has"
+since = "0.14.0"
+name.ru = "Главный профиль ★"
+name.en = "The main profile ★"
+config.ru = "≡ → «Аккаунт и сервер» → «Сделать главным»; метка `~/.config/fedtail/main-profile`"
+config.en = "≡ → “Account and server” → “Make it the main one”; the mark `~/.config/fedtail/main-profile`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "Тот, что запускается без `--profile` и из пункта меню «fedtail». Это не папка с особым именем, а метка — файл `main-profile` рядом с папками профилей; без метки главный — `default`. «Сделать главным» в меню аккаунтов переносит её; в списке (и в `--profiles`) главный отмечен ★."
+details.en = "The one started without `--profile` and from the “fedtail” menu entry. It isn't a folder with a special name but a mark — the `main-profile` file next to the profile folders; without the mark the main one is `default`. “Make it the main one” in the accounts menu moves it; in the list (and in `--profiles`) the main one is marked ★."
+
+[[feature]]
+id = "relogin-logout"
+status = "has"
+since = "0.14.0"
+name.ru = "Войти заново, выйти из аккаунта"
+name.en = "Log in again, log out"
+config.ru = "≡ → «Аккаунт и сервер», с вопросом"
+config.en = "≡ → “Account and server”, with a question"
+api = "OAuth"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Оба — в меню аккаунтов, оба сначала спрашивают. «Войти заново…» — для отозванного токена или новых разрешений: старый токен живёт, пока не войдёшь, отмена ничего не меняет, а войти так можно только в этот же аккаунт (другой — «Добавить аккаунт…»). «Выйти из аккаунта…» удаляет токен (прочитанное, черновики и конфиг остаются); если это был главный профиль, ★ уходит к другому, где ты вошёл, и окно переключается на него; если других нет — окно входа. В общем окне всех аккаунтов оба пункта недоступны."
+details.en = "Both are in the accounts menu, both ask first. “Log in again…” — for a revoked token or new permissions: the old token lives until you're in, cancelling changes nothing, and you can log in this way only to the same account (another one — “Add an account…”). “Log out…” deletes the token (read marks, drafts and the config stay); if that was the main profile, ★ goes to another one you're logged in to and the window switches to it; if there are none — the login window. In the window of all accounts both items are unavailable."
+
+[[feature]]
+id = "merge"
+status = "has"
+since = "0.3.0"
+name.ru = "Все аккаунты в одном окне"
+name.en = "All accounts in one window"
+config = "`ui.merge`"
+api.ru = "своё"
+api.en = "own"
+others = "Ivory, Phanpy, Elk, Tokodon, Sengi, Whalebird"
+clients = ["Ivory", "Phanpy", "Elk", "Tokodon", "Sengi", "Whalebird"]
+details.ru = "Ленты с одинаковыми именами сливаются, у постов других аккаунтов пометка «→ @ник» — ответ, лайк и буст уйдут от того аккаунта, который пост получил. Списки — отдельными лентами. `[\"all\"]`, имена профилей или `[]` — как выбрано в меню."
+details.en = "Lanes of the same name merge, posts of other accounts are marked “→ @nick” — a reply, a like and a boost go from the account that received the post. Lists — lanes of their own. `[\"all\"]`, profile names or `[]` — as chosen in the menu."
+
+[[feature]]
+id = "account-colors"
+status = "has"
+since = "0.14.0"
+name.ru = "Цвет аккаунта в общем окне"
+name.en = "An account's colour in the shared window"
+config = "`ui.account_colors`"
+api.ru = "своё"
+api.en = "own"
+others = "Fedilab"
+clients = ["Fedilab"]
+details.ru = "Цветная полоска или метка у постов, пришедших каждому аккаунту, — чтобы в слитом окне видеть, чьё это, не читая «→ @ник»."
+details.en = "A coloured strip or mark on the posts that came to each account — to see in a merged window whose it is without reading “→ @nick”."
+
+[[feature]]
+id = "act-as"
+status = "has"
+since = "0.14.0"
+name.ru = "Действие от другого аккаунта"
+name.en = "Acting as another account"
+config = "`ui.act_as`"
+api.ru = "общее окно, ⋯ → «От другого аккаунта»: пост ищется на его сервере"
+api.en = "the shared window, ⋯ → “From another account”: the post is looked up on its server"
+others = "Sengi, Tokodon"
+clients = ["Tokodon", "Sengi"]
+details.ru = "Лайкнуть, бустнуть или ответить не тем аккаунтом, который получил пост: В общем окне в меню ⋯ поста — «От другого аккаунта»: fedtail находит пост через сервер того аккаунта и делает действие оттуда; ответ открывается в редакторе от него."
+details.en = "Like, boost or reply not as the account that received the post: in the shared window, a post's ⋯ menu has “From another account”: fedtail finds the post through that account's server and does it from there; a reply opens in the editor as that account."

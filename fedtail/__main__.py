@@ -83,15 +83,24 @@ def main(argv=None):
     for w in warnings:
         print(f"fedtail: {where.config_file}: {w}", file=sys.stderr)
 
-    # the full reference for this version always sits next to the user's config
-    example = config.example_text()
-    ref = where.config_file.with_name("config.example.toml")
-    try:
-        if not ref.exists() or ref.read_text("utf-8") != example:
-            ref.write_text(example, "utf-8")
+    # the full reference for this version always sits next to the user's config, in every
+    # language; the one in the language of the user's own file is what updates use
+    user_text = where.config_file.read_text("utf-8")
+    lang = config.language_of(user_text, config.default_language())
+    for lg in config.EXAMPLE_LANGS:
+        text = config.example_text(lg)
+        out = where.config_file.with_name(config.example_name(lg))
+        try:
+            if not out.exists() or out.read_text("utf-8") != text:
+                out.write_text(text, "utf-8")
+        except OSError:
+            pass
+    try:  # the one-language reference of versions before 0.17
+        where.config_file.with_name("config.example.toml").unlink(missing_ok=True)
     except OSError:
         pass
-    user_text = where.config_file.read_text("utf-8")
+    example = config.example_text(lang)
+    ref = where.config_file.with_name(config.example_name(lang))
     new_options = config_update.missing(user_text, example)
     if args.rebuild_config:
         report = {}

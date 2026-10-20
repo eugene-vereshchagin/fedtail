@@ -4,6 +4,14 @@
 
 - The opossum holding its own tail is back: the app's icon (`ui.app_icon`) and the picture
   in About. It is a sticker from an official Telegram sticker pack.
+- The config's reference comes in English too: `config.example.en.toml` lies next to
+  `config.example.ru.toml` (the old `config.example.toml` goes). A new config is written in
+  the desktop's language; `--update-config` and `--rebuild-config` keep the language your
+  file is in.
+- The docs come in Russian and English, `docs/ru/` and `docs/en/`: the feature list now says
+  since which version each feature is there, and fedtail next to thirteen other clients is
+  one matrix a chapter (`comparison.md`). All of it, the config reference and the shared
+  pieces of the READMEs are built by `tools/docs_build.py`; a test keeps them in step.
 
 ## 0.16.0 — 2026-10-19
 

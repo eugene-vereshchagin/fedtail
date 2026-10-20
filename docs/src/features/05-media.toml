@@ -1,0 +1,110 @@
+# Pictures and video — a chapter of docs/{ru,en}/features.md; built by tools/docs_build.py
+
+id = "media"
+title.ru = "Картинки и видео"
+title.en = "Pictures and video"
+
+[[feature]]
+id = "image-viewer"
+status = "has"
+since = "0.1.0"
+name.ru = "Просмотрщик картинок"
+name.en = "Picture viewer"
+config = "`ui.image_viewer`, `ui.image_upscale`, `ui.image_height`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Клик по картинке — свой просмотрщик (`\"internal\"`: ← → листать, Esc закрыть) или браузер (`\"browser\"`). Маленькие картинки увеличиваются до размеров окна не больше чем в `image_upscale` раз. Высота одиночной картинки в ленте — `image_height`."
+details.en = "A click on a picture — its own viewer (`\"internal\"`: ← → to flip, Esc to close) or the browser (`\"browser\"`). Small pictures are enlarged to the window at most `image_upscale` times. The height of a single picture in a lane — `image_height`."
+
+[[feature]]
+id = "media-grid"
+status = "has"
+since = "0.9.0"
+name.ru = "Сетка картинок"
+name.en = "Picture grid"
+config = "`ui.media_grid`"
+api = "`meta.focus`"
+others = "Mastodon web, Tusky, Phanpy, Elk"
+clients = ["Mastodon web", "Tusky", "Phanpy", "Elk"]
+details.ru = "Несколько картинок в посте: `\"natural\"` — каждая целиком, своей формы; `\"square\"` — ровной сеткой квадратов, обрезанных вокруг точки фокуса автора. Одна картинка не обрезается никогда."
+details.en = "Several pictures in a post: `\"natural\"` — each whole, its own shape; `\"square\"` — an even grid of squares cut around the author's focus point. A single picture is never cut."
+
+[[feature]]
+id = "alt-text"
+status = "has"
+since = "0.9.0"
+name.ru = "Подписи к картинкам (alt)"
+name.en = "Picture descriptions (alt)"
+config = "`ui.alt_text`"
+api = "`description`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "`\"tooltip\"` — при наведении; `\"caption\"` — ещё и подписью под картинками. Подписи ищутся через `Ctrl+F`."
+details.en = "`\"tooltip\"` — on hover; `\"caption\"` — also as a caption under the pictures. Descriptions are found by `Ctrl+F`."
+
+[[feature]]
+id = "video-player"
+status = "has"
+since = "0.11.0"
+name.ru = "Видео, аудио, гифки внутри окна"
+name.en = "Video, audio, gifs inside the window"
+config = "`ui.video_player`, `ui.gifv`"
+api = "`media_attachments`"
+others.ru = "у всех"
+others.en = "everyone"
+clients = ["all"]
+details.ru = "Видео играет поверх окна (пробел — пауза, ← → — перемотка, M — звук, O — в браузер, Esc — закрыть), аудио — плеером в карточке. Нужен QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); без него — стоп-кадр с ▶ и браузер. Гифки Мастодона (короткие беззвучные видео): `\"play\"` — крутятся в карточке, пока она на экране (не больше трёх разом), `\"click\"` — стоп-кадр, клик — поверх окна."
+details.en = "A video plays over the window (Space — pause, ← → — seek, M — sound, O — to the browser, Esc — close), audio — with a player in the card. Needs QtMultimedia (Debian: `python3-pyside6.qtmultimedia python3-pyside6.qtmultimediawidgets`); without it — a still frame with ▶ and the browser. Mastodon's gifs (short silent videos): `\"play\"` — loop in the card while it's on screen (at most three at once), `\"click\"` — a still frame, a click plays it over the window."
+
+[[feature]]
+id = "video-software"
+status = "has"
+since = "0.16.0"
+name.ru = "Видео без аппаратного декодера (по умолчанию)"
+name.en = "Video without a hardware decoder (the default)"
+config = "`ui.video_decode`"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+
+[[feature]]
+id = "save-media"
+status = "has"
+since = "0.2.0"
+name.ru = "Сохранить картинку, видео, гифку"
+name.en = "Save a picture, video, gif"
+config = "`ui.save_dir`"
+others = "Tusky, Ivory"
+clients = ["Tusky", "Ivory"]
+details.ru = "Кнопка ⤓, клавиша S в просмотрщике, правый клик по картинке в ленте. `\"\"` — в «Загрузки» рабочего стола."
+details.en = "The ⤓ button, the S key in the viewer, a right click on a picture in a lane. `\"\"` — into the desktop's Downloads."
+
+[[feature]]
+id = "prefetch"
+status = "has"
+since = "0.13.0"
+name.ru = "Картинки и видео заранее, кэш на диске"
+name.en = "Pictures and video ahead of time, a disk cache"
+config = "`feed.prefetch`, `ui.image_disk_mb`, `ui.video_disk_mb`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Как только опрос принёс новые посты, их картинки скачиваются на диск своими фоновыми потоками — открываешь ленту, а всё уже есть. `\"previews\"` (по умолчанию) — превью (и у видео), аватарки и картинки ссылок; `\"all\"` — ещё оригиналы, сами видео и гифки (видео по одному, до 300 МБ каждое); `\"off\"` — только когда пост на экране. Кэш картинок держится в `image_disk_mb` (1 ГБ), видео — в своей папке, `video_disk_mb` (10 ГБ); сверх лимита уходит то, что дольше всего не открывали. Видео, открытое раз, в следующий раз играет с диска."
+details.en = "As soon as a poll brings new posts, their pictures are fetched to disk by background workers of their own — open a lane and everything is there. `\"previews\"` (the default) — previews (of videos too), avatars and link pictures; `\"all\"` — also originals, the videos themselves and gifs (videos one at a time, up to 300 MB each); `\"off\"` — only when a post is on screen. The picture cache keeps within `image_disk_mb` (1 GB), videos — in their own folder, `video_disk_mb` (10 GB); over the limit go the ones not opened the longest. A video opened once plays from disk the next time."
+
+[[feature]]
+id = "image-memory"
+status = "has"
+since = "0.2.0"
+name.ru = "Память под картинки"
+name.en = "Memory for pictures"
+config = "`ui.image_cache_mb`, `ui.image_decode`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+details.ru = "Разжатые картинки держатся в памяти до `image_cache_mb` МБ, самые давние выбрасываются первыми (с диска перечитываются мгновенно). `image_decode = \"box\"` — разжимать под размер рамки с учётом плотности экрана: в разы меньше памяти; `\"full\"` — до 1200 точек по большей стороне, резче при растягивании окна."
+details.en = "Decoded pictures are held in memory up to `image_cache_mb` MB, the oldest thrown out first (reread from disk at once). `image_decode = \"box\"` — decode to the size of the frame, minding the screen's density: several times less memory; `\"full\"` — up to 1200 pixels on the longer side, sharper when the window is stretched."

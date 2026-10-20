@@ -114,7 +114,9 @@ class CliTest(unittest.TestCase):
             self.assertEqual(out.returncode, 0, out.stderr)
             self.assertIn("ui.actions", out.stdout)
             self.assertTrue((Path(d) / "c.toml.bak").exists())
-            self.assertTrue((Path(d) / "config.example.toml").exists())
+            self.assertTrue((Path(d) / "config.example.ru.toml").exists())
+            self.assertTrue((Path(d) / "config.example.en.toml").exists())
+            self.assertFalse((Path(d) / "config.example.toml").exists())
             self.assertIn("\nactions = ", cfg.read_text("utf-8"))
 
     def test_bad_config_is_explained(self):

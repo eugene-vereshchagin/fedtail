@@ -142,14 +142,20 @@ fedtail/
       login.py       first-run login dialog (OAuth out-of-band code)
       diagnostics.py Qt messages → log, freeze watchdog, widget counts
   data/
-    config.example.toml  the full config in chapters (Russian), the reference
+    config.example.ru.toml  the full config in chapters, the reference (Russian)
+    config.example.en.toml  the same options, values and order, English comments
+    help/<lang>/*.md     the in-app help (F1), its includes expanded by tools/docs_build.py
     themes/*.toml        built-in themes (system.toml lists every key)
     icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
     icons/fedtail.svg    the drawn bubble (ui.app_icon = "bubble"; iconart.py themes it)
 tests/               unittest; fakes.py is an in-memory Mastodon
 tools/screenshots.py renders the window with made-up data (CI publishes PNGs)
+tools/docs_build.py  builds every generated doc and expands includes (§19, docs)
+tools/config_doc.py  the config reference from an example config (docs_build calls it)
 .github/             CI workflow; annotate.py turns test failures into annotations
-docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md
+docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md, TESTING.md
+  src/features/*.toml  the feature list's source: a chapter a file, ru and en side by side
+  ru/, en/             generated: features.md, comparison.md, config.md; parts/ to include
 ```
 
 ## 3. Start-up sequence
@@ -162,8 +168,9 @@ docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md
    `~/.local/share/fedtail/<profile>/` (0700). Overridable by `--config/--data`.
 3. `config.load()` → validated `cfg` dict (see §16). A broken config prints the
    reason and exits with code 2.
-4. Writes `config.example.toml` next to the user's config (always the current
-   reference) and reports options the user's file doesn't mention yet;
+4. Writes `config.example.ru.toml` and `config.example.en.toml` next to the user's
+   config (always the current reference; the old one-language `config.example.toml`
+   goes), picks the one in the language of the user's file (`config.language_of`) and reports options the user's file doesn't mention yet;
    `--update-config` inserts them and exits.
 5. `--bug-report` packs the logs (§18) and exits.
 6. `i18n.setup(cfg.ui.language)`.
@@ -543,10 +550,13 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 * `core/config.py: DEFAULTS` is the single source of truth: section → key →
   default. `validate()` checks types strictly (bool is not int), `CHOICES`,
   `MINIMUM`, lane names; unknown keys are warnings, wrong values are errors.
-* `fedtail/data/config.example.toml` documents every option in Russian, in chapters
+* `fedtail/data/config.example.ru.toml` documents every option in Russian, in chapters
   (a banner before each section, sub-headings inside `[ui]`; a comment block followed by
   a blank line belongs to no option), every option set to its default; a test asserts
-  that parsing it gives exactly `DEFAULTS`.
+  that parsing it gives exactly `DEFAULTS`. `config.example.en.toml` is its English
+  twin: every line that isn't a `# comment` (sections, options, commented-out options,
+  chapter banners) is the same, in the same order — a test compares them. A new config
+  is written in the desktop's language (`config.default_language()`).
 * `config_update.py`: finds options the user's file doesn't mention, inserts them with
   their explanations (`--update-config`); `rebuild()` lays the user's file out anew from
   the example with their values put in (`--rebuild-config`).
@@ -614,12 +624,24 @@ to `leaks.WATCH`.
   force-pushes PNGs to the `screenshots` branch. `.github/annotate.py` turns
   failures into annotations (job logs aren't always downloadable).
 * Lint: `ruff check .` (line length 100).
+* Docs: `python3 tools/docs_build.py` writes every generated document,
+  `--check` (a test runs it) fails when one is stale. Sources: `docs/src/features/*.toml`
+  (each feature with its status, `since`, config key, API, other clients, texts in `ru`
+  and `en` — a plain string is the same in both) → `docs/<lang>/features.md`,
+  `comparison.md` and the parts `features-short`, `only-in-fedtail`, `whats-new`,
+  `roadmap`; the two example configs → `docs/<lang>/config.md`. Hand-written parts live
+  in `docs/<lang>/parts/`. Any README, `docs/` page or help page pulls a part in with
+  `<!-- include: parts/NAME -->…<!-- /include -->` (`shift=N` lowers its headings,
+  `lang=xx` where the path doesn't say the language); the text between the markers is
+  rewritten by the build, so the file reads whole on GitHub. Links in parts go from the
+  repository root (`/docs/en/features.md`). Parts don't include parts.
 
 ## 20. Recipes
 
 **Add a config option.** Add it to `DEFAULTS` (and `CHOICES`/`MINIMUM` if needed),
-document it in `config.example.toml` as `#key = value` with a Russian comment
-above, read it via `cfg["section"]["key"]`. The example-equals-defaults test
+document it in `config.example.ru.toml` and `config.example.en.toml` as
+`key = default` with a comment above in each language, add its row in
+`docs/src/features/` if it's a feature, run `python3 tools/docs_build.py`, read it via `cfg["section"]["key"]`. The example-equals-defaults test
 tells you if they differ.
 
 **Add a lane.** Filter function + `LANES` entry in `lanes.py`, add the name to
