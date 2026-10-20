@@ -477,13 +477,13 @@ class FeedView(QScrollArea):
             if row.status_id in ids:
                 row.set_unread(unread)
 
-    def refresh_status(self, store, changed):
+    def refresh_status(self, changed):
         """One post changed (a like, a boost, an edit): only its cards are redone. Going
         through every card asks the database for each, and with a few hundred cards
         open that froze the window for seconds after every click. changed: the Post as
         it is now (None: look at every card)."""
         if changed is None:
-            self.refresh_from_store(store)
+            self.refresh_from_store()
             return
         changed = real_entry(changed)
         for i, spec in enumerate(self.model):
@@ -501,12 +501,11 @@ class FeedView(QScrollArea):
             if row is not None:
                 row.update_spec(new)
 
-    def refresh_from_store(self, store):
+    def refresh_from_store(self):
         for row in self.rows.values():
             if row.status_id is None:
                 continue
-            raw = store.get_status(row.status_id)
-            fresh = self.ctx.view.entry(raw) if raw else None
+            fresh = self.ctx.view.stored(row.status_id)
             if fresh is not None and fresh != row.spec.entry:
                 row.update_spec(replace(row.spec, entry=fresh))
 

@@ -108,10 +108,12 @@ class LinkPolicyTest(unittest.TestCase):
 
     def test_history_warning_is_text(self):
         from fedtail.frontends.richtext import history_html
-        h = history_html([{"created_at": "", "content": "<p>v1</p>",
-                           "spoiler_text": '<img src="file://attacker.example/s/x.png">'
-                                           '<a href="fedtail:delete/1">x</a>'},
-                          {"created_at": "", "content": "<p>v2</p>"}], lambda _iso: "")
+        from fedtail.protocols.mastodon import adapter
+        h = history_html([adapter.post({"id": "v1", "content": "<p>v1</p>",
+                                        "spoiler_text": '<img src="file://attacker.example/'
+                                                        's/x.png"><a href="fedtail:delete/1">'
+                                                        'x</a>'}),
+                          adapter.post({"id": "v2", "content": "<p>v2</p>"})], lambda _t: "")
         self.assertNotIn("<img", h)
         self.assertNotIn('href="fedtail:delete', h)
         self.assertIn("&lt;img", h)
@@ -144,9 +146,10 @@ class SnippetBlocksTest(unittest.TestCase):
 class EmojiTest(unittest.TestCase):
     def test_shortcodes_become_pictures_outside_tags(self):
         from fedtail.frontends.richtext import emojify
-        emojis = [{"shortcode": "blobcat", "url": "https://s/blobcat.gif",
-                   "static_url": "https://s/blobcat.png"},
-                  {"shortcode": "nope", "url": "https://s/nope.png"}]
+        from fedtail.protocols.mastodon import adapter
+        emojis = adapter.emojis([{"shortcode": "blobcat", "url": "https://s/blobcat.gif",
+                                  "static_url": "https://s/blobcat.png"},
+                                 {"shortcode": "nope", "url": "https://s/nope.png"}])
         have = {"https://s/blobcat.png": "/tmp/cache/abc"}
         h, missing = emojify('<a title=":blobcat:">hi :blobcat: and :nope: and :other:</a>',
                              emojis, 18, have.get)
@@ -165,8 +168,9 @@ class NoEmojiTest(unittest.TestCase):
 
     def test_unicode_and_server_emoji_go_text_and_app_glyphs_stay(self):
         from fedtail.frontends.richtext import strip_emoji
+        from fedtail.model import Emoji
         h = strip_emoji('<a title=":blob: 🔥">hi 🔥🔥 there 👨‍👩‍👧 ok ❤️ ⚠ ↔ '
-                        'warn 🇬🇪 1️⃣ x :blob: y</a>', [{"shortcode": "blob"}])
+                        'warn 🇬🇪 1️⃣ x :blob: y</a>', [Emoji("blob", "u")])
         self.assertEqual(h, '<a title=":blob: 🔥">hi there ok ⚠ ↔ warn x y</a>')
 
     def test_unlisted_shortcode_alone_goes_but_times_stay(self):

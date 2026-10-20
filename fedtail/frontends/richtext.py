@@ -288,18 +288,12 @@ def strip_emoji(h, emojis=()):
 
 
 def display_name(account):
-    """The name to show, escaped: an Account of fedtail.model (or, from code not moved
-    to the model yet, a server's account dict)."""
-    if isinstance(account, dict):
-        return esc(account.get("display_name") or account.get("username")
-                   or account.get("acct"))
+    """The name to show, escaped (an Account)."""
     return esc(account.name or account.username or account.handle)
 
 
 def _emoji_pair(e):
-    """(shortcode, picture url) of a custom emoji: a model Emoji or a server's dict."""
-    if isinstance(e, dict):
-        return e.get("shortcode"), e.get("static_url") or e.get("url")
+    """(shortcode, picture url) of a custom emoji (an Emoji)."""
     return e.shortcode, e.static_url or e.url
 
 
@@ -327,12 +321,13 @@ def link(action, arg, label, color=None, bold=False):
 
 
 def history_html(versions, date, link_color=None):
-    """An edited post's versions for the history dialog. The warning (spoiler_text) is
-    the author's plain text like the rest: escaped, never markup."""
+    """An edited post's versions (Posts, oldest first) for the history dialog. The
+    warning is the author's plain text like the rest: escaped, never markup."""
     from ..i18n import _
     parts = []
     for i, v in enumerate(versions or (), 1):
-        cw = f"<p><i>⚠ {esc(v.get('spoiler_text'))}</i></p>" if v.get("spoiler_text") else ""
-        parts.append(f"<h4>{_('history_version', n=i)} · {esc(date(v.get('created_at', '')))}"
-                     f"</h4>{cw}{clean(v.get('content', ''), link_color)}")
+        cw = f"<p><i>⚠ {esc(v.warning)}</i></p>" if v.warning else ""
+        when = date(v.created) if v.created else ""
+        parts.append(f"<h4>{_('history_version', n=i)} · {esc(when)}"
+                     f"</h4>{cw}{clean(v.text, link_color)}")
     return "<hr>".join(parts)

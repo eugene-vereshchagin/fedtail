@@ -45,7 +45,7 @@ from PySide6.QtWidgets import (
 from ... import diag, version
 from ...core import lanes as lanes_module
 from ...i18n import _
-from ...model import Account, Post, Share
+from ...model import Account, Post, Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet
 from .. import themefile
@@ -105,7 +105,7 @@ def list_open(rel, inside):
     in a list (taking out is always fine). Not yet known (None): no."""
     if inside:
         return True
-    return bool(rel) and bool(rel.get("following") or rel.get("requested"))
+    return rel is not None and bool(rel.following or rel.requested)
 
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
@@ -936,12 +936,12 @@ class MainWindow(QMainWindow):
         auth = self.core.auth or {}
         if not auth:
             return
-        acct = "@" + auth.get("acct", "?")
+        acct = "@" + (self.ctx.view.auth_handle or "?")
         if QMessageBox.question(self, _("relogin_title"), _("relogin_q", acct=acct)) \
                 != QMessageBox.StandardButton.Yes:
             return
         log.info("login anew: asked")
-        if LoginDialog(self, expect=(auth["server"], auth.get("acct", ""))).exec() \
+        if LoginDialog(self, expect=(auth["server"], self.ctx.view.auth_handle)).exec() \
                 == QDialog.DialogCode.Accepted:
             log.info("login anew: done, reconnecting")
             self.start()
@@ -952,7 +952,7 @@ class MainWindow(QMainWindow):
         from ...core import profiles
         me = self.core.paths.profile
         mine = self.ctx.view.me
-        acct = "@" + (mine.handle if mine else (self.core.auth or {}).get("acct", me))
+        acct = "@" + (mine.handle if mine else self.ctx.view.auth_handle or me)
         others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
         main = profiles.paths.main_profile()
         text = [_("logout_q", acct=acct)]
@@ -1022,7 +1022,7 @@ class MainWindow(QMainWindow):
         else:
             groups = [(None, [x.name for x in self.core.lanes if not lanes_module.is_list(x.name)]),
                       ("lists", [x.name for x in self.core.lanes if lanes_module.is_list(x.name)])]
-        titles = {x["id"]: x for x in self.core.lists}
+        titles = {x.id: x for x in self.ctx.view.lists}
         for group, names in groups:
             if group == "lists":
                 if not self.cfg["lists"]["enabled"]:
@@ -1037,11 +1037,11 @@ class MainWindow(QMainWindow):
                 it = QListWidgetItem()
                 it.setData(Qt.ItemDataRole.UserRole, name)
                 lst = titles.get(name[len("list:"):]) if lanes_module.is_list(name) else None
-                title = lst["title"] if lst else None
+                title = lst.title if lst else None
                 if name.startswith("tags:"):
                     title = self.core.lane_title(name)
                 w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title)
-                if lst and lst.get("exclusive"):
+                if lst and lst.exclusive:
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())
                 self.lanes.addItem(it)
@@ -1077,25 +1077,26 @@ class MainWindow(QMainWindow):
         m = QMenu(self)
         if name and name.startswith("list:"):
             lid = name[len("list:"):]
-            x = next((x for x in self.core.lists if x["id"] == lid), None)
+            lists = self.ctx.view.lists
+            x = next((x for x in lists if x.id == lid), None)
             if x is None:
                 return
             m.addAction(_("list_people"), lambda: self.open_list_people(x))
             up = m.addAction(_("list_up"), lambda: self.bridge.call(
-                self.core.submit(self.core.move_list, x["id"], -1)))
+                self.core.submit(self.core.move_list, x.id, -1)))
             down = m.addAction(_("list_down"), lambda: self.bridge.call(
-                self.core.submit(self.core.move_list, x["id"], 1)))
-            ids = [y["id"] for y in self.core.lists]
-            up.setEnabled(ids.index(x["id"]) > 0)
-            down.setEnabled(ids.index(x["id"]) < len(ids) - 1)
+                self.core.submit(self.core.move_list, x.id, 1)))
+            ids = [y.id for y in lists]
+            up.setEnabled(ids.index(x.id) > 0)
+            down.setEnabled(ids.index(x.id) < len(ids) - 1)
             m.addSeparator()
             m.addAction(_("list_rename"), lambda: self.rename_list(x))
             ex = m.addAction(_("list_exclusive"))
             ex.setCheckable(True)
-            ex.setChecked(bool(x.get("exclusive")))
+            ex.setChecked(x.exclusive)
             ex.setToolTip(_("list_exclusive_tip"))
             ex.toggled.connect(lambda on: self.bridge.call(
-                self.core.update_list(x["id"], x["title"], on)))
+                self.core.update_list(x.id, x.title, on)))
             m.addSeparator()
             m.addAction(_("list_delete"), lambda: self.delete_list(x))
         elif name and name.startswith("tags:"):
@@ -1115,28 +1116,28 @@ class MainWindow(QMainWindow):
     def open_list_people(self, x):
         """Who is in a list, a tab of people; each can be taken out right there."""
         def out(acc_id):
-            return self.core.set_in_list(x["id"], acc_id, False)
-        self.open_accounts(f"list-people:{x['id']}", _("list_people_title", title=x["title"]),
-                           lambda _cursor: self.core.list_people(x["id"]), dismiss=out,
+            return self.core.set_in_list(x.id, acc_id, False)
+        self.open_accounts(f"list-people:{x.id}", _("list_people_title", title=x.title),
+                           lambda _cursor: self.core.list_people(x.id), dismiss=out,
                            dismiss_label=_("list_take_out"))
 
     def new_list(self, add=None):
         title, ok = QInputDialog.getText(self, _("list_new").rstrip("…"), _("list_name_q"))
         if ok and title.strip():
-            self.bridge.call(self.core.create_list(title.strip(), add=add),
+            self.bridge.call(self.ctx.view.create_list(title.strip(), add=add),
                              ok=lambda x: self.statusBar().showMessage(
-                                 _("list_created", title=x["title"]), 5000))
+                                 _("list_created", title=x.title), 5000))
 
     def rename_list(self, x):
         title, ok = QInputDialog.getText(self, _("list_rename"), _("list_name_q"),
-                                         text=x["title"])
-        if ok and title.strip() and title.strip() != x["title"]:
-            self.bridge.call(self.core.update_list(x["id"], title.strip(), x.get("exclusive")))
+                                         text=x.title)
+        if ok and title.strip() and title.strip() != x.title:
+            self.bridge.call(self.core.update_list(x.id, title.strip(), x.exclusive))
 
     def delete_list(self, x):
-        if QMessageBox.question(self, _("list_delete"), _("list_delete_q", title=x["title"])) \
+        if QMessageBox.question(self, _("list_delete"), _("list_delete_q", title=x.title)) \
                 == QMessageBox.StandardButton.Yes:
-            self.bridge.call(self.core.delete_list(x["id"]))
+            self.bridge.call(self.core.delete_list(x.id))
 
     def fill_list_menu(self, menu, account):
         """"Add to list" submenu of a post: every list, ticked where the author is. A
@@ -1151,14 +1152,15 @@ class MainWindow(QMainWindow):
         follow.triggered.connect(lambda _c=False, a=account: self._follow_from_menu(a))
         head = menu.addSeparator()
         list_actions = []
-        for x in self.core.lists:
-            a = menu.addAction(x["title"])
+        lists = self.ctx.view.lists
+        for x in lists:
+            a = menu.addAction(x.title)
             list_actions.append(a)
             a.setCheckable(True)
-            a.setChecked(x["id"] in inside)
-            a.toggled.connect(lambda on, act=a, lid=x["id"], acc=account.id:
+            a.setChecked(x.id in inside)
+            a.toggled.connect(lambda on, act=a, lid=x.id, acc=account.id:
                               self._list_toggled(act, lid, acc, on))
-        if self.core.lists:
+        if lists:
             menu.addSeparator()
         list_actions.append(menu.addAction(_("list_new"),
                                            lambda: self.new_list(add=account.id)))
@@ -1175,11 +1177,11 @@ class MainWindow(QMainWindow):
                 follow.setVisible(not ok and rel is not None)
             except RuntimeError:  # the menu closed meanwhile
                 pass
-        rel = self.core.relation_known(account.id)
+        rel = self.ctx.view.relation_known(account.id)  # a Relationship, or None
         apply(rel)
         if rel is None:
-            self.bridge.call(self.core.relationship(account.id), ok=apply,
-                             fail=lambda _e: apply({}))
+            self.bridge.call(self.ctx.view.relationship(account.id), ok=apply,
+                             fail=lambda _e: apply(Relationship()))
 
     def _list_toggled(self, action, list_id, acc_id, on):
         try:
@@ -1195,9 +1197,9 @@ class MainWindow(QMainWindow):
             fail=self.error)
 
     def _follow_from_menu(self, account):
-        self.bridge.call(self.core.follow(account.id), ok=lambda rel: self.statusBar(
+        self.bridge.call(self.ctx.view.follow(account.id), ok=lambda rel: self.statusBar(
             ).showMessage(_("followed_now", acct="@" + account.handle)
-                          if rel.get("following") else _("follow_asked_list"), 6000),
+                          if rel.following else _("follow_asked_list"), 6000),
                          fail=self.error)
 
     def _lane_clicked(self, cur, _prev, show=False):
@@ -1262,7 +1264,7 @@ class MainWindow(QMainWindow):
             return
         from .columns import ColumnsArea, start_names
         if on:
-            titles = {x["title"]: "list:" + x["id"] for x in self.core.lists}
+            titles = {x.title: "list:" + x.id for x in self.ctx.view.lists}
             names = start_names(self.cfg, self.core.get_state("columns"), self.lane_order,
                                 titles)
             self.columns = ColumnsArea(self)
@@ -1457,7 +1459,7 @@ class MainWindow(QMainWindow):
                 payload.get("id") else None
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:  # Activity has none
-                    w.view.refresh_status(self.core.store, changed)
+                    w.view.refresh_status(changed)
         elif name == "status_deleted":
             for w in list(self.lane_widgets.values()) + self.extra_tabs():
                 if getattr(w, "view", None) is not None:
@@ -2051,11 +2053,9 @@ class MainWindow(QMainWindow):
             self.error(_("translate_none"))
             return
 
-        def got(tr):
-            tr = tr or {}
-            done({"lang": tr.get("detected_source_language") or "",
-                  "provider": tr.get("provider") or "", "html": tr.get("content") or ""})
-        self.bridge.call(self.core.translate(self.ctx.view.raw(post)), ok=got, fail=self.error)
+        def got(tr):  # a Translation
+            done({"lang": tr.lang, "provider": tr.provider, "html": tr.html})
+        self.bridge.call(self.ctx.view.translate(post), ok=got, fail=self.error)
 
     def show_filtered(self):
         from .filtered import FilteredDialog
@@ -2085,17 +2085,16 @@ class MainWindow(QMainWindow):
 
         def fill(items):
             lst.clear()
-            for s in items:
-                text = (s.get("params") or {}).get("text") or ""
-                it = QListWidgetItem(f"{self.theme.date(s.get('scheduled_at', ''))} — "
-                                     f"{text[:120]}")
-                it.setData(Qt.ItemDataRole.UserRole, s["id"])
+            for s in items:  # Scheduled
+                it = QListWidgetItem(f"{self.theme.date(s.at) if s.at else ''} — "
+                                     f"{s.text[:120]}")
+                it.setData(Qt.ItemDataRole.UserRole, s.id)
                 lst.addItem(it)
             if not items:
                 lst.addItem(_("scheduled_none"))
 
         def load():
-            self.bridge.call(self.core.scheduled(), ok=fill, fail=self.error)
+            self.bridge.call(self.ctx.view.scheduled(), ok=fill, fail=self.error)
 
         def drop():
             it = lst.currentItem()

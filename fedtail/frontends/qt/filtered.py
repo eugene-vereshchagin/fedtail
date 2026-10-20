@@ -20,8 +20,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...core.model import html_to_text
 from ...i18n import _
+from ...model.text import snippet
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class FilteredDialog(QDialog):
     def __init__(self, win):
         super().__init__(win)
         self.win = win
-        self.core = win.core
+        self.core = win.ctx.view
         self.setWindowTitle(_("filtered_title"))
         self.resize(560, 480)
         lay = QVBoxLayout(self)
@@ -80,13 +80,11 @@ class FilteredDialog(QDialog):
                 b.setEnabled(False)
             return
         self.note.setText(_("filtered_note", n=len(got["requests"])))
-        for r in got["requests"]:
-            acc = r.get("account") or {}
-            last = html_to_text((r.get("last_status") or {}).get("content", ""))
-            text = f"@{acc.get('acct', '?')} — " + \
-                _("filtered_count", n=int(r.get("notifications_count") or 0))
+        for r in got["requests"]:  # HeldBack
+            last = snippet(r.last, 140) if r.last else ""
+            text = f"@{r.who.handle if r.who else '?'} — " + _("filtered_count", n=r.count)
             if last:
-                text += "\n" + last[:140]
+                text += "\n" + last
             it = QListWidgetItem(text)
             it.setData(Qt.ItemDataRole.UserRole, r)
             self.list.addItem(it)
@@ -111,13 +109,13 @@ class FilteredDialog(QDialog):
         if not r:
             return
         log.info("filtered: %s a sender", "accepted" if accept else "dismissed")
-        self.win.bridge.call(self.core.answer_filtered(r["id"], accept),
+        self.win.bridge.call(self.core.answer_filtered(r.id, accept),
                              ok=lambda _x: self.load(), fail=self.win.error)
 
     def _profile(self, item):
         r = self._current(item)
-        if r and r.get("account"):
-            self.win.open_account(r["account"]["id"])
+        if r and r.who:
+            self.win.open_account(r.who.id)
 
     def _set(self, key):
         if self._filling:

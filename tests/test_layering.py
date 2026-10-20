@@ -1,8 +1,5 @@
-"""Frontends moved to fedtail.model read no protocol fields (docs/PROTOCOLS.md, stage 2).
-
-The Qt frontend moves file by file; when the last one is in, the list goes and the
-test covers frontends/ as a whole.
-"""
+"""Frontends read no protocol fields: they speak fedtail.model through core/view.py
+(docs/PROTOCOLS.md, stage 2) — every file under frontends/."""
 
 import re
 import unittest
@@ -10,20 +7,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "fedtail"
 
-MOVED = ["frontends/cli.py", "frontends/tui/model.py", "frontends/tui/app.py",
-         "frontends/web/server.py",
-         # Qt, as it moves: the post card and what it opens
-         "frontends/qt/card.py", "frontends/qt/viewer.py", "frontends/qt/player.py",
-         "frontends/qt/find.py", "frontends/qt/social.py", "frontends/qt/feed.py",
-         "frontends/qt/compose.py", "frontends/qt/cmdline.py",
-         "frontends/notifytext.py"]
+MOVED = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "frontends").rglob("*.py"))
 
 # what only a Mastodon status or account has; the model says it differently
 RAW = re.compile(r'"(reblog|spoiler_text|in_reply_to_id|in_reply_to_account_id|'
                  r'media_attachments|favourited|reblogged|favourites_count|reblogs_count|'
                  r'replies_count|display_name|acct|statuses_count|followers_count|'
                  r'following_count|preview_url|remote_url)"|/api/v\d|\.lane_entries\(|'
-                 r'\.unread_ids\(|\.parent_of\(|\.account_statuses\(|core\.model import')
+                 r'\.unread_ids\(|\.parent_of\(|\.account_statuses\(|core\.model import|'
+                 r'\.store\.|\bstore\.get_status\(')
 
 
 class LayeringTest(unittest.TestCase):

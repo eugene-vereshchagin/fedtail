@@ -698,7 +698,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(dlg.changes(), {})
         dlg.name.setText("Мира Новый")
         dlg.locked.setChecked(True)
-        self.assertEqual(dlg.changes(), {"display_name": "Мира Новый", "locked": True})
+        self.assertEqual(dlg.changes(), {"name": "Мира Новый", "locked": True})
         dlg.save()
         self.pump(until=lambda: self.world.profile_updates and gone(dlg))
         self.pump(until=lambda: "Мира Новый" in self.win.account_name.text())

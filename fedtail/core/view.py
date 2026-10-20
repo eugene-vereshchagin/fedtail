@@ -38,6 +38,7 @@ from ..model import (
     Scheduled,
     Share,
     ThreadItem,
+    Translation,
     real,
 )
 from ..protocols.mastodon import adapter
@@ -135,6 +136,8 @@ class View:
                 return self._activity_of(x)
             if kind == "tag":
                 return adapter.tag(x)
+            if kind == "list":
+                return adapter.user_list(x, self.profile)
             return {k: self._out(v) for k, v in x.items()}
         if isinstance(x, list):
             return [self._out(v) for v in x]
@@ -318,6 +321,11 @@ class View:
         st = self._core.store.get_status(post_id)
         return real(self.entry(st)) if st else None
 
+    def stored(self, post_id):
+        """A stored entry as it is (a Post, or a Share for a boost's id), or None."""
+        st = self._core.store.get_status(post_id)
+        return self.entry(st) if st else None
+
     def by_alias(self, alias):
         st = self._core.by_alias(alias)
         return real(self.entry(st)) if st else None
@@ -354,6 +362,66 @@ class View:
 
     def relationship(self, acc_id):
         return _then(self._core.relationship(acc_id), adapter.relationship)
+
+    def relation_known(self, acc_id):
+        """The Relationship asked for lately, or None — for menus that open at once."""
+        rel = self._core.relation_known(acc_id)
+        return adapter.relationship(rel) if rel is not None else None
+
+    def scheduled(self):
+        """Future: [Scheduled] — my posts waiting on the server for their time."""
+        def made(items):
+            return [Scheduled(str(s.get("id") or ""), adapter.when(s.get("scheduled_at")),
+                              str((s.get("params") or {}).get("text") or ""))
+                    for s in items or () if isinstance(s, dict)]
+        return _then(self._core.scheduled(), made)
+
+    def translate(self, post):
+        """Future: a Translation of the post (the server's translator)."""
+        def made(tr):
+            tr = tr if isinstance(tr, dict) else {}
+            return Translation(str(tr.get("content") or ""),
+                               str(tr.get("detected_source_language") or ""),
+                               str(tr.get("provider") or ""))
+        return _then(self._core.translate(self._raw(real(post))), made)
+
+    def history(self, post):
+        """Future: [Post] — the versions of an edited post, oldest first."""
+        def made(versions):
+            return [real(adapter.post(dict(v, id=v.get("id") or f"{real(post).id}~v{i}"),
+                                      self.profile))
+                    for i, v in enumerate(versions or ()) if isinstance(v, dict)]
+        return _then(self._core.history(self._raw(real(post))), made)
+
+    @property
+    def auth_handle(self):
+        """The handle I logged in as (from the login itself: known before connecting)."""
+        return (self._core.auth or {}).get("acct", "")
+
+    def filtered(self):
+        """Future: {"policy": {key: "accept"|"filter"|"drop"}, "pending": n, "requests":
+        [HeldBack]}, or None — the server holds nothing back (GoToSocial, old Mastodon)."""
+        def made(got):
+            if got is None:
+                return None
+            return dict(got, requests=[adapter.held_back(r, self.profile)
+                                       for r in got.get("requests") or ()])
+        return _then(self._core.filtered(), made)
+
+    def my_profile(self):
+        """Future: MyProfile — my account with the bio and fields as typed."""
+        return _then(self._core.my_profile(), lambda r: adapter.my_profile(r, self.profile))
+
+    def update_profile(self, **changes):
+        """name, bio, fields [(name, value)], locked, bot, discoverable, avatar / header
+        (a file path). Future: my Account as it is now."""
+        return _then(self._core.update_profile(**{adapter.PROFILE_KEYS[k]: v
+                                                  for k, v in changes.items()}), self.acc)
+
+    def create_list(self, title, exclusive=False, add=None):
+        """Future: the UserList made (add: someone to put in it at once)."""
+        return _then(self._core.create_list(title, exclusive, add=add),
+                     lambda x: adapter.user_list(x, self.profile))
 
     def follow(self, acc_id, on=True):
         return _then(self._core.follow(acc_id, on), adapter.relationship)
@@ -467,6 +535,11 @@ class View:
         """Future: my server about itself (ServerInfo)."""
         return _then(self._core.server_info(), lambda r: adapter.server_info(r, self.profile))
 
+    @property
+    def lists(self):
+        """[UserList] of mine, in the sidebar's order."""
+        return [adapter.user_list(x, self.profile) for x in self._core.lists or ()]
+
     def probe_server(self):
         """Future: a Probe — my server asked what it can do (takes a few seconds)."""
         return _then(self._core.probe_server(), _probe)
@@ -545,6 +618,8 @@ def _shape(d):
         return "tag"  # (an emoji reaction has a count, an emoji a shortcode: not tags)
     if "id" not in d:
         return None
+    if "title" in d and ("exclusive" in d or "replies_policy" in d) and "account" not in d:
+        return "list"
     if "account" in d and ("content" in d or "reblog" in d or "media_attachments" in d):
         return "status"
     if "acct" in d and "username" in d:

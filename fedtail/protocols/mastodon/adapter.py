@@ -17,9 +17,11 @@ from ...model import (
     Counts,
     Emoji,
     Field,
+    HeldBack,
     Media,
     Mention,
     Mine,
+    MyProfile,
     Notice,
     Policy,
     Poll,
@@ -32,6 +34,8 @@ from ...model import (
     ServerInfo,
     Share,
     Tag,
+    UserList,
+    real,
 )
 from . import PROTO
 
@@ -102,6 +106,12 @@ def emojis(raw):
                  for e in _list(raw) if isinstance(e, dict) and e.get("shortcode"))
 
 
+def _header(url):
+    """A profile's header picture; Mastodon's "no header" placeholder is none."""
+    url = _str(url)
+    return "" if "/missing" in url else url
+
+
 def account(raw, profile=""):
     """An account (a Person, a Service, a Group)."""
     raw = _dict(raw)
@@ -115,8 +125,8 @@ def account(raw, profile=""):
         uri=_str(raw.get("uri")),
         avatar=_str(raw.get("avatar")),
         avatar_static=_str(raw.get("avatar_static")) or _str(raw.get("avatar")),
-        header=_str(raw.get("header")),
-        header_static=_str(raw.get("header_static")) or _str(raw.get("header")),
+        header=_header(raw.get("header")),
+        header_static=_header(raw.get("header_static")) or _header(raw.get("header")),
         note=_str(raw.get("note")),
         fields=tuple(Field(_str(f.get("name")), _str(f.get("value")),
                            when(f.get("verified_at")))
@@ -411,6 +421,40 @@ def tag(raw):
                uses=sum(_int(h.get("uses")) for h in hist),
                people=sum(_int(h.get("accounts")) for h in hist),
                last_post=when(raw.get("last_status_at")))
+
+
+def held_back(raw, profile=""):
+    """A notification request → HeldBack."""
+    raw = _dict(raw)
+    acc, last = raw.get("account"), raw.get("last_status")
+    return HeldBack(Ref(profile, _str(raw.get("id"))),
+                    account(acc, profile) if isinstance(acc, dict) else None,
+                    _int(raw.get("notifications_count")),
+                    real(post(last, profile)) if isinstance(last, dict) and last.get("id")
+                    else None)
+
+
+def my_profile(raw, profile=""):
+    """verify_credentials → MyProfile (the source: what I typed)."""
+    raw = _dict(raw)
+    src = _dict(raw.get("source"))
+    return MyProfile(account(raw, profile), _str(src.get("note")),
+                     tuple((_str(f.get("name")), _str(f.get("value")))
+                           for f in _list(src.get("fields")) if isinstance(f, dict)))
+
+
+# what MyProfile's editor changes → the names update_credentials takes
+PROFILE_KEYS = {"name": "display_name", "bio": "note", "fields": "fields", "locked": "locked",
+                "bot": "bot", "discoverable": "discoverable", "avatar": "avatar",
+                "header": "header"}
+
+
+def user_list(raw, profile=""):
+    """A list of mine → UserList."""
+    raw = _dict(raw)
+    return UserList(Ref(profile, _str(raw.get("id"))), _str(raw.get("title")),
+                    exclusive=raw.get("exclusive") is True,
+                    replies=_str(raw.get("replies_policy")))
 
 
 def server_info(raw, profile=""):

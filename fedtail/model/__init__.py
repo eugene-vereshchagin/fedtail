@@ -339,6 +339,15 @@ class Scheduled:
     """A post the server will put out later."""
     id: str
     at: datetime | None = None
+    text: str = ""                 # as typed
+
+
+@dataclass(frozen=True, slots=True)
+class Translation:
+    """A post put into my language by the server."""
+    html: str = ""
+    lang: str = ""                 # what it was in
+    provider: str = ""             # who translated it (DeepL, LibreTranslate…)
 
 
 @dataclass(frozen=True, slots=True)
@@ -376,6 +385,42 @@ class Tag:
     uses: int = 0                  # these days, in all (the server's history)
     people: int = 0                # these days, how many people used it
     last_post: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HeldBack:
+    """Someone whose notifications my server holds back (Mastodon's filtered
+    notifications): how many, and the last post among them."""
+    ref: Ref
+    who: Account | None
+    count: int = 0
+    last: Post | None = None
+
+    @property
+    def id(self):
+        return self.ref.id
+
+
+@dataclass(frozen=True, slots=True)
+class MyProfile:
+    """My own account as its editor needs it: the bio and fields as I typed them."""
+    account: Account
+    bio: str = ""
+    fields: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class UserList:
+    """A list of people of mine (a lane of its own). exclusive: its people's posts
+    leave Home."""
+    ref: Ref
+    title: str
+    exclusive: bool = False
+    replies: str = ""              # whose replies it shows: followed, list, none ("" — not said)
+
+    @property
+    def id(self):
+        return self.ref.id
 
 
 @dataclass(frozen=True, slots=True)

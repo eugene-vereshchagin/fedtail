@@ -27,7 +27,7 @@ IMAGE_FILTER = "*.png *.jpg *.jpeg *.gif *.webp"
 class ProfileDialog(QDialog):
     def __init__(self, win):
         super().__init__(win)
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view
         self.setWindowTitle(_("profile_title"))
         self.setMinimumWidth(560)
         self.loaded = None
@@ -97,12 +97,13 @@ class ProfileDialog(QDialog):
                         fail=lambda e: self.hint.setText(_("load_failed", err=e)))
 
     # ---- loading -------------------------------------------------------------------
-    def _loaded(self, me):
-        self.loaded = me
-        src = me.get("source") or {}
-        self.name.setText(me.get("display_name") or "")
-        self.bio.setPlainText(src.get("note", ""))
-        fields = [(f.get("name", ""), f.get("value", "")) for f in src.get("fields", [])]
+    def _loaded(self, prof):
+        """prof: a MyProfile."""
+        self.loaded = prof
+        me = prof.account
+        self.name.setText(me.name)
+        self.bio.setPlainText(prof.bio)
+        fields = list(prof.fields)
         for i in range(max(FIELDS_SHOWN, len(fields))):
             n, v = fields[i] if i < len(fields) else ("", "")
             name, value = QLineEdit(n), QLineEdit(v)
@@ -111,18 +112,17 @@ class ProfileDialog(QDialog):
             self.grid.addWidget(name, i, 0)
             self.grid.addWidget(value, i, 1)
             self.field_edits.append((name, value))
-        self.locked.setChecked(bool(me.get("locked")))
-        self.bot.setChecked(bool(me.get("bot")))
-        self.discoverable.setChecked(bool(me.get("discoverable")))
+        self.locked.setChecked(me.locked)
+        self.bot.setChecked(me.bot)
+        self.discoverable.setChecked(bool(me.discoverable))
         self.hint.setText("")
         self.save_btn.setEnabled(True)
         # pictures come later, from the image cache
         images = self.win.images
-        images.get(me.get("avatar_static") or me.get("avatar"),
+        images.get(me.avatar_static or me.avatar,
                    lambda pm: self.avatar_img.setPixmap(_round(pm, 72)))
-        header = me.get("header_static") or me.get("header") or ""
-        if header and "/missing" not in header:  # Mastodon's "no header" placeholder
-            images.get(header, self._show_header)
+        if me.header_static or me.header:
+            images.get(me.header_static or me.header, self._show_header)
 
     def _show_header(self, pm):
         w = max(self.header_img.width(), 520)
@@ -152,21 +152,20 @@ class ProfileDialog(QDialog):
     # ---- saving --------------------------------------------------------------------
     def changes(self):
         """Only what differs from the server, so nothing is overwritten by accident."""
-        me = self.loaded
-        src = me.get("source") or {}
+        prof = self.loaded
+        me = prof.account
         out = {}
-        if self.name.text() != (me.get("display_name") or ""):
-            out["display_name"] = self.name.text()
-        if self.bio.toPlainText() != src.get("note", ""):
-            out["note"] = self.bio.toPlainText()
+        if self.name.text() != me.name:
+            out["name"] = self.name.text()
+        if self.bio.toPlainText() != prof.bio:
+            out["bio"] = self.bio.toPlainText()
         fields = [(n.text().strip(), v.text().strip()) for n, v in self.field_edits]
         fields = [f for f in fields if f[0] or f[1]]
-        old = [(f.get("name", ""), f.get("value", "")) for f in src.get("fields", [])]
-        if fields != old:
+        if fields != list(prof.fields):
             out["fields"] = fields
-        for key, box in (("locked", self.locked), ("bot", self.bot),
-                         ("discoverable", self.discoverable)):
-            if box.isChecked() != bool(me.get(key)):
+        for key, box, was in (("locked", self.locked, me.locked), ("bot", self.bot, me.bot),
+                              ("discoverable", self.discoverable, bool(me.discoverable))):
+            if box.isChecked() != was:
                 out[key] = box.isChecked()
         if self.avatar_path:
             out["avatar"] = self.avatar_path
