@@ -150,6 +150,7 @@ class Store:
         # bumped on every change, so callers can cache what they derive from the store
         self.items_version = {}
         self.status_version = 0
+        self.read_version = 0  # bumped by every read mark (Core caches unread counts by it)
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
         self.db.execute("PRAGMA synchronous=NORMAL")
@@ -817,6 +818,7 @@ class Store:
     def mark_read(self, status_ids):
         with self._tx() as db:
             db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in status_ids])
+            self.read_version += 1
 
     def mark_mine_read(self):
         """Every stored post of mine read (ones stored before this rule). How many."""
@@ -825,6 +827,7 @@ class Store:
         with self._tx() as db:
             cur = db.execute("INSERT OR IGNORE INTO read SELECT id FROM statuses "
                              "WHERE author = ?", (self.me_id,))
+            self.read_version += 1
             return cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
 
     def account_of(self, acc_id):

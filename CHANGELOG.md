@@ -2,6 +2,15 @@
 
 ## 0.17.0 — in progress
 
+- The server's rate limit is kept to: fedtail reads its X-RateLimit headers, keeps
+  quiet once fewer requests are left than two poll rounds and a reserve, until the
+  server's window starts anew, and asks nothing while it is spent. One line in the
+  status bar says until when — instead of a "429" for every lane, every round (as on
+  GoToSocial with a few lists, the live stream waking the poller every few seconds).
+- Less freezing after a poll: the lanes and their unread counts are worked out in the
+  poll thread before the window hears of news, and unread counts are cached until a
+  lane or a read mark changes — the sidebar asked every lane after every event, reading
+  thousands of stored posts between two frames (250 ms to a second).
 - `fedtail --layout single|columns|qip` and `--theme NAME`: the layout or the theme for
   one run, the config untouched.
 - Five themes in the spirit of messengers, for `ui.layout = "qip"` above all: `qip-retro`

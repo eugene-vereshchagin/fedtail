@@ -1474,6 +1474,10 @@ class MainWindow(QMainWindow):
                 if getattr(w, "view", None) is not None:
                     w.view.remove_status(payload)
             self.statusBar().showMessage(_("deleted"), 4000)
+        elif name == "rate_limited":
+            # the server asks to wait: once, with when, not an error per lane
+            when = time.strftime("%H:%M", time.localtime(payload.get("until") or time.time()))
+            self.statusBar().showMessage(_("rate_limited", until=when), 20_000)
         elif name == "capabilities_changed":
             # the server answered for a feature: what offers it shows or hides now
             for w in list(self.lane_widgets.values()) + self.extra_tabs():

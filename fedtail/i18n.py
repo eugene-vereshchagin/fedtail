@@ -401,6 +401,8 @@ _STRINGS = {
         "server_contact": "Связь: {who}",
         "server_rules": "Правила",
         "server_privacy": "Политика конфиденциальности",
+        "rate_limited": "Сервер просит не частить: новые посты — с {until}, когда он разрешит "
+                        "снова (лайки и ответы тоже подождут)",
         "info_head": "Сервер и федерация",
         "grp_threads": "Треды",
         "grp_talks": "Беседы",
@@ -1201,6 +1203,8 @@ _STRINGS = {
         "server_contact": "Contact: {who}",
         "server_rules": "Rules",
         "server_privacy": "Privacy policy",
+        "rate_limited": "The server asks to slow down: new posts from {until}, when it allows "
+                        "again (likes and replies wait too)",
         "info_head": "Server and federation",
         "grp_threads": "Threads",
         "grp_talks": "Talks",

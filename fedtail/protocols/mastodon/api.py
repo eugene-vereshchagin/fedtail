@@ -15,7 +15,7 @@ import requests
 
 from ... import version
 from ...core import health
-from ..base import Capabilities, ServerError  # noqa: F401 — Capabilities: as before
+from ..base import Budget, Capabilities, RateLimited, ServerError  # noqa: F401
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
@@ -104,6 +104,31 @@ def capabilities_from_instance(inst, v2=None):
     )
 
 
+def _when_reset(value):
+    """X-RateLimit-Reset as a unix time: an ISO time (Mastodon, GoToSocial), a unix time,
+    or seconds from now."""
+    if not value:
+        return time.time() + 60
+    value = str(value).strip()
+    try:
+        n = float(value)
+        return n if n > 10**9 else time.time() + n
+    except ValueError:
+        pass
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return time.time() + 60
+
+
+def _retry_after(headers):
+    try:
+        return max(5.0, float(headers.get("Retry-After") or 60))
+    except ValueError:
+        return 60.0
+
+
 def seg(value):
     """An id as one segment of an API path: whatever it holds ("1/../../statuses/2/
     reblog", "?x", "#") can't become another path. Server ids (digits, ULIDs) pass as
@@ -162,6 +187,8 @@ class Api:
         self.base = server
         self.host = (urlsplit(server).hostname or "?").lower()  # for health.REC
         self._last = threading.local()  # the latest response's headers, per thread
+        self.budget = Budget()  # the server's rate limit, as its latest answer said
+        self.requests = 0       # made so far (the core paces its polls by it)
         self.s = session or requests.Session()
         self.s.headers["User-Agent"] = USER_AGENT
         if token:
@@ -170,6 +197,10 @@ class Api:
     # ---- plumbing ---------------------------------------------------------
     def _req(self, method, path, **kw):
         kw.setdefault("timeout", 30)
+        if self.budget.spent():  # it would only say 429: don't ask until the window ends
+            raise RateLimited("rate limit reached (waiting for the server's window)",
+                              self.budget.reset)
+        self.requests += 1
         params = kw.get("params") or {}
         shown = " ".join(f"{k}={v}" for k, v in params.items() if k in _SAFE_PARAMS)
         t = time.monotonic()
@@ -187,11 +218,28 @@ class Api:
                 else logging.DEBUG, "%s %s %s -> %s %.2f s %d B", method, path, shown,
                 r.status_code, took, len(r.content or b""))
         self._last.headers = r.headers
+        self._note_budget(r.headers)
+        if r.status_code == 429:
+            until = self.budget.reset if self.budget.reset > time.time() else \
+                time.time() + _retry_after(r.headers)
+            self.budget = Budget(self.budget.limit, 0, until)
+            raise RateLimited(error_text(r), until)
         if r.status_code >= 400:
             raise ApiError(r.status_code, error_text(r))
         if not r.content:
             return None
         return r.json()
+
+    def _note_budget(self, headers):
+        """X-RateLimit-Limit / -Remaining / -Reset (Mastodon, GoToSocial, Akkoma)."""
+        rem = headers.get("X-RateLimit-Remaining")
+        if rem is None:
+            return
+        try:
+            self.budget = Budget(int(headers.get("X-RateLimit-Limit") or 0), int(rem),
+                                 _when_reset(headers.get("X-RateLimit-Reset")))
+        except ValueError:
+            pass
 
     def get(self, path, params=None, timeout=30):
         return self._req("GET", path, params=params, timeout=timeout)

@@ -19,6 +19,7 @@ inside ``protocols/``: no ``/api/v…`` path in the code anywhere else, and the 
 only methods listed here.
 """
 
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -30,6 +31,34 @@ class ServerError(Exception):
     def __init__(self, status, message):
         super().__init__(f"HTTP {status}: {message}")
         self.status = status
+
+
+class RateLimited(ServerError):
+    """The server asks to wait: too many requests (HTTP 429), until `until` (a unix time).
+    Also raised without asking it, while its budget is spent (the client knows)."""
+
+    def __init__(self, message, until):
+        super().__init__(429, message)
+        self.until = until
+
+
+@dataclass
+class Budget:
+    """What the server allows: requests per window, how many are left, when it starts
+    anew (unix time); as its last answer said. limit 0: it doesn't say."""
+    limit: int = 0
+    remaining: int = 0
+    reset: float = 0.0
+
+    def spent(self, now=None):
+        """Nothing left and the window still on: asking now only earns a 429."""
+        now = time.time() if now is None else now
+        return bool(self.limit) and self.remaining <= 0 and now < self.reset
+
+    def low(self, reserve, now=None):
+        """Fewer left than reserve (a poll round's worth and some), the window on."""
+        now = time.time() if now is None else now
+        return bool(self.limit) and self.remaining < reserve and now < self.reset
 
 # every method of the client the core calls (self.api.<name>, api.<name>); and its
 # attribute ``base``, the server's address

@@ -170,6 +170,10 @@ class Core(SocialMixin):
             seen = getattr(self, "_errors_seen", None)
             if seen is None:
                 seen = self._errors_seen = {}
+            if "HTTP 429" in str(payload):
+                # the server asks to wait: said once by rate_limited, not lane by lane
+                log.info("rate limited: %s", str(payload)[:200])
+                return
             last = seen.get(str(payload))
             if last is not None and now - last < self.ERROR_QUIET_S:
                 log.debug("error again (not shown): %s", str(payload)[:200])
@@ -389,6 +393,12 @@ class Core(SocialMixin):
                 self._poll_failures += 1
                 self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
                 self.emit("error", str(e))
+            quiet = self._pace()
+            if quiet > 0:
+                # the server's budget is nearly spent: nothing until its window starts
+                # anew — a Refresh doesn't cut it short (it would only earn a 429)
+                self._stop.wait(quiet)
+                continue
             done = time.monotonic()
             self._wake.wait(self.cfg["poll"]["interval_seconds"])
             self._wake.clear()
@@ -400,11 +410,33 @@ class Core(SocialMixin):
                 self._wake.clear()
             self._urgent = False
 
+    RESERVE = 20  # requests kept for what I do by hand (a like, a reply), besides a round
+
+    def _pace(self):
+        """Seconds to keep quiet before the next round: the server's rate limit (its
+        X-RateLimit headers) nearly spent — fewer left than two rounds and RESERVE — or
+        spent. 0: go on as usual. Says so once a window (event rate_limited)."""
+        budget = getattr(self.api, "budget", None)
+        if budget is None:
+            return 0
+        per_round = getattr(self, "_round_requests", 0)
+        if not (budget.spent() or budget.low(2 * per_round + self.RESERVE)):
+            return 0
+        wait = max(0.0, budget.reset - time.time())
+        if wait and getattr(self, "_quiet_said", None) != budget.reset:
+            self._quiet_said = budget.reset
+            log.info("rate limit: %d of %d left, a round takes %d — quiet for %.0f s",
+                     budget.remaining, budget.limit, per_round, wait)
+            self.emit("rate_limited", {"until": budget.reset, "left": budget.remaining,
+                                       "limit": budget.limit})
+        return min(wait, 15 * 60)  # a clock gone wrong never stops polling for good
+
     def poll_once(self):
         """One round: catch every source up, check subscriptions, lists, activity,
         follow requests; then tell the frontend. Logged with its timing."""
         if not self.api:
             return
+        before = getattr(self.api, "requests", 0)
         t = time.monotonic()
         self._steps = {}
         self._step_at = t
@@ -414,6 +446,7 @@ class Core(SocialMixin):
             return got
         finally:
             took = time.monotonic() - t
+            self._round_requests = getattr(self.api, "requests", 0) - before
             self._poll_count += 1
             self._last_poll_s = round(took, 2)
             self._poll_max_s = max(getattr(self, "_poll_max_s", 0.0), took)
@@ -526,11 +559,13 @@ class Core(SocialMixin):
                 try:
                     new_activity = self._poll_activity()
                     if new_activity:
+                        self._warm_lanes()  # the window counts every lane on this event
                         self.emit("activity_updated", len(new_activity))
                 except Exception as e:
                     self.emit("error", f"activity: {e}")
 
             self._step("requests+activity")
+            self._warm_lanes()  # before the window hears: it finds them made
             new_statuses = self._new_statuses(new_by_source)
             self._ask_prefetch(new_statuses)
             mine = [st["id"] for st in new_statuses if st["account"]["id"] == self.me["id"]]
@@ -972,6 +1007,8 @@ class Core(SocialMixin):
         self.lane_by_name = {lane.name: lane for lane in new_lanes}
         self.lanes = new_lanes
         self._lists_version += 1
+        if threading.current_thread() is not threading.main_thread():
+            self._warm_lanes()  # every lane anew (lists change what Home shows)
         self.emit("lists_changed", list(got))
         self.poll_now()
 
@@ -1458,7 +1495,34 @@ class Core(SocialMixin):
         return {i for i in ids if i not in read}
 
     def unread_count(self, name):
-        return len(self.unread_ids(self.lane_entries(name)))
+        """Unread in a lane — cached while neither the lane nor any read mark changed:
+        the sidebar asks for every lane after every event."""
+        entries = self.lane_entries(name)
+        hit = self._lane_cache.get(name)
+        key = (hit[0] if hit else None, id(entries), self.store.read_version)
+        cache = self.__dict__.setdefault("_unread_cache", {})
+        got = cache.get(name)
+        if got and got[0] == key:
+            return got[1]
+        n = len(self.unread_ids(entries))
+        cache[name] = (key, n)
+        return n
+
+    def _warm_lanes(self):
+        """The lanes and their unread counts worked out here, in the poll thread, before
+        the window hears of news: it then finds them made, instead of reading thousands
+        of stored posts itself between two frames (the freezes of 250 ms to a second
+        after each poll)."""
+        t = time.monotonic()
+        for lane in list(self.lanes):
+            if lane.lazy or self._stop.is_set():
+                continue
+            try:
+                self.unread_count(lane.name)
+            except Exception as e:  # noqa: BLE001 — the window will try again itself
+                log.debug("warm %s: %s", lane.name, e)
+        self._step("warm lanes")
+        log.debug("lanes warmed in %.2f s", time.monotonic() - t)
 
     def mark_read(self, status_ids):
         status_ids = list(status_ids)
