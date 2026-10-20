@@ -70,8 +70,11 @@
   a line of its own. Lanes slide in on a phone; light and dark follow the system.
 - Inside: the terminal, the TUI and the web interface work on fedtail's own data model
   (`fedtail/model`, `fedtail/core/view.py`) instead of the server's JSON — stage 2 of
-  docs/PROTOCOLS.md; the Qt window follows. Nothing changes in what they show, except
-  that the web page and `fedtail post -v` say "followers" (`private` still works).
+  docs/PROTOCOLS.md; so does the Qt window — lanes, threads, profiles, activity,
+  notifications, the composer and the command line (lists, editing my profile and
+  filtered notifications still read the server's JSON). Nothing changes in what they
+  show, except that the web page and `fedtail post -v` say "followers" (`private` still
+  works).
 
 ## 0.16.0 — 2026-10-19
 

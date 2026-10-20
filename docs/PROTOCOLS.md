@@ -158,7 +158,7 @@ classic | qip | columns`) — забота фронтенда; ростер — 
 |---|---|---|
 | 0 ✓ | сборка мусора в базе + incremental vacuum | тест: база не растёт на прогоне тысяч постов |
 | 1 ✓ | `fedtail/model/` + адаптер Mastodon → модель; никто ещё не пользуется | тесты адаптера на `tests/fakes.py` и образцах GTS/Mastodon/Akkoma; `tools/model_check.py` — прогон адаптера по своей базе |
-| 2 ◐ | ядро отдаёт фронтендам модель (`core/view.py`: View поверх Core); фронтенды по одному: cli ✓ → tui ✓ → web ✓ (переписан) → qt | `tests/test_layering.py`: в переведённых фронтендах нет полей протокола |
+| 2 ◐ | ядро отдаёт фронтендам модель (`core/view.py`: View поверх Core); фронтенды по одному: cli ✓ → tui ✓ → web ✓ (переписан) → qt ◐ (всё, кроме списков, правки профиля и отфильтрованных уведомлений) | `tests/test_layering.py`: в переведённых фронтендах нет полей протокола |
 | 3 | `api.py` и все `/api/v1` уезжают в `protocols/mastodon/`; ядро зовёт `Protocol` | тест-запрет вне `protocols/` |
 | 4 | `Capabilities` вместо разрозненных `unsupported` | тесты на скрытие кнопок |
 | 5 | `Core.roster()` и `layout = qip` на Qt | smoke + скриншоты `tools/screenshots.py` |
