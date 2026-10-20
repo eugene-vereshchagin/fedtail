@@ -35,6 +35,8 @@ from ..model import (
     Probe,
     Redraft,
     Relationship,
+    RosterGroup,
+    RosterItem,
     Scheduled,
     Share,
     ThreadItem,
@@ -544,6 +546,36 @@ class View:
     def server_info(self):
         """Future: my server about itself (ServerInfo)."""
         return _then(self._core.server_info(), lambda r: adapter.server_info(r, self.profile))
+
+    def roster(self):
+        """[RosterGroup] — the lanes, grouped as the sidebar groups them, each with its
+        unread count and newest post: what a messenger-style roster shows (docs/
+        LAYOUTS.md). Cheap: lane entries are cached by the core; asked again whenever
+        what's new or read changes."""
+        from .lanes import grouped
+        c = self._core
+        out = []
+        for group, names in grouped(c.lanes):
+            items = []
+            for name in names:
+                lane = c.lane_by_name.get(name)
+                last, total = None, 0
+                if name == "activity":
+                    unread = c.activity_unread()
+                elif name == "requests":
+                    reqs = getattr(c, "follow_requests", None) or ()
+                    unread = total = len(reqs)
+                elif getattr(lane, "lazy", False):
+                    unread = 0  # a browsed lane: nothing is "unread" in it
+                else:
+                    entries = c.lane_entries(name)
+                    unread, total = c.unread_count(name), len(entries)
+                    if entries:
+                        last = real(self.entry(entries[-1][1]))
+                items.append(RosterItem("lane", name, c.lane_title(name), unread, total,
+                                        last))
+            out.append(RosterGroup(group, tuple(items)))
+        return out
 
     @property
     def lists(self):

@@ -316,6 +316,30 @@ class Activity:
 
 
 @dataclass(frozen=True, slots=True)
+class RosterItem:
+    """One "contact" of the roster (the QIP-style layout's list, the sidebar's lanes):
+    a lane for now; threads and conversations later. last: its newest post — a line of
+    it under the title, its author's face beside, as a status line in a messenger."""
+    kind: str                      # "lane"
+    key: str                       # what to open: a lane's name
+    title: str
+    unread: int = 0
+    total: int = 0                 # entries in it (0: not counted, or empty)
+    last: Post | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RosterGroup:
+    """A group of the roster: "standard", "personal", "lists", "tags"…, with its items."""
+    name: str
+    items: tuple[RosterItem, ...] = ()
+
+    @property
+    def unread(self):
+        return sum(i.unread for i in self.items)
+
+
+@dataclass(frozen=True, slots=True)
 class Feature:
     """One answer of the server about what it can do (View.probe_server). state: "yes",
     "no", "closed" (there, but not open to me), "error" (no clear answer), "info" (detail
