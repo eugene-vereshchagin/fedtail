@@ -575,6 +575,20 @@ class View:
                 items.append(RosterItem("lane", name, c.lane_title(name), unread, total,
                                         last))
             out.append(RosterGroup(group, tuple(items)))
+        # threads I follow and private talks, each a "contact" of its own (as people
+        # are in a messenger): the freshest first, ui.roster_threads of each
+        keep = int(c.cfg["ui"].get("roster_threads", 15) or 0)
+        for group, lane, kind in (("threads", "subs", "thread"), ("talks", "direct", "talk")):
+            if not keep or lane not in c.lane_by_name:
+                continue
+            entries = self.entries(lane)
+            unread = self.unread(entries)
+            convs = list(reversed(self.conversations(entries, unread)))[:keep]
+            me = self.me
+            items = tuple(RosterItem(kind, g["key"], _conv_title(g["top"], kind, me),
+                                     g["unread"], len(g["members"]), g["last"],
+                                     tuple(g["members"])) for g in convs)
+            out.append(RosterGroup(group, items))
         return out
 
     @property
@@ -671,6 +685,21 @@ def _shape(d):
     if "type" in d and "account" in d and ("status" in d or "created_at" in d):
         return "activity"
     return None
+
+
+def _conv_title(top, kind, me):
+    """A thread's name in the roster: who began it and how; a private talk's: who is in
+    it, but me."""
+    from ..model.text import norm_handle, snippet
+    top = real(top)
+    who = top.author.name or top.author.username or top.author.handle
+    if kind == "talk":
+        mine = norm_handle(me.handle) if me else ""
+        people = [top.author] if norm_handle(top.author.handle) != mine else []
+        names = [p.name or p.username for p in people] + \
+            [m.username or m.handle for m in top.mentions if norm_handle(m.handle) != mine]
+        return ", ".join(dict.fromkeys(n for n in names if n)) or who
+    return f"{who}: {snippet(top, 40)}"
 
 
 def _probe(d):

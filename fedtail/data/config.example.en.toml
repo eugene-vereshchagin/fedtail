@@ -102,6 +102,10 @@ layout = "single"
 # With layout = "qip": the roster stays above other windows.
 roster_on_top = false
 
+# With layout = "qip": how many followed threads and private talks stand in the roster as
+# items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only.
+roster_threads = 15
+
 # Which lanes stand as columns, left to right, until you change them in the window (a click
 # on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is
 # remembered). Names — as in lanes.enabled; "list:Friends" — a list by its title. [] — Home,

@@ -2228,6 +2228,10 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(hidden, [False])
         roster.search.clear()
         roster.toggle(group)
+        # a thread item opens its thread in a tab
+        from fedtail.frontends.qt.feed import ThreadWidget
+        roster.open("thread/011")
+        self.pump(until=lambda: isinstance(win.tabs.currentWidget(), ThreadWidget))
         # closing the messages window leaves the roster, as in a messenger
         win.close()
         self.assertFalse(win.isVisible())

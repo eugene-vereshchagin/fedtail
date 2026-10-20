@@ -39,7 +39,7 @@ class RosterRow(QWidget):
 
     def __init__(self, roster, item):
         super().__init__()
-        self.roster, self.key = roster, item.key
+        self.roster, self.key = roster, row_key(item)
         win = roster.win
         h = QHBoxLayout(self)
         h.setContentsMargins(8, 4, 8, 4)
@@ -48,7 +48,9 @@ class RosterRow(QWidget):
         icon.setFixedWidth(18)
         from .window import LANE_ICON
         if win.theme.shape["lane_icons"]:
-            ic = QIcon.fromTheme(LANE_ICON.get(item.key.split(":")[0], ""))
+            kind = {"thread": "subs", "talk": "direct"}.get(item.kind,
+                                                             item.key.split(":")[0])
+            ic = QIcon.fromTheme(LANE_ICON.get(kind, ""))
             if not ic.isNull():
                 icon.setPixmap(ic.pixmap(18, 18))
         h.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
@@ -109,6 +111,12 @@ class RosterRow(QWidget):
     def matches(self, text):
         t = text.casefold()
         return not t or t in self.item.title.casefold() or t in self.line.text().casefold()
+
+
+def row_key(item):
+    """A roster item's key among the rows: a lane by its name, a thread or talk by kind
+    and id (one thread may be both followed and private)."""
+    return item.key if item.kind == "lane" else f"{item.kind}/{item.key}"
 
 
 def _alive(w):
@@ -223,14 +231,15 @@ class RosterWindow(QWidget):
         me = view.me if self.win.core.me else None
         self._show_me(me)
         groups = view.roster() if me is not None else []
-        shape = [(g.name, tuple(i.key for i in g.items)) for g in groups]
+        shape = [(g.name, tuple(row_key(i) for i in g.items)) for g in groups]
         if shape != self._shape:  # lanes came or went: build anew
             self._build(groups)
             self._shape = shape
         for g in groups:
-            self.heads[g.name].show_counts(g, g.name in self.folded)
+            if g.name in self.heads:
+                self.heads[g.name].show_counts(g, g.name in self.folded)
             for item in g.items:
-                self.rows[item.key].update_item(item)
+                self.rows[row_key(item)].update_item(item)
         self._filter(self.search.text())
 
     def _build(self, groups):
@@ -249,13 +258,13 @@ class RosterWindow(QWidget):
             self.heads[g.name] = head
             for item in g.items:
                 row_it = QListWidgetItem()
-                row_it.setData(Qt.ItemDataRole.UserRole, item.key)
-                row_it.setData(Qt.ItemDataRole.UserRole + 1, g.name)
                 row = RosterRow(self, item)
+                row_it.setData(Qt.ItemDataRole.UserRole, row.key)
+                row_it.setData(Qt.ItemDataRole.UserRole + 1, g.name)
                 row_it.setSizeHint(QSize(0, max(row.sizeHint().height(), FACE + 8)))
                 self.list.addItem(row_it)
                 self.list.setItemWidget(row_it, row)
-                self.rows[item.key] = row
+                self.rows[row.key] = row
 
     def _show_me(self, me):
         if me is None:
@@ -295,8 +304,13 @@ class RosterWindow(QWidget):
 
     # ---- acting ----------------------------------------------------------------------
     def open(self, key):
-        """A lane chosen: in front in the messages window."""
-        self.win.select_lane(key)
+        """An item chosen (a row's key): its lane, or its thread, in front in the
+        messages window."""
+        kind, _sep, post_id = key.partition("/") if "/" in key else ("lane", "", key)
+        if kind == "lane":
+            self.win.select_lane(key)
+        else:
+            self.win.open_thread(post_id)
         self.win.show_raise()
 
     def _activated(self, it):
@@ -328,10 +342,15 @@ class RosterWindow(QWidget):
         m.exec(self.list.mapToGlobal(pos))
 
     def _read_all(self, key):
+        """Everything in it read (marking the read ones again changes nothing)."""
         view = self.win.ctx.view
-        unread = view.unread(view.entries(key))
-        if unread:
-            view.mark_read(sorted(unread))
+        row = self.rows.get(key)
+        if row is not None and row.item.kind != "lane":
+            ids = list(row.item.ids)
+        else:
+            ids = [e.id for _item, e in view.entries(key)]
+        if ids:
+            view.mark_read(ids)
 
     # ---- the window ------------------------------------------------------------------
     def _restore_place(self):

@@ -401,6 +401,8 @@ _STRINGS = {
         "server_contact": "Связь: {who}",
         "server_rules": "Правила",
         "server_privacy": "Политика конфиденциальности",
+        "grp_threads": "Треды",
+        "grp_talks": "Беседы",
         "roster_title": "fedtail",
         "roster_search": "Поиск",
         "roster_search_tip": "Найти ленту по названию или по последнему посту; Enter — открыть "
@@ -1198,6 +1200,8 @@ _STRINGS = {
         "server_contact": "Contact: {who}",
         "server_rules": "Rules",
         "server_privacy": "Privacy policy",
+        "grp_threads": "Threads",
+        "grp_talks": "Talks",
         "roster_title": "fedtail",
         "roster_search": "Search",
         "roster_search_tip": "Find a lane by its name or its newest post; Enter opens the only "

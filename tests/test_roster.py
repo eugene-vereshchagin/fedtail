@@ -44,3 +44,48 @@ class RosterTest(TmpDir):
         names = [i.key for g in roster for i in g.items]
         self.assertEqual(len(names), len(set(names)))  # each lane once
         self.assertEqual(set(names), {lane.name for lane in core.lanes})
+
+    def test_threads_and_talks_are_contacts(self):
+        """A followed thread and a private talk stand in the roster as items of their
+        own, the freshest first, with what's new in them."""
+        from fedtail.model import RosterItem
+        core, w = self.make()
+        core.poll_once()  # first run
+        core.cfg["subs"]["interval_minutes"] = 0  # check every poll here
+        alice = fakes.acct("A", "alice@example.org")
+        w.add(status("100", fakes.ME, minute=20, text="мой тред"), home=True)
+        core.poll_once()  # my post: followed by itself
+        w.add(status("101", BOB, "100", "ME", minute=21), mention=True)
+        w.add(status("102", alice, "101", "B", minute=22))  # alice answers bob, no @me
+        core.poll_once()
+        v = View(core)
+        threads = next((g for g in v.roster() if g.name == "threads"), None)
+        if "subs" not in core.lane_by_name:
+            self.assertIsNone(threads)
+            return
+        self.assertIsNotNone(threads)
+        item = threads.items[0]
+        self.assertIsInstance(item, RosterItem)
+        self.assertEqual((item.kind, item.key), ("thread", "100"))
+        self.assertEqual(item.unread, 1)
+        self.assertEqual(item.ids, ("102",))
+        self.assertIn("мой тред", item.title)
+        core.cfg["ui"]["roster_threads"] = 0
+        self.assertFalse(any(g.name == "threads" for g in v.roster()))
+
+
+
+class TalkTitleTest(TmpDir):
+    def test_who_is_in_it_but_me(self):
+        from fedtail.core.view import _conv_title
+        from fedtail.protocols.mastodon import adapter
+        dm = dict(status("5", BOB, text="привет"), visibility="direct",
+                  mentions=[{"id": "ME", "acct": "mira", "username": "mira"},
+                            {"id": "A", "acct": "alice@x", "username": "alice"}])
+        me = adapter.account(fakes.ME)
+        self.assertEqual(_conv_title(adapter.post(dm), "talk", me),
+                         f"{BOB.get('display_name') or BOB['username']}, alice")
+        mine = dict(status("6", fakes.ME, text="ну"), visibility="direct",
+                    mentions=[{"id": "B", "acct": BOB["acct"], "username": BOB["username"]}])
+        self.assertEqual(_conv_title(adapter.post(mine), "talk", me), BOB["username"])
+        self.assertTrue(_conv_title(adapter.post(dm), "thread", me).endswith(": привет"))

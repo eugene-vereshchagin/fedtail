@@ -8,7 +8,9 @@
   "▾ Personal (2/9)" (with something new / all), each with its count, a line of its
   newest post and its author's face. A click opens the lane in the main window, which
   here is the messages window, without the sidebar. Closing the roster closes fedtail
-  (to the tray with `ui.close_to_tray`); `ui.roster_on_top`.
+  (to the tray with `ui.close_to_tray`); `ui.roster_on_top`. Followed threads and private
+  talks stand there as contacts of their own ("Threads", "Talks", the freshest
+  `ui.roster_threads`): who began it and how, or who is in it.
 - fedtail took GoToSocial 0.22 for Mastodon: its version says only "0.22.1+git-…".
   Now it reads the instance document's `source_url` and GoToSocial's own keys, and asks
   the server's nodeinfo when still unsure — so × in Activity hides here instead of
