@@ -55,7 +55,7 @@ READ = {"id", "created_at", "edited_at", "in_reply_to_id", "in_reply_to_account_
         "reblogged", "muted", "bookmarked", "pinned", "content", "reblog", "application",
         "account", "media_attachments", "mentions", "tags", "emojis", "card", "poll",
         "quote", "quote_id", "quote_approval", "interaction_policy", "filtered",
-        "emoji_reactions", "pleroma"}
+        "emoji_reactions", "pleroma", "text", "content_type"}
 
 # raw key → does the model have it
 ON_WIRE = {
@@ -68,6 +68,7 @@ ON_WIRE = {
     "filtered": lambda p: bool(p.filtered) or p.hidden,
     "spoiler_text": lambda p: bool(p.warning),
     "media_attachments": lambda p: bool(p.media),
+    "text": lambda p: bool(p.source),
 }
 
 

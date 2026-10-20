@@ -28,6 +28,7 @@ def gts_status(**over):
         "favourited": True, "reblogged": False, "muted": False, "bookmarked": True,
         "pinned": False, "content": "<p>Хинкали :khinkali: <a href=\"#\">#еда</a></p>",
         "reblog": None, "application": {"name": "fedtail"},
+        "text": "Хинкали :khinkali: #еда", "content_type": "text/markdown",
         "account": {
             "id": "01ME00000000000000000000AA", "username": "mira", "acct": "mira",
             "display_name": "Мира :cat:", "locked": True, "bot": False, "group": False,
@@ -113,6 +114,7 @@ class AdapterPostTest(unittest.TestCase):
         self.assertEqual(p.emojis[0].shortcode, "khinkali")
         self.assertEqual(p.mentions[0].handle, "bob@social.example")
         self.assertEqual(p.app, "fedtail")
+        self.assertEqual((p.source, p.source_type), ("Хинкали :khinkali: #еда", "text/markdown"))
         m = p.media[0]
         self.assertEqual((m.kind, m.width, m.height, m.alt), ("image", 1600, 1200, "тарелка"))
         self.assertEqual(m.focus, (0.25, -0.5))

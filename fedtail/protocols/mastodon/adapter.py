@@ -273,6 +273,8 @@ def post(raw, profile="", _depth=0):
         created=when(created_at),
         sort=sort,
         text=_str(raw.get("content")),
+        source=_str(raw.get("text")),
+        source_type=_str(raw.get("content_type")),
         warning=_str(raw.get("spoiler_text")),
         sensitive=bool(raw.get("sensitive")),
         visibility=visibility,

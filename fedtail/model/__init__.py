@@ -226,6 +226,8 @@ class Post:
     created: datetime | None
     sort: str                      # orders posts of one profile as text, oldest first
     text: str = ""                 # HTML
+    source: str = ""               # what the author typed (Markdown, plain), when given:
+    source_type: str = ""          #   GoToSocial sends it with my own posts; a MIME type
     warning: str = ""              # the content warning (spoiler); "" — none
     sensitive: bool = False        # media hidden until clicked
     visibility: str = "public"     # one of VISIBILITIES
