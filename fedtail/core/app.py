@@ -115,7 +115,6 @@ class Core(SocialMixin):
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
-        self.unsupported = set()  # features the server said it hasn't got (social.py)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (its preferences)
         self.browse_empty = set()  # browse sources (local, federated) the server gave nothing
@@ -253,6 +252,20 @@ class Core(SocialMixin):
             threading.Thread(target=job, name="fedtail-revoke").start()
 
     # ---- connect & poll ----------------------------------------------------------
+    def _carry_answers(self, old, new):
+        """What the server answered about its features stays across a reconnect to the
+        same server; the last probe (kept) speaks for the same software and version."""
+        if old.same_server(new.software, new.version):
+            new.missing |= old.missing
+            new.present |= old.present
+        from ..protocols.mastodon import probe
+        last = self.store.kv_get(probe.KV)
+        if isinstance(last, dict) and new.same_server(last.get("software"),
+                                                       last.get("version")):
+            for feature, there in probe.features(last).items():
+                if feature not in new.missing and feature not in new.present:
+                    new.learn(feature, there)
+
     def connect(self):
         def job():
             if not api_module.cleartext_ok(self.auth["server"]):
@@ -264,6 +277,7 @@ class Core(SocialMixin):
                 caps = self.proto.capabilities(api.instance())
             except Exception:  # instance info is a nicety, not a must
                 caps = Capabilities()
+            self._carry_answers(self.caps, caps)
             self.api, self.me, self.caps = api, me, caps
             self.store.me_id = (me or {}).get("id")  # my posts are read, however they come
             n = self.store.mark_mine_read()

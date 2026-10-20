@@ -19,7 +19,7 @@ inside ``protocols/``: no ``/api/v…`` path in the code anywhere else, and the 
 only methods listed here.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -52,6 +52,55 @@ CLIENT = frozenset("""
     tag tag_timeline translate trends unfeature_tag update_credentials update_list
     upload_media verify_credentials vote base
 """.split())
+
+
+# what is known of a server without asking it: (software, feature) -> there or not
+KNOWN = {
+    ("gotosocial", "dismiss_one"): False,   # it clears all notifications, never one
+}
+
+
+@dataclass
+class Capabilities:
+    """What my server can do — one place for it (docs/PROTOCOLS.md, stage 4).
+
+    What the server says about itself (software, version, the limits) comes with the
+    connection; whether it has a feature is learned: a probe's answers (≡ → Server info
+    → What it can do), an answer "no such thing here" to a call (Core._api), and what is
+    known of its software (KNOWN). has(feature) is True until one of them says no — a
+    button is offered, and goes once the server refuses it.
+
+    Feature names are short words the core uses: "conversations", "dismiss",
+    "dismiss_one", "mute_thread", "trends_tags", "quotes"…"""
+    software: str = ""
+    version: str = ""  # what the server says it runs ("4.3.0", "0.17.3 git-…")
+    max_characters: int = 500
+    max_media: int = 4
+    markdown: bool = False
+    max_poll_options: int = 4
+    translation: bool = False
+    streaming: str = ""  # wss://… of the live stream, "" — not said
+    image_bytes: int = 0   # the largest picture the server takes, bytes (0 — not said)
+    image_pixels: int = 0  # …and in pixels, width × height
+    missing: set = field(default_factory=set)  # the server said no
+    present: set = field(default_factory=set)  # the server said yes (a probe)
+
+    def has(self, feature):
+        if feature in self.missing:
+            return False
+        if feature in self.present:
+            return True
+        return KNOWN.get(((self.software or "").lower(), feature), True)
+
+    def learn(self, feature, there):
+        """The server answered for a feature. True: that changed what has() says."""
+        before = self.has(feature)
+        (self.present if there else self.missing).add(feature)
+        (self.missing if there else self.present).discard(feature)
+        return self.has(feature) != before
+
+    def same_server(self, software, version):
+        return (software or "") == self.software and (version or "") == self.version
 
 
 @dataclass(frozen=True)

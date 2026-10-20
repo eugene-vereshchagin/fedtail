@@ -178,6 +178,28 @@ class SocialTest(TmpDir):
         core.poll_once()  # all hidden: no history fetched anew
         self.assertEqual(core.store.activity_recent(10), [])
 
+    def test_capabilities_are_learned_told_and_kept(self):
+        """A "no such thing" answer hides the feature and says so; a reconnect to the
+        same server keeps it; the last probe speaks for the server from the start."""
+        core, w = self.make()
+        told = []
+        core.events.on("capabilities_changed", lambda _n, p: told.append(p))
+        core._learn("directory", False)
+        core._learn("directory", False)
+        self.assertEqual(told, ["directory"])  # once: nothing new the second time
+        self.assertFalse(core.supports("directory"))
+        old = core.caps
+        new = type(old)(software=old.software, version=old.version)
+        core._carry_answers(old, new)
+        self.assertFalse(new.has("directory"))
+        from fedtail.protocols.mastodon import probe
+        core.store.kv_set(probe.KV, {"software": "gotosocial", "version": "9",
+                                     "items": [["trends_tags", "no", "HTTP 404"]]})
+        other = type(old)(software="gotosocial", version="9")
+        core._carry_answers(old, other)
+        self.assertFalse(other.has("trends_tags"))
+        self.assertTrue(other.has("directory"))  # another server: its own answers
+
     def test_people_and_profile(self):
         core, w = self.make()
         w.followers.add("B")

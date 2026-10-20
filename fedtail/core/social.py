@@ -37,8 +37,22 @@ class NotSupported(ApiError):
 class SocialMixin:
     # ---- what the server can do ----------------------------------------------------
     def supports(self, feature):
-        """False once the server answered that it hasn't got this feature."""
-        return feature not in self.unsupported
+        """Does my server have this feature (Capabilities.has): yes until it said no."""
+        return self.caps.has(feature)
+
+    @property
+    def unsupported(self):
+        """The features the server said no to (Capabilities.missing)."""
+        return self.caps.missing
+
+    def _learn(self, feature, there):
+        """The server answered for a feature: the frontends hear when that changes what
+        they may offer (capabilities_changed)."""
+        if self.caps.learn(feature, there):
+            if not there:
+                log.info("server has no %s", feature)
+                self.emit("unsupported", feature)
+            self.emit("capabilities_changed", feature)
 
     def _api(self, feature, fn, *a, **kw):
         """Call the API; a "no such thing here" answer marks the feature unsupported."""
@@ -46,10 +60,8 @@ class SocialMixin:
             return fn(*a, **kw)
         except ApiError as e:
             if e.status in UNSUPPORTED_STATUS and not isinstance(e, NotSupported):
-                if feature not in self.unsupported:
-                    log.info("server has no %s (%s)", feature, e.status)
-                    self.unsupported.add(feature)
-                    self.emit("unsupported", feature)
+                log.debug("%s: %s", feature, e.status)
+                self._learn(feature, False)
                 raise NotSupported(feature) from e
             raise
 
@@ -178,8 +190,7 @@ class SocialMixin:
     def can_dismiss_one(self):
         """Can the server dismiss a single notification? GoToSocial can't (it only clears
         them all): there × hides it here only."""
-        return self.supports("dismiss_one") and \
-            getattr(getattr(self, "caps", None), "software", "") != "gotosocial"
+        return self.supports("dismiss_one")
 
     def dismiss_activity(self, nid):
         """One notification gone: from Activity always, from the server when it can."""
@@ -352,11 +363,7 @@ class SocialMixin:
         def job():
             got = probe.run(self.api, self.caps)
             for feature, there in probe.features(got).items():
-                if there:
-                    self.unsupported.discard(feature)
-                elif feature not in self.unsupported:
-                    self.unsupported.add(feature)
-                    self.emit("unsupported", feature)
+                self._learn(feature, there)
             self.store.kv_set(probe.KV, got)
             return got
         return self.submit(job)

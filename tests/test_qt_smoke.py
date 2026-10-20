@@ -1588,6 +1588,11 @@ class QtSmokeTest(unittest.TestCase):
         w = self.win.lane_widgets["activity"]
         when = self.theme.date("2099-10-14T11:01:00.000Z")
         self.assertTrue(any(when in lab.text() for lab in w.findChildren(QLabel)))
+        # the server says it can't clear: the button goes at once
+        self.assertFalse(w.clear_btn.isHidden())
+        self.core._learn("dismiss", False)
+        self.pump(until=lambda: w.clear_btn.isHidden())
+        w = self.win.lane_widgets["activity"]
         ok = [b for b in w.findChildren(QPushButton) if b.text() == _("ok_interaction")]
         self.assertEqual(len(ok), 1)
         ok[0].click()

@@ -2019,9 +2019,10 @@ class ActivityWidget(QWidget):
         self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
         self.header.add(_button(_("mark_all_read"), lambda: self.core.mark_activity_seen(),
                                 icon="mail-mark-read"))
-        if self.core.supports("dismiss"):
-            self.header.add(_button(_("activity_clear"), self._clear, icon="edit-clear-all",
-                                    tip=_("activity_clear_tip")))
+        self.clear_btn = _button(_("activity_clear"), self._clear, icon="edit-clear-all",
+                                 tip=_("activity_clear_tip"))
+        self.header.add(self.clear_btn)
+        self.clear_btn.setVisible(self.core.supports("dismiss"))
         lay.addWidget(self.header)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -2254,6 +2255,11 @@ class ActivityWidget(QWidget):
 
     def apply_read(self, ids):
         pass
+
+    def capabilities_changed(self):
+        """The server answered for a feature: Clear and the × tips as it can now."""
+        self.clear_btn.setVisible(self.core.supports("dismiss"))
+        self.refresh()
 
 
 # the i18n words a row of activity can say (act_<key>); its card's "kind" is the key

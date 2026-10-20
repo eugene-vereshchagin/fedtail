@@ -73,7 +73,8 @@ fedtail/
                      (docs/PROTOCOLS.md); text.py: html_to_text, snippet, reply_mentions
   protocols/         one package per protocol; get(name) → its Protocol
     base.py          Protocol (client, error, capabilities, adapter, stream), CLIENT — the
-                     client methods the core calls, ServerError (tests/test_protocols.py)
+                     client methods the core calls, ServerError, Capabilities — what the
+                     server can do, learned (Core.supports; event capabilities_changed)
     mastodon/
       adapter.py     Mastodon API JSON (GTS, Mastodon, Akkoma, Pleroma) → model:
                      post() → Post | Share, account(), activity(); forgiving, never raises

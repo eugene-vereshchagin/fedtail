@@ -9,14 +9,13 @@ import os
 import re
 import threading
 import time
-from dataclasses import dataclass
 from urllib.parse import quote, urlencode, urlsplit
 
 import requests
 
 from ... import version
 from ...core import health
-from ..base import ServerError
+from ..base import Capabilities, ServerError  # noqa: F401 — Capabilities: as before
 
 OOB = "urn:ietf:wg:oauth:2.0:oob"
 SCOPES = "read write"
@@ -49,20 +48,6 @@ def error_text(r):
 
 class ApiError(ServerError):
     """An error answer of the Mastodon API."""
-
-
-@dataclass
-class Capabilities:
-    software: str = ""
-    version: str = ""  # what the server says it runs ("4.3.0", "0.17.3 git-…")
-    max_characters: int = 500
-    max_media: int = 4
-    markdown: bool = False
-    max_poll_options: int = 4
-    translation: bool = False
-    streaming: str = ""  # wss://… of the live stream, "" — not said
-    image_bytes: int = 0   # the largest picture the server takes, bytes (0 — not said)
-    image_pixels: int = 0  # …and in pixels, width × height
 
 
 def capabilities_from_instance(inst):

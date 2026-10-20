@@ -87,7 +87,10 @@
   a line of its own. Lanes slide in on a phone; light and dark follow the system.
 - Inside: the terminal, the TUI and the web interface work on fedtail's own data model
   (`fedtail/model`, `fedtail/core/view.py`) instead of the server's JSON — stage 2 of
-  docs/PROTOCOLS.md; so does the Qt window, all of it. Nothing changes in what they
+  docs/PROTOCOLS.md; so does the Qt window, all of it. The Mastodon API itself lives in
+  `fedtail/protocols/mastodon/` behind a protocol interface (stage 3), and what the server
+  can do is kept in one place (stage 4): a button the server refuses goes at once, and
+  stays gone after a reconnect. Nothing changes in what they
   show, except that the web page and `fedtail post -v` say "followers" (`private` still
   works).
 

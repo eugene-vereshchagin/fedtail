@@ -71,5 +71,19 @@ class ProtocolLayerTest(unittest.TestCase):
         self.assertEqual(bad, [], "\n".join(bad))
 
 
+class CapabilitiesTest(unittest.TestCase):
+    def test_learned_and_known(self):
+        from fedtail.protocols.base import Capabilities
+        caps = Capabilities(software="gotosocial", version="0.20")
+        self.assertTrue(caps.has("lists"))          # not known otherwise: offered
+        self.assertFalse(caps.has("dismiss_one"))   # known of GoToSocial
+        self.assertTrue(caps.learn("lists", False))
+        self.assertFalse(caps.has("lists"))
+        self.assertFalse(caps.learn("lists", False))  # nothing new
+        self.assertTrue(caps.learn("dismiss_one", True))  # a newer one can: it said so
+        self.assertTrue(caps.has("dismiss_one"))
+        self.assertTrue(caps.same_server("gotosocial", "0.20"))
+
+
 if __name__ == "__main__":
     unittest.main()

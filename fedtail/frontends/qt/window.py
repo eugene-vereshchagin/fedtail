@@ -1465,6 +1465,12 @@ class MainWindow(QMainWindow):
                 if getattr(w, "view", None) is not None:
                     w.view.remove_status(payload)
             self.statusBar().showMessage(_("deleted"), 4000)
+        elif name == "capabilities_changed":
+            # the server answered for a feature: what offers it shows or hides now
+            for w in list(self.lane_widgets.values()) + self.extra_tabs():
+                fn = getattr(w, "capabilities_changed", None)
+                if fn is not None:
+                    fn()
         elif name == "me_updated":
             self._show_me(payload)
             for w in self.extra_tabs():
