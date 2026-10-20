@@ -32,7 +32,6 @@ log = logging.getLogger(__name__)
 
 FACE = 64  # a face beside the messages, as in QIP: as tall as the input line
 BAR_FACE = 36  # the author's, in the one-line bar over a lane
-VIS_MARK = {"public": "🌐", "unlisted": "🔓", "private": "🔒", "direct": "✉"}
 
 
 class InputDock(QWidget):
@@ -61,7 +60,7 @@ class InputDock(QWidget):
         self.cw_btn.setCheckable(True)
         self.cw_btn.toggled.connect(self._cw_toggled)
         bar.addWidget(self.cw_btn)
-        self.attach_btn = self._mini("📎", _("dock_attach"))
+        self.attach_btn = self._mini(_("dock_attach_word"), _("dock_attach"))
         self.attach_btn.clicked.connect(self._attach)
         bar.addWidget(self.attach_btn)
         self.media = []         # [(path, description)] going with the next post
@@ -99,12 +98,18 @@ class InputDock(QWidget):
         self.face.hide()
         self._to = self._face_url = None
         HoverCard(win, self.face, lambda: self._to)
-        row.addWidget(self.face, 0, Qt.AlignmentFlag.AlignTop)
+        # a column on the right: the face in its middle, Send at its foot
+        side = QVBoxLayout()
+        side.setSpacing(4)
+        side.addStretch(1)
+        side.addWidget(self.face, 0, Qt.AlignmentFlag.AlignHCenter)
+        side.addStretch(1)
         self.send_btn = QPushButton(_("dock_send"))
         self.send_btn.setObjectName("compose")
         self.send_btn.setToolTip(_("dock_send") + " (Ctrl+Enter)")
         self.send_btn.clicked.connect(self.send)
-        row.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignBottom)
+        side.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignHCenter)
+        row.addLayout(side)
         v.addLayout(row)
         self.visibility = win.ctx.view.reply_visibility(None)
         self.dress()
@@ -115,9 +120,9 @@ class InputDock(QWidget):
         from . import icons
         t = self.win.theme
         icons.dress(self.cw_btn, "warning", t, glyph="CW")
-        icons.dress(self.attach_btn, "attach", t,
-                    words=str(len(self.media)) if self.media else "", glyph="📎" +
-                    (str(len(self.media)) if self.media else ""))
+        n = f" {len(self.media)}" if self.media else ""
+        icons.dress(self.attach_btn, "attach", t, words=n.strip(),
+                    glyph=_("dock_attach_word") + n)
         self.lang_btn.setText((self.language or _("dock_lang_default")) + " ▾")
         icons.dress(self.send_btn, "send", t, words=_("dock_send"))
         self._show_visibility()
@@ -236,7 +241,7 @@ class InputDock(QWidget):
         from . import icons
         vis = self.visibility
         icons.dress(self.vis_btn, vis, self.win.theme, words="▾",
-                    glyph=VIS_MARK.get(vis, "?") + " ▾")
+                    glyph=_("vis_short_" + VIS_KEY.get(vis, vis)) + " ▾")
         self.vis_btn.setToolTip(f"{_('web_visibility')}: "
                                 f"{_('vis_' + VIS_KEY.get(vis, vis))}")
 
