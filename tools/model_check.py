@@ -6,6 +6,11 @@ Read-only: the database is opened for reading and nothing is sent anywhere. Prin
 how many posts, boosts and notifications went through, any that failed (with the
 error and the post's id — no texts), and how often each part of the model came out
 filled, so a server that names a field differently shows up as a 0 % next to it.
+It also checks the adapter against the raw JSON: for the parts that matter, how many
+posts carry them on the wire and how many came out in the model (a gap means the
+adapter misreads this server), and which fields the server sends that the adapter
+doesn't read at all (names only).
+
 Paste the output into an issue or a message: it holds no posts and no names.
 """
 
@@ -43,6 +48,29 @@ FILLED = {
 }
 
 
+# what the adapter reads from a status, top level (anything else is listed as unread)
+READ = {"id", "created_at", "edited_at", "in_reply_to_id", "in_reply_to_account_id",
+        "sensitive", "spoiler_text", "visibility", "local_only", "language", "uri", "url",
+        "replies_count", "reblogs_count", "favourites_count", "quotes_count", "favourited",
+        "reblogged", "muted", "bookmarked", "pinned", "content", "reblog", "application",
+        "account", "media_attachments", "mentions", "tags", "emojis", "card", "poll",
+        "quote", "quote_id", "quote_approval", "interaction_policy", "filtered",
+        "emoji_reactions", "pleroma"}
+
+# raw key → does the model have it
+ON_WIRE = {
+    "card": lambda p: p.card is not None,
+    "quote": lambda p: p.quote is not None,
+    "quote_id": lambda p: p.quote is not None,
+    "poll": lambda p: p.poll is not None,
+    "emoji_reactions": lambda p: bool(p.reactions),
+    "edited_at": lambda p: p.edited is not None,
+    "filtered": lambda p: bool(p.filtered) or p.hidden,
+    "spoiler_text": lambda p: bool(p.warning),
+    "media_attachments": lambda p: bool(p.media),
+}
+
+
 def main():
     name = sys.argv[1] if len(sys.argv) > 1 else None
     db_path = paths.resolve(name).db_file
@@ -53,10 +81,20 @@ def main():
     filled = collections.Counter()
     vis = collections.Counter()
     failed = []
-    t = time.perf_counter()
+    unread = collections.Counter()
+    wire, model = collections.Counter(), collections.Counter()
+    took = 0.0
     for sid, data in db.execute("SELECT id, data FROM statuses"):
+        raw = json.loads(data)
+        if isinstance(raw.get("reblog"), dict):
+            raw = raw["reblog"]  # stored by itself too, but count what the wrapper holds
+        for key in raw:
+            if key not in READ:
+                unread[key] += 1
         try:
+            t = time.perf_counter()
             got = adapter.post(json.loads(data))
+            took += time.perf_counter() - t
         except Exception:  # noqa: BLE001 — that's what we're here to find
             failed.append((sid, traceback.format_exc(limit=3)))
             continue
@@ -65,9 +103,13 @@ def main():
             got = got.post
         count["posts"] += 1
         vis[got.visibility] += 1
+        for key, test in ON_WIRE.items():
+            if raw.get(key) or (key == "emoji_reactions"
+                                and (raw.get("pleroma") or {}).get("emoji_reactions")):
+                wire[key] += 1
+                model[key] += bool(test(got))
         for key, test in FILLED.items():
             filled[key] += bool(test(got))
-    took = time.perf_counter() - t
     kinds = collections.Counter()
     for nid, type_, acc, _sid in db.execute("SELECT id, type, account, status_id FROM activity"):
         try:
@@ -83,6 +125,12 @@ def main():
     print("filled:")
     for key in FILLED:
         print(f"  {key:16} {filled[key] * 100 / n:5.1f} %")
+    print("on the wire → in the model:")
+    for key in ON_WIRE:
+        mark = "" if wire[key] == model[key] else "   <-- gap"
+        print(f"  {key:18} {wire[key]:6} → {model[key]:6}{mark}")
+    print("sent by the server, not read:",
+          ", ".join(f"{k} {v}" for k, v in unread.most_common()) or "—")
     print(f"failed: {len(failed)}")
     for oid, tb in failed[:10]:
         print(f"--- {oid}\n{tb}")
