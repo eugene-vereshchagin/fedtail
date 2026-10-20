@@ -376,10 +376,8 @@ class RosterWindow(QWidget):
         elif kind == "person":
             row = self.rows.get(key)
             item = row.item if row is not None else None
-            if item is not None and item.talk:
-                self.win.open_thread(item.talk)  # our private talk
-            elif item is not None and item.who is not None:
-                self.win.write_to(item.who)  # none yet: a private message to them
+            if item is not None and item.who is not None:
+                self.win.write_to(item.who)  # our talk, a tab of its own, written to
         else:
             self.win.open_thread(post_id)
         self.win.show_raise()

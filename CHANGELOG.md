@@ -7,6 +7,11 @@
   server's window starts anew, and asks nothing while it is spent. One line in the
   status bar says until when — instead of a "429" for every lane, every round (as on
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
+- In the split layout a person from "People" opens as a tab of their own with only
+  our private messages (the Direct lane holds everyone's), written to by the input
+  line; the bar over a lane is one line with a small face and stays put; the input
+  line attaches pictures and picks the language (⤢ and the big window are gone from
+  it); `--layout` / `--theme` carry over to an account switched to.
 - `ui.button_icons = "theme" | "on" | "off"`: pictures on buttons whatever the theme
   says. The split layout's buttons (the input line, the bar over a lane, the roster)
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the

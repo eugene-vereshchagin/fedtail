@@ -405,6 +405,7 @@ class MainWindow(QMainWindow):
             self.read_write.setStretchFactor(1, 0)
             rv.insertWidget(at, self.msg_tabs)
             rv.insertWidget(at + 1, self.read_write, 1)
+            self.read_write.setSizes([10_000, 1])  # the input line as small as it goes
             self.tabs.currentChanged.connect(lambda _i: self.dock.follow(
                 self.tabs.currentWidget()))
         self.menuBar().hide()
@@ -1643,6 +1644,17 @@ class MainWindow(QMainWindow):
                 return
         self._add_tab(ThreadWidget(self, sid), _("thread_loading"))
 
+    def open_talk(self, account):
+        """Our private talk with someone, a tab of its own (the split layout)."""
+        from .dock import TalkWidget
+        for w in self.extra_tabs():
+            if isinstance(w, TalkWidget) and w.who.id == account.id:
+                self._front(w)
+                return w
+        w = TalkWidget(self, account)
+        self._add_tab(w, w.title)
+        return w
+
     def open_account(self, acc_id):
         for w in self.extra_tabs():
             if isinstance(w, AccountWidget) and w.acc_id == acc_id:
@@ -2116,8 +2128,7 @@ class MainWindow(QMainWindow):
         Compose window, "@them " and direct."""
         if self.dock is not None:
             self.show_raise()
-            if "direct" in self.core.lane_by_name:
-                self.select_lane("direct")
+            self.open_talk(account)  # a tab of our own: only our private messages
             self.dock.write_to(account)
             return
         dlg = Compose(self, text="@" + account.handle + " ")

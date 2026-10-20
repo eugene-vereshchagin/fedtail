@@ -150,6 +150,9 @@ class CliTest(TmpDir):
         args = entry.parse_args(["--layout", "split", "--theme", "psi"])
         self.assertIsNone(entry.for_this_run(args, cfg))
         self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["theme"]), ("split", "psi"))
+        from fedtail.core import profiles  # another account started from here: the same
+        self.assertEqual(profiles.RUN_FLAGS, ["--layout", "split", "--theme", "psi"])
+        self.addCleanup(profiles.RUN_FLAGS.clear)
         self.assertIn("no theme", entry.for_this_run(entry.parse_args(["--theme", "nope"]), cfg))
         with self.assertRaises(SystemExit):  # argparse: not a layout
             entry.parse_args(["--layout", "sideways"])

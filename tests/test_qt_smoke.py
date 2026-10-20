@@ -2250,7 +2250,7 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(win.dock.face.isVisibleTo(win),
                          win.dock.target.author.id != self.core.me["id"])
         win.author_bar.update_bar()
-        self.assertFalse(win.author_bar.isVisibleTo(win))
+        self.assertFalse(win.author_bar.isVisibleTo(win))  # a thread: by the input line
         win.select_lane("home")
         self.assertIsNone(win.dock.target)  # a lane: a new post
         self.pump(0.3)
@@ -2271,6 +2271,18 @@ class QtSmokeTest(unittest.TestCase):
         win.compose(thread.posts[0])
         self.assertEqual(win.dock.target.id, thread.posts[0].id)
         win.dock.text.clear()
+        # a private talk with one person: a tab of its own, the input line to them
+        from fedtail.frontends.qt.dock import TalkWidget, talk_with
+        who = thread.posts[0].author
+        win.write_to(who)
+        self.assertIsInstance(win.tabs.currentWidget(), TalkWidget)
+        self.assertEqual(win.dock.visibility, "direct")
+        self.assertIn("@" + who.handle, win.dock.text.toPlainText())
+        win.write_to(who)  # again: the same tab
+        self.assertEqual(sum(isinstance(w, TalkWidget) for w in win.extra_tabs()), 1)
+        self.assertEqual(talk_with(win.ctx.view, [], who.handle), [])
+        win.dock.text.clear()
+        win.tabs.setCurrentWidget(thread)
         # every lane and thread opened has a tab above; a command in the input line
         win.msg_tabs.sync()
         kinds = {win.msg_tabs.tabData(i)[0] for i in range(win.msg_tabs.count())}

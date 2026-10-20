@@ -108,11 +108,17 @@ def command(profile):
     return [sys.executable, "-m", "fedtail", "--profile", profile], None
 
 
+# --layout / --theme given to this run (fedtail/__main__.py): a profile started from
+# here gets them too, or switching accounts would drop back to the config's layout
+RUN_FLAGS = []
+
+
 def launch(profile, after=0.0):
     """Start fedtail with that profile, detached. If it is already running, the new
     process asks it to show itself and leaves (SingleInstance). after: seconds to
     wait first (a restart of this very profile: let this window close)."""
     argv, cwd = command(profile)
+    argv = list(argv) + RUN_FLAGS
     log.info("starting profile %s%s", profile, f" in {after} s" if after else "")
     from .. import sysenv
     env = sysenv.child_env() or dict(os.environ)

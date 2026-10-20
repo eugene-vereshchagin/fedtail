@@ -22,14 +22,18 @@ from .frontends import cli  # noqa: E402
 def for_this_run(args, cfg):
     """--layout / --theme: this run only, the config file stays as it is. An error to
     say, or None."""
+    from .core import profiles
+    profiles.RUN_FLAGS[:] = []
     if getattr(args, "layout", None):
         cfg["ui"]["layout"] = args.layout
+        profiles.RUN_FLAGS += ["--layout", args.layout]
     if getattr(args, "theme", None):
         from .frontends import themefile
         have = themefile.available()
         if args.theme not in have:
             return f"no theme {args.theme!r}; there are: {', '.join(have)}"
         cfg["ui"]["theme"] = args.theme
+        profiles.RUN_FLAGS += ["--theme", args.theme]
     return None
 
 

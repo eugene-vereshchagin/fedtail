@@ -27,8 +27,16 @@ def names():
     return sorted(p.stem for p in DIR.glob("*.svg"))
 
 
+_said = []
+
+
 def wanted(theme):
-    return QSvgRenderer is not None and bool(theme.shape.get("icons"))
+    on = bool(theme.shape.get("icons"))
+    if on and QSvgRenderer is None and not _said:
+        _said.append(1)
+        log.warning("button pictures need Qt's SVG module (Debian: python3-pyside6.qtsvg);"
+                    " words instead")
+    return QSvgRenderer is not None and on
 
 
 def icon(name, theme, size=16):

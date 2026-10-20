@@ -31,6 +31,7 @@ from .card import VIS_KEY
 log = logging.getLogger(__name__)
 
 FACE = 64  # a face beside the messages, as in QIP: as tall as the input line
+BAR_FACE = 36  # the author's, in the one-line bar over a lane
 VIS_MARK = {"public": "🌐", "unlisted": "🔓", "private": "🔒", "direct": "✉"}
 
 
@@ -60,9 +61,16 @@ class InputDock(QWidget):
         self.cw_btn.setCheckable(True)
         self.cw_btn.toggled.connect(self._cw_toggled)
         bar.addWidget(self.cw_btn)
-        full = self.full_btn = self._mini("⤢", _("dock_full"))
-        full.clicked.connect(self.open_full)
-        bar.addWidget(full)
+        self.attach_btn = self._mini("📎", _("dock_attach"))
+        self.attach_btn.clicked.connect(self._attach)
+        bar.addWidget(self.attach_btn)
+        self.media = []         # [(path, description)] going with the next post
+        self.lang_btn = self._mini("", _("dock_language"))
+        self.lang_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.lang_btn.setMenu(QMenu(self.lang_btn))
+        self.lang_btn.menu().aboutToShow.connect(self._fill_languages)
+        self.language = None    # None: post.language
+        bar.addWidget(self.lang_btn)
         self.about = QLabel()
         self.about.setObjectName("muted")
         bar.addWidget(self.about, 1)
@@ -106,9 +114,34 @@ class InputDock(QWidget):
         from . import icons
         t = self.win.theme
         icons.dress(self.cw_btn, "warning", t, glyph="CW")
-        icons.dress(self.full_btn, "expand", t, glyph="⤢")
+        icons.dress(self.attach_btn, "attach", t,
+                    words=str(len(self.media)) if self.media else "", glyph="📎" +
+                    (str(len(self.media)) if self.media else ""))
+        self.lang_btn.setText((self.language or _("dock_lang_default")) + " ▾")
         icons.dress(self.send_btn, "send", t, words=_("dock_send"))
         self._show_visibility()
+
+    def _attach(self):
+        """Pictures or a video for the next post; again: what was chosen goes."""
+        from PySide6.QtWidgets import QFileDialog
+        if self.media:
+            self.media = []
+        else:
+            paths, _f = QFileDialog.getOpenFileNames(self, _("dock_attach"))
+            self.media = [(p, "") for p in paths[:4]]
+        self.attach_btn.setToolTip("\n".join(p for p, _d in self.media) or _("dock_attach"))
+        self.dress()
+
+    def _fill_languages(self):
+        m = self.lang_btn.menu()
+        m.clear()
+        m.addAction(_("dock_lang_default"), lambda: self._set_language(None))
+        for code in self.win.cfg["post"].get("languages") or ("ru", "en"):
+            m.addAction(code, lambda c=code: self._set_language(c))
+
+    def _set_language(self, code):
+        self.language = code
+        self.dress()
 
     def _mini(self, text, tip):
         b = QToolButton()
@@ -128,6 +161,9 @@ class InputDock(QWidget):
             post = posts[-1] if posts else None
         if self._typed():
             return  # words of mine on their way: they keep whom they answer
+        if isinstance(widget, TalkWidget):
+            self.write_to(widget.who, focus=False)  # a talk: privately to them
+            return
         self.set_target(post)
 
     def _typed(self):
@@ -139,10 +175,10 @@ class InputDock(QWidget):
         self.set_target(post, fresh=not self._typed())
         self.text.setFocus()
 
-    def write_to(self, account):
+    def write_to(self, account, focus=True):
         """A private message to someone (a person in the roster): "@them ", direct."""
         self.target = None
-        self.set_target(None)
+        self.set_target(None, fresh=True)
         self._prefill = "@" + account.handle + " "
         self.text.setPlainText(self._prefill)
         self.text.moveCursor(QTextCursor.MoveOperation.End)
@@ -150,7 +186,8 @@ class InputDock(QWidget):
         self.show_whom(account)
         self._about = _("dock_private", name=account.username or account.handle)
         self.about.setText(self._about)
-        self.text.setFocus()
+        if focus:
+            self.text.setFocus()
 
     def start_with(self, text):
         """A new post beginning with these words ("Mention" on a profile)."""
@@ -275,6 +312,8 @@ class InputDock(QWidget):
         log.info("dock: %s", "reply to " + target.id if target else "new post")
 
         def sent(st):
+            self.media = []
+            self.dress()
             self.text.clear()
             self._prefill = ""
             self.cw.clear()
@@ -287,20 +326,11 @@ class InputDock(QWidget):
             self._count()
             self.win.error(err)
 
-        self.win.bridge.call(self.win.ctx.view.post(text, self.visibility, target, warning),
-                             ok=sent, fail=failed)
-
-    def open_full(self):
-        """The same words in the full Compose window; the line here is emptied."""
-        text = self.text.toPlainText()
-        if text.strip() == self._prefill.strip():
-            text = ""
-        target = self.target
-        self.text.clear()
-        self._prefill = ""
-        self.target = None
-        self.win.compose_window(target, (), text)
-        self.follow(self.win.tabs.currentWidget())
+        kw = {"language": self.language} if self.language else {}
+        if self.media:
+            kw["media"] = list(self.media)
+        self.win.bridge.call(self.win.ctx.view.post(text, self.visibility, target, warning,
+                                                    **kw), ok=sent, fail=failed)
 
 
 def other_side(win, me):
@@ -314,6 +344,10 @@ def other_side(win, me):
         if key not in view.rows:
             anchor = view._reading_anchor()
             key = anchor[0] if anchor else None
+        if key not in view.rows:  # not scrolled yet: the first card on screen
+            top = view.verticalScrollBar().value()
+            key = next((k for k in view.order if k in view.rows and
+                        view.rows[k].y() + view.rows[k].height() > top), None)
         row = view.rows.get(key)
         spec = getattr(row, "spec", None)
         if spec is not None and spec.entry is not None:
@@ -342,46 +376,46 @@ class AuthorBar(QWidget):
         self._url = None
         self.setObjectName("authorBar")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        # one line: name @address · how we stand ……… [Follow] [List ▾] [✉] [profile] face
+        self.setFixedHeight(BAR_FACE + 8)  # one height whoever it shows: nothing jumps
         h = QHBoxLayout(self)
-        h.setContentsMargins(10, 4, 10, 4)
-        h.setSpacing(10)
-        col = QVBoxLayout()
-        col.setSpacing(2)
+        h.setContentsMargins(10, 3, 6, 3)
+        h.setSpacing(6)
         self.name = QLabel()
         self.name.setObjectName("faceName")
         self.name.setTextFormat(Qt.TextFormat.PlainText)
-        col.addWidget(self.name)
+        h.addWidget(self.name)
         self.about = QLabel()
         self.about.setObjectName("muted")
         self.about.setTextFormat(Qt.TextFormat.PlainText)
-        col.addWidget(self.about)
-        row = QHBoxLayout()
-        row.setSpacing(4)
+        self.about.setMinimumWidth(40)
+        from PySide6.QtWidgets import QSizePolicy
+        self.about.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        h.addWidget(self.about, 1)
         self.follow_btn = QPushButton()
         self.follow_btn.setObjectName("tool")
         self.follow_btn.clicked.connect(self._follow)
-        row.addWidget(self.follow_btn)
+        h.addWidget(self.follow_btn)
         self.lists_btn = QPushButton(_("add_to_list") + " ▾")
         self.lists_btn.setObjectName("tool")
         menu = QMenu(self.lists_btn)
         menu.aboutToShow.connect(lambda: self.who is not None and
                                  self.win.fill_list_menu(menu, self.who))
         self.lists_btn.setMenu(menu)
-        row.addWidget(self.lists_btn)
+        h.addWidget(self.lists_btn)
         self.glyph_btns = []
-        for text, pic, tip, fn in (("✉", "direct", _("faces_private"), self._write),
-                                   ("👤", "profile", _("faces_profile"), self._profile)):
-            b = QPushButton(text)
+        # without pictures: ✉ (in every font) and a word for the profile (👤 is not)
+        for glyph, pic, tip, fn in (("✉", "direct", _("faces_private"), self._write),
+                                    (_("faces_profile"), "profile", _("faces_profile"),
+                                     self._profile)):
+            b = QPushButton(glyph)
             b.setObjectName("tool")
             b.setToolTip(tip)
             b.clicked.connect(fn)
-            row.addWidget(b)
-            self.glyph_btns.append((b, pic, text))
-        row.addStretch(1)
-        col.addLayout(row)
-        h.addLayout(col, 1)
+            h.addWidget(b)
+            self.glyph_btns.append((b, pic, glyph))
         self.face = ClickLabel()
-        self.face.setFixedSize(FACE, FACE)
+        self.face.setFixedSize(BAR_FACE, BAR_FACE)
         self.face.setCursor(Qt.CursorShape.PointingHandCursor)
         self.face.clicked.connect(self._profile)
         h.addWidget(self.face)
@@ -408,11 +442,18 @@ class AuthorBar(QWidget):
         except Exception:  # noqa: BLE001 — the core going away
             return
         # a thread or a talk has whom I answer by the input line; this is for lanes
-        who = None if isinstance(win.tabs.currentWidget(), ThreadWidget) \
-            else other_side(win, me)
-        self.setVisible(who is not None)
+        lane = not isinstance(win.tabs.currentWidget(), (ThreadWidget, TalkWidget))
+        # over a lane it stays, even empty, so the posts under it never jump
+        self.setVisible(lane)
+        who = other_side(win, me) if lane else None
+        for b in [self.follow_btn, self.lists_btn] + [b for b, _p, _g in self.glyph_btns]:
+            b.setEnabled(who is not None)
         if who is None:
-            self.who = None
+            if self.who is not None:
+                self.who = None
+                self.name.setText("")
+                self.about.setText("")
+                set_face(win, self.face, "", self, "_url")
             return
         changed = self.who is None or self.who.id != who.id
         self.who = who
@@ -436,7 +477,10 @@ class AuthorBar(QWidget):
                 bits.append(_("faces_follows_me"))
             elif rel.requested:
                 bits.append(_("faces_requested"))
-        self.about.setText(" · ".join(bits))
+        text = " · ".join(bits)
+        self.about.setText(self.about.fontMetrics().elidedText(
+            text, Qt.TextElideMode.ElideRight, max(40, self.about.width())))
+        self.about.setToolTip(text)
         on = bool(rel and (rel.following or rel.requested))
         from . import icons
         icons.dress(self.follow_btn, "unfollow" if on else "follow", self.win.theme,
@@ -592,3 +636,68 @@ class MessageTabs(QTabBar):
         self.sync()
         if self.count() == 0:
             self.win.hide()  # the last conversation closed: the messages window goes too
+
+
+def talk_with(view, entries, handle):
+    """The entries of a private lane that are between me and this one person only:
+    written by them to me alone, or by me to them alone."""
+    from ...model import real
+    from ...model.text import norm_handle
+    me = norm_handle(view.me.handle) if view.me else ""
+    them = norm_handle(handle)
+    out = []
+    for item, e in entries:
+        p = real(e)
+        people = {norm_handle(p.author.handle)} | {norm_handle(m.handle) for m in p.mentions}
+        people.discard(me)
+        if people == {them}:
+            out.append((item, e))
+    return out
+
+
+class TalkWidget(QWidget):
+    """A private talk with one person, as a messenger has it: their private messages
+    with me, and mine with them, nobody else's (the Direct lane holds everyone's).
+    Its tab is theirs; the input line writes to them, privately."""
+
+    def __init__(self, win, account):
+        super().__init__()
+        from .feed import FeedView
+        self.win, self.who = win, account
+        self.title = account.name or account.username or account.handle
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        self.view = FeedView(win.ctx)
+        self.view.seen.connect(self._seen)
+        v.addWidget(self.view, 1)
+        self.empty = QLabel(_("talk_empty", name=self.title))
+        self.empty.setObjectName("muted")
+        self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(self.empty)
+        self._key = None
+        self._timer = QTimer(self, interval=2000)
+        self._timer.timeout.connect(self.refresh)
+        self._timer.start()
+        self.refresh()
+
+    def refresh(self):
+        from .card import make_spec
+        view = self.win.ctx.view
+        if "direct" not in self.win.core.lane_by_name:
+            return
+        mine = talk_with(view, view.entries("direct"), self.who.handle)
+        unread = view.unread([e for _i, e in mine])
+        key = (tuple(e.id for _i, e in mine), tuple(sorted(unread)))
+        if key == self._key:
+            return
+        self._key = key
+        specs = [make_spec(view, e.id, e, unread=e.id in unread) for _i, e in mine]
+        self.view.set_specs(specs, keep_position=True)
+        self.empty.setVisible(not specs)
+        if specs and self._key is not None and not getattr(self, "_placed", False):
+            self._placed = True
+            QTimer.singleShot(0, lambda: self.view.scroll_to_end(True))
+
+    def _seen(self, ids):
+        if self.win.cfg["read"]["mark_read"] != "manual":
+            self.win.ctx.view.mark_read(ids)
