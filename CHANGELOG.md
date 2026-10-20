@@ -43,9 +43,10 @@
   command line itself hides). Every lane opened from the roster and every thread is a
   tab of its own above. "People" in the roster: whom I follow who follows me back
   (asked once a day) — a double click opens our private talk or starts a private
-  message. Beside them, the faces (`ui.faces`): the other side's on top
-  — whose post the cursor is on, or whom I answer — with the name, the address and
-  buttons for the profile and a private message, and mine by the input line. At the
+  message. The faces (`ui.faces`), as in QIP: over a lane's posts the
+  author of the one under the cursor — name, address, whether we follow each other,
+  and Follow, Add to list, a private message, the profile; by the input line, whom I
+  write to. Reading and writing are split by a bar that drags. At the
   bottom of the roster, the menu and the accounts
   (@me ▾); ⚙ (or a right click on empty space) sets how it looks: compact — a line an
   item, without the header, the search or the buttons, only where there's something new,

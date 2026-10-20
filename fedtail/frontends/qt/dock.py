@@ -30,6 +30,7 @@ from .card import VIS_KEY
 
 log = logging.getLogger(__name__)
 
+FACE = 64  # a face beside the messages, as in QIP: as tall as the input line
 VIS_MARK = {"public": "🌐", "unlisted": "🔓", "private": "🔒", "direct": "✉"}
 
 
@@ -76,10 +77,20 @@ class InputDock(QWidget):
         row = QHBoxLayout()
         self.text = QPlainTextEdit()
         self.text.setObjectName("dockText")
-        self.text.setFixedHeight(64)
+        self.text.setMinimumHeight(FACE)
         self.text.textChanged.connect(self._count)
         self.text.installEventFilter(self)
         row.addWidget(self.text, 1)
+        # whom I write to, as in QIP: their face beside the line (mine isn't needed)
+        from .card import ClickLabel
+        self.face = ClickLabel()
+        self.face.setFixedSize(FACE, FACE)
+        self.face.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.face.clicked.connect(lambda: self._to is not None and
+                                  self.win.open_account(self._to.id))
+        self.face.hide()
+        self._to = self._face_url = None
+        row.addWidget(self.face, 0, Qt.AlignmentFlag.AlignTop)
         self.send_btn = QPushButton(_("dock_send"))
         self.send_btn.setObjectName("compose")
         self.send_btn.setToolTip(_("dock_send") + " (Ctrl+Enter)")
@@ -127,6 +138,7 @@ class InputDock(QWidget):
         self.text.setPlainText(self._prefill)
         self.text.moveCursor(QTextCursor.MoveOperation.End)
         self.set_visibility("direct")
+        self.show_whom(account)
         self._about = _("dock_private", name=account.username or account.handle)
         self.about.setText(self._about)
         self.text.setFocus()
@@ -153,9 +165,21 @@ class InputDock(QWidget):
             self.text.moveCursor(QTextCursor.MoveOperation.End)
             self.visibility = view.reply_visibility(post)
             self._show_visibility()
+        self.show_whom(post.author if post else None)
         self._about = _("dock_reply", name=post.author.username) if post \
             else _("dock_new")
         self.about.setText(self._about)
+
+    def show_whom(self, account):
+        """Their face beside the line: whom this goes to (None: nobody in particular)."""
+        me = self.win.ctx.view.me if self.win.core.me else None
+        if account is not None and me is not None and account.id == me.id:
+            account = None
+        self._to = account
+        self.face.setVisible(account is not None and self.win.cfg["ui"].get("faces", True))
+        self.face.setToolTip("@" + account.handle if account else "")
+        set_face(self.win, self.face, account.avatar_static if account else "", self,
+                 "_face_url")
 
     def set_visibility(self, vis):
         self.visibility = vis
@@ -268,134 +292,164 @@ class InputDock(QWidget):
         self.follow(self.win.tabs.currentWidget())
 
 
-FACE = 88  # the faces beside the messages, as in the Mail.ru Agent
+def other_side(win, me):
+    """The account on the other side, or None: whose post the cursor is on (else the
+    post on top of the screen); my own post there — whom I answer."""
+    from ...model import real
+    view = win.current_view()
+    post = None
+    if view is not None:
+        key = view.cursor_key
+        if key not in view.rows:
+            anchor = view._reading_anchor()
+            key = anchor[0] if anchor else None
+        row = view.rows.get(key)
+        spec = getattr(row, "spec", None)
+        if spec is not None and spec.entry is not None:
+            post = real(spec.entry)
+    dock = win.dock
+    if (post is None or (me and post.author.id == me.id)) and dock is not None \
+            and dock.target is not None:
+        post = dock.target
+    if post is None or (me and post.author.id == me.id):
+        return None
+    return post.author
 
 
-class FaceColumn(QWidget):
-    """Beside the messages, as in the Mail.ru Agent: the other side's face on top (whose
-    post the cursor is on, else the one answered, else the post on top of the screen),
-    its name, @address and small buttons — the profile, a private message; mine at the
-    bottom, beside the input line, with my name. A click on a face: the profile.
-    Looked at twice a second: cheap, and no signal to miss."""
+class AuthorBar(QWidget):
+    """Over a lane's posts (ui.faces): who wrote the post under the cursor — the face on
+    the right, changing as the cursor goes; on the left the name, the @address, how we
+    stand, and what to do: follow or unfollow, the lists, a private message, the
+    profile. Looked at twice a second: cheap, and no signal to miss."""
 
     def __init__(self, win):
         super().__init__()
         from .card import ClickLabel
         self.win = win
         self.who = None
-        self.setObjectName("faceColumn")
+        self._asked = set()
+        self._url = None
+        self.setObjectName("authorBar")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setFixedWidth(FACE + 20)
-        v = QVBoxLayout(self)
-        v.setContentsMargins(10, 8, 10, 8)
-        v.setSpacing(3)
-        self.them = ClickLabel()
-        self.them.setFixedSize(FACE, FACE)
-        self.them.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.them.clicked.connect(self._their_profile)
-        v.addWidget(self.them, 0, Qt.AlignmentFlag.AlignHCenter)
-        self.them_name = self._caption("faceName")
-        v.addWidget(self.them_name)
-        self.them_handle = self._caption("muted")
-        v.addWidget(self.them_handle)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(10, 4, 10, 4)
+        h.setSpacing(10)
+        col = QVBoxLayout()
+        col.setSpacing(2)
+        self.name = QLabel()
+        self.name.setObjectName("faceName")
+        self.name.setTextFormat(Qt.TextFormat.PlainText)
+        col.addWidget(self.name)
+        self.about = QLabel()
+        self.about.setObjectName("muted")
+        self.about.setTextFormat(Qt.TextFormat.PlainText)
+        col.addWidget(self.about)
         row = QHBoxLayout()
-        row.setSpacing(2)
-        self.buttons = []
-        for mark, tip, fn in (("👤", _("faces_profile"), self._their_profile),
-                              ("✉", _("faces_private"), self._write)):
-            b = QToolButton()
-            b.setObjectName("menu")
-            b.setText(mark)
+        row.setSpacing(4)
+        self.follow_btn = QPushButton()
+        self.follow_btn.setObjectName("tool")
+        self.follow_btn.clicked.connect(self._follow)
+        row.addWidget(self.follow_btn)
+        self.lists_btn = QPushButton(_("add_to_list") + " ▾")
+        self.lists_btn.setObjectName("tool")
+        menu = QMenu(self.lists_btn)
+        menu.aboutToShow.connect(lambda: self.who is not None and
+                                 self.win.fill_list_menu(menu, self.who))
+        self.lists_btn.setMenu(menu)
+        row.addWidget(self.lists_btn)
+        for text, tip, fn in (("✉", _("faces_private"), self._write),
+                              ("👤", _("faces_profile"), self._profile)):
+            b = QPushButton(text)
+            b.setObjectName("tool")
             b.setToolTip(tip)
-            b.setAutoRaise(True)
             b.clicked.connect(fn)
             row.addWidget(b)
-            self.buttons.append(b)
         row.addStretch(1)
-        v.addLayout(row)
-        v.addStretch(1)
-        self.me = ClickLabel()
-        self.me.setFixedSize(FACE, FACE)
-        self.me.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.me.clicked.connect(win.open_my_profile)
-        v.addWidget(self.me, 0, Qt.AlignmentFlag.AlignHCenter)
-        self.me_name = self._caption("faceName")
-        v.addWidget(self.me_name)
-        self._urls = {}
+        col.addLayout(row)
+        h.addLayout(col, 1)
+        self.face = ClickLabel()
+        self.face.setFixedSize(FACE, FACE)
+        self.face.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.face.clicked.connect(self._profile)
+        h.addWidget(self.face)
+        self.hide()
         self._timer = QTimer(self, interval=500)
-        self._timer.timeout.connect(self.update_faces)
+        self._timer.timeout.connect(self.update_bar)
         self._timer.start()
 
-    def _caption(self, name):
-        lab = QLabel()
-        lab.setObjectName(name)
-        lab.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        lab.setTextFormat(Qt.TextFormat.PlainText)
-        lab.setMaximumWidth(FACE + 4)
-        return lab
-
-    def _elided(self, lab, text):
-        lab.setText(lab.fontMetrics().elidedText(text, Qt.TextElideMode.ElideRight,
-                                                 FACE + 4))
-        lab.setToolTip(text)
-
-    def _set(self, lab, url, tip=""):
-        lab.setToolTip(tip)
-        if self._urls.get(id(lab)) == url:
-            return
-        self._urls[id(lab)] = url
-        lab.clear()
-        if url:
-            from .card import _round
-            self.win.images.get(url, lambda pm, w=lab, u=url: (
-                self._urls.get(id(w)) == u and w.setPixmap(_round(pm, FACE))))
-
-    def update_faces(self):
-        if not self.isVisible():
+    def update_bar(self):
+        from .feed import ThreadWidget
+        win = self.win
+        if not win.isVisible():
             return
         try:
-            me = self.win.ctx.view.me if self.win.core.me else None
+            me = win.ctx.view.me if win.core.me else None
         except Exception:  # noqa: BLE001 — the core going away
             return
-        self._set(self.me, me.avatar_static if me else "", "@" + me.handle if me else "")
-        self._elided(self.me_name, (me.name or me.username) if me else "")
-        who = self.who = self._other(me)
-        self._set(self.them, who.avatar_static if who else "",
-                  "@" + who.handle if who else "")
-        self._elided(self.them_name, (who.name or who.username) if who else "")
-        self._elided(self.them_handle, "@" + who.handle if who else "")
-        for b in self.buttons:
-            b.setVisible(who is not None)
+        # a thread or a talk has whom I answer by the input line; this is for lanes
+        who = None if isinstance(win.tabs.currentWidget(), ThreadWidget) \
+            else other_side(win, me)
+        self.setVisible(who is not None)
+        if who is None:
+            self.who = None
+            return
+        changed = self.who is None or self.who.id != who.id
+        self.who = who
+        if changed:
+            self.name.setText(who.name or who.username)
+            set_face(win, self.face, who.avatar_static, self, "_url")
+        self._show_relation()
 
-    def _their_profile(self):
-        if self.who is not None:
-            self.win.open_account(self.who.id)
+    def _show_relation(self):
+        who, view = self.who, self.win.ctx.view
+        rel = view.relation_known(who.id)
+        if rel is None and who.id not in self._asked:
+            self._asked.add(who.id)
+            self.win.bridge.call(view.relationship(who.id), ok=lambda _r: None,
+                                 fail=lambda e: log.debug("relation: %s", e))
+        bits = ["@" + who.handle]
+        if rel is not None:
+            if rel.following and rel.followed_by:
+                bits.append(_("faces_mutual"))
+            elif rel.followed_by:
+                bits.append(_("faces_follows_me"))
+            elif rel.requested:
+                bits.append(_("faces_requested"))
+        self.about.setText(" · ".join(bits))
+        on = bool(rel and (rel.following or rel.requested))
+        self.follow_btn.setText(_("unfollow") if on else _("follow"))
+        self.follow_btn.setEnabled(rel is not None)
+
+    def _follow(self):
+        who, view = self.who, self.win.ctx.view
+        if who is None:
+            return
+        rel = view.relation_known(who.id)
+        on = not (rel and (rel.following or rel.requested))
+        self.follow_btn.setEnabled(False)
+        self.win.bridge.call(view.follow(who.id, on), ok=lambda _r: self._show_relation(),
+                             fail=self.win.error)
 
     def _write(self):
         if self.who is not None:
             self.win.write_to(self.who)
 
-    def _other(self, me):
-        """The account on the other side, or None."""
-        from ...model import real
-        view = self.win.current_view()
-        post = None
-        if view is not None:
-            key = view.cursor_key
-            if key not in view.rows:
-                anchor = view._reading_anchor()
-                key = anchor[0] if anchor else None
-            row = view.rows.get(key)
-            spec = getattr(row, "spec", None)
-            if spec is not None and spec.entry is not None:
-                post = real(spec.entry)
-        dock = self.win.dock
-        if (post is None or (me and post.author.id == me.id)) and dock is not None \
-                and dock.target is not None:
-            post = dock.target  # my own post under the cursor: whom I answer
-        if post is None or (me and post.author.id == me.id):
-            return None
-        return post.author
+    def _profile(self):
+        if self.who is not None:
+            self.win.open_account(self.who.id)
+
+
+def set_face(win, lab, url, owner, attr):
+    """A face into a label, round, once the picture comes (and only if it's still the
+    one wanted: owner.<attr> keeps the url asked last)."""
+    if getattr(owner, attr, None) == url:
+        return
+    setattr(owner, attr, url)
+    lab.clear()
+    if url:
+        from .card import _round
+        win.images.get(url, lambda pm: getattr(owner, attr, None) == url and
+                       lab.setPixmap(_round(pm, lab.width())))
 
 
 class MessageTabs(QTabBar):

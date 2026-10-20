@@ -100,6 +100,13 @@ def _tags_key(g):
     return taggroups.key(g)
 
 
+def pop_menu(menu, btn, above=False):
+    """A menu from a button: under it, or above it (buttons at a window's bottom, as
+    the roster's), its left edge at the button's."""
+    y = -menu.sizeHint().height() if above else btn.height()
+    menu.exec(btn.mapToGlobal(QPoint(0, y)))
+
+
 def list_open(rel, inside):
     """May the "add to list" ticks be used: someone I follow (or asked to), or already
     in a list (taking out is always fine). Not yet known (None): no."""
@@ -361,42 +368,43 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         # ui.layout = "split": the lanes in a roster window of their own (roster.py); this
         # window is the messages window — no sidebar, the lanes and threads in tabs
-        self.roster = self.dock = self.faces = self.msg_tabs = None
+        self.roster = self.dock = self.author_bar = self.msg_tabs = None
         self.lane_now = None
         if self.cfg["ui"].get("layout") in ("split", "qip"):
             from .dock import InputDock
             from .roster import RosterWindow
             self.split.widget(0).hide()
             self.roster = RosterWindow(self)
-            # the input line, always under the tabs, and tabs of its own above (dock.py)
-            from .dock import MessageTabs
+            # tabs of its own above, the input line below, a bar that drags between them
+            # (as in QIP); over a lane's posts who wrote the one under the cursor (dock.py)
+            from .dock import AuthorBar, MessageTabs
             self.dock = InputDock(self)
-            rv.insertWidget(rv.indexOf(self.tabs) + 1, self.dock)
             self.msg_tabs = MessageTabs(self)
-            rv.insertWidget(rv.indexOf(self.tabs), self.msg_tabs)
             self.tabs.tabBar().hide()  # the bar above says which is in front
             self.tabs.tabBar().setMaximumHeight(0)
             self.tabs.currentChanged.connect(lambda _i: self.msg_tabs.sync())
             if self.cfg["ui"].get("dock_commands", True):
                 self.cmdline.hide()  # the input line takes the commands (Ctrl+L: still here)
-            # and the faces beside them (ui.faces): theirs on top, mine by the input
+            at = rv.indexOf(self.tabs)
+            rv.removeWidget(self.tabs)
+            reading = QWidget()
+            rl = QVBoxLayout(reading)
+            rl.setContentsMargins(0, 0, 0, 0)
+            rl.setSpacing(0)
             if self.cfg["ui"].get("faces", True):
-                from .dock import FaceColumn
-                outer = QHBoxLayout()
-                outer.setContentsMargins(0, 0, 0, 0)
-                outer.setSpacing(0)
-                inner = QWidget()
-                inner.setLayout(QVBoxLayout())
-                inner.layout().setContentsMargins(0, 0, 0, 0)
-                inner.layout().setSpacing(0)
-                at = rv.indexOf(self.tabs)
-                for w in (self.msg_tabs, self.tabs, self.dock):
-                    rv.removeWidget(w)
-                    inner.layout().addWidget(w, 1 if w is self.tabs else 0)
-                outer.addWidget(inner, 1)
-                self.faces = FaceColumn(self)
-                outer.addWidget(self.faces)
-                rv.insertLayout(at, outer, 1)
+                self.author_bar = AuthorBar(self)
+                rl.addWidget(self.author_bar)
+            rl.addWidget(self.tabs, 1)
+            self.read_write = QSplitter(Qt.Orientation.Vertical)
+            self.read_write.setObjectName("readWrite")
+            self.read_write.setChildrenCollapsible(False)
+            self.read_write.setHandleWidth(6)
+            self.read_write.addWidget(reading)
+            self.read_write.addWidget(self.dock)
+            self.read_write.setStretchFactor(0, 1)
+            self.read_write.setStretchFactor(1, 0)
+            rv.insertWidget(at, self.msg_tabs)
+            rv.insertWidget(at + 1, self.read_write, 1)
             self.tabs.currentChanged.connect(lambda _i: self.dock.follow(
                 self.tabs.currentWidget()))
         self.menuBar().hide()
@@ -737,9 +745,9 @@ class MainWindow(QMainWindow):
         if self.roster is not None:
             self.roster.refresh()
 
-    def _pop_app_menu(self, btn):
+    def _pop_app_menu(self, btn, above=False):
         m = self._app_menu()
-        m.exec(btn.mapToGlobal(QPoint(0, btn.height())))
+        pop_menu(m, btn, above)
         m.deleteLater()
 
     def _set_title(self):
@@ -2420,6 +2428,8 @@ class MainWindow(QMainWindow):
         if e.key() == Qt.Key.Key_Escape and not e.modifiers() and mode != "off":
             if self.find_bar.isVisible():
                 self.find_bar.close_bar()
+            elif self.msg_tabs is not None:
+                self.msg_tabs.close_current()  # split: the tab in front, as in QIP
             elif mode == "tray":
                 self.hide_away()
             elif not self.curtain_shown():

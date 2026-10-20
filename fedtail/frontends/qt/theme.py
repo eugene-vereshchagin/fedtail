@@ -255,7 +255,10 @@ QTabBar::tab {{ background: transparent; color: {k('muted')}; padding: 7px 14px;
     border-top-left-radius: {br}px; border-top-right-radius: {br}px; }}
 QTabBar::tab:selected {{ background: {k('view')}; color: {k('text')}; font-weight: 600; }}
 QTabBar#messageTabs {{ background: {k('window')}; }}
-QWidget#faceColumn {{ background: {k('sidebar')}; border-left: 1px solid {k('sidebar_border')}; }}
+QWidget#authorBar {{ background: {k('header')}; border-bottom: 1px solid {k('header_border')}; }}
+QSplitter#readWrite::handle {{ background: {k('header_border')}; margin: 1px 0; }}
+QSplitter#readWrite::handle:hover {{ background: {k('selected')}; }}
+QWidget#inputDock {{ background: {k('header')}; }}
 QLabel#faceName {{ font-weight: 600; background: transparent; }}
 QTabBar#messageTabs::tab {{ background: {k('button')}; color: {k('text')};
     border: 1px solid {k('button_border')}; border-bottom: 0; margin: 3px 1px 0 1px;

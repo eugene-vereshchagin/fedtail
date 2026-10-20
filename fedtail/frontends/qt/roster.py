@@ -31,6 +31,7 @@ log = logging.getLogger(__name__)
 AVATAR = 40      # mine, in the header
 FACE = 28        # the newest post's author, beside an item
 REFRESH_MS = 300  # coalesce bursts of events into one rebuild
+_ICONS = {}       # a lane kind's icon, looked up once
 # how the roster looks (the ⚙ menu, kept in state): a compact one is a line an item —
 # no status line, no face; the header, the search and the bottom row can go
 LOOK = {"compact": False, "header": True, "search": True, "bottom": True,
@@ -54,9 +55,12 @@ class RosterRow(QWidget):
         if win.theme.shape["lane_icons"]:
             kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(item.kind,
                                                              item.key.split(":")[0])
-            ic = QIcon.fromTheme(LANE_ICON.get(kind, ""))
-            if not ic.isNull():
-                icon.setPixmap(ic.pixmap(18, 18))
+            pm = _ICONS.get(kind)
+            if pm is None:  # looking an icon up in the theme is slow: once a kind
+                ic = QIcon.fromTheme(LANE_ICON.get(kind, ""))
+                pm = _ICONS[kind] = ic.pixmap(18, 18) if not ic.isNull() else False
+            if pm:
+                icon.setPixmap(pm)
         h.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(0)
@@ -125,6 +129,11 @@ class RosterRow(QWidget):
     def matches(self, text):
         t = text.casefold()
         return not t or t in self.item.title.casefold() or t in self.line.text().casefold()
+
+
+def pop_menu(menu, btn, above=True):
+    from .window import pop_menu as pop  # the window's (it pops its own menus too)
+    pop(menu, btn, above)
 
 
 def row_key(item):
@@ -225,7 +234,7 @@ class RosterWindow(QWidget):
         bottom.setContentsMargins(0, 0, 0, 0)
         self.menu_btn = QPushButton(_("menu"))
         self.menu_btn.setObjectName("tool")
-        self.menu_btn.clicked.connect(lambda: self.win._pop_app_menu(self.menu_btn))
+        self.menu_btn.clicked.connect(lambda: self.win._pop_app_menu(self.menu_btn, True))
         bottom.addWidget(self.menu_btn)
         self.account_btn = QPushButton()
         self.account_btn.setObjectName("tool")
@@ -235,8 +244,7 @@ class RosterWindow(QWidget):
         self.look_btn = QPushButton("⚙")
         self.look_btn.setObjectName("tool")
         self.look_btn.setToolTip(_("roster_look"))
-        self.look_btn.clicked.connect(lambda: self._look_menu().exec(
-            self.look_btn.mapToGlobal(QPoint(0, self.look_btn.height()))))
+        self.look_btn.clicked.connect(lambda: pop_menu(self._look_menu(), self.look_btn, True))
         bottom.addWidget(self.look_btn)
         v.addWidget(self.bottom)
         self.head_box = head
@@ -276,8 +284,16 @@ class RosterWindow(QWidget):
         self._filter(self.search.text())
 
     def _build(self, groups):
+        self.list.setUpdatesEnabled(False)
+        try:
+            self._build_rows(groups)
+        finally:
+            self.list.setUpdatesEnabled(True)
+
+    def _build_rows(self, groups):
         self.list.clear()
         self.rows, self.heads = {}, {}
+        tall = {}  # a row's height, measured once a shape (asking each is slow)
         for g in groups:
             if not g.items:
                 continue
@@ -294,8 +310,11 @@ class RosterWindow(QWidget):
                 row = RosterRow(self, item)
                 row_it.setData(Qt.ItemDataRole.UserRole, row.key)
                 row_it.setData(Qt.ItemDataRole.UserRole + 1, g.name)
-                tall = row.sizeHint().height()
-                row_it.setSizeHint(QSize(0, tall if row.compact else max(tall, FACE + 8)))
+                shape = (row.compact, bool(row.line.text()))
+                if shape not in tall:
+                    h = row.sizeHint().height()
+                    tall[shape] = h if row.compact else max(h, FACE + 8)
+                row_it.setSizeHint(QSize(0, tall[shape]))
                 self.list.addItem(row_it)
                 self.list.setItemWidget(row_it, row)
                 self.rows[row.key] = row
@@ -403,8 +422,7 @@ class RosterWindow(QWidget):
             view.mark_read(ids)
 
     def _pop_accounts(self):
-        m = self.win.accounts_menu(self)
-        m.exec(self.account_btn.mapToGlobal(QPoint(0, self.account_btn.height())))
+        pop_menu(self.win.accounts_menu(self), self.account_btn, True)
 
     def eventFilter(self, obj, e):
         from PySide6.QtCore import QEvent

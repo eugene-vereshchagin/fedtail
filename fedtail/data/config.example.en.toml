@@ -112,8 +112,9 @@ roster_on_top = false
 # items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only.
 roster_threads = 15
 
-# With layout = "split": the faces beside the messages — the other side's on top (whose
-# post the cursor is on, or whom I answer), mine by the input line.
+# With layout = "split": faces, as in QIP — over a lane's posts the author of the one
+# under the cursor, with what to do (follow, lists, a private message, the profile);
+# by the input line, whom I write to.
 faces = true
 
 # With layout = "split": the input line at the bottom takes the command line's commands

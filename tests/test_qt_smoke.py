@@ -2245,11 +2245,18 @@ class QtSmokeTest(unittest.TestCase):
         thread = win.tabs.currentWidget()
         self.pump(until=lambda: win.dock.target is not None)
         self.assertEqual(win.dock.target.id, thread.posts[-1].id)
-        win.faces.update_faces()  # the other side's face: whom I answer
-        self.assertTrue(win.faces.them_name.text() or win.dock.target.author.id ==
-                        self.core.me["id"])
+        # whom I answer: their face by the input line (not mine); in a thread the bar
+        # over the posts stays away — it is for lanes
+        self.assertEqual(win.dock.face.isVisibleTo(win),
+                         win.dock.target.author.id != self.core.me["id"])
+        win.author_bar.update_bar()
+        self.assertFalse(win.author_bar.isVisibleTo(win))
         win.select_lane("home")
         self.assertIsNone(win.dock.target)  # a lane: a new post
+        self.pump(0.3)
+        win.author_bar.update_bar()  # whose post is on top: over the lane, with buttons
+        if win.author_bar.who is not None:
+            self.assertTrue(win.author_bar.name.text())
         win.tabs.setCurrentWidget(thread)
         # another theme tried: the sidebar stays away, the tab out of sight waits
         win.try_theme("psi")
