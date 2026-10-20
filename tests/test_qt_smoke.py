@@ -2210,8 +2210,11 @@ class QtSmokeTest(unittest.TestCase):
         win.start()
         self.pump(until=lambda: self.core.me is not None)
         self.core.poll_once()
-        self.pump(until=lambda: "home" in roster.rows and roster.rows["home"].item.unread)
+        self.pump(0.2)
+        roster.refresh()  # at once (an error in it shows here, not as a timeout)
+        self.assertIn("home", roster.rows, sorted(roster.rows))
         home = roster.rows["home"]
+        self.assertTrue(home.item.unread, home.item)
         self.assertTrue(home.badge.isVisibleTo(roster))
         self.assertIn(":", home.line.text())  # who wrote last: how it begins
         self.assertIn("@", roster.me_handle.text())
