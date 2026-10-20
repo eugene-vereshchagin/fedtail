@@ -5,6 +5,11 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**0.17.0 (in progress):**
+
+- Help inside, in two languages
+- “What's this?”: a longer hint about any button
+
 **0.16.0:**
 
 - Sending to a slow server without doubles
@@ -14,6 +19,9 @@ What's new in the latest versions, and the plans.
 - Copy the handle @user@server
 - Federation status: how my server is doing and what fails
 <!-- /include -->
+
+Everything that changed, fixes included, is in the
+[CHANGELOG](https://github.com/eugene-vereshchagin/fedtail/blob/main/CHANGELOG.md).
 
 ## What's next
 

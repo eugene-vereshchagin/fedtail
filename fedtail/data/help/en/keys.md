@@ -4,12 +4,43 @@ Every shortcut in one table.
 
 ## The window
 
-*Being written.*
+| Key | What it does |
+|---|---|
+| `Ctrl+N` | a new post |
+| `Ctrl+Enter` | send |
+| `Ctrl+K` | find people, tags, posts |
+| `Ctrl+F`, `F3`, `Shift+F3` | find in a lane, thread or profile |
+| `Ctrl+L` | the command line |
+| `F5` | refresh |
+| `Alt+1…9` | a lane by its number |
+| `Ctrl+W` | close a tab |
+| `Esc` | close what's on top; the last one — the curtain |
+| `Ctrl+Q` | quit (the cross only hides to the tray) |
+
+Help and "What's this?" have no keys on purpose — the ≡ menu only: F1 is next to Esc, too easy to
+hit by mistake.
 
 ## A lane and a thread
 
-*Being written: j/k, r, f, b, m, o.*
+| Key | What it does |
+|---|---|
+| `j` / `k` | the next / previous post |
+| `r` | reply |
+| `f` | like |
+| `b` | boost |
+| `m` | bookmark |
+| `o`, `Enter` | open the thread |
+
+To turn these letters off — `ui.post_keys = false`.
 
 ## The viewer and the player
 
-*Being written.*
+| Key | What it does |
+|---|---|
+| `←` `→` | flip pictures; in a video — seek |
+| `PgUp` `PgDn` | the next / previous video of a post |
+| Space | pause |
+| `M` | sound |
+| `S` | save |
+| `O` | open in the browser |
+| `Esc` | close |

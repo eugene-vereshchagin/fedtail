@@ -66,6 +66,7 @@ from .feed import (
     ThreadWidget,
 )
 from .find import FindBar
+from .hints import HintMode
 from .images import Images
 from .login import LoginDialog
 from .notify import Notifier, icon_path, mascot_path
@@ -319,6 +320,10 @@ class MainWindow(QMainWindow):
         rv.addWidget(self.find_bar)
         self.cmdline = CommandBar(self)
         self.cmdline.setVisible(self.cfg["ui"]["command_line"])
+        # "What's this?": longer hints on hover — for the session from the menu, or from
+        # the start with ui.whats_this (no shortcut: F1 / Shift+F1 sit next to Esc)
+        self.hints = HintMode(self, self.cfg["ui"].get("whats_this", False))
+        self.help_panel = None
         rv.addWidget(self.cmdline)
         self.tabs.currentChanged.connect(lambda _i: self.find_bar.view_changed())
         self.stack.currentChanged.connect(lambda _i: self.find_bar.view_changed())
@@ -812,6 +817,14 @@ class MainWindow(QMainWindow):
         snap = dbg.addAction(_("debug_snapshot"), self.debug_snapshot)
         snap.setEnabled(leaks.tracing())
         dbg.setToolTipsVisible(True)
+        m.addSeparator()
+        m.addAction(_("help_title"), self.open_help)
+        whats = m.addAction(_("whats_this"))
+        whats.setCheckable(True)
+        whats.setChecked(self.hints.on)
+        whats.setToolTip(_("whats_this_tip"))
+        whats.toggled.connect(self.hints.set_on)
+        m.setToolTipsVisible(True)
         m.addAction(_("about"), self.about)
         m.addSeparator()
         m.addAction(_("quit") + "\tCtrl+Q", self.quit)
@@ -1713,6 +1726,19 @@ class MainWindow(QMainWindow):
         if handle:
             QGuiApplication.clipboard().setText(handle)
             self.statusBar().showMessage(_("handle_copied", handle=handle), 5000)
+
+    def open_help(self, page="index", anchor=""):
+        """≡ → Help: the help panel over the lanes, at `page` — the same panel each time,
+        where it was left when no page is asked for. No shortcut on purpose."""
+        from .help import HelpPanel
+        if self.help_panel is None:
+            self.help_panel = HelpPanel(self)
+        panel = self.help_panel
+        if page != "index" or anchor or panel.current is None:
+            panel.show_page(page, anchor)
+        panel.show()
+        panel.raise_()
+        return panel
 
     def open_url(self, url):
         """Someone else's address: only the web (and mail, XMPP…); see opener."""

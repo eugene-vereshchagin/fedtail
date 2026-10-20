@@ -549,6 +549,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Cleaning the database of posts no lane holds | planned | — | — | SQLite | — |
 | Screen readers | partly | 0.9.0 | `ui.alt_text` | — | Mastodon web, Tusky, Ivory |
 | Interface language | has | 0.1.0 | `ui.language` | — | everyone |
+| Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
+| “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `ui.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
 
 <details><summary>In detail</summary>
 
@@ -581,6 +583,10 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Screen readers.** Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca.
 
 **Interface language.** `"auto"` (from LANG), `"ru"`, `"en"`.
+
+**Help inside, in two languages.** A panel in the main window, like the compose panel: the contents on the left, search through the whole help, Back and Forward. Short, by section, and at the end of each — “In detail →” into the full feature list and the settings reference: they are right here and work offline. No shortcut on purpose — F1 is next to Esc.
+
+**“What's this?”: a longer hint about any button.** Turn it on, and hovering shows a longer hint instead of the short one: what the button does, which config key changes it and which help section says more. The same menu item turns it off.
 
 </details>
 

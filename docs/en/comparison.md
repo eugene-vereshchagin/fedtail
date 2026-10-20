@@ -108,7 +108,6 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | The compose panel and drafts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Visibility: private by default, a reply never wider than the post | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| Markdown | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Preview before sending | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Content warning (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Pictures: drag, paste, description, focus | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -120,7 +119,6 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Call someone into a thread | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Copy the handle @user@server | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Quoting a post; who may quote mine | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
-| Who may reply, boost, like (GoToSocial) | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A scheduled post | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |   |
 | Edit, delete, pin your own post | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Delete and redraft | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |
@@ -190,10 +188,9 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 
 | What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A Qt window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Commands in a terminal | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | A terminal interface (Textual) | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ⏳ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 132 compared.
+Only in fedtail — **30** features of the 129 compared.

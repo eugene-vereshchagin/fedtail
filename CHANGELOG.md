@@ -8,6 +8,13 @@
   `config.example.ru.toml` (the old `config.example.toml` goes). A new config is written in
   the desktop's language; `--update-config` and `--rebuild-config` keep the language your
   file is in.
+- Help inside: ≡ → "Help" opens it as a panel over the lanes, like the compose panel —
+  the contents on the left, search through it all, Back and Forward. Short pages, each
+  ending in "In detail →" links into the full feature list and the settings reference,
+  which come with it and work offline. In Russian and in English.
+- ≡ → "What's this?": point the mouse at a button and get the longer story — what it
+  does, which config key changes it, where the help says more. For the session from the
+  menu, or from the start with `ui.whats_this`. Neither has a key: F1 is next to Esc.
 - The docs come in Russian and English, `docs/ru/` and `docs/en/`: the feature list now says
   since which version each feature is there, and fedtail next to thirteen other clients is
   one matrix a chapter (`comparison.md`). All of it, the config reference and the shared

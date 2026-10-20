@@ -181,6 +181,11 @@ compose_size = 0
 # A command line as on Point at the bottom of the window (Ctrl+L shows it even if false).
 command_line = true
 
+# "What's this?" from the start: point the mouse at a button — a longer hint on what it
+# does, which config key changes it and where the help says more. For now it's turned on
+# and off in the ≡ menu → "What's this?". No shortcut on purpose (F1 is next to Esc).
+whats_this = false
+
 # ── Pictures and links ──────────────────────────────────────────────────────────────
 
 # The height of a single picture in a lane, pixels (several pictures — smaller tiles).

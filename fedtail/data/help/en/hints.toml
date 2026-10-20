@@ -1,0 +1,280 @@
+# The hints of "What's this?" (≡ → "What's this?").
+#
+# A key is the key of an interface string in fedtail/i18n.py: a button whose tooltip is
+# "Reply" is the key reply. The mode finds a hint by the text the button shows anyway, so
+# nothing in the window's code needs marking. text — what to say; config — which config
+# key changes it; help — the help section (page.md#anchor). A test makes sure the keys here
+# and in ru/hints.toml are the same and real.
+
+# ── The left column ────────────────────────────────────────────────────────────────────
+
+[menu]
+text = "The menu: the config, themes, accounts, “For the tender and sensitive”, debugging, the help and this mode."
+help = "start.md#the-window"
+
+[write]
+text = "A new post — as a panel right in the window. The draft is saved as you type."
+config = "ui.compose"
+help = "writing.md#the-compose-panel-and-drafts"
+
+[full_width_tip]
+text = "Posts across the whole window or in a narrow column that's easy to read. Remembered until the next start; the config isn't touched."
+config = "ui.max_width"
+help = "look.md#width-font-buttons-emoji"
+
+[columns_tip]
+text = "Several lanes side by side, in columns. A click on a lane on the left adds a column, ✕ takes it away, ‹ › move it."
+config = "ui.layout, ui.columns"
+help = "reading.md#lanes"
+
+[search_side_tip]
+text = "Search on the server: people by name or @nick@server, tags, links to posts and profiles. Follow right from the results."
+help = "search.md#people-tags-posts"
+
+[accounts_tip]
+text = "Right click — your other accounts: switch, add, make the main one, all in one window."
+help = "start.md#profiles-and-accounts"
+
+[my_profile]
+text = "Your profile: posts, followers, the “Edit profile” button."
+help = "people.md#profiles"
+
+[group_fold_tip]
+text = "Fold a group of lanes: one unread number stays for the whole group. Remembered between runs."
+help = "reading.md#lanes"
+
+[footer_profile_tip]
+text = "Which profile and account this is. Each profile has its own config, theme and database."
+help = "start.md#profiles-and-accounts"
+
+[tip_home]
+text = "Posts of the people you follow and of the tags you follow. Bots are in a lane of their own, people from lists in their lists' lanes."
+config = "lanes.enabled"
+help = "reading.md#lanes"
+
+[tip_federated]
+text = "Everything your server knows from all servers. Browsed, no counter: it isn't read to the end."
+config = "lanes.enabled"
+help = "reading.md#lanes"
+
+[tip_local]
+text = "All the posts of your server. Browsed, no counter."
+config = "lanes.enabled"
+help = "reading.md#lanes"
+
+[tip_bots]
+text = "The bots among those you follow: relays, news, weather. A bot without the tick — add it to lanes.extra_bots."
+config = "lanes.extra_bots"
+help = "reading.md#lanes"
+
+[tip_my_posts]
+text = "Your posts and comments — always read."
+help = "reading.md#lanes"
+
+[tip_direct]
+text = "Direct messages: posts only the mentioned can see. They don't double up in “Replies to me” and “Mentions”."
+config = "lanes.direct_apart"
+help = "reading.md#lanes"
+
+[tip_mentions]
+text = "Where you were tagged in someone else's conversation. Replies to your posts are apart, in “Replies to me”."
+config = "lanes.mentions_all"
+help = "reading.md#lanes"
+
+[tip_replies]
+text = "Replies to your posts and comments, even if they @ you."
+help = "reading.md#lanes"
+
+[tip_subs]
+text = "New comments in threads you're subscribed to — even when you weren't mentioned there. As on Point."
+config = "subs.auto"
+help = "reading.md#threads"
+
+[tip_bookmarks]
+text = "What you put in bookmarks. The server keeps them, so they are shared with your other clients."
+help = "reading.md#the-post-card"
+
+[tip_my_likes]
+text = "The posts you liked. The lane is off by default."
+config = "lanes.enabled"
+help = "reading.md#lanes"
+
+[tip_activity]
+text = "Who liked, boosted, followed, a poll ended; on GoToSocial — also what waits for your approval."
+config = "activity.types"
+help = "notifications.md#activity"
+
+[tip_requests]
+text = "Who asks to follow you: accept or reject."
+help = "people.md#follows-and-requests"
+
+# ── Over a lane ────────────────────────────────────────────────────────────────────────
+
+[show_all_tip]
+text = "All posts and all replies."
+help = "reading.md#lanes"
+
+[posts_only_tip]
+text = "Top-level posts only, without comments and replies."
+config = "lanes.posts_only"
+help = "reading.md#lanes"
+
+[unread_only_tip]
+text = "Only what was unread when you opened the lane, and what came after. What you read greys out but doesn't vanish under your eyes."
+help = "reading.md#your-place-and-read-marks"
+
+[view_feed_tip]
+text = "Each post as a card of its own, in order."
+help = "reading.md#lanes"
+
+[conv_mode_tip]
+text = "Each thread as one card: where it began, how many messages, how many new, who wrote last. Like conversations on Point."
+config = "feed.remember_choices"
+help = "reading.md#lanes"
+
+[media_filter_tip]
+text = "Leave only posts with pictures, gifs, video, sound, only text or only boosts. Until a restart."
+help = "reading.md#lanes"
+
+[to_new_tip]
+text = "Scroll to the first unread."
+help = "reading.md#your-place-and-read-marks"
+
+[to_end_tip]
+text = "Nothing unread — scroll to the newest."
+help = "reading.md#your-place-and-read-marks"
+
+[mark_all_read]
+text = "Mark everything in this lane read."
+config = "read.mark_read"
+help = "reading.md#your-place-and-read-marks"
+
+[refresh]
+text = "Ask the server for what's new now, without waiting for the poll."
+config = "poll.interval_seconds"
+
+[sub_tip]
+text = "Subscribe to the thread: its new comments come to “Subscriptions”, as on Point."
+config = "subs.auto"
+help = "reading.md#threads"
+
+# ── A post ─────────────────────────────────────────────────────────────────────────────
+
+[reply]
+text = "Reply: the reply is never more public than the original post. The r key."
+config = "post.reply_never_wider"
+help = "writing.md#visibility"
+
+[fav]
+text = "Like. A right click on the star — who liked it. The f key."
+help = "reading.md#the-post-card"
+
+[boost]
+text = "Boost the post to your followers. A right click — who boosted it. The b key."
+help = "reading.md#the-post-card"
+
+[thread]
+text = "Open the whole thread as a tree, with replies from the author's server."
+config = "feed.complete_threads"
+help = "reading.md#threads"
+
+[bookmark]
+text = "Bookmark it (the “Bookmarks” lane). The m key."
+config = "ui.bookmark_button"
+help = "reading.md#the-post-card"
+
+[more]
+text = "Everything else: quote, translate, mute the thread, subscribe to it, to a list, copy the handle, from another account, report."
+help = "reading.md#the-post-card"
+
+[short_id_tip]
+text = "The post's short number, like #abc on Point. A click puts it into the command line: add text, and it's a reply."
+help = "command-line.md#commands"
+
+[unread_tip]
+text = "Not read yet. When a post counts as read — read.mark_read."
+config = "read.mark_read"
+help = "reading.md#your-place-and-read-marks"
+
+[old_post_tip]
+text = "Older than feed.old_days days: it came from someone's outbox or an old thread, it isn't news."
+config = "feed.old_days"
+
+[reactions_tip]
+text = "Emoji reactions from Akkoma, Pleroma, Misskey. You can't add your own yet: GoToSocial has none."
+help = "reading.md#the-post-card"
+
+# ── The compose panel ──────────────────────────────────────────────────────────────────
+
+[compose_bigger_tip]
+text = "A bigger or smaller panel; the choice is remembered."
+config = "ui.compose_size"
+help = "writing.md#the-compose-panel-and-drafts"
+
+[close_tip]
+text = "Close the panel. The draft stays — open it again and it's there."
+config = "post.drafts_autosave"
+help = "writing.md#the-compose-panel-and-drafts"
+
+[lang_tip]
+text = "The post's language: servers filter and translate by it. “Another language…” adds any ISO 639 code."
+config = "post.language, post.languages"
+help = "writing.md#markdown-cw-language"
+
+[cw_add_tip]
+text = "A content warning (CW): the text hides behind a “show” button. For spoilers, heavy topics, very long texts."
+config = "post.cw_field"
+help = "writing.md#markdown-cw-language"
+
+[poll_add_tip]
+text = "A poll instead of pictures: options, how long, one answer or several."
+help = "writing.md#polls-quotes-chains-scheduled-posts"
+
+[sensitive_mark_tip]
+text = "The pictures stay covered until the reader opens them."
+help = "writing.md#pictures"
+
+[schedule_tip]
+text = "Send later: the post waits on the server, even with fedtail closed. The waiting ones — ≡ → “Scheduled posts”."
+config = "post.schedule"
+help = "writing.md#polls-quotes-chains-scheduled-posts"
+
+[preview_tip]
+text = "How the post will look: the Markdown rendered, the CW, visibility, each part of a chain."
+config = "post.preview"
+help = "writing.md#markdown-cw-language"
+
+[media_tip]
+text = "A double click — the description (alt) and the focus point. Without a description fedtail asks before sending."
+config = "post.alt_reminder, post.focus_point"
+help = "writing.md#pictures"
+
+# ── Search and the command line ────────────────────────────────────────────────────────
+
+[cmd_tip]
+text = "A command line as on Point: #id — open, #id text — reply, S/U — subscriptions, ! — boost, ~ — bookmark, plain text — a new post."
+config = "ui.command_line, post.plain_posts"
+help = "command-line.md#commands"
+
+[find_deeper_tip]
+text = "Search everything stored for this lane and load the lane down to the match."
+help = "search.md#in-a-lane-ctrlf"
+
+[find_everywhere_tip]
+text = "Search every lane at once: the next match opens its lane by itself."
+help = "search.md#in-every-lane"
+
+[try_theme_tip]
+text = "Any theme at once, until a restart. For good — ui.theme in the config."
+config = "ui.theme"
+help = "look.md#themes"
+
+[viewer_save_tip]
+text = "Save the original to the downloads folder. The S key."
+config = "ui.save_dir"
+help = "keys.md#the-viewer-and-the-player"
+
+[whats_this_tip]
+text = "This very mode: longer hints when you point the mouse. The same menu item turns it off."
+config = "ui.whats_this"
+help = "index.md"

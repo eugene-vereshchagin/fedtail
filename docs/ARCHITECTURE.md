@@ -118,6 +118,9 @@ fedtail/
     notifytext.py    what a desktop notification says (no Qt, tested)
     iconart.py       the app icon as SVG, drawn from a theme's [icon] colours
     themefile.py     theme TOML files: find, inherit, validate (no Qt)
+    helpdocs.py      the in-app help and the "What's this?" hints (no Qt): pages from
+                     data/help/<lang>/, links resolved (help page, deep dive, GitHub, web),
+                     search, the hint behind a tooltip's text
     qt/              the Qt Widgets frontend (PySide6)
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics
       bridge.py      core futures and events → GUI thread (Qt signals)
@@ -126,6 +129,8 @@ fedtail/
                      ThreadWidget, AccountWidget, RequestsWidget, ActivityWidget
       card.py        PostRow (one post), CardSpec, SeparatorRow, media grid
       compose.py     the compose dialog (drafts, media, drag&drop, CW, hint)
+      help.py        HelpPanel: the help as a panel over the lanes, like compose's
+      hints.py       HintMode: "What's this?" — an app-wide filter on tooltip events
       text.py        server HTML → QLabel rich text (an allow-list sanitizer: no scripts,
                      no pictures from paths, links only to the web or inside); dates;
                      emojify(): :shortcodes: → our own <img> of the cached emoji file
@@ -499,6 +504,13 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 
 ## 14. The Qt frontend
 
+* **Help and "What's this?"** — ≡ → Help (`MainWindow.open_help(page, anchor)`) shows
+  `HelpPanel`, one per window, hidden rather than destroyed so it comes back where it
+  was left. ≡ → What's this? toggles `MainWindow.hints` (`HintMode`; `ui.whats_this`
+  turns it on at start): while on, an event filter on the QApplication answers every
+  `QEvent.ToolTip` whose tooltip text is an i18n string with a row in
+  `data/help/<lang>/hints.toml` — so a new button gets a hint by adding one row, no code.
+  Neither has a shortcut: F1 / Shift+F1 sit next to Esc (a test checks no F1 is bound).
 * **`ViewContext`** (window.py) is what a card needs from the window: cfg, theme,
   images, `on_link`, `open_url`, `show_images`, `me_id`, `subscribed`,
   `fill_list_menu`, `save_image`. Cards never import the window.

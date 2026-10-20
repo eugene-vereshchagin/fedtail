@@ -259,6 +259,15 @@ _STRINGS = {
         "write": "Написать", "menu_file": "&Файл", "menu_help": "&Справка",
         "open_config": "Открыть конфиг", "open_data": "Открыть папку данных",
         "relogin": "Войти заново…", "quit": "Выход", "about": "О программе", "show": "Показать",
+        "help_title": "Справка", "help_search": "Найти в справке…", "help_back": "Назад",
+        "help_forward": "Вперёд", "help_home": "Оглавление", "help_none": "ничего не нашлось",
+        "help_found": "найдено в разделах: {n}", "help_deep": "Подробно",
+        "help_close_tip": "Закрыть справку", "help_missing": "Нет такой страницы: {name}",
+        "whats_this": "Что это?",
+        "whats_this_tip": "Наведи мышь на любую кнопку — подробная подсказка (ui.whats_this "
+                          "— с самого запуска)",
+        "whats_this_on": "«Что это?»: наведи мышь на кнопку. Выключить — ≡ → «Что это?»",
+        "hint_config": "Конфиг: {opt}", "hint_help": "Справка: {page}",
         "connecting": "Подключаюсь…", "connected": "@{acct} на {server}",
         "server_down": "Сервер не отвечает: {err}. Попробую ещё раз через 20 секунд.",
         "auth_failed_title": "Сервер не пускает",
@@ -957,6 +966,16 @@ _STRINGS = {
         "write": "Write", "menu_file": "&File", "menu_help": "&Help",
         "open_config": "Open config", "open_data": "Open data folder",
         "relogin": "Log in again…", "quit": "Quit", "about": "About", "show": "Show",
+        "help_title": "Help", "help_search": "Find in the help…", "help_back": "Back",
+        "help_forward": "Forward", "help_home": "Contents", "help_none": "nothing found",
+        "help_found": "found in sections: {n}", "help_deep": "In detail",
+        "help_close_tip": "Close the help", "help_missing": "No such page: {name}",
+        "whats_this": "What's this?",
+        "whats_this_tip": "Point the mouse at any button for a longer hint (ui.whats_this — "
+                          "from the start)",
+        "whats_this_on": "“What's this?”: point the mouse at a button. To turn it off — ≡ → "
+                         "“What's this?”",
+        "hint_config": "Config: {opt}", "hint_help": "Help: {page}",
         "connecting": "Connecting…", "connected": "@{acct} on {server}",
         "server_down": "Server is not answering: {err}. Retrying in 20 seconds.",
         "auth_failed_title": "Access denied",
@@ -1451,3 +1470,8 @@ def months():
 
 def keys(lang):
     return set(_STRINGS[lang])
+
+
+def strings(lang):
+    """{key: text} of one language (plural forms as lists) — for looking a shown text up."""
+    return dict(_STRINGS.get(lang, _STRINGS["en"]))

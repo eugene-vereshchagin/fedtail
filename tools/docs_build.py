@@ -12,7 +12,9 @@ What it builds, for each language in LANGS (Russian and English):
 * ``docs/<lang>/config.md`` — every config option, from
   ``fedtail/data/config.example.<lang>.toml`` (see ``tools/config_doc.py``);
 * generated parts in ``docs/<lang>/parts/``: ``features-short``, ``only-in-fedtail``,
-  ``whats-new``, ``roadmap``.
+  ``whats-new``, ``roadmap``;
+* the deep dive of the in-app help, ``fedtail/data/help/<lang>/ref/`` — copies of
+  ``features.md``, ``config.md`` and ``comparison.md``, so the help works offline.
 
 Then it expands includes. Any Markdown file in the repository's documentation (the
 READMEs, ``docs/``, the in-app help in ``fedtail/data/help/``) may hold::
@@ -51,6 +53,7 @@ CLIENTS = ("Mastodon web", "Tusky", "Ivory", "Phanpy", "Elk", "Tokodon", "Ice Cu
            "Fedilab", "Sengi", "Megalodon", "tut", "Tuba", "Whalebird")
 TEXT_FIELDS = ("name", "status_note", "config", "api", "others", "note", "size", "why",
                "details")
+REF_PAGES = ("features.md", "config.md", "comparison.md")  # copied into the help's ref/
 CYRILLIC = re.compile(r"[а-яёА-ЯЁ]")
 VERSION = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -450,6 +453,11 @@ def build():
         new = expand(text, path, out)
         if path in out or new != text:
             out[path] = new
+    # the deep dive of the in-app help: the same pages, shipped inside the package
+    for lang in LANGS:
+        for name in REF_PAGES:
+            out[ROOT / "fedtail" / "data" / "help" / lang / "ref" / name] = \
+                out[ROOT / "docs" / lang / name]
     return out
 
 

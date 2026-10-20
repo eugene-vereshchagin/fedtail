@@ -90,6 +90,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `ui.compose` | `"inline"` | Where to write a post: "inline" — a panel inside the main window (the keyboard layout isn't reset: KDE keeps it per window, and a new window may open with another one); "window" — a window of its own, as before. |
 | `ui.compose_size` | `0` | The size of the post panel — in percent of the main window (and following it when the window changes size): 50, 80, 100… 0 — as before, at most 820 × 540. The ⤡ button in the panel switches between normal and big (90 %) and remembers the choice. |
 | `ui.command_line` | `true` | A command line as on Point at the bottom of the window (Ctrl+L shows it even if false). |
+| `ui.whats_this` | `false` | "What's this?" from the start: point the mouse at a button — a longer hint on what it does, which config key changes it and where the help says more. For now it's turned on and off in the ≡ menu → "What's this?". No shortcut on purpose (F1 is next to Esc). |
 
 ### Pictures and links
 

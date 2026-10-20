@@ -4,12 +4,27 @@ Logs, a bug report, the federation status.
 
 ## Logs and the report
 
-*Being written: latest.log, --bug-report.*
+- ≡ → "Debugging" → "Open the logs folder". The one to send is `latest.log`, a link to the
+  current log.
+- ≡ → "Debugging" → "Make a report for diagnosis" (or `fedtail --bug-report`) — an archive of two
+  days: logs, crash traces, the config and system details. No token, no database.
+- Report a bug on [GitHub](https://github.com/eugene-vereshchagin/fedtail/issues) — attach
+  `latest.log` or the archive.
+
+The detailed log is on in development versions and off in releases; `--debug` turns it on for
+one run.
 
 ## Federation status
 
-*Being written: ≡ → Debugging → Federation status.*
+≡ → "Debugging" → "Federation status…": how your server is doing, how many requests and with
+which errors, polling and the live stream, what the server can't do, who waits to go into a
+list — and what keeps failing on other servers, with what it most likely means. "Copy" — as text
+for an issue.
 
 ## Frozen, memory leaking
 
-*Being written: kill -USR1, an overnight run.*
+- The window froze — `kill -USR1 <pid>`: `stacks.log` gets where every thread is stuck.
+- Memory grows — ≡ → "Debugging" → "What grows: stats and object census now". For a night,
+  turn memory tracing on, make a "Memory snapshot" in the morning and send it.
+
+In detail → [The application](ref/features.md#the-application) · [Logs and debugging](ref/config.md#12-logs-and-debugging)

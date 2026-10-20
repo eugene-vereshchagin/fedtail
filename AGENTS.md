@@ -62,5 +62,9 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   in-app help. Never edit generated files or the text between include markers by hand —
   a test runs `--check` and fails.
 * Reused texts are parts: `docs/<lang>/parts/*.md`, no top heading, links from the repo
-  root (`/docs/en/…`), no includes inside. The in-app help is `fedtail/data/help/<lang>/`.
+  root (`/docs/en/…`), no includes inside. The in-app help is `fedtail/data/help/<lang>/`:
+  short pages ending in "Подробно → / In detail →" links into `ref/` (the deep dive,
+  copied there by the build). A new button or menu item with a tooltip gets a row in
+  both `hints.toml` (key = the tooltip's i18n key) — tests check links, anchors, keys.
+* No shortcut on F1 or Shift+F1, ever: they sit next to Esc.
 * Docstrings: Google style; every module starts with what it is for.

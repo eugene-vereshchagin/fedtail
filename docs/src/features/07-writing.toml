@@ -41,7 +41,6 @@ config = "`account.markdown`, `post.plain_posts`"
 api = "`content_type`"
 others.ru = "клиенты GoToSocial и Akkoma"
 others.en = "GoToSocial and Akkoma clients"
-clients = []
 details.ru = "`\"auto\"` — спросить у сервера; GoToSocial и Akkoma понимают Markdown, ванильный Mastodon — нет."
 details.en = "`\"auto\"` — ask the server; GoToSocial and Akkoma understand Markdown, vanilla Mastodon doesn't."
 
@@ -207,7 +206,6 @@ config = "`post.who_can_reply`, `post.who_can_boost`, `post.who_can_like`"
 api = "`interaction_policy`"
 others.ru = "клиенты GoToSocial"
 others.en = "GoToSocial clients"
-clients = []
 details.ru = "`\"everyone\"`, `\"followers\"` (и упомянутые), `\"following\"` (и упомянутые), `\"mentioned\"`, `\"me\"` или `\"\"` — как в настройках аккаунта. Другим серверам не отправляется."
 details.en = "`\"everyone\"`, `\"followers\"` (and the mentioned), `\"following\"` (and the mentioned), `\"mentioned\"`, `\"me\"` or `\"\"` — as in the account's settings. Not sent to other servers."
 

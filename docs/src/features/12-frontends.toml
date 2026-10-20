@@ -17,7 +17,6 @@ name.en = "A Qt window"
 config = "`ui.frontend = \"qt\"`"
 others.ru = "основной"
 others.en = "the main one"
-clients = []
 
 [[feature]]
 id = "cli"

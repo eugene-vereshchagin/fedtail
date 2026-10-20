@@ -29,6 +29,7 @@ DEFAULTS = {
         "sidebar_groups": True,
         "sidebar_width": 272,
         "command_line": True,
+        "whats_this": False,
         "expand_cw": True,
         "bookmark_button": True,
         "arts_mode": True,

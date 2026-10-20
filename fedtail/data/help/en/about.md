@@ -28,6 +28,8 @@ The principles fedtail grows from, who wrote it and under which licence.
 
 ## Only in fedtail
 
+What none of the thirteen clients we compared with has ([the whole matrix](ref/comparison.md)):
+
 <!-- include: parts/only-in-fedtail -->
 - **Lanes:** Bots in a lane of their own · Who is in a list leaves the general lanes · Into a list — the author or the booster; only people you follow · Into a list right after a follow · An empty live lane says why it's empty · Filtering a lane by media and boosts · Repeated boosts don't bring an old post up again · Find in a lane · Sending to a slow server without doubles · Find in every lane at once
 - **Threads:** A whole thread: replies from the author's server · Thread subscriptions, as on Point
@@ -35,15 +37,17 @@ The principles fedtail grows from, who wrote it and under which licence.
 - **The post card:** Arts mode · Honest counters
 - **Pictures and video:** Video without a hardware decoder (the default) · Pictures and video ahead of time, a disk cache
 - **Profiles:** Posts older than my server knows · “Following since …”
-- **Writing:** Visibility: private by default, a reply never wider than the post · Markdown · CamelCase hint for hashtags · Call someone into a thread · Who may reply, boost, like (GoToSocial) · A command line as on Point
+- **Writing:** Visibility: private by default, a reply never wider than the post · CamelCase hint for hashtags · Call someone into a thread · A command line as on Point
 - **Notifications and activity:** Desktop notifications with privacy levels · Approve a reply, like, boost (GoToSocial) · Direct messages read here are read on the server too
-- **Interfaces:** A Qt window
 <!-- /include -->
 
 ## Who wrote it
 
-*Being written.*
+The code, from the first line to the icon, is written by Claude (Anthropic), an AI. The idea,
+testing every build on his own node and every remark are a human's. The version, the build and
+the links — ≡ → "About".
 
 ## Licence
 
-*Being written: GPL-3.0-or-later; the opossum is a Telegram sticker.*
+GPL-3.0-or-later. The opossum on the icon isn't under the GPL: it is a sticker from an official
+Telegram sticker pack.

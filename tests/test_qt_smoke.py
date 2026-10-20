@@ -2232,3 +2232,88 @@ if __name__ == "__main__":
         dlg = self.win.show_filtered()
         self.pump(until=lambda: not dlg.accept_btn.isEnabled())
         dlg.close()
+
+    def test_help_panel(self):
+        """≡ → Help: a panel inside the window with the contents, links into the deep
+        dive, Back and Forward, search; closed and asked again — where it was left."""
+        from fedtail.frontends.qt.help import NAME_ROLE
+        _ = i18n._
+        texts = [a.text() for a in self.win._app_menu().actions()]
+        self.assertIn(_("help_title"), texts)
+        self.assertIn(_("whats_this"), texts)
+        panel = self.win.open_help()
+        self.pump(0.05)
+        self.assertFalse(panel.isWindow())  # a panel, as the compose one
+        self.assertTrue(self.win.isAncestorOf(panel))
+        self.assertTrue(self.win.rect().contains(panel.geometry()))
+        self.assertEqual(panel.current, "index")
+        self.assertIn("Справка fedtail", panel.view.toPlainText())
+        names = [panel.toc.item(i).data(NAME_ROLE) for i in range(panel.toc.count())]
+        self.assertIn("reading", names)
+        self.assertIn("ref/features", names)
+        self.assertIn(None, names)  # the "In detail" heading over the deep dive
+        panel.follow("reading.md#треды")
+        self.assertEqual(panel.current, "reading")
+        panel.follow("ref/features.md#ленты")  # light reading → the deep dive
+        self.assertEqual(panel.current, "ref/features")
+        self.assertIn("Режим arts", panel.view.toPlainText())
+        panel.back()
+        self.assertEqual(panel.current, "reading")
+        panel.forward()
+        self.assertEqual(panel.current, "ref/features")
+        opened = []
+        self.win.open_url = opened.append
+        panel.follow("/CHANGELOG.md")  # not in the help: GitHub, in the browser
+        self.assertTrue(opened and opened[0].endswith("/CHANGELOG.md"))
+        self.assertEqual(panel.current, "ref/features")
+        panel.search.setText("шторка")
+        found = [panel.toc.item(i).data(NAME_ROLE) for i in range(panel.toc.count())]
+        self.assertIn("reading", found)
+        self.assertNotIn("look", found)
+        panel.search.clear()
+        self.assertEqual(panel.toc.count(), len(names))
+        panel.reject()
+        self.assertFalse(panel.isVisible())
+        again = self.win.open_help()
+        self.assertIs(again, panel)
+        self.assertEqual(again.current, "ref/features")  # where it was left
+        self.win.open_help("keys")
+        self.assertEqual(panel.current, "keys")
+        panel.reject()
+
+    def test_whats_this(self):
+        """≡ → What's this?: the longer hint instead of the tooltip, found by the tooltip
+        itself; off — the usual tooltip; ui.whats_this — on from the start."""
+        from PySide6.QtCore import QEvent, QPoint
+        from PySide6.QtGui import QHelpEvent
+        from PySide6.QtWidgets import QPushButton
+
+        from fedtail.frontends import helpdocs
+        from fedtail.frontends.qt.hints import HintMode
+        _ = i18n._
+        hints = self.win.hints
+        self.assertFalse(hints.on)  # off by default
+        b = QPushButton("↩", self.win)
+        b.setToolTip(_("reply"))
+        other = QPushButton("x", self.win)
+        other.setToolTip("ничего такого")
+
+        def ask(w):
+            return QHelpEvent(QEvent.Type.ToolTip, QPoint(1, 1), w.mapToGlobal(QPoint(1, 1)))
+        self.assertFalse(hints.eventFilter(b, ask(b)))
+        hints.set_on(True)
+        self.assertIsNotNone(hints.badge)
+        self.assertTrue(hints.eventFilter(b, ask(b)))
+        self.assertEqual(hints.hint_text(b), helpdocs.hints("ru")["reply"]["text"])
+        self.assertFalse(hints.eventFilter(other, ask(other)))  # nothing more to say
+        hints.set_on(False)
+        self.assertIsNone(hints.badge)
+        self.assertFalse(hints.eventFilter(b, ask(b)))
+        whats = next(a for a in self.win._app_menu().actions() if a.text() == _("whats_this"))
+        whats.setChecked(True)
+        self.assertTrue(hints.on)
+        whats.setChecked(False)
+        self.assertFalse(hints.on)
+        start = HintMode(self.win, on=True)
+        self.assertTrue(start.on)
+        start.set_on(False)

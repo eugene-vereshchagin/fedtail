@@ -1,3 +1,8 @@
+**0.17.0 (in progress):**
+
+- Help inside, in two languages
+- “What's this?”: a longer hint about any button
+
 **0.16.0:**
 
 - Sending to a slow server without doubles
