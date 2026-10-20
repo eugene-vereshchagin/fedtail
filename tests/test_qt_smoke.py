@@ -2157,6 +2157,13 @@ class QtSmokeTest(unittest.TestCase):
         dlg.probe_btn.click()  # asked in the background: the dialog keeps working
         self.pump(until=lambda: dlg.probe_table.topLevelItemCount() > 20)
         self.assertTrue(dlg.probe_btn.isEnabled())
+        from PySide6.QtGui import QGuiApplication
+        dlg.copy_btn.click()  # the answers as a table, for a bug report
+        got = QGuiApplication.clipboard().text()
+        self.assertIn("|---|---|", got)
+        self.assertGreater(got.count("\n| "), 20)
+        dlg.probe_table.topLevelItem(0).setSelected(True)
+        self.assertEqual(dlg.probe_text(selected=True).count("\n| "), 2)  # head + the row
         dlg.close()
         again = ServerInfoDialog(self.win, self.win.ctx.view.server_info().result())
         self.assertGreater(again.probe_table.topLevelItemCount(), 20)  # kept from last time

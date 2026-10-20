@@ -200,6 +200,17 @@ class SocialTest(TmpDir):
         self.assertFalse(other.has("trends_tags"))
         self.assertTrue(other.has("directory"))  # another server: its own answers
 
+    def test_a_guessed_software_is_asked_of_nodeinfo(self):
+        from concurrent.futures import Future
+        core, _w = self.make()
+        caps = type(core.caps)(software="mastodon", version="0.22.1+git-x")
+        f = Future()
+        f.set_result("GoToSocial 0.22.1")
+        core.server_software = lambda host: f
+        core._own_software(caps)
+        self.assertEqual((caps.software, caps.software_sure), ("gotosocial", True))
+        self.assertFalse(caps.has("dismiss_one"))
+
     def test_people_and_profile(self):
         core, w = self.make()
         w.followers.add("B")

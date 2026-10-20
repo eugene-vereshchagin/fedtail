@@ -190,6 +190,7 @@ class ServerInfoDialog(QDialog):
     def __init__(self, win, info):
         super().__init__(win)
         self.setWindowTitle(_("server_info") + " — " + (info.title or info.domain))
+        self.domain = info.domain or info.title
         self.resize(640, 560)
         lay = QVBoxLayout(self)
         css = win.theme.css("link")
@@ -236,13 +237,24 @@ class ServerInfoDialog(QDialog):
         top.addWidget(self.probe_note, 1)
         self.probe_btn = _button(_("probe_run"), self._probe, icon="view-refresh",
                                  tip=_("probe_tip"))
-        top.addWidget(self.probe_btn, 0, Qt.AlignmentFlag.AlignTop)
+        self.copy_btn = _button(_("probe_copy"), self._copy, icon="edit-copy",
+                                tip=_("probe_copy_tip"))
+        self.save_btn = _button(_("probe_save"), self._save, icon="document-save",
+                                tip=_("probe_save_tip"))
+        for b in (self.copy_btn, self.save_btn, self.probe_btn):
+            top.addWidget(b, 0, Qt.AlignmentFlag.AlignTop)
         v.addLayout(top)
         self.probe_table = QTreeWidget()
         self.probe_table.setRootIsDecorated(False)
         self.probe_table.setHeaderLabels([_("probe_what"), _("probe_answer")])
         self.probe_table.setAlternatingRowColors(True)
+        self.probe_table.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
+        from PySide6.QtGui import QKeySequence, QShortcut
+        QShortcut(QKeySequence.StandardKey.Copy, self.probe_table,
+                  context=Qt.ShortcutContext.WidgetShortcut,
+                  activated=lambda: self._copy(selected=True))
         v.addWidget(self.probe_table, 1)
+        self.domain = getattr(self, "domain", "")
         self._show_probe(win.ctx.view.last_probe())
         return tab
 
@@ -265,8 +277,51 @@ class ServerInfoDialog(QDialog):
                 pass
         self.win.bridge.call(self.win.ctx.view.probe_server(), ok=done, fail=failed)
 
+    def probe_text(self, selected=False):
+        """The answers as a Markdown table (pasted into an issue, a chat, a note):
+        the server, when it was checked, then a row per feature."""
+        items = self.probe_table.selectedItems() if selected else []
+        rows = [it for it in (items or [self.probe_table.topLevelItem(i) for i in
+                                        range(self.probe_table.topLevelItemCount())])]
+        rows = list(dict.fromkeys(rows))  # a selected row comes once per column
+        head = f"{self.domain} — {self.probe_note.text()}".strip(" —")
+        lines = [head, "", f"| {_('probe_what')} | {_('probe_answer')} |", "|---|---|"]
+        lines += [f"| {it.text(0)} | {it.text(1)} |" for it in rows]
+        return "\n".join(lines) + "\n"
+
+    def _copy(self, selected=False):
+        from PySide6.QtGui import QGuiApplication
+        if not self.probe_table.topLevelItemCount():
+            return
+        QGuiApplication.clipboard().setText(self.probe_text(selected))
+        self.probe_note.setToolTip(_("probe_copied"))
+        self.win.statusBar().showMessage(_("probe_copied"), 4000)
+
+    def _save(self):
+        from pathlib import Path
+
+        from PySide6.QtWidgets import QFileDialog
+        if not self.probe_table.topLevelItemCount():
+            return
+        name = f"fedtail-{self.domain or 'server'}-features.md"
+        start = str(Path(self.win.core.get_state("last_save_dir", str(Path.home()))) / name)
+        path, _f = QFileDialog.getSaveFileName(self, _("probe_save"), start,
+                                               "Markdown (*.md);;Text (*.txt)")
+        if not path:
+            return
+        try:
+            Path(path).write_text(self.probe_text(), encoding="utf-8")
+        except OSError as e:
+            self.win.error(e)
+            return
+        self.win.core.set_state("last_save_dir", str(Path(path).parent))
+        self.win.statusBar().showMessage(_("saved_to", path=path), 6000)
+
     def _show_probe(self, probe):
         self.probe_table.clear()
+        has = probe is not None
+        self.copy_btn.setEnabled(has)
+        self.save_btn.setEnabled(has)
         if probe is None:
             self.probe_note.setText(_("probe_never"))
             return

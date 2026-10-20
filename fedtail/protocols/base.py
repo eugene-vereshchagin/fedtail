@@ -49,7 +49,7 @@ CLIENT = frozenset("""
     read_conversation reblog reblogged_by register_app reject_follow relationship
     relationships remove_from_followers report revoke_quote scheduled search set_markers
     set_note set_notification_policy status status_history status_source suggestions
-    tag tag_timeline translate trends unfeature_tag update_credentials update_list
+    instance_v2 tag tag_timeline translate trends unfeature_tag update_credentials update_list
     upload_media verify_credentials vote base
 """.split())
 
@@ -74,6 +74,7 @@ class Capabilities:
     "dismiss_one", "mute_thread", "trends_tags", "quotes"…"""
     software: str = ""
     version: str = ""  # what the server says it runs ("4.3.0", "0.17.3 git-…")
+    software_sure: bool = False  # False: software is a guess (the core asks nodeinfo)
     max_characters: int = 500
     max_media: int = 4
     markdown: bool = False

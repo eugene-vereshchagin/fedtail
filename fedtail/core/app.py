@@ -252,6 +252,26 @@ class Core(SocialMixin):
             threading.Thread(target=job, name="fedtail-revoke").start()
 
     # ---- connect & poll ----------------------------------------------------------
+    def _own_software(self, caps):
+        """The instance document only guessed what my server runs (a bare version
+        number): its nodeinfo says for sure — GoToSocial can't dismiss one notification,
+        mute a thread on the server…, and the core must know."""
+        if caps.software_sure:
+            return
+        from urllib.parse import urlparse
+        host = urlparse(self.auth["server"]).hostname or ""
+        try:
+            name = self.server_software(host).result(timeout=10)
+        except Exception as e:  # noqa: BLE001 — a guess stays a guess
+            log.debug("own nodeinfo: %s", e)
+            return
+        sw = name.split()[0].lower() if name else ""
+        if sw:
+            if sw != caps.software:
+                log.info("server software: %s (the instance document said only %r)",
+                         sw, caps.version)
+            caps.software, caps.software_sure = sw, True
+
     def _carry_answers(self, old, new):
         """What the server answered about its features stays across a reconnect to the
         same server; the last probe (kept) speaks for the same software and version."""
@@ -274,9 +294,11 @@ class Core(SocialMixin):
             api = self.api_class(self.auth["server"], self.auth["token"])
             me = api.me()
             try:
-                caps = self.proto.capabilities(api.instance())
+                v2 = api.instance_v2() if hasattr(api, "instance_v2") else None
+                caps = self.proto.capabilities(api.instance(), v2)
             except Exception:  # instance info is a nicety, not a must
                 caps = Capabilities()
+            self._own_software(caps)
             self._carry_answers(self.caps, caps)
             self.api, self.me, self.caps = api, me, caps
             self.store.me_id = (me or {}).get("id")  # my posts are read, however they come

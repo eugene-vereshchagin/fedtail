@@ -405,6 +405,12 @@ _STRINGS = {
         "probe_tab": "Что умеет",
         "probe_run": "Проверить",
         "probe_again": "Проверить заново",
+        "probe_copy": "Копировать",
+        "probe_copy_tip": "Скопировать ответы таблицей Markdown — вставить в баг-репорт, чат, "
+                          "заметку. Ctrl+C в таблице — только выделенные строки",
+        "probe_save": "Сохранить…",
+        "probe_save_tip": "Сохранить ответы в файл (Markdown)",
+        "probe_copied": "Ответы сервера скопированы",
         "probe_tip": "Спросить сервер, что из возможностей у него есть: два десятка безобидных "
                      "запросов «покажи одну штуку», ничего не меняется. Несколько секунд, в фоне",
         "probe_what": "Возможность",
@@ -1185,6 +1191,12 @@ _STRINGS = {
         "probe_tab": "What it can do",
         "probe_run": "Check",
         "probe_again": "Check again",
+        "probe_copy": "Copy",
+        "probe_copy_tip": "Copy the answers as a Markdown table — for a bug report, a chat, a "
+                          "note. Ctrl+C in the table — the selected rows only",
+        "probe_save": "Save…",
+        "probe_save_tip": "Save the answers to a file (Markdown)",
+        "probe_copied": "The server's answers are copied",
         "probe_tip": "Ask the server which features it has: a score of harmless “show me one” "
                      "requests, nothing changes. A few seconds, in the background",
         "probe_what": "Feature",

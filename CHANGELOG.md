@@ -2,6 +2,13 @@
 
 ## 0.17.0 — in progress
 
+- fedtail took GoToSocial 0.22 for Mastodon: its version says only "0.22.1+git-…".
+  Now it reads the instance document's `source_url` and GoToSocial's own keys, and asks
+  the server's nodeinfo when still unsure — so × in Activity hides here instead of
+  asking the server, and the probe says right what GoToSocial can't. Translating is
+  read from the newer instance document (Mastodon said "no" before when it could).
+- Server info → What it can do: "Copy" (a Markdown table, for a bug report or a chat),
+  "Save…" to a file, Ctrl+C copies the selected rows.
 - ≡ → Server info has a "What it can do" tab: "Check" asks the server about two dozen
   features with harmless one-item GETs (a few seconds, in the background) and lists yes /
   no / closed to me / unclear, with the limits; the last check is kept. The answers also

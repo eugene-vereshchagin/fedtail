@@ -85,5 +85,27 @@ class CapabilitiesTest(unittest.TestCase):
         self.assertTrue(caps.same_server("gotosocial", "0.20"))
 
 
+class SoftwareTest(unittest.TestCase):
+    """GoToSocial 0.22 says only "0.22.1+git-…" as its version: still known for it."""
+
+    def test_detection(self):
+        from fedtail.protocols.mastodon.api import capabilities_from_instance, software_of
+        self.assertEqual(software_of({"version": "0.17.3 git-abc (gotosocial)"}),
+                         ("gotosocial", True))
+        gts = {"version": "0.22.1+git-fdff42b", "account_domain": "dmesg.online",
+               "configuration": {"accounts": {"allow_custom_css": True}}}
+        self.assertEqual(software_of(gts), ("gotosocial", True))
+        self.assertEqual(software_of({"version": "0.22.1",
+                                      "source_url": "https://codeberg.org/superseriousbusiness/"
+                                                    "gotosocial"}), ("gotosocial", True))
+        self.assertEqual(software_of({"version": "4.3.0"}), ("mastodon", False))  # a guess
+        caps = capabilities_from_instance({"version": "4.3.0"},
+                                          {"source_url": "https://github.com/mastodon/mastodon",
+                                           "configuration": {"translation": {"enabled": True}}})
+        self.assertEqual((caps.software, caps.software_sure, caps.translation),
+                         ("mastodon", True, True))
+        self.assertFalse(capabilities_from_instance(gts).has("dismiss_one"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -50,21 +50,52 @@ class ApiError(ServerError):
     """An error answer of the Mastodon API."""
 
 
-def capabilities_from_instance(inst):
+# names a server's software goes by, looked for in what it says of itself
+SOFTWARE = MARKDOWN_SERVERS + ("hometown", "iceshrimp", "sharkey", "firefish", "misskey")
+
+
+def software_of(inst):
+    """(name, sure) from the instance document. GoToSocial 0.22 says only "0.22.1+git…"
+    in version: its source_url and its own keys give it away; a bare "4.3.0" is a
+    guess of Mastodon (sure False: the core asks nodeinfo)."""
     inst = inst or {}
+    version = str(inst.get("version", "")).lower()
+    source = str(inst.get("source_url") or "").lower()
+    for name in SOFTWARE:
+        if name in version or name in source:
+            return name, True
+    conf = inst.get("configuration") or {}
+    if "allow_custom_css" in (conf.get("accounts") or {}) or "account_domain" in inst:
+        return "gotosocial", True
+    if "mastodon" in source:
+        return "mastodon", True
+    return "mastodon", False
+
+
+def capabilities_from_instance(inst, v2=None):
+    """inst: /api/v1/instance; v2: /api/v2/instance when the server has it — the v1
+    document doesn't say whether it translates."""
+    inst = dict(inst or {})
+    v2 = v2 if isinstance(v2, dict) else {}
+    if v2.get("source_url") and not inst.get("source_url"):
+        inst["source_url"] = v2["source_url"]
     version = str(inst.get("version", "")).lower()
     conf = inst.get("configuration") or {}
     st = conf.get("statuses") or {}
     mimes = st.get("supported_mime_types") or []
-    md = "text/markdown" in mimes or any(s in version for s in MARKDOWN_SERVERS)
-    software = next((s for s in MARKDOWN_SERVERS if s in version), "mastodon")
+    software, sure = software_of(inst)
+    md = "text/markdown" in mimes or software in MARKDOWN_SERVERS or \
+        any(s in version for s in MARKDOWN_SERVERS)
     return Capabilities(
         software=software,
+        software_sure=sure,
         version=str(inst.get("version", ""))[:80],
         max_characters=int(st.get("max_characters") or inst.get("max_toot_chars") or 500),
         max_media=int(st.get("max_media_attachments") or 4),
         max_poll_options=int((conf.get("polls") or {}).get("max_options") or 4),
-        translation=bool((conf.get("translation") or {}).get("enabled")),
+        translation=bool((conf.get("translation") or {}).get("enabled") or
+                         ((v2.get("configuration") or {}).get("translation") or {})
+                         .get("enabled")),
         markdown=md,
         streaming=str((inst.get("urls") or {}).get("streaming_api") or
                       ((conf.get("urls") or {}).get("streaming")) or ""),
@@ -257,6 +288,14 @@ class Api:
 
     def instance(self):
         return self.get("/api/v1/instance")
+
+    def instance_v2(self):
+        """The newer instance document: says whether the server translates, and where its
+        source lives (source_url: what software it is). None on servers without it."""
+        try:
+            return self.get("/api/v2/instance", timeout=15)
+        except ApiError:
+            return None
 
     def home(self, limit=40, max_id=None, min_id=None):
         return self.get("/api/v1/timelines/home", self._page(limit, max_id, min_id))
