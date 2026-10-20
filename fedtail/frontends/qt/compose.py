@@ -34,8 +34,8 @@ from PySide6.QtWidgets import (
 
 from ...core.hashtags import flat_tags
 from ...core.model import VISIBILITIES, real, reply_mentions, snippet
-from ...model.text import join_quote, quote_lines
 from ...i18n import _
+from ...model.text import join_quote, quote_lines
 from .text import display_name, esc
 
 MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",

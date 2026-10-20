@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, urlsplit
 
-from ... import __version__
+from ... import __version__, version
 from ...core import config
 from ...core.view import View
 from ...i18n import _
@@ -270,7 +270,16 @@ class Web:
                 "start_at": c["feed"]["start_at"], "expand_cw": config.expand_cw(c),
                 "visibility": self.core.default_visibility(),
                 "sensitive_media": config.sensitive_media(c),
+                "quote_prefix": c["post"].get("quote_prefix", "> "),
+                "homepage": version.HOMEPAGE, "help_url": self.help_url(),
                 "words": {k: _(k) for k in WORDS}}
+
+    @staticmethod
+    def help_url():
+        """The help as GitHub shows it, in the interface's language: the page has no
+        Markdown of its own (the Qt window shows the same pages offline)."""
+        from ..helpdocs import language
+        return f"{version.HOMEPAGE}/blob/main/fedtail/data/help/{language()}/index.md"
 
     def lanes(self):
         from ..tui.model import lane_label, ordered_lanes, start_lane
@@ -366,6 +375,36 @@ class Web:
         got = fn(p).result() or core.by_id(p.id) or p
         return post_json(core, got, core.short_ids([got]).get(got.id))
 
+    def post_menu(self, sid):
+        """What a post's ⋯ menu needs that a lane doesn't send with every post."""
+        core = self.core
+        p = self._post_by_id(sid)
+        me = core.me
+        return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
+                "own": bool(me and real(p).author.id == me.id)}
+
+    def thread_act(self, action, sid):
+        """Subscribe to, leave, mute or unmute the thread a post is in."""
+        core = self.core
+        p = self._post_by_id(sid)
+        if action in ("sub", "unsub"):
+            (core.subscribe if action == "sub" else core.unsubscribe)(p).result()
+            return {"message": _("subbed" if action == "sub" else "unsubbed")}
+        if action in ("mute", "unmute"):
+            core.mute_thread(p, action == "mute").result()
+            return {"message": _("thread_muted" if action == "mute" else "thread_unmuted")}
+        raise ValueError(action)
+
+    def delete(self, sid):
+        """My own post, after the page asked "sure?"."""
+        core = self.core
+        p = self._post_by_id(sid)
+        me = core.me
+        if not (me and real(p).author.id == me.id):
+            raise ValueError("not mine")
+        core.delete(p).result()
+        return {"message": _("deleted")}
+
     def vote(self, sid, choices):
         core = self.core
         p = self._post_by_id(sid)
@@ -432,7 +471,11 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "web_parent_gone", "web_mark_read", "tui_profile", "open_browser", "refresh",
          "more", "no_older", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",
          "web_new_post", "web_original", "web_close", "web_lanes", "web_edited",
-         "web_requested", "lang_label")
+         "web_requested", "lang_label",
+         "reply_quote", "quote_in_reply", "sub_thread", "unsub_thread", "mute_thread",
+         "unmute_thread", "copy_link", "delete", "delete_q", "help_title", "about",
+         "my_profile", "web_more", "web_menu", "web_keys", "web_keys_text", "web_copied",
+         "web_about")
 
 
 class Server(ThreadingHTTPServer):
@@ -529,6 +572,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/lane": lambda: self.web.lane(q.get("name", "")),
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", "")),
+                  "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
                   "/api/wait": lambda: {"v": self.web.wait(int(q.get("v", "-1") or -1))}}
         self._run(routes.get(u.path))
 
@@ -559,6 +603,8 @@ class Handler(BaseHTTPRequestHandler):
                                                 body.get("confirm") is True),
             "/api/active": lambda: web.activate(body.get("name")),
             "/api/resolve": lambda: web.resolve(str(body.get("url", ""))),
+            "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
+            "/api/delete": lambda: web.delete(str(body.get("id"))),
         }
         self._run(routes.get(path))
 

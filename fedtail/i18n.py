@@ -93,6 +93,14 @@ _STRINGS = {
         "web_sensitive": "Чувствительное — нажми, чтобы показать",
         "web_parent_gone": "ответ на удалённое или скрытое",
         "web_mark_read": "Всё прочитано",
+        "web_more": "Ещё", "web_menu": "Меню", "web_keys": "Клавиши",
+        "web_copied": "Ссылка скопирована",
+        "web_about": "fedtail {version} — клиент федиверса. Ты — @{handle}.",
+        "web_keys_text": "j / k — следующий / предыдущий пост\nr — ответить, q — ответить с "
+                         "цитатой\nf — ★, b — ♻, m — закладка\no или Enter — тред, p — "
+                         "профиль\nn — написать, x — всё прочитано, R — обновить\n: — "
+                         "командная строка\nEsc — закрыть панель / картинку, ← / → — "
+                         "листать картинки\nCtrl+Enter в ответе — отправить",
         "web_new_post": "Новый пост", "web_original": "Оригинал", "web_close": "Закрыть",
         "web_lanes": "Ленты", "web_edited": "изменён",
         "web_requested": "Заявка отправлена", "lang_label": "Язык (ru, en…)",
@@ -811,6 +819,14 @@ _STRINGS = {
         "web_sensitive": "Sensitive — click to show",
         "web_parent_gone": "a reply to something deleted or hidden",
         "web_mark_read": "All read",
+        "web_more": "More", "web_menu": "Menu", "web_keys": "Keys",
+        "web_copied": "Link copied",
+        "web_about": "fedtail {version}, a fediverse client. You are @{handle}.",
+        "web_keys_text": "j / k — next / previous post\nr — reply, q — reply with quote\n"
+                         "f — ★, b — ♻, m — bookmark\no or Enter — thread, p — profile\n"
+                         "n — write, x — all read, R — refresh\n: — the command line\n"
+                         "Esc — close the panel / picture, ← / → — through the pictures\n"
+                         "Ctrl+Enter in a reply — send",
         "web_new_post": "New post", "web_original": "Original", "web_close": "Close",
         "web_lanes": "Lanes", "web_edited": "edited",
         "web_requested": "Request sent", "lang_label": "Language (ru, en…)",

@@ -161,7 +161,7 @@ function renderMedia(p) {
   const veiled = p.sensitive && !p.warning && state.me.sensitive_media === "hide";
   const show = () => {
     box.textContent = "";
-    for (const m of p.media) box.append(renderOne(m));
+    for (const m of p.media) box.append(renderOne(m, p.media));
   };
   if (veiled) {
     const v = el("button", "veil", "⚠ " + w("web_sensitive"));
@@ -174,7 +174,7 @@ function renderMedia(p) {
 
 const LATER = [60, 300, 1800];  // s: a picture that didn't come is asked again by itself
 
-function renderOne(m) {
+function renderOne(m, all) {
   const cell = el("figure", "cell");
   const caption = m.alt ? el("figcaption", "alt", m.alt) : null;
   const fail = (again) => {  // a box that says so (with a link), and a try later
@@ -192,7 +192,7 @@ function renderOne(m) {
       img.title = m.alt;
       img.loading = "lazy";
       img.referrerPolicy = "no-referrer";
-      img.onclick = () => view(m);
+      img.onclick = () => view(m, all);
       // a preview the server couldn't make: the original; neither — say so, try later
       img.onerror = () => {
         if (m.url && img.getAttribute("src") !== m.url) img.src = m.url;
@@ -233,7 +233,10 @@ function broken(m) {  // nothing to show here: still a way to the file
   return box;
 }
 
-function view(m) {  // a picture over the page; click or Esc — gone
+function view(m, all) {  // a picture over the page; ←/→ through the post's; click or Esc — gone
+  const list = (all || [m]).filter((x) => x.kind === "image" && (x.url || x.preview));
+  state.viewer = { list, at: Math.max(0, list.indexOf(m)) };
+  $("#viewer-prev").hidden = $("#viewer-next").hidden = list.length < 2;
   $("#viewer-img").src = m.url || m.preview;
   $("#viewer-img").alt = m.alt;
   $("#viewer-alt").textContent = m.alt;
@@ -242,6 +245,13 @@ function view(m) {  // a picture over the page; click or Esc — gone
   o.href = m.url || m.preview;
   o.hidden = !(m.url || m.preview);
   $("#viewer").hidden = false;
+}
+
+function stepViewer(d) {
+  const v = state.viewer;
+  if (!v || v.list.length < 2) return;
+  v.at = (v.at + d + v.list.length) % v.list.length;
+  view(v.list[v.at], v.list);
 }
 
 function closeViewer() {
@@ -343,6 +353,8 @@ function renderActions(p, inThread) {
     a.title = w("open_browser");
     row.append(a);
   }
+  const more = btn("⋯", w("web_more"), false, null);
+  more.onclick = (e) => { e.stopPropagation(); postMenu(p, more); };
   return row;
 }
 
@@ -356,6 +368,138 @@ function redraw(p) {  // a post came back changed: every card of it, here and in
     next.className = card.className;
     card.replaceWith(next);
   }
+}
+
+// ---- menus: a post's ⋯ and the window's ≡ (one at a time; items [label, fn] or "-") ----
+function popup(anchor, items) {
+  const pop = $("#pop");
+  pop.textContent = "";
+  for (const it of items) {
+    if (it === "-") { pop.append(el("hr")); continue; }
+    const b = el("button", "", it[0]);
+    b.type = "button";
+    b.setAttribute("role", "menuitem");
+    b.onclick = () => { closePopup(); it[1](); };
+    pop.append(b);
+  }
+  pop.hidden = false;
+  const r = anchor.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.max(4, Math.min(r.right - pw, innerWidth - pw - 4)) + "px";
+  pop.style.top = (r.bottom + ph + 4 < innerHeight ? r.bottom + 4
+    : Math.max(4, r.top - ph - 4)) + "px";
+  const first = pop.querySelector("button");
+  if (first) first.focus();
+}
+
+function closePopup() { $("#pop").hidden = true; }
+
+async function postMenu(p, anchor) {
+  let info = { subscribed: false, muted: false, own: p.own };
+  try { info = await api("/api/post_menu?id=" + encodeURIComponent(p.sid)); }
+  catch (e) { /* the rest of the menu still works */ }
+  const items = [];
+  if (state.me.quote_prefix) items.push(["❝ " + w("reply_quote"), () => quoteReply(p)]);
+  items.push("-",
+    [info.subscribed ? w("unsub_thread") : w("sub_thread"),
+     () => threadAct(info.subscribed ? "unsub" : "sub", p)],
+    [info.muted ? w("unmute_thread") : w("mute_thread"),
+     () => threadAct(info.muted ? "unmute" : "mute", p)], "-");
+  if (p.url) {
+    items.push([w("copy_link"), () => copyText(p.url)],
+               [w("open_browser"), () => window.open(p.url, "_blank", "noopener")]);
+  }
+  items.push([w("tui_profile") + " @" + p.account.handle, () => openAccount(p.account.id)]);
+  if (info.own) {
+    items.push("-", [w("delete"), async () => {
+      if (!window.confirm(w("delete_q", { text: plainOf(p).slice(0, 200) }))) return;
+      try { toast((await api("/api/delete", { id: p.sid })).message); await refresh(); }
+      catch (e) { toast(e.message); }
+    }]);
+  }
+  popup(anchor, items);
+}
+
+async function threadAct(action, p) {
+  try { toast((await api("/api/thread_act", { action, id: p.sid })).message); await refresh(); }
+  catch (e) { toast(e.message); }
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast(w("web_copied")); }
+  catch (e) { window.prompt("", text); }  // no clipboard over plain http (the LAN): by hand
+}
+
+function mainMenu() {
+  popup($("#more"), [
+    ["✎ " + w("write"), () => compose(null)],
+    [w("my_profile"), () => state.me.me && openAccount(state.me.me.id)],
+    [w("refresh"), refresh],
+    [w("web_mark_read"), markAllRead],
+    "-",
+    [w("help_title") + " ↗", () => window.open(state.me.help_url, "_blank", "noopener")],
+    [w("web_keys"), () => info(w("web_keys_text"))],
+    [w("about"), () => info(w("web_about", { version: state.me.version, handle: state.me.handle }),
+                           [[state.me.homepage, state.me.homepage]])],
+  ]);
+}
+
+function info(text, links) {
+  $("#info-text").textContent = text;
+  const box = $("#info-links");
+  box.textContent = "";
+  for (const [label, url] of links || []) box.append(link(label, url));
+  $("#info").showModal();
+}
+
+// ---- quoting: answer a post piece by piece ------------------------------------------------
+const LEADING_MENTIONS = /^(?:@[\w.-]+(?:@[\w.-]+)?[\s,]*)+/u;
+
+function quoteLines(text, whole) {  // the same as fedtail/model/text.py quote_lines
+  const prefix = state.me.quote_prefix || "> ";
+  text = (text || "").replace(/\r\n/g, "\n").trim();
+  if (whole) text = text.replace(LEADING_MENTIONS, "").trim();
+  if (!text) return "";
+  const bare = prefix.trimEnd();
+  return text.split("\n").map((l) => (l.trim() ? prefix + l : bare)).join("\n") + "\n\n";
+}
+
+function joinQuote(before) {  // fedtail/model/text.py join_quote
+  const t = before.trim();
+  if (!t) return "";
+  if (!t.includes("\n") && (t + " ").replace(LEADING_MENTIONS, "") === "")
+    return before.endsWith("\n") ? "" : "\n";
+  const tail = before.length - before.replace(/\n+$/, "").length;
+  return "\n".repeat(Math.max(0, 2 - tail));
+}
+
+function plainOf(p) {  // the post's text as the reader sees it
+  // an inert document: nothing in it loads or runs, and it never joins the page
+  const box = new DOMParser().parseFromString(p.html, "text/html").body;
+  for (const br of box.querySelectorAll("br")) br.replaceWith("\n");
+  for (const para of box.querySelectorAll("p")) para.append("\n\n");
+  return box.textContent.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+// put a quote into the reply at its cursor, the cursor after it
+function insertQuote(text, whole) {
+  const q = quoteLines(text, whole);
+  if (!q) return;
+  const t = $("#text");
+  const at = t.selectionStart, end = t.selectionEnd;
+  const before = t.value.slice(0, at);
+  const ins = joinQuote(before) + q;
+  t.value = before + ins + t.value.slice(end);
+  t.focus();
+  t.selectionStart = t.selectionEnd = at + ins.length;
+  counter();
+}
+
+function quoteReply(p) {  // ⋯ → reply with quote: the whole post, or into the open reply
+  if (!($("#compose").open && state.replyTo && state.replyTo.sid === p.sid)) compose(p);
+  const t = $("#text");
+  t.selectionStart = t.selectionEnd = t.value.length;
+  insertQuote(plainOf(p), true);
 }
 
 // ---- lanes ------------------------------------------------------------------------------
@@ -637,9 +781,10 @@ function compose(replyTo) {
   line.hidden = !replyTo;
   line.textContent = "";
   if (replyTo) {
-    line.append(el("b", "", w("web_reply_to", { who: "@" + replyTo.account.handle })),
-                el("div", "muted", (replyTo.warning ? "⚠ " + replyTo.warning : "")
-                  || (replyTo.html ? new DOMParser().parseFromString(replyTo.html, "text/html").body.textContent.slice(0, 200) : "")));
+    line.append(el("b", "", w("web_reply_to", { who: "@" + replyTo.account.handle })));
+    if (replyTo.warning) line.append(el("div", "muted", "⚠ " + replyTo.warning));
+    // the whole post, to select a piece of it and quote it with ❝ (post.quote_prefix)
+    if (replyTo.html) line.append(el("div", "whole", plainOf(replyTo)));
     const draft = store("draft." + replyTo.sid);
     t.value = draft || replyTo.reply_prefix || "";
     $("#vis").value = narrower(replyTo.visibility, state.me.visibility);
@@ -649,6 +794,7 @@ function compose(replyTo) {
     $("#vis").value = state.me.visibility;
   }
   if (!replyTo || !replyTo.warning) { $("#cw").value = ""; showCw(false); }
+  $("#quote-sel").hidden = !(replyTo && replyTo.html && state.me.quote_prefix);
   counter();
   if (!d.open) d.showModal();
   t.focus();
@@ -748,7 +894,13 @@ document.addEventListener("click", async (e) => {
 
 // ---- keys --------------------------------------------------------------------------------
 document.addEventListener("keydown", (e) => {
-  if (!$("#viewer").hidden) { if (e.key === "Escape") closeViewer(); return; }
+  if (!$("#viewer").hidden) {
+    if (e.key === "Escape") closeViewer();
+    else if (e.key === "ArrowLeft") stepViewer(-1);
+    else if (e.key === "ArrowRight") stepViewer(1);
+    return;
+  }
+  if (!$("#pop").hidden && e.key === "Escape") { e.preventDefault(); closePopup(); return; }
   if (e.target.closest("textarea, input, select")) {
     if (e.key === "Escape" && e.target.id === "cmd") { e.target.value = ""; $("#posts").focus(); }
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest("#compose")) send(e);
@@ -763,6 +915,7 @@ document.addEventListener("keydown", (e) => {
     m: () => p && act("bookmark", p), o: () => p && openThread(p.sid),
     Enter: () => p && openThread(p.sid), n: () => compose(null),
     p: () => p && openAccount(p.account.id), x: markAllRead, R: refresh,
+    q: () => p && quoteReply(p),
     ":": () => $("#cmd").focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),
   };
   if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
@@ -842,7 +995,27 @@ async function start() {
   }
   vis.value = me.visibility;
   vis.title = w("web_visibility");
-  $("#viewer").onclick = (e) => { if (e.target.id !== "viewer-open") closeViewer(); };
+  $("#viewer").onclick = (e) => {
+    if (e.target.id !== "viewer-open" && !e.target.closest(".nav-btn")) closeViewer();
+  };
+  $("#viewer-prev").onclick = () => stepViewer(-1);
+  $("#viewer-next").onclick = () => stepViewer(1);
+  $("#more").title = w("web_menu");
+  $("#more").onclick = (e) => { e.stopPropagation(); mainMenu(); };
+  document.addEventListener("mousedown", (e) => {
+    if (!$("#pop").hidden && !e.target.closest("#pop")) closePopup();
+  });
+  $("#info-close").textContent = w("web_close");
+  const qs = $("#quote-sel");
+  qs.textContent = "❝ " + w("quote_in_reply");
+  qs.onmousedown = (e) => e.preventDefault();  // keep the selection in the post
+  qs.onclick = () => {
+    const sel = window.getSelection();
+    const whole = $("#reply-line .whole");
+    const picked = sel && !sel.isCollapsed && whole && whole.contains(sel.anchorNode)
+      ? sel.toString() : "";
+    insertQuote(picked || (whole ? whole.textContent : ""), !picked);
+  };
   const lanes = await loadLanes();
   const want = decodeURIComponent(location.hash.slice(1));
   const names = lanes.map((l) => l.name);

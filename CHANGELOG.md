@@ -11,6 +11,11 @@
   the reply as a `> ` quote; a right click on selected text → "Quote in reply". With the
   reply already open the quote goes where the cursor is, so a long post can be answered
   sentence by sentence without copying. `post.quote_prefix`.
+- Web: the ≡ menu (write, my profile, refresh, all read, help, keys, about) and a post's
+  ⋯ menu (reply with quote, subscribe / leave / mute the thread, copy the link, delete my
+  post); `q` replies with a quote. A reply shows the whole post it answers: select a piece,
+  "❝ Quote in reply" puts it at the cursor. The picture viewer goes through the post's
+  pictures with ← / → and the side buttons.
 - Unsubscribing from a thread mutes its mentions too (`subs.leave_mutes`, on): leaving
   used to stop "Subscriptions" only, while auto-tagged replies kept coming.
 

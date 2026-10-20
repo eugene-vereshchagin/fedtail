@@ -24,6 +24,7 @@
       <button id="refresh" type="button" class="tool" aria-label="refresh">⟳</button>
       <button id="allread" type="button" class="tool"></button>
       <button id="write2" type="button" class="icon" aria-label="write">✎</button>
+      <button id="more" type="button" class="tool big" aria-haspopup="menu">≡</button>
     </header>
     <div id="posts" tabindex="0"></div>
     <form id="cmdline" autocomplete="off">
@@ -46,6 +47,7 @@
       <button id="compose-close" type="button" class="tool" aria-label="close">✕</button>
     </header>
     <div id="reply-line" hidden></div>
+    <button id="quote-sel" type="button" class="tool" hidden></button>
     <input id="cw" type="text" hidden>
     <textarea id="text" rows="6"></textarea>
     <div class="dlg-foot">
@@ -59,10 +61,15 @@
 </dialog>
 
 <div id="viewer" hidden>
+  <button id="viewer-prev" type="button" class="nav-btn" hidden>‹</button>
+  <button id="viewer-next" type="button" class="nav-btn" hidden>›</button>
   <img id="viewer-img" alt="">
   <div id="viewer-bar"><span id="viewer-alt"></span> <a id="viewer-open" target="_blank" rel="noopener noreferrer"></a></div>
 </div>
 <div id="toast" role="status" hidden></div>
+<div id="pop" class="pop" role="menu" hidden></div>
+<dialog id="info"><form method="dialog"><pre id="info-text"></pre><div id="info-links"></div>
+  <button id="info-close" class="primary"></button></form></dialog>
 <script src="/app.js"></script>
 </body>
 </html>

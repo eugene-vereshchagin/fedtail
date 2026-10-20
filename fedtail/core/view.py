@@ -229,6 +229,20 @@ class View:
     def unsubscribe(self, post):
         return self._core.unsubscribe(self._raw(real(post)))
 
+    def subscribed(self, post):
+        """Is the thread this post is in followed (Point-style)? Not a future."""
+        return bool(self._core.subscribed(self._raw(real(post))))
+
+    def thread_quiet(self, post):
+        """Is the thread this post is in muted (here, or on the server too)?"""
+        quiet = getattr(self._core, "thread_quiet", None)
+        return bool(quiet and quiet(self._raw(real(post))))
+
+    def mute_thread(self, post, on=True):
+        """Mute (or unmute) the post's thread: on the server when it can, here always.
+        Future: the post as it is now."""
+        return _then(self._core.mute_thread(self._raw(real(post)), on), self._post_back)
+
     # ---- writing -------------------------------------------------------------------
     def default_visibility(self):
         return adapter.visibility_in(self._core.default_visibility())

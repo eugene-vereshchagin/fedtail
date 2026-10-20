@@ -233,6 +233,41 @@ class WebTest(TmpDir):
             missing = [k for k in web.WORDS if k not in i18n._STRINGS[lang]]
             self.assertEqual(missing, [], lang)
 
+    def test_menus_threads_delete(self):
+        """What the page's ≡ and ⋯ menus need: the help, a post's thread state; follow,
+        leave and mute a thread (muting works where the server can't); delete only my
+        own post."""
+        _c, _h, body = self.req("/api/me")
+        me = json.loads(body)
+        self.assertTrue(me["help_url"].endswith("/fedtail/data/help/en/index.md"))
+        self.assertEqual(me["quote_prefix"], "> ")
+        self.assertEqual(me["words"]["reply_quote"], "Reply with quote")
+        _c, _h, body = self.req("/api/post_menu?id=002")
+        self.assertEqual(json.loads(body), {"subscribed": False, "muted": False, "own": False})
+        self.assertEqual(self.req("/api/post_menu?id=../x")[0], 400)
+        self.assertEqual(self.req("/api/thread_act", {"action": "sub", "id": "002"})[0], 200)
+        self.assertTrue(json.loads(self.req("/api/post_menu?id=002")[2])["subscribed"])
+        self.w.missing = {"mute_thread"}  # GoToSocial
+        self.assertEqual(self.req("/api/thread_act", {"action": "mute", "id": "002"})[0], 200)
+        got = json.loads(self.req("/api/post_menu?id=002")[2])
+        self.assertTrue(got["muted"])
+        self.assertFalse(got["subscribed"])  # muting leaves the thread
+        self.assertEqual(self.req("/api/thread_act", {"action": "boom", "id": "002"})[0], 400)
+        self.assertEqual(self.req("/api/delete", {"id": "002"})[0], 400)  # not mine
+        self.assertIn("002", self.w.statuses)
+        self.assertTrue(json.loads(self.req("/api/post_menu?id=001")[2])["own"])
+        self.assertEqual(self.req("/api/delete", {"id": "001"})[0], 200)
+        self.assertNotIn("001", self.w.statuses)
+
+    def test_page_has_the_menus(self):
+        body = self.req("/")[2]
+        for wanted in ('id="more"', 'id="pop"', 'id="quote-sel"', 'id="viewer-next"'):
+            self.assertIn(wanted, body)
+        js = self.req("/app.js")[2]
+        for wanted in ("function postMenu", "function mainMenu", "function insertQuote",
+                       "function stepViewer"):
+            self.assertIn(wanted, js)
+
     def test_thread_and_account(self):
         _c, _h, body = self.req("/api/thread?id=002")
         nodes = json.loads(body)["posts"]
