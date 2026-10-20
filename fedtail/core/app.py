@@ -550,6 +550,7 @@ class Core(SocialMixin):
                     changed = ids != self._known_requests
                     self._known_requests = ids
                     if changed:  # not every poll: the tab would be rebuilt for nothing
+                        self._warm_lanes()  # the window counts every lane on this too
                         self.emit("requests_updated", self.follow_requests)
                 except Exception as e:
                     self.emit("error", f"requests: {e}")

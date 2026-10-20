@@ -516,6 +516,7 @@ class AuthorBar(QWidget):
     def dress(self):
         from . import icons
         t = self.win.theme
+        self._shown = None  # the follow button dressed anew with the rest
         icons.dress(self.lists_btn, "list", t, words=_("add_to_list") + " ▾")
         for b, pic, glyph in self.glyph_btns:
             icons.dress(b, pic, t, glyph=glyph)
@@ -566,10 +567,16 @@ class AuthorBar(QWidget):
             elif rel.requested:
                 bits.append(_("faces_requested"))
         text = " · ".join(bits)
+        on = bool(rel and (rel.following or rel.requested))
+        # asked twice a second: change nothing that's the same — a button's picture or
+        # words set anew lays the whole window out again (300 ms with a full lane)
+        now = (text, self.about.width(), on, rel is not None)
+        if now == getattr(self, "_shown", None):
+            return
+        self._shown = now
         self.about.setText(self.about.fontMetrics().elidedText(
             text, Qt.TextElideMode.ElideRight, max(40, self.about.width())))
         self.about.setToolTip(text)
-        on = bool(rel and (rel.following or rel.requested))
         from . import icons
         icons.dress(self.follow_btn, "unfollow" if on else "follow", self.win.theme,
                     words=_("unfollow") if on else _("follow"))
@@ -635,6 +642,8 @@ class _TabChip(QFrame):
         h.addWidget(self.close_btn)
 
     def set_text(self, text):
+        if text == getattr(self, "full", None):
+            return
         self.full = text
         self.label.setText(self.label.fontMetrics().elidedText(
             text, Qt.TextElideMode.ElideRight, 220))
@@ -729,7 +738,11 @@ class MessageTabs(QWidget):
 
     def setTabIcon(self, i, icon):  # noqa: N802
         chip = self.chips[i]
-        if icon is None or icon.isNull():
+        key = None if icon is None or icon.isNull() else icon.cacheKey()
+        if key == getattr(chip, "icon_key", None):
+            return  # the same: a picture set anew lays the window out again
+        chip.icon_key = key
+        if key is None:
             chip.icon.hide()
         else:
             chip.icon.setPixmap(icon.pixmap(16, 16))

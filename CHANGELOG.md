@@ -31,6 +31,10 @@
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the
   theme's colours: who sees a post, a warning, send, follow, lists, a private message,
   the menu; a flower for a person in the roster, a bubble for a talk.
+- Less freezing in the split layout: the bar over a lane and the tabs no longer set
+  their buttons' pictures and words anew twice a second (each time the whole window was
+  laid out again, ~300 ms with a full lane), a new follow request no longer recounts
+  every lane in the window, and the roster adds People without building itself anew.
 - Trying a theme from the menu no longer freezes the window for seconds: the lanes out
   of sight let their cards go first (drawn anew when opened), and the tabs out of sight
   are rebuilt when they come into view.

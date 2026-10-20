@@ -308,8 +308,12 @@ class RosterWindow(QWidget):
             self.win.bridge.call(view.refresh_mutuals(), ok=lambda _n: self.refresh_soon(),
                                  fail=lambda e: log.info("mutuals: %s", e))
         shape = [(g.name, tuple(row_key(i) for i in g.items)) for g in groups]
-        if shape != self._shape:  # lanes came or went: build anew
-            self._build(groups)
+        old = self._shape or []
+        if shape != old:
+            if old and shape[:len(old)] == old:  # groups added at the end (People came)
+                self._build(groups[len(old):], append=True)
+            else:  # lanes came or went: build anew
+                self._build(groups)
             self._shape = shape
         for g in groups:
             if g.name in self.heads:
@@ -318,16 +322,17 @@ class RosterWindow(QWidget):
                 self.rows[row_key(item)].update_item(item)
         self._filter(self.search.text())
 
-    def _build(self, groups):
+    def _build(self, groups, append=False):
         self.list.setUpdatesEnabled(False)
         try:
-            self._build_rows(groups)
+            self._build_rows(groups, append)
         finally:
             self.list.setUpdatesEnabled(True)
 
-    def _build_rows(self, groups):
-        self.list.clear()
-        self.rows, self.heads = {}, {}
+    def _build_rows(self, groups, append=False):
+        if not append:
+            self.list.clear()
+            self.rows, self.heads = {}, {}
         tall = {}  # a row's height, measured once a shape (asking each is slow)
         for g in groups:
             if not g.items:
