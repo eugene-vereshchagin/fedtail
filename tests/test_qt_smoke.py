@@ -2193,6 +2193,7 @@ class QtSmokeTest(unittest.TestCase):
         roster = win.roster
 
         def done():
+            self.core.set_state("roster_look", {})  # the look tried here: not for others
             win.quitting = True
             roster.close()
             win.hide()
@@ -2256,7 +2257,6 @@ class QtSmokeTest(unittest.TestCase):
         win.try_theme("system")
         # the compact roster: a line an item
         roster.set_look("compact", True)
-        self.addCleanup(self.core.set_state, "roster_look", {})
         self.assertFalse(roster.rows["home"].line.isVisibleTo(roster))
         roster.set_look("only_new", True)
         roster.set_look("only_new", False)
