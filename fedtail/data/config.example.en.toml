@@ -60,6 +60,9 @@
 #   "pink"     — pink: powder and berries, soft corners, little flowers;
 #   "nord"     — arctic dark: cold blue-grey, frosty links;
 #   "solarized" — Solarized light: warm paper, blue links;
+#   "qip-retro", "qip-modern", "mra", "mra-blue", "psi" — in the spirit of QIP Infium and
+#                QIP 2012, the Mail.ru Agent (orange and blue) and Psi: "Name (time)" over
+#                each post, mine in a colour of its own; best with layout = "qip";
 #   "paper"    — warm paper and a book typeface, for long threads;
 #   "debug"    — for hunting what's unfinished: unread, the j/k cursor, found, "seen
 #                not whole", the keyboard focus — each in a loud frame of its own.

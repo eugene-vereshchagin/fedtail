@@ -1,0 +1,72 @@
+# fedtail theme: qip-modern — in the spirit of QIP 2012: flat white and light blue, a big
+# face on top, "Name 18:09 20.09" in colour over each message. Best with ui.layout = "qip".
+# Own icons and colours only.
+name = "QIP modern"
+inherit = "system"
+
+[font]
+family = "Segoe UI, Open Sans, Noto Sans, sans-serif"
+mono = "DejaVu Sans Mono, monospace"
+post_scale = 1.05
+# Open Sans comes with fedtail (SIL OFL 1.1): where Segoe UI is missing
+files = ["fonts/OpenSans-Variable.ttf", "fonts/OpenSans-Italic-Variable.ttf"]
+
+[colors]
+window = "#eef5fb"
+sidebar = "#e3eef8"
+sidebar_border = "#cddff0"
+panel = "#f5f9fd"
+selected = "#2e8de0"
+selected_text = "#ffffff"
+view = "#ffffff"
+header_border = "#d6e4f2"
+card = "#ffffff"
+card_border = "#e1ebf5"
+card_border_unread = "#2e8de0"
+text = "#1f2a37"
+muted = "#7a8a9c"
+link = "#1e7fd6"
+accent = "#2e8de0"
+on_accent = "#ffffff"
+hot = "#e0484f"
+on_hot = "#ffffff"
+quiet = "#e6eef7"
+on_quiet = "#5d6d80"
+new_pill = "#2e8de0"
+on_new_pill = "#ffffff"
+ctx = "#f1f6fb"
+ctx_bar = "#bcd6ef"
+focus = "#eef6ff"
+focus_border = "#2e8de0"
+myreply = "#eaf3fc"
+on_myreply = "#2f5f8f"
+separator = "#2e8de0"
+rail = "#d3e2f1"
+button = "#ffffff"
+button_border = "#c8dbee"
+dot = "#2e8de0"
+header = "#f0f6fc"
+header_bar = "#2e8de0"
+chat_me = "#2e8de0"
+chat_them = "#e0484f"
+
+[shape]
+radius = 6
+button_radius = 6
+card_style = "rule"
+rule = "solid"
+header_bar = 0
+avatar = 32
+avatar_shape = "rounded"
+card_header = "chat"
+
+[words]
+chat = "{name} {when}"
+chat_date = "{clock} {dd}.{mm}"
+
+[icon]
+bg_top = "#5fb0f0"
+bg_bottom = "#1f6fc0"
+bubble = "#ffffff"
+ink = "#1f6fc0"
+accent = "#6cc24a"

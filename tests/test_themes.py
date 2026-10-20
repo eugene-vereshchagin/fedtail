@@ -109,8 +109,9 @@ class ThemeFileTest(unittest.TestCase):
         self.assertTrue((self.dir / "README.txt").exists())
         # copies in builtin/ are not themes of their own
         self.assertEqual(themefile.available(),
-                         ["bnw", "contrast", "debug", "juick", "juick-classic", "night", "nord",
-                          "paper", "pink", "point", "solarized", "system", "terminal"])
+                         ["bnw", "contrast", "debug", "juick", "juick-classic", "mra",
+                          "mra-blue", "night", "nord", "paper", "pink", "point", "psi",
+                          "qip-modern", "qip-retro", "solarized", "system", "terminal"])
 
 
 try:

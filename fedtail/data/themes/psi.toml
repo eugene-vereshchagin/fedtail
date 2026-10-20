@@ -1,0 +1,70 @@
+# fedtail theme: psi — in the spirit of Psi / Psi+: light blue frames, "[14:14:18] <nick>"
+# over each message, the nick coloured. Best with ui.layout = "qip". Own icons and
+# colours only.
+name = "Psi"
+inherit = "system"
+
+[font]
+family = "DejaVu Sans, Noto Sans, sans-serif"
+mono = "DejaVu Sans Mono, monospace"
+post_scale = 1.0
+
+[colors]
+window = "#c8dbf5"
+sidebar = "#dce9fa"
+sidebar_border = "#4c7fcf"
+panel = "#e3edfa"
+selected = "#3d6fc4"
+selected_text = "#ffffff"
+view = "#ffffff"
+header_border = "#b8cff0"
+card = "#ffffff"
+card_border = "#d5e2f5"
+card_border_unread = "#3d6fc4"
+text = "#000000"
+muted = "#5f6f86"
+link = "#1a4fb8"
+accent = "#3d6fc4"
+on_accent = "#ffffff"
+hot = "#c62a1f"
+on_hot = "#ffffff"
+quiet = "#e1ebf8"
+on_quiet = "#4f607a"
+new_pill = "#ffffff"
+on_new_pill = "#1a4fb8"
+ctx = "#eef4fc"
+ctx_bar = "#9fbbe6"
+focus = "#eef5ff"
+focus_border = "#3d6fc4"
+myreply = "#e6effb"
+on_myreply = "#2f4f80"
+separator = "#3d6fc4"
+rail = "#c7d8f1"
+button = "#eef3fb"
+button_border = "#90acd9"
+dot = "#3d6fc4"
+header = "#d7e5f8"
+header_bar = "#4c7fcf"
+chat_me = "#1a4fb8"
+chat_them = "#c62a1f"
+
+[shape]
+radius = 3
+button_radius = 4
+card_style = "rule"
+rule = "dashed"
+header_bar = 2
+card_avatars = false
+card_header = "chat"
+
+[words]
+date = "{dd}.{mm} {clock}"
+chat = "[{when}] <{name}>"
+chat_date = "{secs}"
+
+[icon]
+bg_top = "#86b1ec"
+bg_bottom = "#3062b8"
+bubble = "#ffffff"
+ink = "#3062b8"
+accent = "#f0b429"

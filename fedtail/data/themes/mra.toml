@@ -1,0 +1,74 @@
+# fedtail theme: mra — in the spirit of the Mail.ru Agent (2008–2010): warm orange frames
+# and buttons, white panes, "Name (18:50) :" in red, mine in blue. Best with
+# ui.layout = "qip"; mra-blue is the same in blue. Own icons and colours only.
+name = "Agent (orange)"
+inherit = "system"
+
+[font]
+family = "Tahoma, Arial, Arimo, DejaVu Sans, sans-serif"
+mono = "DejaVu Sans Mono, monospace"
+post_scale = 1.05
+# Arimo (Arial's metrics) comes with fedtail (SIL OFL 1.1): where Tahoma and Arial are missing
+files = ["fonts/Arimo-Variable.ttf", "fonts/Arimo-Italic-Variable.ttf"]
+
+[colors]
+window = "#fbe2bd"
+sidebar = "#fdecd3"
+sidebar_border = "#eaa24a"
+panel = "#fff2df"
+selected = "#e3e3e3"
+selected_text = "#111111"
+view = "#ffffff"
+header_border = "#f0c58c"
+card = "#ffffff"
+card_border = "#f3d3a6"
+card_border_unread = "#ef8e12"
+text = "#1a1a1a"
+muted = "#8a7a68"
+link = "#1559b8"
+accent = "#f39a1f"
+on_accent = "#ffffff"
+hot = "#d6201b"
+on_hot = "#ffffff"
+quiet = "#fbe9cf"
+on_quiet = "#7a6346"
+new_pill = "#ffffff"
+on_new_pill = "#d6701b"
+ctx = "#fff6ea"
+ctx_bar = "#f0c58c"
+focus = "#fff8ee"
+focus_border = "#ef8e12"
+myreply = "#fff1dc"
+on_myreply = "#7a5326"
+separator = "#ef8e12"
+rail = "#f3d3a6"
+button = "#fff4e3"
+button_border = "#e8a95c"
+dot = "#3fae3a"
+primary = "#f39a1f"
+on_primary = "#ffffff"
+header = "#fde2b8"
+header_bar = "#ef8e12"
+chat_me = "#1a3fcf"
+chat_them = "#d6201b"
+
+[shape]
+radius = 8
+button_radius = 10
+card_style = "rule"
+rule = "solid"
+header_bar = 3
+card_avatars = false
+card_header = "chat"
+
+[words]
+date = "{dd}.{mm} {clock}"
+chat = "{name} ({when}) :"
+chat_date = "{clock}"
+
+[icon]
+bg_top = "#ffc35c"
+bg_bottom = "#e87d0d"
+bubble = "#ffffff"
+ink = "#c4620a"
+accent = "#3fae3a"

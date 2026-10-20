@@ -350,6 +350,8 @@ def main():
     run(app, out, "dark", BREEZE_DARK, "system", set())
     run(app, out, "terminal", BREEZE_LIGHT, "terminal", set())
     run(app, out, "qip", BREEZE_LIGHT, "system", set(), layout="qip")
+    for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "psi"):
+        run(app, out, name, BREEZE_LIGHT, name, set(), layout="qip")
     for name in ("point", "juick", "juick-classic", "bnw", "night", "paper", "contrast",
                  "pink", "nord", "solarized"):
         run(app, out, name, BREEZE_LIGHT, name, set())

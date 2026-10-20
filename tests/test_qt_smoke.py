@@ -2299,6 +2299,30 @@ class QtSmokeTest(unittest.TestCase):
         self.assertNotIn("🔥", texts)
         self.assertNotIn(":blob:", texts)
 
+    def test_messenger_themes_write_posts_as_chat(self):
+        """The QIP / Agent / Psi themes: "Name (time)" over each post, mine and the
+        others' in their own colours; a theme's own brackets stay text."""
+        from PySide6.QtWidgets import QLabel
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
+        self.core.poll_once()
+        lane = self.win.lane_widgets["home"]
+        self.pump(until=lambda: "011" in lane.view.rows and "010" in lane.view.rows)
+        try:
+            for name in ("qip-retro", "qip-modern", "mra", "mra-blue", "psi"):
+                self.win.try_theme(name)
+                self.assertEqual(self.win.theme.id, name)
+                them = [w for w in lane.view.rows["011"].findChildren(QLabel)
+                        if w.objectName() == "chatName"]
+                mine = [w for w in lane.view.rows["010"].findChildren(QLabel)
+                        if w.objectName() == "chatName"]
+                self.assertTrue(them and mine, name)
+                self.assertIn(self.win.theme.css("chat_them"), them[0].text(), name)
+                self.assertIn(self.win.theme.css("chat_me"), mine[0].text(), name)
+            self.assertIn("&lt;", them[0].text())  # psi's "<nick>": brackets, not a tag
+        finally:
+            self.win.try_theme("system")
+
     def cfg_emoji_off(self):
         self.win.cfg["feed"]["emoji"] = False
         lane = self.win.lane_widgets["home"]

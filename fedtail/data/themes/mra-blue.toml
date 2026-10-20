@@ -1,0 +1,35 @@
+# fedtail theme: mra-blue — the Agent's blue skin: the same as mra, cold blue instead of
+# orange.
+name = "Agent (blue)"
+inherit = "mra"
+
+[colors]
+window = "#c9dcf6"
+sidebar = "#d9e7f9"
+sidebar_border = "#6f9be0"
+panel = "#e7effb"
+header_border = "#a8c3ec"
+card_border = "#c4d7f2"
+card_border_unread = "#3f74cf"
+accent = "#4a7fd6"
+quiet = "#dde8f8"
+on_quiet = "#45618d"
+on_new_pill = "#3f74cf"
+ctx = "#eef4fc"
+ctx_bar = "#a8c3ec"
+focus = "#f1f6fd"
+focus_border = "#3f74cf"
+myreply = "#e6effb"
+on_myreply = "#34537f"
+separator = "#3f74cf"
+rail = "#c4d7f2"
+button = "#eef3fc"
+button_border = "#86a7df"
+primary = "#4a7fd6"
+header = "#d0e0f7"
+header_bar = "#3f74cf"
+
+[icon]
+bg_top = "#7fa9ec"
+bg_bottom = "#2f5fb8"
+ink = "#2f5fb8"

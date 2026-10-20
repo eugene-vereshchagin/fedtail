@@ -2,6 +2,12 @@
 
 ## 0.17.0 — in progress
 
+- Five themes in the spirit of messengers, for `ui.layout = "qip"` above all: `qip-retro`
+  (QIP Infium's pale blue), `qip-modern` (QIP 2012, flat), `mra` and `mra-blue` (the
+  Mail.ru Agent's orange and blue), `psi`. They write a post as a message: "Name (15:25:43
+  23/06/2007)" over it, mine and the others' in colours of their own — `shape.card_header
+  = "chat"`, `colors.chat_me` / `chat_them`, `words.chat` / `chat_date` for any theme.
+  Their icons and colours are fedtail's own, not anyone's skin.
 - Help gets a "Server and federation" part under its contents: About the server, What it
   can do (the probe) and Federation status open on its right side, as pages of the same
   panel — the settings-like window of Psi or QIP, only for what to read, not to set

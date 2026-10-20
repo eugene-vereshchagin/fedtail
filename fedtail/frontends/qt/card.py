@@ -105,6 +105,18 @@ def _host(url):
     return host[4:] if host.startswith("www.") else host
 
 
+def _fill_html(fmt, **parts):
+    """A theme's words with HTML put in: the words' own letters escaped ("<{name}>" in
+    the psi theme stays angle brackets), the parts as they are."""
+    from string import Formatter
+    out = []
+    for literal, key, _spec, _conv in Formatter().parse(fmt):
+        out.append(esc(literal))
+        if key is not None:
+            out.append(parts.get(key, ""))
+    return "".join(out)
+
+
 def emoji_reactions(post):
     """[(name, count)] — emoji reactions where the server passes them on (Akkoma,
     Pleroma, Fedibird, Iceshrimp and kin), the most given first."""
@@ -394,6 +406,8 @@ class PostRow(QWidget):
 
         if self.theme.shape["card_header"] == "compact":
             v.addLayout(self._header_compact(p))
+        elif self.theme.shape["card_header"] == "chat":
+            v.addLayout(self._header_chat(p))
         else:
             v.addLayout(self._header_rich(p))
 
@@ -615,6 +629,39 @@ class PostRow(QWidget):
         lab.setObjectName("meta")
         lab.setToolTip(_("old_post_tip"))
         return lab
+
+    def _header_chat(self, p):
+        """As in ICQ clients: "Name (15:25:43 23/06/2007)" bold, mine in one colour,
+        the others' in another; a click on the name — the profile, on the time — the
+        thread."""
+        acc = p.author
+        h = QHBoxLayout()
+        h.setSpacing(6)
+        h.addWidget(self._unread_mark())
+        if self.spec.number:
+            num = QLabel(f"/{self.spec.number}")
+            num.setObjectName("num")
+            h.addWidget(num)
+        mine = acc.id == self.ctx.me_id
+        color = self.theme.css("chat_me" if mine else "chat_them")
+        when = self.theme.date(p.created, self.theme.words.get("chat_date")) \
+            if p.created else ""
+        name = link("account", acc.id, display_name(acc), color, bold=True)
+        stamp = link("thread", p.id, esc(when), color, bold=True)
+        line = _fill_html(self.theme.words.get("chat", "{name} ({when})"),
+                          name=name, when=stamp)
+        h.addWidget(self._emoji_label(line, acc.emojis, "chatName"))
+        if p.edited:
+            h.addWidget(self._edited_mark(p))
+        self._via_mark(h)
+        self._pinned_mark(h)
+        h.addStretch(1)
+        if self.spec.focus and self.spec.in_thread:
+            came = QLabel(_("came_from"))
+            came.setObjectName("cameFrom")
+            h.addWidget(came)
+        self._short_id(h)
+        return h
 
     def _header_compact(self, p):
         acc = p.author

@@ -87,7 +87,7 @@ def _auto_colors(pal):
 # a theme with its own text colour gets it in the sidebar too
 FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
            "primary": "accent", "on_primary": "on_accent", "name": "text",
-           "header_bar": "accent"}  # the band over a title: the theme's own colour
+           "header_bar": "accent", "chat_me": "link", "chat_them": "hot"}  # the band over a title: the theme's own colour
 # "auto" mixed from two colours of the same theme: (from, towards, how far)
 TINTS = {"header": ("view", "accent", 0.16)}  # the title strip, tinted with the theme
 
@@ -140,8 +140,10 @@ class Theme:
             text = text.lower()
         return self.words[key].format(text=text, **kw)
 
-    def date(self, iso):
-        """A time as the theme writes it: an aware datetime (the model's) or ISO text."""
+    def date(self, iso, fmt=None):
+        """A time as the theme writes it (words.date, or fmt): an aware datetime (the
+        model's) or ISO text. Placeholders: {day} {mon} {time} (the year, for another
+        year) {dd} {mm} {yyyy} {clock} (HH:MM) {secs} (HH:MM:SS)."""
         if isinstance(iso, datetime):
             dt = iso.astimezone()
         else:
@@ -151,9 +153,9 @@ class Theme:
                 return ""
         now = datetime.now(UTC).astimezone()
         time = f"{dt:%H:%M}" if dt.year == now.year else str(dt.year)
-        return self.words["date"].format(day=dt.day, mon=months()[dt.month - 1],
-                                         dd=f"{dt.day:02d}", mm=f"{dt.month:02d}",
-                                         time=time)
+        return (fmt or self.words["date"]).format(
+            day=dt.day, mon=months()[dt.month - 1], dd=f"{dt.day:02d}", mm=f"{dt.month:02d}",
+            yyyy=dt.year, time=time, clock=f"{dt:%H:%M}", secs=f"{dt:%H:%M:%S}")
 
     # ---- stylesheet -------------------------------------------------------------------
     def css(self, key):

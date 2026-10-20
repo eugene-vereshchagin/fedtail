@@ -1,0 +1,77 @@
+# fedtail theme: qip-retro — in the spirit of QIP Infium (2007): pale blue windows with thin
+# blue frames, small icons, "Name (15:25:43 23/06/2007)" bold over every message — mine
+# in blue, everyone else's in red. Best with ui.layout = "qip". Own icons and colours only:
+# a theme in the spirit, not a copy of anyone's skin.
+name = "QIP retro"
+inherit = "system"
+
+[font]
+family = "Tahoma, PT Sans, DejaVu Sans, sans-serif"
+mono = "PT Mono, DejaVu Sans Mono, monospace"
+post_scale = 1.0
+# PT Sans and PT Mono (ParaType) come with fedtail (SIL OFL 1.1): where Tahoma is missing
+files = ["fonts/PT_Sans-Web-Regular.ttf", "fonts/PT_Sans-Web-Bold.ttf",
+         "fonts/PT_Mono-Regular.ttf"]
+
+[colors]
+window = "#d9e6f7"
+sidebar = "#e4eefa"
+sidebar_border = "#7fa6dc"
+panel = "#e6effa"
+selected = "#b9d3f3"
+selected_text = "#0f2e66"
+view = "#f4f8fd"
+header_border = "#9ebce6"
+card = "#ffffff"
+card_border = "#c3d6f0"
+card_border_unread = "#3a78c9"
+text = "#111111"
+muted = "#5b6f8a"
+link = "#0b3fbf"
+accent = "#3a78c9"
+on_accent = "#ffffff"
+hot = "#d0221b"
+on_hot = "#ffffff"
+quiet = "#dbe6f5"
+on_quiet = "#4a5e7c"
+new_pill = "#ffffff"
+on_new_pill = "#0b3fbf"
+ctx = "#eaf1fb"
+ctx_bar = "#9ebce6"
+focus = "#eef5ff"
+focus_border = "#3a78c9"
+myreply = "#e3eefb"
+on_myreply = "#2b4d82"
+active = "#fff3c4"
+on_active = "#6b4e00"
+separator = "#3a78c9"
+rail = "#b4cbec"
+button = "#eef4fc"
+button_border = "#8fb0dc"
+dot = "#3fb53a"
+header = "#cfe0f5"
+header_bar = "#5d8fd6"
+chat_me = "#1d2fd0"
+chat_them = "#d0221b"
+
+[shape]
+radius = 3
+button_radius = 3
+card_style = "rule"
+rule = "solid"
+header_bar = 2
+card_avatars = false
+avatar_shape = "square"
+card_header = "chat"
+
+[words]
+date = "{dd}/{mm} {clock}"
+chat = "{name} ({when})"
+chat_date = "{secs} {dd}/{mm}/{yyyy}"
+
+[icon]
+bg_top = "#7fb2ec"
+bg_bottom = "#2c62b3"
+bubble = "#ffffff"
+ink = "#2c62b3"
+accent = "#3fb53a"

@@ -17,7 +17,7 @@ REFERENCE = "system"  # this theme lists every key
 _COLOR = re.compile(r"^(auto|#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|rgba?\(\s*[\d.,\s%]+\))$")
 CHOICES = {
     ("shape", "card_style"): {"card", "rule"},
-    ("shape", "card_header"): {"rich", "compact", "stacked"},
+    ("shape", "card_header"): {"rich", "compact", "stacked", "chat"},
     ("shape", "avatar_shape"): {"circle", "square", "rounded"},
     ("shape", "short_id"): {"header", "footer"},
     ("shape", "actions_align"): {"left", "right"},

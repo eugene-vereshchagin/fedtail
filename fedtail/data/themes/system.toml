@@ -63,6 +63,8 @@ on_primary = "auto"      # their text ("auto": = on_accent)
 header = "auto"          # behind the lane's title strip ("auto": the view tinted with accent)
 header_bar = "auto"      # the band above it (shape.header_bar); "auto": accent
 name = "auto"            # people's names on posts ("auto": = text)
+chat_me = "auto"         # card_header = "chat": my name ("auto": = link)
+chat_them = "auto"       # … everyone else's ("auto": = hot)
 
 [shape]
 radius = 12              # card corners
@@ -80,6 +82,8 @@ lane_icons = true
 icons = true             # desktop icons on buttons; false = words only (dark custom themes)
 card_header = "rich"     # "rich": avatar, name, @address · time · icon
                          # "compact": @user host · 13.10 17:22 · priv
+                         # "chat": Name (15:25:43 23/06/2007) bold in colors.chat_me /
+                         #   chat_them, the text under it — as in ICQ clients
                          # "stacked": the name bold, @address · time under it (point.im)
 short_id = "header"      # where #a3f goes: "header" (right of the name) or "footer" (under
                          # the post, left, with the number of replies: #a3f | 4)
@@ -99,7 +103,9 @@ lowercase = false
 separator = "{text} · {n}"
 account_title = "{display_name}"
 account_subtitle = "@{acct}"
-date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"
+date = "{day} {mon} {time}"        # also: "{dd}.{mm} {time}"; {yyyy} {clock} {secs} too
+chat = "{name} ({when})"           # card_header = "chat": the line over a post
+chat_date = "{secs} {dd}/{mm}/{yyyy}"  # … its {when}
 
 [icon]
 # The window, tray and notification icon in this theme's colours.
