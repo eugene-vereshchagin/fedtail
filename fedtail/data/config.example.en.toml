@@ -127,9 +127,11 @@ dock_commands = true
 # again, or "close"s them all — it opens with only what you open from the roster.
 split_tabs = "keep"
 
-# Pictures on buttons (visibility, actions, the roster's): "theme" — as the theme says,
-# "on" — always, "off" — words only.
-button_icons = "theme"
+# fedtail's own pictures on buttons, drawn the theme's way (who sees a post, Reply, Boost,
+# the input line's and the roster's buttons, a face for nobody): "layout" — in the split
+# layout only (it has them as the messengers had), "all" — in every layout, "none" — the
+# desktop's icons and words, as before.
+additional_icons = "layout"
 
 # Which lanes stand as columns, left to right, until you change them in the window (a click
 # on a lane on the left adds a column, ✕ on a column takes it away, ‹ › move them; that is

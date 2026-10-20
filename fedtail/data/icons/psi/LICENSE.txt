@@ -1,0 +1,35 @@
+Pictures from Psi+ (https://psi-plus.com, https://github.com/psi-im), renamed for
+fedtail's buttons, unchanged otherwise. Psi and Psi+ are free software under the GNU
+General Public License, version 2 or later; fedtail is GPL-3.0-or-later, which takes them.
+
+- The "Crystal" system iconset: Jason Kim (logo and misc. icons), base icons by Everaldo
+  Coelho (Crystal, LGPL).
+- The "Stellar3" roster iconset (status.png, star.png, star_full.png): Jason Kim
+  (base icon).
+
+Which file is which (fedtail name <- Psi+ iconset file):
+  accounts.png <- iconsets/system/default/changeacc.png
+  attach.png <- iconsets/system/default/share_file.png
+  bookmark.png <- iconsets/system/default/bookmarks.png
+  boost.png <- iconsets/system/default/reload.png
+  direct.png <- iconsets/system/default/send.png
+  emoji.png <- iconsets/system/default/smile.png
+  expand.png <- iconsets/system/default/frame.png
+  star.png <- iconsets/roster/default/offline.png
+  star_full.png <- iconsets/roster/default/online.png
+  follow.png <- iconsets/system/default/add.png
+  list.png <- iconsets/system/default/groupchat.png
+  menu.png <- iconsets/system/default/info.png
+  nobody.png <- iconsets/system/default/default_avatar.png
+  private.png <- iconsets/system/default/ssl_yes.png
+  profile.png <- iconsets/system/default/vcard.png
+  public.png <- iconsets/system/default/eye_blue.png
+  reply.png <- iconsets/system/default/action_button_send.png
+  send.png <- iconsets/system/default/action_button_send.png
+  settings.png <- iconsets/system/default/options.png
+  status.png <- iconsets/roster/default/online.png
+  talk.png <- iconsets/system/default/start-chat.png
+  thread.png <- iconsets/system/default/history.png
+  unfollow.png <- iconsets/system/default/remove.png
+  unlisted.png <- iconsets/system/default/ssl_no.png
+  warning.png <- iconsets/system/default/events.png

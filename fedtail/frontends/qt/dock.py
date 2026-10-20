@@ -117,7 +117,7 @@ class InputDock(QWidget):
         self._count()
 
     def dress(self):
-        """Pictures on the buttons, or words (ui.button_icons); again after a theme."""
+        """Pictures on the buttons, or words (ui.additional_icons); again after a theme."""
         from . import icons
         t = self.win.theme
         icons.dress(self.cw_btn, "warning", t, glyph="CW")
@@ -604,12 +604,18 @@ class AuthorBar(QWidget):
 def set_face(win, lab, url, owner, attr):
     """A face into a label, round, once the picture comes (and only if it's still the
     one wanted: owner.<attr> keeps the url asked last)."""
-    if getattr(owner, attr, None) == url:
+    if getattr(owner, attr, None) == url and lab.pixmap() is not None and \
+            not lab.pixmap().isNull():
         return
     setattr(owner, attr, url)
-    lab.clear()
+    from . import icons
+    from .card import _round
+    stand_in = icons.nobody(win.theme, lab.width())  # until theirs comes, or for nobody
+    if stand_in is not None:
+        lab.setPixmap(_round(stand_in, lab.width()))
+    else:
+        lab.clear()
     if url:
-        from .card import _round
         win.images.get(url, lambda pm: getattr(owner, attr, None) == url and
                        lab.setPixmap(_round(pm, lab.width())))
 

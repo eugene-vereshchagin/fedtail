@@ -102,9 +102,10 @@ roster_rows = "lines"    # the roster's items: "lines" — the name, a line of t
                          # a small face on the right; "faces" — a big face on the left and
                          # three lines beside it (the Agent, Psi)
 roster_face = 40         # px of that face ("faces")
-icon_set = "gloss"       # fedtail's own button pictures (ui.button_icons): "gloss" (QIP: a
+icon_set = "gloss"       # fedtail's own button pictures (ui.additional_icons): "gloss" (QIP: a
                          # gradient and a shine, a flower for a person), "agent" (the
-                         # Agent: brighter, an "@"), "flat" (Psi on KDE: plain, a star)
+                         # Agent: brighter, an "@"), "flat" (plain, a star), "psi" (Psi+'s
+                         # own pictures, GPL, data/icons/psi; "flat" where it has none)
 tab_rows = "wrap"        # the messages window's tabs: "wrap" — into more rows when they
                          # don't fit (the Agent); "one" — one row, scrolled
 posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Conversations): "segmented" — buttons stuck together, "check" — round marks

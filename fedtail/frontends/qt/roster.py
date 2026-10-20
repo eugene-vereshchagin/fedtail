@@ -469,7 +469,7 @@ class RosterWindow(QWidget):
             view.mark_read(ids)
 
     def dress(self):
-        """Pictures on the bottom buttons (ui.button_icons); again after a theme."""
+        """Pictures on the bottom buttons (ui.additional_icons); again after a theme."""
         from . import icons
         t = self.win.theme
         icons.dress(self.menu_btn, "menu", t, words=_("menu"))

@@ -43,7 +43,7 @@ DEFAULTS = {
         "faces": True,
         "dock_commands": True,
         "split_tabs": "keep",
-        "button_icons": "theme",
+        "additional_icons": "layout",
         "columns": [],
         "column_width": 460,
         "image_height": 360,
@@ -227,7 +227,7 @@ DEFAULTS = {
 CHOICES = {
     ("ui", "layout"): {'single', 'columns', 'split', 'qip'},
     ("ui", "app_icon"): {'possum', 'bubble'},
-    ("ui", "button_icons"): {'theme', 'on', 'off'},
+    ("ui", "additional_icons"): {'layout', 'all', 'none'},
     ("ui", "split_tabs"): {'keep', 'close'},
     ("poll", "stream"): {'auto', 'off'},
     ("ui", "image_decode"): {'box', 'full'},

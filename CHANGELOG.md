@@ -27,8 +27,11 @@
   it); hovering a person in the roster, or a face, shows their card as QIP did — the
   face, the @address, how we stand, the bio's first lines, how much they post and
   since when; `--layout` / `--theme` carry over to an account switched to.
-- `ui.button_icons = "theme" | "on" | "off"`: pictures on buttons whatever the theme
-  says. The split layout's buttons (the input line, the bar over a lane, the roster)
+- `ui.additional_icons = "layout" | "all" | "none"`: fedtail's own pictures on buttons —
+  in the split layout only (the default), in every layout, or none. With them a post's
+  Reply, Favourite, Boost, Thread and Bookmark and who sees it have pictures too, and a
+  face nobody has yet shows a grey silhouette. The `psi` theme brings Psi+'s own
+  pictures (the Crystal and Stellar iconsets, GPL; `shape.icon_set = "psi"`). The split layout's buttons (the input line, the bar over a lane, the roster)
   have pictures of fedtail's own, in the spirit of 2007's messengers and in the
   theme's colours, drawn the theme's way (`shape.icon_set`: "gloss" for QIP with a
   flower for a person, "agent" for the Agent with an "@", "flat" for Psi with a star):

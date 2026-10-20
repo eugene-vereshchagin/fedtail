@@ -2351,26 +2351,33 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(buttons[4].geometry().width(), 100)  # the last: as it is
         box.deleteLater()
 
-    def test_button_icons_override_the_theme(self):
-        from fedtail.frontends.qt import theme as themes
-        for say, want in (("off", False), ("on", True)):
-            cfg, _ = config.validate({"ui": {"button_icons": say}})
-            self.assertIs(themes.apply(self.app, cfg).shape["icons"], want)
-        themes.apply(self.app, config.validate({})[0])
+    def test_additional_icons(self):
+        """ui.additional_icons: fedtail's own pictures in the split layout only, in every
+        layout, or none; each messenger theme draws them its own way."""
         from fedtail.frontends.qt import icons
-        if icons.QSvgRenderer is not None:  # fedtail's own pictures, in the theme's colours
-            t = themes.apply(self.app, config.validate({"ui": {"button_icons": "on"}})[0])
-            self.assertFalse(icons.icon("send", t).isNull())
-            self.assertTrue(icons.icon("no-such-picture", t).isNull())
-            for theme_name in ("psi", "mra-green"):  # each messenger its set and status
-                cfg = config.validate({"ui": {"button_icons": "on", "theme": theme_name}})[0]
-                t = themes.apply(self.app, cfg)
-                self.assertFalse(icons.icon("status", t).isNull(), theme_name)
-            from PySide6.QtGui import QColor
-            flat = icons._styled((icons.DIR / "emoji.svg").read_text(), "flat",
-                                 QColor("#3daee9"))
-            self.assertNotIn("url(#g)", flat)  # Psi's: plain colour, no shine
-            self.assertNotIn('opacity=".35"', flat)
+        from fedtail.frontends.qt import theme as themes
+
+        def t(**ui):
+            return themes.apply(self.app, config.validate({"ui": ui})[0])
+        try:
+            self.assertFalse(icons.wanted(t()))  # the single window: the desktop's icons
+            self.assertFalse(icons.wanted(t(layout="split", additional_icons="none")))
+            psi = t(layout="split", theme="psi")
+            self.assertTrue(icons.wanted(psi))
+            self.assertFalse(icons.icon("profile", psi).isNull())  # Psi+'s own PNG
+            self.assertIsNotNone(icons.nobody(psi, 64))
+            if icons.QSvgRenderer is not None:  # ours, in the theme's colours
+                own = t(additional_icons="all", theme="mra-green")
+                self.assertTrue(icons.wanted(own))
+                for name in ("send", "status", "reply", "star_full", "boost", "nobody"):
+                    self.assertFalse(icons.icon(name, own).isNull(), name)
+                self.assertTrue(icons.icon("no-such-picture", own).isNull())
+                from PySide6.QtGui import QColor
+                flat = icons._styled((icons.DIR / "emoji.svg").read_text(), "flat",
+                                     QColor("#3daee9"))
+                self.assertNotIn("url(#g)", flat)  # flat: plain colour, no shine
+                self.assertNotIn('opacity=".35"', flat)
+        finally:
             themes.apply(self.app, config.validate({})[0])
 
     def test_terminal_theme(self):

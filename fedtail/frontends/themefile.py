@@ -28,7 +28,7 @@ CHOICES = {
     ("shape", "faces"): {"qip", "agent", "none"},
     ("shape", "roster_rows"): {"lines", "faces"},
     ("shape", "tab_rows"): {"wrap", "one"},
-    ("shape", "icon_set"): {"gloss", "agent", "flat"},
+    ("shape", "icon_set"): {"gloss", "agent", "flat", "psi"},
 }
 
 README = """fedtail themes

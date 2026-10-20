@@ -1,6 +1,7 @@
 """fedtail's own button pictures (data/icons/ui/*.svg): small SVGs in the spirit of the
 2007 messengers, coloured by the theme — {c} its accent, {l} a light top for the gloss,
-{d} the outline. Shown where ui.button_icons (or the theme's shape.icons) says so.
+{d} the outline. Shown where ui.additional_icons says so (the split layout,
+by default).
 Without Qt's SVG module (a separate package on some systems) there are none and the
 buttons keep their words."""
 
@@ -15,13 +16,21 @@ log = logging.getLogger(__name__)
 
 DIR = Path(__file__).resolve().parents[2] / "data" / "icons" / "ui"
 # pictures of their own colour, whatever the theme: a status flower is green, as ever
-OWN = {"status": "#36b02c", "warning": "#f2a400", "emoji": "#f5c400", "send": "#3aa63a"}
+OWN = {"nobody": "#8a96a6", "status": "#36b02c", "warning": "#f2a400", "emoji": "#f5c400",
+       "send": "#3aa63a", "star_full": "#f2b705"}
 _cache = {}
 
 try:
     from PySide6.QtSvg import QSvgRenderer
 except ImportError:  # python3-pyside6.qtsvg not installed
     QSvgRenderer = None
+
+
+def nobody(theme, size):
+    """A face for nobody (no one under the cursor, no picture of theirs yet): a grey
+    silhouette, Psi+'s in its theme. A QPixmap, or None without a way to draw it."""
+    ic = icon("nobody", theme, size)
+    return None if ic.isNull() else ic.pixmap(size, size)
 
 
 def names():
@@ -31,13 +40,22 @@ def names():
 _said = []
 
 
+PSI = Path(__file__).resolve().parents[2] / "data" / "icons" / "psi"  # Psi+'s, GPL
+
+
 def wanted(theme):
-    on = bool(theme.shape.get("icons"))
-    if on and QSvgRenderer is None and not _said:
+    """fedtail's own pictures on buttons: ui.additional_icons (theme.own_icons, set by
+    theme.apply) — and something to draw them with (Qt's SVG module, or Psi+'s PNGs)."""
+    on = bool(getattr(theme, "own_icons", False))
+    if not on:
+        return False
+    if icon_set(theme) == "psi":
+        return True
+    if QSvgRenderer is None and not _said:
         _said.append(1)
         log.warning("button pictures need Qt's SVG module (Debian: python3-pyside6.qtsvg);"
                     " words instead")
-    return QSvgRenderer is not None and on
+    return QSvgRenderer is not None
 
 
 # a theme's set (shape.icon_set): the same drawings, drawn three ways — "gloss" (QIP:
@@ -69,9 +87,17 @@ def _styled(text, style, base):
 def icon(name, theme, size=16):
     """A QIcon of this picture in the theme's colours and the theme's set (an empty one
     if there's none)."""
+    style = icon_set(theme)
+    if style == "psi":  # Psi+'s own pictures where it has one, else ours drawn flat
+        png = PSI / f"{name}.png"
+        if png.is_file():
+            key = ("psi", name)
+            if key not in _cache:
+                _cache[key] = QIcon(str(png))
+            return _cache[key]
+        style = "flat"
     if QSvgRenderer is None:
         return QIcon()
-    style = icon_set(theme)
     if name == "status":
         name = STATUS.get(style, "status")
     base = QColor(OWN_SET.get(name) or OWN.get(name) or theme.c["accent"])

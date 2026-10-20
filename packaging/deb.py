@@ -61,7 +61,9 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
         " On Debian systems the full text is in /usr/share/common-licenses/GPL-3.\n\n"
         "Files: */fedtail/data/themes/fonts/*\nCopyright: ParaType, IBM, Adobe, Google, "
         "Mozilla and the font projects' authors\n"
-        "License: OFL-1.1\n The full text for each family lies next to it (OFL-*.txt).\n",
+        "License: OFL-1.1\n The full text for each family lies next to it (OFL-*.txt).\n\n"
+        "Files: */fedtail/data/icons/psi/*\nCopyright: the Psi and Psi+ authors (Jason Kim, "
+        "Everaldo Coelho)\nLicense: GPL-2+\n From Psi+'s iconsets: see LICENSE.txt there.\n",
         "utf-8")
     (doc / "changelog.gz").write_bytes(gzip.compress((ROOT / "CHANGELOG.md").read_bytes(),
                                                      mtime=0))

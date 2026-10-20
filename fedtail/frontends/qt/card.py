@@ -46,6 +46,9 @@ VIS_ICONS = {
     "followers": ("object-locked", "lock"),
     "direct": ("mail-message", "mail-unread"),
 }
+# fedtail's own pictures for a post's buttons (frontends/qt/icons.py)
+OWN_ACTION = {"reply": "reply", "fav": "star", "boost": "boost", "thread": "thread",
+              "bookmark": "bookmark"}
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 VIS_KEY = {"followers": "private"}  # the words for it in i18n: vis_private
 QUOTE_SHOWN = {"accepted"}
@@ -585,7 +588,11 @@ class PostRow(QWidget):
             + link("thread", p.id, self.theme.date(p.created), self.theme.css("muted")),
             "meta", wrap=False))
         vis = p.visibility
-        icon = _theme_icon(VIS_ICONS.get(vis, ())) if self.theme.shape["icons"] else QIcon()
+        from . import icons as pictures
+        if pictures.wanted(self.theme):
+            icon = pictures.icon({"followers": "private"}.get(vis, vis), self.theme)
+        else:
+            icon = _theme_icon(VIS_ICONS.get(vis, ())) if self.theme.shape["icons"] else QIcon()
         vis_label = QLabel()
         vis_label.setToolTip(_("vis_" + VIS_KEY.get(vis, vis)))
         if icon.isNull():
@@ -776,13 +783,22 @@ class PostRow(QWidget):
             buttons.append(("readone", ("mail-mark-read", "object-select-symbolic"), "✓",
                             _("mark_one_read"), "", False))
         sid = self.spec.entry.id  # a boost: its own id (the window finds the post in it)
+        from . import icons as pictures
+        own = pictures.wanted(self.theme)  # fedtail's own (ui.additional_icons)
+        if own and style == "text":
+            style = "both"  # the split layout has pictures by the words, as messengers did
         for action, icons, glyph, label, count, active in buttons:
             b = QToolButton()
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(label)
             b.setAccessibleName(label + count)
-            ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
+            pic = OWN_ACTION.get(action)
+            if own and pic:
+                ic = pictures.icon(("star_full" if active else pic) if action == "fav"
+                                   else pic, self.theme)
+            else:
+                ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
             # the short form, for when the row doesn't fit: the icon (or the glyph) and
             # the count — never a label cut in half ("В избран…")
             short = count.replace(" · ", "")

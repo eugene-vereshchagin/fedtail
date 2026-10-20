@@ -27,6 +27,15 @@ class IconsTest(unittest.TestCase):
             src = (ROOT / f).read_text(encoding="utf-8")
             asked |= set(re.findall(r'icons\.dress\(\s*[\w.]+,\s*"(\w+)"', src))
             asked |= set(re.findall(r'icons?\.icon\("(\w+)"', src))
-        asked |= {"public", "unlisted", "private", "direct", "status", "talk", "thread"}
+        asked |= {"public", "unlisted", "private", "direct", "status", "talk", "thread",
+                  "reply", "star", "star_full", "boost", "bookmark", "nobody"}
         self.assertTrue(asked)
         self.assertEqual(asked - have, set())
+
+
+    def test_psi_pictures_come_with_their_licence(self):
+        psi = DIR.parent / "psi"
+        self.assertTrue((psi / "LICENSE.txt").is_file())
+        listed = (psi / "LICENSE.txt").read_text(encoding="utf-8")
+        for f in psi.glob("*.png"):
+            self.assertIn(f.name, listed)

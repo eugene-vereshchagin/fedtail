@@ -488,9 +488,11 @@ def apply(app, cfg, name=None):
         data, _w = themefile.load(themefile.REFERENCE)
         warnings = [f"theme '{name}': {e} — using '{themefile.REFERENCE}'"]
     theme = Theme(data, app.palette(), warnings)
-    icons = cfg["ui"].get("button_icons", "theme")
-    if icons != "theme":  # ui.button_icons: pictures on buttons whatever the theme says
-        theme.shape["icons"] = icons == "on"
+    # ui.additional_icons: fedtail's own pictures — in the split layout only, everywhere,
+    # or nowhere (the desktop's icons, as the theme's shape.icons says)
+    extra = cfg["ui"].get("additional_icons", "layout")
+    theme.own_icons = extra == "all" or (
+        extra == "layout" and cfg["ui"].get("layout") in ("split", "qip"))
 
     if theme.c["window"] != app.palette().color(QPalette.ColorRole.Window) or \
             data["colors"].get("window", "auto") != "auto":
