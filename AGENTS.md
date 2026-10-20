@@ -67,5 +67,12 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   short pages ending in "Подробно → / In detail →" links into `ref/` (the deep dive,
   copied there by the build). A new button or menu item with a tooltip gets a row in
   both `hints.toml` (key = the tooltip's i18n key) — tests check links, anchors, keys.
+* The project's website lives in a repo of its own and is built from this one: at every
+  build it takes `docs/<lang>/features.md`, `config.md`, `comparison.md` and CHANGELOG.md
+  from the latest `vX.Y.Z` tag (plus the "in progress" CHANGELOG section from main), and
+  links the release files by the names the `release` job gives them. So keep those
+  files' places, the `## X.Y.Z — date` headings and the asset names stable, and keep
+  links in those docs repo-rooted (`/docs/…`). The `release` job pokes the site's deploy
+  hook (secret `SITE_DEPLOY_HOOK`) once a release is out.
 * No shortcut on F1 or Shift+F1, ever: they sit next to Esc.
 * Docstrings: Google style; every module starts with what it is for.

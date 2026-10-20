@@ -237,6 +237,7 @@ jobs:
         with:
           path: built
       - name: Tag and release
+        id: release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -259,3 +260,14 @@ jobs:
           cp built/fedtail-deb/fedtail_*_all.deb .
           gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag \
             "fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64" fedtail_*_all.deb
+          echo "released=true" >> "$GITHUB_OUTPUT"
+      # the site (a repo of its own) takes the docs and the download links from the
+      # latest release tag: rebuild it now. The secret is the Cloudflare Workers Builds
+      # deploy hook URL; without it nothing happens (the site rebuilds nightly anyway).
+      - name: Rebuild the site
+        if: steps.release.outputs.released == 'true'
+        env:
+          HOOK: ${{ secrets.SITE_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "no SITE_DEPLOY_HOOK secret: site not rebuilt"; exit 0; fi
+          curl -fsS -X POST "$HOOK" || echo "::warning::the site's deploy hook failed"
