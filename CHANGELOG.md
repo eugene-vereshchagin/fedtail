@@ -16,6 +16,14 @@
   post); `q` replies with a quote. A reply shows the whole post it answers: select a piece,
   "❝ Quote in reply" puts it at the cursor. The picture viewer goes through the post's
   pictures with ← / → and the side buttons.
+- Terminal interface: `p` shows the profile for real — the screen used to scroll its header
+  away as the first post was highlighted, and what stayed looked like a lane. Lanes by
+  keyboard: `[` / `]`, `1`…`9`, `h` into the lane list (`j` / `k` move there), `l` back;
+  Tab now really goes between lanes and posts. "Activity" and "Follow requests" show
+  their rows (they were empty: they aren't post lanes); `a` / `d` answer a request.
+  Pictures drawn with half blocks: a post's first one small in the lane
+  (`tui.pictures`, `tui.picture_rows`), `v` — all of them full screen, ← / →, `o` — the
+  original in the browser. Needs Pillow (`python3-pil`).
 - Unsubscribing from a thread mutes its mentions too (`subs.leave_mutes`, on): leaving
   used to stop "Subscriptions" only, while auto-tagged replies kept coming.
 

@@ -341,6 +341,8 @@ fedtail без окна: `fedtail lanes`, `fedtail show replies -n 20`, `fedtail
 | `tui.theme` | `""` | Тема Textual: "" — его обычная; или имя: "textual-light", "nord", "gruvbox", "dracula", "tokyo-night", "monokai", "solarized-light" и др. (Ctrl+P → Change theme — посмотреть). |
 | `tui.lanes_width` | `26` | Ширина колонки с лентами, в знаках. |
 | `tui.show_context` | `true` | Над ответом — строка «↳ @кто: начало того, на что он отвечает». false — без неё. |
+| `tui.pictures` | `"inline"` | Картинки в терминале — полублоками (нужен Pillow, python3-pil; терминал с truecolor). "inline" — первая картинка поста маленькой прямо в ленте, v — все в полный экран; "key" — только по v; "off" — никак (o — открыть пост в браузере). |
+| `tui.picture_rows` | `8` | Высота картинки в ленте, в строках. |
 
 ## 14. В браузере
 

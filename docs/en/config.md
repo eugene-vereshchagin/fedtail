@@ -341,6 +341,8 @@ The interface in a terminal — `fedtail --ui tui` (or ui.frontend = "tui"): lan
 | `tui.theme` | `""` | The Textual theme: "" — its usual one; or a name: "textual-light", "nord", "gruvbox", "dracula", "tokyo-night", "monokai", "solarized-light" and others (Ctrl+P → Change theme — to look). |
 | `tui.lanes_width` | `26` | The width of the lanes column, in characters. |
 | `tui.show_context` | `true` | Over a reply — a line "↳ @who: the start of what it answers". false — without it. |
+| `tui.pictures` | `"inline"` | Pictures in the terminal, drawn with half blocks (needs Pillow, python3-pil; a true colour terminal). "inline" — a post's first picture small right in the lane, v — all of them full screen; "key" — on v only; "off" — none (o — open the post in the browser). |
+| `tui.picture_rows` | `8` | How high a picture in the lane is, in lines. |
 
 ## 14. In a browser
 

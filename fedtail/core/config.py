@@ -199,6 +199,8 @@ DEFAULTS = {
         "theme": "",
         "lanes_width": 26,
         "show_context": True,
+        "pictures": "inline",
+        "picture_rows": 8,
     },
     "web": {
         "host": "127.0.0.1",
@@ -251,6 +253,7 @@ CHOICES = {
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "compose"): {"inline", "window"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
+    ("tui", "pictures"): {"inline", "key", "off"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
               "local", "federated", "requests", "direct", "my_likes"}
@@ -266,6 +269,7 @@ MINIMUM = {
     ("poll", "interval_seconds"): 30,
     ("poll", "stream_gap_seconds"): 0,
     ("subs", "interval_minutes"): 1,
+    ("tui", "picture_rows"): 2,
     ("lists", "refresh_minutes"): 1,
     ("debug", "log_mb"): 1,
     ("ui", "image_cache_mb"): 16,

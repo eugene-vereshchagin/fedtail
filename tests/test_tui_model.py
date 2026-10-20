@@ -97,3 +97,43 @@ class DeleteGuardTest(unittest.TestCase):
         self.assertFalse(g.confirmed("2"))  # too late: asks again
         self.assertTrue(g.confirmed("2"))
 
+class ActivityRowsTest(TmpDir):
+    make = test_cli.CliTest.make
+
+    def setUp(self):
+        super().setUp()
+        i18n.setup("en")
+
+    def test_activity_and_request_rows(self):
+        from fedtail.protocols.mastodon.adapter import account, activity
+        mine = status("001", ME, minute=1, text="my post")
+        a = activity({"id": "a1", "type": "favourite", "account": BOB, "status": mine,
+                      "created_at": "2099-10-14T11:00:00.000Z"})
+        shown = model.show_activity(a, width=40, unread=True)
+        kinds = dict(shown.head)
+        self.assertEqual(kinds["who"], "@bob@social.example")
+        self.assertEqual(kinds["boost"], i18n._("act_favourite"))
+        self.assertIn("unread", kinds)
+        self.assertEqual(shown.body, ["my post"])
+        f = activity({"id": "a2", "type": "follow", "account": BOB,
+                      "created_at": "2099-10-14T11:01:00.000Z"})
+        self.assertEqual(dict(model.show_activity(f).head)["boost"], i18n._("act_follow"))
+        self.assertEqual(model.show_activity(f).body, [])
+        req = model.show_request(account(BOB))
+        self.assertEqual(dict(req.head)["who"], "@bob@social.example")
+        self.assertIn("a —", req.foot)
+
+    def test_activity_and_requests_counted(self):
+        from . import fakes
+        core, w = self.make(lanes={"enabled": ["home", "activity", "requests"]})
+        w.act("a0", "follow", BOB, minute=1)
+        core.connect().result()
+        core.poll_once()  # the first fetch is history
+        w.act("a1", "favourite", BOB, minute=5)
+        w.requests.append(fakes.acct("Q", "quinn@example.org"))
+        core.poll_once()
+        view = View(core)
+        self.assertEqual(model.lane_label(view, "activity")[1], 1)
+        self.assertEqual(model.lane_label(view, "requests")[1], 1)
+        self.assertEqual([a.kind for a in view.activity()], ["like", "follow"])
+        self.assertEqual([x.handle for x in view.follow_requests()], ["quinn@example.org"])

@@ -182,12 +182,70 @@ class Commands:
 def lane_label(core, name, width=22):
     title = core.lane_title(name) or _("lane_" + name)
     lane = core.lane_by_name.get(name)
-    n = 0 if lane is None or lane.lazy or lane.source is None else core.unread_count(name)
+    if name == "activity":  # not posts: its own "seen" mark
+        n = _safe(lambda: core.activity_unread())
+    elif name == "requests":
+        n = _safe(lambda: len(core.follow_requests()))
+    else:
+        n = 0 if lane is None or lane.lazy or lane.source is None else core.unread_count(name)
     count = f" {n}" if n else ""
     room = max(4, width - len(count))
     if len(title) > room:
         title = title[:room - 1] + "…"
     return title, n
+
+
+def _safe(fn):
+    try:
+        return int(fn() or 0)
+    except (AttributeError, TypeError, ValueError):  # a core without it (an old fake)
+        return 0
+
+
+# Activity.kind → what the line says (the Qt window's words where it has them)
+ACTIVITY_WORD = {"like": "act_favourite", "share": "act_reblog", "follow": "act_follow",
+                 "poll": "act_poll", "update": "act_update", "post": "act_status",
+                 "mention": "act_mention", "quote": "act_quote", "reaction": "act_reaction",
+                 "follow_request": "act_follow_request"}
+
+
+def show_activity(a, width=80, unread=False):
+    """One activity row (an Activity of core.view) as Shown: who, what, when; the post
+    it is about below, in a line."""
+    out = Shown()
+    if a.who is not None:
+        out.head.append(("who", "@" + (a.who.handle or "?")))
+        name = (a.who.name or "").strip()
+        if name and name != a.who.username:
+            out.head.append(("name", name))
+    word = ACTIVITY_WORD.get(a.kind)
+    if a.kind == "reaction" and a.emoji:
+        what = f"{a.emoji} " + _("act_reaction")
+    elif a.kind == "notice":
+        what = a.notice or _("act_other")
+    else:
+        what = _(word) if word else _("act_other")
+    out.head.append(("boost", what))
+    out.head.append(("time", when(a.created)))
+    if unread:
+        out.head.append(("unread", "●"))
+    if a.post is not None:
+        out.body = [snippet(a.post, max(20, width))]
+    return out
+
+
+def show_request(acc, width=80):
+    """A follow request as Shown: who asks; a / d — accept / reject."""
+    out = Shown()
+    out.head.append(("who", "@" + (acc.handle or "?")))
+    name = (acc.name or "").strip()
+    if name and name != acc.username:
+        out.head.append(("name", name))
+    note = html_to_text(acc.note or "").strip()
+    if note:
+        out.body = textwrap.wrap(note, max(20, width))[:3]
+    out.foot = _("tui_request_keys")
+    return out
 
 
 def ordered_lanes(core):

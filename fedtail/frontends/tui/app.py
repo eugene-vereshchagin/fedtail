@@ -1,6 +1,8 @@
 """The Textual application: lanes on the left, posts on the right, the command
 line at the bottom. Keys as in the window: j / k, Enter — the thread, r — reply,
-f — like, b — boost, m — bookmark, n — a new post, x — the lane read, Esc — back."""
+f — like, b — boost, m — bookmark, n — a new post, x — the lane read, Esc — back;
+[ / ] or 1…9 — another lane, h / l — to the lanes / the posts, Tab — between them;
+v — the post's pictures full screen (drawn with half blocks, see pictures.py)."""
 
 import logging
 import threading
@@ -18,7 +20,17 @@ from ...i18n import _
 from ...model import real
 from ...model.text import html_to_text, snippet
 from ..richtext import openable
-from .model import Commands, DeleteGuard, lane_label, ordered_lanes, show_post, start_lane
+from . import pictures
+from .model import (
+    Commands,
+    DeleteGuard,
+    lane_label,
+    ordered_lanes,
+    show_activity,
+    show_post,
+    show_request,
+    start_lane,
+)
 
 log = logging.getLogger(__name__)
 
@@ -56,9 +68,116 @@ def render(shown):
 
 class PostItem(ListItem):
     def __init__(self, entry, text, key=None):
-        super().__init__(Static(text, classes="post"))
+        self.body = Static(text, classes="post")  # kept: a picture comes in later
+        super().__init__(self.body)
         self.entry = entry  # a Post or a Share
         self.key = key
+        self.text = text
+
+    def set_picture(self, pic):
+        """The post's first picture under its text (tui.pictures = "inline")."""
+        self.body.update(self.text + Text("\n") + pic if pic is not None else self.text)
+
+
+class ActivityItem(ListItem):
+    """A row of the "Activity" lane: someone liked, shared, followed, mentioned…"""
+
+    def __init__(self, activity, text):
+        super().__init__(Static(text, classes="post"))
+        self.activity = activity
+        self.key = activity.id
+
+
+class RequestItem(ListItem):
+    """Someone asking to follow me: a — accept, d — reject."""
+
+    def __init__(self, account, text):
+        super().__init__(Static(text, classes="post"))
+        self.account = account
+        self.key = account.id
+
+
+def first_picture(entry):
+    """The first picture of a post (Post or Share) worth drawing, or None."""
+    for m in real(entry).media:
+        if m.kind in ("image", "gifv", "video") and (m.preview or m.url):
+            return m
+    return None
+
+
+class PictureScreen(Screen):
+    """A post's pictures over everything: ← / → through them, o — the original in the
+    browser, Esc — back. Drawn with half blocks as big as the terminal allows."""
+
+    BINDINGS = [Binding("escape,q,v", "app.pop_screen", _("tui_back")),
+                Binding("left,h,k", "step(-1)", "←"), Binding("right,l,j", "step(1)", "→"),
+                Binding("o", "original", _("open_browser"))]
+    CSS = """
+    PictureScreen { align: center middle; }
+    PictureScreen #pic { width: auto; height: auto; }
+    PictureScreen #pic-title { dock: top; height: 1; padding: 0 1;
+                               background: $primary-background; }
+    PictureScreen #pic-alt { dock: bottom; height: auto; max-height: 4; padding: 0 1; }
+    """
+
+    def __init__(self, media):
+        super().__init__()
+        self.media = list(media)
+        self.at = 0
+
+    def compose(self) -> ComposeResult:
+        yield Static("", id="pic-title")
+        yield Static("…", id="pic")
+        yield Static("", id="pic-alt")
+        yield Footer()
+
+    def on_mount(self):
+        self.show()
+
+    def on_resize(self, _event):
+        self.show()
+
+    def show(self):
+        m = self.media[self.at]
+        n = len(self.media)
+        self.query_one("#pic-title", Static).update(
+            _("tui_picture_of", i=self.at + 1, n=n) if n > 1 else _("tui_picture"))
+        self.query_one("#pic-alt", Static).update(Text(m.alt or "", style="dim"))
+        pic = self.query_one("#pic", Static)
+        if not pictures.available():
+            pic.update(_("tui_no_pil"))
+            return
+        pic.update("…")
+        cols = max(10, self.size.width - 2)
+        rows = max(4, self.size.height - 4 - (2 if m.alt else 0))
+        url = m.url if m.kind == "image" and m.url else (m.preview or m.url)
+        at = self.at
+
+        def done(f):
+            try:
+                data = f.result()
+            except Exception as e:  # noqa: BLE001 — said on the screen
+                self.app.in_ui(self._put, at, _("tui_picture_failed", err=e))
+                return
+            drawn = pictures.blocks(data, cols, rows)
+            self.app.in_ui(self._put, at, drawn if drawn is not None else
+                           _("tui_picture_failed", err="?"))
+        self.app.core.media_bytes(url).add_done_callback(done)
+
+    def _put(self, at, what):
+        if at == self.at and self.is_attached:
+            self.query_one("#pic", Static).update(what)
+
+    def action_step(self, d):
+        if len(self.media) > 1:
+            self.at = (self.at + d) % len(self.media)
+            self.show()
+
+    def action_original(self):
+        m = self.media[self.at]
+        url = m.remote_url or m.url
+        if url and openable(url):
+            webbrowser.open(url)
 
 
 class LaneItem(ListItem):
@@ -102,7 +221,21 @@ class PostsMixin(Ui):
     def current(self):
         lv = self.query_one("#posts", ListView)
         item = lv.highlighted_child
+        if isinstance(item, ActivityItem):  # a like, a mention…: the post it is about
+            return item.activity.post
         return item.entry if isinstance(item, PostItem) else None
+
+    def current_item(self):
+        return self.query_one("#posts", ListView).highlighted_child
+
+    def action_pictures(self):
+        st = self.current()
+        media = [m for m in real(st).media if m.kind in ("image", "gifv", "video")
+                 and (m.preview or m.url)] if st else []
+        if media:
+            self.app.push_screen(PictureScreen(media))
+        elif st:
+            self.app.notify(_("tui_no_pictures"))
 
     def action_cursor_down(self):
         self.query_one("#posts", ListView).action_cursor_down()
@@ -141,6 +274,13 @@ class PostsMixin(Ui):
             self.app.push_screen(ThreadScreen(real(st).id))
 
     def action_profile(self):
+        item = self.current_item()
+        if isinstance(item, ActivityItem) and item.activity.who is not None:
+            self.app.push_screen(ProfileScreen(item.activity.who.id))
+            return
+        if isinstance(item, RequestItem):
+            self.app.push_screen(ProfileScreen(item.account.id))
+            return
         st = self.current()
         if st:
             self.app.push_screen(ProfileScreen(real(st).author.id))
@@ -164,7 +304,13 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
                 Binding("o", "browser", _("open_browser"), show=False),
                 Binding("p", "profile", _("tui_profile")),
+                Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("colon", "command", ":", show=False)]
+    # the screen doesn't scroll as a whole, the list does (see ProfileScreen)
+    CSS = """
+    ThreadScreen { overflow: hidden hidden; layout: vertical; }
+    ThreadScreen #posts { height: 1fr; }
+    """
 
     def __init__(self, status_id):
         super().__init__()
@@ -208,6 +354,7 @@ class ThreadScreen(Screen, PostsMixin):
         await lv.clear()
         await lv.extend(items)
         lv.index = focus
+        self.app.load_pictures(items)
         if core.cfg["read"]["mark_read"] != "manual":
             core.mark_read(posts)
 
@@ -224,7 +371,11 @@ class ThreadScreen(Screen, PostsMixin):
 
 class ProfileScreen(Screen, PostsMixin):
     """Someone's profile: who, the bio, follows you or not; F — follow / unfollow;
-    their posts below (Enter — a thread)."""
+    their posts below (Enter — a thread).
+
+    The header is a box of its own and the screen doesn't scroll as a whole: it used
+    to, and highlighting the first post scrolled the header away — the profile
+    flashed and what stayed looked just like a lane."""
 
     BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
@@ -232,7 +383,15 @@ class ProfileScreen(Screen, PostsMixin):
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
                 Binding("o", "browser", _("open_browser"), show=False),
+                Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("colon", "command", ":", show=False)]
+    CSS = """
+    ProfileScreen { overflow: hidden hidden; layout: vertical; }
+    ProfileScreen #about { height: auto; max-height: 14; padding: 0 1 1 1;
+                           border-bottom: solid $primary; overflow-y: auto; }
+    ProfileScreen #posts-head { height: 1; padding: 0 1; color: $text-muted; }
+    ProfileScreen #posts { height: 1fr; }
+    """
 
     def __init__(self, acc_id):
         super().__init__()
@@ -240,8 +399,9 @@ class ProfileScreen(Screen, PostsMixin):
         self.acc, self.rel = None, None
 
     def compose(self) -> ComposeResult:
-        yield Static(_("tui_thread_loading"), id="title")
-        yield Static("", id="about")
+        yield Static(_("tui_profile") + " …", id="title")
+        yield Static("…", id="about")
+        yield Static(_("tui_profile_posts"), id="posts-head")
         yield ListView(id="posts")
         yield _cmd_line()
         yield Footer()
@@ -249,7 +409,9 @@ class ProfileScreen(Screen, PostsMixin):
     def on_mount(self):
         core = self.app.core
         self.query_one("#posts", ListView).focus()
-        self.later(core.account(self.acc_id), ok=self.got_account)
+        self.later(core.account(self.acc_id), ok=self.got_account,
+                   fail=lambda e: self.query_one("#about", Static).update(
+                       Text(_("tui_profile_failed", err=e), style="red")))
         me = core.me
         if not me or self.acc_id != me.id:
             self.later(core.relationship(self.acc_id), ok=self.got_relation,
@@ -268,8 +430,9 @@ class ProfileScreen(Screen, PostsMixin):
         acc = self.acc
         if not acc:
             return
-        head = Text(acc.name or acc.username, style="bold")
-        head.append(f"  @{acc.handle}", style="cyan")
+        head = Text(_("tui_profile_title", who=acc.handle) + "  ", style="bold")
+        if acc.name and acc.name != acc.username:
+            head.append(acc.name)
         self.query_one("#title", Static).update(head)
         t = Text()
         bits = [_("posts_n", n=acc.posts), _("followers_n", n=acc.followers),
@@ -300,6 +463,8 @@ class ProfileScreen(Screen, PostsMixin):
         await lv.extend(items)
         if items:
             lv.index = 0
+            lv.scroll_home(animate=False)
+        self.app.load_pictures(items)
 
     def action_follow(self):
         on = not (self.rel and self.rel.following)
@@ -337,7 +502,17 @@ class FedtailApp(App, PostsMixin):
                 Binding("R", "refresh", _("refresh"), show=False),
                 Binding("o", "browser", _("open_browser"), show=False),
                 Binding("p", "profile", _("tui_profile")),
-                Binding("tab", "switch", _("tui_switch"), show=False),
+                Binding("v", "pictures", _("tui_picture"), show=False),
+                Binding("a", "request(True)", show=False),
+                Binding("d", "request(False)", show=False),
+                Binding("left_square_bracket", "lane_step(-1)", _("tui_lane_prev")),
+                Binding("right_square_bracket", "lane_step(1)", _("tui_lane_next")),
+                Binding("h", "to_lanes", _("tui_lanes_keys"), show=False),
+                Binding("l", "to_posts", show=False),
+                *[Binding(str(i), f"lane_number({i})", show=False) for i in range(1, 10)],
+                # priority: the screen's own Tab (focus next) used to win, and the lanes
+                # couldn't be reached without the mouse
+                Binding("tab", "switch", _("tui_switch"), show=False, priority=True),
                 Binding("colon", "command", ":", show=False),
                 Binding("escape", "escape", show=False)]
 
@@ -354,6 +529,7 @@ class FedtailApp(App, PostsMixin):
         self.lanes_width = int(tcfg.get("lanes_width", 26))
         self._theme_wanted = tcfg.get("theme", "")
         self._redraw_pending = False
+        self._pictures = {}  # (address, cols, rows) -> the drawn picture
 
     # ---- threads -------------------------------------------------------------------
     def in_ui(self, fn, *args):
@@ -398,6 +574,8 @@ class FedtailApp(App, PostsMixin):
         if self._instance is not None:
             self._instance.listen(lambda _m: None)
         self.core.on("lanes_updated", lambda _n, p: self.in_ui(self.lanes_updated, p))
+        for event in ("activity_updated", "activity_seen", "requests_updated"):
+            self.core.on(event, lambda n, _p: self.in_ui(self.other_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
         if not self.core.logged_in:
             self.push_screen(LoginScreen())
@@ -450,6 +628,9 @@ class FedtailApp(App, PostsMixin):
         if name is None:
             return
         lv = self._main("#posts", ListView)
+        if name in ("activity", "requests"):  # not posts: rows of their own
+            await self._fill_other(lv, name, first)
+            return
         entries = core.entries(name)
         if core.cfg["feed"]["order"] == "newest_first":
             entries = list(reversed(entries))
@@ -477,6 +658,82 @@ class FedtailApp(App, PostsMixin):
         else:
             lv.index = self._start_index(entries, unread)
         self.update_lane_counts()
+        self.load_pictures(items)
+
+    # ---- pictures in the lane (tui.pictures = "inline") ------------------------------
+    def load_pictures(self, items):
+        """Draw each post's first picture under it, as the bytes come. Small and
+        cached by address and size, so redrawing a lane costs nothing."""
+        tcfg = self.core.cfg.get("tui", {})
+        if tcfg.get("pictures", "inline") != "inline" or not pictures.available():
+            return
+        rows = max(2, int(tcfg.get("picture_rows", 8)))
+        cols = rows * 4  # about a 2:1 box: room for a landscape photo
+        cache = self._pictures
+        for item in items:
+            if not isinstance(item, PostItem):
+                continue
+            m = first_picture(item.entry)
+            if m is None:
+                continue
+            url = m.preview or m.url
+            key = (url, cols, rows)
+            if key in cache:
+                item.set_picture(cache[key])
+                continue
+
+            def done(f, item=item, key=key):
+                try:
+                    drawn = pictures.blocks(f.result(), cols, rows)
+                except Exception as e:  # noqa: BLE001 — no picture, the text stays
+                    log.debug("tui picture: %s", e)
+                    return
+                if drawn is None:
+                    return
+                if len(cache) > 400:
+                    cache.clear()
+                cache[key] = drawn
+                self.in_ui(self._put_picture, item, drawn)
+            self.core.media_bytes(url).add_done_callback(done)
+
+    @staticmethod
+    def _put_picture(item, drawn):
+        if item.is_attached:
+            item.set_picture(drawn)
+
+    async def _fill_other(self, lv, name, first):
+        core = self.core
+        width = max(30, lv.size.width - 4 if lv.size.width else 76)
+        keep = getattr(lv.highlighted_child, "key", None)
+        if name == "activity":
+            seen = core.activity_seen()
+            rows = core.activity(300)  # newest first
+            if core.cfg["feed"]["order"] == "oldest_first":
+                rows = list(reversed(rows))
+            items = [ActivityItem(a, render(show_activity(a, width, a.sort > seen)))
+                     for a in rows]
+            empty = _("activity_none")
+        else:
+            items = [RequestItem(acc, render(show_request(acc, width)))
+                     for acc in core.follow_requests()]
+            empty = _("no_requests")
+        title = core.lane_title(name) or _("lane_" + name)
+        self._main("#title", Static).update(Text(title, style="bold"))
+        await lv.clear()
+        if not items:
+            await lv.append(ListItem(Static(Text(empty, style="dim"))))
+            self.update_lane_counts()
+            return
+        await lv.extend(items)
+        keys = [it.key for it in items]
+        if keep in keys and not first:
+            lv.index = keys.index(keep)
+        else:
+            newest = 0 if core.cfg["feed"]["order"] == "newest_first" else len(items) - 1
+            lv.index = newest
+        if name == "activity":
+            core.mark_activity_seen()  # on screen: seen, as in the window
+        self.update_lane_counts()
 
     def _start_index(self, entries, unread):
         """feed.start_at: the first unread (oldest first) or the newest."""
@@ -502,6 +759,19 @@ class FedtailApp(App, PostsMixin):
         else:
             self.update_lane_counts()
 
+    async def other_updated(self, event):
+        """Activity or follow requests changed: the lane redrawn if it is on screen
+        (not for "seen" — that is this very lane being looked at), the counts anyway."""
+        lane = "requests" if event == "requests_updated" else "activity"
+        if self.lane == lane and event != "activity_seen" and not self._redraw_pending:
+            self._redraw_pending = True
+            try:
+                await self.refresh_posts()
+            finally:
+                self._redraw_pending = False
+        else:
+            self.update_lane_counts()
+
     def _lane_names(self):
         return [i.lane for i in self._main("#lanes", ListView).children
                 if isinstance(i, LaneItem)]
@@ -515,6 +785,14 @@ class FedtailApp(App, PostsMixin):
         if e.list_view.id == "lanes" and isinstance(e.item, LaneItem):
             await self.select_lane(e.item.lane)
             self.query_one("#posts", ListView).focus()
+        elif e.list_view.id == "posts" and isinstance(e.item, RequestItem):
+            self.push_screen(ProfileScreen(e.item.account.id))
+        elif e.list_view.id == "posts" and isinstance(e.item, ActivityItem):
+            a = e.item.activity
+            if a.post is not None:
+                self.push_screen(ThreadScreen(a.post.id))
+            elif a.who is not None:
+                self.push_screen(ProfileScreen(a.who.id))
         elif e.list_view.id == "posts" and self.screen is self.screen_stack[0]:
             self.action_open()
         elif e.list_view.id == "posts" and isinstance(self.screen, ProfileScreen):
@@ -580,8 +858,59 @@ class FedtailApp(App, PostsMixin):
         self.query_one("#cmd", Input).focus()
 
     def action_switch(self):
+        if self.screen is not self.screen_stack[0]:  # a thread, a profile: Tab as usual
+            self.screen.focus_next()
+            return
         lanes, posts = self.query_one("#lanes", ListView), self.query_one("#posts", ListView)
         (posts if lanes.has_focus else lanes).focus()
+
+    def _lanes_focused(self):
+        try:
+            return self._main("#lanes", ListView).has_focus
+        except Exception:  # noqa: BLE001 — not built yet
+            return False
+
+    def action_cursor_down(self):  # j / k move whichever list has the focus
+        if self._lanes_focused():
+            self._main("#lanes", ListView).action_cursor_down()
+        else:
+            super().action_cursor_down()
+
+    def action_cursor_up(self):
+        if self._lanes_focused():
+            self._main("#lanes", ListView).action_cursor_up()
+        else:
+            super().action_cursor_up()
+
+    def action_to_lanes(self):
+        self._main("#lanes", ListView).focus()
+
+    def action_to_posts(self):
+        lanes = self._main("#lanes", ListView)
+        if lanes.has_focus and isinstance(lanes.highlighted_child, LaneItem) and \
+                lanes.highlighted_child.lane != self.lane:
+            self.call_next(self.select_lane, lanes.highlighted_child.lane)
+        self._main("#posts", ListView).focus()
+
+    async def action_lane_step(self, d):
+        names = self._lane_names()
+        if not names:
+            return
+        i = names.index(self.lane) if self.lane in names else -1
+        await self.select_lane(names[(i + d) % len(names)])
+
+    async def action_lane_number(self, n):
+        names = self._lane_names()
+        if 0 < n <= len(names):
+            await self.select_lane(names[n - 1])
+
+    def action_request(self, approve):
+        item = self.current_item()
+        if not isinstance(item, RequestItem):
+            return
+        who = item.account.handle
+        self.later(self.core.answer_follow(item.account.id, approve),
+                   ok=lambda _r: self.notify(("✔ " if approve else "✘ ") + "@" + who))
 
     def action_escape(self):
         cmd = self.query_one("#cmd", Input)

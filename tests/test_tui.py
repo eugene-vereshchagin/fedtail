@@ -11,7 +11,7 @@ except ImportError:
 
 from fedtail import i18n
 
-from . import test_cli
+from . import fakes, test_cli
 from .fakes import BOB, ME, status
 from .test_core import TmpDir
 
@@ -58,15 +58,15 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("j")
             await pilot.pause(0.1)
             self.assertEqual(posts.index, 1)
-            seen = posts.highlighted_child.status["id"]
-            self.assertNotIn(seen, core.unread_ids([(None, posts.highlighted_child.status)]))
+            seen = posts.highlighted_child.entry.id
+            self.assertNotIn(seen, core.unread_ids([(None, {"id": seen})]))
             await pilot.press("k")
             await pilot.pause(0.1)
             self.assertEqual(posts.index, 0)
 
             # f likes the post under the cursor
             await pilot.press("f")
-            target = posts.highlighted_child.status["id"]
+            target = posts.highlighted_child.entry.id
             await self.wait(pilot, lambda: w.statuses[target].get("favourited"))
 
             # r puts "#alias " in the command line; Enter sends the reply
@@ -92,7 +92,7 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             # p: the author's profile, with their posts; F follows
             from fedtail.frontends.tui.app import ProfileScreen
             posts.focus()
-            posts.index = [i.status["id"] for i in posts.children].index("003")
+            posts.index = [i.entry.id for i in posts.children].index("003")
             await pilot.press("p")
             await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
             await self.wait(pilot, lambda: len(app.screen.query_one("#posts").children) >= 1)
@@ -106,7 +106,7 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             names = [i.lane for i in lanes.children]
             self.assertIn("replies", names)
             await app.select_lane("replies")
-            await self.wait(pilot, lambda: any("a reply to me" in i.status["content"]
+            await self.wait(pilot, lambda: any("a reply to me" in i.entry.text
                                                for i in app.query_one("#posts").children))
 
             # x: the whole lane read
@@ -155,6 +155,81 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
                             > before)
             self.assertTrue(any(isinstance(i, LaneItem)
                                 for i in main.query_one("#lanes", ListView).children))
+            await pilot.press("escape")
+            await pilot.press("q")
+
+    async def test_lane_keys_profile_activity_requests(self):
+        """[ / ] and digits switch lanes, h / j / l walk the lane list; the profile's
+        header stays on screen; Activity and Requests have rows; v opens pictures."""
+        from textual.widgets import ListView, Static
+
+        from fedtail.frontends.tui.app import (
+            ActivityItem,
+            FedtailApp,
+            PictureScreen,
+            ProfileScreen,
+            RequestItem,
+        )
+        core, w = self.make(lanes={"enabled": ["home", "replies", "activity", "requests"]})
+        mine = w.add(status("001", ME, minute=1, text="my post", vis="public"), home=True)
+        pic = status("003", BOB, minute=3, text="look", vis="public")
+        pic["media_attachments"] = [{"id": "m1", "type": "image",
+                                     "url": "https://example.test/m1.png",
+                                     "preview_url": "https://example.test/m1s.png"}]
+        w.add(pic, home=True)
+        w.act("a0", "follow", BOB, minute=1)  # history: the first fetch is seen
+        app = FedtailApp(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            core.poll_once()
+            w.act("a1", "favourite", BOB, st=mine, minute=5)
+            w.requests.append(fakes.acct("Q", "quinn@example.org"))
+            core.poll_once()
+            await self.wait(pilot, lambda: app.lane is not None)
+            names = app._lane_names()
+            first = app.lane
+            await pilot.press("right_square_bracket")
+            await self.wait(pilot, lambda: app.lane == names[(names.index(first) + 1)
+                                                              % len(names)])
+            await pilot.press("1")
+            await self.wait(pilot, lambda: app.lane == names[0])
+            await pilot.press("h")
+            lanes = app.query_one("#lanes", ListView)
+            self.assertTrue(lanes.has_focus)
+            before = lanes.index
+            await pilot.press("j")
+            await pilot.pause(0.1)
+            self.assertEqual(lanes.index, before + 1)
+            await pilot.press("l")
+            await self.wait(pilot, lambda: app.lane == names[before + 1])
+
+            await app.select_lane("activity")
+            await self.wait(pilot, lambda: any(isinstance(i, ActivityItem)
+                                               for i in app.query_one("#posts").children))
+            await app.select_lane("requests")
+            await self.wait(pilot, lambda: any(isinstance(i, RequestItem)
+                                               for i in app.query_one("#posts").children))
+            posts = app.query_one("#posts", ListView)
+            posts.focus()
+            posts.index = 0
+            await pilot.press("a")
+            await self.wait(pilot, lambda: not w.requests)
+
+            await app.select_lane("home")
+            await self.wait(pilot, lambda: len(app.query_one("#posts").children) >= 2)
+            posts = app.query_one("#posts", ListView)
+            posts.focus()
+            posts.index = [i.entry.id for i in posts.children].index("003")
+            await pilot.press("p")
+            await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
+            await self.wait(pilot, lambda: len(app.screen.query_one("#posts").children) >= 1)
+            await pilot.pause(0.2)
+            title = app.screen.query_one("#title", Static)
+            self.assertEqual(title.region.y, 0)  # the header is still at the top
+            self.assertGreater(title.region.height, 0)
+            await pilot.press("escape")
+            await self.wait(pilot, lambda: not isinstance(app.screen, ProfileScreen))
+            await pilot.press("v")
+            await self.wait(pilot, lambda: isinstance(app.screen, PictureScreen))
             await pilot.press("escape")
             await pilot.press("q")
 

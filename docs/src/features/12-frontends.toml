@@ -36,11 +36,11 @@ status = "has"
 since = "0.10.0"
 name.ru = "Терминальный интерфейс (Textual)"
 name.en = "A terminal interface (Textual)"
-config = "`ui.frontend = \"tui\"`, `[tui]`: `theme`, `lanes_width`, `show_context`"
+config = "`ui.frontend = \"tui\"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows`"
 others = "tut"
 clients = ["tut"]
-details.ru = "Слева ленты, справа посты, внизу командная строка. Те же клавиши, `x` — лента прочитана, `:` — командная строка. Работает по ssh. Нужен `python3-textual`."
-details.en = "Lanes on the left, posts on the right, the command line at the bottom. The same keys, `x` — the lane is read, `:` — the command line. Works over ssh. Needs `python3-textual`."
+details.ru = "Слева ленты, справа посты, внизу командная строка. Те же клавиши, `x` — лента прочитана, `:` — командная строка. Ленты — `[` / `]`, цифры `1`…`9`, `h` — в список лент (там `j` / `k`), `l` — обратно в посты, Tab — туда-сюда. «Активность» и «Заявки» — свои строки (в заявках `a` — пустить, `d` — отказать). Картинки рисуются полублоками: первая — маленькой прямо в ленте (`tui.pictures`, `tui.picture_rows`), `v` — все во весь экран, ← / → между ними, `o` — оригинал в браузере; нужен Pillow (`python3-pil`) и терминал с truecolor. Работает по ssh. Нужен `python3-textual`."
+details.en = "Lanes on the left, posts on the right, the command line at the bottom. The same keys, `x` — the lane is read, `:` — the command line. Lanes — `[` / `]`, digits `1`…`9`, `h` — into the lane list (`j` / `k` there), `l` — back to the posts, Tab — to and fro. “Activity” and “Follow requests” have rows of their own (in requests `a` — accept, `d` — reject). Pictures are drawn with half blocks: the first one small right in the lane (`tui.pictures`, `tui.picture_rows`), `v` — all of them full screen, ← / → between them, `o` — the original in the browser; needs Pillow (`python3-pil`) and a true colour terminal. Works over ssh. Needs `python3-textual`."
 
 [[feature]]
 id = "web"

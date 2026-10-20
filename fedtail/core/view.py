@@ -13,8 +13,10 @@ cost nothing extra.
 
 from __future__ import annotations
 
+import hashlib
+import os
 import threading
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 
 from ..model import Account, Post, Share, ThreadItem, real
 from ..protocols.mastodon import adapter
@@ -44,8 +46,10 @@ PASS = {
     "cfg", "lanes", "lane_by_name", "lane_title", "set_active_lane", "set_state",
     "get_state", "poll_once", "poll_now", "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
-    "load_older", "auth",
+    "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
 }
+
+MEDIA_MAX = 20 * 1024 * 1024  # one picture fetched for a frontend (as Qt's previews)
 
 
 class View:
@@ -56,6 +60,7 @@ class View:
         self._core = core
         self._cache = {}   # lane -> (the raw list it was made from, converted)
         self._lock = threading.Lock()
+        self._media = None  # pictures' own workers, made when first needed
 
     def __getattr__(self, name):
         if name in PASS:
@@ -242,6 +247,58 @@ class View:
         """Mute (or unmute) the post's thread: on the server when it can, here always.
         Future: the post as it is now."""
         return _then(self._core.mute_thread(self._raw(real(post)), on), self._post_back)
+
+    # ---- activity and follow requests (lanes that are not posts) -------------------
+    def activity(self, limit=300):
+        """[Activity] newest first: who liked, shared, followed, mentioned…"""
+        return [adapter.activity(n, self.profile)
+                for n in self._core.activity_entries(limit)]
+
+    def activity_seen(self):
+        """The sort key up to which activity is seen (Activity.sort above it: new)."""
+        return self._core.activity_seen_mark()
+
+    def follow_requests(self):
+        """[Account] asking to follow me (as of the last poll)."""
+        return [self.acc(a) for a in getattr(self._core, "follow_requests", None) or ()]
+
+    # ---- pictures --------------------------------------------------------------------
+    def media_bytes(self, url):
+        """Future: a picture's bytes, from the shared disk cache (the Qt window's too) or
+        downloaded — without the token, public addresses only (core.remote), at most
+        MEDIA_MAX. A frontend that draws pictures itself (the terminal) uses this."""
+        with self._lock:
+            if self._media is None:
+                self._media = ThreadPoolExecutor(max_workers=3,
+                                                 thread_name_prefix="fedtail-media")
+        return self._media.submit(self._fetch_media, url)
+
+    def _fetch_media(self, url):
+        import requests
+
+        from . import remote
+        from .api import USER_AGENT
+        cache = self._core.paths.cache_dir
+        path = cache / hashlib.sha1(url.encode()).hexdigest()
+        if path.exists():
+            try:
+                os.utime(path)  # used now: the cache cleanup keeps it
+            except OSError:
+                pass
+            return path.read_bytes()
+        session = requests.Session()
+        session.headers["User-Agent"] = USER_AGENT
+        with remote.open_url(session, url, timeout=(6, 30), schemes=("https", "http"),
+                             own_hosts=self._core._own_hosts()) as r:
+            r.raise_for_status()
+            kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+            data = remote.read(r, MEDIA_MAX)
+        if kind.startswith("image/"):  # never keep an error page in the shared cache
+            try:
+                path.write_bytes(data)
+            except OSError:
+                pass
+        return data
 
     # ---- writing -------------------------------------------------------------------
     def default_visibility(self):
