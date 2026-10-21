@@ -161,23 +161,33 @@ def _find(widget, kind):
     return None
 
 
-def scroll(meter, lv, to_top):
-    """The lane to its top or its end a screen at a time, 60 times a second, as a hand
-    would — waiting at the edge for more to come in, until nothing more does."""
+def scroll(meter, lv, to_top, pages=1):
+    """The lane to its top or its end `pages` screens at a time, 60 times a second, as
+    a hand would (pages > 1: a fling, Page Down held) — waiting at the edge for more
+    to come in, until nothing more does. Said after: how often the hand hit the edge of
+    what's built and waited there, and for how long (the lane "not keeping up")."""
     adj = lv.adj
-    still = 0
-    for _ in range(400):  # a few hundred posts: enough to see how it goes
+    still, waits, waited, t_edge = 0, 0, 0.0, None
+    for _ in range(600):  # a few hundred posts: enough to see how it goes
         v = adj.get_value()
-        nxt = max(adj.get_lower(), v - adj.get_page_size()) if to_top else \
-            min(adj.get_upper() - adj.get_page_size(), v + adj.get_page_size())
+        step = adj.get_page_size() * pages
+        nxt = max(adj.get_lower(), v - step) if to_top else \
+            min(adj.get_upper() - adj.get_page_size(), v + step)
         adj.set_value(nxt)
         meter.run(0.016)
         if abs(adj.get_value() - v) < 1:
+            if t_edge is None:
+                t_edge = time.monotonic()
             still += 1
-            if still > 40:  # ~0.7 s at the edge and nothing came in
+            if still > 40:  # ~0.7 s at the edge and nothing came in: the lane's end
                 break
         else:
-            still = 0
+            if t_edge is not None:  # it came in after all: a wait at the edge
+                waits += 1
+                waited += time.monotonic() - t_edge
+            still, t_edge = 0, None
+    print(f"      waited at the edge of what's built {waits} times, "
+          f"{waited * 1000:.0f} ms in all", flush=True)
     return lambda: True
 
 
@@ -257,6 +267,20 @@ def run(layout, theme, posts, profile, maximized=False):
     if lv is not None and hasattr(lv, "adj"):
         meter.scenario("scroll home to the end", lambda: scroll(meter, lv, False))
         meter.scenario("scroll home back to the top", lambda: scroll(meter, lv, True))
+        meter.scenario("fling home to the end (4 pages a frame)",
+                       lambda: scroll(meter, lv, False, 4))
+        # a hand's speeds: 6 and 15 screens a second, to the end and back — waiting at
+        # the edge here is what is felt as "it doesn't keep up"
+        meter.scenario("scroll fast, 6 screens a second, back to the top",
+                       lambda: scroll(meter, lv, True, 0.1))
+        meter.scenario("scroll faster, 15 screens a second, to the end",
+                       lambda: scroll(meter, lv, False, 0.25))
+        meter.scenario("rewind: thumb to the end at once",
+                       lambda: rewind(meter, lv, 1, 1, "at once"))
+        meter.scenario("rewind: fast drag through the lane",
+                       lambda: rewind(meter, lv, 30, 30, "drag"))
+        meter.scenario("rewind: fling (5 pages a frame)",
+                       lambda: rewind(meter, lv, 40, 40, "fling"))
 
     for lane in ("mentions", "local", "replies"):
         if lane in win.lane_rows:
@@ -326,6 +350,38 @@ def run(layout, theme, posts, profile, maximized=False):
     win.close()
     core.shutdown()
     return meter.rows
+
+
+def on_screen(lv):
+    """How many cards are in the lane's window right now (0: an empty stretch)."""
+    top = lv.adj.get_value()
+    bottom = top + lv.adj.get_page_size()
+    n = 0
+    for card in list(lv.rows.values()):
+        y = lv._y(card)
+        if y is not None and y < bottom and y + card.get_height() > top:
+            n += 1
+    return n
+
+
+def rewind(meter, lv, steps, frames, label):
+    """The scroll bar dragged fast through a lane not built yet (a fling, the thumb,
+    Page Down held): frames with no card at all, and how long it stays empty after."""
+    adj = lv.adj
+    adj.set_value(0)
+    meter.run(0.3)
+    blank = 0
+    for i in range(1, steps + 1):
+        adj.set_value((adj.get_upper() - adj.get_page_size()) * i / steps)
+        meter.run(frames / steps * 0.016)
+        if on_screen(lv) == 0:
+            blank += 1
+    t0 = time.monotonic()
+    meter.run(5.0, until=lambda: on_screen(lv) > 0)
+    empty = (time.monotonic() - t0) * 1000
+    print(f"      {label}: {blank} of {steps} frames empty, {empty:.0f} ms empty at the end",
+          flush=True)
+    return lambda: True
 
 
 def _home(win):

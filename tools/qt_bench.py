@@ -74,19 +74,67 @@ class Meter:
               f"slow turns {self.slow:3d}", flush=True)
 
 
-def scroll(meter, bar, to_top):
-    """The scroll bar to its top or end a page at a time, 60 times a second."""
-    still = 0
-    for _ in range(400):
+def scroll(meter, bar, to_top, pages=1):
+    """The scroll bar to its top or end `pages` pages at a time, 60 times a second
+    (pages > 1: a fling, Page Down held); then how often it hit the edge of what's
+    built and waited for more, and for how long (the lane "not keeping up")."""
+    still, waits, waited, t_edge = 0, 0, 0.0, None
+    for _ in range(600):
         v = bar.value()
-        bar.setValue(v - bar.pageStep() if to_top else v + bar.pageStep())
+        step = max(1, int(bar.pageStep() * pages))
+        bar.setValue(v - step if to_top else v + step)
         meter.run(0.016)
         if bar.value() == v:
+            if t_edge is None:
+                t_edge = time.monotonic()
             still += 1
             if still > 40:
                 break
         else:
-            still = 0
+            if t_edge is not None:
+                waits += 1
+                waited += time.monotonic() - t_edge
+            still, t_edge = 0, None
+    print(f"      waited at the edge of what's built {waits} times, "
+          f"{waited * 1000:.0f} ms in all", flush=True)
+    return lambda: True
+
+
+def on_screen(view):
+    """How many cards are in the view's window right now (0: an empty stretch —
+    what the eye sees as "it didn't draw the rest yet")."""
+    from PySide6.QtCore import QPoint, QRect
+    vp = view.viewport()
+    area = vp.rect()
+    n = 0
+    for w in list(getattr(view, "rows", {}).values()):
+        try:
+            if w.isVisible() and area.intersects(QRect(w.mapTo(vp, QPoint(0, 0)), w.size())):
+                n += 1
+        except RuntimeError:  # a card just let go
+            pass
+    return n
+
+
+def rewind(meter, view, steps, frames, label):
+    """The scroll bar dragged fast through a lane not built yet: `steps` positions
+    from top to bottom in `frames` frames (a fling, the thumb dragged, Page Down held).
+    Counts the frames that showed no card at all, and how long the view stayed empty
+    after the last move — what feels like "it doesn't keep up"."""
+    bar = view.verticalScrollBar()
+    bar.setValue(0)
+    meter.run(0.3)
+    blank = 0
+    for i in range(1, steps + 1):
+        bar.setValue(bar.maximum() * i // steps)
+        meter.run(frames / steps * 0.016)
+        if on_screen(view) == 0:
+            blank += 1
+    t0 = time.monotonic()
+    meter.run(5.0, until=lambda: on_screen(view) > 0)
+    empty = (time.monotonic() - t0) * 1000
+    print(f"      {label}: {blank} of {steps} frames empty, {empty:.0f} ms empty at the end",
+          flush=True)
     return lambda: True
 
 
@@ -174,6 +222,23 @@ def run(layout, theme, posts, profile, maximized=False):
         bar = view.verticalScrollBar()
         meter.scenario("scroll home to the end", lambda: scroll(meter, bar, False))
         meter.scenario("scroll home back to the top", lambda: scroll(meter, bar, True))
+        meter.scenario("fling home to the end (4 pages a frame)",
+                       lambda: scroll(meter, bar, False, 4))
+        meter.scenario("scroll fast, 6 screens a second, back to the top",
+                       lambda: scroll(meter, bar, True, 0.1))
+        meter.scenario("scroll faster, 15 screens a second, to the end",
+                       lambda: scroll(meter, bar, False, 0.25))
+        # rewinding a lane that isn't built: the thumb to the end at once, a fast drag,
+        # a fling — the cards must keep up
+        meter.scenario("rewind: thumb to the end at once",
+                       lambda: rewind(meter, view, 1, 1, "at once"))
+        meter.scenario("rewind: fast drag through the lane",
+                       lambda: rewind(meter, view, 30, 30, "drag"))
+        meter.scenario("rewind: fling (5 pages a frame)",
+                       lambda: rewind(meter, view, max(5, bar.maximum() //
+                                                       max(1, bar.pageStep() * 5)),
+                                      max(5, bar.maximum() // max(1, bar.pageStep() * 5)),
+                                      "fling"))
 
     for name in ("mentions", "local", "replies"):
         def open_lane(name=name):

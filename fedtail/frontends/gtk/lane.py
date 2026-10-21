@@ -384,11 +384,17 @@ class LaneView(Gtk.Box):
             self._hold()
         self._fit_batch(start)
         made = 0
+        # the reader waiting at the edge of what's built (nothing on screen moves): a
+        # bigger batch — a long frame then costs less than more frames of waiting
+        at_edge = self.positioned and side == "end" and \
+            self.adj.get_value() + self.adj.get_page_size() >= self.adj.get_upper() - 2
+        limit, budget = (self._per_batch * 2, BATCH_MS * 2) if at_edge else \
+            (self._per_batch, BATCH_MS)
         with diag.busy(f"gtk lane {self.name}: build"):
-            while keys and (time.monotonic() - start) * 1000 < BATCH_MS and \
-                    made < self._per_batch:
+            while keys and (time.monotonic() - start) * 1000 < budget and \
+                    made < limit:
                 take = []
-                while keys and len(take) < min(4, self._per_batch - made):
+                while keys and len(take) < min(4, limit - made):
                     if side == "inside" and first is not None and \
                             (self.index[keys[0]] < self.index[first]) != above:
                         break
@@ -426,6 +432,10 @@ class LaneView(Gtk.Box):
     def _done_building(self):
         if getattr(self, "_wanted", None) is not None:
             GLib.idle_add(self._bring_wanted, priority=GLib.PRIORITY_LOW)
+        elif self.positioned:
+            # still near an end (the reader held there, waiting): more at once — no
+            # scroll event comes while the view stands at the edge
+            GLib.idle_add(self._grow_idle, priority=GLib.PRIORITY_LOW)
         self._older_visible()
         self._schedule_seen()  # new cards may be on screen already
         if not self.positioned and self.get_mapped():
@@ -581,17 +591,36 @@ class LaneView(Gtk.Box):
         self.older.set_visible(oldest in self.rows and not self._pending())
 
     def _grow(self):
-        """The view nears an end of what's built: STEP more from the lane there."""
+        """The view nears an end of what's built: more from the lane there — STEP, and
+        twice as many each time the reader comes back to that end soon after (scrolling
+        fast, a fling: the cards must stay ahead, not be waited for at the edge)."""
         if self._pending() or not self.order or not self.positioned:
             return
         lo, hi = self.index[self.order[0]], self.index[self.order[-1]] + 1
         value, page, upper = (self.adj.get_value(), self.adj.get_page_size(),
                               self.adj.get_upper())
-        if value + page * 2.5 >= upper and hi < len(self.keys):
-            self._queue.append(("end", self.keys[hi:hi + STEP]))
-        elif value <= page * 1.5 and lo > 0:
-            self._queue.append(("start", self.keys[max(0, lo - STEP):lo][::-1]))
+        side = None
+        if value + page * 3 >= upper and hi < len(self.keys):
+            side = "end"
+        elif value <= page * 2 and lo > 0:
+            side = "start"
+        if side is None:
+            return
+        now = time.monotonic()
+        last_side, last_at, step = getattr(self, "_last_grow", (None, 0.0, STEP))
+        step = min(MAX_ROWS // 2, step * 2) if side == last_side and now - last_at < 1.0 \
+            else STEP
+        self._last_grow = (side, now, step)
+        if side == "end":
+            self._queue.append(("end", self.keys[hi:hi + step]))
+        else:
+            self._queue.append(("start", self.keys[max(0, lo - step):lo][::-1]))
         self._build_soon()
+
+    def _grow_idle(self):
+        if not self.stopped and self.get_root() is not None:
+            self._grow()
+        return GLib.SOURCE_REMOVE
 
     def _pill(self, n):
         self.pill.set_visible(n > 0)
