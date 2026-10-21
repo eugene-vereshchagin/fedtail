@@ -94,7 +94,7 @@ class LaneRow(Gtk.ListBoxRow):
         lab.set_hexpand(True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)
         box.append(lab)
-        self.badge = Gtk.Label()
+        self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
         self.badge.add_css_class("ft-badge")
         if name in BADGE_KIND:
             self.badge.add_css_class(BADGE_KIND[name])
@@ -124,7 +124,7 @@ class SectionRow(Gtk.ListBoxRow):
         lab.add_css_class("caption-heading")
         lab.set_hexpand(True)
         box.append(lab)
-        self.badge = Gtk.Label()
+        self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
         self.badge.add_css_class("ft-badge")
         self.badge.set_visible(False)
         box.append(self.badge)

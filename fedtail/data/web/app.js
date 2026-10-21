@@ -50,15 +50,19 @@ function link(text, url, cls) {
   return a;
 }
 
+function locale() {  // the interface's language, else the browser's
+  return document.documentElement.lang || [];
+}
+
 function when(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return "";
   const now = new Date();
-  const hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const hm = d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
   if (d.toDateString() === now.toDateString()) return hm;
   const opts = { day: "numeric", month: "short" };
   if (d.getFullYear() !== now.getFullYear()) opts.year = "numeric";
-  return d.toLocaleDateString([], opts) + " " + hm;
+  return d.toLocaleDateString(locale(), opts) + " " + hm;
 }
 
 function store(key, value) {  // a remembered draft: a convenience, never needed
@@ -119,7 +123,7 @@ function renderPost(p, inThread) {
     meta.append(v);
   }
   const t = el("span", "time", when(p.created) + (p.edited ? " · " + w("web_edited") : ""));
-  t.title = new Date(p.created).toLocaleString();
+  t.title = new Date(p.created).toLocaleString(locale());
   meta.append(t);
   head.append(meta);
   card.append(head);
@@ -953,6 +957,9 @@ async function start() {
   const me = await api("/api/me");
   state.me = me;
   state.words = me.words;
+  // dates and times as fedtail's language writes them, not the browser's (a Russian
+  // window said "10:25 PM")
+  if (me.lang) document.documentElement.lang = me.lang;
   const who = $("#who");
   who.append(avatar(me.me, "ava small"), el("span", "", "@" + me.handle));
   who.title = me.server || "";

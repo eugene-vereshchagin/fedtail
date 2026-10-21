@@ -35,8 +35,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 from fedtail import i18n  # noqa: E402
 from fedtail.core import auth, config, paths  # noqa: E402
 from fedtail.core.app import Core  # noqa: E402
-from tests import fakes  # noqa: E402
-from tests.fakes import ME, FakeApi, acct, status  # noqa: E402
+from tests.fakes import FakeApi  # noqa: E402
 
 BREEZE_LIGHT = {"Window": "#eff0f1", "Base": "#fcfcfc", "AlternateBase": "#f7f7f7",
                 "Text": "#232629", "WindowText": "#232629", "Button": "#fcfcfc",
@@ -49,87 +48,10 @@ BREEZE_DARK = {"Window": "#202326", "Base": "#141618", "AlternateBase": "#1d1f22
                "Link": "#1d99f3", "PlaceholderText": "#8d9196", "Mid": "#4d5257",
                "ToolTipBase": "#292c30", "ToolTipText": "#fcfcfc"}
 
-KOT = acct("K", "kot@kot.example")
-KOT["display_name"] = "Кот Учёный"
-ARSEN = acct("A", "arsen@gts.example")
-ARSEN["display_name"] = "Арсен"
-OSTAP = acct("O", "ostap@vivaldi.example")
-OSTAP["display_name"] = "Остап"
-NEWS = acct("N", "weather_news", bot=True)
-NEWS["display_name"] = "Погода на побережье"
-AVATAR_COLORS = {"K": ("#d9c7a3", "К"), "A": ("#2f4f6f", "А"), "O": ("#5a3d5c", "О"),
-                 "N": ("#7a3b2e", "Н"), "ME": ("#3b4a3f", "М")}
-for a in (KOT, ARSEN, OSTAP, NEWS, ME):
-    a["avatar_static"] = f"https://img.example/avatar/{a['id']}"
-
-
-def _recent(w):
-    """Give the made-up posts today's dates, so cards show times, not years."""
-    from datetime import UTC, datetime, timedelta
-    now = datetime.now(UTC).replace(second=0, microsecond=0)
-    for st in w.statuses.values():
-        minute = int(st["created_at"][14:16])
-        st["created_at"] = (now - timedelta(minutes=60 - minute)).strftime(
-            "%Y-%m-%dT%H:%M:%S.000Z")
-    for n in w.notifications:
-        n["created_at"] = n["status"]["created_at"]
-
-
-def world():
-    w = fakes.World()
-    t = lambda m: m  # minutes since 10:00 keep the order readable
-    router = w.add(status("100", ME, minute=t(1), text="Роутер второй раз за неделю отвалился, "
-                          "похоже, пора его менять. Кто что посоветует под OpenWrt, "
-                          "чтобы без танцев?"), home=True)
-    w.add(status("101", KOT, "100", "ME", minute=t(3), text="@mira перед тем как менять — "
-                 "протри контакты и поставь умную розетку на мониторинг. У меня ровно так же "
-                 "было: дело оказалось в блоке питания."), home=True, mention=True)
-    mine = w.add(status("102", ME, "101", "K", minute=t(5), text="@kot а розетку какую взял? "
-                        "Чтобы без облака, только по локальной сети."), home=True)
-    w.add(status("103", KOT, mine["id"], "ME", minute=t(8), text="@mira обычную на Zigbee, "
-                 "прошитую. Облака там нет вообще."), home=True, mention=True)
-    pic = status("104", ARSEN, minute=t(12), vis="public",
-                 text="Есть в горах точки, откуда видно сразу три страны и весь хребет. "
-                      "Высота 2600 метров, дорога — только на полном приводе.")
-    pic["media_attachments"] = [{"type": "image", "url": "https://img.example/full/mountains",
-                                 "preview_url": "https://img.example/small/mountains",
-                                 "description": "Горный хребет на закате",
-                                 "meta": {"original": {"width": 1600, "height": 900}}}]
-    pic["favourites_count"], pic["favourited"], pic["reblogs_count"] = 5, True, 1
-    w.add(pic, home=True)
-    w.add(status("105", ME, "104", "A", minute=t(14), text="@arsen с перевала в ясную погоду "
-                 "видно, да. Но дорогу размыло."), home=True)
-    w.add(status("106", OSTAP, minute=t(18), vis="unlisted", text="Десять лет на Point, а "
-                 "потом раз — и все разбежались кто куда. Хорошо, что хоть треды теперь снова "
-                 "деревом."), home=True)
-    w.add(status("107", NEWS, minute=t(20), vis="public", text="Сильный порывистый ветер "
-                 "уже второй день на побережье. #погода"), home=True)
-    w.add(status("108", OSTAP, "100", "ME", minute=t(25), text="@mira а я свой просто "
-                 "перевернул вверх ногами — перестал греться. Десять лет работает."),
-          home=True, mention=True)
-    w.statuses["106"]["poll"] = {
-        "id": "P1", "expired": False, "multiple": False, "voted": True, "own_votes": [0],
-        "votes_count": 23, "voters_count": 23, "expires_at": "2099-01-01T12:00:00Z",
-        "options": [{"title": "GoToSocial", "votes_count": 12},
-                    {"title": "Mastodon", "votes_count": 7},
-                    {"title": "обратно на Point", "votes_count": 4}]}
-    w.statuses["107"]["card"] = {
-        "url": "https://weather.example/black-sea-storm", "provider_name": "weather.example",
-        "title": "Шторм на побережье: ветер до 25 м/с",
-        "description": "Порывы до 25 метров в секунду ожидаются во всех портах до конца "
-                       "недели, паромы задерживаются.",
-        "image": "https://img.example/small/storm"}
-    w.requests = [OSTAP]
-    router = w.statuses.get("100")
-    for i, (kind, who) in enumerate((("favourite", KOT), ("favourite", ARSEN),
-                                     ("favourite", OSTAP), ("reblog", ARSEN),
-                                     ("follow", OSTAP)), 1):
-        w.act(f"act{i}", kind, who, router if kind != "follow" else None, minute=i)
-    w.lists = {"L1": {"title": "Новости", "exclusive": True, "members": {NEWS["id"]}},
-               "L2": {"title": "Мемасики", "exclusive": True, "members": set()}}
-    del router
-    _recent(w)
-    return w
+from tools.showcase import (  # noqa: E402 — the world every screenshot shows
+    AVATAR_COLORS,
+    world,
+)
 
 
 def make_pixmap(url, _max_side=0):

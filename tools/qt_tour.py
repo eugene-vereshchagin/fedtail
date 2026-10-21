@@ -42,6 +42,9 @@ else:
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 _tmp = tempfile.mkdtemp(prefix="fedtail-tour-")
 REAL = real.snapshot(_tmp)  # before XDG_* point at the temporary folder
+from tools import userthemes  # noqa: E402
+
+OWN_THEMES = userthemes.bring(Path(_tmp) / "config")  # tested too, never published
 os.environ["XDG_CONFIG_HOME"] = str(Path(_tmp) / "config")
 os.environ["XDG_DATA_HOME"] = str(Path(_tmp) / "data")
 
@@ -456,7 +459,8 @@ def main():
     first = True
     first_sizes = True
     for name in themes:
-        for layout in ("single",) + (("split",) if name in SPLIT_THEMES else ()):
+        split = name in SPLIT_THEMES or name in OWN_THEMES
+        for layout in ("single",) + (("split",) if split else ()):
             label = f"{name}-{layout}"
             t0 = time.monotonic()
             try:

@@ -9,6 +9,7 @@ logged-in fedtail — the same on your own account (a copy, read-only).
     python3 tools/selfcheck.py --quick         # a few themes, one layout (3–5 minutes)
     python3 tools/selfcheck.py --only qt,web   # some steps: tests qt bench gtk tui web parity
     python3 tools/selfcheck.py --real          # and your account too (--real=PROFILE)
+    python3 tools/selfcheck.py --only gallery  # the site's and the docs' pictures only
 
 Your account (--real, and --night when a profile is logged in): a copy of the
 profile's config, login and database in a temporary folder; only GET goes to the
@@ -33,7 +34,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STEPS = ("tests", "qt", "bench", "gtk", "tui", "web", "parity")
+STEPS = ("tests", "qt", "bench", "gtk", "tui", "web", "parity", "gallery")
 
 
 def probe(code):
@@ -305,6 +306,10 @@ def main():
                  "(pip install playwright && playwright install chromium)")
     if "parity" in only:  # after the walks: their menus go side by side
         run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
+    # the gallery (tools/gallery.py): with --night, or asked by --only gallery
+    if "gallery" in only and (a.night or a.only):
+        run.step("gallery", ["tools/gallery.py", str(out / "gallery")], timeout=1800,
+                 note="the site's and the docs' pictures (built-in themes only)")
 
     # ---- your own account -------------------------------------------------------------
     if real_profile:

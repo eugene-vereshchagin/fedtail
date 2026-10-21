@@ -567,9 +567,47 @@ class RosterWindow(QWidget):
                 self.restoreGeometry(QByteArray(bytes.fromhex(got)))
             except ValueError:
                 pass
-        else:  # the first time: on the left of the main window
-            g = self.win.geometry()
-            self.move(QPoint(max(0, g.left() - self.width() - 12), g.top()))
+        # the first time — or a place saved over the messages' window (the old default
+        # put it there when the window stood at the screen's left edge): placed beside
+        # it once both are on the screen (showEvent)
+
+    def showEvent(self, e):  # noqa: N802 — Qt's name
+        super().showEvent(e)
+        QTimer.singleShot(0, self.step_aside)
+
+    def step_aside(self, force=False):
+        """The roster beside the messages' window, never over it: on its left if the
+        screen has room there, else on its right; with no room either side, at the
+        screen's right edge and the messages' window narrowed to its left (as a
+        messenger stands). A place of the user's own that covers little of the window
+        is left as it is."""
+        win = self.win
+        if not win.isVisible() or win.isFullScreen():
+            return
+        me, them = self.frameGeometry(), win.frameGeometry()
+        over = me.intersected(them)
+        if not force and over.width() * over.height() < me.width() * me.height() // 3:
+            return
+        screen = (win.screen() or self.screen()).availableGeometry()
+        gap = 8
+        top = max(screen.top(), min(them.top(), screen.bottom() - me.height()))
+        if them.left() - screen.left() >= me.width() + gap:
+            self.move(QPoint(them.left() - me.width() - gap, top))
+        elif screen.right() - them.right() >= me.width() + gap:
+            self.move(QPoint(them.right() + gap + 1, top))
+        else:
+            x = screen.right() - me.width() + 1
+            room = x - gap - screen.left()
+            if win.isMaximized():
+                win.showNormal()
+            if room >= max(win.minimumWidth(), 480):
+                # the frame's edges: what the window manager adds around the contents
+                fw = them.width() - win.width()
+                fh = them.height() - win.height()
+                win.setGeometry(screen.left() + fw // 2, screen.top() + fh - fw // 2,
+                                room - fw, min(win.height(), screen.height() - fh))
+            self.move(QPoint(x, screen.top()))
+        log.info("roster placed beside the window (it stood over it)")
 
     def save_place(self):
         try:

@@ -2,6 +2,16 @@
 
 ## 0.18.0 — in progress
 
+- tools/gallery.py: the pictures for the site's gallery and the docs — every interface
+  on one made-up world (tools/showcase.py, now shared by Qt's and GTK's screenshots),
+  with gallery.toml (titles and a line each, Russian and English); part of
+  selfcheck --night. The walks also take your own themes (~/.config/fedtail/themes),
+  never published.
+- The split layout: the roster stands beside the conversation window, never over it —
+  on its left or right where the screen has room, else at the screen's edge with the
+  window narrowed beside it (a place saved over the window is corrected once).
+- The web interface writes dates and times in fedtail's language, not the browser's.
+- GTK: the lanes' counters are pills, not ovals as high as the row.
 - selfcheck --night: everything in one run, for the night — the tests (each by name,
   the slowest, and where a hung one stood), the walks of every interface, the window at
   six sizes with what each cut or pushed out, its edge and the sidebar's dragged and

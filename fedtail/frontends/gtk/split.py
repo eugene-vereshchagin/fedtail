@@ -56,7 +56,7 @@ class RosterRow(Gtk.ListBoxRow):
         self.name = Gtk.Label(xalign=0, hexpand=True)
         self.name.set_ellipsize(Pango.EllipsizeMode.END)
         top.append(self.name)
-        self.badge = Gtk.Label()
+        self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
         self.badge.add_css_class("ft-badge")
         top.append(self.badge)
         col.append(top)

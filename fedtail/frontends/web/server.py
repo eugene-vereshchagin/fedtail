@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, urlsplit
 
-from ... import __version__, version
+from ... import __version__, i18n, version
 from ...core import config
 from ...core.view import View
 from ...i18n import _
@@ -272,6 +272,7 @@ class Web:
                 "sensitive_media": config.sensitive_media(c),
                 "quote_prefix": c["post"].get("quote_prefix", "> "),
                 "homepage": version.HOMEPAGE, "help_url": self.help_url(),
+                "lang": i18n.current_language(),
                 "words": {k: _(k) for k in WORDS}}
 
     @staticmethod

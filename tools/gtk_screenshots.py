@@ -3,8 +3,8 @@ given (all by default), light and dark.
 
     xvfb-run -a python3 tools/gtk_screenshots.py OUT_DIR [THEME ...]
 
-The GTK twin of tools/screenshots.py (docs/GTK.md); the made-up world is a small one
-of its own until the Qt tool's moves into a module both can use.
+The GTK twin of tools/screenshots.py (docs/GTK.md), on the same made-up world
+(tools/showcase.py): a theme in Qt and in GTK can be put side by side.
 """
 
 import os
@@ -17,6 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 _tmp = tempfile.mkdtemp(prefix="fedtail-gtk-shots-")
+from tools import userthemes  # noqa: E402
+
+OWN_THEMES = userthemes.bring(Path(_tmp) / "config")  # tested too, never published
 os.environ["XDG_CONFIG_HOME"] = str(Path(_tmp) / "config")
 os.environ["XDG_DATA_HOME"] = str(Path(_tmp) / "data")
 
@@ -29,72 +32,15 @@ from fedtail.frontends.gtk import theme as themes  # noqa: E402
 from fedtail.frontends.gtk.bridge import Bridge  # noqa: E402
 from fedtail.frontends.gtk.gi_setup import GLib, Gtk  # noqa: E402
 from fedtail.frontends.gtk.window import MainWindow  # noqa: E402
-from tests import fakes  # noqa: E402
-from tests.fakes import ME, FakeApi, acct, status  # noqa: E402
-
-KOT = acct("K", "kot@kot.example")
-KOT["display_name"] = "Кот Учёный"
-OSTAP = acct("O", "ostap@vivaldi.example")
-OSTAP["display_name"] = "Остап"
-NEWS = acct("N", "weather_news", bot=True)
-NEWS["display_name"] = "Погода на побережье"
-
-
-def world():
-    w = fakes.World()
-    for a in (KOT, OSTAP, NEWS, ME):
-        a["avatar_static"] = f"https://example.test/a/{a['id']}.png"
-    mine = w.add(status("100", ME, minute=1, vis="public",
-                        text="<p>Переезжаю с Drive2 на свою ноду. Кто уже, как оно?</p>"),
-                 home=True)
-    w.add(status("101", KOT, mine["id"], "ME", minute=3,
-                 text="<p>@mira перед тем как менять — проверь, что <b>экспорт</b> "
-                      "забирает и картинки.</p><blockquote><p>Кто уже, как оно?</p>"
-                      "</blockquote><p>Я переехал, <a href=\"https://kot.example/a\">"
-                      "вот заметка</a>.</p>"), home=True, mention=True)
-    w.add(status("102", OSTAP, minute=8, vis="unlisted",
-                 text="<p>Десять лет на Point, а руки всё помнят:</p><ul><li>#a3f — ответ"
-                      "</li><li>! — рекомендация</li></ul>"), home=True)
-    cw = status("103", KOT, minute=12, text="<p>Под катом.</p>")
-    cw["spoiler_text"] = "спойлер про сериал"
-    w.add(cw, home=True)
-    pic = status("104", KOT, minute=20, vis="public",
-                 text="<p>Сильный порывистый ветер до 20 м/с на побережье.</p>")
-    pic["media_attachments"] = [{"type": "image", "url": "https://example.test/m/sea.png",
-                                 "preview_url": "https://example.test/m/sea_s.png",
-                                 "description": "Волны у причала"}]
-    w.add(pic, home=True)
-    w.add(status("105", OSTAP, minute=25, text="<p>А <code>~~это~~</code> ~~зачёркнуто~~"
-                                                "</p>"), home=True)
-    return w
-
-
-def png(w, h, rgb):
-    """A plain PNG of one colour (the made-up avatars and pictures), no Pillow needed."""
-    import struct
-    import zlib
-    raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
-
-    def chunk(kind, data):
-        return struct.pack(">I", len(data)) + kind + data + \
-            struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
-    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
-            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
-
-
-FACES = {"K": (0xd9, 0xc7, 0xa3), "O": (0x5a, 0x3d, 0x5c), "N": (0x2f, 0x6f, 0x8f),
-         "ME": (0x8a, 0x3c, 0x3c)}
+from tests.fakes import FakeApi  # noqa: E402
+from tools.showcase import picture_png, world  # noqa: E402 — the world Qt's shots show
 
 
 def fake_media(url):
-    """View.media_bytes without the network: a face per person, a picture per post."""
+    """View.media_bytes without the network: the made-up world's faces and pictures."""
     from concurrent.futures import Future
     f = Future()
-    key = url.rsplit("/", 1)[-1].split(".")[0]
-    if key in FACES:
-        f.set_result(png(48, 48, FACES[key]))
-    else:
-        f.set_result(png(320, 180, (0x6f, 0x9a, 0x6a)))
+    f.set_result(picture_png(url))
     return f
 
 
@@ -233,7 +179,8 @@ def shoot_extras(win, out, stem):
 def main():
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "out")
     out.mkdir(parents=True, exist_ok=True)
-    names = sys.argv[2:] or sorted(p.stem for p in themefile.BUILTIN_DIR.glob("*.toml"))
+    names = sys.argv[2:] or sorted(p.stem for p in themefile.BUILTIN_DIR.glob("*.toml")) \
+        + OWN_THEMES
     i18n.setup("ru")
     for i, name in enumerate(names):
         for dark in (False, True):

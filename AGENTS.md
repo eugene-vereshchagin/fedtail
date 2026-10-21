@@ -22,6 +22,7 @@ xvfb-run -a python3 -m unittest tests.test_gtk_smoke   # the GTK window (python3
 python3 tools/gtk_screenshots.py out/ system point     # the same for GTK (runs xvfb-run itself)
 python3 tools/selfcheck.py --night      # all below at once (+ your account) → report.md + zip
 python3 tools/parity.py out.md           # which interface lacks what (docs/TESTPLAN.md)
+python3 tools/gallery.py out/            # the site's/docs' pictures + gallery.toml (built-in themes)
 python3 tools/qt_tour.py out/ --native   # every theme, menu (inventory) and dialog of Qt
 python3 tools/qt_bench.py / gtk_bench.py # freezes: start, lanes, scroll, menu, themes
 python3 tools/tui_check.py out/          # Textual: every lane, screen and key; SVG shots
