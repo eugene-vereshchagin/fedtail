@@ -2,6 +2,10 @@
 
 ## 0.18.0 — in progress
 
+- Help → "The look" tells where your own themes live and how fedtail reads them (from
+  `~/.config/fedtail/themes/`, never copied; `builtin/` is only a sample), and how to keep
+  them in a git repository of your own; the README in the themes folder says the same.
+
 - GTK, the split layout in the Mail.ru Agent themes (mra…): the other side's face in a
   column beside the posts, the name under it, a click — the profile; in a talk whom I
   talk to, over a lane the author under the pointer.

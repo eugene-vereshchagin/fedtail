@@ -11,6 +11,18 @@ what's unfinished). ≡ → "Try a theme" — at once, no restart, the config is
 `ui.theme`. Your own theme is a file in the themes folder (≡ → "Open themes folder", README.txt
 is there): a theme sets not only the colours but the card's layout too.
 
+## Themes of your own
+
+Your themes live in `~/.config/fedtail/themes/` (shared by all profiles), one `name.toml`
+each, and fedtail reads them right there — nothing is copied; one named as a built-in wins
+over it. The built-in themes work from fedtail's own folder, and `themes/builtin/` gets a
+copy of them at every start — a sample to start from only (fedtail doesn't read them and
+rewrites them with every version: editing them is no use). A theme's fonts go next to it
+(`[font] files`), fonts for any theme into `~/.config/fedtail/fonts/`, nothing to install.
+Your themes are handy in git: make `~/.config/fedtail/themes/` a working copy of your own
+repository and put `builtin/` in its `.gitignore` — a `git pull` there gives working themes
+at once.
+
 ## As in a messenger: the split layout
 
 `fedtail --layout split` (for good — `ui.layout = "split"`): the lanes, threads, talks and

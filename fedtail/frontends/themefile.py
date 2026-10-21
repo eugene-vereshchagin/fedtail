@@ -54,6 +54,10 @@ A theme can bring its own fonts: put the files next to it and name them in
 [font] files = ["fonts/MyFont.ttf"], then family = "My Font". Fonts for every
 theme go to ~/.config/fedtail/fonts/; ui.font in config.toml picks one over
 the theme's.
+
+fedtail reads your themes right here, nothing is copied anywhere; builtin/ is only
+a sample, rewritten at every start. To keep your themes in git, make this folder a
+working copy of your repository and put builtin/ into its .gitignore.
 """
 
 
