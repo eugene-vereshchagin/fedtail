@@ -418,6 +418,21 @@ class GtkSmokeTest(_GtkBase):
         for w in new:
             w.close()
 
+    def test_add_to_list(self):
+        """"Add to list" from a post's ⋯ and a profile, as in Qt: someone not followed —
+        the ticks dead under "follow first", Follow right there."""
+        lane = self._lane("home")
+        card = next(c for c in lane.rows.values() if c.post.id == "011")
+        card._fill_menu(card.more)
+        labels = [b.get_label() for b in _walk(card.more.get_popover())
+                  if isinstance(b, Gtk.Button)]
+        self.assertIn(i18n._("add_to_list"), labels)
+        pop = self.win.lists_popover(card.post.author, card.more)
+        self.assertTrue(pump(lambda: any(
+            isinstance(w, Gtk.Label) and w.get_text() == i18n._("list_follow_first")
+            for w in _walk(pop)), 3))
+        pop.popdown()
+
     def test_edit_my_profile(self):
         """My profile's Edit as in Qt: loaded, only what changed goes to the server."""
         ed = self.win.edit_profile()

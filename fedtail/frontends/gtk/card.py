@@ -489,6 +489,7 @@ class Card(Gtk.Box):
                            subscribed=c.subscribed, thread_quiet=c.thread_quiet,
                            in_thread=c.in_thread,
                            long_form=bool(c.cfg["feed"].get("long_form", True)),
+                           lists=True,
                            translate=bool(getattr(c.view.caps, "translation", False)))
 
     def _fill_actions(self):
@@ -542,8 +543,8 @@ class Card(Gtk.Box):
             if it.kind == "separator":
                 box.append(Gtk.Separator())
                 continue
-            if it.kind not in ("link", "open", "copy", "long_form", "translate"):
-                continue  # lists, other accounts: not in GTK yet
+            if it.kind not in ("link", "open", "copy", "long_form", "translate", "lists"):
+                continue  # as another account: not in GTK yet
             b = Gtk.Button(label=it.label)
             b.add_css_class("flat")
             b.get_child().set_xalign(0)
@@ -559,7 +560,9 @@ class Card(Gtk.Box):
             self.more.popup()
 
     def _do(self, it):
-        if it.kind == "translate":
+        if it.kind == "lists":
+            self.ctx.win.lists_popover(it.data, self.more)
+        elif it.kind == "translate":
             self.translate()
         elif it.kind == "long_form":
             self.ctx.win.read_whole(it.data)

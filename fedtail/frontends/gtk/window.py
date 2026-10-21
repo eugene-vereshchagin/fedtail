@@ -694,12 +694,18 @@ class MainWindow(Gtk.ApplicationWindow):
             self.tabs.remove_page(self.tabs.page_num(page))
         self._tab_switched()
 
-    def new_list(self):
+    def new_list(self, add=None):
+        """A new list (add: someone to put in it at once)."""
         from . import dialogs
         dialogs.ask_text(self, _("list_new").rstrip("…"), _("list_name_q"),
-                         lambda title: self.call(self.view.create_list(title),
+                         lambda title: self.call(self.view.create_list(title, add=add),
                                                  lambda x: self.status(
                                                      _("list_created", title=x.title))))
+
+    def lists_popover(self, account, anchor):
+        """"Add to list" for someone: the lists, ticked where they are (gtk/lists.py)."""
+        from . import lists
+        return lists.popover(self, account, anchor)
 
     def test_notification(self):
         self.status(_("debug_notify_sent", backend=self.notifier.test()))
@@ -1378,16 +1384,18 @@ class MainWindow(Gtk.ApplicationWindow):
             meta.set_visible(bool(bits))
             while (c := buttons.get_first_child()) is not None:
                 buttons.remove(c)
-            for act in prof.actions(acc, rel, own, self.cfg, self.view.supports):
-                if act.key == "lists":
-                    continue
+            for act in prof.actions(acc, rel, own, self.cfg, self.view.supports, lists=True):
                 b = Gtk.Button(label=act.label)
                 if act.primary:
                     b.add_css_class("ft-primary")
                 if act.tip:
                     tip(b, act.tip)
-                b.connect("clicked", lambda _b, k=act.key: prof.do(
-                    k, acc, state["rel"], self.view, self, fill))
+                if act.key == "lists":
+                    b.set_label(act.label + " ▾")
+                    b.connect("clicked", lambda b: self.lists_popover(acc, b))
+                else:
+                    b.connect("clicked", lambda _b, k=act.key: prof.do(
+                        k, acc, state["rel"], self.view, self, fill))
                 buttons.append(b)
             line = prof.note_line(rel, own)
             note.set_text(line)
