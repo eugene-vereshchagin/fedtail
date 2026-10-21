@@ -48,6 +48,7 @@ from ...model import Account, Post, Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet
 from .. import themefile
+from ..common import sidebar
 from ..common.links import Links
 from . import badge
 from . import card as card_module
@@ -1144,16 +1145,10 @@ class MainWindow(QMainWindow):
         self.lane_items = {}
         self.lane_order = []
         self.group_heads, self.group_rows = {}, {}
-        if self.cfg["ui"]["sidebar_groups"]:
-            groups = lanes_module.grouped(self.core.lanes)
-        else:
-            groups = [(None, [x.name for x in self.core.lanes if not lanes_module.is_list(x.name)]),
-                      ("lists", [x.name for x in self.core.lanes if lanes_module.is_list(x.name)])]
+        groups = sidebar.groups(self.ctx.view, self.cfg)
         titles = {x.id: x for x in self.ctx.view.lists}
         for group, names in groups:
             if group == "lists":
-                if not self.cfg["lists"]["enabled"]:
-                    continue
                 self._section_header(_("lists_header"), group, plus=True)
             elif not names:
                 continue
@@ -1472,13 +1467,10 @@ class MainWindow(QMainWindow):
 
     # ---- folding sections of the sidebar -----------------------------------------------
     def folded_groups(self):
-        return set(self.core.get_state("folded_groups") or [])
+        return sidebar.folded(self.ctx.view)
 
     def fold_group(self, group, fold=None):
-        folded = self.folded_groups()
-        fold = (group not in folded) if fold is None else fold
-        (folded.add if fold else folded.discard)(group)
-        self.core.set_state("folded_groups", sorted(folded))
+        fold = sidebar.fold(self.ctx.view, group, fold)
         names = set(self.group_rows.get(group, ()))
         for i in range(self.lanes.count()):
             it = self.lanes.item(i)
@@ -1511,22 +1503,11 @@ class MainWindow(QMainWindow):
             self._show_lane_tab = False
 
     def update_badges(self):
-        total = 0
-        for name, item in getattr(self, "lane_items", {}).items():
-            if not self.core.me:
-                n = 0
-            elif name == "requests":
-                n = len(self.core.follow_requests)
-            elif name == "activity":
-                n = self.core.activity_unread()
-            elif getattr(self.core.lane_by_name.get(name), "lazy", False):
-                n = 0  # browse lanes have no "unread"
-            else:
-                n = self.core.unread_count(name)
-            if self.core.lane_chosen(name, self.cfg["ui"]["icon_count"],
-                                     self.cfg["ui"].get("icon_count_except", [])):
-                total += n
-            item.set_count(n)
+        items = getattr(self, "lane_items", {})
+        numbers = sidebar.counts(self.ctx.view, items)
+        total = sidebar.icon_total(self.ctx.view, self.cfg, numbers)
+        for name, item in items.items():
+            item.set_count(numbers[name])
         for g in getattr(self, "group_heads", {}):
             self._show_fold(g)
         if getattr(self, "curtain", None) is not None and self.curtain_shown():

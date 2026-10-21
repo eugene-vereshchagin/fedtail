@@ -6,7 +6,6 @@ tab it writes a new post. Small buttons around it: who sees it, a content warnin
 schedule)."""
 
 import logging
-import re
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QTextCursor
@@ -25,8 +24,9 @@ from PySide6.QtWidgets import (
 
 from ...i18n import _
 from ...model import VISIBILITIES, Scheduled
-from ...model.text import reply_mentions
 from ..common import compose as rules
+from ..common import split
+from ..common.split import talk_with  # noqa: F401  (Qt's name for it)
 from .card import VIS_KEY
 
 log = logging.getLogger(__name__)
@@ -195,12 +195,13 @@ class InputDock(QWidget):
         """A private message to someone (a person in the roster): "@them ", direct."""
         self.target = None
         self.set_target(None, fresh=True)
-        self._prefill = "@" + account.handle + " "
+        start = split.private_start(account)
+        self._prefill = start.prefill
         self.text.setPlainText(self._prefill)
         self.text.moveCursor(QTextCursor.MoveOperation.End)
-        self.set_visibility("direct")
-        self.show_whom(account)
-        self._about = _("dock_private", name=account.username or account.handle)
+        self.set_visibility(start.visibility)
+        self.show_whom(start.whom)
+        self._about = start.about
         self._say()
         if focus:
             self.text.setFocus()
@@ -220,29 +221,22 @@ class InputDock(QWidget):
         view = self.win.ctx.view
         if fresh is None:
             fresh = not self._typed()
+        start = split.reply_start(view, post)
         if fresh:  # nothing of mine yet: start anew
-            me = view.me if self.win.core.me else None
-            self._prefill = reply_mentions(post, me.handle if me else "") if post else ""
+            self._prefill = start.prefill
             self.text.setPlainText(self._prefill)
             self.text.moveCursor(QTextCursor.MoveOperation.End)
-            self.visibility = view.reply_visibility(post)
+            self.visibility = start.visibility
             self._show_visibility()
-        self.show_whom(post.author if post else None)
-        self._about = _("dock_reply", name=post.author.username) if post \
-            else _("dock_new")
+        self.show_whom(start.whom)
+        self._about = start.about
         self._say()
 
     def show_whom(self, account):
         """The face beside the line: whom this goes to (None: nobody in particular) —
         or, as the Agent had it (shape.faces = "agent"), mine whoever it goes to."""
         me = self.win.ctx.view.me if self.win.core.me else None
-        mode = faces_mode(self.win)
-        if mode == "agent":
-            account = me
-        elif mode == "none":
-            account = None
-        elif account is not None and me is not None and account.id == me.id:
-            account = None
+        account = split.face(faces_mode(self.win), account, me)
         self._to = account
         self.face.setVisible(account is not None)
         self.face.setToolTip("@" + account.handle if account else "")
@@ -252,8 +246,7 @@ class InputDock(QWidget):
     def _say(self):
         """Above the line, in words: where this goes and who will see it — "in the
         thread: a reply to andy · seen by: followers"."""
-        vis = _("vis_short_" + VIS_KEY.get(self.visibility, self.visibility))
-        self.about.setText(f"{self._about} · {_('dock_seen_by', who=vis)}")
+        self.about.setText(split.about_line(self._about, self.visibility))
 
     def set_visibility(self, vis):
         self.visibility = vis
@@ -277,13 +270,7 @@ class InputDock(QWidget):
         """The text, when it is a Point-style command (ui.dock_commands): "#a3f",
         "#a3f text", "! #a3f", "S #a3f", "?" — one line; "@user …" stays a post here
         (a reply begins with it)."""
-        text = self.text.toPlainText().strip()
-        if not self.win.cfg["ui"].get("dock_commands", True) or "\n" in text or \
-                text == self._prefill.strip():
-            return None
-        if re.match(r"^(#[a-z][0-9a-z]{2,}|[!~?]|[SUD]\s+[#@])", text):
-            return text
-        return None
+        return split.command(self.text.toPlainText(), self._prefill, self.win.cfg)
 
     def put_alias(self, alias):
         """A click on a post's #abc: "#abc " at the start, the cursor at the end."""
@@ -370,9 +357,7 @@ class InputDock(QWidget):
 def faces_mode(win):
     """How the split layout shows faces: the theme's shape.faces ("qip", "agent",
     "none"), "none" with ui.faces = false."""
-    if not win.cfg["ui"].get("faces", True):
-        return "none"
-    return win.theme.shape.get("faces", "qip")
+    return split.faces_mode(win.cfg, win.theme.shape)
 
 
 class AgentFace(QWidget):
@@ -513,13 +498,7 @@ def other_side(win, me):
         spec = getattr(row, "spec", None)
         if spec is not None and spec.entry is not None:
             post = real(spec.entry)
-    dock = win.dock
-    if (post is None or (me and post.author.id == me.id)) and dock is not None \
-            and dock.target is not None:
-        post = dock.target
-    if post is None or (me and post.author.id == me.id):
-        return None
-    return post.author
+    return split.other_side(post, me, win.dock.target if win.dock is not None else None)
 
 
 class AuthorBar(QWidget):
@@ -935,23 +914,6 @@ class MessageTabs(QWidget):
         self.sync()
         if self.count() == 0:
             self.win.hide()  # the last conversation closed: the messages window goes too
-
-
-def talk_with(view, entries, handle):
-    """The entries of a private lane that are between me and this one person only:
-    written by them to me alone, or by me to them alone."""
-    from ...model import real
-    from ...model.text import norm_handle
-    me = norm_handle(view.me.handle) if view.me else ""
-    them = norm_handle(handle)
-    out = []
-    for item, e in entries:
-        p = real(e)
-        people = {norm_handle(p.author.handle)} | {norm_handle(m.handle) for m in p.mentions}
-        people.discard(me)
-        if people == {them}:
-            out.append((item, e))
-    return out
 
 
 class TalkWidget(QWidget):

@@ -7,7 +7,7 @@ from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
 from ...i18n import _
-from ...model.text import haystack, matches
+from ..common import find as rules
 
 
 class FindBar(QWidget):
@@ -98,15 +98,13 @@ class FindBar(QWidget):
             if self.all_hits is None or self._all_query != self.edit.text():
                 self._search_all(jump=True)
             elif self.all_hits:
-                self.all_pos = (self.all_pos + delta) % len(self.all_hits) \
-                    if self.all_pos >= 0 else (0 if delta > 0 else len(self.all_hits) - 1)
+                self.all_pos = rules.step(self.all_pos, len(self.all_hits), delta)
                 self._go_all()
             return
         self.search(jump=False)  # the view may have changed since
         if not self.hits:
             return
-        self.pos = (self.pos + delta) % len(self.hits) if self.pos >= 0 else \
-            (0 if delta > 0 else len(self.hits) - 1)
+        self.pos = rules.step(self.pos, len(self.hits), delta)
         self._go()
 
     # ---- searching -------------------------------------------------------------------
@@ -121,13 +119,10 @@ class FindBar(QWidget):
         query = self.edit.text()
         old = self.hits[self.pos] if 0 <= self.pos < len(self.hits) else None
         self.hits = []
-        if view is not None and query.strip():
+        if view is not None:
             # every post of the lane, also those whose cards aren't built yet
-            for spec in view.model or [view.rows[k].spec for k in view.order]:
-                if spec.entry is None or spec.extra.get("separator"):
-                    continue
-                if matches(query, haystack(spec.entry, spec.extra.get("short_id"))):
-                    self.hits.append(spec.key)
+            self.hits = rules.hits(view.model or [view.rows[k].spec for k in view.order],
+                                   query)
         if old in self.hits:
             self.pos = self.hits.index(old)
         elif jump and self.hits:
@@ -309,24 +304,14 @@ class FindBar(QWidget):
         self.deeper.setVisible(not everywhere and bool(self._lane_name()) and
                                bool(self.edit.text().strip()))
         if everywhere:
-            hit, n = self._all_hit(), len(self.all_hits or [])
-            if not self.edit.text().strip() or self.all_hits is None:
-                self.count.setText("")
-            elif not n:
-                self.count.setText(_("find_none_anywhere"))
-            else:
-                self.count.setText(_("find_count_lane", i=self.all_pos + 1, n=n,
-                                     lane=self.win.lane_title(hit["lane"]) if hit else ""))
-            over = bool(self.edit.text().strip()) and self.all_hits == []
-        elif not self.edit.text().strip():
-            self.count.setText("")
-        elif not self.hits:
-            self.count.setText(_("find_none"))
+            hit = self._all_hit()
+            text, over = rules.count_text(
+                self.edit.text(), self.all_pos, len(self.all_hits or []),
+                self.win.lane_title(hit["lane"]) if hit else "", everywhere=True,
+                searched=self.all_hits is not None)
         else:
-            self.count.setText(_("find_count", i=self.pos + 1 if self.pos >= 0 else 0,
-                                 n=len(self.hits)))
-        if not everywhere:
-            over = bool(self.edit.text().strip()) and not self.hits
+            text, over = rules.count_text(self.edit.text(), self.pos, len(self.hits))
+        self.count.setText(text)
         self.count.setProperty("over", "true" if over else "false")
         self.count.style().unpolish(self.count)
         self.count.style().polish(self.count)

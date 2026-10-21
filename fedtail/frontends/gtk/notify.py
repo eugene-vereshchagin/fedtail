@@ -34,13 +34,8 @@ class Notifier:
 
     def notify(self, items):
         """items: [(lane, a post, account or notification)] from the core."""
-        if not items or not self.cfg["enabled"]:
-            return
-        items = self.win.view.model_of(list(items))
-        for note in notifytext.build(items, self.cfg["privacy"], self.win.lane_title):
-            if not self.cfg["when_focused"] and self.on_screen(note.lane):
-                log.info("notify: %s skipped, that lane is on screen", note.lane)
-                continue
+        for note in notifytext.due(self.win.view, items, self.cfg, self.on_screen,
+                                   self.win.lane_title):
             self.show(note)
 
     def on_screen(self, lane):

@@ -112,6 +112,17 @@ class GtkSmokeTest(unittest.TestCase):
         self.win.update_badges()
         self.assertFalse(self.win.lane_rows["home"].badge.get_visible())
 
+    def test_a_section_folds(self):
+        from fedtail.frontends.gtk.window import SectionRow
+        heads = [r for r in _walk(self.win.sidebar) if isinstance(r, SectionRow)]
+        if not heads:
+            self.skipTest("no sections in this sidebar")
+        head = heads[0]
+        self.win._row_activated(self.win.sidebar, head)
+        self.assertTrue(all(not self.win.lane_rows[n].get_visible() for n in head.names))
+        self.win._row_activated(self.win.sidebar, head)
+        self.assertTrue(all(self.win.lane_rows[n].get_visible() for n in head.names))
+
     def test_filters_and_the_funnel(self):
         """The header's choices (common/lane.py): posts only, the media funnel."""
         lane = self._lane("home")

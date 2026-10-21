@@ -7,6 +7,7 @@ privacy:
 """
 
 import html
+import logging
 from dataclasses import dataclass
 
 from ..i18n import _
@@ -19,6 +20,7 @@ ACTIVITY_ORDER = ["follow", "like", "share"]
 ACT_WORDS = {"follow": "notify_act_follow_n", "like": "notify_act_favourite_n",
              "share": "notify_act_reblog_n"}
 MAX_LINES = 3
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -74,6 +76,25 @@ def build(items, privacy="full", titles=None):
     kinds = [k for k in ACTIVITY_ORDER if k in acts] + sorted(k for k in acts
                                                               if k not in ACTIVITY_ORDER)
     return notes + [_activity_note(k, acts[k], privacy) for k in kinds]
+
+
+def due(view, items, cfg, on_screen, titles=None):
+    """The notes to show now for what the core says came (items: [(lane, a post,
+    account or notification)]): none when notify.enabled is off; without the ones about
+    a lane the reader is looking at (on_screen(lane)), unless notify.when_focused."""
+    if not items:
+        return []
+    if not cfg["enabled"]:
+        log.debug("notify: %d new, notifications are off", len(items))
+        return []
+    notes = []
+    for note in build(view.model_of(list(items)), cfg["privacy"], titles):
+        if not cfg["when_focused"] and on_screen(note.lane):
+            log.info("notify: %s skipped, that lane is on screen (notify.when_focused)",
+                     note.lane)
+            continue
+        notes.append(note)
+    return notes
 
 
 def _activity_note(kind, notifs, privacy):

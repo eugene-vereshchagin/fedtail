@@ -183,7 +183,7 @@ def fit_for_server(path, caps, folder, images):
 
     images: the toolkit's pictures — size(path) -> (w, h) or None, load(path) -> img or
     None, scaled(img, w, h), dims(img) -> (w, h), alpha(img), save(img, out, kind,
-    quality) -> bool. (qt/compose.py still has its own copy of this; GTK uses this one.)"""
+    quality) -> bool (qt/compose.py _QtImages, gtk/compose.py _PixbufImages)."""
     import logging
     import os
     from pathlib import Path

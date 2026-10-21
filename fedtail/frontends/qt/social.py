@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from ...i18n import _
 from ...model.text import snippet
+from ..common import server
 from .feed import AccountRow, FeedView, TagRow, _button, _Header, _PagedTab
 from .text import clean, esc
 
@@ -187,26 +188,7 @@ def _section(text):
 def server_html(win, info):
     """What my server says about itself (a ServerInfo), as a page."""
     css = win.theme.css("link")
-    parts = [f"<h2>{esc(info.title or info.domain)}</h2>"]
-    desc = info.description
-    if desc:
-        # HTML on GoToSocial and older Mastodon, plain text on Mastodon 4
-        parts.append(clean(desc, css) if "<" in desc else f"<p>{esc(desc)}</p>")
-    who = ", ".join(x for x in ("@" + info.contact.handle if info.contact else "",
-                                info.email) if x)
-    if who:
-        parts.append(f"<p>{esc(_('server_contact', who=who))}</p>")
-    if info.about:
-        parts.append(clean(info.about, css))
-    if info.rules:
-        parts.append(f"<h3>{esc(_('server_rules'))}</h3><ol>" +
-                     "".join(f"<li>{esc(text)}"
-                             + (f"<br><small>{esc(hint)}</small>" if hint else "")
-                             + "</li>" for text, hint in info.rules)
-                     + "</ol>")
-    if info.privacy:
-        parts.append(f"<h3>{esc(_('server_privacy'))}</h3>" + clean(info.privacy, css))
-    return "".join(parts)
+    return server.server_html(info, lambda html: clean(html, css))
 
 
 class ServerInfoDialog(QDialog):
@@ -298,10 +280,8 @@ class ProbeWidget(QWidget):
         rows = [it for it in (items or [self.probe_table.topLevelItem(i) for i in
                                         range(self.probe_table.topLevelItemCount())])]
         rows = list(dict.fromkeys(rows))  # a selected row comes once per column
-        head = f"{self.domain} — {self.probe_note.text()}".strip(" —")
-        lines = [head, "", f"| {_('probe_what')} | {_('probe_answer')} |", "|---|---|"]
-        lines += [f"| {it.text(0)} | {it.text(1)} |" for it in rows]
-        return "\n".join(lines) + "\n"
+        return server.probe_markdown(self.domain, self.probe_note.text(),
+                                     [(it.text(0), it.text(1)) for it in rows])
 
     def _copy(self, selected=False):
         from PySide6.QtGui import QGuiApplication

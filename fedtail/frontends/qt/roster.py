@@ -23,7 +23,8 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import _
-from ...model.text import snippet
+from ..common import roster as rules
+from ..common.roster import LOOK, row_key  # noqa: F401  (Qt's names)
 from .text import display_name, esc
 
 log = logging.getLogger(__name__)
@@ -34,10 +35,6 @@ REFRESH_MS = 300  # coalesce bursts of events into one rebuild
 _ICONS = {}       # a lane kind's icon, looked up once
 # how the roster looks (the ⚙ menu, kept in state): a compact one is a line an item —
 # no status line, no face; the header, the search and the bottom row can go
-LOOK = {"compact": False, "header": True, "search": True, "bottom": True,
-        "only_new": False, "groups": True, "on_top": None}
-
-
 class RosterRow(QWidget):
     """One item: icon, the lane's name (bold when there is something new), the count,
     and under it the newest post as a status line; its author's face on the right."""
@@ -125,31 +122,14 @@ class RosterRow(QWidget):
         self.name.style().polish(self.name)
         self.badge.setText(str(item.unread) if item.unread < 1000 else "999+")
         self.badge.setVisible(new)
-        last = item.last
-        if last is None and item.who is not None:
-            self.line.setText("@" + item.who.handle)  # no talk yet: who it is
-            self.line.setToolTip("")
-        elif last is not None:
-            a = last.author
-            # a status line: who wrote last and how it begins, plain text
-            self.line.setText(f"{a.name or a.username or a.handle}: {snippet(last, 80)}")
-            self.line.setToolTip(snippet(last, 300))
-        else:
-            self.line.setText("")
-        self.line.setVisible(bool(self.line.text()) and not self.compact)
+        line, tip, status = rules.lines(item, self.faces)
+        self.line.setText(line)
+        self.line.setToolTip(tip)
+        self.line.setVisible(bool(line) and not self.compact)
         if self.faces:
-            if item.who is not None:
-                status = "@" + item.who.handle
-                if last is not None:
-                    self.line.setText(snippet(last, 80))
-            elif new:
-                status = _("roster_unread", n=item.unread)
-            else:
-                status = _("roster_total", n=item.total) if item.total else ""
             self.status.setText(status)
             self.status.setVisible(bool(status))
-        url = item.who.avatar_static if item.who is not None else \
-            last.author.avatar_static if last is not None else ""
+        url = rules.face_url(item)
         if self.faces and not url:  # a big frame with nobody in it: the lane's own picture
             self.face.setVisible(not self.compact and self.icon_pm is not None)
             if self.icon_pm is not None and self._face_url != "":
@@ -172,25 +152,16 @@ class RosterRow(QWidget):
                         _round(pm, w.width())))
         self._tip(item, new)
 
-    def _tip(self, item, new):
-        tip = item.title + (f" — {_('roster_unread', n=item.unread)}" if new else "")
-        # a person has the card instead of a tooltip
-        self.setToolTip("" if item.kind == "person" else tip)
+    def _tip(self, item, _new=None):
+        self.setToolTip(rules.tip(item))  # a person has the card instead of a tooltip
 
     def matches(self, text):
-        t = text.casefold()
-        return not t or t in self.item.title.casefold() or t in self.line.text().casefold()
+        return rules.matches(self.item, self.line.text(), text)
 
 
 def pop_menu(menu, btn, above=True):
     from .window import pop_menu as pop  # the window's (it pops its own menus too)
     pop(menu, btn, above)
-
-
-def row_key(item):
-    """A roster item's key among the rows: a lane by its name, a thread or talk by kind
-    and id (one thread may be both followed and private)."""
-    return item.key if item.kind == "lane" else f"{item.kind}/{item.key}"
 
 
 def _alive(w):
@@ -312,9 +283,8 @@ class RosterWindow(QWidget):
         self.head_box = head
         self.rows, self.heads = {}, {}
         self._queue, self._tall = [], {}
-        self.folded = set(win.core.get_state("roster_folded", []) or [])
-        got = win.core.get_state("roster_look", {}) or {}
-        self.look = dict(LOOK, **{k: bool(v) for k, v in got.items() if k in LOOK})
+        self.folded = rules.folded(win.ctx.view)
+        self.look = rules.look(win.ctx.view)
         self._shape = None
         self._mutuals_asked = False
         self._timer = QTimer(self, singleShot=True, interval=REFRESH_MS)
@@ -473,10 +443,9 @@ class RosterWindow(QWidget):
             group = it.data(Qt.ItemDataRole.UserRole + 1)
             row = self.rows.get(key)
             folded = group in self.folded and self.look["groups"]
-            hide = (not text and (folded or (self.look["only_new"] and row is not None
-                                             and not row.item.unread))) or \
-                (row is not None and not row.matches(text))
-            it.setHidden(hide)
+            it.setHidden(rules.hidden(row.item if row is not None else None,
+                                      row.line.text() if row is not None else "", text,
+                                      folded, self.look))
 
     def toggle(self, group):
         self.folded ^= {group}
@@ -487,7 +456,7 @@ class RosterWindow(QWidget):
     def open(self, key):
         """An item chosen (a row's key): its lane, or its thread, in front in the
         messages window."""
-        kind, _sep, post_id = key.partition("/") if "/" in key else ("lane", "", key)
+        kind, post_id = rules.what(key)
         self.win.show_raise()  # first: what opens in a shown window gets a tab
         if kind == "lane":
             self.win.select_lane(key)
@@ -535,10 +504,7 @@ class RosterWindow(QWidget):
         """Everything in it read (marking the read ones again changes nothing)."""
         view = self.win.ctx.view
         row = self.rows.get(key)
-        if row is not None and row.item.kind != "lane":
-            ids = list(row.item.ids)
-        else:
-            ids = [e.id for _item, e in view.entries(key)]
+        ids = rules.read_ids(view, key, row.item if row is not None else None)
         if ids:
             view.mark_read(ids)
 

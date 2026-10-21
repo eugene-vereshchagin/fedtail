@@ -1,17 +1,13 @@
 """Brings core events and futures into the GTK main loop (GLib.idle_add — what Qt's
-queued signals are to the Qt frontend). Error handling as in qt/bridge.py."""
+queued signals are to the Qt frontend). Results are handled as in Qt (common/results.py)."""
 
 import logging
 
-import requests
-
 from ... import diag
-from ...protocols.base import ServerError
+from ..common import results
 from .gi_setup import GLib
 
 log = logging.getLogger(__name__)
-
-EXPECTED = (requests.RequestException, ServerError, TimeoutError, ConnectionError)
 
 
 class Bridge:
@@ -50,21 +46,7 @@ class Bridge:
         return GLib.SOURCE_REMOVE
 
     def _handle(self, future, ok, fail):
-        exc = future.exception()
-        try:
-            if exc is not None:
-                if isinstance(exc, EXPECTED):
-                    (log.debug if fail else log.warning)(
-                        "call failed: %s: %s", type(exc).__name__, exc)
-                else:
-                    log.warning("call failed: %s", exc, exc_info=exc)
-                handler = fail or self.on_error
-                if handler:
-                    handler(str(exc))
-            elif ok:
-                ok(future.result())
-        except Exception as e:  # a bug in a handler
-            self._report(e)
+        results.handle(future, ok, fail, self.on_error)
 
     def _report(self, e):
         log.exception("handler failed")

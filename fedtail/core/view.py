@@ -39,6 +39,7 @@ from ..model import (
     RosterItem,
     Scheduled,
     Share,
+    Silenced,
     ThreadItem,
     Translation,
     real,
@@ -542,6 +543,24 @@ class View:
             except OSError:
                 pass
         return data
+
+    def filters(self):
+        """Future: [WordFilter] — my filters on the server."""
+        return _then(self._core.filters(), lambda got: [adapter.word_filter(f) for f in got or ()])
+
+    def silenced_people(self):
+        """Future: Silenced — whom I muted and blocked, the servers I blocked."""
+        def conv(got):
+            got = got or {}
+            return Silenced(tuple(self.acc(a) for a in got.get("muted") or ()),
+                            tuple(self.acc(a) for a in got.get("blocked") or ()),
+                            tuple(got.get("domains") or ()))
+        return _then(self._core.silenced_people(), conv)
+
+    def announcements(self):
+        """Future: [Announcement] not dismissed yet, oldest first."""
+        return _then(self._core.announcements(),
+                     lambda got: [adapter.announcement(a) for a in got or ()])
 
     def server_info(self):
         """Future: my server about itself (ServerInfo)."""

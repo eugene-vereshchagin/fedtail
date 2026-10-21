@@ -2575,9 +2575,6 @@ class QtSmokeTest(unittest.TestCase):
         lane = self.win.lane_widgets["home"]
         lane.view.rebuild_rows()
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_announcements_banner(self):
         self.world.announcements = [
             {"id": "a1", "content": "<p>Обновление в полночь</p>", "read": False,
@@ -2799,3 +2796,7 @@ if __name__ == "__main__":
                 r = place(cursor, size, area)
                 self.assertFalse(r.contains(cursor), (x, y))
                 self.assertTrue(area.contains(r), (x, y))
+
+
+if __name__ == "__main__":
+    unittest.main()

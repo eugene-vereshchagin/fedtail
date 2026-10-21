@@ -28,7 +28,7 @@ class SilenceDialog(QDialog):
 
     def __init__(self, win, tab="filters"):
         super().__init__(win)
-        self.win, self.core = win, win.core
+        self.win, self.core = win, win.ctx.view  # filters and people as fedtail.model
         self.setWindowTitle(_("silence_title"))
         self.setMinimumSize(560, 460)
         lay = QVBoxLayout(self)
@@ -150,23 +150,22 @@ class SilenceDialog(QDialog):
     def _filters(self, filters):
         self.filter_list.clear()
         for f in filters:
-            words = ", ".join(k.get("keyword", "") for k in f.get("keywords") or [])
-            how = _("filter_hide") if f.get("filter_action") == "hide" else _("filter_warn")
-            it = QListWidgetItem(f"{f.get('title') or words} — {how}"
-                                 + (f" ({words})" if words and words != f.get("title") else ""))
-            it.setData(Qt.ItemDataRole.UserRole, f["id"])
+            words = ", ".join(f.words)
+            how = _("filter_hide") if f.action == "hide" else _("filter_warn")
+            it = QListWidgetItem(f"{f.title or words} — {how}"
+                                 + (f" ({words})" if words and words != f.title else ""))
+            it.setData(Qt.ItemDataRole.UserRole, f.id)
             self.filter_list.addItem(it)
 
     def _people(self, got):
         self.domain_list.clear()
-        for d in got.get("domains") or []:
+        for d in got.domains:
             it = QListWidgetItem(d)
             it.setData(Qt.ItemDataRole.UserRole, d)
             self.domain_list.addItem(it)
-        for lst, accounts in ((self.muted_list, got["muted"]), (self.blocked_list, got["blocked"])):
+        for lst, accounts in ((self.muted_list, got.muted), (self.blocked_list, got.blocked)):
             lst.clear()
             for a in accounts:
-                it = QListWidgetItem(f"{a.get('display_name') or a.get('username', '')} "
-                                     f"@{a.get('acct', a['id'])}")
-                it.setData(Qt.ItemDataRole.UserRole, a["id"])
+                it = QListWidgetItem(f"{a.name or a.username} @{a.handle or a.id}")
+                it.setData(Qt.ItemDataRole.UserRole, a.id)
                 lst.addItem(it)

@@ -452,6 +452,32 @@ class UserList:
 
 
 @dataclass(frozen=True, slots=True)
+class WordFilter:
+    """A filter of mine on the server: posts with these words folded or hidden."""
+    id: str
+    title: str = ""
+    words: tuple[str, ...] = ()
+    action: str = "warn"           # warn | hide
+
+
+@dataclass(frozen=True, slots=True)
+class Silenced:
+    """Whom I muted and blocked, and the servers I blocked."""
+    muted: tuple[Account, ...] = ()
+    blocked: tuple[Account, ...] = ()
+    domains: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class Announcement:
+    """The server's word to everyone on it (shown above the lanes)."""
+    id: str
+    html: str = ""
+    published: datetime | None = None
+    reactions: tuple[Reaction, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class Relationship:
     """Between me and an account."""
     following: bool = False

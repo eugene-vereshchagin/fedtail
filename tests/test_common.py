@@ -230,6 +230,118 @@ class CommonTest(TmpDir):
         self.assertEqual(lanes.seen(-80, -10, 0, 100, glimpsed=True), "read")  # went past
         self.assertIsNone(lanes.seen(200, 300, 0, 100))
 
+    # ---- what the Silence dialog and the announcements bar get -------------------------------
+    def test_filters_people_announcements_as_the_model(self):
+        self.core.add_filter("крипта", ["крипта", "nft"], "hide").result()
+        (f,) = self.view.filters().result()
+        self.assertEqual((f.title, f.words, f.action), ("крипта", ("крипта", "nft"), "hide"))
+        self.core.mute("B").result()
+        got = self.view.silenced_people().result()
+        self.assertEqual([a.id for a in got.muted], ["B"])
+        self.w.announcements = [{"id": "a1", "content": "<p>hi</p>", "read": False,
+                                 "published_at": "2099-10-14T09:00:00.000Z",
+                                 "reactions": [{"name": "👍", "count": 2, "me": False}]}]
+        (a,) = self.view.announcements().result()
+        self.assertEqual((a.id, a.published.year, a.reactions[0].count), ("a1", 2099, 2))
+        from fedtail.frontends.common.announce import react
+        after = react(a.reactions, "👍", True)
+        self.assertEqual((after[0].count, after[0].me), (3, True))
+        self.assertEqual(react(after, "👍", False)[0].count, 2)
+        self.assertEqual([r.name for r in react((), "🎉", True)], ["🎉"])
+
+    # ---- the split layout ------------------------------------------------------------------
+    def test_the_input_line_of_the_split_layout(self):
+        from fedtail.frontends.common import split
+        bob = self.view.by_id("001")
+        start = split.reply_start(self.view, bob)
+        self.assertTrue(start.prefill.startswith("@bob"))
+        self.assertEqual(start.whom.id, bob.author.id)
+        self.assertEqual(split.private_start(bob.author).visibility, "direct")
+        cfg = self.core.cfg
+        self.assertEqual(split.command("#a3f hi", "", cfg), "#a3f hi")
+        self.assertIsNone(split.command("@bob hi", "", cfg))
+        self.assertIsNone(split.command("#a3f\nhi", "", cfg))
+        self.assertIsNone(split.command(start.prefill, start.prefill, cfg))
+        me = self.view.by_id("002").author
+        self.assertIsNone(split.face("qip", me, me))
+        self.assertEqual(split.face("agent", bob.author, me), me)
+        self.assertEqual(split.other_side(self.view.by_id("002"), me, bob).id, bob.author.id)
+        self.assertIsNone(split.other_side(None, me))
+        self.assertIn("·", split.about_line(start.about, "public"))
+
+    def test_the_roster_rows(self):
+        from fedtail.frontends.common import roster
+        from fedtail.model import RosterItem
+        bob = self.view.by_id("001")
+        lane = RosterItem("lane", "home", "Home", unread=2, total=5, last=bob)
+        talk = RosterItem("talk", "001", "Bob", ids=("001",))
+        person = RosterItem("person", "B", "Bob", who=bob.author)
+        self.assertEqual([roster.row_key(x) for x in (lane, talk)], ["home", "talk/001"])
+        self.assertEqual(roster.what("talk/001"), ("talk", "001"))
+        self.assertEqual(roster.what("home"), ("lane", "home"))
+        line, tip, status = roster.lines(lane, faces=True)
+        self.assertIn("hello", line)
+        self.assertTrue(status)
+        self.assertEqual(roster.lines(person, faces=False)[0], "@" + bob.author.handle)
+        self.assertEqual(roster.tip(person), "")
+        look = dict(roster.LOOK, only_new=True)
+        self.assertTrue(roster.hidden(talk, "", "", False, look))      # read: away
+        self.assertFalse(roster.hidden(lane, line, "", False, look))
+        self.assertTrue(roster.hidden(lane, line, "nothing like it", False, look))
+        self.assertEqual(roster.read_ids(self.view, "talk/001", talk), ["001"])
+        self.assertEqual(roster.look(self.view)["groups"], True)
+
+    def test_results_reach_the_window(self):
+        from concurrent.futures import Future
+
+        from fedtail.frontends.common import results
+        said = []
+        bad = Future()
+        bad.set_exception(TimeoutError("slow"))
+        results.handle(bad, None, said.append)
+        good = Future()
+        good.set_result(1)
+        with self.assertLogs("fedtail.frontends.common.results", "ERROR"):
+            results.handle(good, lambda _r: 1 / 0, None, on_error=said.append)
+        gone = Future()
+        gone.set_result(1)
+        results.handle(gone, lambda _r: (_ for _ in ()).throw(RuntimeError("deleted")), None,
+                       on_error=said.append, gone=lambda e: isinstance(e, RuntimeError))
+        self.assertEqual(said, ["slow", "ZeroDivisionError: division by zero"])
+
+    def test_server_page_probe_table_profile_changes(self):
+        from fedtail.frontends.common import server
+        from fedtail.model import MyProfile, ServerInfo
+        info = ServerInfo(title="Ex", domain="x.test", description="plain <words>",
+                          rules=(("be nice", "really"),), about="<p>long</p>")
+        page = server.server_html(info, lambda h: "[" + h + "]")
+        self.assertIn("<h2>Ex</h2>", page)
+        self.assertIn("[plain <words>]", page)  # "<" in it: HTML, the toolkit cleans it
+        self.assertIn("<li>be nice<br><small>really</small></li>", page)
+        md = server.probe_markdown("x.test", "today", [("polls", "yes")])
+        self.assertTrue(md.startswith("x.test — today\n"))
+        self.assertIn("| polls | yes |", md)
+        me = self.view.by_id("002").author
+        prof = MyProfile(me, bio="hi", fields=(("site", "x"),))
+        flags = {"locked": me.locked, "bot": me.bot, "discoverable": bool(me.discoverable)}
+        self.assertEqual(server.profile_changes(prof, me.name, "hi", [(" site", "x ")],
+                                                flags), {})
+        got = server.profile_changes(prof, "New", "hi", [("", "")], dict(flags, bot=True),
+                                     avatar="/a.png")
+        self.assertEqual(got, {"name": "New", "fields": [], "bot": True, "avatar": "/a.png"})
+
+    def test_find(self):
+        from fedtail.frontends.common import find
+        lm = lanes.LaneModel(self.view, "home")
+        specs = lm.build(positioned=True).specs
+        self.assertEqual(len(find.hits(specs, "hello")), 1)
+        self.assertEqual(find.hits(specs, "  "), [])
+        self.assertEqual((find.step(-1, 3, 1), find.step(-1, 3, -1), find.step(2, 3, 1)),
+                         (0, 2, 0))
+        self.assertEqual(find.count_text("x", 0, 0), (i18n._("find_none"), True))
+        self.assertEqual(find.count_text("x", 0, 0, everywhere=True, searched=False),
+                         ("", False))
+
 
 if __name__ == "__main__":
     unittest.main()

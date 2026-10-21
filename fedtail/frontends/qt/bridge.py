@@ -2,17 +2,18 @@
 
 import logging
 
-import requests
 from PySide6.QtCore import QObject, Signal
 
 from ... import diag
-from ...protocols.base import ServerError
+from ..common import results
+from ..common.results import EXPECTED  # noqa: F401  (Qt's name for it)
 
 log = logging.getLogger(__name__)
 
-# The network or the server said no: one line is the whole story (the request is
-# logged by api.py with its timing). Anything else gets its traceback.
-EXPECTED = (requests.RequestException, ServerError, TimeoutError, ConnectionError)
+
+def _gone(e):
+    """The widget waiting for this result is already gone."""
+    return isinstance(e, RuntimeError) and "already deleted" in str(e)
 
 
 class Bridge(QObject):
@@ -40,28 +41,7 @@ class Bridge(QObject):
             self._handle(future, ok, fail)
 
     def _handle(self, future, ok, fail):
-        exc = future.exception()
-        try:
-            if exc is not None:
-                if isinstance(exc, EXPECTED):
-                    # the request is in the log already; a caller with its own fail
-                    # handler deals with it, so only say it twice when debugging
-                    (log.debug if fail else log.warning)(
-                        "call failed: %s: %s", type(exc).__name__, exc)
-                else:
-                    log.warning("call failed: %s", exc, exc_info=exc)
-                handler = fail or self.on_error
-                if handler:
-                    handler(str(exc))
-            elif ok:
-                ok(future.result())
-        except RuntimeError as e:
-            # the widget waiting for this result is already gone
-            if "already deleted" in str(e):
-                return
-            self._report(e)
-        except Exception as e:  # a bug in a handler: show it, don't swallow it
-            self._report(e)
+        results.handle(future, ok, fail, self.on_error, gone=_gone)
 
     def _report(self, e):
         log.exception("result handler failed")

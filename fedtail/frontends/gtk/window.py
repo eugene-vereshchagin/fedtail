@@ -14,6 +14,7 @@ from ...core import lanes as lanes_mod
 from ...i18n import _
 from ...model import real
 from .. import richtext
+from ..common import sidebar
 from ..common.links import Links
 from . import login
 from .activity import ActivityLane, RequestsLane
@@ -88,7 +89,36 @@ class LaneRow(Gtk.ListBoxRow):
 
     def set_count(self, n):
         self.badge.set_visible(n > 0)
-        self.badge.set_text(str(n) if n < 1000 else "999+")
+        self.badge.set_text(sidebar.badge_text(n))
+
+
+class SectionRow(Gtk.ListBoxRow):
+    """A group's title in the sidebar: not a lane; a click folds the group away, and
+    folded it shows how many are unread in it."""
+
+    def __init__(self, group, text, names):
+        super().__init__(selectable=False, activatable=True)
+        self.group, self.names = group, list(names)
+        box = Gtk.Box(spacing=6)
+        box.set_margin_top(8)
+        self.mark = Gtk.Label(label="▾")
+        self.mark.add_css_class("ft-account")
+        box.append(self.mark)
+        lab = Gtk.Label(label=text, xalign=0)
+        lab.add_css_class("ft-account")
+        lab.add_css_class("caption-heading")
+        lab.set_hexpand(True)
+        box.append(lab)
+        self.badge = Gtk.Label()
+        self.badge.add_css_class("ft-badge")
+        self.badge.set_visible(False)
+        box.append(self.badge)
+        self.set_child(box)
+
+    def show_fold(self, folded, unread):
+        self.mark.set_text("▸" if folded else "▾")
+        self.badge.set_visible(folded and unread > 0)
+        self.badge.set_text(sidebar.badge_text(unread))
 
 
 class MainWindow(Gtk.ApplicationWindow):
@@ -106,6 +136,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.notifier = Notifier(self, app)
         self.lane_views = {}     # name -> LaneView
         self.lane_rows = {}      # name -> LaneRow
+        self.sections = {}       # group -> SectionRow
         self.threads = {}        # root post id -> page widget
         self.accounts = {}       # account id -> page widget
         self.quitting = False
@@ -145,6 +176,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.sidebar.add_css_class("ft-sidebar")
         self.sidebar.add_css_class("navigation-sidebar")
         self.sidebar.connect("row-selected", self._lane_selected)
+        self.sidebar.connect("row-activated", self._row_activated)
         side_scroll = Gtk.ScrolledWindow()
         side_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         side_scroll.set_child(self.sidebar)
@@ -237,24 +269,24 @@ class MainWindow(Gtk.ApplicationWindow):
         while (row := self.sidebar.get_first_child()) is not None:
             self.sidebar.remove(row)
         self.lane_rows = {}
+        self.sections = {}       # group -> SectionRow
         by_name = self.view.lane_by_name
-        if self.cfg["ui"]["sidebar_groups"]:
-            groups = lanes_mod.grouped(self.view.lanes)
-        else:  # as qt/window.py: the lanes, then the lists
-            groups = [(None, [x.name for x in self.view.lanes if not lanes_mod.is_list(x.name)]),
-                      ("lists", [x.name for x in self.view.lanes if lanes_mod.is_list(x.name)])]
-        for group, names in groups:
+        folded = sidebar.folded(self.view)
+        for group, names in sidebar.groups(self.view, self.cfg):
             # lanes that aren't status streams: only Activity and follow requests are known
             names = [n for n in names if n in by_name and
                      (by_name[n].source is not None or n in SPECIAL)]
-            if not names or (group == "lists" and not self.cfg["lists"]["enabled"]):
+            if not names:
                 continue
             if group:
-                self.sidebar.append(_section(_("lists_header") if group == "lists"
-                                             else _("grp_" + group)))
+                head = SectionRow(group, _("lists_header") if group == "lists"
+                                  else _("grp_" + group), names)
+                self.sections[group] = head
+                self.sidebar.append(head)
             for name in names:
                 title = self.view.lane_title(name) or _("lane_" + _base(name))
                 row = LaneRow(name, title)
+                row.set_visible(group not in folded)
                 self.lane_rows[name] = row
                 self.sidebar.append(row)
         self.update_badges()
@@ -299,16 +331,22 @@ class MainWindow(Gtk.ApplicationWindow):
         return self.tabs.get_current_page() == 0 and self._current_lane() == name
 
     def update_badges(self):
+        numbers = sidebar.counts(self.view, self.lane_rows)
         for name, row in self.lane_rows.items():
-            try:
-                if name == "activity":
-                    row.set_count(int(self.view.activity_unread() or 0))
-                elif name == "requests":
-                    row.set_count(len(self.view.follow_requests() or ()))
-                else:
-                    row.set_count(self.view.unread_count(name))
-            except Exception:  # noqa: BLE001 — a lane the core doesn't count
-                row.set_count(0)
+            row.set_count(numbers[name])
+        folded = sidebar.folded(self.view)
+        for group, head in self.sections.items():
+            head.show_fold(group in folded, sum(numbers.get(n, 0) for n in head.names))
+
+    def _row_activated(self, _box, row):
+        """A section's title clicked: it folds away (or comes back), as in Qt."""
+        if not isinstance(row, SectionRow):
+            return
+        on = sidebar.fold(self.view, row.group)
+        for name in row.names:
+            if name in self.lane_rows:
+                self.lane_rows[name].set_visible(not on)
+        self.update_badges()
 
     def _activated(self):
         if self.is_active():
@@ -672,17 +710,6 @@ def own_titlebar(cfg):
         return True
     desk = (os.environ.get("XDG_CURRENT_DESKTOP") or "").lower()
     return any(d in desk for d in CSD_DESKTOPS)
-
-
-def _section(text):
-    """A group's title in the sidebar: not a lane, can't be chosen."""
-    row = Gtk.ListBoxRow(selectable=False, activatable=False)
-    lab = Gtk.Label(label=text, xalign=0)
-    lab.add_css_class("ft-account")
-    lab.add_css_class("caption-heading")
-    lab.set_margin_top(8)
-    row.set_child(lab)
-    return row
 
 
 def _base(name):

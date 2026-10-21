@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from ...model import (
     Account,
     Activity,
+    Announcement,
     Card,
     Counts,
     Emoji,
@@ -33,8 +34,10 @@ from ...model import (
     Relationship,
     ServerInfo,
     Share,
+    Silenced,
     Tag,
     UserList,
+    WordFilter,
     real,
 )
 from . import PROTO
@@ -455,6 +458,35 @@ def user_list(raw, profile=""):
     return UserList(_ref(profile, raw.get("id")), _str(raw.get("title")),
                     exclusive=raw.get("exclusive") is True,
                     replies=_str(raw.get("replies_policy")))
+
+
+def word_filter(raw):
+    """A filter of mine (v2) → WordFilter."""
+    raw = _dict(raw)
+    words = tuple(_str(_dict(k).get("keyword")) for k in _list(raw.get("keywords"))
+                  if _dict(k).get("keyword"))
+    return WordFilter(_str(raw.get("id")), _str(raw.get("title")), words,
+                      "hide" if raw.get("filter_action") == "hide" else "warn")
+
+
+def silenced(raw, profile=""):
+    """{"muted": [accounts], "blocked": [accounts], "domains": [names]} → Silenced."""
+    raw = _dict(raw)
+    return Silenced(tuple(account(a, profile) for a in _list(raw.get("muted"))
+                          if isinstance(a, dict)),
+                    tuple(account(a, profile) for a in _list(raw.get("blocked"))
+                          if isinstance(a, dict)),
+                    tuple(_str(d) for d in _list(raw.get("domains"))))
+
+
+def announcement(raw):
+    """One of the server's announcements → Announcement."""
+    raw = _dict(raw)
+    rs = tuple(Reaction(_str(r.get("name")), _int(r.get("count")), bool(r.get("me")),
+                        _str(r.get("url")))
+               for r in _list(raw.get("reactions")) if isinstance(r, dict) and r.get("name"))
+    return Announcement(_str(raw.get("id")), _str(raw.get("content")),
+                        when(raw.get("published_at")), rs)
 
 
 def server_info(raw, profile=""):

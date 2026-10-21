@@ -27,6 +27,17 @@
   colours come from `frontends/palette.py`. The Qt window behaves as before. The command
   line's "#abc text" for a post not known here goes out as a post, as before, only in the
   windows; the terminal and the web page still say there's no such post.
+- The GTK window: a lane's header has what Qt's has — everything / posts only / what's
+  new, as conversations, and the funnel (only posts with pictures, video…, boosts or
+  not); sidebar sections fold away, showing what's unread in them; pictures come from
+  the same disk cache as in Qt, read small, asked again when a server was only busy,
+  fetched ahead for posts just come; "mark read on open" works there too.
+- Inside: the rest of the decisions moved out of the Qt window into `frontends/common/`
+  — what a lane shows (the divider, the filters, conversations, where reading starts,
+  what counts as read), the picture cache, the sidebar's numbers and folds, the split
+  layout's input line and the roster's rows, Ctrl+F, the server's page and the probe's
+  table, the profile editor's changes; the announcements bar and the Silence dialog get
+  `fedtail.model` objects, not the server's JSON. The Qt window behaves as before.
 - fedtail has an app id, `online.dmesg.fedtail` (from the project's website): the menu
   entry is now `online.dmesg.fedtail.desktop` (another profile's:
   `online.dmesg.fedtail.<profile>.desktop`), and both the Qt and the GTK window say they

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import _
+from ..common import server
 from .card import _round
 
 FIELDS_SHOWN = 4  # Mastodon allows 4; more are kept if the server already has them
@@ -152,26 +153,12 @@ class ProfileDialog(QDialog):
     # ---- saving --------------------------------------------------------------------
     def changes(self):
         """Only what differs from the server, so nothing is overwritten by accident."""
-        prof = self.loaded
-        me = prof.account
-        out = {}
-        if self.name.text() != me.name:
-            out["name"] = self.name.text()
-        if self.bio.toPlainText() != prof.bio:
-            out["bio"] = self.bio.toPlainText()
-        fields = [(n.text().strip(), v.text().strip()) for n, v in self.field_edits]
-        fields = [f for f in fields if f[0] or f[1]]
-        if fields != list(prof.fields):
-            out["fields"] = fields
-        for key, box, was in (("locked", self.locked, me.locked), ("bot", self.bot, me.bot),
-                              ("discoverable", self.discoverable, bool(me.discoverable))):
-            if box.isChecked() != was:
-                out[key] = box.isChecked()
-        if self.avatar_path:
-            out["avatar"] = self.avatar_path
-        if self.header_path:
-            out["header"] = self.header_path
-        return out
+        return server.profile_changes(
+            self.loaded, self.name.text(), self.bio.toPlainText(),
+            [(n.text(), v.text()) for n, v in self.field_edits],
+            {"locked": self.locked.isChecked(), "bot": self.bot.isChecked(),
+             "discoverable": self.discoverable.isChecked()},
+            self.avatar_path, self.header_path)
 
     def save(self):
         if self.loaded is None:
