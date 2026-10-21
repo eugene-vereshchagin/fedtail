@@ -39,10 +39,15 @@ class RosterRow(Gtk.ListBoxRow):
         box.set_margin_top(3)
         box.set_margin_bottom(3)
         own = {"person": "status", "talk": "talk", "thread": "thread"}.get(item.kind)
+        from .. import iconpack
         from . import icons
-        pic = icons.image(own, roster.win.theme) if own and icons.wanted(roster.win.theme) \
-            else None
-        if pic is not None:  # fedtail's own: a flower for a person, as in QIP
+        t = roster.win.theme
+        pic = icons.image(own, t) if own else None  # a flower for a person, as in QIP
+        if pic is None and icons.pictures(t):  # else the lane's picture
+            kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(
+                item.kind, (item.key or "").split(":")[0])
+            pic = icons.image(iconpack.lane_picture(kind), t)
+        if pic is not None:
             pic.set_valign(Gtk.Align.START)
             pic.set_margin_top(2)
             box.append(pic)
