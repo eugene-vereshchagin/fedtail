@@ -871,7 +871,7 @@ class MessageTabs(QWidget):
             self._busy = False
 
     def _picked(self, i):
-        if self._busy or i < 0:
+        if self._busy or i < 0 or self.tabData(i) is None:  # None: its data comes next
             return
         kind, what = self.tabData(i)
         if kind == "lane":

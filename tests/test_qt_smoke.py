@@ -2213,7 +2213,11 @@ class QtSmokeTest(unittest.TestCase):
         self.core.poll_once()
         self.pump(0.2)
         roster.refresh()  # at once (an error in it shows here, not as a timeout)
-        self.assertIn("home", roster.rows, sorted(roster.rows))
+        self.assertIn("home", roster.rows, sorted(roster.rows))  # in the first batch
+        while roster._queue:  # the rest, a batch a tick
+            roster._build_some()
+        everything = sum(len(g.items) for g in win.ctx.view.roster())
+        self.assertEqual(len(roster.rows), everything)
         home = roster.rows["home"]
         self.assertTrue(home.item.unread, home.item)
         self.assertTrue(home.badge.isVisibleTo(roster))
@@ -2339,6 +2343,48 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(win.isVisible())
         self.assertTrue(roster.isVisible())
         self.assertEqual((win.extra_tabs(), win.msg_tabs.count()), ([], 0))
+
+    def test_message_tabs_keep_the_one_in_front(self):
+        """The split layout's own tabs speak QTabBar's words: closing one before the tab
+        in front keeps that one in front; closing the one in front brings a neighbour."""
+        from types import SimpleNamespace
+
+        from fedtail.frontends.qt.dock import MessageTabs
+        shown = []
+        win = SimpleNamespace(theme=SimpleNamespace(shape={"tab_rows": "wrap"}),
+                              tabs=SimpleNamespace(setCurrentWidget=shown.append),
+                              select_lane=shown.append)
+        bar = MessageTabs(win)
+        bar._timer.stop()  # no window to agree with here
+        for name in ("a", "b", "c"):
+            bar.setTabData(bar.addTab(name), ("lane", name))
+        bar.setCurrentIndex(2)
+        self.assertEqual(shown[-1], "c")
+        bar.removeTab(0)
+        self.assertEqual((bar.count(), bar.currentIndex(), bar.tabText(1)), (2, 1, "c"))
+        bar.removeTab(1)  # the one in front: its neighbour comes
+        self.assertEqual((bar.currentIndex(), shown[-1]), (0, "b"))
+        bar.setTabText(0, "b" * 400)  # a long title is cut, never widens the bar
+        self.assertLessEqual(bar.chips[0].label.width(), 230)
+        bar.removeTab(0)
+        self.assertEqual((bar.count(), bar.currentIndex()), (0, -1))
+        bar.deleteLater()
+
+    def test_theme_gradients_where_qt_paints_them(self):
+        """colors.*_end: a gradient; the posts' diagonal on the scroll area itself (on
+        its viewport it lost to the flat rule); no _end — flat, as before."""
+        from fedtail.frontends.qt import theme as themes
+        try:
+            t = themes.apply(self.app, config.validate({"ui": {"theme": "qip-modern"}})[0])
+            css = t.stylesheet(10, "x")
+            self.assertIn("QScrollArea#feed { background: qlineargradient", css)
+            self.assertIn("qlineargradient", t._bg("header"))
+            flat = themes.apply(self.app, config.validate({})[0])
+            self.assertNotIn("gradient", flat._bg("window"))
+            self.assertNotIn("QScrollArea#feed { background: qlineargradient",
+                             flat.stylesheet(10, "x"))
+        finally:
+            themes.apply(self.app, config.validate({})[0])
 
     def test_flow_rows_justified(self):
         """Tabs in rows, as in the Agent: a full row stretched to the edge, the last
