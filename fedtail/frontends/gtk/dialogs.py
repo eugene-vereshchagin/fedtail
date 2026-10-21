@@ -36,8 +36,9 @@ def _box(margin=12, spacing=8):
     return box
 
 
-def ask_text(parent, title, question, then, text="", ok_label=None):
-    """A line to type in; then(text) on OK (stripped, never empty)."""
+def ask_text(parent, title, question, then, text="", ok_label=None, allow_empty=False):
+    """A line to type in; then(text) on OK (stripped; never empty unless allow_empty —
+    an empty note, "all languages")."""
     win = _window(parent, title, 420, -1)
     win.set_modal(True)
     box = _box()
@@ -51,7 +52,7 @@ def ask_text(parent, title, question, then, text="", ok_label=None):
 
     def done(*_a):
         got = entry.get_text().strip()
-        if got:
+        if got or allow_empty:
             win.close()
             then(got)
     ok.connect("clicked", done)

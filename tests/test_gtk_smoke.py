@@ -358,6 +358,32 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: not any(isinstance(w, Gtk.CheckButton)
                                              for w in _walk(card)), 5))
 
+    def test_profile_buttons_as_in_qt(self):
+        """A profile's buttons come from common/profile.py (as Qt offers them) and do
+        their thing: mute, a note, whom they follow."""
+        from fedtail.frontends.common import profile as prof
+        self.win.open_account("B")
+        page = self.win.accounts.get("B")
+        self.assertIsNotNone(page)
+
+        def labels():
+            return [b.get_label() for b in _walk(page) if isinstance(b, Gtk.Button)]
+        self.assertTrue(pump(lambda: i18n._("mute") in labels(), 5))
+        for key in ("block", "note_edit", "copy_handle"):
+            self.assertIn(i18n._(key), labels())
+        mute = next(b for b in _walk(page) if isinstance(b, Gtk.Button)
+                    and b.get_label() == i18n._("mute"))
+        mute.emit("clicked")
+        self.assertTrue(pump(lambda: i18n._("unmute") in labels(), 5))
+        asked = []
+        self.win.ask_text = lambda title, q, then, text="", allow_empty=False: \
+            asked.append(then)
+        note = next(b for b in _walk(page) if isinstance(b, Gtk.Button)
+                    and b.get_label() == i18n._("note_edit"))
+        note.emit("clicked")
+        self.assertEqual(len(asked), 1)
+        self.assertEqual(prof.parse_langs("ru; en  de"), ["ru", "en", "de"])
+
     def test_reply_in_the_editor(self):
         from fedtail.frontends.gtk.compose import ComposeWindow
         post = self.view.by_id("011")

@@ -1340,40 +1340,48 @@ class MainWindow(Gtk.ApplicationWindow):
         names.append(counts)
         names.set_hexpand(True)
         top.append(names)
-        buttons = Gtk.Box(spacing=6)
-        buttons.set_valign(Gtk.Align.START)
-        if not own:
-            follow = Gtk.Button(label=_("follow"))
-            follow.add_css_class("ft-primary")
-            follow.set_sensitive(False)
-            buttons.append(follow)
-
-            def show(rel):
-                on = bool(rel and (rel.following or rel.requested))
-                follow.set_label(_("unfollow") if on else _("follow"))
-                follow.set_sensitive(True)
-                follow.following = on
-
-            def toggle(_b):
-                follow.set_sensitive(False)
-                self.call(self.view.follow(acc.id, not getattr(follow, "following", False)),
-                          show, lambda e: (follow.set_sensitive(True), self.error(e)))
-            follow.connect("clicked", toggle)
-            self.call(self.view.relationship(acc.id), show,
-                      lambda _e: follow.set_sensitive(True))
-            mention = Gtk.Button(label=_("mention"))
-            mention.connect("clicked", lambda _b: self.compose(text=f"@{acc.handle} "))
-            buttons.append(mention)
-        top.append(buttons)
         head.append(top)
-        more = Gtk.Box(spacing=6)  # as Qt's: copy the handle, open the page outside
-        copy = Gtk.Button(label=_("copy_handle"))
-        copy.connect("clicked", lambda _b: self.copy_handle(acc.handle))
-        more.append(copy)
-        if acc.url:
-            web = Gtk.Button(label=_("open_browser"))
-            web.connect("clicked", lambda _b: self.open_url(acc.url))
-            more.append(web)
+        meta = Gtk.Label(xalign=0, wrap=True)
+        meta.add_css_class("ft-muted")
+        names.append(meta)
+        # the buttons, as Qt's (common/profile.py: which, in what order, what they do);
+        # too many for a line: they wrap
+        buttons = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, row_spacing=6,
+                              column_spacing=6, homogeneous=False, max_children_per_line=12)
+        note = Gtk.Label(xalign=0, wrap=True)
+        note.add_css_class("ft-muted")
+        note.set_visible(False)
+        tip(note, _("note_tip"))
+        state = {"rel": None}
+
+        def fill(rel):
+            from ..common import profile as prof
+            state["rel"] = rel
+            since = rel is not None and rel.following and \
+                self.view.followed_since(acc.id, rel)
+            bits = prof.meta(acc, rel, self.theme.date, since or None)[1:]  # (the @ is above)
+            meta.set_text(" · ".join(bits))
+            meta.set_visible(bool(bits))
+            while (c := buttons.get_first_child()) is not None:
+                buttons.remove(c)
+            for act in prof.actions(acc, rel, own, self.cfg, self.view.supports):
+                if act.key == "lists":
+                    continue
+                b = Gtk.Button(label=act.label)
+                if act.primary:
+                    b.add_css_class("ft-primary")
+                if act.tip:
+                    tip(b, act.tip)
+                b.connect("clicked", lambda _b, k=act.key: prof.do(
+                    k, acc, state["rel"], self.view, self, fill))
+                buttons.append(b)
+            line = prof.note_line(rel, own)
+            note.set_text(line)
+            note.set_visible(bool(line))
+        if own:
+            fill(None)
+        else:
+            self.call(self.view.relationship(acc.id), fill, lambda _e: fill(None))
         if acc.note:
             from .. import pango
             bio = Gtk.Label(xalign=0, wrap=True, selectable=False)
@@ -1388,7 +1396,8 @@ class MainWindow(Gtk.ApplicationWindow):
                            ("✓ " if f.verified else "") + pango.markup(f.value))
             row.connect("activate-link", lambda _l, u: (self.on_link(u), True)[1])
             head.append(row)
-        head.append(more)
+        head.append(buttons)
+        head.append(note)
         return head
 
     # ---- links: common/links.py asks these ---------------------------------------------
@@ -1397,6 +1406,17 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def call(self, future, ok=None, fail=None):
         return self.bridge.call(future, ok, fail or self.error)
+
+    def ask_text(self, title, question, then, text="", allow_empty=False):
+        from .dialogs import ask_text
+        return ask_text(self, title, question, then, text, allow_empty=allow_empty)
+
+    def open_people(self, acc, which):
+        """Whom someone follows, or who follows them: a tab of people."""
+        from .people import open_people
+        return open_people(self, f"people:{which}:{acc.id}",
+                           _("people_" + which, acct=acc.handle),
+                           lambda cur: self.view.people(acc.id, which, cur))
 
     # ---- what a post's ⋯ opens (common/links.py asks; gtk/postinfo.py shows) ----------
     def show_history(self, st):
