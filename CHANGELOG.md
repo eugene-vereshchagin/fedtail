@@ -6,6 +6,10 @@
   "into the thread, a reply to andy · seen by: followers", "new post · seen by: all",
   "✉ privately to sn4il · seen by: only those mentioned". In a thread it answers the
   post you came for, else the thread's newest — not the last branch of the tree.
+- A quick scroll reads what it went over: a post the screen passed whole while you
+  scrolled by the wheel or the keys is read, without dwelling on each (a jump — the
+  scroll bar dragged far, End — still counts nothing). The check looks at the cards on
+  screen only, not at every card of the lane.
 - Less CPU with the split layout open for long: the roster is worked out in the
   background (it read every lane on the window's thread, a third of a second each
   time), and the face over a lane finds the post under the pointer or the lowest whole

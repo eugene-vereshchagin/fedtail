@@ -88,6 +88,7 @@ class FeedView(QScrollArea):
         self._seen_tick = QTimer(self, singleShot=True, interval=300)
         self._seen_tick.timeout.connect(self._emit_seen)
         self._glimpsed = set()  # unread rows that have been on screen at some point
+        self._swept = set()  # unread rows the screen went over whole while scrolling
         self._touched_at = 0.0  # when the reader last scrolled by hand (monotonic)
         sb = self.verticalScrollBar()
         sb.valueChanged.connect(self._scrolled)
@@ -197,11 +198,42 @@ class FeedView(QScrollArea):
         front = QApplication.activeWindow()
         return front is not None and getattr(self.window(), "roster", None) is front
 
-    def _scrolled(self, _value):
+    def _scrolled(self, value):
+        # what the screen went over on its way here: a card the window passed whole is
+        # read, though no tick caught it standing (a scroll by the wheel moves less than
+        # a screen at a time; a jump — the scroll bar dragged, End — counts nothing)
+        old = getattr(self, "_last_value", value)
+        self._last_value = value
+        vh = self.viewport().height()
+        if old != value and abs(value - old) <= vh and \
+                time.monotonic() - self._touched_at < 1.0:
+            lo, hi = min(old, value), max(old, value) + vh
+            for key in self.order[self._first_below(lo):]:
+                row = self.rows.get(key)
+                if row is None:
+                    continue
+                top = self._top(row)
+                if top > hi:
+                    break
+                if row.spec.unread and top >= lo - 2 and top + row.height() <= hi + 2:
+                    self._swept.add(key)
         self._seen_timer.start()
         if not self._seen_tick.isActive():
             self._seen_tick.start()
         self._grow_soon()
+
+    def _first_below(self, y):
+        """The index in self.order of the first row whose bottom is below y (binary
+        search: the rows stand in order down the feed)."""
+        lo, hi = 0, len(self.order)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            row = self.rows[self.order[mid]]
+            if self._top(row) + row.height() <= y:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
 
     # j / k between posts; r f b m o act on the one under the cursor (ui.post_keys)
     POST_KEYS = {Qt.Key.Key_R: "reply", Qt.Key.Key_F: "fav", Qt.Key.Key_B: "boost",
@@ -550,9 +582,21 @@ class FeedView(QScrollArea):
         at_end = sb.value() >= sb.maximum()
         ids = []
         glimpsed = set()
-        for key in self.order:
-            row = self.rows[key]
-            if not row.spec.unread:
+        # the cards on screen, those glimpsed before and those the scroll went past —
+        # not every card of the lane, measured every few hundred ms
+        near = set(self._glimpsed) | self._swept
+        start = self._first_below(vtop)
+        for key in self.order[start:]:
+            if self._top(self.rows[key]) >= vbot:
+                break
+            near.add(key)
+        swept, self._swept = self._swept, set()
+        for key in [k for k in self.order if k in near]:
+            row = self.rows.get(key)
+            if row is None or not row.spec.unread:
+                continue
+            if key in swept:
+                ids.append(row.status_id)
                 continue
             top = self._top(row)
             bottom = top + row.height()

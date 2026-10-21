@@ -2055,6 +2055,35 @@ class QtSmokeTest(unittest.TestCase):
         view._emit_seen()
         self.assertIn(far.status_id, seen)
 
+    def test_a_quick_scroll_reads_what_it_went_over(self):
+        """Scrolled down by the wheel, a screen at most a step, without stopping: every
+        card the screen went over whole is read — no need to dwell on each."""
+        for i in range(40):
+            self.world.add(status(f"8{i:02d}", NEWS, minute=i % 60,
+                                  text="пост " * 30 + str(i)), home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+        self.win.select_lane("bots")
+        view = self.win.lane_widgets["bots"].view
+        self.pump(until=lambda: len(view.unread_keys()) > 10)
+        self.pump(2.0)
+        view._drop_target()
+        seen = []
+        view.seen.connect(seen.extend)
+        sb = view.verticalScrollBar()
+        start = sb.value()
+        step = view.viewport().height() // 2
+        for _i in range(4):  # four wheel turns, no tick in between
+            view._touched()
+            sb.setValue(sb.value() + step)
+        view._emit_seen()
+        went_over = [view.rows[k].status_id for k in view.order
+                     if start <= view._top(view.rows[k])
+                     and view._top(view.rows[k]) + view.rows[k].height() <= sb.value()]
+        self.assertTrue(went_over)
+        self.assertLessEqual(set(went_over), set(seen))
+
     def test_hidden_lane_lets_its_cards_go(self):
         """ui.unload_hidden_minutes: a lane long out of sight drops its cards and draws
         them anew when opened; the lane in front never does."""
