@@ -383,7 +383,7 @@ def main():
         PARTS[sys.argv[sys.argv.index("--part") + 1]](out)
         return 0
     only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv \
-        else list(PARTS)
+        else [p for p in PARTS if not (p == "gtk" and os.name == "nt")]  # no GTK there
     env = dict(os.environ, PYTHONUTF8="1", PYTHONPATH=str(ROOT) + os.pathsep +
                os.environ.get("PYTHONPATH", ""))
     failed = []
