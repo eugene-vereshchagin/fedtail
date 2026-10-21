@@ -2,6 +2,24 @@
 
 ## 0.18.0 — in progress
 
+- GTK, faster: a post's text is one Pango layout now, not a wrapping label (that laid
+  the text out several times to learn its size: nine tenths of what a card cost), so a
+  lane lays out four times faster; cards come a batch a frame, as many as the last
+  frame had room for (several batches between two frames made one long freeze); marking
+  posts read while scrolling no longer rebuilds the whole lane each time (only the marks
+  change, as in Qt); a long lane keeps 120 cards at most (every one is laid out again at
+  each scroll step); the first card on screen is found by bisection, not row by row.
+  On a fake lane of 2000 posts under Xvfb: opening a lane 1.4 s → 0.4 s, the longest
+  freeze 390 → 80 ms; scrolling it no longer stops for a third of a second at a time.
+- tools/gtk_bench.py: how fast the GTK window is — the start, opening lanes, scrolling,
+  the menu, the editor, themes, the roster and tabs — on a fake server, in every layout,
+  with --profile for where the time goes. Run it on your desktop: the accessibility bus,
+  fonts and GPU are half of it.
+- The point theme's pictures are point.im's look — plain grey-blue silhouettes, a
+  megaphone for the feed, a house for my posts, a speech bubble for replies — drawn for
+  fedtail; [pictures] color gives all of a theme's pictures one colour.
+- The copies of the built-in themes (and their pictures) are made once a run and only
+  when changed — every start and every theme tried read them all.
 - The pictures on the buttons are the theme's. [shape] icons says where they come from:
   "desktop" — the desktop's icon theme (system, debug), "own" — a set of the theme's own,
   "words" — none (terminal, bnw); ui.icons may choose otherwise, "additional" putting the

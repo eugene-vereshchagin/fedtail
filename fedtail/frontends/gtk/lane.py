@@ -31,11 +31,14 @@ from .gi_setup import GLib, Gtk, Pango, clamp, hscroll, set_clamp, tip
 log = logging.getLogger(__name__)
 
 SEEN_DELAY_MS = 400
-WINDOW = 40         # cards built when a lane opens: a few above where reading starts
+WINDOW = 30         # cards built when a lane opens: a few above where reading starts
 BACK = 8            # …of them above it
 STEP = 20           # cards added when the view nears an end
-MAX_ROWS = 240      # more than this on screen: the far end goes
+MAX_ROWS = 120      # more than this on screen: the far end goes (every row is laid out
+                    # again at each scroll step: a long list costs on every frame)
 BATCH_MS = 25       # building cards for at most this long at a time, then a frame
+FRAME_MS = 40       # what laying a batch out may take: the number per batch follows it
+PER_BATCH = (2, 4, 12)  # cards a batch: at least, to start with, at most
 HOLD_MS = 250       # the view held still this long after rows changed above it
 
 
@@ -70,6 +73,7 @@ class LaneView(Gtk.Box):
         self.stopped = False     # the window closed: no more work queued
         self._queue = []         # (side, [keys]) waiting to be built: side "end" | "start"
         self._building = 0
+        self._tick = 0           # a batch waiting for the next frame
         self._seen_timer = 0
         # while rows go in or out above what's being read: the height of the content
         # last seen, and until when to hold the view still (see _hold)
@@ -212,6 +216,23 @@ class LaneView(Gtk.Box):
         self._older_visible()
         self._build_soon()
 
+    def apply_read(self, ids):
+        """Posts marked read (here as they were seen, or anywhere else): their marks
+        go, nothing is rebuilt — a whole refresh for every few posts seen while
+        scrolling was most of what a long lane cost (as Qt's apply_read)."""
+        ids = set(ids)
+        gone = [k for k in self.unread if self.specs.get(k) is not None
+                and (self.specs[k].entry.id in ids or real(self.specs[k].entry).id in ids)]
+        if not gone:
+            return
+        for k in gone:
+            self.unread.discard(k)
+            self.specs[k] = replace(self.specs[k], unread=False)
+            card = self.rows.get(k)
+            if card is not None:
+                card.set_unread(False)
+        self._pill(len(self.unread))
+
     def _reset(self):
         """Another filter or view: the lane anew, placed anew."""
         for k in list(self.order):
@@ -315,9 +336,23 @@ class LaneView(Gtk.Box):
 
     # ---- building in batches ---------------------------------------------------------
     def _build_soon(self):
-        if self._building or not self._pending():
+        if self._building or self._tick or not self._pending():
             return
-        self._building = GLib.idle_add(self._build_batch, priority=GLib.PRIORITY_LOW)
+        self._next_batch()
+
+    def _next_batch(self):
+        """A batch a frame: on screen, at the next frame (so each batch is laid out
+        before the next is made — idle callbacks ran several between two frames, and
+        one frame then laid out them all); out of sight, when the loop is idle."""
+        if self.get_mapped():
+            self._tick = self.add_tick_callback(self._on_tick)
+        else:
+            self._building = GLib.idle_add(self._build_batch, priority=GLib.PRIORITY_LOW)
+
+    def _on_tick(self, *_a):
+        self._tick = 0
+        self._build_batch()
+        return GLib.SOURCE_REMOVE
 
     def _build_batch(self):
         """Build cards for BATCH_MS, all on one side (so the view can be held still),
@@ -347,10 +382,13 @@ class LaneView(Gtk.Box):
             return GLib.SOURCE_REMOVE
         if above:
             self._hold()
+        self._fit_batch(start)
+        made = 0
         with diag.busy(f"gtk lane {self.name}: build"):
-            while keys and (time.monotonic() - start) * 1000 < BATCH_MS:
+            while keys and (time.monotonic() - start) * 1000 < BATCH_MS and \
+                    made < self._per_batch:
                 take = []
-                while keys and len(take) < 4:
+                while keys and len(take) < min(4, self._per_batch - made):
                     if side == "inside" and first is not None and \
                             (self.index[keys[0]] < self.index[first]) != above:
                         break
@@ -358,12 +396,30 @@ class LaneView(Gtk.Box):
                 if not take:  # the rest is on the view's other side: a batch of its own
                     break
                 self._make(take)
+                made += len(take)
+        self._batch_end = time.monotonic()
         self._build_soon_after()
         return GLib.SOURCE_REMOVE
 
+    def _fit_batch(self, now):
+        """Building a card is the cheap part: laying it out (its text shaped, wrapped,
+        measured) costs ten times more, and all of a batch is laid out in the next frame.
+        So the number of cards a batch follows how long the last batch's frame took:
+        fewer when it held the window, more when there was room."""
+        if not hasattr(self, "_per_batch"):
+            self._per_batch, self._batch_end = PER_BATCH[1], None
+        if self._batch_end is None:
+            return
+        took = (now - self._batch_end) * 1000
+        lo, _start, hi = PER_BATCH
+        if took > FRAME_MS * 3:
+            self._per_batch = max(lo, self._per_batch // 2)
+        elif took < FRAME_MS:
+            self._per_batch = min(hi, self._per_batch + 2)
+
     def _build_soon_after(self):
         if self._pending():
-            self._building = GLib.idle_add(self._build_batch, priority=GLib.PRIORITY_LOW)
+            self._next_batch()
         else:
             self._done_building()
 
@@ -409,8 +465,24 @@ class LaneView(Gtk.Box):
         return lo
 
     def _first_visible(self):
+        """The first row reaching below the view's top: a bisection (the rows are in
+        order down the list) — looking at every row on every scroll step was a good part
+        of what scrolling a long lane cost; one not laid out yet: row by row."""
         top = self.adj.get_value()
-        for k in self.order:
+        order, lo, hi = self.order, 0, len(self.order)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            card = self.rows[order[mid]]
+            y = self._y(card)
+            if y is None:
+                break
+            if y + card.get_height() > top:
+                hi = mid
+            else:
+                lo = mid + 1
+        else:
+            return order[lo] if lo < len(order) else None
+        for k in order:
             card = self.rows[k]
             y = self._y(card)
             if y is not None and y + card.get_height() > top:
@@ -654,6 +726,9 @@ class LaneView(Gtk.Box):
             if src:
                 GLib.source_remove(src)
                 setattr(self, attr, 0)
+        if self._tick:
+            self.remove_tick_callback(self._tick)
+            self._tick = 0
 
     def window_activated(self):
         self._schedule_seen()

@@ -199,6 +199,7 @@ class Set:
     dirs: tuple
     style: str = "gloss"
     colors: tuple = ()  # ((name, "#rrggbb"), …)
+    color: str = ""     # every picture's colour ("": the theme's accent)
 
     def find(self, name, exts=EXTS, fallback=True):
         """The file of a picture (or what stands in for it), or None."""
@@ -213,7 +214,7 @@ class Set:
                         return p
         return None
 
-    def color(self, name):
+    def color_of(self, name):
         return dict(self.colors).get(name)
 
 
@@ -224,7 +225,8 @@ def for_theme(theme):
     return Set(dirs=tuple(str(d) for d in getattr(theme, "icon_dirs", ()) or ())
                + (str(FALLBACK_DIR),),
                style=pics.get("style") if pics.get("style") in STYLES else "gloss",
-               colors=tuple(sorted((str(k), str(v)) for k, v in colors.items())))
+               colors=tuple(sorted((str(k), str(v)) for k, v in colors.items())),
+               color=str(pics.get("color") or ""))
 
 
 _told = set()
@@ -293,7 +295,7 @@ def picture(pset, name, accent, svg_ok=True):
     except OSError as e:
         log.debug("picture %s: %s", p, e)
         return None
-    own = pset.color(name) or pset.color(p.stem)
+    own = pset.color_of(name) or pset.color_of(p.stem) or pset.color
     try:
         return Picture("svg", text=styled(text, pset.style, own or accent))
     except ValueError:  # a colour that isn't one (themefile warned): the accent

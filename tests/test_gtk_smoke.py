@@ -254,6 +254,31 @@ class GtkSmokeTest(_GtkBase):
         self.win.on_link("fedtail:copyhandle/bob%40social.example")
         self.assertIn("@bob@social.example", self.win.status_line.get_text())
 
+    def test_post_text_is_one_layout_with_links(self):
+        from fedtail.frontends.gtk.textblock import TextBlock, links_of
+        shown, links = links_of('при&amp;вет <a href="https://e.test/?a=1&amp;b=2">ссылка</a>!',
+                                "#123456")
+        self.assertNotIn("<a", shown)
+        self.assertEqual(len(links), 1)
+        start, end, url = links[0]
+        self.assertEqual(url, "https://e.test/?a=1&b=2")
+        text = "при&вет ссылка!".encode()
+        self.assertEqual(text[start:end].decode(), "ссылка")
+        lane = self._lane("home")
+        card = next(c for c in lane.rows.values() if c.post.id == "011")
+        body = next(w for w in _walk(card) if isinstance(w, TextBlock))
+        self.assertIn("привет", body.text())
+        pump(lambda: body.get_width() > 0, 3)
+        followed = []
+        body.on_link = followed.append
+        start, end, url = body.links[0]
+        idx = (start + end) // 2
+        rect = body.layout.index_to_pos(idx)
+        from fedtail.frontends.gtk.gi_setup import Pango
+        x, y = rect.x / Pango.SCALE + 1, rect.y / Pango.SCALE + 1
+        self.assertEqual(body.link_at(x, y), "https://e.test/")
+        self.assertIsNone(body.link_at(0, 0))  # "привет": no link
+
     def test_like_updates_the_card(self):
         lane = self._lane("home")
         card = next(c for c in lane.rows.values() if c.post.id == "011")

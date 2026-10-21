@@ -118,6 +118,7 @@ posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Co
 # The theme's own set ([shape] icons = "own"): what its folder lacks comes from the
 # themes it inherits, then from the theme named here, then from fedtail's fallback set.
 from = ""                # a theme whose set this one borrows: "mra" (mra-blue does)
+color = ""               # every picture's colour, "" — colors.accent (point: one grey-blue)
 style = "gloss"          # how an SVG's blank colours ({c} {l} {d}) are filled: "gloss" (a
                          # gradient and a shine), "agent" (brighter, a softer outline),
                          # "flat" (plain colour, no shine), "qip" (a strong shine, a thick

@@ -276,8 +276,29 @@ def validate(theme, ref):
     return warnings
 
 
+_INSTALLED = []
+
+
+def _copy_if_changed(src, dst):
+    """dst made a copy of src unless it is one already (by size and time: reading every
+    picture of every theme at each start and each theme tried took a tenth of a second)."""
+    s = src.stat()
+    try:
+        d = dst.stat()
+        if d.st_size == s.st_size and d.st_mtime >= s.st_mtime:
+            return
+    except OSError:
+        pass
+    dst.write_bytes(src.read_bytes())
+
+
 def install_copies():
-    """Keep ~/.config/fedtail/themes/builtin/ and the README current. Best effort."""
+    """Keep ~/.config/fedtail/themes/builtin/ and the README current — once a run. Best
+    effort."""
+    where = str(user_dir())
+    if where in _INSTALLED:
+        return
+    _INSTALLED.append(where)
     try:
         target = user_dir() / "builtin"
         target.mkdir(parents=True, exist_ok=True)
@@ -290,9 +311,8 @@ def install_copies():
             if icons.is_dir():
                 (target / p.stem / "icons").mkdir(parents=True, exist_ok=True)
                 for f in icons.iterdir():
-                    d = target / p.stem / "icons" / f.name
-                    if f.is_file() and (not d.exists() or d.read_bytes() != f.read_bytes()):
-                        d.write_bytes(f.read_bytes())
+                    if f.is_file():
+                        _copy_if_changed(f, target / p.stem / "icons" / f.name)
         from . import iconpack
         names = PICTURES.format(
             standard="\n".join(f"    {k:<10} {v}" for k, v in iconpack.STANDARD.items()),

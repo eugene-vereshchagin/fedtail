@@ -1112,7 +1112,16 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---- core events ------------------------------------------------------------------
     def on_event(self, name, payload):
-        if name in ("lanes_updated", "parents", "read_changed", "arrived"):
+        if name == "read_changed":  # marks only: no lane is rebuilt for them
+            for lname, lv in self.lane_views.items():
+                if lname in SPECIAL:
+                    continue
+                if lv.get_mapped() and hasattr(lv, "apply_read"):
+                    lv.apply_read(payload or ())
+                else:
+                    lv.dirty = True
+            self.update_badges()
+        elif name in ("lanes_updated", "parents", "arrived"):
             changed = payload if name == "lanes_updated" and isinstance(payload, dict) else None
             for lname, lv in self.lane_views.items():
                 if lname in SPECIAL:

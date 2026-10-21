@@ -16,6 +16,7 @@ from .gi_setup import Gdk, GLib, Gtk, Pango, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 
+WRAP_MIN_CHARS = 20  # the narrowest a wrapped text asks to be
 QUOTE_DEPTH = 1     # a quoted post shows its own quote no deeper than this
 
 
@@ -28,6 +29,9 @@ def _label(text="", css=(), markup=False, wrap=False, xalign=0.0, selectable=Fal
     if wrap:
         lab.set_wrap(True)
         lab.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        # a width to start from: without one GTK lays the text out a character a line
+        # to find how narrow it could go — a third of what a card cost to lay out
+        lab.set_width_chars(WRAP_MIN_CHARS)
     lab.set_selectable(selectable)
     for c in css:
         lab.add_css_class(c)
@@ -248,9 +252,10 @@ class Card(Gtk.Box):
         html = richtext.clean(html, markup=cfg["feed"]["text_markup"])
         if not cfg["feed"]["emoji"]:
             html = richtext.strip_emoji(html, p.emojis)
-        lab = _label(pango.markup(html, sanitized=True), ("ft-body",), markup=True, wrap=True)
-        lab.connect("activate-link", self._link)
-        return lab
+        # one Pango layout, not a wrapping label: a quarter of the cost (textblock.py)
+        from .textblock import TextBlock
+        return TextBlock(pango.markup(html, sanitized=True), self.ctx.theme.c["link"].name(),
+                         lambda uri: self._link(None, uri), css=("ft-body",))
 
     def _media(self, p):
         """Pictures as the Qt card has them: one alone — ui.image_height tall, as wide
