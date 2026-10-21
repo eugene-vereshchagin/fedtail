@@ -94,6 +94,9 @@ class LaneRow(Gtk.ListBoxRow):
         lab.set_hexpand(True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)
         box.append(lab)
+        what = _("tip_" + name) if not name.startswith("list:") else ""
+        if what and what != "tip_" + name:  # what the lane is, as Qt's sidebar says
+            tip(self, what)
         self.badge = Gtk.Label(valign=Gtk.Align.CENTER)  # a pill, not a row-high oval
         self.badge.add_css_class("ft-badge")
         if name in BADGE_KIND:
@@ -233,6 +236,9 @@ class MainWindow(Gtk.ApplicationWindow):
         paned.set_start_child(side)
         # the lanes and, under them, the command line: beside the sidebar, as in Qt
         self.right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        from .find import FindBar
+        self.find_bar = FindBar(self)  # Ctrl+F, over the lanes
+        self.right.append(self.find_bar)
         self.tabs.set_vexpand(True)
         self.right.append(self.tabs)
         paned.set_end_child(self.right)
@@ -460,8 +466,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _shortcuts(self):
         """The same keys as the Qt window where it has the thing: Ctrl+L the command line,
-        Ctrl+N write, F5 refresh, Ctrl+W a thread's tab, Ctrl+Q quit. (Never F1: it sits
-        next to Esc.)"""
+        Ctrl+N write, Ctrl+F find, F5 refresh, Ctrl+W a thread's tab, Ctrl+Q quit. (Never
+        F1: it sits next to Esc.)"""
         ctl = Gtk.ShortcutController()
         ctl.set_scope(Gtk.ShortcutScope.GLOBAL)
 
@@ -470,6 +476,7 @@ class MainWindow(Gtk.ApplicationWindow):
                                               Gtk.CallbackAction.new(lambda *_a: (fn(), True)[1])))
         add("<Control>l", lambda: self.cmdline is not None and self.cmdline.entry.grab_focus())
         add("<Control>n", self.compose)
+        add("<Control>f", self.find_bar.open)
         add("F5", self.view.poll_now)
         add("<Control>q", self.close)
         add("<Control>w", self._close_current_tab)
@@ -1018,6 +1025,13 @@ class MainWindow(Gtk.ApplicationWindow):
         return want if want in self.lane_rows else next(iter(self.lane_rows), None)
 
     # ---- lanes -------------------------------------------------------------------------
+    def current_lane_view(self):
+        """The lane in front: a lane's tab (split), or the lane chosen in the sidebar."""
+        page = self.tabs.get_nth_page(self.tabs.get_current_page())
+        if isinstance(page, LaneView):
+            return page
+        return self.lane_views.get(self._current_lane() or "")
+
     def _current_lane(self):
         row = self.sidebar.get_selected_row()
         return row.name if isinstance(row, LaneRow) else None

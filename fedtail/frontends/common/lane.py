@@ -300,6 +300,17 @@ class LaneModel:
         return [m for i in ids for m in self.conv_members.get(i, [i])]
 
 
+def age_days(p, cfg):
+    """How many days old a post is, when that's more than feed.old_days; else 0 — an
+    old post pulled from someone's outbox is marked "old", not read as news."""
+    limit = int(cfg["feed"].get("old_days", 30) or 0)
+    if not limit or p.created is None:
+        return 0
+    from datetime import UTC, datetime
+    days = (datetime.now(UTC) - p.created).days
+    return days if days > limit else 0
+
+
 def seen(top, bottom, vtop, vbottom, at_end=False, glimpsed=False, slack=2):
     """Is a card read now? Its top and bottom and the viewport's, in one coordinate;
     at_end: the view stands at the lane's end; glimpsed: the card was on screen before.

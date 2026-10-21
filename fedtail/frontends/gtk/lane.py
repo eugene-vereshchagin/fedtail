@@ -424,6 +424,8 @@ class LaneView(Gtk.Box):
             self._done_building()
 
     def _done_building(self):
+        if getattr(self, "_wanted", None) is not None:
+            GLib.idle_add(self._bring_wanted, priority=GLib.PRIORITY_LOW)
         self._older_visible()
         self._schedule_seen()  # new cards may be on screen already
         if not self.positioned and self.get_mapped():
@@ -621,6 +623,34 @@ class LaneView(Gtk.Box):
             self._queue = []
             self.keys, self.index = [], {}
             self.positioned = False
+
+    def bring(self, key, then=None):
+        """key's card on screen near the top — built around it if it wasn't (find,
+        a link to a post far away); then(card) once it's there."""
+        if key in self.rows:
+            y = self._y(self.rows[key])
+            if y is not None:
+                self.adj.set_value(max(0, y - 40))
+            if then is not None:
+                then(self.rows[key])
+            return
+        if key not in self.index:
+            return
+        for k in list(self.order):
+            self._remove(k)
+        target = self.index[key]
+        lo, hi = window_around(len(self.keys), target)
+        self._queue = [("end", self.keys[target:hi]), ("start", self.keys[lo:target][::-1])]
+        self.positioned = True  # placed here, not where reading starts
+        self._wanted = (key, then)
+        self._build_soon()
+
+    def _bring_wanted(self):
+        key, then = self._wanted
+        self._wanted = None
+        if key in self.rows:
+            self.bring(key, then)
+        return GLib.SOURCE_REMOVE
 
     def jump_first_unread(self):
         """↓ To new: the first unread at the top (built around it, if it wasn't), or —

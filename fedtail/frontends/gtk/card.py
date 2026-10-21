@@ -155,8 +155,17 @@ class Card(Gtk.Box):
             meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
         if p.edited:
             meta.append(link_markup(f"fedtail:history/{p.id}", _("edited_mark")))
+        from ..common.lane import age_days
+        days = age_days(p, ctx.cfg)
+        if days:
+            meta.append(GLib.markup_escape_text(_("old_post", n=days)))
         info = _label(" · ".join(meta), ("ft-muted",), markup=True)
-        tip(info, actions.vis_word(p.visibility))
+        tips = [actions.vis_word(p.visibility)]
+        if p.edited:
+            tips.append(_("edited_tip", when=ctx.theme.date(p.edited)))
+        if days:
+            tips.append(_("old_post_tip"))
+        tip(info, "\n".join(tips))
         info.connect("activate-link", self._link)
         head.append(info)
         if vis_pic is not None:

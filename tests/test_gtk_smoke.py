@@ -384,6 +384,25 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(len(asked), 1)
         self.assertEqual(prof.parse_langs("ru; en  de"), ["ru", "en", "de"])
 
+    def test_find_in_the_lane(self):
+        """Ctrl+F as in Qt: the words, "1 of 1", the card brought and marked."""
+        bar = self.win.find_bar
+        bar.open()
+        self.assertTrue(bar.get_visible())
+        bar.entry.set_text("коммент")
+        bar.search(jump=True)
+        lv = self.win.current_lane_view()
+        self.assertIsNotNone(lv, "no lane in front")
+        self.assertEqual(len(bar.hits), 1)
+        self.assertTrue(pump(lambda: bar._marked is not None, 3))
+        self.assertTrue(bar._marked.has_css_class("ft-found"))
+        self.assertEqual(bar.count.get_text(), i18n._("find_count", i=1, n=1))
+        bar.entry.set_text("нет такого слова")
+        bar.search(jump=True)
+        self.assertEqual(bar.count.get_text(), i18n._("find_none"))
+        bar.close_bar()
+        self.assertFalse(bar.get_visible())
+
     def test_reply_in_the_editor(self):
         from fedtail.frontends.gtk.compose import ComposeWindow
         post = self.view.by_id("011")
