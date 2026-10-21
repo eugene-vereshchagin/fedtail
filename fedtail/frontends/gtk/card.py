@@ -188,9 +188,9 @@ class Card(Gtk.Box):
             inner.append(self._media(p))
         if p.poll is not None:
             inner.append(self._poll(p))
-        if p.quote is not None and p.quote.post is not None and \
-                ctx.cfg["feed"].get("quotes", "card") == "card":
-            inner.append(self._quote(p.quote.post))
+        quote_mode = ctx.cfg["feed"].get("quotes", "card")
+        if p.quote is not None and quote_mode != "off":
+            inner.append(self._quote_of(p.quote, quote_mode))
         cards = ctx.cfg["feed"].get("link_cards", "full")
         if p.card is not None and not p.media and cards != "off":
             inner.append(self._link_card(p.card))
@@ -434,6 +434,27 @@ class Card(Gtk.Box):
             parts.append(_("poll_multiple"))
         box.append(_label(" · ".join(parts), ("ft-muted",)))
 
+    def _quote_of(self, quote, mode):
+        """The quoted post framed in this one (feed.quotes = "card") or a line with a
+        link to it ("link"); a quote that can't be shown says why — as in Qt."""
+        state, q, qid = quote.state, quote.post, quote.id
+        if state != "accepted" or (q is None and not qid):
+            key = "quote_" + state
+            why = _(key) if _(key) != key else _("quote_unavailable")
+            text = GLib.markup_escape_text("❝ " + why)
+            if qid and state in ("blocked_account", "blocked_domain", "muted_account"):
+                text += " · " + link_markup(f"fedtail:thread/{qid}", _("quote_show_anyway"))
+            lab = _label(text, ("ft-muted",), markup=True, wrap=True)
+            lab.connect("activate-link", self._link)
+            return lab
+        if q is None or mode == "link":
+            words = "❝ " + (_("quote_by", name=name_of(q.author)) + ": " + snippet(q, 90)
+                            if q is not None else _("quote_open"))
+            lab = _label(link_markup(f"fedtail:thread/{qid}", words), markup=True, wrap=True)
+            lab.connect("activate-link", self._link)
+            return lab
+        return self._quote(q)
+
     def _quote(self, q):
         frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         frame.add_css_class("ft-ctx")
@@ -441,7 +462,12 @@ class Card(Gtk.Box):
                                   q.author.handle), markup=True)
         head.connect("activate-link", self._link)
         frame.append(head)
-        frame.append(self._body(q))
+        if q.warning:  # a warning stays a warning inside a quote too
+            frame.append(_label("⚠ " + q.warning, ("ft-muted",), wrap=True))
+        else:
+            frame.append(self._body(q))
+            if q.media:
+                frame.append(_label("🖼 " + _("quote_media", n=len(q.media)), ("ft-muted",)))
         return frame
 
     def _link_card(self, card):
