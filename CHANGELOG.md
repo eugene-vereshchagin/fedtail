@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.18.0 — in progress
+## 0.17.1 — 2026-10-21
 
 - The split layout's input line says in words where a post goes and who will see it:
   "into the thread, a reply to andy · seen by: followers", "new post · seen by: all",
