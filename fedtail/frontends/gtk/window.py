@@ -1398,6 +1398,27 @@ class MainWindow(Gtk.ApplicationWindow):
     def call(self, future, ok=None, fail=None):
         return self.bridge.call(future, ok, fail or self.error)
 
+    # ---- what a post's ⋯ opens (common/links.py asks; gtk/postinfo.py shows) ----------
+    def show_history(self, st):
+        from . import postinfo
+        return postinfo.show_history(self, st)
+
+    def report(self, st):
+        from . import postinfo
+        return postinfo.report(self, st)
+
+    def open_reactions(self, st, kind):
+        from . import postinfo
+        return postinfo.open_reactions(self, st, kind)
+
+    def open_quotes(self, post):
+        from . import postinfo
+        return postinfo.open_quotes(self, post)
+
+    def read_up_to(self, sid):
+        from . import postinfo
+        return postinfo.read_up_to(self, sid)
+
     def error(self, text):
         self.status(_("error", err=text))
 

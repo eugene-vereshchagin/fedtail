@@ -351,27 +351,79 @@ class Card(Gtk.Box):
         parent.remove(old)
 
     def _poll(self, p):
-        """The results as lines with a bar each (voting comes with the editor)."""
-        poll = p.poll
+        """Options to pick and Vote (or a peek at the results), as in Qt; the results
+        as lines with a bar each — after voting, when it's over, on my own post."""
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        total = max(1, poll.voters or poll.votes or 0)
-        for i, opt in enumerate(poll.options):
-            row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            mine = i in poll.my_votes
-            pct = (opt.votes or 0) * 100 // total if opt.votes is not None else None
-            text = ("✓ " if mine else "") + opt.title + (f" — {pct}%" if pct is not None else "")
-            row.append(_label(text, wrap=True))
-            if pct is not None:
-                bar = Gtk.LevelBar()
-                bar.set_min_value(0)
-                bar.set_max_value(100)
-                bar.set_value(pct)
-                row.append(bar)
-            box.append(row)
-        state = _("poll_closed") if poll.expired else (
-            _("poll_until", when=self.ctx.theme.date(poll.expires)) if poll.expires else "")
-        box.append(_label(f"{poll.votes} · {state}".strip(" ·"), ("ft-muted",)))
+        self._fill_poll(box, p, False)
         return box
+
+    def _fill_poll(self, box, p, peek):
+        while (c := box.get_first_child()) is not None:
+            box.remove(c)
+        poll = p.poll
+        mine = p.author.id == self.ctx.me_id
+        if poll.voted or poll.expired or mine or peek:
+            total = max(1, (poll.voters if poll.multiple else None) or poll.votes or 0)
+            for i, opt in enumerate(poll.options):
+                row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+                pct = (opt.votes or 0) * 100 // total if opt.votes is not None else None
+                text = ("✓ " if i in poll.my_votes else "") + opt.title + \
+                    (f" — {pct}%" if pct is not None else "")
+                row.append(_label(text, wrap=True))
+                if pct is not None:
+                    bar = Gtk.LevelBar()
+                    bar.set_min_value(0)
+                    bar.set_max_value(100)
+                    bar.set_value(pct)
+                    row.append(bar)
+                box.append(row)
+        else:
+            picks, first = [], None
+            for opt in poll.options:
+                b = Gtk.CheckButton(label=opt.title)
+                if not poll.multiple:  # one of them: radio buttons
+                    if first is None:
+                        first = b
+                    else:
+                        b.set_group(first)
+                picks.append(b)
+                box.append(b)
+            row = Gtk.Box(spacing=6)
+            vote = Gtk.Button(label=_("poll_vote"))
+            vote.set_sensitive(False)
+            peek_b = Gtk.Button(label=_("poll_results"))
+            peek_b.add_css_class("flat")
+            for b in picks:
+                b.connect("toggled", lambda *_a: vote.set_sensitive(
+                    any(x.get_active() for x in picks)))
+
+            def send(_b):
+                vote.set_sensitive(False)
+                vote.set_label(_("poll_sending"))
+                chosen = [i for i, x in enumerate(picks) if x.get_active()]
+
+                def done(post):
+                    self.ctx.win.status(_("poll_voted"))
+                    if post is not None and getattr(post, "poll", None) is not None:
+                        self._fill_poll(box, post, False)
+                self.ctx.win.call(self.ctx.view.vote(p, chosen), done,
+                                  lambda e: (vote.set_label(_("poll_vote")),
+                                             vote.set_sensitive(True),
+                                             self.ctx.win.error(e)))
+            vote.connect("clicked", send)
+            peek_b.connect("clicked", lambda _b: self._fill_poll(box, p, True))
+            row.append(vote)
+            row.append(peek_b)
+            box.append(row)
+        n = poll.voters if poll.voters is not None else poll.votes
+        parts = [_("poll_people" if poll.voters is not None else "poll_votes", n=n)]
+        if poll.expired:
+            parts.append(_("poll_closed"))
+        elif poll.expires:
+            parts.append(_("poll_until", when=self.ctx.theme.date(poll.expires)))
+        if poll.multiple:
+            parts.append(_("poll_multiple"))
+        box.append(_label(" · ".join(parts), ("ft-muted",)))
 
     def _quote(self, q):
         frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)

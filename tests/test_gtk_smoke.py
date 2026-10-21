@@ -311,6 +311,53 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: self.view.by_id("010") is None or
                              getattr(self.world, "deleted", None), 5))
 
+    def test_what_the_post_menu_opens(self):
+        """The ⋯ items that open a window or a tab — a post's versions, a complaint,
+        who liked it, the quotes of my post — and "read up to here": as in Qt, no
+        "not here yet"."""
+        said = []
+        self.win.status = lambda text, *a: said.append(text)
+        before = set(Gtk.Window.list_toplevels())
+        self.win.on_link("fedtail:history/011")
+        self.win.on_link("fedtail:report/011")
+        pump(timeout=0.5)
+        new = [w for w in Gtk.Window.list_toplevels() if w not in before]
+        self.assertGreaterEqual(len(new), 2)
+        self.win.on_link("fedtail:favourited_by/011")
+        self.win.on_link("fedtail:quotes/010")
+        pump(timeout=0.5)
+        self.assertIn("favourited_by:011", self.win.extra_tabs)
+        self.assertIn("quotes:010", self.win.extra_tabs)
+        self.win.on_link("fedtail:readupto/012")
+        pump(timeout=0.3)
+        self.assertNotIn(i18n._("gtk_not_yet"), said)
+        for w in new:
+            w.close()
+
+    def test_vote_in_a_poll(self):
+        """A poll not voted in: options and Vote, as in Qt; voted — the results."""
+        st = status("020", BOB, minute=20, text="опрос", vis="public")
+        st["poll"] = {"id": "P2", "expired": False, "multiple": False, "voted": False,
+                      "own_votes": [], "votes_count": 3, "voters_count": 3,
+                      "expires_at": "2099-01-01T12:00:00Z",
+                      "options": [{"title": "да", "votes_count": 2},
+                                  {"title": "нет", "votes_count": 1}]}
+        self.world.add(st, home=True)
+        self.core.poll_once()
+        lane = self._lane("home")
+        self.assertTrue(pump(lambda: any(c.post.id == "020" for c in lane.rows.values()), 5))
+        card = next(c for c in lane.rows.values() if c.post.id == "020")
+        checks = [w for w in _walk(card) if isinstance(w, Gtk.CheckButton)]
+        vote = next(w for w in _walk(card) if isinstance(w, Gtk.Button) and
+                    w.get_label() == i18n._("poll_vote"))
+        self.assertEqual([c.get_label() for c in checks], ["да", "нет"])
+        self.assertFalse(vote.get_sensitive())
+        checks[1].set_active(True)
+        self.assertTrue(vote.get_sensitive())
+        vote.emit("clicked")
+        self.assertTrue(pump(lambda: not any(isinstance(w, Gtk.CheckButton)
+                                             for w in _walk(card)), 5))
+
     def test_reply_in_the_editor(self):
         from fedtail.frontends.gtk.compose import ComposeWindow
         post = self.view.by_id("011")
