@@ -2,6 +2,9 @@
 
 ## 0.18.0 — in progress
 
+- GTK, the split layout in the Mail.ru Agent themes (mra…): the other side's face in a
+  column beside the posts, the name under it, a click — the profile; in a talk whom I
+  talk to, over a lane the author under the pointer.
 - "You replied" shows under the post at once after replying from fedtail (it waited for
   something else to change in that lane — in "Replies to me", often for good).
 - The split layout's input line completes #tags, @names and :emoji: as the Compose window

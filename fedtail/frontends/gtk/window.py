@@ -277,11 +277,21 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tabs.set_show_tabs(True)
         self.dock = split.InputDock(self)
         reading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        if split.split.faces_mode(self.cfg, self.theme.shape) == "qip":
+        mode = split.split.faces_mode(self.cfg, self.theme.shape)
+        self.agent_face = None
+        if mode == "qip":  # over a lane: the author under the pointer, in one line
             self.author_bar = split.AuthorBar(self)
             reading.append(self.author_bar)
         self.tabs.set_vexpand(True)
-        reading.append(self.tabs)
+        if mode == "agent":  # the Agent: their face in a column beside the posts
+            beside = Gtk.Box(vexpand=True)
+            self.tabs.set_hexpand(True)
+            beside.append(self.tabs)
+            self.agent_face = split.AgentFace(self)
+            beside.append(self.agent_face)
+            reading.append(beside)
+        else:
+            reading.append(self.tabs)
         rw = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
         rw.set_start_child(reading)
         rw.set_end_child(self.dock)
@@ -376,9 +386,10 @@ class MainWindow(Gtk.ApplicationWindow):
             panel._set_vis("direct")
 
     def _watch_pointer(self, lv):
-        """The author bar follows the post under the pointer, or, scrolled by keys or
-        the wheel without it, the lowest one wholly on screen."""
-        if self.author_bar is None or not hasattr(lv, "list"):
+        """The author bar (or the Agent's face) follows the post under the pointer, or,
+        scrolled by keys or the wheel without it, the lowest one wholly on screen."""
+        if (self.author_bar is None and self.agent_face is None) or \
+                not hasattr(lv, "list"):
             return
         motion = Gtk.EventControllerMotion()
 
@@ -391,17 +402,27 @@ class MainWindow(Gtk.ApplicationWindow):
         lv.adj.connect("value-changed", lambda _a: self._follow_author(lv))
 
     def _follow_author(self, lv=None):
+        """Whose face and name the bar over a lane (QIP) or the column beside it (the
+        Agent) shows: the author under the pointer; in a talk whom I talk to; in a
+        thread whom I answer."""
         from . import split
-        if self.author_bar is None:
+        if self.author_bar is None and self.agent_face is None:
             return
         page = self.tabs.get_nth_page(self.tabs.get_current_page())
-        lv = lv if lv is not None else page
-        if lv is not page or not hasattr(lv, "rows"):
-            self.author_bar.set_who(None)
+        if lv is not None and lv is not page:
             return
-        post = split.post_at(lv, self._pointer_y)
-        self.author_bar.set_who(split.split.other_side(
-            post, self.view.me, self.dock.target if self.dock else None))
+        me = self.view.me
+        target = self.dock.target if self.dock else None
+        if getattr(page, "who", None) is not None:
+            who = page.who
+        elif hasattr(page, "rows"):
+            who = split.split.other_side(split.post_at(page, self._pointer_y), me, target)
+        else:
+            who = split.split.other_side(None, me, target)
+        if self.author_bar is not None:
+            self.author_bar.set_who(who if hasattr(page, "rows") else None)
+        if self.agent_face is not None:
+            self.agent_face.set_who(who)
 
     def _shortcuts(self):
         """The same keys as the Qt window where it has the thing: Ctrl+L the command line,
@@ -1014,7 +1035,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.dock.follow(page)
             if self.author_bar is not None:
                 self.author_bar.set_visible(hasattr(page, "rows"))
-                self._follow_author()
+            self._follow_author()
             name = next((n for n, lv in self.lane_tabs.items() if lv is page), None)
             if name is not None:
                 self.view.set_active_lane(name)

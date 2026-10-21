@@ -486,6 +486,31 @@ class GtkSplitTest(_GtkBase):
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkAgentTest(_GtkBase):
+    """The split layout in a Mail.ru Agent theme: a face column beside the posts."""
+    UI = {"layout": "split", "theme": "mra"}
+
+    def test_agent_face(self):
+        win = self.win
+        self.assertIsNone(win.author_bar)
+        face = win.agent_face
+        self.assertIsNotNone(face)
+        self.assertTrue(face.get_visible())
+        pump(lambda: "home" in win.lane_tabs, 5)
+        lane = win.lane_tabs["home"]
+        win.tabs.set_current_page(win.tabs.page_num(lane))
+        pump(lambda: getattr(lane, "positioned", True), 5)
+        win._follow_author(lane)
+        self.assertIsNotNone(face.who)  # someone's face, never an empty frame
+        bob = self.view.by_id("011").author
+        win.write_to(bob)  # a talk: whom I talk to
+        pump(timeout=0.3)
+        win._follow_author()
+        self.assertEqual(face.who.id, bob.id)
+        self.assertTrue(face.name.get_text())
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkBigLaneTest(unittest.TestCase):
     """Thousands of posts in a lane: only a window of them is built, in batches, so the
     main loop never stops for long (the first try froze the desktop for good: 5.6 s for

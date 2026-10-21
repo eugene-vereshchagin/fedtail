@@ -157,6 +157,9 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
                     background: {c['card']}; }}
 .ft-compose-text, .ft-compose-text text {{ background: transparent; color: {c['text']}; }}
 .ft-column {{ border-right: 1px solid {c['sidebar_border']}; }}
+.ft-agent-face {{ background: {c['panel']}; border-left: 1px solid {c['sidebar_border']}; }}
+.ft-face-frame {{ border: 1px solid {c['card_border']}; border-radius: 4px;
+                  background: {c['card']}; }}
 """
 
 

@@ -933,3 +933,58 @@ def post_at(lv, y=None):
         elif top > vbot:
             break
     return real(best.entry) if best is not None else None
+
+
+AGENT_FACE = 88
+
+
+class AgentFace(Gtk.Box):
+    """The Mail.ru Agent's column beside the posts (shape.faces = "agent"): the other
+    side's face, big, in a frame, the name under it, a click — the profile. In a thread
+    whom I answer, in a talk whom I talk to, over a lane the author under the pointer."""
+
+    def __init__(self, win):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        self.win, self.who = win, None
+        self.add_css_class("ft-agent-face")
+        self.set_size_request(AGENT_FACE + 16, -1)
+        for m in ("top", "bottom", "start", "end"):
+            getattr(self, "set_margin_" + m)(8)
+        self.face = Gtk.Box(halign=Gtk.Align.CENTER)
+        self.face.set_size_request(AGENT_FACE, AGENT_FACE)
+        self.face.add_css_class("ft-face-frame")
+        click = Gtk.GestureClick()
+        click.connect("released", lambda *_a: self._profile())
+        self.face.add_controller(click)
+        self.append(self.face)
+        self.name = Gtk.Label(xalign=0.5)
+        self.name.add_css_class("ft-name")
+        self.name.set_ellipsize(Pango.EllipsizeMode.END)
+        self.name.set_max_width_chars(12)
+        self.append(self.name)
+        self.link = Gtk.Label(xalign=0.5)
+        self.link.connect("activate-link", lambda _l, _u: (self._profile(), True)[1])
+        self.append(self.link)
+
+    def set_who(self, who):
+        if who is not None and self.who is not None and who.id == self.who.id:
+            return
+        if who is None and self.who is None:
+            return
+        self.who = who
+        while (c := self.face.get_first_child()) is not None:
+            self.face.remove(c)
+        if who is None:
+            self.name.set_text("")
+            self.link.set_text("")
+            return
+        from .card import Avatar
+        self.face.append(Avatar(self.win.ctx, who, AGENT_FACE))
+        name = who.name or who.username or who.handle
+        self.name.set_text(name)
+        self.name.set_tooltip_text(name)
+        self.link.set_markup(f'<a href="#">{GLib.markup_escape_text(_("faces_profile"))}</a>')
+
+    def _profile(self):
+        if self.who is not None:
+            self.win.open_account(self.who.id)
