@@ -2,6 +2,15 @@
 
 ## 0.18.0 — in progress
 
+- The split layout's input line says in words where a post goes and who will see it:
+  "into the thread, a reply to andy · seen by: followers", "new post · seen by: all",
+  "✉ privately to sn4il · seen by: only those mentioned". In a thread it answers the
+  post you came for, else the thread's newest — not the last branch of the tree.
+- Less CPU with the split layout open for long: the roster is worked out in the
+  background (it read every lane on the window's thread, a third of a second each
+  time), and the face over a lane finds the post under the pointer or the lowest whole
+  one without measuring every card of the lane twice a second.
+
 ## 0.17.0 — 2026-10-21
 
 - **A GTK 4 window, the frame of it** (`fedtail --ui gtk`, or `ui.frontend = "gtk"`;

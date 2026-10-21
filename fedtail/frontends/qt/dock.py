@@ -164,8 +164,12 @@ class InputDock(QWidget):
         from .feed import ThreadWidget
         post = None
         if isinstance(widget, ThreadWidget):
+            # the post I came to the thread for; else its newest (not the last in the
+            # tree, which may be an old branch)
             posts = getattr(widget, "posts", None) or []
-            post = posts[-1] if posts else None
+            post = next((p for p in posts if p.id == widget.focus_id), None) or \
+                (max(posts, key=lambda p: (p.created is not None, p.created or 0))
+                 if posts else None)
         if self._typed():
             return  # words of mine on their way: they keep whom they answer
         if isinstance(widget, TalkWidget):
@@ -192,7 +196,7 @@ class InputDock(QWidget):
         self.set_visibility("direct")
         self.show_whom(account)
         self._about = _("dock_private", name=account.username or account.handle)
-        self.about.setText(self._about)
+        self._say()
         if focus:
             self.text.setFocus()
 
@@ -221,7 +225,7 @@ class InputDock(QWidget):
         self.show_whom(post.author if post else None)
         self._about = _("dock_reply", name=post.author.username) if post \
             else _("dock_new")
-        self.about.setText(self._about)
+        self._say()
 
     def show_whom(self, account):
         """The face beside the line: whom this goes to (None: nobody in particular) —
@@ -240,15 +244,22 @@ class InputDock(QWidget):
         set_face(self.win, self.face, account.avatar_static if account else "", self,
                  "_face_url")
 
+    def _say(self):
+        """Above the line, in words: where this goes and who will see it — "in the
+        thread: a reply to andy · seen by: followers"."""
+        vis = _("vis_short_" + VIS_KEY.get(self.visibility, self.visibility))
+        self.about.setText(f"{self._about} · {_('dock_seen_by', who=vis)}")
+
     def set_visibility(self, vis):
         self.visibility = vis
+        self._say()
         self._show_visibility()
 
     def _show_visibility(self):
         from . import icons
         vis = self.visibility
         icons.dress(self.vis_btn, vis, self.win.theme, words="▾",
-                    glyph=_("vis_short_" + VIS_KEY.get(vis, vis)) + " ▾")
+                    glyph=_("vis_btn_" + VIS_KEY.get(vis, vis)) + " ▾")
         self.vis_btn.setToolTip(f"{_('web_visibility')}: "
                                 f"{_('vis_' + VIS_KEY.get(vis, vis))}")
 
@@ -288,7 +299,7 @@ class InputDock(QWidget):
             self.count.setText("")
             self.send_btn.setEnabled(True)
             return
-        self.about.setText(self._about)
+        self._say()
         limit = getattr(self.win.ctx.view.caps, "max_characters", None) or 500
         n = len(self.text.toPlainText())
         self.count.setText(f"{n}/{limit}")
@@ -421,37 +432,56 @@ class AgentFace(QWidget):
 
 
 def _under_pointer(view):
+    """The post under the mouse pointer: the widget there, up to its row — not every
+    row of the lane measured twice a second (half a second on a long one)."""
     from PySide6.QtGui import QCursor
+    from PySide6.QtWidgets import QApplication
     vp = view.viewport()
-    at = vp.mapFromGlobal(QCursor.pos())
-    if not vp.rect().contains(at):
+    pos = QCursor.pos()
+    if not vp.rect().contains(vp.mapFromGlobal(pos)):
         return None
-    y = view.verticalScrollBar().value() + at.y()
-    for key in view.order:
-        row = view.rows.get(key)
-        if row is not None and getattr(row, "spec", None) is not None:
-            top = view._top(row)
-            if top <= y < top + row.height():
-                return key
+    w = QApplication.widgetAt(pos)
+    rows = {id(r): k for k, r in view.rows.items()}
+    while w is not None and w is not vp:
+        key = rows.get(id(w))
+        if key is not None:
+            row = view.rows[key]
+            return key if getattr(row, "spec", None) is not None else None
+        w = w.parentWidget()
     return None
+
+
+def _first_below(view, y):
+    """The index in view.order of the first row whose bottom is below y: a binary
+    search (rows stand in order down the lane)."""
+    order = view.order
+    lo, hi = 0, len(order)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        row = view.rows.get(order[mid])
+        if row is not None and view._top(row) + row.height() <= y:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo
 
 
 def _lowest_whole(view):
     sb = view.verticalScrollBar()
     top, bottom = sb.value(), sb.value() + view.viewport().height()
     best = None
-    for key in view.order:
+    for key in view.order[_first_below(view, top):]:
         row = view.rows.get(key)
         if row is None or getattr(row, "spec", None) is None or row.spec.entry is None:
             continue
         y = view._top(row)
+        if y > bottom:
+            break
         if y >= top - 2 and y + row.height() <= bottom + 2:
             best = key
-        elif y > bottom:
-            break
     if best is None:  # one card taller than the screen: the one on screen
-        a = view._anchor()
-        best = a[0] if a else None
+        i = _first_below(view, top)
+        best = view.order[i] if i < len(view.order) else None
     return best
 
 

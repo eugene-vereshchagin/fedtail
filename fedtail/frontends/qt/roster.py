@@ -318,7 +318,8 @@ class RosterWindow(QWidget):
         self._shape = None
         self._mutuals_asked = False
         self._timer = QTimer(self, singleShot=True, interval=REFRESH_MS)
-        self._timer.timeout.connect(self.refresh)
+        self._timer.timeout.connect(self.refresh_in_background)
+        self._computing = self._again = False
         self._restore_place()
         self._apply_look()
         self.dress()
@@ -327,11 +328,39 @@ class RosterWindow(QWidget):
     def refresh_soon(self):
         self._timer.start()
 
+    def refresh_in_background(self):
+        """The roster worked out in the core's threads (it reads every lane: a third of
+        a second on a big store), put on screen when done; one at a time."""
+        view = self.win.ctx.view
+        if not self.win.core.me:
+            return self.refresh()
+        if self._computing:
+            self._again = True
+            return
+        self._computing = True
+
+        def done(groups):
+            self._computing = False
+            self._show(groups)
+            if self._again:
+                self._again = False
+                self.refresh_soon()
+
+        def failed(e):
+            self._computing = False
+            log.info("roster: %s", e)
+        self.win.bridge.call(self.win.core.submit(view.roster), ok=done, fail=failed)
+
     def refresh(self):
+        """At once, in this thread (a click, a fold, the tests)."""
+        view = self.win.ctx.view
+        me = view.me if self.win.core.me else None
+        self._show(view.roster() if me is not None else [])
+
+    def _show(self, groups):
         view = self.win.ctx.view
         me = view.me if self.win.core.me else None
         self._show_me(me)
-        groups = view.roster() if me is not None else []
         if me is not None and not self._mutuals_asked:
             self._mutuals_asked = True  # whom to write to: asked once a day
             self.win.bridge.call(view.refresh_mutuals(), ok=lambda _n: self.refresh_soon(),

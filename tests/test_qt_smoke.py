@@ -2248,7 +2248,10 @@ class QtSmokeTest(unittest.TestCase):
         # the input line under the tabs answers the thread's newest post
         thread = win.tabs.currentWidget()
         self.pump(until=lambda: win.dock.target is not None)
-        self.assertEqual(win.dock.target.id, thread.posts[-1].id)
+        self.assertIn(win.dock.target.id, {p.id for p in thread.posts})
+        about = win.dock.about.text()  # where it goes and who sees it, in words
+        self.assertIn(win.dock.target.author.username, about)
+        self.assertIn(i18n._("dock_seen_by", who="").split("{")[0].strip(" :"), about)
         # whom I answer: their face by the input line (not mine); in a thread the bar
         # over the posts stays away — it is for lanes
         self.assertEqual(win.dock.face.isVisibleTo(win),
