@@ -66,6 +66,7 @@ class RosterRow(QWidget):
             if pm:
                 icon.setPixmap(pm)
         h.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
+        self.icon, self.icon_pm = icon, icon.pixmap() if not icon.pixmap().isNull() else None
         col = QVBoxLayout()
         col.setSpacing(0)
         top = QHBoxLayout()
@@ -109,6 +110,7 @@ class RosterRow(QWidget):
             self.face.setObjectName("faceFrame")
             h.insertWidget(0, self.face, 0, Qt.AlignmentFlag.AlignTop)
             h.setContentsMargins(4, 3, 8, 3)
+            self.icon.hide()  # its picture is in the face's frame when nobody's face is
         if self.compact:
             h.setContentsMargins(6, 1, 6, 1)
             self.face.hide()
@@ -148,6 +150,18 @@ class RosterRow(QWidget):
             self.status.setVisible(bool(status))
         url = item.who.avatar_static if item.who is not None else \
             last.author.avatar_static if last is not None else ""
+        if self.faces and not url:  # a big frame with nobody in it: the lane's own picture
+            self.face.setVisible(not self.compact and self.icon_pm is not None)
+            if self.icon_pm is not None and self._face_url != "":
+                self._face_url = ""
+                self.face.setPixmap(self.icon_pm.scaled(
+                    self.face.width() // 2, self.face.height() // 2,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation))
+                self.face.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return self._tip(item, new)
+        if self.faces:
+            self.face.setVisible(not self.compact)
         if url != self._face_url and not self.compact:
             self._face_url = url
             self.face.clear()
@@ -156,6 +170,9 @@ class RosterRow(QWidget):
                 self.roster.win.images.get(
                     url, lambda pm, w=self.face: _alive(w) and w.setPixmap(
                         _round(pm, w.width())))
+        self._tip(item, new)
+
+    def _tip(self, item, new):
         tip = item.title + (f" — {_('roster_unread', n=item.unread)}" if new else "")
         # a person has the card instead of a tooltip
         self.setToolTip("" if item.kind == "person" else tip)
@@ -226,6 +243,9 @@ class RosterWindow(QWidget):
         super().__init__(None, Qt.WindowType.Window)
         self.win = win
         self.setObjectName("roster")
+        # a QWidget of our own: without this its stylesheet background (the theme's
+        # gradient) is never painted
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setWindowTitle(_("roster_title"))
         self.setWindowIcon(win.windowIcon())
         self.resize(280, 640)
