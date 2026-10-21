@@ -18,7 +18,7 @@ from ..common import compose as rules
 from ..common import roster as rrules
 from ..common import split
 from ..common.actions import vis_word
-from .gi_setup import GLib, Gtk, Pango, tip
+from .gi_setup import GLib, Gtk, Pango, set_markup, tip
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +68,8 @@ class RosterRow(Gtk.ListBoxRow):
         faces = roster.win.theme.shape.get("roster_rows") == "faces" and not compact
         new = item.unread > 0
         esc = GLib.markup_escape_text(item.title)
-        self.name.set_markup(f"<b>{esc}</b>" if new else esc)
+        markup = f"<b>{esc}</b>" if new else esc
+        set_markup(self.name, markup)
         self.badge.set_text(str(item.unread) if item.unread < 1000 else "999+")
         self.badge.set_visible(new)
         line, tip_text, status = rrules.lines(item, faces)
@@ -76,7 +77,7 @@ class RosterRow(Gtk.ListBoxRow):
         self.line.set_visible(bool(line) and not compact)
         self.status.set_text(status)
         self.status.set_visible(bool(status))
-        self.set_tooltip_text(rrules.tip(item) or None)
+        tip(self, rrules.tip(item))
         url = rrules.face_url(item)
         if url != self._face_url and not compact:
             self._face_url = url
@@ -114,7 +115,7 @@ class RosterHead(Gtk.ListBoxRow):
         text = word.format(arrow="▸" if folded else "▾",
                            title=GLib.markup_escape_text(title),
                            lit=f'<span foreground="{dot}">{lit}</span>', n=n)
-        self.label.set_markup(text)
+        set_markup(self.label, text)
 
 
 class RosterWindow(Gtk.Window):
@@ -297,7 +298,7 @@ class RosterWindow(Gtk.Window):
         except Exception:  # noqa: BLE001
             n = 0
         text = _("roster_news", n=n) if n else _("roster_no_news")
-        self.news.set_markup(f'<a href="fedtail:activity">{GLib.markup_escape_text(text)}</a>')
+        set_markup(self.news, f'<a href="fedtail:activity">{GLib.markup_escape_text(text)}</a>')
         if getattr(self, "_my_face", None) != me.avatar_static:
             self._my_face = me.avatar_static
             while (c := self.me_face.get_first_child()) is not None:
@@ -596,7 +597,7 @@ class InputDock(Gtk.Box):
         if account is not None:
             from .card import Avatar
             self.face.append(Avatar(self.win.ctx, account, FACE))
-            self.face.set_tooltip_text("@" + account.handle)
+            tip(self.face, "@" + account.handle)
         self.face.set_visible(account is not None)
 
     def _say(self):
@@ -982,7 +983,7 @@ class AgentFace(Gtk.Box):
         self.face.append(Avatar(self.win.ctx, who, AGENT_FACE))
         name = who.name or who.username or who.handle
         self.name.set_text(name)
-        self.name.set_tooltip_text(name)
+        tip(self.name, name)
         self.link.set_markup(f'<a href="#">{GLib.markup_escape_text(_("faces_profile"))}</a>')
 
     def _profile(self):

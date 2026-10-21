@@ -166,6 +166,7 @@ class Cache:
                 "gui_total_ms": round(st["gui_ms"]), "gui_max_ms": round(st["gui_max_ms"])}
 
     def shutdown(self):
+        self.closed = True
         for pool in (self.pool, self.big_pool):
             pool.shutdown(wait=False, cancel_futures=True)
 
@@ -494,6 +495,8 @@ class Cache:
         self._ask(key)
 
     def _ask(self, key):
+        if getattr(self, "closed", False):  # a second try timed after the window closed
+            return
         url, max_side = key
         big = key in self.big
         self.asked[key] = time.monotonic()

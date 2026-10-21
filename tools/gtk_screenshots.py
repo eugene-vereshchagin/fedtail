@@ -213,9 +213,21 @@ def shoot_extras(win, out, stem):
     win.columns_btn.set_active(False)
     pump(0.3)
     win.menu.model()  # (made when ≡ opens: what needs a login is enabled then)
-    for action, tag in (("filters", "silence"), ("server", "server"), ("help", "help")):
+    for action, tag in (("filters", "silence"), ("server", "server")):
         win.activate_action("win." + action, None)
         shot_last(tag)
+    panel = win.open_help()  # a panel over the lanes, as the editor
+    pump(0.6)
+    shoot(win, out / f"{stem}-help.png")
+    panel.close()
+    pics = [m for lv in win.lane_views.values() for card in getattr(lv, "rows", {}).values()
+            for m in getattr(getattr(card, "post", None), "media", ()) if m.kind == "image"]
+    if pics:  # the viewer over the window
+        from fedtail.frontends.gtk import viewer
+        v = viewer.show(win, pics, 0)
+        pump(1.0)
+        shoot(win, out / f"{stem}-viewer.png")
+        v.close()
 
 
 def main():

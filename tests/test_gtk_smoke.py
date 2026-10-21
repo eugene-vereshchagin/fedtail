@@ -423,6 +423,100 @@ class GtkSmokeTest(_GtkBase):
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkPanelsTest(_GtkBase):
+    """What comes over the window: the pictures' viewer, the help; and the pictures in a
+    card, the desktop notification, ≡ → Quit."""
+
+    def _post_with_pictures(self, n):
+        from fedtail.protocols.mastodon import adapter
+
+        def offline(*_a, **_k):
+            raise OSError("no network in the tests")
+        self.win.images.http.get = offline
+        raw = status("090", BOB, minute=30, text="картинки")
+        raw["media_attachments"] = [
+            {"id": f"m{i}", "type": "image", "url": f"https://e.test/{i}.png",
+             "preview_url": f"https://e.test/{i}s.png", "description": f"картинка {i}",
+             "meta": {"original": {"width": 800, "height": 400}}} for i in range(n)]
+        return adapter.post(raw, "t")
+
+    def test_pictures_keep_their_shape(self):
+        from fedtail.frontends.gtk.card import Card
+        one = Card(self.win.ctx, "090", self._post_with_pictures(1))
+        grid = one.media_box
+        cell = grid.get_child_at(0, 0)
+        w, h = cell.get_size_request()
+        # one alone: as tall as ui.image_height allows within the lane, its shape kept
+        self.assertGreater(h, 300)
+        self.assertEqual(w, 2 * h)
+        four = Card(self.win.ctx, "091", self._post_with_pictures(4))
+        self.assertIsNotNone(four.media_box.get_child_at(2, 0))  # three in a row
+        self.assertIsNotNone(four.media_box.get_child_at(0, 1))
+        self.assertEqual(four.media_box.get_child_at(0, 0).get_size_request()[1], 115)
+
+    def test_viewer_over_the_window(self):
+        from fedtail.frontends.gtk import viewer
+        media = list(self._post_with_pictures(3).media)
+        v = viewer.show(self.win, media, 1)
+        self.assertIs(v.get_parent(), self.win.overlay)
+        self.assertIn("2 / 3", v.caption.get_text())
+        v.go(1)
+        self.assertEqual(v.i, 2)
+        v.go(1)
+        self.assertEqual(v.i, 0)
+        v._set_actual(True)
+        self.assertTrue(v.actual)
+        v.close()
+        self.assertIsNone(v.get_parent())
+        self.assertIsNone(self.win.viewer)
+        self.win.cfg["ui"]["image_viewer"] = "browser"
+        opened = []
+        self.win.open_url = opened.append
+        self.assertIsNone(viewer.show(self.win, media, 0))
+        self.assertEqual(opened, ["https://e.test/0.png"])
+
+    def test_help_is_a_panel_in_the_window(self):
+        before = set(Gtk.Window.list_toplevels())
+        panel = self.win.open_help()
+        pump(timeout=0.3)
+        self.assertIs(panel.get_parent(), self.win.overlay)
+        self.assertEqual(set(Gtk.Window.list_toplevels()), before)  # no window of its own
+        self.assertEqual(panel.current, "index")
+        self.assertTrue(panel.blocks)
+        from fedtail.frontends import helpdocs
+        other = next(p.name for p in helpdocs.pages() if p.name != "index")
+        panel.show_page(other)
+        self.assertEqual(panel.current, other)
+        panel.back()
+        self.assertEqual(panel.current, "index")
+        panel.search.set_text("тема")
+        panel._filter("тема")
+        self.assertTrue(panel.found.get_visible())
+        panel.close()
+        self.assertFalse(panel.get_visible())
+        self.assertIs(self.win.open_help(), panel)  # the same one, back where it was
+        self.assertTrue(panel.get_visible())
+
+    def test_notification_goes_out(self):
+        from fedtail.frontends import notifytext
+        sent = []
+
+        class App:
+            def send_notification(self, _id, n):
+                sent.append(n)
+        n = self.win.notifier
+        n.app, n.backend = App(), "gio"
+        n.show(notifytext.Note("t", "b", "home"))
+        self.assertEqual(len(sent), 1)
+
+    def test_quit_quits(self):
+        self.win.quit_app()
+        pump(timeout=0.2)
+        self.assertTrue(self.win.quitting)
+        self.assertFalse(self.win.get_visible())
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkSplitTest(_GtkBase):
     """ui.layout = "split": the roster window, the lanes in tabs, the input line."""
     UI = {"layout": "split"}
@@ -474,6 +568,24 @@ class GtkSplitTest(_GtkBase):
         win._follow_author(lane)
         if win.author_bar is not None:
             self.assertTrue(win.author_bar.who is None or win.author_bar.who.id)
+        # another theme: the lanes' tabs drawn anew, in their places
+        win.try_theme("psi")
+        pump(timeout=0.3)
+        self.assertIn("home", win.lane_tabs)
+        self.assertIsNot(win.lane_tabs["home"], lane)
+        self.assertTrue(win.lane_on_screen("home"))
+        lane = win.lane_tabs["home"]
+        # the tabs: in rows of chips, one a page (the lanes' stack none)
+        rows = win.tab_rows
+        self.assertIsNotNone(rows)
+        rows.sync()
+        self.assertEqual(set(rows.chips), set(rows.pages()))
+        self.assertNotIn(win.stack, rows.chips)
+        self.assertFalse(win.tabs.get_show_tabs())
+        n = len(rows.chips)
+        rows.close(win.extra_tabs["talk:" + bob.id])
+        pump(timeout=0.3)
+        self.assertEqual(len(rows.chips), n - 1)
         # the roster's look and folds
         win.roster.set_look("compact", True)
         win.roster.toggle("standard")

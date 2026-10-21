@@ -69,6 +69,10 @@ class Ctx:
     def status(self, text):
         self.win.status(text)
 
+    def show_images(self, media, index=0):
+        from . import viewer
+        return viewer.show(self.win, media, index)
+
 
 class LaneRow(Gtk.ListBoxRow):
     def __init__(self, name, title):
@@ -137,6 +141,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # input line at the bottom
         self.split_mode = core.cfg["ui"].get("layout") in ("split", "qip")
         self.roster = self.dock = self.author_bar = None
+        self.agent_face = self.tab_rows = None
         self.lane_tabs = {}      # split: lane name -> its page (the LaneView)
         self.cfg = core.cfg
         self.add_css_class("fedtail")
@@ -215,14 +220,20 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tabs.connect("switch-page", lambda *_a: GLib.idle_add(self._tab_switched))
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         paned.set_start_child(side)
-        paned.set_end_child(self.tabs)
+        # the lanes and, under them, the command line: beside the sidebar, as in Qt
+        self.right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.tabs.set_vexpand(True)
+        self.right.append(self.tabs)
+        paned.set_end_child(self.right)
         if self.split_mode:
+            self.right.remove(self.tabs)
             paned.set_end_child(None)
             paned.set_start_child(None)
             paned = self._split_area(side)
-        paned.set_resize_start_child(False)
-        paned.set_shrink_start_child(False)
-        paned.set_position(240)
+        bar = self.read_write if self.split_mode else paned
+        bar.set_resize_start_child(False)
+        bar.set_shrink_start_child(False)
+        bar.set_position(240)
 
         # the status bar: whose this window is at the left, what happens, and in the
         # debugging mode how the window is drawn at the right
@@ -238,11 +249,13 @@ class MainWindow(Gtk.ApplicationWindow):
         bar.append(self.profile_label)
         bar.append(self.status_line)
         corner = self._debug_corner()
+        self.corner_label = None
         if corner:
             lab = Gtk.Label(label=corner)
             lab.add_css_class("ft-muted")
             tip(lab, _("debug_corner_tip"))
             bar.append(lab)
+            self.corner_label = lab
         self._profile_text()
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         outer.add_css_class("fedtail-main")
@@ -251,11 +264,13 @@ class MainWindow(Gtk.ApplicationWindow):
         self.overlay.set_child(paned)
         self.overlay.set_vexpand(True)
         self.composer = None
+        self.viewer = None
+        self.help_panel = None
         outer.append(self.overlay)
         if self.cfg["ui"]["command_line"]:
             from .cmdline import CommandLine
             self.cmdline = CommandLine(self)
-            outer.append(self.cmdline)
+            (outer if self.split_mode else self.right).append(self.cmdline)
             if self.split_mode and self.cfg["ui"].get("dock_commands", True):
                 self.cmdline.set_visible(False)  # the input line takes the commands
         outer.append(bar)
@@ -274,7 +289,6 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import split
         side.set_visible(False)  # (kept: its rows count what the tabs say)
         self.stack.set_visible(False)  # a hidden page: the notebook shows no tab for it
-        self.tabs.set_show_tabs(True)
         self.dock = split.InputDock(self)
         reading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         mode = split.split.faces_mode(self.cfg, self.theme.shape)
@@ -307,7 +321,16 @@ class MainWindow(Gtk.ApplicationWindow):
         rw.connect("notify::max-position", low)
         self.roster = split.RosterWindow(self, self.app)
         self._pointer_y = None
-        return rw
+        # the tabs in as many rows as they take, over everything (as in Qt)
+        from .tabrows import TabRows
+        self.tabs.set_show_tabs(False)
+        self.tab_rows = TabRows(self.tabs, hidden=(self.stack,),
+                                wrap=self.theme.shape.get("tab_rows", "wrap") == "wrap")
+        area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        area.append(self.tab_rows)
+        rw.set_vexpand(True)
+        area.append(rw)
+        return area
 
     def select_lane(self, name):
         """A lane in front: its row in the sidebar (and so its tab, in the split layout)."""
@@ -594,9 +617,10 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import dialogs
         return dialogs.federation(self)
 
-    def open_help(self, page="index"):
-        from . import dialogs
-        return dialogs.help_page(self, page)
+    def open_help(self, page="index", anchor=""):
+        """≡ → Help: a panel over the lanes, as the editor (and as in Qt)."""
+        from . import help as helppanel
+        return helppanel.open_help(self, page, anchor)
 
     def open_suggestions(self):
         from . import people
@@ -692,20 +716,37 @@ class MainWindow(Gtk.ApplicationWindow):
         old = self.theme.id
         theme = themes.apply(self.cfg, name)
         self.theme = self.ctx.theme = theme
+        if getattr(self, "corner_label", None) is not None:  # the corner says which, now
+            self.corner_label.set_text(self._debug_corner())
         log.info("theme tried: %s (was %s, config says %s)", theme.id, old,
                  self.cfg["ui"]["theme"])
         current = self._current_lane()
         columns = self.columns is not None
         if columns:
             self.set_columns(False)
+        # split: the lanes' tabs drawn anew too, in their places, the one in front kept
+        front = self.tabs.get_nth_page(self.tabs.get_current_page())
+        tabbed = [(self.tabs.page_num(lv), n) for n, lv in self.lane_tabs.items()]
+        front_lane = next((n for n, lv in self.lane_tabs.items() if lv is front), None)
+        for lv in list(self.lane_tabs.values()):
+            self.tabs.remove_page(self.tabs.page_num(lv))
+        self.lane_tabs = {}
         for lv in self.lane_views.values():
             if hasattr(lv, "stop"):
                 lv.stop()
             if lv.get_parent() is self.stack:
                 self.stack.remove(lv)
         self.lane_views = {}
+        for at, name in sorted(tabbed):
+            lv = self._lane_tab(name)
+            self.tabs.reorder_child(lv, at)
         self._rebuild_sidebar()
-        if current in self.lane_rows:
+        if front_lane is not None:
+            self.tabs.set_current_page(self.tabs.page_num(self.lane_tabs[front_lane]))
+            self.lane_tabs[front_lane].shown()
+        elif front is not None and self.tabs.page_num(front) >= 0:
+            self.tabs.set_current_page(self.tabs.page_num(front))
+        if current in self.lane_rows and not self.split_mode:
             self._lane_selected(self.sidebar, self.lane_rows[current])
         if columns:
             self.set_columns(True)
@@ -1425,6 +1466,15 @@ class MainWindow(Gtk.ApplicationWindow):
             return max(w, 480), max(h, 360)
         except ValueError:
             return 1000, 720
+
+    def quit_app(self):
+        """≡ → Quit: all of fedtail, whichever window asked (in the split layout closing
+        the messages window only hides it)."""
+        self.quitting = True
+        self.close()
+        app = self.get_application()
+        if app is not None:
+            app.quit()
 
     def _close_request(self, _win):
         if self.roster is not None and not self.quitting and self.roster.get_visible():

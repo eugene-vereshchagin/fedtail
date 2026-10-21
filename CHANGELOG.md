@@ -2,6 +2,23 @@
 
 ## 0.18.0 — in progress
 
+- GTK: pictures in a post keep their shape, as in Qt — one alone ui.image_height tall
+  (not a strip cut to 180 px), several as tiles three in a row; a gif or a video with ▶;
+  "sensitive" ones covered until clicked. A click opens the picture viewer over the
+  window (ui.image_viewer): ← → to flip, Z or a double click for 100 %, S to save, O to
+  the browser, Esc or a click to close.
+- GTK: the help is a panel over the lanes (as the editor and as in Qt), not a window:
+  contents on the left, back and forward, a search over all pages, links to headings.
+- GTK, split: the messages window's tabs in as many rows as they take (shape.tab_rows),
+  over the author bar, as in Qt; another theme tried redraws the lanes' tabs too.
+- GTK: ≡ → Quit quits (in the split layout it only hid the messages window); the
+  command line sits under the lanes, beside the sidebar, not under the whole window.
+- GTK: desktop notifications went nowhere — PyGObject knows Gio.Notification's
+  set_default_action_and_target_value by another name; both are tried now.
+- GTK on KDE: the ≡ menu is made when it first opens and again only when it changed (it
+  held the start for 4.7 s and each opening for most of a second); the roster's rows
+  no longer set their tooltips and texts anew on every count (a third of a second each).
+- GTK: the status bar's corner says the theme tried, not the one started with.
 - Help → "The look" tells where your own themes live and how fedtail reads them (from
   `~/.config/fedtail/themes/`, never copied; `builtin/` is only a sample), and how to keep
   them in a git repository of your own; the README in the themes folder says the same.

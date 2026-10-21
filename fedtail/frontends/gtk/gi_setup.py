@@ -44,11 +44,17 @@ def tip(widget, text):
     """A tooltip given when it's asked for, not set ahead (once per widget):
     Gtk.Widget.set_tooltip_text also updates the widget's accessible description, and
     with an accessibility bus about (KDE's) every such update is a round trip — a few
-    of them per card held the window for a third of a second per batch of cards."""
-    if not text:
+    of them per card held the window for a third of a second per batch of cards.
+    Called again on the same widget: the new text (or none)."""
+    first = not hasattr(widget, "_ft_tip")
+    widget._ft_tip = text or ""
+    if not first or not text:
         return
 
-    def query(_w, _x, _y, _kb, tooltip):
+    def query(w, _x, _y, _kb, tooltip):
+        text = getattr(w, "_ft_tip", "")
+        if not text:
+            return False
         if HINTS["on"]:  # ≡ → What's this?: the help's word on it, if it has one
             rich = _hint(text)
             if rich:
@@ -58,6 +64,14 @@ def tip(widget, text):
         return True
     widget.set_has_tooltip(True)
     widget.connect("query-tooltip", query)
+
+
+def set_markup(label, markup):
+    """label.set_markup, only when it changed: each change is a trip to the accessibility
+    bus (see tip), and the roster sets every row's text on every count."""
+    if getattr(label, "_ft_markup", None) != markup:
+        label._ft_markup = markup
+        label.set_markup(markup)
 
 
 def hscroll(child, end=False):

@@ -52,9 +52,13 @@ class Notifier:
         if self.backend == "gio":
             n = Gio.Notification.new(note.title)
             n.set_body(note.body)
-            n.set_default_action_and_target_value(f"app.{ACTION}", GLib.Variant("s", target))
-            n.add_button_with_target_value(_("open_action"), f"app.{ACTION}",
-                                           GLib.Variant("s", target))
+            # the C names end in _value; PyGObject knows them by their rename-to
+            default = getattr(n, "set_default_action_and_target_value", None) or \
+                n.set_default_action_and_target
+            button = getattr(n, "add_button_with_target_value", None) or \
+                n.add_button_with_target
+            default(f"app.{ACTION}", GLib.Variant("s", target))
+            button(_("open_action"), f"app.{ACTION}", GLib.Variant("s", target))
             self.app.send_notification(None, n)
         elif self.backend == "notify-send":
             argv = notifytext.desktop_argv([shutil.which("notify-send"), "--app-name=fedtail"],

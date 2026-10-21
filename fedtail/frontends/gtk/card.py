@@ -16,7 +16,6 @@ from .gi_setup import Gdk, GLib, Gtk, Pango, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 
-THUMB_H = 180       # px: a picture's height in a card
 QUOTE_DEPTH = 1     # a quoted post shows its own quote no deeper than this
 
 
@@ -246,41 +245,97 @@ class Card(Gtk.Box):
         return lab
 
     def _media(self, p):
-        """Pictures in a row, cut to the card (their focus point is not used yet); a
-        video or a sound is a line to open; a click opens the original outside."""
-        box = Gtk.Box(spacing=4)
-        from ...core import config
-        sensitive = p.sensitive and config.sensitive_media(self.ctx.cfg) == "hide"
-        for m in p.media[:4]:
-            if m.kind in ("image", "gifv", "video") and (m.preview or m.url) and \
-                    self.ctx.images is not None and not sensitive:
-                pic = Gtk.Picture()
-                pic.set_can_shrink(True)
-                pic.set_content_fit(Gtk.ContentFit.COVER)
-                pic.set_size_request(-1, THUMB_H)
-                pic.set_hexpand(True)
-                pic.add_css_class("ft-thumb")
-                pic.set_overflow(Gtk.Overflow.HIDDEN)
-                pic.set_alternative_text(m.alt or None)
+        """Pictures as the Qt card has them: one alone — ui.image_height tall, as wide
+        as its shape says (up to the lane's width), never cut; several — tiles of their
+        own shape, three in a row. A click: the viewer over the window (ui.image_viewer),
+        a video or a gif — outside for now; marked sensitive — covered until clicked."""
+        from ..common.lane import card_boxes, decode_side, thumb_box, true_kind
+        atts = [true_kind(m) for m in p.media]
+        grid = Gtk.Grid(column_spacing=6, row_spacing=6, halign=Gtk.Align.START)
+        visual = [m for m in atts if m.kind in ("image", "gifv", "video")
+                  and (m.preview or m.url) and self.ctx.images is not None]
+        images = [m for m in visual if m.kind == "image"]
+        height, max_w = card_boxes(visual, self.ctx.cfg)
+        covered = p.sensitive and not p.warning and not getattr(self, "media_revealed", False) \
+            and config.sensitive_media(self.ctx.cfg) == "hide"
+        pos = 0
+        for m in atts:
+            full = m.url or m.remote_url
+            if m in visual:
+                tw, th = thumb_box(m.width, m.height, height, max_w)
+                if covered:
+                    cell = Gtk.Button(label="⚠ " + _("sensitive_media") + "\n" +
+                                      _("sensitive_click"))
+                    cell.add_css_class("ft-thumb")
+                    cell.connect("clicked", lambda _b: self._reveal_media())
+                else:
+                    cell = self._picture(m, tw, th, decode_side(
+                        tw, th, m.width, m.height, self.ctx.cfg,
+                        self.get_scale_factor() or 1.0) or 1200, images, full)
+                cell.set_size_request(tw, th)
                 if m.alt:
-                    tip(pic, m.alt)
-                self.ctx.images.get(m.preview or m.url, pic.set_paintable)
-                click = Gtk.GestureClick()
-                click.connect("released", lambda *_a, u=m.url or m.remote_url:
-                              self.ctx.open_url(u))
-                pic.add_controller(click)
-                pic.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
-                box.append(pic)
+                    tip(cell, m.alt)
+                grid.attach(cell, pos % 3, pos // 3, 1, 1)
+                pos += 1
             else:
                 word = _("media_" + m.kind) if m.kind in ("image", "video", "audio", "gifv") \
                     else _("media_unknown")
-                if sensitive:
-                    word = "⚠ " + _("sensitive_media") + " · " + word
-                lab = _label(link_markup(m.url or m.remote_url, "📎 " + word), ("ft-muted",),
-                             markup=True)
+                lab = _label(link_markup(full, "📎 " + word), ("ft-muted",), markup=True)
                 lab.connect("activate-link", lambda _l, u: (self.ctx.open_url(u), True)[1])
-                box.append(lab)
-        return box
+                row = -(-pos // 3)
+                grid.attach(lab, 0, row, 3, 1)
+                pos = (row + 1) * 3
+        if self.ctx.cfg["ui"].get("alt_text") == "caption" and not covered:
+            row = -(-pos // 3)
+            for i, m in enumerate(visual):
+                if m.alt.strip():
+                    num = f"{i + 1}. " if len(visual) > 1 else ""
+                    grid.attach(_label(num + m.alt.strip()[:400], ("ft-muted",), wrap=True),
+                                0, row, 3, 1)
+                    row += 1
+        self.media_box = grid
+        return grid
+
+    def _picture(self, m, tw, th, side, images, full):
+        """One picture in its box (cut to it only by a hair: the box has its shape); a
+        video or a gif: its still frame with ▶ over it."""
+        pic = Gtk.Picture()
+        pic.set_can_shrink(True)
+        pic.set_content_fit(Gtk.ContentFit.COVER)
+        pic.add_css_class("ft-thumb")
+        pic.set_overflow(Gtk.Overflow.HIDDEN)
+        pic.set_alternative_text(m.alt or _("media_" + m.kind))
+        src = m.preview or full
+        if src:
+            self.ctx.images.get(src, pic.set_paintable, max_side=side)
+        over = Gtk.Overlay()
+        over.set_child(pic)
+        over.set_overflow(Gtk.Overflow.HIDDEN)
+        if m.kind != "image":
+            play = Gtk.Label(label="▶")
+            play.add_css_class("ft-play")
+            play.set_halign(Gtk.Align.CENTER)
+            play.set_valign(Gtk.Align.CENTER)
+            over.add_overlay(play)
+        click = Gtk.GestureClick()
+        if m.kind == "image" and m in images:
+            idx = images.index(m)
+            click.connect("released", lambda *_a: self.ctx.show_images(images, idx))
+        else:
+            click.connect("released", lambda *_a: self.ctx.open_url(full))
+        over.add_controller(click)
+        over.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
+        return over
+
+    def _reveal_media(self):
+        self.media_revealed = True
+        old = getattr(self, "media_box", None)
+        if old is None or old.get_parent() is None:
+            return
+        parent = old.get_parent()
+        new = self._media(self.post)
+        parent.insert_child_after(new, old)
+        parent.remove(old)
 
     def _poll(self, p):
         """The results as lines with a bar each (voting comes with the editor)."""

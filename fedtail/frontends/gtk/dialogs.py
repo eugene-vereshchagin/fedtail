@@ -376,30 +376,6 @@ def federation(win):
     return page
 
 
-def help_page(win, name="index"):
-    """Help: the pages of docs/help (helpdocs.py), Markdown shown as text, links
-    between the pages followed here, the rest outside."""
-    from .. import helpdocs
-    lang = helpdocs.language()
-
-    def show(page_name, anchor=""):
-        md = helpdocs.page(lang, page_name) or helpdocs.page(lang, "index") or ""
-        page.set_markup(pango.markdown(md))
-        page.current = page_name
-        page.scroll.get_vadjustment().set_value(0)
-
-    def link(uri):
-        target = helpdocs.resolve(uri, lang, getattr(page, "current", "index"))
-        if target.page:
-            show(target.page, target.anchor)
-        elif target.url:
-            win.open_url(target.url)
-    page = Page(win, _("help_title"), "", link, 820, 720)
-    show(name)
-    page.present()
-    return page
-
-
 CHOICES = ("accept", "filter", "drop")
 
 

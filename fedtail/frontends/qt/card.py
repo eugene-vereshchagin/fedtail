@@ -38,7 +38,9 @@ from ..common.lane import (  # noqa: F401  (Qt's names)
     VIDEO_EXT,
     CardSpec,
     conversation_line,
+    decode_side,
     make_spec,
+    thumb_box,
 )
 from ..common.lane import true_kind as _true_kind
 from ..richtext import plain_tip
@@ -1256,24 +1258,13 @@ def _hover_text(url):
 
 
 def _decode_side(lab, tw, th, w, h, cfg):
-    """How big a feed picture has to be decoded for its box (filled, on this screen's
-    pixel density), in steps of 100 — not the 1200 px of before: a picture kept in memory
-    four times the pixels it is shown at was most of the memory a lane held
-    (ui.image_decode = "box"). None: as before."""
-    if cfg["ui"].get("image_decode", "box") != "box":
-        return None
+    """common/lane.py decode_side, on this label's screen."""
     from .images import FEED_SIDE
     try:
         dpr = max(1.0, float(lab.devicePixelRatioF()))
     except (AttributeError, RuntimeError):
         dpr = 1.0
-    if w and h:  # filling the box: the short side reaches it, the long one goes past
-        scale = max(tw / w, th / h)
-        need = max(w, h) * scale
-    else:
-        need = max(tw, th) * 2
-    need = int(-(-need * dpr // 100) * 100)
-    return max(100, min(FEED_SIDE, need))
+    return decode_side(tw, th, w, h, cfg, dpr, FEED_SIDE)
 
 
 
@@ -1340,12 +1331,7 @@ def _dims(m):
 
 
 def _thumb_box(w, h, height=THUMB_H, max_w=THUMB_MAX_W):
-    if not (w and h):
-        return height, height
-    tw = int(height * w / h)
-    if tw <= max_w:
-        return max(tw, 24), height
-    return max_w, max(24, int(max_w * h / w))
+    return thumb_box(w, h, height, max_w)
 
 
 def _focus(m):

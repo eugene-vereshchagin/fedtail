@@ -59,6 +59,42 @@ def true_kind(m):
     return m
 
 
+def thumb_box(w, h, height, max_w):
+    """The box a picture of w×h gets in a card: `height` tall and as wide as its shape
+    says, but no wider than max_w (then less tall); unknown size: a square."""
+    if not (w and h):
+        return height, height
+    tw = int(height * w / h)
+    if tw <= max_w:
+        return max(tw, 24), height
+    return max_w, max(24, int(max_w * h / w))
+
+
+def card_boxes(media, cfg, small=(150, 230)):
+    """(height, max width) of the pictures of a post: one alone — ui.image_height tall,
+    across the lane's width; several — a smaller tile each."""
+    visual = [m for m in media if m.kind in ("image", "gifv", "video") and (m.preview or m.url)]
+    if len(visual) == 1:
+        return cfg["ui"]["image_height"], max(200, (cfg["ui"]["max_width"] or 900) - 60)
+    return small
+
+
+def decode_side(tw, th, w, h, cfg, dpr=1.0, most=1200):
+    """How big a feed picture has to be decoded for its box (filled, on this screen's
+    pixel density), in steps of 100 — not the 1200 px of before: a picture kept in memory
+    four times the pixels it is shown at was most of the memory a lane held
+    (ui.image_decode = "box"). None: as before."""
+    if cfg["ui"].get("image_decode", "box") != "box":
+        return None
+    if w and h:  # filling the box: the short side reaches it, the long one goes past
+        scale = max(tw / w, th / h)
+        need = max(w, h) * scale
+    else:
+        need = max(tw, th) * 2
+    need = int(-(-need * max(1.0, dpr) // 100) * 100)
+    return max(100, min(most, need))
+
+
 def media_kinds(entry):
     """What a post (Post | Share) shows: {"image", "gifv", "video", "audio"} from its
     attachments (a video a server called a picture counts as a video), or {"text"}."""

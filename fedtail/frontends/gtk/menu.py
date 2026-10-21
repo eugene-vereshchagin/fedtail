@@ -65,7 +65,7 @@ class MainMenu:
         a("snapshot", win.debug_snapshot)
         a("help", win.open_help)
         a("about", win.about)
-        a("quit", win.close)
+        a("quit", win.quit_app)
         self._arg("switch", win.switch_profile)
         self._arg("theme", win.try_theme)
         self._toggle("merged", lambda: bool(getattr(win.core, "others", None)),
@@ -227,13 +227,36 @@ class MainMenu:
         return m
 
 
+def signature(model):
+    """What a menu model says, as a tuple: equal ones need no new popover."""
+    out = []
+    for i in range(model.get_n_items()):
+        attrs = []
+        it = model.iterate_item_attributes(i)
+        while it.next():
+            attrs.append((it.get_name(), str(it.get_value())))
+        links = []
+        it = model.iterate_item_links(i)
+        while it.next():
+            links.append((it.get_name(), signature(it.get_value())))
+        out.append((tuple(sorted(attrs)), tuple(links)))
+    return tuple(out)
+
+
 def button(win, menu, icon="open-menu-symbolic", accounts_only=False):
-    """A ≡ button that makes its menu when opened."""
+    """A ≡ button that makes its menu when opened — the first time, and again only when
+    something in it changed (an account, a theme): GTK builds a popover of the whole
+    model, submenus and all, and on KDE (its accessibility bus) that took most of a
+    second each time, and five at the start when it was made ahead."""
     b = Gtk.MenuButton(icon_name=icon)
     tip(b, _("accounts") if accounts_only else _("menu"))
+    made = [None]
 
     def make(btn):
-        btn.set_menu_model(menu.accounts_model() if accounts_only else menu.model())
+        model = menu.accounts_model() if accounts_only else menu.model()
+        sig = signature(model)
+        if sig != made[0]:
+            made[0] = sig
+            btn.set_menu_model(model)
     b.set_create_popup_func(make)
-    make(b)
     return b

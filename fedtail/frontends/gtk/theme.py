@@ -158,6 +158,25 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-compose-text, .ft-compose-text text {{ background: transparent; color: {c['text']}; }}
 .ft-column {{ border-right: 1px solid {c['sidebar_border']}; }}
 .ft-agent-face {{ background: {c['panel']}; border-left: 1px solid {c['sidebar_border']}; }}
+.ft-tabrows {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
+               padding: 3px 4px 0 4px; }}
+.ft-tabrows > flowboxchild {{ padding: 0; }}
+.ft-tabchip {{ border: 1px solid {c['card_border']}; border-bottom: none;
+              border-radius: {br}px {br}px 0 0; padding: 0 2px 0 8px; color: {c['muted']}; }}
+.ft-tabrows > flowboxchild.ft-current .ft-tabchip {{ background: {c['view']};
+    color: {c['text']}; border-color: {c['accent']}; }}
+.ft-tabchip-x {{ min-height: 18px; min-width: 18px; padding: 0; }}
+.ft-viewer {{ background: rgba(0, 0, 0, 0.85); }}
+.ft-viewer-text {{ color: #dddddd; }}
+.ft-viewer-keys {{ color: #888888; font-size: smaller; }}
+.ft-viewer-button {{ background: rgba(0, 0, 0, 0.47); color: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.24); border-radius: 8px; padding: 4px 12px;
+    box-shadow: none; }}
+.ft-viewer-button:hover {{ background: rgba(255, 255, 255, 0.18); color: white; }}
+.ft-play {{ background: rgba(0, 0, 0, 0.55); color: white; border-radius: 9999px;
+           padding: 6px 12px; font-size: 1.4em; }}
+.ft-help-toc row {{ padding: 3px 8px; }}
+.ft-help-toc .ft-help-deep {{ font-weight: bold; padding-top: 8px; }}
 .ft-face-frame {{ border: 1px solid {c['card_border']}; border-radius: 4px;
                   background: {c['card']}; }}
 """
