@@ -199,8 +199,9 @@ class Theme:
         diagonal gradient, as QIP Infium had them (white top right, tinted lower left)."""
         if self.c["view_end"] == self.c["view"]:
             return ""
+        # white over most of it, the tint only towards the lower left (as Infium's)
         g = (f"qlineargradient(x1:1, y1:0, x2:0, y2:1, stop:0 {self.css('view')}, "
-             f"stop:1 {self.css('view_end')})")
+             f"stop:0.4 {self.css('view')}, stop:1 {self.css('view_end')})")
         # on the scroll area itself: Qt paints a QAbstractScrollArea's background into its
         # viewport, and the earlier flat rule for it won over one on the viewport
         return (f"QScrollArea#feed {{ background: {g}; }}\n"
