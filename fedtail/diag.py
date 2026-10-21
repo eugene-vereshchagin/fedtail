@@ -606,7 +606,9 @@ class Watchdog:
 
 
 # ---- freezes of the GUI thread ----------------------------------------------------------
-EVENT_LOOP = "frontends/qt/__init__.py"  # where app.exec() runs: Qt's own work
+# where the toolkit's loop runs (app.exec(), app.run()): a stack ending there is the
+# toolkit's own work — laying out, painting, shaping text
+EVENT_LOOP = ("frontends/qt/__init__.py", "frontends/gtk/__init__.py")
 _busy = []  # what the GUI thread is doing now, outermost first (labels from busy())
 
 
@@ -691,8 +693,8 @@ class StallMeter:
             seen.add(key)
             inside = " > ".join(labels) or "-"
             frames = " <- ".join(reversed(stack)) if stack else "?"
-            if stack and not labels and EVENT_LOOP in stack[-1]:
-                inside = "Qt itself (layout, painting, text)"
+            if stack and not labels and any(e in stack[-1] for e in EVENT_LOOP):
+                inside = "the toolkit itself (layout, painting, text)"
             where.append(f"[{inside}] {frames}")
         log.warning("GUI froze %.0f ms%s", ms,
                     (": " + " || ".join(where)) if where else " (not caught in the act)")

@@ -27,18 +27,16 @@ def run(core, instance, argv):
     from . import theme as themes
     from .bridge import Bridge
     from .window import MainWindow
-    app_id = desktop_id(core.paths.profile)
-    GLib.set_prgname(app_id)  # X11 WM_CLASS: the task bar finds fedtail.desktop
-    if not Gio.Application.id_is_valid(app_id):
-        # a GApplication id needs a dot; the .desktop file's name has none yet (on
-        # Wayland the app id is what finds the icon: docs/GTK.md, decisions)
-        app_id = "org.fedtail." + app_id.replace("-", "_")
+    app_id = desktop_id(core.paths.profile)  # Wayland finds the .desktop entry by it
+    GLib.set_prgname("fedtail")  # X11: WM_CLASS, as the entry's StartupWMClass says
     # fedtail has its own single-instance socket: GTK must not make a second one
     flags = Gio.ApplicationFlags.NON_UNIQUE
     app = (Adw.Application if Adw else Gtk.Application)(application_id=app_id, flags=flags)
     view = View(core)
     bridge = Bridge(view)
     state = {}
+    from . import diagnostics
+    stop_diag = diagnostics.install(core.cfg)  # a frozen window: its stacks in the log
 
     def activate(_app):
         theme = themes.apply(core.cfg)
@@ -62,4 +60,5 @@ def run(core, instance, argv):
     try:
         return app.run(argv[:1])
     finally:
+        stop_diag()
         core.shutdown()

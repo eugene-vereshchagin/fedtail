@@ -88,15 +88,27 @@ class MainWindow(Gtk.ApplicationWindow):
         bridge.on_error = lambda text: self.status(_("error", err=text))
         self.set_default_size(*self._saved_size())
 
-        header = Gtk.HeaderBar()
         refresh = Gtk.Button(icon_name="view-refresh-symbolic")
         refresh.set_tooltip_text(_("refresh"))
         refresh.connect("clicked", lambda _b: self.view.poll_now())
-        header.pack_start(refresh)
         self.who = Gtk.Label()
         self.who.add_css_class("ft-muted")
-        header.pack_end(self.who)
-        self.set_titlebar(header)
+        toolbar = None
+        if own_titlebar(self.cfg):
+            header = Gtk.HeaderBar()
+            header.pack_start(refresh)
+            header.pack_end(self.who)
+            self.set_titlebar(header)
+        else:  # the desktop draws the frame (KDE, XFCE…): the buttons get a bar of their own
+            toolbar = Gtk.Box(spacing=6)
+            toolbar.add_css_class("toolbar")
+            refresh.add_css_class("flat")
+            toolbar.append(refresh)
+            spacer = Gtk.Box()
+            spacer.set_hexpand(True)
+            toolbar.append(spacer)
+            self.who.set_margin_end(8)
+            toolbar.append(self.who)
 
         self.sidebar = Gtk.ListBox()
         self.sidebar.add_css_class("ft-sidebar")
@@ -127,6 +139,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_line.set_ellipsize(Pango.EllipsizeMode.END)
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         outer.add_css_class("fedtail-main")
+        if toolbar is not None:
+            outer.append(toolbar)
         paned.set_vexpand(True)
         outer.append(paned)
         outer.append(self.status_line)
@@ -209,9 +223,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tabs.set_current_page(0)
         self.view.set_active_lane(name)
         self.view.set_state("lane", name)
-        lv.refresh()
-        GLib.idle_add(lambda: (lv.refresh() if not lv.positioned else None,
-                               GLib.SOURCE_REMOVE)[1])
+        lv.shown()
 
     def update_badges(self):
         for name, row in self.lane_rows.items():
@@ -236,8 +248,11 @@ class MainWindow(Gtk.ApplicationWindow):
             changed = payload if name == "lanes_updated" and isinstance(payload, dict) else None
             for lname, lv in self.lane_views.items():
                 if changed is None or lname in changed:
-                    if lv.get_mapped() or changed is not None:
+                    # only the lane on screen catches up now; the others when shown
+                    if lv.get_mapped():
                         lv.refresh()
+                    else:
+                        lv.dirty = True
             self.update_badges()
         elif name == "status_updated":
             post = payload
@@ -245,7 +260,10 @@ class MainWindow(Gtk.ApplicationWindow):
                 lv.update_post(real(post))
         elif name == "status_deleted":
             for lv in self.lane_views.values():
-                lv.refresh()
+                if lv.get_mapped():
+                    lv.refresh()
+                else:
+                    lv.dirty = True
         elif name == "lists_changed":
             self._rebuild_sidebar()
         elif name == "me_updated" and self.view.me is not None:
@@ -380,6 +398,27 @@ class MainWindow(Gtk.ApplicationWindow):
             self.view.set_state("gtk_window", f"{w}x{h}")
         self.quitting = True
         return False
+
+
+# desktops whose windows draw their own title bar (client-side decorations): there the
+# GTK header bar is at home; elsewhere the desktop's frame is (and stays usable even if
+# fedtail hangs: a frozen header bar can hold the pointer, as it did on KDE)
+CSD_DESKTOPS = ("gnome", "budgie", "pantheon", "unity", "phosh")
+
+
+def own_titlebar(cfg):
+    """ui.gtk_headerbar: "on", "off", or "auto" — on with libadwaita or in GNOME and
+    its kin, off in KDE, XFCE, MATE, Cinnamon and the rest."""
+    import os
+
+    from . import gi_setup
+    mode = cfg["ui"].get("gtk_headerbar", "auto")
+    if mode != "auto":
+        return mode == "on"
+    if gi_setup.Adw is not None:
+        return True
+    desk = (os.environ.get("XDG_CURRENT_DESKTOP") or "").lower()
+    return any(d in desk for d in CSD_DESKTOPS)
 
 
 def _section(text):

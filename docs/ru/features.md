@@ -642,7 +642,7 @@
 | Linux: один файл | есть | 0.5.0 | `fedtail-X.Y.Z-linux-x86_64`, собран на Debian 12 |
 | deb-пакет | есть | 0.10.0 | собирается в CI в Debian 13 |
 | Windows: один .exe | есть | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
-| Пункт в меню с иконкой | есть | 0.2.0 | `--install-desktop` |
+| Пункт в меню с иконкой | есть | 0.2.0 | сам при запуске окна (`ui.desktop_entry`), или `--install-desktop`; имя — `online.dmesg.fedtail.desktop` (с 0.18) |
 | Свой apt-репозиторий | в планах | — | из deb-пакетов релизов |
 | Установщик и подпись для Windows | в планах | — | когда будут пользователи на Windows |
 

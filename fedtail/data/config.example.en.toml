@@ -211,6 +211,17 @@ frontend = "qt"
 # "off" (plain GTK: looks more at home in XFCE, MATE, Cinnamon).
 adwaita = "auto"
 
+# The GTK interface: its own title bar with the buttons (as in GNOME) — "on"; the
+# desktop's frame — "off"; "auto" — its own with libadwaita and in GNOME and its kin,
+# the desktop's frame in KDE, XFCE, MATE, Cinnamon.
+gtk_headerbar = "auto"
+
+# The menu entry and the icon (~/.local/share/applications, icons): at every start of a
+# window (qt, gtk) check they're there and point to this fedtail (a moved checkout, a new
+# one-file build) and mend them; old entries of the former name (fedtail.desktop) go.
+# With the deb package its menu entry is the one: none of ours beside it.
+desktop_entry = true
+
 # ── Window, keys, start ─────────────────────────────────────────────────────────────
 
 # The cross hides the window to the tray instead of closing the program.

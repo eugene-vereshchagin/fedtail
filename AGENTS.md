@@ -38,9 +38,11 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
 * Strings go to both `ru` and `en` in `fedtail/i18n.py` (a test checks).
 * Never log or send the token; requests to other servers go without it; the bug
   report excludes `auth.json` and `state.db`.
-* The repository never names the author's own server; nothing is hardcoded. One
-  exception, the author's wish: `version.AUTHOR` / `AUTHOR_URL`, his fediverse address
-  linked from About — nothing else may use them.
+* The repository never names the author's own server; nothing is hardcoded. Two
+  exceptions, the author's wish: `version.AUTHOR` / `AUTHOR_URL`, his fediverse address
+  linked from About — nothing else may use them; and `version.APP_ID`
+  (`online.dmesg.fedtail`, from the project's website): the desktop entry's name and the
+  app id of both toolkits, through `desktop.desktop_id()` only.
 * Comments and commit messages in English. User-facing docs come in Russian and English:
   README.md / README.ru.md, `docs/en/` / `docs/ru/`, `fedtail/data/help/en|ru/`.
   ARCHITECTURE.md and CHANGELOG.md are English only, DESIGN.md Russian only.

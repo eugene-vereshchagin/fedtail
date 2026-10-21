@@ -200,6 +200,11 @@ def main(argv=None):
 
     ui = args.ui or cfg["ui"]["frontend"]
     frontend = frontends.load(ui)
+    if ui in ("qt", "gtk") and cfg["ui"]["desktop_entry"]:
+        from .desktop import ensure
+        made = ensure(where.profile)
+        if made:
+            logging.getLogger("fedtail").info("desktop: %s", made)
     if ui == "tui":
         diag.quiet_console()
     core = Core(cfg, where)

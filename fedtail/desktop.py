@@ -1,7 +1,11 @@
-"""`--install-desktop`: a menu entry and the icon in ~/.local/share, so KDE shows
-fedtail with its own icon in the launcher, the task bar and in notifications."""
+"""The menu entry and the icon in ~/.local/share, so the desktop shows fedtail with its
+own icon in the launcher, the task bar and in notifications: made by `--install-desktop`
+and checked at every start of a window (`ensure`, ui.desktop_entry), which also takes
+away entries of the old name (fedtail.desktop, before the app had an id)."""
 
+import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -9,6 +13,9 @@ from importlib import resources
 from pathlib import Path
 
 from .core.paths import main_profile
+from .version import APP_ID
+
+log = logging.getLogger(__name__)
 
 
 def _data_home():
@@ -67,9 +74,25 @@ def handler_text(entry):
 
 
 def desktop_id(profile=None):
-    """The .desktop file's name without .desktop: what the window says it is, so
-    the task bar finds its icon and the unread count lands on the right button."""
-    return "fedtail" if (profile or main_profile()) == main_profile() else f"fedtail-{profile}"
+    """The .desktop file's name without .desktop — the app's id (version.APP_ID), and
+    for a profile other than the main one that id plus the profile, so each profile's
+    window finds its own entry, icon and unread count on the task bar. Always a valid
+    GApplication id: dot-separated parts of letters, digits, _ and -, none starting with
+    a digit."""
+    profile = profile or main_profile()
+    if profile == main_profile():
+        return APP_ID
+    part = re.sub(r"[^A-Za-z0-9_-]", "_", profile)
+    if not part or part[0].isdigit() or part[0] == "-":
+        part = "p" + part
+    return f"{APP_ID}.{part}"
+
+
+def old_ids(profile=None):
+    """What the entry was called before the app had an id."""
+    profile = profile or main_profile()
+    stem = "fedtail" if profile == main_profile() else f"fedtail-{profile}"
+    return [stem, f"{stem}-open"]
 
 
 def source_dir():
@@ -104,36 +127,111 @@ def _windows_install(profile):
     return link, Path(icon)
 
 
+def _files(profile):
+    """{path: bytes} of what the menu entry is made of here."""
+    data = _data_home()
+    apps = data / "applications"
+    icon = data / "icons" / "hicolor" / "512x512" / "apps" / "fedtail.png"
+    stem = desktop_id(profile)
+    text = entry_text(profile, source_dir(), icon=str(icon))
+    icon_src = resources.files("fedtail").joinpath("data/icons/fedtail.png")
+    return {apps / f"{stem}.desktop": text.encode(),
+            apps / f"{stem}-open.desktop": handler_text(text).encode(),
+            icon: icon_src.read_bytes()}
+
+
+def _ours(path):
+    """An entry fedtail made (not one of the same name someone wrote by hand)."""
+    try:
+        text = path.read_text("utf-8", errors="replace")
+    except OSError:
+        return False
+    return "Keywords=mastodon;gotosocial;fediverse" in text and "fedtail" in text
+
+
+def _remove_old(profile):
+    apps = _data_home() / "applications"
+    gone = []
+    for stem in old_ids(profile):
+        p = apps / f"{stem}.desktop"
+        if p.is_file() and _ours(p):
+            p.unlink()
+            gone.append(p)
+    return gone
+
+
 def install(profile=None):
     profile = profile or main_profile()
     if os.name == "nt":
         return _windows_install(profile)
+    files = _files(profile)
+    for path, content in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
     data = _data_home()
-    apps = data / "applications"
-    icons = data / "icons" / "hicolor" / "512x512" / "apps"
-    apps.mkdir(parents=True, exist_ok=True)
-    icons.mkdir(parents=True, exist_ok=True)
     # the opossum holding its own tail (the bubble of before goes: one icon by that name)
-    icon_src = resources.files("fedtail").joinpath("data/icons/fedtail.png")
-    (icons / "fedtail.png").write_bytes(icon_src.read_bytes())
     (data / "icons" / "hicolor" / "scalable" / "apps" / "fedtail.svg").unlink(missing_ok=True)
-    stem = desktop_id(profile)
-    entry = apps / f"{stem}.desktop"
-    text = entry_text(profile, source_dir(), icon=str(icons / "fedtail.png"))
-    entry.write_text(text, "utf-8")
+    _remove_old(profile)
+    entry, opener, icon = list(files)
     # web+ap:// links (a "open in your app" button on a server's page) and
     # `xdg-open web+ap://…` go to `fedtail open URL`: into the running window
-    opener = apps / f"{stem}-open.desktop"
-    opener.write_text(handler_text(text), "utf-8")
+    from . import sysenv
     if shutil.which("xdg-mime"):
-        from . import sysenv
         subprocess.run(["xdg-mime", "default", opener.name, "x-scheme-handler/web+ap"],
                        capture_output=True, env=sysenv.child_env())
     # let the desktop notice right away (best effort)
+    apps = entry.parent
     for cmd in (["update-desktop-database", str(apps)],
                 ["gtk-update-icon-cache", "-q", "-t", str(data / "icons" / "hicolor")],
                 ["kbuildsycoca6"], ["kbuildsycoca5"]):
         if shutil.which(cmd[0]):
-            from . import sysenv
             subprocess.run(cmd, capture_output=True, env=sysenv.child_env())
-    return entry, icons / "fedtail.png"
+    return entry, icon
+
+
+def system_entry():
+    """The entry a package put in /usr/share/applications (the deb), or None."""
+    for base in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":"):
+        p = Path(base or "/usr/share") / "applications" / f"{APP_ID}.desktop"
+        if p.is_file():
+            return p
+    return None
+
+
+def ensure(profile=None):
+    """At the start of a window (ui.desktop_entry): the menu entry and the icon are there
+    and say what this fedtail is (moved checkout, new one-file build, a renamed id);
+    entries of the old name go. Writes only when something differs, so an ordinary start
+    costs a few small reads. Linux and the like only; never raises. What it did, or
+    None when nothing was needed."""
+    if os.name == "nt" or sys.platform == "darwin":
+        return None
+    profile = profile or main_profile()
+    try:
+        installed = not getattr(sys, "frozen", False) and source_dir() is None
+        if installed and system_entry() is not None and profile == main_profile():
+            # the package's own entry serves; one of ours beside it would be a duplicate
+            gone = _remove_old(profile) + _remove_own(profile)
+            return f"package entry kept, removed {len(gone)}" if gone else None
+        files = _files(profile)
+        stale = [p for p, c in files.items() if not p.is_file() or p.read_bytes() != c]
+        old = [p for stem in old_ids(profile)
+               if (p := _data_home() / "applications" / f"{stem}.desktop").is_file()
+               and _ours(p)]
+        if not stale and not old:
+            return None
+        entry, _icon = install(profile)
+        return f"menu entry {entry} (was: {', '.join(p.name for p in stale + old)})"
+    except Exception as e:  # noqa: BLE001 — a menu entry must never stop the start
+        log.warning("menu entry: %s", e)
+        return None
+
+
+def _remove_own(profile):
+    """Our user-level menu entry, when a package's is there for the same id (the
+    web+ap:// link handler stays: the package has none)."""
+    p = _data_home() / "applications" / f"{desktop_id(profile)}.desktop"
+    if p.is_file() and _ours(p):
+        p.unlink()
+        return [p]
+    return []

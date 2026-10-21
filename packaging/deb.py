@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT))
 
 from fedtail import __version__  # noqa: E402
 from fedtail.desktop import entry_text  # noqa: E402
+from fedtail.version import APP_ID  # noqa: E402
 
 DEPENDS = "python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets"
 RECOMMENDS = ("python3-pyside6.qtdbus, python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, "
@@ -48,7 +49,7 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
     launcher.chmod(0o755)
     apps = work / "usr/share/applications"
     apps.mkdir(parents=True)
-    (apps / "fedtail.desktop").write_text(entry_text(icon="fedtail"), "utf-8")
+    (apps / f"{APP_ID}.desktop").write_text(entry_text(icon="fedtail"), "utf-8")
     icons = work / "usr/share/icons/hicolor/512x512/apps"
     icons.mkdir(parents=True)
     shutil.copy(ROOT / "fedtail/data/icons/fedtail.png", icons / "fedtail.png")

@@ -639,7 +639,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | Linux: one file | has | 0.5.0 | `fedtail-X.Y.Z-linux-x86_64`, built on Debian 12 |
 | A deb package | has | 0.10.0 | built in CI on Debian 13 |
 | Windows: one .exe | has | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
-| A menu entry with the icon | has | 0.2.0 | `--install-desktop` |
+| A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`ui.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
 | An apt repository of its own | planned | — | from the releases' deb packages |
 | An installer and a signature for Windows | planned | — | once there are users on Windows |
 

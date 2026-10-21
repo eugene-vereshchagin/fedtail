@@ -145,10 +145,113 @@ class GtkSmokeTest(unittest.TestCase):
         self.assertTrue(pump(lambda: card.post.mine.liked, 5))
 
 
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkBigLaneTest(unittest.TestCase):
+    """Thousands of posts in a lane: only a window of them is built, in batches, so the
+    main loop never stops for long (the first try froze the desktop for good)."""
+
+    N = 2000
+
+    def setUp(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.gtk import theme as themes
+        from fedtail.frontends.gtk.bridge import Bridge
+        from fedtail.frontends.gtk.window import MainWindow
+        from fedtail.protocols.mastodon import adapter
+        i18n.setup("ru")
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        tmp = Path(self._tmp.name)
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
+                                  "ui": {"start_lane": "home", "adwaita": "off"}})
+        p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        self.core = Core(cfg, p, api_class=FakeApi)
+        self.view = View(self.core)
+        self.big = [(f"{i:05d}", adapter.post(
+            status(f"{i:05d}", BOB, minute=i % 59, text="<p>пост " + "текст " * 30 + "</p>"),
+            "t")) for i in range(self.N)]
+        self.view.entries = lambda lane: self.big if lane == "home" else []
+        self.view.unread = lambda entries: set()  # all read: the lane opens at its end
+        self.win = MainWindow(None, self.core, self.view, Bridge(self.view), themes.apply(cfg))
+        self.win.set_default_size(900, 600)
+        self.win.present()
+        self.worst = 0.0
+        self.win.start()
+        self.loop(lambda: self.lane() is not None and self.lane().positioned, 10)
+
+    def tearDown(self):
+        self.win.destroy()
+        pump(timeout=0.1)
+        self.core.shutdown()
+        self._tmp.cleanup()
+
+    def lane(self):
+        return self.win.lane_views.get("home")
+
+    def loop(self, until, timeout=5.0):
+        """pump(), keeping the longest single step of the main loop."""
+        ctx = GLib.MainContext.default()
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            while ctx.pending():
+                t = time.monotonic()
+                ctx.iteration(False)
+                self.worst = max(self.worst, time.monotonic() - t)
+            if until():
+                return True
+            time.sleep(0.005)
+        return False
+
+    def test_only_a_window_is_built_and_the_loop_keeps_going(self):
+        from fedtail.frontends.gtk import lane as lane_mod
+        lv = self.lane()
+        self.assertLessEqual(len(lv.rows), lane_mod.WINDOW)
+        self.assertEqual(lv.order[-1], self.big[-1][0])  # opened at the newest end
+        self.assertLess(self.worst, 0.5, "the main loop stopped for too long")
+
+    def test_scrolling_up_grows_without_a_jump(self):
+        lv = self.lane()
+        before = len(lv.rows)
+        grow, lv._grow = lv._grow, lambda: None
+        lv.adj.set_value(0)  # at the top of what's built…
+        pump(timeout=0.3)
+        top = lv._first_visible()
+        offset = lv._y(lv.rows[top]) - lv.adj.get_value()
+        lv._grow = grow
+        lv._grow()  # …older ones join above
+        self.assertTrue(self.loop(lambda: len(lv.rows) > before, 5))
+        self.loop(lambda: not lv._pending() and lv._held_upper is None, 5)
+        pump(timeout=0.2)
+        # the post at the top is still where it was on screen: the view moved with it
+        self.assertAlmostEqual(lv._y(lv.rows[top]) - lv.adj.get_value(), offset, delta=2)
+        self.assertGreater(lv.adj.get_value(), 0)
+        self.assertLess(self.worst, 0.5)
+
+
 def _cards(win):
     from fedtail.frontends.gtk.window import _cards as cards
     for page in win.threads.values():
         yield from cards(page)
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class TitlebarTest(unittest.TestCase):
+    def test_desktop_frame_outside_gnome(self):
+        from unittest import mock
+
+        from fedtail.frontends.gtk import gi_setup
+        from fedtail.frontends.gtk.window import own_titlebar
+        cfg = {"ui": {"gtk_headerbar": "auto"}}
+        with mock.patch.object(gi_setup, "Adw", None):
+            for desk, own in (("KDE", False), ("XFCE", False), ("X-Cinnamon", False),
+                              ("GNOME", True), ("ubuntu:GNOME", True), ("", False)):
+                with mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": desk}):
+                    self.assertEqual(own_titlebar(cfg), own, desk)
+            with mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "KDE"}):
+                self.assertTrue(own_titlebar({"ui": {"gtk_headerbar": "on"}}))
+        with mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "GNOME"}):
+            self.assertFalse(own_titlebar({"ui": {"gtk_headerbar": "off"}}))
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")

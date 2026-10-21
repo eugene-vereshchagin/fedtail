@@ -403,8 +403,8 @@ class PathsAuthTest(TmpDir):
         self.assertEqual([p["name"] for p in got], ["work", "default", "old"])
         self.assertEqual(profiles.label(got[0]), "@w@social.example")
         self.assertEqual(profiles.label(got[1]), "@mira@social.example (default)")
-        self.assertEqual(desktop.desktop_id("work"), "fedtail")
-        self.assertEqual(desktop.desktop_id("default"), "fedtail-default")
+        self.assertEqual(desktop.desktop_id("work"), "online.dmesg.fedtail")
+        self.assertEqual(desktop.desktop_id("default"), "online.dmesg.fedtail.default")
         self.assertNotIn("--profile", desktop.entry_text("work"))
         # not the main one logs out: the mark stays
         auth.forget(paths.resolve("old").auth_file)

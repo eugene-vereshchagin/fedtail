@@ -14,6 +14,8 @@ DEFAULTS = {
     "ui": {
         "frontend": "qt",
         "adwaita": "auto",
+        "gtk_headerbar": "auto",
+        "desktop_entry": True,
         "language": "auto",
         "theme": "system",
         "font_size": 0,
@@ -247,6 +249,7 @@ CHOICES = {
     ("account", "markdown"): {"auto", "on", "off"},
     ("ui", "frontend"): {"qt", "tui", "web", "gtk"},
     ("ui", "adwaita"): {"auto", "on", "off"},
+    ("ui", "gtk_headerbar"): {"auto", "on", "off"},
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "image_viewer"): {"internal", "browser"},
     ("ui", "video_player"): {"internal", "browser"},

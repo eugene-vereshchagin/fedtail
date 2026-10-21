@@ -81,7 +81,8 @@ class CliTest(unittest.TestCase):
                                   "--profile", "croco"], cwd=ROOT, env=env,
                                  capture_output=True, text=True)
             self.assertEqual(out.returncode, 0, out.stderr)
-            entry = (Path(d) / "applications" / "fedtail-croco.desktop").read_text("utf-8")
+            entry = (Path(d) / "applications" / "online.dmesg.fedtail.croco.desktop"
+                     ).read_text("utf-8")
             self.assertIn("-m fedtail --profile croco", entry)
             self.assertIn(f"Path={ROOT}", entry)
             # a full path: Plasma doesn't have to find it in a cached icon theme

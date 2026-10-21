@@ -2,6 +2,22 @@
 
 ## 0.18.0 — in progress
 
+- fedtail has an app id, `online.dmesg.fedtail` (from the project's website): the menu
+  entry is now `online.dmesg.fedtail.desktop` (another profile's:
+  `online.dmesg.fedtail.<profile>.desktop`), and both the Qt and the GTK window say they
+  are it — on Wayland that is how the task bar finds the icon. Every start of a window
+  checks the entry and the icon are there and point to this fedtail (a moved checkout, a
+  new one-file build) and mends them; the old `fedtail.desktop` goes (only one fedtail
+  made). With the deb package its own entry is the one. `ui.desktop_entry = false` —
+  leave the menu alone.
+- The GTK window (0.17's frame) no longer freezes at the start on a big lane (it
+  built a card for every post stored — seconds per thousand, the desktop stuck under a
+  frozen title bar): only a window of posts around where reading starts is built, in
+  small batches between frames, more as the view nears an end, the far end let go past
+  a few hundred; lanes not on screen catch up when shown. Outside GNOME it keeps the
+  desktop's own frame (`ui.gtk_headerbar = auto | on | off`), and the freeze watchdog
+  and stall meter of the debug log work for GTK too.
+
 ## 0.17.1 — 2026-10-21
 
 - The split layout's input line says in words where a post goes and who will see it:

@@ -45,7 +45,8 @@ status = "has"
 since = "0.2.0"
 name.ru = "Пункт в меню с иконкой"
 name.en = "A menu entry with the icon"
-note = "`--install-desktop`"
+note.ru = "сам при запуске окна (`ui.desktop_entry`), или `--install-desktop`; имя — `online.dmesg.fedtail.desktop` (с 0.18)"
+note.en = "by itself when a window starts (`ui.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18)"
 
 [[feature]]
 id = "apt-repo"

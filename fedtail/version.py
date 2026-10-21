@@ -26,6 +26,10 @@ USER_AGENT = f"fedtail/{__version__}"  # every request fedtail makes says so
 # place the repository names his server; nothing else depends on it)
 AUTHOR = "@veresk@dmesg.online"
 AUTHOR_URL = "https://dmesg.online/@veresk"
+# the app's id on the desktop: the .desktop file's name, GTK's application id (Wayland
+# finds the icon by it), Qt's desktop file name. Reverse DNS of the project's website,
+# fedtail.dmesg.online — the author's wish, the other place his domain may appear.
+APP_ID = "online.dmesg.fedtail"
 
 
 def _git(*args):
