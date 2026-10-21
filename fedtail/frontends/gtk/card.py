@@ -183,7 +183,10 @@ class Card(Gtk.Box):
             col.append(ctx_lab)
 
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        inner.append(self._body(p))
+        # the text in a box of its own: a translation takes its place and gives it back
+        self.text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.text_box.append(self._body(p))
+        inner.append(self.text_box)
         if p.media:
             inner.append(self._media(p))
         if p.poll is not None:
@@ -484,7 +487,9 @@ class Card(Gtk.Box):
         c = self.ctx
         return actions.Ctx(cfg=c.cfg, me_id=c.me_id, supports=c.supports,
                            subscribed=c.subscribed, thread_quiet=c.thread_quiet,
-                           in_thread=c.in_thread)
+                           in_thread=c.in_thread,
+                           long_form=bool(c.cfg["feed"].get("long_form", True)),
+                           translate=bool(getattr(c.view.caps, "translation", False)))
 
     def _fill_actions(self):
         if not hasattr(self, "actions"):
@@ -537,8 +542,8 @@ class Card(Gtk.Box):
             if it.kind == "separator":
                 box.append(Gtk.Separator())
                 continue
-            if it.kind not in ("link", "open", "copy"):
-                continue  # lists, other accounts, translation…: not in GTK yet
+            if it.kind not in ("link", "open", "copy", "long_form", "translate"):
+                continue  # lists, other accounts: not in GTK yet
             b = Gtk.Button(label=it.label)
             b.add_css_class("flat")
             b.get_child().set_xalign(0)
@@ -554,7 +559,11 @@ class Card(Gtk.Box):
             self.more.popup()
 
     def _do(self, it):
-        if it.kind == "link":
+        if it.kind == "translate":
+            self.translate()
+        elif it.kind == "long_form":
+            self.ctx.win.read_whole(it.data)
+        elif it.kind == "link":
             self.ctx.on_link(it.url)
         elif it.kind == "open":
             self.ctx.open_url(it.url)
@@ -565,6 +574,39 @@ class Card(Gtk.Box):
     def _link(self, _label, uri):
         self.ctx.on_link(uri)
         return True  # handled: GTK must not open it itself
+
+    # ---- translation (as Qt's: the server translates; the original a click away) -----
+    def translate(self):
+        tr = getattr(self, "translation", None)
+        if tr is not None:
+            self._show_text(not self.showing_translation)
+            return
+
+        def got(t):
+            self.translation = t
+            self._show_text(True)
+        self.ctx.win.call(self.ctx.view.translate(self.post), got)
+
+    def _show_text(self, translated):
+        self.showing_translation = translated
+        box = self.text_box
+        while (c := box.get_first_child()) is not None:
+            box.remove(c)
+        p = self.post
+        if translated:
+            from dataclasses import replace as _replace
+            tr = self.translation
+            row = Gtk.Box(spacing=8)
+            row.append(_label(_("translated_from", lang=tr.lang or "?",
+                                provider=tr.provider or ""), ("ft-muted",), wrap=True))
+            back = Gtk.Button(label=_("show_original"))
+            back.add_css_class("flat")
+            back.connect("clicked", lambda _b: self._show_text(False))
+            row.append(back)
+            box.append(row)
+            box.append(self._body(_replace(p, text=tr.html or p.text)))
+        else:
+            box.append(self._body(p))
 
 
 class Separator(Gtk.Box):

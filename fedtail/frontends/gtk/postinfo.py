@@ -135,3 +135,42 @@ def read_up_to(win, sid):
     at = keys.index(sid)
     older = keys[at:] if lv.newest_first else keys[:at + 1]
     win.view.mark_read([k for k in older if k in lv.unread])
+
+
+def read_whole(win, st):
+    """📄 The whole text from the author's server: an article my server cut to a title
+    and a link, an event with its time and place — in a page of its own, as in Qt."""
+    from ..richtext import esc, sanitize
+    win.status(_("long_form_wait"))
+
+    def when(iso):
+        from datetime import datetime
+        try:
+            t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+            return (t.astimezone() if t.tzinfo else t).strftime("%d.%m.%Y %H:%M")
+        except ValueError:
+            return esc(iso)
+
+    def got(d):
+        if not d:
+            win.error(_("long_form_none"))
+            return
+        parts = []
+        if d["name"]:
+            parts.append(f"<h2>{esc(d['name'])}</h2>")
+        event = [x for x in (
+            "🗓 " + " — ".join(when(t) for t in (d["start"], d["end"]) if t)
+            if d["start"] else "", "📍 " + esc(d["location"]) if d["location"] else "") if x]
+        if event:
+            parts.append("<p><b>" + "<br>".join(event) + "</b></p>")
+        if d["summary"]:
+            parts.append(f"<p><i>{sanitize(d['summary'])}</i></p>")
+        parts.append(sanitize(d["content"]) or esc(snippet(st, 2000)))
+        page = Page(win, d["name"] or _("long_form_title"), "".join(parts),
+                    on_link=win.on_link, width=820, height=760)
+        if d["url"]:
+            b = Gtk.Button(label=_("open_browser"))
+            b.connect("clicked", lambda _b: win.open_url(d["url"]))
+            page.extra_button(b)
+        page.present()
+    win.call(win.view.long_form(st), got)

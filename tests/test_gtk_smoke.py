@@ -23,6 +23,14 @@ from . import fakes  # noqa: E402
 from .fakes import BOB, ME, NEWS, FakeApi, status  # noqa: E402
 
 
+def _done(value):
+    """A future already done (a fake core call)."""
+    from concurrent.futures import Future
+    f = Future()
+    f.set_result(value)
+    return f
+
+
 def pump(until=None, timeout=3.0):
     """Run the main loop until until() is true (or a while, when None)."""
     ctx = GLib.MainContext.default()
@@ -383,6 +391,29 @@ class GtkSmokeTest(_GtkBase):
         note.emit("clicked")
         self.assertEqual(len(asked), 1)
         self.assertEqual(prof.parse_langs("ru; en  de"), ["ru", "en", "de"])
+
+    def test_translate_and_read_whole(self):
+        """⋯ → Translate puts the server's translation in the text's place (the original
+        a click away); 📄 the whole text opens a page — as in Qt."""
+        from fedtail.model import Translation
+        lane = self._lane("home")
+        card = next(c for c in lane.rows.values() if c.post.id == "011")
+        self.view.translate = lambda p: _done(Translation("<p>hello</p>", "ru", "test"))
+        card.translate()
+        self.assertTrue(pump(lambda: getattr(card, "showing_translation", False), 3))
+        card.translate()
+        self.assertFalse(card.showing_translation)
+        self.view.long_form = lambda st: _done({"name": "Статья", "start": "", "end": "",
+                                                "location": "", "summary": "",
+                                                "content": "<p>всё</p>",
+                                                "url": "https://e.test/a"})
+        before = set(Gtk.Window.list_toplevels())
+        self.win.read_whole(card.post)
+        pump(timeout=0.4)
+        new = [w for w in Gtk.Window.list_toplevels() if w not in before]
+        self.assertEqual([w.get_title() for w in new], ["Статья"])
+        for w in new:
+            w.close()
 
     def test_edit_my_profile(self):
         """My profile's Edit as in Qt: loaded, only what changed goes to the server."""

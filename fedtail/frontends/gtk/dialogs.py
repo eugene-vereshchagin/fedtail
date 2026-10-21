@@ -99,8 +99,13 @@ class Page(Gtk.Window):
         for side in ("bottom", "end"):
             getattr(row, "set_margin_" + side)(8)
         box.append(row)
+        self.button_row = row
         self.set_child(box)
         self.set_html(html)
+
+    def extra_button(self, button):
+        """One more button beside Close (Open in browser…)."""
+        self.button_row.prepend(button)
 
     def set_html(self, html):
         self.label.set_markup(pango.markup(html or ""))

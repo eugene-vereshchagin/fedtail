@@ -1421,6 +1421,11 @@ class MainWindow(Gtk.ApplicationWindow):
     def call(self, future, ok=None, fail=None):
         return self.bridge.call(future, ok, fail or self.error)
 
+    def read_whole(self, st):
+        """📄 The whole text from the author's server (an article, an event)."""
+        from . import postinfo
+        return postinfo.read_whole(self, st)
+
     def edit_profile(self):
         """My profile edited: name, bio, fields, pictures, who may follow."""
         from .profiledit import ProfileEditor
