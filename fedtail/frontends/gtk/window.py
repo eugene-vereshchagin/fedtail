@@ -236,7 +236,10 @@ class MainWindow(Gtk.ApplicationWindow):
         paned.set_start_child(side)
         # the lanes and, under them, the command line: beside the sidebar, as in Qt
         self.right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        from .announce import AnnounceBar
         from .find import FindBar
+        self.announce_bar = AnnounceBar(self)  # the server's announcements, as in Qt
+        self.right.append(self.announce_bar)
         self.find_bar = FindBar(self)  # Ctrl+F, over the lanes
         self.right.append(self.find_bar)
         self.tabs.set_vexpand(True)
@@ -996,6 +999,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if self.cfg["ui"].get("layout") == "columns":
             self.set_columns(True)
         self.view.start_polling()
+        self.announce_bar.start()
 
     def _rebuild_sidebar(self):
         current = self._current_lane()

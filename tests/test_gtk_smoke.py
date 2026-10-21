@@ -455,6 +455,16 @@ class GtkSmokeTest(_GtkBase):
         page = lists.open_list_people(self.win, made[0])
         self.assertIsNotNone(page)
 
+    def test_announcements(self):
+        """The server's announcements as Qt's strip: shown, "Got it" sends it away."""
+        from fedtail.model import Announcement
+        bar = self.win.announce_bar
+        bar.got([Announcement(id="A1", html="<p>Обновление сервера в полночь</p>")])
+        self.assertTrue(bar.get_visible())
+        self.assertIn("Обновление", bar.body.get_text())
+        bar.dismiss()
+        self.assertFalse(bar.get_visible())
+
     def test_edit_my_profile(self):
         """My profile's Edit as in Qt: loaded, only what changed goes to the server."""
         ed = self.win.edit_profile()

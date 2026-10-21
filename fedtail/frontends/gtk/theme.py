@@ -123,6 +123,8 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-card.ft-focus {{ background: {c['focus']}; border-color: {c['focus_border']}; }}
 .ft-card.ft-found {{ border: 2px solid {c['accent']}; }}
 .ft-findbar {{ background: {c['header']}; }}
+.ft-announce {{ background: {c['ctx']}; border: 1px solid {c['card_border']};
+               border-radius: {br}px; padding: 4px 8px; }}
 .ft-over {{ color: {c['hot']}; }}
 .ft-name {{ color: {c['name']}; font-weight: bold; }}
 .ft-muted, .ft-card .ft-muted {{ color: {c['muted']}; }}
