@@ -5,10 +5,17 @@ the ≡ menu opens (Silence, Scheduled, the server, the federation, help, people
 Whatever goes wrong on the way — an exception, an error on the status bar, a warning in
 the log — goes to errors.txt; menus.txt is the inventory of every menu.
 
-    python3 tools/qt_tour.py OUT_DIR [--quick] [--native]
+Besides the ≡ menu, every menu the window has is opened: each button's that has one,
+and each right click (the widgets that answer one get it, a couple of each kind).
+
+    python3 tools/qt_tour.py OUT_DIR [--quick] [--native] [--maximized] [--pace 2]
+                             [--real[=PROFILE]]
 
 --native: the desktop's own Qt platform (the real fonts, style and icons, windows flash
-on the screen); without it, offscreen (nothing shows, the look is plainer)."""
+on the screen); without it, offscreen (nothing shows, the look is plainer).
+--maximized: the window as big as the screen. --pace: every wait that many times longer
+(a slow machine: pictures, icons, lanes have time to come). --real: your own account,
+read-only, instead of the fake server (tools/real.py)."""
 
 from __future__ import annotations
 
@@ -21,7 +28,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from tools import real  # noqa: E402
+
 NATIVE = "--native" in sys.argv
+MAXIMIZED = "--maximized" in sys.argv
+PACE = float(sys.argv[sys.argv.index("--pace") + 1]) if "--pace" in sys.argv else 1.0
 if NATIVE:  # (tools/screenshots.py, imported below, would make it offscreen)
     os.environ["QT_QPA_PLATFORM"] = os.environ.get("QT_QPA_PLATFORM") or (
         "windows" if os.name == "nt" else
@@ -30,6 +41,7 @@ if NATIVE:  # (tools/screenshots.py, imported below, would make it offscreen)
 else:
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 _tmp = tempfile.mkdtemp(prefix="fedtail-tour-")
+REAL = real.snapshot(_tmp)  # before XDG_* point at the temporary folder
 os.environ["XDG_CONFIG_HOME"] = str(Path(_tmp) / "config")
 os.environ["XDG_DATA_HOME"] = str(Path(_tmp) / "data")
 
@@ -43,11 +55,13 @@ from tests.fakes import FakeApi  # noqa: E402
 from tools import screenshots as shots  # noqa: E402  (its world and pictures)
 
 ERRORS, MENUS = [], []
+CAUGHT = []  # menus that were exec()'d: kept here instead of waiting for a click
+SEEN = set()  # (what was shot) — a menu with the same items once only
 SPLIT_THEMES = ("system", "qip-retro", "qip-modern", "mra", "mra-blue", "psi")
 
 
 def pump(app, seconds):
-    end = time.monotonic() + seconds
+    end = time.monotonic() + seconds * PACE
     while time.monotonic() < end:
         app.processEvents()
         time.sleep(0.01)
@@ -61,7 +75,7 @@ def save(widget, out, name):
         ERRORS.append(f"{name}: can't grab: {e}")
 
 
-def inventory(menu, title, depth=0):
+def inventory(menu, title, depth=0, top=True):
     """Every item of a menu and its submenus, as lines."""
     lines = []
     for a in menu.actions():
@@ -73,20 +87,73 @@ def inventory(menu, title, depth=0):
         sub = a.menu()
         if sub is not None:
             sub.aboutToShow.emit()  # filled when it opens
-            lines += inventory(sub, a.text(), depth + 1)
-    if depth == 0:
+            lines += inventory(sub, a.text(), depth + 1, False)
+    if top:
         MENUS.append(f"== {title}\n" + "\n".join(lines) + "\n")
     return lines
 
 
 def shoot_menu(menu, out, name):
     menu.aboutToShow.emit()
+    key = tuple(a.text() for a in menu.actions())
+    if key in SEEN:
+        return
+    SEEN.add(key)
+    if not key:
+        ERRORS.append(f"{name}: an empty menu")
     save(menu, out, name)
     inventory(menu, name)
     for i, a in enumerate(a for a in menu.actions() if a.menu() is not None):
         sub = a.menu()
         sub.aboutToShow.emit()
         save(sub, out, f"{name}-sub{i}")
+
+
+def sweep(app, root, out, label):
+    """Every menu under root: the buttons' (shown on a click) and the right clicks'
+    (customContextMenuRequested, a point near the widget's corner; whatever menu that
+    exec()s is caught). Two widgets of a kind at most: a lane has dozens of cards."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtWidgets import QAbstractButton, QWidget
+    kinds = {}
+    n = 0
+    for b in root.findChildren(QAbstractButton):
+        m = getattr(b, "menu", lambda: None)()
+        if m is not None and b.isVisible():
+            n += 1
+            shoot_menu(m, out, f"{label}-btn{n}-{type(b).__name__}"
+                       f"{'-' + b.objectName() if b.objectName() else ''}")
+    for w in [root] + root.findChildren(QWidget):
+        if w.contextMenuPolicy() != Qt.ContextMenuPolicy.CustomContextMenu or \
+                not w.isVisible():
+            continue
+        k = (type(w).__name__, w.objectName())
+        if kinds.get(k, 0) >= 2:
+            continue
+        kinds[k] = kinds.get(k, 0) + 1
+        del CAUGHT[:]
+        before = {id(x) for x in app.topLevelWidgets() if x.isVisible()}
+        try:
+            w.customContextMenuRequested.emit(QPoint(min(8, w.width() // 2),
+                                                     min(8, w.height() // 2)))
+        except Exception:  # noqa: BLE001
+            ERRORS.append(f"right click on {k}: " + traceback.format_exc(limit=5))
+        for i, m in enumerate(list(CAUGHT)):
+            shoot_menu(m, out, f"{label}-ctx-{k[0]}{'-' + k[1] if k[1] else ''}-{i}")
+        for x in app.topLevelWidgets():  # a right click that opened a window: closed
+            if x.isVisible() and id(x) not in before and not isinstance(x, QMenu):
+                x.close()
+    pump(app, 0.2)
+
+
+def catch_menus():
+    """QMenu.exec shows the menu and waits for a click: here it is kept and returns at
+    once (nothing chosen)."""
+    def exec_(menu, *a, **k):
+        CAUGHT.append(menu)
+        return None
+    QMenu.exec = exec_
+    QMenu.exec_ = exec_
 
 
 def closing_modals(app, out, name, fn):
@@ -98,6 +165,7 @@ def closing_modals(app, out, name, fn):
         w = app.activeModalWidget() or app.activePopupWidget()
         if w is not None:
             save(w, out, name)
+            sweep(app, w, out, name)
             shot.append(1)
             w.close()
     timer = QTimer()
@@ -114,6 +182,7 @@ def closing_modals(app, out, name, fn):
         if w.isVisible() and id(w) not in before and not isinstance(w, QMenu):
             if not shot:
                 save(w, out, name)
+                sweep(app, w, out, name)
                 shot.append(1)
             w.close()
     pump(app, 0.2)
@@ -123,26 +192,37 @@ def make_window(app, theme_name, layout, label):
     from fedtail.frontends.qt import theme as themes
     from fedtail.frontends.qt.bridge import Bridge
     from fedtail.frontends.qt.window import MainWindow
-    FakeApi.world = shots.world()
-    cfg, _ = config.validate({"ui": {"theme": theme_name, "layout": layout},
-                              "feed": {"first_run_mark_read": False}})
-    data = Path(_tmp) / f"profile-{label}"
-    p = paths.resolve(label, config=str(data / "c.toml"), data=str(data))
-    auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
-    core = Core(cfg, p, api_class=FakeApi)
-    core._origin_json = lambda url: None
+    ui = {"theme": theme_name, "layout": layout}
+    if REAL:
+        cfg = real.config(REAL, ui)
+        core = real.core(REAL, cfg)
+    else:
+        FakeApi.world = shots.world()
+        cfg, _ = config.validate({"ui": ui, "feed": {"first_run_mark_read": False}})
+        data = Path(_tmp) / f"profile-{label}"
+        p = paths.resolve(label, config=str(data / "c.toml"), data=str(data))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
     theme = themes.apply(app, cfg)
     win = MainWindow(core, Bridge(core), theme)
-    win.images.get = lambda url, cb, *a, **k: cb(shots.make_pixmap(url))
+    if not REAL:
+        win.images.get = lambda url, cb, *a, **k: cb(shots.make_pixmap(url))
+    win.tour_tray = win.tray
+    if win.tray is not None:
+        win.tray.hide()
     win.tray = None
-    win.resize(1280, 860)
-    win.show()
+    if MAXIMIZED:
+        win.showMaximized()
+    else:
+        win.resize(1280, 860)
+        win.show()
     win.start()
-    pump(app, 1.0)
+    pump(app, 3.0 if REAL else 1.0)
     core.poll_once()
-    pump(app, 1.0)
-    win.select_lane("home")
-    pump(app, 1.5)
+    pump(app, 3.0 if REAL else 1.0)
+    win.select_lane("home" if "home" in win.lane_order else win.lane_order[0])
+    pump(app, 4.0 if REAL else 1.5)
     return core, win
 
 
@@ -160,6 +240,11 @@ def tour_menus(app, out, core, win):
     """The ≡ menu and all it opens, the accounts, a post's ⋯."""
     shoot_menu(win._app_menu(), out, "menu-main")
     shoot_menu(win.accounts_menu(), out, "menu-accounts")
+    if win.tour_tray is not None and win.tour_tray.contextMenu() is not None:
+        shoot_menu(win.tour_tray.contextMenu(), out, "menu-tray")
+    sweep(app, win, out, "main")
+    if getattr(win, "roster", None) is not None:
+        sweep(app, win.roster, out, "roster")
     from fedtail.frontends.qt.card import PostRow
     cards = [c for c in win.findChildren(PostRow) if c.isVisible()]
     if cards:
@@ -169,7 +254,8 @@ def tour_menus(app, out, core, win):
     else:
         ERRORS.append("no post card on screen for the ⋯ menu")
     from fedtail.frontends.qt.silence import SilenceDialog
-    for name, fn in (("dlg-silence", lambda: SilenceDialog(win, "filters").exec()),
+    for name, fn in (("tab-profile", lambda: win.open_account(core.me["id"])),
+                     ("dlg-silence", lambda: SilenceDialog(win, "filters").exec()),
                      ("dlg-scheduled", win.show_scheduled),
                      ("dlg-filtered", win.show_filtered),
                      ("dlg-server", win.show_server_info),
@@ -185,6 +271,7 @@ def tour_menus(app, out, core, win):
         closing_modals(app, out, name, fn)
         if name.startswith("tab-"):
             save(win, out, name)
+            sweep(app, win.tabs.currentWidget(), out, name)
             win.close_tab(win.tabs.currentIndex())
             pump(app, 0.3)
 
@@ -208,6 +295,7 @@ def main():
         old_hook(t, v, tb)
     sys.excepthook = hook
     i18n.setup("ru")
+    catch_menus()
     app = QApplication.instance() or QApplication([])
     if not NATIVE:
         app.setStyle("Fusion")
@@ -229,14 +317,18 @@ def main():
                 pump(app, 0.4)
                 save(win.roster, out, label + "-roster")
             msg = win.statusBar().currentMessage()
-            if msg.startswith(("Ошибка", "Error")):
+            if msg.startswith(("Ошибка", "Error")) and real.READ_ONLY not in msg:
                 ERRORS.append(f"{label}: on the status bar: {msg}")
             if first:  # the menus and the windows: once is enough
                 tour_menus(app, out, core, win)
                 first = False
+            elif win.roster is not None and layout == "split":
+                sweep(app, win.roster, out, label + "-roster")
             close_window(app, core, win)
             print(f"{label}: {time.monotonic() - t0:.1f} s", flush=True)
     (out / "menus.txt").write_text("\n".join(MENUS), "utf-8")
+    if REAL:  # what the tool's clicks would have sent: stopped on purpose
+        ERRORS[:] = [e for e in ERRORS if real.READ_ONLY not in e]
     (out / "errors.txt").write_text("\n\n".join(ERRORS) + "\n" if ERRORS else "none\n",
                                     "utf-8")
     print(f"{len(ERRORS)} problems; {out}")

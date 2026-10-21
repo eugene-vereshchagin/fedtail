@@ -90,8 +90,10 @@ def scroll(meter, bar, to_top):
     return lambda: True
 
 
-def run(layout, theme, posts, profile):
+def run(layout, theme, posts, profile, maximized=False):
+    from tools import real
     tmp = tempfile.mkdtemp(prefix="fedtail-qtbench-")
+    snap = real.snapshot(tmp)  # --real: before XDG_* point at tmp
     os.environ["XDG_CONFIG_HOME"] = str(Path(tmp) / "config")
     os.environ["XDG_DATA_HOME"] = str(Path(tmp) / "data")
     from PySide6.QtWidgets import QApplication
@@ -106,11 +108,13 @@ def run(layout, theme, posts, profile):
     from tools.gtk_bench import fake_media, world
     i18n.setup("ru")
     app = QApplication.instance() or QApplication([])
-    FakeApi.world = world(posts)
-    cfg, _ = config.validate({
-        "feed": {"first_run_mark_read": False},
-        "ui": {"start_lane": "home", "theme": theme, "layout": layout,
-               "columns": ["home", "mentions", "local"] if layout == "columns" else []}})
+    ui = {"start_lane": "home", "theme": theme, "layout": layout,
+          "columns": ["home", "mentions", "local"] if layout == "columns" else []}
+    if snap:
+        cfg = real.config(snap, ui)
+    else:
+        FakeApi.world = world(posts)
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False}, "ui": ui})
     p = paths.resolve("bench", config=str(Path(tmp) / "c.toml"), data=str(Path(tmp) / "d"))
     auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
     prof = None
@@ -119,28 +123,38 @@ def run(layout, theme, posts, profile):
         prof = cProfile.Profile()
         prof.enable()
     meter = Meter(app)
-    print(f"\nQt · {layout} · {theme} · {posts} posts", flush=True)
+    print(f"\nQt · {layout} · {theme} · "
+          f"{'your account' if snap else f'{posts} posts'}", flush=True)
     state = {}
 
     def start():
         from PySide6.QtGui import QPixmap
-        core = Core(cfg, p, api_class=FakeApi)
-        core._origin_json = lambda url: None
-        # the home lane: all of the server's posts at once (as after days of polling)
-        every = sorted(FakeApi.world.statuses.values(), key=lambda x: x["id"])
-        lane_entries = core.lane_entries
-        core.lane_entries = lambda lane, *a, **k: [(x["id"], x) for x in every] \
-            if lane == "home" else lane_entries(lane, *a, **k)
+        if snap:
+            core = real.core(snap, cfg)
+        else:
+            core = Core(cfg, p, api_class=FakeApi)
+            core._origin_json = lambda url: None
+            # the home lane: all of the server's posts at once (as after days of polling)
+            every = sorted(FakeApi.world.statuses.values(), key=lambda x: x["id"])
+            lane_entries = core.lane_entries
+            core.lane_entries = lambda lane, *a, **k: [(x["id"], x) for x in every] \
+                if lane == "home" else lane_entries(lane, *a, **k)
         win = MainWindow(core, Bridge(core), themes.apply(app, cfg))
 
         def picture(url, cb, *a, **k):
             pm = QPixmap()
             pm.loadFromData(fake_media(url))
             cb(pm)
-        win.images.get = picture
+        if not snap:
+            win.images.get = picture
+        if win.tray is not None:
+            win.tray.hide()
         win.tray = None
-        win.resize(1200, 800)
-        win.show()
+        if maximized:
+            win.showMaximized()
+        else:
+            win.resize(1200, 800)
+            win.show()
         win.start()
         state.update(core=core, win=win)
         return lambda: bool(core.me)
@@ -215,14 +229,20 @@ def main():
     ap.add_argument("--theme")
     ap.add_argument("--posts", type=int, default=2000)
     ap.add_argument("--profile", action="store_true")
+    ap.add_argument("--maximized", action="store_true", help="the window as big as the screen")
+    ap.add_argument("--real", nargs="?", const="", metavar="PROFILE",
+                    help="your own account, read-only, not the fake server (tools/real.py)")
     a = ap.parse_args()
+    extra = (["--maximized"] if a.maximized else []) + \
+        ([f"--real={a.real}" if a.real else "--real"] if a.real is not None else [])
     if a.layout and a.theme:
-        run(a.layout, a.theme, a.posts, a.profile)
+        run(a.layout, a.theme, a.posts, a.profile, a.maximized)
         return 0
     for layout in ([a.layout] if a.layout else LAYOUTS):
         for theme in ([a.theme] if a.theme else THEMES):
             subprocess.call([sys.executable, __file__, "--layout", layout, "--theme", theme,
-                             "--posts", str(a.posts)] + (["--profile"] if a.profile else []))
+                             "--posts", str(a.posts)] + (["--profile"] if a.profile else [])
+                            + extra)
     return 0
 
 

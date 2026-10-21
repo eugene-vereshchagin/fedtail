@@ -3,7 +3,9 @@ lane, a thread, a profile, Activity, follow requests, the pictures screen, the c
 line, every key of the bindings — a screenshot (SVG, open it in a browser) of each, and
 whether the pictures in the lane were drawn. What went wrong goes to errors.txt.
 
-    python3 tools/tui_check.py OUT_DIR"""
+    python3 tools/tui_check.py OUT_DIR [--real[=PROFILE]]
+
+--real: your own account, read-only, instead of the fake server (tools/real.py)."""
 
 from __future__ import annotations
 
@@ -18,7 +20,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from tools import real  # noqa: E402
+
 _tmp = tempfile.mkdtemp(prefix="fedtail-tui-")
+REAL = real.snapshot(_tmp)  # before XDG_* point at the temporary folder
 os.environ["XDG_CONFIG_HOME"] = str(Path(_tmp) / "config")
 os.environ["XDG_DATA_HOME"] = str(Path(_tmp) / "data")
 
@@ -33,6 +38,8 @@ def png(w, h, rgb):
 
 
 def make_core():
+    if REAL:
+        return real.core(REAL, real.config(REAL)), None
     from fedtail.core import auth, config, paths
     from fedtail.core.app import Core
     from tests import fakes
@@ -73,7 +80,7 @@ async def walk(out):
         ProfileScreen,
         ThreadScreen,
     )
-    from fedtail.model import real
+    from fedtail.model import real as real_post
     NOTES.append(f"pictures.available() = {pictures.available()}"
                  + ("" if pictures.available() else " — Pillow (python3-pil) is missing: "
                     "no pictures in the terminal at all"))
@@ -84,7 +91,8 @@ async def walk(out):
         f = Future()
         f.set_result(png(80, 50, (40 + len(url) * 3 % 200, 120, 160)))
         return f
-    app.core.media_bytes = fake_bytes
+    if not REAL:
+        app.core.media_bytes = fake_bytes
 
     async def wait(pilot, cond, what, timeout=8):
         loop = asyncio.get_running_loop()
@@ -113,7 +121,7 @@ async def walk(out):
         drawn = [i for i in app.query_one("#posts").children
                  if isinstance(i, PostItem) and i.has_picture]
         with_pics = [i for i in app.query_one("#posts").children
-                     if isinstance(i, PostItem) and getattr(real(i.entry), "media", None)]
+                     if isinstance(i, PostItem) and getattr(real_post(i.entry), "media", None)]
         NOTES.append(f"lane {app.lane}: {len(with_pics)} posts with pictures, "
                      f"{len(drawn)} drawn in the lane")
         if pictures.available() and with_pics and not drawn:
@@ -135,9 +143,10 @@ async def walk(out):
                 shot(f"03-{label}")
                 await pilot.press("escape")
                 await pilot.pause(0.3)
-        ids = [getattr(i.entry, "id", "") for i in posts.children]
-        if "003" in ids:
-            posts.index = ids.index("003")
+        pics = [n for n, i in enumerate(posts.children)
+                if isinstance(i, PostItem) and getattr(real_post(i.entry), "media", None)]
+        if pics:
+            posts.index = pics[0]
             await pilot.press("v")
             if await wait(pilot, lambda: isinstance(app.screen, PictureScreen), "pictures"):
                 await pilot.pause(0.8)
@@ -169,7 +178,7 @@ async def walk(out):
 
 
 def main():
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "tui-check")
+    out = Path(next((a for a in sys.argv[1:] if not a.startswith("--")), "tui-check"))
     out.mkdir(parents=True, exist_ok=True)
     try:
         import textual
@@ -185,6 +194,8 @@ def main():
         asyncio.run(walk(out))
     except Exception:  # noqa: BLE001
         ERRORS.append(traceback.format_exc())
+    if REAL:
+        ERRORS[:] = [e for e in ERRORS if real.READ_ONLY not in e]
     (out / "notes.txt").write_text("\n".join(NOTES) + "\n", "utf-8")
     (out / "errors.txt").write_text("\n\n".join(ERRORS) + "\n" if ERRORS else "none\n",
                                     "utf-8")

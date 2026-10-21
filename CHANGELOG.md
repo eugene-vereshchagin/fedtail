@@ -10,7 +10,12 @@
   whether pictures are drawn; tools/tui_check.py); the web page in a real browser
   (every lane, the ≡ and ⋯ menus, the editor, the picture viewer, a phone's width, the
   page's console; tools/web_check.py). What can't run there is skipped; at the end a
-  report.md and one zip to send back. Linux, Windows, macOS.
+  report.md and one zip to send back. Linux, Windows, macOS. The Qt walk opens every
+  menu the window has — each button's, each right click's (caught instead of waiting
+  for a click), the roster's, the tray's — and says which are empty; --maximized,
+  --pace for a slow machine. The tools take --real[=PROFILE]: your own account and
+  database instead of the fake server, from a copy of the profile, the server only
+  asked (every request but GET stopped before it goes out).
 - GTK, faster: a post's text is one Pango layout now, not a wrapping label (that laid
   the text out several times to learn its size: nine tenths of what a card cost), so a
   lane lays out four times faster; cards come a batch a frame, as many as the last

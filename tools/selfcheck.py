@@ -6,6 +6,7 @@ and data are not touched: each step runs on a fake server in a temporary folder.
     python3 tools/selfcheck.py                 # all of it (10–30 minutes)
     python3 tools/selfcheck.py --quick         # a few themes, one layout (3–5 minutes)
     python3 tools/selfcheck.py --only qt,web   # some of the steps: tests qt bench gtk tui web
+    python3 tools/selfcheck.py --maximized --pace 2   # windows as big as the screen, slower
 
 What can't run here (no PySide6, no GTK, no Textual, no browser) is skipped and said
 so. At the end: report.md in the folder and one zip of all of it, to send back.
@@ -110,7 +111,11 @@ def main():
     ap.add_argument("--only", help="comma-separated: " + " ".join(STEPS))
     ap.add_argument("--offscreen", action="store_true",
                     help="Qt without the desktop (nothing flashes; plainer look)")
+    ap.add_argument("--maximized", action="store_true", help="windows as big as the screen")
+    ap.add_argument("--pace", type=float, default=1.0,
+                    help="the Qt walk's waits that many times longer (a slow machine)")
     a = ap.parse_args()
+    big = ["--maximized"] if a.maximized else []
     only = set((a.only or ",".join(STEPS)).split(","))
     out = Path(a.out or "selfcheck-" + time.strftime("%Y%m%d-%H%M")).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -149,19 +154,20 @@ def main():
             d = out / "qt-tour"
             native = has_display() and not a.offscreen
             run.step("qt-tour", ["tools/qt_tour.py", str(d)] + (["--quick"] if a.quick else [])
-                     + (["--native"] if native else []), timeout=1800, folder=d,
+                     + (["--native"] if native else []) + big
+                     + ["--pace", str(a.pace)], timeout=3600, folder=d,
                      note="native" if native else "offscreen")
     if "bench" in only:
         if qt and has_display():
             run.step("bench-qt", ["tools/qt_bench.py"] +
-                     (["--layout", "split", "--theme", "qip-retro"] if a.quick else []),
-                     timeout=3600)
+                     (["--layout", "split", "--theme", "qip-retro"] if a.quick else [])
+                     + big, timeout=3600)
         else:
             run.skip("bench-qt", "no PySide6" if not qt else "no desktop to measure on")
         if gtk:
             run.step("bench-gtk", ["tools/gtk_bench.py"] +
-                     (["--layout", "split", "--theme", "qip-retro"] if a.quick else []),
-                     timeout=3600)
+                     (["--layout", "split", "--theme", "qip-retro"] if a.quick else [])
+                     + big, timeout=3600)
         else:
             run.skip("bench-gtk", "no GTK 4 (python3-gi, gir1.2-gtk-4.0)")
     if "gtk" in only:

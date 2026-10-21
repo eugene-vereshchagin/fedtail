@@ -3,7 +3,9 @@ desktop's and a phone's width, every lane, the ≡ menu and a post's ⋯ menu (a
 them), the editor, a thread, a profile, the picture viewer — a screenshot of each, and
 what the page's console said. What went wrong goes to errors.txt.
 
-    python3 tools/web_check.py OUT_DIR
+    python3 tools/web_check.py OUT_DIR [--real[=PROFILE]]
+
+--real: your own account, read-only, instead of the fake server (tools/real.py).
 
 With Playwright (pip install playwright) it clicks through all of that; without it, a
 Chromium or Chrome found on the system takes one screenshot of the page; with neither,
@@ -24,7 +26,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from tools import real  # noqa: E402
+
 _tmp = tempfile.mkdtemp(prefix="fedtail-web-")
+REAL = real.snapshot(_tmp)  # before XDG_* point at the temporary folder
 os.environ["XDG_CONFIG_HOME"] = str(Path(_tmp) / "config")
 os.environ["XDG_DATA_HOME"] = str(Path(_tmp) / "data")
 
@@ -32,6 +37,11 @@ ERRORS, NOTES = [], []
 
 
 def make_core():
+    if REAL:
+        core = real.core(REAL, real.config(REAL))
+        core.connect().result()
+        core.poll_once()
+        return core
     from fedtail.core import auth, config, paths
     from fedtail.core.app import Core
     from tests import fakes
@@ -97,10 +107,10 @@ def with_playwright(base, key, out):
             browser = pw.chromium.launch(executable_path=found)
         for label, size in (("desktop", (1280, 860)), ("phone", (390, 844))):
             page = browser.new_page(viewport={"width": size[0], "height": size[1]})
-            # pictures and faces from the fake world's servers: drawn here, no network
-            page.route(lambda url: not url.startswith(base),
-                       lambda route: route.fulfill(status=200, content_type="image/png",
-                                                   body=_png(route.request.url)))
+            if not REAL:  # pictures and faces of the fake world: drawn here, no network
+                page.route(lambda url: not url.startswith(base),
+                           lambda route: route.fulfill(status=200, content_type="image/png",
+                                                       body=_png(route.request.url)))
             page.on("console", lambda m, label=label: m.type in ("error", "warning") and
                     ERRORS.append(f"{label} console {m.type}: {m.text}"))
             page.on("pageerror", lambda e, label=label: ERRORS.append(f"{label} page error: {e}"))
@@ -195,7 +205,7 @@ def with_chromium(base, key, out):
 
 
 def main():
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "web-check")
+    out = Path(next((a for a in sys.argv[1:] if not a.startswith("--")), "web-check"))
     out.mkdir(parents=True, exist_ok=True)
     from fedtail import i18n
     from fedtail.frontends.web import server as web
@@ -218,6 +228,8 @@ def main():
     finally:
         srv.shutdown()
         core.shutdown()
+    if REAL:
+        ERRORS[:] = [e for e in ERRORS if real.READ_ONLY not in e]
     (out / "notes.txt").write_text("\n".join(NOTES) + "\n", "utf-8")
     (out / "errors.txt").write_text("\n\n".join(ERRORS) + "\n" if ERRORS else "none\n",
                                     "utf-8")

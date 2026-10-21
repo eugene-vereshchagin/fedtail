@@ -25,6 +25,9 @@ python3 tools/qt_tour.py out/ --native   # every theme, menu (inventory) and dia
 python3 tools/qt_bench.py / gtk_bench.py # freezes: start, lanes, scroll, menu, themes
 python3 tools/tui_check.py out/          # Textual: every lane, screen and key; SVG shots
 python3 tools/web_check.py out/          # the web page in Chromium (Playwright): lanes, menus
+# qt_tour, qt_bench, gtk_bench, tui_check, web_check: --real[=PROFILE] — your own account
+# (a copy of the profile; only GET goes to the server: tools/real.py); the Qt and GTK
+# ones also --maximized, qt_tour --pace N (waits N times longer)
 ```
 
 Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests`
