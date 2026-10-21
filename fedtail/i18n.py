@@ -33,6 +33,36 @@ _STRINGS = {
         "cli_no_post": "не знаю пост {alias}",
         "cli_posted": "отправлено {alias} ({vis}) {url}",
         "cli_login_first": "этот профиль не вошёл на сервер: сначала открой окно (fedtail) и войди",
+        "sync_no_folder": "Синхронизация: в sync.folder не указана папка",
+        "sync_login_first": "Синхронизация: нет токена для сервера синхронизации — "
+                            "выполни fedtail sync login",
+        "sync_no_server": "Синхронизация: {server} не называет сервер синхронизации — "
+                          "укажи sync.url",
+        "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
+                         "устройства — перенеси ключ: fedtail sync key там, "
+                         "fedtail sync join здесь",
+        "sync_other_key": "Синхронизация: в хранилище журнал с другим ключом — "
+                          "перенеси ключ командой fedtail sync join",
+        "sync_no_crypto": "Синхронизации нужен пакет cryptography (Debian: "
+                          "python3-cryptography)",
+        "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
+        "sync_full": "Синхронизация: место на сервере кончилось (квота)",
+        "sync_failed": "Синхронизация не удалась: {why}",
+        "sync_off": "синхронизация выключена: sync.enabled = true в конфиге",
+        "sync_status": "хранилище: {backend} {where}\nвход: {login}\nустройство: {device}\n"
+                       "ключ: {kid}\nне отправлено: {pending}\nпоследний раз: {last}",
+        "sync_nothing": "—",
+        "sync_key_none": "ключа ещё нет: он появится при первой синхронизации "
+                         "(или fedtail sync join КЛЮЧ)",
+        "sync_key_show": "Ключ синхронизации — перенеси его на другие устройства "
+                         "(fedtail sync join …) и никому не показывай:",
+        "sync_join_ok": "ключ сохранён (id {kid})",
+        "sync_join_bad": "это не ключ синхронизации",
+        "sync_login_open": "Открой в браузере и разреши «fedtail sync» (только «кто я»):\n{url}",
+        "sync_login_code": "Код со страницы: ",
+        "sync_login_ok": "готово: токен для синхронизации от {instance} сохранён",
+        "sync_round": "отправлено {sent}, получено {got}",
+        "sync_round_failed": "не получилось — причина в «последний раз» (fedtail sync status)",
         "filtered_title": "Отфильтрованные уведомления",
         "filtered_loading": "Спрашиваю сервер…",
         "filtered_unsupported": "Этот сервер не придерживает уведомления "
@@ -897,6 +927,34 @@ _STRINGS = {
         "cli_posted": "sent {alias} ({vis}) {url}",
         "cli_login_first": "this profile is not logged in: open the window (fedtail), "
                            "log in first",
+        "sync_no_folder": "Sync: no folder in sync.folder",
+        "sync_login_first": "Sync: no token for the sync server — run fedtail sync login",
+        "sync_no_server": "Sync: {server} names no sync server — set sync.url",
+        "sync_need_key": "Sync: the account already has a journal sealed by another "
+                         "device's key — carry the key over: fedtail sync key there, "
+                         "fedtail sync join here",
+        "sync_other_key": "Sync: the store holds a journal sealed by another key — "
+                          "carry the key over with fedtail sync join",
+        "sync_no_crypto": "Sync needs the cryptography package (Debian: python3-cryptography)",
+        "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
+        "sync_full": "Sync: no room left on the server (quota)",
+        "sync_failed": "Sync failed: {why}",
+        "sync_off": "sync is off: sync.enabled = true in the config",
+        "sync_status": "store: {backend} {where}\nlogin: {login}\ndevice: {device}\n"
+                       "key: {kid}\nnot sent: {pending}\nlast time: {last}",
+        "sync_nothing": "—",
+        "sync_key_none": "no key yet: it is made at the first sync (or fedtail sync join KEY)",
+        "sync_key_show": "The sync key — carry it to your other devices "
+                         "(fedtail sync join …) and show it to nobody:",
+        "sync_join_ok": "key saved (id {kid})",
+        "sync_join_bad": "that is not a sync key",
+        "sync_login_open": "Open this in a browser and allow \"fedtail sync\" (only \"who am I\"):"
+                           "\n{url}",
+        "sync_login_code": "The code from that page: ",
+        "sync_login_ok": "done: the sync token from {instance} is saved",
+        "sync_round": "sent {sent}, got {got}",
+        "sync_round_failed": "didn't work — the reason is under \"last time\" "
+                             "(fedtail sync status)",
         "filtered_title": "Filtered notifications",
         "filtered_loading": "Asking the server…",
         "filtered_unsupported": "This server doesn't hold notifications back (Mastodon does "

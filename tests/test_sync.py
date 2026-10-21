@@ -1,0 +1,335 @@
+"""Sync between an account's devices (core/sync) and the fedtail-sync server."""
+
+import io
+import json
+import threading
+import unittest
+import urllib.request
+
+from fedtail.core import auth, config, paths
+from fedtail.core.app import Core
+from fedtail.core.sync import backends, crypto, engine
+from fedtail.frontends import cli
+
+from . import fakes
+from .fakes import BOB, FakeApi, status
+from .test_core import TmpDir
+
+try:
+    import cryptography  # noqa: F401
+    HAVE_CRYPTO = True
+except ImportError:
+    HAVE_CRYPTO = False
+need_crypto = unittest.skipUnless(HAVE_CRYPTO, "needs the cryptography package")
+
+
+def load_server():
+    """syncserver/fedtail_sync.py: a file of its own, outside the package."""
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parent.parent / "syncserver" / "fedtail_sync.py"
+    spec = importlib.util.spec_from_file_location("fedtail_sync", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@need_crypto
+class CryptoTest(unittest.TestCase):
+    def test_sealed_opens_only_with_its_key(self):
+        key, other = crypto.new_key(), crypto.new_key()
+        blob = crypto.seal(key, {"ops": [{"r": ["1", "2"]}]})
+        self.assertEqual(crypto.unseal(key, blob), {"ops": [{"r": ["1", "2"]}]})
+        self.assertEqual(crypto.blob_key_id(blob), crypto.key_id(key))
+        self.assertNotIn(b'"r"', blob)  # nothing readable inside
+        with self.assertRaises(crypto.BadBlob):
+            crypto.unseal(other, blob)
+        broken = blob[:-1] + bytes([blob[-1] ^ 1])
+        with self.assertRaises(crypto.BadBlob):
+            crypto.unseal(key, broken)
+        with self.assertRaises(crypto.BadBlob):
+            crypto.blob_key_id(b"hello")
+
+    def test_key_text_survives_a_person(self):
+        key = crypto.new_key()
+        text = crypto.key_text(key)
+        self.assertEqual(crypto.key_from_text(text), key)
+        self.assertEqual(crypto.key_from_text(" " + text.lower().replace("-", " ") + "\n"), key)
+        with self.assertRaises(ValueError):
+            crypto.key_from_text("not a key")
+        with self.assertRaises(ValueError):
+            crypto.key_from_text(text[:-4])
+
+
+class Devices(TmpDir):
+    """Two devices of one account (same fake server), meeting in a folder."""
+
+    def device(self, name, world, **sync):
+        FakeApi.world = world
+        user = {"feed": {"first_run_mark_read": False}, "ui": {"language": "en"},
+                "sync": {"enabled": True, "backend": "folder",
+                         "folder": str(self.tmp / "meet"), **sync}}
+        cfg, _ = config.validate(user)
+        p = paths.resolve(name, config=str(self.tmp / f"{name}.toml"),
+                          data=str(self.tmp / name))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        core.events_seen = []
+        core.events.on("*", lambda name, payload: core.events_seen.append((name, payload)))
+        self.addCleanup(core.shutdown)
+        core.connect().result()
+        return core
+
+    def setUp(self):
+        super().setUp()
+        from fedtail import i18n
+        was = i18n.current_language()
+        i18n.setup("en")  # the texts checked below are the English ones
+        self.addCleanup(i18n.setup, was)
+        (self.tmp / "meet").mkdir()
+        self.world = fakes.World()
+        self.desk = self.device("desk", self.world)
+        self.phone = self.device("phone", self.world)
+
+
+@need_crypto
+class FolderSyncTest(Devices):
+    def test_read_marks_travel(self):
+        self.desk.mark_read(["101", "102"])
+        self.assertEqual(self.desk.sync_now(), (1, 0))
+        self.assertIsNotNone(self.phone.sync_join(self.desk.sync_key()))
+        self.assertEqual(self.phone.sync_now(), (0, 2))
+        self.assertEqual(self.phone.store.read_set(["101", "102", "103"]), {"101", "102"})
+        self.assertIn(("read_changed", ["101", "102"]),
+                      [(n, sorted(p)) for n, p in self.phone.events_seen if n == "read_changed"])
+        # and back
+        self.phone.mark_read(["103"])
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertEqual(self.desk.store.read_set(["103"]), {"103"})
+
+    def test_own_marks_dont_come_back_and_automatic_ones_stay_home(self):
+        self.desk.store.mark_read(["900"])  # fedtail's own (first run, older history)
+        self.desk.mark_read(["901"])
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.assertEqual(self.phone.store.read_set(["900", "901"]), {"901"})
+        self.assertEqual(self.desk.sync_now(), (0, 0))  # its own journal isn't news to it
+
+    def test_a_device_without_the_key_waits_for_it(self):
+        self.desk.mark_read(["1"])
+        self.desk.sync_now()
+        self.assertIsNone(self.phone.sync_now())  # someone's journal is there: no new key
+        self.assertIn("sync join", self.phone.sync_status()["last"]["error"])
+        self.assertTrue(any(n == "error" for n, _ in self.phone.events_seen))
+        self.assertIsNone(self.phone.sync_key())
+
+    def test_another_key_is_told_not_merged(self):
+        self.desk.mark_read(["1"])
+        self.desk.sync_now()
+        self.phone.sync_join(crypto.key_text(crypto.new_key()))  # the wrong one
+        self.assertEqual(self.phone.sync_now(), (0, 0))
+        self.assertEqual(self.phone.store.read_set(["1"]), set())
+        self.assertIn("sync join", self.phone.sync_status()["last"]["error"])
+        self.assertTrue(self.phone.sync_status()["key"])
+
+    def test_thread_states_newest_wins(self):
+        root = self.world.add(status("500", fakes.ME, minute=1))
+        self.world.add(status("501", BOB, reply_to="500", reply_acc="ME", minute=2))
+        self.desk.subscribe(root).result()
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.assertTrue(self.phone.subscribed(root))
+        self.phone.unsubscribe(root).result()  # left there later
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertFalse(self.desk.subscribed(root))
+        # a stale "sub" from long ago changes nothing
+        self.assertFalse(self.desk.store.sync_newer("t:500", 1, "zz", "sub"))
+
+    def test_the_thread_sends_by_itself_and_at_exit(self):
+        import time
+        self.desk.mark_read(["5"])
+        self.desk.sync.start()
+        deadline = time.monotonic() + 5
+        while self.desk.store.sync_pending_count() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(self.desk.store.sync_pending_count(), 0)
+        self.desk.mark_read(["6"])
+        self.desk.sync.stop()  # its last round sends what came just now
+        self.assertEqual(self.desk.store.sync_pending_count(), 0)
+
+    def test_nothing_recorded_when_not_wanted(self):
+        core = self.device("quiet", self.world, what=["threads"])
+        core.mark_read(["7"])
+        self.assertEqual(core.store.sync_pending_count(), 0)
+
+    def test_folder_backend_pages_and_skips_its_own(self):
+        b = backends.FolderBackend(self.tmp / "meet")
+        for i in range(backends.PAGE + 5):
+            b.push(f"blob{i}".encode(), "aaaaaaaaaaaaaaaa")
+        b.push(b"mine", "bbbbbbbbbbbbbbbb")
+        got, cur, more = b.pull(None, "bbbbbbbbbbbbbbbb")
+        self.assertEqual((len(got), more), (backends.PAGE, True))
+        got2, cur, more = b.pull(cur, "bbbbbbbbbbbbbbbb")
+        self.assertEqual((len(got2), more), (5, False))
+        self.assertNotIn(b"mine", got + got2)
+        self.assertEqual(b.pull(cur, "bbbbbbbbbbbbbbbb")[0], [])
+
+
+class SyncOffTest(TmpDir):
+    def test_off_records_nothing_and_says_so(self):
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({"ui": {"language": "en"}})
+        p = paths.resolve("o", config=str(self.tmp / "o.toml"), data=str(self.tmp / "o"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(core.shutdown)
+        core.mark_read(["1"])
+        self.assertIsNone(core.sync)
+        self.assertEqual(core.store.sync_pending_count(), 0)
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as e:
+            cli.run(core, ["sync", "status"], stream=out)
+        self.assertIn("sync.enabled", str(e.exception.code))
+
+    def test_config_is_checked(self):
+        with self.assertRaises(config.ConfigError):
+            config.validate({"sync": {"what": ["everything"]}})
+        with self.assertRaises(config.ConfigError):
+            config.validate({"sync": {"url": "http://sync.example"}})
+        with self.assertRaises(config.ConfigError):
+            config.validate({"sync": {"backend": "carrier pigeon"}})
+        cfg, _ = config.validate({"sync": {"url": "https://sync.example"}})
+        self.assertEqual(cfg["sync"]["interval_seconds"], 60)
+
+
+# ---- the server ---------------------------------------------------------------------------
+
+class ServerTest(TmpDir):
+    TOKENS = {("me.example", "t-me"): "1", ("me.example", "t-me2"): "1",
+              ("me.example", "t-you"): "2"}
+
+    def setUp(self):
+        super().setUp()
+        syncserver = load_server()
+        self.mod = syncserver
+        self.app = syncserver.Server(
+            {"db": str(self.tmp / "s.db"), "instances": ["me.example"], "quota_mb": 1,
+             "listen": "127.0.0.1:0",
+             "max_blob_kb": 64, "public_url": "https://sync.me.example"},
+            verify=lambda host, token: self.TOKENS.get((host, token)))
+        self.httpd = syncserver.make_http_server(self.app)
+        self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
+        t = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        t.start()
+        self.addCleanup(self.httpd.server_close)
+        self.addCleanup(self.httpd.shutdown)
+
+    def call(self, method, path, token=None, body=None, instance="https://me.example",
+             device=""):
+        req = urllib.request.Request(self.url + path, data=body, method=method)
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
+            req.add_header("X-Fedtail-Instance", instance)
+        if device:
+            req.add_header("X-Fedtail-Device", device)
+        try:
+            with urllib.request.urlopen(req, timeout=5) as r:
+                return r.status, json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())
+
+    def test_whose_journal_is_whose(self):
+        self.assertEqual(self.call("GET", "/v1"), (200, {"fedtail-sync": 1}))
+        self.assertEqual(self.call("GET", "/.well-known/fedtail-sync"),
+                         (200, {"url": "https://sync.me.example"}))
+        self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"one", device="d1")[0], 200)
+        self.assertEqual(self.call("POST", "/v1/blobs", "t-me2", b"two", device="d2")[0], 200)
+        self.assertEqual(self.call("POST", "/v1/blobs", "t-you", b"theirs")[0], 200)
+        code, got = self.call("GET", "/v1/blobs?after=0&exclude=d1", "t-me")
+        self.assertEqual(code, 200)
+        self.assertEqual([b["device"] for b in got["blobs"]], ["d2"])  # not d1, not you
+        self.assertEqual(got["last"], 2)
+        self.assertEqual(self.call("GET", "/v1/blobs?after=2", "t-me")[1]["blobs"], [])
+        self.assertEqual(self.call("DELETE", "/v1/blobs", "t-me"), (200, {"deleted": 2}))
+        self.assertEqual(len(self.call("GET", "/v1/blobs", "t-you")[1]["blobs"]), 1)
+
+    def test_found_through_the_well_known(self):
+        self.assertEqual(backends.discover(self.url), "https://sync.me.example")
+        self.assertIsNone(backends.discover(self.url + "/nothing-here"))
+
+    def test_strangers_and_greed_refused(self):
+        self.assertEqual(self.call("GET", "/v1/blobs")[0], 401)
+        self.assertEqual(self.call("GET", "/v1/blobs", "nope")[0], 401)
+        self.assertEqual(self.call("GET", "/v1/blobs", "t-me", instance="https://else.example")[0],
+                         403)
+        self.assertEqual(self.call("GET", "/v1/blobs", "t-me", instance="http://me.example")[0],
+                         401)  # not https: no host at all
+        self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"x" * 70 * 1024)[0], 413)
+        for _ in range(17):
+            self.call("POST", "/v1/blobs", "t-me", b"x" * 60 * 1024)
+        self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"x" * 60 * 1024)[0], 507)
+
+    def test_any_instance_means_public_ones_only(self):
+        app = self.mod.Server({"db": ":memory:", "instances": ["*"]}, verify=lambda h, t: "1")
+        self.assertFalse(app.allowed_host("localhost"))
+        self.assertFalse(app.allowed_host("127.0.0.1"))
+        self.assertIsNone(self.mod.host_of("https://x.example/path"))
+        self.assertEqual(self.mod.host_of("https://X.Example/"), "x.example")
+
+    @need_crypto
+    def test_two_devices_through_the_server(self):
+        b1 = backends.HttpBackend(self.url, "https://me.example", "t-me")
+        b2 = backends.HttpBackend(self.url, "https://me.example", "t-me2")
+        key = crypto.new_key()
+        b1.push(crypto.seal(key, {"d": "a", "ops": [{"r": ["9"]}]}), "a" * 16)
+        got, cur, more = b2.pull(None, "b" * 16)
+        self.assertEqual(crypto.unseal(key, got[0])["ops"], [{"r": ["9"]}])
+        self.assertEqual((cur, more), (1, False))
+        self.assertEqual(b1.pull(None, "a" * 16)[0], [])  # its own: skipped
+        with self.assertRaises(backends.BackendError) as e:
+            backends.HttpBackend(self.url, "https://me.example", "bad").pull(None, "c" * 16)
+        self.assertEqual(e.exception.kind, "auth")
+
+
+class CliSyncTest(Devices):
+    def run_cli(self, name, *argv):
+        """A command on that device, as from a terminal: a Core of its own, shut after."""
+        out = io.StringIO()
+        cli.run(self.device(name, self.world), list(argv), stream=out)
+        return out.getvalue()
+
+    @need_crypto
+    def test_key_join_now_status(self):
+        self.assertIn("fedtail sync join", self.run_cli("desk", "sync", "key"))  # none yet
+        self.desk.mark_read(["42"])
+        self.assertIn("sent 1", self.run_cli("desk", "sync", "now"))
+        shown = self.run_cli("desk", "sync", "key").strip().splitlines()[-1]
+        self.assertEqual(crypto.key_text(crypto.key_from_text(shown)), shown)
+        self.assertIn("(id ", self.run_cli("phone", "sync", "join", shown))
+        self.run_cli("phone", "sync", "now")
+        self.assertEqual(self.phone.store.read_set(["42"]), {"42"})
+        status = self.run_cli("phone", "sync", "status")
+        self.assertIn("folder", status)
+        self.assertIn(crypto.key_id(crypto.key_from_text(shown)).hex(), status)
+        with self.assertRaises(SystemExit):
+            self.run_cli("phone", "sync", "join", "nonsense")
+
+
+class LoginTest(Devices):
+    def test_the_sync_token_is_a_narrow_one(self):
+        out = io.StringIO()
+        cli.run(self.device("desk", self.world), ["sync", "login", "good"], stream=out)
+        self.assertIn("scope=read:accounts", out.getvalue())
+        self.assertIn(("fedtail sync", "read:accounts"), self.world.apps)
+        saved = engine.load_auth(engine.auth_path(self.desk.paths))
+        self.assertEqual(saved["token"], "tok-read-accounts")
+        self.assertNotEqual(saved["token"], auth.load(self.desk.paths.auth_file)["token"])
+
+
+if __name__ == "__main__":
+    unittest.main()

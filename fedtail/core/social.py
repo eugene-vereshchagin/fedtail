@@ -187,9 +187,11 @@ class SocialMixin:
                 except ApiError as e:  # not my thread, say: here it still works
                     log.info("mute thread %s on the server: %s", s["id"], e)
             if on:
-                subs.leave(self.store, self.api, s, quiet=True)
+                root = subs.leave(self.store, self.api, s, quiet=True)
             else:
-                subs.unquiet(self.store, s)
+                root = subs.unquiet(self.store, s)
+            if self.sync and root:
+                self.sync.record_thread(root, "muted" if on else "left")
             self._silence_seen = {}  # what was let through before may be muted now
             st = dict(st or s, muted=on)
             self.store.put_statuses([st])

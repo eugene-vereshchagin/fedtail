@@ -200,6 +200,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Your own posts are always read | has | 0.13.0 | — | own | — |
 | The first run doesn't start with a pile | has | 0.1.0 | `feed.first_run_mark_read` | own | — |
 | The reading place is shared with other clients | has | 0.8.0 | `read.sync_markers` | `/api/v1/markers` | Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes |
+| Read marks and thread subscriptions shared by all your devices | has | 0.18.0 | `sync.enabled`, `sync.backend`, `sync.url`, `sync.folder`, `sync.what`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | own: a fedtail-sync server (one file, `syncserver/fedtail_sync.py`) or a shared folder; it is entered with a `read:accounts`-only token | only in fedtail (markers are just the place in Home and notifications) |
 | Cards are built around the reading place | has | 0.11.0 | `feed.build_at_once`, `feed.render_limit` | own | only in fedtail |
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `ui.esc`, `ui.start_lane` | own | only in fedtail |
 
@@ -216,6 +217,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **The first run doesn't start with a pile.** At the very first run, everything fetched counts as read.
 
 **The reading place is shared with other clients.** Read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma — if that client tells the server its place: Mastodon's web, Ivory, Phanpy do; Tusky keeps its place in Home to itself and shares only notifications. `false` — read marks live in fedtail only.
+
+**Read marks and thread subscriptions shared by all your devices.** Read a post on the laptop — it's read on the desktop; follow a thread, leave it or mute it — so it is on the other devices. Marks fedtail makes by itself (everything read on the first run, older history, your own posts) stay home: a new device won't read the desktop for you. Each device writes a journal of what it did; the journals meet on a fedtail-sync server (your server can name it by itself, `/.well-known/fedtail-sync`) or in a folder all the devices see (a NAS share, WebDAV, Syncthing). The journals are sealed with a key only your devices have: the store doesn't see what you read. The first device makes the key; `fedtail sync key` shows it, `fedtail sync join` carries it to another. To the sync server fedtail gives not its own token but a separate one that can only tell “who am I” (`fedtail sync login`). Setting up a server of your own — docs/en/sync.md.
 
 **Cards are built around the reading place.** When a lane opens, `build_at_once` cards are built around where you read; the rest — as you scroll near an edge, and far behind they are let go (more than three `build_at_once` — back to one behind and two ahead). What you read doesn't move; a filter and “unread only” also build only around the reading place. At most `render_limit` latest posts are kept on screen, older ones with the “older” button. `0` in `build_at_once` — build everything at once (on hundreds of posts that takes seconds).
 
@@ -391,6 +394,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Delete and redraft | has | 0.14.0 | `post.redraft` | `statuses/:id/source` + `DELETE statuses/:id` | Mastodon web, Megalodon |
 | A thread as a chain | has | 0.14.0 | `post.chain` | `in_reply_to_id` | Ice Cubes (up to five posts) |
 | A command line as on Point | has | 0.3.0 | `ui.command_line`, `post.plain_posts` | own | only in fedtail (tut — vim-style commands) |
+| Short post names the same on every device | has | 0.18.0 | — | own | only in fedtail (Point had the server's post numbers) |
 
 <details><summary>In detail</summary>
 
@@ -431,6 +435,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A thread as a chain.** A line of nothing but `---` splits the text into posts: they go at once, each a reply to the one before, with the same visibility, CW and language; pictures and the poll go with the first. The character counter counts each part on its own. `post.chain = false` — `---` stays text.
 
 **A command line as on Point.** At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts).
+
+**Short post names the same on every device.** A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them.
 
 </details>
 

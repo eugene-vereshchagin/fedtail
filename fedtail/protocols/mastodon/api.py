@@ -268,27 +268,27 @@ class Api:
         return p
 
     # ---- auth ---------------------------------------------------------------
-    def register_app(self):
+    def register_app(self, scopes=SCOPES, name="fedtail"):
         return self.post("/api/v1/apps", data={
-            "client_name": "fedtail",
+            "client_name": name,
             "redirect_uris": OOB,
-            "scopes": SCOPES,
+            "scopes": scopes,
             "website": version.HOMEPAGE,
         })
 
-    def authorize_url(self, client_id):
+    def authorize_url(self, client_id, scopes=SCOPES):
         q = urlencode({"client_id": client_id, "redirect_uri": OOB,
-                       "response_type": "code", "scope": SCOPES})
+                       "response_type": "code", "scope": scopes})
         return f"{self.base}/oauth/authorize?{q}"
 
-    def get_token(self, client_id, client_secret, code):
+    def get_token(self, client_id, client_secret, code, scopes=SCOPES):
         res = self.post("/oauth/token", data={
             "grant_type": "authorization_code",
             "client_id": client_id,
             "client_secret": client_secret,
             "redirect_uri": OOB,
             "code": code.strip(),
-            "scope": SCOPES,
+            "scope": scopes,
         })
         return res["access_token"]
 

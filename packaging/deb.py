@@ -23,7 +23,7 @@ from fedtail.version import APP_ID  # noqa: E402
 
 DEPENDS = "python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets"
 RECOMMENDS = ("python3-pyside6.qtdbus, python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, "
-              "python3-pyside6.qtmultimediawidgets")
+              "python3-pyside6.qtmultimediawidgets, python3-cryptography")
 SUGGESTS = "python3-textual, python3-pil"
 MAINTAINER = "Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>"
 HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"

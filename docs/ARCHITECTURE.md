@@ -119,6 +119,9 @@ fedtail/
     sources.py       server streams, forward catch-up with min_id
     store.py         SQLite: statuses, items, read marks, drafts, aliases, …
     subs.py          thread subscriptions (Point-style)
+    sync/            read marks and thread states shared by the account's devices (§12):
+                     engine.py (Sync: record, round, apply, the key), crypto.py (AES-GCM),
+                     backends.py (fedtail-sync over HTTP, a folder; well-known discovery)
     threads.py       context → flat tree with depth and /N numbers
   frontends/
     __init__.py      registry: name -> module with run(core, instance, argv)
@@ -181,8 +184,10 @@ fedtail/
     themes/*.toml        built-in themes (system.toml lists every key)
     icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
     icons/fedtail.svg    the drawn bubble (ui.app_icon = "bubble"; iconart.py themes it)
+syncserver/fedtail_sync.py  the fedtail-sync server: one stdlib file an admin copies (§12)
 tests/               unittest; fakes.py is an in-memory Mastodon
 tools/screenshots.py renders the window with made-up data (CI publishes PNGs)
+tools/push_probe.py  does the account's server push? Web Push → an ntfy topic, decrypted
 tools/docs_build.py  builds every generated doc and expands includes (§19, docs)
 tools/config_doc.py  the config reference from an example config (docs_build calls it)
 .github/             CI workflow; annotate.py turns test failures into annotations
@@ -261,8 +266,9 @@ Rules:
 * Ids are opaque strings: GoToSocial uses ULIDs, Mastodon snowflakes. Never
   compare ids numerically. For ordering, `store.sort_key(created_at, id)` builds
   `"<iso time>|<id left-padded to 32>"`, which sorts chronologically for both.
-* A **short id** (Point's `#a3f`) is a local alias: `aliases` table, a letter
-  then base-36 (`a00`…`zzz`, then 4 chars). Stable, never reused, per profile.
+* A **short id** (Point's `#a3f`): since 0.18 derived from the post's id (`#kq3zt`,
+  `store.short_code`, table `short_ids`), the same on every device; names the counter
+  gave before (`aliases` table, `a00`…`zzz`, then 4 chars) stay with their posts (§12).
 * `in_reply_to_account_id == me` means "a reply to me" (`model.is_comment_to_me`).
 * Bots: `account.bot` or listed in `lanes.extra_bots`.
 
@@ -275,7 +281,10 @@ Rules:
 | `read(status_id)` | read marks |
 | `missing(status_id)` | parents the server refused (404/403/410) — shown as "post unavailable" |
 | `drafts(key, data, updated)` | compose drafts; key `new` or `reply:<id>` |
-| `aliases(n, status_id)` | short ids |
+| `aliases(n, status_id)` | short ids the counter gave (before 0.18) |
+| `short_ids(code, status_id)` | derived short ids: the full 8-character code → the post |
+| `sync_out(seq, op)` | sync ops recorded, not sent yet (core/sync) |
+| `sync_lww(key, at, device, value)` | the newest setting per thread, for sync's last-writer-wins |
 | `subs(root_id, since, last_activity, checked, auto)` | followed threads |
 | `sub_members(status_id, root_id)` | posts already seen in a followed thread |
 | `unsubs(root_id)` | threads the user left (auto-subscribe never returns) |
@@ -494,6 +503,28 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   source mentions) is marked read once per new marker; push — the newest item such that
   everything older is read goes to the server. Ids compare with `model.id_after`
   (numbers or same-length ULIDs).
+* **Sync between devices** (`core/sync/`, docs/en/sync.md; `sync.*`, off by default) —
+  `Sync` (engine.py) is made by `Core.__init__` when `sync.enabled`; `Core.mark_read`,
+  `subscribe`, `unsubscribe`, `mute_thread` record into the store's `sync_out` (read
+  marks only when the *user* made them — `store.mark_read` by the core itself isn't
+  recorded), thread states also into `sync_lww` (key `t:<root>`, `(at ms, device)` —
+  the newest wins). The `fedtail-sync` thread (started by `start_polling`, stopped first
+  in `shutdown` after a last push) every `sync.interval_seconds`, or 3 s after a record:
+  `sync_pending` → batches of ops sealed by `crypto.seal` (AES-256-GCM under
+  `data/sync.key`, key id in clear) → `backend.push`; then `backend.pull(cursor)` (kv
+  `sync.cursor`, reset when `sync.where` changes) → `crypto.unseal` → `Sync.apply`:
+  reads unioned (`read_changed`), thread states through `sync_newer` →
+  `Core.apply_thread_state` (subs.subscribe / leave, no re-recording). Backends
+  (backends.py): `HttpBackend` (fedtail-sync: `syncserver/fedtail_sync.py`, a stdlib file
+  outside the package; token from `data/sync_auth.json`, a `read:accounts` app made by
+  `fedtail sync login`; URL from `sync.url` or `/.well-known/fedtail-sync` on the
+  account's server) and `FolderBackend` (one subfolder per device). No key and a store
+  with others' blobs → no new key, the error asks for `fedtail sync join`. Problems go
+  out once as `error` events and stay in kv `sync.last` (`fedtail sync status`).
+* **Short names** — `store.aliases()`: a post with an old counter name (`aliases`
+  table, 3–4 characters) keeps it; others get `short_code(id)` (a letter + base-36 of
+  sha256, 8 characters kept in `short_ids`), shown cut to `SHORT_LEN` = 5, longer while
+  another known code shares the beginning. Same on every device of the account.
 * **Async refresh** — Mastodon 4.5 answers `/context` with `Mastodon-Async-Refresh`;
   `Api.last_async_refresh()` reads the last response's headers (thread-local);
   `Core._await_refresh()` polls `/api/v1_alpha/async_refreshes/:id` and emits

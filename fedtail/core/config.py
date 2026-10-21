@@ -184,6 +184,14 @@ DEFAULTS = {
         "stream_gap_seconds": 10,
         "stream": 'auto',
     },
+    "sync": {
+        "enabled": False,
+        "backend": "server",
+        "url": "",
+        "folder": "",
+        "what": ["read", "threads"],
+        "interval_seconds": 60,
+    },
     "storage": {
         "max_mb": 1024,
         "keep_per_lane": 3000,
@@ -233,6 +241,7 @@ CHOICES = {
     ("ui", "icons"): {'theme', 'desktop', 'own', 'additional', 'words'},
     ("ui", "split_tabs"): {'keep', 'close'},
     ("poll", "stream"): {'auto', 'off'},
+    ("sync", "backend"): {'server', 'folder'},
     ("ui", "image_decode"): {'box', 'full'},
     ("feed", "prefetch"): {'previews', 'all', 'off'},
     ("ui", "alt_text"): {'caption', 'tooltip'},
@@ -282,8 +291,10 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("lists", "hide_in"), ("cli", "tail_lanes")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
+SYNC_WHAT = {"read", "threads"}
 MINIMUM = {
     ("poll", "interval_seconds"): 30,
+    ("sync", "interval_seconds"): 15,
     ("poll", "stream_gap_seconds"): 0,
     ("subs", "interval_minutes"): 1,
     ("tui", "picture_rows"): 2,
@@ -447,6 +458,13 @@ def validate(user):
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
     if bad_auto:
         errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")
+    bad_what = [x for x in cfg["sync"]["what"] if x not in SYNC_WHAT]
+    if bad_what:
+        errors.append(f"sync.what: unknown {bad_what}; known: {', '.join(sorted(SYNC_WHAT))}")
+    url = cfg["sync"]["url"]
+    if url and not (url.startswith("https://") or
+                    url.startswith(("http://localhost", "http://127.0.0.1"))):
+        errors.append(f"sync.url = {url!r}: https:// (http:// only to this computer)")
     if not cfg["lanes"]["enabled"]:
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):

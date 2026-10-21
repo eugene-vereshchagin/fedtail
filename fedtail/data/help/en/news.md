@@ -5,7 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
-No new features yet.
+**0.18.0 (in progress):**
+
+- Read marks and thread subscriptions shared by all your devices
+- Short post names the same on every device
 <!-- /include -->
 
 Everything that changed, fixes included, is in the

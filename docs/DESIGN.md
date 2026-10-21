@@ -88,7 +88,8 @@
    Зависимости (Debian 13): `python3 (>= 3.11)`, `python3-pyside6.qtwidgets`,
    `python3-requests`; Recommends: `python3-pyside6.qtdbus` (число на кнопке в панели
    задач), `qt6-image-formats-plugins` (webp/avif/tiff в просмотрщике — без него такие
-   оригиналы не показываются), `libnotify-bin` (notify-send, уведомления).
+   оригиналы не показываются), `libnotify-bin` (notify-send, уведомления),
+   `python3-cryptography` (синхронизация между устройствами, docs/ru/sync.md).
 
 11. ~~**Чистка базы.**~~ — сделано (0.17.0): `Store.gc`, `[storage]`, бюджет `max_mb`.
 

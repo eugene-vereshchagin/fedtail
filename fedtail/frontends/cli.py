@@ -6,6 +6,7 @@
     fedtail post "text"                  a new post ("-" or nothing: the text from stdin)
     fedtail post --reply a3f "text"      a reply to #a3f
     fedtail read comments                mark a lane read
+    fedtail sync status|key|join|login|now   sync with your other devices (docs/en/sync.md)
 
 Plain Python, no Qt: works over ssh, in scripts, in pipes (colour only on a
 terminal, `cli.color`). It is the same Core as the window — the same profile, the
@@ -26,7 +27,7 @@ from ..i18n import _
 from ..model import Share, real
 from ..model.text import html_to_text
 
-COMMANDS = ("lanes", "show", "tail", "post", "read")
+COMMANDS = ("lanes", "show", "tail", "post", "read", "sync")
 
 _C = {"dim": "2", "bold": "1", "id": "36", "who": "1;34", "warn": "33", "new": "1;32"}
 
@@ -195,6 +196,49 @@ def cmd_post(core, out, args, stdin=None):
     out.line(_("cli_posted", alias=f"#{alias}" if alias else p.id, vis=vis, url=p.url))
 
 
+def cmd_sync(core, out, args, stdin=None):
+    """`fedtail sync …`: the key, the sync server's token, a round now, how it stands."""
+    what = args.what
+    if what == "key":
+        key = core.sync_key()
+        out.line(_("sync_key_show") if key else _("sync_key_none"))
+        if key:
+            out.line(key)
+        return
+    if what == "join":
+        try:
+            kid = core.sync_join(args.arg or (stdin or sys.stdin).readline())
+        except ValueError:
+            raise SystemExit(_("sync_join_bad")) from None
+        out.line(_("sync_join_ok", kid=kid))
+        return
+    if what == "login":
+        if not core.logged_in:
+            raise SystemExit(_("cli_login_first"))
+        pending = core.sync_login_begin()
+        out.line(_("sync_login_open", url=pending["url"]))
+        print(_("sync_login_code"), end="", file=out.stream, flush=True)
+        code = args.arg or (stdin or sys.stdin).readline()
+        core.sync_login_end(pending, code)
+        out.line(_("sync_login_ok", instance=pending["instance"]))
+        return
+    if core.sync_status() is None:
+        raise SystemExit(_("sync_off"))
+    if what == "now":
+        if core.logged_in:
+            core.connect().result()  # a thread's state from elsewhere asks the server
+        done = core.sync_now()
+        out.line(_("sync_round", sent=done[0], got=done[1]) if done
+                 else _("sync_round_failed"))
+    st = core.sync_status()
+    last = st["last"]
+    shown = " ".join(x for x in (last.get("at", ""), last.get("error", "")) if x)
+    nothing = _("sync_nothing")
+    out.line(_("sync_status", backend=st["backend"], where=st["where"] or nothing,
+               login=st["login"] or nothing, device=st["device"], kid=st["key"] or nothing,
+               pending=st["pending"], last=shown or nothing))
+
+
 VIS_ALIASES = {"private": "followers"}  # the Mastodon word still works
 
 
@@ -221,6 +265,9 @@ def parser():
                    help="who sees it (private = followers)")
     w.add_argument("--cw", help="content warning")
     w.add_argument("--lang", help="language code (ru, en, ka…)")
+    y = sub.add_parser("sync", help="sync with your other devices")
+    y.add_argument("what", choices=["status", "key", "join", "login", "now"])
+    y.add_argument("arg", nargs="?", help="join: the key; login: the code (else asked)")
     return p
 
 
@@ -229,6 +276,12 @@ def run(core, argv, stream=None):
     args = parser().parse_args(argv)
     core = core if isinstance(core, View) else View(core)
     out = Out(core.cfg.get("cli", {}), stream)
+    if args.command == "sync":  # some of it works before logging in, none needs a poll
+        try:
+            cmd_sync(core, out, args)
+        finally:
+            core.shutdown()
+        return 0
     if not core.logged_in:
         raise SystemExit(_("cli_login_first"))
     core.connect().result()

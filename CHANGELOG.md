@@ -2,6 +2,26 @@
 
 ## 0.18.0 — in progress
 
+- Sync between your devices: read marks you made and threads you followed, left or
+  muted travel to your other devices (`sync.*`, off by default; docs/en/sync.md). Each
+  device keeps a journal, sealed with AES-256-GCM under a key only your devices have, and
+  exchanges it through a fedtail-sync server or a folder they all see (a NAS share, WebDAV
+  mounted, Syncthing). Marks fedtail makes by itself (the first run, older history) stay
+  home. The server finds itself through `/.well-known/fedtail-sync` on your server; it is
+  given a separate token limited to `read:accounts`, never the main one. New terminal
+  command `fedtail sync status|key|join|login|now`. Needs the `cryptography` package
+  (Debian: python3-cryptography) — only for sync.
+- fedtail-sync: the server for it, one file of the standard library
+  (`syncserver/fedtail_sync.py`): who is who is asked of each account's own server, which
+  servers' people are served is a list (or anyone's), a quota and a request limit per
+  account; it can't read what it keeps.
+- Short post names are derived from the post's id (`#kq3zt`, five characters, longer
+  where two known posts begin alike): the same post has the same name on every device.
+  Names given earlier by the counter (`#a3f`) stay with their posts and still work.
+- tools/push_probe.py: does your server push? Subscribes your account to Web Push with
+  an endpoint on an ntfy topic, decrypts what comes (RFC 8291) and shows it, then
+  unsubscribes — the check before relying on UnifiedPush on a phone.
+
 - tools/gallery.py: the pictures for the site's gallery and the docs — every interface
   on one made-up world (tools/showcase.py, now shared by Qt's and GTK's screenshots),
   with gallery.toml (titles and a line each, Russian and English); part of

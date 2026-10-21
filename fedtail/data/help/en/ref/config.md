@@ -50,7 +50,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 - [8. Lists](#8-lists) — `[lists]`
 - [9. Thread subscriptions](#9-thread-subscriptions) — `[subs]`
 - [10. Polling the server](#10-polling-the-server) — `[poll]`
-- [11. The server](#11-the-server) — `[account]`
+- [11. The server](#11-the-server) — `[account]`, `[sync]`
 - [12. Database and logs](#12-database-and-logs) — `[storage]`, `[debug]`
 - [13. In a terminal](#13-in-a-terminal) — `[cli]`, `[tui]`
 - [14. In a browser](#14-in-a-browser) — `[web]`
@@ -301,6 +301,17 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | Key | Default | What it does |
 |---|---|---|
 | `account.markdown` | `"auto"` | Whether the server understands Markdown: "auto" (ask the server), "on", "off". GoToSocial / Akkoma do, vanilla Mastodon doesn't. |
+
+### `[sync]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `sync.enabled` | `false` | Read marks and thread subscriptions the same on all your devices (a desktop, a laptop, a phone). Off by default. What travels is sealed with a key only your devices have: whatever stores it sees no posts and no read marks. Setting up: docs/en/sync.md, in short: `fedtail sync login` (a sync server) or a folder, then `fedtail sync key` here and `fedtail sync join` on the other devices. |
+| `sync.backend` | `"server"` | Where the devices meet: "server" — a fedtail-sync server; "folder" — a folder every device sees (a NAS share, WebDAV mounted, Syncthing). |
+| `sync.url` | `""` | The sync server's address. Empty — the one your fediverse server names (https://<server>/.well-known/fedtail-sync), if its admin set one up. |
+| `sync.folder` | `""` | The folder for backend = "folder" (~ is your home folder). |
+| `sync.what` | `["read", "threads"]` | What travels: "read" — read marks you made (not the first run's "everything read"), "threads" — threads you followed, left or muted by hand. |
+| `sync.interval_seconds` | `60` | How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after it was made anyway. |
 
 ## 12. Database and logs
 

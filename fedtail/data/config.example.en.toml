@@ -880,6 +880,33 @@ stream = "auto"
 # GoToSocial / Akkoma do, vanilla Mastodon doesn't.
 markdown = "auto"
 
+[sync]
+# Read marks and thread subscriptions the same on all your devices (a desktop, a laptop,
+# a phone). Off by default. What travels is sealed with a key only your devices have:
+# whatever stores it sees no posts and no read marks. Setting up: docs/en/sync.md, in
+# short: `fedtail sync login` (a sync server) or a folder, then `fedtail sync key` here
+# and `fedtail sync join` on the other devices.
+enabled = false
+
+# Where the devices meet: "server" — a fedtail-sync server; "folder" — a folder every
+# device sees (a NAS share, WebDAV mounted, Syncthing).
+backend = "server"
+
+# The sync server's address. Empty — the one your fediverse server names
+# (https://<server>/.well-known/fedtail-sync), if its admin set one up.
+url = ""
+
+# The folder for backend = "folder" (~ is your home folder).
+folder = ""
+
+# What travels: "read" — read marks you made (not the first run's "everything read"),
+# "threads" — threads you followed, left or muted by hand.
+what = ["read", "threads"]
+
+# How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after
+# it was made anyway.
+interval_seconds = 60
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  12. Database and logs

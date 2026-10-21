@@ -655,6 +655,45 @@ class AliasTest(TmpDir):
         self.assertEqual(s.by_alias("#" + a["X"]), "X")
         s.close()
 
+    def test_derived_names_are_the_same_on_every_device(self):
+        from fedtail.core.store import SHORT_LEN, short_code
+        one, two = Store(self.tmp / "one.db"), Store(self.tmp / "two.db")
+        a = one.aliases(["01J9", "01JA"])
+        b = two.aliases(["01JA", "01J9"])  # another order, another database
+        self.assertEqual(a, b)
+        self.assertEqual(len(a["01J9"]), SHORT_LEN)
+        self.assertTrue(a["01J9"][0].isalpha())
+        self.assertEqual(two.by_alias("#" + a["01J9"]), "01J9")
+        self.assertEqual(two.by_alias(short_code("01J9")), "01J9")  # the full code too
+        one.close()
+        two.close()
+
+    def test_old_counter_names_stay(self):
+        s = Store(self.tmp / "old.db")
+        with s.lock:  # a name given by an older fedtail
+            s.db.execute("INSERT INTO aliases (status_id) VALUES ('OLD')")
+        names = s.aliases(["OLD", "NEW"])
+        self.assertEqual(names["OLD"], "a00")
+        self.assertEqual(s.by_alias("a00"), "OLD")
+        self.assertEqual(len(names["NEW"]), 5)
+        self.assertEqual(s.by_alias(names["NEW"]), "NEW")
+        s.close()
+
+    def test_clashing_beginnings_grow_longer(self):
+        from fedtail.core import store as store_mod
+        s = Store(self.tmp / "clash.db")
+        real_code = store_mod.short_code
+        fake = {"P": "kqzzz001", "Q": "kqzzz002"}
+        store_mod.short_code = lambda sid: fake.get(sid) or real_code(sid)
+        try:
+            names = s.aliases(["P", "Q"])
+        finally:
+            store_mod.short_code = real_code
+        self.assertEqual(names, {"P": "kqzzz001", "Q": "kqzzz002"})  # as long as it takes
+        self.assertEqual(s.by_alias("kqzzz001"), "P")
+        self.assertEqual(s.by_alias("kqzzz002"), "Q")
+        s.close()
+
 
 class StoreLockTest(TmpDir):
     def test_failed_begin_releases_lock(self):

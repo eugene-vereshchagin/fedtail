@@ -88,6 +88,21 @@ details.ru = "Дочитал «Ленту» или упоминания на т�
 details.en = "Read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma — if that client tells the server its place: Mastodon's web, Ivory, Phanpy do; Tusky keeps its place in Home to itself and shares only notifications. `false` — read marks live in fedtail only."
 
 [[feature]]
+id = "device-sync"
+status = "has"
+since = "0.18.0"
+name.ru = "Прочитанное и подписки на треды — общие на всех твоих устройствах"
+name.en = "Read marks and thread subscriptions shared by all your devices"
+config = "`sync.enabled`, `sync.backend`, `sync.url`, `sync.folder`, `sync.what`, `sync.interval_seconds`; `fedtail sync status|key|join|login|now`"
+api.ru = "своё: сервер fedtail-sync (один файл, `syncserver/fedtail_sync.py`) или общая папка; вход по токену только `read:accounts`"
+api.en = "own: a fedtail-sync server (one file, `syncserver/fedtail_sync.py`) or a shared folder; it is entered with a `read:accounts`-only token"
+others.ru = "только в fedtail (markers — лишь место в «Ленте» и уведомлениях)"
+others.en = "only in fedtail (markers are just the place in Home and notifications)"
+clients = []
+details.ru = "Прочитал пост на ноутбуке — на десктопе он прочитан; подписался на тред, вышел из него или заглушил — так и на других устройствах. Отметки, которые fedtail ставит сам (всё прочитано при первом запуске, старая история, свои посты), не уходят: новое устройство не прочитает за тебя десктоп. Каждое устройство пишет журнал своих действий, журналы встречаются на сервере fedtail-sync (его адрес твой сервер может назвать сам, `/.well-known/fedtail-sync`) или в папке, которую видят все устройства (шара NAS, WebDAV, Syncthing). Журналы зашифрованы ключом, который есть только у твоих устройств: хранилище не видит, что ты читал. Первое устройство делает ключ само; `fedtail sync key` показывает его, `fedtail sync join` переносит на другое. Серверу синхронизации fedtail даёт не свой токен, а отдельный, которым можно только узнать «кто я» (`fedtail sync login`). Как поднять свой сервер — docs/ru/sync.md."
+details.en = "Read a post on the laptop — it's read on the desktop; follow a thread, leave it or mute it — so it is on the other devices. Marks fedtail makes by itself (everything read on the first run, older history, your own posts) stay home: a new device won't read the desktop for you. Each device writes a journal of what it did; the journals meet on a fedtail-sync server (your server can name it by itself, `/.well-known/fedtail-sync`) or in a folder all the devices see (a NAS share, WebDAV, Syncthing). The journals are sealed with a key only your devices have: the store doesn't see what you read. The first device makes the key; `fedtail sync key` shows it, `fedtail sync join` carries it to another. To the sync server fedtail gives not its own token but a separate one that can only tell “who am I” (`fedtail sync login`). Setting up a server of your own — docs/en/sync.md."
+
+[[feature]]
 id = "build-around"
 status = "has"
 since = "0.11.0"

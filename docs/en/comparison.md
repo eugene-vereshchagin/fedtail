@@ -51,6 +51,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Catching up with no holes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | When a post counts as read | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The reading place is shared with other clients | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
+| Read marks and thread subscriptions shared by all your devices | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
@@ -125,6 +126,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Delete and redraft | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |
 | A thread as a chain | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A command line as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Short post names the same on every device | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## People and order
 
@@ -194,4 +196,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ◐ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **31** features of the 130 compared.
+Only in fedtail — **33** features of the 132 compared.

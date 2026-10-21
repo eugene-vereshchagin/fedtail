@@ -4,6 +4,7 @@ One connection shared by all threads, serialised with a lock. Every
 method is a short transaction, so contention is negligible.
 """
 
+import hashlib
 import json
 import logging
 import sqlite3
@@ -42,10 +43,29 @@ CREATE TABLE IF NOT EXISTS drafts (
     data    TEXT NOT NULL,
     updated TEXT NOT NULL
 );
--- short local names for posts, like #k7q on Point: stable, never reused
+-- short names for posts, like #k7q on Point. Before 0.18 a counter of this profile
+-- (kept: names already given stay theirs); since, derived from the post's id
+-- (short_ids: the full 8-character code, shown cut to 5 or more) — the same post has
+-- the same name on every device of the account, without asking anyone
 CREATE TABLE IF NOT EXISTS aliases (
     n         INTEGER PRIMARY KEY AUTOINCREMENT,
     status_id TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS short_ids (
+    code      TEXT PRIMARY KEY,
+    status_id TEXT NOT NULL
+);
+-- sync between devices (core/sync): what this device did and hasn't sent yet, and
+-- when each thread's state was last set (and by which device) — the newest wins
+CREATE TABLE IF NOT EXISTS sync_out (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    op  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sync_lww (
+    key    TEXT PRIMARY KEY,
+    at     INTEGER NOT NULL,
+    device TEXT NOT NULL,
+    value  TEXT NOT NULL
 );
 -- threads followed like on Point: new comments anywhere in them come to "Subscriptions"
 CREATE TABLE IF NOT EXISTS subs (
@@ -126,6 +146,24 @@ def alias_number(text):
     for c in text[1:]:
         v = v * 36 + _B36.index(c)
     return k + v + 1
+
+
+SHORT_LEN = 5  # a derived name shows this many characters (more when two would clash)
+CODE_LEN = 8   # what is kept: a letter and seven base-36 digits, 2·10¹² names
+
+
+def short_code(status_id):
+    """The post's derived name, full length: a letter, then base-36 digits of a hash of
+    its id. Every device of an account knows a post by the same id, so by the same name.
+    Its first SHORT_LEN characters are what a card shows; 5 is already longer than the
+    counter's 3–4 ever reached, so old and new names never mix up."""
+    v = int.from_bytes(hashlib.sha256(str(status_id).encode()).digest()[:12], "big")
+    v, head = divmod(v, 26)
+    tail = ""
+    for _ in range(CODE_LEN - 1):
+        v, r = divmod(v, 36)
+        tail += _B36[r]
+    return _LETTERS[head] + tail
 
 
 def now_iso():
@@ -482,26 +520,49 @@ class Store:
         return out
 
     def aliases(self, status_ids):
-        """{status id: short alias}, giving new ones to ids that have none yet."""
+        """{status id: short alias}. A post named by the old counter keeps that name;
+        any other gets its derived one (short_code), remembered so it can be looked up
+        — cut to SHORT_LEN, or longer while another known post shares the beginning."""
         ids = list(dict.fromkeys(status_ids))
         out = {}
         with self._tx() as db:
-            db.executemany("INSERT OR IGNORE INTO aliases (status_id) VALUES (?)",
-                           [(i,) for i in ids])
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
                 marks = ",".join("?" * len(chunk))
                 for sid, n in db.execute(
                         f"SELECT status_id, n FROM aliases WHERE status_id IN ({marks})", chunk):
                     out[sid] = alias_text(n)
+            codes = {sid: short_code(sid) for sid in ids if sid not in out}
+            db.executemany("INSERT OR IGNORE INTO short_ids VALUES (?, ?)",
+                           [(c, sid) for sid, c in codes.items()])
+            for sid, code in codes.items():
+                n = SHORT_LEN
+                while n < CODE_LEN and db.execute(
+                        "SELECT COUNT(*) FROM short_ids WHERE code >= ? AND code < ?",
+                        (code[:n], code[:n] + "~")).fetchone()[0] > 1:
+                    n += 1
+                out[sid] = code[:n]
         return out
 
     def by_alias(self, alias):
-        n = alias_number(alias)
-        if n is None:
+        """The post behind a name: an old counter name (3–4 characters) or the beginning
+        of a derived one (5 and more). Where a beginning fits several posts, the newest
+        stored one — the card itself shows them longer."""
+        text = (alias or "").lower().lstrip("#")
+        if len(text) < SHORT_LEN:
+            n = alias_number(text)
+            if n is None:
+                return None
+            with self.lock:
+                row = self.db.execute("SELECT status_id FROM aliases WHERE n=?", (n,)).fetchone()
+            return row[0] if row else None
+        if len(text) > CODE_LEN or any(c not in _B36 for c in text):
             return None
         with self.lock:
-            row = self.db.execute("SELECT status_id FROM aliases WHERE n=?", (n,)).fetchone()
+            row = self.db.execute(
+                "SELECT k.status_id FROM short_ids k LEFT JOIN statuses s ON s.id = k.status_id "
+                "WHERE k.code >= ? AND k.code < ? ORDER BY s.created_at DESC LIMIT 1",
+                (text, text + "~")).fetchone()
         return row[0] if row else None
 
     def missing_set(self, ids):
@@ -872,6 +933,39 @@ class Store:
             rows = self.db.execute("SELECT key, data, updated FROM drafts "
                                    "ORDER BY updated DESC").fetchall()
         return [(k, json.loads(d), u) for k, d, u in rows]
+
+    # ---- sync between devices (core/sync) ------------------------------------------
+    def sync_record(self, op):
+        """One thing this device did, to be sent to the others."""
+        with self.lock:
+            self.db.execute("INSERT INTO sync_out (op) VALUES (?)",
+                            (json.dumps(op, separators=(",", ":")),))
+
+    def sync_pending(self, limit=500):
+        """[(seq, op)] not sent yet, oldest first."""
+        with self.lock:
+            rows = self.db.execute("SELECT seq, op FROM sync_out ORDER BY seq LIMIT ?",
+                                   (limit,)).fetchall()
+        return [(seq, json.loads(op)) for seq, op in rows]
+
+    def sync_sent(self, upto):
+        with self.lock:
+            self.db.execute("DELETE FROM sync_out WHERE seq <= ?", (upto,))
+
+    def sync_pending_count(self):
+        with self.lock:
+            return self.db.execute("SELECT COUNT(*) FROM sync_out").fetchone()[0]
+
+    def sync_newer(self, key, at, device, value):
+        """Last-writer-wins: keep (at, device, value) under `key` if it is newer than
+        what is there. True when it was (the caller then applies `value`)."""
+        with self._tx() as db:
+            row = db.execute("SELECT at, device FROM sync_lww WHERE key=?", (key,)).fetchone()
+            if row and (row[0], row[1]) >= (at, device):
+                return False
+            db.execute("INSERT OR REPLACE INTO sync_lww VALUES (?, ?, ?, ?)",
+                       (key, at, device, value))
+            return True
 
 
 class _Tx:

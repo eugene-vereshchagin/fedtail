@@ -112,6 +112,12 @@ class Core(SocialMixin):
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
+        # read marks and thread states shared with the account's other devices (sync.*):
+        # recorded whenever it is on, sent by the thread polling starts
+        self.sync = None
+        if cfg.get("sync", {}).get("enabled"):
+            from .sync import Sync
+            self.sync = Sync(self)
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
@@ -335,6 +341,8 @@ class Core(SocialMixin):
         self._start_stream()
         self._poller = threading.Thread(target=self._poll_loop, name="fedtail-poll", daemon=True)
         self._poller.start()
+        if self.sync:
+            self.sync.start()
 
     def poll_now(self):
         self._urgent = True  # asked for (Refresh, a post sent): no waiting
@@ -1246,6 +1254,8 @@ class Core(SocialMixin):
     def subscribe(self, status):
         def job():
             root = subs.subscribe(self.store, self.api, status)
+            if self.sync:
+                self.sync.record_thread(root, "sub")
             self.emit("subs_changed", root)
             return root
         return self.submit(job)
@@ -1262,11 +1272,52 @@ class Core(SocialMixin):
         def job():
             quiet = self.cfg["subs"]["leave_mutes"]
             root = subs.leave(self.store, self.api, status, quiet=quiet)
+            if self.sync:
+                self.sync.record_thread(root, "muted" if quiet else "left")
             self._silence_seen = {}  # what was let through before may be muted now
             self.emit("subs_changed", root)
             self.emit("lanes_updated", {"subs": [], **({"mentions": []} if quiet else {})})
             return root
         return self.submit(job)
+
+    # ---- sync with the account's other devices (`fedtail sync …`, core/sync) ---------
+    def sync_key(self):
+        from .sync import engine
+        return engine.shown_key(self)
+
+    def sync_join(self, text):
+        from .sync import engine
+        return engine.join(self, text)
+
+    def sync_login_begin(self):
+        from .sync import engine
+        return engine.login_start(self.api_class, self.auth["server"])
+
+    def sync_login_end(self, pending, code):
+        from .sync import engine
+        engine.login_finish(self.api_class, self.paths, pending, code)
+
+    def sync_now(self):
+        """One round at once: (sent, got), or None (sync.last says why)."""
+        return self.sync.step() if self.sync else None
+
+    def sync_status(self):
+        return self.sync.status() if self.sync else None
+
+    def apply_thread_state(self, root, state):
+        """Another device set this thread's state (core/sync): do the same here, without
+        recording it again. Blocking (asks the server for the thread)."""
+        post = {"id": root}
+        if state == "sub":
+            subs.subscribe(self.store, self.api, post)
+        else:
+            subs.leave(self.store, self.api, post, quiet=state == "muted")
+            if state == "left":
+                self.store.quiet_set(root, False)
+            self._silence_seen = {}
+        log.info("sync: thread %s → %s (another device)", root, state)
+        self.emit("subs_changed", root)
+        self.emit("lanes_updated", {"subs": [], "mentions": []})
 
     def thread_quiet(self, status):
         """Is this post's thread muted here? (Knows only the posts it has seen there.)"""
@@ -1532,6 +1583,8 @@ class Core(SocialMixin):
         if status_ids:
             self.store.mark_read(status_ids)
             self.emit("read_changed", status_ids)
+            if self.sync:
+                self.sync.record_read(status_ids)
             self._read_conversations(status_ids)
 
     def load_older(self, name):
@@ -2801,6 +2854,8 @@ class Core(SocialMixin):
     def shutdown(self):
         self._stop.set()
         self._wake.set()
+        if self.sync:
+            self.sync.stop()  # its last round sends what was marked just now
         if getattr(self, "_stream", None) is not None:
             self._stream.stop()
         self.pool.shutdown(wait=False, cancel_futures=True)

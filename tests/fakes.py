@@ -55,19 +55,20 @@ class FakeApi:
             w = FakeApi.world = World()
         self.w = w
 
-    def register_app(self):
+    def register_app(self, scopes="read write", name="fedtail"):
+        self.w.apps.append((name, scopes))
         return {"client_id": "cid", "client_secret": "sec"}
 
-    def authorize_url(self, client_id):
-        return f"{self.base}/oauth/authorize?client_id={client_id}"
+    def authorize_url(self, client_id, scopes="read write"):
+        return f"{self.base}/oauth/authorize?client_id={client_id}&scope={scopes}"
 
     def revoke(self, cid, sec, token):
         self.w.revoked.append(token)
 
-    def get_token(self, cid, sec, code):
+    def get_token(self, cid, sec, code, scopes="read write"):
         if code.strip() != "good":
             raise ApiError(400, "bad code")
-        return "tok"
+        return "tok" if scopes == "read write" else "tok-" + scopes.replace(":", "-")
 
     def me(self):
         if self.w.fail_auth:
@@ -581,6 +582,7 @@ class World:
         self.emoji = []  # the server's custom emoji
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.revoked = []  # tokens revoked through /oauth/revoke
+        self.apps = []  # (name, scopes) of every app registered
         self.policy = None  # notification policy: None — the server has none (404)
         self.held, self.answered = [], []  # notification requests; answers to them
         self.me = ME

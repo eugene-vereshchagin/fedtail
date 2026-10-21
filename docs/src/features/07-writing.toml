@@ -292,6 +292,21 @@ details.ru = "Внизу окна (`Ctrl+L`): `#a3f` — открыть, `#a3f �
 details.en = "At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts)."
 
 [[feature]]
+id = "short-ids"
+status = "has"
+since = "0.18.0"
+name.ru = "Короткие имена постов одинаковые на всех устройствах"
+name.en = "Short post names the same on every device"
+config = "—"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail (на Point — номера постов сервера)"
+others.en = "only in fedtail (Point had the server's post numbers)"
+clients = []
+details.ru = "Имя вроде `#kq3zt` выводится из id поста, поэтому один и тот же пост зовётся одинаково на десктопе, ноутбуке и телефоне — можно продиктовать с одного и открыть на другом. Пять знаков; если два известных поста начинаются одинаково, их имена показываются длиннее. Имена, которые fedtail раздал раньше (три-четыре знака, счётчиком), остаются за своими постами и по-прежнему открываются."
+details.en = "A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them."
+
+[[feature]]
 id = "ai-helpers"
 status = "wont"
 name.ru = "ИИ-помощники в панели поста (как в Ice Cubes)"

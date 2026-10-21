@@ -72,6 +72,7 @@ PASS = {
     "get_state", "poll_once", "poll_now", "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
+    "sync_key", "sync_join", "sync_login_begin", "sync_login_end", "sync_now", "sync_status",
 }
 # what never goes through: the server's own data, unconverted
 BLOCKED = {"store", "api", "events", "_core"}

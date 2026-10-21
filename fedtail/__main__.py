@@ -75,7 +75,8 @@ def parse_args(argv):
                         + ", ".join(cli.COMMANDS) + " (`fedtail COMMAND -h` for each)")
     p.add_argument("rest", nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
     p.epilog = ("terminal: fedtail lanes | show LANE [-n N] [--unread] | tail [LANE…] | "
-                "read LANE | post [--reply ALIAS] [-v VIS] [--cw TEXT] TEXT|-")
+                "read LANE | post [--reply ALIAS] [-v VIS] [--cw TEXT] TEXT|- | "
+                "sync status|key|join KEY|login|now")
     return p.parse_args(argv)
 
 

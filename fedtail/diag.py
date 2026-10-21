@@ -797,7 +797,8 @@ def debug_context(paths, cfg, ui):
 
 
 # ---- bug report ----------------------------------------------------------------------------------
-REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm"}
+REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm", "sync.key",
+               "sync_auth.json"}
 
 
 def bug_report(paths, dest_dir=None, cfg=None, hours=48):
