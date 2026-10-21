@@ -30,19 +30,22 @@ from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
 from ..common import activity
 from ..common.activity import ACT_KINDS, act_key
+from ..common.lane import (  # noqa: F401  (Qt's names for them)
+    CONVERSATION_LANES,
+    MEDIA_KINDS,
+    POSTS_ONLY_LANES,
+    SEPARATOR,
+    LaneModel,
+    media_kinds,
+    seen,
+)
+from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
 from .card import CardSpec, PostRow, SeparatorRow, make_spec
 from .card import _set_prop as _mark
 from .text import display_name, esc
 
 log = logging.getLogger(__name__)
-
-POSTS_ONLY_LANES = ("home", "bots", "my_posts", "local")
-# where Feed | Conversations means something: lanes made of replies, many of them to the
-# same few threads. In Home almost every post is a conversation of its own — the two
-# views would look the same there, so the switch isn't offered.
-CONVERSATION_LANES = ("replies", "mentions", "subs")
-
 
 class FeedView(QScrollArea):
     seen = Signal(list)  # status ids the reader has actually seen
@@ -601,17 +604,10 @@ class FeedView(QScrollArea):
                 ids.append(row.status_id)
                 continue
             top = self._top(row)
-            bottom = top + row.height()
-            on_screen = top < vbot and bottom > vtop
-            fully = top >= vtop - 2 and bottom <= vbot + 2
-            tall_and_done = row.height() > vh and bottom <= vbot + 2 and bottom > vtop
-            tail = at_end and on_screen
-            # it was on screen and the reader went on past it: read, though it was never
-            # all on screen at a moment the feed stood still
-            passed = bottom <= vtop + 2 and key in self._glimpsed
-            if fully or tall_and_done or tail or passed:
+            got = seen(top, top + row.height(), vtop, vbot, at_end, key in self._glimpsed)
+            if got == "read":
                 ids.append(row.status_id)
-            elif on_screen:
+            elif got == "glimpsed":
                 glimpsed.add(key)
         before = self._glimpsed
         self._glimpsed = (self._glimpsed & {k for k in self.order
@@ -642,26 +638,14 @@ ICONS = True  # set from the theme by the window: dark custom themes want words 
 COMPACT_HEADERS = False  # set by the window in the split layout: slim lane headers
 
 
-MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
-
-
-def media_kinds(entry):
-    """What a post (Post | Share) shows: {"image", "gifv", "video", "audio"} from its
-    attachments (a video a server called a picture counts as a video), or {"text"}."""
-    from .card import _true_kind
-    kinds = {_true_kind(m).kind for m in real_entry(entry).media}
-    kinds &= set(MEDIA_KINDS)
-    return kinds or {"text"}
-
-
 class MediaFilter:
     """The funnel next to Refresh: show only posts with pictures, gifs, video… —
     for this run only (never saved: posts that vanish after a restart drive one mad).
-    on_change() redraws the view."""
+    on_change() redraws the view. What it keeps is state's (common/lane.py)."""
 
-    def __init__(self, header, on_change):
+    def __init__(self, header, on_change, state=None):
         from PySide6.QtWidgets import QMenu
-        self.wanted = set(MEDIA_KINDS)
+        self.state = state or MediaChoice()
         self.on_change = on_change
         self.btn = _button("", lambda: None, icon="view-filter", tip=_("media_filter_tip"))
         if self.btn.icon().isNull():
@@ -676,7 +660,6 @@ class MediaFilter:
             self.actions[kind] = a
         menu.addSeparator()
         # boosts apart from the kinds: someone who boosts a lot hides their own posts
-        self.boosts = True
         b = menu.addAction(_("filter_boosts"))
         b.setCheckable(True)
         b.setChecked(True)
@@ -691,19 +674,17 @@ class MediaFilter:
         header.add(self.btn)
 
     def active(self):
-        return self.wanted != set(MEDIA_KINDS) or not self.boosts
+        return self.state.active()
 
     def keeps(self, entry):
-        if not self.boosts and isinstance(entry, Share):
-            return False
-        return self.wanted == set(MEDIA_KINDS) or bool(media_kinds(entry) & self.wanted)
+        return self.state.keeps(entry)
 
     def _toggle_boosts(self, on):
-        self.boosts = on
-        self._toggle("text", "text" in self.wanted)  # restyle and redraw
+        self.state.boosts = on
+        self._toggle("text", "text" in self.state.wanted)  # restyle and redraw
 
     def _toggle(self, kind, on):
-        (self.wanted.add if on else self.wanted.discard)(kind)
+        self.state.toggle(kind, on)
         self.btn.setProperty("active", "true" if self.active() else "false")
         self.btn.style().unpolish(self.btn)
         self.btn.style().polish(self.btn)
@@ -714,8 +695,7 @@ class MediaFilter:
             a.blockSignals(True)
             a.setChecked(True)
             a.blockSignals(False)
-        self.wanted = set(MEDIA_KINDS)
-        self.boosts = True
+        self.state.reset()
         self._toggle("text", True)
 
 
@@ -836,7 +816,9 @@ class LaneWidget(QWidget):
         self.dirty = False
         self.unloaded = False  # its cards let go while it was hidden (ui.unload_hidden_minutes)
         self.empty_note = None  # "the server gives this lane empty" (live feeds off)
-        self.separator = None  # (key of the first unread when the lane opened, count)
+        # what it shows and how (common/lane.py): the filters, the divider, the cards
+        self.lm = LaneModel(self.core, name, lambda n: self.theme.word(
+            "separator", _("new_below"), n=n))
         self._unload_timer = QTimer(self, singleShot=True)
         self._unload_timer.timeout.connect(self._unload)
         lay = QVBoxLayout(self)
@@ -848,22 +830,16 @@ class LaneWidget(QWidget):
         self.header.h.insertWidget(1, self.pill)
         # what to show: everything / posts only / what's unread — one control, so the
         # three sit together; how: as a feed / as conversations — another
-        lazy = getattr(self.core.lane_by_name.get(name), "lazy", False)
-        self.has_posts_only = name in POSTS_ONLY_LANES or name.startswith("list:")
-        self._kept = None  # "Unread": item keys on screen while the lane is open
-        self._conv_members = {}  # top status id -> member status ids (conversations view)
-        options = [("all", _("show_all"), _("show_all_tip"))]
-        if self.has_posts_only:
-            options.append(("posts", _("posts_only"), _("posts_only_tip")))
-        if not lazy:
-            options.append(("unread", _("unread_only"), _("unread_only_tip")))
+        words = {"all": ("show_all", "show_all_tip"), "posts": ("posts_only", "posts_only_tip"),
+                 "unread": ("unread_only", "unread_only_tip")}
+        options = [(k, _(words[k][0]), _(words[k][1])) for k in self.lm.filters]
         self.filter_seg = None
         if len(options) > 1:
-            self.filter_seg = _Segmented(options, self._current_filter(), self.set_filter,
+            self.filter_seg = _Segmented(options, self.lm.current_filter(), self.set_filter,
                                          self.theme.shape["posts_only"])
             self.header.add(self.filter_seg)
         self.view_seg = None
-        if name in CONVERSATION_LANES:
+        if self.lm.conversations_offered():
             self.view_seg = _Segmented(
                 [("feed", _("view_feed"), _("view_feed_tip")),
                  ("conversations", _("conv_mode"), _("conv_mode_tip"))],
@@ -874,7 +850,8 @@ class LaneWidget(QWidget):
                                                  tip=_("to_new_tip")))
         self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
                                                icon="mail-mark-read"))
-        self.media_filter = MediaFilter(self.header, lambda: self.refresh(force=True))
+        self.media_filter = MediaFilter(self.header, lambda: self.refresh(force=True),
+                                        self.lm.media)
         self.header.add(_button("", self.refresh_now, icon="view-refresh",
                                 tip=_("refresh") + " (F5)"))
         lay.addWidget(self.header)
@@ -894,12 +871,14 @@ class LaneWidget(QWidget):
         self.btn_older.setVisible(not self.unread_only_on())
 
     # ---- what to show, and how ---------------------------------------------------
-    def _current_filter(self):
-        if self.has_posts_only and self.core.posts_only(self.name):
-            return "posts"
-        if self.core.choice(f"unread_only.{self.name}"):
-            return "unread"
-        return "all"
+    @property
+    def separator(self):
+        """(key of the first unread when the lane opened, count) — or None."""
+        return self.lm.separator
+
+    @separator.setter
+    def separator(self, value):
+        self.lm.separator = value
 
     def set_filter(self, which):
         """"all", "posts" (no replies) or "unread" — one at a time. The button turns at
@@ -909,12 +888,8 @@ class LaneWidget(QWidget):
         _busy(lambda: self._apply_filter(which), self)
 
     def _apply_filter(self, which):
-        if self.has_posts_only and self.core.posts_only(self.name) != (which == "posts"):
-            self.core.set_posts_only(self.name, which == "posts")
-        self.core.set_choice(f"unread_only.{self.name}", which == "unread")
-        self._kept = None
+        self.lm.set_filter(which)
         self.positioned = False  # a different list: start over at the first unread
-        self.separator = None
         self.btn_older.setVisible(which != "unread")  # older history is read: not here
         self.refresh(force=True)
         self._initial_position()
@@ -927,15 +902,13 @@ class LaneWidget(QWidget):
         _busy(lambda: self._apply_view(which), self)
 
     def _apply_view(self, which):
-        self.core.set_choice(f"conversations.{self.name}", which == "conversations")
-        self.separator = None
+        self.lm.set_conversations(which == "conversations")
         self.positioned = False
         self.refresh(force=True)
 
     def _seen(self, ids):
-        if self.cfg["read"]["mark_read"] == "on_scroll":
-            # a conversation card seen = its new messages seen
-            ids = [m for i in ids for m in self._conv_members.get(i, [i])]
+        ids = self.lm.read(ids)  # a conversation card seen = its new messages seen
+        if ids:
             self.core.mark_read(ids)
 
     def unread_only_on(self):
@@ -943,8 +916,7 @@ class LaneWidget(QWidget):
 
     def hideEvent(self, e):
         # left the lane: what got read meanwhile goes the next time it opens
-        if self.unread_only_on():
-            self._kept = None
+        if self.lm.left():
             self.positioned = False
             self.dirty = True
         minutes = self.cfg["ui"].get("unload_hidden_minutes", 0)
@@ -986,51 +958,10 @@ class LaneWidget(QWidget):
         self.dirty = False
         self.unloaded = False
         t0 = time.monotonic()
-        entries = self.core.entries(self.name)  # [(item id, Post | Share)]
-        # browse lanes (local, federated) have nothing "unread": no marks, no divider
-        lazy = getattr(self.core.lane_by_name.get(self.name), "lazy", False)
-        unread = set() if lazy else self.core.unread(entries)
-        if self.unread_only_on():
-            fresh = {item for item, e in entries if e.id in unread}
-            self._kept = fresh if self._kept is None else self._kept | fresh
-            entries = [e for e in entries if e[0] in self._kept]
-            self.header.info.setText(_("unread_only_info", n=len(fresh)) if self._kept
-                                     else _("unread_only_none"))
-        elif self.filter_seg is not None:
-            self.header.info.setText("")
-        if self.media_filter.active():
-            entries = [x for x in entries if self.media_filter.keeps(x[1])]
-            self.header.info.setText(_("media_filter_info", n=len(entries)))
-        posts = [e for _, e in entries]
-        parents = self.core.parents(posts)
-        answers = self.core.my_replies(posts)  # {post id: [my replies to it]}
-        short = self.core.short_ids(posts)
-        specs, unknown = [], []
-        for item_id, e in entries:
-            parent = parents.get(e.id)
-            if parent is None and real_entry(e).reply_to:
-                unknown.append(e)
-            specs.append(make_spec(self.core, item_id, e, parent=parent,
-                                   unread=e.id in unread,
-                                   extra={"my_replies": answers.get(real_entry(e).id, []),
-                                          "short_id": short.get(real_entry(e).id)}))
-        if self.conversations_on():
-            specs = self._conversation_specs(entries, unread, parents, answers, short)
-        if self.name in ("replies", "mentions"):
-            self.core.check_my_replies(posts)
-        if unknown:
-            self.core.ensure_parents(unknown)
-        # "new below": fixed where the reader stood when the lane opened
-        if self.separator is None and not self.positioned and not self.unread_only_on():
-            first = next((s for s in specs if s.unread), None)
-            if first is not None and any(not s.unread for s in specs):
-                self.separator = (first.key, sum(1 for s in specs if s.unread))
-        if self.separator and any(s.key == self.separator[0] for s in specs):
-            i = next(i for i, s in enumerate(specs) if s.key == self.separator[0])
-            text = self.theme.word("separator", _("new_below"), n=self.separator[1])
-            specs.insert(i, CardSpec(key="__sep__", extra={"separator": text}))
-        if self.newest_first:
-            specs.reverse()
+        built = self.lm.build(self.positioned)
+        specs = built.specs
+        if self.filter_seg is not None or self.lm.media.active():
+            self.header.info.setText(built.info)
         if not self.positioned:
             self.view.set_specs(specs, keep_position=False, around=self._start_key(specs))
             if self.isVisible() and self.view.isVisible():
@@ -1044,9 +975,7 @@ class LaneWidget(QWidget):
             if jump and any(s.key not in had for s in specs):
                 self.view.scroll_to_end(not self.newest_first)
         self.update_strip()
-        lane = self.core.lane_by_name.get(self.name)
-        empty = lazy and not specs and lane is not None and \
-            lane.source in getattr(self.core, "browse_empty", ())
+        empty = built.empty
         if empty and self.empty_note is None:
             # in the lane itself, big and wrapped: the header's info line is small and
             # gives way to the buttons
@@ -1062,27 +991,7 @@ class LaneWidget(QWidget):
         if self.empty_note is not None:
             self.empty_note.setVisible(empty)
         log.debug("lane %s drawn: %d rows, %d unread, %.0f ms", self.name, len(specs),
-                  len(unread), (time.monotonic() - t0) * 1000)
-
-    def _conversation_specs(self, entries, unread, parents, answers, short):
-        """One card per conversation: its top post, with a line about the rest."""
-        groups = self.core.conversations(entries, unread)
-        tops = [g["top"] for g in groups]
-        more_short = self.core.short_ids(tops)
-        self._conv_members = {g["top"].id: g["members"] for g in groups}
-        specs = []
-        for g in groups:
-            top = g["top"]
-            pid = real_entry(top).id
-            specs.append(make_spec(
-                self.core, "conv:" + g["key"], top,
-                parent=parents.get(top.id) or self.core.parent(top),
-                unread=g["unread"] > 0,
-                extra={"my_replies": answers.get(pid, []),
-                       "short_id": more_short.get(pid) or short.get(pid),
-                       "conversation": {"members": g["members"], "unread": g["unread"],
-                                        "last": g["last"]}}))
-        return specs
+                  built.unread, (time.monotonic() - t0) * 1000)
 
     def show_plate(self, on=True):
         if on:
@@ -1131,29 +1040,15 @@ class LaneWidget(QWidget):
     def _start_key(self, specs):
         """Where reading starts (as _initial_position goes there): the cards around it
         are the ones built first."""
-        if not specs:
-            return None
-        unread = [s.key for s in specs if s.unread]
-        if self.cfg["feed"]["start_at"] == "first_unread" and unread:
-            if self.newest_first:
-                return unread[-1]
-            if any(s.key == "__sep__" for s in specs):
-                return "__sep__"
-            return unread[0]
-        return specs[0].key if self.newest_first else specs[-1].key
+        return self.lm.start_key(specs)
 
     def _initial_position(self):
         if self.positioned or not self.view.order or not self.view.isVisible():
             return
         self.positioned = True
-        unread = self.view.unread_keys()
-        if self.cfg["feed"]["start_at"] == "first_unread" and unread:
-            if self.newest_first:
-                self.view.scroll_to(unread[-1], "bottom")
-            elif self.view.has("__sep__"):
-                self.view.scroll_to("__sep__", "top")
-            else:
-                self.view.scroll_to(unread[0], "top")
+        key, where = self.lm.start(self.view.model)
+        if key is not None and self.view.has(key):
+            self.view.scroll_to(key, where)
         else:
             self.view.scroll_to_end(not self.newest_first)
 

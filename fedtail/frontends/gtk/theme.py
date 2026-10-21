@@ -105,6 +105,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-lane-header {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
                    padding: 4px 10px; }}
 .ft-lane-title {{ font-weight: bold; }}
+.ft-active {{ color: {c['accent']}; }}
 .ft-new-pill {{ background: {c['new_pill']}; color: {c['on_new_pill']};
                border-radius: 9px; padding: 0 8px; }}
 .ft-feed > row {{ background: transparent; padding: 3px 0; }}

@@ -1,86 +1,60 @@
-"""Pictures for the GTK window: avatars and post previews as Gdk.Textures.
-
-The bytes come from View.media_bytes (the disk cache the Qt window shares, without the
-token, size-capped); decoding happens in the media workers — a Gdk.Texture may be
-made in any thread — and the widget gets it in the main loop. Textures are kept in a
-small LRU bounded in bytes (ui.image_cache_mb, as Qt). The full cache policy of
-qt/images.py (retries, newest first, disk pruning) moves to a shared module later
-(docs/GTK.md, stage 0); until then failures are simply not retried for a while.
-"""
+"""Pictures for the GTK window: common/images.py's cache (the one the Qt window has:
+memory and disk, newest first, retried when a server was only busy, the disk kept
+within its size), with GTK's pictures — decoded in the workers by GdkPixbuf, already no
+bigger than asked (a big JPEG is read small), and handed over as a Gdk.Texture, which
+any thread may make and widgets take as they are."""
 
 from __future__ import annotations
 
-import logging
-import time
-from collections import OrderedDict
-
+from ..common import images as common
+from ..common.images import FEED_SIDE  # noqa: F401  (the size of a feed picture)
 from .gi_setup import GLib
 
-log = logging.getLogger(__name__)
 
-RETRY_AFTER = 300  # s: a picture that failed isn't asked for again before this
+def decode(data, max_side):
+    """A Gdk.Texture of the picture in data, no bigger than max_side — or None."""
+    import gi
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import Gdk, GdkPixbuf
+
+    loader = GdkPixbuf.PixbufLoader()
+
+    def prepared(ld, w, h):
+        if max(w, h) > max_side:
+            k = max_side / max(w, h)
+            ld.set_size(max(1, round(w * k)), max(1, round(h * k)))
+    loader.connect("size-prepared", prepared)
+    try:
+        loader.write(data)
+        loader.close()
+    except GLib.Error:
+        try:
+            loader.close()
+        except GLib.Error:
+            pass
+        return None
+    pix = loader.get_pixbuf()
+    if pix is None:
+        return None
+    try:  # the pixels as they are (new_for_pixbuf is deprecated in newer GTK)
+        fmt = Gdk.MemoryFormat.R8G8B8A8 if pix.get_has_alpha() else Gdk.MemoryFormat.R8G8B8
+        return Gdk.MemoryTexture.new(pix.get_width(), pix.get_height(), fmt,
+                                     pix.read_pixel_bytes(), pix.get_rowstride())
+    except (AttributeError, TypeError, ValueError):  # bindings that lack it
+        return Gdk.Texture.new_for_pixbuf(pix)
 
 
-def _decode(data):
-    from gi.repository import Gdk
-    return Gdk.Texture.new_from_bytes(GLib.Bytes.new(data))
+class Images(common.Cache):
+    FORMAT_HINT = "GdkPixbuf can't read this format (webp-pixbuf-loader?)"
 
+    def decode(self, data, max_side):
+        return decode(data, max_side)
 
-class Images:
-    def __init__(self, view, bridge, cap_mb=64):
-        self.view, self.bridge = view, bridge
-        self.cap = max(8, int(cap_mb or 64)) * 1024 * 1024
-        self.mem = OrderedDict()      # url -> (texture, bytes)
-        self.mem_bytes = 0
-        self.waiting = {}             # url -> [callbacks]
-        self.failed = {}              # url -> when
+    def size(self, picture):
+        return picture.get_width(), picture.get_height()
 
-    def get(self, url, callback):
-        """callback(texture) in the main loop, now if known, later when fetched; never
-        for a picture that can't be had."""
-        if not url:
-            return
-        hit = self.mem.get(url)
-        if hit is not None:
-            self.mem.move_to_end(url)
-            callback(hit[0])
-            return
-        if time.monotonic() - self.failed.get(url, -RETRY_AFTER) < RETRY_AFTER:
-            return
-        if url in self.waiting:
-            self.waiting[url].append(callback)
-            return
-        self.waiting[url] = [callback]
-
-        def fetch():
-            data = self.view.media_bytes(url).result()
-            return _decode(data), len(data)
-
-        from concurrent.futures import ThreadPoolExecutor
-        if not hasattr(self, "_pool"):
-            self._pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="fedtail-gtkimg")
-        self.bridge.call(self._pool.submit(fetch), lambda got: self._got(url, got),
-                         lambda err: self._fail(url, err))
-
-    def _got(self, url, got):
-        texture, size = got
-        self.mem[url] = (texture, size)
-        self.mem_bytes += size * 4  # decoded: about four times the file
-        while self.mem_bytes > self.cap and len(self.mem) > 1:
-            _u, (_t, s) = self.mem.popitem(last=False)
-            self.mem_bytes -= s * 4
-        for cb in self.waiting.pop(url, []):
-            try:
-                cb(texture)
-            except Exception:  # noqa: BLE001 — a widget gone meanwhile
-                log.debug("picture callback failed", exc_info=True)
-
-    def _fail(self, url, err):
-        self.waiting.pop(url, None)
-        self.failed[url] = time.monotonic()
-        log.debug("picture not loaded: %s", err)
-
-    def shutdown(self):
-        pool = getattr(self, "_pool", None)
-        if pool is not None:
-            pool.shutdown(wait=False, cancel_futures=True)
+    def later(self, ms, fn):
+        def once():
+            fn()
+            return GLib.SOURCE_REMOVE
+        GLib.timeout_add(int(ms), once)

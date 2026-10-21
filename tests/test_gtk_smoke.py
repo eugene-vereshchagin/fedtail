@@ -112,6 +112,25 @@ class GtkSmokeTest(unittest.TestCase):
         self.win.update_badges()
         self.assertFalse(self.win.lane_rows["home"].badge.get_visible())
 
+    def test_filters_and_the_funnel(self):
+        """The header's choices (common/lane.py): posts only, the media funnel."""
+        lane = self._lane("home")
+        pump(lambda: lane.positioned and not lane._pending(), 5)
+        everything = len(lane.rows)
+        lane._filter_buttons["posts"].set_active(True)  # no replies
+        pump(lambda: lane.positioned and not lane._pending(), 5)
+        self.assertLess(len(lane.rows), everything)
+        self.assertFalse(any(c.post.reply_to for c in lane.rows.values()))
+        lane._filter_buttons["all"].set_active(True)
+        pump(lambda: len(lane.rows) == everything, 5)
+        lane.media_checks["text"].set_active(False)  # posts with pictures only: none here
+        pump(lambda: not lane.rows, 5)
+        self.assertFalse(lane.rows)
+        self.assertTrue(lane.info.get_text())
+        lane.media_checks["text"].set_active(True)
+        pump(lambda: len(lane.rows) == everything, 5)
+        self.assertEqual(len(lane.rows), everything)
+
     def test_new_post_joins_at_the_bottom(self):
         lane = self._lane("home")
         before = list(lane.order)
@@ -410,6 +429,65 @@ class TitlebarTest(unittest.TestCase):
                 self.assertTrue(own_titlebar({"ui": {"gtk_headerbar": "on"}}))
         with mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "GNOME"}):
             self.assertFalse(own_titlebar({"ui": {"gtk_headerbar": "off"}}))
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkImagesTest(unittest.TestCase):
+    """common/images.py with GTK's pictures: read small, to disk, from disk."""
+
+    def test_a_picture_comes_small_and_is_kept_on_disk(self):
+        import gi
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf
+
+        from fedtail.frontends.gtk import images
+
+        pix = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, 300, 200)
+        pix.fill(0x336699FF)
+        ok, data = pix.save_to_bufferv("png", [], [])
+        self.assertTrue(ok)
+        tex = images.decode(bytes(data), 100)
+        self.assertEqual((tex.get_width(), tex.get_height()), (100, 67))
+        self.assertIsNone(images.decode(b"not a picture", 100))
+
+        class Resp:
+            headers = {"Content-Type": "image/png"}
+            is_redirect = False
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_a):
+                return False
+
+            def raise_for_status(self):
+                pass
+
+            def iter_content(self, _size):
+                yield bytes(data)
+
+            def close(self):
+                pass
+
+        class Bridge:
+            def call(self, future, ok=None, fail=None):
+                future.add_done_callback(lambda f: GLib.idle_add(
+                    lambda: (ok(f.result()) if ok else None) and False))
+                return future
+
+        with tempfile.TemporaryDirectory() as tmp:
+            core = type("C", (), {"cfg": {"ui": {}}, "_own_hosts": lambda self: set(),
+                                  "paths": type("P", (), {"cache_dir": Path(tmp)})()})()
+            imgs = images.Images(core, Bridge())
+            imgs.http.get = lambda url, timeout, **_kw: Resp()
+            got = []
+            try:
+                imgs.get("https://media.example/a.png", got.append, max_side=50)
+                self.assertTrue(pump(lambda: got, 5))
+                self.assertEqual(got[0].get_width(), 50)
+                self.assertTrue(imgs.local("https://media.example/a.png"))  # on disk now
+            finally:
+                imgs.shutdown()
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")

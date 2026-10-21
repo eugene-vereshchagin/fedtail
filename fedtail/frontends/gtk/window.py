@@ -98,7 +98,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.cfg = core.cfg
         self.add_css_class("fedtail")
         from .images import Images
-        self.images = Images(view, bridge, self.cfg["ui"].get("image_cache_mb", 64))
+        self.images = Images(view, bridge)
         self.ctx = Ctx(self.cfg, view, theme, bridge, self, images=self.images)
         self.links = Links(view, self)  # what fedtail: links do (common/links.py)
         self.cmdline = None
@@ -283,6 +283,9 @@ class MainWindow(Gtk.ApplicationWindow):
             lv = SPECIAL[name](self) if name in SPECIAL else LaneView(self.ctx, name, title)
             self.lane_views[name] = lv
             self.stack.add_named(lv, name)
+        before = self.stack.get_visible_child()
+        if before is not lv and hasattr(before, "hidden"):
+            before.hidden()
         self.stack.set_visible_child(lv)
         self.tabs.set_current_page(0)
         self.view.set_active_lane(name)
@@ -348,6 +351,10 @@ class MainWindow(Gtk.ApplicationWindow):
                 else:
                     lv.dirty = True
             self.update_badges()
+        elif name == "prefetch":  # pictures of posts just come: to disk, ahead of time
+            self.images.prefetch(payload)
+        elif name == "prefetch_video":  # their videos too (feed.prefetch = "all")
+            self.images.prefetch_video(payload)
         elif name == "notify":
             self.notifier.notify(payload)
         elif name == "lists_changed":

@@ -7,6 +7,7 @@ from fedtail import i18n
 from fedtail.core.view import View
 from fedtail.frontends.common import actions, commands, links
 from fedtail.frontends.common import compose as rules
+from fedtail.frontends.common import lane as lanes
 from fedtail.protocols.mastodon.adapter import post as to_post
 
 from . import test_cli
@@ -188,6 +189,46 @@ class CommonTest(TmpDir):
         self.assertEqual(self.w.posted[-1][0], "#zz9 hi")
         fut, _msg = cmds.run("@nobody@nowhere.test")
         self.assertIsInstance(fut.result(), commands.Failed)
+
+    # ---- a lane ---------------------------------------------------------------------------
+    def test_a_lane_builds_with_the_divider_and_starts_at_it(self):
+        self.w.add(status("003", BOB, minute=3, vis="public", text="new"), home=True)
+        self.core.poll_once()
+        self.view.mark_read(["001", "002"])
+        lm = lanes.LaneModel(self.view, "home", lambda n: f"{n} new")
+        built = lm.build(positioned=False)
+        keys = [s.key for s in built.specs]
+        self.assertEqual(built.unread, 1)
+        self.assertEqual(keys[-2], lanes.SEPARATOR)
+        self.assertEqual(built.specs[-2].extra["separator"], "1 new")
+        self.assertEqual(lm.start(built.specs), (lanes.SEPARATOR, "top"))
+        self.assertIn("short_id", built.specs[-1].extra)
+        self.assertEqual(lm.filters, ["all", "posts", "unread"])
+        lm.set_filter("unread")
+        only = lm.build(positioned=False)
+        self.assertEqual([s.post.id for s in only.specs], ["003"])
+        self.assertTrue(lm.read(["003"]))
+
+    def test_the_media_funnel_and_true_kinds(self):
+        from fedtail.protocols.mastodon import adapter
+        clip = {"id": "m", "type": "image", "url": "https://x/a.MP4?x=1",
+                "preview_url": "", "description": ""}
+        self.assertEqual(lanes.true_kind(adapter.media(clip)).kind, "video")
+        f = lanes.MediaFilter()
+        self.assertFalse(f.active())
+        f.toggle("text", False)
+        self.assertTrue(f.active())
+        self.assertFalse(f.keeps(self.view.by_id("001")))  # text only
+        f.reset()
+        self.assertTrue(f.keeps(self.view.by_id("001")))
+
+    def test_what_counts_as_seen(self):
+        self.assertEqual(lanes.seen(10, 90, 0, 100), "read")
+        self.assertEqual(lanes.seen(50, 150, 0, 100), "glimpsed")
+        self.assertEqual(lanes.seen(50, 150, 0, 100, at_end=True), "read")
+        self.assertEqual(lanes.seen(-200, 60, 0, 100), "read")      # taller, its end seen
+        self.assertEqual(lanes.seen(-80, -10, 0, 100, glimpsed=True), "read")  # went past
+        self.assertIsNone(lanes.seen(200, 300, 0, 100))
 
 
 if __name__ == "__main__":

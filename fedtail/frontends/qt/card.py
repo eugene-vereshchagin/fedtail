@@ -1,7 +1,7 @@
 """One post on screen, and the "new below" divider."""
 
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from urllib.parse import quote, unquote
 
 from PySide6.QtCore import QRectF, QSize, Qt, Signal
@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from ...core import config
 from ...i18n import _
-from ...model import Share, real
+from ...model import Share
 from ...model.text import (
     collapse_tag_stuffing,
     html_to_text,
@@ -34,6 +34,13 @@ from ...model.text import (
     without_quote_fallback,
 )
 from ..common import actions
+from ..common.lane import (  # noqa: F401  (Qt's names)
+    VIDEO_EXT,
+    CardSpec,
+    conversation_line,
+    make_spec,
+)
+from ..common.lane import true_kind as _true_kind
 from ..richtext import plain_tip
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
@@ -53,36 +60,6 @@ OWN_ACTION = {"reply": "reply", "fav": "star", "boost": "boost", "thread": "thre
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 VIS_KEY = {"followers": "private"}  # the words for it in i18n: vis_private
 QUOTE_SHOWN = {"accepted"}
-
-
-@dataclass
-class CardSpec:
-    """What one card shows: a post of fedtail.model (a Post, or a Share around one),
-    and where and how. Cards read nothing else of the server (docs/PROTOCOLS.md)."""
-    key: str                   # unique within a view (item id or status id)
-    entry: object = None       # Post | Share; None for the "new below" divider
-    depth: int = 0
-    number: int | None = None  # /N inside a thread
-    parent: object = None      # the Post it answers, "missing", or None (unknown / no reply)
-    unread: bool = False
-    focus: bool = False
-    in_thread: bool = False
-    extra: dict = field(default_factory=dict)  # my_replies, short_id, separator, via…
-
-    @property
-    def post(self):
-        """The post itself (the one inside a Share), or None."""
-        return real(self.entry) if self.entry is not None else None
-
-
-def make_spec(view, key, entry, extra=None, **kw):
-    """A CardSpec for a lane entry (Post | Share) of the View: with which account of
-    mine got it, when the window shows several."""
-    extra = dict(extra or {})
-    via = view.via(entry)
-    if via:
-        extra["via"] = via
-    return CardSpec(key=key, entry=entry, extra=extra, **kw)
 
 
 class ClickLabel(QLabel):
@@ -507,13 +484,10 @@ class PostRow(QWidget):
                 "you_replied", when=self.theme.date(last.created),
                 text=esc(snippet(last, 120))) + more, self.theme.css("on_myreply")),
                 "myreply"))
-        conv = spec.extra.get("conversation")
-        if conv and (len(conv["members"]) > 1 or conv["last"].id != p.id):
-            last = conv["last"]
-            who = last.author.name or last.author.username
-            text = _("conv_line", n=len(conv["members"]), new=conv["unread"]) + " · " + \
-                _("conv_last", who=esc(who), text=esc(snippet(last, 90)))
-            v.addWidget(self._label(link("thread", last.id, "💬 " + text,
+        line = conversation_line(spec)
+        if line:
+            text, last_id = line
+            v.addWidget(self._label(link("thread", last_id, "💬 " + esc(text),
                                          self.theme.css("link")), "ctx"))
 
     # ---- header -------------------------------------------------------------------
@@ -1241,18 +1215,6 @@ def _set(lab, pm):
         lab.setPixmap(pm)
     except RuntimeError:  # gone meanwhile
         pass
-
-
-VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
-
-
-def _true_kind(m):
-    """Servers sometimes call a video an "image" (a remote one they couldn't sort);
-    the file's name knows better. A copy with the right kind."""
-    url = (m.url or m.remote_url).lower().split("?")[0]
-    if m.kind in ("image", "unknown") and url.endswith(VIDEO_EXT):
-        return replace(m, kind="video")
-    return m
 
 
 def _play_mark(pm):

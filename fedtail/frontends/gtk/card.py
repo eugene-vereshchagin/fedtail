@@ -55,7 +55,8 @@ class Avatar(Gtk.Image):
         self.set_overflow(Gtk.Overflow.HIDDEN)  # the rounding cuts the picture
         if ctx.images is not None:
             url = account.avatar_static or account.avatar
-            ctx.images.get(url, self.set_from_paintable)
+            # read small: a face twice its size at most (sharp on a HiDPI screen)
+            ctx.images.get(url, self.set_from_paintable, max_side=max(64, size * 2))
 
 
 class Card(Gtk.Box):
@@ -198,6 +199,13 @@ class Card(Gtk.Box):
             lab.connect("activate-link", self._link)
             self.mine_box.append(lab)
         self.mine_box.set_visible(bool(replies))
+
+    def add_conversation(self, text, last_id):
+        """A conversation card (common/lane.py conversation_line): the rest of it."""
+        lab = _label(link_markup(f"fedtail:thread/{last_id}", "💬 " + text), ("ft-ctx",),
+                     markup=True, wrap=True)
+        lab.connect("activate-link", self._link)
+        self.column.insert_child_after(lab, self.mine_box)
 
     def _body(self, p):
         cfg = self.ctx.cfg

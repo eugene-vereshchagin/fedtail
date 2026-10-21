@@ -8,9 +8,11 @@ MAX_ROWS.
 
 Nothing jumps (docs/DESIGN.md): rows are kept by key and never rebuilt while on screen;
 when rows go in or out above what is being read, the view moves by exactly the height
-they added or took away. Posts seen whole while the window is active are marked read;
-the decision is `seen()`, a plain function the Qt rule (qt/feed.py _emit_seen) is
-going to share.
+they added or took away. Posts seen while the window is active are marked read.
+
+What the lane shows — the cards, the filters, conversations, the media funnel, the
+divider, where reading starts, what counts as read — is common/lane.py's, the same as
+in the Qt window; this file only puts it on screen.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from dataclasses import replace
 from ... import diag
 from ...i18n import _
 from ...model import Share, real
+from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator
 from .gi_setup import GLib, Gtk
 
@@ -34,15 +37,6 @@ STEP = 20           # cards added when the view nears an end
 MAX_ROWS = 240      # more than this on screen: the far end goes
 BATCH_MS = 25       # building cards for at most this long at a time, then a frame
 HOLD_MS = 250       # the view held still this long after rows changed above it
-
-
-def seen(top, bottom, vtop, vbottom):
-    """A card from top to bottom (in the list's coordinates) is read in a viewport from
-    vtop to vbottom when it is on screen whole, or — taller than the screen — when its
-    end has come into view."""
-    if bottom - top > vbottom - vtop:
-        return top < vbottom and bottom <= vbottom
-    return top >= vtop and bottom <= vbottom
 
 
 def window_around(n, anchor, size=WINDOW, back=BACK):
@@ -59,16 +53,18 @@ class LaneView(Gtk.Box):
     def __init__(self, ctx, name, title):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.ctx, self.name = ctx, name
-        lane = ctx.view.lane_by_name.get(name)
-        self.lazy = bool(getattr(lane, "lazy", False))
-        self.newest_first = ctx.cfg["feed"]["order"] == "newest_first"
-        self.keys = []           # every key of the lane, top to bottom
+        self.lm = LaneModel(ctx.view, name, lambda n: ctx.theme.word(
+            "separator", _("new_below"), n=n))
+        self.lazy = self.lm.lazy
+        self.newest_first = self.lm.newest_first
+        self.keys = []           # every key of the lane, top to bottom (no divider)
         self.index = {}          # key -> its place in self.keys
-        self.entries = {}        # key -> Post | Share
-        self.unread = set()      # unread post ids
+        self.specs = {}          # key -> CardSpec (common/lane.py)
+        self.unread = set()      # keys of the unread cards
         self.rows = {}           # key -> Card on screen
         self.order = []          # keys on screen, top to bottom: a run of self.keys
-        self.separator = None    # key of the first unread when the lane opened
+        self.sep_above = None    # the key the "new below" line sits above
+        self._glimpsed = set()   # unread cards seen in part (common/lane.py seen())
         self.positioned = False
         self.dirty = True        # the lane changed while not on screen
         self.stopped = False     # the window closed: no more work queued
@@ -92,6 +88,35 @@ class LaneView(Gtk.Box):
         self.pill.add_css_class("ft-new-pill")
         self.pill.set_visible(False)
         header.append(self.pill)
+        self.info = Gtk.Label(xalign=1)
+        self.info.add_css_class("ft-muted")
+        header.append(self.info)
+        self._filter_buttons = {}
+        if len(self.lm.filters) > 1:
+            group, words = None, {"all": ("show_all", "show_all_tip"),
+                                  "posts": ("posts_only", "posts_only_tip"),
+                                  "unread": ("unread_only", "unread_only_tip")}
+            seg = Gtk.Box()
+            seg.add_css_class("linked")
+            now = self.lm.current_filter()
+            for which in self.lm.filters:
+                b = Gtk.ToggleButton(label=_(words[which][0]))
+                b.set_tooltip_text(_(words[which][1]))
+                if group is not None:
+                    b.set_group(group)
+                group = group or b
+                b.set_active(which == now)
+                b.connect("toggled", lambda b, w=which: b.get_active() and self.set_filter(w))
+                self._filter_buttons[which] = b
+                seg.append(b)
+            header.append(seg)
+        if self.lm.conversations_offered():
+            conv = Gtk.ToggleButton(label=_("conv_mode"))
+            conv.set_tooltip_text(_("conv_mode_tip"))
+            conv.set_active(self.lm.conversations())
+            conv.connect("toggled", lambda b: self.set_conversations(b.get_active()))
+            header.append(conv)
+        header.append(self._media_button())
         read = Gtk.Button(label=_("mark_all_read"))
         read.add_css_class("flat")
         read.connect("clicked", lambda _b: self.mark_all_read())
@@ -145,46 +170,113 @@ class LaneView(Gtk.Box):
 
     def _refresh(self):
         self.dirty = False
-        view = self.ctx.view
-        entries = view.entries(self.name)
-        self.unread = set() if self.lazy else view.unread(entries)
-        keys = [k for k, _ in entries]
-        if self.newest_first:
-            keys.reverse()
+        built = self.lm.build(self.positioned)
+        self.info.set_text(built.info)
+        specs = built.specs
+        self.sep_above = None
+        keys, sep = [], False
+        for sp in specs:
+            if sp.key == SEPARATOR:
+                sep = sp
+                continue
+            if sep:
+                self.sep_above, sep = (sp.key, sep.extra["separator"]), False
+            keys.append(sp.key)
         old_keys = self.keys
-        self.keys, self.entries = keys, dict(entries)
+        self.keys, self.specs = keys, {sp.key: sp for sp in specs if sp.key != SEPARATOR}
+        self.unread = {k for k in keys if self.specs[k].unread}
         self.index = index = {k: i for i, k in enumerate(keys)}
-        if self.separator is None and not self.positioned:
-            first = next((k for k, e in entries if e.id in self.unread), None)
-            if first is not None and any(e.id not in self.unread for _, e in entries):
-                self.separator = first
         for k in [k for k in self.order if k not in index]:
             self._remove(k)
         self._queue = [(side, [k for k in ks if k in index and k not in self.rows])
                        for side, ks in self._queue]
         if not self.order and not self._pending():
-            self._open(index)
+            self._open(specs)
         else:
             self._take_new(old_keys, index)
-        for k in self.order:
-            self.rows[k].set_unread(self.entries[k].id in self.unread)
-        if self.order:  # "you replied" under what's on screen: a reply just sent shows
-            shown = [self.entries[k] for k in self.order]
-            answers = view.my_replies(shown)
-            for k in self.order:
-                self.rows[k].set_my_replies(answers.get(real(self.entries[k]).id, ()))
+        for k in self.order:  # "you replied" under what's on screen: a reply just sent
+            self.rows[k].set_unread(k in self.unread)
+            self.rows[k].set_my_replies(self.specs[k].extra.get("my_replies", ()))
         self._pill(len(self.unread))
         self._older_visible()
         self._build_soon()
 
-    def _open(self, index):
-        """The first window: around the first unread, or at the end to read from."""
+    def _reset(self):
+        """Another filter or view: the lane anew, placed anew."""
+        for k in list(self.order):
+            self._remove(k)
+        self._queue = []
+        self.keys, self.index = [], {}
+        self.positioned = False
+        self._glimpsed = set()
+        self.refresh()
+
+    def set_filter(self, which):
+        """"all", "posts" (no replies) or "unread"."""
+        if which == self.lm.current_filter() and self.positioned:
+            return
+        self.lm.set_filter(which)
+        self._reset()
+
+    def set_conversations(self, on):
+        self.lm.set_conversations(on)
+        self._reset()
+
+    def _media_button(self):
+        """The funnel: posts with pictures, gifs, video… only, boosts or not."""
+        button = Gtk.MenuButton(icon_name="view-filter-symbolic")
+        button.set_tooltip_text(_("media_filter_tip"))
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        checks, quiet = {}, []
+
+        def changed():
+            (button.add_css_class if self.lm.media.active() else
+             button.remove_css_class)("ft-active")
+            self._reset()
+
+        def toggled(kind, on):
+            if quiet:
+                return
+            if kind == "boosts":
+                self.lm.media.boosts = on
+            else:
+                self.lm.media.toggle(kind, on)
+            changed()
+
+        for kind in (*MEDIA_KINDS, "boosts"):
+            c = Gtk.CheckButton(label=_("filter_" + kind), active=True)
+            c.connect("toggled", lambda c, k=kind: toggled(k, c.get_active()))
+            checks[kind] = c
+            box.append(c)
+
+        def everything(_b):
+            quiet.append(True)
+            for c in checks.values():
+                c.set_active(True)
+            quiet.clear()
+            self.lm.media.reset()
+            changed()
+        reset = Gtk.Button(label=_("filter_all"))
+        reset.add_css_class("flat")
+        reset.connect("clicked", everything)
+        box.append(reset)
+        pop = Gtk.Popover()
+        pop.set_child(box)
+        button.set_popover(pop)
+        self.media_checks = checks
+        return button
+
+    def _open(self, specs):
+        """The first window: around where reading starts (common/lane.py start())."""
         if not self.keys:
             self.positioned = True
             return
-        target = next((i for i, k in enumerate(self.keys)
-                       if self.entries[k].id in self.unread), None)
-        if target is None:
+        key, _where = self.lm.start(specs)
+        if key == SEPARATOR:
+            key = self.sep_above[0] if self.sep_above else None
+        if key in self.index:
+            target = self.index[key]
+        else:
             target = 0 if self.newest_first else len(self.keys) - 1
         lo, hi = window_around(len(self.keys), target)
         # from the target down first, then what's above it: reading starts at once
@@ -272,24 +364,18 @@ class LaneView(Gtk.Box):
         self._trim()
 
     def _make(self, keys):
-        view = self.ctx.view
-        posts = [self.entries[k] for k in keys]
-        parents = view.parents(posts)
-        short = view.short_ids(posts)
-        answers = view.my_replies(posts)  # {post id: [my replies to it]}
-        unknown = [e for e in posts if parents.get(e.id) is None and real(e).reply_to]
-        if unknown:
-            view.ensure_parents(unknown)
         for k in keys:
-            e = self.entries[k]
-            card = Card(self.ctx, k, e, parent=parents.get(e.id), unread=e.id in self.unread,
-                        short_id=short.get(real(e).id),
-                        my_replies=answers.get(real(e).id, ()))
+            sp = self.specs[k]
+            card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
+                        short_id=sp.extra.get("short_id"),
+                        my_replies=sp.extra.get("my_replies", ()))
+            line = conversation_line(sp)
+            if line:
+                card.add_conversation(*line)
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
-            if k == self.separator:
+            if self.sep_above and k == self.sep_above[0]:
                 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-                box.append(Separator(self.ctx.theme.word("separator", _("new_below"),
-                                                         n=len(self.unread))))
+                box.append(Separator(self.sep_above[1]))
                 box.append(card)
                 row.set_child(box)
             else:
@@ -430,20 +516,39 @@ class LaneView(Gtk.Box):
     # ---- position and reading --------------------------------------------------------
     def shown(self):
         """The lane came on screen: catch up if it changed meanwhile, place it."""
+        if self.ctx.cfg["read"]["mark_read"] == "on_open" and not self.lazy:
+            GLib.idle_add(lambda: self.mark_all_read() and False)
         if self.dirty:
             self.refresh()
         elif not self.positioned and not self._pending():
             GLib.idle_add(self._position, priority=GLib.PRIORITY_LOW)
 
+    def hidden(self):
+        """Another lane in front: "unread only" shows anew what's unread next time."""
+        if self.lm.left():
+            self.dirty = True
+            for k in list(self.order):
+                self._remove(k)
+            self._queue = []
+            self.keys, self.index = [], {}
+            self.positioned = False
+
     def _position(self):
-        """Opened: the first unread at the top (or the newest end when all is read)."""
+        """Opened: where reading starts (common/lane.py start()) — the first unread at
+        the top, or the newest end when all is read."""
         if self.positioned or self._pending() or self.get_root() is None:
             return GLib.SOURCE_REMOVE
-        target = next((k for k in self.order if self.rows[k].unread), None)
-        if target is not None:
-            y = self._y(self.rows[target])
-            if y is not None:
-                self.adj.set_value(max(0, y - 40))
+        specs = [self.specs[k] for k in self.order]
+        key, where = self.lm.start(specs)
+        if key is None and self.unread:  # the divider's card is not built: the first unread
+            key = next((k for k in self.order if k in self.unread), None)
+            where = "bottom" if self.newest_first else "top"
+        card = self.rows.get(key) if key is not None else None
+        y = self._y(card) if card is not None else None
+        if y is not None and where == "bottom":
+            self.adj.set_value(max(0, y + card.get_height() - self.adj.get_page_size() + 40))
+        elif y is not None:
+            self.adj.set_value(max(0, y - 40))
         elif self.newest_first:
             self.adj.set_value(0)
         else:
@@ -474,7 +579,8 @@ class LaneView(Gtk.Box):
             return GLib.SOURCE_REMOVE
         vtop = self.adj.get_value()
         vbot = vtop + self.adj.get_page_size()
-        ids, unplaced = [], False
+        at_end = vtop >= self.adj.get_upper() - self.adj.get_page_size() - 1
+        keys, unplaced, glimpsed = [], False, set()
         for k in self.order:
             card = self.rows[k]
             if not card.unread:
@@ -483,13 +589,20 @@ class LaneView(Gtk.Box):
             if y is None or card.get_height() <= 0:
                 unplaced = True  # not laid out yet: look again in a moment
                 continue
-            if seen(y, y + card.get_height(), vtop, vbot):
-                ids.append(card.entry.id)
-                card.set_unread(False)
+            got = seen(y, y + card.get_height(), vtop, vbot, at_end, k in self._glimpsed)
+            if got == "read":
+                keys.append(k)
+            elif got == "glimpsed":
+                glimpsed.add(k)
+        self._glimpsed = (self._glimpsed & self.unread) | glimpsed
         if unplaced:
             self._schedule_seen()
+        ids = self.lm.read([self.rows[k].entry.id for k in keys])
         if ids:
-            self.unread -= set(ids)
+            for k in keys:
+                self.rows[k].set_unread(False)
+            self.unread -= set(keys)
+            self._glimpsed -= set(keys)
             self.ctx.view.mark_read(ids)
             self._pill(len(self.unread))
         return GLib.SOURCE_REMOVE
