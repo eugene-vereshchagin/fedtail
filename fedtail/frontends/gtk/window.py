@@ -895,16 +895,31 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def about(self):
         import platform
+        from importlib import resources
 
         from ... import version
+        from ...model.text import html_to_text
         info = version.info()
         about = Gtk.AboutDialog(transient_for=self, modal=True)
         about.set_program_name("fedtail")
         about.set_version(info["version"])
-        about.set_logo_icon_name(self.get_icon_name() or "online.dmesg.fedtail")
+        # the opossum holding its own tail, as in Qt's About (else the window's icon)
+        try:
+            pic = resources.files("fedtail").joinpath("data/icons/fedtail.png")
+            about.set_logo(Gdk.Texture.new_from_filename(str(pic)))
+        except (GLib.Error, OSError):
+            about.set_logo_icon_name(self.get_icon_name() or "online.dmesg.fedtail")
         about.set_website(version.HOMEPAGE)
-        about.set_comments(_("made_by_long") + "\n\nPython " + platform.python_version() +
-                           " · GTK " + ".".join(str(x) for x in gtk_version()))
+        # the same words as Qt's: what it is, which build, on what, who made it
+        tagline = html_to_text(_("about_text", version=info["version"])).split("\n")[-1]
+        lines = [tagline.strip()]
+        if info["commit"]:
+            lines.append(_("about_build", commit=info["commit"], date=info["date"]))
+        lines.append("Python " + platform.python_version() + " · GTK " +
+                     ".".join(str(x) for x in gtk_version()))
+        lines.append(_("made_by_long"))
+        about.set_comments("\n\n".join(x for x in lines if x))
+        about.set_authors([version.AUTHOR + " " + version.AUTHOR_URL, "Claude (Anthropic)"])
         about.set_license_type(Gtk.License.GPL_3_0)
         about.present()
 
@@ -1333,6 +1348,24 @@ class MainWindow(Gtk.ApplicationWindow):
         self.call(self.view.account(acc_id), got_account,
                   lambda err: title.set_text(_("load_failed", err=err)))
 
+    def _moved_banner(self, new):
+        """The account moved: where to, with "open" and "follow there" — as in Qt."""
+        box = Gtk.Box(spacing=8)
+        box.add_css_class("ft-ctx")
+        text = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        text.set_markup(_("moved_to", acct=GLib.markup_escape_text("@" + new.handle)))
+        box.append(text)
+        go = Gtk.Button(label=_("moved_open"))
+        go.connect("clicked", lambda _b: self.open_account(new.id))
+        box.append(go)
+        follow = Gtk.Button(label=_("moved_follow"))
+        follow.add_css_class("ft-primary")
+        follow.connect("clicked", lambda _b: self.call(
+            self.view.follow(new.id),
+            lambda _r: self.status(_("followed_now", acct="@" + new.handle))))
+        box.append(follow)
+        return box
+
     def close_account(self, acc_id):
         page = self.accounts.pop(acc_id, None)
         if page is not None:
@@ -1352,6 +1385,8 @@ class MainWindow(Gtk.ApplicationWindow):
             banner.add_css_class("ft-thumb")
             self.images.get(banner_url, banner.set_paintable)
             head.append(banner)
+        if acc.moved and self.cfg["feed"].get("show_moved", True):
+            head.append(self._moved_banner(acc.moved))
         top = Gtk.Box(spacing=10)
         top.append(Avatar(self.ctx, acc, 64))
         names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)

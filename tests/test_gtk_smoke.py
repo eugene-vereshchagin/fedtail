@@ -465,6 +465,15 @@ class GtkSmokeTest(_GtkBase):
         bar.dismiss()
         self.assertFalse(bar.get_visible())
 
+    def test_about_says_what_qt_says(self):
+        before = set(Gtk.Window.list_toplevels())
+        self.win.about()
+        pump(timeout=0.3)
+        new = [w for w in Gtk.Window.list_toplevels() if w not in before]
+        self.assertEqual(len(new), 1)
+        self.assertIn(i18n._("made_by_long"), new[0].get_comments())
+        new[0].close()
+
     def test_edit_my_profile(self):
         """My profile's Edit as in Qt: loaded, only what changed goes to the server."""
         ed = self.win.edit_profile()
