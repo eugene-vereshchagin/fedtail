@@ -304,6 +304,25 @@ class WebTest(TmpDir):
         host.error("x")
         self.assertEqual(host.out, {"error": "x"})
 
+    def test_profile_buttons_are_the_windows(self):
+        """A profile's buttons (common/profile.py), done through the server: mute at
+        once, a note asked for first, Mention opens the editor."""
+        got = json.loads(self.req("/api/account?id=B")[2])
+        keys = [a["key"] for a in got["actions"]]
+        for k in ("follow", "mention", "mute", "block", "note", "copy_handle"):
+            self.assertIn(k, keys)
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "mute"})[2])
+        self.assertTrue(r.get("refresh"))
+        got = json.loads(self.req("/api/account?id=B")[2])
+        self.assertIn(i18n._("unmute"), [a["label"] for a in got["actions"]])
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "note"})[2])
+        self.assertIn("ask", r)
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "mention"})[2])
+        self.assertEqual(r["compose"], {"text": "@bob@social.example "})
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "block"})[2])
+        self.assertIn("confirm", r)
+        self.assertEqual(self.req("/api/profile_act", {"id": "B", "key": "lists"})[0], 400)
+
     def test_page_has_the_menus(self):
         body = self.req("/")[2]
         for wanted in ('id="more"', 'id="pop"', 'id="quote-sel"', 'id="viewer-next"'):

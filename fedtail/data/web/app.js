@@ -781,9 +781,24 @@ async function openAccount(id) {
       }
       box.append(fields);
     }
-    box.append(el("div", "muted", a.account.counts +
-                  (a.relation.followed_by ? " · " + w("acc_follows_you") : "")));
+    box.append(el("div", "muted", [a.account.counts].concat(a.meta || []).join(" · ")));
     const row = el("div", "row");
+    if (a.actions) {
+      // the same buttons as the windows' profile (common/profile.py)
+      for (const act of a.actions) {
+        const b = el("button", act.primary ? "primary" : "tool", act.label);
+        b.type = "button";
+        if (act.tip) b.title = act.tip;
+        b.onclick = () => profileAct(id, act.key);
+        row.append(b);
+      }
+      box.append(row);
+      if (a.note_line) box.append(el("div", "muted", a.note_line));
+      body.append(box);
+      for (const p of a.posts) body.append(renderPost(p, false));
+      if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
+      return;
+    }
     if (!a.account.own) {
       const label = () => (a.relation.requested ? w("web_requested")
         : a.relation.following ? w("unfollow") : w("follow"));
@@ -807,6 +822,24 @@ async function openAccount(id) {
     for (const p of a.posts) body.append(renderPost(p, false));
     if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
   } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
+}
+
+async function profileAct(id, key, answer, confirmed) {
+  let r;
+  try { r = await api("/api/profile_act", { id, key, answer: answer === undefined ? null : answer,
+                                             confirmed: !!confirmed }); }
+  catch (e) { toast(e.message); return; }
+  if (r.confirm) { if (window.confirm(r.confirm)) await profileAct(id, key, answer, true); return; }
+  if (r.ask) {
+    const got = window.prompt(r.ask.title + "\n\n" + r.ask.question, r.ask.text || "");
+    if (got !== null) await profileAct(id, key, got, confirmed);
+    return;
+  }
+  if (r.copy) copyText(r.copy);
+  if (r.open && r.open.url) window.open(r.open.url, "_blank", "noopener");
+  if (r.compose) composeFrom(r.compose, null);
+  if (r.message) toast(r.message);
+  if (r.refresh) await openAccount(id);
 }
 
 let sideN = 0;

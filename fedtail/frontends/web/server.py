@@ -208,6 +208,12 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     return out
 
 
+# a profile's buttons the page has (common/profile.py): not yet the lists' submenu nor
+# the tabs of whom they follow
+WEB_PROFILE_ACTS = ("follow", "bell", "boosts", "langs", "mention", "mute", "block",
+                    "remove_follower", "endorse", "note", "copy_handle", "open_browser")
+
+
 class _WebHost:
     """The window common/links.py talks to, for the web: it waits for each future
     here (the request waits with it) and writes down what the page should do."""
@@ -252,8 +258,8 @@ class _WebHost:
     def read_up_to(self, sid):
         self.out["read_up_to"] = sid
 
-    def compose(self, reply_to=None, invite=False, edit=None, quote=None):
-        c = {}
+    def compose(self, reply_to=None, invite=False, edit=None, quote=None, text=None):
+        c = {"text": text} if text else {}
         if edit is not None:
             text, cw = self.view.source(edit).result(timeout=30)
             c = {"edit": edit.id, "text": text, "cw": cw,
@@ -265,6 +271,14 @@ class _WebHost:
             if invite:
                 c["text"] = "@"
         self.out["compose"] = c
+
+    answer = None
+
+    def ask_text(self, title, question, then, text="", allow_empty=False):
+        if self.answer is not None and (self.answer.strip() or allow_empty):
+            then(self.answer)
+        else:
+            self.out["ask"] = {"title": str(title), "question": str(question), "text": text}
 
     def redrafted(self, d):
         self.out["compose"] = {"text": d.text, "cw": d.warning, "visibility": d.visibility,
@@ -420,11 +434,41 @@ class Web:
                              "verified": f.verified is not None}
                             for f in (acc.fields if acc else ())],
                     own=bool(me and acc and acc.id == me.id))
+        from ..common import profile as prof
+        own = bool(me and acc and acc.id == me.id)
+        acts = [{"key": a.key, "label": a.label, "tip": a.tip, "primary": a.primary}
+                for a in prof.actions(acc, rel, own, core.cfg, core.supports)
+                if a.key in WEB_PROFILE_ACTS] if acc else []
+        since = rel is not None and rel.following and core.followed_since(acc_id, rel)
         return {"account": info,
                 "relation": {"following": bool(rel and rel.following),
                              "followed_by": bool(rel and rel.followed_by),
                              "requested": bool(rel and rel.requested)},
+                "meta": prof.meta(acc, rel, self._date, since or None)[1:] if acc else [],
+                "note_line": prof.note_line(rel, own),
+                "actions": acts,
                 "posts": self._posts(page)}
+
+    @staticmethod
+    def _date(when):
+        return when.astimezone().strftime("%d.%m.%Y") if when else ""
+
+    def profile_act(self, acc_id, key, answer=None, confirmed=False):
+        """A profile's button (common/profile.py), done as the windows do it; what's
+        left for the page comes back: a question, a line to type, the editor."""
+        from ..common import profile as prof
+        core = self.core
+        acc_id = one_id(acc_id)
+        if key not in WEB_PROFILE_ACTS:
+            raise ValueError(key)
+        acc = core.account(acc_id).result()
+        rel = core.relationship(acc_id).result()
+        host = _WebHost(core, confirmed)
+        host.answer = answer
+        prof.do(key, acc, rel, core, host, lambda _r: host.out.setdefault("refresh", True))
+        if host.out.get("error"):
+            raise ValueError(host.out["error"])
+        return host.out
 
     def _post_by_id(self, sid):
         p = self.core.by_id(one_id(sid))
@@ -707,6 +751,10 @@ class Handler(BaseHTTPRequestHandler):
             "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/link": lambda: web.link(str(body.get("url", "")),
                                           bool(body.get("confirmed"))),
+            "/api/profile_act": lambda: web.profile_act(
+                str(body.get("id", "")), str(body.get("key", "")),
+                body.get("answer") if isinstance(body.get("answer"), str) else None,
+                bool(body.get("confirmed"))),
         }
         self._run(routes.get(path))
 

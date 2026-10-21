@@ -186,6 +186,7 @@ class FakeApi:
         return {"id": acc_id, "following": acc_id in self.w.following,
                 # list_refuse: followed a moment ago, the request not accepted yet
                 "followed_by": False, "requested": acc_id in self.w.list_refuse,
+                "muting": acc_id in self.w.muted, "blocking": acc_id in self.w.blocked,
                 "note": self.w.notes.get(acc_id, "")}
 
     def follow(self, acc_id, on=True):
