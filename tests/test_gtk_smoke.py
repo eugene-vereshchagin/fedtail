@@ -37,7 +37,9 @@ def pump(until=None, timeout=3.0):
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
-class GtkSmokeTest(unittest.TestCase):
+class _GtkBase(unittest.TestCase):
+    UI = {}  # more of [ui] for a test class of its own (the split layout)
+
     def setUp(self):
         from fedtail.core.view import View
         from fedtail.frontends.gtk import theme as themes
@@ -59,7 +61,7 @@ class GtkSmokeTest(unittest.TestCase):
         self.world = w
         cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
                                   "ui": {"start_lane": "home", "arts_mode": False,
-                                         "frontend": "gtk", "adwaita": "off"}})
+                                         "frontend": "gtk", "adwaita": "off", **self.UI}})
         p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
@@ -87,6 +89,10 @@ class GtkSmokeTest(unittest.TestCase):
 
     def _lane(self, name):
         return self.win.lane_views.get(name)
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkSmokeTest(_GtkBase):
 
     def test_lanes_and_cards(self):
         self.assertIn("home", self.win.lane_rows)
@@ -414,6 +420,69 @@ class GtkSmokeTest(unittest.TestCase):
         self.assertTrue(pump(lambda: bar.entry.get_text() == "", 2))
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkSplitTest(_GtkBase):
+    """ui.layout = "split": the roster window, the lanes in tabs, the input line."""
+    UI = {"layout": "split"}
+
+    def test_roster_tabs_and_the_input_line(self):
+        win = self.win
+        self.assertIsNotNone(win.roster)
+        self.assertTrue(win.roster.get_visible())
+        self.assertFalse(win.stack.get_visible())
+        pump(lambda: win.roster.rows, 5)
+        self.assertIn("home", win.roster.rows)
+        self.assertIn("home", win.lane_tabs)  # the start lane: a tab of its own
+        lane = win.lane_tabs["home"]
+        self.assertTrue(win.lane_on_screen("home"))
+        win.roster.open("replies")
+        pump(timeout=0.3)
+        self.assertIn("replies", win.lane_tabs)
+        self.assertTrue(win.lane_on_screen("replies"))
+        win.close_lane_tab("replies")
+        self.assertNotIn("replies", win.lane_tabs)
+        # the input line: a new post over a lane; a reply when the card's button says so
+        win.tabs.set_current_page(win.tabs.page_num(lane))
+        pump(timeout=0.2)
+        dock = win.dock
+        self.assertIsNone(dock.target)
+        post = self.view.by_id("011")
+        win.compose(reply_to=post)  # the card's Reply: into the input line, not a window
+        self.assertEqual(dock.target.id, "011")
+        self.assertTrue(dock._text().startswith("@bob"))
+        dock.buffer.insert_at_cursor("ответ снизу")
+        before = len(self.world.posted)
+        dock.send()
+        self.assertTrue(pump(lambda: len(self.world.posted) > before, 5))
+        self.assertEqual(self.world.posted[-1][2], "011")
+        # a command goes to the command line, a post doesn't
+        dock._set_text("#zz9 привет")
+        self.assertIsNotNone(dock.command())
+        dock._set_text("@bob привет")
+        self.assertIsNone(dock.command())
+        # a private talk: its tab, written to privately
+        bob = post.author
+        win.write_to(bob)
+        pump(timeout=0.3)
+        self.assertIn("talk:" + bob.id, win.extra_tabs)
+        self.assertEqual(dock.visibility, "direct")
+        # the author bar follows what's read
+        win.tabs.set_current_page(win.tabs.page_num(lane))
+        pump(timeout=0.3)
+        win._follow_author(lane)
+        if win.author_bar is not None:
+            self.assertTrue(win.author_bar.who is None or win.author_bar.who.id)
+        # the roster's look and folds
+        win.roster.set_look("compact", True)
+        win.roster.toggle("standard")
+        win.roster.toggle("standard")
+        # closing the messages window keeps the roster
+        win.close()
+        pump(timeout=0.2)
+        self.assertFalse(win.get_visible())
+        self.assertTrue(win.roster.get_visible())
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")

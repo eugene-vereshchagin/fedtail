@@ -61,6 +61,15 @@
   under it), a post folded by a "warn" filter stays closed; `--layout split` says the
   GTK window has no such layout yet. Switching accounts from a `--ui gtk` window opens
   the other one in GTK too.
+- The split layout in the GTK window (`--layout split`, `ui.layout = "split"`): the
+  roster in a window of its own — groups that fold, rows with the face and the newest
+  post, the search (Enter: the only one found, or a search of the server), a double
+  click opens, "mark all read", the look (⚙), ≡ and the accounts at the bottom; the
+  messages window — a tab per lane, thread, profile and private talk; over a lane the
+  author of the post under the pointer (Follow, write privately, the profile); the
+  input line at the bottom answering the thread in front, writing privately in a talk,
+  taking Point commands on Enter. Closing the messages window keeps the roster; closing
+  the roster closes fedtail.
 - Qt, split layout: the author bar's Follow / Unfollow keeps one width — it no longer
   jumps as the post under the cursor changes.
 - Both windows say "Getting the lanes from the server…" until the first round of

@@ -94,3 +94,15 @@ def look(view):
 
 def folded(view):
     return set(view.get_state("roster_folded", []) or [])
+
+
+def group_counts(group):
+    """A group's title and how many: (title, lanes with something new, lanes)."""
+    title = _("lists_header") if group.name == "lists" else _("grp_" + group.name)
+    return title, sum(1 for i in group.items if i.unread), len(group.items)
+
+
+def group_word(words, lit):
+    """The theme's words for a group's title line ({arrow} {title} ({lit}/{n}))."""
+    key = "roster_group" if lit else "roster_group_quiet"
+    return words.get(key, "{arrow} {title} ({lit}/{n})" if lit else "{arrow} {title} ({n})")

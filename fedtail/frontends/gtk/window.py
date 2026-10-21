@@ -131,6 +131,13 @@ class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app, core, view, bridge, theme):
         super().__init__(application=app, title="fedtail")
         self.core, self.view, self.bridge, self.theme = core, view, bridge, theme
+        self.app = app
+        # ui.layout = "split": the lanes in a roster window of their own (split.py);
+        # this window is the messages window — no sidebar, a tab per lane or talk, the
+        # input line at the bottom
+        self.split_mode = core.cfg["ui"].get("layout") in ("split", "qip")
+        self.roster = self.dock = self.author_bar = None
+        self.lane_tabs = {}      # split: lane name -> its page (the LaneView)
         self.cfg = core.cfg
         self.add_css_class("fedtail")
         from .images import Images
@@ -209,6 +216,10 @@ class MainWindow(Gtk.ApplicationWindow):
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         paned.set_start_child(side)
         paned.set_end_child(self.tabs)
+        if self.split_mode:
+            paned.set_end_child(None)
+            paned.set_start_child(None)
+            paned = self._split_area(side)
         paned.set_resize_start_child(False)
         paned.set_shrink_start_child(False)
         paned.set_position(240)
@@ -245,6 +256,8 @@ class MainWindow(Gtk.ApplicationWindow):
             from .cmdline import CommandLine
             self.cmdline = CommandLine(self)
             outer.append(self.cmdline)
+            if self.split_mode and self.cfg["ui"].get("dock_commands", True):
+                self.cmdline.set_visible(False)  # the input line takes the commands
         outer.append(bar)
         self.set_child(outer)
 
@@ -252,6 +265,143 @@ class MainWindow(Gtk.ApplicationWindow):
         self.connect("notify::is-active", lambda *_a: self._activated())
         self.connect("close-request", self._close_request)
         self.connect("destroy", self._stop)
+
+    # ---- the split layout ---------------------------------------------------------------
+    def _split_area(self, side):
+        """The messages window: tabs above (a lane, a thread, a profile, a talk each),
+        over a lane whose post is under the pointer, the input line below — a bar
+        between them drags (as in QIP). The sidebar is the roster's, in its own window."""
+        from . import split
+        side.set_visible(False)  # (kept: its rows count what the tabs say)
+        self.stack.set_visible(False)  # a hidden page: the notebook shows no tab for it
+        self.tabs.set_show_tabs(True)
+        self.dock = split.InputDock(self)
+        reading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        if split.split.faces_mode(self.cfg, self.theme.shape) == "qip":
+            self.author_bar = split.AuthorBar(self)
+            reading.append(self.author_bar)
+        self.tabs.set_vexpand(True)
+        reading.append(self.tabs)
+        rw = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
+        rw.set_start_child(reading)
+        rw.set_end_child(self.dock)
+        rw.set_resize_end_child(False)
+        rw.set_shrink_end_child(False)
+        rw.set_resize_start_child(True)
+        self.read_write = rw
+
+        def low(paned, _p):  # the input line as small as it goes, the posts the rest
+            if not getattr(paned, "placed", False) and paned.get_property("max-position") > 0:
+                paned.placed = True
+                paned.set_position(paned.get_property("max-position"))
+        rw.connect("notify::max-position", low)
+        self.roster = split.RosterWindow(self, self.app)
+        self._pointer_y = None
+        return rw
+
+    def select_lane(self, name):
+        """A lane in front: its row in the sidebar (and so its tab, in the split layout)."""
+        row = self.lane_rows.get(name)
+        if row is None:
+            return
+        if self.sidebar.get_selected_row() is row:
+            self._lane_selected(self.sidebar, row)
+        else:
+            self.sidebar.select_row(row)
+
+    def _lane_tab(self, name):
+        """split: the lane in a tab of its own (made the first time; ✕ puts it away, its
+        place and filters kept for when it opens again)."""
+        lv = self._lane_view(name)
+        if name not in self.lane_tabs:
+            if lv.get_parent() is self.stack:
+                self.stack.remove(lv)
+            lv.set_visible(True)
+            label = Gtk.Box(spacing=4)
+            text = Gtk.Label(label=self.lane_title(name))
+            text.set_ellipsize(Pango.EllipsizeMode.END)
+            text.set_width_chars(min(len(self.lane_title(name)) + 4, 20))
+            text.set_max_width_chars(28)
+            label.append(text)
+            label.text = text
+            close = Gtk.Button(icon_name="window-close-symbolic")
+            close.add_css_class("flat")
+            close.connect("clicked", lambda _b, n=name: self.close_lane_tab(n))
+            label.append(close)
+            self.tabs.append_page(lv, label)
+            self.tabs.set_tab_reorderable(lv, True)
+            self.lane_tabs[name] = lv
+            self._watch_pointer(lv)
+        self.tabs.set_current_page(self.tabs.page_num(lv))
+        self.update_badges()
+        return lv
+
+    def close_lane_tab(self, name):
+        lv = self.lane_tabs.pop(name, None)
+        if lv is None:
+            return
+        self.tabs.remove_page(self.tabs.page_num(lv))
+        self.stack.add_named(lv, name)
+        if hasattr(lv, "hidden"):
+            lv.hidden()
+
+    def open_talk(self, account):
+        """Our private talk with someone, a tab of its own (the split layout)."""
+        from . import split
+        key = "talk:" + account.id
+        page = self.extra_tabs.get(key)
+        if page is None:
+            page = split.TalkPage(self, account)
+            tab = Gtk.Box(spacing=4)
+            tab.append(Gtk.Label(label=page.title))
+            close = Gtk.Button(icon_name="window-close-symbolic")
+            close.add_css_class("flat")
+            close.connect("clicked", lambda _b: self.close_extra(key))
+            tab.append(close)
+            self.tabs.append_page(page, tab)
+            self.extra_tabs[key] = page
+        self.tabs.set_current_page(self.tabs.page_num(page))
+        return page
+
+    def write_to(self, account):
+        """A private message to someone: the input line and a talk in the split layout,
+        else the editor with "@them ", direct."""
+        if self.dock is not None:
+            self.present()
+            self.open_talk(account)
+            self.dock.write_to(account)
+            return
+        panel = self.compose(text="@" + account.handle + " ")
+        if panel is not None:
+            panel._set_vis("direct")
+
+    def _watch_pointer(self, lv):
+        """The author bar follows the post under the pointer, or, scrolled by keys or
+        the wheel without it, the lowest one wholly on screen."""
+        if self.author_bar is None or not hasattr(lv, "list"):
+            return
+        motion = Gtk.EventControllerMotion()
+
+        def moved(_c, _x, y):
+            self._pointer_y = y
+            self._follow_author(lv)
+        motion.connect("motion", moved)
+        motion.connect("leave", lambda *_a: setattr(self, "_pointer_y", None))
+        lv.list.add_controller(motion)
+        lv.adj.connect("value-changed", lambda _a: self._follow_author(lv))
+
+    def _follow_author(self, lv=None):
+        from . import split
+        if self.author_bar is None:
+            return
+        page = self.tabs.get_nth_page(self.tabs.get_current_page())
+        lv = lv if lv is not None else page
+        if lv is not page or not hasattr(lv, "rows"):
+            self.author_bar.set_who(None)
+            return
+        post = split.post_at(lv, self._pointer_y)
+        self.author_bar.set_who(split.split.other_side(
+            post, self.view.me, self.dock.target if self.dock else None))
 
     def _shortcuts(self):
         """The same keys as the Qt window where it has the thing: Ctrl+L the command line,
@@ -724,9 +874,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def _connected(self, _me):
         self._show_me()
         self.status(_("first_poll"), seconds=0)  # until the first round is in
-        if self.cfg["ui"].get("layout") == "split":  # not here yet: say so, not silently
-            log.warning("ui.layout = split: the GTK window has no split layout yet")
-            self._after_first_poll = _("gtk_no_split")
+        if self.roster is not None:
+            self.roster.present()
+            self.roster.refresh()
         self._rebuild_sidebar()
         if self.cfg["ui"].get("layout") == "columns":
             self.set_columns(True)
@@ -778,6 +928,12 @@ class MainWindow(Gtk.ApplicationWindow):
         if not isinstance(row, LaneRow):
             return
         name = row.name
+        if self.split_mode:
+            lv = self._lane_tab(name)
+            self.view.set_active_lane(name)
+            self.view.set_state("lane", name)
+            lv.shown()
+            return
         if self.columns is not None:  # in columns: that column (added if not there)
             if name not in self.columns.frames:
                 self.columns.add(name, self._lane_view(name))
@@ -812,6 +968,10 @@ class MainWindow(Gtk.ApplicationWindow):
         return self.view.lane_title(name) or _("lane_" + _base(name))
 
     def lane_on_screen(self, name):
+        if self.split_mode:
+            lv = self.lane_tabs.get(name)
+            return lv is not None and \
+                self.tabs.get_nth_page(self.tabs.get_current_page()) is lv
         if self.columns is not None:
             return self.tabs.get_current_page() == 0 and name in self.columns.frames
         return self.tabs.get_current_page() == 0 and self._current_lane() == name
@@ -823,6 +983,13 @@ class MainWindow(Gtk.ApplicationWindow):
         folded = sidebar.folded(self.view)
         for group, head in self.sections.items():
             head.show_fold(group in folded, sum(numbers.get(n, 0) for n in head.names))
+        for name, lv in self.lane_tabs.items():  # split: "Лента (3)" on the lane's tab
+            label = self.tabs.get_tab_label(lv)
+            n = numbers.get(name, 0)
+            if label is not None and hasattr(label, "text"):
+                label.text.set_text(self.lane_title(name) + (f" ({n})" if n else ""))
+        if self.roster is not None:
+            self.roster.refresh_soon()
 
     def _row_activated(self, _box, row):
         """A section's title clicked: it folds away (or comes back), as in Qt."""
@@ -841,6 +1008,17 @@ class MainWindow(Gtk.ApplicationWindow):
                 lv.window_activated()
 
     def _tab_switched(self):
+        if self.split_mode:  # the tabs are the conversations: always shown
+            page = self.tabs.get_nth_page(self.tabs.get_current_page())
+            if self.dock is not None and page is not None:
+                self.dock.follow(page)
+            if self.author_bar is not None:
+                self.author_bar.set_visible(hasattr(page, "rows"))
+                self._follow_author()
+            name = next((n for n, lv in self.lane_tabs.items() if lv is page), None)
+            if name is not None:
+                self.view.set_active_lane(name)
+            return GLib.SOURCE_REMOVE
         self.tabs.set_show_tabs(self.tabs.get_n_pages() > 1)
         return GLib.SOURCE_REMOVE
 
@@ -857,6 +1035,9 @@ class MainWindow(Gtk.ApplicationWindow):
                         lv.refresh()
                     else:
                         lv.dirty = True
+            for page in self.extra_tabs.values():  # split: the talks take theirs in
+                if hasattr(page, "add_sent"):
+                    page.refresh()
             self.update_badges()
         elif name == "status_updated" and payload is not None:
             self._post_changed(payload)
@@ -921,12 +1102,17 @@ class MainWindow(Gtk.ApplicationWindow):
         page, box, title = self._new_tab(_("thread_loading"),
                                          lambda: self.close_thread(root))
         page.focus_id = root
+        page.posts = []
         self.threads[root] = page
 
         def got(items):
             ctx = Ctx(self.cfg, self.view, self.theme, self.bridge, self, in_thread=True,
                       images=self.images)
             posts = [it.post for it in items]
+            page.posts = posts
+            if self.dock is not None and \
+                    self.tabs.get_nth_page(self.tabs.get_current_page()) is page:
+                self.dock.follow(page)
             unread = self.view.unread(posts)
             short = self.view.short_ids(posts)
             focus = None
@@ -1126,6 +1312,23 @@ class MainWindow(Gtk.ApplicationWindow):
         return dlg
 
     def compose(self, reply_to=None, invite=False, edit=None, quote=None, text=""):
+        if self.dock is not None and not (invite or edit or quote) and \
+                self.view.me is not None and not (text and reply_to):
+            # the split layout: a reply or a new post goes into the input line
+            self.present()
+            if isinstance(reply_to, str):
+                reply_to = self.view.by_id(reply_to)
+            if reply_to is not None:
+                self.dock.reply_to(real(reply_to))
+            elif text:
+                self.dock.start_with(text)
+            else:
+                self.dock.text.grab_focus()
+            return None
+        return self.compose_panel(reply_to, invite, edit, quote, text)
+
+    def compose_panel(self, reply_to=None, invite=False, edit=None, quote=None, text=""):
+        """The full editor, whatever the layout."""
         from .compose import ComposeWindow
         if self.view.me is None:
             return None
@@ -1150,6 +1353,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status(_("handle_copied", handle=handle))
 
     def put_alias(self, alias):
+        if self.dock is not None:
+            self.dock.put_alias(alias)
+            return
         if self.cmdline is not None:
             self.cmdline.put_alias(alias)
 
@@ -1200,6 +1406,9 @@ class MainWindow(Gtk.ApplicationWindow):
             return 1000, 720
 
     def _close_request(self, _win):
+        if self.roster is not None and not self.quitting and self.roster.get_visible():
+            self.set_visible(False)  # the messages window goes; the roster stays (QIP)
+            return True
         w, h = self.get_default_size()
         if w > 0 and h > 0:
             self.view.set_state("gtk_window", f"{w}x{h}")
@@ -1207,6 +1416,8 @@ class MainWindow(Gtk.ApplicationWindow):
             self.columns_changed()
         self.quitting = True
         self._stop()
+        if self.roster is not None and self.roster.get_visible():
+            self.roster.close()
         return False
 
     def _stop(self, *_a):

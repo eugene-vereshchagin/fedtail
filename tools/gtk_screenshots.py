@@ -147,12 +147,13 @@ def shoot(win, path):
     texture.save_to_png(str(path))
 
 
-def run(out, theme_name, dark, extras=False):
+def run(out, theme_name, dark, extras=False, layout="single"):
     tmp = Path(tempfile.mkdtemp(dir=_tmp))
     FakeApi.world = world()
     cfg, _w = config.validate({"feed": {"first_run_mark_read": False},
                                "ui": {"theme": theme_name, "frontend": "gtk",
-                                      "start_lane": "home", "adwaita": "off"}})
+                                      "start_lane": "home", "adwaita": "off",
+                                      "layout": layout}})
     p = paths.resolve("shots", config=str(tmp / "c.toml"), data=str(tmp / "d"))
     auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
     core = Core(cfg, p, api_class=FakeApi)
@@ -168,7 +169,8 @@ def run(out, theme_name, dark, extras=False):
     pump(1.0)
     core.poll_once()
     pump(1.5)
-    name = f"gtk-{theme_name}-{'dark' if dark else 'light'}.png"
+    name = f"gtk-{theme_name}-{'dark' if dark else 'light'}" + \
+        ("" if layout == "single" else f"-{layout}") + ".png"
     shoot(win, out / name)
     lane = win.lane_views.get("home")
     if lane is not None:  # and the lane's end: the picture, the newest posts
@@ -177,6 +179,9 @@ def run(out, theme_name, dark, extras=False):
         shoot(win, out / name.replace(".png", "-end.png"))
     if extras:
         shoot_extras(win, out, name.replace(".png", ""))
+    if win.roster is not None:  # the split layout: the roster beside it
+        shoot(win.roster, out / name.replace(".png", "-roster.png"))
+        win.quitting = True
     win.close()
     win.destroy()
     core.shutdown()
@@ -221,6 +226,8 @@ def main():
     for i, name in enumerate(names):
         for dark in (False, True):
             run(out, name, dark, extras=(i == 0 and dark))
+        if i == 0:
+            run(out, name, True, layout="split")
     return 0
 
 
