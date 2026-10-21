@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import _
-from ...model import VISIBILITIES
+from ...model import VISIBILITIES, Scheduled
 from ...model.text import reply_mentions
 from .card import VIS_KEY
 
@@ -343,7 +343,13 @@ class InputDock(QWidget):
             self.cw.clear()
             self.cw_btn.setChecked(False)
             self.target = None
-            self.win.after_post(st, target)
+            front = self.win.tabs.currentWidget()
+            if isinstance(front, TalkWidget) and st is not None and \
+                    not isinstance(st, Scheduled):
+                front.add_sent(st)  # in the talk at once, not a thread of its own
+                self.win.statusBar().showMessage(_("sent"), 4000)
+            else:
+                self.win.after_post(st, target)
             self.follow(self.win.tabs.currentWidget())
 
         def failed(err):
@@ -954,6 +960,7 @@ class TalkWidget(QWidget):
         from .feed import FeedView
         self.win, self.who = win, account
         self.title = account.name or account.username or account.handle
+        self.sent = {}  # my messages sent from here, until the Direct lane has them
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         self.view = FeedView(win.ctx)
@@ -969,12 +976,22 @@ class TalkWidget(QWidget):
         self._timer.start()
         self.refresh()
 
+    def add_sent(self, post):
+        """A message of mine just sent: here at once, before the Direct lane has it."""
+        self.sent[post.id] = post
+        self._key = None
+        self.refresh()
+        QTimer.singleShot(0, lambda: self.view.scroll_to_end(True))
+
     def refresh(self):
         from .card import make_spec
         view = self.win.ctx.view
         if "direct" not in self.win.core.lane_by_name:
             return
         mine = talk_with(view, view.entries("direct"), self.who.handle)
+        have = {e.id for _i, e in mine}
+        mine += [(None, p) for pid, p in self.sent.items() if pid not in have]
+        mine.sort(key=lambda x: (x[1].created is not None, x[1].created or 0))
         unread = view.unread([e for _i, e in mine])
         key = (tuple(e.id for _i, e in mine), tuple(sorted(unread)))
         if key == self._key:

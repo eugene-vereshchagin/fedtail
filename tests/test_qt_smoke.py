@@ -2323,6 +2323,9 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIn(who.handle, card.lines.text())
         card.away()
         win._on_event("read_changed", [])  # a talk's tab takes read marks too
+        talk = win.tabs.currentWidget()
+        talk.add_sent(thread.posts[0])  # mine just sent: in the talk at once
+        self.assertIn(thread.posts[0].id, [sp.key for sp in talk.view.model])
         win.write_to(who)  # again: the same tab
         self.assertEqual(sum(isinstance(w, TalkWidget) for w in win.extra_tabs()), 1)
         self.assertEqual(talk_with(win.ctx.view, [], who.handle), [])

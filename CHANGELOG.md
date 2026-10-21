@@ -6,6 +6,8 @@
   "into the thread, a reply to andy · seen by: followers", "new post · seen by: all",
   "✉ privately to sn4il · seen by: only those mentioned". In a thread it answers the
   post you came for, else the thread's newest — not the last branch of the tree.
+- A private message sent from a talk's tab shows in the talk at once (it opened a
+  thread tab of its own and the talk waited for the next poll).
 - A quick scroll reads what it went over: a post the screen passed whole while you
   scrolled by the wheel or the keys is read, without dwelling on each (a jump — the
   scroll bar dragged far, End — still counts nothing). The check looks at the cards on
