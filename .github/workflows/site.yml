@@ -1,0 +1,26 @@
+# Rebuild the project's website (a private repo of its own, hosted on Cloudflare
+# Workers): nightly, so its "coming next" page follows main's CHANGELOG, and by hand
+# (Actions → site → Run workflow). Releases rebuild it from ci.yml's release job.
+# Lives here because this repo is public: Actions minutes are free.
+# Needs the secret SITE_DEPLOY_HOOK — the Workers Builds deploy hook URL.
+name: site
+on:
+  schedule:
+    - cron: "37 1 * * *"   # 05:37 in Tbilisi
+  workflow_dispatch:
+permissions: {}
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the site's deploy hook
+        env:
+          HOOK: ${{ secrets.SITE_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::no SITE_DEPLOY_HOOK secret in this repo: the site can't be rebuilt"
+            exit 1
+          fi
+          curl -fsS -X POST "$HOOK"
+          echo
+          echo "build requested"

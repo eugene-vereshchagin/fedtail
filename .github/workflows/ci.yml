@@ -279,5 +279,5 @@ jobs:
         env:
           HOOK: ${{ secrets.SITE_DEPLOY_HOOK }}
         run: |
-          if [ -z "$HOOK" ]; then echo "no SITE_DEPLOY_HOOK secret: site not rebuilt"; exit 0; fi
+          if [ -z "$HOOK" ]; then echo "::warning::no SITE_DEPLOY_HOOK secret: the site was not rebuilt"; exit 0; fi
           curl -fsS -X POST "$HOOK" || echo "::warning::the site's deploy hook failed"
