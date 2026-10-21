@@ -14,7 +14,7 @@ from ...model import VISIBILITIES, Scheduled, real
 from ...model.text import snippet
 from ..common import compose as rules
 from ..common.actions import vis_word
-from .gi_setup import GLib, Gtk, Pango
+from .gi_setup import GLib, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class ComposeWindow(Gtk.Window):
 
         bar = Gtk.Box(spacing=6)
         self.cw_btn = Gtk.ToggleButton(label="CW")
-        self.cw_btn.set_tooltip_text(_("cw_placeholder"))
+        tip(self.cw_btn, _("cw_placeholder"))
         self.cw_btn.connect("toggled", lambda b: self._toggle_cw(b.get_active()))
         bar.append(self.cw_btn)
         self.vis = Gtk.DropDown.new_from_strings([vis_word(v) for v in VISIBILITIES])
@@ -79,11 +79,11 @@ class ComposeWindow(Gtk.Window):
         self.attach_btn.connect("clicked", lambda _b: self.attach())
         bar.append(self.attach_btn)
         self.poll_btn = Gtk.ToggleButton(label=_("poll_add"))
-        self.poll_btn.set_tooltip_text(_("poll_add_tip"))
+        tip(self.poll_btn, _("poll_add_tip"))
         self.poll_btn.connect("toggled", lambda b: self._toggle_poll(b.get_active()))
         bar.append(self.poll_btn)
         self.sensitive_btn = Gtk.ToggleButton(label="⚠")
-        self.sensitive_btn.set_tooltip_text(_("sensitive_mark"))
+        tip(self.sensitive_btn, _("sensitive_mark"))
         self.sensitive_btn.set_visible(False)
         bar.append(self.sensitive_btn)
         self.counter = Gtk.Label()
@@ -263,7 +263,7 @@ class ComposeWindow(Gtk.Window):
         row.append(alt)
         rm = Gtk.Button(label="✕")
         rm.add_css_class("flat")
-        rm.set_tooltip_text(_("detach"))
+        tip(rm, _("detach"))
         item = [path, alt]
         rm.connect("clicked", lambda _b: self._remove_media(item, row))
         row.append(rm)

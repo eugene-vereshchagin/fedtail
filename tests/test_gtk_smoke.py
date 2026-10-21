@@ -112,6 +112,17 @@ class GtkSmokeTest(unittest.TestCase):
         self.win.update_badges()
         self.assertFalse(self.win.lane_rows["home"].badge.get_visible())
 
+    def test_main_menu_and_a_narrow_window(self):
+        for name in ("write", "refresh", "profile", "config", "logs", "about", "quit"):
+            self.assertIsNotNone(self.win.lookup_action(name), name)
+        lane = self._lane("home")
+        self.win.set_default_size(560, 500)  # ui.max_width is wider: the column narrows
+        self.assertTrue(pump(lambda: 0 < self.win.get_width() <= 600, 3),
+                        f"the window stays {self.win.get_width()} px wide")
+        pump(timeout=0.3)
+        self.assertLessEqual(lane.list.get_width(), lane.get_width())
+        self.assertLessEqual(lane.get_width(), self.win.get_width())
+
     def test_a_section_folds(self):
         from fedtail.frontends.gtk.window import SectionRow
         heads = [r for r in _walk(self.win.sidebar) if isinstance(r, SectionRow)]

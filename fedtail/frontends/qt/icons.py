@@ -104,10 +104,54 @@ def _styled(text, style, base):
         .replace("{d}", dark.name())
 
 
+def _theme_own(name, theme, style, size):
+    """The theme's own picture of this name (themefile.icon_dirs): a PNG as it is, an
+    SVG coloured as ours are ({c} {l} {d}). None when the theme has none."""
+    for d in getattr(theme, "icon_dirs", ()):
+        for ext in (".svg", ".png"):
+            p = Path(d) / f"{name}{ext}"
+            if not p.is_file():
+                continue
+            key = ("own", str(p), style, theme.c["accent"].name(), size)
+            if key in _cache:
+                return _cache[key]
+            if ext == ".png" or QSvgRenderer is None:
+                if ext == ".svg":
+                    continue
+                _cache[key] = QIcon(str(p))
+                return _cache[key]
+            try:
+                text = p.read_text(encoding="utf-8")
+            except OSError as e:
+                log.debug("icon %s: %s", p, e)
+                continue
+            base = QColor(OWN.get(name) or theme.c["accent"])
+            _cache[key] = _render(_styled(text, style, base), size)
+            return _cache[key]
+    return None
+
+
+def _render(svg, size):
+    renderer = QSvgRenderer(QByteArray(svg.encode()))
+    out = QIcon()
+    for scale in (1, 2):
+        pm = QPixmap(size * scale, size * scale)
+        pm.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pm)
+        renderer.render(p)
+        p.end()
+        pm.setDevicePixelRatio(scale)
+        out.addPixmap(pm)
+    return out
+
+
 def icon(name, theme, size=16):
     """A QIcon of this picture in the theme's colours and the theme's set (an empty one
     if there's none)."""
     style = icon_set(theme)
+    own = _theme_own(name, theme, style, size)
+    if own is not None:
+        return own
     if style == "psi":  # Psi+'s own pictures where it has one, else ours drawn flat
         png = PSI / f"{name}.png"
         if png.is_file():
@@ -132,17 +176,7 @@ def icon(name, theme, size=16):
     except OSError as e:
         log.debug("icon %s: %s", name, e)
         return QIcon()
-    svg = _styled(text, style, base)
-    renderer = QSvgRenderer(QByteArray(svg.encode()))
-    out = QIcon()
-    for scale in (1, 2):
-        pm = QPixmap(size * scale, size * scale)
-        pm.fill(Qt.GlobalColor.transparent)
-        p = QPainter(pm)
-        renderer.render(p)
-        p.end()
-        pm.setDevicePixelRatio(scale)
-        out.addPixmap(pm)
+    out = _render(_styled(text, style, base), size)
     _cache[key] = out
     return out
 

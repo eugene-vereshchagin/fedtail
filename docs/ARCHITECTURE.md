@@ -547,6 +547,7 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `arrived` | [(post id, reply-to id)] | new posts stored | thread tabs grow, faces |
 | `thread_grew` | root id | a followed thread got replies | its tab reloads |
 | `rate_limited` | {until, left, …} | the server's budget is low | one status line |
+| `first_poll_done` | None | the first round of polling is over | "getting the lanes…" leaves the status bar |
 | `capabilities_changed` | feature | the server answered "no such thing" | buttons hide at once |
 | `prefetch` / `prefetch_video` | [urls] | after a poll | pictures/videos fetched ahead |
 

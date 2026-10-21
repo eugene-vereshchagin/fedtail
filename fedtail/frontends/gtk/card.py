@@ -11,7 +11,7 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
-from .gi_setup import Gdk, GLib, Gtk, Pango
+from .gi_setup import Gdk, GLib, Gtk, Pango, tip
 
 THUMB_H = 180       # px: a picture's height in a card
 QUOTE_DEPTH = 1     # a quoted post shows its own quote no deeper than this
@@ -175,7 +175,7 @@ class Card(Gtk.Box):
         self.more.set_child(Gtk.Label(label="⋯"))  # (a label of its own: no ▾ beside it)
         self.more.add_css_class("flat")
         self.more.add_css_class("ft-action")
-        self.more.set_tooltip_text(_("more"))
+        tip(self.more, _("more"))
         self.more.set_create_popup_func(self._fill_menu)
         bar.append(self.more)
         col.append(bar)
@@ -235,7 +235,7 @@ class Card(Gtk.Box):
                 pic.set_overflow(Gtk.Overflow.HIDDEN)
                 pic.set_alternative_text(m.alt or None)
                 if m.alt:
-                    pic.set_tooltip_text(m.alt)
+                    tip(pic, m.alt)
                 self.ctx.images.get(m.preview or m.url, pic.set_paintable)
                 click = Gtk.GestureClick()
                 click.connect("released", lambda *_a, u=m.url or m.remote_url:
@@ -322,7 +322,7 @@ class Card(Gtk.Box):
             b.add_css_class("flat")
             if bt.active:
                 b.add_css_class("ft-active")
-            b.set_tooltip_text(bt.label + ("\n" + _("who_right_click") if bt.who else ""))
+            tip(b, bt.label + ("\n" + _("who_right_click") if bt.who else ""))
             b.connect("clicked", lambda _b, u=bt.url: self.ctx.on_link(u))
             if bt.who:
                 right = Gtk.GestureClick(button=3)

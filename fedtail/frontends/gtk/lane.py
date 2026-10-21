@@ -26,7 +26,7 @@ from ...i18n import _
 from ...model import Share, real
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator
-from .gi_setup import GLib, Gtk
+from .gi_setup import GLib, Gtk, Pango, clamp, tip
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class LaneView(Gtk.Box):
         self.title = Gtk.Label(label=ctx.theme.word("lane_title", title), xalign=0)
         self.title.add_css_class("ft-lane-title")
         self.title.set_hexpand(True)
+        self.title.set_ellipsize(Pango.EllipsizeMode.END)  # never wider than the window
         header.append(self.title)
         self.pill = Gtk.Label()
         self.pill.add_css_class("ft-new-pill")
@@ -90,7 +91,15 @@ class LaneView(Gtk.Box):
         header.append(self.pill)
         self.info = Gtk.Label(xalign=1)
         self.info.add_css_class("ft-muted")
+        self.info.set_ellipsize(Pango.EllipsizeMode.END)
         header.append(self.info)
+        # the controls wrap to a second line in a narrow window, never past its edge
+        tools = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False,
+                            min_children_per_line=1, max_children_per_line=8,
+                            column_spacing=6, row_spacing=4)
+        tools.set_halign(Gtk.Align.END)
+        tools.set_valign(Gtk.Align.CENTER)
+        header.append(tools)
         self._filter_buttons = {}
         if len(self.lm.filters) > 1:
             group, words = None, {"all": ("show_all", "show_all_tip"),
@@ -101,7 +110,7 @@ class LaneView(Gtk.Box):
             now = self.lm.current_filter()
             for which in self.lm.filters:
                 b = Gtk.ToggleButton(label=_(words[which][0]))
-                b.set_tooltip_text(_(words[which][1]))
+                tip(b, _(words[which][1]))
                 if group is not None:
                     b.set_group(group)
                 group = group or b
@@ -109,19 +118,19 @@ class LaneView(Gtk.Box):
                 b.connect("toggled", lambda b, w=which: b.get_active() and self.set_filter(w))
                 self._filter_buttons[which] = b
                 seg.append(b)
-            header.append(seg)
+            tools.append(seg)
         if self.lm.conversations_offered():
             conv = Gtk.ToggleButton(label=_("conv_mode"))
-            conv.set_tooltip_text(_("conv_mode_tip"))
+            tip(conv, _("conv_mode_tip"))
             conv.set_active(self.lm.conversations())
             conv.connect("toggled", lambda b: self.set_conversations(b.get_active()))
-            header.append(conv)
-        header.append(self._media_button())
+            tools.append(conv)
+        tools.append(self._media_button())
         read = Gtk.Button(label=_("mark_all_read"))
         read.add_css_class("flat")
         read.connect("clicked", lambda _b: self.mark_all_read())
-        read.set_visible(not self.lazy)
-        header.append(read)
+        if not self.lazy:
+            tools.append(read)
         self.append(header)
 
         self.older = Gtk.Button(label=_("older_down") if self.newest_first else _("older_up"))
@@ -142,9 +151,8 @@ class LaneView(Gtk.Box):
             column.append(self.older)
         column.set_hexpand(True)
         max_width = int(ctx.cfg["ui"].get("max_width") or 0)
-        if max_width:
-            column.set_halign(Gtk.Align.CENTER)
-            column.set_size_request(min(max_width, 4000), -1)
+        if max_width:  # a column at most this wide — narrower with the window
+            column = clamp(column, min(max_width, 4000))
 
         self.scroll = Gtk.ScrolledWindow()
         self.scroll.add_css_class("ft-view")
@@ -225,7 +233,7 @@ class LaneView(Gtk.Box):
     def _media_button(self):
         """The funnel: posts with pictures, gifs, video… only, boosts or not."""
         button = Gtk.MenuButton(icon_name="view-filter-symbolic")
-        button.set_tooltip_text(_("media_filter_tip"))
+        tip(button, _("media_filter_tip"))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         checks, quiet = {}, []
 
@@ -465,6 +473,12 @@ class LaneView(Gtk.Box):
 
     def _let_go(self):
         self._hold_timer = 0
+        if not self.stopped and self.get_mapped() and \
+                any(c.get_height() <= 0 for c in self.rows.values()):
+            # cards made but not laid out yet (a slow frame): their height is still to
+            # come, so the view is held on until it has
+            self._hold_timer = GLib.timeout_add(HOLD_MS // 2, self._let_go)
+            return GLib.SOURCE_REMOVE
         self._keep_anchor(None, None)
         if self._ticking:
             self.list.remove_tick_callback(self._ticking)

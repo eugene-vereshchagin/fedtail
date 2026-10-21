@@ -57,6 +57,7 @@ class Theme:
         self.shape = data["shape"]
         self.words = data["words"]
         self.icon = data.get("icon", {})
+        self.icon_dirs = list(data.get("icon_dirs") or ())  # the theme's own pictures
         self.warnings = list(warnings)
         # every colour worked out by palette.py (the GTK window's too): "auto" from the
         # desktop's palette, the ones that follow or tint others

@@ -459,6 +459,8 @@ class Core(SocialMixin):
                 else logging.DEBUG
             log.log(level, "poll #%d took %.2f s%s", self._poll_count, took,
                     f" ({steps})" if steps and took > slow else "")
+            if self._poll_count == 1:  # the window said "getting the lanes…": done now
+                self.emit("first_poll_done", None)
 
     def _step(self, name):
         """Poll timing: the time since the last step goes to name (summed)."""

@@ -7,7 +7,7 @@ from ...core.commands import parse
 from ...i18n import _
 from ..common import compose as rules
 from ..common.commands import Commands, Failed, History, preview
-from .gi_setup import Gtk, Pango
+from .gi_setup import Gtk, Pango, tip
 
 
 class CommandLine(Gtk.Box):
@@ -18,7 +18,7 @@ class CommandLine(Gtk.Box):
         self.set_margin_start(8)
         self.set_margin_end(8)
         self.entry = Gtk.Entry(placeholder_text=_("cmd_placeholder"))
-        self.entry.set_tooltip_text(_("cmd_tip"))
+        tip(self.entry, _("cmd_tip"))
         self.entry.set_hexpand(True)
         self.entry.connect("changed", lambda e: self._hint(preview(self.view, e.get_text())))
         self.entry.connect("activate", lambda _e: self.run())

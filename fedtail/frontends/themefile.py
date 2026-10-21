@@ -103,6 +103,19 @@ def reference():
     return _read(BUILTIN_DIR / f"{REFERENCE}.toml")
 
 
+def icon_dirs(chain):
+    """Where a theme's own button pictures lie: a folder named as the theme, with
+    icons/ in it, next to its file (themes/mine.toml → themes/mine/icons/reply.svg or
+    .png) — the theme's own first, then those of the themes it inherits. A picture not
+    there is drawn from the built-in set (shape.icon_set)."""
+    out = []
+    for path, _data in chain:
+        d = path.parent / path.stem / "icons"
+        if d.is_dir():
+            out.append(str(d))
+    return out
+
+
 def load(name):
     """Fully resolved theme dict for `name`, plus warnings. Raises ThemeError."""
     chain, seen, current = [], set(), name
@@ -131,6 +144,7 @@ def load(name):
     warnings = validate(merged, ref)
     merged["id"] = name
     merged["font"]["files"] = files
+    merged["icon_dirs"] = icon_dirs(chain)
     return merged, warnings
 
 

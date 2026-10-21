@@ -48,7 +48,7 @@ from ...model import Account, Post, Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet
 from .. import themefile
-from ..common import sidebar
+from ..common import results, sidebar
 from ..common.links import Links
 from . import badge
 from . import card as card_module
@@ -1001,8 +1001,12 @@ class MainWindow(QMainWindow):
         self._show_me(me)
         for w in self.theme.warnings:
             self.error(w)
-        self.statusBar().showMessage(_("connected", acct=self.ctx.view.acc(me).handle,
-                                       server=self.core.auth["server"]), 8000)
+        # until the first round of polling is in, the bar says so (a slow connection
+        # would otherwise show empty lanes and nothing else)
+        self._hello = _("connected", acct=self.ctx.view.acc(me).handle,
+                        server=self.core.auth["server"])
+        self._waiting_text = f"{self._hello} · {_('first_poll')}"
+        self.statusBar().showMessage(self._waiting_text)
         self._after_connect(me)
 
     def _show_me(self, me):
@@ -1580,10 +1584,12 @@ class MainWindow(QMainWindow):
                 if getattr(w, "view", None) is not None:
                     w.view.remove_status(payload)
             self.statusBar().showMessage(_("deleted"), 4000)
+        elif name == "first_poll_done":
+            if self.statusBar().currentMessage() == getattr(self, "_waiting_text", None):
+                self.statusBar().showMessage(self._hello, 5000)
         elif name == "rate_limited":
             # the server asks to wait: once, with when, not an error per lane
-            when = time.strftime("%H:%M", time.localtime(payload.get("until") or time.time()))
-            self.statusBar().showMessage(_("rate_limited", until=when), 20_000)
+            self.statusBar().showMessage(results.rate_text(payload), 20_000)
         elif name == "capabilities_changed":
             # the server answered for a feature: what offers it shows or hides now
             for w in list(self.lane_widgets.values()) + self.extra_tabs():

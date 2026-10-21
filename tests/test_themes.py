@@ -39,6 +39,16 @@ class ThemeFileTest(unittest.TestCase):
         self.assertEqual(theme["words"]["date"], "{dd}.{mm} {time}")
         self.assertIn("mine", themefile.available())
 
+    def test_a_theme_brings_its_own_pictures(self):
+        self.write("base", 'inherit = "system"\n')
+        self.write("mine", 'inherit = "base"\n')
+        for name in ("mine", "base"):
+            (self.dir / name / "icons").mkdir(parents=True)
+        theme, _ = themefile.load("mine")
+        self.assertEqual(theme["icon_dirs"], [str(self.dir / "mine" / "icons"),
+                                              str(self.dir / "base" / "icons")])
+        self.assertEqual(themefile.load("system")[0]["icon_dirs"], [])
+
     def test_user_file_wins_over_builtin(self):
         self.write("terminal", 'inherit = "system"\n[colors]\ntext = "#123456"\n')
         theme, _ = themefile.load("terminal")

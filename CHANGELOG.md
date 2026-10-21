@@ -32,6 +32,22 @@
   not); sidebar sections fold away, showing what's unread in them; pictures come from
   the same disk cache as in Qt, read small, asked again when a server was only busy,
   fetched ahead for posts just come; "mark read on open" works there too.
+- The GTK window, after the first real try: a ☰ menu (write, refresh, all read, the
+  command line, my profile, the config, themes, data and log folders, about, quit); the
+  lanes no longer go past the window's edge (ui.max_width was taken for the narrowest
+  width); building cards no longer holds the window for a third of a second at a time
+  on KDE (tooltips are given when asked for — setting them ahead went over the
+  accessibility bus); the view is held still until new cards above are laid out (it
+  scrolled by itself on a slow frame); the sidebar counts no "unread" in Local and
+  Federated; the server's "slow down" is a sentence, not `{'until': …}`, and status
+  lines go away after a while; WebP pictures (GoToSocial's) are read through Pillow when
+  GTK can't (else the log says to install webp-pixbuf-loader).
+- Both windows say "Getting the lanes from the server…" until the first round of
+  polling is in — on a slow connection the empty lanes looked broken.
+- A theme can bring its own button pictures: `themes/<name>/icons/<picture>.svg` or
+  `.png` next to `themes/<name>.toml` (inherited from the themes it builds on; an SVG
+  coloured by the theme as the built-in ones are); what it doesn't have comes from
+  `shape.icon_set`.
 - Inside: the rest of the decisions moved out of the Qt window into `frontends/common/`
   — what a lane shows (the divider, the filters, conversations, where reading starts,
   what counts as read), the picture cache, the sidebar's numbers and folds, the split

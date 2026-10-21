@@ -32,10 +32,10 @@ def decode(data, max_side):
             loader.close()
         except GLib.Error:
             pass
-        return None
+        return _with_pillow(data, max_side)
     pix = loader.get_pixbuf()
     if pix is None:
-        return None
+        return _with_pillow(data, max_side)
     try:  # the pixels as they are (new_for_pixbuf is deprecated in newer GTK)
         fmt = Gdk.MemoryFormat.R8G8B8A8 if pix.get_has_alpha() else Gdk.MemoryFormat.R8G8B8
         return Gdk.MemoryTexture.new(pix.get_width(), pix.get_height(), fmt,
@@ -44,8 +44,31 @@ def decode(data, max_side):
         return Gdk.Texture.new_for_pixbuf(pix)
 
 
+def _with_pillow(data, max_side):
+    """What GdkPixbuf can't read (WebP — what GoToSocial serves — without
+    webp-pixbuf-loader, AVIF…): through Pillow, when it's there. None otherwise."""
+    try:
+        import io
+
+        from gi.repository import Gdk
+        from PIL import Image
+    except ImportError:
+        return None
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.draft("RGB", (max_side, max_side))  # a JPEG read small
+        img = img.convert("RGBA")
+        img.thumbnail((max_side, max_side))
+    except Exception:  # noqa: BLE001 — anything Pillow can't read: no picture
+        return None
+    w, h = img.size
+    return Gdk.MemoryTexture.new(w, h, Gdk.MemoryFormat.R8G8B8A8,
+                                 GLib.Bytes.new(img.tobytes()), w * 4)
+
+
 class Images(common.Cache):
-    FORMAT_HINT = "GdkPixbuf can't read this format (webp-pixbuf-loader?)"
+    FORMAT_HINT = ("GTK can't read this format — WebP needs webp-pixbuf-loader "
+                   "(or python3-pil), AVIF libavif-gdk-pixbuf")
 
     def decode(self, data, max_side):
         return decode(data, max_side)

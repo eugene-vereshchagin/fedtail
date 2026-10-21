@@ -246,8 +246,11 @@ class Cache:
             img = self.decode(data, max_side)
             if img is None:  # downloaded fine, but can't be read (webp, avif, heic…)
                 self.why[url] = ("format", kind or "?")
-                log.warning("image %s: %s, %d B — %s", _where(url), kind or "unknown type",
-                            len(data), self.FORMAT_HINT)
+                said = self.__dict__.setdefault("_formats_said", set())
+                (log.debug if kind in said else log.warning)(
+                    "image %s: %s, %d B — %s", _where(url), kind or "unknown type",
+                    len(data), self.FORMAT_HINT)  # once per kind in the normal log
+                said.add(kind)
             else:  # never keep an error page or half a file
                 p.write_bytes(data)
                 self._count_write()

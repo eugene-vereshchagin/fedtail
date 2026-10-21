@@ -8,7 +8,7 @@ from ...i18n import _
 from ...model.text import snippet, snippet_html
 from ..common import activity
 from .card import link_markup, name_of
-from .gi_setup import GLib, Gtk, Pango
+from .gi_setup import GLib, Gtk, Pango, tip
 from .lane import seen, y_in
 
 SEEN_DELAY_MS = 700
@@ -131,7 +131,7 @@ class ActivityLane(_Lane):
         top.append(line)
         x = Gtk.Button(label="×")
         x.add_css_class("flat")
-        x.set_tooltip_text(_("activity_dismiss_tip" if self.view.can_dismiss_one()
+        tip(x, _("activity_dismiss_tip" if self.view.can_dismiss_one()
                              else "activity_hide_tip"))
         x.connect("clicked", lambda _b, ids=[a.id for a in r.entries]: self._dismiss(ids))
         top.append(x)

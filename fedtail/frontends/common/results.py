@@ -44,3 +44,14 @@ def report(e, on_error=None):
     log.exception("result handler failed", exc_info=e)
     if on_error:
         on_error(f"{type(e).__name__}: {e}")
+
+
+def rate_text(payload):
+    """The server asks to wait (the "rate_limited" event): the line for the status bar,
+    with when it allows again."""
+    import time
+
+    from ...i18n import _
+    until = (payload or {}).get("until") if isinstance(payload, dict) else None
+    when = time.strftime("%H:%M", time.localtime(until or time.time()))
+    return _("rate_limited", until=when)

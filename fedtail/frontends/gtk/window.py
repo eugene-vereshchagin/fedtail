@@ -14,12 +14,12 @@ from ...core import lanes as lanes_mod
 from ...i18n import _
 from ...model import real
 from .. import richtext
-from ..common import sidebar
+from ..common import results, sidebar
 from ..common.links import Links
 from . import login
 from .activity import ActivityLane, RequestsLane
 from .card import Card
-from .gi_setup import Gio, GLib, Gtk, Pango
+from .gi_setup import Gio, GLib, Gtk, Pango, gtk_version, tip
 from .lane import LaneView, y_in
 
 log = logging.getLogger(__name__)
@@ -145,7 +145,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.set_default_size(*self._saved_size())
 
         refresh = Gtk.Button(icon_name="view-refresh-symbolic")
-        refresh.set_tooltip_text(_("refresh"))
+        tip(refresh, _("refresh"))
         refresh.connect("clicked", lambda _b: self.view.poll_now())
         write = Gtk.Button(label=_("write"))
         write.add_css_class("ft-primary")
@@ -153,11 +153,13 @@ class MainWindow(Gtk.ApplicationWindow):
         write.connect("clicked", lambda _b: self.compose())
         self.who = Gtk.Label()
         self.who.add_css_class("ft-muted")
+        menu = self._main_menu()
         toolbar = None
         if own_titlebar(self.cfg):
             header = Gtk.HeaderBar()
             header.pack_start(write)
             header.pack_start(refresh)
+            header.pack_end(menu)
             header.pack_end(self.who)
             self.set_titlebar(header)
         else:  # the desktop draws the frame (KDE, XFCE…): the buttons get a bar of their own
@@ -171,6 +173,8 @@ class MainWindow(Gtk.ApplicationWindow):
             toolbar.append(spacer)
             self.who.set_margin_end(8)
             toolbar.append(self.who)
+            menu.add_css_class("flat")
+            toolbar.append(menu)
 
         self.sidebar = Gtk.ListBox()
         self.sidebar.add_css_class("ft-sidebar")
@@ -235,6 +239,83 @@ class MainWindow(Gtk.ApplicationWindow):
         add("<Control>w", self._close_current_tab)
         self.add_controller(ctl)
 
+    def _main_menu(self):
+        """The ☰ menu: what the Qt window's menu has that this window has too."""
+        items = [
+            (None, [("write", _("write"), self.compose, "<Control>n"),
+                    ("refresh", _("refresh"), self.view.poll_now, "F5"),
+                    ("readall", _("mark_all_read"), self._read_current_lane, None),
+                    ("cmdline", _("cmd_line_menu"), self._focus_cmdline, "<Control>l")]),
+            (None, [("profile", _("my_profile"), self._my_profile, None)]),
+            (None, [("config", _("open_config"),
+                     lambda: self._open_path(self.view.paths.config_file), None),
+                    ("themes", _("open_themes"), lambda: self._open_path(_themes_dir()), None),
+                    ("data", _("open_data"),
+                     lambda: self._open_path(self.view.paths.data_dir), None),
+                    ("logs", _("debug_logs"), self._open_logs, None)]),
+            (None, [("about", _("about"), self._about, None),
+                    ("quit", _("quit"), self.close, "<Control>q")]),
+        ]
+        model = Gio.Menu()
+        for _label, entries in items:
+            section = Gio.Menu()
+            for name, label, fn, accel in entries:
+                act = Gio.SimpleAction.new(name, None)
+                act.connect("activate", lambda _a, _p, fn=fn: fn())
+                self.add_action(act)
+                item = Gio.MenuItem.new(label, "win." + name)
+                if accel:
+                    item.set_attribute_value("accel", GLib.Variant("s", accel))
+                section.append_item(item)
+            model.append_section(None, section)
+        button = Gtk.MenuButton(icon_name="open-menu-symbolic")
+        tip(button, _("menu"))
+        button.set_menu_model(model)
+        return button
+
+    def _focus_cmdline(self):
+        if self.cmdline is not None:
+            self.cmdline.entry.grab_focus()
+
+    def _read_current_lane(self):
+        lv = self.lane_views.get(self._current_lane())
+        if lv is not None and hasattr(lv, "mark_all_read"):
+            lv.mark_all_read()
+
+    def _my_profile(self):
+        me = self.view.me
+        if me is not None:
+            self.open_account(me.id)
+
+    def _open_path(self, path):
+        from ...sysenv import open_external
+        uri = Gio.File.new_for_path(str(path)).get_uri()
+        if open_external(uri):
+            return
+        try:
+            Gio.AppInfo.launch_default_for_uri(uri, None)
+        except GLib.Error as e:
+            self.status(_("error", err=e.message))
+
+    def _open_logs(self):
+        from ... import diag
+        self._open_path(diag.logs_dir(self.view.paths))
+
+    def _about(self):
+        import platform
+
+        from ... import version
+        info = version.info()
+        about = Gtk.AboutDialog(transient_for=self, modal=True)
+        about.set_program_name("fedtail")
+        about.set_version(info["version"])
+        about.set_logo_icon_name(self.get_icon_name() or "online.dmesg.fedtail")
+        about.set_website(version.HOMEPAGE)
+        about.set_comments(_("made_by_long") + "\n\nPython " + platform.python_version() +
+                           " · GTK " + ".".join(str(x) for x in gtk_version()))
+        about.set_license_type(Gtk.License.GPL_3_0)
+        about.present()
+
     def _close_current_tab(self):
         page = self.tabs.get_nth_page(self.tabs.get_current_page())
         root = next((r for r, p in self.threads.items() if p is page), None)
@@ -260,7 +341,7 @@ class MainWindow(Gtk.ApplicationWindow):
         me = self.view.me
         if me is not None:
             self.who.set_text("@" + me.handle)
-        self.status("")
+        self.status(_("first_poll"), seconds=0)  # until the first round is in
         self._rebuild_sidebar()
         self.view.start_polling()
 
@@ -401,8 +482,11 @@ class MainWindow(Gtk.ApplicationWindow):
             self.who.set_text("@" + self.view.me.handle)
         elif name == "error":
             self.status(_("error", err=payload))
-        elif name == "rate_limited":
-            self.status(str(payload))
+        elif name == "first_poll_done":
+            if self.status_line.get_text() == _("first_poll"):
+                self.status("")
+        elif name == "rate_limited":  # once, with when; not an error per lane
+            self.status(results.rate_text(payload), seconds=20)
         elif name == "auth_failed":
             server = (self.view.auth or {}).get("server", "")
             acct = self.view.auth_handle
@@ -666,8 +750,18 @@ class MainWindow(Gtk.ApplicationWindow):
             self.status(_("error", err=e.message))
 
     # ---- misc --------------------------------------------------------------------------
-    def status(self, text):
+    def status(self, text, seconds=10):
+        """A line at the bottom for a while (as Qt's status bar), then gone."""
         self.status_line.set_text(text or "")
+        if getattr(self, "_status_timer", 0):
+            GLib.source_remove(self._status_timer)
+            self._status_timer = 0
+        if text and seconds:
+            def clear():
+                self._status_timer = 0
+                self.status_line.set_text("")
+                return GLib.SOURCE_REMOVE
+            self._status_timer = GLib.timeout_add_seconds(seconds, clear)
 
     def _saved_size(self):
         size = self.view.get_state("gtk_window") or ""
@@ -738,3 +832,10 @@ def _scroll_to(page, box, widget):
     y = y_in(widget, box)
     if y is not None:
         page.get_vadjustment().set_value(max(0, y - 40))
+
+
+def _themes_dir():
+    from .. import themefile
+    d = themefile.user_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    return d
