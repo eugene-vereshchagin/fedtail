@@ -7,6 +7,10 @@ python3 tools/selfcheck.py --night      # на ночь: всё, плюс сво
 python3 tools/selfcheck.py --quick      # за 5 минут: по одной раскладке и паре тем
 ```
 
+Один раз перед первым запуском: `python3 tools/devenv.py` — Playwright и Chromium для
+веба и галереи в отдельное окружение (системный питон Debian pip не пускает; окружение
+видит системные PySide6, GTK, Textual — ничего не ставится дважды).
+
 Утром — `selfcheck-ДАТА/report.md` и рядом zip. Скриншоты своего аккаунта размыты
 (`--no-blur` — как есть), запросы к серверу только GET (tools/real.py).
 

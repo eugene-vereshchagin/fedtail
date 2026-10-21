@@ -20,6 +20,7 @@ ruff check .                             # line length 100
 python3 tools/screenshots.py out/        # PNGs of every theme with made-up data
 xvfb-run -a python3 -m unittest tests.test_gtk_smoke   # the GTK window (python3-gi gir1.2-gtk-4.0)
 python3 tools/gtk_screenshots.py out/ system point     # the same for GTK (runs xvfb-run itself)
+python3 tools/devenv.py                  # once: Playwright + Chromium in a venv (PEP 668)
 python3 tools/selfcheck.py --night      # all below at once (+ your account) → report.md + zip
 python3 tools/parity.py out.md           # which interface lacks what (docs/TESTPLAN.md)
 python3 tools/gallery.py out/            # the site's/docs' pictures + gallery.toml (built-in themes)

@@ -7,7 +7,7 @@ what the page's console said. What went wrong goes to errors.txt.
 
 --real: your own account, read-only, instead of the fake server (tools/real.py).
 
-With Playwright (pip install playwright) it clicks through all of that; without it, a
+With Playwright (python3 tools/devenv.py) it clicks through all of that; without it, a
 Chromium or Chrome found on the system takes one screenshot of the page; with neither,
 only the server's answers are checked (the page, the API, the menus' code)."""
 
@@ -217,10 +217,10 @@ def with_chromium(base, key, out):
             p.wait(10)
     if shot.exists():
         NOTES.append(f"one screenshot by {exe} (Playwright clicks through the menus too: "
-                     "pip install playwright && playwright install chromium)")
+                     "python3 tools/devenv.py)")
     else:
         NOTES.append(f"{exe} took no screenshot in 20 s (the page never ends loading "
-                     "for it); pip install playwright && playwright install chromium — "
+                     "for it); python3 tools/devenv.py — "
                      "and the walk clicks through all of it")
 
 

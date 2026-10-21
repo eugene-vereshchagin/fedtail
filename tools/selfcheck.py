@@ -63,13 +63,13 @@ class Run:
         self.out = out
         self.rows = []
 
-    def step(self, name, args, timeout, folder=None, note=""):
+    def step(self, name, args, timeout, folder=None, note="", py=None):
         log = self.out / f"{name}.log"
         print(f"→ {name} …", flush=True)
         t0 = time.monotonic()
         try:
             with open(log, "w", encoding="utf-8") as f:
-                code = subprocess.run([sys.executable] + args, cwd=ROOT, env=env(),
+                code = subprocess.run([py or sys.executable] + args, cwd=ROOT, env=env(),
                                       stdout=f, stderr=subprocess.STDOUT,
                                       timeout=timeout).returncode
         except subprocess.TimeoutExpired:
@@ -224,6 +224,15 @@ def main():
     pil, pil_v = probe("import PIL; print(PIL.__version__)")
     pw, pw_v = probe("import playwright; from importlib.metadata import version; "
                      "print(version('playwright'))")
+    # no Playwright in the system's Python (Debian: no pip there): the dev tools' own
+    # environment (tools/devenv.py) runs the web walk and the gallery
+    web_py = None
+    if not pw:
+        sys.path.insert(0, str(ROOT / "tools"))
+        import devenv
+        if devenv.python() is not None:
+            web_py = str(devenv.python())
+            pw, pw_v = True, "in " + str(devenv.where())
     want_real = a.real if a.real is not None else ("" if a.night and not a.no_real else None)
     real_profile = logged_in(want_real) if want_real is not None else ""
     facts = [("fedtail", f"{version} ({git.stdout.strip() or 'no git'})"),
@@ -301,15 +310,15 @@ def main():
             run.skip("tui", "no Textual (pip install textual)")
     if "web" in only:
         d = out / "web"
-        run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d,
+        run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d, py=web_py,
                  note="Playwright" if pw else "no Playwright: no walk "
-                 "(pip install playwright && playwright install chromium)")
+                 "(python3 tools/devenv.py — once)")
     if "parity" in only:  # after the walks: their menus go side by side
         run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
     # the gallery (tools/gallery.py): with --night, or asked by --only gallery
     if "gallery" in only and (a.night or a.only):
         run.step("gallery", ["tools/gallery.py", str(out / "gallery")], timeout=1800,
-                 note="the site's and the docs' pictures (built-in themes only)")
+                 py=web_py, note="the site's and the docs' pictures (built-in themes only)")
 
     # ---- your own account -------------------------------------------------------------
     if real_profile:
@@ -337,7 +346,7 @@ def main():
         if "web" in only:
             d = r / "web"
             run.step("real-web", ["tools/web_check.py", str(d)] + flag, timeout=900,
-                     folder=d, note="your account")
+                     folder=d, note="your account", py=web_py)
         if not a.no_blur:
             n = blur(r)
             print(f"your account's screenshots: {n} blurred", flush=True)
