@@ -26,7 +26,7 @@ from ...i18n import _
 from ...model import Share, real
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator
-from .gi_setup import GLib, Gtk, Pango, clamp, tip
+from .gi_setup import GLib, Gtk, Pango, clamp, hscroll, set_clamp, tip
 
 log = logging.getLogger(__name__)
 
@@ -93,13 +93,10 @@ class LaneView(Gtk.Box):
         self.info.add_css_class("ft-muted")
         self.info.set_ellipsize(Pango.EllipsizeMode.END)
         header.append(self.info)
-        # the controls wrap to a second line in a narrow window, never past its edge
-        tools = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False,
-                            min_children_per_line=1, max_children_per_line=8,
-                            column_spacing=6, row_spacing=4)
-        tools.set_halign(Gtk.Align.END)
-        tools.set_valign(Gtk.Align.CENTER)
-        header.append(tools)
+        # as Qt's header: All | Posts only | New, conversations, ↓ To new, Mark all
+        # read, ▾ Show, Refresh (F5)
+        tools = Gtk.Box(spacing=6, halign=Gtk.Align.END, valign=Gtk.Align.CENTER)
+        header.append(hscroll(tools, end=True))
         self._filter_buttons = {}
         if len(self.lm.filters) > 1:
             group, words = None, {"all": ("show_all", "show_all_tip"),
@@ -125,12 +122,18 @@ class LaneView(Gtk.Box):
             conv.set_active(self.lm.conversations())
             conv.connect("toggled", lambda b: self.set_conversations(b.get_active()))
             tools.append(conv)
-        tools.append(self._media_button())
+        self.to_new = Gtk.Button(label="↓ " + _("to_new"))
+        tip(self.to_new, _("to_new_tip"))
+        self.to_new.connect("clicked", lambda _b: self.jump_first_unread())
+        tools.append(self.to_new)
         read = Gtk.Button(label=_("mark_all_read"))
-        read.add_css_class("flat")
         read.connect("clicked", lambda _b: self.mark_all_read())
         if not self.lazy:
             tools.append(read)
+        tools.append(self._media_button())
+        refresh = Gtk.Button(label=_("refresh") + " (F5)")
+        refresh.connect("clicked", lambda _b: ctx.view.poll_now())
+        tools.append(refresh)
         self.append(header)
 
         self.older = Gtk.Button(label=_("older_down") if self.newest_first else _("older_up"))
@@ -150,9 +153,9 @@ class LaneView(Gtk.Box):
         if self.newest_first:
             column.append(self.older)
         column.set_hexpand(True)
-        max_width = int(ctx.cfg["ui"].get("max_width") or 0)
-        if max_width:  # a column at most this wide — narrower with the window
-            column = clamp(column, min(max_width, 4000))
+        # a column at most ui.max_width wide — narrower with the window; 0: the whole
+        # width (↔ in the sidebar changes it while running)
+        self.clamp = column = clamp(column, _width(ctx.cfg))
 
         self.scroll = Gtk.ScrolledWindow()
         self.scroll.add_css_class("ft-view")
@@ -232,7 +235,7 @@ class LaneView(Gtk.Box):
 
     def _media_button(self):
         """The funnel: posts with pictures, gifs, video… only, boosts or not."""
-        button = Gtk.MenuButton(icon_name="view-filter-symbolic")
+        button = Gtk.MenuButton(label="▾ " + _("media_filter"))
         tip(button, _("media_filter_tip"))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         checks, quiet = {}, []
@@ -547,6 +550,23 @@ class LaneView(Gtk.Box):
             self.keys, self.index = [], {}
             self.positioned = False
 
+    def jump_first_unread(self):
+        """↓ To new: the first unread at the top (built around it, if it wasn't), or —
+        nothing new — the lane's newest end."""
+        target = next((k for k in self.keys if k in self.unread), None)
+        if target is not None and target in self.rows:
+            y = self._y(self.rows[target])
+            if y is not None:
+                self.adj.set_value(max(0, y - 40))
+                return
+        if target is None and self.keys:
+            end = self.keys[0] if self.newest_first else self.keys[-1]
+            if end in self.rows:
+                self.adj.set_value(0 if self.newest_first else
+                                   self.adj.get_upper() - self.adj.get_page_size())
+                return
+        self._reset()  # not built: the lane anew, around where reading starts
+
     def _position(self):
         """Opened: where reading starts (common/lane.py start()) — the first unread at
         the top, or the newest end when all is read."""
@@ -621,6 +641,10 @@ class LaneView(Gtk.Box):
             self._pill(len(self.unread))
         return GLib.SOURCE_REMOVE
 
+    def apply_width(self):
+        """ui.max_width changed (↔): the column follows."""
+        set_clamp(self.clamp, _width(self.ctx.cfg))
+
     def stop(self):
         """The window closes: whatever is queued is dropped (the core may close too)."""
         self.stopped = True
@@ -651,6 +675,14 @@ class LaneView(Gtk.Box):
         self.ctx.bridge.call(self.ctx.view.load_older(self.name), done,
                              lambda err: (self.older.set_sensitive(True),
                                           self.ctx.status(_("error", err=err))))
+
+
+FULL = 100_000  # "no limit" for the clamp
+
+
+def _width(cfg):
+    w = int(cfg["ui"].get("max_width") or 0)
+    return min(w, 4000) if w else FULL
 
 
 def y_in(widget, ancestor):

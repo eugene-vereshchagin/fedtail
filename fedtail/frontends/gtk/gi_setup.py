@@ -49,10 +49,42 @@ def tip(widget, text):
         return
 
     def query(_w, _x, _y, _kb, tooltip):
+        if HINTS["on"]:  # ≡ → What's this?: the help's word on it, if it has one
+            rich = _hint(text)
+            if rich:
+                tooltip.set_markup(rich)
+                return True
         tooltip.set_text(text)
         return True
     widget.set_has_tooltip(True)
     widget.connect("query-tooltip", query)
+
+
+def hscroll(child, end=False):
+    """A row of buttons that takes its natural width where there's room and scrolls
+    sideways where there isn't — never pushing the window past its edge."""
+    sc = Gtk.ScrolledWindow()
+    sc.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+    sc.set_propagate_natural_width(True)
+    sc.set_propagate_natural_height(True)
+    sc.set_has_frame(False)
+    sc.set_child(child)
+    sc.set_hexpand(not end)
+    if end:
+        sc.set_halign(Gtk.Align.END)
+    sc.add_css_class("ft-hscroll")
+    return sc
+
+
+HINTS = {"on": False}
+
+
+def _hint(text):
+    from .. import helpdocs, pango
+    found = helpdocs.hint_for(text)
+    if not found:
+        return None
+    return pango.markup(helpdocs.hint_html(text, found[1]))
 
 
 def clamp(child, max_width):
@@ -64,6 +96,16 @@ def clamp(child, max_width):
         c.set_child(child)
         return c
     return _clamp_class()(child, max_width)
+
+
+def set_clamp(c, max_width):
+    """A clamp made by clamp() to another width (↔: the posts across the window)."""
+    if hasattr(c, "set_maximum_size"):
+        c.set_maximum_size(max_width)
+        c.set_tightening_threshold(max_width)
+    else:
+        c.max_width = max_width
+        c.queue_resize()
 
 
 _CLAMP = []

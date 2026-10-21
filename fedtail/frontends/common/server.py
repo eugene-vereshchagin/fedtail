@@ -64,3 +64,30 @@ def profile_changes(prof, name, bio, fields, flags, avatar=None, header=None):
     if header:
         out["header"] = header
     return out
+
+
+PROBE_MARKS = {"yes": "✓", "no": "✗", "closed": "🔒", "error": "⚠", "self": "◐", "info": "·"}
+_PROBE_ORDER = {"no": 0, "closed": 1, "error": 2, "self": 3, "yes": 4, "info": 5}
+
+
+def _has(key):
+    return _(key) != key
+
+
+def probe_rows(probe, date):
+    """A Probe as the window shows it: (the line on top — when, what software —, and
+    [(feature, "✓ answer", known)] the worst first). date(datetime) -> text; known:
+    the answer is what fedtail knows of such servers, not asked."""
+    if probe is None:
+        return _("probe_never"), []
+    when = date(probe.checked) if probe.checked else "?"
+    note = _("probe_checked", when=when,
+             software=" ".join(x for x in (probe.software, probe.version) if x))
+    rows = []
+    for f in sorted(probe.features, key=lambda f: _PROBE_ORDER.get(f.state, 9)):
+        answer = f.detail if f.state == "info" else \
+            _("probe_" + f.state) + (f" ({f.detail})" if f.detail and f.detail != "known"
+                                     else "")
+        what = _("probe_" + f.key) if _has("probe_" + f.key) else f.key
+        rows.append((what, f"{PROBE_MARKS.get(f.state, '?')} {answer}", f.detail == "known"))
+    return note, rows

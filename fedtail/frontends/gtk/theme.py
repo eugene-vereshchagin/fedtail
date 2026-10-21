@@ -97,6 +97,8 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-sidebar row {{ color: {c['sidebar_text']}; padding: 4px 8px; border-radius: {br}px; }}
 .ft-sidebar row:selected {{ background: {c['selected']}; color: {c['selected_text']}; }}
 .ft-sidebar .ft-account {{ color: {c['sidebar_muted']}; }}
+.ft-sidebar button, .ft-sidebar .ft-name {{ color: {c['sidebar_text']}; }}
+.ft-sidebar .ft-muted {{ color: {c['sidebar_muted']}; }}
 .ft-badge {{ background: {c['accent']}; color: {c['on_accent']}; border-radius: 9px;
             padding: 0 6px; font-size: smaller; }}
 .ft-badge.hot {{ background: {c['hot']}; color: {c['on_hot']}; }}
@@ -145,6 +147,16 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-cmdline {{ background: {c['panel']}; padding: 4px 0; }}
 .ft-cmdline entry {{ font-family: monospace; }}
 .ft-card levelbar block.filled {{ background: {c['accent']}; }}
+.ft-write {{ font-weight: bold; min-height: 34px; }}
+.ft-statusbar {{ background: {c['panel']}; border-top: 1px solid {c['sidebar_border']};
+                padding: 1px 0; font-size: smaller; }}
+.ft-compose-panel {{ background: {c['window']}; border: 1px solid {c['focus_border']};
+                    border-radius: {r}px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); }}
+.ft-compose-head {{ background: {c['header']}; border-radius: {br}px; padding: 2px 6px; }}
+.ft-compose-frame {{ border: 1px solid {c['card_border']}; border-radius: {br}px;
+                    background: {c['card']}; }}
+.ft-compose-text, .ft-compose-text text {{ background: transparent; color: {c['text']}; }}
+.ft-column {{ border-right: 1px solid {c['sidebar_border']}; }}
 """
 
 

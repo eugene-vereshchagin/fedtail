@@ -19,7 +19,7 @@ from ..common.links import Links
 from . import login
 from .activity import ActivityLane, RequestsLane
 from .card import Card
-from .gi_setup import Gio, GLib, Gtk, Pango, gtk_version, tip
+from .gi_setup import Gdk, Gio, GLib, Gtk, Pango, gtk_version, tip
 from .lane import LaneView, y_in
 
 log = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ class SectionRow(Gtk.ListBoxRow):
     """A group's title in the sidebar: not a lane; a click folds the group away, and
     folded it shows how many are unread in it."""
 
-    def __init__(self, group, text, names):
+    def __init__(self, group, text, names, plus=None):
         super().__init__(selectable=False, activatable=True)
         self.group, self.names = group, list(names)
         box = Gtk.Box(spacing=6)
@@ -113,6 +113,12 @@ class SectionRow(Gtk.ListBoxRow):
         self.badge.add_css_class("ft-badge")
         self.badge.set_visible(False)
         box.append(self.badge)
+        if plus is not None:  # Lists: + makes a new one
+            b = Gtk.Button(label="+")
+            b.add_css_class("flat")
+            tip(b, _("list_new"))
+            b.connect("clicked", lambda _b: plus())
+            box.append(b)
         self.set_child(box)
 
     def show_fold(self, folded, unread):
@@ -144,48 +150,55 @@ class MainWindow(Gtk.ApplicationWindow):
         bridge.on_error = lambda text: self.status(_("error", err=text))
         self.set_default_size(*self._saved_size())
 
-        refresh = Gtk.Button(icon_name="view-refresh-symbolic")
-        tip(refresh, _("refresh"))
-        refresh.connect("clicked", lambda _b: self.view.poll_now())
-        write = Gtk.Button(label=_("write"))
+        self.extra_tabs = {}     # key -> page: people, trends, search, a tag
+        self.columns = None      # lanes side by side (❯), or None
+        self.hints_on = False    # ≡ → What's this?
+        if self.view.get_state("full_width"):  # ↔ as left last time
+            self._column_width = self.cfg["ui"]["max_width"] or 760
+            self.cfg["ui"]["max_width"] = 0
+        from .menu import MainMenu
+        self.menu = MainMenu(self)
+        if own_titlebar(self.cfg):  # GNOME and kin: a header bar, the title in it
+            self.set_titlebar(Gtk.HeaderBar())
+
+        # the sidebar, as Qt's: who I am with ≡ ↔ ❯, Write, the search, the lanes,
+        # the version at the foot
+        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        side.add_css_class("ft-sidebar")
+        side.set_size_request(220, -1)
+        side.append(self._me_head())
+        write = Gtk.Button(label="✎ " + _("write"))
         write.add_css_class("ft-primary")
         write.add_css_class("suggested-action")
+        write.add_css_class("ft-write")
         write.connect("clicked", lambda _b: self.compose())
-        self.who = Gtk.Label()
-        self.who.add_css_class("ft-muted")
-        menu = self._main_menu()
-        toolbar = None
-        if own_titlebar(self.cfg):
-            header = Gtk.HeaderBar()
-            header.pack_start(write)
-            header.pack_start(refresh)
-            header.pack_end(menu)
-            header.pack_end(self.who)
-            self.set_titlebar(header)
-        else:  # the desktop draws the frame (KDE, XFCE…): the buttons get a bar of their own
-            toolbar = Gtk.Box(spacing=6)
-            toolbar.add_css_class("toolbar")
-            refresh.add_css_class("flat")
-            toolbar.append(write)
-            toolbar.append(refresh)
-            spacer = Gtk.Box()
-            spacer.set_hexpand(True)
-            toolbar.append(spacer)
-            self.who.set_margin_end(8)
-            toolbar.append(self.who)
-            menu.add_css_class("flat")
-            toolbar.append(menu)
-
+        for m in ("start", "end"):
+            getattr(write, "set_margin_" + m)(8)
+        side.append(write)
+        self.search = Gtk.SearchEntry(placeholder_text=_("search_side"))
+        self.search.connect("activate", lambda e: self.open_search(e.get_text()))
+        for m in ("start", "end"):
+            getattr(self.search, "set_margin_" + m)(8)
+        side.append(self.search)
         self.sidebar = Gtk.ListBox()
         self.sidebar.add_css_class("ft-sidebar")
         self.sidebar.add_css_class("navigation-sidebar")
         self.sidebar.connect("row-selected", self._lane_selected)
         self.sidebar.connect("row-activated", self._row_activated)
-        side_scroll = Gtk.ScrolledWindow()
+        side_scroll = Gtk.ScrolledWindow(vexpand=True)
         side_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         side_scroll.set_child(self.sidebar)
-        side_scroll.add_css_class("ft-sidebar")
-        side_scroll.set_size_request(200, -1)
+        side.append(side_scroll)
+        self.footer = Gtk.Label(xalign=0, label=self._footer_text())
+        self.footer.add_css_class("ft-muted")
+        self.footer.add_css_class("caption")
+        for m in ("start", "end", "bottom"):
+            getattr(self.footer, "set_margin_" + m)(8)
+        foot_click = Gtk.GestureClick()
+        foot_click.connect("released", lambda *_a: self.about())
+        self.footer.add_controller(foot_click)
+        tip(self.footer, _("about"))
+        side.append(self.footer)
 
         self.stack = Gtk.Stack()
         self.tabs = Gtk.Notebook()
@@ -193,28 +206,46 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tabs.set_show_tabs(False)
         self.tabs.append_page(self.stack, Gtk.Label(label=_("gtk_lanes")))
         self.tabs.connect("switch-page", lambda *_a: GLib.idle_add(self._tab_switched))
-
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-        paned.set_start_child(side_scroll)
+        paned.set_start_child(side)
         paned.set_end_child(self.tabs)
         paned.set_resize_start_child(False)
         paned.set_shrink_start_child(False)
-        paned.set_position(220)
+        paned.set_position(240)
 
-        self.status_line = Gtk.Label(xalign=0)
+        # the status bar: whose this window is at the left, what happens, and in the
+        # debugging mode how the window is drawn at the right
+        self.status_line = Gtk.Label(xalign=0, hexpand=True)
         self.status_line.add_css_class("ft-status")
         self.status_line.set_ellipsize(Pango.EllipsizeMode.END)
+        self.profile_label = Gtk.Label(xalign=0)
+        self.profile_label.add_css_class("ft-muted")
+        bar = Gtk.Box(spacing=12)
+        bar.add_css_class("ft-statusbar")
+        for m in ("start", "end"):
+            getattr(bar, "set_margin_" + m)(6)
+        bar.append(self.profile_label)
+        bar.append(self.status_line)
+        corner = self._debug_corner()
+        if corner:
+            lab = Gtk.Label(label=corner)
+            lab.add_css_class("ft-muted")
+            tip(lab, _("debug_corner_tip"))
+            bar.append(lab)
+        self._profile_text()
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         outer.add_css_class("fedtail-main")
-        if toolbar is not None:
-            outer.append(toolbar)
-        paned.set_vexpand(True)
-        outer.append(paned)
+        # the editor comes over the window's middle (as Qt's), not as a window of its own
+        self.overlay = Gtk.Overlay()
+        self.overlay.set_child(paned)
+        self.overlay.set_vexpand(True)
+        self.composer = None
+        outer.append(self.overlay)
         if self.cfg["ui"]["command_line"]:
             from .cmdline import CommandLine
             self.cmdline = CommandLine(self)
             outer.append(self.cmdline)
-        outer.append(self.status_line)
+        outer.append(bar)
         self.set_child(outer)
 
         self._shortcuts()
@@ -239,55 +270,123 @@ class MainWindow(Gtk.ApplicationWindow):
         add("<Control>w", self._close_current_tab)
         self.add_controller(ctl)
 
-    def _main_menu(self):
-        """The ☰ menu: what the Qt window's menu has that this window has too."""
-        items = [
-            (None, [("write", _("write"), self.compose, "<Control>n"),
-                    ("refresh", _("refresh"), self.view.poll_now, "F5"),
-                    ("readall", _("mark_all_read"), self._read_current_lane, None),
-                    ("cmdline", _("cmd_line_menu"), self._focus_cmdline, "<Control>l")]),
-            (None, [("profile", _("my_profile"), self._my_profile, None)]),
-            (None, [("config", _("open_config"),
-                     lambda: self._open_path(self.view.paths.config_file), None),
-                    ("themes", _("open_themes"), lambda: self._open_path(_themes_dir()), None),
-                    ("data", _("open_data"),
-                     lambda: self._open_path(self.view.paths.data_dir), None),
-                    ("logs", _("debug_logs"), self._open_logs, None)]),
-            (None, [("about", _("about"), self._about, None),
-                    ("quit", _("quit"), self.close, "<Control>q")]),
-        ]
-        model = Gio.Menu()
-        for _label, entries in items:
-            section = Gio.Menu()
-            for name, label, fn, accel in entries:
-                act = Gio.SimpleAction.new(name, None)
-                act.connect("activate", lambda _a, _p, fn=fn: fn())
-                self.add_action(act)
-                item = Gio.MenuItem.new(label, "win." + name)
-                if accel:
-                    item.set_attribute_value("accel", GLib.Variant("s", accel))
-                section.append_item(item)
-            model.append_section(None, section)
-        button = Gtk.MenuButton(icon_name="open-menu-symbolic")
-        tip(button, _("menu"))
-        button.set_menu_model(model)
-        return button
+    # ---- the head of the sidebar ---------------------------------------------------------
+    def _me_head(self):
+        """My face and name (a click: my profile; a right click: the other accounts),
+        and ≡ the menu, ↔ posts across the width, ❯ lanes side by side."""
+        from .card import Avatar
+        head = Gtk.Box(spacing=8)
+        for m in ("start", "end", "top"):
+            getattr(head, "set_margin_" + m)(8)
+        self.me_face = Gtk.Box()
+        head.append(self.me_face)
+        names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        self.me_name = Gtk.Label(xalign=0)
+        self.me_name.add_css_class("ft-name")
+        self.me_name.set_ellipsize(Pango.EllipsizeMode.END)
+        self.who = Gtk.Label(xalign=0)
+        self.who.add_css_class("ft-muted")
+        self.who.set_ellipsize(Pango.EllipsizeMode.END)
+        names.append(self.me_name)
+        names.append(self.who)
+        head.append(names)
+        for w in (self.me_face, names):
+            left = Gtk.GestureClick(button=1)
+            left.connect("released", lambda *_a: self.my_profile())
+            w.add_controller(left)
+            right = Gtk.GestureClick(button=3)
+            right.connect("pressed", lambda _g, _n, x, y, w=w: self._accounts_popup(w, x, y))
+            w.add_controller(right)
+            tip(w, _("my_profile") + "\n" + _("accounts_tip"))
+        from .menu import button
+        head.append(button(self, self.menu))
+        self.wide_btn = Gtk.ToggleButton(label="↔")
+        self.wide_btn.set_active(not self.cfg["ui"]["max_width"])
+        tip(self.wide_btn, _("full_width_tip"))
+        self.wide_btn.connect("toggled", lambda b: self.set_full_width(b.get_active()))
+        head.append(self.wide_btn)
+        self.columns_btn = Gtk.ToggleButton(label="❯")
+        tip(self.columns_btn, _("columns_tip"))
+        self.columns_btn.connect("toggled", lambda b: self.set_columns(b.get_active()))
+        head.append(self.columns_btn)
+        for b in head:
+            if isinstance(b, Gtk.Button):
+                b.add_css_class("flat")
+                b.set_valign(Gtk.Align.CENTER)
+        self._Avatar = Avatar
+        return head
 
-    def _focus_cmdline(self):
-        if self.cmdline is not None:
-            self.cmdline.entry.grab_focus()
+    def _show_me(self):
+        me = self.view.me
+        if me is None:
+            return
+        self.me_name.set_text(me.name or me.username or me.handle)
+        self.who.set_text("@" + me.handle)
+        while (c := self.me_face.get_first_child()) is not None:
+            self.me_face.remove(c)
+        self.me_face.append(self._Avatar(self.ctx, me, 40))
+        self._profile_text()
+        self.set_title(f"fedtail — @{me.handle}")
 
-    def _read_current_lane(self):
+    def _accounts_popup(self, w, x, y):
+        pop = Gtk.PopoverMenu.new_from_model(self.menu.accounts_model())
+        pop.set_parent(w)
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+        pop.set_pointing_to(rect)
+        pop.connect("closed", lambda p: GLib.idle_add(p.unparent))
+        pop.popup()
+
+    def _footer_text(self):
+        """Version and build, then who made it — as at the foot of Qt's sidebar."""
+        from ... import version
+        info = version.info()
+        build = info["version"] + (f" · {info['date']}" if info["date"] else "")
+        return f"fedtail {build}\n" + _("made_by").replace("<br>", "\n")
+
+    def _profile_text(self):
+        """"default: @me@server ★" at the left of the status bar."""
+        from ...core import paths
+        me = self.view.paths.profile
+        who = ""
+        if self.view.me is not None:
+            host = (self.view.auth or {}).get("server", "").split("://")[-1].rstrip("/")
+            acct = self.view.me.handle
+            who = "@" + acct + (f"@{host}" if host and "@" not in acct else "")
+        text = f"{me}: {who}" if who else me
+        self.profile_label.set_text(text + (" ★" if me == paths.main_profile() else ""))
+
+    def _debug_corner(self):
+        """In the debugging mode: how the window is drawn — theme, GTK, libadwaita,
+        the display's kind, the scale, the build."""
+        import sys
+
+        from ... import diag
+        from . import gi_setup
+        if not diag.is_on():
+            return ""
+        bits = [_("debug_theme", theme=self.theme.id),
+                "GTK " + ".".join(str(x) for x in gtk_version())]
+        if gi_setup.Adw is not None:
+            bits.append("libadwaita")
+        display = Gdk.Display.get_default()
+        if display is not None:
+            bits.append(type(display).__name__.replace("Display", "").lower() or "?")
+        bits.append("onefile" if getattr(sys, "frozen", False) else "source")
+        return " · ".join(bits)
+
+    # ---- ≡ the menu: what its items do ---------------------------------------------------
+    def read_current_lane(self):
         lv = self.lane_views.get(self._current_lane())
         if lv is not None and hasattr(lv, "mark_all_read"):
             lv.mark_all_read()
 
-    def _my_profile(self):
+    def my_profile(self):
         me = self.view.me
         if me is not None:
             self.open_account(me.id)
 
-    def _open_path(self, path):
+    def open_path(self, path):
         from ...sysenv import open_external
         uri = Gio.File.new_for_path(str(path)).get_uri()
         if open_external(uri):
@@ -297,11 +396,236 @@ class MainWindow(Gtk.ApplicationWindow):
         except GLib.Error as e:
             self.status(_("error", err=e.message))
 
-    def _open_logs(self):
-        from ... import diag
-        self._open_path(diag.logs_dir(self.view.paths))
+    def themes_dir(self):
+        return _themes_dir()
 
-    def _about(self):
+    def open_logs(self):
+        from ... import diag
+        self.open_path(diag.logs_dir(self.view.paths))
+
+    def silence(self, tab="filters"):
+        from . import dialogs
+        return dialogs.silence(self, tab)
+
+    def show_filtered(self):
+        from . import dialogs
+        return dialogs.filtered(self)
+
+    def show_scheduled(self):
+        from . import dialogs
+        return dialogs.scheduled(self)
+
+    def show_server_info(self):
+        from . import dialogs
+        return dialogs.server_info(self)
+
+    def federation_status(self):
+        from . import dialogs
+        return dialogs.federation(self)
+
+    def open_help(self, page="index"):
+        from . import dialogs
+        return dialogs.help_page(self, page)
+
+    def open_suggestions(self):
+        from . import people
+        return people.open_people(self, "suggestions", _("suggestions_title"),
+                                  self.view.suggestions,
+                                  dismiss=lambda a: self.call(self.view.dismiss_suggestion(a)))
+
+    def open_directory(self, local):
+        from . import people
+        key = "directory_local" if local else "directory_title"
+        return people.open_people(self, key, _(key),
+                                  lambda cur: self.view.directory(cur, local))
+
+    def open_trends(self):
+        from . import people
+        return people.open_trends(self)
+
+    def open_search(self, query):
+        from ...core import taggroups
+        from . import people
+        if taggroups.parse((query or "").strip()):
+            self.status(_("gtk_not_yet"))
+            return None
+        return people.open_search(self, query)
+
+    def open_tag(self, tag):
+        from . import people
+        return people.open_tag(self, tag)
+
+    def close_extra(self, key):
+        page = self.extra_tabs.pop(key, None)
+        if page is not None:
+            self.tabs.remove_page(self.tabs.page_num(page))
+        self._tab_switched()
+
+    def new_list(self):
+        from . import dialogs
+        dialogs.ask_text(self, _("list_new").rstrip("…"), _("list_name_q"),
+                         lambda title: self.call(self.view.create_list(title),
+                                                 lambda x: self.status(
+                                                     _("list_created", title=x.title))))
+
+    def test_notification(self):
+        self.status(_("debug_notify_sent", backend=self.notifier.test()))
+
+    def debug_stacks(self):
+        from ... import diag
+        diag.dump_stacks("asked from the menu")
+        diag.log_stats()
+        self.status(_("debug_stacks_done"))
+
+    def debug_census(self):
+        from ... import diag
+        s = diag.check_now(int(self.cfg["debug"].get("rss_warn_mb", 1500)), objects=True)
+        self.status(_("debug_census_done", rss=s["rss_mb"], objects=s["py_objects"]))
+
+    def debug_trim(self):
+        from ... import diag
+        freed = diag.trim_memory()
+        log.info("memory: %s MB given back (from the menu)", freed)
+        self.status(_("debug_trim_none") if freed is None else _("debug_trim_done", mb=freed))
+
+    def debug_snapshot(self):
+        from ... import diag, leaks
+        try:
+            out = leaks.snapshot(diag.logs_dir(self.view.paths))
+        except (OSError, RuntimeError) as e:
+            self.error(e)
+            return
+        self.status(_("debug_snapshot_done", path=str(out)), seconds=15)
+
+    def bug_report(self):
+        from ... import diag
+        try:
+            diag.log_stats()
+            out = diag.bug_report(self.view.paths, cfg=self.cfg)
+        except OSError as e:
+            self.error(e)
+            return
+        self.status(_("debug_report_done", path=str(out)), seconds=15)
+        self.open_path(out.parent)
+
+    def set_hints(self, on):
+        from . import gi_setup
+        self.hints_on = gi_setup.HINTS["on"] = bool(on)
+
+    def try_theme(self, name):
+        """Another theme for this run (the config stays): the window restyled, the
+        lanes drawn anew in its words."""
+        from . import theme as themes
+        if name == self.theme.id:
+            return
+        old = self.theme.id
+        theme = themes.apply(self.cfg, name)
+        self.theme = self.ctx.theme = theme
+        log.info("theme tried: %s (was %s, config says %s)", theme.id, old,
+                 self.cfg["ui"]["theme"])
+        current = self._current_lane()
+        columns = self.columns is not None
+        if columns:
+            self.set_columns(False)
+        for lv in self.lane_views.values():
+            if hasattr(lv, "stop"):
+                lv.stop()
+            if lv.get_parent() is self.stack:
+                self.stack.remove(lv)
+        self.lane_views = {}
+        self._rebuild_sidebar()
+        if current in self.lane_rows:
+            self._lane_selected(self.sidebar, self.lane_rows[current])
+        if columns:
+            self.set_columns(True)
+        for w in theme.warnings:
+            self.error(w)
+        self.status(_("theme_tried", name=theme.id, configured=self.cfg["ui"]["theme"]),
+                    seconds=12)
+
+    def switch_profile(self, name):
+        """The other account in its own window; this one closes (ui.switch_closes)."""
+        from ...core import profiles
+        if name == self.view.paths.profile:
+            return
+        log.info("switching to profile %s", name)
+        profiles.launch(name)
+        if self.cfg["ui"].get("switch_closes", True):
+            GLib.timeout_add(300, lambda: (self.close(), False)[1])
+
+    def set_merged(self, on):
+        """All accounts in one window or not: remembered, then fedtail restarts."""
+        from ...core import profiles
+        primary = getattr(self.core, "primary", self.core)
+        primary.set_state("merge", ["all"] if on else [])
+        log.info("merge %s: restarting", "on" if on else "off")
+        profiles.launch(primary.paths.profile, after=1.5)
+        GLib.timeout_add(200, lambda: (self.close(), False)[1])
+
+    def add_account(self):
+        from ...core import paths as paths_module
+        from ...core import profiles
+        from . import dialogs
+        taken = {p["name"] for p in profiles.listing()}
+
+        def made(name):
+            if name in taken or name in profiles.NOT_PROFILES or \
+                    not paths_module._PROFILE_RE.match(name):
+                self.error(_("account_bad_name", name=name))
+                return
+            self.switch_profile(name)  # a new profile starts with the login window
+        dialogs.ask_text(self, _("account_add"), _("account_add_q"), made)
+
+    def make_main(self):
+        from ...core import paths
+        paths.set_main(self.view.paths.profile)
+        log.info("main profile: %s (from the menu)", self.view.paths.profile)
+        self._profile_text()
+        self.status(_("made_main", profile=self.view.paths.profile))
+
+    def relogin(self):
+        """Log in to this same account anew; the old token stays until the new one is in."""
+        auth = self.view.auth or {}
+        if not auth:
+            return
+        acct = "@" + (self.view.auth_handle or "?")
+
+        def go():
+            login.LoginDialog(self, self._connect,
+                              expect=(auth["server"], self.view.auth_handle)).present()
+        self.confirm(_("relogin_title"), _("relogin_q", acct=acct).replace("<br>", "\n"), go)
+
+    def log_out(self):
+        """Forget this profile's token; the window goes over to another account logged
+        in (the ★ moves with it), or, none left, to the login."""
+        from ...core import profiles
+        me = self.view.paths.profile
+        mine = self.view.me
+        acct = "@" + (mine.handle if mine else self.view.auth_handle or me)
+        others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
+        main = profiles.paths.main_profile()
+        text = [_("logout_q", acct=acct)]
+        target = None
+        if others:
+            target = next((p for p in others if p["name"] == main), others[0])
+            if me == main:
+                text.append(_("logout_main_moves", to=profiles.label(target)))
+            text.append(_("logout_switch", to=profiles.label(target)))
+        else:
+            text.append(_("logout_last"))
+
+        def go():
+            log.info("logout: profile %s", me)
+            self.core.logout()
+            profiles.hand_over_main(me)
+            if target:
+                profiles.launch(target["name"])
+                GLib.timeout_add(300, lambda: (self.close(), False)[1])
+            else:
+                self.start()
+        self.confirm(_("logout_title"), "\n\n".join(text).replace("<br>", "\n"), go)
+
+    def about(self):
         import platform
 
         from ... import version
@@ -315,6 +639,66 @@ class MainWindow(Gtk.ApplicationWindow):
                            " · GTK " + ".".join(str(x) for x in gtk_version()))
         about.set_license_type(Gtk.License.GPL_3_0)
         about.present()
+
+    # ---- ↔ and ❯ ------------------------------------------------------------------------
+    def set_full_width(self, on):
+        """Posts across the whole width, or in a column of ui.max_width (remembered for
+        the next start; the config's value stays what it is)."""
+        if not hasattr(self, "_column_width"):
+            self._column_width = self.cfg["ui"]["max_width"] or 760
+        self.cfg["ui"]["max_width"] = 0 if on else self._column_width
+        self.view.set_state("full_width", bool(on))
+        for lv in self.lane_views.values():
+            if hasattr(lv, "apply_width"):
+                lv.apply_width()
+        log.info("posts: %s", "full width" if on else f"{self._column_width} px column")
+
+    def set_columns(self, on):
+        """Lanes side by side (the same lane views move over, each keeping its place
+        and filters), or one at a time."""
+        from ..common import columns as cols
+        on = bool(on)
+        if self.columns_btn.get_active() != on:
+            self.columns_btn.set_active(on)  # comes back here through toggled
+            return
+        if on == (self.columns is not None):
+            return
+        if on:
+            titles = {x.title: "list:" + x.id for x in self.view.lists}
+            names = cols.start_names(self.cfg, self.view.get_state("columns"),
+                                     list(self.lane_rows), titles)
+            self.columns = Columns(self)
+            for name in names:
+                self.columns.add(name, self._lane_view(name))
+            self.stack.add_named(self.columns, "__columns__")
+            self.stack.set_visible_child(self.columns)
+            self.tabs.set_current_page(0)
+            self.view.set_active_lanes(names)
+            log.info("columns: %s", ", ".join(names))
+        else:
+            focused = self.columns.focused
+            for name, lv in self.columns.release():
+                self.stack.add_named(lv, name)
+            self.stack.remove(self.columns)
+            self.columns = None
+            self.view.set_active_lanes([])
+            log.info("columns off")
+            row = self.lane_rows.get(focused or self._current_lane())
+            if row is not None:
+                self._lane_selected(self.sidebar, row)
+
+    def columns_changed(self):
+        if self.columns is not None:
+            self.view.set_state("columns", self.columns.names())
+            self.view.set_active_lanes(self.columns.names())
+
+    def close_column(self, name):
+        if self.columns is None or len(self.columns.order) <= 1:
+            return  # the last one stays: ❯ goes back to one lane
+        lv = self.columns.drop(name)
+        if lv is not None:
+            self.stack.add_named(lv, name)
+        self.columns_changed()
 
     def _close_current_tab(self):
         page = self.tabs.get_nth_page(self.tabs.get_current_page())
@@ -338,11 +722,14 @@ class MainWindow(Gtk.ApplicationWindow):
                          lambda err: self.status(_("error", err=err)))
 
     def _connected(self, _me):
-        me = self.view.me
-        if me is not None:
-            self.who.set_text("@" + me.handle)
+        self._show_me()
         self.status(_("first_poll"), seconds=0)  # until the first round is in
+        if self.cfg["ui"].get("layout") == "split":  # not here yet: say so, not silently
+            log.warning("ui.layout = split: the GTK window has no split layout yet")
+            self._after_first_poll = _("gtk_no_split")
         self._rebuild_sidebar()
+        if self.cfg["ui"].get("layout") == "columns":
+            self.set_columns(True)
         self.view.start_polling()
 
     def _rebuild_sidebar(self):
@@ -361,7 +748,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 continue
             if group:
                 head = SectionRow(group, _("lists_header") if group == "lists"
-                                  else _("grp_" + group), names)
+                                  else _("grp_" + group), names,
+                                  plus=self.new_list if group == "lists" else None)
                 self.sections[group] = head
                 self.sidebar.append(head)
             for name in names:
@@ -390,12 +778,17 @@ class MainWindow(Gtk.ApplicationWindow):
         if not isinstance(row, LaneRow):
             return
         name = row.name
-        lv = self.lane_views.get(name)
-        if lv is None:
-            title = self.view.lane_title(name) or _("lane_" + _base(name))
-            lv = SPECIAL[name](self) if name in SPECIAL else LaneView(self.ctx, name, title)
-            self.lane_views[name] = lv
-            self.stack.add_named(lv, name)
+        if self.columns is not None:  # in columns: that column (added if not there)
+            if name not in self.columns.frames:
+                self.columns.add(name, self._lane_view(name))
+                self.columns_changed()
+            self.columns.focus(name)
+            self.tabs.set_current_page(0)
+            self.view.set_active_lane(name)
+            self.view.set_state("lane", name)
+            self.lane_views[name].shown()
+            return
+        lv = self._lane_view(name)
         before = self.stack.get_visible_child()
         if before is not lv and hasattr(before, "hidden"):
             before.hidden()
@@ -405,10 +798,22 @@ class MainWindow(Gtk.ApplicationWindow):
         self.view.set_state("lane", name)
         lv.shown()
 
+    def _lane_view(self, name):
+        """The lane's view, made the first time (in the stack until a column takes it)."""
+        lv = self.lane_views.get(name)
+        if lv is None:
+            title = self.lane_title(name)
+            lv = SPECIAL[name](self) if name in SPECIAL else LaneView(self.ctx, name, title)
+            self.lane_views[name] = lv
+            self.stack.add_named(lv, name)
+        return lv
+
     def lane_title(self, name):
         return self.view.lane_title(name) or _("lane_" + _base(name))
 
     def lane_on_screen(self, name):
+        if self.columns is not None:
+            return self.tabs.get_current_page() == 0 and name in self.columns.frames
         return self.tabs.get_current_page() == 0 and self._current_lane() == name
 
     def update_badges(self):
@@ -479,12 +884,16 @@ class MainWindow(Gtk.ApplicationWindow):
         elif name == "lists_changed":
             self._rebuild_sidebar()
         elif name == "me_updated" and self.view.me is not None:
-            self.who.set_text("@" + self.view.me.handle)
+            self._show_me()
         elif name == "error":
             self.status(_("error", err=payload))
         elif name == "first_poll_done":
             if self.status_line.get_text() == _("first_poll"):
                 self.status("")
+            later = getattr(self, "_after_first_poll", "")
+            if later:
+                self._after_first_poll = ""
+                self.status(later, seconds=30)
         elif name == "rate_limited":  # once, with when; not an error per lane
             self.status(results.rate_text(payload), seconds=20)
         elif name == "auth_failed":
@@ -608,6 +1017,15 @@ class MainWindow(Gtk.ApplicationWindow):
         from .card import Avatar, link_markup, name_of
         head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         head.add_css_class("ft-card")
+        banner_url = acc.header_static or acc.header
+        if banner_url and self.images is not None and "missing" not in banner_url:
+            banner = Gtk.Picture()  # the profile's banner, as on its page
+            banner.set_can_shrink(True)
+            banner.set_content_fit(Gtk.ContentFit.COVER)
+            banner.set_size_request(-1, 140)
+            banner.add_css_class("ft-thumb")
+            self.images.get(banner_url, banner.set_paintable)
+            head.append(banner)
         top = Gtk.Box(spacing=10)
         top.append(Avatar(self.ctx, acc, 64))
         names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -653,6 +1071,14 @@ class MainWindow(Gtk.ApplicationWindow):
             buttons.append(mention)
         top.append(buttons)
         head.append(top)
+        more = Gtk.Box(spacing=6)  # as Qt's: copy the handle, open the page outside
+        copy = Gtk.Button(label=_("copy_handle"))
+        copy.connect("clicked", lambda _b: self.copy_handle(acc.handle))
+        more.append(copy)
+        if acc.url:
+            web = Gtk.Button(label=_("open_browser"))
+            web.connect("clicked", lambda _b: self.open_url(acc.url))
+            more.append(web)
         if acc.note:
             from .. import pango
             bio = Gtk.Label(xalign=0, wrap=True, selectable=False)
@@ -667,6 +1093,7 @@ class MainWindow(Gtk.ApplicationWindow):
                            ("✓ " if f.verified else "") + pango.markup(f.value))
             row.connect("activate-link", lambda _l, u: (self.on_link(u), True)[1])
             head.append(row)
+        head.append(more)
         return head
 
     # ---- links: common/links.py asks these ---------------------------------------------
@@ -702,10 +1129,11 @@ class MainWindow(Gtk.ApplicationWindow):
         from .compose import ComposeWindow
         if self.view.me is None:
             return None
-        win = ComposeWindow(self, reply_to=reply_to, invite=invite, edit=edit, quote=quote,
-                            text=text)
-        win.present()
-        return win
+        if self.composer is not None and self.cfg["ui"].get("compose", "inline") == "inline":
+            self.composer.close()  # one at a time: its text waits as a draft first
+        panel = ComposeWindow(self, reply_to=reply_to, invite=invite, edit=edit, quote=quote,
+                              text=text)
+        return panel.open()
 
     def redrafted(self, d):
         """The deleted post back in the editor, as it was typed (d: a Redraft)."""
@@ -775,11 +1203,15 @@ class MainWindow(Gtk.ApplicationWindow):
         w, h = self.get_default_size()
         if w > 0 and h > 0:
             self.view.set_state("gtk_window", f"{w}x{h}")
+        if self.columns is not None:
+            self.columns_changed()
         self.quitting = True
         self._stop()
         return False
 
     def _stop(self, *_a):
+        if self.composer is not None:  # what was typed waits as a draft
+            self.composer.close()
         for lv in self.lane_views.values():
             lv.stop()
         self.images.shutdown()
@@ -839,3 +1271,114 @@ def _themes_dir():
     d = themefile.user_dir()
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+class Columns(Gtk.ScrolledWindow):
+    """Lanes side by side (❯, or ui.layout = "columns"): each a column with ‹ › to
+    move it and ✕ to drop it; sideways scrolling when they don't fit. The lane views
+    are the window's own: they keep their place and filters across the switch."""
+
+    def __init__(self, win):
+        super().__init__()
+        self.win = win
+        self.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        self.row = Gtk.Box(spacing=1)
+        self.set_child(self.row)
+        self.frames = {}   # lane name -> its column
+        self.order = []
+        self.focused = None
+
+    def names(self):
+        return list(self.order)
+
+    def add(self, name, lv, at=None):
+        if name in self.frames:
+            return
+        parent = lv.get_parent()
+        if parent is self.win.stack:
+            self.win.stack.remove(lv)
+        frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        frame.add_css_class("ft-column")
+        frame.set_size_request(int(self.win.cfg["ui"].get("column_width", 460)), -1)
+        bar = Gtk.Box(spacing=2)
+        for text, key, step in (("‹", "column_left", -1), ("›", "column_right", 1)):
+            b = Gtk.Button(label=text)
+            b.add_css_class("flat")
+            tip(b, _(key))
+            b.connect("clicked", lambda _b, n=name, s=step: self.move(n, s))
+            bar.append(b)
+        bar.append(Gtk.Box(hexpand=True))
+        close = Gtk.Button(label="✕")
+        close.add_css_class("flat")
+        tip(close, _("column_close"))
+        close.connect("clicked", lambda _b, n=name: self.win.close_column(n))
+        bar.append(close)
+        frame.append(bar)
+        lv.set_vexpand(True)
+        frame.append(lv)
+        click = Gtk.GestureClick()
+        click.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        click.connect("pressed", lambda *_a, n=name: self._focused(n))
+        frame.add_controller(click)
+        self.frames[name] = frame
+        at = len(self.order) if at is None else max(0, min(at, len(self.order)))
+        self.order.insert(at, name)
+        before = self.frames[self.order[at - 1]] if at > 0 else None
+        self.row.insert_child_after(frame, before)
+        if self.focused is None:
+            self.focused = name
+        lv.shown()
+
+    def drop(self, name):
+        frame = self.frames.pop(name, None)
+        if frame is None:
+            return None
+        self.order.remove(name)
+        lv = self.win.lane_views.get(name)
+        if lv is not None and lv.get_parent() is frame:
+            frame.remove(lv)
+        self.row.remove(frame)
+        if self.focused == name:
+            self.focused = self.order[0] if self.order else None
+        return lv
+
+    def move(self, name, step):
+        if name not in self.order:
+            return
+        i = self.order.index(name)
+        j = max(0, min(len(self.order) - 1, i + step))
+        if i == j:
+            return
+        self.order.insert(j, self.order.pop(i))
+        frame = self.frames[name]
+        before = self.frames[self.order[j - 1]] if j > 0 else None
+        self.row.reorder_child_after(frame, before)
+        self.win.columns_changed()
+
+    def release(self):
+        out = []
+        for name in list(self.order):
+            lv = self.drop(name)
+            if lv is not None:
+                out.append((name, lv))
+        return out
+
+    def focus(self, name):
+        if name in self.frames:
+            self._focused(name)
+            frame = self.frames[name]
+            GLib.idle_add(lambda: (self._show(frame), False)[1])
+
+    def _show(self, frame):
+        ok, rect = frame.compute_bounds(self.row) if hasattr(frame, "compute_bounds") \
+            else (False, None)
+        if ok:
+            adj = self.get_hadjustment()
+            x = rect.get_x()
+            if x < adj.get_value() or x + rect.get_width() > adj.get_value() + \
+                    adj.get_page_size():
+                adj.set_value(max(0, x))
+
+    def _focused(self, name):
+        self.focused = name
+        self.win.view.set_active_lane(name)

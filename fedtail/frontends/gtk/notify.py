@@ -38,6 +38,11 @@ class Notifier:
                                    self.win.lane_title):
             self.show(note)
 
+    def test(self):
+        """Debug menu: a sample right now, whatever has focus; says how it went out."""
+        self.show(notifytext.Note("fedtail", _("notify_test_body"), "home"))
+        return self.backend
+
     def on_screen(self, lane):
         return self.win.is_active() and self.win.lane_on_screen(lane)
 

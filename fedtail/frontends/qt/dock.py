@@ -633,9 +633,28 @@ class AuthorBar(QWidget):
             text, Qt.TextElideMode.ElideRight, max(40, self.about.width())))
         self.about.setToolTip(text)
         from . import icons
+        self._steady_width()
         icons.dress(self.follow_btn, "unfollow" if on else "follow", self.win.theme,
                     words=_("unfollow") if on else _("follow"))
         self.follow_btn.setEnabled(rel is not None)
+
+    def _steady_width(self):
+        """Follow and Unfollow differ in length: the button keeps the width of the
+        longer (measured once per theme), so it doesn't jump as the post under the
+        cursor changes."""
+        from . import icons
+        key = (id(self.win.theme), self.follow_btn.font().toString())
+        if getattr(self, "_follow_width_for", None) == key:
+            return
+        b = self.follow_btn
+        b.setMinimumWidth(0)
+        widths = []
+        for on in (False, True):
+            icons.dress(b, "unfollow" if on else "follow", self.win.theme,
+                        words=_("unfollow") if on else _("follow"))
+            widths.append(b.sizeHint().width())
+        b.setMinimumWidth(max(widths))
+        self._follow_width_for = key
 
     def _follow(self):
         who, view = self.who, self.win.ctx.view

@@ -20,10 +20,12 @@ from .frontends import cli  # noqa: E402
 
 
 def for_this_run(args, cfg):
-    """--layout / --theme: this run only, the config file stays as it is. An error to
+    """--ui / --layout / --theme: this run only, the config file stays as it is. An error to
     say, or None."""
     from .core import profiles
     profiles.RUN_FLAGS[:] = []
+    if getattr(args, "ui", None):  # an account switched to opens in the same window kind
+        profiles.RUN_FLAGS += ["--ui", args.ui]
     if getattr(args, "layout", None):
         cfg["ui"]["layout"] = args.layout
         profiles.RUN_FLAGS += ["--layout", args.layout]

@@ -65,5 +65,20 @@ class PangoTest(unittest.TestCase):
                 self.fail(f"{html!r} → {m!r}: {e}")
 
 
+class MarkdownTest(unittest.TestCase):
+    """The help pages (and the editor's preview) as Pango markup."""
+
+    def test_markdown(self):
+        from fedtail.frontends import pango
+        got = pango.markdown("# Head\n\n**bold** and *it* and `x<y`\n\n- one\n- [two](b.md)\n"
+                             "\n| a | b |\n|---|---|\n| 1 | 2 |\n```\ncode <\n```")
+        self.assertIn('<span size="x-large"><b>Head</b></span>', got)
+        self.assertIn("<b>bold</b> and <i>it</i> and <tt>x&lt;y</tt>", got)
+        self.assertIn('• <a href="b.md">two</a>', got)
+        self.assertIn("1  ·  2", got)
+        self.assertNotIn("---", got)
+        self.assertIn("<tt>code &lt;</tt>", got)
+
+
 if __name__ == "__main__":
     unittest.main()

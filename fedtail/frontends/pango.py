@@ -150,3 +150,77 @@ def markup(html, sanitized=False):
     b.feed(html if sanitized else sanitize(html or ""))
     b.close()
     return re.sub(r"[ \t]+\n", "\n", b.result())  # no spaces left dangling at line ends
+
+
+_MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+_MD_CODE = re.compile(r"`([^`]+)`")
+_MD_BOLD = re.compile(r"\*\*(.+?)\*\*|__(.+?)__")
+_MD_ITAL = re.compile(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])")
+_MD_HEAD = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
+_MD_ITEM = re.compile(r"^(\s*)(?:[-*+]|(\d+)[.)])\s+(.*)$")
+_MD_SIZES = {1: "x-large", 2: "large", 3: "medium"}
+
+
+def _md_inline(text):
+    """One line of Markdown, escaped, with `code`, **bold**, *italics* and [links]."""
+    out, pos = [], 0
+    for m in re.finditer(r"`[^`]+`|\[[^\]]+\]\([^)\s]+(?:\s+\"[^\"]*\")?\)", text):
+        out.append(_md_emph(esc(text[pos:m.start()])))
+        tok = m.group(0)
+        if tok.startswith("`"):
+            out.append(f"<tt>{esc(tok[1:-1])}</tt>")
+        else:
+            lm = _MD_LINK.match(tok)
+            href = safe_href(lm.group(2)) or lm.group(2)
+            out.append(f'<a href="{esc(href)}">{_md_emph(esc(lm.group(1)))}</a>')
+        pos = m.end()
+    out.append(_md_emph(esc(text[pos:])))
+    return "".join(out)
+
+
+def _md_emph(text):
+    text = _MD_BOLD.sub(lambda m: f"<b>{m.group(1) or m.group(2)}</b>", text)
+    return _MD_ITAL.sub(lambda m: f"<i>{m.group(1)}</i>", text)
+
+
+def markdown(md):
+    """Markdown (the help pages) as Pango markup: headings bigger and bold, lists with
+    "• ", code blocks and `code` monospace, tables as lines of cells, links kept."""
+    lines, out, code = (md or "").replace("\r\n", "\n").split("\n"), [], None
+    for line in lines:
+        if line.strip().startswith("```"):
+            if code is None:
+                code = []
+            else:
+                out.append("<tt>" + esc("\n".join(code)) + "</tt>")
+                code = None
+            continue
+        if code is not None:
+            code.append(line)
+            continue
+        h = _MD_HEAD.match(line)
+        if h:
+            size = _MD_SIZES.get(len(h.group(1)), "medium")
+            out.append(f'\n<span size="{size}"><b>{_md_inline(h.group(2))}</b></span>')
+            continue
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            if all(set(c) <= set("-: ") for c in cells):
+                continue  # the line under a table's head
+            out.append("  ·  ".join(_md_inline(c) for c in cells))
+            continue
+        if stripped.startswith(">"):
+            out.append("<i>" + QUOTE_MARK + _md_inline(stripped.lstrip("> ")) + "</i>")
+            continue
+        item = _MD_ITEM.match(line)
+        if item:
+            indent = "    " * (len(item.group(1).expandtabs(4)) // 2)
+            mark = f"{item.group(2)}." if item.group(2) else "•"
+            out.append(f"{indent}{mark} {_md_inline(item.group(3))}")
+            continue
+        out.append(_md_inline(line))
+    if code is not None:
+        out.append("<tt>" + esc("\n".join(code)) + "</tt>")
+    text = "\n".join(out)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()

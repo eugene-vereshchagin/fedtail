@@ -96,7 +96,10 @@ class GtkSmokeTest(unittest.TestCase):
         self.assertTrue(any("привет" in t for t in texts))
         # the reply's warning hides its text in an expander
         reply = next(c for c in lane.rows.values() if c.post.warning)
-        self.assertTrue(any(isinstance(w, Gtk.Expander) for w in _walk(reply)))
+        exp = next(w for w in _walk(reply) if isinstance(w, Gtk.Expander))
+        from fedtail.core import config as config_mod
+        # open or not as ui.expand_cw / ui.arts_mode say, the pictures with it
+        self.assertEqual(exp.get_expanded(), config_mod.expand_cw(self.core.cfg))
 
     def test_seen_posts_get_read(self):
         """The window is active and every post fits: all are seen, so all are read."""
@@ -122,6 +125,63 @@ class GtkSmokeTest(unittest.TestCase):
         pump(timeout=0.3)
         self.assertLessEqual(lane.list.get_width(), lane.get_width())
         self.assertLessEqual(lane.get_width(), self.win.get_width())
+
+    def test_the_menu_and_what_it_opens(self):
+        """≡ as Qt's: its items made, and each window or tab they open comes up
+        without an error (on the fake server)."""
+        menu = self.win.menu
+        model = menu.model()
+        labels = []
+
+        def walk(m):
+            for i in range(m.get_n_items()):
+                label = m.get_item_attribute_value(i, "label", None)
+                if label is not None:
+                    labels.append(label.get_string())
+                for link in ("section", "submenu"):
+                    sub = m.get_item_link(i, link)
+                    if sub is not None:
+                        walk(sub)
+        walk(model)
+        for key in ("tender_menu", "accounts", "try_theme", "debug_menu", "help_title",
+                    "about", "open_config", "silence_muted"):
+            self.assertTrue(any(i18n._(key) in x for x in labels), key)
+        errors = []
+        self.win.error = lambda e: errors.append(str(e))
+        self.win.bridge.on_error = errors.append
+        for name in ("filters", "muted", "scheduled", "server", "federation", "help",
+                     "test_notify", "stacks", "census", "trim", "whats_this"):
+            self.win.activate_action("win." + name, None)
+            pump(timeout=0.3)
+        self.assertTrue(self.win.hints_on)
+        self.win.activate_action("win.whats_this", None)
+        self.assertFalse(self.win.hints_on)
+        self.win.open_search("bob")
+        pump(lambda: "search" in self.win.extra_tabs, 3)
+        self.win.open_tag("linux")
+        pump(timeout=0.3)
+        self.assertIn("tag:linux", self.win.extra_tabs)
+        self.assertEqual(errors, [])
+        for w in list(Gtk.Window.list_toplevels()):
+            if w is not self.win:
+                w.close()
+
+    def test_columns_and_full_width(self):
+        lane = self._lane("home")
+        self.win.columns_btn.set_active(True)
+        pump(timeout=0.3)
+        self.assertIsNotNone(self.win.columns)
+        self.assertIn("home", self.win.columns.frames)
+        self.assertIs(lane.get_parent(), self.win.columns.frames["home"])
+        self.assertTrue(self.win.lane_on_screen("home"))
+        self.win.columns_btn.set_active(False)
+        pump(timeout=0.3)
+        self.assertIsNone(self.win.columns)
+        self.assertIs(lane.get_parent(), self.win.stack)
+        self.win.wide_btn.set_active(not self.win.wide_btn.get_active())
+        pump(timeout=0.2)
+        self.assertEqual(bool(self.core.cfg["ui"]["max_width"]),
+                         not self.win.wide_btn.get_active())
 
     def test_a_section_folds(self):
         from fedtail.frontends.gtk.window import SectionRow
@@ -237,6 +297,33 @@ class GtkSmokeTest(unittest.TestCase):
         card = next(c for c in self._lane("home").rows.values() if c.post.id == "011")
         self.assertTrue(pump(lambda: bool(card.mine_ids), 5))
 
+    def test_the_editor_is_a_panel_in_the_window(self):
+        """As Qt's: over the window's middle, following its size; language, Later,
+        Preview, Discard; one editor at a time."""
+        dlg = self.win.compose()
+        self.assertIs(dlg.get_parent(), self.win.overlay)
+        pump(lambda: dlg.get_width() > 0, 3)
+        self.assertLessEqual(dlg.get_width(), self.win.overlay.get_width())
+        self.assertEqual(dlg.language(), self.core.cfg["post"].get("language") or "")
+        dlg._set_language("ka")
+        self.assertEqual(dlg.language(), "ka")
+        dlg.buffer.set_text("**жирно** и _нет_")
+        prev = dlg.preview()
+        self.assertTrue(prev.get_visible())
+        prev.close()
+        later = dlg.ask_schedule()
+        later.close()
+        other = self.win.compose()  # the first one goes, its text kept — and back
+        self.assertTrue(dlg.closed)
+        self.assertIsNone(dlg.get_parent())
+        self.assertEqual(other._text(), "**жирно** и _нет_")
+        asked = []
+        self.win.confirm = lambda _t, _x, then: asked.append(then)
+        other.discard()
+        asked[0]()
+        self.assertTrue(other.closed)
+        self.assertFalse(self.view.get_draft(other.key))
+
     def test_editor_keeps_a_draft(self):
         dlg = self.win.compose()
         dlg.buffer.set_text("недописанное")
@@ -266,7 +353,7 @@ class GtkSmokeTest(unittest.TestCase):
         self.assertFalse(dlg.poll_btn.get_sensitive())  # pictures or a poll, not both
         self.assertTrue(dlg.sensitive_btn.get_visible())
         asked = []
-        dlg._ask_alt = asked.append
+        dlg._ask_alt = lambda n, *_a: asked.append(n)
         dlg.buffer.set_text("с картинкой")
         dlg.send()
         self.assertEqual(asked, [1])  # no description: asked first

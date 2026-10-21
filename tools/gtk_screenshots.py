@@ -98,6 +98,34 @@ def fake_media(url):
     return f
 
 
+class _Answer:
+    """A streamed HTTP answer, as core.remote reads one."""
+    is_redirect = False
+
+    def __init__(self, data):
+        self.data = data
+        self.headers = {"Content-Type": "image/png"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_a):
+        return False
+
+    def raise_for_status(self):
+        pass
+
+    def iter_content(self, _size):
+        yield self.data
+
+    def close(self):
+        pass
+
+
+def fake_get(url, timeout=None, **_kw):
+    return _Answer(fake_media(url).result())
+
+
 def pump(seconds):
     ctx = GLib.MainContext.default()
     end = time.monotonic() + seconds
@@ -119,7 +147,7 @@ def shoot(win, path):
     texture.save_to_png(str(path))
 
 
-def run(out, theme_name, dark):
+def run(out, theme_name, dark, extras=False):
     tmp = Path(tempfile.mkdtemp(dir=_tmp))
     FakeApi.world = world()
     cfg, _w = config.validate({"feed": {"first_run_mark_read": False},
@@ -133,6 +161,7 @@ def run(out, theme_name, dark):
     view = View(core)
     view.media_bytes = fake_media
     win = MainWindow(None, core, view, Bridge(view), themes.apply(cfg))
+    win.images.http.get = fake_get  # the picture cache: no network either
     win.set_default_size(1000, 700)
     win.present()
     win.start()
@@ -146,10 +175,42 @@ def run(out, theme_name, dark):
         lane.adj.set_value(lane.adj.get_upper())
         pump(0.6)
         shoot(win, out / name.replace(".png", "-end.png"))
+    if extras:
+        shoot_extras(win, out, name.replace(".png", ""))
     win.close()
     win.destroy()
     core.shutdown()
     print(out / name)
+
+
+def shoot_extras(win, out, stem):
+    """The rest of the window, for one theme: the editor over the lanes, the columns,
+    the menu's windows (Silence, the server, help), the preview."""
+    def others():
+        return [w for w in Gtk.Window.list_toplevels() if w is not win and w.get_visible()]
+
+    def shot_last(tag):
+        pump(0.6)
+        for w in others():
+            shoot(w, out / f"{stem}-{tag}.png")
+            w.close()
+        pump(0.2)
+    dlg = win.compose()
+    dlg.buffer.set_text("Черновик: **жирное**, #тег и @kot — Markdown работает.")
+    pump(0.6)
+    shoot(win, out / f"{stem}-compose.png")
+    dlg.preview()
+    shot_last("preview")
+    dlg.close()
+    win.columns_btn.set_active(True)
+    pump(1.0)
+    shoot(win, out / f"{stem}-columns.png")
+    win.columns_btn.set_active(False)
+    pump(0.3)
+    win.menu.model()  # (made when ≡ opens: what needs a login is enabled then)
+    for action, tag in (("filters", "silence"), ("server", "server"), ("help", "help")):
+        win.activate_action("win." + action, None)
+        shot_last(tag)
 
 
 def main():
@@ -157,9 +218,9 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     names = sys.argv[2:] or sorted(p.stem for p in themefile.BUILTIN_DIR.glob("*.toml"))
     i18n.setup("ru")
-    for name in names:
+    for i, name in enumerate(names):
         for dark in (False, True):
-            run(out, name, dark)
+            run(out, name, dark, extras=(i == 0 and dark))
     return 0
 
 

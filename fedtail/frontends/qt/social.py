@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from ...i18n import _
 from ...model.text import snippet
 from ..common import server
+from ..common.server import PROBE_MARKS, _has  # noqa: F401  (Qt's names)
 from .feed import AccountRow, FeedView, TagRow, _button, _Header, _PagedTab
 from .text import clean, esc
 
@@ -319,20 +320,12 @@ class ProbeWidget(QWidget):
         if probe is None:
             self.probe_note.setText(_("probe_never"))
             return
-        when = self.win.theme.date(probe.checked) if probe.checked else "?"
-        self.probe_note.setText(_("probe_checked", when=when,
-                                  software=" ".join(x for x in (probe.software,
-                                                                probe.version) if x)))
+        note, rows = server.probe_rows(probe, self.win.theme.date)
+        self.probe_note.setText(note)
         self.probe_btn.setText(_("probe_again"))
-        order = {"no": 0, "closed": 1, "error": 2, "self": 3, "yes": 4, "info": 5}
-        for f in sorted(probe.features, key=lambda f: order.get(f.state, 9)):
-            mark = PROBE_MARKS.get(f.state, "?")
-            answer = f.detail if f.state == "info" else \
-                _("probe_" + f.state) + (f" ({f.detail})" if f.detail and
-                                         f.detail != "known" else "")
-            item = QTreeWidgetItem([_("probe_" + f.key) if _has("probe_" + f.key)
-                                    else f.key, f"{mark} {answer}"])
-            if f.detail == "known":
+        for what, answer, known in rows:
+            item = QTreeWidgetItem([what, answer])
+            if known:
                 item.setToolTip(1, _("probe_known_tip"))
             self.probe_table.addTopLevelItem(item)
         self.probe_table.resizeColumnToContents(0)
@@ -401,8 +394,3 @@ class FederationWidget(QWidget):
         self.refresh()
 
 
-PROBE_MARKS = {"yes": "✓", "no": "✗", "closed": "🔒", "error": "⚠", "self": "◐", "info": "·"}
-
-
-def _has(key):
-    return _(key) != key

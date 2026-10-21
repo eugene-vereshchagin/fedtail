@@ -6,12 +6,15 @@ same choices the Qt card makes (qt/card.py), drawn with GTK.
 
 from __future__ import annotations
 
+from ...core import config
 from ...i18n import _
 from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
 from .gi_setup import Gdk, GLib, Gtk, Pango, tip
+
+VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 
 THUMB_H = 180       # px: a picture's height in a card
 QUOTE_DEPTH = 1     # a quoted post shows its own quote no deeper than this
@@ -108,8 +111,17 @@ class Card(Gtk.Box):
     # ---- building ----------------------------------------------------------------
     def _build(self, parent, number, my_replies):
         p, ctx, col = self.post, self.ctx, self.column
-        if isinstance(self.entry, Share):
-            col.append(_label(_("boosted_by", name=name_of(self.entry.by)), ("ft-muted",)))
+        if isinstance(self.entry, Share):  # who boosted it (their profile), and when
+            by = self.entry.by
+            text = _("boosted_by", name=GLib.markup_escape_text(name_of(by)))
+            text = text.replace(GLib.markup_escape_text(name_of(by)),
+                                link_markup(f"fedtail:account/{by.id}", name_of(by)), 1)
+            if self.entry.created:
+                text += " · " + GLib.markup_escape_text(
+                    _("boost_time", when=ctx.theme.date(self.entry.created)))
+            boost = _label("♻ " + text, ("ft-muted",), markup=True)
+            boost.connect("activate-link", self._link)
+            col.append(boost)
         head = Gtk.Box(spacing=6)
         mark = "*" if ctx.theme.shape.get("unread_mark") == "star" else "●"
         self.dot = _label(mark, ("ft-dot",))
@@ -130,8 +142,17 @@ class Card(Gtk.Box):
                          ("ft-mono",), markup=True)
             sid.connect("activate-link", self._link)
             head.append(sid)
-        when = ctx.theme.date(p.created) if p.created else ""
-        head.append(_label(when + (" ✎" if p.edited else ""), ("ft-muted",)))
+        # the time (the thread), who sees it, "edited" — as Qt's header has them
+        meta = []
+        if p.created:
+            meta.append(link_markup(f"fedtail:thread/{p.id}", ctx.theme.date(p.created)))
+        meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
+        if p.edited:
+            meta.append(link_markup(f"fedtail:history/{p.id}", _("edited_mark")))
+        info = _label(" · ".join(meta), ("ft-muted",), markup=True)
+        tip(info, actions.vis_word(p.visibility))
+        info.connect("activate-link", self._link)
+        head.append(info)
         col.append(head)
 
         if parent == "missing":
@@ -155,9 +176,16 @@ class Card(Gtk.Box):
         cards = ctx.cfg["feed"].get("link_cards", "full")
         if p.card is not None and not p.media and cards != "off":
             inner.append(self._link_card(p.card))
-        if p.warning:
-            exp = Gtk.Expander(label="⚠ " + p.warning)
+        # a server filter that says "warn": folded as a content warning, and closed;
+        # a warning of the author's open or not as ui.expand_cw / ui.arts_mode say
+        warned = list(p.filtered) if not ctx.cfg["ui"].get("arts_mode") else []
+        if p.warning or warned:
+            label = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else [])
+                               + (["⚠ " + p.warning] if p.warning else []))
+            exp = Gtk.Expander(label=label)
+            exp.get_label_widget().set_wrap(True)
             exp.set_child(inner)
+            exp.set_expanded(not warned and config.expand_cw(ctx.cfg))
             col.append(exp)
         else:
             col.append(inner)

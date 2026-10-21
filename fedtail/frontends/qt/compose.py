@@ -108,18 +108,17 @@ def save_image(core, image):
 
 
 
-OTHER_LANG = "\x00other"
+from ..common.compose import LANG_NAMES, OTHER_LANG  # noqa: E402,F401  (Qt's names)
+
 BIG_PCT = 90  # the ⤢ button: this share of the main window
 # languages Qt has no name of their own for
-LANG_NAMES = {"tok": "toki pona", "jbo": "la .lojban.", "eo": "Esperanto",
-              "ia": "Interlingua", "vo": "Volapük", "ie": "Interlingue"}
-
-
 def _lang_label(code, qlocale):
-    name = LANG_NAMES.get(code) or qlocale(code).nativeLanguageName()
-    if not name or (qlocale(code).language() == qlocale.Language.C and code != "c"):
-        name = LANG_NAMES.get(code, code)
-    return f"{name[:1].upper()}{name[1:]} ({code})"
+    def native(c):
+        loc = qlocale(c)
+        if loc.language() == qlocale.Language.C and c != "c":
+            return None
+        return loc.nativeLanguageName() or None
+    return rules.language_label(code, native)
 
 # a draft kept before the composer spoke the model's words
 _OLD_VIS = {"private": "followers"}

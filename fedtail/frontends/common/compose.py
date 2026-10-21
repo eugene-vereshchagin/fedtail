@@ -221,3 +221,42 @@ def fit_for_server(path, caps, folder, images):
                                      Path(path).name, os.path.getsize(path) // 1024,
                                      out.stat().st_size // 1024)
     return str(out)
+
+
+# ---- the post's language --------------------------------------------------------------
+OTHER_LANG = "\x00other"
+LANG_NAMES = {"tok": "toki pona", "jbo": "la .lojban.", "eo": "Esperanto",
+              "ia": "Interlingua", "vo": "Volapük", "ie": "Interlingue"}
+# each by its own name, for a toolkit with no locale database of its own (GTK)
+NATIVE = {"ru": "русский", "en": "American English", "ka": "ქართული", "uk": "українська",
+          "be": "беларуская", "kk": "қазақ тілі", "hy": "հայերեն", "az": "azərbaycan",
+          "de": "Deutsch", "fr": "français", "es": "español", "it": "italiano",
+          "pt": "português", "pl": "polski", "cs": "čeština", "sk": "slovenčina",
+          "nl": "Nederlands", "sv": "svenska", "no": "norsk", "nb": "norsk bokmål",
+          "da": "dansk", "fi": "suomi", "et": "eesti", "lv": "latviešu", "lt": "lietuvių",
+          "ro": "română", "bg": "български", "sr": "српски", "hr": "hrvatski",
+          "sl": "slovenščina", "el": "Ελληνικά", "hu": "magyar", "tr": "Türkçe",
+          "ar": "العربية", "he": "עברית", "fa": "فارسی", "zh": "中文", "ja": "日本語",
+          "ko": "한국어", "hi": "हिन्दी", "th": "ไทย", "vi": "Tiếng Việt", "id": "Indonesia",
+          "ca": "català", "eu": "euskara", "gl": "galego", "ga": "Gaeilge", "cy": "Cymraeg",
+          "is": "íslenska", "mk": "македонски", "tt": "татар", "cv": "чӑвашла",
+          "ba": "башҡорт", "uz": "o‘zbek", "tg": "тоҷикӣ", "ky": "кыргызча",
+          "mn": "монгол", "os": "ирон"}
+LANG_CODE = re.compile(r"[a-z]{2,3}(-[a-z0-9]{2,8})?")
+
+
+def language_label(code, native=None):
+    """"Русский (ru)": a language by its own name and its code. native(code): the
+    toolkit's own name for it, or None (then NATIVE, then the code)."""
+    name = LANG_NAMES.get(code) or (native(code) if native else None) or NATIVE.get(code) \
+        or code
+    return f"{name[:1].upper()}{name[1:]} ({code})"
+
+
+def languages(cfg, added=()):
+    """The codes the editor offers: post.languages, then post.language if it's not
+    among them, then those added by hand ("Another language…")."""
+    post = cfg["post"]
+    return list(dict.fromkeys(list(post.get("languages") or []) +
+                              ([post["language"]] if post.get("language") else []) +
+                              list(added or [])))

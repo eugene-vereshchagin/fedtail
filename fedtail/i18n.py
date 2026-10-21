@@ -104,7 +104,10 @@ _STRINGS = {
         "web_mark_read": "Всё прочитано",
         "gtk_not_yet": "В GTK-версии этого пока нет — есть в окне на Qt.", "gtk_lanes": "Ленты",
         "gtk_yes": "Да", "gtk_no": "Нет", "cmd_line_menu": "Командная строка",
+        "gtk_no_split": "Раскладка split (ростер и окно сообщений) пока есть только в "
+                        "Qt-окне: здесь — обычная",
         "first_poll": "Получаю ленты с сервера…",
+        "schedule_too_soon": "Не раньше чем через пять минут",
         "web_more": "Ещё", "web_menu": "Меню", "web_keys": "Клавиши",
         "web_copied": "Ссылка скопирована",
         "web_about": "fedtail {version} — клиент федиверса. Ты — @{handle}.",
@@ -961,7 +964,10 @@ _STRINGS = {
         "web_mark_read": "All read",
         "gtk_not_yet": "The GTK version can't do this yet — the Qt window can.",
         "gtk_lanes": "Lanes", "gtk_yes": "Yes", "gtk_no": "No", "cmd_line_menu": "Command line",
+        "gtk_no_split": "The split layout (roster and messages window) is only in the Qt "
+                        "window for now: the usual one here",
         "first_poll": "Getting the lanes from the server…",
+        "schedule_too_soon": "Five minutes from now at the earliest",
         "web_more": "More", "web_menu": "Menu", "web_keys": "Keys",
         "web_copied": "Link copied",
         "web_about": "fedtail {version}, a fediverse client. You are @{handle}.",

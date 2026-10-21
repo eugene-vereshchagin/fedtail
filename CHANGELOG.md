@@ -42,6 +42,27 @@
   Federated; the server's "slow down" is a sentence, not `{'until': …}`, and status
   lines go away after a while; WebP pictures (GoToSocial's) are read through Pillow when
   GTK can't (else the log says to install webp-pixbuf-loader).
+- The GTK window, by the Qt one (screenshots of it as the reference): the sidebar's head
+  — my face and name (a click: my profile; a right click: the other accounts), ≡ ↔ ❯,
+  a big Write, "Find people, tags…", "+" by Lists, the version at the foot; ↔ posts
+  across the window (remembered), ❯ lanes side by side (or `ui.layout = "columns"`),
+  each column with ‹ › ✕; the lane's header as Qt's (All | Posts only | New, ↓ To new,
+  Mark all read, ▾ Show, Refresh); the ≡ menu item for item — for the tender and
+  sensitive (word filters, muted, blocked, blocked servers, filtered notifications),
+  scheduled posts, find people (suggestions, the directory, trends), account and
+  server (switch, all in one window, add, make main, log in again, log out, about the
+  server and what it can do), config, themes, try a theme, data, the whole Debugging
+  submenu, help, What's this?, about; the editor a panel over the window (⤡ bigger,
+  the post's language, Later, Preview, Discard, Close — the draft stays; one at a
+  time), or a window with `ui.compose = "window"`; a search tab, a tag's posts; the
+  card's header with who boosted and when, the visibility, "edited"; a profile with
+  its banner, Copy handle, Open in browser; the status bar with the account. A warning
+  is open or closed as `ui.expand_cw` / `ui.arts_mode` say (the pictures were hidden
+  under it), a post folded by a "warn" filter stays closed; `--layout split` says the
+  GTK window has no such layout yet. Switching accounts from a `--ui gtk` window opens
+  the other one in GTK too.
+- Qt, split layout: the author bar's Follow / Unfollow keeps one width — it no longer
+  jumps as the post under the cursor changes.
 - Both windows say "Getting the lanes from the server…" until the first round of
   polling is in — on a slow connection the empty lanes looked broken.
 - A theme can bring its own button pictures: `themes/<name>/icons/<picture>.svg` or
