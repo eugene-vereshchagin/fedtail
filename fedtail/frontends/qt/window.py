@@ -1885,6 +1885,8 @@ class MainWindow(QMainWindow):
         """≡ → Help: the help panel over the lanes, at `page` — the same panel each time,
         where it was left when no page is asked for. No shortcut on purpose."""
         from .help import HelpPanel
+        if not self.isVisible():  # the split layout: the help lives in the messages window
+            self.show_raise()
         if self.help_panel is None:
             self.help_panel = HelpPanel(self)
         panel = self.help_panel
@@ -2177,6 +2179,8 @@ class MainWindow(QMainWindow):
         """The full Compose window, whatever the layout (⤢ from the input line)."""
         if not self.core.me:
             return
+        if not self.isVisible():  # a panel of the main window: the window comes too
+            self.show_raise()
         Compose(self, reply_to, attach, text).show()
 
     def quote_reply(self, st, text, whole=False):

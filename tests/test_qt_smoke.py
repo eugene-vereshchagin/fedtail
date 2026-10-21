@@ -2324,6 +2324,11 @@ class QtSmokeTest(unittest.TestCase):
                                                   Qt.KeyboardModifier.NoModifier))
         self.assertTrue(win.isVisible())
         self.assertIs(win.stack.currentWidget(), win.lane_widgets["home"])
+        # help from the roster's menu, the messages window hidden: the window comes
+        win.hide()
+        win.open_help()
+        self.assertTrue(win.isVisible() and win.help_panel.isVisible())
+        win.help_panel.hide()
         # closing the messages window leaves the roster, as in a messenger; with
         # ui.split_tabs = "close" its tabs go with it
         win.open_thread("011")

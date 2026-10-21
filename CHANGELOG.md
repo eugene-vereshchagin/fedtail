@@ -59,6 +59,9 @@
 - Less freezing: trying a theme no longer stops the window for seconds (the lanes out of
   sight let their cards go first), the split layout no longer lays the whole window out
   twice a second, and the roster fills in a batch of rows at a time.
+- In the split layout Help (and the big Compose window) from the roster's menu brings
+  the messages window up: they are panels of it, and stayed invisible while it was
+  closed.
 - `--update-config` moves an option that changed its name (`ui.button_icons` of the 0.17
   development builds is `ui.additional_icons`), and the start says what it is now
   instead of "unknown key".
