@@ -161,14 +161,10 @@ class Card(Gtk.Box):
         else:
             col.append(inner)
 
-        for mine in list(my_replies or ())[:3]:  # "you replied", as Qt shows it
-            when = ctx.theme.date(mine.created) if mine.created else ""
-            lab = _label(link_markup(f"fedtail:thread/{mine.id}",
-                                     "↳ " + _("you_replied", when=when,
-                                              text=snippet(mine, 80))),
-                         ("ft-myreply",), markup=True, wrap=True)
-            lab.connect("activate-link", self._link)
-            col.append(lab)
+        self.mine_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        col.append(self.mine_box)
+        self.mine_ids = None
+        self.set_my_replies(my_replies)
 
         bar = Gtk.Box(spacing=4)
         self.actions = Gtk.Box(spacing=4)
@@ -182,6 +178,26 @@ class Card(Gtk.Box):
         self.more.set_create_popup_func(self._fill_menu)
         bar.append(self.more)
         col.append(bar)
+
+    def set_my_replies(self, replies):
+        """ "you replied" under the post (as Qt shows it), the newest few; rebuilt only
+        when they changed — a reply just sent shows at once (the "parents" event)."""
+        replies = list(replies or ())
+        ids = tuple(r.id for r in replies)
+        if ids == self.mine_ids:
+            return
+        self.mine_ids = ids
+        while (child := self.mine_box.get_first_child()) is not None:
+            self.mine_box.remove(child)
+        for mine in replies[:3]:
+            when = self.ctx.theme.date(mine.created) if mine.created else ""
+            lab = _label(link_markup(f"fedtail:thread/{mine.id}",
+                                     "↳ " + _("you_replied", when=when,
+                                              text=snippet(mine, 80))),
+                         ("ft-myreply",), markup=True, wrap=True)
+            lab.connect("activate-link", self._link)
+            self.mine_box.append(lab)
+        self.mine_box.set_visible(bool(replies))
 
     def _body(self, p):
         cfg = self.ctx.cfg

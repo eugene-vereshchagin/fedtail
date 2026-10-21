@@ -1992,10 +1992,14 @@ class CoreTest(TmpDir):
         self.assertEqual([r["id"] for r in core.my_replies([c1])["041"]], ["043"])
         self.assertIn("041", core.store.read_set(["041"]))  # answered → read
         self.assertNotIn("042", core.store.read_set(["042"]))
-        # replying from fedtail marks the comment read and is found at once
+        # replying from fedtail marks the comment read and is found at once — and the
+        # windows hear of it, so "you replied" shows under the post without a new poll
+        heard = []
+        core.events.on("parents", lambda n, p: heard.append(n))
         core.post("ага", "private", reply_to="042").result()
         self.assertIn("042", core.store.read_set(["042"]))
         self.assertIn("042", core.my_replies([c2]))
+        self.assertEqual(heard, ["parents"])
 
     def test_migration_from_v1(self):
         import json as _json

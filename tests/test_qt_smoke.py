@@ -12,6 +12,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
+    from PySide6.QtGui import QTextCursor
     from PySide6.QtWidgets import QApplication
     HAVE_QT = True
 except ImportError:
@@ -2290,6 +2291,16 @@ class QtSmokeTest(unittest.TestCase):
         self.assertFalse(win.author_bar.isVisibleTo(win))  # a thread: by the input line
         win.select_lane("home")
         self.assertIsNone(win.dock.target)  # a lane: a new post
+        # the input line completes @names and #tags as the Compose window does
+        self.core.store.people_counts()
+        win.dock.text.setPlainText("привет @bo")
+        win.dock.text.moveCursor(QTextCursor.MoveOperation.End)
+        win.dock.completion.suggest()
+        offered = win.dock.completion.model.stringList()
+        self.assertTrue(any(x.startswith("@bob@social.example") for x in offered), offered)
+        win.dock.completion.put(offered[0])
+        self.assertEqual(win.dock.text.toPlainText(), "привет @bob@social.example ")
+        win.dock.text.clear()
         self.pump(0.3)
         win.author_bar.update_bar()  # whose post is on top: over the lane, with buttons
         if win.author_bar.who is not None:

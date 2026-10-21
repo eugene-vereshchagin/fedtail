@@ -89,6 +89,10 @@ class InputDock(QWidget):
         self.text.setMinimumHeight(FACE)
         self.text.textChanged.connect(self._count)
         self.text.installEventFilter(self)
+        # #tags, @names, :emoji: as in the Compose window (installed after this filter,
+        # so it sees the keys first: Enter picks from its list, doesn't send)
+        from .complete import Completer
+        self.completion = Completer(self, self.text, win.ctx.view, win.bridge)
         row.addWidget(self.text, 1)
         # whom I write to, as in QIP: their face beside the line (mine isn't needed)
         from .card import ClickLabel

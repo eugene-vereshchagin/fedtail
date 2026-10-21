@@ -738,6 +738,64 @@ class timed:
         return False
 
 
+def _toolkits():
+    """The toolkits loaded in this process, with their versions (only those already
+    imported: asking must not load one)."""
+    out = []
+    if "PySide6.QtCore" in sys.modules:
+        try:
+            from PySide6.QtCore import qVersion
+            out.append(f"Qt {qVersion()}")
+        except Exception:  # noqa: BLE001
+            pass
+    gi = sys.modules.get("gi.repository.Gtk")
+    if gi is not None:
+        try:
+            out.append(f"GTK {gi.get_major_version()}.{gi.get_minor_version()}."
+                       f"{gi.get_micro_version()}")
+            adw = sys.modules.get("gi.repository.Adw")
+            out.append(f"libadwaita {adw.get_major_version()}.{adw.get_minor_version()}"
+                       if adw is not None else "libadwaita not used")
+        except Exception:  # noqa: BLE001
+            pass
+    if "textual" in sys.modules:
+        out.append(f"textual {getattr(sys.modules['textual'], '__version__', '?')}")
+    return out
+
+
+def changed_options(cfg):
+    """{"section.key": value} of the options that differ from the defaults."""
+    from .core.config import DEFAULTS
+    out = {}
+    for section, values in (cfg or {}).items():
+        base = DEFAULTS.get(section)
+        if not isinstance(values, dict) or not isinstance(base, dict):
+            continue
+        for key, val in values.items():
+            if key not in base or base[key] != val:
+                out[f"{section}.{key}"] = val
+    return out
+
+
+def debug_context(paths, cfg, ui):
+    """In the debugging mode (a dev version): what --bug-report would add, written into
+    the log right away — so the log file alone is enough to send. The system summary,
+    the options changed from the defaults and the config file itself (it holds no
+    token; auth.json and the database never go anywhere)."""
+    if not is_on():
+        return
+    log.info("==== for a bug report (the debugging mode: this log alone is enough)\n"
+             "frontend %s\n%s", ui, _system_summary(paths).rstrip())
+    log.info("options changed from the defaults: %s",
+             json.dumps(changed_options(cfg), ensure_ascii=False, default=str))
+    try:
+        text = paths.config_file.read_text("utf-8")
+    except OSError:
+        text = ""
+    if text.strip():
+        log.info("config file %s:\n%s", paths.config_file, text.rstrip())
+
+
 # ---- bug report ----------------------------------------------------------------------------------
 REPORT_SKIP = {"auth.json", "state.db", "state.db-wal", "state.db-shm"}
 
@@ -781,6 +839,7 @@ def _system_summary(paths):
             lines.append(f"{mod} {getattr(m, '__version__', '?')}")
         except Exception as e:
             lines.append(f"{mod} missing ({e.__class__.__name__})")
+    lines += _toolkits()
     try:
         lines.append(f"state.db {paths.db_file.stat().st_size // 1024} KB")
     except OSError:

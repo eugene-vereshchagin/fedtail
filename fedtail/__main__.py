@@ -200,6 +200,7 @@ def main(argv=None):
 
     ui = args.ui or cfg["ui"]["frontend"]
     frontend = frontends.load(ui)
+    diag.debug_context(where, cfg, ui)  # a dev version: the log holds a bug report's all
     if ui in ("qt", "gtk") and cfg["ui"]["desktop_entry"]:
         from .desktop import ensure
         made = ensure(where.profile)

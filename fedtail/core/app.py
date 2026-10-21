@@ -2468,6 +2468,10 @@ class Core(SocialMixin):
                 self.store.put_statuses(chain)
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
                 self._auto_subscribe([st])
+                if reply_to:
+                    # "you replied" under the post answered: the lanes it is in look again
+                    # now (it changed no lane's list of posts, so nothing else tells them)
+                    self.emit("parents")
             except Exception:
                 log.exception("bookkeeping after post failed")
             self.poll_now()

@@ -192,6 +192,9 @@ class GtkSmokeTest(unittest.TestCase):
         self.assertEqual(reply_to, "011")
         self.assertTrue(text.endswith("ответ из GTK"))
         self.assertFalse(self.view.get_draft(dlg.key))
+        # "you replied" under the post answered, at once (not at the next poll)
+        card = next(c for c in self._lane("home").rows.values() if c.post.id == "011")
+        self.assertTrue(pump(lambda: bool(card.mine_ids), 5))
 
     def test_editor_keeps_a_draft(self):
         dlg = self.win.compose()

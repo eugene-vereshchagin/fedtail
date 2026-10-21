@@ -168,6 +168,11 @@ class LaneView(Gtk.Box):
             self._take_new(old_keys, index)
         for k in self.order:
             self.rows[k].set_unread(self.entries[k].id in self.unread)
+        if self.order:  # "you replied" under what's on screen: a reply just sent shows
+            shown = [self.entries[k] for k in self.order]
+            answers = view.my_replies(shown)
+            for k in self.order:
+                self.rows[k].set_my_replies(answers.get(real(self.entries[k]).id, ()))
         self._pill(len(self.unread))
         self._older_visible()
         self._build_soon()

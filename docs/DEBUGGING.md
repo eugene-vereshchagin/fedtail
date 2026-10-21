@@ -66,6 +66,12 @@
 
 ## Если что-то случилось
 
+**Версия для разработки (номер с .dev, из git).** Режим отладки там включён сам, и в
+начале `fedtail.log` каждой сессии уже есть всё, что добавил бы `--bug-report`: версии
+(fedtail, Python, Qt / GTK), система, изменённые опции и сам `config.toml`. Так что
+хватает прислать один лог (папка логов — в первой строке сессии, `"logs": …`). Токена и
+базы в логе нет.
+
 **Упало.** Запусти `python3 -m fedtail --bug-report` — в домашней папке появится
 `fedtail-report-<профиль>-<дата>.tar.gz`. Пришли этот файл. В нём журналы,
 crash.log, stacks.log, config.toml и сводка о системе. Файла с токеном
@@ -198,6 +204,11 @@ shorter freezes (over `debug.stall_ms`): `GUI froze N ms: [label] stack` — the
 says which job of ours (an event, a lane drawing, a picture coming in), `Qt itself`
 that Qt was laying out or painting; every picture's queue, download and decode time,
 and `img.*` / `freezes.*` in the stats line.
+
+**A development version (a number with .dev, from git):** the debugging mode is on by
+itself, and the start of every session in `fedtail.log` already holds what `--bug-report`
+would add: the versions (fedtail, Python, Qt / GTK), the system, the options changed and
+`config.toml` itself — sending the one log is enough. No token, no database in it.
 
 **When something happens:** `python3 -m fedtail --bug-report` makes
 `~/fedtail-report-<profile>-<date>.tar.gz` with the logs, crash and stack files,

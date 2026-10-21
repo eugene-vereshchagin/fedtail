@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QSize, QStringListModel, Qt, QTimer
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
@@ -17,7 +17,6 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QCompleter,
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -227,20 +226,10 @@ class Compose(QDialog):
                                      else _("text_placeholder"))
         lay.addWidget(self.text, 1)
         # "#ge" offers the tags already in use: #georgia, #GeorgiaNews…
-        self._tag_model = QStringListModel(self)
-        self.tag_completer = QCompleter(self._tag_model, self)
-        self.tag_completer.setWidget(self.text)
-        self.tag_completer.setCompletionMode(QCompleter.CompletionMode.UnfilteredPopupCompletion)
-        self.tag_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        self.tag_completer.activated.connect(self._put_tag)
-        self.text.textChanged.connect(self._suggest_tags)
-        self._people_query = ""
-        self._people_timer = QTimer(self, singleShot=True, interval=350)
-        self._people_timer.timeout.connect(self._ask_server_people)
-        self.core.prepare_tags()
-        self.core.prepare_people()
-        if self.core.cfg["post"].get("complete_emoji", True):
-            self.core.prepare_emoji()
+        from .complete import Completer
+        self.completion = Completer(self, self.text, self.core, win.bridge)
+        self._tag_model = self.completion.model          # (the names tests know)
+        self.tag_completer = self.completion.completer
         self.camel = QLabel()
         self.camel.setObjectName("counter")
         self.camel.setWordWrap(True)
@@ -576,9 +565,7 @@ class Compose(QDialog):
 
     # ---- completing #tags and @people -----------------------------------------------
     def _token_at_cursor(self):
-        """("#" or "@", the word typed right before the cursor) — or (None, None)."""
-        cur = self.text.textCursor()
-        return rules.token_at_end(cur.block().text()[:cur.positionInBlock()])
+        return self.completion.token()
 
     # (kept for the name the tests know it by)
     def _tag_at_cursor(self):
@@ -586,51 +573,10 @@ class Compose(QDialog):
         return word if sigil == "#" else None
 
     def _suggest_tags(self):
-        """Offer what fits the #tag or @name being typed (post.complete_tags,
-        post.complete_mentions); for a name, the server is asked too, a moment later."""
-        sigil, word = self._token_at_cursor()
-        items = rules.suggestions(self.core, sigil, word) if sigil else []
-        if sigil == "@" and self.core.cfg["post"].get("complete_mentions", True) and \
-                len(word) >= 2:
-            self._people_query = word
-            self._people_timer.start()
-        self._offer(items, sigil, word)
-
-    def _people_items(self, people):
-        return rules.people_items(people)
-
-    def _ask_server_people(self):
-        word = self._people_query
-
-        def got(found):
-            sigil, now = self._token_at_cursor()
-            if sigil != "@" or now != word:
-                return  # typed on meanwhile
-            self._offer(rules.more_people(self.core.mention_suggestions(word), found), "@", word)
-        self.win.bridge.call(self.core.search_people(word), ok=got, fail=lambda _e: None)
-
-    def _offer(self, items, sigil, word):
-        popup = self.tag_completer.popup()
-        if not rules.worth_offering(items, word):
-            popup.hide()
-            return
-        self._inserts = {label: insert for insert, label in items}
-        self._tag_model.setStringList([label for _i, label in items])
-        rect = self.text.cursorRect()
-        rect.setWidth(popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width()
-                      + 16)
-        self.tag_completer.complete(rect)
-        popup.setCurrentIndex(self._tag_model.index(0))
+        self.completion.suggest()
 
     def _put_tag(self, label):
-        sigil, word = self._token_at_cursor()
-        if word is None:
-            return
-        cur = self.text.textCursor()
-        cur.movePosition(cur.MoveOperation.Left, cur.MoveMode.KeepAnchor, len(word) + 1)
-        cur.insertText(getattr(self, "_inserts", {}).get(label, label) + " ")
-        self.text.setTextCursor(cur)
-        self.tag_completer.popup().hide()
+        self.completion.put(label)
 
     def save_draft(self):
         if self.sent:
@@ -687,11 +633,6 @@ class Compose(QDialog):
             e.acceptProposedAction()
             self._take(e.mimeData())
             return True
-        if t == QEvent.Type.KeyPress and obj is self.text and \
-                self.tag_completer.popup().isVisible() and e.key() in (
-                    Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Tab, Qt.Key.Key_Escape,
-                    Qt.Key.Key_Backtab):
-            return True  # the list of tags takes these
         if t == QEvent.Type.KeyPress and e.matches(QKeySequence.StandardKey.Paste):
             mime = QGuiApplication.clipboard().mimeData()
             if (media_paths(mime) or (mime.hasImage() and not mime.hasText())) and \

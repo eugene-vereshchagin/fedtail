@@ -2,6 +2,14 @@
 
 ## 0.18.0 — in progress
 
+- "You replied" shows under the post at once after replying from fedtail (it waited for
+  something else to change in that lane — in "Replies to me", often for good).
+- The split layout's input line completes #tags, @names and :emoji: as the Compose window
+  does (one completer for both now).
+- A development version writes into its log, at the start of every session, all that
+  `--bug-report` would add — the versions (fedtail, Python, Qt or GTK, libadwaita), the
+  system, the options changed from the defaults and `config.toml` itself — so the log
+  alone is enough to send.
 - The GTK window grows up (stage 2–3 of docs/GTK.md): faces, pictures, the poll's
   results, the quoted post, the link's card, "you replied" under a post; the buttons
   and the ⋯ menu of a post — the same as in Qt (copy the link, the #id or the address,

@@ -918,6 +918,8 @@ grace_hours = 48
 # without the token and the database).
 # The debugging mode: "auto" — on in development versions (from git, a number with .dev),
 # off in releases and the one-file builds made from them; "on" / "off" — always.
+# On: the start of fedtail.log holds all --bug-report would add (versions, the system,
+# the options changed, config.toml itself), so the log alone is enough to send.
 # Off: warnings and errors only, a few MB in the profile's data folder, logs/,
 # no stats and no watchdog; crash.log stays.
 # The --debug launch key turns it on for one run, whatever is set here.
