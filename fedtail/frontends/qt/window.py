@@ -47,7 +47,7 @@ from ...i18n import _
 from ...model import Account, Post, Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet
-from .. import themefile
+from .. import iconpack, themefile
 from ..common import results, sidebar
 from ..common.links import Links
 from . import badge
@@ -83,14 +83,6 @@ log = logging.getLogger(__name__)
 _AVATAR_CORNERS = {"circle": -1, "square": 0, "rounded": 6}  # shape.avatar_shape → px
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
-LANE_ICON = {"tags": "tag", "home": "system-users", "replies": "mail-replied",
-             "mentions": "mail-mark-important", "subs": "mail-thread-watch",
-             "bots": "applications-system",
-             "my_posts": "document-edit", "local": "go-home", "federated": "applications-internet",
-             "requests": "list-add-user", "list": "view-list-details",
-             "activity": "rating", "bookmarks": "bookmarks", "direct": "mail-message",
-             "my_likes": "starred-symbolic"}
-
 
 BADGE_KIND = {"replies": "hot", "bots": "quiet", "activity": "quiet"}
 
@@ -132,9 +124,10 @@ class LaneItem(QWidget):
         h = QHBoxLayout(self)
         h.setContentsMargins(10, 8, 10, 8)
         h.setSpacing(10)
-        if theme.shape["lane_icons"]:
+        from . import icons as pictures
+        if pictures.pictures(theme):
             icon = QLabel()
-            ic = QIcon.fromTheme(LANE_ICON.get(name.split(":")[0], ""))
+            ic = pictures.icon(iconpack.lane_picture(name), theme, 18)
             if not ic.isNull():
                 icon.setPixmap(ic.pixmap(18, 18))
             icon.setFixedWidth(18)
@@ -519,7 +512,7 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self):
         t = self.theme
-        feed_module.ICONS = bool(t.shape["icons"])
+        feed_module.THEME = t
         card_module.AVATAR_RADIUS = _AVATAR_CORNERS.get(t.shape.get("avatar_shape"), -1)
         side = QWidget()
         side.setObjectName("sidebar")
@@ -552,16 +545,14 @@ class MainWindow(QMainWindow):
         # (for now; the start: as ui.layout says). One size, icons from one set — or all
         # three as glyphs — each centred: a menu's own popup arrow would push it aside,
         # so ≡ opens its menu by a plain click.
-        menu_btn = self._side_button(("application-menu", "open-menu-symbolic"), "≡",
-                                     _("menu"))
+        menu_btn = self._side_button("menu", "≡", _("menu"))
         menu_btn.clicked.connect(lambda: self._pop_app_menu(menu_btn))
-        self.wide_btn = self._side_button((), "↔", _("full_width_tip"),
+        self.wide_btn = self._side_button("wide", "↔", _("full_width_tip"),
                                           drawn=self._arrows_icon)
         self.wide_btn.setCheckable(True)
         self.wide_btn.setChecked(not self.cfg["ui"]["max_width"])
         self.wide_btn.toggled.connect(self.set_full_width)
-        self.columns_btn = self._side_button(("view-split-left-right",), "❯",
-                                             _("columns_tip"))
+        self.columns_btn = self._side_button("columns", "❯", _("columns_tip"))
         self.columns_btn.setCheckable(True)
         self.columns_btn.toggled.connect(self.set_columns)
         for b in (menu_btn, self.wide_btn, self.columns_btn):
@@ -621,24 +612,20 @@ class MainWindow(QMainWindow):
         self.update_badges()
         return side
 
-    def _side_button(self, icons, glyph, tip, drawn=None):
-        """A square button at the top of the sidebar: the first theme icon found of
-        icons (or drawn(), when the icon theme has none to fit), else — or with a theme
-        without icons — the glyph; centred either way."""
+    def _side_button(self, picture, glyph, tip, drawn=None):
+        """A square button at the top of the sidebar: the theme's picture (the
+        desktop's, or drawn() when the desktop has none to fit), else — or with a theme
+        without pictures — the glyph; centred either way."""
         b = QToolButton()
         b.setObjectName("menu")
         b.setToolTip(tip)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setFixedSize(32, 32)
         b.setIconSize(QSize(18, 18))
-        ic = QIcon()
-        if self.theme.shape["icons"]:
-            for name in icons:
-                ic = QIcon.fromTheme(name)
-                if not ic.isNull():
-                    break
-            if ic.isNull() and drawn:
-                ic = drawn(18)
+        from . import icons
+        ic = icons.icon(picture, self.theme, 18)
+        if ic.isNull() and drawn and icons.how(self.theme) == "desktop":
+            ic = drawn(18)
         if ic.isNull():
             b.setText(glyph)
         else:
@@ -759,7 +746,7 @@ class MainWindow(QMainWindow):
         built anew, every card rebuilt where it stands, the titles reworded."""
         self.theme = theme
         self.ctx.theme = theme
-        feed_module.ICONS = bool(theme.shape["icons"])
+        feed_module.THEME = theme
         card_module.AVATAR_RADIUS = _AVATAR_CORNERS.get(theme.shape.get("avatar_shape"), -1)
         for w in self.findChildren(QWidget):
             if getattr(w, "theme", None) is old:

@@ -59,6 +59,7 @@ button_end = "#cadcf4"
 window_end = "#b5d0f1"
 
 [shape]
+icons = "own"
 radius = 0
 button_radius = 4
 card_style = "rule"
@@ -70,7 +71,13 @@ faces = "agent"
 roster_rows = "faces"
 roster_face = 44
 tab_rows = "wrap"
-icon_set = "agent"
+
+[pictures]
+from = "mra"
+style = "agent"
+
+[pictures.colors]
+status = "#3aa63a"
 
 [words]
 date = "{dd}.{mm} {clock}"

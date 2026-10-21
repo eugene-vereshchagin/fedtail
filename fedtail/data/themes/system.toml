@@ -85,8 +85,12 @@ card_avatars = true
 avatar = 40
 avatar_shape = "circle"  # "circle", "square" (point.im) or "rounded"
 sidebar_avatar = true
-lane_icons = true
-icons = true             # desktop icons on buttons; false = words only (dark custom themes)
+icons = "desktop"        # the pictures on the buttons and by the lanes: "desktop" — the
+                         # desktop's icon theme (Breeze…), as here; "own" — the theme's
+                         # own set, a folder next to its file: themes/mine.toml →
+                         # themes/mine/icons/reply.svg (or .png), a file a picture
+                         # (their names: builtin/PICTURES.txt); "words" — none, words and
+                         # glyphs (≡ ↔ ❯). ui.icons in config.toml may choose otherwise.
 card_header = "rich"     # "rich": avatar, name, @address · time · icon
                          # "compact": @user host · 13.10 17:22 · priv
                          # "chat": Name (15:25:43 23/06/2007) bold in colors.chat_me /
@@ -106,19 +110,27 @@ roster_rows = "lines"    # the roster's items: "lines" — the name, a line of t
                          # a small face on the right; "faces" — a big face on the left and
                          # three lines beside it (the Agent, Psi)
 roster_face = 40         # px of that face ("faces")
-icon_set = "gloss"       # the picture pack of fedtail's own buttons (ui.additional_icons):
-                         # "gloss" (a gradient and a shine in the theme's colour, a flower
-                         # for a person), "qip" (each its own bright colour, a thick dark
-                         # outline, the XP years' chunky look), "agent" (the Agent:
-                         # brighter, an "@"), "flat" (plain, a star), "psi" (Psi+'s own
-                         # pictures, GPL; flat where it has none) — or one of yours,
-                         # ~/.config/fedtail/icons/<pack>/ (the README there says how).
-                         # A theme's own few pictures go in a folder named as the theme,
-                         # next to its file: themes/mine.toml → themes/mine/icons/
-                         # reply.svg (or .png), over the pack's.
 tab_rows = "wrap"        # the messages window's tabs: "wrap" — into more rows when they
                          # don't fit (the Agent); "one" — one row, scrolled
 posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Conversations): "segmented" — buttons stuck together, "check" — round marks
+
+[pictures]
+# The theme's own set ([shape] icons = "own"): what its folder lacks comes from the
+# themes it inherits, then from the theme named here, then from fedtail's fallback set.
+from = ""                # a theme whose set this one borrows: "mra" (mra-blue does)
+style = "gloss"          # how an SVG's blank colours ({c} {l} {d}) are filled: "gloss" (a
+                         # gradient and a shine), "agent" (brighter, a softer outline),
+                         # "flat" (plain colour, no shine), "qip" (a strong shine, a thick
+                         # dark outline), "none" (filled, nothing else touched)
+
+[pictures.colors]
+# a picture of its own colour whatever the theme (the rest take colors.accent)
+nobody = "#8a96a6"
+status = "#36b02c"
+warning = "#f2a400"
+emoji = "#f5c400"
+send = "#3aa63a"
+star_full = "#f2b705"
 
 [words]
 # {text} is the interface's own wording in the current language

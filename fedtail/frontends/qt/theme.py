@@ -58,6 +58,9 @@ class Theme:
         self.words = data["words"]
         self.icon = data.get("icon", {})
         self.icon_dirs = list(data.get("icon_dirs") or ())  # the theme's own pictures
+        self.pictures = data.get("pictures") or {}  # how they're coloured, from where
+        self.icon_mode = "desktop"  # where the pictures come from: set by apply()
+        self.split_layout = False
         self.warnings = list(warnings)
         # every colour worked out by palette.py (the GTK window's too): "auto" from the
         # desktop's palette, the ones that follow or tint others
@@ -429,11 +432,12 @@ def apply(app, cfg, name=None):
         data, _w = themefile.load(themefile.REFERENCE)
         warnings = [f"theme '{name}': {e} — using '{themefile.REFERENCE}'"]
     theme = Theme(data, app.palette(), warnings)
-    # ui.additional_icons: fedtail's own pictures — in the split layout only, everywhere,
-    # or nowhere (the desktop's icons, as the theme's shape.icons says)
-    extra = cfg["ui"].get("additional_icons", "layout")
-    theme.own_icons = extra == "all" or (
-        extra == "layout" and cfg["ui"].get("layout") in ("split", "qip"))
+    # the pictures: the theme's [shape] icons, or ui.icons (frontends/iconpack.py)
+    from .. import iconpack
+    theme.icon_mode = iconpack.mode(cfg, data["shape"])
+    theme.split_layout = cfg["ui"].get("layout") in ("split", "qip")
+    if iconpack.uses_set(theme.icon_mode):
+        iconpack.missing(theme.id, iconpack.for_theme(theme))
 
     if theme.c["window"] != app.palette().color(QPalette.ColorRole.Window) or \
             data["colors"].get("window", "auto") != "auto":

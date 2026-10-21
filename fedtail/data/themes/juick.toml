@@ -47,14 +47,13 @@ button_border = "#dedcd2"
 dot = "#1b6aa5"
 
 [shape]
+icons = "own"
 radius = 0
 button_radius = 2
 card_style = "card"
 card_avatars = true
 avatar = 40
 sidebar_avatar = true
-lane_icons = false
-icons = false
 card_header = "compact"
 unread_mark = "star"
 posts_only = "check"

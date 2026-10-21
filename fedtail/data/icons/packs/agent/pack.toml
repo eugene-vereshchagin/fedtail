@@ -1,8 +1,0 @@
-# The Mail.ru Agent's way: gloss's pictures brighter, a softer outline, an "@" for a person.
-name = "Agent"
-about = "brighter, a softer outline, an \"@\" for a person"
-inherit = "gloss"
-style = "agent"
-
-[colors]
-status = "#3aa63a"

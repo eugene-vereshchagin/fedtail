@@ -1,0 +1,7 @@
+fedtail's own button pictures — the emergency set, for what a theme's own set
+(themes/<theme>/icons/) lacks — drawn for it in the spirit of the messengers of
+2007 (QIP, Psi, the Mail.ru Agent) — none copied from them. Same licence as fedtail.
+
+Colours are filled in by the theme: {c} the main colour, {l} its light top, {d} the
+outline (frontends/iconpack.py). "status" is a generic five-petal flower, not anyone's
+logo.

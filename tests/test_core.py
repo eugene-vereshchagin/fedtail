@@ -155,26 +155,31 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertEqual(cu.update(new, example), new)  # idempotent
 
     def test_an_option_of_an_older_name_moves(self):
-        """ui.button_icons (0.17 dev) is ui.additional_icons now: --update-config moves
-        it, its value put the new way; the start says so instead of "unknown"."""
+        """ui.button_icons (0.17 dev) and ui.additional_icons are ui.icons now:
+        --update-config moves them, their value put the new way; the start says so
+        instead of "unknown"."""
         import tomllib
 
         from fedtail.core import config_update as cu
         example = config.example_text()
-        old = '[ui]\ntheme = "psi"\nbutton_icons = "on"\n'
-        self.assertTrue(any("additional_icons" in w
-                            for w in config.validate(tomllib.loads(old))[1]))
-        report = {}
-        new = cu.update(old, example, report)
-        parsed = tomllib.loads(new)
-        self.assertNotIn("button_icons", parsed["ui"])
-        self.assertEqual(parsed["ui"]["additional_icons"], "all")
-        self.assertEqual(report["renamed"], ["ui.button_icons → ui.additional_icons"])
-        self.assertEqual(config.validate(parsed)[1], [])
-        self.assertEqual(cu.update(new, example), new)  # idempotent
-        both = '[ui]\nadditional_icons = "none"\nbutton_icons = "on"\n'
-        self.assertEqual(tomllib.loads(cu.update(both, example))["ui"]["additional_icons"],
-                         "none")  # the new name, set already, wins
+        for line, now in (('button_icons = "on"', "additional"),
+                          ('additional_icons = "all"', "additional"),
+                          ('additional_icons = "layout"', "theme"),
+                          ('additional_icons = "none"', "words")):
+            old = f'[ui]\ntheme = "psi"\n{line}\n'
+            name = line.split(" ")[0]
+            self.assertTrue(any("icons" in w for w in config.validate(tomllib.loads(old))[1]))
+            report = {}
+            new = cu.update(old, example, report)
+            parsed = tomllib.loads(new)
+            self.assertNotIn(name, parsed["ui"])
+            self.assertEqual(parsed["ui"]["icons"], now, line)
+            self.assertEqual(report["renamed"], [f"ui.{name} → ui.icons"])
+            self.assertEqual(config.validate(parsed)[1], [])
+            self.assertEqual(cu.update(new, example), new)  # idempotent
+        both = '[ui]\nicons = "words"\nadditional_icons = "all"\n'
+        self.assertEqual(tomllib.loads(cu.update(both, example))["ui"]["icons"],
+                         "words")  # the new name, set already, wins
 
     def test_update_a_packed_file(self):
         """A file of an older version, no blank lines: a new option lands in its own

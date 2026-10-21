@@ -28,6 +28,8 @@ CHOICES = {
     ("shape", "faces"): {"qip", "agent", "none"},
     ("shape", "roster_rows"): {"lines", "faces"},
     ("shape", "tab_rows"): {"wrap", "one"},
+    ("shape", "icons"): {"desktop", "own", "words"},
+    ("pictures", "style"): {"gloss", "agent", "flat", "qip", "none"},
 }
 
 README = """fedtail themes
@@ -54,15 +56,34 @@ A theme can bring its own fonts: put the files next to it and name them in
 theme go to ~/.config/fedtail/fonts/; ui.font in config.toml picks one over
 the theme's.
 
-The pictures on the buttons (ui.additional_icons) come from a picture pack: a theme
-names it in [shape] icon_set = "<pack>" — a built-in one or yours, in
-~/.config/fedtail/icons/<pack>/ (see the README there). A theme can also bring a few
-pictures of its own: a folder named as the theme, with icons/ in it, next to its
-file — themes/mine.toml → themes/mine/icons/reply.svg.
+The pictures on the buttons are the theme's: [shape] icons = "own" takes them from a
+folder named as the theme, with icons/ in it, next to its file — themes/mine.toml →
+themes/mine/icons/reply.svg (or .png), a file a picture; "desktop" takes the desktop's
+icons, "words" has none. What your folder lacks comes from the theme you inherit (a
+copy of each built-in theme's set is in builtin/<theme>/icons/ to start from), then
+from [pictures] from = "<theme>", then from fedtail's fallback set — and the log says
+which. An SVG may leave its colours blank: {c} the colour, {l} its light top, {d} the
+outline; [pictures] style and colors fill them. The names of the pictures, and what
+each is for: builtin/PICTURES.txt.
 
 fedtail reads your themes right here, nothing is copied anywhere; builtin/ is only
 a sample, rewritten at every start. To keep your themes in git, make this folder a
 working copy of your repository and put builtin/ into its .gitignore.
+"""
+
+
+PICTURES = """The pictures a theme's set has (themes/<theme>/icons/<name>.svg or .png)
+=====================================================================
+
+Standard — always there when the theme has pictures at all ([shape] icons = "own"):
+{standard}
+
+Extended — the messengers': in the split layout, and anywhere with ui.icons = "additional":
+{extended}
+
+A picture the set lacks comes from the theme it inherits, then from [pictures] from,
+then from fedtail's fallback set (the log says which). An SVG may leave its colours
+blank: {{c}} the colour, {{l}} its light top, {{d}} the outline.
 """
 
 
@@ -112,11 +133,32 @@ def reference():
     return _read(BUILTIN_DIR / f"{REFERENCE}.toml")
 
 
+# a theme of an earlier version: [shape] icons = true / false (the desktop's or words),
+# lane_icons (gone: a theme's pictures are all or none), icon_set (the pack's look: now
+# [pictures] style)
+_OLD_SET = {"gloss": "gloss", "qip": "qip", "agent": "agent", "flat": "flat", "psi": "flat"}
+
+
+def _legacy(data):
+    shape = data.get("shape")
+    if not isinstance(shape, dict):
+        return data
+    if isinstance(shape.get("icons"), bool):
+        shape["icons"] = "desktop" if shape["icons"] else "words"
+    shape.pop("lane_icons", None)
+    old = shape.pop("icon_set", None)
+    if old in _OLD_SET:
+        pics = data.setdefault("pictures", {})
+        if isinstance(pics, dict):
+            pics.setdefault("style", _OLD_SET[old])
+    return data
+
+
 def icon_dirs(chain):
     """Where a theme's own button pictures lie: a folder named as the theme, with
     icons/ in it, next to its file (themes/mine.toml → themes/mine/icons/reply.svg or
     .png) — the theme's own first, then those of the themes it inherits. A picture not
-    there comes from the theme's picture pack (shape.icon_set, frontends/iconpack.py)."""
+    there comes from [pictures] from, then from the fallback set (frontends/iconpack.py)."""
     out = []
     for path, _data in chain:
         d = path.parent / path.stem / "icons"
@@ -125,7 +167,7 @@ def icon_dirs(chain):
     return out
 
 
-def load(name):
+def load(name, _depth=0):
     """Fully resolved theme dict for `name`, plus warnings. Raises ThemeError."""
     chain, seen, current = [], set(), name
     while current:
@@ -133,7 +175,7 @@ def load(name):
             raise ThemeError(f"theme '{name}': inherit loop through '{current}'")
         seen.add(current)
         path = _find(current)
-        data = _read(path)
+        data = _legacy(_read(path))
         chain.append((path, data))
         current = data.get("inherit") or ""
     ref = reference()
@@ -154,12 +196,15 @@ def load(name):
     merged["id"] = name
     merged["font"]["files"] = files
     merged["icon_dirs"] = icon_dirs(chain)
-    from . import iconpack
-    pack = (merged.get("shape") or {}).get("icon_set") or iconpack.BASE
-    if not iconpack.exists(str(pack)):
-        warnings.append(f"shape.icon_set = {pack!r}: no such picture pack (have: "
-                        f"{', '.join(iconpack.available())}) — using '{iconpack.BASE}'")
-        merged["shape"]["icon_set"] = iconpack.BASE
+    # [pictures] from: a theme whose set this one borrows (and what that one borrows)
+    borrowed = (merged.get("pictures") or {}).get("from") or ""
+    if borrowed and _depth < 4:
+        try:
+            other, _w = load(borrowed, _depth + 1)
+            merged["icon_dirs"] += [d for d in other["icon_dirs"]
+                                    if d not in merged["icon_dirs"]]
+        except ThemeError as e:
+            warnings.append(f"pictures.from = {borrowed!r}: {e}")
     return merged, warnings
 
 
@@ -201,6 +246,14 @@ def validate(theme, ref):
                 warnings.append(f"unknown key {section}.{key}")
                 continue
             want = ref[section][key]
+            if section == "pictures" and key == "colors":
+                if not isinstance(val, dict):
+                    errors.append("pictures.colors must be a table: name = \"#rrggbb\"")
+                    continue
+                for k, v in val.items():
+                    if not isinstance(v, str) or not _COLOR.match(v.strip()):
+                        errors.append(f"pictures.colors.{k} = {v!r}: use \"#rrggbb\"")
+                continue
             if section == "colors" or (section == "icon" and key != "style"):
                 if not isinstance(val, str) or not _COLOR.match(val.strip()):
                     errors.append(f"colors.{key} = {val!r}: use \"#rrggbb\" or \"auto\"")
@@ -233,10 +286,22 @@ def install_copies():
             text = p.read_text("utf-8")
             if not dst.exists() or dst.read_text("utf-8") != text:
                 dst.write_text(text, "utf-8")
+            icons = BUILTIN_DIR / p.stem / "icons"  # its pictures, to start from too
+            if icons.is_dir():
+                (target / p.stem / "icons").mkdir(parents=True, exist_ok=True)
+                for f in icons.iterdir():
+                    d = target / p.stem / "icons" / f.name
+                    if f.is_file() and (not d.exists() or d.read_bytes() != f.read_bytes()):
+                        d.write_bytes(f.read_bytes())
+        from . import iconpack
+        names = PICTURES.format(
+            standard="\n".join(f"    {k:<10} {v}" for k, v in iconpack.STANDARD.items()),
+            extended="\n".join(f"    {k:<10} {v}" for k, v in iconpack.EXTENDED.items()))
+        listing = target / "PICTURES.txt"
+        if not listing.exists() or listing.read_text("utf-8") != names:
+            listing.write_text(names, "utf-8")
         readme = user_dir() / "README.txt"
         if not readme.exists() or readme.read_text("utf-8") != README:
             readme.write_text(README, "utf-8")
     except OSError:
         pass
-    from . import iconpack
-    iconpack.install_copies()

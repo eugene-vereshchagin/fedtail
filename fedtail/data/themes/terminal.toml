@@ -47,6 +47,7 @@ button_border = "#1f6f35"
 dot = "#ffb000"
 
 [shape]
+icons = "words"
 radius = 0
 button_radius = 2
 card_style = "rule"
@@ -54,8 +55,6 @@ rule = "dashed"  # the terminal keeps its dashes
 card_avatars = false
 avatar = 0
 sidebar_avatar = false
-lane_icons = false
-icons = false
 card_header = "compact"
 unread_mark = "star"
 posts_only = "check"

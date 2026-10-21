@@ -51,14 +51,13 @@ button_border = "#00a800"
 dot = "#e0002a"
 
 [shape]
+icons = "words"
 radius = 0
 button_radius = 0
 card_style = "card"
 card_avatars = true
 avatar = 32
 sidebar_avatar = true
-lane_icons = false
-icons = false
 card_header = "compact"
 unread_mark = "star"
 posts_only = "check"

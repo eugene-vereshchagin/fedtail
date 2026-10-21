@@ -1,8 +1,8 @@
-"""fedtail's own button pictures in GTK, as in Qt (qt/icons.py): which file and which
-colours is the theme's picture pack's (frontends/iconpack.py); here they are only
-drawn — an SVG through gdk-pixbuf's SVG loader (librsvg; Debian: librsvg2-common,
-there with almost any GTK desktop), a PNG as it is. Shown where ui.additional_icons
-says so (the split layout, by default); without a way to draw SVG only a pack's PNGs
+"""The pictures on the buttons in GTK, as in Qt (qt/icons.py). Which one, from where
+and in which colours is frontends/iconpack.py's (the theme's [shape] icons, ui.icons,
+the theme's set); here they are only drawn: the desktop's from the icon theme, the
+theme's own SVG through gdk-pixbuf's SVG loader (librsvg; Debian: librsvg2-common,
+there with almost any GTK desktop), a PNG as it is. Without an SVG loader only PNGs
 are drawn, and the buttons keep their words."""
 
 from __future__ import annotations
@@ -31,26 +31,58 @@ def svg_ok():
     return _svg[0]
 
 
-def pack(theme):
+def how(theme):
+    """"desktop", "own", "additional" or "words" (theme.icon_mode, set by theme.apply)."""
+    return getattr(theme, "icon_mode", "desktop")
+
+
+def pictures(theme):
+    """Any pictures at all (not "words")."""
+    return how(theme) != "words"
+
+
+def pset(theme):
     return iconpack.for_theme(theme)
 
 
 def wanted(theme):
-    """ui.additional_icons (theme.own_icons, set by theme.apply) and a way to draw."""
-    if not getattr(theme, "own_icons", False):
-        return False
-    return svg_ok() or iconpack.has_png(pack(theme))
+    """The messengers' pictures (iconpack.EXTENDED) go on their buttons here: the split
+    layout, or ui.icons = "additional"."""
+    return iconpack.shown(how(theme), "send", getattr(theme, "split_layout", False))
+
+
+def _shown(name, theme):
+    return bool(name) and iconpack.shown(how(theme), name,
+                                         getattr(theme, "split_layout", False))
+
+
+def _desktop_name(name):
+    """The first of the picture's freedesktop names the icon theme has, or None."""
+    key = ("desktop", name)
+    if key not in _cache:
+        _cache[key] = None
+        try:
+            from .gi_setup import Gdk
+            display = Gdk.Display.get_default()
+            have = Gtk.IconTheme.get_for_display(display) if display is not None else None
+        except Exception:  # noqa: BLE001
+            have = None
+        for n in iconpack.FREEDESKTOP.get(name, ()):
+            if have is not None and have.has_icon(n):
+                _cache[key] = n
+                break
+    return _cache[key]
 
 
 def texture(name, theme, size=16, scale=2):
-    """A Gdk.Texture of the picture, size × scale pixels square (None if the pack, and
-    all it inherits, has none, or it can't be drawn)."""
-    p = pack(theme)
+    """A Gdk.Texture of the theme's own picture, size × scale pixels square (None if
+    neither its set nor the fallback has one, or it can't be drawn)."""
+    p = pset(theme)
     accent = theme.c["accent"].name()
     pic = iconpack.picture(p, name, accent, svg_ok=svg_ok())
     if pic is None:
         return None
-    key = (p.key, name, accent, size * scale)
+    key = (p, name, accent, size * scale)
     if key in _cache:
         return _cache[key]
     tex = None
@@ -76,7 +108,17 @@ def texture(name, theme, size=16, scale=2):
 
 
 def image(name, theme, size=16):
-    """A Gtk.Image of the picture, or None."""
+    """A Gtk.Image of the picture as the theme has it, or None (without one: "words",
+    a messenger's picture outside its place, none to be found)."""
+    if not _shown(name, theme):
+        return None
+    if how(theme) == "desktop":
+        n = _desktop_name(name)
+        if n is None:
+            return None
+        img = Gtk.Image.new_from_icon_name(n)
+        img.set_pixel_size(size)
+        return img
     tex = texture(name, theme, size)
     if tex is None:
         return None
@@ -87,14 +129,14 @@ def image(name, theme, size=16):
 
 def nobody(theme, size):
     """A face for nobody (no one under the pointer, no picture of theirs yet): the
-    pack's grey silhouette, when pictures are on; else None."""
-    return image("nobody", theme, size) if wanted(theme) else None
+    theme's grey silhouette, or None."""
+    return image("nobody", theme, size)
 
 
 def dress(button, name, theme, words="", glyph=""):
-    """A button with its picture (and its words, if any) when pictures are wanted;
-    else the words, or the glyph standing in for a picture."""
-    img = image(name, theme) if wanted(theme) else None
+    """A button with its picture (and its words, if any); without a picture, the
+    words, or the glyph standing in for it."""
+    img = image(name, theme)
     if img is None:
         button.set_child(None)
         button.set_label(words or glyph)

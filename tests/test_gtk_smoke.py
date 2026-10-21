@@ -257,9 +257,10 @@ class GtkSmokeTest(_GtkBase):
     def test_like_updates_the_card(self):
         lane = self._lane("home")
         card = next(c for c in lane.rows.values() if c.post.id == "011")
-        fav = next(b for b in _walk(card.actions) if isinstance(b, Gtk.Button))
-        self.assertIn("☆", fav.get_label() + "".join(
-            b.get_label() or "" for b in _walk(card.actions) if isinstance(b, Gtk.Button)))
+        # ☆ by the word, or the desktop icon theme's star (the system theme: "desktop")
+        self.assertTrue("☆" in "".join(b.get_label() or "" for b in _walk(card.actions)
+                                       if isinstance(b, Gtk.Button))
+                        or any(isinstance(w, Gtk.Image) for w in _walk(card.actions)))
         self.win.on_link("fedtail:fav/011")
         self.assertTrue(pump(lambda: card.post.mine.liked, 5))
         self.assertTrue(any("ft-active" in b.get_css_classes() for b in _walk(card.actions)
@@ -599,15 +600,15 @@ class GtkSplitTest(_GtkBase):
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkPicturesTest(_GtkBase):
-    """ui.additional_icons in the split layout: the theme's picture pack on the buttons
-    (psi: PNGs — drawn even where gdk-pixbuf reads no SVG)."""
+    """The theme's own set in the split layout: its pictures on the buttons, the
+    messengers' too (psi: PNGs — drawn even where gdk-pixbuf reads no SVG)."""
     UI = {"layout": "split", "theme": "psi"}
 
-    def test_pack_pictures_on_the_buttons(self):
+    def test_theme_pictures_on_the_buttons(self):
         from fedtail.frontends.gtk import icons
         win = self.win
+        self.assertEqual(icons.how(win.theme), "own")
         self.assertTrue(icons.wanted(win.theme))
-        self.assertEqual(icons.pack(win.theme).name, "psi")
         self.assertIsInstance(win.dock.send_btn.get_child(), Gtk.Box)  # picture + "Send"
         self.assertIsInstance(win.dock.cw_btn.get_child(), Gtk.Image)
         lane = win.lane_tabs["home"]
@@ -615,10 +616,12 @@ class GtkPicturesTest(_GtkBase):
         pictures = [w for w in _walk(card.actions) if isinstance(w, Gtk.Image)]
         self.assertTrue(pictures)  # Reply, Favourite… with their pictures
         self.assertIsNotNone(icons.nobody(win.theme, 36))
-        win.try_theme("nord")  # a pack drawn in SVG: pictures where SVG can be read
-        self.assertEqual(icons.pack(win.theme).name, "gloss")
-        if not icons.svg_ok():  # the words come back, nothing breaks
-            self.assertEqual(win.dock.send_btn.get_label(), i18n._("dock_send"))
+        win.try_theme("terminal")  # no pictures: the words come back
+        self.assertEqual(icons.how(win.theme), "words")
+        self.assertEqual(win.dock.send_btn.get_label(), i18n._("dock_send"))
+        self.assertIsNone(icons.image("menu", win.theme))
+        win.try_theme("system")  # the desktop's, by freedesktop names
+        self.assertEqual(icons.how(win.theme), "desktop")
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")

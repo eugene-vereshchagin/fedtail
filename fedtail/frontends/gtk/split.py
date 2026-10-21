@@ -297,8 +297,7 @@ class RosterWindow(Gtk.Window):
         """Pictures on the bottom buttons (ui.additional_icons); again after a theme."""
         from . import icons
         t = self.win.theme
-        if not icons.dress(self.menu_btn, "menu", t, words=_("menu")):
-            self.menu_btn.set_icon_name("open-menu-symbolic")  # the desktop's, as before
+        icons.dress(self.menu_btn, "menu", t, words=_("menu"), glyph="≡")
         icons.dress(self.look_btn, "settings", t, glyph="⚙")
         self._dress_account()
 

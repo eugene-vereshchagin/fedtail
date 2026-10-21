@@ -56,6 +56,7 @@ header = "#efefef"
 header_bar = "#474747"
 
 [shape]
+icons = "own"
 radius = 0
 button_radius = 3
 card_style = "rule"
@@ -66,8 +67,6 @@ card_avatars = true
 avatar = 40
 avatar_shape = "square"
 sidebar_avatar = true
-lane_icons = true
-icons = false
 card_header = "stacked"
 short_id = "footer"
 actions_align = "right"

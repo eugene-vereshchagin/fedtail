@@ -1,5 +1,0 @@
-# Psi+'s own pictures (the Crystal and Stellar iconsets, GPL — LICENSE.txt), renamed for
-# fedtail's buttons; what Psi+ has no picture for comes flat.
-name = "Psi+"
-about = "Psi+'s own pictures (GPL); flat where it has none"
-inherit = "flat"

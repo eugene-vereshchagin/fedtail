@@ -30,21 +30,27 @@ the people you follow each other with in a narrow roster window, as in QIP, Psi 
 Mail.ru Agent; a double click opens one as a tab of the messages window, with an input
 line always at its bottom. Best with one of the messengers' themes — they set its look too:
 where the faces go, how the roster's items look, the pictures on the buttons.
-`ui.additional_icons` — those pictures in every layout, or in none.
 
-## Picture packs
+## Pictures on the buttons
 
-The pictures on the buttons come from the pack a theme names: `[shape] icon_set`.
-Built in: `gloss` (the base: a gradient and a shine in the theme's colour), `qip` (each
-its own bright colour, a thick dark outline), `agent` (the Agent: brighter, an "@" for a
-person), `flat` (plain, a star), `psi` (Psi+'s own pictures). A pack of your own is a
-folder, `~/.config/fedtail/icons/<name>/`: `pack.toml` in it (the name, which pack it
-inherits, how it colours, its pictures' own colours) and a file a picture — `reply.svg`
-or `reply.png`; what the pack lacks comes from the one it inherits. An SVG may leave its
-colours blank — `{c}` the colour, `{l}` its light top, `{d}` the outline — and the pack
-fills them from the theme. Samples of the built-in packs and the list of all pictures:
-`~/.config/fedtail/icons/builtin/` and `README.txt` beside it. A theme can also bring a
-few pictures of its own: `themes/<theme>/icons/reply.svg`, over its pack.
+Where the pictures on the buttons and by the lanes come from is the theme's choice
+(`[shape] icons`): `system` and `debug` take the desktop's icons (Breeze and the like),
+`terminal` and `bnw` do with words and the glyphs ≡ ↔ ❯, the rest bring a set of their
+own — a folder next to the theme's file: `themes/<theme>/icons/`, a file a picture
+(`reply.svg` or `reply.png`). Pictures are standard (the menu, the width, the columns,
+the lanes, the buttons under a post, who sees it) — there whenever the theme has
+pictures at all — and the messengers' (the input line, the roster, the author's bar, a
+person's flower) — in the split layout. `ui.icons` in the config may decide otherwise:
+`"desktop"`, `"own"`, `"words"`, or `"additional"` — the messengers' pictures outside the
+split layout too, wherever their buttons are (the post window, a profile).
+
+A theme of yours takes the pictures of the one it inherits (`inherit`), or of the one
+named in `[pictures] from`, and keeps in its folder only those it wants different. An SVG
+may leave its colours blank — `{c}` the colour, `{l}` its light top, `{d}` the outline —
+filled by `[pictures] style` from the theme's colour or `[pictures.colors]`. What's
+nowhere comes from fedtail's emergency set, and the log says which pictures the theme
+lacked. The built-in themes' sets lie in `themes/builtin/<theme>/icons/` to start from,
+the list of all pictures in `themes/builtin/PICTURES.txt`.
 
 ## Width, font, buttons, emoji
 

@@ -51,8 +51,6 @@ dot = "#ff2bd6"
 [shape]
 radius = 4
 button_radius = 4
-icons = false
-lane_icons = false
 unread_mark = "star"
 debug = true
 

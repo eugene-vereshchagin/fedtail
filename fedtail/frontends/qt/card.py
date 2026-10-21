@@ -5,7 +5,7 @@ from dataclasses import replace
 from urllib.parse import quote, unquote
 
 from PySide6.QtCore import QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QGuiApplication, QIcon, QPainter, QPainterPath, QPixmap
+from PySide6.QtGui import QGuiApplication, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -50,12 +50,6 @@ RAIL_W = 20
 MAX_DEPTH_INDENT = 8
 THUMB_H = 170
 THUMB_MAX_W = 380
-VIS_ICONS = {
-    "public": ("globe", "applications-internet"),
-    "unlisted": ("object-unlocked", "unlock"),
-    "followers": ("object-locked", "lock"),
-    "direct": ("mail-message", "mail-unread"),
-}
 # fedtail's own pictures for a post's buttons (frontends/qt/icons.py)
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 VIS_KEY = {"followers": "private"}  # the words for it in i18n: vis_private
@@ -110,14 +104,6 @@ def _set_prop(w, name, value):
         w.setProperty(name, value)
         w.style().unpolish(w)
         w.style().polish(w)
-
-
-def _theme_icon(names):
-    for n in names:
-        ic = QIcon.fromTheme(n)
-        if not ic.isNull():
-            return ic
-    return QIcon()
 
 
 class WrapLabel(QLabel):
@@ -564,10 +550,7 @@ class PostRow(QWidget):
             "meta", wrap=False))
         vis = p.visibility
         from . import icons as pictures
-        if pictures.wanted(self.theme):
-            icon = pictures.icon(actions.vis_picture(vis), self.theme)
-        else:
-            icon = _theme_icon(VIS_ICONS.get(vis, ())) if self.theme.shape["icons"] else QIcon()
+        icon = pictures.icon(actions.vis_picture(vis), self.theme)
         vis_label = QLabel()
         vis_label.setToolTip(_("vis_" + VIS_KEY.get(vis, vis)))
         if icon.isNull():
@@ -739,22 +722,18 @@ class PostRow(QWidget):
         buttons = actions.buttons(self.spec.entry, self._actions_ctx(),
                                   unread=self.spec.unread)
         from . import icons as pictures
-        own = pictures.wanted(self.theme)  # fedtail's own (ui.additional_icons)
+        own = pictures.wanted(self.theme)  # the messengers' look (split, "additional")
         if own and style == "text":
             style = "both"  # the split layout has pictures by the words, as messengers did
         for bt in buttons:
-            action, icons, glyph, label, count, active = (bt.action, bt.icons, bt.glyph,
-                                                          bt.label, bt.count, bt.active)
+            action, glyph, label, count, active = (bt.action, bt.glyph, bt.label, bt.count,
+                                                   bt.active)
             b = QToolButton()
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(label)
             b.setAccessibleName(label + count)
-            pic = actions.action_picture(action, active)
-            if own and pic:
-                ic = pictures.icon(pic, self.theme)
-            else:
-                ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
+            ic = pictures.icon(actions.action_picture(action, active) or action, self.theme)
             # the short form, for when the row doesn't fit: the icon (or the glyph) and
             # the count — never a label cut in half ("В избран…")
             short = count.replace(" · ", "")
@@ -804,8 +783,8 @@ class PostRow(QWidget):
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(_("more"))
         b.setAccessibleName(_("more"))
-        ic = _theme_icon(("overflow-menu", "application-menu", "view-more-symbolic")) \
-            if self.theme.shape["icons"] else QIcon()
+        from . import icons as pictures
+        ic = pictures.icon("more", self.theme)
         if ic.isNull():
             b.setText("⋯")
         else:

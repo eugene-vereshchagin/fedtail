@@ -1,27 +1,30 @@
-"""Picture packs: fedtail's own button pictures (ui.additional_icons), a set a folder.
-Plain Python (no Qt, no GTK): which file a picture comes from and, for an SVG, its
-colours filled in — the frontends only draw what this gives them.
+"""The pictures on fedtail's buttons, from the theme. Plain Python (no Qt, no GTK):
+which picture a button gets, from which file, in which colours — the frontends only draw
+what this gives them.
 
-A pack is a folder with pack.toml and a file a picture, named as the button it is for
-(NAMES): reply.svg or reply.png. pack.toml says
+Where they come from is the theme's choice ([shape] icons), which ui.icons may override:
 
-    name = "My pack"          # shown in the docs and the warnings
-    about = "…"
-    inherit = "gloss"         # whose pictures stand in for those this one has not
-    style = "gloss"           # how an SVG's blank colours are filled (STYLES); the
-                              # first pack in the chain that says one decides
-    [colors]                  # a picture of its own colour whatever the theme
-    send = "#3aa63a"          # (the rest take the theme's accent); the nearer pack wins
+    "desktop"     the desktop's icon theme (Breeze, Adwaita…), by freedesktop names —
+                  the "system" and "debug" themes;
+    "own"         the theme's own set: themes/<theme>/icons/, a file a picture —
+                  every other theme;
+    "additional"  (ui.icons only) the own set, and the messengers' pictures (EXTENDED)
+                  also outside the split layout, on the buttons that have them;
+    "words"       no pictures: words and glyphs (≡ ↔ ❯) — terminal, bnw.
 
-An SVG may leave its colours blank: {c} the colour, {l} its light top (for a gloss),
-{d} the outline. A PNG is shown as it is (reply@2x.png beside it for a sharp screen).
+Pictures are of two kinds. STANDARD ones are always there when there are pictures at
+all: the menu, the width, the columns, the lanes, the buttons under a post, who sees it.
+EXTENDED ones are the messengers' (the input line, the roster, the author's bar, a
+person's flower): shown in the split layout, and anywhere with "additional".
 
-Built-in packs: data/icons/packs/ (gloss — the base; qip, agent, flat — gloss's pictures
-drawn their way; psi — Psi+'s own PNGs). Your own: ~/.config/fedtail/icons/<name>/,
-winning over a built-in one of the same name; a copy of the built-in ones is kept in
-~/.config/fedtail/icons/builtin/ to start from. A theme picks its pack with
-shape.icon_set; a theme's own folder, themes/<theme>/icons/, is a pack over it (a
-pack.toml there is optional — without one it inherits the theme's icon_set).
+A theme's set is a folder next to its file: themes/mine.toml → themes/mine/icons/,
+reply.svg or reply.png (reply@2x.png beside it for a sharp screen). What the folder
+lacks comes from the themes it inherits (their folders), then from [pictures] from = a
+theme whose set it borrows, and last from the fallback set (data/icons/fallback/) —
+an emergency only: no built-in theme needs it (tests/test_iconpack.py), and a theme of
+yours that does is told in the log. An SVG may leave its colours blank — {c} the colour,
+{l} its light top, {d} the outline — filled as [pictures] style says, from the theme's
+accent or [pictures.colors].
 """
 
 from __future__ import annotations
@@ -29,219 +32,213 @@ from __future__ import annotations
 import functools
 import logging
 import re
-import shutil
-import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from .palette import Color
 
 log = logging.getLogger(__name__)
 
-BUILTIN_DIR = Path(__file__).resolve().parent.parent / "data" / "icons" / "packs"
-BASE = "gloss"  # every chain ends here: no button without a picture
+FALLBACK_DIR = Path(__file__).resolve().parent.parent / "data" / "icons" / "fallback"
 STYLES = ("gloss", "agent", "flat", "qip", "none")
+SOURCES = ("desktop", "own", "words")             # a theme's [shape] icons
+CHOICES = ("theme", "desktop", "own", "additional", "words")  # ui.icons
 EXTS = (".svg", ".png")
 
-# every picture fedtail asks a pack for, and what it is on
-NAMES = {
+# always there when there are pictures at all
+STANDARD = {
+    "menu": "the ≡ menu",
+    "wide": "posts across the whole width (↔)",
+    "columns": "lanes side by side (❯)",
+    "close": "close a tab, a panel",
+    "more": "a post's ⋯ menu",
+    "refresh": "refresh a lane",
+    "mark_read": "mark all read",
+    "filter": "what a lane shows",
+    "edit": "edit (my profile)",
+    "accept": "approve (a follow request)",
+    "reject": "reject (a follow request)",
+    "clear": "clear (Activity)",
     "reply": "Reply under a post",
     "star": "Favourite under a post",
-    "star_full": "Favourite, done",
+    "star_full": "Favourite, done; my favourites",
     "boost": "Boost under a post",
-    "thread": "Thread under a post; a followed thread in the roster",
-    "bookmark": "Bookmark under a post",
-    "public": "who sees a post: everyone",
+    "thread": "Thread under a post",
+    "bookmark": "Bookmark under a post; my bookmarks",
+    "public": "who sees a post: everyone; the federated lane",
     "unlisted": "who sees a post: quietly public",
     "private": "who sees a post: followers",
-    "direct": "who sees a post: the mentioned only",
-    "warning": "the content warning button (CW)",
+    "direct": "who sees a post: the mentioned only; private messages",
+    "home": "the home lane",
+    "local": "my server's lane",
+    "mentions": "mentions",
+    "replies": "replies to me",
+    "subs": "followed threads",
+    "bots": "bots",
+    "my_posts": "my posts",
+    "requests": "follow requests",
+    "list": "a list; add to a list",
+    "activity": "Activity (likes, boosts, follows)",
+    "tags": "followed tags",
+}
+# the messengers': the split layout's, anywhere with ui.icons = "additional"
+EXTENDED = {
+    "warning": "the content warning (CW)",
     "attach": "add pictures or a file",
     "poll": "add a poll",
     "emoji": "emoji",
     "send": "Send",
     "follow": "Follow",
     "unfollow": "Unfollow",
-    "list": "add to a list",
     "talk": "a private talk; write privately",
     "profile": "open the profile",
     "accounts": "the accounts button",
-    "menu": "the ≡ menu",
     "settings": "how the roster looks (⚙)",
     "expand": "make bigger",
-    "status": "a person in the roster (QIP's flower, the Agent's @, Psi's star)",
+    "status": "a person (QIP's flower, the Agent's @, Psi's star)",
     "nobody": "a face for nobody: no one under the pointer, no picture yet",
 }
-
-README = """fedtail picture packs
-=====================
-
-The pictures on fedtail's buttons (ui.additional_icons: in the split layout, or
-everywhere) come from a pack: a folder with pack.toml and a file a picture.
-A theme picks its pack with
-
-    [shape]
-    icon_set = "<pack>"
-
-Make your own: copy a folder from builtin/ next to it under a new name, change
-pack.toml's name, draw over the pictures you want different and delete the rest —
-those come from the pack it inherits. builtin/ is rewritten by every new version,
-so don't edit it in place.
-
-A picture is <name>.svg or <name>.png (and <name>@2x.png for a sharp screen):
-{names}
-
-An SVG may leave its colours blank: {{c}} the colour, {{l}} its light top, {{d}} the
-outline — the pack's style fills them from the theme's accent, or from [colors]
-in pack.toml. A PNG is shown as it is.
-
-A single theme can carry its own pictures too: themes/<theme>/icons/<name>.svg,
-over the pack its icon_set names.
-"""
-
-
-class PackError(Exception):
-    pass
-
-
-def user_dir():
-    from .themefile import user_dir as themes_dir
-    return themes_dir().parent / "icons"
-
-
-def _pack_dir(name):
-    """The folder of a pack by name: yours first, then the built-in one."""
-    if not name or "/" in name or name.startswith(".") or name == "builtin":
-        return None
-    for root in (user_dir(), BUILTIN_DIR):
-        d = root / name
-        if (d / "pack.toml").is_file():
-            return d
-    return None
-
-
-def available():
-    """The packs' names, yours and the built-in ones."""
-    names = set()
-    for root in (BUILTIN_DIR, user_dir()):
-        if root.is_dir():
-            names |= {d.name for d in root.iterdir()
-                      if d.name != "builtin" and (d / "pack.toml").is_file()}
-    return sorted(names)
-
-
-def exists(name):
-    return _pack_dir(name) is not None
-
-
-def _read(d):
-    p = d / "pack.toml"
-    if not p.is_file():
-        return {}
-    try:
-        with open(p, "rb") as f:
-            data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise PackError(f"{p}: {e}") from None
-    return data if isinstance(data, dict) else {}
+NAMES = {**STANDARD, **EXTENDED}
+# a picture a set may leave out: another stands in (a file of its own name wins)
+ALIASES = {"federated": "public", "bookmarks": "bookmark", "my_likes": "star_full",
+           "readone": "mark_read", "notifications": "activity", "tag": "tags"}
+# "desktop": the desktop icon theme's names for each, the first found wins
+FREEDESKTOP = {
+    "menu": ("application-menu", "open-menu-symbolic"),
+    "wide": (),  # none fits: Qt draws its arrows, GTK the glyph
+    "columns": ("view-split-left-right",),
+    "close": ("window-close", "window-close-symbolic"),
+    "more": ("overflow-menu", "application-menu", "view-more-symbolic"),
+    "refresh": ("view-refresh",),
+    "mark_read": ("mail-mark-read", "object-select-symbolic"),
+    "filter": ("view-filter",),
+    "edit": ("document-edit",),
+    "accept": ("dialog-ok",),
+    "reject": ("dialog-cancel",),
+    "clear": ("edit-clear-all",),
+    "reply": ("mail-reply-sender",),
+    "star": ("rating-unrated", "non-starred-symbolic"),
+    "star_full": ("rating", "starred-symbolic"),
+    "boost": ("media-playlist-repeat", "retweet"),
+    "thread": ("view-list-tree", "format-indent-more"),
+    "bookmark": ("bookmark-new", "bookmarks"),
+    "public": ("globe", "applications-internet"),
+    "unlisted": ("object-unlocked", "unlock"),
+    "private": ("object-locked", "lock"),
+    "direct": ("mail-message", "mail-unread"),
+    "home": ("system-users",),
+    "local": ("go-home",),
+    "federated": ("applications-internet",),
+    "mentions": ("mail-mark-important",),
+    "replies": ("mail-replied",),
+    "subs": ("mail-thread-watch",),
+    "bots": ("applications-system",),
+    "my_posts": ("document-edit",),
+    "requests": ("list-add-user",),
+    "list": ("view-list-details",),
+    "activity": ("rating",),
+    "bookmarks": ("bookmarks",),
+    "my_likes": ("starred-symbolic",),
+    "tags": ("tag",),
+    "readone": ("mail-mark-read", "object-select-symbolic"),
+    "warning": ("dialog-warning",),
+    "attach": ("mail-attachment",),
+    "poll": ("office-chart-bar", "view-statistics"),
+    "emoji": ("face-smile",),
+    "send": ("document-send", "mail-send"),
+    "follow": ("list-add-user",),
+    "unfollow": ("list-remove-user",),
+    "talk": ("mail-message-new",),
+    "profile": ("user-identity", "im-user"),
+    "accounts": ("system-users",),
+    "settings": ("configure", "preferences-system"),
+    "expand": ("view-fullscreen",),
+    "status": ("user-online",),
+    "nobody": (),
+}
+# a lane (sidebar, roster, a tab) by its name → its picture
+LANE = {"home": "home", "local": "local", "federated": "federated", "mentions": "mentions",
+        "replies": "replies", "subs": "subs", "bots": "bots", "my_posts": "my_posts",
+        "requests": "requests", "list": "list", "activity": "activity",
+        "bookmarks": "bookmarks", "direct": "direct", "my_likes": "my_likes", "tags": "tags"}
 
 
-@dataclass
-class Pack:
-    """A pack and all it inherits: where to look (the nearest first), its style, the
-    pictures' own colours."""
-    name: str
-    title: str = ""
-    about: str = ""
-    dirs: list = field(default_factory=list)
+def lane_picture(name):
+    """The picture of a lane ("list:12" → "list"), or None."""
+    return LANE.get((name or "").split(":")[0])
+
+
+def mode(cfg, shape):
+    """Where the pictures come from: ui.icons, or the theme's [shape] icons."""
+    chosen = (cfg.get("ui") or {}).get("icons", "theme") if cfg else "theme"
+    if chosen in CHOICES and chosen != "theme":
+        return chosen
+    own = (shape or {}).get("icons", "desktop")
+    return own if own in SOURCES else "desktop"
+
+
+def shown(how, name, split=False):
+    """Does this picture go on its button: none with "words"; a messenger's only in
+    the split layout or with "additional"; the rest always."""
+    if how == "words":
+        return False
+    if name in EXTENDED:
+        return how == "additional" or bool(split)
+    return True
+
+
+def uses_set(how):
+    return how in ("own", "additional")
+
+
+# ---- a theme's set ----------------------------------------------------------------
+@dataclass(frozen=True)
+class Set:
+    """Where a theme's pictures lie (the nearest first, the fallback last), how they
+    are coloured, their own colours."""
+    dirs: tuple
     style: str = "gloss"
-    colors: dict = field(default_factory=dict)
-    warnings: list = field(default_factory=list)
+    colors: tuple = ()  # ((name, "#rrggbb"), …)
 
-    def find(self, picture, exts=EXTS):
-        """The file of a picture (the nearest pack that has it), or None."""
-        for d in self.dirs:
-            for ext in exts:
-                p = d / f"{picture}{ext}"
-                if p.is_file():
-                    return p
+    def find(self, name, exts=EXTS, fallback=True):
+        """The file of a picture (or what stands in for it), or None."""
+        dirs = self.dirs if fallback else self.dirs[:-1]
+        for n in (name, ALIASES.get(name)):
+            if not n:
+                continue
+            for d in dirs:
+                for ext in exts:
+                    p = Path(d) / f"{n}{ext}"
+                    if p.is_file():
+                        return p
         return None
 
-    @property
-    def key(self):
-        return (self.name, tuple(str(d) for d in self.dirs), self.style)
-
-
-@functools.lru_cache(maxsize=32)
-def load(name, own=()):
-    """The pack `name` (a theme's shape.icon_set) with `own` — a theme's own folders of
-    pictures — over it. An unknown or broken pack: gloss, and a warning saying so."""
-    warnings = []
-    chain = []  # (folder, its pack.toml) the nearest first
-    for d in own:
-        d = Path(d)
-        try:
-            data = _read(d)
-        except PackError as e:
-            warnings.append(str(e))
-            data = {}
-        chain.append((d, data))
-        if data.get("inherit"):
-            name = data["inherit"]
-    if not exists(name):
-        if name:
-            warnings.append(f"picture pack '{name}' not found (have: "
-                            f"{', '.join(available())}) — using '{BASE}'")
-        name = BASE
-    seen, current = set(), name
-    while current:
-        if current in seen or len(chain) > 12:
-            warnings.append(f"picture pack '{name}': inherit loop through '{current}'")
-            break
-        seen.add(current)
-        d = _pack_dir(current)
-        if d is None:
-            warnings.append(f"picture pack '{current}' (inherited) not found")
-            break
-        try:
-            data = _read(d)
-        except PackError as e:
-            warnings.append(str(e))
-            data = {}
-        chain.append((d, data))
-        current = data.get("inherit") or ("" if current == BASE else BASE)
-    if all(d != _pack_dir(BASE) for d, _data in chain) and _pack_dir(BASE):
-        chain.append((_pack_dir(BASE), _read(_pack_dir(BASE))))  # never without pictures
-    style, colors = None, {}
-    for _d, data in reversed(chain):  # the base first: the nearer ones win
-        got = data.get("colors")
-        if isinstance(got, dict):
-            for k, v in got.items():
-                try:
-                    Color.parse(str(v))
-                    colors[str(k)] = str(v)
-                except ValueError:
-                    warnings.append(f"picture pack '{name}': colors.{k} = {v!r}: not a colour")
-    for _d, data in chain:
-        s = data.get("style")
-        if s:
-            if s in STYLES:
-                style = s
-                break
-            warnings.append(f"picture pack '{name}': style = {s!r}; allowed: "
-                            f"{', '.join(STYLES)}")
-    top = next((data for d, data in chain if data.get("name")), {})
-    for w in warnings:
-        log.warning("%s", w)
-    return Pack(name=name, title=str(top.get("name") or name), about=str(top.get("about", "")),
-                dirs=[d for d, _data in chain], style=style or "gloss", colors=colors,
-                warnings=warnings)
+    def color(self, name):
+        return dict(self.colors).get(name)
 
 
 def for_theme(theme):
-    """The pack a theme (Qt's or GTK's: .shape, .icon_dirs) draws with."""
-    return load(str(theme.shape.get("icon_set") or BASE),
-                tuple(str(d) for d in getattr(theme, "icon_dirs", ()) or ()))
+    """The set of a theme (Qt's or GTK's: .icon_dirs, .pictures)."""
+    pics = getattr(theme, "pictures", None) or {}
+    colors = pics.get("colors") or {}
+    return Set(dirs=tuple(str(d) for d in getattr(theme, "icon_dirs", ()) or ())
+               + (str(FALLBACK_DIR),),
+               style=pics.get("style") if pics.get("style") in STYLES else "gloss",
+               colors=tuple(sorted((str(k), str(v)) for k, v in colors.items())))
+
+
+_told = set()
+
+
+def missing(theme_id, pset):
+    """The pictures a theme's own set (and what it inherits) lacks — the fallback stands
+    in for them. Said once in the log."""
+    gone = sorted(n for n in NAMES if pset.find(n, fallback=False) is None)
+    if gone and (theme_id, pset.dirs) not in _told:
+        _told.add((theme_id, pset.dirs))
+        log.warning("theme '%s': no picture of its own for %s — from the fallback set",
+                    theme_id, ", ".join(gone))
+    return gone
 
 
 # ---- colouring an SVG -------------------------------------------------------------------
@@ -280,11 +277,12 @@ class Picture:
     path2x: str = ""
 
 
-@functools.lru_cache(maxsize=512)
-def _picture(pack_key, name, accent, svg_ok):
-    pack = _by_key[pack_key]
-    exts = EXTS if svg_ok else (".png",)
-    p = pack.find(name, exts)
+@functools.lru_cache(maxsize=1024)
+def picture(pset, name, accent, svg_ok=True):
+    """What to draw: Picture("svg", text) coloured for this set and accent
+    ("#rrggbb"), or Picture("png", path); None when neither the set nor the fallback
+    has it. svg_ok=False: a frontend that can't draw SVG — PNGs only."""
+    p = pset.find(name, EXTS if svg_ok else (".png",))
     if p is None:
         return None
     if p.suffix == ".png":
@@ -295,44 +293,13 @@ def _picture(pack_key, name, accent, svg_ok):
     except OSError as e:
         log.debug("picture %s: %s", p, e)
         return None
-    return Picture("svg", text=styled(text, pack.style, pack.colors.get(name) or accent))
-
-
-_by_key = {}
-
-
-def picture(pack, name, accent, svg_ok=True):
-    """What to draw for a picture: Picture("svg", text) coloured for this pack and
-    accent ("#rrggbb"), Picture("png", path); None when the pack (and all it inherits)
-    has none. svg_ok=False: a frontend that can't draw SVG — PNGs only."""
-    _by_key[pack.key] = pack
-    return _picture(pack.key, name, str(accent), bool(svg_ok))
-
-
-def has_png(pack):
-    """Some of the pack's pictures are PNGs (drawable without an SVG renderer)."""
-    return any(any(d.glob("*.png")) for d in pack.dirs)
-
-
-# ---- the copies to start from -------------------------------------------------------------
-def install_copies():
-    """Keep ~/.config/fedtail/icons/builtin/ and its README current. Best effort."""
+    own = pset.color(name) or pset.color(p.stem)
     try:
-        root = user_dir()
-        target = root / "builtin"
-        for src in BUILTIN_DIR.iterdir():
-            if not src.is_dir():
-                continue
-            dst = target / src.name
-            dst.mkdir(parents=True, exist_ok=True)
-            for f in src.iterdir():
-                d = dst / f.name
-                if f.is_file() and (not d.exists() or d.read_bytes() != f.read_bytes()):
-                    shutil.copyfile(f, d)
-        names = "\n".join(f"    {k:<10} {v}" for k, v in NAMES.items())
-        text = README.format(names=names)
-        readme = root / "README.txt"
-        if not readme.exists() or readme.read_text("utf-8") != text:
-            readme.write_text(text, "utf-8")
-    except OSError:
-        pass
+        return Picture("svg", text=styled(text, pset.style, own or accent))
+    except ValueError:  # a colour that isn't one (themefile warned): the accent
+        return Picture("svg", text=styled(text, pset.style, accent))
+
+
+def has_png(pset):
+    """Some of the set's pictures are PNGs (drawable without an SVG renderer)."""
+    return any(any(Path(d).glob("*.png")) for d in pset.dirs)

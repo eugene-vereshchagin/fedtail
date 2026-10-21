@@ -32,7 +32,6 @@ log = logging.getLogger(__name__)
 AVATAR = 40      # mine, in the header
 FACE = 28        # the newest post's author, beside an item
 REFRESH_MS = 300  # coalesce bursts of events into one rebuild
-_ICONS = {}       # a lane kind's icon, looked up once
 # how the roster looks (the ⚙ menu, kept in state): a compact one is a line an item —
 # no status line, no face; the header, the search and the bottom row can go
 class RosterRow(QWidget):
@@ -48,20 +47,16 @@ class RosterRow(QWidget):
         h.setSpacing(8)
         icon = QLabel()
         icon.setFixedWidth(18)
+        from .. import iconpack
         from . import icons as pictures
-        from .window import LANE_ICON
         own = {"person": "status", "talk": "talk", "thread": "thread"}.get(item.kind)
-        if own and pictures.wanted(win.theme):  # fedtail's own: a flower for a person
-            icon.setPixmap(pictures.icon(own, win.theme).pixmap(16, 16))
-        elif win.theme.shape["lane_icons"]:
+        ic = pictures.icon(own, win.theme) if own else QIcon()  # a flower for a person
+        if ic.isNull():  # else the lane's picture
             kind = {"thread": "subs", "talk": "direct", "person": "direct"}.get(item.kind,
                                                              item.key.split(":")[0])
-            pm = _ICONS.get(kind)
-            if pm is None:  # looking an icon up in the theme is slow: once a kind
-                ic = QIcon.fromTheme(LANE_ICON.get(kind, ""))
-                pm = _ICONS[kind] = ic.pixmap(18, 18) if not ic.isNull() else False
-            if pm:
-                icon.setPixmap(pm)
+            ic = pictures.icon(iconpack.lane_picture(kind), win.theme, 18)
+        if not ic.isNull():
+            icon.setPixmap(ic.pixmap(16 if own else 18, 16 if own else 18))
         h.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
         self.icon, self.icon_pm = icon, icon.pixmap() if not icon.pixmap().isNull() else None
         col = QVBoxLayout()

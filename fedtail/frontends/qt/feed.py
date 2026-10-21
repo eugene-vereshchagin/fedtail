@@ -634,7 +634,7 @@ class FeedView(QScrollArea):
 
 READING_S = 5  # s after a scroll by hand that a window without focus still counts as read
 
-ICONS = True  # set from the theme by the window: dark custom themes want words only
+THEME = None  # set by the window: whose pictures the lanes' buttons get
 COMPACT_HEADERS = False  # set by the window in the split layout: slim lane headers
 
 
@@ -647,7 +647,7 @@ class MediaFilter:
         from PySide6.QtWidgets import QMenu
         self.state = state or MediaChoice()
         self.on_change = on_change
-        self.btn = _button("", lambda: None, icon="view-filter", tip=_("media_filter_tip"))
+        self.btn = _button("", lambda: None, icon="filter", tip=_("media_filter_tip"))
         if self.btn.icon().isNull():
             self.btn.setText("⏷ " + _("media_filter"))
         menu = QMenu(self.btn)
@@ -708,7 +708,8 @@ def _button(text, slot, name="tool", icon=None, tip=None):
     # to show it; and j / k stay with the feed after a click
     b.setFocusPolicy(Qt.FocusPolicy.TabFocus)
     if icon:
-        ic = QIcon.fromTheme(icon) if ICONS else QIcon()
+        from . import icons
+        ic = icons.icon(icon, THEME) if THEME is not None else QIcon()
         if not ic.isNull():
             b.setIcon(ic)
         elif not text:
@@ -849,10 +850,10 @@ class LaneWidget(QWidget):
         self.btn_first = self.header.add(_button("↓ " + _("to_new"), self.jump_first_unread,
                                                  tip=_("to_new_tip")))
         self.btn_all = self.header.add(_button(_("mark_all_read"), self.mark_all_read,
-                                               icon="mail-mark-read"))
+                                               icon="mark_read"))
         self.media_filter = MediaFilter(self.header, lambda: self.refresh(force=True),
                                         self.lm.media)
-        self.header.add(_button("", self.refresh_now, icon="view-refresh",
+        self.header.add(_button("", self.refresh_now, icon="refresh",
                                 tip=_("refresh") + " (F5)"))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
@@ -1169,10 +1170,10 @@ class ThreadWidget(QWidget):
         self.header = _Header(win.theme)
         self.root, self.posts = None, []
         self.sub_btn = self.header.add(_button(_("sub_thread"), self._toggle_sub,
-                                               icon="mail-thread-watch", tip=_("sub_tip")))
+                                               icon="subs", tip=_("sub_tip")))
         self.sub_btn.setCheckable(True)
         self.sub_btn.setEnabled(False)
-        self.header.add(_button("", self.reload, icon="view-refresh", tip=_("refresh")))
+        self.header.add(_button("", self.reload, icon="refresh", tip=_("refresh")))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
         self.view.seen.connect(self._seen)
@@ -1343,7 +1344,7 @@ class AccountWidget(_PagedTab):
         me = self.core.me
         self.mine = me is not None and acc_id == me.id
         if self.mine:
-            self.header.add(_button(_("edit_profile"), win.edit_profile, icon="document-edit"))
+            self.header.add(_button(_("edit_profile"), win.edit_profile, icon="edit"))
         # who this is: a block of its own, not one more post — the banner, a tinted
         # card with an accent edge, and a "Posts" heading under it
         self.info = QFrame()
@@ -1963,9 +1964,9 @@ class RequestsWidget(QScrollArea):
             v.addWidget(note)
             h = QHBoxLayout()
             h.addWidget(_button(_("approve"), lambda _c=False, a=acc.id:
-                                self.win.answer_follow(a, True), icon="dialog-ok"))
+                                self.win.answer_follow(a, True), icon="accept"))
             h.addWidget(_button(_("reject"), lambda _c=False, a=acc.id:
-                                self.win.answer_follow(a, False), icon="dialog-cancel"))
+                                self.win.answer_follow(a, False), icon="reject"))
             h.addStretch(1)
             v.addLayout(h)
             self.lay.addWidget(card)
@@ -1990,8 +1991,8 @@ class ActivityWidget(QWidget):
         lay.setSpacing(0)
         self.header = _Header(win.theme, win.theme.word("lane_title", _("lane_activity")))
         self.header.add(_button(_("mark_all_read"), lambda: self.core.mark_activity_seen(),
-                                icon="mail-mark-read"))
-        self.clear_btn = _button(_("activity_clear"), self._clear, icon="edit-clear-all",
+                                icon="mark_read"))
+        self.clear_btn = _button(_("activity_clear"), self._clear, icon="clear",
                                  tip=_("activity_clear_tip"))
         self.header.add(self.clear_btn)
         self.clear_btn.setVisible(self.core.supports("dismiss"))

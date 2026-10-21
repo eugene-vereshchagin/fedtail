@@ -2,18 +2,23 @@
 
 ## 0.18.0 — in progress
 
-- Picture packs: the pictures on the buttons (ui.additional_icons) come in packs —
-  a folder with pack.toml (its name, which pack it inherits, how it colours an SVG, its
-  pictures' own colours) and a file a picture. Built in: gloss, qip, agent, flat, psi
-  (what the code had in tables is in their pack.toml now); yours go to
-  ~/.config/fedtail/icons/<name>/, with samples of the built-in ones and the list of
-  pictures in ~/.config/fedtail/icons/builtin/ and README.txt. A theme names its pack in
-  shape.icon_set (an unknown one: gloss, and a warning — the theme still loads);
-  themes/<theme>/icons/ goes over it. One module (frontends/iconpack.py) decides for
-  both interfaces.
-- GTK draws those pictures too, as Qt does: on a post's buttons and who sees it, on the
-  input line, the author's bar, the roster's buttons and rows, a silhouette for nobody
-  (SVG through gdk-pixbuf's loader, librsvg; without it a pack's PNGs only).
+- The pictures on the buttons are the theme's. [shape] icons says where they come from:
+  "desktop" — the desktop's icon theme (system, debug), "own" — a set of the theme's own,
+  "words" — none (terminal, bnw); ui.icons may choose otherwise, "additional" putting the
+  messengers' pictures outside the split layout too. A theme's set is a folder next to
+  it, themes/<theme>/icons/, a file a picture; what it lacks comes from the themes it
+  inherits, then from [pictures] from (mra-blue takes mra's), then from an emergency set
+  — and the log says which pictures the theme lacked. Pictures are standard (the menu,
+  the width, the columns, the lanes, the buttons under a post, who sees it — there
+  whenever the theme has pictures) or the messengers' (the split layout's). Every
+  built-in theme but those four has its whole set now, 21 new pictures among them (the
+  lanes, ↔, ❯, ✕, ⋯, refresh, mark read…). ui.additional_icons is ui.icons now
+  ("layout" → "theme", "all" → "additional", "none" → "words"; the config is updated
+  by itself); a theme's old shape.icons = true / false, lane_icons and icon_set are
+  read the new way.
+- GTK draws the theme's pictures too, as Qt does: ≡ ↔ ❯, the lanes, a post's buttons and
+  who sees it, ⋯, the input line, the author's bar, the roster, a silhouette for nobody
+  (SVG through gdk-pixbuf's loader, librsvg; without it PNGs only).
 - Qt: a status bar message no longer lies over the profile's name at the left.
 - GTK: pictures in a post keep their shape, as in Qt — one alone ui.image_height tall
   (not a strip cut to 180 px), several as tiles three in a row; a gif or a video with ▶;
@@ -111,10 +116,6 @@
   jumps as the post under the cursor changes.
 - Both windows say "Getting the lanes from the server…" until the first round of
   polling is in — on a slow connection the empty lanes looked broken.
-- A theme can bring its own button pictures: `themes/<name>/icons/<picture>.svg` or
-  `.png` next to `themes/<name>.toml` (inherited from the themes it builds on; an SVG
-  coloured by the theme as the built-in ones are); what it doesn't have comes from
-  `shape.icon_set`.
 - Inside: the rest of the decisions moved out of the Qt window into `frontends/common/`
   — what a lane shows (the divider, the filters, conversations, where reading starts,
   what counts as read), the picture cache, the sidebar's numbers and folds, the split

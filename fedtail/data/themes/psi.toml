@@ -52,6 +52,7 @@ tab_mark = "#3daee9"
 button_end = "#eceded"
 
 [shape]
+icons = "own"
 radius = 3
 button_radius = 3
 card_style = "rule"
@@ -63,7 +64,12 @@ faces = "qip"
 roster_rows = "faces"
 roster_face = 32
 tab_rows = "one"
-icon_set = "psi"
+
+[pictures]
+style = "flat"
+
+[pictures.colors]
+status = "#f2c037"
 
 [words]
 date = "{dd}.{mm} {clock}"

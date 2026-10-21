@@ -48,6 +48,7 @@ button_border = "#d9cdb5"
 dot = "#b5462a"
 
 [shape]
+icons = "own"
 radius = 6
 button_radius = 5
 avatar = 36

@@ -47,10 +47,9 @@ button_border = "#4c566a"
 dot = "#88c0d0"
 
 [shape]
+icons = "own"
 radius = 8
 button_radius = 6
-icons = false
-lane_icons = false
 
 [icon]
 bg_top = "#5e81ac"

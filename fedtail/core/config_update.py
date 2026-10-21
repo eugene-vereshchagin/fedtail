@@ -86,7 +86,9 @@ def _ours(block, fresh):
 
 # options of older versions under a new name: (section, old) → (new, {old value: new})
 RENAMED = {
-    ("ui", "button_icons"): ("additional_icons", {"theme": "layout", "on": "all", "off": "none"}),
+    ("ui", "button_icons"): ("icons", {"theme": "theme", "on": "additional", "off": "words"}),
+    ("ui", "additional_icons"): ("icons", {"layout": "theme", "all": "additional",
+                                           "none": "words"}),
 }
 
 

@@ -146,9 +146,8 @@ class Card(Gtk.Box):
         if p.created:
             meta.append(link_markup(f"fedtail:thread/{p.id}", ctx.theme.date(p.created)))
         from . import icons
-        vis_pic = icons.image(actions.vis_picture(p.visibility), ctx.theme, 14) \
-            if icons.wanted(ctx.theme) else None
-        if vis_pic is None:  # fedtail's own picture of who sees it, or the word
+        vis_pic = icons.image(actions.vis_picture(p.visibility), ctx.theme, 14)
+        if vis_pic is None:  # the theme's picture of who sees it, or the word
             meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
         if p.edited:
             meta.append(link_markup(f"fedtail:history/{p.id}", _("edited_mark")))
@@ -206,7 +205,9 @@ class Card(Gtk.Box):
         self.actions.set_hexpand(True)
         bar.append(self.actions)
         self.more = Gtk.MenuButton()
-        self.more.set_child(Gtk.Label(label="⋯"))  # (a label of its own: no ▾ beside it)
+        from . import icons
+        # (a child of its own, a picture or a label: no ▾ beside it)
+        self.more.set_child(icons.image("more", ctx.theme) or Gtk.Label(label="⋯"))
         self.more.add_css_class("flat")
         self.more.add_css_class("ft-action")
         tip(self.more, _("more"))
@@ -400,13 +401,13 @@ class Card(Gtk.Box):
             self.actions.remove(child)
         from . import icons
         style = self.ctx.cfg["ui"]["actions"]
-        own = icons.wanted(self.ctx.theme)  # fedtail's own pictures (ui.additional_icons)
+        own = icons.wanted(self.ctx.theme)  # the messengers' look (split, "additional")
         if own and style == "text":
             style = "both"  # the split layout has pictures by the words, as messengers did
         for bt in actions.buttons(self.entry, self._actx(), unread=bool(self.unread)):
             short = bt.count.replace(" · ", "")
-            pic = actions.action_picture(bt.action, bt.active)
-            img = icons.image(pic, self.ctx.theme) if own and pic else None
+            pic = actions.action_picture(bt.action, bt.active) or bt.action
+            img = icons.image(pic, self.ctx.theme)
             if style == "icons":
                 text = (bt.glyph + " " if img is None else "") + short
             elif style == "text":

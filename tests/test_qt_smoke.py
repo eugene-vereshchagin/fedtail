@@ -2460,26 +2460,35 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(buttons[4].geometry().width(), 100)  # the last: as it is
         box.deleteLater()
 
-    def test_additional_icons(self):
-        """ui.additional_icons: fedtail's own pictures in the split layout only, in every
-        layout, or none; each messenger theme draws them its own way."""
+    def test_theme_pictures(self):
+        """The theme decides where the pictures come from (ui.icons may override): the
+        desktop's, its own set, none; the messengers' only in the split layout or with
+        "additional"."""
         from fedtail.frontends.qt import icons
         from fedtail.frontends.qt import theme as themes
 
         def t(**ui):
             return themes.apply(self.app, config.validate({"ui": ui})[0])
         try:
-            self.assertFalse(icons.wanted(t()))  # the single window: the desktop's icons
-            self.assertFalse(icons.wanted(t(layout="split", additional_icons="none")))
+            system = t()
+            self.assertEqual(icons.how(system), "desktop")
+            self.assertFalse(icons.wanted(system))  # the single window: no messengers'
+            self.assertEqual(icons.how(t(theme="terminal")), "words")
+            self.assertTrue(icons.icon("menu", t(theme="terminal")).isNull())
             psi = t(layout="split", theme="psi")
+            self.assertEqual(icons.how(psi), "own")
             self.assertTrue(icons.wanted(psi))
             self.assertFalse(icons.icon("profile", psi).isNull())  # Psi+'s own PNG
             self.assertIsNotNone(icons.nobody(psi, 64))
-            if icons.QSvgRenderer is not None:  # ours, in the theme's colours
-                own = t(additional_icons="all", theme="mra-green")
-                self.assertTrue(icons.wanted(own))
-                self.assertEqual(icons.icon_set(own), "agent")
-                for name in ("send", "status", "reply", "star_full", "boost", "nobody"):
+            single = t(theme="psi")
+            self.assertFalse(icons.icon("reply", single).isNull())  # standard: everywhere
+            self.assertTrue(icons.icon("send", single).isNull())  # a messenger's: split
+            self.assertFalse(icons.icon("send", t(theme="psi", icons="additional")).isNull())
+            self.assertEqual(icons.how(t(theme="psi", icons="words")), "words")
+            if icons.QSvgRenderer is not None:  # SVGs, in the theme's colours
+                own = t(icons="additional", theme="mra-green")
+                for name in ("send", "status", "reply", "star_full", "boost", "nobody",
+                             "menu", "wide", "columns", "home"):
                     self.assertFalse(icons.icon(name, own).isNull(), name)
                 self.assertTrue(icons.icon("no-such-picture", own).isNull())
         finally:

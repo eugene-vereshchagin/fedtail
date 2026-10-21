@@ -75,10 +75,21 @@ class Ctx:
 
 
 class LaneRow(Gtk.ListBoxRow):
-    def __init__(self, name, title):
+    def __init__(self, name, title, theme=None):
         super().__init__()
         self.name = name
         box = Gtk.Box(spacing=6)
+        if theme is not None:  # the lane's picture, as the theme has it
+            from .. import iconpack
+            from . import icons
+            pic = icons.image(iconpack.lane_picture(name), theme, 18) \
+                if icons.pictures(theme) else None
+            if pic is not None:
+                box.append(pic)
+            elif icons.pictures(theme):
+                spacer = Gtk.Box()
+                spacer.set_size_request(18, -1)
+                box.append(spacer)
         lab = Gtk.Label(label=title, xalign=0)
         lab.set_hexpand(True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)
@@ -493,7 +504,8 @@ class MainWindow(Gtk.ApplicationWindow):
             w.add_controller(right)
             tip(w, _("my_profile") + "\n" + _("accounts_tip"))
         from .menu import button
-        head.append(button(self, self.menu))
+        self.menu_btn = button(self, self.menu)
+        head.append(self.menu_btn)
         self.wide_btn = Gtk.ToggleButton(label="↔")
         self.wide_btn.set_active(not self.cfg["ui"]["max_width"])
         tip(self.wide_btn, _("full_width_tip"))
@@ -503,6 +515,7 @@ class MainWindow(Gtk.ApplicationWindow):
         tip(self.columns_btn, _("columns_tip"))
         self.columns_btn.connect("toggled", lambda b: self.set_columns(b.get_active()))
         head.append(self.columns_btn)
+        self._dress_head()
         for b in head:
             if isinstance(b, Gtk.Button):
                 b.add_css_class("flat")
@@ -549,6 +562,14 @@ class MainWindow(Gtk.ApplicationWindow):
             who = "@" + acct + (f"@{host}" if host and "@" not in acct else "")
         text = f"{me}: {who}" if who else me
         self.profile_label.set_text(text + (" ★" if me == paths.main_profile() else ""))
+
+    def _dress_head(self):
+        """≡ ↔ ❯ with the theme's pictures (or the desktop's, or the glyphs)."""
+        from . import icons
+        t = self.theme
+        icons.dress(self.menu_btn, "menu", t, glyph="≡")
+        icons.dress(self.wide_btn, "wide", t, glyph="↔")
+        icons.dress(self.columns_btn, "columns", t, glyph="❯")
 
     def _debug_corner(self):
         """In the debugging mode: how the window is drawn — theme, GTK, libadwaita,
@@ -750,6 +771,8 @@ class MainWindow(Gtk.ApplicationWindow):
             self._lane_selected(self.sidebar, self.lane_rows[current])
         if columns:
             self.set_columns(True)
+        if getattr(self, "menu_btn", None) is not None:
+            self._dress_head()
         for part in (self.dock, self.author_bar, self.roster):  # their pictures anew
             if part is not None and hasattr(part, "dress"):
                 part.dress()
@@ -969,7 +992,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sidebar.append(head)
             for name in names:
                 title = self.view.lane_title(name) or _("lane_" + _base(name))
-                row = LaneRow(name, title)
+                row = LaneRow(name, title, self.theme)
                 row.set_visible(group not in folded)
                 self.lane_rows[name] = row
                 self.sidebar.append(row)

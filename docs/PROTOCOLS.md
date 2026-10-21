@@ -163,7 +163,7 @@ Lemmy. Раскладки (`ui.layout = single | columns | split`) — забо�
 | 3 ✓ | `api.py`, поток, честные счётчики и проверка возможностей уехали в `protocols/mastodon/`; ядро берёт клиента, его ошибки, поток и `Capabilities` из `Protocol` (`protocols/base.py`), а методы клиента, которые оно зовёт, перечислены там же (`CLIENT`) | `tests/test_protocols.py`: путей `/api/v…` в коде вне `protocols/` нет, ядро зовёт только `CLIENT`, у Mastodon-клиента есть весь `CLIENT`, фронтенды не лезут в `protocols.mastodon` |
 | 4 ✓ | `Capabilities` (`protocols/base.py`) — одно место: что сервер сказал о себе, ответы проверки, отказы «такого нет» и известное о софте (`KNOWN`); `Core.supports` спрашивает его, ответы переживают переподключение, последняя проверка действует с запуска; событие `capabilities_changed` — фронтенды прячут кнопки сразу | `tests/test_protocols.py`, `test_social.py`, smoke: «Очистить» уходит, как только сервер отказал |
 | 5 ✓ | ростер (`View.roster()` → `RosterGroup` / `RosterItem`) и `ui.layout = "split"` на Qt: окно-ростер, окно сообщений со своими вкладками, строка ввода, лица — [LAYOUTS.md](LAYOUTS.md) | `tests/test_roster.py`, smoke + скриншоты `tools/screenshots.py` |
-| 6 ✓ | темы в духе QIP, Psi+ и Агента; тема задаёт и вид раскладки (`shape.faces`, `roster_rows`, `tab_rows`, `icon_set`) | `tests/test_themes.py`, `test_icons.py`, скриншоты |
+| 6 ✓ | темы в духе QIP, Psi+ и Агента; тема задаёт и вид раскладки (`shape.faces`, `roster_rows`, `tab_rows`, `icons`) | `tests/test_themes.py`, `test_icons.py`, скриншоты |
 
 Этапы 0–4 пользователь не должен заметить вообще: поведение то же, CHANGELOG пишет
 «внутренняя переделка». Каждый этап отдельно выпускается как dev-сборка, ты гоняешь
