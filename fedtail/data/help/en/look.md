@@ -32,6 +32,20 @@ line always at its bottom. Best with one of the messengers' themes — they set 
 where the faces go, how the roster's items look, the pictures on the buttons.
 `ui.additional_icons` — those pictures in every layout, or in none.
 
+## Picture packs
+
+The pictures on the buttons come from the pack a theme names: `[shape] icon_set`.
+Built in: `gloss` (the base: a gradient and a shine in the theme's colour), `qip` (each
+its own bright colour, a thick dark outline), `agent` (the Agent: brighter, an "@" for a
+person), `flat` (plain, a star), `psi` (Psi+'s own pictures). A pack of your own is a
+folder, `~/.config/fedtail/icons/<name>/`: `pack.toml` in it (the name, which pack it
+inherits, how it colours, its pictures' own colours) and a file a picture — `reply.svg`
+or `reply.png`; what the pack lacks comes from the one it inherits. An SVG may leave its
+colours blank — `{c}` the colour, `{l}` its light top, `{d}` the outline — and the pack
+fills them from the theme. Samples of the built-in packs and the list of all pictures:
+`~/.config/fedtail/icons/builtin/` and `README.txt` beside it. A theme can also bring a
+few pictures of its own: `themes/<theme>/icons/reply.svg`, over its pack.
+
 ## Width, font, buttons, emoji
 
 - ↔ at the top left — posts across the full width or in a column of `ui.max_width`.

@@ -145,13 +145,20 @@ class Card(Gtk.Box):
         meta = []
         if p.created:
             meta.append(link_markup(f"fedtail:thread/{p.id}", ctx.theme.date(p.created)))
-        meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
+        from . import icons
+        vis_pic = icons.image(actions.vis_picture(p.visibility), ctx.theme, 14) \
+            if icons.wanted(ctx.theme) else None
+        if vis_pic is None:  # fedtail's own picture of who sees it, or the word
+            meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
         if p.edited:
             meta.append(link_markup(f"fedtail:history/{p.id}", _("edited_mark")))
         info = _label(" · ".join(meta), ("ft-muted",), markup=True)
         tip(info, actions.vis_word(p.visibility))
         info.connect("activate-link", self._link)
         head.append(info)
+        if vis_pic is not None:
+            tip(vis_pic, actions.vis_word(p.visibility))
+            head.append(vis_pic)
         col.append(head)
 
         if parent == "missing":
@@ -391,16 +398,30 @@ class Card(Gtk.Box):
             return
         while (child := self.actions.get_first_child()) is not None:
             self.actions.remove(child)
+        from . import icons
         style = self.ctx.cfg["ui"]["actions"]
+        own = icons.wanted(self.ctx.theme)  # fedtail's own pictures (ui.additional_icons)
+        if own and style == "text":
+            style = "both"  # the split layout has pictures by the words, as messengers did
         for bt in actions.buttons(self.entry, self._actx(), unread=bool(self.unread)):
             short = bt.count.replace(" · ", "")
+            pic = actions.action_picture(bt.action, bt.active)
+            img = icons.image(pic, self.ctx.theme) if own and pic else None
             if style == "icons":
-                text = bt.glyph + (" " + short if short else "")
+                text = (bt.glyph + " " if img is None else "") + short
             elif style == "text":
                 text = bt.label + bt.count
             else:
-                text = f"{bt.glyph} {bt.label}" + bt.count
-            b = Gtk.Button(label=text)
+                text = ("" if img is not None else bt.glyph + " ") + bt.label + bt.count
+            b = Gtk.Button()
+            if img is not None:
+                inner = Gtk.Box(spacing=4)
+                inner.append(img)
+                if text.strip():
+                    inner.append(Gtk.Label(label=text.strip()))
+                b.set_child(inner)
+            else:
+                b.set_label(text)
             b.add_css_class("ft-action")
             b.add_css_class("flat")
             if bt.active:

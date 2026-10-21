@@ -28,7 +28,6 @@ CHOICES = {
     ("shape", "faces"): {"qip", "agent", "none"},
     ("shape", "roster_rows"): {"lines", "faces"},
     ("shape", "tab_rows"): {"wrap", "one"},
-    ("shape", "icon_set"): {"gloss", "qip", "agent", "flat", "psi"},
 }
 
 README = """fedtail themes
@@ -54,6 +53,12 @@ A theme can bring its own fonts: put the files next to it and name them in
 [font] files = ["fonts/MyFont.ttf"], then family = "My Font". Fonts for every
 theme go to ~/.config/fedtail/fonts/; ui.font in config.toml picks one over
 the theme's.
+
+The pictures on the buttons (ui.additional_icons) come from a picture pack: a theme
+names it in [shape] icon_set = "<pack>" — a built-in one or yours, in
+~/.config/fedtail/icons/<pack>/ (see the README there). A theme can also bring a few
+pictures of its own: a folder named as the theme, with icons/ in it, next to its
+file — themes/mine.toml → themes/mine/icons/reply.svg.
 
 fedtail reads your themes right here, nothing is copied anywhere; builtin/ is only
 a sample, rewritten at every start. To keep your themes in git, make this folder a
@@ -111,7 +116,7 @@ def icon_dirs(chain):
     """Where a theme's own button pictures lie: a folder named as the theme, with
     icons/ in it, next to its file (themes/mine.toml → themes/mine/icons/reply.svg or
     .png) — the theme's own first, then those of the themes it inherits. A picture not
-    there is drawn from the built-in set (shape.icon_set)."""
+    there comes from the theme's picture pack (shape.icon_set, frontends/iconpack.py)."""
     out = []
     for path, _data in chain:
         d = path.parent / path.stem / "icons"
@@ -149,6 +154,12 @@ def load(name):
     merged["id"] = name
     merged["font"]["files"] = files
     merged["icon_dirs"] = icon_dirs(chain)
+    from . import iconpack
+    pack = (merged.get("shape") or {}).get("icon_set") or iconpack.BASE
+    if not iconpack.exists(str(pack)):
+        warnings.append(f"shape.icon_set = {pack!r}: no such picture pack (have: "
+                        f"{', '.join(iconpack.available())}) — using '{iconpack.BASE}'")
+        merged["shape"]["icon_set"] = iconpack.BASE
     return merged, warnings
 
 
@@ -227,3 +238,5 @@ def install_copies():
             readme.write_text(README, "utf-8")
     except OSError:
         pass
+    from . import iconpack
+    iconpack.install_copies()

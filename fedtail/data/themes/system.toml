@@ -106,17 +106,16 @@ roster_rows = "lines"    # the roster's items: "lines" — the name, a line of t
                          # a small face on the right; "faces" — a big face on the left and
                          # three lines beside it (the Agent, Psi)
 roster_face = 40         # px of that face ("faces")
-icon_set = "gloss"       # fedtail's own button pictures (ui.additional_icons): "gloss" (a
-                         # gradient and a shine in the theme's colour, a flower for a
-                         # person), "qip" (each its own bright colour, a thick dark
-                         # outline, the XP years' chunky look), "agent" (the
-                         # Agent: brighter, an "@"), "flat" (plain, a star), "psi" (Psi+'s
-                         # own pictures, GPL, data/icons/psi; "flat" where it has none).
-                         # A theme's own pictures go in a folder named as the theme,
+icon_set = "gloss"       # the picture pack of fedtail's own buttons (ui.additional_icons):
+                         # "gloss" (a gradient and a shine in the theme's colour, a flower
+                         # for a person), "qip" (each its own bright colour, a thick dark
+                         # outline, the XP years' chunky look), "agent" (the Agent:
+                         # brighter, an "@"), "flat" (plain, a star), "psi" (Psi+'s own
+                         # pictures, GPL; flat where it has none) — or one of yours,
+                         # ~/.config/fedtail/icons/<pack>/ (the README there says how).
+                         # A theme's own few pictures go in a folder named as the theme,
                          # next to its file: themes/mine.toml → themes/mine/icons/
-                         # reply.svg (or .png), one file per picture, named as those in
-                         # data/icons/ui; an SVG may use {c} {l} {d} (the colour, its
-                         # light, its dark). What's not there comes from icon_set.
+                         # reply.svg (or .png), over the pack's.
 tab_rows = "wrap"        # the messages window's tabs: "wrap" — into more rows when they
                          # don't fit (the Agent); "one" — one row, scrolled
 posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Conversations): "segmented" — buttons stuck together, "check" — round marks

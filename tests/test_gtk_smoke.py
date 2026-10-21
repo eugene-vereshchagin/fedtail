@@ -598,6 +598,30 @@ class GtkSplitTest(_GtkBase):
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
+class GtkPicturesTest(_GtkBase):
+    """ui.additional_icons in the split layout: the theme's picture pack on the buttons
+    (psi: PNGs — drawn even where gdk-pixbuf reads no SVG)."""
+    UI = {"layout": "split", "theme": "psi"}
+
+    def test_pack_pictures_on_the_buttons(self):
+        from fedtail.frontends.gtk import icons
+        win = self.win
+        self.assertTrue(icons.wanted(win.theme))
+        self.assertEqual(icons.pack(win.theme).name, "psi")
+        self.assertIsInstance(win.dock.send_btn.get_child(), Gtk.Box)  # picture + "Send"
+        self.assertIsInstance(win.dock.cw_btn.get_child(), Gtk.Image)
+        lane = win.lane_tabs["home"]
+        card = next(iter(lane.rows.values()))
+        pictures = [w for w in _walk(card.actions) if isinstance(w, Gtk.Image)]
+        self.assertTrue(pictures)  # Reply, Favourite… with their pictures
+        self.assertIsNotNone(icons.nobody(win.theme, 36))
+        win.try_theme("nord")  # a pack drawn in SVG: pictures where SVG can be read
+        self.assertEqual(icons.pack(win.theme).name, "gloss")
+        if not icons.svg_ok():  # the words come back, nothing breaks
+            self.assertEqual(win.dock.send_btn.get_label(), i18n._("dock_send"))
+
+
+@unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkAgentTest(_GtkBase):
     """The split layout in a Mail.ru Agent theme: a face column beside the posts."""
     UI = {"layout": "split", "theme": "mra"}

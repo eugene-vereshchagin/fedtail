@@ -25,6 +25,21 @@ def vis_word(vis):
     return _("vis_" + VIS_KEY.get(vis, vis))
 
 
+# fedtail's own pictures (frontends/iconpack.py) for a post's buttons and who sees it
+ACTION_PICTURE = {"reply": "reply", "fav": "star", "boost": "boost", "thread": "thread",
+                  "bookmark": "bookmark"}
+
+
+def action_picture(action, active=False):
+    """The picture of a button under a post (a done favourite: a full star), or None."""
+    pic = ACTION_PICTURE.get(action)
+    return "star_full" if pic == "star" and active else pic
+
+
+def vis_picture(vis):
+    return {"followers": "private"}.get(vis, vis)
+
+
 @dataclass
 class Ctx:
     cfg: dict

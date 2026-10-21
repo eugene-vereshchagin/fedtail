@@ -1,0 +1,8 @@
+# Psi on KDE: gloss's pictures in plain colour, no shine; a star for a person.
+name = "Flat"
+about = "plain colour, no shine, a star for a person"
+inherit = "gloss"
+style = "flat"
+
+[colors]
+status = "#f2c037"

@@ -750,6 +750,9 @@ class MainWindow(Gtk.ApplicationWindow):
             self._lane_selected(self.sidebar, self.lane_rows[current])
         if columns:
             self.set_columns(True)
+        for part in (self.dock, self.author_bar, self.roster):  # their pictures anew
+            if part is not None and hasattr(part, "dress"):
+                part.dress()
         for w in theme.warnings:
             self.error(w)
         self.status(_("theme_tried", name=theme.id, configured=self.cfg["ui"]["theme"]),

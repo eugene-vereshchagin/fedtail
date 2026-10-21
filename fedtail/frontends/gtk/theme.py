@@ -69,6 +69,8 @@ class Theme:
         self.name = data.get("name") or self.id
         self.font = data["font"]
         self.shape = data["shape"]
+        self.icon_dirs = list(data.get("icon_dirs") or ())  # the theme's own pictures
+        self.own_icons = False  # ui.additional_icons, set by apply()
         self.words = data["words"]
         self.c = palette.resolve(data["colors"], desk)
         self.warnings = list(warnings)
@@ -197,6 +199,11 @@ def apply(cfg, name=None):
         data, _w = themefile.load(themefile.REFERENCE)
         warnings = [f"theme '{name}': {e} — using '{themefile.REFERENCE}'"]
     theme = Theme(data, desktop(), warnings)
+    # ui.additional_icons: fedtail's own pictures — in the split layout only, everywhere,
+    # or nowhere (frontends/iconpack.py; gtk/icons.py draws them)
+    extra = cfg["ui"].get("additional_icons", "layout")
+    theme.own_icons = extra == "all" or (
+        extra == "layout" and cfg["ui"].get("layout") in ("split", "qip"))
     for w in warnings:
         log.warning("%s", w)
     mode = cfg["ui"].get("fonts", "theme")

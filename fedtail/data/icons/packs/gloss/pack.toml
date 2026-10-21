@@ -1,0 +1,18 @@
+# fedtail's own button pictures — the set every other one falls back on.
+# A pack is a folder: this file and a picture a file, named as the button it is for
+# (the names: fedtail/frontends/iconpack.py NAMES, or `fedtail --icons`).
+# An SVG may leave its colours blank — {c} the colour, {l} its light top, {d} the
+# outline — and the pack's style fills them; a PNG is shown as it is.
+name = "Gloss"
+about = "a gradient and a shine in the theme's colour, a flower for a person"
+inherit = ""          # the pack whose pictures stand in for those this one has not
+style = "gloss"       # how blank colours are filled: "gloss", "agent", "flat", "qip", "none"
+
+[colors]
+# a picture of its own colour whatever the theme (the rest take the theme's accent)
+nobody = "#8a96a6"
+status = "#36b02c"
+warning = "#f2a400"
+emoji = "#f5c400"
+send = "#3aa63a"
+star_full = "#f2b705"

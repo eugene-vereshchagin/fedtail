@@ -19,6 +19,7 @@ from ..common import roster as rrules
 from ..common import split
 from ..common.actions import vis_word
 from .gi_setup import GLib, Gtk, Pango, set_markup, tip
+from .icons import nobody
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +38,14 @@ class RosterRow(Gtk.ListBoxRow):
             getattr(box, "set_margin_" + m)(6)
         box.set_margin_top(3)
         box.set_margin_bottom(3)
+        own = {"person": "status", "talk": "talk", "thread": "thread"}.get(item.kind)
+        from . import icons
+        pic = icons.image(own, roster.win.theme) if own and icons.wanted(roster.win.theme) \
+            else None
+        if pic is not None:  # fedtail's own: a flower for a person, as in QIP
+            pic.set_valign(Gtk.Align.START)
+            pic.set_margin_top(2)
+            box.append(pic)
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         top = Gtk.Box(spacing=6)
         self.name = Gtk.Label(xalign=0, hexpand=True)
@@ -205,6 +214,7 @@ class RosterWindow(Gtk.Window):
         tip(self.look_btn, _("roster_look"))
         self.look_btn.set_popover(self._look_popover())
         self.bottom.append(self.look_btn)
+        self.dress()
         v.append(self.bottom)
         self.set_child(v)
         self._apply_look()
@@ -283,6 +293,20 @@ class RosterWindow(Gtk.Window):
                 self.rows[row.key] = row
                 self.list.append(row)
 
+    def dress(self):
+        """Pictures on the bottom buttons (ui.additional_icons); again after a theme."""
+        from . import icons
+        t = self.win.theme
+        if not icons.dress(self.menu_btn, "menu", t, words=_("menu")):
+            self.menu_btn.set_icon_name("open-menu-symbolic")  # the desktop's, as before
+        icons.dress(self.look_btn, "settings", t, glyph="⚙")
+        self._dress_account()
+
+    def _dress_account(self):
+        from . import icons
+        icons.dress(self.account_btn, "accounts", self.win.theme,
+                    words=getattr(self, "_account_word", _("accounts")))
+
     def _show_me(self):
         me = self.win.view.me
         if me is None:
@@ -292,7 +316,8 @@ class RosterWindow(Gtk.Window):
             return
         self.me_name.set_text(me.name or me.username or me.handle)
         self.me_handle.set_text("@" + me.handle)
-        self.account_btn.set_label("@" + me.handle.partition("@")[0])
+        self._account_word = "@" + me.handle.partition("@")[0]
+        self._dress_account()
         try:
             n = int(self.win.view.activity_unread() or 0)
         except Exception:  # noqa: BLE001
@@ -512,7 +537,7 @@ class InputDock(Gtk.Box):
         keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         keys.connect("key-pressed", self._key)
         self.text.add_controller(keys)
-        self._show_visibility()
+        self.dress()
         self._say()
         self._count()
 
@@ -598,7 +623,11 @@ class InputDock(Gtk.Box):
             from .card import Avatar
             self.face.append(Avatar(self.win.ctx, account, FACE))
             tip(self.face, "@" + account.handle)
-        self.face.set_visible(account is not None)
+        else:  # nobody yet: the pack's silhouette, if pictures are on
+            stand_in = nobody(self.win.theme, FACE)
+            if stand_in is not None:
+                self.face.append(stand_in)
+        self.face.set_visible(self.face.get_first_child() is not None)
 
     def _say(self):
         self.about.set_text(split.about_line(self._about, self.visibility))
@@ -609,7 +638,22 @@ class InputDock(Gtk.Box):
         self._show_visibility()
 
     def _show_visibility(self):
-        self.vis_btn.set_label(vis_word(self.visibility).split(" ", 1)[0])
+        from ..common.actions import vis_picture
+        from . import icons
+        icons.dress(self.vis_btn, vis_picture(self.visibility), self.win.theme, words="▾",
+                    glyph=vis_word(self.visibility).split(" ", 1)[0])
+        tip(self.vis_btn, f"{_('web_visibility')}: {vis_word(self.visibility)}")
+
+    def dress(self):
+        """Pictures on the buttons, or words (ui.additional_icons); again after a theme."""
+        from . import icons
+        t = self.win.theme
+        icons.dress(self.cw_btn, "warning", t, glyph="CW")
+        n = f" {len(self.media)}" if self.media else ""
+        icons.dress(self.attach_btn, "attach", t, words=n.strip(),
+                    glyph=_("dock_attach_word") + n)
+        icons.dress(self.send_btn, "send", t, words=_("dock_send"))
+        self._show_visibility()
 
     def _cw_toggled(self, on):
         self.cw.set_visible(on)
@@ -636,7 +680,7 @@ class InputDock(Gtk.Box):
         """Pictures or a video for the next post; pressed again: what was chosen goes."""
         if self.media:
             self.media = []
-            self.attach_btn.set_label(_("dock_attach_word"))
+            self.dress()
             return
         dlg = Gtk.FileDialog(title=_("dock_attach"))
 
@@ -647,7 +691,7 @@ class InputDock(Gtk.Box):
                 return
             self.media = [(files.get_item(i).get_path(), "")
                           for i in range(min(4, files.get_n_items()))]
-            self.attach_btn.set_label(f"{_('dock_attach_word')} {len(self.media)}")
+            self.dress()
         dlg.open_multiple(self.get_root(), None, done)
 
     def command(self):
@@ -739,7 +783,7 @@ class InputDock(Gtk.Box):
 
         def sent(st):
             self.media = []
-            self.attach_btn.set_label(_("dock_attach_word"))
+            self.dress()
             self._set_text("")
             self._prefill = ""
             self.cw.set_text("")
@@ -781,6 +825,7 @@ class AuthorBar(Gtk.Box):
         self.append(names)
         self.follow_btn = Gtk.Button(label=_("follow"))
         self.follow_btn.connect("clicked", lambda _b: self._follow())
+        self._following = False
         self.append(self.follow_btn)
         self.write_btn = Gtk.Button(label="✉")
         tip(self.write_btn, _("faces_private"))
@@ -792,17 +837,34 @@ class AuthorBar(Gtk.Box):
         self.append(self.profile_btn)
         self._asked = set()
         self._steady = False
+        self.dress()
         self.set_who(None)
+
+    def dress(self):
+        """Pictures on the buttons, or the glyphs (ui.additional_icons)."""
+        from . import icons
+        t = self.win.theme
+        icons.dress(self.write_btn, "talk", t, glyph="✉")
+        icons.dress(self.profile_btn, "profile", t, glyph="👤")
+        self._steady = False
+        self._dress_follow(self._following)
+
+    def _dress_follow(self, on):
+        from . import icons
+        icons.dress(self.follow_btn, "unfollow" if on else "follow", self.win.theme,
+                    words=_("unfollow") if on else _("follow"))
 
     def _steady_width(self):
         """Follow and Unfollow differ in length: the button keeps the longer's width."""
         if self._steady:
             return
         widths = []
-        for word in (_("follow"), _("unfollow")):
-            self.follow_btn.set_label(word)
+        self.follow_btn.set_size_request(-1, -1)
+        for on in (False, True):
+            self._dress_follow(on)
             widths.append(self.follow_btn.measure(Gtk.Orientation.HORIZONTAL, -1)[1])
         self.follow_btn.set_size_request(max(widths), -1)
+        self._dress_follow(self._following)
         self._steady = True
 
     def set_who(self, who):
@@ -818,6 +880,9 @@ class AuthorBar(Gtk.Box):
         if who is None:
             self.name.set_text("")
             self.about.set_text("")
+            stand_in = nobody(self.win.theme, 36)  # a grey silhouette while nobody's there
+            if stand_in is not None:
+                self.face.append(stand_in)
             return
         from .card import Avatar
         self.face.append(Avatar(self.win.ctx, who, 36))
@@ -841,9 +906,9 @@ class AuthorBar(Gtk.Box):
                 bits.append(_("faces_requested"))
         self.about.set_text(" · ".join(bits))
         on = bool(rel and (rel.following or rel.requested))
-        self.follow_btn.set_label(_("unfollow") if on else _("follow"))
-        self.follow_btn.set_sensitive(rel is not None)
         self._following = on
+        self._dress_follow(on)
+        self.follow_btn.set_sensitive(rel is not None)
 
     def _follow(self):
         who = self.who
@@ -978,6 +1043,9 @@ class AgentFace(Gtk.Box):
         if who is None:
             self.name.set_text("")
             self.link.set_text("")
+            stand_in = nobody(self.win.theme, AGENT_FACE)
+            if stand_in is not None:
+                self.face.append(stand_in)
             return
         from .card import Avatar
         self.face.append(Avatar(self.win.ctx, who, AGENT_FACE))

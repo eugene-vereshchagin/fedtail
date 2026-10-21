@@ -2,6 +2,19 @@
 
 ## 0.18.0 — in progress
 
+- Picture packs: the pictures on the buttons (ui.additional_icons) come in packs —
+  a folder with pack.toml (its name, which pack it inherits, how it colours an SVG, its
+  pictures' own colours) and a file a picture. Built in: gloss, qip, agent, flat, psi
+  (what the code had in tables is in their pack.toml now); yours go to
+  ~/.config/fedtail/icons/<name>/, with samples of the built-in ones and the list of
+  pictures in ~/.config/fedtail/icons/builtin/ and README.txt. A theme names its pack in
+  shape.icon_set (an unknown one: gloss, and a warning — the theme still loads);
+  themes/<theme>/icons/ goes over it. One module (frontends/iconpack.py) decides for
+  both interfaces.
+- GTK draws those pictures too, as Qt does: on a post's buttons and who sees it, on the
+  input line, the author's bar, the roster's buttons and rows, a silhouette for nobody
+  (SVG through gdk-pixbuf's loader, librsvg; without it a pack's PNGs only).
+- Qt: a status bar message no longer lies over the profile's name at the left.
 - GTK: pictures in a post keep their shape, as in Qt — one alone ui.image_height tall
   (not a strip cut to 180 px), several as tiles three in a row; a gif or a video with ▶;
   "sensitive" ones covered until clicked. A click opens the picture viewer over the

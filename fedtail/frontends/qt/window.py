@@ -472,6 +472,11 @@ class MainWindow(QMainWindow):
         self.profile_label.setObjectName("muted")
         self.profile_label.setToolTip(_("footer_profile_tip"))
         self.statusBar().addWidget(self.profile_label)
+        # a message comes over the left of the bar: the profile's name steps aside for it
+        # and back (QStatusBar is meant to do that itself, but a label shown again — a
+        # theme tried, the window restyled — stayed under the message, both unreadable)
+        self.statusBar().messageChanged.connect(
+            lambda msg: self.profile_label.setVisible(not msg))
         self._profile_text()
 
         for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),

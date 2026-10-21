@@ -1645,6 +1645,11 @@ class QtSmokeTest(unittest.TestCase):
 
     def test_profile_in_the_status_bar_and_sidebar_width(self):
         self.assertTrue(self.win.profile_label.text().startswith("t"))  # this profile
+        bar = self.win.statusBar()
+        bar.showMessage("сообщение")  # over the left of the bar: the name steps aside
+        self.assertTrue(self.win.profile_label.isHidden())
+        bar.clearMessage()
+        self.assertFalse(self.win.profile_label.isHidden())
         self.assertEqual(self.win._sidebar_width(), self.core.cfg["ui"]["sidebar_width"])
         self.core.set_state("sidebar_width", {"cfg": self.core.cfg["ui"]["sidebar_width"],
                                               "width": 400})
@@ -2473,18 +2478,10 @@ class QtSmokeTest(unittest.TestCase):
             if icons.QSvgRenderer is not None:  # ours, in the theme's colours
                 own = t(additional_icons="all", theme="mra-green")
                 self.assertTrue(icons.wanted(own))
+                self.assertEqual(icons.icon_set(own), "agent")
                 for name in ("send", "status", "reply", "star_full", "boost", "nobody"):
                     self.assertFalse(icons.icon(name, own).isNull(), name)
                 self.assertTrue(icons.icon("no-such-picture", own).isNull())
-                from PySide6.QtGui import QColor
-                flat = icons._styled((icons.DIR / "emoji.svg").read_text(), "flat",
-                                     QColor("#3daee9"))
-                qip = icons._styled((icons.DIR / "send.svg").read_text(), "qip",
-                                    QColor(icons.QIP_COLOURS["send"]))
-                self.assertNotIn("{c}", qip)  # QIP's: its own bright colour, every blank
-                self.assertIn(icons.QIP_COLOURS["send"], qip)  # filled
-                self.assertNotIn("url(#g)", flat)  # flat: plain colour, no shine
-                self.assertNotIn('opacity=".35"', flat)
         finally:
             themes.apply(self.app, config.validate({})[0])
 

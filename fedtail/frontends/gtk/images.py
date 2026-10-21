@@ -15,7 +15,7 @@ def decode(data, max_side):
     """A Gdk.Texture of the picture in data, no bigger than max_side — or None."""
     import gi
     gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import Gdk, GdkPixbuf
+    from gi.repository import GdkPixbuf
 
     loader = GdkPixbuf.PixbufLoader()
 
@@ -36,7 +36,14 @@ def decode(data, max_side):
     pix = loader.get_pixbuf()
     if pix is None:
         return _with_pillow(data, max_side)
-    try:  # the pixels as they are (new_for_pixbuf is deprecated in newer GTK)
+    return texture_of(pix)
+
+
+def texture_of(pix):
+    """A GdkPixbuf as a texture: the pixels as they are (new_for_pixbuf is deprecated
+    in newer GTK)."""
+    from gi.repository import Gdk
+    try:
         fmt = Gdk.MemoryFormat.R8G8B8A8 if pix.get_has_alpha() else Gdk.MemoryFormat.R8G8B8
         return Gdk.MemoryTexture.new(pix.get_width(), pix.get_height(), fmt,
                                      pix.read_pixel_bytes(), pix.get_rowstride())

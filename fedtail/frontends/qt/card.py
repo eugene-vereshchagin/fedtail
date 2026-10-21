@@ -57,8 +57,6 @@ VIS_ICONS = {
     "direct": ("mail-message", "mail-unread"),
 }
 # fedtail's own pictures for a post's buttons (frontends/qt/icons.py)
-OWN_ACTION = {"reply": "reply", "fav": "star", "boost": "boost", "thread": "thread",
-              "bookmark": "bookmark"}
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 VIS_KEY = {"followers": "private"}  # the words for it in i18n: vis_private
 QUOTE_SHOWN = {"accepted"}
@@ -567,7 +565,7 @@ class PostRow(QWidget):
         vis = p.visibility
         from . import icons as pictures
         if pictures.wanted(self.theme):
-            icon = pictures.icon({"followers": "private"}.get(vis, vis), self.theme)
+            icon = pictures.icon(actions.vis_picture(vis), self.theme)
         else:
             icon = _theme_icon(VIS_ICONS.get(vis, ())) if self.theme.shape["icons"] else QIcon()
         vis_label = QLabel()
@@ -752,10 +750,9 @@ class PostRow(QWidget):
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(label)
             b.setAccessibleName(label + count)
-            pic = OWN_ACTION.get(action)
+            pic = actions.action_picture(action, active)
             if own and pic:
-                ic = pictures.icon(("star_full" if active else pic) if action == "fav"
-                                   else pic, self.theme)
+                ic = pictures.icon(pic, self.theme)
             else:
                 ic = _theme_icon(icons) if self.theme.shape["icons"] else QIcon()
             # the short form, for when the row doesn't fit: the icon (or the glyph) and
