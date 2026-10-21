@@ -208,6 +208,71 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     return out
 
 
+class _WebHost:
+    """The window common/links.py talks to, for the web: it waits for each future
+    here (the request waits with it) and writes down what the page should do."""
+
+    def __init__(self, view, confirmed):
+        self.view, self.confirmed, self.out = view, confirmed, {}
+
+    def call(self, fut, ok=None, fail=None):
+        try:
+            got = fut.result(timeout=60)
+        except Exception as e:  # noqa: BLE001 — said on the page
+            (fail or self.error)(str(e))
+            return
+        if ok is not None:
+            ok(got)
+        self.out.setdefault("refresh", True)
+
+    def status(self, text):
+        self.out["message"] = str(text)
+
+    def error(self, text):
+        self.out["error"] = str(text)
+
+    def confirm(self, title, text, then):
+        if self.confirmed:
+            then()
+        else:
+            self.out["confirm"] = str(text)
+
+    def open_url(self, url):
+        self.out["open"] = {"url": url}
+
+    def open_thread(self, sid):
+        self.out["open"] = {"thread": sid}
+
+    def open_account(self, acc_id):
+        self.out["open"] = {"account": acc_id}
+
+    def copy_handle(self, handle):
+        self.out["copy"] = "@" + handle.lstrip("@")
+
+    def read_up_to(self, sid):
+        self.out["read_up_to"] = sid
+
+    def compose(self, reply_to=None, invite=False, edit=None, quote=None):
+        c = {}
+        if edit is not None:
+            text, cw = self.view.source(edit).result(timeout=30)
+            c = {"edit": edit.id, "text": text, "cw": cw,
+                 "visibility": real(edit).visibility}
+        elif quote is not None:
+            c = {"quote": real(quote).id, "quote_of": "@" + real(quote).author.handle}
+        elif reply_to is not None:
+            c = {"reply_to": reply_to.id, "invite": bool(invite)}
+            if invite:
+                c["text"] = "@"
+        self.out["compose"] = c
+
+    def redrafted(self, d):
+        self.out["compose"] = {"text": d.text, "cw": d.warning, "visibility": d.visibility,
+                               "lang": d.language, "reply_to": d.reply_to}
+        if d.media:
+            self.out["message"] = _("redraft_media", n=d.media)
+
+
 class Web:
     """The state behind the handler: the core (as a View), the key, a version for long
     polls."""
@@ -377,12 +442,41 @@ class Web:
         return post_json(core, got, core.short_ids([got]).get(got.id))
 
     def post_menu(self, sid):
-        """What a post's ⋯ menu needs that a lane doesn't send with every post."""
+        """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
+        what is offered, when, in which order) — the page only lays them out. Items
+        the page can't do yet (a list's submenu, as another account, the whole text,
+        translation) are left out."""
+        from ..common import actions
         core = self.core
         p = self._post_by_id(sid)
         me = core.me
+        cfg = core.cfg
+        ctx = actions.Ctx(cfg=cfg, me_id=me.id if me else None, supports=core.supports,
+                          subscribed=core.subscribed, thread_quiet=core.thread_quiet,
+                          quote_reply=bool(cfg["post"].get("quote_prefix", "> ")))
+        short = core.short_ids([p]).get(real(p).id)
+        unread = p.id in core.unread([p])
+        items = []
+        for it in actions.menu(p, ctx, short, unread):
+            if it.kind in ("link", "open", "copy", "separator", "quote_reply"):
+                items.append({"kind": it.kind, "label": it.label, "url": it.url,
+                              "text": it.text})
+        while items and items[0]["kind"] == "separator":
+            items.pop(0)
         return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
-                "own": bool(me and real(p).author.id == me.id)}
+                "own": bool(me and real(p).author.id == me.id), "items": items}
+
+    def link(self, url, confirmed=False):
+        """A fedtail: link from the ⋯ menu, done the way every window does it
+        (common/links.py); what the page must do then comes back: a message, a
+        question first ("sure?" — asked again with confirmed), a place to open, the
+        editor to fill, text to copy."""
+        from ..common.links import Links
+        host = _WebHost(self.core, confirmed)
+        Links(self.core, host).open(str(url or ""))
+        if host.out.get("error"):
+            raise ValueError(host.out["error"])
+        return host.out
 
     def thread_act(self, action, sid):
         """Subscribe to, leave, mute or unmute the thread a post is in."""
@@ -423,6 +517,10 @@ class Web:
         text = (body.get("text") or "").strip()
         if not text:
             raise ValueError("empty")
+        cw = (body.get("cw") or "").strip()
+        if body.get("edit"):  # my post corrected (the ⋯ menu's Edit)
+            p = core.edit(self._post_by_id(body["edit"]), text, cw).result()
+            return {"id": p.id if p else None, "url": p.url if p else "", "edited": True}
         parent = self._post_by_id(body["reply_to"]) if body.get("reply_to") else None
         vis = body.get("visibility") or core.reply_visibility(parent)
         if vis == "private":  # the API's word, from an older page
@@ -430,8 +528,8 @@ class Web:
         if vis not in ("public", "unlisted", "followers", "direct"):
             raise ValueError(vis)
         lang = (body.get("lang") or "").strip() or None
-        p = core.post(text, vis, parent, (body.get("cw") or "").strip(),
-                      language=lang).result()
+        p = core.post(text, vis, parent, cw, language=lang,
+                      quote=str(body["quote"]) if body.get("quote") else None).result()
         return {"id": p.id if p else None, "url": p.url if p else ""}
 
     def command(self, line, confirmed=False):
@@ -475,6 +573,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "web_requested", "lang_label",
          "reply_quote", "quote_in_reply", "sub_thread", "unsub_thread", "mute_thread",
          "unmute_thread", "copy_link", "delete", "delete_q", "help_title", "about",
+         "edit", "quote",
          "my_profile", "web_more", "web_menu", "web_keys", "web_keys_text", "web_copied",
          "web_about")
 
@@ -606,6 +705,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/resolve": lambda: web.resolve(str(body.get("url", ""))),
             "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
             "/api/delete": lambda: web.delete(str(body.get("id"))),
+            "/api/link": lambda: web.link(str(body.get("url", "")),
+                                          bool(body.get("confirmed"))),
         }
         self._run(routes.get(path))
 

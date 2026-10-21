@@ -8,6 +8,7 @@ const $ = (s) => document.querySelector(s);
 const state = {
   me: null, words: {}, lane: null, lanes: [], posts: [], cursor: -1, version: -1,
   replyTo: null, readQueue: new Set(), side: null, older: false, busy: false,
+  edit: null, quote: null,  // the editor correcting my post / quoting one
 };
 
 // ---- small things ------------------------------------------------------------------
@@ -403,25 +404,76 @@ async function postMenu(p, anchor) {
   try { info = await api("/api/post_menu?id=" + encodeURIComponent(p.sid)); }
   catch (e) { /* the rest of the menu still works */ }
   const items = [];
-  if (state.me.quote_prefix) items.push(["❝ " + w("reply_quote"), () => quoteReply(p)]);
-  items.push("-",
-    [info.subscribed ? w("unsub_thread") : w("sub_thread"),
-     () => threadAct(info.subscribed ? "unsub" : "sub", p)],
-    [info.muted ? w("unmute_thread") : w("mute_thread"),
-     () => threadAct(info.muted ? "unmute" : "mute", p)], "-");
-  if (p.url) {
-    items.push([w("copy_link"), () => copyText(p.url)],
-               [w("open_browser"), () => window.open(p.url, "_blank", "noopener")]);
+  if (info.items) {
+    // the same items as the Qt and GTK windows' ⋯, in the same order (common/actions)
+    for (const it of info.items) {
+      if (it.kind === "separator") items.push("-");
+      else if (it.kind === "open") items.push([it.label, () => window.open(it.url, "_blank", "noopener")]);
+      else if (it.kind === "copy") items.push([it.label, () => copyText(it.text)]);
+      else if (it.kind === "quote_reply") items.push(["❝ " + it.label, () => quoteReply(p)]);
+      else if (it.kind === "link") items.push([it.label, () => linkAct(it.url, p)]);
+    }
+    items.push("-");
   }
   items.push([w("tui_profile") + " @" + p.account.handle, () => openAccount(p.account.id)]);
-  if (info.own) {
-    items.push("-", [w("delete"), async () => {
-      if (!window.confirm(w("delete_q", { text: plainOf(p).slice(0, 200) }))) return;
-      try { toast((await api("/api/delete", { id: p.sid })).message); await refresh(); }
-      catch (e) { toast(e.message); }
-    }]);
-  }
   popup(anchor, items);
+}
+
+// a fedtail: link from the ⋯ menu: the server does it as every window does, and says
+// what is left for the page — a question first, a place to open, the editor, a copy
+async function linkAct(url, p, confirmed) {
+  let r;
+  try { r = await api("/api/link", { url, confirmed: !!confirmed }); }
+  catch (e) { toast(e.message); return; }
+  if (r.confirm) {
+    if (window.confirm(r.confirm)) await linkAct(url, p, true);
+    return;
+  }
+  if (r.copy) copyText(r.copy);
+  if (r.open) {
+    if (r.open.thread) openThread(r.open.thread);
+    else if (r.open.account) openAccount(r.open.account);
+    else if (r.open.url) window.open(r.open.url, "_blank", "noopener");
+  }
+  if (r.compose) composeFrom(r.compose, p);
+  if (r.read_up_to) readUpTo(r.read_up_to);
+  if (r.message) toast(r.message);
+  if (r.refresh) await refresh();
+}
+
+function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invite, redraft
+  const parent = c.reply_to ? (state.posts.find((x) => x.sid === c.reply_to || x.id === c.reply_to)
+                               || (p && p.sid === c.reply_to ? p : null)) : null;
+  compose(parent);
+  state.edit = c.edit || null;
+  state.quote = c.quote || null;
+  if (c.edit) $("#compose-title").textContent = w("edit");
+  if (c.quote) {
+    $("#compose-title").textContent = w("quote");
+    const line = $("#reply-line");
+    line.hidden = false;
+    line.textContent = "❝ " + (c.quote_of || "");
+  }
+  if (c.text !== undefined) $("#text").value = c.text;
+  if (c.cw) { $("#cw").value = c.cw; showCw(true); }
+  if (c.visibility) $("#vis").value = c.visibility === "private" ? "followers" : c.visibility;
+  if (c.lang) $("#lang").value = c.lang;
+  counter();
+}
+
+function readUpTo(sid) {  // this post and everything older in the lane: read
+  const at = state.posts.findIndex((x) => x.sid === sid || x.id === sid);
+  if (at < 0) return;
+  const older = state.me.order === "oldest_first" ? state.posts.slice(0, at + 1)
+                                                  : state.posts.slice(at);
+  for (const x of older) {
+    if (!x.unread) continue;
+    const card = document.querySelector(`.post[data-id="${CSS.escape(x.id)}"]`);
+    if (card) read(card);
+    else { x.unread = false; state.readQueue.add(x.id); }
+  }
+  countUnread();
+  flushRead();
 }
 
 async function threadAct(action, p) {
@@ -779,6 +831,7 @@ async function act(action, p) {
 function compose(replyTo) {
   const d = $("#compose");
   state.replyTo = replyTo || null;
+  state.edit = state.quote = null;
   const t = $("#text");
   $("#compose-title").textContent = replyTo ? w("reply") : w("web_new_post");
   const line = $("#reply-line");
@@ -823,7 +876,11 @@ function counter() {
   store(key, $("#text").value);
 }
 
-function closeCompose() { $("#compose").close(); state.replyTo = null; $("#posts").focus(); }
+function closeCompose() {
+  $("#compose").close();
+  state.replyTo = state.edit = state.quote = null;
+  $("#posts").focus();
+}
 
 async function send(e) {
   e.preventDefault();
@@ -834,7 +891,7 @@ async function send(e) {
   try {
     await api("/api/post", { text, reply_to: state.replyTo ? state.replyTo.sid : null,
                              visibility: $("#vis").value, cw: $("#cw").hidden ? "" : $("#cw").value,
-                             lang: $("#lang").value });
+                             lang: $("#lang").value, edit: state.edit, quote: state.quote });
     store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
     $("#text").value = "";
     toast(w("sent"));

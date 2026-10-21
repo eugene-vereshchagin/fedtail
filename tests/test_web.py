@@ -243,7 +243,9 @@ class WebTest(TmpDir):
         self.assertEqual(me["quote_prefix"], "> ")
         self.assertEqual(me["words"]["reply_quote"], "Reply with quote")
         _c, _h, body = self.req("/api/post_menu?id=002")
-        self.assertEqual(json.loads(body), {"subscribed": False, "muted": False, "own": False})
+        got = json.loads(body)
+        self.assertEqual({k: got[k] for k in ("subscribed", "muted", "own")},
+                         {"subscribed": False, "muted": False, "own": False})
         self.assertEqual(self.req("/api/post_menu?id=../x")[0], 400)
         self.assertEqual(self.req("/api/thread_act", {"action": "sub", "id": "002"})[0], 200)
         self.assertTrue(json.loads(self.req("/api/post_menu?id=002")[2])["subscribed"])
@@ -258,6 +260,49 @@ class WebTest(TmpDir):
         self.assertTrue(json.loads(self.req("/api/post_menu?id=001")[2])["own"])
         self.assertEqual(self.req("/api/delete", {"id": "001"})[0], 200)
         self.assertNotIn("001", self.w.statuses)
+
+    def test_post_menu_is_the_windows_menu(self):
+        """The ⋯ menu: the very items of the Qt and GTK windows (common/actions), and
+        its fedtail: links done the way they do them, the page told what's left."""
+        from fedtail.frontends.common import actions
+        from fedtail.frontends.web.server import _WebHost
+        items = json.loads(self.req("/api/post_menu?id=002")[2])["items"]
+        view = self.srv.web.core
+        p = view.by_id("002")
+        ctx = actions.Ctx(cfg=view.cfg, me_id=view.me.id, supports=view.supports,
+                          subscribed=view.subscribed, thread_quiet=view.thread_quiet,
+                          quote_reply=True)
+        want = [it.label for it in actions.menu(p, ctx, view.short_ids([p]).get(p.id),
+                                                 p.id in view.unread([p]))
+                if it.kind in ("link", "open", "copy", "separator", "quote_reply")]
+        while want and not want[0]:  # (a separator first is dropped)
+            want.pop(0)
+        self.assertEqual([i["label"] for i in items], want)
+        self.assertTrue(any(i["url"].startswith("fedtail:") for i in items))
+        mine = json.loads(self.req("/api/post_menu?id=001")[2])["items"]
+        urls = [i["url"] for i in mine]
+        self.assertIn("fedtail:edit/001", urls)
+        self.assertIn("fedtail:redraft/001", urls)
+        # a link: a question first, done when confirmed
+        code, _h, body = self.req("/api/link", {"url": "fedtail:delete/001"})
+        self.assertEqual(code, 200)
+        self.assertIn("confirm", json.loads(body))
+        self.assertIn("001", self.w.statuses)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:delete/001",
+                                                "confirmed": True})[2])
+        self.assertTrue(got.get("refresh"))
+        self.assertNotIn("001", self.w.statuses)
+        # the editor and the clipboard: for the page to do
+        got = json.loads(self.req("/api/link", {"url": "fedtail:invite/002"})[2])
+        self.assertEqual(got["compose"], {"reply_to": "002", "invite": True, "text": "@"})
+        got = json.loads(self.req("/api/link", {"url": "fedtail:copyhandle/bob%40x.example"})[2])
+        self.assertEqual(got["copy"], "@bob@x.example")
+        got = json.loads(self.req("/api/link", {"url": "fedtail:thread/002"})[2])
+        self.assertEqual(got["open"], {"thread": "002"})
+        self.assertEqual(self.req("/api/link", {"url": "fedtail:boom/002"})[0], 200)
+        host = _WebHost(view, False)
+        host.error("x")
+        self.assertEqual(host.out, {"error": "x"})
 
     def test_page_has_the_menus(self):
         body = self.req("/")[2]

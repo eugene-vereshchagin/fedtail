@@ -149,6 +149,18 @@ def with_playwright(base, key, out):
                 NOTES.append("⋯ menu: " + " | ".join(page.locator("#pop button, #pop a")
                                                       .all_inner_texts()))
                 page.screenshot(path=str(out / "desktop-04-post-menu.png"))
+                # a link of the menu, done through the server: "call into the thread"
+                # opens the editor with "@" in it
+                invite = page.locator("#pop button", has_text="Позвать в тред")
+                if invite.count():
+                    invite.first.click()
+                    page.wait_for_timeout(800)
+                    if not page.is_visible("#compose") or \
+                            page.input_value("#text").strip() != "@":
+                        ERRORS.append("⋯ → Позвать в тред: the editor didn't open with @")
+                    else:
+                        page.screenshot(path=str(out / "desktop-04b-invite.png"))
+                    page.click("#compose-close")
                 page.mouse.click(5, 5)
             else:
                 ERRORS.append("no ⋯ button on a post")
