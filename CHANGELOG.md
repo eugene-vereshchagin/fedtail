@@ -10,6 +10,10 @@
 - The split layout: the roster stands beside the conversation window, never over it —
   on its left or right where the screen has room, else at the screen's edge with the
   window narrowed beside it (a place saved over the window is corrected once).
+- selfcheck: stopped by hand (Ctrl+C, the terminal closed, killed) it says so in its
+  report and makes no zip; --clean removes such runs and the tools' leftover temporary
+  folders (--clean all: every run); the temporary folders — with --real a copy of your
+  login among them — are removed after every run.
 - The web interface writes dates and times in fedtail's language, not the browser's.
 - GTK: the lanes' counters are pills, not ovals as high as the row. A lane's column
   measured its cards narrower than they can be ("needs at least 814", some 20 000

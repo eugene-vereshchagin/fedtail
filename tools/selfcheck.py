@@ -10,6 +10,8 @@ logged-in fedtail — the same on your own account (a copy, read-only).
     python3 tools/selfcheck.py --only qt,web   # some steps: tests qt bench gtk tui web parity
     python3 tools/selfcheck.py --real          # and your account too (--real=PROFILE)
     python3 tools/selfcheck.py --only gallery  # the site's and the docs' pictures only
+    python3 tools/selfcheck.py --clean         # after Ctrl+C: the unfinished runs gone
+    python3 tools/selfcheck.py --clean all     # every run here
 
 Your account (--real, and --night when a profile is logged in): a copy of the
 profile's config, login and database in a temporary folder; only GET goes to the
@@ -27,8 +29,10 @@ import argparse
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -115,8 +119,11 @@ def test_failures(log):
     return out
 
 
-def report(run, out, facts):
+def report(run, out, facts, interrupted=False):
     md = ["# fedtail self-check", ""]
+    if interrupted:
+        md += ["**STOPPED BY HAND — not a result: the failures below may be the stop "
+               "itself.**", ""]
     md += [f"- {k}: {v}" for k, v in facts]
     md += ["", "| step | result | time | |", "|---|---|---|---|"]
     for name, state, took, note, *_ in run.rows:
@@ -178,6 +185,49 @@ def _mask(markup):
                   markup)
 
 
+# ---- tidying up ------------------------------------------------------------------------
+# the temporary folders the tools make (each a fake profile; with --real a copy of your
+# login and database): gone after a run, and by --clean after a run that was killed
+TEMP_PREFIXES = ("fedtail-tour-", "fedtail-web-", "fedtail-tui-", "fedtail-bench-",
+                 "fedtail-qtbench-", "fedtail-gallery-", "fedtail-shots-",
+                 "fedtail-gtk-shots-")
+
+
+def clean_temp(since=None):
+    """The tools' temporary folders (made since `since`, or all of them)."""
+    n = 0
+    for p in Path(tempfile.gettempdir()).iterdir():
+        try:
+            if p.is_dir() and p.name.startswith(TEMP_PREFIXES) and \
+                    (since is None or p.stat().st_mtime >= since - 5):
+                shutil.rmtree(p, ignore_errors=True)
+                n += 1
+        except OSError:
+            pass
+    return n
+
+
+def clean(where, everything):
+    """Runs that didn't finish (stopped, killed, a crash: no zip, or INTERRUPTED in
+    it) — or, with everything, every run here — and the tools' temporary folders."""
+    gone = []
+    for d in sorted(where.glob("selfcheck-*")):
+        if d.is_dir():
+            unfinished = (d / "INTERRUPTED").exists() or not d.with_suffix(".zip").exists()
+            if everything or unfinished:
+                shutil.rmtree(d, ignore_errors=True)
+                gone.append(d.name + "/")
+        elif d.suffix == ".zip" and everything:
+            d.unlink()
+            gone.append(d.name)
+    n = clean_temp()
+    print("removed: " + (", ".join(gone) or "no runs") + f"; temporary folders: {n}")
+    left = sorted(p.name for p in where.glob("selfcheck-*"))
+    if left:
+        print("kept (finished): " + ", ".join(left) + "  — --clean all removes them too")
+    return 0
+
+
 def logged_in(profile):
     """Whether the profile (the main one: "") has a login on this machine."""
     ok, where = probe("from fedtail.core import paths; "
@@ -204,153 +254,182 @@ def main():
     ap.add_argument("--no-real", action="store_true", help="--night without your account")
     ap.add_argument("--no-blur", action="store_true",
                     help="your account's screenshots as they are")
+    ap.add_argument("--clean", nargs="?", const="unfinished", choices=("unfinished", "all"),
+                    help="remove the runs that didn't finish (stopped by hand, killed) and "
+                         "the tools' temporary folders; --clean all: every run here")
     a = ap.parse_args()
+    if a.clean:
+        return clean(Path(a.out or ".").resolve(), a.clean == "all")
     if a.night and a.quick:
         ap.error("--night or --quick, not both")
     pace = a.pace if a.pace is not None else (2.0 if a.night else 1.0)
     only = set((a.only or ",".join(STEPS)).split(","))
     out = Path(a.out or "selfcheck-" + time.strftime("%Y%m%d-%H%M")).resolve()
     out.mkdir(parents=True, exist_ok=True)
+    stale = [d.name for d in out.parent.glob("selfcheck-*") if d.is_dir() and d != out and
+             ((d / "INTERRUPTED").exists() or not d.with_suffix(".zip").exists())]
+    if stale:
+        print("unfinished runs here (not results): " + ", ".join(stale) +
+              " — python3 tools/selfcheck.py --clean", flush=True)
     run = Run(out)
+    started = time.time()
 
-    ok_v, version = probe("import fedtail; print(getattr(fedtail, '__version__', '?'))")
-    git = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
-                         capture_output=True, text=True)
-    qt, qt_v = probe("import PySide6, PySide6.QtCore as c; print(PySide6.__version__)")
-    gtk, gtk_v = probe("import gi; gi.require_version('Gtk', '4.0'); "
-                       "from gi.repository import Gtk; "
-                       "print(f'{Gtk.get_major_version()}.{Gtk.get_minor_version()}')")
-    tui, tui_v = probe("import textual; print(textual.__version__)")
-    pil, pil_v = probe("import PIL; print(PIL.__version__)")
-    pw, pw_v = probe("import playwright; from importlib.metadata import version; "
-                     "print(version('playwright'))")
-    # no Playwright in the system's Python (Debian: no pip there): the dev tools' own
-    # environment (tools/devenv.py) runs the web walk and the gallery
-    web_py = None
-    if not pw:
-        sys.path.insert(0, str(ROOT / "tools"))
-        import devenv
-        if devenv.python() is not None:
-            web_py = str(devenv.python())
-            pw, pw_v = True, "in " + str(devenv.where())
-    want_real = a.real if a.real is not None else ("" if a.night and not a.no_real else None)
-    real_profile = logged_in(want_real) if want_real is not None else ""
-    facts = [("fedtail", f"{version} ({git.stdout.strip() or 'no git'})"),
-             ("Python", f"{platform.python_version()} {sys.executable}"),
-             ("system", f"{platform.platform()}"),
-             ("desktop", os.environ.get("XDG_CURRENT_DESKTOP", "") +
-              (" wayland" if os.environ.get("WAYLAND_DISPLAY") else "") +
-              (" x11" if os.environ.get("DISPLAY") else "")),
-             ("PySide6", qt_v if qt else "no"), ("GTK 4", gtk_v if gtk else "no"),
-             ("Textual", tui_v if tui else "no"), ("Pillow", pil_v if pil else "no"),
-             ("Playwright", pw_v if pw else "no"),
-             ("mode", "night" if a.night else "quick" if a.quick else "full"),
-             ("your account", (f"profile {real_profile}, read-only, screenshots "
-                               + ("as they are" if a.no_blur else "blurred"))
-              if real_profile else ("not asked" if want_real is None
-                                    else "no logged-in profile here"))]
-    for k, v in facts:
-        print(f"{k}: {v}")
-    quick = ["--quick"] if a.quick else []
-    native = has_display() and not a.offscreen
+    def stop(*_a):  # killed, the terminal closed: as Ctrl+C
+        raise KeyboardInterrupt
+    import signal
+    for sig in ("SIGTERM", "SIGHUP", "SIGBREAK"):
+        if hasattr(signal, sig):
+            signal.signal(getattr(signal, sig), stop)
+    try:
 
-    # ---- the fake server --------------------------------------------------------------
-    if "tests" in only:
-        py = sys.version_info
-        cmd = ["-X", "faulthandler", "-c",
-               "import faulthandler, sys, unittest; "
-               "faulthandler.dump_traceback_later(1500, exit=True); "  # a hang: where
-               "sys.argv = ['unittest', 'discover', '-s', 'tests', '-t', '.', '-v'"
-               + (", '--durations', '15'" if py >= (3, 12) else "") + "]; "
-               "unittest.main(module=None)"]
-        run.step("tests", cmd, timeout=1800)
-    if "qt" in only:
-        if not qt:
-            run.skip("qt-tour", "no PySide6 (pip install PySide6)")
-        else:
-            d = out / "qt-tour"
-            run.step("qt-tour", ["tools/qt_tour.py", str(d)] + quick
-                     + (["--native"] if native else [])
-                     + (["--maximized"] if a.maximized else [])
-                     + ["--pace", str(pace)], timeout=5400, folder=d,
-                     note="native" if native else "offscreen")
-            if a.night and native:
-                d = out / "qt-tour-maximized"
-                run.step("qt-tour-maximized", ["tools/qt_tour.py", str(d), "--quick",
-                                               "--native", "--maximized", "--pace",
-                                               str(pace)], timeout=3600, folder=d,
-                         note="maximized")
-    if "bench" in only:
-        big = ["--maximized"] if a.maximized else []
-        if qt and has_display():
-            run.step("bench-qt", ["tools/qt_bench.py"] +
-                     (["--layout", "split", "--theme", "qip-retro"] if a.quick else [])
-                     + big + (["--posts", "4000"] if a.night else []), timeout=7200)
-        else:
-            run.skip("bench-qt", "no PySide6" if not qt else "no desktop to measure on")
-        if gtk:
-            run.step("bench-gtk", ["tools/gtk_bench.py"] +
-                     (["--layout", "split", "--theme", "qip-retro"] if a.quick else [])
-                     + big + (["--posts", "4000"] if a.night else []), timeout=7200)
-        else:
-            run.skip("bench-gtk", "no GTK 4 (python3-gi, gir1.2-gtk-4.0)")
-    if "gtk" in only:
-        if gtk:
-            d = out / "gtk-shots"
-            run.step("gtk-shots", ["tools/gtk_screenshots.py", str(d)] +
-                     (["system", "point", "qip-retro"] if a.quick else []), timeout=3600)
-        else:
-            run.skip("gtk-shots", "no GTK 4 (python3-gi, gir1.2-gtk-4.0)")
-    if "tui" in only:
-        if tui:
-            d = out / "tui"
-            run.step("tui", ["tools/tui_check.py", str(d)], timeout=900, folder=d,
-                     note="" if pil else "no Pillow: no pictures in the terminal")
-        else:
-            run.skip("tui", "no Textual (pip install textual)")
-    if "web" in only:
-        d = out / "web"
-        run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d, py=web_py,
-                 note="Playwright" if pw else "no Playwright: no walk "
-                 "(python3 tools/devenv.py — once)")
-    if "parity" in only:  # after the walks: their menus go side by side
-        run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
-    # the gallery (tools/gallery.py): with --night, or asked by --only gallery
-    if "gallery" in only and (a.night or a.only):
-        run.step("gallery", ["tools/gallery.py", str(out / "gallery")], timeout=1800,
-                 py=web_py, note="the site's and the docs' pictures (built-in themes only)")
+        ok_v, version = probe("import fedtail; print(getattr(fedtail, '__version__', '?'))")
+        git = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+                             capture_output=True, text=True)
+        qt, qt_v = probe("import PySide6, PySide6.QtCore as c; print(PySide6.__version__)")
+        gtk, gtk_v = probe("import gi; gi.require_version('Gtk', '4.0'); "
+                           "from gi.repository import Gtk; "
+                           "print(f'{Gtk.get_major_version()}.{Gtk.get_minor_version()}')")
+        tui, tui_v = probe("import textual; print(textual.__version__)")
+        pil, pil_v = probe("import PIL; print(PIL.__version__)")
+        pw, pw_v = probe("import playwright; from importlib.metadata import version; "
+                         "print(version('playwright'))")
+        # no Playwright in the system's Python (Debian: no pip there): the dev tools' own
+        # environment (tools/devenv.py) runs the web walk and the gallery
+        web_py = None
+        if not pw:
+            sys.path.insert(0, str(ROOT / "tools"))
+            import devenv
+            if devenv.python() is not None:
+                web_py = str(devenv.python())
+                pw, pw_v = True, "in " + str(devenv.where())
+        want_real = a.real if a.real is not None else ("" if a.night and not a.no_real else None)
+        real_profile = logged_in(want_real) if want_real is not None else ""
+        facts = [("fedtail", f"{version} ({git.stdout.strip() or 'no git'})"),
+                 ("Python", f"{platform.python_version()} {sys.executable}"),
+                 ("system", f"{platform.platform()}"),
+                 ("desktop", os.environ.get("XDG_CURRENT_DESKTOP", "") +
+                  (" wayland" if os.environ.get("WAYLAND_DISPLAY") else "") +
+                  (" x11" if os.environ.get("DISPLAY") else "")),
+                 ("PySide6", qt_v if qt else "no"), ("GTK 4", gtk_v if gtk else "no"),
+                 ("Textual", tui_v if tui else "no"), ("Pillow", pil_v if pil else "no"),
+                 ("Playwright", pw_v if pw else "no"),
+                 ("mode", "night" if a.night else "quick" if a.quick else "full"),
+                 ("your account", (f"profile {real_profile}, read-only, screenshots "
+                                   + ("as they are" if a.no_blur else "blurred"))
+                  if real_profile else ("not asked" if want_real is None
+                                        else "no logged-in profile here"))]
+        for k, v in facts:
+            print(f"{k}: {v}")
+        quick = ["--quick"] if a.quick else []
+        native = has_display() and not a.offscreen
 
-    # ---- your own account -------------------------------------------------------------
-    if real_profile:
-        flag = [f"--real={real_profile}"]
-        r = out / "real"
-        r.mkdir(exist_ok=True)
-        if "qt" in only and qt:
-            d = r / "qt-tour"
-            run.step("real-qt-tour", ["tools/qt_tour.py", str(d), "--quick"]
-                     + (["--native"] if native else []) + ["--pace", str(max(pace, 2.0))]
-                     + flag, timeout=3600, folder=d, note="your account")
-        if "bench" in only and qt and has_display():
-            for layout, theme in (("single", "system"), ("split", "qip-retro")):
-                run.step(f"real-bench-qt-{layout}",
-                         ["tools/qt_bench.py", "--layout", layout, "--theme", theme] + flag,
-                         timeout=1800, note="your account")
-        if "bench" in only and gtk:
-            run.step("real-bench-gtk", ["tools/gtk_bench.py", "--layout", "single",
-                                        "--theme", "system"] + flag, timeout=1800,
-                     note="your account")
-        if "tui" in only and tui:
-            d = r / "tui"
-            run.step("real-tui", ["tools/tui_check.py", str(d)] + flag, timeout=900,
-                     folder=d, note="your account")
+        # ---- the fake server --------------------------------------------------------------
+        if "tests" in only:
+            py = sys.version_info
+            cmd = ["-X", "faulthandler", "-c",
+                   "import faulthandler, sys, unittest; "
+                   "faulthandler.dump_traceback_later(1500, exit=True); "  # a hang: where
+                   "sys.argv = ['unittest', 'discover', '-s', 'tests', '-t', '.', '-v'"
+                   + (", '--durations', '15'" if py >= (3, 12) else "") + "]; "
+                   "unittest.main(module=None)"]
+            run.step("tests", cmd, timeout=1800)
+        if "qt" in only:
+            if not qt:
+                run.skip("qt-tour", "no PySide6 (pip install PySide6)")
+            else:
+                d = out / "qt-tour"
+                run.step("qt-tour", ["tools/qt_tour.py", str(d)] + quick
+                         + (["--native"] if native else [])
+                         + (["--maximized"] if a.maximized else [])
+                         + ["--pace", str(pace)], timeout=5400, folder=d,
+                         note="native" if native else "offscreen")
+                if a.night and native:
+                    d = out / "qt-tour-maximized"
+                    run.step("qt-tour-maximized", ["tools/qt_tour.py", str(d), "--quick",
+                                                   "--native", "--maximized", "--pace",
+                                                   str(pace)], timeout=3600, folder=d,
+                             note="maximized")
+        if "bench" in only:
+            big = ["--maximized"] if a.maximized else []
+            if qt and has_display():
+                run.step("bench-qt", ["tools/qt_bench.py"] +
+                         (["--layout", "split", "--theme", "qip-retro"] if a.quick else [])
+                         + big + (["--posts", "4000"] if a.night else []), timeout=7200)
+            else:
+                run.skip("bench-qt", "no PySide6" if not qt else "no desktop to measure on")
+            if gtk:
+                run.step("bench-gtk", ["tools/gtk_bench.py"] +
+                         (["--layout", "split", "--theme", "qip-retro"] if a.quick else [])
+                         + big + (["--posts", "4000"] if a.night else []), timeout=7200)
+            else:
+                run.skip("bench-gtk", "no GTK 4 (python3-gi, gir1.2-gtk-4.0)")
+        if "gtk" in only:
+            if gtk:
+                d = out / "gtk-shots"
+                run.step("gtk-shots", ["tools/gtk_screenshots.py", str(d)] +
+                         (["system", "point", "qip-retro"] if a.quick else []), timeout=3600)
+            else:
+                run.skip("gtk-shots", "no GTK 4 (python3-gi, gir1.2-gtk-4.0)")
+        if "tui" in only:
+            if tui:
+                d = out / "tui"
+                run.step("tui", ["tools/tui_check.py", str(d)], timeout=900, folder=d,
+                         note="" if pil else "no Pillow: no pictures in the terminal")
+            else:
+                run.skip("tui", "no Textual (pip install textual)")
         if "web" in only:
-            d = r / "web"
-            run.step("real-web", ["tools/web_check.py", str(d)] + flag, timeout=900,
-                     folder=d, note="your account", py=web_py)
-        if not a.no_blur:
-            n = blur(r)
-            print(f"your account's screenshots: {n} blurred", flush=True)
+            d = out / "web"
+            run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d, py=web_py,
+                     note="Playwright" if pw else "no Playwright: no walk "
+                     "(python3 tools/devenv.py — once)")
+        if "parity" in only:  # after the walks: their menus go side by side
+            run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
+        # the gallery (tools/gallery.py): with --night, or asked by --only gallery
+        if "gallery" in only and (a.night or a.only):
+            run.step("gallery", ["tools/gallery.py", str(out / "gallery")], timeout=1800,
+                     py=web_py, note="the site's and the docs' pictures (built-in themes only)")
 
+        # ---- your own account -------------------------------------------------------------
+        if real_profile:
+            flag = [f"--real={real_profile}"]
+            r = out / "real"
+            r.mkdir(exist_ok=True)
+            if "qt" in only and qt:
+                d = r / "qt-tour"
+                run.step("real-qt-tour", ["tools/qt_tour.py", str(d), "--quick"]
+                         + (["--native"] if native else []) + ["--pace", str(max(pace, 2.0))]
+                         + flag, timeout=3600, folder=d, note="your account")
+            if "bench" in only and qt and has_display():
+                for layout, theme in (("single", "system"), ("split", "qip-retro")):
+                    run.step(f"real-bench-qt-{layout}",
+                             ["tools/qt_bench.py", "--layout", layout, "--theme", theme] + flag,
+                             timeout=1800, note="your account")
+            if "bench" in only and gtk:
+                run.step("real-bench-gtk", ["tools/gtk_bench.py", "--layout", "single",
+                                            "--theme", "system"] + flag, timeout=1800,
+                         note="your account")
+            if "tui" in only and tui:
+                d = r / "tui"
+                run.step("real-tui", ["tools/tui_check.py", str(d)] + flag, timeout=900,
+                         folder=d, note="your account")
+            if "web" in only:
+                d = r / "web"
+                run.step("real-web", ["tools/web_check.py", str(d)] + flag, timeout=900,
+                         folder=d, note="your account", py=web_py)
+            if not a.no_blur:
+                n = blur(r)
+                print(f"your account's screenshots: {n} blurred", flush=True)
+
+    except KeyboardInterrupt:
+        # stopped by hand: what is half done says nothing — no zip to send, the
+        # folder marked, the temporary copies (your login among them) gone
+        (out / "INTERRUPTED").write_text("stopped by hand; not a result\n", "utf-8")
+        report(run, out, facts, interrupted=True)
+        clean_temp(started)
+        print(f"\nstopped. Nothing to send from {out}; "
+              "python3 tools/selfcheck.py --clean removes it.")
+        return 130
+    clean_temp(started)
     report(run, out, facts)
     archive = out.with_suffix(".zip")
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
