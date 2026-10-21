@@ -190,7 +190,7 @@ class MainWindow(Gtk.ApplicationWindow):
         side.add_css_class("ft-sidebar")
         side.set_size_request(220, -1)
         side.append(self._me_head())
-        write = Gtk.Button(label="✎ " + _("write"))
+        write = Gtk.Button(label=self.theme.word("compose", _("write")))  # as in Qt
         write.add_css_class("ft-primary")
         write.add_css_class("suggested-action")
         write.add_css_class("ft-write")
@@ -527,11 +527,21 @@ class MainWindow(Gtk.ApplicationWindow):
         me = self.view.me
         if me is None:
             return
-        self.me_name.set_text(me.name or me.username or me.handle)
-        self.who.set_text("@" + me.handle)
+        # the theme's words, as in Qt (terminal: "mira@fedtail:~$")
+        words = getattr(self.theme, "words", {}) or {}
+        fields = dict(display_name=me.name or me.username, username=me.username,
+                      acct=me.handle)
+        try:
+            title = words.get("account_title", "{display_name}").format(**fields)
+            sub = words.get("account_subtitle", "@{acct}").format(**fields)
+        except (KeyError, IndexError, ValueError):
+            title, sub = me.name or me.username or me.handle, "@" + me.handle
+        self.me_name.set_text(title)
+        self.who.set_text(sub)
         while (c := self.me_face.get_first_child()) is not None:
             self.me_face.remove(c)
-        self.me_face.append(self._Avatar(self.ctx, me, 40))
+        if self.theme.shape.get("sidebar_avatar", True):  # terminal: none, as in Qt
+            self.me_face.append(self._Avatar(self.ctx, me, 40))
         self._profile_text()
         self.set_title(f"fedtail — @{me.handle}")
 
@@ -1112,6 +1122,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---- core events ------------------------------------------------------------------
     def on_event(self, name, payload):
+        if getattr(getattr(self.core, "store", None), "closed", False):
+            return  # queued before the exit, come after the database closed
         if name == "read_changed":  # marks only: no lane is rebuilt for them
             for lname, lv in self.lane_views.items():
                 if lname in SPECIAL:

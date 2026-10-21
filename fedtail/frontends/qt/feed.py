@@ -503,6 +503,53 @@ class FeedView(QScrollArea):
         if anchor and anchor[0] in self.rows:
             self._set_target(("anchor", anchor[0], anchor[1]))
 
+    def let_go_rows(self):
+        """Before the whole application is restyled (a theme tried): the cards go now,
+        not after — Qt restyles every widget alive, cards most of them, and restyling
+        them only to build them again in the new theme was most of the seconds a theme
+        took. bring_back_rows() builds them again, the reading place kept. The caller
+        flushes the deletions (sendPostedEvents DeferredDelete) before restyling."""
+        if not self.order:
+            return None
+        anchor = self._reading_anchor()
+        held = []
+        for key in self.order:
+            old = self.rows.pop(key, None)
+            if old is None:
+                continue
+            kept = {a: getattr(old, a) for a in ("cw_open", "translation", "show_translation")
+                    if hasattr(old, a)}
+            held.append((key, old.spec, kept))
+            self.col.removeWidget(old)
+            old.hide()
+            old.deleteLater()
+        return anchor, held
+
+    def bring_back_rows(self, state):
+        if state is None:
+            return
+        anchor, held = state
+        self.setUpdatesEnabled(False)
+        try:
+            for i, (key, spec, kept) in enumerate(held):
+                row = (SeparatorRow if spec.extra.get("separator") else PostRow)(spec, self.ctx)
+                changed = False
+                for a, v in kept.items():
+                    if getattr(row, a, None) != v:
+                        setattr(row, a, v)
+                        changed = True
+                if changed:
+                    row._build()
+                self.rows[key] = row
+                self.col.insertWidget(1 + i, row)  # index 0 is the header layout
+                if key == self.cursor_key and hasattr(row, "card"):
+                    _mark(row.card, "keyed", True)
+        finally:
+            self.setUpdatesEnabled(True)
+        self.order = [k for k, _s, _k in held]
+        if anchor and anchor[0] in self.rows:
+            self._set_target(("anchor", anchor[0], anchor[1]))
+
     def scroll_to(self, key, where="top"):
         if self._bring(key):
             self._set_target(("row", key, where))
@@ -725,10 +772,11 @@ class _ElidedLabel(QLabel):
     """One line that gives way: when there's no room it ends in "…" (the whole text
     in the tooltip) instead of pushing the window wider."""
 
-    def __init__(self, text=""):
+    def __init__(self, text="", keep=0):
         super().__init__()
         self._full = ""
         self._tip = ""
+        self._keep = keep  # this many letters stay however tight it gets ("Л…" said nothing)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.setMinimumWidth(40)
         self.setText(text)
@@ -753,6 +801,12 @@ class _ElidedLabel(QLabel):
         return self._full
 
     def _elide(self):
+        if self._keep:
+            fm = self.fontMetrics()
+            least = min(fm.horizontalAdvance(self._full) + 4,
+                        fm.horizontalAdvance(self._full[:self._keep] + "…") + 4)
+            if self.minimumWidth() != max(40, least):
+                self.setMinimumWidth(max(40, least))
         shown = self.fontMetrics().elidedText(self._full, Qt.TextElideMode.ElideRight,
                                               max(self.width(), 40))
         QLabel.setText(self, shown)
@@ -761,6 +815,11 @@ class _ElidedLabel(QLabel):
     def resizeEvent(self, e):
         super().resizeEvent(e)
         self._elide()
+
+    def changeEvent(self, e):  # noqa: N802 — a theme's font: measured anew
+        super().changeEvent(e)
+        if e.type() == e.Type.FontChange:
+            self._elide()
 
     def sizeHint(self):  # noqa: N802
         hint = super().sizeHint()
@@ -785,7 +844,7 @@ class _Header(QWidget):
             self.h.setContentsMargins(28, 12, 20, 12)
             self.h.setSpacing(12)
         # a long title or a long note must never make the window wider: they give way
-        self.title = _ElidedLabel(title)
+        self.title = _ElidedLabel(title, keep=8)
         self.title.setObjectName("laneTitle")
         self.title.setTextFormat(Qt.TextFormat.PlainText)
         self.h.addWidget(self.title, 3)

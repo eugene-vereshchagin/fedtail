@@ -13,10 +13,34 @@ from . import theme as themes
 from .bridge import Bridge
 from .window import MainWindow
 
+_translators = []
+
+
+def translate_qt(app):
+    """Qt's own words in the interface's language: the standard buttons (Close,
+    Cancel, OK), the context menus of text fields — English in a Russian window
+    before. From Qt's translations (the wheel brings them; Debian:
+    qt6-translations-l10n); none there — English, as before."""
+    from PySide6.QtCore import QLibraryInfo, QTranslator
+
+    from ... import i18n
+    lang = i18n.current_language()
+    if lang == "en" or _translators:
+        return
+    where = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    for name in ("qtbase", "qt"):
+        t = QTranslator(app)
+        if t.load(f"{name}_{lang}", where):
+            app.installTranslator(t)
+            _translators.append(t)
+            return
+    logging.getLogger("fedtail").info("no Qt translations for %s in %s", lang, where)
+
 
 def run(core, instance, argv):
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
+    translate_qt(app)
     from ...desktop import desktop_id
     app.setDesktopFileName(desktop_id(core.paths.profile))
     app.setQuitOnLastWindowClosed(False)

@@ -179,6 +179,13 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
         w.add(pic, home=True)
         w.act("a0", "follow", BOB, minute=1)  # history: the first fetch is seen
         app = FedtailApp(core)
+
+        def no_network(url):  # the pictures: not fetched from example.test
+            from concurrent.futures import Future
+            f = Future()
+            f.set_exception(OSError("no network in tests"))
+            return f
+        app.core.media_bytes = no_network
         async with app.run_test(size=(120, 40)) as pilot:
             core.poll_once()
             w.act("a1", "favourite", BOB, st=mine, minute=5)

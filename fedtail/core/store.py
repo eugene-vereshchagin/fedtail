@@ -225,8 +225,11 @@ class Store:
                     self.kv_set(f"ui.{kind}.{new}", value)
                     self.db.execute("DELETE FROM kv WHERE key=?", (f"ui.{kind}.{old}",))
 
+    closed = False  # after close(): what still comes (a late event) knows to stop
+
     def close(self):
         with self.lock:
+            self.closed = True
             self.db.close()
 
     def _tx(self):

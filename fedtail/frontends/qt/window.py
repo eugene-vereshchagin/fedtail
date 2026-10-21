@@ -5,7 +5,7 @@ import sys
 import time
 from dataclasses import dataclass
 
-from PySide6.QtCore import QPoint, QPointF, QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QPointF, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
@@ -30,7 +30,6 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
-    QSizePolicy,
     QSplitter,
     QStackedWidget,
     QSystemTrayIcon,
@@ -531,13 +530,14 @@ class MainWindow(QMainWindow):
         acc.addWidget(self.account_avatar)
         names = QVBoxLayout()
         names.setSpacing(0)
-        self.account_name = QLabel(self.base_title)
+        # cut with "…" (all of it in the tooltip) when the buttons beside take the room:
+        # clipped, the terminal theme's "mira@fedtail:~$" read "mi"
+        self.account_name = feed_module._ElidedLabel(self.base_title, keep=6)
         self.account_name.setObjectName("accountName")
-        self.account_sub = QLabel("")
+        self.account_sub = feed_module._ElidedLabel("", keep=6)
         self.account_sub.setObjectName("accountSub")
         for w in (self.account_name, self.account_sub):
-            w.setMinimumWidth(1)
-            w.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            w.setTextFormat(Qt.TextFormat.PlainText)
         names.addWidget(self.account_name)
         names.addWidget(self.account_sub)
         acc.addLayout(names, 1)
@@ -725,10 +725,21 @@ class MainWindow(QMainWindow):
         for w in self.lane_widgets.values():
             if isinstance(w, LaneWidget):
                 w._unload()
+        # and the cards on screen go too, built again in the new theme right after:
+        # restyled first and then thrown away, they cost seconds (columns: 6–9 s)
+        from .feed import FeedView
+        held = {}
+        for view in self.findChildren(FeedView):
+            if view.isVisible() and view.order:
+                held[view] = view.let_go_rows()
+        # what deleteLater() let go is still alive (and would be restyled) until the
+        # event loop comes round: gone now
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        t0 = time.monotonic()
         theme = themes.apply(app, self.cfg, name)
-        log.info("theme tried: %s (was %s, config says %s)", theme.id, old.id,
-                 self.cfg["ui"]["theme"])
-        self._retheme(old, theme)
+        log.info("theme tried: %s (was %s, config says %s), restyled in %.0f ms", theme.id,
+                 old.id, self.cfg["ui"]["theme"], (time.monotonic() - t0) * 1000)
+        self._retheme(old, theme, held)
         if self.cfg["ui"]["themed_icon"] and self.cfg["ui"].get("app_icon") == "bubble":
             notify_module.use_theme_icon(theme, self.core.paths.cache_dir)
             self.setWindowIcon(QIcon(icon_path()))
@@ -741,7 +752,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(
             _("theme_tried", name=theme.id, configured=self.cfg["ui"]["theme"]), 12_000)
 
-    def _retheme(self, old, theme):
+    def _retheme(self, old, theme, held=None):
         """Everything drawn in the old theme, drawn again in the new one: the sidebar
         built anew, every card rebuilt where it stands, the titles reworded."""
         self.theme = theme
@@ -787,8 +798,11 @@ class MainWindow(QMainWindow):
             if header is not None and isinstance(w, LaneWidget):
                 header.title.setText(theme.word("lane_title", self.lane_title(name)))
         from .feed import FeedView
+        held = held or {}
         for view in self.findChildren(FeedView):
-            if view.isVisible() or not view.order:
+            if view in held:
+                view.bring_back_rows(held[view])
+            elif view.isVisible() or not view.order:
                 view.rebuild_rows()
             else:
                 view.restyle = True  # rebuilt when it comes into sight
@@ -832,7 +846,8 @@ class MainWindow(QMainWindow):
         from ...core import profiles
         m.clear()
         me = self.core.paths.profile
-        for p in profiles.listing():
+        listed = profiles.listing()
+        for p in listed:
             a = m.addAction(profiles.label(p) + (" ★" if p.get("main") else "")
                             + ("" if p["logged_in"] else "  " + _("not_logged_in")))
             a.setCheckable(True)
@@ -841,7 +856,8 @@ class MainWindow(QMainWindow):
                 a.setEnabled(False)
             else:
                 a.triggered.connect(lambda _c=False, n=p["name"]: self.switch_profile(n))
-        m.addSeparator()
+        if listed:  # (a menu that starts with a line looks broken)
+            m.addSeparator()
         m.addAction(_("my_profile"), self.open_my_profile).setEnabled(bool(self.core.me))
         m.addAction(_("server_info") + "…", self.show_server_info).setEnabled(
             bool(self.core.me))
@@ -1522,6 +1538,8 @@ class MainWindow(QMainWindow):
 
     # ---- events from the core ---------------------------------------------------------
     def on_event(self, name, payload):
+        if getattr(getattr(self.core, "store", None), "closed", False):
+            return  # an event queued before the exit, come after the database closed
         t = time.monotonic()
         try:
             with diag.busy(f"event {name}"):

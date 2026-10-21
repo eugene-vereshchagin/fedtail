@@ -162,7 +162,27 @@ class Theme:
             card_found = f"border: 2px solid {k('accent')};"
         return self._stylesheet(k, s, r, br, post_pt, title_pt, base_pt, mono_family, card,
                                 card_unread, card_focus, card_found) + \
+            (self._ticks(k) if s.get("icons") != "desktop" else "") + \
             (DEBUG_CSS if s.get("debug") else "")
+
+    @staticmethod
+    def _ticks(k):
+        """Check boxes and radio buttons in the theme's colours: the desktop's style
+        took the theme's button colour for the box, so an empty box in bnw was as
+        green as a ticked one. Empty — the card's colour, a frame; ticked — the accent.
+        (The system and debug themes keep the desktop's own.)"""
+        return f"""
+QCheckBox::indicator {{ width: 13px; height: 13px; border: 1px solid {k('muted')};
+    background: {k('card')}; border-radius: 3px; }}
+QCheckBox::indicator:checked {{ background: {k('accent')}; border-color: {k('accent')}; }}
+QCheckBox::indicator:indeterminate {{ background: {k('muted')}; }}
+QCheckBox::indicator:disabled {{ border-color: {k('rail')}; }}
+QRadioButton::indicator {{ width: 13px; height: 13px; border: 1px solid {k('muted')};
+    background: {k('card')}; border-radius: 7px; }}
+QRadioButton::indicator:checked {{ background: qradialgradient(cx: 0.5, cy: 0.5, radius: 0.5,
+    fx: 0.5, fy: 0.5, stop: 0 {k('accent')}, stop: 0.55 {k('accent')}, stop: 0.6 {k('card')},
+    stop: 1 {k('card')}); border-color: {k('accent')}; }}
+"""
 
     def _stylesheet(self, k, s, r, br, post_pt, title_pt, base_pt, mono_family, card,
                     card_unread, card_focus, card_found):
@@ -191,6 +211,14 @@ QPushButton#compose:hover {{ background: {self.c['primary'].lighter(110).name()}
 QListWidget#lanes {{ background: transparent; border: 0; outline: 0; }}
 QListWidget#lanes::item {{ border-radius: {br}px; margin: 1px 0; }}
 QListWidget#lanes::item:selected {{ background: {k('selected')}; }}
+QListWidget#lanes QScrollBar:vertical {{ background: {k('sidebar')}; width: 8px; margin: 0;
+    border: 0; }}
+QListWidget#lanes QScrollBar::handle:vertical {{ background: {k('rail')}; min-height: 24px;
+    border-radius: 4px; margin: 1px; }}
+QListWidget#lanes QScrollBar::add-line:vertical, QListWidget#lanes QScrollBar::sub-line:vertical
+    {{ height: 0; border: 0; }}
+QListWidget#lanes QScrollBar::add-page:vertical, QListWidget#lanes QScrollBar::sub-page:vertical
+    {{ background: none; }}
 QListWidget#lanes::item:hover:!selected {{ background: {_alpha(self.c['selected'], 110)}; }}
 QLabel#laneName {{ background: transparent; }}
 QLabel#listsHeader {{ font-weight: 600; background: transparent; }}

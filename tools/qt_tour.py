@@ -55,8 +55,12 @@ from tests.fakes import FakeApi  # noqa: E402
 from tools import screenshots as shots  # noqa: E402  (its world and pictures)
 
 ERRORS, MENUS = [], []
+LEAKS, LEAK_NOTES = [], []  # widgets alive after each window closed
+SIZE_NOTES = []  # sizes.txt: every size, what it did
 CAUGHT = []  # menus that were exec()'d: kept here instead of waiting for a click
 SEEN = set()  # (what was shot) — a menu with the same items once only
+# the sizes are tried with these (a proportional font, a monospace one, the messengers)
+SIZE_THEMES = ("system", "terminal", "bnw", "qip-retro", "mra")
 SPLIT_THEMES = ("system", "qip-retro", "qip-modern", "mra", "mra-blue", "psi")
 
 
@@ -146,6 +150,118 @@ def sweep(app, root, out, label):
     pump(app, 0.2)
 
 
+SIZES = ((1920, 1080), (1366, 768), (1024, 768), (800, 600), (640, 480), (480, 860))
+
+
+def _in_scroll(w, top):
+    """Inside a scroll area's contents (out of view there on purpose), or in a menu."""
+    from PySide6.QtWidgets import QAbstractScrollArea
+    p = w.parentWidget()
+    while p is not None and p is not top:
+        if isinstance(p, QAbstractScrollArea):
+            return True
+        p = p.parentWidget()
+    return False
+
+
+def layout_problems(win):
+    """What a size does to the window: a widget sticking out of it, a button or a line
+    of text cut (narrower than what it says needs), a picture button squeezed."""
+    from PySide6.QtCore import QPoint, QRect, Qt
+    from PySide6.QtWidgets import QAbstractButton, QLabel, QWidget
+    out, seen = [], set()
+    whole = win.rect()
+    for w in win.findChildren(QWidget):
+        if not w.isVisible() or w.width() <= 0 or w.height() <= 0 or _in_scroll(w, win):
+            continue
+        what = f"{type(w).__name__}{'#' + w.objectName() if w.objectName() else ''}"
+        g = QRect(w.mapTo(win, QPoint(0, 0)), w.size())
+        if not whole.contains(g, False) and g.intersects(whole) and \
+                (g.right() - whole.right() > 2 or g.bottom() - whole.bottom() > 2):
+            key = ("out", what)
+            if key not in seen:
+                seen.add(key)
+                out.append(f"sticks out of the window: {what} {g.getRect()}")
+        text = ""
+        if isinstance(w, QAbstractButton):
+            text = w.text()
+            need = w.minimumSizeHint().width()
+            if text and w.width() + 2 < need:
+                key = ("button", what, text)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(f"button cut: {what} '{text}' {w.width()} < {need} px")
+        elif isinstance(w, QLabel) and not w.wordWrap() and \
+                w.textFormat() != Qt.TextFormat.RichText and w.pixmap().isNull():
+            text = QLabel.text(w)  # what is shown (an elided label: with its "…")
+            if text and "<" not in text and "\n" not in text:
+                need = w.fontMetrics().horizontalAdvance(text)
+                if need > w.contentsRect().width() + 3:
+                    key = ("label", what, text)
+                    if key not in seen:
+                        seen.add(key)
+                        out.append(f"text cut: {what} '{text[:40]}' needs {need} px, "
+                                   f"has {w.contentsRect().width()}")
+    return out
+
+
+def sizes(app, out, win, label):
+    """The window at the sizes of real screens (and a narrow one), a screenshot and
+    what each did to the layout; then its edge dragged as a hand does, timed."""
+    from PySide6.QtCore import QSize
+    lines = []
+    was_max = win.isMaximized()
+    if was_max:
+        win.showNormal()
+        pump(app, 0.3)
+    for w, h in SIZES:
+        win.resize(w, h)
+        pump(app, 0.6)
+        got = win.size()
+        name = f"size-{label}-{w}x{h}"
+        save(win, out, name)
+        probs = layout_problems(win)
+        note = "" if got == QSize(w, h) else \
+            f" — the window would not go below {got.width()}×{got.height()}"
+        lines.append(f"{label} {w}×{h}{note}: {len(probs)} problems")
+        lines += ["    " + p for p in probs[:25]]
+        if got.width() > w and w >= 800:
+            ERRORS.append(f"{name}: the window can't be {w} px wide (it stays "
+                          f"{got.width()}): something in it is too wide")
+        for p in probs:
+            if w >= 1024:  # at a real screen's size nothing should be cut
+                ERRORS.append(f"{name}: {p}")
+    # the edge dragged: 640 ↔ 1600, a step a frame; the slowest step is what is felt
+    worst, steps, t0 = 0.0, 0, time.monotonic()
+    for x in list(range(1600, 640, -32)) + list(range(640, 1601, 32)):
+        a = time.monotonic()
+        win.resize(x, 900)
+        app.processEvents()
+        worst = max(worst, time.monotonic() - a)
+        steps += 1
+    lines.append(f"{label} drag the edge 1600↔640: {steps} steps in "
+                 f"{time.monotonic() - t0:.1f} s, the slowest {worst * 1000:.0f} ms")
+    if worst > 0.25:
+        ERRORS.append(f"{label}: dragging the window's edge stops for {worst * 1000:.0f} ms")
+    split = getattr(win, "split", None)
+    if split is not None and split.count() > 1 and split.widget(0).isVisible():
+        total = sum(split.sizes())
+        worst, t0 = 0.0, time.monotonic()
+        for x in list(range(180, 480, 10)) + list(range(480, 179, -10)):
+            a = time.monotonic()
+            split.setSizes([x, total - x])
+            app.processEvents()
+            worst = max(worst, time.monotonic() - a)
+        lines.append(f"{label} drag the sidebar 180↔480: the slowest step "
+                     f"{worst * 1000:.0f} ms")
+    if was_max or MAXIMIZED:
+        win.showMaximized()
+    else:
+        win.resize(1280, 860)
+    pump(app, 0.5)
+    SIZE_NOTES.extend(lines + [""])
+
+
 def catch_menus():
     """QMenu.exec shows the menu and waits for a click: here it is kept and returns at
     once (nothing chosen)."""
@@ -158,7 +274,10 @@ def catch_menus():
 
 def closing_modals(app, out, name, fn):
     """Call fn; whatever window it opens — modal (exec) or not — is saved and closed."""
+    from PySide6.QtWidgets import QDialog
     before = {id(w) for w in app.topLevelWidgets() if w.isVisible()}
+    # a panel set inside the window (help, ui.panels = "inside") is no top-level window
+    inside = {id(w) for w in app.allWidgets() if isinstance(w, QDialog) and w.isVisible()}
     shot = []
 
     def close_modal():
@@ -185,6 +304,20 @@ def closing_modals(app, out, name, fn):
                 sweep(app, w, out, name)
                 shot.append(1)
             w.close()
+    for w in app.allWidgets():
+        if isinstance(w, QDialog) and w.isVisible() and id(w) not in inside:
+            if not shot:
+                save(w.window(), out, name)
+                sweep(app, w, out, name)
+                shot.append(1)
+            w.close()
+    if not shot and name == "compose":  # the editor inside the window (ui.compose)
+        w = app.activeWindow()
+        if w is not None:
+            save(w, out, name)
+            shot.append(1)
+    if not shot and not name.startswith("tab-") and name != "compose":
+        ERRORS.append(f"{name}: nothing opened")
     pump(app, 0.2)
 
 
@@ -226,7 +359,12 @@ def make_window(app, theme_name, layout, label):
     return core, win
 
 
-def close_window(app, core, win):
+def census(app):
+    from collections import Counter
+    return Counter(type(w).__name__ for w in app.allWidgets())
+
+
+def close_window(app, core, win, label=""):
     win.quitting = True
     if getattr(win, "roster", None) is not None:
         win.roster.close()
@@ -234,6 +372,18 @@ def close_window(app, core, win):
     core.shutdown()
     win.deleteLater()
     pump(app, 0.3)
+    from PySide6.QtCore import QCoreApplication, QEvent
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    pump(app, 0.2)
+    # a window closed: its widgets gone with it? Whatever stays is a leak — and Qt
+    # restyles every widget alive at each theme tried, so a leak slows that down too
+    now = census(app)
+    if LEAKS:
+        grew = now - LEAKS[0][1]
+        LEAK_NOTES.append(f"after {label}: {sum(now.values())} widgets alive "
+                          f"(+{sum(grew.values())} since the first window closed) — "
+                          + ", ".join(f"{k} +{v}" for k, v in grew.most_common(8)))
+    LEAKS.append((label, now))
 
 
 def tour_menus(app, out, core, win):
@@ -297,11 +447,14 @@ def main():
     i18n.setup("ru")
     catch_menus()
     app = QApplication.instance() or QApplication([])
+    from fedtail.frontends.qt import translate_qt
+    translate_qt(app)
     if not NATIVE:
         app.setStyle("Fusion")
     from fedtail.frontends import themefile
     themes = ("system", "point", "qip-retro") if quick else tuple(themefile.available())
     first = True
+    first_sizes = True
     for name in themes:
         for layout in ("single",) + (("split",) if name in SPLIT_THEMES else ()):
             label = f"{name}-{layout}"
@@ -322,11 +475,22 @@ def main():
             if first:  # the menus and the windows: once is enough
                 tour_menus(app, out, core, win)
                 first = False
+            if name in SIZE_THEMES or (quick and first_sizes):
+                first_sizes = False
+                sizes(app, out, win, label)
             elif win.roster is not None and layout == "split":
                 sweep(app, win.roster, out, label + "-roster")
-            close_window(app, core, win)
+            close_window(app, core, win, label)
             print(f"{label}: {time.monotonic() - t0:.1f} s", flush=True)
     (out / "menus.txt").write_text("\n".join(MENUS), "utf-8")
+    (out / "sizes.txt").write_text("\n".join(SIZE_NOTES), "utf-8")
+    (out / "leaks.txt").write_text("\n".join(LEAK_NOTES) + "\n", "utf-8")
+    if len(LEAKS) > 3:
+        grew = sum((LEAKS[-1][1] - LEAKS[0][1]).values())
+        per = grew / (len(LEAKS) - 1)
+        if per > 50:
+            ERRORS.append(f"leak: {per:.0f} widgets stay alive after each window is "
+                          f"closed ({grew} over {len(LEAKS) - 1} windows; leaks.txt)")
     if REAL:  # what the tool's clicks would have sent: stopped on purpose
         ERRORS[:] = [e for e in ERRORS if real.READ_ONLY not in e]
     (out / "errors.txt").write_text("\n\n".join(ERRORS) + "\n" if ERRORS else "none\n",

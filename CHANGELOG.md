@@ -2,6 +2,25 @@
 
 ## 0.18.0 — in progress
 
+- selfcheck --night: everything in one run, for the night — the tests (each by name,
+  the slowest, and where a hung one stood), the walks of every interface, the window at
+  six sizes with what each cut or pushed out, its edge and the sidebar's dragged and
+  timed, widgets left alive after a window closed, the benches, the parity of the four
+  interfaces (tools/parity.py), and then the same on your own account (read-only,
+  screenshots blurred). docs/TESTPLAN.md: what is checked, what is left to the eye.
+- From the first night's report: Qt's own buttons (Close, Cancel) in the interface's
+  language; nord's and night's outline pictures (a star, an @, refresh) were the
+  background's colour — an outline too close to it is drawn light; check boxes and
+  radio buttons in the theme's colours (bnw's empty box was as green as a ticked one);
+  the sidebar's scroll bar in the theme's colours; the terminal theme's name in the
+  sidebar cut to "mi" — now with "…"; a lane's title keeps a few letters; trying a
+  theme no longer restyles the cards it is about to throw away (columns: 6–9 s); the
+  help's sticky header after its page changed; events after the database closed.
+  GTK: the Write button's words were the sidebar's colour (invisible in terminal and
+  point) and now the theme's, as in Qt; the sidebar's name and avatar as the theme
+  says; tab titles, the lane title and the chosen filter readable under a dark desktop.
+  Terminal: a picture coming back while the app closed hung it (and the test suite);
+  the first picture that fails to load is said in the log.
 - tools/selfcheck.py: every check the dev tools have, on your own machine, in one go —
   the tests; a walk through the Qt window (every theme, the split layout, every menu
   with the list of what's in it, every dialog the ≡ menu opens; tools/qt_tour.py); how

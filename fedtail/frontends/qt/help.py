@@ -84,7 +84,11 @@ class StickyHeader(QWidget):
     def place(self, *_a):
         y = self.view.verticalScrollBar().value()
         for t in self.tables:
-            box, h = self._header(t)
+            try:
+                box, h = self._header(t)
+            except RuntimeError:  # the page was replaced, its tables with it: until
+                self.tables = []  # reload() finds the new ones, no sticky header
+                break
             # its header gone above the top, and rows of it still on screen below
             if h and box.top() < y and box.bottom() - 2 * h > y:
                 self.shown = (box, h)

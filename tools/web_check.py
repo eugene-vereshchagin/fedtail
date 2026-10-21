@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import traceback
 import urllib.request
 from pathlib import Path
@@ -198,10 +199,29 @@ def with_chromium(base, key, out):
     if not exe:
         NOTES.append("no Playwright, no Chromium/Chrome: the server's answers only")
         return
-    subprocess.run([exe, "--headless=new", "--disable-gpu", "--window-size=1280,860",
-                    "--virtual-time-budget=6000", f"--screenshot={out / 'desktop-01-home.png'}",
-                    base + "/?k=" + key], capture_output=True, timeout=90)
-    NOTES.append(f"one screenshot by {exe} (Playwright clicks through the menus too)")
+    # the page keeps a connection open for news (it never "finishes loading"), so the
+    # browser may wait for ever and take none: it gets 20 s
+    shot = out / "desktop-01-home.png"
+    with tempfile.TemporaryDirectory() as prof:
+        p = subprocess.Popen([exe, "--headless=new", "--disable-gpu", "--no-first-run",
+                              f"--user-data-dir={prof}", "--window-size=1280,860",
+                              "--virtual-time-budget=6000", f"--screenshot={shot}",
+                              base + "/?k=" + key],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        end = time.monotonic() + 20
+        while time.monotonic() < end and p.poll() is None and not shot.exists():
+            time.sleep(0.5)
+        time.sleep(1)
+        if p.poll() is None:
+            p.kill()
+            p.wait(10)
+    if shot.exists():
+        NOTES.append(f"one screenshot by {exe} (Playwright clicks through the menus too: "
+                     "pip install playwright && playwright install chromium)")
+    else:
+        NOTES.append(f"{exe} took no screenshot in 20 s (the page never ends loading "
+                     "for it); pip install playwright && playwright install chromium — "
+                     "and the walk clicks through all of it")
 
 
 def main():
@@ -210,7 +230,12 @@ def main():
     from fedtail import i18n
     from fedtail.frontends.web import server as web
     i18n.setup("ru")
-    core = make_core()
+    try:
+        core = make_core()
+    except Exception as e:  # noqa: BLE001 — your server unreachable, a login gone…
+        (out / "errors.txt").write_text(f"no start: {type(e).__name__}: {e}\n", "utf-8")
+        print(f"no start: {e}")
+        return 1
     key = web.load_key(core.paths.data_dir)
     srv = web.make_server(core, "127.0.0.1", 0, key)
     srv.handle_error = lambda *a: None  # a browser dropping a connection: not a problem

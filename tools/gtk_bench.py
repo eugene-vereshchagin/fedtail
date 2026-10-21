@@ -148,6 +148,19 @@ class Meter:
               f"slow turns {self.slow:3d}", flush=True)
 
 
+def _find(widget, kind):
+    """The first widget of a kind under widget (depth first)."""
+    child = widget.get_first_child()
+    while child is not None:
+        if isinstance(child, kind):
+            return child
+        found = _find(child, kind)
+        if found is not None:
+            return found
+        child = child.get_next_sibling()
+    return None
+
+
 def scroll(meter, lv, to_top):
     """The lane to its top or its end a screen at a time, 60 times a second, as a hand
     would — waiting at the edge for more to come in, until nothing more does."""
@@ -262,6 +275,29 @@ def run(layout, theme, posts, profile, maximized=False):
             btn.popdown()
         return None
     meter.scenario("open the ≡ menu", menu)
+
+    def drag_edge():
+        """The window's edge dragged narrower and back, a step every frame."""
+        if win.is_maximized():
+            win.unmaximize()
+            meter.run(0.3)
+        w0, h = max(win.get_width(), 1100), max(win.get_height(), 600)
+        for x in list(range(w0, 640, -24)) + list(range(640, w0 + 1, 24)):
+            win.set_default_size(x, h)
+            meter.run(0.016)
+        return lambda: True
+    meter.scenario("drag the window's edge", drag_edge)
+
+    def drag_sidebar():
+        from gi.repository import Gtk
+        paned = _find(win, Gtk.Paned)
+        if paned is None:
+            return None
+        for x in list(range(180, 460, 8)) + list(range(460, 179, -8)):
+            paned.set_position(x)
+            meter.run(0.016)
+        return lambda: True
+    meter.scenario("drag the sidebar's edge", drag_sidebar)
 
     def compose():
         state["composer"] = win.compose()

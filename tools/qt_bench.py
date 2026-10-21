@@ -190,6 +190,30 @@ def run(layout, theme, posts, profile, maximized=False):
         return None
     meter.scenario("open the ≡ menu", menu)
 
+    def drag_edge():
+        """The window's edge dragged narrower and back, as a hand does: a step every
+        frame. Every lane, header and card lays itself out again at each one."""
+        if win.isMaximized():
+            win.showNormal()
+            meter.run(0.3)
+        w0, h = max(win.width(), 1100), win.height()
+        for x in list(range(w0, 640, -24)) + list(range(640, w0 + 1, 24)):
+            win.resize(x, h)
+            meter.run(0.016)
+        return lambda: True
+    meter.scenario("drag the window's edge", drag_edge)
+
+    def drag_sidebar():
+        split = getattr(win, "split", None)
+        if split is None or split.count() < 2 or not split.widget(0).isVisible():
+            return None
+        total = sum(split.sizes())
+        for x in list(range(180, 460, 8)) + list(range(460, 179, -8)):
+            split.setSizes([x, total - x])
+            meter.run(0.016)
+        return lambda: True
+    meter.scenario("drag the sidebar's edge", drag_sidebar)
+
     def compose():
         win.compose()
         return None

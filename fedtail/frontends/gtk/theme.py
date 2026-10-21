@@ -110,7 +110,9 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-view, .ft-view > viewport, .ft-feed {{ background: {c['view']}; }}
 .ft-lane-header {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
                    padding: 4px 10px; }}
-.ft-lane-title {{ font-weight: bold; }}
+.ft-lane-title {{ font-weight: bold; color: {c['text']}; }}
+.ft-lane-header togglebutton:checked, .ft-lane-header button:checked {{
+    background: {c['accent']}; color: {c['on_accent']}; }}
 .ft-active {{ color: {c['accent']}; }}
 .ft-new-pill {{ background: {c['new_pill']}; color: {c['on_new_pill']};
                border-radius: 9px; padding: 0 8px; }}
@@ -142,6 +144,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-card .ft-ctx link {{ color: {c['muted']}; }}
 .ft-action.ft-active {{ background: {c['active']}; color: {c['on_active']}; }}
 .ft-primary {{ background: {c['primary']}; color: {c['on_primary']}; border-radius: {br}px; }}
+.ft-sidebar button.ft-primary {{ color: {c['on_primary']}; }}
 .ft-status {{ color: {c['muted']}; padding: 2px 8px; font-size: smaller; }}
 .ft-rail {{ border-left: 2px solid {c['rail']}; }}
 .ft-avatar-circle {{ border-radius: 9999px; }}
@@ -169,6 +172,8 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
               border-radius: {br}px {br}px 0 0; padding: 0 2px 0 8px; color: {c['muted']}; }}
 .ft-tabrows > flowboxchild.ft-current .ft-tabchip {{ background: {c['view']};
     color: {c['text']}; border-color: {c['accent']}; }}
+.ft-tabchip label {{ color: {c['muted']}; }}
+.ft-tabrows > flowboxchild.ft-current .ft-tabchip label {{ color: {c['text']}; }}
 .ft-tabchip-x {{ min-height: 18px; min-width: 18px; padding: 0; }}
 .ft-viewer {{ background: rgba(0, 0, 0, 0.85); }}
 .ft-viewer-text {{ color: #dddddd; }}

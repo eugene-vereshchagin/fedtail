@@ -4,6 +4,7 @@ f — like, b — boost, m — bookmark, n — a new post, x — the lane read, 
 [ / ] or 1…9 — another lane, h / l — to the lanes / the posts, Tab — between them;
 v — the post's pictures full screen (drawn with half blocks, see pictures.py)."""
 
+import asyncio
 import logging
 import threading
 import webbrowser
@@ -527,22 +528,34 @@ class FedtailApp(App, PostsMixin):
         self.delete_guard = DeleteGuard()
         self.lane = None
         self._ui_thread = None
+        self._ui_loop = None
         tcfg = core.cfg.get("tui", {})
         self.lanes_width = int(tcfg.get("lanes_width", 26))
         self._theme_wanted = tcfg.get("theme", "")
         self._redraw_pending = False
         self._pictures = {}  # (address, cols, rows) -> the drawn picture
+        self._picture_failed = False
 
     # ---- threads -------------------------------------------------------------------
     def in_ui(self, fn, *args):
-        """Run fn(*args) in the interface's thread, from wherever."""
+        """Run fn(*args) in the interface's thread, from wherever — without waiting for
+        it: Textual's call_from_thread waits for the answer, and a picture's or a poll's
+        thread that came back while the app was closing waited forever (and with it the
+        core's shutdown, which waits for its threads)."""
         if threading.get_ident() == self._ui_thread:
             self.call_next(fn, *args)
-        else:
-            try:
-                self.call_from_thread(fn, *args)
-            except RuntimeError:  # the app is gone
-                pass
+            return
+        loop = self._ui_loop
+        if loop is None or loop.is_closed() or not getattr(self, "is_running", True):
+            return  # not started yet, or gone
+        try:
+            loop.call_soon_threadsafe(self._run_in_ui, fn, args)
+        except RuntimeError:  # the loop closed just now
+            pass
+
+    def _run_in_ui(self, fn, args):
+        if getattr(self, "is_running", True):
+            self.call_next(fn, *args)
 
     def _main(self, selector, kind=None):
         """A widget of the main screen, whatever screen is on top now: core events come
@@ -566,6 +579,7 @@ class FedtailApp(App, PostsMixin):
 
     def on_mount(self):
         self._ui_thread = threading.get_ident()
+        self._ui_loop = asyncio.get_running_loop()
         self.title = "fedtail"
         self.query_one("#lanes").styles.width = self.lanes_width
         if self._theme_wanted:
@@ -684,11 +698,15 @@ class FedtailApp(App, PostsMixin):
                 item.set_picture(cache[key])
                 continue
 
-            def done(f, item=item, key=key):
+            def done(f, item=item, key=key, url=url):
                 try:
                     drawn = pictures.blocks(f.result(), cols, rows)
                 except Exception as e:  # noqa: BLE001 — no picture, the text stays
-                    log.debug("tui picture: %s", e)
+                    # the first one said aloud: "no pictures in the terminal" was
+                    # silent before (a refused address, a proxy, a timeout)
+                    (log.debug if self._picture_failed else log.warning)(
+                        "tui picture %s: %s", url, e)
+                    self._picture_failed = True
                     return
                 if drawn is None:
                     return

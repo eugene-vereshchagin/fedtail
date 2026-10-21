@@ -89,10 +89,11 @@ def icon(name, theme, size=16):
         _said.append(1)
         log.warning("the theme's pictures need Qt's SVG module (Debian: "
                     "python3-pyside6.qtsvg); its PNGs only, words for the rest")
-    pic = iconpack.picture(s, name, accent, svg_ok=QSvgRenderer is not None)
+    bg = theme.c["card"].name()
+    pic = iconpack.picture(s, name, accent, svg_ok=QSvgRenderer is not None, bg=bg)
     if pic is None:
         return QIcon()
-    key = (s, name, accent, size)
+    key = (s, name, accent, bg, size)
     if key in _cache:
         return _cache[key]
     if pic.kind == "png":

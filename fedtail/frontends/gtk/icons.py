@@ -79,10 +79,11 @@ def texture(name, theme, size=16, scale=2):
     neither its set nor the fallback has one, or it can't be drawn)."""
     p = pset(theme)
     accent = theme.c["accent"].name()
-    pic = iconpack.picture(p, name, accent, svg_ok=svg_ok())
+    bg = theme.c["card"].name()
+    pic = iconpack.picture(p, name, accent, svg_ok=svg_ok(), bg=bg)
     if pic is None:
         return None
-    key = (p, name, accent, size * scale)
+    key = (p, name, accent, bg, size * scale)
     if key in _cache:
         return _cache[key]
     tex = None

@@ -35,7 +35,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .palette import Color
+from .palette import Color, readable_on
 
 log = logging.getLogger(__name__)
 
@@ -248,11 +248,13 @@ _SHINE = re.compile(r'<ellipse[^>]*opacity="\.35"/>')
 _WIDTH = re.compile(r'stroke-width="([\d.]+)"')
 
 
-def styled(text, style, base):
+def styled(text, style, base, bg=None):
     """An SVG's blanks filled: {c} base, {l} its light top, {d} the outline — the way
     `style` draws (gloss: a gradient and a shine; agent: a brighter shine, a softer
     outline; flat: plain colour, no shine; qip: a strong shine, a thick dark outline;
-    none: the blanks filled, nothing else touched)."""
+    none: the blanks filled, nothing else touched). bg: what the pictures stand on —
+    an outline as dark as a dark theme's background is drawn light instead (the
+    outline-only pictures, a star, an @, vanished on nord)."""
     base = base if isinstance(base, Color) else Color.parse(str(base))
     light = base.lighter(165)
     if style == "qip":
@@ -267,6 +269,12 @@ def styled(text, style, base):
         dark = base.darker(135)
     else:  # gloss, none
         dark = base.darker(170)
+    if bg:
+        back = bg if isinstance(bg, Color) else Color.parse(str(bg))
+        if abs(dark.lightness() - back.lightness()) < OUTLINE_CONTRAST:
+            dark = base.lighter(170) if back.lightness() < 128 else base.darker(260)
+            if abs(dark.lightness() - back.lightness()) < OUTLINE_CONTRAST:
+                dark = readable_on(back)
     return text.replace("{c}", base.name()).replace("{l}", light.name()) \
         .replace("{d}", dark.name())
 
@@ -279,8 +287,11 @@ class Picture:
     path2x: str = ""
 
 
+OUTLINE_CONTRAST = 70  # of HSL lightness, 0–255: less, and the outline is lost
+
+
 @functools.lru_cache(maxsize=1024)
-def picture(pset, name, accent, svg_ok=True):
+def picture(pset, name, accent, svg_ok=True, bg=None):
     """What to draw: Picture("svg", text) coloured for this set and accent
     ("#rrggbb"), or Picture("png", path); None when neither the set nor the fallback
     has it. svg_ok=False: a frontend that can't draw SVG — PNGs only."""
@@ -297,9 +308,9 @@ def picture(pset, name, accent, svg_ok=True):
         return None
     own = pset.color_of(name) or pset.color_of(p.stem) or pset.color
     try:
-        return Picture("svg", text=styled(text, pset.style, own or accent))
+        return Picture("svg", text=styled(text, pset.style, own or accent, bg))
     except ValueError:  # a colour that isn't one (themefile warned): the accent
-        return Picture("svg", text=styled(text, pset.style, accent))
+        return Picture("svg", text=styled(text, pset.style, accent, bg))
 
 
 def has_png(pset):
