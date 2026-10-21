@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.17.0 — in progress
+## 0.17.0 — 2026-10-21
 
 - **A GTK 4 window, the frame of it** (`fedtail --ui gtk`, or `ui.frontend = "gtk"`;
   `ui.adwaita = auto | on | off` — libadwaita if installed, required, or never): login,
