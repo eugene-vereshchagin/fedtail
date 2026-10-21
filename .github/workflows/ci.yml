@@ -277,7 +277,7 @@ jobs:
       - name: Rebuild the site
         if: steps.release.outputs.released == 'true'
         env:
-          HOOK: ${{ secrets.SITE_DEPLOY_HOOK }}
+          HOOK: ${{ secrets.SITE_DEPLOY_HOOK || secrets.DOCS_UPDATE }}
         run: |
           if [ -z "$HOOK" ]; then echo "::warning::no SITE_DEPLOY_HOOK secret: the site was not rebuilt"; exit 0; fi
           curl -fsS -X POST "$HOOK" || echo "::warning::the site's deploy hook failed"
