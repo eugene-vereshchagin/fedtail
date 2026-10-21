@@ -1421,6 +1421,11 @@ class MainWindow(Gtk.ApplicationWindow):
     def call(self, future, ok=None, fail=None):
         return self.bridge.call(future, ok, fail or self.error)
 
+    def edit_profile(self):
+        """My profile edited: name, bio, fields, pictures, who may follow."""
+        from .profiledit import ProfileEditor
+        return ProfileEditor(self)
+
     def ask_text(self, title, question, then, text="", allow_empty=False):
         from .dialogs import ask_text
         return ask_text(self, title, question, then, text, allow_empty=allow_empty)

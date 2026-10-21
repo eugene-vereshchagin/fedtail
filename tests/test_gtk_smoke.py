@@ -384,6 +384,15 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(len(asked), 1)
         self.assertEqual(prof.parse_langs("ru; en  de"), ["ru", "en", "de"])
 
+    def test_edit_my_profile(self):
+        """My profile's Edit as in Qt: loaded, only what changed goes to the server."""
+        ed = self.win.edit_profile()
+        self.assertTrue(pump(lambda: ed.loaded is not None, 5))
+        self.assertEqual(ed.changes(), {})
+        ed.name.set_text("Новое имя")
+        self.assertEqual(ed.changes(), {"name": "Новое имя"})
+        ed.dlg.close()
+
     def test_find_in_the_lane(self):
         """Ctrl+F as in Qt: the words, "1 of 1", the card brought and marked."""
         bar = self.win.find_bar

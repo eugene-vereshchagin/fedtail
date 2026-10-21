@@ -10,6 +10,7 @@ me (Relationship) and what my server can do. `do()` carries one out through a `h
   confirm(title, text, then)         ask first; then() on yes
   ask_text(title, question, then, text="")   a line to type; then(text)
   compose(text=...)  open_people(acc, which)  copy_handle(handle)  open_url(url)
+  edit_profile()
   status(text)  error(text)
 
 and `changed(rel)` gets the relationship as it is afterwards (the server's answer, or
@@ -55,6 +56,8 @@ def actions(acc, rel, mine, cfg, supports, lists=False):
     """The profile's buttons, in order."""
     rel = rel or Relationship()
     out = []
+    if mine:
+        out.append(Act("edit_profile", _("edit_profile")))
     if not mine:
         following = rel.following
         out.append(Act("follow", _("unfollow") if following else
@@ -157,6 +160,8 @@ def do(key, acc, rel, view, host, changed):
                       lambda text: host.call(view.set_note(acc.id, text.strip(), old),
                                              after(note=text.strip()), host.error),
                       note_text(old), allow_empty=True)
+    elif key == "edit_profile":
+        host.edit_profile()
     elif key == "copy_handle":
         host.copy_handle(acc.handle)
     elif key == "open_browser":
