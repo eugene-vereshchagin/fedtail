@@ -229,6 +229,9 @@ class GtkSmokeTest(_GtkBase):
 
     def test_new_post_joins_at_the_bottom(self):
         lane = self._lane("home")
+        # the lane done building first (in a busy run it may still be): what's on screen
+        pump(lambda: lane.positioned and not lane._pending() and len(lane.order) ==
+             len(lane.keys), 5)
         before = list(lane.order)
         self.world.add(status("020", BOB, minute=20, text="новое"), home=True)
         self.core.poll_once()
