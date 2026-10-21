@@ -4,7 +4,8 @@ Read `docs/ARCHITECTURE.md` first: it maps every module, the threads, the store
 schema, the lanes, the poll cycle, the events and the Qt frontend, with recipes
 for common changes. `docs/DESIGN.md` (Russian) is the product spec and the queue
 of planned work; `docs/PROTOCOLS.md` (Russian) is the agreed plan to make Mastodon one
-protocol among others behind fedtail's own data model. `docs/DEBUGGING.md` explains the logs a user can send; `docs/TESTING.md` is the page
+protocol among others behind fedtail's own data model; `docs/GTK.md` (Russian) is the plan
+and the state of the GTK 4 frontend (`fedtail/frontends/gtk/`). `docs/DEBUGGING.md` explains the logs a user can send; `docs/TESTING.md` is the page
 for alpha testers (install, what to try, how to report); `docs/en/features.md` (and
 `docs/ru/`) is the feature table (have / partly / no / planned, since which version, other
 clients, the config switch for each) — generated, see "Docs" below.
@@ -17,6 +18,8 @@ python3 -m unittest discover -s tests -t .   # all tests; Qt ones skip without P
 QT_QPA_PLATFORM=offscreen python3 -m unittest tests.test_qt_smoke
 ruff check .                             # line length 100
 python3 tools/screenshots.py out/        # PNGs of every theme with made-up data
+xvfb-run -a python3 -m unittest tests.test_gtk_smoke   # the GTK window (python3-gi gir1.2-gtk-4.0)
+python3 tools/gtk_screenshots.py out/ system point     # the same for GTK (runs xvfb-run itself)
 ```
 
 Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests`

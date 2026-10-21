@@ -2,6 +2,14 @@
 
 ## 0.17.0 — in progress
 
+- **A GTK 4 window, the frame of it** (`fedtail --ui gtk`, or `ui.frontend = "gtk"`;
+  `ui.adwaita = auto | on | off` — libadwaita if installed, required, or never): login,
+  the lanes in their groups with unread counts, posts as cards with what they answer,
+  the content warning and attachments, seen posts marked read, "All read", "earlier",
+  threads in tabs, ★ and ♻, every fedtail theme. The rest comes stage by stage
+  (docs/GTK.md); needs `python3-gi gir1.2-gtk-4.0`. Inside: the theme colours
+  (`frontends/palette.py`) and post text for GTK labels (`frontends/pango.py`) are
+  worked out without a toolkit, ready for Qt to share.
 - The server's rate limit is kept to: fedtail reads its X-RateLimit headers, keeps
   quiet once fewer requests are left than two poll rounds and a reserve, until the
   server's window starts anew, and asks nothing while it is spent. One line in the

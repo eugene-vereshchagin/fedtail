@@ -192,6 +192,6 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Commands in a terminal | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | A terminal interface (Textual) | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
-| GTK4 + libadwaita | ⏳ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
+| GTK4 + libadwaita | ◐ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
 Only in fedtail — **31** features of the 130 compared.

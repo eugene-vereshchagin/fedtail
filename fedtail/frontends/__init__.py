@@ -17,6 +17,10 @@ FRONTENDS = {
             "  Debian 13:  sudo apt install python3-textual\n"
             "  elsewhere:  pip install 'textual>=0.86'"),
     "web": ("fedtail.frontends.web", ""),
+    "gtk": ("fedtail.frontends.gtk",
+            "The GTK interface needs PyGObject and GTK 4.\n"
+            "  Debian 13:  sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1\n"
+            "  elsewhere:  your distribution's PyGObject and GTK 4 packages"),
 }
 
 
@@ -25,7 +29,7 @@ def load(name):
     try:
         return importlib.import_module(module)
     except ImportError as e:
-        if any(x in str(e) for x in ("PySide6", "shiboken", "textual", "rich")):
+        if any(x in str(e) for x in ("PySide6", "shiboken", "textual", "rich", "GTK 4")):
             print(f"fedtail: {hint}", file=sys.stderr)
             sys.exit(3)
         raise

@@ -6,6 +6,7 @@
 - The database doesn't grow for ever: cleanup and a size budget
 - Help inside, in two languages
 - “What's this?”: a longer hint about any button
+- GTK4 + libadwaita
 
 **0.16.0:**
 

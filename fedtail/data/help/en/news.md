@@ -13,6 +13,7 @@ What's new in the latest versions, and the plans.
 - The database doesn't grow for ever: cleanup and a size budget
 - Help inside, in two languages
 - “What's this?”: a longer hint about any button
+- GTK4 + libadwaita
 
 **0.16.0:**
 
@@ -37,7 +38,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| GTK4 + libadwaita | Interfaces | — | large |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |
 | An installer and a signature for Windows | Builds and installing | — | — |

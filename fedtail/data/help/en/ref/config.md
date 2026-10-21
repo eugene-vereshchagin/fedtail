@@ -89,7 +89,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `ui.icon_count` | `["replies", "mentions", "subs", "requests"]` | Which lanes not to count on the icon, even if they are in icon_count (say, with |
 | `ui.icon_count_except` | `[]` |  |
 | `ui.language` | `"auto"` | The interface language: "auto" (from LANG), "ru", "en". |
-| `ui.frontend` | `"qt"` | The interface: "qt" — a window; "tui" — in a terminal (needs Textual: python3-textual or pip install textual), the same as `fedtail --ui tui`; "web" — in a browser (`--ui web`). |
+| `ui.frontend` | `"qt"` | The interface: "qt" — a window; "tui" — in a terminal (needs Textual: python3-textual or pip install textual), the same as `fedtail --ui tui`; "web" — in a browser (`--ui web`); "gtk" — a GTK 4 window for GNOME and other GTK desktops, a frame so far (python3-gi gir1.2-gtk-4.0; `--ui gtk`). |
+| `ui.adwaita` | `"auto"` | The GTK interface: libadwaita — "auto" (when installed), "on" (don't start without it), "off" (plain GTK: looks more at home in XFCE, MATE, Cinnamon). |
 
 ### Window, keys, start
 

@@ -57,15 +57,16 @@ details.en = "fedtail in a browser tab: lanes, threads as trees, profiles, a “
 
 [[feature]]
 id = "gtk"
-status = "planned"
+status = "partly"
+since = "0.17.0"
 name = "GTK4 + libadwaita"
-config = "—"
+status_note.ru = "каркас"
+status_note.en = "a frame"
+config = "`ui.frontend = \"gtk\"`, `ui.adwaita`"
 others = "Tuba"
 clients = ["Tuba"]
-size.ru = "крупный"
-size.en = "large"
-details.ru = "Чтобы выглядело родным в GNOME и прочих GTK-столах."
-details.en = "To look native in GNOME and other GTK desktops."
+details.ru = "Чтобы выглядело родным в GNOME и прочих GTK-столах. Пока каркас: вход, ленты по группам с числом непрочитанного, посты карточками (контекст ответа, предупреждение под катом, вложения строкой), «увиденное — прочитано», «Всё прочитано», «раньше», треды во вкладках, ★ и ♻, темы fedtail. Писать, картинки, меню поста и остальное — по этапам [GTK.md](/docs/GTK.md); полное окно пока — Qt. Нужны `python3-gi gir1.2-gtk-4.0`, libadwaita (`gir1.2-adw-1`) — по желанию."
+details.en = "To look native in GNOME and other GTK desktops. A frame so far: login, lanes in groups with their unread counts, posts as cards (what a reply answers, the content warning, attachments as a line), seen means read, “All read”, “earlier”, threads in tabs, ★ and ♻, fedtail's themes. Writing, pictures, the post menu and the rest come stage by stage ([GTK.md](/docs/GTK.md), in Russian); the full window is Qt for now. Needs `python3-gi gir1.2-gtk-4.0`; libadwaita (`gir1.2-adw-1`) is optional."
 
 [[feature]]
 id = "toga"

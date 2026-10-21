@@ -13,6 +13,7 @@ DEFAULTS = {
     "account": {"markdown": "auto"},
     "ui": {
         "frontend": "qt",
+        "adwaita": "auto",
         "language": "auto",
         "theme": "system",
         "font_size": 0,
@@ -244,7 +245,8 @@ CHOICES = {
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
     ("account", "markdown"): {"auto", "on", "off"},
-    ("ui", "frontend"): {"qt", "tui", "web"},
+    ("ui", "frontend"): {"qt", "tui", "web", "gtk"},
+    ("ui", "adwaita"): {"auto", "on", "off"},
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "image_viewer"): {"internal", "browser"},
     ("ui", "video_player"): {"internal", "browser"},

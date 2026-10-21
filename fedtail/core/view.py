@@ -702,13 +702,17 @@ class View:
         """Subscribe to a core event; payloads that carry server objects come as model
         ones: status_updated → Post, me_updated → Account, requests_updated →
         [Account]. Ids and lane maps pass as they are."""
-        conv = {"status_updated": lambda st: self._post_back(st),
-                "me_updated": lambda me: adapter.account(me, self.profile),
-                "requests_updated": lambda accs: [self.acc(a) for a in accs or ()]}.get(name)
-        if conv is None:
-            self._core.events.on(name, fn)
-        else:
-            self._core.events.on(name, lambda n, p: fn(n, conv(p)))
+        self._core.events.on(name, lambda n, p: fn(n, self.event_payload(n, p)))
+
+    def event_payload(self, name, payload):
+        """An event's payload as the model (see on()); anything else as it is."""
+        if name == "status_updated" and isinstance(payload, dict) and payload.get("id"):
+            return self._post_back(payload)
+        if name == "me_updated" and isinstance(payload, dict):
+            return adapter.account(payload, self.profile)
+        if name == "requests_updated":
+            return [self.acc(a) for a in payload or ()]
+        return payload
 
 
 def is_entry(x):

@@ -204,8 +204,14 @@ icon_count_except = []
 language = "auto"
 
 # Интерфейс: "qt" — окно; "tui" — в терминале (нужен Textual: python3-textual или
-# pip install textual), то же, что `fedtail --ui tui`; "web" — в браузере (`--ui web`).
+# pip install textual), то же, что `fedtail --ui tui`; "web" — в браузере (`--ui web`);
+# "gtk" — окно на GTK 4 для GNOME и прочих GTK-столов, пока каркас (python3-gi
+# gir1.2-gtk-4.0; `--ui gtk`).
 frontend = "qt"
+
+# GTK-интерфейс: libadwaita — "auto" (если установлена), "on" (без неё не запускаться),
+# "off" (чистый GTK: в XFCE, MATE, Cinnamon смотрится родней).
+adwaita = "auto"
 
 # ── Окно, клавиши, запуск ───────────────────────────────────────────────────────────
 

@@ -89,7 +89,8 @@
 | `ui.icon_count` | `["replies", "mentions", "subs", "requests"]` | Какие ленты не считать на иконке, даже если они есть в icon_count (например, при |
 | `ui.icon_count_except` | `[]` |  |
 | `ui.language` | `"auto"` | Язык интерфейса: "auto" (из LANG), "ru", "en". |
-| `ui.frontend` | `"qt"` | Интерфейс: "qt" — окно; "tui" — в терминале (нужен Textual: python3-textual или pip install textual), то же, что `fedtail --ui tui`; "web" — в браузере (`--ui web`). |
+| `ui.frontend` | `"qt"` | Интерфейс: "qt" — окно; "tui" — в терминале (нужен Textual: python3-textual или pip install textual), то же, что `fedtail --ui tui`; "web" — в браузере (`--ui web`); "gtk" — окно на GTK 4 для GNOME и прочих GTK-столов, пока каркас (python3-gi gir1.2-gtk-4.0; `--ui gtk`). |
+| `ui.adwaita` | `"auto"` | GTK-интерфейс: libadwaita — "auto" (если установлена), "on" (без неё не запускаться), "off" (чистый GTK: в XFCE, MATE, Cinnamon смотрится родней). |
 
 ### Окно, клавиши, запуск
 

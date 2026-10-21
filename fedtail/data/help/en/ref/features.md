@@ -612,7 +612,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | Commands in a terminal | has | 0.9.0 | `[cli]`: `enabled`, `color`, `max_lines`, `tail_lanes` | tut (TUI), toot (CLI) |
 | A terminal interface (Textual) | has | 0.10.0 | `ui.frontend = "tui"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows` | tut |
 | Web on localhost | has | 0.10.0 | `ui.frontend = "web"`, `[web]`: `host`, `port`, `open_browser` | Phanpy, Elk — web clients |
-| GTK4 + libadwaita | planned | — | — | Tuba |
+| GTK4 + libadwaita | partly — a frame | 0.17.0 | `ui.frontend = "gtk"`, `ui.adwaita` | Tuba |
 | Toga (BeeWare) | planned | — | — | — |
 
 <details><summary>In detail</summary>
@@ -623,7 +623,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 
 **Web on localhost.** fedtail in a browser tab: lanes, threads as trees, profiles, a “Write” button (content warning, who sees it, language, drafts), pictures in a grid with a viewer, video and audio, polls with voting, link cards, quotes, custom emoji, “More” at a lane's end, the Point command line; on a phone the lanes slide in from the side, light and dark follow the system. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = "0.0.0.0"` — from the phone on the home network too; no encryption, for your own network only. The ≡ menu (write, my profile, refresh, all read, help, keys, about) and a post's ⋯ menu (reply with quote, subscribe / leave / mute the thread, copy the link, delete my post). A reply shows the whole post: select a piece and “❝ Quote in reply” puts it where the cursor is. The viewer goes through a post's pictures with ← / →.
 
-**GTK4 + libadwaita.** To look native in GNOME and other GTK desktops.
+**GTK4 + libadwaita.** To look native in GNOME and other GTK desktops. A frame so far: login, lanes in groups with their unread counts, posts as cards (what a reply answers, the content warning, attachments as a line), seen means read, “All read”, “earlier”, threads in tabs, ★ and ♻, fedtail's themes. Writing, pictures, the post menu and the rest come stage by stage ([GTK.md](/docs/GTK.md), in Russian); the full window is Qt for now. Needs `python3-gi gir1.2-gtk-4.0`; libadwaita (`gir1.2-adw-1`) is optional.
 
 **Toga (BeeWare).** Native widgets of Windows, macOS, GTK, Android from one code. To try out.
 
@@ -670,7 +670,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| GTK4 + libadwaita | Interfaces | — | large |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |
 | An installer and a signature for Windows | Builds and installing | — | — |
