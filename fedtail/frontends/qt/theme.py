@@ -201,7 +201,9 @@ class Theme:
             return ""
         g = (f"qlineargradient(x1:1, y1:0, x2:0, y2:1, stop:0 {self.css('view')}, "
              f"stop:1 {self.css('view_end')})")
-        return (f"QScrollArea#feed > QWidget#qt_scrollarea_viewport {{ background: {g}; }}\n"
+        # on the scroll area itself: Qt paints a QAbstractScrollArea's background into its
+        # viewport, and the earlier flat rule for it won over one on the viewport
+        return (f"QScrollArea#feed {{ background: {g}; }}\n"
                 f"QWidget#feedBody {{ background: transparent; }}\n"
                 f"QPlainTextEdit#dockText {{ background: {g}; }}")
 
