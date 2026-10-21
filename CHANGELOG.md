@@ -2,6 +2,15 @@
 
 ## 0.18.0 — in progress
 
+- tools/selfcheck.py: every check the dev tools have, on your own machine, in one go —
+  the tests; a walk through the Qt window (every theme, the split layout, every menu
+  with the list of what's in it, every dialog the ≡ menu opens; tools/qt_tour.py); how
+  fast Qt and GTK are (tools/qt_bench.py, gtk_bench.py); GTK screenshots; the terminal
+  interface (every lane, the thread, the profile, the pictures screen, every key, and
+  whether pictures are drawn; tools/tui_check.py); the web page in a real browser
+  (every lane, the ≡ and ⋯ menus, the editor, the picture viewer, a phone's width, the
+  page's console; tools/web_check.py). What can't run there is skipped; at the end a
+  report.md and one zip to send back. Linux, Windows, macOS.
 - GTK, faster: a post's text is one Pango layout now, not a wrapping label (that laid
   the text out several times to learn its size: nine tenths of what a card cost), so a
   lane lays out four times faster; cards come a batch a frame, as many as the last

@@ -20,6 +20,11 @@ ruff check .                             # line length 100
 python3 tools/screenshots.py out/        # PNGs of every theme with made-up data
 xvfb-run -a python3 -m unittest tests.test_gtk_smoke   # the GTK window (python3-gi gir1.2-gtk-4.0)
 python3 tools/gtk_screenshots.py out/ system point     # the same for GTK (runs xvfb-run itself)
+python3 tools/selfcheck.py [--quick]     # all below at once on this machine → report.md + zip
+python3 tools/qt_tour.py out/ --native   # every theme, menu (inventory) and dialog of Qt
+python3 tools/qt_bench.py / gtk_bench.py # freezes: start, lanes, scroll, menu, themes
+python3 tools/tui_check.py out/          # Textual: every lane, screen and key; SVG shots
+python3 tools/web_check.py out/          # the web page in Chromium (Playwright): lanes, menus
 ```
 
 Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-requests`

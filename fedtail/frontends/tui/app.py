@@ -73,9 +73,11 @@ class PostItem(ListItem):
         self.entry = entry  # a Post or a Share
         self.key = key
         self.text = text
+        self.has_picture = False
 
     def set_picture(self, pic):
         """The post's first picture under its text (tui.pictures = "inline")."""
+        self.has_picture = pic is not None
         self.body.update(self.text + Text("\n") + pic if pic is not None else self.text)
 
 
