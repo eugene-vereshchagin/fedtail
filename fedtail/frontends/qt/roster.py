@@ -291,6 +291,7 @@ class RosterWindow(QWidget):
         v.addWidget(self.bottom)
         self.head_box = head
         self.rows, self.heads = {}, {}
+        self._queue, self._tall = [], {}
         self.folded = set(win.core.get_state("roster_folded", []) or [])
         got = win.core.get_state("roster_look", {}) or {}
         self.look = dict(LOOK, **{k: bool(v) for k, v in got.items() if k in LOOK})
@@ -327,7 +328,9 @@ class RosterWindow(QWidget):
             if g.name in self.heads:
                 self.heads[g.name].show_counts(g, g.name in self.folded)
             for item in g.items:
-                self.rows[row_key(item)].update_item(item)
+                row = self.rows.get(row_key(item))
+                if row is not None:  # not built yet: it comes with this very item
+                    row.update_item(item)
         self._filter(self.search.text())
 
     def _build(self, groups, append=False):
@@ -337,36 +340,58 @@ class RosterWindow(QWidget):
         finally:
             self.list.setUpdatesEnabled(True)
 
+    BATCH = 16  # rows built at a time: a full roster at once froze the window ~350 ms
+
     def _build_rows(self, groups, append=False):
+        """The rows, a batch now and the rest a batch a tick after (each RosterRow is a
+        handful of widgets): the roster shows at once and fills in as it goes."""
         if not append:
             self.list.clear()
             self.rows, self.heads = {}, {}
-        tall = {}  # a row's height, measured once a shape (asking each is slow)
+            self._queue = []
+            self._tall = {}  # a row's height, measured once a shape (asking each is slow)
         for g in groups:
-            if not g.items:
-                continue
-            it = QListWidgetItem()
-            it.setData(Qt.ItemDataRole.UserRole, None)
-            it.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            head = RosterHeader(self, g.name)
-            it.setSizeHint(QSize(0, head.sizeHint().height()))
-            self.list.addItem(it)
-            self.list.setItemWidget(it, head)
-            self.heads[g.name] = head
-            for item in g.items:
+            if g.items:
+                self._queue.append(("head", g, None))
+                self._queue += [("row", g, item) for item in g.items]
+        self._build_some()
+
+    def _build_some(self):
+        n = 0
+        self.list.setUpdatesEnabled(False)
+        try:
+            while self._queue and n < self.BATCH:
+                kind, g, item = self._queue.pop(0)
+                if kind == "head":
+                    it = QListWidgetItem()
+                    it.setData(Qt.ItemDataRole.UserRole, None)
+                    it.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                    head = RosterHeader(self, g.name)
+                    head.show_counts(g, g.name in self.folded)
+                    it.setSizeHint(QSize(0, head.sizeHint().height()))
+                    self.list.addItem(it)
+                    self.list.setItemWidget(it, head)
+                    self.heads[g.name] = head
+                    continue
                 row_it = QListWidgetItem()
                 row = RosterRow(self, item)
                 row_it.setData(Qt.ItemDataRole.UserRole, row.key)
                 row_it.setData(Qt.ItemDataRole.UserRole + 1, g.name)
                 shape = (row.compact, row.faces, bool(row.line.text()),
                          row.status.isVisibleTo(row))
-                if shape not in tall:
+                if shape not in self._tall:
                     h = row.sizeHint().height()
-                    tall[shape] = h if row.compact else max(h, row.face.height() + 8)
-                row_it.setSizeHint(QSize(0, tall[shape]))
+                    self._tall[shape] = h if row.compact else max(h, row.face.height() + 8)
+                row_it.setSizeHint(QSize(0, self._tall[shape]))
                 self.list.addItem(row_it)
                 self.list.setItemWidget(row_it, row)
                 self.rows[row.key] = row
+                n += 1
+        finally:
+            self.list.setUpdatesEnabled(True)
+        self._filter(self.search.text())
+        if self._queue:
+            QTimer.singleShot(0, self._build_some)
 
     def _show_me(self, me):
         if me is None:

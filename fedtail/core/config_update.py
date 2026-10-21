@@ -84,6 +84,39 @@ def _ours(block, fresh):
         difflib.SequenceMatcher(None, a, b).ratio() >= 0.6
 
 
+# options of older versions under a new name: (section, old) → (new, {old value: new})
+RENAMED = {
+    ("ui", "button_icons"): ("additional_icons", {"theme": "layout", "on": "all", "off": "none"}),
+}
+
+
+def renamed(user_text, report=None):
+    """Options set under an older name, set under the new one (their value put the new
+    way); one already set under the new name wins and the old line goes."""
+    lines, section, done = user_text.splitlines(), None, []
+    have = mentioned(user_text)
+    out = []
+    for line in lines:
+        m = _HEADER.match(line)
+        if m and not line.lstrip().startswith("#"):
+            section = m.group(1)
+        m = _OPTION.match(line)
+        if section and m and not line.lstrip().startswith("#") and \
+                (section, m.group(1)) in RENAMED:
+            new, values = RENAMED[(section, m.group(1))]
+            done.append(f"{section}.{m.group(1)} → {section}.{new}")
+            if new in have.get(section, set()):
+                continue  # the new one is there already: it wins
+            val = line.split("=", 1)[1].strip()
+            plain = val.strip('"')
+            val = f'"{values[plain]}"' if plain in values else val
+            line = f"{new} = {val}"
+        out.append(line)
+    if report is not None:
+        report["renamed"] = done
+    return "\n".join(out) + ("\n" if user_text.endswith("\n") else "")
+
+
 def refresh(user_text, example_text, report=None):
     """Explanations above options brought up to date; commented-out options this
     version doesn't know dropped (with their explanation). Values untouched."""
@@ -134,6 +167,7 @@ def update(user_text, example_text, report=None):
     """User text with every missing option added (commented) to its section, the
     explanations refreshed and options of older versions dropped (see refresh)."""
     rep = {} if report is None else report
+    user_text = renamed(user_text, rep)
     rep["added"] = missing(user_text, example_text)
     user_text = refresh(user_text, example_text, rep)
     have = mentioned(user_text)
@@ -212,6 +246,7 @@ def rebuild(user_text, example_text, report=None):
     its place. Options this version doesn't know are kept at the end of their
     section with a note. The user's own comments are not carried over."""
     import tomllib
+    user_text = renamed(user_text, report)
     user = tomllib.loads(user_text)
     out, section, ends, kept = [], None, {}, []
     for line in example_text.splitlines():

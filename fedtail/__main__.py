@@ -148,7 +148,8 @@ def main(argv=None):
                                                                                  "utf-8")
         where.config_file.write_text(new_text, "utf-8")
         print(f"fedtail: updated {where.config_file} (the old one is config.toml.bak)")
-        for what, keys in (("added", report["added"]),
+        for what, keys in (("renamed", report.get("renamed", [])),
+                           ("added", report["added"]),
                            ("explanation refreshed", report["refreshed"]),
                            ("dropped (no longer exists, was commented out)",
                             report["dropped"])):

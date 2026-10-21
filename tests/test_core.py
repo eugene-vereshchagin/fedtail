@@ -154,6 +154,28 @@ class ConfigUpdateTest(unittest.TestCase):
         self.assertLess(new.index("\nactions ="), new.index("\n[feed]"))  # inside [ui]
         self.assertEqual(cu.update(new, example), new)  # idempotent
 
+    def test_an_option_of_an_older_name_moves(self):
+        """ui.button_icons (0.17 dev) is ui.additional_icons now: --update-config moves
+        it, its value put the new way; the start says so instead of "unknown"."""
+        import tomllib
+
+        from fedtail.core import config_update as cu
+        example = config.example_text()
+        old = '[ui]\ntheme = "psi"\nbutton_icons = "on"\n'
+        self.assertTrue(any("additional_icons" in w
+                            for w in config.validate(tomllib.loads(old))[1]))
+        report = {}
+        new = cu.update(old, example, report)
+        parsed = tomllib.loads(new)
+        self.assertNotIn("button_icons", parsed["ui"])
+        self.assertEqual(parsed["ui"]["additional_icons"], "all")
+        self.assertEqual(report["renamed"], ["ui.button_icons → ui.additional_icons"])
+        self.assertEqual(config.validate(parsed)[1], [])
+        self.assertEqual(cu.update(new, example), new)  # idempotent
+        both = '[ui]\nadditional_icons = "none"\nbutton_icons = "on"\n'
+        self.assertEqual(tomllib.loads(cu.update(both, example))["ui"]["additional_icons"],
+                         "none")  # the new name, set already, wins
+
     def test_update_a_packed_file(self):
         """A file of an older version, no blank lines: a new option lands in its own
         section (not under the next chapter's banner) and options get their gaps."""

@@ -390,7 +390,12 @@ def validate(user):
                 warnings.append('ui.esc_hides is now ui.esc ("curtain", "tray" or "off")')
                 continue
             if key not in DEFAULTS[section]:
-                warnings.append(f"unknown key {section}.{key} — ignored")
+                from .config_update import RENAMED
+                if (section, key) in RENAMED:  # an older name: say what it is now
+                    warnings.append(f"{section}.{key} is {section}.{RENAMED[(section, key)][0]} "
+                                    "now — `--update-config` moves it")
+                else:
+                    warnings.append(f"unknown key {section}.{key} — ignored")
                 continue
             default = DEFAULTS[section][key]
             # bool is a subclass of int: check it strictly

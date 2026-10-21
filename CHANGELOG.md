@@ -57,8 +57,11 @@
 - `fedtail --layout single|columns|split` and `--theme NAME`: the layout or the theme for
   one run, the config untouched; an account switched to from there gets them too.
 - Less freezing: trying a theme no longer stops the window for seconds (the lanes out of
-  sight let their cards go first), and the split layout no longer lays the whole window
-  out twice a second.
+  sight let their cards go first), the split layout no longer lays the whole window out
+  twice a second, and the roster fills in a batch of rows at a time.
+- `--update-config` moves an option that changed its name (`ui.button_icons` of the 0.17
+  development builds is `ui.additional_icons`), and the start says what it is now
+  instead of "unknown key".
 - Less freezing after a poll: the lanes and their unread counts are worked out in the
   poll thread before the window hears of news, and unread counts are cached until a
   lane or a read mark changes — the sidebar asked every lane after every event, reading
