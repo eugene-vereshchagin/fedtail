@@ -286,3 +286,17 @@ others.ru = "KDE-приложения (What's This)"
 others.en = "KDE apps (What's This)"
 details.ru = "Включил — и при наведении мыши вместо короткой подсказки всплывает подробная: что кнопка делает, какой ключ конфига её меняет и в каком разделе справки об этом больше. Выключается тем же пунктом меню."
 details.en = "Turn it on, and hovering shows a longer hint instead of the short one: what the button does, which config key changes it and which help section says more. The same menu item turns it off."
+
+[[feature]]
+id = "sound-scheme"
+status = "planned"
+name.ru = "Звуковая схема"
+name.en = "A sound scheme"
+config = "—"
+others.ru = "QIP, ICQ, Mail.ru Агент, Psi"
+others.en = "QIP, ICQ, Mail.ru Agent, Psi"
+size.ru = "средний"
+size.en = "medium"
+details.ru = "Звука в fedtail пока нет вообще. Звуки — часть темы, как значки: папка темы, свой набор у мессенджерных (новое сообщение, ответ, упоминание, вход), выключаемо."
+details.en = "fedtail has no sound at all yet. Sounds are part of a theme, as its pictures are: the theme's folder, a set of their own for the messengers' themes (a new message, a reply, a mention, signing in), switchable off."
+

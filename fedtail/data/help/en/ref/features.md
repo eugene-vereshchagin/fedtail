@@ -567,6 +567,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Interface language | has | 0.1.0 | `ui.language` | — | everyone |
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
 | “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `ui.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
+| A sound scheme | planned | — | — | — | QIP, ICQ, Mail.ru Agent, Psi |
 
 <details><summary>In detail</summary>
 
@@ -604,6 +605,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **“What's this?”: a longer hint about any button.** Turn it on, and hovering shows a longer hint instead of the short one: what the button does, which config key changes it and which help section says more. The same menu item turns it off.
 
+**A sound scheme.** fedtail has no sound at all yet. Sounds are part of a theme, as its pictures are: the theme's folder, a set of their own for the messengers' themes (a new message, a reply, a mention, signing in), switchable off.
+
 </details>
 
 ---
@@ -618,7 +621,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | Commands in a terminal | has | 0.9.0 | `[cli]`: `enabled`, `color`, `max_lines`, `tail_lanes` | tut (TUI), toot (CLI) |
 | A terminal interface (Textual) | has | 0.10.0 | `ui.frontend = "tui"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows` | tut |
 | Web on localhost | has | 0.10.0 | `ui.frontend = "web"`, `[web]`: `host`, `port`, `open_browser` | Phanpy, Elk — web clients |
-| GTK4 + libadwaita | partly — a frame | 0.17.0 | `ui.frontend = "gtk"`, `ui.adwaita` | Tuba |
+| GTK4 + libadwaita | partly — most of what Qt has | 0.17.0 | `ui.frontend = "gtk"`, `ui.adwaita` | Tuba |
 | Toga (BeeWare) | planned | — | — | — |
 
 <details><summary>In detail</summary>
@@ -627,9 +630,9 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 
 **A terminal interface (Textual).** Lanes on the left, posts on the right, the command line at the bottom. The same keys, `x` — the lane is read, `:` — the command line. Lanes — `[` / `]`, digits `1`…`9`, `h` — into the lane list (`j` / `k` there), `l` — back to the posts, Tab — to and fro. “Activity” and “Follow requests” have rows of their own (in requests `a` — accept, `d` — reject). Pictures are drawn with half blocks: the first one small right in the lane (`tui.pictures`, `tui.picture_rows`), `v` — all of them full screen, ← / → between them, `o` — the original in the browser; needs Pillow (`python3-pil`) and a true colour terminal. Works over ssh. Needs `python3-textual`.
 
-**Web on localhost.** fedtail in a browser tab: lanes, threads as trees, profiles, a “Write” button (content warning, who sees it, language, drafts), pictures in a grid with a viewer, video and audio, polls with voting, link cards, quotes, custom emoji, “More” at a lane's end, the Point command line; on a phone the lanes slide in from the side, light and dark follow the system. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = "0.0.0.0"` — from the phone on the home network too; no encryption, for your own network only. The ≡ menu (write, my profile, refresh, all read, help, keys, about) and a post's ⋯ menu (reply with quote, subscribe / leave / mute the thread, copy the link, delete my post). A reply shows the whole post: select a piece and “❝ Quote in reply” puts it where the cursor is. The viewer goes through a post's pictures with ← / →.
+**Web on localhost.** fedtail in a browser tab: lanes, threads as trees, profiles, a “Write” button (content warning, who sees it, language, drafts), pictures in a grid with a viewer, video and audio, polls with voting, link cards, quotes, custom emoji, “More” at a lane's end, the Point command line; on a phone the lanes slide in from the side, light and dark follow the system. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = "0.0.0.0"` — from the phone on the home network too; no encryption, for your own network only. The ≡ menu (write, my profile, refresh, all read, help, keys, about); a post's ⋯ menu — the same as the Qt and GTK windows', the same items in the same order (since 0.18: open, copy the link, the #id and the handle, reply with quote, call into the thread, bookmark, who quoted, subscribe / mute the thread, mute / block the author and the server, report, edit, pin, delete, delete and redraft — the risky ones ask first); a profile's buttons as in the windows too (follow, the bell, boosts and languages in Home, mention, mute, block, remove from followers, endorse, a note). A reply shows the whole post: select a piece and “❝ Quote in reply” puts it where the cursor is. The viewer goes through a post's pictures with ← / →.
 
-**GTK4 + libadwaita.** To look native in GNOME and other GTK desktops. It has: login, lanes in groups with their unread counts, posts as cards (the face, what a reply answers, the content warning, pictures, a poll's results, the quoted post, the link's card, “you replied”), the post's buttons and menu — the same as Qt's, asking before the risky ones, seen means read, “All read”, “earlier”, threads in tabs, writing / replying / quoting / calling in / correcting with drafts, who sees it, the warning, pictures with descriptions, a poll and Tab completion, the Point command line (Ctrl+L), profiles in tabs, Activity, follow requests, notifications, fedtail's themes. Not yet: search, lists, the tray, help, the picture viewer, the split layout — stage by stage ([GTK.md](/docs/GTK.md), in Russian); the full window is Qt for now. Needs `python3-gi gir1.2-gtk-4.0`; libadwaita (`gir1.2-adw-1`) is optional.
+**GTK4 + libadwaita.** To look native in GNOME and other GTK desktops. It has: login, lanes in groups with their unread counts, posts as cards (the face, what a reply answers, the content warning, pictures, a poll's results, the quoted post, the link's card, “you replied”), the post's buttons and menu — the same as Qt's, asking before the risky ones, seen means read, “All read”, “earlier”, threads in tabs, writing / replying / quoting / calling in / correcting with drafts, who sees it, the warning, pictures with descriptions, a poll and Tab completion, the Point command line (Ctrl+L), profiles in tabs, Activity, follow requests, notifications, fedtail's themes. Since 0.18 also: find in the lane (Ctrl+F), the split layout, the picture viewer, help as a panel, voting in polls, translating a post, “read it whole”, an edit's history, reporting, who liked and boosted, quotes of my post, “read up to here”, a profile with all of Qt's buttons and editing my own, quotes saying why one can't be shown. Not yet: managing lists and tags, the server's announcements, the tray, the video player — stage by stage ([GTK.md](/docs/GTK.md), in Russian); what Qt has and GTK doesn't — `tools/parity.py`. Needs `python3-gi gir1.2-gtk-4.0`; libadwaita (`gir1.2-adw-1`) is optional.
 
 **Toga (BeeWare).** Native widgets of Windows, macOS, GTK, Android from one code. To try out.
 
@@ -676,6 +679,7 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
+| A sound scheme | The application | — | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |
 | An installer and a signature for Windows | Builds and installing | — | — |

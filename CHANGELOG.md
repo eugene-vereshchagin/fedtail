@@ -2,6 +2,21 @@
 
 ## 0.18.0 — in progress
 
+- The four interfaces offer the same things. The web page's ⋯ menu of a post is the
+  windows' own (common/actions.py: the same items, the same order) and its links are
+  done the way the windows do them — editing, delete and redraft, calling into a
+  thread, who quoted, blocking a server, report, read up to here; a profile's buttons
+  come from one place (common/profile.py) for GTK and the web — the bell, boosts and
+  languages in Home, remove from followers, endorse, a private note. GTK caught up with
+  Qt on: find in the lane (Ctrl+F), voting in polls, translating a post, reading the
+  whole text from its server, an edit's history, reporting, who liked or boosted, the
+  quotes of my post, read up to here, editing my profile, quotes that say why they
+  can't be shown, "old" and "edited" marks, what each lane is (its tooltip).
+  tools/parity.py says what is still missing where.
+- Scrolling a long lane fast: the benches measure how often the reader hits the edge
+  of what's built and waits (a hand's 6 and 15 screens a second, a fling, the thumb
+  dragged); GTK builds ahead faster — while the reader keeps coming to an end, and
+  while standing at it.
 - Sync between your devices: read marks you made and threads you followed, left or
   muted travel to your other devices (`sync.*`, off by default; docs/en/sync.md). Each
   device keeps a journal, sealed with AES-256-GCM under a key only your devices have, and
