@@ -186,6 +186,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
            padding: 6px 12px; font-size: 1.4em; }}
 .ft-help-toc row {{ padding: 3px 8px; }}
 .ft-help-toc .ft-help-deep {{ font-weight: bold; padding-top: 8px; }}
+scrollbar slider {{ margin: 0; min-width: 6px; min-height: 6px; }}
 .ft-face-frame {{ border: 1px solid {c['card_border']}; border-radius: 4px;
                   background: {c['card']}; }}
 """

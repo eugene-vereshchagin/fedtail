@@ -11,7 +11,10 @@
   on its left or right where the screen has room, else at the screen's edge with the
   window narrowed beside it (a place saved over the window is corrected once).
 - The web interface writes dates and times in fedtail's language, not the browser's.
-- GTK: the lanes' counters are pills, not ovals as high as the row.
+- GTK: the lanes' counters are pills, not ovals as high as the row. A lane's column
+  measured its cards narrower than they can be ("needs at least 814", some 20 000
+  warnings in a night's log, and heights worked out for a width never given); the
+  desktop theme's scroll bars no longer warn of negative sizes either.
 - selfcheck --night: everything in one run, for the night — the tests (each by name,
   the slowest, and where a hung one stood), the walks of every interface, the window at
   six sizes with what each cut or pushed out, its edge and the sidebar's dragged and

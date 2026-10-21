@@ -138,7 +138,11 @@ def _clamp_class():
 
         def do_measure(self, orientation, for_size):
             if orientation == Gtk.Orientation.VERTICAL and for_size >= 0:
-                for_size = min(for_size, self.max_width)
+                # the width the child will get — never below what it needs: measured at
+                # less, GTK warned at every layout ("needs at least 814"), 20 000 lines
+                # a bench, and the height came out for a width it never had
+                lo_w = self.child.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+                for_size = max(lo_w, min(for_size, self.max_width))
             lo, nat, lo_b, nat_b = self.child.measure(orientation, for_size)
             if orientation == Gtk.Orientation.HORIZONTAL:
                 nat = max(lo, min(nat, self.max_width))
