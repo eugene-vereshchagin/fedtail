@@ -136,6 +136,19 @@ fedtail/
     helpdocs.py      the in-app help and the "What's this?" hints (no Qt): pages from
                      data/help/<lang>/, links resolved (help page, deep dive, GitHub, web),
                      search, the hint behind a tooltip's text
+    palette.py       a theme's colours without a toolkit: "auto" from the desktop,
+                     FOLLOWS/TINTS, QColor's lighter/darker copied (both windows use it)
+    pango.py         post HTML → Pango markup (GTK labels)
+    common/          what both windows decide alike, no toolkit (a test checks):
+      links.py       fedtail:<action>/<arg> — what each link does; the window is a host
+                     with call/status/error/confirm/compose/open_* (§14b)
+      actions.py     the buttons under a post and its ⋯ menu: what, when, which link
+      compose.py     writing rules: draft key, what an editor starts with, counter,
+                     #tag/@name/:emoji: being typed, polls, keep or drop a draft
+      commands.py    the Point command line: Commands (run), preview, History — the
+                     terminal, the web page and both windows
+      activity.py    the Activity lane's rows: grouping, act_key, the words, notices
+    gtk/             the GTK 4 frontend (PyGObject, libadwaita optional): docs/GTK.md
     qt/              the Qt Widgets frontend (PySide6)
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics
       bridge.py      core futures and events → GUI thread (Qt signals)
@@ -531,6 +544,11 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `error` | text | recoverable failure | status bar (and the log) |
 | `unsupported` | feature name | the server answered 404 to it | its menu items and buttons hide |
 | `auth_failed` | text | 401/403 | re-login dialog |
+| `arrived` | [(post id, reply-to id)] | new posts stored | thread tabs grow, faces |
+| `thread_grew` | root id | a followed thread got replies | its tab reloads |
+| `rate_limited` | {until, left, …} | the server's budget is low | one status line |
+| `capabilities_changed` | feature | the server answered "no such thing" | buttons hide at once |
+| `prefetch` / `prefetch_video` | [urls] | after a poll | pictures/videos fetched ahead |
 
 ## 14. The Qt frontend
 
@@ -569,6 +587,35 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 * **Notifications**: `notify.Notifier` → `notify-send --action=open --wait` in a
   thread (so "Open" can bring the window to the thread), tray balloon otherwise;
   silent while the window is active unless `notify.when_focused`.
+
+## 14b. Shared decisions and the GTK frontend
+
+Both windows draw; what a link does, which actions a post offers, how writing works
+and what the command line does is decided once in `frontends/common/` (no toolkit, a
+test in `test_layering.py` checks). A window hands every `fedtail:` link to
+`Links(view, host).open(url)`; the host answers `call` (the bridge), `status`, `error`,
+`confirm(title, text, then)` — then() only on yes, and it may come later (GTK's dialogs
+don't block) — `compose(reply_to, invite, edit, quote)` and the `open_*` places. A host
+that lacks a place yet (GTK: report, quotes…) gets a "not here yet" status. Qt's host is
+`_LinkHost` in window.py, GTK's is its `MainWindow`.
+
+The GTK frontend (`frontends/gtk/`, docs/GTK.md has the plan and the stages):
+
+* `__init__.py` run(): libadwaita if `ui.adwaita` allows, `Gtk.Application`
+  NON_UNIQUE (fedtail has its own instance socket), app id `version.APP_ID`.
+* `bridge.py` — futures and events into the GLib main loop (`GLib.idle_add`), the event
+  payloads already the model (`View.event_payload`).
+* `lane.py` — a lane builds only a window of cards (`WINDOW` around where reading starts),
+  in `BATCH_MS` batches between frames, `STEP` more near an end, trimmed past `MAX_ROWS`;
+  rows going in above the view hold it still (`_hold`: height changes in the same frame,
+  the top post put back on each frame tick). `seen()` decides "read".
+* `card.py` — the card from the model and `common/actions.py`; `images.py` — textures
+  from `View.media_bytes`, a byte-bounded LRU; `compose.py`, `cmdline.py` — the editor
+  and the command line on `common/compose.py` and `common/commands.py`.
+* `theme.py` — CSS from the theme files via `palette.py`; "auto" colours are Adwaita's
+  (GTK 4 has no desktop palette), the accent from libadwaita ≥ 1.6.
+* Outside GNOME the window keeps the desktop's frame (`ui.gtk_headerbar`): a frozen
+  client-side title bar can hold the pointer, as it did on KDE.
 
 ## 15. Themes
 

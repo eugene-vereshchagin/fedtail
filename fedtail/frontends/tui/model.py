@@ -6,10 +6,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ...core import config
-from ...core.commands import parse
 from ...i18n import _
 from ...model import Share, real
-from ...model.text import html_to_text, reply_mentions, snippet
+from ...model.text import html_to_text, snippet
+from ..common.commands import Commands  # noqa: F401 — the TUI's, now shared
 
 
 @dataclass
@@ -102,81 +102,6 @@ class DeleteGuard:
             return True
         self.asked = (sid, now)
         return False
-
-
-class Commands:
-    """The command line (core/commands.py), carried out on the core (a core.view.View).
-    Each method returns a future; done(message) is how the interface hears back.
-    Results: a message, ("thread", post id), ("profile", Account), ("delete", Post),
-    or the Post made."""
-
-    def __init__(self, core):
-        self.core = core
-
-    def run(self, line, reply_to=None):
-        """(future or None, message or None). reply_to: the post the line answers
-        when the interface put "#alias " in front itself (the r key)."""
-        core = self.core
-        c = parse(line)
-        if c.kind == "error":
-            return None, _("cmd_unknown")
-        if c.kind == "help":
-            return None, _("cmd_help")
-        if c.kind == "post":
-            if not core.cfg["post"]["plain_posts"]:
-                return None, _("cmd_unknown")
-            return core.post(c.text, core.default_visibility()), _("sent")
-        if c.kind in ("follow", "unfollow", "direct", "profile"):
-            return self._user(c), None
-        if core.by_alias(c.alias) is None:
-            return None, _("cmd_no_post", alias=c.alias)
-        return self._post(c), None
-
-    def _user(self, c):
-        core = self.core
-
-        def job():
-            acc = core.find_user(c.user).result()
-            if acc is None:
-                return _("cmd_no_user", who=c.user)
-            if c.kind == "direct":
-                core.post(c.text, "direct").result()
-                return _("sent")
-            if c.kind == "profile":
-                return ("profile", acc)
-            on = c.kind == "follow"
-            core.follow(acc.id, on).result()
-            return _("cmd_followed" if on else "cmd_unfollowed", who=acc.handle)
-        return core.bg.submit(job)
-
-    def _post(self, c):
-        core = self.core
-
-        def job():
-            p = core.target(c.alias, c.number).result()
-            if p is None:
-                return _("cmd_no_comment", where=f"#{c.alias}/{c.number}")
-            if c.kind == "open":
-                return ("thread", p.id)
-            if c.kind == "reply":
-                me = core.me
-                text = reply_mentions(p, me.handle if me else "") + c.text
-                core.post(text, core.reply_visibility(p), p).result()
-                return _("sent")
-            if c.kind in ("sub", "unsub"):
-                (core.subscribe if c.kind == "sub" else core.unsubscribe)(p).result()
-                return _("subbed" if c.kind == "sub" else "unsubbed")
-            if c.kind == "boost":
-                core.share(p).result()
-                return _("cmd_boosted")
-            if c.kind == "bookmark":
-                on = not p.mine.bookmarked
-                core.bookmark(p, on).result()
-                return _("bookmarked" if on else "unbookmarked")
-            if c.kind == "delete":
-                return ("delete", p)
-            return None
-        return core.bg.submit(job)
 
 
 def lane_label(core, name, width=22):

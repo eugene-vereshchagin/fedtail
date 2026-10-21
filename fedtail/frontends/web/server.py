@@ -28,8 +28,8 @@ from ...core.view import View
 from ...i18n import _
 from ...model import Account, Share, real
 from ...model.text import reply_mentions, snippet
+from ..common.commands import Commands
 from ..richtext import clean
-from ..tui.model import Commands
 
 log = logging.getLogger(__name__)
 

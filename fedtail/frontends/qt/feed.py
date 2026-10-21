@@ -28,6 +28,8 @@ from ...i18n import _
 from ...model import Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
+from ..common import activity
+from ..common.activity import ACT_KINDS, act_key
 from ..richtext import plain_tip
 from .card import CardSpec, PostRow, SeparatorRow, make_spec
 from .card import _set_prop as _mark
@@ -2127,17 +2129,7 @@ class ActivityWidget(QWidget):
         bar.rangeChanged.connect(lambda *_a: self._seen_timer.start())
         self.refresh()
 
-    @staticmethod
-    def groups(entries):
-        """Neighbouring Activity of one kind about one post become one row."""
-        out = []
-        for a in entries:
-            key = (act_key(a), a.post.id if a.post else None)
-            if out and out[-1]["key"] == key:
-                out[-1]["entries"].append(a)
-            else:
-                out.append({"key": key, "entries": [a]})
-        return out
+    groups = staticmethod(activity.groups)  # one kind about one post: one row
 
     def refresh(self):
         built = self.lay.count() > 0
@@ -2337,38 +2329,8 @@ class ActivityWidget(QWidget):
         self.refresh()
 
 
-# the i18n words a row of activity can say (act_<key>); its card's "kind" is the key
-ACT_KINDS = tuple(k[4:] for k in (
-    "act_favourite", "act_reblog", "act_follow", "act_poll", "act_update", "act_status",
-    "act_pending.reply", "act_pending.favourite", "act_pending.reblog",
-    "act_severed_relationships", "act_moderation_warning"))
-
-
-def _notice_text(n):
-    """What the server's own notice (a Notice) says: follows cut by a block, a
-    moderators' warning."""
-    if n.kind == "severed":
-        return _("act_severed", target=n.target or "?", n=n.lost,
-                 why=_("severed_" + (n.reason or "domain_block")))
-    if n.kind == "warning":
-        return _("act_warning", action=_("warn_" + (n.action or "none")), text=n.text[:300])
-    return ""
-
-
-# fedtail.model's kinds → the words for them in i18n (act_<key>) and a card's "kind"
-_ACT_KEY = {"like": ACT_KINDS[0], "share": ACT_KINDS[1], "follow": ACT_KINDS[2],
-            "poll": ACT_KINDS[3], "update": ACT_KINDS[4], "post": ACT_KINDS[5]}
-_ASKS_KEY = {"reply": ACT_KINDS[6], "like": ACT_KINDS[7], "share": ACT_KINDS[8]}
-_NOTICE_KEY = {"severed": ACT_KINDS[9], "warning": ACT_KINDS[10]}
-
-
-def act_key(a):
-    """An Activity's key among ACT_KINDS (or its model kind, for the others)."""
-    if a.kind == "request":
-        return _ASKS_KEY.get(a.asks, "request")
-    if a.kind == "notice":
-        return _NOTICE_KEY.get(a.details.kind if a.details else "", "notice")
-    return _ACT_KEY.get(a.kind, a.kind)
+# the Activity lane's words and grouping are shared with GTK (common/activity.py)
+_notice_text = activity.notice_text
 
 
 class AccountRow(QFrame):

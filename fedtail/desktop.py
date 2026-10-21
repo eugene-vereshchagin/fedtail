@@ -102,8 +102,9 @@ def source_dir():
 
 
 def _windows_install(profile):
-    """A Start menu shortcut (a .lnk, made by PowerShell's WScript.Shell)."""
-    stem = desktop_id(profile)
+    """A Start menu shortcut (a .lnk, made by PowerShell's WScript.Shell). Its name is
+    the one people see in the menu: "fedtail", "fedtail-<profile>" — not the app id."""
+    stem = old_ids(profile)[0]
     menu = Path(os.environ.get("APPDATA") or Path.home() / "AppData/Roaming") / \
         "Microsoft/Windows/Start Menu/Programs"
     menu.mkdir(parents=True, exist_ok=True)

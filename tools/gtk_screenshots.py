@@ -42,6 +42,8 @@ NEWS["display_name"] = "Погода на побережье"
 
 def world():
     w = fakes.World()
+    for a in (KOT, OSTAP, NEWS, ME):
+        a["avatar_static"] = f"https://example.test/a/{a['id']}.png"
     mine = w.add(status("100", ME, minute=1, vis="public",
                         text="<p>Переезжаю с Drive2 на свою ноду. Кто уже, как оно?</p>"),
                  home=True)
@@ -56,11 +58,44 @@ def world():
     cw = status("103", KOT, minute=12, text="<p>Под катом.</p>")
     cw["spoiler_text"] = "спойлер про сериал"
     w.add(cw, home=True)
-    w.add(status("104", NEWS, minute=20, vis="public",
-                 text="<p>Сильный порывистый ветер до 20 м/с на побережье.</p>"), home=True)
+    pic = status("104", KOT, minute=20, vis="public",
+                 text="<p>Сильный порывистый ветер до 20 м/с на побережье.</p>")
+    pic["media_attachments"] = [{"type": "image", "url": "https://example.test/m/sea.png",
+                                 "preview_url": "https://example.test/m/sea_s.png",
+                                 "description": "Волны у причала"}]
+    w.add(pic, home=True)
     w.add(status("105", OSTAP, minute=25, text="<p>А <code>~~это~~</code> ~~зачёркнуто~~"
                                                 "</p>"), home=True)
     return w
+
+
+def png(w, h, rgb):
+    """A plain PNG of one colour (the made-up avatars and pictures), no Pillow needed."""
+    import struct
+    import zlib
+    raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + \
+            struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+FACES = {"K": (0xd9, 0xc7, 0xa3), "O": (0x5a, 0x3d, 0x5c), "N": (0x2f, 0x6f, 0x8f),
+         "ME": (0x8a, 0x3c, 0x3c)}
+
+
+def fake_media(url):
+    """View.media_bytes without the network: a face per person, a picture per post."""
+    from concurrent.futures import Future
+    f = Future()
+    key = url.rsplit("/", 1)[-1].split(".")[0]
+    if key in FACES:
+        f.set_result(png(48, 48, FACES[key]))
+    else:
+        f.set_result(png(320, 180, (0x6f, 0x9a, 0x6a)))
+    return f
 
 
 def pump(seconds):
@@ -96,6 +131,7 @@ def run(out, theme_name, dark):
     core._origin_json = lambda url: None
     Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", dark)
     view = View(core)
+    view.media_bytes = fake_media
     win = MainWindow(None, core, view, Bridge(view), themes.apply(cfg))
     win.set_default_size(1000, 700)
     win.present()
@@ -105,6 +141,12 @@ def run(out, theme_name, dark):
     pump(1.5)
     name = f"gtk-{theme_name}-{'dark' if dark else 'light'}.png"
     shoot(win, out / name)
+    lane = win.lane_views.get("home")
+    if lane is not None:  # and the lane's end: the picture, the newest posts
+        lane.adj.set_value(lane.adj.get_upper())
+        pump(0.6)
+        shoot(win, out / name.replace(".png", "-end.png"))
+    win.close()
     win.destroy()
     core.shutdown()
     print(out / name)

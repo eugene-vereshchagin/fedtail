@@ -124,12 +124,26 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-card label link, .ft-ctx label link {{ color: {c['link']}; }}
 .ft-separator {{ color: {c['separator']}; border-bottom: 1px dashed {c['separator']};
                 padding: 2px 0; font-size: smaller; }}
-.ft-action {{ background: {c['button']}; border: 1px solid {c['button_border']};
-             border-radius: {br}px; color: {c['muted']}; padding: 0 8px; min-height: 22px; }}
+.ft-action {{ background: transparent; border: 1px solid transparent; box-shadow: none;
+             border-radius: {br}px; color: {c['muted']}; padding: 0 6px; min-height: 22px; }}
+menubutton.ft-action > button {{ background: transparent; border-color: transparent;
+    box-shadow: none; min-height: 22px; padding: 0 6px; }}
+.ft-action:hover {{ background: {c['button']}; border-color: {c['button_border']}; }}
+.ft-card label link, .ft-ctx label link, .ft-myreply label link {{
+    text-decoration-line: none; }}
+.ft-card .ft-muted link, .ft-card .ft-mono link {{ color: {c['muted']}; }}
+.ft-card .ft-ctx link {{ color: {c['muted']}; }}
 .ft-action.ft-active {{ background: {c['active']}; color: {c['on_active']}; }}
 .ft-primary {{ background: {c['primary']}; color: {c['on_primary']}; border-radius: {br}px; }}
 .ft-status {{ color: {c['muted']}; padding: 2px 8px; font-size: smaller; }}
 .ft-rail {{ border-left: 2px solid {c['rail']}; }}
+.ft-avatar-circle {{ border-radius: 9999px; }}
+.ft-avatar-rounded {{ border-radius: 6px; }}
+.ft-avatar-square {{ border-radius: 0; }}
+.ft-thumb {{ border-radius: {br}px; background: {c['ctx']}; }}
+.ft-cmdline {{ background: {c['panel']}; padding: 4px 0; }}
+.ft-cmdline entry {{ font-family: monospace; }}
+.ft-card levelbar block.filled {{ background: {c['accent']}; }}
 """
 
 

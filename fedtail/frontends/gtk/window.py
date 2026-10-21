@@ -14,7 +14,9 @@ from ...core import lanes as lanes_mod
 from ...i18n import _
 from ...model import real
 from .. import richtext
+from ..common.links import Links
 from . import login
+from .activity import ActivityLane, RequestsLane
 from .card import Card
 from .gi_setup import Gio, GLib, Gtk, Pango
 from .lane import LaneView, y_in
@@ -22,6 +24,7 @@ from .lane import LaneView, y_in
 log = logging.getLogger(__name__)
 
 BADGE_KIND = {"replies": "hot", "bots": "quiet", "activity": "quiet"}  # as qt/window.py
+SPECIAL = {"activity": ActivityLane, "requests": RequestsLane}  # lanes that aren't posts
 
 
 @dataclass
@@ -33,7 +36,25 @@ class Ctx:
     bridge: object
     win: object = None
     in_thread: bool = False
+    images: object = None
     extra: dict = field(default_factory=dict)
+
+    @property
+    def me_id(self):
+        me = self.view.me
+        return me.id if me is not None else None
+
+    def supports(self, what):
+        try:
+            return bool(self.view.supports(what))
+        except Exception:  # noqa: BLE001 — not connected yet
+            return False
+
+    def subscribed(self, entry):
+        return self.view.subscribed(entry)
+
+    def thread_quiet(self, entry):
+        return self.view.thread_quiet(entry)
 
     def on_link(self, uri):
         self.win.on_link(uri)
@@ -43,9 +64,6 @@ class Ctx:
 
     def open_thread(self, post):
         self.win.open_thread(post)
-
-    def act(self, what, post):
-        self.win.act(what, post)
 
     def status(self, text):
         self.win.status(text)
@@ -79,10 +97,17 @@ class MainWindow(Gtk.ApplicationWindow):
         self.core, self.view, self.bridge, self.theme = core, view, bridge, theme
         self.cfg = core.cfg
         self.add_css_class("fedtail")
-        self.ctx = Ctx(self.cfg, view, theme, bridge, self)
+        from .images import Images
+        self.images = Images(view, bridge, self.cfg["ui"].get("image_cache_mb", 64))
+        self.ctx = Ctx(self.cfg, view, theme, bridge, self, images=self.images)
+        self.links = Links(view, self)  # what fedtail: links do (common/links.py)
+        self.cmdline = None
+        from .notify import Notifier
+        self.notifier = Notifier(self, app)
         self.lane_views = {}     # name -> LaneView
         self.lane_rows = {}      # name -> LaneRow
         self.threads = {}        # root post id -> page widget
+        self.accounts = {}       # account id -> page widget
         self.quitting = False
         bridge.on_event = self.on_event
         bridge.on_error = lambda text: self.status(_("error", err=text))
@@ -91,11 +116,16 @@ class MainWindow(Gtk.ApplicationWindow):
         refresh = Gtk.Button(icon_name="view-refresh-symbolic")
         refresh.set_tooltip_text(_("refresh"))
         refresh.connect("clicked", lambda _b: self.view.poll_now())
+        write = Gtk.Button(label=_("write"))
+        write.add_css_class("ft-primary")
+        write.add_css_class("suggested-action")
+        write.connect("clicked", lambda _b: self.compose())
         self.who = Gtk.Label()
         self.who.add_css_class("ft-muted")
         toolbar = None
         if own_titlebar(self.cfg):
             header = Gtk.HeaderBar()
+            header.pack_start(write)
             header.pack_start(refresh)
             header.pack_end(self.who)
             self.set_titlebar(header)
@@ -103,6 +133,7 @@ class MainWindow(Gtk.ApplicationWindow):
             toolbar = Gtk.Box(spacing=6)
             toolbar.add_css_class("toolbar")
             refresh.add_css_class("flat")
+            toolbar.append(write)
             toolbar.append(refresh)
             spacer = Gtk.Box()
             spacer.set_hexpand(True)
@@ -143,11 +174,43 @@ class MainWindow(Gtk.ApplicationWindow):
             outer.append(toolbar)
         paned.set_vexpand(True)
         outer.append(paned)
+        if self.cfg["ui"]["command_line"]:
+            from .cmdline import CommandLine
+            self.cmdline = CommandLine(self)
+            outer.append(self.cmdline)
         outer.append(self.status_line)
         self.set_child(outer)
 
+        self._shortcuts()
         self.connect("notify::is-active", lambda *_a: self._activated())
         self.connect("close-request", self._close_request)
+        self.connect("destroy", self._stop)
+
+    def _shortcuts(self):
+        """The same keys as the Qt window where it has the thing: Ctrl+L the command line,
+        Ctrl+N write, F5 refresh, Ctrl+W a thread's tab, Ctrl+Q quit. (Never F1: it sits
+        next to Esc.)"""
+        ctl = Gtk.ShortcutController()
+        ctl.set_scope(Gtk.ShortcutScope.GLOBAL)
+
+        def add(trigger, fn):
+            ctl.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string(trigger),
+                                              Gtk.CallbackAction.new(lambda *_a: (fn(), True)[1])))
+        add("<Control>l", lambda: self.cmdline is not None and self.cmdline.entry.grab_focus())
+        add("<Control>n", self.compose)
+        add("F5", self.view.poll_now)
+        add("<Control>q", self.close)
+        add("<Control>w", self._close_current_tab)
+        self.add_controller(ctl)
+
+    def _close_current_tab(self):
+        page = self.tabs.get_nth_page(self.tabs.get_current_page())
+        root = next((r for r, p in self.threads.items() if p is page), None)
+        if root is not None:
+            self.close_thread(root)
+        acc = next((a for a, p in self.accounts.items() if p is page), None)
+        if acc is not None:
+            self.close_account(acc)
 
     # ---- start -----------------------------------------------------------------------
     def start(self):
@@ -181,8 +244,9 @@ class MainWindow(Gtk.ApplicationWindow):
             groups = [(None, [x.name for x in self.view.lanes if not lanes_mod.is_list(x.name)]),
                       ("lists", [x.name for x in self.view.lanes if lanes_mod.is_list(x.name)])]
         for group, names in groups:
-            # follow requests and activity aren't status streams: not in GTK yet
-            names = [n for n in names if n in by_name and by_name[n].source is not None]
+            # lanes that aren't status streams: only Activity and follow requests are known
+            names = [n for n in names if n in by_name and
+                     (by_name[n].source is not None or n in SPECIAL)]
             if not names or (group == "lists" and not self.cfg["lists"]["enabled"]):
                 continue
             if group:
@@ -216,7 +280,7 @@ class MainWindow(Gtk.ApplicationWindow):
         lv = self.lane_views.get(name)
         if lv is None:
             title = self.view.lane_title(name) or _("lane_" + _base(name))
-            lv = LaneView(self.ctx, name, title)
+            lv = SPECIAL[name](self) if name in SPECIAL else LaneView(self.ctx, name, title)
             self.lane_views[name] = lv
             self.stack.add_named(lv, name)
         self.stack.set_visible_child(lv)
@@ -225,10 +289,21 @@ class MainWindow(Gtk.ApplicationWindow):
         self.view.set_state("lane", name)
         lv.shown()
 
+    def lane_title(self, name):
+        return self.view.lane_title(name) or _("lane_" + _base(name))
+
+    def lane_on_screen(self, name):
+        return self.tabs.get_current_page() == 0 and self._current_lane() == name
+
     def update_badges(self):
         for name, row in self.lane_rows.items():
             try:
-                row.set_count(self.view.unread_count(name))
+                if name == "activity":
+                    row.set_count(int(self.view.activity_unread() or 0))
+                elif name == "requests":
+                    row.set_count(len(self.view.follow_requests() or ()))
+                else:
+                    row.set_count(self.view.unread_count(name))
             except Exception:  # noqa: BLE001 — a lane the core doesn't count
                 row.set_count(0)
 
@@ -247,6 +322,8 @@ class MainWindow(Gtk.ApplicationWindow):
         if name in ("lanes_updated", "parents", "read_changed", "arrived"):
             changed = payload if name == "lanes_updated" and isinstance(payload, dict) else None
             for lname, lv in self.lane_views.items():
+                if lname in SPECIAL:
+                    continue
                 if changed is None or lname in changed:
                     # only the lane on screen catches up now; the others when shown
                     if lv.get_mapped():
@@ -254,16 +331,25 @@ class MainWindow(Gtk.ApplicationWindow):
                     else:
                         lv.dirty = True
             self.update_badges()
-        elif name == "status_updated":
-            post = payload
-            for lv in self.lane_views.values():
-                lv.update_post(real(post))
+        elif name == "status_updated" and payload is not None:
+            self._post_changed(payload)
         elif name == "status_deleted":
             for lv in self.lane_views.values():
                 if lv.get_mapped():
                     lv.refresh()
                 else:
                     lv.dirty = True
+        elif name in ("activity_updated", "activity_seen", "requests_updated"):
+            lname = "requests" if name == "requests_updated" else "activity"
+            lv = self.lane_views.get(lname)
+            if lv is not None and name != "activity_seen":
+                if lv.get_mapped():
+                    lv.refresh()
+                else:
+                    lv.dirty = True
+            self.update_badges()
+        elif name == "notify":
+            self.notifier.notify(payload)
         elif name == "lists_changed":
             self._rebuild_sidebar()
         elif name == "me_updated" and self.view.me is not None:
@@ -278,12 +364,7 @@ class MainWindow(Gtk.ApplicationWindow):
             login.LoginDialog(self, self._connect,
                               expect=(server, acct) if server and acct else None).present()
 
-    # ---- actions ------------------------------------------------------------------------
-    def act(self, what, post):
-        fn = {"like": self.view.like, "share": self.view.share}[what]
-        self.bridge.call(fn(post), lambda got: got and self._post_changed(got),
-                         lambda err: self.status(_("error", err=err)))
-
+    # ---- posts -------------------------------------------------------------------------
     def _post_changed(self, got):
         for lv in self.lane_views.values():
             lv.update_post(real(got))
@@ -293,38 +374,20 @@ class MainWindow(Gtk.ApplicationWindow):
                     card.update(real(got))
 
     def open_thread(self, post):
-        root = real(post).id
+        """A thread in a tab of its own; post: a Post, a Share or a post id."""
+        root = real(post).id if not isinstance(post, str) else post
         page = self.threads.get(root)
         if page is not None:
             self.tabs.set_current_page(self.tabs.page_num(page))
             return
-        page = Gtk.ScrolledWindow()
-        page.add_css_class("ft-view")
-        page.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        box = Gtk.ListBox()
-        box.set_selection_mode(Gtk.SelectionMode.NONE)
-        box.add_css_class("ft-feed")
-        box.set_margin_start(8)
-        box.set_margin_end(8)
-        page.set_child(box)
+        page, box, title = self._new_tab(_("thread_loading"),
+                                         lambda: self.close_thread(root))
         page.focus_id = root
         self.threads[root] = page
-        tab = Gtk.Box(spacing=4)
-        title = Gtk.Label(label=_("thread_loading"))
-        title.set_max_width_chars(24)
-        title.set_ellipsize(Pango.EllipsizeMode.END)
-        tab.append(title)
-        close = Gtk.Button(icon_name="window-close-symbolic")
-        close.add_css_class("flat")
-        close.connect("clicked", lambda _b: self.close_thread(root))
-        tab.append(close)
-        n = self.tabs.append_page(page, tab)
-        self.tabs.set_tab_reorderable(page, True)
-        self.tabs.set_current_page(n)
-        self._tab_switched()
 
         def got(items):
-            ctx = Ctx(self.cfg, self.view, self.theme, self.bridge, self, in_thread=True)
+            ctx = Ctx(self.cfg, self.view, self.theme, self.bridge, self, in_thread=True,
+                      images=self.images)
             posts = [it.post for it in items]
             unread = self.view.unread(posts)
             short = self.view.short_ids(posts)
@@ -352,21 +415,198 @@ class MainWindow(Gtk.ApplicationWindow):
             self.tabs.remove_page(self.tabs.page_num(page))
         self._tab_switched()
 
-    # ---- links -------------------------------------------------------------------------
-    def on_link(self, uri):
-        if uri.startswith("fedtail:"):
-            action, _sep, arg = uri[len("fedtail:"):].partition("/")
-            if action == "thread":
-                post = self.view.by_id(arg)
-                if post is not None:
-                    self.open_thread(post)
-                    return
-            if action == "resolve" and richtext.openable(arg):
-                self.open_url(arg)
-                return
-            self.status(_("gtk_not_yet"))
+    def _new_tab(self, text, close_fn):
+        """A tab after the lanes: a scrolled list of cards; (page, list, title label)."""
+        page = Gtk.ScrolledWindow()
+        page.add_css_class("ft-view")
+        page.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        box = Gtk.ListBox()
+        box.set_selection_mode(Gtk.SelectionMode.NONE)
+        box.add_css_class("ft-feed")
+        box.set_margin_start(8)
+        box.set_margin_end(8)
+        page.set_child(box)
+        tab = Gtk.Box(spacing=4)
+        title = Gtk.Label(label=text)
+        title.set_width_chars(10)  # an ellipsized label asks for nothing: give it room
+        title.set_max_width_chars(24)
+        title.set_ellipsize(Pango.EllipsizeMode.END)
+        tab.append(title)
+        close = Gtk.Button(icon_name="window-close-symbolic")
+        close.add_css_class("flat")
+        close.connect("clicked", lambda _b: close_fn())
+        tab.append(close)
+        n = self.tabs.append_page(page, tab)
+        self.tabs.set_tab_reorderable(page, True)
+        self.tabs.set_current_page(n)
+        self._tab_switched()
+        return page, box, title
+
+    # ---- profiles ----------------------------------------------------------------------
+    def open_account(self, acc_id):
+        """A profile in a tab: the face, name, bio, counts, Follow and Mention, the posts."""
+        page = self.accounts.get(acc_id)
+        if page is not None:
+            self.tabs.set_current_page(self.tabs.page_num(page))
             return
-        self.open_url(uri)
+        page, box, title = self._new_tab(_("loading"), lambda: self.close_account(acc_id))
+        self.accounts[acc_id] = page
+        me = self.view.me
+        own = me is not None and me.id == acc_id
+
+        def got_account(acc):
+            if acc is None:
+                title.set_text(_("load_failed", err="?"))
+                return
+            title.set_text("@" + acc.handle)
+            box.append(self._profile_head(acc, own))
+            self.call(self.view.account_posts(acc_id), got_posts)
+
+        def got_posts(posts):
+            short = self.view.short_ids(posts)
+            for p in posts:
+                box.append(Card(self.ctx, p.id, p, short_id=short.get(real(p).id)))
+        self.call(self.view.account(acc_id), got_account,
+                  lambda err: title.set_text(_("load_failed", err=err)))
+
+    def close_account(self, acc_id):
+        page = self.accounts.pop(acc_id, None)
+        if page is not None:
+            self.tabs.remove_page(self.tabs.page_num(page))
+        self._tab_switched()
+
+    def _profile_head(self, acc, own):
+        from .card import Avatar, link_markup, name_of
+        head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        head.add_css_class("ft-card")
+        top = Gtk.Box(spacing=10)
+        top.append(Avatar(self.ctx, acc, 64))
+        names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        name = Gtk.Label(label=name_of(acc), xalign=0)
+        name.add_css_class("ft-name")
+        name.add_css_class("title-3")
+        names.append(name)
+        handle = Gtk.Label(xalign=0, selectable=True)
+        handle.set_markup(link_markup(acc.url or "", "@" + acc.handle))
+        handle.connect("activate-link", lambda _l, u: (self.open_url(u), True)[1])
+        handle.add_css_class("ft-muted")
+        names.append(handle)
+        counts = Gtk.Label(xalign=0, label=" · ".join((
+            _("posts_n", n=acc.posts), _("followers_n", n=acc.followers),
+            _("following_n", n=acc.following))))
+        counts.add_css_class("ft-muted")
+        names.append(counts)
+        names.set_hexpand(True)
+        top.append(names)
+        buttons = Gtk.Box(spacing=6)
+        buttons.set_valign(Gtk.Align.START)
+        if not own:
+            follow = Gtk.Button(label=_("follow"))
+            follow.add_css_class("ft-primary")
+            follow.set_sensitive(False)
+            buttons.append(follow)
+
+            def show(rel):
+                on = bool(rel and (rel.following or rel.requested))
+                follow.set_label(_("unfollow") if on else _("follow"))
+                follow.set_sensitive(True)
+                follow.following = on
+
+            def toggle(_b):
+                follow.set_sensitive(False)
+                self.call(self.view.follow(acc.id, not getattr(follow, "following", False)),
+                          show, lambda e: (follow.set_sensitive(True), self.error(e)))
+            follow.connect("clicked", toggle)
+            self.call(self.view.relationship(acc.id), show,
+                      lambda _e: follow.set_sensitive(True))
+            mention = Gtk.Button(label=_("mention"))
+            mention.connect("clicked", lambda _b: self.compose(text=f"@{acc.handle} "))
+            buttons.append(mention)
+        top.append(buttons)
+        head.append(top)
+        if acc.note:
+            from .. import pango
+            bio = Gtk.Label(xalign=0, wrap=True, selectable=False)
+            bio.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            bio.set_markup(pango.markup(self.view.in_app_html(acc.note)))
+            bio.connect("activate-link", lambda _l, u: (self.on_link(u), True)[1])
+            head.append(bio)
+        for f in acc.fields:
+            from .. import pango
+            row = Gtk.Label(xalign=0, wrap=True)
+            row.set_markup(f"<b>{GLib.markup_escape_text(f.name)}</b>  " +
+                           ("✓ " if f.verified else "") + pango.markup(f.value))
+            row.connect("activate-link", lambda _l, u: (self.on_link(u), True)[1])
+            head.append(row)
+        return head
+
+    # ---- links: common/links.py asks these ---------------------------------------------
+    def on_link(self, uri):
+        self.links.open(uri)
+
+    def call(self, future, ok=None, fail=None):
+        return self.bridge.call(future, ok, fail or self.error)
+
+    def error(self, text):
+        self.status(_("error", err=text))
+
+    def confirm(self, title, text, then):
+        """Ask; then() on yes. GTK's dialogs answer later, so this never blocks."""
+        dlg = Gtk.AlertDialog()
+        dlg.set_message(title)
+        dlg.set_detail(text)
+        dlg.set_buttons([_("gtk_no"), _("gtk_yes")])
+        dlg.set_cancel_button(0)
+        dlg.set_default_button(1)
+
+        def done(d, res):
+            try:
+                if d.choose_finish(res) == 1:
+                    then()
+            except GLib.Error:
+                pass  # dismissed
+        dlg.choose(self, None, done)
+        self._asking = dlg  # (tests answer it)
+        return dlg
+
+    def compose(self, reply_to=None, invite=False, edit=None, quote=None, text=""):
+        from .compose import ComposeWindow
+        if self.view.me is None:
+            return None
+        win = ComposeWindow(self, reply_to=reply_to, invite=invite, edit=edit, quote=quote,
+                            text=text)
+        win.present()
+        return win
+
+    def redrafted(self, d):
+        """The deleted post back in the editor, as it was typed (d: a Redraft)."""
+        parent = self.view.by_id(d.reply_to) if d.reply_to else None
+        win = self.compose(reply_to=parent)
+        if win is not None:
+            win.fill(d.text, d.warning, d.visibility, d.language)
+        if d.media:
+            self.status(_("redraft_media", n=d.media))
+
+    def copy_handle(self, handle):
+        handle = "@" + handle.lstrip("@")
+        self.get_clipboard().set(handle)
+        self.status(_("handle_copied", handle=handle))
+
+    def put_alias(self, alias):
+        if self.cmdline is not None:
+            self.cmdline.put_alias(alias)
+
+    def resolve_link(self, url):
+        """A fediverse link: the post here when the server knows it, else outside."""
+        def got(found):
+            from ...model import Account, Post, Share
+            if isinstance(found, (Post, Share)):
+                self.open_thread(found)
+            elif isinstance(found, Account):
+                self.open_account(found.id)
+            else:
+                self.open_url(url)
+        self.call(self.view.resolve(url), got, lambda _e: self.open_url(url))
 
     def open_url(self, url):
         if not richtext.openable(url):
@@ -397,7 +637,13 @@ class MainWindow(Gtk.ApplicationWindow):
         if w > 0 and h > 0:
             self.view.set_state("gtk_window", f"{w}x{h}")
         self.quitting = True
+        self._stop()
         return False
+
+    def _stop(self, *_a):
+        for lv in self.lane_views.values():
+            lv.stop()
+        self.images.shutdown()
 
 
 # desktops whose windows draw their own title bar (client-side decorations): there the

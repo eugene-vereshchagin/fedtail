@@ -79,6 +79,7 @@ class GtkSmokeTest(unittest.TestCase):
     def tearDown(self):
         self.assertEqual(self.errors, [], "a handler failed")
         self.win.quitting = True
+        self.win.close()  # as a user would: the lanes stop their queued work
         self.win.destroy()
         pump(timeout=0.1)
         self.core.shutdown()
@@ -95,8 +96,7 @@ class GtkSmokeTest(unittest.TestCase):
         self.assertTrue(any("привет" in t for t in texts))
         # the reply's warning hides its text in an expander
         reply = next(c for c in lane.rows.values() if c.post.warning)
-        self.assertIsInstance(reply.get_first_child().get_next_sibling().get_next_sibling(),
-                              (Gtk.Expander, Gtk.Label))
+        self.assertTrue(any(isinstance(w, Gtk.Expander) for w in _walk(reply)))
 
     def test_seen_posts_get_read(self):
         """The window is active and every post fits: all are seen, so all are read."""
@@ -134,23 +134,166 @@ class GtkSmokeTest(unittest.TestCase):
         opened = []
         self.win.open_url = opened.append
         self.win.on_link("https://e.test/x")
-        self.win.on_link("fedtail:account/1")
         self.assertEqual(opened, ["https://e.test/x"])
-        self.assertTrue(self.win.status_line.get_text())
+        self.win.on_link("fedtail:account/B")  # a profile: a tab with the posts
+        self.assertTrue(pump(lambda: "B" in self.win.accounts and
+                             any(isinstance(w, Gtk.Button) and
+                                 w.get_label() in (i18n._("follow"), i18n._("unfollow"))
+                                 for w in _walk(self.win.accounts["B"])), 5))
+        self.win._close_current_tab()
+        self.assertNotIn("B", self.win.accounts)
+        self.win.on_link("fedtail:thread/011")
+        self.assertTrue(pump(lambda: "011" in self.win.threads, 5))
+        self.win.on_link("fedtail:copyhandle/bob%40social.example")
+        self.assertIn("@bob@social.example", self.win.status_line.get_text())
 
     def test_like_updates_the_card(self):
         lane = self._lane("home")
         card = next(c for c in lane.rows.values() if c.post.id == "011")
-        self.win.act("like", card.post)
+        fav = next(b for b in _walk(card.actions) if isinstance(b, Gtk.Button))
+        self.assertIn("☆", fav.get_label() + "".join(
+            b.get_label() or "" for b in _walk(card.actions) if isinstance(b, Gtk.Button)))
+        self.win.on_link("fedtail:fav/011")
         self.assertTrue(pump(lambda: card.post.mine.liked, 5))
+        self.assertTrue(any("ft-active" in b.get_css_classes() for b in _walk(card.actions)
+                            if isinstance(b, Gtk.Button)))
+
+    def test_post_menu_from_the_shared_list(self):
+        lane = self._lane("home")
+        card = next(c for c in lane.rows.values() if c.post.id == "011")
+        card._fill_menu(card.more)
+        labels = [b.get_label() for b in _walk(card.more.get_popover())
+                  if isinstance(b, Gtk.Button)]
+        self.assertIn(i18n._("open_browser"), labels)
+        self.assertIn(i18n._("block_acct", acct="bob@social.example"), labels)
+        self.assertNotIn(i18n._("delete"), labels)  # not mine
+
+    def test_delete_asks_first(self):
+        asked = []
+        self.win.confirm = lambda title, text, then: asked.append(then)
+        self.win.on_link("fedtail:delete/010")
+        self.assertEqual(len(asked), 1)
+        self.assertNotIn("010", self.world.deleted if hasattr(self.world, "deleted") else [])
+        asked[0]()  # yes
+        self.assertTrue(pump(lambda: self.view.by_id("010") is None or
+                             getattr(self.world, "deleted", None), 5))
+
+    def test_reply_in_the_editor(self):
+        from fedtail.frontends.gtk.compose import ComposeWindow
+        post = self.view.by_id("011")
+        dlg = self.win.compose(reply_to=post)
+        self.assertIsInstance(dlg, ComposeWindow)
+        self.assertTrue(dlg._text().startswith("@bob@social.example"))
+        dlg.buffer.insert_at_cursor("ответ из GTK")
+        before = len(self.world.posted)
+        dlg.send()
+        self.assertTrue(pump(lambda: len(self.world.posted) > before, 5))
+        text, _vis, reply_to, _md = self.world.posted[-1]
+        self.assertEqual(reply_to, "011")
+        self.assertTrue(text.endswith("ответ из GTK"))
+        self.assertFalse(self.view.get_draft(dlg.key))
+
+    def test_editor_keeps_a_draft(self):
+        dlg = self.win.compose()
+        dlg.buffer.set_text("недописанное")
+        dlg.close()
+        pump(timeout=0.2)
+        self.assertEqual(self.view.get_draft(dlg.key)["text"], "недописанное")
+        again = self.win.compose()
+        self.assertEqual(again._text(), "недописанное")
+        again.buffer.set_text("")
+        again.close()
+        pump(timeout=0.2)
+        self.assertFalse(self.view.get_draft(again.key))
+
+    def test_editor_pictures_and_poll(self):
+        import struct
+        import zlib
+        png = Path(self._tmp.name) / "p.png"
+        raw = b"\x00" + b"\x10\x20\x30" * 4
+
+        def chunk(k, d):
+            return struct.pack(">I", len(d)) + k + d + struct.pack(">I", zlib.crc32(k + d))
+        png.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(
+            ">IIBBBBB", 4, 1, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) +
+            chunk(b"IEND", b""))
+        dlg = self.win.compose()
+        dlg._add_media(str(png))
+        self.assertFalse(dlg.poll_btn.get_sensitive())  # pictures or a poll, not both
+        self.assertTrue(dlg.sensitive_btn.get_visible())
+        asked = []
+        dlg._ask_alt = asked.append
+        dlg.buffer.set_text("с картинкой")
+        dlg.send()
+        self.assertEqual(asked, [1])  # no description: asked first
+        dlg._remove_media(dlg.media[0], dlg.media_box.get_first_child())
+        self.assertTrue(dlg.poll_btn.get_sensitive())
+        dlg.poll_btn.set_active(True)
+        self.assertFalse(dlg.attach_btn.get_sensitive())
+        dlg.poll_options[0].set_text("да")
+        self.assertIsNone(dlg.poll_data())  # one option is no poll
+        dlg.poll_options[1].set_text("нет")
+        self.assertEqual(dlg.poll_data()["options"], ["да", "нет"])
+        dlg.close()
+        pump(timeout=0.2)
+        back = self.win.compose()
+        self.assertTrue(back.poll_btn.get_active())  # the draft kept the poll
+        self.assertEqual(back.poll_options[1].get_text(), "нет")
+        back.close()
+
+    def test_notifications(self):
+        shown = []
+        n = self.win.notifier
+        n.show = shown.append
+        n.cfg = dict(n.cfg, enabled=True, when_focused=True)
+        n.notify([("mentions", self.core.store.get_status("013"))])
+        self.assertEqual(len(shown), 1)
+        self.assertEqual(shown[0].lane, "mentions")
+        n.opened("thread:013")  # a click: the thread
+        self.assertTrue(pump(lambda: "013" in self.win.threads, 5))
+
+    def test_activity_lane(self):
+        mine = self.core.store.get_status("010")
+        self.world.act("x1", "favourite", BOB, mine, minute=1)
+        self.world.act("x2", "favourite", NEWS, mine, minute=2)
+        self.world.act("x3", "follow", NEWS, minute=3)
+        self.core.poll_once()  # the first fetch: history
+        self.world.act("x4", "reblog", BOB, mine, minute=4)
+        self.core.poll_once()
+        pump(timeout=0.3)
+        self.assertIn("activity", self.win.lane_rows)
+        self.win.sidebar.select_row(self.win.lane_rows["activity"])
+        lane = self.win.lane_views["activity"]
+        self.assertTrue(pump(lambda: lane.positioned, 5))
+        rows = [w for w in _walk(lane.list) if hasattr(w, "newest_sort")]
+        self.assertEqual(len(rows), 3)  # the two likes of one post are one row
+        # on screen in an active window: seen
+        self.assertTrue(pump(lambda: self.core.activity_unread() == 0, 5))
+
+    def test_command_line(self):
+        bar = self.win.cmdline
+        self.assertIsNotNone(bar)
+        alias = self.view.short_ids([self.view.by_id("011")])["011"]
+        bar.entry.set_text(f"#{alias} согласен")
+        self.assertIn(alias, bar.hint.get_text())  # says what Enter will do
+        before = len(self.world.posted)
+        bar.run()
+        self.assertTrue(pump(lambda: len(self.world.posted) > before, 5))
+        self.assertEqual(self.world.posted[-1][2], "011")
+        self.assertTrue(pump(lambda: bar.entry.get_text() == "", 2))
+        self.win.on_link(f"fedtail:alias/{alias}")
+        self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkBigLaneTest(unittest.TestCase):
     """Thousands of posts in a lane: only a window of them is built, in batches, so the
-    main loop never stops for long (the first try froze the desktop for good)."""
+    main loop never stops for long (the first try froze the desktop for good: 5.6 s for
+    1500 posts). The bound is loose: under Xvfb GTK paints in software, a frame of new
+    cards there takes a few tenths of a second that a real desktop doesn't."""
 
     N = 2000
+    STEP_MAX = 1.0  # s: the longest a single turn of the main loop may take
 
     def setUp(self):
         from fedtail.core.view import View
@@ -181,6 +324,7 @@ class GtkBigLaneTest(unittest.TestCase):
         self.loop(lambda: self.lane() is not None and self.lane().positioned, 10)
 
     def tearDown(self):
+        self.win.close()  # as a user would: the lanes stop their queued work
         self.win.destroy()
         pump(timeout=0.1)
         self.core.shutdown()
@@ -208,7 +352,7 @@ class GtkBigLaneTest(unittest.TestCase):
         lv = self.lane()
         self.assertLessEqual(len(lv.rows), lane_mod.WINDOW)
         self.assertEqual(lv.order[-1], self.big[-1][0])  # opened at the newest end
-        self.assertLess(self.worst, 0.5, "the main loop stopped for too long")
+        self.assertLess(self.worst, self.STEP_MAX, "the main loop stopped for too long")
 
     def test_scrolling_up_grows_without_a_jump(self):
         lv = self.lane()
@@ -226,7 +370,18 @@ class GtkBigLaneTest(unittest.TestCase):
         # the post at the top is still where it was on screen: the view moved with it
         self.assertAlmostEqual(lv._y(lv.rows[top]) - lv.adj.get_value(), offset, delta=2)
         self.assertGreater(lv.adj.get_value(), 0)
-        self.assertLess(self.worst, 0.5)
+        self.assertLess(self.worst, self.STEP_MAX)
+
+
+def _walk(widget):
+    """widget and everything inside it."""
+    if widget is None:
+        return
+    yield widget
+    child = widget.get_first_child()
+    while child is not None:
+        yield from _walk(child)
+        child = child.get_next_sibling()
 
 
 def _cards(win):

@@ -4,7 +4,6 @@ import logging
 import sys
 import time
 from dataclasses import dataclass
-from urllib.parse import unquote
 
 from PySide6.QtCore import QPoint, QPointF, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import (
@@ -49,6 +48,7 @@ from ...model import Account, Post, Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet
 from .. import themefile
+from ..common.links import Links
 from . import badge
 from . import card as card_module
 from . import feed as feed_module
@@ -239,6 +239,42 @@ class ViewContext:
     quote_reply: object = None     # (post, text, whole) -> reply quoting the text
 
 
+class _LinkHost:
+    """What common/links.py asks of the window, the Qt way: blocking questions, the
+    status bar, the Compose dialog."""
+
+    def __init__(self, win):
+        self.win = win
+
+    def call(self, future, ok=None, fail=None):
+        return self.win.bridge.call(future, ok=ok, fail=fail)
+
+    def status(self, text):
+        self.win.statusBar().showMessage(text, 6000)
+
+    def error(self, text):
+        self.win.error(text)
+
+    def confirm(self, title, text, then):
+        if QMessageBox.question(self.win, title, text) == QMessageBox.StandardButton.Yes:
+            then()
+
+    def compose(self, reply_to=None, invite=False, edit=None, quote=None):
+        if edit is not None or invite or quote is not None:
+            Compose(self.win, reply_to=reply_to, invite=invite, edit=edit, quote=quote).show()
+        else:
+            self.win.compose(reply_to)
+
+    def put_alias(self, alias):
+        self.win.cmdline.put_alias(alias)
+
+    def redrafted(self, d):
+        self.win._redrafted(d)
+
+    def __getattr__(self, name):  # open_thread, open_account, report… — the window's own
+        return getattr(self.win, name)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, core, bridge, theme):
         super().__init__()
@@ -255,6 +291,7 @@ class MainWindow(QMainWindow):
                                self.show_images)
         from ...core.view import View
         self.ctx.view = View(core)
+        self.links = Links(self.ctx.view, _LinkHost(self))  # what fedtail: links do
         self.ctx.subscribed = lambda e: core.subscribed(self.ctx.view.raw(e))
         quiet = getattr(core, "thread_quiet", None)
         self.ctx.thread_quiet = (lambda e: quiet(self.ctx.view.raw(e))) if quiet else None
@@ -1919,122 +1956,11 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(500, lambda: self.open_when_ready(url, tries - 1))
 
     def on_link(self, url):
+        """A fedtail: link (or one to the outside): common/links.py decides what it does,
+        _LinkHost below is how this window answers it."""
         if not url.startswith("fedtail:"):
             log.info("link: browser (%s)", QUrl(url).host() or "?")
-            self.open_url(url)
-            return
-        action, _sep, arg = url[len("fedtail:"):].partition("/")
-        log.info("action %s %s", action, arg if action not in ("tag", "resolve") else "…")
-        v = self.ctx.view
-        st = v.by_id(arg) \
-            if action not in ("account", "tag", "resolve", "alias", "copyhandle") else None
-        if action == "copyhandle":  # someone's @user@server, to call them anywhere
-            self.copy_handle(unquote(arg))
-        elif action == "alias":  # a post's #abc: into the command line
-            self.cmdline.put_alias(arg)
-        elif action == "tag":
-            self.open_tag(unquote(arg))
-        elif action == "resolve":
-            self.resolve_link(unquote(arg))
-        elif action == "thread":
-            self.open_thread(arg)
-        elif action == "account":
-            self.open_account(arg)
-        elif st is None:
-            self.error(_("not_in_cache"))
-        else:
-            self._post_action(action, arg, st)
-
-    def _post_action(self, action, arg, st):
-        """on_link's actions on a post (st: the Post)."""
-        v = self.ctx.view
-        if action == "poll":
-            self.bridge.call(v.refresh_poll(st), fail=self.error)
-        elif action == "reply":
-            self.compose(st)
-        elif action == "invite":  # call someone into this thread: a reply naming them
-            if v.me:
-                Compose(self, reply_to=st, invite=True).show()
-        elif action == "edit":
-            Compose(self, edit=st).show()
-        elif action == "history":
-            self.show_history(st)
-        elif action in ("mute", "block"):
-            acc = st.author
-            if action == "block" and QMessageBox.question(
-                    self, _("block"), _("block_q", acct=acc.handle)) \
-                    != QMessageBox.StandardButton.Yes:
-                return
-            call = v.mute if action == "mute" else v.block
-            self.bridge.call(call(acc.id, True), ok=lambda _r: self.statusBar().showMessage(
-                _(action + "d_msg", acct=acc.handle), 6000))
-        elif action == "bookmark":
-            on = not st.mine.bookmarked
-            self.bridge.call(v.bookmark(st, on), ok=lambda _s: self.statusBar().showMessage(
-                _("bookmarked" if on else "unbookmarked"), 4000))
-        elif action == "fav":
-            self.bridge.call(v.like(st))
-        elif action == "boost":
-            self.bridge.call(v.share(st))
-        elif action == "open":
-            self.open_url(st.url or st.uri)
-        elif action in ("sub", "unsub"):
-            sub = action == "sub"
-            self.bridge.call((v.subscribe if sub else v.unsubscribe)(st),
-                             ok=lambda _r: self.statusBar().showMessage(
-                                 _("subbed" if sub else "unsubbed"), 6000))
-        elif action == "report":
-            self.report(st)
-        elif action == "blockdomain":
-            domain = st.author.handle.partition("@")[2]
-            if domain and QMessageBox.question(
-                    self, _("block_domain", domain=domain), _("block_domain_q", domain=domain)) \
-                    == QMessageBox.StandardButton.Yes:
-                self.bridge.call(v.block_domain(domain, True),
-                                 ok=lambda _d: self.statusBar().showMessage(
-                                     _("domain_blocked", domain=domain), 6000),
-                                 fail=self.error)
-        elif action == "quote":
-            Compose(self, quote=st).show()
-        elif action == "readone":
-            v.mark_read([arg])
-        elif action == "readupto":
-            self.read_up_to(arg)
-        elif action in ("favourited_by", "reblogged_by"):
-            self.open_reactions(st, action)
-        elif action in ("mutethread", "unmutethread"):
-            on = action == "mutethread"
-            self.bridge.call(v.mute_thread(st, on),
-                             ok=lambda _s: self.statusBar().showMessage(
-                                 _("thread_muted" if on else "thread_unmuted"), 5000),
-                             fail=self.error)
-        elif action == "quotes":
-            self.open_quotes(st)
-        elif action == "revokequote":
-            mine = st.quote.post if st.quote else None
-            if mine and QMessageBox.question(
-                    self, _("revoke_quote"),
-                    _("revoke_quote_q", acct=st.author.handle)) \
-                    == QMessageBox.StandardButton.Yes:
-                self.bridge.call(v.revoke_quote(mine, st),
-                                 ok=lambda _s: self.statusBar().showMessage(
-                                     _("quote_taken_back"), 5000),
-                                 fail=self.error)
-        elif action in ("pin", "unpin"):
-            on = action == "pin"
-            self.bridge.call(v.pin(st, on), ok=lambda _s: self.statusBar().showMessage(
-                _("pinned_msg" if on else "unpinned_msg"), 4000), fail=self.error)
-        elif action == "delete":
-            if QMessageBox.question(self, _("delete_q_title"),
-                                    _("delete_q", text=snippet(st, 200))) \
-                    == QMessageBox.StandardButton.Yes:
-                self.bridge.call(v.delete(st))
-        elif action == "redraft":
-            n = len(st.media)
-            q = _("redraft_q", text=snippet(st, 200)) + (
-                "\n\n" + _("redraft_media", n=n) if n else "")
-            if QMessageBox.question(self, _("redraft"), q) == QMessageBox.StandardButton.Yes:
-                self.bridge.call(v.redraft(st), ok=self._redrafted, fail=self.error)
+        self.links.open(url)
 
     def _post(self, x):
         """A Post from a Post, a Share or (older callers) a stored status."""

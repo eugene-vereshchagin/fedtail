@@ -32,10 +32,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...core.hashtags import flat_tags
 from ...i18n import _
 from ...model import VISIBILITIES, Post, Scheduled, Share, real
-from ...model.text import chain_parts, join_quote, quote_lines, reply_mentions, snippet
+from ...model.text import chain_parts, join_quote, quote_lines, snippet
+from ..common import compose as rules
 from .card import VIS_KEY
 from .text import display_name, esc
 
@@ -141,13 +141,8 @@ class Compose(QDialog):
         self.reply_to = self._as_post(reply_to)
         self.quote = self._as_post(quote)  # the post this one quotes
         self.invite = bool(invite and self.reply_to)
-        if self.edit:
-            self.key = f"edit:{self.edit.id}"
-        elif self.invite:  # not the reply's draft: a call has its own
-            self.key = f"invite:{self.reply_to.id}"
-        else:
-            self.key = self.core.draft_key(self.reply_to.id if self.reply_to else None,
-                                           self.quote.id if self.quote else None)
+        self.key = rules.draft_key(self.core, self.reply_to, self.quote, self.edit,
+                                   self.invite)
         self.start_text = text  # "@someone " from a profile's Mention button
         # the window finds an open reply here to put a quote into (quote_reply)
         alive = []
@@ -460,41 +455,26 @@ class Compose(QDialog):
         if self.edit:
             self._load_edit()
             return
-        d = self.core.get_draft(self.key)
-        vis = self.core.reply_visibility(self.reply_to)
-        if d:
-            self.text.setPlainText(d.get("text", ""))
-            self.cw.setText(d.get("cw", ""))
-            vis = _OLD_VIS.get(d.get("visibility"), d.get("visibility") or vis)
-            if "language" in d:
-                self.set_language(d["language"])
-            for path, desc, *focus in d.get("media", []):
-                if Path(path).exists():
-                    self._add_media(path, desc, focus[0] if focus else None)
-            self.sensitive_btn.setChecked(bool(d.get("sensitive")))
-            poll = d.get("poll")
-            if poll:
-                self.poll_btn.setChecked(True)
-                for e, text in zip(self.poll_options, poll.get("options", []), strict=False):
-                    e.setText(text)
-                i = self.poll_time.findData(poll.get("expires_in"))
-                if i >= 0:
-                    self.poll_time.setCurrentIndex(i)
-                self.poll_multiple.setChecked(bool(poll.get("multiple")))
-            self.hint.setText(_("draft_restored"))
-        else:
-            if self.start_text:
-                self.text.setPlainText(self.start_text)
-            if self.invite:  # only the one called: the thread's people aren't bothered
-                self.text.setPlainText("@")
-                self.hint.setText(_("invite_hint"))
-                if self.reply_to.warning:
-                    self.cw.setText(self.reply_to.warning)
-            elif self.reply_to:
-                me = self.core.me
-                self.text.setPlainText(reply_mentions(self.reply_to, me.handle if me else ""))
-                if self.reply_to.warning:
-                    self.cw.setText(self.reply_to.warning)
+        st = rules.start(self.core, self.key, self.reply_to, self.start_text, self.invite)
+        self.text.setPlainText(st.text)
+        self.cw.setText(st.cw)
+        if st.language is not None:
+            self.set_language(st.language)
+        for path, desc, *focus in st.media:
+            if Path(path).exists():
+                self._add_media(path, desc, focus[0] if focus else None)
+        self.sensitive_btn.setChecked(st.sensitive)
+        if st.poll:
+            self.poll_btn.setChecked(True)
+            for e, text in zip(self.poll_options, st.poll.get("options", []), strict=False):
+                e.setText(text)
+            i = self.poll_time.findData(st.poll.get("expires_in"))
+            if i >= 0:
+                self.poll_time.setCurrentIndex(i)
+            self.poll_multiple.setChecked(bool(st.poll.get("multiple")))
+        if st.hint:
+            self.hint.setText(_(st.hint))
+        vis = st.visibility
         self.vis.setCurrentIndex(VISIBILITIES.index(vis) if vis in VISIBILITIES else 2)
         self.initial = self._snapshot()
 
@@ -531,14 +511,12 @@ class Compose(QDialog):
                                              self.hint.setText(_("load_failed", err=e))))
 
     def _snapshot(self):
-        return {"text": self.text.toPlainText(), "cw": self.cw.text(),
-                "visibility": self.vis.currentData(), "media": self._media_list(),
-                "language": self._language(),
-                "sensitive": self.sensitive_btn.isChecked(), "poll": self.poll_data()}
+        return rules.snapshot(self.text.toPlainText(), self.cw.text(), self.vis.currentData(),
+                              self._media_list(), self._language(),
+                              self.sensitive_btn.isChecked(), self.poll_data())
 
     # ---- a poll -------------------------------------------------------------------
-    POLL_TIMES = [(300, "poll_5m"), (1800, "poll_30m"), (3600, "poll_1h"), (21600, "poll_6h"),
-                  (86400, "poll_1d"), (259200, "poll_3d"), (604800, "poll_7d")]
+    POLL_TIMES = rules.POLL_TIMES
 
     def _build_poll(self, lay):
         self.poll_box = QWidget()
@@ -586,13 +564,10 @@ class Compose(QDialog):
             self.attach_btn.setEnabled(not self.poll_btn.isChecked() and not self.edit)
 
     def poll_data(self):
-        if not getattr(self, "poll_btn", None) or not self.poll_btn.isChecked():
+        if not getattr(self, "poll_btn", None):
             return None
-        options = [e.text().strip() for e in self.poll_options if e.text().strip()]
-        if len(options) < 2:
-            return None
-        return {"options": options, "expires_in": self.poll_time.currentData(),
-                "multiple": self.poll_multiple.isChecked()}
+        return rules.poll_data(self.poll_btn.isChecked(), [e.text() for e in self.poll_options],
+                               self.poll_time.currentData(), self.poll_multiple.isChecked())
 
     def _changed(self):
         self._count()
@@ -600,18 +575,10 @@ class Compose(QDialog):
         self._autosave.start()
 
     # ---- completing #tags and @people -----------------------------------------------
-    _TOKEN_AT_END = re.compile(r"(?:^|[\s(«\"'])([#@:])(\w[\w.@-]*)$")
-
     def _token_at_cursor(self):
         """("#" or "@", the word typed right before the cursor) — or (None, None)."""
         cur = self.text.textCursor()
-        before = cur.block().text()[:cur.positionInBlock()]
-        m = self._TOKEN_AT_END.search(before)
-        if not m or (m.group(1) in "#:" and not re.fullmatch(r"\w+", m.group(2))):
-            return None, None
-        if m.group(1) == ":" and len(m.group(2)) < 2:
-            return None, None
-        return m.group(1), m.group(2)
+        return rules.token_at_end(cur.block().text()[:cur.positionInBlock()])
 
     # (kept for the name the tests know it by)
     def _tag_at_cursor(self):
@@ -622,21 +589,15 @@ class Compose(QDialog):
         """Offer what fits the #tag or @name being typed (post.complete_tags,
         post.complete_mentions); for a name, the server is asked too, a moment later."""
         sigil, word = self._token_at_cursor()
-        post = self.core.cfg["post"]
-        items = []
-        if sigil == "#" and post.get("complete_tags", True):
-            items = [("#" + n, "#" + n) for n in self.core.tag_suggestions(word)]
-        elif sigil == "@" and post.get("complete_mentions", True):
-            items = self._people_items(self.core.mention_suggestions(word))
-            if len(word) >= 2:
-                self._people_query = word
-                self._people_timer.start()
-        elif sigil == ":" and post.get("complete_emoji", True):
-            items = [(f":{code}:", f":{code}:") for code, _e in self.core.emoji_suggestions(word)]
+        items = rules.suggestions(self.core, sigil, word) if sigil else []
+        if sigil == "@" and self.core.cfg["post"].get("complete_mentions", True) and \
+                len(word) >= 2:
+            self._people_query = word
+            self._people_timer.start()
         self._offer(items, sigil, word)
 
     def _people_items(self, people):
-        return [("@" + acct, f"@{acct}" + (f" — {name}" if name else "")) for acct, name in people]
+        return rules.people_items(people)
 
     def _ask_server_people(self):
         word = self._people_query
@@ -645,15 +606,12 @@ class Compose(QDialog):
             sigil, now = self._token_at_cursor()
             if sigil != "@" or now != word:
                 return  # typed on meanwhile
-            local = self.core.mention_suggestions(word)
-            seen = {a.casefold() for a, _n in local}
-            more = [(a, n) for a, n in found if a.casefold() not in seen]
-            self._offer(self._people_items(local + more)[:10], "@", word)
+            self._offer(rules.more_people(self.core.mention_suggestions(word), found), "@", word)
         self.win.bridge.call(self.core.search_people(word), ok=got, fail=lambda _e: None)
 
     def _offer(self, items, sigil, word):
         popup = self.tag_completer.popup()
-        if not items or (len(items) == 1 and items[0][0][1:].casefold() == (word or "").casefold()):
+        if not rules.worth_offering(items, word):
             popup.hide()
             return
         self._inserts = {label: insert for insert, label in items}
@@ -678,9 +636,10 @@ class Compose(QDialog):
         if self.sent:
             return
         snap = self._snapshot()
-        if snap == self.initial and not self.core.get_draft(self.key):
+        what = rules.keep(snap, self.initial, bool(self.core.get_draft(self.key)))
+        if what == "skip":
             return
-        if not snap["text"].strip() and not snap["media"] and not snap["cw"]:
+        if what == "delete":
             self.core.delete_draft(self.key)
             return
         self.core.save_draft(self.key, snap)
@@ -870,22 +829,19 @@ class Compose(QDialog):
 
     # ---- sending --------------------------------------------------------------------
     def _count(self):
-        lim = self.core.caps.max_characters
-        parts = chain_parts(self.text.toPlainText()) \
-            if self.core.cfg["post"].get("chain", True) else []
-        if len(parts) > 1:  # a chain: each part counts on its own
-            n = max(len(x) for x in parts) + len(self.cw.text())
-            self.counter.setText(_("chain_count", n=len(parts)) + f" · {n} / {lim}")
+        c = rules.count(self.text.toPlainText(), self.cw.text(), self.core.caps.max_characters,
+                        self.core.cfg)
+        if c.parts > 1:  # a chain: each part counts on its own
+            self.counter.setText(_("chain_count", n=c.parts) + f" · {c.n} / {c.limit}")
         else:
-            n = len(self.text.toPlainText()) + len(self.cw.text())
-            self.counter.setText(f"{n} / {lim}")
-        over = "true" if n > lim else "false"
+            self.counter.setText(f"{c.n} / {c.limit}")
+        over = "true" if c.over else "false"
         if self.counter.property("over") != over:
             self.counter.setProperty("over", over)
             self.counter.style().unpolish(self.counter)
             self.counter.style().polish(self.counter)
         if self.core.cfg["post"]["camelcase_hint"]:
-            flat = flat_tags(self.text.toPlainText())
+            flat = c.flat_tags
             self.camel.setVisible(bool(flat))
             if flat:
                 self.camel.setText(_("camel_hint", tags=", ".join("#" + t for t in flat[:3])))

@@ -2,6 +2,23 @@
 
 ## 0.18.0 — in progress
 
+- The GTK window grows up (stage 2–3 of docs/GTK.md): faces, pictures, the poll's
+  results, the quoted post, the link's card, "you replied" under a post; the buttons
+  and the ⋯ menu of a post — the same as in Qt (copy the link, the #id or the address,
+  quote, call into the thread, bookmark, read up to here, mute or follow the thread,
+  mute, block, report, edit, pin, delete, delete and redraft), each risky one asked
+  first; writing — a new post, a reply, a quote, a call, my post corrected — with drafts
+  kept, who sees it, the warning, #tags and @names completed by Tab, Ctrl+Enter to send;
+  pictures with descriptions (a reminder when one has none; made to fit the server) or a
+  poll; the Point command line (Ctrl+L) with ↑ ↓; a profile in a tab (face, bio, fields,
+  Follow, Mention, posts); Activity (a row per kind and post, approve or reject, ×) and
+  follow requests; desktop notifications whose click opens the thread or the lane; a
+  fediverse link opens the post or the profile here.
+- Inside: what a link does, which actions a post offers, the rules of writing and the
+  command line now live once in `frontends/common/`, for both windows; Qt's theme
+  colours come from `frontends/palette.py`. The Qt window behaves as before. The command
+  line's "#abc text" for a post not known here goes out as a post, as before, only in the
+  windows; the terminal and the web page still say there's no such post.
 - fedtail has an app id, `online.dmesg.fedtail` (from the project's website): the menu
   entry is now `online.dmesg.fedtail.desktop` (another profile's:
   `online.dmesg.fedtail.<profile>.desktop`), and both the Qt and the GTK window say they

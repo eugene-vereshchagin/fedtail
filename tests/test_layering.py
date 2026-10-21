@@ -26,6 +26,16 @@ class LayeringTest(unittest.TestCase):
                     if RAW.search(line)]
             self.assertEqual(hits, [], "\n".join(hits))
 
+    def test_shared_frontend_code_imports_no_toolkit(self):
+        """frontends/common, palette.py, pango.py and the other shared modules are for
+        every toolkit: none of them may import one (docs/GTK.md, stage 0)."""
+        toolkit = re.compile(r"^\s*(from|import)\s+(PySide6|gi\b|textual|shiboken)", re.M)
+        shared = [p for p in (ROOT / "frontends").rglob("*.py")
+                  if p.parent.name in ("frontends", "common")]
+        self.assertTrue(any(p.parent.name == "common" for p in shared))
+        for p in shared:
+            self.assertIsNone(toolkit.search(p.read_text(encoding="utf-8")), p.name)
+
     def test_the_page_speaks_the_model(self):
         js = (ROOT / "data/web/app.js").read_text(encoding="utf-8")
         for word in ("favourited", "reblogged", "spoiler", "acct", "private"):

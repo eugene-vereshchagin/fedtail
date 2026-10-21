@@ -41,6 +41,7 @@ class ColorTest(unittest.TestCase):
         self.assertEqual(Color(255, 0, 0).lighter(150).r, 255)
         self.assertGreater(Color(255, 0, 0).lighter(150).g, 0)
         self.assertEqual(Color(10, 20, 30).lightness(), 20)
+        self.assertEqual(Color(165, 77, 202).lightness(), 140)  # .5 goes up, as in Qt
 
     def test_readable_and_mix(self):
         self.assertEqual(palette.readable_on(Color(255, 255, 255)).name(), "#111111")
@@ -73,8 +74,8 @@ class ResolveTest(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_QT, "PySide6 not installed")
 class SameAsQtTest(unittest.TestCase):
-    """The GTK frontend draws the themes from palette.py, Qt from qt/theme.py: they
-    must agree, or a theme looks different on the two."""
+    """palette.py copies QColor's arithmetic (both windows draw a theme from it, and
+    themes were made by looking at Qt): lightness, lighter, darker agree with QColor."""
 
     @classmethod
     def setUpClass(cls):
@@ -82,26 +83,26 @@ class SameAsQtTest(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         cls.app = QGuiApplication.instance() or QGuiApplication([])
 
-    def qpal(self, d):
-        pal = QPalette()
-        R = QPalette.ColorRole
-        for role, c in [(R.Base, d.base), (R.Window, d.window), (R.Text, d.text),
-                        (R.Highlight, d.highlight), (R.Link, d.link)]:
-            pal.setColor(role, QColor(c.name()))
-        return pal
+    def test_arithmetic(self):
+        import random
+        rnd = random.Random(7)
+        for _ in range(400):
+            c = Color(rnd.randrange(256), rnd.randrange(256), rnd.randrange(256))
+            q = QColor(c.r, c.g, c.b)
+            self.assertEqual(c.lightness(), q.lightness(), c)
+            for f in (104, 112, 115, 130, 135, 145, 150, 170, 108):
+                for ours, theirs in ((c.lighter(f), q.lighter(f)), (c.darker(f), q.darker(f))):
+                    diff = max(abs(ours.r - theirs.red()), abs(ours.g - theirs.green()),
+                               abs(ours.b - theirs.blue()))
+                    self.assertLessEqual(diff, 2, f"{c} {f}: {ours.css()} vs {theirs.name()}")
 
-    def test_all_themes_light_and_dark(self):
+    def test_qt_theme_takes_every_builtin(self):
         from fedtail.frontends.qt.theme import Theme
+        pal = QPalette()
         for name in sorted(p.stem for p in themefile.BUILTIN_DIR.glob("*.toml")):
             data, _w = themefile.load(name)
-            for desk in (LIGHT, DARK):
-                qt = Theme(data, self.qpal(desk)).c
-                ours = palette.resolve(data["colors"], desk)
-                for key, q in qt.items():
-                    o = ours[key]
-                    diff = max(abs(q.red() - o.r), abs(q.green() - o.g), abs(q.blue() - o.b),
-                               abs(q.alpha() - o.a))
-                    self.assertLessEqual(diff, 2, f"{name} {key}: Qt {q.name()} vs {o.css()}")
+            c = Theme(data, pal).c
+            self.assertEqual(set(c), set(data["colors"]), name)
 
 
 if __name__ == "__main__":

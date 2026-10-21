@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from ...i18n import _
 from ...model import VISIBILITIES, Scheduled
 from ...model.text import reply_mentions
+from ..common import compose as rules
 from .card import VIS_KEY
 
 log = logging.getLogger(__name__)
@@ -285,8 +286,7 @@ class InputDock(QWidget):
         text = self.text.toPlainText()
         if text.strip() == self._prefill.strip():
             text = ""
-        rest = re.sub(r"^\s*#[0-9a-z]+(/\d+)?\s*", "", text)
-        self.text.setPlainText(f"#{alias} " + rest.lstrip())
+        self.text.setPlainText(rules.put_alias(text, alias))
         self.text.moveCursor(QTextCursor.MoveOperation.End)
         self.text.setFocus()
 

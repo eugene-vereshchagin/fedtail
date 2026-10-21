@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QPalette
 
 from ...i18n import months
-from .. import themefile
+from .. import palette, themefile
 
 EMOJI_FONTS = ("Noto Color Emoji", "Twemoji", "JoyPixels")
 
@@ -34,68 +34,23 @@ def stripe_tile(color, size=10, width=3):
     return path.as_posix()
 
 
-def _mix(a, b, t):
-    a, b = QColor(a), QColor(b)
-    return QColor(round(a.red() * (1 - t) + b.red() * t),
-                  round(a.green() * (1 - t) + b.green() * t),
-                  round(a.blue() * (1 - t) + b.blue() * t))
-
-
-def _auto_colors(pal):
-    """Every 'auto' colour, derived from the desktop palette (works light and dark)."""
+def desktop_of(pal):
+    """What palette.py needs of the desktop's QPalette."""
     R = QPalette.ColorRole
-    base, win, text = pal.color(R.Base), pal.color(R.Window), pal.color(R.Text)
-    hl, link = pal.color(R.Highlight), pal.color(R.Link)
-    dark = base.lightness() < 128
-    green = QColor("#3c9a3c")
-    accent = hl.darker(135) if dark else hl.darker(145)
-    return {
-        "window": win,
-        "sidebar": win.lighter(112) if dark else win.darker(104),
-        "sidebar_border": _mix(win, text, 0.15),
-        "selected": base.lighter(130) if dark else base,
-        "selected_text": text,
-        "view": base,
-        "header_border": _mix(base, text, 0.12),
-        "card": base.lighter(115) if dark else base,
-        "card_border": _mix(base, text, 0.13),
-        "card_border_unread": _mix(base, hl, 0.45),
-        "text": text,
-        "muted": _mix(text, base, 0.36),
-        "link": link,
-        "accent": accent,
-        "on_accent": _readable_on(accent),
-        "quiet": _mix(base, text, 0.18),
-        "on_quiet": text,
-        "new_pill": _mix(base, hl, 0.16),
-        "on_new_pill": hl.lighter(150) if dark else hl.darker(170),
-        "ctx": _mix(base, text, 0.05),
-        "ctx_bar": _mix(base, text, 0.35),
-        "focus": _mix(base, hl, 0.12),
-        "focus_border": _mix(base, hl, 0.5),
-        "myreply": _mix(base, green, 0.12),
-        "on_myreply": _mix(text, green, 0.55) if not dark else green.lighter(150),
-        "separator": accent,
-        "rail": _mix(base, text, 0.22),
-        "button": base,
-        "button_border": _mix(base, text, 0.22),
-        "dot": hl,
-    }
+
+    def c(role):
+        q = pal.color(role)
+        return palette.Color(q.red(), q.green(), q.blue(), q.alpha())
+    return palette.Desktop(base=c(R.Base), window=c(R.Window), text=c(R.Text),
+                           highlight=c(R.Highlight), link=c(R.Link))
 
 
-# colours that, left at "auto", copy another one of the same theme (not the desktop):
-# a theme with its own text colour gets it in the sidebar too
-FOLLOWS = {"sidebar_text": "text", "sidebar_muted": "muted", "panel": "window",
-           "primary": "accent", "on_primary": "on_accent", "name": "text",
-           "header_bar": "accent", "chat_me": "link", "chat_them": "hot",
-           "view_end": "view", "tab_mark": "accent", "window_end": "window",
-           "button_end": "button", "header_end": "header"}  # the band over a title: the theme's own colour
-# "auto" mixed from two colours of the same theme: (from, towards, how far)
-TINTS = {"header": ("view", "accent", 0.16)}  # the title strip, tinted with the theme
+def _q(col):
+    return QColor(col.r, col.g, col.b, col.a)
 
 
 class Theme:
-    def __init__(self, data, palette, warnings=()):
+    def __init__(self, data, pal, warnings=()):
         self.id = data["id"]
         self.name = data.get("name") or self.id
         self.font = data["font"]
@@ -103,37 +58,10 @@ class Theme:
         self.words = data["words"]
         self.icon = data.get("icon", {})
         self.warnings = list(warnings)
-        auto = _auto_colors(palette)
-        self.c = {}
-        follow = []
-        for key, val in data["colors"].items():
-            val = val.strip()
-            if val == "auto" and (key in FOLLOWS or key in TINTS):
-                follow.append(key)
-                continue
-            if val == "auto":
-                col = auto.get(key, QColor("#888888"))
-            elif val.startswith("rgb"):
-                nums = [float(x.strip().rstrip("%")) for x in val[val.index("(") + 1:-1].split(",")]
-                col = QColor(int(nums[0]), int(nums[1]), int(nums[2]))
-                if len(nums) > 3:
-                    col.setAlphaF(nums[3] if nums[3] <= 1 else nums[3] / 255)
-            else:
-                col = QColor(val)
-                if len(val) == 9:  # #rrggbbaa (Qt reads #aarrggbb)
-                    col = QColor(val[:7])
-                    col.setAlpha(int(val[7:], 16))
-            self.c[key] = col
-        for key in follow:  # "auto" here means "the same as the colour it stands for"
-            if key in FOLLOWS and FOLLOWS[key] in self.c:
-                self.c[key] = QColor(self.c[FOLLOWS[key]])
-        for key in follow:  # …or a mix of two of them (after the plain ones are known)
-            if key in TINTS:
-                a, b, t = TINTS[key]
-                self.c[key] = _mix(self.c[a], self.c[b], t)
-        for key in follow:  # following a mixed one (header_end → header): now it's known
-            if key in FOLLOWS and key not in self.c:
-                self.c[key] = QColor(self.c[FOLLOWS[key]])
+        # every colour worked out by palette.py (the GTK window's too): "auto" from the
+        # desktop's palette, the ones that follow or tint others
+        self.c = {k: _q(v) for k, v in palette.resolve(data["colors"],
+                                                       desktop_of(pal)).items()}
         # the old flat attributes some widgets still use
         self.muted = self.c["muted"].name()
         self.bg = self.c["view"].name()
@@ -426,13 +354,6 @@ QPushButton#older {{ background: transparent; color: {k('muted')}; border: 1px d
 QStatusBar {{ background: {self._bg('window')}; color: {k('muted')}; }}
 QStatusBar::item {{ border: 0; }}
 """
-
-
-def _readable_on(bg):
-    """Black or white, whichever reads better on bg."""
-    r, g, b = (c / 255 for c in (bg.red(), bg.green(), bg.blue()))
-    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-    return QColor("#111111") if lum > 0.45 else QColor("#ffffff")
 
 
 def _alpha(col, a):

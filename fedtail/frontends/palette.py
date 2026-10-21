@@ -63,7 +63,7 @@ class Color:
     # ---- QColor's arithmetic ----------------------------------------------------
     def lightness(self):
         """HSL lightness, 0–255."""
-        return (max(self.r, self.g, self.b) + min(self.r, self.g, self.b)) // 2
+        return (max(self.r, self.g, self.b) + min(self.r, self.g, self.b) + 1) // 2  # as Qt
 
     def _hsv(self):
         mx, mn = max(self.r, self.g, self.b), min(self.r, self.g, self.b)

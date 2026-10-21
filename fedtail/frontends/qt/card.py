@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...core import config
-from ...i18n import _, current_language
+from ...i18n import _
 from ...model import Share, real
 from ...model.text import (
     collapse_tag_stuffing,
@@ -33,6 +33,7 @@ from ...model.text import (
     snippet,
     without_quote_fallback,
 )
+from ..common import actions
 from ..richtext import plain_tip
 from .text import clean, display_name, emojify, esc, link, strip_emoji
 
@@ -761,33 +762,15 @@ class PostRow(QWidget):
             self._short_id(h, replies=p.counts.replies, where="footer")
         if self.theme.shape.get("actions_align") == "right":
             h.addStretch(1)
-        n = lambda x: f" · {x}" if x else ""
-        fav = p.mine.liked
-        boosted = p.mine.shared
-        buttons = [("reply", ("mail-reply-sender",), "↩", _("reply"), "", False)]
-        buttons.append(("fav", ("rating", "starred-symbolic") if fav else
-                        ("rating-unrated", "non-starred-symbolic"), "★" if fav else "☆",
-                        _("faved") if fav else _("fav"), n(p.counts.likes), fav))
-        if p.visibility in ("public", "unlisted"):
-            buttons.append(("boost", ("media-playlist-repeat", "retweet"), "♻",
-                            _("boosted") if boosted else _("boost"),
-                            n(p.counts.shares), boosted))
-        if not self.spec.in_thread:
-            buttons.append(("thread", ("view-list-tree", "format-indent-more"), "⤷",
-                            _("thread"), n(p.counts.replies), False))
-        if self.ctx.cfg["ui"].get("bookmark_button", True):
-            marked = p.mine.bookmarked
-            buttons.append(("bookmark", ("bookmark-new", "bookmarks"), "🔖",
-                            _("unbookmark") if marked else _("bookmark"), "", marked))
-        if self.spec.unread and self.ctx.cfg["read"].get("read_button", False):
-            buttons.append(("readone", ("mail-mark-read", "object-select-symbolic"), "✓",
-                            _("mark_one_read"), "", False))
-        sid = self.spec.entry.id  # a boost: its own id (the window finds the post in it)
+        buttons = actions.buttons(self.spec.entry, self._actions_ctx(),
+                                  unread=self.spec.unread)
         from . import icons as pictures
         own = pictures.wanted(self.theme)  # fedtail's own (ui.additional_icons)
         if own and style == "text":
             style = "both"  # the split layout has pictures by the words, as messengers did
-        for action, icons, glyph, label, count, active in buttons:
+        for bt in buttons:
+            action, icons, glyph, label, count, active = (bt.action, bt.icons, bt.glyph,
+                                                          bt.label, bt.count, bt.active)
             b = QToolButton()
             b.setAutoRaise(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -818,16 +801,13 @@ class PostRow(QWidget):
                     b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             if active:
                 b.setProperty("active", "true")
-            b.clicked.connect(lambda _c=False, a=action, i=sid:
-                              self.ctx.on_link(f"fedtail:{a}/{i}"))
+            b.clicked.connect(lambda _c=False, u=bt.url: self.ctx.on_link(u))
             # a right click on the like or the boost: who did it
-            who = {"fav": ("favourited_by", p.counts.likes),
-                   "boost": ("reblogged_by", p.counts.shares)}.get(action)
-            if who and who[1] and self.ctx.supports(who[0]):
+            if bt.who:
                 b.setToolTip(label + "\n" + _("who_right_click"))
                 b.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 b.customContextMenuRequested.connect(
-                    lambda _p, k=who[0], i=sid: self.ctx.on_link(f"fedtail:{k}/{i}"))
+                    lambda _p, u=bt.who: self.ctx.on_link(u))
             h.addWidget(b)
         if self.theme.shape.get("actions_align") != "right":
             h.addStretch(1)
@@ -874,120 +854,46 @@ class PostRow(QWidget):
             self._fill_more(self._menu, self.spec.entry)
         return self._menu
 
+    def _actions_ctx(self):
+        """What common/actions.py needs to know about this window."""
+        c = self.ctx
+        return actions.Ctx(
+            cfg=c.cfg, me_id=c.me_id, supports=c.supports, subscribed=c.subscribed,
+            thread_quiet=c.thread_quiet, lists=c.fill_list_menu is not None,
+            act_as=c.act_as, long_form=bool(c.long_form), translate=bool(c.translate),
+            quote_reply=self._can_quote(), in_thread=self.spec.in_thread)
+
     def _fill_more(self, menu, entry):
+        """The post's ⋯ menu: what's in it comes from common/actions.py."""
         menu.clear()
-        p = real(entry)
-        sid = entry.id  # a boost: its own id (the window finds the post in it)
-        url = p.url or p.uri
         from .opener import open_link
-        menu.addAction(_("open_browser"), lambda u=url: open_link(u))
-        menu.addAction(_("copy_link"), lambda u=url: QGuiApplication.clipboard().setText(u))
-        short = self.spec.extra.get("short_id")
-        if short:
-            menu.addAction(_("copy_id", id="#" + short),
-                           lambda s=short: QGuiApplication.clipboard().setText("#" + s))
-        author = p.author
-        booster = entry.by if isinstance(entry, Share) and entry.by.id != author.id else None
-        # @user@server of who wrote it (and who boosted it): to call them anywhere
-        for acc in [author] + ([booster] if booster else []):
-            link = "fedtail:copyhandle/" + quote(acc.handle, safe="")
-            menu.addAction(_("copy_handle_of", acct="@" + acc.handle),
-                           lambda u=link: self.ctx.on_link(u))
-        if self.ctx.fill_list_menu is not None:
-            # a boost has two people: the one who wrote it and the one who boosted it (a
-            # relay bot, say) — each by name, so it's clear who goes into the list
-            who = [(author, "add_to_list_author")]
-            if booster:
-                who.append((booster, "add_to_list_booster"))
-            for acc, key in who:
-                if acc.id == self.ctx.me_id:
-                    continue
-                lists = menu.addMenu(_(key, acct="@" + acc.handle) if len(who) > 1
-                                     else _("add_to_list"))
-                lists.aboutToShow.connect(lambda m=lists, a=acc: self.ctx.fill_list_menu(m, a))
-        approval = p.policy.can_quote if p.policy else ""
-        if self.ctx.cfg["post"].get("quote_action", True) and approval in ("automatic", "manual"):
-            quote_url = f"fedtail:quote/{p.id}"
-            menu.addAction(_("quote") if approval == "automatic" else _("quote_ask"),
-                           lambda u=quote_url: self.ctx.on_link(u))
-        lang = p.lang.split("-")[0]
-        if self.ctx.act_as is not None:
-            others = self.ctx.act_as(entry)
-            if others:
-                sub = menu.addMenu(_("act_as"))
-                for tag, label in others:
-                    for action, key in (("fav", "act_as_fav"), ("boost", "act_as_boost"),
-                                        ("reply", "act_as_reply")):
-                        sub.addAction(_(key, acct=label), lambda e=entry, t=tag, a=action:
-                                      self.ctx.do_act_as(e, t, a))
-        if self.ctx.long_form and "@" in author.handle and p.uri:
-            menu.addAction(_("long_form"), lambda e=entry: self.ctx.long_form(e))
-        if self.ctx.translate and lang and lang != current_language() and p.text:
-            menu.addAction(_("translate"), self._translate)
-        if self._can_quote() and self.ctx.me_id:
-            menu.addAction(_("reply_quote"), lambda: self._quote_reply())
-        if self.ctx.cfg["post"].get("invite", True):
-            menu.addAction(_("invite"), lambda i=sid: self.ctx.on_link(f"fedtail:invite/{i}"))
-        menu.addAction(_("unbookmark") if p.mine.bookmarked else _("bookmark"),
-                       lambda i=sid: self.ctx.on_link(f"fedtail:bookmark/{i}"))
-        if self.spec.unread:  # by hand, whatever read.mark_read says
-            menu.addAction(_("mark_one_read"),
-                           lambda i=sid: self.ctx.on_link(f"fedtail:readone/{i}"))
-            menu.addAction(_("mark_read_upto"),
-                           lambda i=sid: self.ctx.on_link(f"fedtail:readupto/{i}"))
-        # who liked, who boosted; quotes of my post; my post out of someone's quote
-        sup = self.ctx.supports
-        for kind, count in (("favourited_by", p.counts.likes),
-                            ("reblogged_by", p.counts.shares)):
-            if sup(kind) and count:
-                menu.addAction(_("who_" + kind + "_n", n=count),
-                               lambda i=sid, k=kind: self.ctx.on_link(f"fedtail:{k}/{i}"))
-        if author.id == self.ctx.me_id and sup("quotes") and \
-                p.visibility in ("public", "unlisted"):
-            menu.addAction(_("quotes_of"), lambda i=sid: self.ctx.on_link(f"fedtail:quotes/{i}"))
-        quoted_post = p.quote.post if p.quote else None
-        if quoted_post is not None and quoted_post.author.id == self.ctx.me_id and \
-                sup("quotes") and author.id != self.ctx.me_id:
-            menu.addAction(_("revoke_quote"), lambda i=sid:
-                           self.ctx.on_link(f"fedtail:revokequote/{i}"))
-        # always offered: a server that can't mute a thread (GoToSocial) gets it done here
-        if self.ctx.thread_quiet is not None or sup("mute_thread"):
-            muted = bool(p.mine.muted) or bool(self.ctx.thread_quiet and
-                                               self.ctx.thread_quiet(entry))
-            menu.addAction(_("unmute_thread" if muted else "mute_thread"),
-                           lambda i=sid, m=muted:
-                           self.ctx.on_link(f"fedtail:{'unmute' if m else 'mute'}thread/{i}"))
-        if self.ctx.subscribed is not None:
-            menu.addSeparator()
-            on = self.ctx.subscribed(entry)
-            menu.addAction(_("unsub_thread" if on else "sub_thread"),
-                           lambda i=sid, on=on:
-                           self.ctx.on_link(f"fedtail:{'unsub' if on else 'sub'}/{i}"))
-        if author.id != self.ctx.me_id:
-            menu.addSeparator()
-            menu.addAction(_("mute_acct", acct=author.handle),
-                           lambda i=sid: self.ctx.on_link(f"fedtail:mute/{i}"))
-            menu.addAction(_("block_acct", acct=author.handle),
-                           lambda i=sid: self.ctx.on_link(f"fedtail:block/{i}"))
-            domain = author.handle.partition("@")[2]
-            if domain:
-                menu.addAction(_("block_domain", domain=domain),
-                               lambda i=sid: self.ctx.on_link(f"fedtail:blockdomain/{i}"))
-            if not self.ctx.cfg["ui"]["arts_mode"]:
-                menu.addAction(_("report"),
-                               lambda i=sid: self.ctx.on_link(f"fedtail:report/{i}"))
-        mine = (entry.by if isinstance(entry, Share) else author).id == self.ctx.me_id
-        if mine:
-            menu.addSeparator()
-            menu.addAction(_("edit"), lambda i=sid: self.ctx.on_link(f"fedtail:edit/{i}"))
-            if p.visibility in ("public", "unlisted"):
-                pin_url = f"fedtail:{'unpin' if p.mine.pinned else 'pin'}/{p.id}"
-                menu.addAction(_("unpin") if p.mine.pinned else _("pin"),
-                               lambda u=pin_url: self.ctx.on_link(u))
-            menu.addAction(_("delete"), lambda i=sid: self.ctx.on_link(f"fedtail:delete/{i}"))
-            if self.ctx.cfg["post"].get("redraft", True):
-                menu.addAction(_("redraft"),
-                               lambda i=sid: self.ctx.on_link(f"fedtail:redraft/{i}"))
+        for it in actions.menu(entry, self._actions_ctx(),
+                               short_id=self.spec.extra.get("short_id"),
+                               unread=self.spec.unread):
+            if it.kind == "separator":
+                menu.addSeparator()
+            elif it.kind == "link":
+                menu.addAction(it.label, lambda u=it.url: self.ctx.on_link(u))
+            elif it.kind == "open":
+                menu.addAction(it.label, lambda u=it.url: open_link(u))
+            elif it.kind == "copy":
+                menu.addAction(it.label,
+                               lambda t=it.text: QGuiApplication.clipboard().setText(t))
+            elif it.kind == "lists":
+                lists = menu.addMenu(it.label)
+                lists.aboutToShow.connect(lambda m=lists, a=it.data:
+                                          self.ctx.fill_list_menu(m, a))
+            elif it.kind == "act_as":
+                sub = menu.addMenu(it.label)
+                for label, e, tag, action in it.data:
+                    sub.addAction(label, lambda e=e, t=tag, a=action:
+                                  self.ctx.do_act_as(e, t, a))
+            elif it.kind == "long_form":
+                menu.addAction(it.label, lambda e=it.data: self.ctx.long_form(e))
+            elif it.kind == "translate":
+                menu.addAction(it.label, self._translate)
+            elif it.kind == "quote_reply":
+                menu.addAction(it.label, lambda: self._quote_reply())
 
     # ---- media --------------------------------------------------------------------
     # ---- polls --------------------------------------------------------------------

@@ -71,6 +71,7 @@ class LaneView(Gtk.Box):
         self.separator = None    # key of the first unread when the lane opened
         self.positioned = False
         self.dirty = True        # the lane changed while not on screen
+        self.stopped = False     # the window closed: no more work queued
         self._queue = []         # (side, [keys]) waiting to be built: side "end" | "start"
         self._building = 0
         self._seen_timer = 0
@@ -214,6 +215,9 @@ class LaneView(Gtk.Box):
         """Build cards for BATCH_MS, all on one side (so the view can be held still),
         then give the window a frame."""
         self._building = 0
+        if self.stopped or self.get_root() is None:  # the window is gone: nothing more
+            self._queue = []
+            return GLib.SOURCE_REMOVE
         while self._queue and not self._queue[0][1]:
             self._queue.pop(0)
         if not self._queue:
@@ -267,13 +271,15 @@ class LaneView(Gtk.Box):
         posts = [self.entries[k] for k in keys]
         parents = view.parents(posts)
         short = view.short_ids(posts)
+        answers = view.my_replies(posts)  # {post id: [my replies to it]}
         unknown = [e for e in posts if parents.get(e.id) is None and real(e).reply_to]
         if unknown:
             view.ensure_parents(unknown)
         for k in keys:
             e = self.entries[k]
             card = Card(self.ctx, k, e, parent=parents.get(e.id), unread=e.id in self.unread,
-                        short_id=short.get(real(e).id))
+                        short_id=short.get(real(e).id),
+                        my_replies=answers.get(real(e).id, ()))
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
             if k == self.separator:
                 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
@@ -426,7 +432,7 @@ class LaneView(Gtk.Box):
 
     def _position(self):
         """Opened: the first unread at the top (or the newest end when all is read)."""
-        if self.positioned or self._pending():
+        if self.positioned or self._pending() or self.get_root() is None:
             return GLib.SOURCE_REMOVE
         target = next((k for k in self.order if self.rows[k].unread), None)
         if target is not None:
@@ -455,6 +461,8 @@ class LaneView(Gtk.Box):
 
     def _mark_seen(self):
         self._seen_timer = 0
+        if self.stopped:
+            return GLib.SOURCE_REMOVE
         root = self.get_root()
         if not self.positioned or root is None or not root.is_active() or \
                 not self.get_mapped():
@@ -480,6 +488,16 @@ class LaneView(Gtk.Box):
             self.ctx.view.mark_read(ids)
             self._pill(len(self.unread))
         return GLib.SOURCE_REMOVE
+
+    def stop(self):
+        """The window closes: whatever is queued is dropped (the core may close too)."""
+        self.stopped = True
+        self._queue = []
+        for attr in ("_building", "_seen_timer", "_hold_timer"):
+            src = getattr(self, attr, 0)
+            if src:
+                GLib.source_remove(src)
+                setattr(self, attr, 0)
 
     def window_activated(self):
         self._schedule_seen()

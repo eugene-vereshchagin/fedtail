@@ -1,15 +1,14 @@
-"""The command line at the bottom of the window, Point-style (core/commands.py
-has the grammar). While you type it says what Enter will do — which post a
-reply goes to, who will see a new post — so nothing is sent by surprise."""
-
-import re
+"""The command line at the bottom of the window, Point-style. What it says while you
+type and what Enter does are common/commands.py's (the terminal and the web page share
+them); this is the Qt widget around it."""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QMessageBox, QWidget
 
 from ...core.commands import parse
 from ...i18n import _
-from ...model.text import reply_mentions, snippet
+from ..common import compose as rules
+from ..common.commands import Commands, Failed, History, preview
 
 
 class CommandBar(QWidget):
@@ -32,7 +31,8 @@ class CommandBar(QWidget):
         self.hint.setTextFormat(Qt.TextFormat.PlainText)
         self.hint.hide()  # the line takes the whole width until there's a hint
         lay.addWidget(self.hint, 2)
-        self.history, self.pos = [], 0
+        self.history = History()
+        self.cmds = Commands(self.core)
 
     def focus(self):
         self.edit.setFocus()
@@ -50,45 +50,13 @@ class CommandBar(QWidget):
             dock.put_alias(alias)  # the split layout: the input line takes commands too
             return
         self.show()
-        text = self.edit.text()
-        rest = re.sub(r"^\s*#[0-9a-z]+(/\d+)?\s*", "", text) if text.lstrip().startswith("#") \
-            else text
-        self.edit.setText(f"#{alias} " + rest.lstrip())
+        self.edit.setText(rules.put_alias(self.edit.text(), alias))
         self.edit.setFocus()
         self.edit.end(False)
 
     # ---- what Enter would do ------------------------------------------------------
-    def _who_sees(self, vis):
-        from .card import VIS_KEY
-        return _("vis_" + VIS_KEY.get(vis, vis))
-
     def _preview(self, text):
-        c = parse(text)
-        if not text.strip():
-            self._hint("")
-            return
-        if c.kind in ("open", "reply", "sub", "unsub", "boost", "bookmark", "delete"):
-            st = self.core.by_alias(c.alias)
-            if st is None:
-                self._hint(_("cmd_no_post", alias=c.alias) +
-                                  (" " + _("cmd_as_post") if c.kind == "reply" and
-                                   self.core.cfg["post"]["plain_posts"] else ""))
-                return
-            who = st.author.handle
-            where = f"#{c.alias}" + (f"/{c.number}" if c.number else "")
-            self._hint(_("cmd_do_" + c.kind, where=where, who=who,
-                                text=snippet(st, 50),
-                                vis=self._who_sees(self.core.reply_visibility(st))))
-        elif c.kind in ("follow", "unfollow", "profile", "direct"):
-            self._hint(_("cmd_do_" + c.kind, who=c.user))
-        elif c.kind == "post":
-            self._hint(_("cmd_do_post", vis=self._who_sees(
-                self.core.default_visibility()))
-                if self.core.cfg["post"]["plain_posts"] else _("cmd_unknown"))
-        elif c.kind == "help":
-            self._hint(_("cmd_do_help"))
-        else:
-            self._hint(_("cmd_unknown"))
+        self._hint(preview(self.core, text))
 
     # ---- doing it -------------------------------------------------------------------
     def run(self):
@@ -97,97 +65,46 @@ class CommandBar(QWidget):
         if c.kind == "error":
             self._hint(_("cmd_unknown"))
             return
-        if line.strip() and (not self.history or self.history[-1] != line):
-            self.history.append(line)
-        self.pos = len(self.history)
+        self.history.add(line)
         if c.kind == "help":
             QMessageBox.information(self, _("cmd_help_title"), _("cmd_help"))
             return
-        if c.kind == "post":
-            if not self.core.cfg["post"]["plain_posts"]:
-                self._hint(_("cmd_unknown"))
-                return
-            self._send(c.text, self.core.default_visibility())
+        fut, msg = self.cmds.run(line, unknown_as_post=True)
+        if fut is None:
+            self._hint(msg or _("cmd_unknown"))
             return
-        if c.kind in ("follow", "unfollow", "profile", "direct"):
-            self.win.bridge.call(self.core.find_user(c.user), ok=lambda acc: self._user(c, acc),
-                                 fail=self.win.error)
-            return
-        if self.core.by_alias(c.alias) is None:
-            if c.kind == "reply" and self.core.cfg["post"]["plain_posts"]:
-                self._send(line.strip(), self.core.default_visibility())
-            else:
-                self._hint(_("cmd_no_post", alias=c.alias))
-            return
-        self.win.bridge.call(self.core.target(c.alias, c.number),
-                             ok=lambda st: self._post_cmd(c, st), fail=self.win.error)
-
-    def _post_cmd(self, c, st):
-        if st is None:
-            self._hint(_("cmd_no_comment", where=f"#{c.alias}/{c.number}"))
-            return
-        s = st
-        done = lambda key: (self.edit.clear(), self.win.statusBar().showMessage(_(key), 4000))  # noqa: E731
-        if c.kind == "open":
-            self.win.open_thread(s.id)
-            self.edit.clear()
-        elif c.kind == "reply":
-            me = self.core.me
-            mentions = reply_mentions(s, me.handle if me else "")
-            self._send(mentions + c.text, self.core.reply_visibility(s), s)
-        elif c.kind in ("sub", "unsub"):
-            call = self.core.subscribe if c.kind == "sub" else self.core.unsubscribe
-            self.win.bridge.call(call(s), ok=lambda _r: done("subbed" if c.kind == "sub"
-                                                             else "unsubbed"))
-        elif c.kind == "boost":
-            self.win.bridge.call(self.core.share(s), ok=lambda _r: done("cmd_boosted"))
-        elif c.kind == "bookmark":
-            on = not s.mine.bookmarked
-            self.win.bridge.call(self.core.bookmark(s, on),
-                                 ok=lambda _r: done("bookmarked" if on else "unbookmarked"))
-        elif c.kind == "delete":
-            self.edit.clear()
-            self.win.on_link(f"fedtail:delete/{s.id}")
-
-    def _user(self, c, acc):
-        if acc is None:
-            self._hint(_("cmd_no_user", who=c.user))
-            return
-        if c.kind == "profile":
-            self.win.open_account(acc.id)
-            self.edit.clear()
-        elif c.kind in ("follow", "unfollow"):
-            on = c.kind == "follow"
-            self.win.bridge.call(self.core.follow(acc.id, on), ok=lambda _r: (
-                self.edit.clear(), self.win.statusBar().showMessage(
-                    _("cmd_followed" if on else "cmd_unfollowed", who=acc.handle), 4000)))
-        elif c.kind == "direct":
-            self._send(c.text, "direct")
-
-    def _send(self, text, visibility, reply_to=None):
         self.edit.setEnabled(False)
 
-        def ok(_st):
+        def ok(result):
             self.edit.setEnabled(True)
-            self.edit.clear()
-            self.win.statusBar().showMessage(_("sent"), 4000)
             self.edit.setFocus()
+            if isinstance(result, Failed):
+                self._hint(result)  # the line stays, to mend
+                return
+            self.edit.clear()
+            if isinstance(result, tuple):
+                what, x = result
+                if what == "thread":
+                    self.win.open_thread(x)
+                elif what == "profile":
+                    self.win.open_account(x.id)
+                elif what == "delete":
+                    self.win.on_link(f"fedtail:delete/{x.id}")
+            elif isinstance(result, str):
+                self.win.statusBar().showMessage(result, 4000)
+            else:  # the post made
+                self.win.statusBar().showMessage(msg or _("sent"), 4000)
 
         def fail(e):
             self.edit.setEnabled(True)
             self.win.error(_("send_failed_text", err=e))
-        self.win.bridge.call(self.core.post(text, visibility, reply_to), ok=ok, fail=fail)
+        self.win.bridge.call(fut, ok=ok, fail=fail)
 
     # ---- ↑ ↓ through what you typed before ------------------------------------------
     def eventFilter(self, obj, e):
-        if e.type() == e.Type.KeyPress and self.history:
-            if e.key() == Qt.Key.Key_Up:
-                self.pos = max(0, self.pos - 1)
-                self.edit.setText(self.history[self.pos])
-                return True
-            if e.key() == Qt.Key.Key_Down:
-                self.pos = min(len(self.history), self.pos + 1)
-                self.edit.setText(self.history[self.pos] if self.pos < len(self.history)
-                                  else "")
+        if e.type() == e.Type.KeyPress and e.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            line = self.history.up() if e.key() == Qt.Key.Key_Up else self.history.down()
+            if line is not None:
+                self.edit.setText(line)
                 return True
         return super().eventFilter(obj, e)
