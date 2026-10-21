@@ -2073,13 +2073,14 @@ class QtSmokeTest(unittest.TestCase):
         view.seen.connect(seen.extend)
         sb = view.verticalScrollBar()
         start = sb.value()
+        unread = set(view.unread_keys())  # those on screen already may be read by now
         step = view.viewport().height() // 2
         for _i in range(4):  # four wheel turns, no tick in between
             view._touched()
             sb.setValue(sb.value() + step)
         view._emit_seen()
         went_over = [view.rows[k].status_id for k in view.order
-                     if start <= view._top(view.rows[k])
+                     if k in unread and start <= view._top(view.rows[k])
                      and view._top(view.rows[k]) + view.rows[k].height() <= sb.value()]
         self.assertTrue(went_over)
         self.assertLessEqual(set(went_over), set(seen))
