@@ -433,6 +433,28 @@ class GtkSmokeTest(_GtkBase):
             for w in _walk(pop)), 3))
         pop.popdown()
 
+    def test_a_lists_menu_in_the_sidebar(self):
+        """A right click on a list: who's in it, up/down, rename, exclusive, delete —
+        as in Qt; on another lane: a new list."""
+        from fedtail.frontends.gtk import lists
+        row = next((r for n, r in self.win.lane_rows.items() if not n.startswith("list:")))
+        pop = lists.lane_menu(self.win, row)
+        if self.win.cfg["lists"]["enabled"]:
+            labels = [b.get_label() for b in _walk(pop) if isinstance(b, Gtk.Button)]
+            self.assertIn(i18n._("list_new"), labels)
+            pop.popdown()
+        made = []
+        self.win.call(self.view.create_list("Друзья"), made.append)
+        self.assertTrue(pump(lambda: made and f"list:{made[0].id}" in self.win.lane_rows, 5))
+        row = self.win.lane_rows[f"list:{made[0].id}"]
+        pop = lists.lane_menu(self.win, row)
+        labels = [b.get_label() for b in _walk(pop) if isinstance(b, Gtk.Button)]
+        for key in ("list_people", "list_rename", "list_delete"):
+            self.assertIn(i18n._(key), labels)
+        pop.popdown()
+        page = lists.open_list_people(self.win, made[0])
+        self.assertIsNotNone(page)
+
     def test_edit_my_profile(self):
         """My profile's Edit as in Qt: loaded, only what changed goes to the server."""
         ed = self.win.edit_profile()

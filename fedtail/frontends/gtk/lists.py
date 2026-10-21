@@ -78,3 +78,73 @@ def popover(win, account, anchor):
     pop.connect("closed", lambda p: p.unparent())
     pop.popup()
     return pop
+
+
+def lane_menu(win, row):
+    """A right click on a list in the sidebar, as in Qt: who's in it, up / down, rename,
+    exclusive (its people's posts out of Home), delete; on another lane — a new list."""
+    view, core = win.view, win.core
+    name = row.name
+    pop = Gtk.Popover()
+    pop.set_has_arrow(False)
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
+    def item(label, fn, sensitive=True):
+        b = Gtk.Button(label=label)
+        b.add_css_class("flat")
+        b.get_child().set_xalign(0)
+        b.set_sensitive(sensitive)
+        b.connect("clicked", lambda _b: (pop.popdown(), fn()))
+        box.append(b)
+        return b
+    if name.startswith("list:"):
+        lid = name[len("list:"):]
+        lists = list(view.lists)
+        x = next((y for y in lists if y.id == lid), None)
+        if x is None:
+            return None
+        ids = [y.id for y in lists]
+        item(_("list_people"), lambda: open_list_people(win, x))
+        item(_("list_up"), lambda: win.call(core.submit(core.move_list, x.id, -1)),
+             ids.index(x.id) > 0)
+        item(_("list_down"), lambda: win.call(core.submit(core.move_list, x.id, 1)),
+             ids.index(x.id) < len(ids) - 1)
+        box.append(Gtk.Separator())
+        item(_("list_rename"), lambda: _rename(win, x))
+        ex = Gtk.CheckButton(label=_("list_exclusive"))
+        ex.set_active(x.exclusive)
+        from .gi_setup import tip
+        tip(ex, _("list_exclusive_tip"))
+        ex.connect("toggled", lambda c: win.call(core.update_list(x.id, x.title,
+                                                                   c.get_active())))
+        box.append(ex)
+        box.append(Gtk.Separator())
+        item(_("list_delete"), lambda: win.confirm(
+            _("list_delete"), _("list_delete_q", title=x.title),
+            lambda: win.call(core.delete_list(x.id))))
+    elif win.cfg["lists"]["enabled"]:
+        item(_("list_new"), win.new_list)
+    else:
+        return None
+    pop.set_child(box)
+    pop.set_parent(row)
+    pop.connect("closed", lambda p: p.unparent())
+    pop.popup()
+    return pop
+
+
+def _rename(win, x):
+    from .dialogs import ask_text
+
+    def done(title):
+        if title != x.title:
+            win.call(win.core.update_list(x.id, title, x.exclusive))
+    ask_text(win, _("list_rename"), _("list_name_q"), done, x.title)
+
+
+def open_list_people(win, x):
+    """Who is in a list: a tab of people, each taken out right there (×)."""
+    from .people import open_people
+    return open_people(win, f"list-people:{x.id}", _("list_people_title", title=x.title),
+                       lambda _cursor: win.view.list_people(x.id),
+                       dismiss=lambda acc_id: win.core.set_in_list(x.id, acc_id, False))

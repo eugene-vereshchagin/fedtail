@@ -702,6 +702,10 @@ class MainWindow(Gtk.ApplicationWindow):
                                                  lambda x: self.status(
                                                      _("list_created", title=x.title))))
 
+    def lane_menu(self, row):
+        from . import lists
+        return lists.lane_menu(self, row)
+
     def lists_popover(self, account, anchor):
         """"Add to list" for someone: the lists, ticked where they are (gtk/lists.py)."""
         from . import lists
@@ -1017,6 +1021,9 @@ class MainWindow(Gtk.ApplicationWindow):
                 title = self.view.lane_title(name) or _("lane_" + _base(name))
                 row = LaneRow(name, title, self.theme)
                 row.set_visible(group not in folded)
+                right = Gtk.GestureClick(button=3)  # a list's menu, as Qt's sidebar
+                right.connect("pressed", lambda *_a, r=row: self.lane_menu(r))
+                row.add_controller(right)
                 self.lane_rows[name] = row
                 self.sidebar.append(row)
         self.update_badges()
