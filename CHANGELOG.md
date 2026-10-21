@@ -7,105 +7,68 @@
   server's window starts anew, and asks nothing while it is spent. One line in the
   status bar says until when — instead of a "429" for every lane, every round (as on
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
-- The messenger themes made anew from the originals, with square or nearly square
-  corners: `qip-retro` — QIP under Windows XP (beige windows, white panes in grey-blue
-  frames, XP tabs with an orange line); `qip-modern` — QIP Infium (light grey, the posts
-  and the input line on a white-to-blue diagonal, "▾ Friends - 3/25"); `mra` (orange),
-  `mra-blue` and the new `mra-green` and `mra-violet` — the Mail.ru Agent's skins; `psi`
-  — Psi+ on KDE (flat, Breeze blue). In the split layout a theme sets its look too:
-  `shape.faces` ("qip": the author's bar over a lane and whom I write to by the input
-  line; "agent": a column on the right with their face by the posts and mine by the
-  input line), `roster_rows` ("faces": a big face and three lines, as in the Agent and
-  Psi), `tab_rows` ("wrap": the tabs go into more rows, as in the Agent), `colors.view_end`
-  (a diagonal behind the posts), `window_end` / `button_end` / `header_end` (the
-  glossy gradients of the originals' windows, roster, buttons and bars) and `tab_mark`,
-  `words.roster_group`. The tabs of the
-  messages window are fedtail's own now, each with its ×, closed by the middle button
-  too; in more rows each full row is stretched to the window's edge, as in the Agent
-  (new tabs no longer widen the window). A click on the tray icon hides or brings back
-  the roster and the messages window together.
-- In the split layout a person from "People" opens as a tab of their own with only
-  our private messages (the Direct lane holds everyone's), written to by the input
-  line; the bar over a lane is one line with a small face and stays put; the input
-  line attaches pictures and picks the language (⤢ and the big window are gone from
-  it); hovering a person in the roster, or a face, shows their card as QIP did — the
-  face, the @address, how we stand, the bio's first lines, how much they post and
-  since when; `--layout` / `--theme` carry over to an account switched to.
-- `ui.additional_icons = "layout" | "all" | "none"`: fedtail's own pictures on buttons —
-  in the split layout only (the default), in every layout, or none. With them a post's
-  Reply, Favourite, Boost, Thread and Bookmark and who sees it have pictures too, and a
-  face nobody has yet shows a grey silhouette. The `psi` theme brings Psi+'s own
-  pictures (the Crystal and Stellar iconsets, GPL; `shape.icon_set = "psi"`). The split layout's buttons (the input line, the bar over a lane, the roster)
-  have pictures of fedtail's own, in the spirit of 2007's messengers and in the
-  theme's colours, drawn the theme's way (`shape.icon_set`: "qip" for the QIP themes —
-  each picture its own bright colour, a thick dark outline, the XP years' chunky look,
-  a flower for a person; "gloss" in the theme's colour; "agent" for the Agent with an "@", "flat" for Psi with a star):
-  who sees a post, a warning, send, follow, lists, a private message,
-  the menu; a flower for a person in the roster, a bubble for a talk.
-- The roster's groups say "(15)" when nothing in them is new and "(2/15)" when 2 items
-  have something new, the 2 in colour (`words.roster_group_quiet`); a private post to no
-  one but me is "Notes to myself", two talks with the same people are told apart by how
-  they begin, and a title with quotes no longer shows "&quot;".
-- In the split layout a lane opened from the roster is read at once: the roster in
-  front counts as fedtail being looked at (the last post of a lane, never scrolled to,
-  stayed unread). The face over the posts is the author's of the post under the
-  pointer, else of the cursor's, else of the lowest one whole on screen — the newest
-  as you read, not the one on top; the Agent's column cuts a long name inside itself.
-- Fewer buttons heaped up in the split layout: the lanes' headers are a slim strip with
-  pictures only (the words in tooltips), and the author's bar shows no buttons when
-  nobody's post is under the cursor (Activity, an empty lane).
-- `ui.split_tabs = "keep" | "close"`: whether the closed messages window keeps its tabs
-  for next time. A private talk's tab no longer breaks read marks (an error on every
-  one stopped the counts from going down).
-- Less freezing in the split layout: the bar over a lane and the tabs no longer set
-  their buttons' pictures and words anew twice a second (each time the whole window was
-  laid out again, ~300 ms with a full lane), a new follow request no longer recounts
-  every lane in the window, and the roster adds People without building itself anew.
-- Trying a theme from the menu no longer freezes the window for seconds: the lanes out
-  of sight let their cards go first (drawn anew when opened), and the tabs out of sight
-  are rebuilt when they come into view.
+- **The split layout** (`ui.layout = "split"`, for one run `fedtail --layout split`;
+  `"qip"`, its first name, is still understood) — fedtail as a messenger of the 2000s,
+  QIP, the Mail.ru Agent or Psi (docs/LAYOUTS.md):
+  - The **roster**, a narrow window of its own, and fedtail starts with it alone: who I
+    am and what's new in Activity on top, a search line, then folding groups — the
+    lanes, followed threads and private talks ("Threads", "Talks", the freshest
+    `ui.roster_threads`), and "People": whom I follow who follows me back (asked once a
+    day). A group says "(15)", or "(2/15)" when two of its items have something new.
+    Each item has its count, a line of its newest post and a face. A double click (or
+    Enter) opens it; hovering a person shows their card, as QIP did. At the bottom: the
+    menu, the accounts, and ⚙ for how it looks — compact, without the header, the
+    search or the buttons, only what's new, without groups, above other windows
+    (`ui.roster_on_top`). Closing the roster closes fedtail (to the tray with
+    `ui.close_to_tray`); the tray icon hides and brings back both windows.
+  - The **messages window** is the main one, without the sidebar: every lane, thread,
+    profile and talk opened is a tab of its own, in more rows when they don't fit; ×,
+    the middle button or Esc close one, and with the last the window goes
+    (`ui.split_tabs`: whether it keeps its tabs for next time). A person opens as a
+    talk with only our private messages.
+  - The **input line** is always under the posts, a bar that drags between them: in a
+    thread it answers the thread (a private talk stays private), in a talk it writes to
+    that person privately, in a lane it writes a new post; Reply on a card goes there
+    too. Who sees it, a content warning, pictures, the language; it also runs the
+    command line's commands (`ui.dock_commands`: "#a3f text", "! #a3f", "?" — Enter).
+  - **Faces** (`ui.faces`): over a lane, in one line, the author of the post under the
+    pointer (or the cursor, or the newest whole on screen) — name, address, whether we
+    follow each other, Follow, Add to list, a private message, the profile; by the input
+    line, whom I write to. The Agent's themes put them in a column on the right instead,
+    theirs by the posts and mine by the input line. A grey silhouette stands in for a
+    face not there yet.
+  - **Pictures on buttons** of fedtail's own, drawn the theme's way
+    (`ui.additional_icons = "layout" | "all" | "none"`, in the split layout by default):
+    the input line's, the author's bar's, the roster's, a post's Reply, Favourite, Boost,
+    Thread and Bookmark and who sees it. A flower for a person in the QIP themes, an "@"
+    in the Agent's, a star in Psi's; the `psi` theme brings Psi+'s own pictures (the
+    Crystal and Stellar iconsets, GPL).
+- **The messenger themes**, made from the originals' screenshots, square or nearly
+  square, glossy where they were: `qip-retro` (QIP under Windows XP: beige, white panes
+  in grey-blue frames, XP tabs with an orange line), `qip-modern` (QIP Infium: pale blue,
+  the posts on a white-to-blue diagonal), `mra`, `mra-blue`, `mra-green`, `mra-violet`
+  (the Mail.ru Agent's skins), `psi` (Psi+ on KDE). They write a post as a message:
+  "Name (15:25:43 23/06/2007)" over it, mine and the others' in colours of their own.
+  New theme keys for any theme: `shape.card_header = "chat"`, `colors.chat_me` /
+  `chat_them`, `words.chat` / `chat_date`; for the split layout `shape.faces`,
+  `roster_rows`, `roster_face`, `tab_rows`, `icon_set`, `colors.view_end`, `window_end`,
+  `button_end`, `header_end`, `tab_mark`, `words.roster_group` / `roster_group_quiet`.
+  Their colours and pictures are fedtail's own, in the spirit, not anyone's skin.
+- `fedtail --layout single|columns|split` and `--theme NAME`: the layout or the theme for
+  one run, the config untouched; an account switched to from there gets them too.
+- Less freezing: trying a theme no longer stops the window for seconds (the lanes out of
+  sight let their cards go first), and the split layout no longer lays the whole window
+  out twice a second.
 - Less freezing after a poll: the lanes and their unread counts are worked out in the
   poll thread before the window hears of news, and unread counts are cached until a
   lane or a read mark changes — the sidebar asked every lane after every event, reading
   thousands of stored posts between two frames (250 ms to a second).
 - `fedtail --layout single|columns|split` and `--theme NAME`: the layout or the theme for
   one run, the config untouched.
-- Five themes in the spirit of messengers, for `ui.layout = "split"` above all: `qip-retro`
-  (QIP Infium's pale blue), `qip-modern` (QIP 2012, flat), `mra` and `mra-blue` (the
-  Mail.ru Agent's orange and blue), `psi`. They write a post as a message: "Name (15:25:43
-  23/06/2007)" over it, mine and the others' in colours of their own — `shape.card_header
-  = "chat"`, `colors.chat_me` / `chat_them`, `words.chat` / `chat_date` for any theme.
-  Their icons and colours are fedtail's own, not anyone's skin.
 - Help gets a "Server and federation" part under its contents: About the server, What it
   can do (the probe) and Federation status open on its right side, as pages of the same
   panel — the settings-like window of Psi or QIP, only for what to read, not to set
   (settings stay a file).
-- `ui.layout = "split"` (`"qip"`, its first name, is still understood), the first step of
-  a messenger-style layout (docs/LAYOUTS.md): the
-  lanes in a narrow roster window of their own, as in QIP, Psi or the Mail.ru Agent — who
-  I am and what's new in Activity on top, a search line, the lanes in folding groups
-  "▾ Personal (2/9)" (with something new / all), each with its count, a line of its
-  newest post and its author's face. fedtail starts with the roster only; a double
-  click (or Enter) opens a lane in the messages window — the main one, without the
-  sidebar, its tabs drawn as tabs; closing the last tab closes it. Under the tabs, an
-  input line is always there: in a thread's tab it answers the thread (a private talk
-  stays private), in a lane's tab it writes a new post; who sees it, a warning, and ⤢ for
-  the full Compose window; Reply on a card answers there too, and it takes the command
-  line's commands (`ui.dock_commands`: "#a3f text", "! #a3f", "?" — Enter runs them; the
-  command line itself hides). Every lane opened from the roster and every thread is a
-  tab of its own above. "People" in the roster: whom I follow who follows me back
-  (asked once a day) — a double click opens our private talk or starts a private
-  message. The faces (`ui.faces`), as in QIP: over a lane's posts the
-  author of the one under the cursor — name, address, whether we follow each other,
-  and Follow, Add to list, a private message, the profile; by the input line, whom I
-  write to. Reading and writing are split by a bar that drags. At the
-  bottom of the roster, the menu and the accounts
-  (@me ▾); ⚙ (or a right click on empty space) sets how it looks: compact — a line an
-  item, without the header, the search or the buttons, only where there's something new,
-  without groups, above other windows (`ui.roster_on_top` says how it starts). Closing
-  the roster closes fedtail (to the tray with `ui.close_to_tray`). Followed threads and private
-  talks stand there as contacts of their own ("Threads", "Talks", the freshest
-  `ui.roster_threads`): who began it and how, or who is in it.
 - fedtail took GoToSocial 0.22 for Mastodon: its version says only "0.22.1+git-…".
   Now it reads the instance document's `source_url` and GoToSocial's own keys, and asks
   the server's nodeinfo when still unsure — so × in Activity hides here instead of

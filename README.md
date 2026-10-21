@@ -230,6 +230,12 @@ lane clicked on the left comes as a column, ✕ takes it away, ‹ › move it, 
 remembered. That's for now: the window starts as `ui.layout` says (`"single"` or
 `"columns"`).
 
+**As in a messenger:** `fedtail --layout split` (or `ui.layout = "split"`) puts the lanes,
+followed threads, private talks and mutuals in a roster window of their own, as QIP, Psi or
+the Mail.ru Agent had it; a double click opens one as a tab of the messages window, which
+has an input line at its bottom, faces, and pictures on its buttons. The messengers' themes
+(`qip-retro`, `qip-modern`, `mra`, `mra-blue`, `mra-green`, `mra-violet`, `psi`) set its look.
+
 ## Posts
 
 A post shows what's in it the way its server meant: the server's own emoji (`:blobcat:`) as
