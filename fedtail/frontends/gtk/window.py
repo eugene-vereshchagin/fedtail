@@ -701,21 +701,27 @@ class MainWindow(Gtk.ApplicationWindow):
     def _debug_corner(self):
         """In the debugging mode: how the window is drawn — theme, GTK, libadwaita,
         the display's kind, the scale, the build."""
-        import sys
 
         from ... import diag
         from . import gi_setup
         if not diag.is_on():
             return ""
-        bits = [_("debug_theme", theme=self.theme.id),
-                "GTK " + ".".join(str(x) for x in gtk_version())]
-        if gi_setup.Adw is not None:
-            bits.append("libadwaita")
+        from ..common import corner
         display = Gdk.Display.get_default()
-        if display is not None:
-            bits.append(type(display).__name__.replace("Display", "").lower() or "?")
-        bits.append("onefile" if getattr(sys, "frozen", False) else "source")
-        return " · ".join(bits)
+        kind = type(display).__name__.replace("Gdk", "").replace("Display", "") \
+            if display is not None else ""
+        # the family the theme's CSS gives (the desktop's when none), the desktop's size —
+        # written as Qt writes it: "Open Sans 10pt"
+        settings = Gtk.Settings.get_default()
+        desk = (settings.get_property("gtk-font-name") or "") if settings else ""
+        fam, _sp, size = desk.rpartition(" ")
+        if not size.replace(".", "").isdigit():
+            fam, size = desk, ""
+        font = " ".join(x for x in (getattr(self.theme, "font_family", "") or fam,
+                                    f"{size}pt" if size else "") if x)
+        return corner.text(self.theme.id, "GTK " + ".".join(str(x) for x in gtk_version()),
+                           "libadwaita" if gi_setup.Adw is not None else "GTK", font, kind,
+                           self.get_scale_factor() or 1)
 
     # ---- ≡ the menu: what its items do ---------------------------------------------------
     def read_current_lane(self):

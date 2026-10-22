@@ -193,13 +193,16 @@ def fit_box(child, width, height, least=96):
             def do_measure(self, orientation, for_size):
                 if orientation == Gtk.Orientation.HORIZONTAL:
                     return self.least, self.w, -1, -1
-                # the least height is the same at any width (GTK holds a widget's least
-                # height for a width never to grow as the width does: a picture's does,
-                # and it said "Expect overlapping widgets"); the natural one keeps the
-                # shape — a lane gives the natural one
-                width = self.w if for_size < 0 else max(self.least, min(for_size, self.w))
-                least = max(1, round(self.h * self.least / self.w))
-                return least, max(least, round(self.h * width / self.w)), -1, -1
+                # the height is the shape's at the width given, least and natural alike:
+                # a ListBox (the lane) gives its rows their LEAST height, and a least
+                # height smaller than the shape (as it was) cut every picture to a strip.
+                # No width (-1): the full height — never less than at any real width, so
+                # GTK's "least height grew with the width" check holds
+                if for_size < 0:
+                    return self.h, self.h, -1, -1
+                width = max(self.least, min(for_size, self.w))
+                h = max(1, round(self.h * width / self.w))
+                return h, h, -1, -1
 
             def do_size_allocate(self, width, height, baseline):
                 # given less height than the shape wants at this width (a parent that

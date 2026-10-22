@@ -48,9 +48,11 @@ py -3.13 -m fedtail --install-desktop
 строка — ярлык в меню «Пуск» (по желанию).
 
 Если страница входа сервера говорит «неверный пароль» при верном (GoToSocial: «password/email
-combination was incorrect»), это старая сессия сервера в браузере: открыть ту же ссылку в
-приватном окне или удалить куки сайта сервера и войти снова. Ссылку можно открыть и в
-браузере на другой машине — код оттуда подойдёт.
+combination was incorrect»), до fedtail дело ещё не дошло: это сервер не принял то, что
+пришло из формы. Что именно, скажет лог сервера по Request ID из ошибки (у GoToSocial:
+`journalctl -u gotosocial | grep <Request ID>` — «password hash didn't match» значит, email
+верный, а пароль пришёл другой). Обойти: открыть ту же ссылку в браузере на другой машине —
+код оттуда подойдёт.
 
 Обновиться:
 
@@ -120,8 +122,10 @@ code.
 
 3. Run: `py -3.13 -m fedtail` (server address → sign in in the browser → the code back into
    fedtail); `py -3.13 -m fedtail --install-desktop` — a Start menu shortcut. A sign-in page
-   saying the right password is wrong: the server's old session in that browser — a private
-   window, or the site's cookies cleared. Update: `git pull`, `py -3.13 -m fedtail
+   saying the right password is wrong is the server refusing what the form sent, before
+   fedtail has any part: its log by the error's Request ID says what (GoToSocial: "password
+   hash didn't match" — the email is right, the password came different); open the link on
+   another machine and bring the code back. Update: `git pull`, `py -3.13 -m fedtail
    --update-config`. Config: `%APPDATA%\fedtail\<profile>\`; data and logs:
    `%LOCALAPPDATA%\fedtail\<profile>\logs\` (send `latest.log`).
 

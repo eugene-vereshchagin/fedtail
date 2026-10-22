@@ -666,8 +666,8 @@ _STRINGS = {
         "scheduled_msg": "Запланировано на {when}.", "scheduled_title": "Запланированные",
         "scheduled_cancel": "Отменить выбранный", "scheduled_none": "Ничего не запланировано.",
         "debug_theme": "тема {theme}",
-        "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, стиль Qt, шрифт, "
-                            "платформа, масштаб, сборка или исходники.",
+        "debug_corner_tip": "Режим отладки: чем нарисовано окно — тема, тулкит и версия, "
+                            "стиль, шрифт, дисплей, масштаб, сборка или исходники.",
         "deleted": "Удалено.", "sent": "Отправлено.", "error": "Ошибка: {err}",
         "not_in_cache": "Этого поста нет в кеше — обнови ленту.",
         "delete_q_title": "Удалить?", "delete_q": "Удалить пост насовсем?\n\n{text}",
@@ -1537,8 +1537,8 @@ _STRINGS = {
         "scheduled_msg": "Scheduled for {when}.", "scheduled_title": "Scheduled posts",
         "scheduled_cancel": "Cancel the chosen one", "scheduled_none": "Nothing scheduled.",
         "debug_theme": "theme {theme}",
-        "debug_corner_tip": "Debugging mode: how the window is drawn — theme, Qt style, font, "
-                            "platform, scale, one-file build or source.",
+        "debug_corner_tip": "Debugging mode: how the window is drawn — theme, toolkit and "
+                            "version, style, font, display, scale, one-file build or source.",
         "deleted": "Deleted.", "sent": "Sent.", "error": "Error: {err}",
         "not_in_cache": "This post is not cached — refresh the lane.",
         "delete_q_title": "Delete?", "delete_q": "Delete this post for good?\n\n{text}",

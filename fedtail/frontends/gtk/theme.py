@@ -77,6 +77,7 @@ class Theme:
         self.c = palette.resolve(data["colors"], desk)
         self.warnings = list(warnings)
         self.dark = desk.base.lightness() < 128
+        self.font_family = ""  # set by apply(): the family the CSS gives, "" — the desktop's
 
     def word(self, key, text, **kw):
         return palette.word(self.words, key, text, **kw)
@@ -228,6 +229,7 @@ def apply(cfg, name=None):
     family = {"custom": cfg["ui"].get("font") or "",
               "theme": theme.font.get("family") or ""}.get(mode, "")
     family = family.split(",")[0].strip().strip('"')
+    theme.font_family = family  # what the window is written in ("" — the desktop's)
     css = theme.css(family, float(theme.font.get("post_scale") or 1.0))
     display = Gdk.Display.get_default()
     if display is None:

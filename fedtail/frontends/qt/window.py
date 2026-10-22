@@ -2526,15 +2526,19 @@ class MainWindow(QMainWindow):
         from ... import diag
         if not diag.is_on():
             return
+        from PySide6 import QtCore
+
+        from ..common import corner
         app = QApplication.instance()
         screen = app.primaryScreen()
         f = app.font()
-        bits = [_("debug_theme", theme=self.theme.id), app.style().name(),
-                f"{f.family()} {f.pointSizeF():g}pt", app.platformName()]
-        if screen:
-            bits.append(f"{screen.devicePixelRatio() * 100:g}%")
-        bits.append("onefile" if getattr(sys, "frozen", False) else "source")
-        label = QLabel(" · ".join(bits))
+        style = app.style()
+        # (name() is "" in some PySide6 builds: the corner showed "· ·")
+        style_name = style.name() or style.objectName() or type(style).__name__
+        label = QLabel(corner.text(
+            self.theme.id, "Qt " + QtCore.qVersion(), style_name,
+            f"{f.family()} {f.pointSizeF():g}pt", app.platformName(),
+            screen.devicePixelRatio() if screen else 0))
         label.setObjectName("muted")
         label.setToolTip(_("debug_corner_tip"))
         self.statusBar().addPermanentWidget(label)

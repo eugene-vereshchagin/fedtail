@@ -49,9 +49,13 @@
   is on (`ui.accessibility = "auto"`; "on" — always): with KDE's bus up and nobody
   reading, the ≡ menu took 2 s to open. The tray answers the panel without rebuilding
   the icon's pixels each time (0.1–0.3 s per new post).
-- GTK: a picture in a card is never cut at the bottom — given less height than its
-  shape wants, it narrows; a picture whose size the server didn't say is shown whole in
-  its box, not cut to a square.
+- GTK: pictures in a lane at their full size again — a lane is a ListBox, which gives
+  its rows their least height, and a picture's least height was a strip of it (cut, then
+  shrunk to 96 px wide); its least height is now its shape's at the width it gets. A
+  picture whose size the server didn't say is shown whole, not cut to a square.
+- The debugging corner of the status bar says the same in Qt and GTK, in one order:
+  theme · toolkit and version · style · font · display · scale · build (Qt's had an
+  empty "· ·" where its style's name was).
 - docs/WINDOWS.md: fedtail on Windows from the source — Python and git by winget, the
   packages, running, the tests as CI runs them, the selfcheck; tests/test_windows_doc.py
   keeps it the same as CI and the code.
