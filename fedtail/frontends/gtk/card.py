@@ -70,7 +70,7 @@ class Card(Gtk.Box):
     Post or Share; parent: the Post it answers, "missing" or None."""
 
     def __init__(self, ctx, key, entry, parent=None, unread=False, short_id=None,
-                 depth=0, number=None, my_replies=()):
+                 depth=0, number=None, my_replies=(), via=None):
         # vertical, the face laid over the column's left margin: GTK 4.18 takes a
         # horizontal box's least height as its children's at their least width — the
         # text wrapped word by word — above the natural one at the width it has, and
@@ -79,6 +79,7 @@ class Card(Gtk.Box):
         self.ctx, self.key = ctx, key
         self.entry = entry
         self.short_id = short_id
+        self.via = via  # all accounts in one window: which of mine got it
         self.add_css_class("ft-card")
         self.unread = None
         self.depth = depth
@@ -203,6 +204,15 @@ class Card(Gtk.Box):
         handle.set_ellipsize(Pango.EllipsizeMode.END)
         handle.set_hexpand(True)
         head.append(handle)
+        if self.via:  # → @account, in a colour of its own (ui.account_colors), as Qt's
+            from ..common.lane import account_color
+            text = GLib.markup_escape_text("→ " + self.via)
+            if ctx.cfg["ui"].get("account_colors", True):
+                text = (f'<span background="{account_color(self.via)}" foreground="white">'
+                        f" {text} </span>")
+            via_lab = _label(text, ("ft-via",), markup=True)
+            tip(via_lab, _("via_tip", acct=self.via))
+            head.append(via_lab)
         if number:
             head.append(_label(f"/{number}", ("ft-mono",)))
         if self.short_id:

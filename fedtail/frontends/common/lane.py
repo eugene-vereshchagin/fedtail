@@ -50,6 +50,16 @@ def make_spec(view, key, entry, extra=None, **kw):
     return CardSpec(key=key, entry=entry, extra=extra, **kw)
 
 
+def account_color(name):
+    """A colour of its own for each account of mine, from its name: steady, readable
+    under white letters (Qt's QColor.fromHsl(h, 150, 105)), "#rrggbb"."""
+    import colorsys
+    import hashlib
+    h = int(hashlib.sha1(name.lower().encode()).hexdigest()[:4], 16) % 360
+    r, g, b = colorsys.hls_to_rgb(h / 360, 105 / 255, 150 / 255)
+    return "#" + "".join(f"{round(x * 255):02x}" for x in (r, g, b))
+
+
 def true_kind(m):
     """Servers sometimes call a video an "image" (a remote one they couldn't sort);
     the file's name knows better. A copy with the right kind."""

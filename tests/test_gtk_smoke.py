@@ -751,6 +751,16 @@ class GtkSmokeTest(_GtkBase):
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 
+    def test_which_account_of_mine_got_it(self):
+        """All accounts in one window: "→ @account" on the card, in its own colour."""
+        from fedtail.frontends.common.lane import account_color
+        from fedtail.frontends.gtk.card import Card
+        card = Card(self.win.ctx, "x", self.view.by_id("011"), via="@w")
+        labels = [w.get_text() for w in _walk(card) if isinstance(w, Gtk.Label)]
+        self.assertTrue(any("→ @w" in t for t in labels), labels)
+        self.assertRegex(account_color("@w"), r"^#[0-9a-f]{6}$")
+        self.assertEqual(account_color("@w"), account_color("@W"))
+
     def test_a_pictures_menu_saves_it(self):
         from fedtail.model import Media
         card = next(iter(self._lane("home").rows.values()))

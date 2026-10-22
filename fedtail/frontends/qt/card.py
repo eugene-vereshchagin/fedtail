@@ -1291,12 +1291,10 @@ class _ActionsBox(QWidget):
 
 
 def account_color(name):
-    """A colour of its own for each account, from its name: steady, readable on white."""
-    import hashlib
+    """A colour of its own for each account, from its name (common/lane.py's)."""
+    from ..common.lane import account_color as color
+    return color(name)
 
-    from PySide6.QtGui import QColor
-    h = int(hashlib.sha1(name.lower().encode()).hexdigest()[:4], 16) % 360
-    return QColor.fromHsl(h, 150, 105).name()
 
 def _age_days(p, cfg):
     """How many days old a post is, when that's more than feed.old_days; else 0."""
