@@ -313,6 +313,10 @@ class FeedView(QScrollArea):
             self._set_specs(window, keep_position)
         finally:
             self.setUpdatesEnabled(True)
+        # new posts coming in at the end the reader stands at add cards with nobody
+        # scrolling: let go of the far ones here too, not only when it grows (the night
+        # of 22.10: +74 cards in a window left in the background)
+        self._trim()
         self._grow_soon()
 
     def _all_at_once(self):

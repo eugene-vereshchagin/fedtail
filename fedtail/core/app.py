@@ -2888,4 +2888,7 @@ class Core(SocialMixin):
             finally:
                 self._poll_lock.release()
         else:
-            log.warning("exit: a poll is still running, database left open")
+            # not a problem (said as one, it looked like one in the night's log): SQLite
+            # has every commit on disk, the process ending closes the file
+            log.info("exit: a poll still waits for the server — not waited for; all "
+                     "it stored is on disk")
