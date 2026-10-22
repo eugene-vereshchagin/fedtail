@@ -371,13 +371,35 @@ def federation(win):
     (fedstatus.py makes the page, as for Qt)."""
     from .. import fedstatus
     page = Page(win, _("fed_title"), _("loading"), win.on_link, 900, 700)
-    refresh = Gtk.Button(label=_("refresh"))
+    got = [None]
+
+    def show(data):
+        got[0] = data
+        page.set_html(fedstatus.html(data))
 
     def load(*_a):
-        win.call(win.view.federation_status(), lambda data: page.set_html(fedstatus.html(data)))
-    refresh.connect("clicked", load)
-    page.get_child().get_last_child().prepend(refresh)
+        win.call(win.view.federation_status(), show)
+
+    def copy(*_a):  # for an issue, as Qt's
+        if got[0] is not None:
+            page.get_clipboard().set(fedstatus.text(got[0]))
+            win.status(_("fed_copied"), seconds=5)
+
+    def count_anew(*_a):
+        from ...core import health
+        health.REC.clear()
+        log.info("federation status: counting anew")
+        load()
+    bar = page.get_child().get_last_child()
+    for word, fn in reversed((("fed_refresh", load), ("fed_copy", copy),
+                              ("fed_reset", count_anew))):
+        b = Gtk.Button(label=_(word))
+        b.connect("clicked", fn)
+        bar.prepend(b)
     load()
+    # live while open: the numbers move as polls come (as Qt's, every 15 s)
+    GLib.timeout_add_seconds(15, lambda: (load(), True)[1] if page.get_visible()
+                             else GLib.SOURCE_REMOVE)
     page.present()
     return page
 

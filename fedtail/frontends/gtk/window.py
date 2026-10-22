@@ -386,6 +386,7 @@ class MainWindow(Gtk.ApplicationWindow):
             label.text = text
             close = Gtk.Button(icon_name="window-close-symbolic")
             close.add_css_class("flat")
+            tip(close, _("close_tab"))
             close.connect("clicked", lambda _b, n=name: self.close_lane_tab(n))
             label.append(close)
             self.tabs.append_page(lv, label)
@@ -416,6 +417,7 @@ class MainWindow(Gtk.ApplicationWindow):
             tab.append(Gtk.Label(label=page.title))
             close = Gtk.Button(icon_name="window-close-symbolic")
             close.add_css_class("flat")
+            tip(close, _("close_tab"))
             close.connect("clicked", lambda _b: self.close_extra(key))
             tab.append(close)
             self.tabs.append_page(page, tab)
@@ -767,6 +769,8 @@ class MainWindow(Gtk.ApplicationWindow):
     def set_hints(self, on):
         from . import gi_setup
         self.hints_on = gi_setup.HINTS["on"] = bool(on)
+        if on:  # how it works, once it's on (as Qt says)
+            self.status(_("whats_this_on"), seconds=8)
 
     def try_theme(self, name):
         """Another theme for this run (the config stays): the window restyled, the
@@ -901,7 +905,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 GLib.timeout_add(300, lambda: (self.close(), False)[1])
             else:
                 self.start()
-        self.confirm(_("logout_title"), "\n\n".join(text).replace("<br>", "\n"), go)
+        self.confirm(_("logout_title"), "\n\n".join(text).replace("<br>", "\n"), go,
+                     yes=_("logout_yes"))
 
     def about(self):
         import platform
@@ -1377,6 +1382,7 @@ class MainWindow(Gtk.ApplicationWindow):
         tab.append(title)
         close = Gtk.Button(icon_name="window-close-symbolic")
         close.add_css_class("flat")
+        tip(close, _("close_tab"))
         close.connect("clicked", lambda _b: close_fn())
         tab.append(close)
         n = self.tabs.append_page(page, tab)
@@ -1628,12 +1634,13 @@ class MainWindow(Gtk.ApplicationWindow):
     def error(self, text):
         self.status(_("error", err=text))
 
-    def confirm(self, title, text, then):
-        """Ask; then() on yes. GTK's dialogs answer later, so this never blocks."""
+    def confirm(self, title, text, then, yes=""):
+        """Ask; then() on yes (yes: the button's own word, "Log out"). GTK's dialogs
+        answer later, so this never blocks."""
         dlg = Gtk.AlertDialog()
         dlg.set_message(title)
         dlg.set_detail(text)
-        dlg.set_buttons([_("gtk_no"), _("gtk_yes")])
+        dlg.set_buttons([_("gtk_no"), yes or _("gtk_yes")])
         dlg.set_cancel_button(0)
         dlg.set_default_button(1)
 

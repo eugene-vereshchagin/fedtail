@@ -8,7 +8,7 @@ from ...i18n import _
 from ...model.text import snippet, snippet_html
 from ..common import activity
 from .card import link_markup, name_of
-from .gi_setup import GLib, Gtk, Pango, tip
+from .gi_setup import GLib, Gtk, Pango, side_by_side, tip
 from .lane import seen, y_in
 
 SEEN_DELAY_MS = 700
@@ -140,25 +140,24 @@ class ActivityLane(_Lane):
                             for a in r.people)
             if r.more:
                 who += " " + GLib.markup_escape_text(_("act_more", n=r.more))
-        top = Gtk.Box(spacing=6)
         line = _label(f"{who} <span alpha='70%'>— {GLib.markup_escape_text(r.what)}"
                       + (f" · {GLib.markup_escape_text(r.when)}" if r.when else "") + "</span>")
         line.set_hexpand(True)
         line.connect("activate-link", lambda _l, u: (self.win.on_link(u), True)[1])
-        top.append(line)
-        x = Gtk.Button(label="×")
+        x = Gtk.Button(label="×", valign=Gtk.Align.START)
         x.add_css_class("flat")
         tip(x, _("activity_dismiss_tip" if self.view.can_dismiss_one()
                              else "activity_hide_tip"))
         x.connect("clicked", lambda _b, ids=[a.id for a in r.entries]: self._dismiss(ids))
-        top.append(x)
-        box.append(top)
+        # the words and × beside them — not a horizontal box (the words wrap: GTK 4.18)
+        box.append(side_by_side(line, x, 6))
         if r.request:  # waiting for my yes (GoToSocial): answer right here, one by one
             for a in r.entries:
                 row = Gtk.Box(spacing=6)
                 row.set_halign(Gtk.Align.END)
                 for ok in (True, False):
                     b = Gtk.Button(label=_("ok_interaction") if ok else _("no_interaction"))
+                    tip(b, _("approve_tip") if ok else _("reject_tip"))
                     if ok:
                         b.add_css_class("ft-primary")
                     b.connect("clicked", lambda _b, en=a, ok=ok: self._answer(en, ok))
