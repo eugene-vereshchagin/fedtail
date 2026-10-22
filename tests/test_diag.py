@@ -199,12 +199,34 @@ class DiagTest(unittest.TestCase):
         for _ in range(10):
             h.emit(rec)
         self.assertNotEqual(h.path, first)  # over log_mb: the next file
-        self.assertEqual((folder / "latest.log").resolve(), h.path.resolve())
+        # a symlink, or a hard link on Windows: the same file either way
+        self.assertTrue(os.path.samefile(folder / "latest.log", h.path))
         h.hour = "1999010100"  # a new hour: a new file too
         before = h.path
         h.emit(rec)
         self.assertNotEqual(h.path, before)
         h.close()
+
+    def test_latest_is_a_hard_link_without_symlinks(self):
+        """Windows without developer mode can't make symlinks: latest.log is then a hard
+        link to the current file and follows it to the next one."""
+        from unittest import mock
+        folder = Path(self._tmp.name) / "hard"
+        folder.mkdir()
+        with mock.patch.object(Path, "symlink_to", side_effect=OSError("no right")):
+            h = diag.SessionLog(folder, max_mb=0.001, keep_mb=5)
+            rec = logging.LogRecord("x", logging.INFO, "", 0, "y" * 300, None, None)
+            h.emit(rec)
+            latest = folder / "latest.log"
+            self.assertFalse(latest.is_symlink())
+            self.assertTrue(os.path.samefile(latest, h.path))
+            self.assertIn("y" * 300, latest.read_text("utf-8"))
+            first = h.path
+            for _ in range(10):
+                h.emit(rec)
+            self.assertNotEqual(h.path, first)
+            self.assertTrue(os.path.samefile(latest, h.path))  # moved on with it
+            h.close()
 
     def test_memory_back_and_files_by_kind(self):
         freed = diag.trim_memory()

@@ -168,16 +168,30 @@ class SessionLog(logging.Handler):
             n += 1
             name = f"{now:%Y-%m-%d_%H-%M-%S}-{n}.log"
         self.path = self.folder / name
+        self.path.touch()
+        self._link_latest()
         self.stream = open(self.path, "a", encoding="utf-8")  # noqa: SIM115
         self.hour = now.strftime("%Y%m%d%H")
+        self._prune()
+
+    def _link_latest(self):
+        """latest.log → the file being written: a symlink, or — where symlinks need a
+        right nobody has (Windows without developer mode) — a hard link, the same file
+        under a second name. Made before the file is opened for writing: Windows won't
+        link a file someone holds open."""
         latest = self.folder / "latest.log"
         try:
             if latest.is_symlink() or latest.exists():
                 latest.unlink()
+        except OSError:  # held open elsewhere (an editor): the old one stays
+            return
+        try:
             latest.symlink_to(self.path.name)
-        except OSError:  # no symlinks here (Windows without the right): fine
-            pass
-        self._prune()
+        except OSError:
+            try:
+                os.link(self.path, latest)
+            except OSError:  # neither (FAT, a network share): no latest.log
+                pass
 
     def _prune(self):
         files = sorted((f for f in self.folder.glob("2[0-9][0-9][0-9]-*.log")
@@ -813,7 +827,9 @@ def bug_report(paths, dest_dir=None, cfg=None, hours=48):
     with tarfile.open(out, "w:gz") as tar:
         if folder.exists():
             for f in sorted(folder.iterdir()):
+                # latest.log: the link (a hard one on Windows), not a second copy
                 if f.is_file() and not f.is_symlink() and f.name not in REPORT_SKIP \
+                        and f.name != "latest.log" \
                         and (not f.name[:1].isdigit() or f.stat().st_mtime >= since):
                     tar.add(f, arcname=f"logs/{f.name}")
         if paths.config_file.exists():
