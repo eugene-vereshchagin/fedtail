@@ -394,8 +394,15 @@ class Card(Gtk.Box):
             else:
                 word = _("media_" + m.kind) if m.kind in ("image", "video", "audio", "gifv") \
                     else _("media_unknown")
-                lab = _label(link_markup(full, "📎 " + word), ("ft-muted",), markup=True)
-                lab.connect("activate-link", lambda _l, u: (self.ctx.open_url(u), True)[1])
+                lab = _label(link_markup(full, ("▶ " if m.kind == "audio" else "📎 ") + word),
+                             ("ft-muted",), markup=True)
+                if m.kind == "audio":  # played here, as Qt's (the player, sound only)
+                    moving = [x for x in p.media if x.kind in ("video", "gifv", "audio")]
+                    lab.connect("activate-link", lambda _l, _u, a=m, mv=moving: (
+                        self.ctx.win.play_media(mv, mv.index(a) if a in mv else 0), True)[1])
+                else:
+                    lab.connect("activate-link",
+                                lambda _l, u: (self.ctx.open_url(u), True)[1])
                 row = -(-pos // 3)
                 grid.attach(lab, 0, row, 3, 1)
                 pos = (row + 1) * 3
@@ -452,6 +459,10 @@ class Card(Gtk.Box):
         if m.kind == "image" and m in images:
             idx = images.index(m)
             click.connect("released", lambda *_a: self.ctx.show_images(images, idx))
+        elif m.kind in ("video", "gifv"):  # the player over the window, as Qt's
+            moving = [x for x in self.post.media if x.kind in ("video", "gifv", "audio")]
+            idx = moving.index(m) if m in moving else 0
+            click.connect("released", lambda *_a: self.ctx.win.play_media(moving, idx))
         else:
             click.connect("released", lambda *_a: self.ctx.open_url(full))
         over.add_controller(click)

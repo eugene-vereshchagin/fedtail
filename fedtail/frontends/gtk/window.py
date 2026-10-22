@@ -294,6 +294,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.overlay.set_vexpand(True)
         self.composer = None
         self.viewer = None
+        self.player = None  # a video over the window (player.py)
         self.help_panel = None
         outer.append(self.overlay)
         if self.cfg["ui"]["command_line"]:
@@ -1809,6 +1810,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 return
             self.status("")
         self.call(self.view.resolve(url), got, lambda _e: self.open_url(url))
+
+    def play_media(self, media, index=0):
+        """A video, a gifv or a sound: the player over the window (ui.video_player)."""
+        from . import player
+        return player.show(self, media, index)
 
     def save_media(self, m):
         """A picture or a video to ui.save_dir, as Qt's save_image."""

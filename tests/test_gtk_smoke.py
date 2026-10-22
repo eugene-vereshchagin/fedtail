@@ -885,6 +885,33 @@ class GtkPanelsTest(_GtkBase):
         self.assertIsNotNone(four.media_box.get_child_at(0, 1))
         self.assertEqual(four.media_box.get_child_at(0, 0).h, 115)
 
+    def test_the_player_over_the_window(self):
+        """A video: the player over the window, its keys as Qt's (no media backend
+        here: it is built and driven all the same); without one — the browser."""
+        from fedtail.frontends.gtk import player
+        from fedtail.model import Media
+        ref = self.view.by_id("011").ref
+        vids = [Media(ref, "video", url="https://e.test/a.mp4"),
+                Media(ref, "gifv", url="https://e.test/b.mp4")]
+        opened = []
+        self.win.open_url = opened.append
+        if not player.available():
+            self.assertIsNone(self.win.play_media(vids, 0))
+            self.assertEqual(opened, ["https://e.test/a.mp4"])
+        p = player.VideoPlayer(self.win, vids, 0)
+        self.assertIs(self.win.player, p)
+        self.assertTrue(p.next_btn.get_visible())
+        p.go(1)  # the gifv: a silent loop
+        self.assertTrue(p.stream.get_loop())
+        self.assertTrue(p.stream.get_muted())
+        p.toggle_mute()
+        self.assertFalse(p.stream.get_muted())
+        p.open_outside()
+        self.assertEqual(opened[-1], "https://e.test/b.mp4")
+        from gi.repository import Gdk
+        self.assertTrue(p._key(None, Gdk.KEY_Escape, 0, 0))
+        self.assertIsNone(self.win.player)
+
     def test_viewer_over_the_window(self):
         from fedtail.frontends.gtk import viewer
         media = list(self._post_with_pictures(3).media)
