@@ -53,6 +53,10 @@
   its rows their least height, and a picture's least height was a strip of it (cut, then
   shrunk to 96 px wide); its least height is now its shape's at the width it gets. A
   picture whose size the server didn't say is shown whole, not cut to a square.
+- GTK on X11 follows the desktop's 125 % / 150 %: with no text DPI of its own (KDE gives
+  GTK apps one only through its GTK settings daemon) it takes X's Xft.dpi, or Plasma's
+  scale from kdeglobals — it sat at 100 % beside Qt's 125 %. The text grows; pictures
+  and gaps keep their pixels, as in every GTK 4 app on X11. Wayland scales GTK itself.
 - The debugging corner of the status bar says the same in Qt and GTK, in one order:
   theme · toolkit and version · style · font · display · scale · build (Qt's had an
   empty "· ·" where its style's name was).

@@ -71,6 +71,8 @@ def run(core, instance, argv):
     stop_diag = diagnostics.install(core.cfg)  # a frozen window: its stacks in the log
 
     def activate(_app):
+        from . import scale
+        scale.apply()  # the desktop's 125 % on X11, before anything is measured
         theme = themes.apply(core.cfg)
         win = MainWindow(app, core, view, bridge, theme)
         state["win"] = win

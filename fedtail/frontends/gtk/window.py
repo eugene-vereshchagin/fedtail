@@ -707,6 +707,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if not diag.is_on():
             return ""
         from ..common import corner
+        from . import scale
         display = Gdk.Display.get_default()
         kind = type(display).__name__.replace("Gdk", "").replace("Display", "") \
             if display is not None else ""
@@ -721,7 +722,7 @@ class MainWindow(Gtk.ApplicationWindow):
                                     f"{size}pt" if size else "") if x)
         return corner.text(self.theme.id, "GTK " + ".".join(str(x) for x in gtk_version()),
                            "libadwaita" if gi_setup.Adw is not None else "GTK", font, kind,
-                           self.get_scale_factor() or 1)
+                           (self.get_scale_factor() or 1) * scale.gtk_dpi() / scale.BASE)
 
     # ---- ≡ the menu: what its items do ---------------------------------------------------
     def read_current_lane(self):
