@@ -112,6 +112,10 @@ class Cache:
         # of pictures scrolled past must not make it wait behind them all
         self._stacks = {False: [], True: []}
         self._stack_lock = threading.Lock()
+        # one download of a url at a time: asked at two sizes (the card's, the viewer's)
+        # it was fetched twice at once — the night of 22.10, both 120 s to a timeout
+        self._fetching = {}  # url -> Event set when its download is over
+        self._fetch_lock = threading.Lock()
         self.http = requests.Session()
         self.http.headers["User-Agent"] = USER_AGENT
         # every worker keeps its connection to the server instead of opening a new one
@@ -219,42 +223,64 @@ class Cache:
                 except OSError:
                     pass
         if img is None:
-            t = time.monotonic()
+            with self._fetch_lock:
+                ev = self._fetching.get(url)
+                mine = ev is None
+                if mine:
+                    ev = self._fetching[url] = threading.Event()
+            if not mine:  # another worker is fetching it: its file, when it's there
+                ev.wait(150)
+                if p.exists():
+                    img = self.decode(p.read_bytes(), max_side)
+                    if img is not None:
+                        return img
+                raise requests.ConnectionError(f"{_where(url)}: the same download failed")
             try:
-                # a preview that hasn't come in 12 s is asked again soon with a minute of
-                # patience: a server stuck on it (fetching it from the author's server)
-                # mostly has it by then — waiting longer on the first try only held a
-                # worker. An original is worth waiting for from the start.
-                if big:
-                    slow = 120
-                elif patient:
-                    slow = 60
-                else:
-                    slow = 12
-                with self._open(url, (6, slow)) as r:
-                    r.raise_for_status()
-                    kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
-                    data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
-            except requests.RequestException as e:
-                code = getattr(getattr(e, "response", None), "status_code", None)
-                what = f"refused ({e})" if isinstance(e, remote.Refused) else \
-                    f"HTTP {code}" if code else e.__class__.__name__
-                log.warning("image %s: %s after %.1f s", _where(url), what,
-                            time.monotonic() - t)
-                self.why[url] = ("network", what)
-                raise
-            self._t.got = (len(data), time.monotonic() - t)
-            img = self.decode(data, max_side)
-            if img is None:  # downloaded fine, but can't be read (webp, avif, heic…)
-                self.why[url] = ("format", kind or "?")
-                said = self.__dict__.setdefault("_formats_said", set())
-                (log.debug if kind in said else log.warning)(
-                    "image %s: %s, %d B — %s", _where(url), kind or "unknown type",
-                    len(data), self.FORMAT_HINT)  # once per kind in the normal log
-                said.add(kind)
-            else:  # never keep an error page or half a file
-                p.write_bytes(data)
-                self._count_write()
+                return self._fetch(url, max_side, p, patient, big)
+            finally:
+                with self._fetch_lock:
+                    self._fetching.pop(url, None)
+                ev.set()
+        return img
+
+    def _fetch(self, url, max_side, p, patient, big):
+        """The url from the network into the disk cache (p), decoded at max_side."""
+        t = time.monotonic()
+        try:
+            # a preview that hasn't come in 12 s is asked again soon with a minute of
+            # patience: a server stuck on it (fetching it from the author's server)
+            # mostly has it by then — waiting longer on the first try only held a
+            # worker. An original is worth waiting for from the start.
+            if big:
+                slow = 120
+            elif patient:
+                slow = 60
+            else:
+                slow = 12
+            with self._open(url, (6, slow)) as r:
+                r.raise_for_status()
+                kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+                data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
+        except requests.RequestException as e:
+            code = getattr(getattr(e, "response", None), "status_code", None)
+            what = f"refused ({e})" if isinstance(e, remote.Refused) else \
+                f"HTTP {code}" if code else e.__class__.__name__
+            log.warning("image %s: %s after %.1f s", _where(url), what,
+                        time.monotonic() - t)
+            self.why[url] = ("network", what)
+            raise
+        self._t.got = (len(data), time.monotonic() - t)
+        img = self.decode(data, max_side)
+        if img is None:  # downloaded fine, but can't be read (webp, avif, heic…)
+            self.why[url] = ("format", kind or "?")
+            said = self.__dict__.setdefault("_formats_said", set())
+            (log.debug if kind in said else log.warning)(
+                "image %s: %s, %d B — %s", _where(url), kind or "unknown type",
+                len(data), self.FORMAT_HINT)  # once per kind in the normal log
+            said.add(kind)
+        else:  # never keep an error page or half a file
+            p.write_bytes(data)
+            self._count_write()
         return img
 
     def _open(self, url, timeout):

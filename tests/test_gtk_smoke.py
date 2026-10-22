@@ -1122,6 +1122,25 @@ class GtkImagesTest(unittest.TestCase):
                 self.assertTrue(pump(lambda: got, 5))
                 self.assertEqual(got[0].get_width(), 50)
                 self.assertTrue(imgs.local("https://media.example/a.png"))  # on disk now
+                # one picture asked at two sizes at once: downloaded once (the night of
+                # 22.10: twice, both to a 120 s timeout)
+                import threading
+                calls, out = [], []
+
+                def slow_get(url, timeout, **_kw):
+                    calls.append(url)
+                    time.sleep(0.3)
+                    return Resp()
+                imgs.http.get = slow_get
+                b = "https://media.example/b.png"
+                ts = [threading.Thread(target=lambda side=side: out.append(
+                    imgs._download(b, side))) for side in (40, 80)]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join(5)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(sorted(x.get_width() for x in out), [40, 80])
             finally:
                 imgs.shutdown()
 
