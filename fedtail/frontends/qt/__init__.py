@@ -38,6 +38,14 @@ def translate_qt(app):
 
 
 def run(core, instance, argv):
+    import os
+    if QApplication.instance() is None and \
+            os.environ.get("QT_QPA_PLATFORM", "").lower() == "offscreen":
+        # left over from running the tests in the same terminal (they set it): the window
+        # would be drawn nowhere — fedtail "started" and nothing showed (Windows, 22.10)
+        del os.environ["QT_QPA_PLATFORM"]
+        print("fedtail: QT_QPA_PLATFORM=offscreen in this terminal (from the tests?) — "
+              "ignored, or the window would be invisible", file=sys.stderr)
     app = QApplication.instance() or QApplication(argv)
     app.setApplicationName("fedtail")
     translate_qt(app)

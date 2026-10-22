@@ -64,8 +64,16 @@
   GTK's own containers (pictures, headers, wrapping rows) let their children go when
   they go — they were kept ("Finalizing … still has children left"). The ≡ menu says
   in the log how long it took to make and to show.
-- GTK's split layout starts with the roster only, as Qt's (both windows came up); the
-  icon theme is read in the background after start — the first ≡ took 2 s reading it.
+- GTK's split layout starts with the roster only, as Qt's (both windows came up). The
+  first menu GTK builds in a run took 1.5–2 s on KDE (later ones: milliseconds): that
+  one-time cost is paid after start instead of on the first click of ≡, its parts timed
+  in the log.
+- Debug → Federation status works again in GTK and the web: someone waiting to go into
+  a list (a name and a link) was taken for a hashtag on the way to the window.
+- A Qt window started in a terminal where the tests had set `QT_QPA_PLATFORM=offscreen`
+  showed nowhere (Windows): fedtail now drops that setting for its window and says so.
+  GoToSocial isn't asked for grouped notifications or a user's server blocks any more
+  (it has neither: a 404 at every start).
 - fedtail from the source says at start where its logs are (`fedtail: logs in …`);
   docs/WINDOWS.md has every Windows path and the commands to open and follow the log.
 - The debugging corner of the status bar says the same in Qt and GTK, in one order:

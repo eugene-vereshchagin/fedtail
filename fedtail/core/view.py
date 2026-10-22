@@ -73,6 +73,9 @@ PASS = {
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_join", "sync_login_begin", "sync_login_end", "sync_now", "sync_status",
+    # plain data for a page of its own (fedstatus.py), no server objects in it: someone
+    # waiting for a list (name, url) was taken for a hashtag and the page fell over
+    "federation_status",
 }
 # what never goes through: the server's own data, unconverted
 BLOCKED = {"store", "api", "events", "_core"}
@@ -742,7 +745,8 @@ def is_entry(x):
 def _shape(d):
     """What a dict from the core is, by its keys: "status", "account", "relationship",
     "activity" (a notification or a stored activity entry), "tag", or None."""
-    if "name" in d and not ("acct" in d or "count" in d or "shortcode" in d) and \
+    if "name" in d and not ("acct" in d or "account" in d or "count" in d or
+                            "shortcode" in d) and \
             ("url" in d or "history" in d or "statuses_count" in d or "following" in d):
         return "tag"  # (an emoji reaction has a count, an emoji a shortcode: not tags)
     if "id" not in d:

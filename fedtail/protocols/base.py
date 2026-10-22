@@ -88,6 +88,8 @@ CLIENT = frozenset("""
 # what is known of a server without asking it: (software, feature) -> there or not
 KNOWN = {
     ("gotosocial", "dismiss_one"): False,   # it clears all notifications, never one
+    ("gotosocial", "grouped"): False,       # no /api/v2/notifications (asking: a 404)
+    ("gotosocial", "domain_blocks"): False,  # a user's own server blocks: admins only
 }
 
 

@@ -85,6 +85,7 @@ class StatusTest(test_core.TmpDir):
         x = core.create_list("Ждут").result()
         w.list_refuse.add("B")
         core.set_in_list(x["id"], "B", True).result()
+        core.caps.software = "mastodon"  # (GoToSocial is known not to have it: not asked)
         core.api.domain_blocks = lambda: (_ for _ in ()).throw(ApiError(404, "Not Found"))
         core._refresh_silence()
         health.REC.note("example.test", "POST", "/api/v1/lists/01M520G8TV8A258CRRYASEQSC6/"
@@ -107,6 +108,13 @@ class StatusTest(test_core.TmpDir):
         plain = fedstatus.text(data)
         self.assertIn("POST /api/v1/lists/:id/accounts -> 404", plain)
         self.assertNotIn("<", plain)
+        # the same through the window's View: plain data still (someone waiting for a
+        # list has a name and a url — it was taken for a hashtag, and the page fell over)
+        from fedtail.core.view import View
+        via = View(core).federation_status().result()
+        self.assertIsInstance(via["list_waiting"][0], dict)
+        self.assertIn("@bob@social.example", fedstatus.html(via))
+        self.assertIn("@bob@social.example", fedstatus.text(via))
 
     def test_someone_with_no_post_here_is_named_by_my_server(self):
         i18n.setup("en")

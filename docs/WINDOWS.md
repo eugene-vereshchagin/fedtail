@@ -91,7 +91,11 @@ py -3.13 -m fedtail --bug-report
 $env:QT_QPA_PLATFORM = "offscreen"
 $env:PYTHONIOENCODING = "utf-8"
 py -3.13 -X faulthandler -m unittest discover -s tests -t . -v
+Remove-Item Env:QT_QPA_PLATFORM
 ```
+
+Последняя строка — обязательно (или новый PowerShell): с `offscreen` в этом окне и сам
+fedtail рисовал бы окно «в никуда». fedtail такое замечает и не слушает, но говорит об этом.
 
 Пропущенные (skipped) — то, чего на Windows нет: GTK, `.desktop`, D-Bus. Упавшие — присылать
 вывод целиком: удобнее всего дописать к команде тестов `2>&1 | Tee-Object tests.txt` —
@@ -158,7 +162,11 @@ code.
    $env:QT_QPA_PLATFORM = "offscreen"
    $env:PYTHONIOENCODING = "utf-8"
    py -3.13 -X faulthandler -m unittest discover -s tests -t . -v
+   Remove-Item Env:QT_QPA_PLATFORM
    ```
+
+   (the last line, or a new PowerShell: with `offscreen` left, fedtail's window would go
+   nowhere — fedtail notices it, ignores it and says so)
 
 5. Selfcheck: `py -3.13 tools/devenv.py` once (Playwright), then `py -3.13 tools/selfcheck.py
    --quick` / no flags / `--night`; send the zip next to the `selfcheck-<date>` folder.

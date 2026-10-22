@@ -1529,6 +1529,7 @@ class CoreTest(TmpDir):
         def none(*_a):
             asked.append(1)
             raise ApiError(404, "Not Found")
+        core.caps.software = "mastodon"  # (GoToSocial is known not to have it: not asked)
         core.api.domain_blocks = none
         core._refresh_silence()
         core._refresh_silence()

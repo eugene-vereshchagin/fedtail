@@ -94,20 +94,32 @@ def run(core, instance, argv):
         instance.listen(message)
         front.present()
 
-        def warm_icons():
-            # the icon theme is read the first time GTK needs a symbolic icon — a menu's
-            # submenu arrow, its check marks: where nothing asked before (the split
-            # layout's own pictures), that came on the first click of ≡ (2 s on KDE)
+        def warm_menu():
+            # the first ≡ menu GTK builds took 1.5–2 s on KDE (each later one: ms) — a
+            # cost paid once per run; paid here, after start, in parts that the log
+            # names, so the first click opens at once (and the slow part shows itself)
             import time
+
+            from gi.repository import Gdk
+            steps = []
             t = time.monotonic()
             it = Gtk.IconTheme.get_for_display(win.get_display())
             for name in ("pan-end-symbolic", "object-select-symbolic", "go-previous-symbolic"):
                 it.has_icon(name)
-            took = time.monotonic() - t
-            (log.info if took > 0.2 else log.debug)(
-                "icon theme %s read in %.0f ms", it.get_theme_name(), took * 1000)
+            steps.append(("icon theme " + (it.get_theme_name() or "?"), time.monotonic() - t))
+            t = time.monotonic()
+            Gtk.accelerator_get_label(Gdk.KEY_q, Gdk.ModifierType.CONTROL_MASK)
+            steps.append(("key names", time.monotonic() - t))
+            t = time.monotonic()
+            pop = Gtk.PopoverMenu.new_from_model(win.menu.model())
+            steps.append(("a popover menu", time.monotonic() - t))
+            del pop
+            total = sum(x for _n, x in steps)
+            (log.info if total > 0.2 else log.debug)(
+                "menus warmed in %.0f ms: %s", total * 1000,
+                ", ".join(f"{n} {x * 1000:.0f} ms" for n, x in steps))
             return GLib.SOURCE_REMOVE
-        GLib.timeout_add(1500, warm_icons)
+        GLib.timeout_add(1500, warm_menu)
         GLib.idle_add(lambda: (win.start(), GLib.SOURCE_REMOVE)[1])
 
     app.connect("activate", activate)

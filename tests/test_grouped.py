@@ -148,6 +148,7 @@ class CoreGroupsTest(unittest.TestCase):
                 sid="500", minute=int(newest["created_at"][14:16]))],
                 [status("500", ME)]))
         core.connect().result()
+        core.caps.software = "mastodon"  # (the fake says GoToSocial, which has no groups)
         core.api.notification_groups = groups
         core.poll_once()  # history
         for i in range(3):
@@ -164,6 +165,7 @@ class CoreGroupsTest(unittest.TestCase):
         def no(*_a, **_kw):
             raise ApiError(404, "Not Found")
         core.connect().result()
+        core.caps.software = "mastodon"
         core.api.notification_groups = no
         core.poll_once()
         for i in range(3):
