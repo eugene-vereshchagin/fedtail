@@ -104,6 +104,14 @@ class Card(Gtk.Box):
         click.connect("pressed", lambda _g, _n, x, y: self._menu_at(x, y))
         self.add_controller(click)
 
+    def set_cw(self, open_):
+        """Open or close what's behind the content warning (a thread's "show all")."""
+        if getattr(self, "cw_inner", None) is None:
+            return
+        self.cw_open = bool(open_)
+        self.cw_inner.set_visible(self.cw_open)
+        self.cw_btn.set_label(_("cw_hide") if self.cw_open else _("cw_show"))
+
     def mark(self, words, css="ft-muted"):
         """A word at the end of the card's top line: "you came from here" in a thread,
         "📌 pinned" on a profile (as Qt's)."""
@@ -172,6 +180,7 @@ class Card(Gtk.Box):
             sid = _label(link_markup(f"fedtail:alias/{self.short_id}", "#" + self.short_id),
                          ("ft-mono",), markup=True)
             sid.connect("activate-link", self._link)
+            tip(sid, _("short_id_tip"))
             head.append(sid)
         # the time (the thread), who sees it, "edited" — as Qt's header has them
         meta = []
@@ -203,6 +212,9 @@ class Card(Gtk.Box):
 
         if parent == "missing":
             col.append(_label(_("ctx_missing"), ("ft-ctx",), wrap=True))
+        elif parent is None and p.reply_to and not ctx.in_thread and \
+                ctx.cfg["feed"].get("show_reply_context", True):
+            col.append(_label(_("ctx_loading"), ("ft-ctx",), wrap=True))  # (as Qt)
         elif isinstance(parent, Post) and not ctx.in_thread:
             text = _("ctx_reply", name=name_of(parent.author), text=snippet(parent, 160))
             ctx_lab = _label(link_markup(f"fedtail:thread/{p.id}", "↑ " + text), ("ft-ctx",),
@@ -225,17 +237,34 @@ class Card(Gtk.Box):
         cards = ctx.cfg["feed"].get("link_cards", "full")
         if p.card is not None and not p.media and cards != "off":
             inner.append(self._link_card(p.card))
+        reacted = sorted(((r.name, r.count) for r in p.reactions if r.count > 0),
+                         key=lambda x: -x[1]) if ctx.cfg["feed"].get("emoji", True) else []
+        if reacted:  # emoji reactions where the server passes them on (Akkoma & kin)
+            line = _label(" ".join((name if len(name) <= 4 else ":" + name.strip(":") + ":")
+                                   + f" {count}" for name, count in reacted[:12]),
+                          ("ft-muted",), wrap=True)
+            tip(line, _("reactions_tip"))
+            inner.append(line)
         # a server filter that says "warn": folded as a content warning, and closed;
         # a warning of the author's open or not as ui.expand_cw / ui.arts_mode say
         warned = list(p.filtered) if not ctx.cfg["ui"].get("arts_mode") else []
         if p.warning or warned:
             label = " · ".join(([_("filtered_by", title=", ".join(warned))] if warned else [])
                                + (["⚠ " + p.warning] if p.warning else []))
-            exp = Gtk.Expander(label=label)
-            exp.get_label_widget().set_wrap(True)
-            exp.set_child(inner)
-            exp.set_expanded(not warned and config.expand_cw(ctx.cfg))
-            col.append(exp)
+            # the warning and "show" / "hide" by it, as Qt's (an expander's arrow said
+            # nothing to someone who never met one)
+            self.cw_open = not warned and config.expand_cw(ctx.cfg)
+            row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            cw = _label(label, ("ft-cw",), wrap=True)
+            row.append(cw)
+            self.cw_btn = Gtk.Button(halign=Gtk.Align.START)
+            self.cw_btn.add_css_class("flat")
+            self.cw_btn.connect("clicked", lambda _b: self.set_cw(not self.cw_open))
+            row.append(self.cw_btn)
+            col.append(row)
+            self.cw_inner = inner
+            col.append(inner)
+            self.set_cw(self.cw_open)
         else:
             col.append(inner)
 
@@ -360,7 +389,7 @@ class Card(Gtk.Box):
         pic.set_content_fit(Gtk.ContentFit.COVER)
         pic.add_css_class("ft-thumb")
         pic.set_overflow(Gtk.Overflow.HIDDEN)
-        pic.set_alternative_text(m.alt or _("media_" + m.kind))
+        pic.set_alternative_text(m.alt or _("a11y_no_alt"))
         src = m.preview or full
         if src:
             self.ctx.images.get(src, pic.set_paintable, max_side=side)

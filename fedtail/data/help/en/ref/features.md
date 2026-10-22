@@ -234,7 +234,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 |---|---|---|---|---|---|
 | Arts mode | has | 0.11.0 | `ui.arts_mode` (on by default, recommended) | — | nobody has it as one switch |
 | Content warnings (CW) | has | 0.1.0 | `ui.expand_cw` | `spoiler_text` | everyone can set it |
-| Open every CW in a thread at once | no | — | — | own | Sengi, Megalodon (the same CW across a thread) |
+| Open every CW in a thread at once | has | 0.18.0 | — | own | Sengi, Megalodon (the same CW across a thread) |
 | Sensitive pictures | has | 0.8.0 | `feed.sensitive_media` | `status.sensitive` | everyone |
 | Link cards | has | 0.8.0 | `feed.link_cards` | `status.card` | everyone |
 | Servers' emoji as pictures | has | 0.8.0 | `feed.custom_emoji` | `emojis` of the post and the account | everyone |

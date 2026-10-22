@@ -1778,6 +1778,30 @@ class QtSmokeTest(unittest.TestCase):
         self.win.update_badges()
         self.assertEqual(sent, [1])
 
+    def test_open_every_cw_in_a_thread(self):
+        """A thread with warnings: its header opens (and closes) every one at once."""
+        from fedtail.frontends.qt.feed import ThreadWidget
+        a = status("060", BOB, minute=40, text="корень")
+        a["spoiler_text"] = "осторожно"
+        b = status("061", NEWS, "060", "B", minute=41, text="ответ")
+        b["spoiler_text"] = "тоже"
+        self.world.add(a, home=True)
+        self.world.add(b, home=True)
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None and "home" in self.win.lane_widgets)
+        self.core.poll_once()
+        self.win.on_link("fedtail:thread/060")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, ThreadWidget)
+        self.pump(until=lambda: tab.loaded and len(tab.view.rows) == 2)
+        self.assertTrue(tab.cw_btn.isVisibleTo(tab))
+        rows = list(tab.view.rows.values())
+        tab.cw_btn.click()
+        self.assertTrue(all(r.cw_open for r in rows))
+        self.assertEqual(tab.cw_btn.text(), "Закрыть все CW")
+        tab.cw_btn.click()
+        self.assertFalse(any(r.cw_open for r in rows))
+
     def test_open_thread_grows_and_says_why_replies_come(self):
         from PySide6.QtCore import Qt
 

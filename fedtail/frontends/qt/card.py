@@ -460,6 +460,11 @@ class PostRow(QWidget):
                 sync()
             btn.clicked.connect(toggle)
             sync()
+
+            def set_cw(on):  # a thread's "open every CW"
+                self.cw_open = bool(on)
+                sync()
+            self.set_cw = set_cw
         v.addWidget(content)
         v.addWidget(self._actions(p))
         answers = spec.extra.get("my_replies") or []

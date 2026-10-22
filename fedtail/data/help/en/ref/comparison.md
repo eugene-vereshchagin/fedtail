@@ -61,7 +61,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Arts mode | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Content warnings (CW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Open every CW in a thread at once | — |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| Open every CW in a thread at once | ✓ |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
 | Sensitive pictures | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Link cards | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Servers' emoji as pictures | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |

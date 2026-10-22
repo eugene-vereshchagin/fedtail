@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **0.18.0 (in progress):**
 
 - Read marks and thread subscriptions shared by all your devices
+- Open every CW in a thread at once
 - Short post names the same on every device
 <!-- /include -->
 

@@ -38,7 +38,8 @@ details.en = "`true` — text and pictures under a CW open at once; `false` — 
 
 [[feature]]
 id = "uncw-thread"
-status = "no"
+status = "has"
+since = "0.18.0"
 name.ru = "Снять CW во всём треде разом"
 name.en = "Open every CW in a thread at once"
 config = "—"

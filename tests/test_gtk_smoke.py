@@ -116,12 +116,16 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: len(lane.rows) >= 3, 5), len(lane.rows))
         texts = [c.post.text for c in lane.rows.values()]
         self.assertTrue(any("привет" in t for t in texts))
-        # the reply's warning hides its text in an expander
+        # the reply's warning hides its text; "show" / "hide" by it, as Qt's
         reply = next(c for c in lane.rows.values() if c.post.warning)
-        exp = next(w for w in _walk(reply) if isinstance(w, Gtk.Expander))
         from fedtail.core import config as config_mod
         # open or not as ui.expand_cw / ui.arts_mode say, the pictures with it
-        self.assertEqual(exp.get_expanded(), config_mod.expand_cw(self.core.cfg))
+        was = config_mod.expand_cw(self.core.cfg)
+        self.assertEqual(reply.cw_open, was)
+        self.assertEqual(reply.cw_btn.get_label(), i18n._("cw_hide" if was else "cw_show"))
+        reply.cw_btn.emit("clicked")
+        self.assertEqual(reply.cw_inner.get_visible(), not was)
+        self.assertEqual(reply.cw_btn.get_label(), i18n._("cw_show" if was else "cw_hide"))
 
     def test_seen_posts_get_read(self):
         """The window is active and every post fits: all are seen, so all are read."""
@@ -258,6 +262,16 @@ class GtkSmokeTest(_GtkBase):
         head = self.win.threads["013"].head
         self.assertTrue(pump(lambda: head.root is not None, 3))
         self.assertIn(i18n._("thread_info", n=1).split()[0], head.info.get_text())
+        # a warning in the thread: every one of them opened at once (and closed)
+        self.assertTrue(head.cw_all.get_visible())
+        from fedtail.frontends.gtk.card import Card
+        warned = [c for c in _walk(self.win.threads["013"]) if isinstance(c, Card)
+                  and getattr(c, "cw_inner", None) is not None]
+        self.assertTrue(warned)
+        head.cw_all.emit("clicked")
+        self.assertTrue(all(c.cw_open for c in warned))
+        head.cw_all.emit("clicked")
+        self.assertFalse(any(c.cw_open for c in warned))
         was = bool(self.view.subscribed(head.root))
         head.sub.set_active(not was)
         self.assertTrue(pump(lambda: bool(self.view.subscribed(head.root)) != was, 3))

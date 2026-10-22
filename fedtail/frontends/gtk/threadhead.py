@@ -30,6 +30,12 @@ class ThreadHead(Gtk.Box):
         self.sub.set_sensitive(False)
         self._sub_signal = self.sub.connect("toggled", lambda _b: self._toggle())
         self.append(self.sub)
+        self.cw_all = Gtk.Button(label=_("cw_all_show"), valign=Gtk.Align.CENTER)
+        tip(self.cw_all, _("cw_all_tip"))
+        self.cw_all.set_visible(False)  # a thread with warnings only
+        self.cw_open = False
+        self.cw_all.connect("clicked", lambda _b: self._all_cw())
+        self.append(self.cw_all)
         again = Gtk.Button(label=_("refresh"), valign=Gtk.Align.CENTER)
         again.connect("clicked", lambda _b: self.win.reload_thread(self.root_id))
         self.append(again)
@@ -46,6 +52,20 @@ class ThreadHead(Gtk.Box):
         tip(self.info, "")
         self._sub_state()
         self._why_it_reaches_me(posts)
+        self.cw_all.set_visible(any(p.warning or p.filtered for p in posts))
+
+    def _all_cw(self):
+        """Every content warning in the thread opened (or closed) at once."""
+        self.cw_open = not self.cw_open
+        self.cw_all.set_label(_("cw_all_hide") if self.cw_open else _("cw_all_show"))
+        from .card import Card
+        box = self.get_ancestor(Gtk.ListBox)
+        row = box.get_first_child() if box is not None else None
+        while row is not None:
+            card = row.get_child() if isinstance(row, Gtk.ListBoxRow) else row
+            if isinstance(card, Card):
+                card.set_cw(self.cw_open)
+            row = row.get_next_sibling()
 
     def _sub_state(self):
         on = bool(self.win.view.subscribed(self.root))

@@ -1236,6 +1236,10 @@ class ThreadWidget(QWidget):
                                                icon="subs", tip=_("sub_tip")))
         self.sub_btn.setCheckable(True)
         self.sub_btn.setEnabled(False)
+        self.cw_open = False  # "open every CW": a thread with warnings only
+        self.cw_btn = self.header.add(_button(_("cw_all_show"), self._all_cw,
+                                              tip=_("cw_all_tip")))
+        self.cw_btn.hide()
         self.header.add(_button("", self.reload, icon="refresh", tip=_("refresh")))
         lay.addWidget(self.header)
         self.view = FeedView(win.ctx)
@@ -1253,6 +1257,16 @@ class ThreadWidget(QWidget):
             self.header.info.setText(_("loading"))
         self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
                              fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
+
+    def _all_cw(self):
+        """Every content warning in the thread opened (or closed) at once."""
+        self.cw_open = not self.cw_open
+        self.cw_btn.setText(_("cw_all_hide") if self.cw_open else _("cw_all_show"))
+        for row in self.view.rows.values():
+            card = getattr(row, "card", row)
+            set_cw = getattr(card, "set_cw", None) or getattr(row, "set_cw", None)
+            if set_cw is not None:
+                set_cw(self.cw_open)
 
     def update_sub_button(self):
         if self.root is None:
@@ -1305,6 +1319,7 @@ class ThreadWidget(QWidget):
         if root is None:
             return
         self.update_sub_button()
+        self.cw_btn.setVisible(any(p.warning or p.filtered for p in posts))
         self.title = f"{root.author.username}: {snippet(root, 30)}"
         self.header.title.setText(snippet(root, 60))
         self.info_text = _("thread_info", n=len(items) - 1) + \
