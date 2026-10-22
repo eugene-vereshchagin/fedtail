@@ -104,6 +104,9 @@ class _Answer:
         return False
 
 
+MEASURE = [False, 0]  # --measure: only the measuring checks; how many done
+
+
 def _measure_check(win):
     """Cards that tell GTK a least height above the natural one (GTK 4.18 warns of
     them by the thousand): which widget inside does it, on the cards built now."""
@@ -112,6 +115,7 @@ def _measure_check(win):
     from fedtail.frontends.gtk.measure import report
     lv = _home(win)
     cards = [c for c in getattr(lv, "rows", {}).values() if c.get_mapped()]
+    MEASURE[1] += 1
     lines = report(cards, stop=Card)
     v = f"{Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()}"
     print(f"  measuring {len(cards)} cards on GTK {v}: "
@@ -163,6 +167,8 @@ class Meter:
     def scenario(self, name, fn):
         """fn() starts it (it may turn the loop itself) and returns a "done?" function
         (or None: then the loop runs a second more)."""
+        if MEASURE[0] and MEASURE[1] >= 2:  # --measure: the checks done, the rest skipped
+            return
         self.worst, self.slow, self.turns = 0.0, 0, 0
         t0 = time.monotonic()
         done = fn()
@@ -356,7 +362,7 @@ def run(layout, theme, posts, profile, maximized=False):
         state["composer"] = win.compose()
         return None
     meter.scenario("open the editor", compose)
-    if state["composer"] is not None:  # (split: the input line, nothing to close)
+    if state.get("composer") is not None:  # (split: the input line, nothing to close)
         meter.scenario("close the editor", lambda: (state["composer"].close(), None)[1])
 
     if layout == "split" and win.roster is not None:
@@ -433,12 +439,16 @@ def main():
     ap.add_argument("--theme")
     ap.add_argument("--posts", type=int, default=2000)
     ap.add_argument("--profile", action="store_true")
+    ap.add_argument("--measure", action="store_true",
+                    help="only which widgets measure wrong (GTK 4.18's warnings), quickly")
     ap.add_argument("--maximized", action="store_true", help="the window as big as the screen")
     ap.add_argument("--real", nargs="?", const="", metavar="PROFILE",
                     help="your own account, read-only, not the fake server (tools/real.py)")
     a = ap.parse_args()
+    MEASURE[0] = a.measure
     extra = (["--maximized"] if a.maximized else []) + \
-        ([f"--real={a.real}" if a.real else "--real"] if a.real is not None else [])
+        ([f"--real={a.real}" if a.real else "--real"] if a.real is not None else []) + \
+        (["--measure"] if a.measure else [])
     if a.layout and a.theme:
         run(a.layout, a.theme, a.posts, a.profile, a.maximized)
         return 0
