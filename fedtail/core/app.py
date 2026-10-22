@@ -34,6 +34,7 @@ from . import auth, lanes, search, sources, subs, taggroups, threads
 from .events import Events
 from .model import id_after, interaction_policy, looks_sent, narrower, real, send_key
 from .social import SocialMixin
+from .sounds import Chime
 from .store import Store, now_iso, sort_key
 
 
@@ -135,6 +136,7 @@ class Core(SocialMixin):
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
         self._limits = {}
+        self.chime = Chime(cfg, chosen=self.lane_chosen)
         self._lane_cache = {}
         self._pending_login = None
         self._wake = threading.Event()
@@ -333,6 +335,7 @@ class Core(SocialMixin):
                              self.store.kv_get("tag_groups")):
                 self._apply_lists([], {})  # the tag lanes come all the same
             self.emit("ready", me)
+            self.sound_moment("online")
             return me
         return self.submit(job)
 
@@ -772,16 +775,20 @@ class Core(SocialMixin):
         return per_lane
 
     def _notify(self, per_lane, new_requests=(), new_activity=()):
-        """Emit 'notify' with [(lane, status-or-account)] for lanes the user wants."""
+        """Emit 'notify' with [(lane, status-or-account)] for lanes the user wants, and
+        'sound' with the event a batch's news makes (core/sounds.py)."""
         wanted = set(self.cfg["notify"]["lanes"])
         never = set(self.cfg["notify"].get("except") or ())
-        out, quiet = [], []
+        out, quiet, fresh = [], [], []
         for name, ids in per_lane.items():
             lane = self.lane_by_name[name]
             if not ids:
                 continue
-            if not self._notify_wanted(name, wanted, never):
+            notify = self._notify_wanted(name, wanted, never)
+            chime = self.chime.on and self.chime.lane_wanted(name)
+            if not notify:
                 quiet.append(f"{name}+{len(ids)}")
+            if not notify and not chime:
                 continue
             id_set = set(ids)
             rows = self.store.items(lane.source, len(ids) + 50)
@@ -789,16 +796,40 @@ class Core(SocialMixin):
                 rows = self._without_repeats(lane.source, rows)
             sts = [st for item_id, st in rows if item_id in id_set]
             unread = self.store.read_set(st["id"] for st in sts)
-            out += [(name, st) for st in sts if st["id"] not in unread and not self.silenced(st)]
-        if new_requests and self._notify_wanted("requests", wanted, never):
-            out += [("requests", acc) for acc in new_requests]
-        if new_activity and self._notify_wanted("activity", wanted, never):
-            out += [("activity", n) for n in new_activity]
+            news = [(name, st) for st in sts
+                    if st["id"] not in unread and not self.silenced(st)]
+            if news:
+                fresh.append(name)
+            if notify:
+                out += news
+        if new_requests:
+            fresh.append("requests")
+            if self._notify_wanted("requests", wanted, never):
+                out += [("requests", acc) for acc in new_requests]
+        if new_activity:
+            fresh.append("activity")
+            if self._notify_wanted("activity", wanted, never):
+                out += [("activity", n) for n in new_activity]
         if quiet:  # "why no notification?" — answered by the log
             log.info("notify: not asked for (notify.lanes / notify.except): %s",
                      ", ".join(quiet))
         if out:
             self.emit("notify", out)
+        self.sound_news(fresh)
+
+    def sound_news(self, lanes_with_news):
+        """Emit 'sound' for a batch of news in these lanes, if the config wants one."""
+        event = self.chime.for_news(lanes_with_news)
+        if event:
+            log.debug("sound: %s (%s)", event, ", ".join(lanes_with_news))
+            self.emit("sound", event)
+
+    def sound_moment(self, event):
+        """Emit 'sound' for "online" or "sent", if the config wants it."""
+        event = self.chime.for_moment(event)
+        if event:
+            log.debug("sound: %s", event)
+            self.emit("sound", event)
 
     def _notify_wanted(self, name, wanted, never):
         """notify.lanes names this lane and notify.except doesn't (see lanes.chosen)."""
@@ -2570,6 +2601,7 @@ class Core(SocialMixin):
                 log.info("chain: %d posts", len(chain))
             # the post is out; nothing below may turn that into a reported failure
             try:
+                self.sound_moment("sent")
                 if draft_key:
                     self.store.delete_draft(draft_key)
                 self.store.put_statuses(chain)

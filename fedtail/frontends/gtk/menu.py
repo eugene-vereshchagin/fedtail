@@ -60,6 +60,7 @@ class MainMenu:
         a("logs", win.open_logs)
         a("report", win.bug_report)
         a("test_notify", win.test_notification)
+        a("test_sound", lambda: win.status(win.sounds.test()))
         a("stacks", win.debug_stacks)
         a("census", win.debug_census)
         a("trim", win.debug_trim)
@@ -159,7 +160,7 @@ class MainMenu:
         one = Gio.Menu()
         for action, key in (("federation", "debug_federation"), ("logs", "debug_logs"),
                             ("report", "debug_report"), ("test_notify", "debug_notify"),
-                            ("stacks", "debug_stacks")):
+                            ("test_sound", "debug_sound"), ("stacks", "debug_stacks")):
             _item(one, _(key), action)
         dbg.append_section(None, one)
         two = Gio.Menu()

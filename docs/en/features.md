@@ -570,7 +570,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Interface language | has | 0.1.0 | `ui.language` | — | everyone |
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
 | “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `ui.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
-| A sound scheme | planned | — | — | — | QIP, ICQ, Mail.ru Agent, Psi |
+| A sound scheme | has | 0.19.0 | `sound.*`, `tui.sound`; in the theme — `[sound] source`, `from` | own: the theme's `sounds/` folder | QIP, ICQ, Mail.ru Agent, Psi |
 
 <details><summary>In detail</summary>
 
@@ -608,7 +608,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **“What's this?”: a longer hint about any button.** Turn it on, and hovering shows a longer hint instead of the short one: what the button does, which config key changes it and which help section says more. The same menu item turns it off.
 
-**A sound scheme.** fedtail has no sound at all yet. Sounds are part of a theme, as its pictures are: the theme's folder, a set of their own for the messengers' themes (a new message, a reply, a mention, signing in), switchable off.
+**A sound scheme.** Sounds are part of a theme, as its pictures are. The messenger themes bring their own sets: `qip-retro` (and `qip-modern`) — bright “pip-pip” and a knock at the door when signing in, `mra` (and its colours) — round “blop”s and a xylophone, `psi` — soft chimes, `point` (and `juick`) — dry wooden ticks; `system` plays the desktop's sounds (the KDE/GNOME sound theme through `canberra-gtk-play`; without it a quiet set of fedtail's own), `terminal` and `bnw` — a beep. Your own sounds — a `sounds/` folder by the theme (`message.wav`, `reply.wav`, `mention.wav`, `direct.wav`, `thread.wav`, `request.wav`, `activity.wav`, `online.wav`, `sent.wav`); a missing one comes from the parent theme, from `[sound] from`, then a lighter sound of the same set. A batch of news chimes once, with the weightiest sound (private → reply → mention → thread → request → activity → message), no more often than `sound.min_gap_seconds`; lanes — `sound.lanes` / `sound.except`, signing in and sending — `sound.online`, `sound.sent`; another theme's scheme whatever the look — `sound.scheme`, volume — `sound.volume`, the player — `sound.player` (by default pw-play, paplay, aplay; afplay on macOS; Windows itself). Qt and GTK alike; the terminal beeps (`tui.sound`), the web plays in the browser. ≡ → Debug → “Test the sound”. Every set is synthesised by `tools/make_sounds.py` — our own, GPL.
 
 </details>
 
@@ -688,7 +688,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| A sound scheme | The application | — | medium (0.19) |
 | The terminal — everything the windows have | Interfaces | `ui.frontend = "tui"` | large (0.19) |
 | The web — everything the windows have | Interfaces | `ui.frontend = "web"` | large (0.19) |
 | Toga (BeeWare) | Interfaces | — | large |

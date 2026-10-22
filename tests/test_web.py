@@ -42,6 +42,28 @@ class WebTest(TmpDir):
         self.addCleanup(self.srv.shutdown)
         self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
 
+    def test_a_page_that_hangs_up_is_no_error(self):
+        # a reload or a closed tab while /api/wait waits: the answer has nowhere to go —
+        # no traceback on the terminal (it was two BrokenPipeErrors), the server goes on
+        import contextlib
+        import io
+        import socket
+        import struct
+        from unittest import mock
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), mock.patch.object(web, "WAIT_SECONDS", 0.5):
+            for _ in range(3):
+                s = socket.create_connection(self.srv.server_address[:2])
+                s.sendall(f"GET /api/wait?v=0 HTTP/1.1\r\nHost: x\r\n"
+                          f"Cookie: {web.COOKIE}={self.key}\r\n\r\n".encode())
+                # close at once with a reset: the answer's write fails
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+                s.close()
+            time.sleep(1.2)
+        self.assertNotIn("Traceback", err.getvalue())
+        self.assertNotIn("BrokenPipe", err.getvalue())
+        self.assertEqual(self.req("/api/me")[0], 200)
+
     def req(self, path, body=None, cookie=True, header=True):
         headers = {}
         if cookie:

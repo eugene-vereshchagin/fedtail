@@ -5,6 +5,15 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- Sounds, as a part of the theme like its pictures: the messenger themes bring sets of
+  their own (qip-retro, mra, psi, point — synthesised by tools/make_sounds.py, ours),
+  system plays the desktop's sound theme, terminal and bnw beep. A batch of news chimes
+  once with its weightiest sound; `sound.*` says which lanes, the volume, the player,
+  signing in and sending; a theme's own set is a `sounds/` folder by it. Qt, GTK, the
+  terminal (its bell, `tui.sound`) and the web page (in the browser) alike.
+  ≡ → Debug → "Test the sound".
+- Web: a page that left while waiting for news (a reload, a closed tab) no longer
+  prints two BrokenPipeError tracebacks on the terminal.
 
 ## 0.18.0 — 2026-10-22
 

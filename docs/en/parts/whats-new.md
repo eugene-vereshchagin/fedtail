@@ -1,3 +1,7 @@
+**0.19.0 (in progress):**
+
+- A sound scheme
+
 **0.18.0:**
 
 - Read marks and thread subscriptions shared by all your devices

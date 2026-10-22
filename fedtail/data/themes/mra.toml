@@ -90,3 +90,6 @@ bg_bottom = "#ee8a17"
 bubble = "#ffffff"
 ink = "#b25e05"
 accent = "#3fae3a"
+
+[sound]
+source = "own"          # its own set: mra/sounds/ (made by tools/make_sounds.py)

@@ -45,7 +45,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 - [3. Read marks](#3-read-marks) — `[read]`
 - [4. Which lanes](#4-which-lanes) — `[lanes]`
 - [5. Posts](#5-posts) — `[post]`
-- [6. Notifications](#6-notifications) — `[notify]`
+- [6. Notifications](#6-notifications) — `[notify]`, `[sound]`
 - [7. Activity](#7-activity) — `[activity]`
 - [8. Lists](#8-lists) — `[lists]`
 - [9. Thread subscriptions](#9-thread-subscriptions) — `[subs]`
@@ -251,6 +251,21 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `notify.backend` | `"auto"` | How to show them: "auto" (KDE notifications if there's notify-send, otherwise through the tray), "desktop" — notify-send only, "tray" — through the tray only. |
 | `notify.filtered` | `"remind"` | Filtered notifications (Mastodon 4.3+: the server holds back mentions from strangers, new accounts and the like until you allow them): ≡ → "For the tender and sensitive" → "Filtered notifications…" — who waits, "Let in" / "Dismiss", and what exactly to filter. "remind" — so, and at start a line at the bottom if someone waits; "menu" — in the menu only; "off" — neither. |
 
+### `[sound]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `sound.enabled` | `true` | Sounds. The sound scheme is a part of the theme, like the pictures: the messenger themes (qip-*, mra-*, psi) bring their own set, system plays the desktop's sounds (the KDE/GNOME sound theme), terminal and bnw the terminal's beep, the rest what they inherit. One program plays them all: pw-play, paplay or aplay (Linux), afplay (macOS), Windows itself; none of them — silence. |
+| `sound.lanes` | `["direct", "replies", "mentions", "subs", "requests"]` | Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:<br>direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",<br>requests → "request", activity → "activity", every other lane → "message". |
+| `sound.except` | `[]` | Never chime about these, even if lanes names them. |
+| `sound.online` | `true` | The "online" sound — when fedtail has connected to the server. |
+| `sound.sent` | `true` | The "sent" sound — when a post has gone out. |
+| `sound.when_focused` | `true` | Chime while the fedtail window is active too (notifications keep quiet then — sounds don't). |
+| `sound.scheme` | `"theme"` | Whose scheme: "theme" — the theme's; a theme's name ("qip-retro", "mra", "psi") — its sounds whatever the look; "none" — no sounds (the same as enabled = false). |
+| `sound.volume` | `80` | Volume, 0 to 100 — where the player can (pw-play, paplay, afplay, the browser). |
+| `sound.player` | `"auto"` | What plays them: "auto" — the first found of those above; or a command of yours, {file} being the file's path: "mpv --no-video {file}". |
+| `sound.min_gap_seconds` | `3` | No more than one sound in this many seconds (a batch of news chimes once — the weightiest). |
+
 ## 7. Activity
 
 ### `[activity]`
@@ -366,6 +381,7 @@ The interface in a terminal — `fedtail --ui tui` (or ui.frontend = "tui"): lan
 | Key | Default | What it does |
 |---|---|---|
 | `tui.theme` | `""` | The Textual theme: "" — its usual one; or a name: "textual-light", "nord", "gruvbox", "dracula", "tokyo-night", "monokai", "solarized-light" and others (Ctrl+P → Change theme — to look). |
+| `tui.sound` | `"bell"` | Sounds (sound.*) in the terminal: "bell" — the terminal's beep (reaches you over ssh too); "scheme" — the sounds of the ui.theme theme, played by this computer; "off" — silence. |
 | `tui.lanes_width` | `26` | The width of the lanes column, in characters. |
 | `tui.show_context` | `true` | Over a reply — a line "↳ @who: the start of what it answers". false — without it. |
 | `tui.pictures` | `"inline"` | Pictures in the terminal, drawn with half blocks (needs Pillow, python3-pil; a true colour terminal). "inline" — a post's first picture small right in the lane, v — all of them full screen; "key" — on v only; "off" — none (o — open the post in the browser). |

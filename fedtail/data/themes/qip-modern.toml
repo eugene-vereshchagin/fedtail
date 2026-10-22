@@ -140,3 +140,7 @@ bg_bottom = "#3a78c9"
 bubble = "#ffffff"
 ink = "#2c62b3"
 accent = "#3fb53a"
+
+[sound]
+source = "own"
+from = "qip-retro"

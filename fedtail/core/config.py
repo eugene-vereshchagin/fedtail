@@ -161,6 +161,18 @@ DEFAULTS = {
         "backend": "auto",
         "filtered": 'remind',
     },
+    "sound": {
+        "enabled": True,
+        "lanes": ["direct", "replies", "mentions", "subs", "requests"],
+        "except": [],
+        "online": True,
+        "sent": True,
+        "when_focused": True,
+        "scheme": "theme",
+        "volume": 80,
+        "player": "auto",
+        "min_gap_seconds": 3,
+    },
     "activity": {
         "types": ["favourite", "reblog", "follow"],
         "approvals": True,
@@ -219,6 +231,7 @@ DEFAULTS = {
     },
     "tui": {
         "theme": "",
+        "sound": "bell",
         "lanes_width": 26,
         "show_context": True,
         "pictures": "inline",
@@ -283,12 +296,13 @@ CHOICES = {
     ("ui", "compose"): {"inline", "window"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
     ("tui", "pictures"): {"inline", "key", "off"},
+    ("tui", "sound"): {"bell", "scheme", "off"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
               "local", "federated", "requests", "direct", "my_likes"}
 # options that name lanes: their old names are read as the new ones
 LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
-              ("notify", "except"),
+              ("notify", "except"), ("sound", "lanes"), ("sound", "except"),
               ("ui", "icon_count"), ("ui", "icon_count_except"), ("ui", "columns"),
               ("ui", "start_lane"),
               ("lists", "hide_in"), ("cli", "tail_lanes")]
@@ -296,6 +310,7 @@ ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = {"read", "threads"}
 MINIMUM = {
+    ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
     ("sync", "interval_seconds"): 15,
     ("poll", "stream_gap_seconds"): 0,
@@ -440,8 +455,9 @@ def validate(user):
         else:
             cfg[section][key] = canonical(val)
     # pairs that pick lanes (lanes.chosen): "all" in the first, "list:Друзья" in both
-    wanted = cfg["notify"]["lanes"] + cfg["ui"]["icon_count"]
-    picking = wanted + cfg["notify"]["except"] + cfg["ui"]["icon_count_except"]
+    wanted = cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] + cfg["sound"]["lanes"]
+    picking = wanted + cfg["notify"]["except"] + cfg["ui"]["icon_count_except"] + \
+        cfg["sound"]["except"]
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            picking + cfg["lists"]["hide_in"]
            if x not in LANE_NAMES | {"lists"}
@@ -464,6 +480,9 @@ def validate(user):
     bad_what = [x for x in cfg["sync"]["what"] if x not in SYNC_WHAT]
     if bad_what:
         errors.append(f"sync.what: unknown {bad_what}; known: {', '.join(sorted(SYNC_WHAT))}")
+    vol = cfg["sound"]["volume"]
+    if not 0 <= vol <= 100:
+        errors.append(f"sound.volume = {vol}: from 0 to 100")
     url = cfg["sync"]["url"]
     if url and not (url.startswith("https://") or
                     url.startswith(("http://localhost", "http://127.0.0.1"))):

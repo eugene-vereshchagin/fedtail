@@ -91,3 +91,7 @@ bg_bottom = "#3a76c4"
 bubble = "#ffffff"
 ink = "#1f4f94"
 accent = "#3fae3a"
+
+[sound]
+source = "own"
+from = "mra"

@@ -135,7 +135,7 @@ class MergedCore:
                      if lane not in ("requests", "activity")]
             if items:
                 self.events.emit(name, items)
-        elif name in ("parents", "lists_changed", "subs_changed"):
+        elif name in ("parents", "lists_changed", "subs_changed", "sound"):
             self.events.emit(name, payload)
         elif name == "ready":
             self.events.emit("lists_changed", self.lists)

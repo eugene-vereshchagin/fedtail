@@ -7,6 +7,7 @@
 const $ = (s) => document.querySelector(s);
 const state = {
   me: null, words: {}, lane: null, lanes: [], posts: [], cursor: -1, version: -1,
+  soundSeq: -1, played: [],
   replyTo: null, readQueue: new Set(), side: null, older: false, busy: false,
   edit: null, quote: null,  // the editor correcting my post / quoting one
 };
@@ -1026,11 +1027,37 @@ async function refresh() {
   if (state.lane) await selectLane(state.lane, true);
 }
 
+// ---- sounds: the theme's, sent by the server with the news (fedtail sound.*) -----------
+let audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new AudioContext();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 880;
+    g.gain.value = 0.12 * (state.me.sound.volume / 100);
+    o.connect(g).connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + 0.12);
+  } catch (e) { /* no audio here: silence */ }
+}
+
+function playSound(snd) {
+  const s = state.me && state.me.sound;
+  if (!s || (!s.when_focused && document.hasFocus())) return;
+  state.played.push(snd.event);
+  if (snd.kind === "bell") return beep();
+  const a = new Audio("/sound/" + encodeURIComponent(snd.event));
+  a.volume = Math.max(0, Math.min(1, s.volume / 100));
+  a.play().catch(() => { /* the browser wants a click on the page first */ });
+}
+
 // ---- live: the server answers when something changed ---------------------------------
 async function follow() {
   for (;;) {
     try {
-      const r = await api("/api/wait?v=" + state.version);
+      const r = await api("/api/wait?v=" + state.version + "&s=" + state.soundSeq);
+      state.soundSeq = r.s;
+      for (const snd of r.sounds || []) playSound(snd);
       if (r.v !== state.version) {
         const first = state.version < 0;
         state.version = r.v;

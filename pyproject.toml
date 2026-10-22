@@ -50,7 +50,7 @@ version = { attr = "fedtail.__version__" }
 include = ["fedtail*"]
 
 [tool.setuptools.package-data]
-fedtail = ["data/*", "data/themes/*", "data/themes/fonts/*", "data/icons/*", "data/icons/fallback/*", "data/themes/*/icons/*", "data/web/*", "data/help/*/*", "data/help/*/ref/*"]
+fedtail = ["data/*", "data/themes/*", "data/themes/fonts/*", "data/icons/*", "data/icons/fallback/*", "data/themes/*/icons/*", "data/themes/*/sounds/*", "data/sounds/*/*", "data/web/*", "data/help/*/*", "data/help/*/ref/*"]
 
 [tool.ruff]
 line-length = 100

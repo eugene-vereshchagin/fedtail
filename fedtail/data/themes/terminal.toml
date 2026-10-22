@@ -77,3 +77,6 @@ bg_bottom = "#000000"
 bubble = "#3dff73"
 ink = "#3dff73"
 accent = "#ffb000"
+
+[sound]
+source = "bell"         # the beep, like the terminals it looks like

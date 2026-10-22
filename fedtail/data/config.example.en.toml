@@ -780,6 +780,45 @@ backend = "auto"
 # "off" — neither.
 filtered = "remind"
 
+[sound]
+# Sounds. The sound scheme is a part of the theme, like the pictures: the messenger themes
+# (qip-*, mra-*, psi) bring their own set, system plays the desktop's sounds (the KDE/GNOME
+# sound theme), terminal and bnw the terminal's beep, the rest what they inherit. One
+# program plays them all: pw-play, paplay or aplay (Linux), afplay (macOS), Windows itself;
+# none of them — silence.
+enabled = true
+
+# Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:
+#   direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",
+#   requests → "request", activity → "activity", every other lane → "message".
+lanes = ["direct", "replies", "mentions", "subs", "requests"]
+
+# Never chime about these, even if lanes names them.
+except = []
+
+# The "online" sound — when fedtail has connected to the server.
+online = true
+
+# The "sent" sound — when a post has gone out.
+sent = true
+
+# Chime while the fedtail window is active too (notifications keep quiet then — sounds don't).
+when_focused = true
+
+# Whose scheme: "theme" — the theme's; a theme's name ("qip-retro", "mra", "psi") — its
+# sounds whatever the look; "none" — no sounds (the same as enabled = false).
+scheme = "theme"
+
+# Volume, 0 to 100 — where the player can (pw-play, paplay, afplay, the browser).
+volume = 80
+
+# What plays them: "auto" — the first found of those above; or a command of yours, {file}
+# being the file's path: "mpv --no-video {file}".
+player = "auto"
+
+# No more than one sound in this many seconds (a batch of news chimes once — the weightiest).
+min_gap_seconds = 3
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  7. Activity
@@ -1058,6 +1097,10 @@ tail_lanes = []
 # The Textual theme: "" — its usual one; or a name: "textual-light", "nord", "gruvbox", "dracula",
 # "tokyo-night", "monokai", "solarized-light" and others (Ctrl+P → Change theme — to look).
 theme = ""
+
+# Sounds (sound.*) in the terminal: "bell" — the terminal's beep (reaches you over ssh too);
+# "scheme" — the sounds of the ui.theme theme, played by this computer; "off" — silence.
+sound = "bell"
 
 # The width of the lanes column, in characters.
 lanes_width = 26

@@ -771,6 +771,9 @@ _STRINGS = {
         "curtain_hint": "Открыть — клик по ленте слева или Enter.",
         "debug_notify": "Проверить уведомление",
         "debug_notify_sent": "Пробное уведомление отправлено ({backend})",
+        "debug_sound": "Проверить звук",
+        "debug_sound_played": "Звук «{event}» темы {theme}: {how}",
+        "debug_sound_silent": "Тема {theme} молчит о «{event}» (или нечем играть — см. лог)",
         "notify_test_body": "Уведомления работают.",
         "notify_no_send": "Уведомления идут через трей: нет notify-send. Для уведомлений KDE "
                           "с кнопкой «Открыть»: sudo apt install libnotify-bin",
@@ -1638,6 +1641,10 @@ _STRINGS = {
         "curtain_hint": "Open — click a lane on the left, or Enter.",
         "debug_notify": "Send a test notification",
         "debug_notify_sent": "Test notification sent ({backend})",
+        "debug_sound": "Test the sound",
+        "debug_sound_played": "The {theme} theme's \u201c{event}\u201d sound: {how}",
+        "debug_sound_silent": "The {theme} theme is silent about \u201c{event}\u201d "
+                              "(or nothing to play it with — see the log)",
         "notify_test_body": "Notifications work.",
         "notify_no_send": "Notifications go through the tray: notify-send is missing. For KDE "
                           "notifications with an Open button: sudo apt install libnotify-bin",

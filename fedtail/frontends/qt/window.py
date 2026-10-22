@@ -49,6 +49,7 @@ from ...model.text import snippet
 from .. import iconpack, themefile
 from ..common import results, sidebar
 from ..common.links import Links
+from ..common.sound import Sounds
 from . import badge
 from . import card as card_module
 from . import feed as feed_module
@@ -503,6 +504,8 @@ class MainWindow(QMainWindow):
             self.tray.setToolTip(self.windowTitle())
             self.tray.show()
         self.notifier = Notifier(self)
+        # the theme's sounds (common/sound.py); "bell" themes beep the Qt way
+        self.sounds = Sounds(self.cfg, self.theme.id, bell=QApplication.beep)
         self.notifier.clicked.connect(self._notification_clicked)
         self.notifier.failed.connect(lambda why: self.error(_("notify_failed", err=why)))
         if self.notifier.problem:
@@ -756,6 +759,8 @@ class MainWindow(QMainWindow):
         """Everything drawn in the old theme, drawn again in the new one: the sidebar
         built anew, every card rebuilt where it stands, the titles reworded."""
         self.theme = theme
+        if getattr(self, "sounds", None) is not None:  # and its sounds from now on
+            self.sounds.set_theme(theme.id)
         self.ctx.theme = theme
         feed_module.THEME = theme
         card_module.AVATAR_RADIUS = _AVATAR_CORNERS.get(theme.shape.get("avatar_shape"), -1)
@@ -948,6 +953,8 @@ class MainWindow(QMainWindow):
         dbg.addAction(_("debug_report"), self.bug_report)
         dbg.addAction(_("debug_notify"), lambda: self.statusBar().showMessage(
             _("debug_notify_sent", backend=self.notifier.test()), 8000))
+        dbg.addAction(_("debug_sound"), lambda: self.statusBar().showMessage(
+            self.sounds.test(), 8000))
         dbg.addAction(_("debug_stacks"), lambda: (diag.dump_stacks("asked from the menu"),
                                                   diag.log_stats(),
                                                   self.statusBar().showMessage(
@@ -1638,6 +1645,8 @@ class MainWindow(QMainWindow):
             self.update_badges()
         elif name == "notify":
             self._notify(payload)
+        elif name == "sound":
+            self.sounds.play(payload, focused=self.isActiveWindow())
         elif name == "prefetch":  # pictures of posts just come: to disk, ahead of time
             self.images.prefetch(payload)
         elif name == "prefetch_video":  # their videos too (feed.prefetch = "all")

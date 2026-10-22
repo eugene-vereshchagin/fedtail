@@ -289,14 +289,16 @@ details.en = "Turn it on, and hovering shows a longer hint instead of the short 
 
 [[feature]]
 id = "sound-scheme"
-status = "planned"
+status = "has"
+since = "0.19.0"
 name.ru = "Звуковая схема"
 name.en = "A sound scheme"
-config = "—"
+config.ru = "`sound.*`, `tui.sound`; в теме — `[sound] source`, `from`"
+config.en = "`sound.*`, `tui.sound`; in the theme — `[sound] source`, `from`"
+api.ru = "своё: папка `sounds/` темы"
+api.en = "own: the theme's `sounds/` folder"
 others.ru = "QIP, ICQ, Mail.ru Агент, Psi"
 others.en = "QIP, ICQ, Mail.ru Agent, Psi"
-size.ru = "средний (0.19)"
-size.en = "medium (0.19)"
-details.ru = "Звука в fedtail пока нет вообще. Звуки — часть темы, как значки: папка темы, свой набор у мессенджерных (новое сообщение, ответ, упоминание, вход), выключаемо."
-details.en = "fedtail has no sound at all yet. Sounds are part of a theme, as its pictures are: the theme's folder, a set of their own for the messengers' themes (a new message, a reply, a mention, signing in), switchable off."
+details.ru = "Звуки — часть темы, как значки. У мессенджерных тем свои наборы: `qip-retro` (и `qip-modern`) — звонкие «пип-пип» и стук в дверь при входе, `mra` (и цветные) — круглые «бульк» и ксилофон, `psi` — мягкие колокольчики, `point` (и `juick`) — сухие деревянные щелчки; `system` играет звуки рабочего стола (тема звуков KDE/GNOME через `canberra-gtk-play`, без него — свой тихий набор), `terminal` и `bnw` — писк. Свои звуки — папкой `sounds/` рядом с темой (`message.wav`, `reply.wav`, `mention.wav`, `direct.wav`, `thread.wav`, `request.wav`, `activity.wav`, `online.wav`, `sent.wav`); недостающий берётся у темы-родителя, из `[sound] from`, потом более лёгкий звук того же набора. Звенит пачка новостей один раз — самым важным звуком (личное → ответ → упоминание → тред → заявка → активность → сообщение), не чаще `sound.min_gap_seconds`; ленты — `sound.lanes` / `sound.except`, вход и отправка — `sound.online`, `sound.sent`; чужая схема при любом виде — `sound.scheme`, громкость — `sound.volume`, проигрыватель — `sound.player` (по умолчанию pw-play, paplay, aplay; afplay на macOS; сам Windows). Qt и GTK — одинаково; терминал — писком терминала (`tui.sound`), веб — в браузере. ≡ → Отладка → «Проверить звук». Все наборы синтезированы скриптом `tools/make_sounds.py` — свои, под GPL."
+details.en = "Sounds are part of a theme, as its pictures are. The messenger themes bring their own sets: `qip-retro` (and `qip-modern`) — bright “pip-pip” and a knock at the door when signing in, `mra` (and its colours) — round “blop”s and a xylophone, `psi` — soft chimes, `point` (and `juick`) — dry wooden ticks; `system` plays the desktop's sounds (the KDE/GNOME sound theme through `canberra-gtk-play`; without it a quiet set of fedtail's own), `terminal` and `bnw` — a beep. Your own sounds — a `sounds/` folder by the theme (`message.wav`, `reply.wav`, `mention.wav`, `direct.wav`, `thread.wav`, `request.wav`, `activity.wav`, `online.wav`, `sent.wav`); a missing one comes from the parent theme, from `[sound] from`, then a lighter sound of the same set. A batch of news chimes once, with the weightiest sound (private → reply → mention → thread → request → activity → message), no more often than `sound.min_gap_seconds`; lanes — `sound.lanes` / `sound.except`, signing in and sending — `sound.online`, `sound.sent`; another theme's scheme whatever the look — `sound.scheme`, volume — `sound.volume`, the player — `sound.player` (by default pw-play, paplay, aplay; afplay on macOS; Windows itself). Qt and GTK alike; the terminal beeps (`tui.sound`), the web plays in the browser. ≡ → Debug → “Test the sound”. Every set is synthesised by `tools/make_sounds.py` — our own, GPL."
 

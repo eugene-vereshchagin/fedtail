@@ -83,3 +83,6 @@ bg_bottom = "#2a6fc9"
 bubble = "#ffffff"
 ink = "#2a6fc9"
 accent = "#f2c037"
+
+[sound]
+source = "own"          # its own set: psi/sounds/ (made by tools/make_sounds.py)

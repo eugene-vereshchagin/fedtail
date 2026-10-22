@@ -169,6 +169,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.cmdline = None
         from .notify import Notifier
         self.notifier = Notifier(self, app)
+        from ..common.sound import Sounds
+        self.sounds = Sounds(self.cfg, theme.id, bell=self._beep)  # common/sound.py
         self.lane_views = {}     # name -> LaneView
         self.lane_rows = {}      # name -> LaneRow
         self.sections = {}       # group -> SectionRow
@@ -889,6 +891,12 @@ class MainWindow(Gtk.ApplicationWindow):
         if on:  # how it works, once it's on (as Qt says)
             self.status(_("whats_this_on"), seconds=8)
 
+    def _beep(self):
+        """The "bell" sound of the terminal-looking themes: the display's own beep."""
+        display = Gdk.Display.get_default()
+        if display is not None:
+            display.beep()
+
     def try_theme(self, name):
         """Another theme for this run (the config stays): the window restyled, the
         lanes drawn anew in its words."""
@@ -898,6 +906,7 @@ class MainWindow(Gtk.ApplicationWindow):
         old = self.theme.id
         theme = themes.apply(self.cfg, name)
         self.theme = self.ctx.theme = theme
+        self.sounds.set_theme(theme.id)
         if getattr(self, "corner_label", None) is not None:  # the corner says which, now
             self.corner_label.set_text(self._debug_corner())
         log.info("theme tried: %s (was %s, config says %s)", theme.id, old,
@@ -1398,6 +1407,8 @@ class MainWindow(Gtk.ApplicationWindow):
             self.images.prefetch_video(payload)
         elif name == "notify":
             self.notifier.notify(payload)
+        elif name == "sound":
+            self.sounds.play(payload, focused=self.is_active())
         elif name == "lists_changed":
             self._rebuild_sidebar()
         elif name == "me_updated" and self.view.me is not None:

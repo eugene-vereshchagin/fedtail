@@ -8,18 +8,21 @@ scripts from here only (Content-Security-Policy); server HTML is cleaned here,
 before it reaches the page. The key never goes into the log.
 """
 
+import collections
 import hmac
 import json
 import logging
 import os
 import re
 import secrets
+import sys
 import threading
 import time
 from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from ... import __version__, i18n, version
@@ -37,13 +40,15 @@ COOKIE = "fedtail_web"
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8")}
-CSP = ("default-src 'self'; img-src https: data:; media-src https:; style-src 'self'; "
+CSP = ("default-src 'self'; img-src https: data:; media-src https: 'self'; style-src 'self'; "
        "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; "
        "form-action 'self'")
 WAIT_SECONDS = 25
 LINK_SECONDS = 15 * 60  # a one-time login link is good this long
 MAX_CLIENTS = 32        # connections at once (a phone and a laptop need a handful)
 SOCKET_SECONDS = WAIT_SECONDS + 35  # a client that sends nothing this long is dropped
+# the browser hung up: nothing to answer, nothing to report
+GONE = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
 _ID = re.compile(r"[A-Za-z0-9_.-]{1,100}")
 
 
@@ -72,6 +77,13 @@ def load_key(data_dir):
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(key)
     return key
+
+
+def _int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def static_text(name):
@@ -302,6 +314,10 @@ class Web:
         for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
                       "lists_changed"):
             self.core.on(event, lambda _n, _p: self.bump())
+        # the theme's sounds: the page plays them (frontends/soundpack.py)
+        self.sound_seq = 0
+        self.sound_log = collections.deque(maxlen=8)  # (seq, event)
+        self.core.on("sound", lambda _n, p: self.chime(p))
 
     def login_link(self, base):
         """A link that logs a browser in once, within LINK_SECONDS: what the history,
@@ -318,6 +334,52 @@ class Web:
         with self._links_lock:
             until = self.links.pop(token, 0)
         return until > time.monotonic()
+
+    def scheme(self):
+        from .. import soundpack
+        return soundpack.scheme(self.core.cfg["ui"].get("theme", "system"), self.core.cfg)
+
+    def chime(self, event):
+        with self.changed:
+            self.sound_seq += 1
+            self.sound_log.append((self.sound_seq, str(event)))
+        self.bump()
+
+    def sounds_since(self, seq):
+        """What the page should play: [{event, kind}] newer than seq ("file" — fetch
+        /sound/<event>; "bell" — beep), and the newest seq. A page that opens hears
+        nothing of what came before it."""
+        with self.changed:
+            last = self.sound_seq
+            got = [e for n, e in self.sound_log if n > seq] if seq >= 0 else []
+        out = []
+        sch = self.scheme()
+        for e in got[-1:]:  # a page that slept: one sound, the newest, not a medley
+            snd = sch.find(e)
+            if snd is None:
+                continue
+            kind = "bell" if snd.kind == "bell" else "file"
+            if kind == "file" and not (snd.file if snd.kind == "desktop" else snd.value):
+                continue
+            out.append({"event": e, "kind": kind})
+        return out, last
+
+    def sound_file(self, event):
+        """The bytes of an event's sound (a browser can't play the desktop's sound
+        theme: fedtail's own quiet set stands in), or None."""
+        snd = self.scheme().find(str(event))
+        if snd is None or snd.kind == "bell":
+            return None
+        path = snd.file if snd.kind == "desktop" else snd.value
+        try:
+            return Path(path).read_bytes() if path else None
+        except OSError:
+            return None
+
+    def wait_answer(self, since, sound_since):
+        v = self.wait(since)
+        sounds, last = self.sounds_since(sound_since)
+        return {"v": v, "s": last, "sounds": sounds}
 
     def bump(self):
         with self.changed:
@@ -352,6 +414,8 @@ class Web:
                 "quote_prefix": c["post"].get("quote_prefix", "> "),
                 "homepage": version.HOMEPAGE, "help_url": self.help_url(),
                 "lang": i18n.current_language(),
+                "sound": {"volume": c["sound"]["volume"],
+                          "when_focused": c["sound"]["when_focused"]},
                 "words": {k: _(k) for k in WORDS}}
 
     @staticmethod
@@ -642,6 +706,16 @@ class Server(ThreadingHTTPServer):
             self.slots.release()
             raise
 
+    def handle_error(self, request, client_address):
+        """A page that hung up mid-answer is everyday life, not a traceback on the
+        terminal; anything else goes to the log (not stderr: no traceback over the
+        terminal fedtail runs in)."""
+        exc = sys.exc_info()[1]
+        if isinstance(exc, GONE):
+            log.debug("web: %s hung up", client_address[0])
+            return
+        log.warning("web: request failed", exc_info=True)
+
     def process_request_thread(self, request, client_address):
         try:
             super().process_request_thread(request, client_address)
@@ -717,7 +791,13 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
-                  "/api/wait": lambda: {"v": self.web.wait(int(q.get("v", "-1") or -1))}}
+                  "/api/wait": lambda: self.web.wait_answer(
+                      _int(q.get("v"), -1), _int(q.get("s"), -1))}
+        if u.path.startswith("/sound/"):
+            data = self.web.sound_file(u.path[len("/sound/"):])
+            if data is None:
+                return self._send(HTTPStatus.NOT_FOUND, b"", "text/plain")
+            return self._send(HTTPStatus.OK, data, "audio/wav")
         self._run(routes.get(u.path))
 
     # ---- POST --------------------------------------------------------------------
@@ -759,18 +839,33 @@ class Handler(BaseHTTPRequestHandler):
         self._run(routes.get(path))
 
     def _run(self, fn):
+        """Answer with what fn returns. Its failures become the page's error; a page
+        that left before the answer (a reload, a closed tab: the long /api/wait most of
+        all) is no failure at all — the answer just has nowhere to go."""
+        status = HTTPStatus.OK
         if fn is None:
-            return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
+            body, status = {"error": "not found"}, HTTPStatus.NOT_FOUND
+        else:
+            try:
+                body = fn()
+            except GONE:
+                return self._gone()
+            except (KeyError, ValueError) as e:
+                body = {"error": f"{e.__class__.__name__}: {e}"}
+                status = HTTPStatus.BAD_REQUEST
+            except Exception as e:  # noqa: BLE001 — the page says what failed
+                # the kind of failure only: a request's error text carries its whole
+                # address (a search's words in the query), and the log goes into bug reports
+                log.warning("web %s: %s", urlsplit(self.path).path, e.__class__.__name__)
+                body, status = {"error": _api_error(e)}, HTTPStatus.BAD_GATEWAY
         try:
-            return self._json(fn())
-        except (KeyError, ValueError) as e:
-            return self._json({"error": f"{e.__class__.__name__}: {e}"},
-                              HTTPStatus.BAD_REQUEST)
-        except Exception as e:  # noqa: BLE001 — the page says what failed
-            # the kind of failure only: a request's error text carries its whole address
-            # (a search's words in the query), and the log goes into bug reports
-            log.warning("web %s: %s", urlsplit(self.path).path, e.__class__.__name__)
-            return self._json({"error": _api_error(e)}, HTTPStatus.BAD_GATEWAY)
+            return self._json(body, status)
+        except GONE:
+            return self._gone()
+
+    def _gone(self):
+        log.debug("web %s: the page left before the answer", urlsplit(self.path).path)
+        self.close_connection = True
 
 
 def make_server(core, host, port, key):

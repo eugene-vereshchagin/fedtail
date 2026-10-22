@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**0.19.0 (in progress):**
+
+- A sound scheme
+
 **0.18.0:**
 
 - Read marks and thread subscriptions shared by all your devices
@@ -26,7 +30,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| A sound scheme | The application | — | medium (0.19) |
 | The terminal — everything the windows have | Interfaces | `ui.frontend = "tui"` | large (0.19) |
 | The web — everything the windows have | Interfaces | `ui.frontend = "web"` | large (0.19) |
 | Toga (BeeWare) | Interfaces | — | large |

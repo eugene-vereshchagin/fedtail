@@ -93,3 +93,6 @@ bg_bottom = "#2f2f2f"
 bubble = "#ffffff"
 ink = "#3c5a8a"
 accent = "#c4501b"
+
+[sound]
+source = "own"          # its own set: point/sounds/ (made by tools/make_sounds.py)

@@ -30,6 +30,7 @@ CHOICES = {
     ("shape", "tab_rows"): {"wrap", "one"},
     ("shape", "icons"): {"desktop", "own", "words"},
     ("pictures", "style"): {"gloss", "agent", "flat", "qip", "none"},
+    ("sound", "source"): {"desktop", "own", "bell", "none"},
 }
 
 README = """fedtail themes
@@ -65,6 +66,14 @@ from [pictures] from = "<theme>", then from fedtail's fallback set — and the l
 which. An SVG may leave its colours blank: {c} the colour, {l} its light top, {d} the
 outline; [pictures] style and colors fill them. The names of the pictures, and what
 each is for: builtin/PICTURES.txt.
+
+The sounds are the theme's too: [sound] source = "own" takes them from sounds/ in the
+same folder — themes/mine/sounds/message.wav, reply.wav, mention.wav, direct.wav,
+thread.wav, request.wav, activity.wav, online.wav, sent.wav (.wav plays everywhere,
+.ogg and others where the player can); "desktop" plays the desktop's sound theme,
+"bell" just beeps, "none" is silent. A missing one is filled like the pictures:
+inherited, then [sound] from, then a lighter sound of the set (a reply sounds like a
+mention, a mention like a message).
 
 fedtail reads your themes right here, nothing is copied anywhere; builtin/ is only
 a sample, rewritten at every start. To keep your themes in git, make this folder a
@@ -167,6 +176,18 @@ def icon_dirs(chain):
     return out
 
 
+def sound_dirs(chain):
+    """Where a theme's own sounds lie: themes/mine.toml → themes/mine/sounds/ (message.wav,
+    reply.wav…), the theme's own first, then those of the themes it inherits; what none
+    has comes from [sound] from (frontends/soundpack.py)."""
+    out = []
+    for path, _data in chain:
+        d = path.parent / path.stem / "sounds"
+        if d.is_dir():
+            out.append(str(d))
+    return out
+
+
 def load(name, _depth=0):
     """Fully resolved theme dict for `name`, plus warnings. Raises ThemeError."""
     chain, seen, current = [], set(), name
@@ -196,6 +217,7 @@ def load(name, _depth=0):
     merged["id"] = name
     merged["font"]["files"] = files
     merged["icon_dirs"] = icon_dirs(chain)
+    merged["sound_dirs"] = sound_dirs(chain)
     # [pictures] from: a theme whose set this one borrows (and what that one borrows)
     borrowed = (merged.get("pictures") or {}).get("from") or ""
     if borrowed and _depth < 4:
@@ -205,6 +227,15 @@ def load(name, _depth=0):
                                     if d not in merged["icon_dirs"]]
         except ThemeError as e:
             warnings.append(f"pictures.from = {borrowed!r}: {e}")
+    # [sound] from: likewise for the sounds
+    borrowed = (merged.get("sound") or {}).get("from") or ""
+    if borrowed and _depth < 4:
+        try:
+            other, _w = load(borrowed, _depth + 1)
+            merged["sound_dirs"] += [d for d in other["sound_dirs"]
+                                     if d not in merged["sound_dirs"]]
+        except ThemeError as e:
+            warnings.append(f"sound.from = {borrowed!r}: {e}")
     return merged, warnings
 
 
@@ -236,7 +267,7 @@ def validate(theme, ref):
     """Raise on wrong values; return warnings for unknown keys."""
     warnings, errors = [], []
     for section, values in theme.items():
-        if section in ("name", "inherit", "id"):
+        if section in ("name", "inherit", "id", "icon_dirs", "sound_dirs"):
             continue
         if section not in ref or not isinstance(ref[section], dict):
             warnings.append(f"unknown section [{section}]")
@@ -307,12 +338,13 @@ def install_copies():
             text = p.read_text("utf-8")
             if not dst.exists() or dst.read_text("utf-8") != text:
                 dst.write_text(text, "utf-8")
-            icons = BUILTIN_DIR / p.stem / "icons"  # its pictures, to start from too
-            if icons.is_dir():
-                (target / p.stem / "icons").mkdir(parents=True, exist_ok=True)
-                for f in icons.iterdir():
-                    if f.is_file():
-                        _copy_if_changed(f, target / p.stem / "icons" / f.name)
+            for part in ("icons", "sounds"):  # its pictures and sounds, to start from too
+                src = BUILTIN_DIR / p.stem / part
+                if src.is_dir():
+                    (target / p.stem / part).mkdir(parents=True, exist_ok=True)
+                    for f in src.iterdir():
+                        if f.is_file():
+                            _copy_if_changed(f, target / p.stem / part / f.name)
         from . import iconpack
         names = PICTURES.format(
             standard="\n".join(f"    {k:<10} {v}" for k, v in iconpack.STANDARD.items()),

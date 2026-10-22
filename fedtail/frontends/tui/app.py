@@ -564,6 +564,19 @@ class FedtailApp(App, PostsMixin):
         screen = self.screen_stack[0] if self.screen_stack else self.screen
         return screen.query_one(selector, kind) if kind else screen.query_one(selector)
 
+    def _make_sounds(self):
+        """tui.sound: the terminal's bell, the theme's sounds on this computer, or none."""
+        how = self.core.cfg.get("tui", {}).get("sound", "bell")
+        if how == "off":
+            return None
+        from ..common.sound import Sounds
+        return Sounds(self.core.cfg, self.core.cfg["ui"].get("theme", "system"),
+                      bell=self.bell, only_bell=(how == "bell"))
+
+    def play_sound(self, event):
+        # the terminal can't tell whether it is looked at: "when focused" is always so
+        self.sounds.play(event, focused=False)
+
     def show_error(self, message):
         self.notify(str(message)[:300], severity="error", timeout=8)
 
@@ -593,6 +606,9 @@ class FedtailApp(App, PostsMixin):
         for event in ("activity_updated", "activity_seen", "requests_updated"):
             self.core.on(event, lambda n, _p: self.in_ui(self.other_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
+        self.sounds = self._make_sounds()
+        if self.sounds is not None:
+            self.core.on("sound", lambda _n, p: self.in_ui(self.play_sound, p))
         if not self.core.logged_in:
             self.push_screen(LoginScreen())
             return

@@ -5,7 +5,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| A sound scheme | The application | — | medium (0.19) |
 | The terminal — everything the windows have | Interfaces | `ui.frontend = "tui"` | large (0.19) |
 | The web — everything the windows have | Interfaces | `ui.frontend = "web"` | large (0.19) |
 | Toga (BeeWare) | Interfaces | — | large |

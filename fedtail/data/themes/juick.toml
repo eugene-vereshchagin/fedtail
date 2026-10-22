@@ -71,3 +71,7 @@ bg_bottom = "#262626"
 bubble = "#ffffff"
 ink = "#1b6aa5"
 accent = "#4aa3df"
+
+[sound]
+source = "own"
+from = "point"

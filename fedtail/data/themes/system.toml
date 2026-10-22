@@ -133,6 +133,14 @@ emoji = "#f5c400"
 send = "#3aa63a"
 star_full = "#f2b705"
 
+[sound]
+# The sounds: what plays when news comes (sound.* in config.toml says when).
+source = "desktop"       # "desktop" — the desktop's sound theme (KDE, GNOME; needs
+                         # canberra-gtk-play, else fedtail's own quiet set); "own" — the
+                         # theme's set: themes/mine/sounds/message.wav, reply.wav…; "bell" —
+                         # the beep; "none" — silence
+from = ""                # a theme whose sounds this one borrows: "qip-retro" (qip-modern does)
+
 [words]
 # {text} is the interface's own wording in the current language
 compose = "✎  {text}"

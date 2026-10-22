@@ -137,3 +137,6 @@ bg_bottom = "#2c62b3"
 bubble = "#ffffff"
 ink = "#2c62b3"
 accent = "#3fb53a"
+
+[sound]
+source = "own"          # its own set: qip-retro/sounds/ (made by tools/make_sounds.py)
