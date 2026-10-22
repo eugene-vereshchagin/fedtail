@@ -78,3 +78,27 @@ class WindowsDocTest(unittest.TestCase):
 
     def test_linked_from_the_testers_page(self):
         self.assertIn("WINDOWS.md", (ROOT / "docs" / "TESTING.md").read_text("utf-8"))
+
+
+class WindowsCheckTest(unittest.TestCase):
+    """tools/windows_check.py knows every command of the page: runs it, or says why not."""
+
+    def test_every_command_is_planned(self):
+        import sys
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import windows_check
+        finally:
+            sys.path.pop(0)
+        for line in windows_check.commands():
+            argv, why = windows_check.plan(line)
+            self.assertNotEqual(why, "not a command of fedtail's", line)
+            if argv is not None and argv[0] != "git":
+                self.assertEqual(argv[0], sys.executable, line)
+        planned = {line: windows_check.plan(line)[0] for line in windows_check.commands()}
+        self.assertTrue(any(a and "--install-desktop" in a for a in planned.values()))
+        self.assertTrue(any(a and "unittest" in a for a in planned.values()))
+
+
+if __name__ == "__main__":
+    unittest.main()

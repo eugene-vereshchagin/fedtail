@@ -39,7 +39,8 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STEPS = ("tests", "qt", "bench", "gtk", "tui", "web", "behaviour", "parity", "gallery")
+STEPS = ("tests", "windows", "qt", "bench", "gtk", "tui", "web", "behaviour", "parity",
+         "gallery")
 
 
 def probe(code):
@@ -422,6 +423,10 @@ def main():
             run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d, py=web_py,
                      note="Playwright" if pw else "no Playwright: no walk "
                      "(python3 tools/devenv.py — once)")
+        if "windows" in only and sys.platform == "win32":  # docs/WINDOWS.md, done here
+            d = out / "windows"
+            run.step("windows", ["tools/windows_check.py", str(d)], timeout=1200, folder=d,
+                     note="docs/WINDOWS.md in a profile of its own")
         if "behaviour" in only:  # the same scenario through every interface here
             cmd = ["tools/behaviour.py", str(out / "behaviour.md")]
             wrap = run.wrap or (["xvfb-run", "-a"] if sys.platform.startswith("linux") and

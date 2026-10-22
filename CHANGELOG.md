@@ -47,6 +47,10 @@
   to here, all read — through each interface's own way in, held against
   frontends/common; and whether each window has every place a link may ask for. A step
   of `tools/selfcheck.py`, a table in its report.
+- Windows: tests that hold Windows' ways on any machine (where the files go, the Start
+  menu shortcut's PowerShell, the single-instance pipe's key, the sounds through
+  winsound); `tools/windows_check.py` runs docs/WINDOWS.md on Windows in a profile of
+  its own (the self-check's `windows` step).
 - Web: a page that left while waiting for news (a reload, a closed tab) no longer
   prints two BrokenPipeError tracebacks on the terminal.
 

@@ -101,6 +101,19 @@ fedtail рисовал бы окно «в никуда». fedtail такое з�
 вывод целиком: удобнее всего дописать к команде тестов `2>&1 | Tee-Object tests.txt` —
 вывод останется в `tests.txt` в папке fedtail. Своих логов тесты не пишут: всё в выводе.
 
+## 4½. Эта страница — одной командой
+
+Всё, что на этой странице можно выполнить без человека (проверить Python, git и пакеты,
+запуск, ярлык в «Пуск», `--update-config`, `--bug-report`, тесты), — по порядку, в отдельном
+профиле во временной папке (твой fedtail, его ярлык и логи не трогаются):
+
+```powershell
+py -3.13 tools/windows_check.py windows-check --tests
+```
+
+В папке `windows-check` — `report.md` (что сделано, что пропущено и почему) и `errors.txt`.
+Самопроверка (ниже) делает то же сама, шагом `windows`.
+
 ## 5. Самопроверка (как на Linux)
 
 Обход всех окон со скриншотами, скорость, паритет интерфейсов — `tools/selfcheck.py`.
@@ -168,5 +181,14 @@ code.
    (the last line, or a new PowerShell: with `offscreen` left, fedtail's window would go
    nowhere — fedtail notices it, ignores it and says so)
 
-5. Selfcheck: `py -3.13 tools/devenv.py` once (Playwright), then `py -3.13 tools/selfcheck.py
+5. This page in one command — everything here that runs without a person, in order, in a
+   profile of its own in a temporary folder (your fedtail, its shortcut and logs untouched);
+   `windows-check/report.md` says what was done and skipped, `errors.txt` what failed (the
+   self-check does the same as its `windows` step):
+
+   ```powershell
+   py -3.13 tools/windows_check.py windows-check --tests
+   ```
+
+6. Selfcheck: `py -3.13 tools/devenv.py` once (Playwright), then `py -3.13 tools/selfcheck.py
    --quick` / no flags / `--night`; send the zip next to the `selfcheck-<date>` folder.
