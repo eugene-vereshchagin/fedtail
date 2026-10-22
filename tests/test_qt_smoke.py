@@ -1778,6 +1778,43 @@ class QtSmokeTest(unittest.TestCase):
         self.win.update_badges()
         self.assertEqual(sent, [1])
 
+    def test_a_suggestion_put_in_by_the_keyboard(self):
+        """The list of @names and #tags: ↓ chooses, Enter (or Tab) puts it in — it took
+        a click before; Esc closes it, the text as typed."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QKeyEvent
+        from PySide6.QtWidgets import QApplication
+
+        from fedtail.frontends.qt.compose import Compose
+        dlg = Compose(self.win)
+        dlg.show()
+        self.core.store.people_counts()
+
+        def key(k):
+            QApplication.sendEvent(dlg.text, QKeyEvent(QKeyEvent.Type.KeyPress, k,
+                                                       Qt.KeyboardModifier.NoModifier))
+
+        def typed(text):
+            dlg.text.setPlainText(text)
+            cur = dlg.text.textCursor()
+            cur.movePosition(cur.MoveOperation.End)
+            dlg.text.setTextCursor(cur)
+            dlg._suggest_tags()
+        typed("и @bo")
+        self.assertTrue(dlg.tag_completer.popup().isVisible())
+        key(Qt.Key.Key_Return)
+        self.assertTrue(dlg.text.toPlainText().startswith("и @bob@social.example"),
+                        dlg.text.toPlainText())
+        self.assertFalse(dlg.tag_completer.popup().isVisible())
+        typed("и @bo")
+        key(Qt.Key.Key_Tab)
+        self.assertTrue(dlg.text.toPlainText().startswith("и @bob@social.example"))
+        typed("и @bo")
+        key(Qt.Key.Key_Escape)
+        self.assertFalse(dlg.tag_completer.popup().isVisible())
+        self.assertEqual(dlg.text.toPlainText(), "и @bo")
+        dlg.close()
+
     def test_open_every_cw_in_a_thread(self):
         """A thread with warnings: its header opens (and closes) every one at once."""
         from fedtail.frontends.qt.feed import ThreadWidget

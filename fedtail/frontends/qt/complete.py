@@ -26,6 +26,7 @@ class Completer(QObject):
         self.completer.activated.connect(self.put)
         text.textChanged.connect(self.suggest)
         text.installEventFilter(self)
+        self.completer.popup().installEventFilter(self)  # (it has the keys while open)
         self.inserts = {}
         self.people_query = ""
         self.people_timer = QTimer(self, singleShot=True, interval=350)
@@ -89,7 +90,19 @@ class Completer(QObject):
         return self.completer.popup().isVisible()
 
     def eventFilter(self, obj, e):
-        if obj is self.text and e.type() == QEvent.Type.KeyPress and self.busy() and \
-                e.key() in self.KEYS:
-            return True  # the list takes these
+        # the list open: Enter and Tab put in the one chosen (the arrows choose), Esc
+        # closes it — done here, not left to QCompleter: the keys stopped at the text
+        # box and nothing but a click put a suggestion in
+        if obj in (self.text, self.completer.popup()) and \
+                e.type() == QEvent.Type.KeyPress and self.busy() and e.key() in self.KEYS:
+            if e.key() == Qt.Key.Key_Escape:
+                self.completer.popup().hide()
+            elif e.key() != Qt.Key.Key_Backtab:
+                popup = self.completer.popup()
+                index = popup.currentIndex()
+                row = index.row() if index.isValid() else 0
+                labels = self.model.stringList()
+                if 0 <= row < len(labels):
+                    self.put(labels[row])
+            return True
         return super().eventFilter(obj, e)
