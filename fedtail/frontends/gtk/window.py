@@ -206,6 +206,7 @@ class MainWindow(Gtk.ApplicationWindow):
         side.append(write)
         self.search = Gtk.SearchEntry(placeholder_text=_("search_side"))
         self.search.connect("activate", lambda e: self.open_search(e.get_text()))
+        tip(self.search, _("search_side_tip"))
         for m in ("start", "end"):
             getattr(self.search, "set_margin_" + m)(8)
         side.append(self.search)
@@ -486,6 +487,7 @@ class MainWindow(Gtk.ApplicationWindow):
         add("<Control>l", lambda: self.cmdline is not None and self.cmdline.entry.grab_focus())
         add("<Control>n", self.compose)
         add("<Control>f", self.find_bar.open)
+        add("<Control>k", self.search.grab_focus)  # the sidebar's search, as in Qt
         add("F5", self.view.poll_now)
         add("<Control>q", self.close)
         add("<Control>w", self._close_current_tab)
@@ -690,9 +692,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def open_search(self, query):
         from ...core import taggroups
         from . import people
-        if taggroups.parse((query or "").strip()):
-            self.status(_("gtk_not_yet"))
-            return None
+        spec = taggroups.parse((query or "").strip())
+        if spec:  # several tags: a lane of them, not a search (as Qt)
+            return people.open_tag_group(self, spec)
         return people.open_search(self, query)
 
     def open_tag(self, tag):
@@ -1401,6 +1403,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 return
             title.set_text("@" + acc.handle)
             box.append(self._profile_head(acc, own))
+            posts_head = Gtk.Label(label=_("profile_posts"), xalign=0)
+            posts_head.add_css_class("ft-account")
+            posts_head.add_css_class("caption-heading")
+            posts_head.set_margin_top(8)
+            box.append(posts_head)
             if self.cfg["feed"].get("profile_pinned", True):
                 self.call(self.view.pinned(acc_id), got_pinned, lambda _e: None)
             self.call(self.view.account_posts(acc_id), got_posts)
@@ -1417,15 +1424,14 @@ class MainWindow(Gtk.ApplicationWindow):
         def got_pinned(posts):
             """What they pinned, first, marked 📌 (feed.profile_pinned), as in Qt."""
             short = self.view.short_ids(posts or [])
-            head = box.get_first_child()
+            # right under "Posts" (the head and that line first; until they're there,
+            # at the top)
+            at = 2 if box.get_row_at_index(1) is not None else 0
             for p in reversed(posts or []):
                 pinned_ids.add(real(p).id)
                 card = Card(self.ctx, "pin:" + p.id, p, short_id=short.get(real(p).id))
                 card.mark("📌 " + _("pinned"))
-                if head is not None:
-                    box.insert(card, 1)
-                else:
-                    box.prepend(card)
+                box.insert(card, at)
         self.call(self.view.account(acc_id), got_account,
                   lambda err: title.set_text(_("load_failed", err=err)))
 
@@ -1468,8 +1474,6 @@ class MainWindow(Gtk.ApplicationWindow):
             head.append(banner)
         if acc.moved and self.cfg["feed"].get("show_moved", True):
             head.append(self._moved_banner(acc.moved))
-        top = Gtk.Box(spacing=10)
-        top.append(Avatar(self.ctx, acc, 64))
         names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         name = Gtk.Label(label=name_of(acc), xalign=0)
         name.add_css_class("ft-name")
@@ -1486,27 +1490,30 @@ class MainWindow(Gtk.ApplicationWindow):
         counts.add_css_class("ft-muted")
         names.append(counts)
         names.set_hexpand(True)
-        top.append(names)
-        head.append(top)
+        from .gi_setup import side_by_side, wrap_box
+        face = Avatar(self.ctx, acc, 64)
+        # the face and the words beside it: not a horizontal box (GTK 4.18 asks a box's
+        # least height of its wrapping lines at their least width: measure.py)
+        head.append(side_by_side(face, names, 10))
         meta = Gtk.Label(xalign=0, wrap=True)
         meta.add_css_class("ft-muted")
         names.append(meta)
         # the buttons, as Qt's (common/profile.py: which, in what order, what they do);
         # too many for a line: they wrap
-        buttons = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, row_spacing=6,
-                              column_spacing=6, homogeneous=False, max_children_per_line=12)
+        buttons = wrap_box(spacing=6, row_spacing=6)
         note = Gtk.Label(xalign=0, wrap=True)
         note.add_css_class("ft-muted")
         note.set_visible(False)
         tip(note, _("note_tip"))
-        state = {"rel": None}
+        state = {"rel": None, "software": ""}
 
         def fill(rel):
             from ..common import profile as prof
             state["rel"] = rel
             since = rel is not None and rel.following and \
                 self.view.followed_since(acc.id, rel)
-            bits = prof.meta(acc, rel, self.theme.date, since or None)[1:]  # (the @ is above)
+            bits = prof.meta(acc, rel, self.theme.date, since or None,
+                             state["software"])[1:]  # (the @ is above)
             meta.set_text(" · ".join(bits))
             meta.set_visible(bool(bits))
             while (c := buttons.get_first_child()) is not None:
@@ -1531,6 +1538,15 @@ class MainWindow(Gtk.ApplicationWindow):
             fill(None)
         else:
             self.call(self.view.relationship(acc.id), fill, lambda _e: fill(None))
+        from urllib.parse import urlparse
+        host = urlparse(acc.url or acc.uri or "").hostname or ""
+        if host:  # what their server runs (feed.server_info), on the meta line, as Qt
+
+            def software(name):
+                if name:
+                    state["software"] = name
+                    fill(state["rel"])
+            self.call(self.view.server_software(host), software, lambda _e: None)
         if acc.note:
             from .. import pango
             bio = Gtk.Label(xalign=0, wrap=True, selectable=False)
@@ -1545,8 +1561,41 @@ class MainWindow(Gtk.ApplicationWindow):
                            ("✓ " if f.verified else "") + pango.markup(f.value))
             row.connect("activate-link", lambda _l, u: (self.on_link(u), True)[1])
             head.append(row)
+        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        head.append(extra)  # whom of mine they're followed by, their tags and people
         head.append(buttons)
         head.append(note)
+
+        def links_line(words, items, more=0):
+            from .card import link_markup as lm
+            row = Gtk.Label(xalign=0, wrap=True)
+            row.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            row.set_markup(words + ", ".join(lm(u, t) for u, t in items) +
+                           (" " + GLib.markup_escape_text(_("act_more", n=more))
+                            if more > 0 else ""))
+            row.connect("activate-link", lambda _l, u: (self.on_link(u), True)[1])
+            extra.append(row)
+
+        def familiar(people):
+            people = [a for a in people or () if getattr(a, "id", None)]
+            if people:
+                text = GLib.markup_escape_text(_("familiar", who="\x00")).split("\x00")
+                row_items = [(f"fedtail:account/{a.id}", "@" + a.handle) for a in people[:5]]
+                links_line(text[0], row_items, len(people) - 5)
+
+        def featured(got):
+            got = got or {}
+            tags = [(f"fedtail:tag/{t.name}", "#" + t.name) for t in got.get("tags") or ()
+                    if getattr(t, "name", None)]
+            people = [(f"fedtail:account/{a.id}", "@" + a.handle)
+                      for a in got.get("people") or () if getattr(a, "id", None)]
+            for key, items in (("featured_tags", tags), ("featured_people", people)):
+                if items:
+                    links_line(f"<b>{GLib.markup_escape_text(_(key))}</b> ", items)
+        if not own and self.view.supports("familiar"):
+            self.call(self.view.familiar(acc.id), familiar, lambda _e: None)
+        if self.cfg["feed"].get("profile_featured", True):
+            self.call(self.view.featured(acc.id), featured, lambda _e: None)
         return head
 
     # ---- links: common/links.py asks these ---------------------------------------------

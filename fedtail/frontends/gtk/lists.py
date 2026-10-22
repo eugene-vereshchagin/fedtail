@@ -122,6 +122,15 @@ def lane_menu(win, row):
         item(_("list_delete"), lambda: win.confirm(
             _("list_delete"), _("list_delete_q", title=x.title),
             lambda: win.call(core.delete_list(x.id))))
+    elif name.startswith("tags:"):  # a group of tags: out of the sidebar, as Qt's
+        from ...core import taggroups
+        g = next((g for g in view.tag_groups
+                  if f"tags:{taggroups.key(g)}" == name), None)
+        drop = item(_("tags_drop"), lambda: win.call(core.drop_tag_group(name)))
+        if g is not None and not g.get("saved"):
+            drop.set_sensitive(False)  # from the config: taken out there
+            from .gi_setup import tip
+            tip(drop, _("tags_in_config"))
     elif win.cfg["lists"]["enabled"]:
         item(_("list_new"), win.new_list)
     else:
@@ -147,4 +156,5 @@ def open_list_people(win, x):
     from .people import open_people
     return open_people(win, f"list-people:{x.id}", _("list_people_title", title=x.title),
                        lambda _cursor: win.view.list_people(x.id),
-                       dismiss=lambda acc_id: win.core.set_in_list(x.id, acc_id, False))
+                       dismiss=lambda acc_id: win.core.set_in_list(x.id, acc_id, False),
+                       dismiss_label=_("list_take_out"))

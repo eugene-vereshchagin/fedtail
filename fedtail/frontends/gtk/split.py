@@ -74,6 +74,8 @@ class RosterRow(Gtk.ListBoxRow):
         self._face_url = None
         self.set_child(box)
         self.update_item(item)
+        from .contact import hover  # a person: their card on hover, as QIP had it
+        hover(roster.win, self, lambda: getattr(self.item, "who", None))
 
     def update_item(self, item):
         self.item = item
@@ -522,6 +524,8 @@ class InputDock(Gtk.Box):
         click.connect("released", lambda *_a: self._to is not None and
                       self.win.open_account(self._to.id))
         self.face.add_controller(click)
+        from .contact import hover
+        hover(self.win, self.face, lambda: self._to)
         side.append(self.face)
         self.send_btn = Gtk.Button(label=_("dock_send"))
         self.send_btn.add_css_class("suggested-action")
@@ -817,6 +821,8 @@ class AuthorBar(Gtk.Box):
         self.add_css_class("ft-lane-header")
         self.face = Gtk.Box()
         self.append(self.face)
+        from .contact import hover
+        hover(win, self.face, lambda: self.who)
         names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         self.name = Gtk.Label(xalign=0)
         self.name.add_css_class("ft-name")
@@ -904,7 +910,9 @@ class AuthorBar(Gtk.Box):
                           lambda _e: None)
         bits = ["@" + who.handle]
         if rel is not None:
-            if rel.followed_by:
+            if rel.following and rel.followed_by:
+                bits.append(_("faces_mutual"))
+            elif rel.followed_by:
                 bits.append(_("faces_follows_me"))
             elif rel.requested:
                 bits.append(_("faces_requested"))
@@ -1026,6 +1034,8 @@ class AgentFace(Gtk.Box):
         click = Gtk.GestureClick()
         click.connect("released", lambda *_a: self._profile())
         self.face.add_controller(click)
+        from .contact import hover
+        hover(win, self.face, lambda: self.who)
         self.append(self.face)
         self.name = Gtk.Label(xalign=0.5)
         self.name.add_css_class("ft-name")

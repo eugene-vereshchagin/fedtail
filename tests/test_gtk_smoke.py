@@ -718,6 +718,36 @@ class GtkSmokeTest(_GtkBase):
             self.win.set_default_size(*size)
             pump(timeout=0.4)
             self.assertEqual(boxes_418(self.win), [], f"at {size}")
+        # and the tabs: a profile, a thread
+        self.win.open_account("B")
+        pump(lambda: "B" in self.win.accounts, 3)
+        pump(timeout=0.6)
+        self.assertEqual(boxes_418(self.win), [], "a profile")
+        self.win.open_thread("013")
+        pump(timeout=0.6)
+        self.assertEqual(boxes_418(self.win), [], "a thread")
+        self.win.open_search("bob")
+        pump(timeout=0.6)
+        self.assertEqual(boxes_418(self.win), [], "the search: people")
+
+    def test_a_group_of_tags(self):
+        """Several tags typed into the search: their tab, as Qt's; "＋ to lanes" puts it
+        in the sidebar, and its right-click menu takes it out."""
+        from fedtail.core import taggroups
+        from fedtail.frontends.gtk import lists
+        spec = taggroups.parse("#linux #georgia")
+        page = self.win.open_search("#linux #georgia")
+        self.assertIsNotNone(page)
+        save = next(w for w in _walk(page) if isinstance(w, Gtk.Button)
+                    and w.get_label() == i18n._("tags_save"))
+        save.emit("clicked")
+        name = taggroups.lane_name(spec)
+        self.assertTrue(pump(lambda: name in self.win.lane_rows, 5))
+        pop = lists.lane_menu(self.win, self.win.lane_rows[name])
+        drop = next(w for w in _walk(pop) if isinstance(w, Gtk.Button)
+                    and w.get_label() == i18n._("tags_drop"))
+        drop.emit("clicked")
+        self.assertTrue(pump(lambda: name not in self.win.lane_rows, 5))
 
     def test_tag_tab_follows_and_features(self):
         from fedtail.frontends.gtk.people import TagRow
@@ -839,6 +869,27 @@ class GtkPanelsTest(_GtkBase):
 class GtkSplitTest(_GtkBase):
     """ui.layout = "split": the roster window, the lanes in tabs, the input line."""
     UI = {"layout": "split"}
+
+    def test_a_contact_card_on_hover(self):
+        """As QIP (and Qt's split layout): who this is, beside the face."""
+        from dataclasses import replace
+
+        from fedtail.frontends.gtk import contact
+        from fedtail.model import Relationship
+        bob = replace(self.view.by_id("011").author, posts=12, followers=3, following=4,
+                      note="<p>пишу про роутеры</p>")
+        self.view.relation_known = lambda _id: Relationship(following=True,
+                                                            followed_by=True)
+        words = [t for t, _css in contact.lines(self.view, bob, self.win.theme.date)]
+        self.assertEqual(words[0], "@" + bob.handle)
+        self.assertIn(i18n._("faces_mutual"), words)
+        self.assertIn("пишу про роутеры", words)
+        self.assertIn(i18n._("card_counts", posts=12, followers=3, following=4), words)
+        box = contact.card(self.win, bob)
+        self.assertTrue(any(isinstance(w, Gtk.Label) and w.get_text() == "пишу про роутеры"
+                            for w in _walk(box)))
+        state = contact.hover(self.win, self.win.dock.face, lambda: bob)
+        self.assertIsNone(state["pop"])
 
     def test_roster_tabs_and_the_input_line(self):
         win = self.win
