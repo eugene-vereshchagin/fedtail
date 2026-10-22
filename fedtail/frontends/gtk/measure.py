@@ -19,7 +19,9 @@ def _bad_at(w):
     top = max(lo_w, nat_w, w.get_width(), 760) + 160
     widths = sorted(set(range(lo_w, top, 8)) | {w.get_width(), 744})
     box418 = None
-    if isinstance(w, Gtk.Box) and w.get_orientation() == horizontal:
+    # (a Box with no layout manager is one of gi_setup's own: not BoxLayout's rule)
+    if isinstance(w, Gtk.Box) and w.get_orientation() == horizontal and \
+            w.get_layout_manager() is not None:
         # GTK 4.18's own rule (gtkboxlayout.c): a horizontal box's least height is its
         # children's least at their least width (measured at -1), whatever width it
         # gets — 4.14 here never shows it, so it is worked out the same way
@@ -158,7 +160,8 @@ def boxes_418(root):
     def walk(w):
         if not w.get_visible():
             return
-        if isinstance(w, Gtk.Box) and w.get_orientation() == hor and w.get_width() > 0:
+        if isinstance(w, Gtk.Box) and w.get_orientation() == hor and w.get_width() > 0 \
+                and w.get_layout_manager() is not None:
             kids, c = [], w.get_first_child()
             while c is not None:
                 if c.get_visible():

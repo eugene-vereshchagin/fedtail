@@ -72,6 +72,10 @@ class ImageViewer(Gtk.Box):
         win.viewer = self
         win.overlay.add_overlay(self)
         self.grab_focus()
+        # (not focusable until it's on screen: the card clicked kept the keys — again
+        # once it's mapped, so ← → Z S O work without a click first)
+        self.connect("map", lambda *_a: GLib.idle_add(
+            lambda: (self.grab_focus(), GLib.SOURCE_REMOVE)[1]))
         self.load()
 
     def _button(self, text, tip_text, fn):

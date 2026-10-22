@@ -783,6 +783,13 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: lane.positioned, 5))
         rows = [w for w in _walk(lane.list) if hasattr(w, "newest_sort")]
         self.assertEqual(len(rows), 3)  # the two likes of one post are one row
+        # × at the row's right end, whatever the words' length
+        pump(timeout=0.3)
+        for r in rows:
+            x = next(b for b in _walk(r) if isinstance(b, Gtk.Button) and b.get_label() == "×")
+            ok, bounds = x.compute_bounds(r)
+            self.assertTrue(ok)
+            self.assertGreater(bounds.get_x() + bounds.get_width(), r.get_width() - 40)
         # on screen in an active window: seen
         if pump(lambda: self.win.is_active(), 2):
             self.assertTrue(pump(lambda: self.core.activity_unread() == 0, 5))
@@ -1017,6 +1024,15 @@ class GtkPanelsTest(_GtkBase):
         self.assertEqual(v.i, 0)
         v._set_actual(True)
         self.assertTrue(v.actual)
+        # Esc with the keys elsewhere (the card clicked to open it): the viewer goes, the
+        # tabs and lanes under it stay
+        pages = self.win.tabs.get_current_page()
+        from gi.repository import Gdk as _Gdk
+        self.assertTrue(self.win._key(None, _Gdk.KEY_Escape, 0, 0))
+        self.assertTrue(v.closed)
+        self.assertEqual(self.win.tabs.get_current_page(), pages)
+        self.assertFalse(self.win.curtain_shown())
+        v = viewer.show(self.win, media, 1)
         v.close()
         self.assertIsNone(v.get_parent())
         self.assertIsNone(self.win.viewer)
@@ -1061,8 +1077,9 @@ class GtkPanelsTest(_GtkBase):
         self.assertEqual(len(sent), 1)
 
     def test_quit_quits(self):
-        self.win.quit_app()
-        pump(timeout=0.2)
+        # ≡ → Quit: the menu's action (run once the menu has gone), as a click on it does
+        self.assertTrue(self.win.activate_action("win.quit", None))
+        pump(timeout=0.3)
         self.assertTrue(self.win.quitting)
         self.assertFalse(self.win.get_visible())
 

@@ -81,7 +81,9 @@ def run(core, instance, argv):
                  f"{Adw.get_major_version()}.{Adw.get_minor_version()}" if Adw
                  else "none", theme.id, "dark" if theme.dark else "light",
                  "one-file build" if getattr(sys, "frozen", False) else "source",
-                 "on" if a11y else "off (ui.accessibility)")
+                 ("on" if a11y else "off (ui.accessibility)") +
+                 ("" if a11y or Gtk.Button().get_at_context() is None
+                  else " — but GTK made one anyway (GTK_A11Y not taken)"))
 
         def message(msg):
             GLib.idle_add(lambda: (win.present(), GLib.SOURCE_REMOVE)[1])

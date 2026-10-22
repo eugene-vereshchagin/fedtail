@@ -131,9 +131,13 @@ def _clamp_class():
     if _CLAMP:
         return _CLAMP[0]
 
-    class Clamp(Gtk.Widget):
+    class Clamp(Gtk.Box):
         def __init__(self, child, max_width):
             super().__init__()
+            # a Box with no layout manager: its own measure and allocate below, and
+            # Box's dispose takes its children away (a Python do_dispose never runs:
+            # "Finalizing … but it still has children left", every one of them kept)
+            self.set_layout_manager(None)
             self.max_width = max_width
             self.child = child
             child.set_parent(self)
@@ -178,9 +182,13 @@ def fit_box(child, width, height, least=96):
     minimum: a picture 800 px wide kept the lane past an 800 px window's edge, and an
     overlay over it told GTK two different least heights."""
     if not _FIT:
-        class Fit(Gtk.Widget):
+        class Fit(Gtk.Box):
             def __init__(self, child, width, height, least):
                 super().__init__()
+                # a Box with no layout manager: its own measure and allocate below, and
+                # Box's dispose takes its children away (a Python do_dispose never runs:
+                # "Finalizing … but it still has children left", every one of them kept)
+                self.set_layout_manager(None)
                 self.w, self.h = max(1, int(width)), max(1, int(height))
                 self.least = min(self.w, least)
                 self.child = child
@@ -230,9 +238,13 @@ def wrap_box(spacing=4, row_spacing=2, align_end=False):
     columns as wide as the widest, a narrow one stacks them all). append(w), remove(w),
     get_first_child() as a box's."""
     if not _WRAP:
-        class Wrap(Gtk.Widget):
+        class Wrap(Gtk.Box):
             def __init__(self, spacing, row_spacing, align_end):
                 super().__init__()
+                # a Box with no layout manager: its own measure and allocate below, and
+                # Box's dispose takes its children away (a Python do_dispose never runs:
+                # "Finalizing … but it still has children left", every one of them kept)
+                self.set_layout_manager(None)
                 self.spacing, self.row_spacing, self.align_end = \
                     spacing, row_spacing, align_end
 
@@ -331,9 +343,13 @@ def side_by_side(left, right, spacing=8):
     that wraps is tallest there ("GtkBox reported min height 210 and natural height
     87"). Here the height is asked at the width each one gets."""
     if not _SIDE:
-        class Side(Gtk.Widget):
+        class Side(Gtk.Box):
             def __init__(self, left, right, spacing):
                 super().__init__()
+                # a Box with no layout manager: its own measure and allocate below, and
+                # Box's dispose takes its children away (a Python do_dispose never runs:
+                # "Finalizing … but it still has children left", every one of them kept)
+                self.set_layout_manager(None)
                 self.left, self.right, self.spacing = left, right, spacing
                 left.set_parent(self)
                 right.set_parent(self)

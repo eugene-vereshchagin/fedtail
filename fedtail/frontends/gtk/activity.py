@@ -144,7 +144,7 @@ class ActivityLane(_Lane):
                       + (f" · {GLib.markup_escape_text(r.when)}" if r.when else "") + "</span>")
         line.set_hexpand(True)
         line.connect("activate-link", lambda _l, u: (self.win.on_link(u), True)[1])
-        x = Gtk.Button(label="×", valign=Gtk.Align.START)
+        x = Gtk.Button(label="×", valign=Gtk.Align.START, halign=Gtk.Align.END)
         x.add_css_class("flat")
         tip(x, _("activity_dismiss_tip" if self.view.can_dismiss_one()
                              else "activity_hide_tip"))

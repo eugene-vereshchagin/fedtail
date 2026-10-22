@@ -520,6 +520,13 @@ class MainWindow(Gtk.ApplicationWindow):
         if mods:
             return False
         mode = self.cfg["ui"].get("esc", "curtain")
+        # what's over the window goes first, wherever the keyboard's focus is (the card
+        # clicked to open a picture kept it, and Esc closed the lane under the viewer)
+        if keyval == Gdk.KEY_Escape:
+            for over in (getattr(self, "viewer", None), getattr(self, "player", None)):
+                if over is not None and not getattr(over, "closed", False):
+                    over.close()
+                    return True
         if keyval == Gdk.KEY_Escape and mode != "off":
             if self.find_bar.get_visible():
                 self.find_bar.close_bar()

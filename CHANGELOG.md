@@ -57,6 +57,13 @@
   GTK apps one only through its GTK settings daemon) it takes X's Xft.dpi, or Plasma's
   scale from kdeglobals — it sat at 100 % beside Qt's 125 %. The text grows; pictures
   and gaps keep their pixels, as in every GTK 4 app on X11. Wayland scales GTK itself.
+- GTK: Esc closes the picture viewer (and the video player) wherever the keyboard is —
+  the card clicked to open it kept the keys, and Esc closed the lane under it; the
+  viewer takes the keys once on screen. ≡ → Quit quits (it ran inside the menu's own
+  click and left the window up; the tray's Quit worked). Activity's × at the right end.
+  GTK's own containers (pictures, headers, wrapping rows) let their children go when
+  they go — they were kept ("Finalizing … still has children left"). The ≡ menu says
+  in the log how long it took to make and to show.
 - The debugging corner of the status bar says the same in Qt and GTK, in one order:
   theme · toolkit and version · style · font · display · scale · build (Qt's had an
   empty "· ·" where its style's name was).

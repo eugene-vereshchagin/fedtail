@@ -65,7 +65,9 @@ class MainMenu:
         a("snapshot", win.debug_snapshot)
         a("help", win.open_help)
         a("about", win.about)
-        a("quit", win.quit_app)
+        # after the menu has gone: quitting from inside the popover's own click left the
+        # window up (the tray's Quit, which runs later, always worked)
+        a("quit", lambda: GLib.idle_add(lambda: (win.quit_app(), GLib.SOURCE_REMOVE)[1]))
         self._arg("switch", win.switch_profile)
         self._arg("theme", win.try_theme)
         self._toggle("merged", lambda: bool(getattr(win.core, "others", None)),
@@ -253,10 +255,23 @@ def button(win, menu, icon="open-menu-symbolic", accounts_only=False):
     made = [None]
 
     def make(btn):
+        import time
+        t = time.monotonic()
         model = menu.accounts_model() if accounts_only else menu.model()
         sig = signature(model)
+        t_model = time.monotonic() - t
         if sig != made[0]:
             made[0] = sig
             btn.set_menu_model(model)
+            pop = btn.get_popover()
+            if pop is not None:  # how long until it's on screen, for the log
+                shown_at = [time.monotonic()]
+                pop.connect("map", lambda _p: log.info(
+                    "menu on screen %.0f ms after it was asked for",
+                    (time.monotonic() - shown_at[0]) * 1000))
+        took = time.monotonic() - t
+        (log.info if took > 0.2 else log.debug)(
+            "menu made in %.0f ms (model %.0f ms, %s)", took * 1000, t_model * 1000,
+            "built anew" if made[0] is sig else "as before")
     b.set_create_popup_func(make)
     return b
