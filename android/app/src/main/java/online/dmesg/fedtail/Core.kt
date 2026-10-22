@@ -4,23 +4,38 @@ import android.content.Context
 import com.chaquo.python.Python
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * The Kotlin face of fedtail's core: every call goes to fedtail_android/bridge.py, takes
  * and gives plain values (JSON), and runs off the main thread — Python and the network
- * never block a frame.
+ * never block a frame. A call that failed answers {"error": "…"}: see [failed].
  */
 object Core {
     private val bridge by lazy { Python.getInstance().getModule("fedtail_android.bridge") }
 
-    suspend fun start(context: Context): JSONObject = withContext(Dispatchers.IO) {
-        val files = context.filesDir.absolutePath
-        val cache = context.cacheDir.absolutePath
-        JSONObject(bridge.callAttr("start", files, cache).toString())
-    }
+    private suspend fun call(name: String, vararg args: Any?): String =
+        withContext(Dispatchers.IO) { bridge.callAttr(name, *args).toString() }
 
-    suspend fun info(): JSONObject = withContext(Dispatchers.IO) {
-        JSONObject(bridge.callAttr("info").toString())
-    }
+    private suspend fun obj(name: String, vararg args: Any?) = JSONObject(call(name, *args))
+
+    fun failed(o: JSONObject): String? = if (o.has("error")) o.optString("error") else null
+
+    suspend fun start(context: Context, lang: String, demo: Boolean): JSONObject = obj(
+        "start", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang, demo)
+
+    suspend fun state() = obj("state")
+    suspend fun loginBegin(server: String) = obj("login_begin", server)
+    suspend fun loginFinish(code: String) = obj("login_finish", code)
+    suspend fun open() = obj("open")
+    suspend fun lanes() = JSONArray(call("lanes"))
+    suspend fun lane(name: String, keep: Boolean) = obj("lane", name, keep)
+    suspend fun read(ids: List<String>) = obj("read", JSONArray(ids).toString())
+    suspend fun refresh() = obj("refresh")
+    suspend fun pause(on: Boolean) = obj("pause", on)
+
+    /** Blocks up to [seconds] for a change in the lanes; → the version now. */
+    suspend fun waitChange(since: Int, seconds: Int): Int =
+        withContext(Dispatchers.IO) { bridge.callAttr("wait", since, seconds).toInt() }
 }

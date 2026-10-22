@@ -205,7 +205,10 @@ class Core(SocialMixin):
         return self.caps.markdown if mode == "auto" else mode == "on"
 
     # ---- login -----------------------------------------------------------------
-    def begin_login(self, server):
+    def begin_login(self, server, redirect=None):
+        """→ the server's page where the user allows fedtail. redirect: where the server
+        sends the code — None: it shows it to be pasted (the desktop); an app's address
+        (fedtail://oauth on a phone): it goes straight back to the app."""
         def job():
             if not api_module.cleartext_ok(server):
                 # the token would cross the internet in the clear: only a server here,
@@ -213,17 +216,18 @@ class Core(SocialMixin):
                 from ..i18n import _
                 raise ValueError(_("login_insecure"))
             api = self.api_class(server)
-            app = api.register_app()
-            self._pending_login = (api, app)
-            return api.authorize_url(app["client_id"])
+            where = {"redirect": redirect} if redirect else {}
+            app = api.register_app(**where)
+            self._pending_login = (api, app, where)
+            return api.authorize_url(app["client_id"], **where)
         return self.submit(job)
 
     def finish_login(self, code, expect=None):
         """expect: (server, acct) this profile already is — logging in anew must not
         put another account into its data (read marks, drafts, lists are that one's)."""
         def job():
-            api, app = self._pending_login
-            token = api.get_token(app["client_id"], app["client_secret"], code)
+            api, app, where = self._pending_login
+            token = api.get_token(app["client_id"], app["client_secret"], code, **where)
             me = self.api_class(api.base, token).me()
             if expect and (api.base.rstrip("/"), me["acct"]) != \
                     (expect[0].rstrip("/"), expect[1]):
@@ -394,8 +398,19 @@ class Core(SocialMixin):
             base = "wss://" + base.split("://")[-1]
         return base
 
+    def pause_polling(self, on=True):
+        """Out of sight (a phone's app in the background): no rounds until resumed; a
+        resume polls at once. The desktop never pauses."""
+        self._paused = on
+        if not on:
+            self.poll_now()
+
     def _poll_loop(self):
         while not self._stop.is_set():
+            if getattr(self, "_paused", False):
+                self._wake.wait(60)
+                self._wake.clear()
+                continue
             try:
                 self.poll_once()
             except RateLimited as e:  # the server says wait: _pace() waits, said once

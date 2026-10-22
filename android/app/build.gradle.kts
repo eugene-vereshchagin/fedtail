@@ -37,8 +37,21 @@ android {
         }
     }
 
+    signingConfigs {
+        // dev builds share one key, so each new one installs over the last. It is in the
+        // repository on purpose and signs nothing but online.dmesg.fedtail.dev; a release
+        // gets its own key, kept out of here (docs: the porting plan, "keys").
+        create("dev") {
+            storeFile = rootProject.file("dev.keystore")
+            storePassword = "fedtail-dev"
+            keyAlias = "dev"
+            keyPassword = "fedtail-dev"
+        }
+    }
+
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("dev")
             // the dev build stands next to the released one, never replaces it
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
@@ -57,6 +70,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -67,8 +81,21 @@ val copyFedtail = tasks.register<Sync>("copyFedtail") {
     from(repo.resolve("fedtail")) {
         into("fedtail")
         exclude("**/__pycache__/**", "_build.py")
-        exclude("frontends/qt/**", "frontends/gtk/**", "frontends/tui/**", "frontends/web/**")
+        // the desktop's windows stay home; the web interface's JSON layer and the
+        // terminal's plain model come along: the app's bridge stands on them
+        exclude("frontends/qt/**", "frontends/gtk/**")
+        exclude("frontends/tui/app.py", "frontends/tui/screens.py", "frontends/tui/host.py",
+                "frontends/tui/pictures.py")
         exclude("data/web/**")
+    }
+    // the made-up world of fedtail's screenshots: the dev build's demo mode (CI's emulator)
+    from(repo.resolve("tests")) {
+        into("tests")
+        include("__init__.py", "fakes.py")
+    }
+    from(repo.resolve("tools")) {
+        into("tools")
+        include("showcase.py")
     }
     into(corePython)
     inputs.property("version", "$fedtailVersion $buildNumber $commit")
@@ -109,5 +136,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }

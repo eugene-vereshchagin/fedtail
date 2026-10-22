@@ -55,17 +55,19 @@ class FakeApi:
             w = FakeApi.world = World()
         self.w = w
 
-    def register_app(self, scopes="read write", name="fedtail"):
+    def register_app(self, scopes="read write", name="fedtail", redirect=None):
         self.w.apps.append((name, scopes))
+        self.w.redirects.append(redirect)
         return {"client_id": "cid", "client_secret": "sec"}
 
-    def authorize_url(self, client_id, scopes="read write"):
-        return f"{self.base}/oauth/authorize?client_id={client_id}&scope={scopes}"
+    def authorize_url(self, client_id, scopes="read write", redirect=None):
+        back = f"&redirect_uri={redirect}" if redirect else ""
+        return f"{self.base}/oauth/authorize?client_id={client_id}&scope={scopes}{back}"
 
     def revoke(self, cid, sec, token):
         self.w.revoked.append(token)
 
-    def get_token(self, cid, sec, code, scopes="read write"):
+    def get_token(self, cid, sec, code, scopes="read write", redirect=None):
         if code.strip() != "good":
             raise ApiError(400, "bad code")
         return "tok" if scopes == "read write" else "tok-" + scopes.replace(":", "-")
@@ -590,6 +592,7 @@ class World:
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.revoked = []  # tokens revoked through /oauth/revoke
         self.apps = []  # (name, scopes) of every app registered
+        self.redirects = []  # where each of them asked the code to go (None: shown)
         self.policy = None  # notification policy: None — the server has none (404)
         self.held, self.answered = [], []  # notification requests; answers to them
         self.me = ME

@@ -1,67 +1,127 @@
 """The one door the Kotlin side knocks on.
 
 Kotlin calls module-level functions here through Chaquopy and gets JSON back (a str):
-plain values cross the bridge both ways, nothing of Python's lives on in Kotlin. The
-core itself is the repository's fedtail/ package, unchanged — this module only puts it
-on its feet on a phone:
+plain values cross the bridge both ways, nothing of Python's lives on in Kotlin. Every
+call that can fail answers {"error": "…"} instead of raising, so a screen shows the
+reason and the app lives on.
 
-* start(files_dir, cache_dir) — where a profile's files go. fedtail's paths follow XDG,
-  so the app's private folders become XDG_CONFIG_HOME / XDG_DATA_HOME / XDG_CACHE_HOME
-  and the core needs no Android branch for that. Call once, before anything else.
-* info() — what the core sees about itself: versions, TLS, the database, profiles.
-  The first screen shows it; a bug report starts with it.
+The core is the repository's fedtail/ package, unchanged. What a screen needs comes
+from the web interface's own JSON layer (frontends/web/server.py, class Web): the same
+lanes, cards, "new below" divider and read rules the windows and the browser page use
+(they all stand on frontends/common/lane.py) — the phone is one more face of them, not
+a copy of their logic.
 
-Later steps add the calls the screens need (log in, lanes, a lane's posts, mark read…),
-each a function here over the same View the desktop's interfaces use.
+    start(files_dir, cache_dir, lang, demo)  where the files go; the core is made
+    info()                                   versions, TLS, the database (first screen)
+    state()                                  logged in? which server, which account
+    login_begin(server) / login_finish(code) OAuth: back to fedtail://oauth, or a code
+    open()                                   connect, start polling → me + lanes
+    lanes() / lane(name, keep)               the sidebar; a lane's cards
+    read(ids) / refresh() / pause(on)        marks; a round now; out of sight
+    wait(since, seconds)                     blocks until something changed → version
+
+demo: a made-up world instead of a server (tools/showcase.py, the one every screenshot
+of fedtail shows), in a profile of its own — for the emulator's screenshots in CI.
 """
 
 import json
 import os
 import platform
+import threading
 import time
 
+REDIRECT = "fedtail://oauth"
+DEMO_SERVER = "https://example.test"
+
 _started = None
+_lock = threading.Lock()
+_s = {"core": None, "web": None, "demo": False, "profile": None}
 
 
-def start(files_dir, cache_dir):
-    """Set the stage for the core; → info() as JSON."""
+def _answer(fn):
+    """Run fn() → JSON of its value, or of {"error": …} (logged with its trace)."""
+    try:
+        return json.dumps(fn(), ensure_ascii=False)
+    except Exception as e:  # noqa: BLE001 — the screen says what broke
+        import logging
+        logging.getLogger("fedtail.android").exception("bridge")
+        return json.dumps({"error": f"{e.__class__.__name__}: {e}"}, ensure_ascii=False)
+
+
+# ---- the stage ------------------------------------------------------------------------
+
+def start(files_dir, cache_dir, lang="", demo=False):
+    """Set the stage for the core and make it; → info() as JSON."""
     global _started
     t = time.monotonic()
     os.environ["XDG_CONFIG_HOME"] = os.path.join(files_dir, "config")
     os.environ["XDG_DATA_HOME"] = os.path.join(files_dir, "data")
     os.environ["XDG_CACHE_HOME"] = cache_dir
     os.environ.setdefault("HOME", files_dir)
+    if lang:  # the phone's language, for ui.language = "auto"
+        os.environ["LANG"] = os.environ["LC_ALL"] = f"{lang}.UTF-8"
     for d in ("config", "data"):
         os.makedirs(os.path.join(files_dir, d), exist_ok=True)
     _started = t
+    with _lock:
+        _make(bool(demo))
     return info()
+
+
+def _make(demo):
+    from fedtail import i18n
+    from fedtail.core import auth, config, paths
+    from fedtail.core.app import Core
+    from fedtail.frontends.web.server import Web
+    old = _s["core"]
+    if old is not None:
+        old.shutdown()
+    profile = "demo" if demo else None
+    where = paths.resolve(profile)
+    where.ensure()
+    cfg, _warnings = config.load(where.config_file)
+    i18n.setup(cfg["ui"]["language"])
+    kw = {}
+    if demo:
+        # the made-up posts come unread, so the demo shows "new below" and marks working
+        cfg["feed"]["first_run_mark_read"] = False
+        from tests.fakes import FakeApi
+        from tools import showcase
+        FakeApi.worlds = {}  # one world for every server: the showcase's
+        FakeApi.world = showcase.world()
+        kw["api_class"] = FakeApi
+        if not auth.load(where.auth_file):
+            auth.save(where.auth_file, {"server": DEMO_SERVER, "token": "demo"})
+    core = Core(cfg, where, **kw)
+    _s.update(core=core, web=Web(core, None), demo=demo, profile=profile)
+
+
+def _core():
+    if _s["core"] is None:
+        raise RuntimeError("start() first")
+    return _s["core"]
 
 
 def info():
     """{'version', 'python', 'abi', 'ssl', 'store', 'profiles', 'sync', 'started_ms'}
-    — or {'error': …} with what failed: the screen shows either."""
+    — or {'error', 'trace'}: the screen shows either."""
     out = {"python": platform.python_version(), "abi": platform.machine()}
     try:
         import ssl
         out["ssl"] = ssl.OPENSSL_VERSION
         from fedtail import version
-        from fedtail.core import config, paths
-        from fedtail.core.store import Store
+        from fedtail.core import paths
         out["version"] = version.full()
-        where = paths.resolve(None)
-        where.ensure()
-        cfg, _warnings = config.load(where.config_file)
-        store = Store(where.db_file)
-        try:
-            out["store"] = store.diag_counts()
-        finally:
-            store.close()
+        core = _s["core"]
+        if core is not None:
+            out["store"] = core.store.diag_counts()
+            out["language"] = core.cfg["ui"]["language"]
         base = paths.data_base()
         out["profiles"] = sorted(p.name for p in base.iterdir() if p.is_dir()) \
             if base.is_dir() else []
-        out["language"] = cfg["ui"]["language"]
         from fedtail.core.sync import crypto
         out["sync"] = crypto.available()
+        out["demo"] = _s["demo"]
     except Exception as e:  # noqa: BLE001 — the screen says what broke, the app lives on
         import traceback
         out["error"] = f"{e.__class__.__name__}: {e}"
@@ -69,3 +129,109 @@ def info():
     if _started is not None:
         out["started_ms"] = round((time.monotonic() - _started) * 1000)
     return json.dumps(out, ensure_ascii=False)
+
+
+def state():
+    def get():
+        core = _core()
+        a = core.auth or {}
+        return {"logged_in": bool(core.logged_in), "demo": _s["demo"],
+                "server": a.get("server", ""), "acct": a.get("acct", "")}
+    return _answer(get)
+
+
+# ---- logging in -------------------------------------------------------------------------
+
+def login_begin(server):
+    """→ {"url", "redirect"}: open url in a browser. redirect true — the server sends the
+    code straight back to fedtail://oauth; false — it shows the code, to be pasted
+    (a server that wouldn't take the app's address)."""
+    def go():
+        core = _core()
+        server_ = (server or "").strip()
+        if not server_:
+            raise ValueError("no server")
+        try:
+            url = core.begin_login(server_, redirect=REDIRECT).result(60)
+            return {"url": url, "redirect": True}
+        except ValueError:
+            raise  # http:// on the internet: not tried another way
+        except Exception as e:  # noqa: BLE001 — refused the address: the pasted code then
+            import logging
+            logging.getLogger("fedtail.android").info("login with %s refused (%s): code",
+                                                      REDIRECT, e)
+            url = core.begin_login(server_).result(60)
+            return {"url": url, "redirect": False}
+    return _answer(go)
+
+
+def login_finish(code):
+    def go():
+        me = _core().finish_login((code or "").strip()).result(60)
+        return {"acct": me.get("acct", "")}
+    return _answer(go)
+
+
+# ---- reading ----------------------------------------------------------------------------
+
+def open():  # noqa: A001 — what Kotlin calls it
+    """Connect and start polling (once). → {"me", "lanes"}."""
+    def go():
+        core = _core()
+        if core.me is None:
+            core.connect().result(120)
+            # the poller's first round before the first screen: it opens filled, not
+            # empty (and not racing a round of its own)
+            done = threading.Event()
+            core.events.on("first_poll_done", lambda _n, _p: done.set())
+            core.start_polling()
+            done.wait(60)
+        web = _s["web"]
+        me = web.me()
+        return {"me": {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
+                                                "start_at", "mark_read")},
+                "lanes": web.lanes()}
+    return _answer(go)
+
+
+def lanes():
+    return _answer(lambda: _s["web"].lanes())
+
+
+def lane(name, keep=False):
+    """A lane's cards as the browser page gets them, each with its text as plain words
+    too (the screens draw text; links and emojis come in a later step)."""
+    def go():
+        from fedtail.model.text import html_to_text
+        got = _s["web"].lane(name, bool(keep))
+        for p in got.get("posts", []):
+            p["text"] = html_to_text(p.get("html") or "")
+            ctx = p.get("context")
+            if ctx and ctx.get("text"):
+                ctx["text"] = ctx["text"].strip()
+        return got
+    return _answer(go)
+
+
+def read(ids_json):
+    return _answer(lambda: _s["web"].read(list(json.loads(ids_json or "[]"))))
+
+
+def refresh():
+    def go():
+        _core().poll_now()
+        return {"ok": True}
+    return _answer(go)
+
+
+def pause(on):
+    def go():
+        _core().pause_polling(bool(on))
+        return {"ok": True}
+    return _answer(go)
+
+
+def wait(since, seconds=25):
+    """Blocks (call it off the main thread) until something in the lanes changed, or
+    the time is up. → the version now: different from `since` — reload."""
+    return int(_s["web"].wait(int(since), float(seconds)))

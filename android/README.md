@@ -21,16 +21,32 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
 
 ## Where it stands
 
-Step one: the app starts Python and the core, opens the profile's database and shows
-what the core says about itself (versions, TLS, the database, profiles, whether sync's
-`cryptography` is there, how long the start took). That proves the chain on a phone.
-Next: logging in, the lanes, a lane's posts, a thread as a tree, marking read — each a
-call in `bridge.py` over the core's `View`, and a screen.
+* **Logging in**: the server's page opens in the browser; after "allow" the server sends
+  it back to `fedtail://oauth?code=…`, which this app catches (`MainActivity`, singleTask).
+  A server that won't take that address gets the desktop's way: the code shown, pasted.
+* **Lanes**: the drawer lists them with unread counts; a lane's cards come from the web
+  interface's JSON layer (`frontends/web/server.py`, class `Web`) — the very cards, "new
+  below" divider and order the windows and the browser page use. A lane opens on its first
+  unread post; what stood whole on screen when scrolling stopped is marked read (and goes
+  into sync's journal like any read mark). Pull down or ⟳ asks the server at once.
+* **Live**: while the app is on screen the core polls as on the desktop, and the screen
+  waits on `bridge.wait()` for anything that changed; out of sight polling pauses.
+* **Demo** (dev builds): `adb shell am start -n online.dmesg.fedtail.dev/online.dmesg.fedtail.MainActivity --ez demo true`
+  — the made-up world of fedtail's screenshots (`tools/showcase.py`), in a profile of its own.
+* Plain Material 3 for now; the look (fedtail's themes, the card, threads as trees) is
+  designed next, from mockups.
+
+Dev builds are signed with `dev.keystore` (in the repository on purpose: it signs only
+`online.dmesg.fedtail.dev`), so each one installs over the last.
 
 ## Building
 
 CI builds the dev APK on every push to the `android` branch (`.github/workflows/android.yml`;
-the desktop's CI leaves this branch alone) and attaches it to the run as an artifact.
+the desktop's CI leaves this branch alone) and attaches it to the run as an artifact. Then
+it starts the APK on an emulator and photographs it (`.github/android_shots.sh`): the login
+screen and the demo world's Home lane, with Python's and Android's log — as an artifact and
+in the `android-shots` branch (one commit, rewritten by every run). A failed build says
+why in annotations (`.github/android_why.py`).
 
 By hand: JDK 17, the Android SDK (`ANDROID_HOME`), Python 3.12 on PATH (Chaquopy builds
 with the same version it ships), then
