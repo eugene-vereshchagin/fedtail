@@ -19,6 +19,10 @@ a copy of their logic.
     lanes() / lane(name, keep)               the sidebar; a lane's cards
     read(ids) / refresh() / pause(on)        marks; a round now; out of sight
     wait(since, seconds)                     blocks until something changed → version
+    thread(id)                               a thread as a tree: numbers and depths
+    post(body) / act(action, id)             write or answer; like, boost, bookmark
+    config_text() / config_save(text)        the config file, edited in the app
+    sync_*                                   sync with the other devices (core/sync)
 
 demo: a made-up world instead of a server (tools/showcase.py, the one every screenshot
 of fedtail shows), in a profile of its own — for the emulator's screenshots in CI.
@@ -189,7 +193,7 @@ def open():  # noqa: A001 — what Kotlin calls it
         web = _s["web"]
         me = web.me()
         return {"me": {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
-                                                "start_at", "mark_read")},
+                                                "start_at", "mark_read", "visibility")},
                 "lanes": web.lanes()}
     return _answer(go)
 
@@ -202,13 +206,8 @@ def lane(name, keep=False):
     """A lane's cards as the browser page gets them, each with its text as plain words
     too (the screens draw text; links and emojis come in a later step)."""
     def go():
-        from fedtail.model.text import html_to_text
         got = _s["web"].lane(name, bool(keep))
-        for p in got.get("posts", []):
-            p["text"] = html_to_text(p.get("html") or "")
-            ctx = p.get("context")
-            if ctx and ctx.get("text"):
-                ctx["text"] = ctx["text"].strip()
+        _texts(got.get("posts", []))
         return got
     return _answer(go)
 
@@ -235,3 +234,120 @@ def wait(since, seconds=25):
     """Blocks (call it off the main thread) until something in the lanes changed, or
     the time is up. → the version now: different from `since` — reload."""
     return int(_s["web"].wait(int(since), float(seconds)))
+
+
+def _texts(posts):
+    from fedtail.model.text import html_to_text
+    for p in posts:
+        p["text"] = html_to_text(p.get("html") or "")
+        ctx = p.get("context")
+        if ctx and ctx.get("text"):
+            ctx["text"] = ctx["text"].strip()
+    return posts
+
+
+# ---- a thread, writing ------------------------------------------------------------------
+
+def thread(post_id):
+    """The whole thread around a post: depth-first, each card with its /N and depth."""
+    def go():
+        got = _s["web"].thread(post_id)
+        _texts(got.get("posts", []))
+        return got
+    return _answer(go)
+
+
+def post(body_json):
+    """A new post or a reply: {"text", "reply_to"?, "visibility"?, "cw"?} — the web
+    page's own call (visibility: a reply is never wider than what it answers)."""
+    return _answer(lambda: _s["web"].post(json.loads(body_json or "{}")))
+
+
+def act(action, post_id):
+    """like / share / bookmark, toggled; → the card as it is now."""
+    def go():
+        got = _s["web"].act(action, post_id)
+        return _texts([got])[0]
+    return _answer(go)
+
+
+# ---- the config, edited in the app (no settings pages: the file itself) ------------------
+
+def config_text():
+    def go():
+        from fedtail.core import config
+        core = _core()
+        path = core.paths.config_file
+        config.load(path)  # the commented example is written if there's none yet
+        return {"text": path.read_text("utf-8"), "path": str(path)}
+    return _answer(go)
+
+
+def config_save(text):
+    """Checked before it is written: a broken file never lands. Saved → the core is made
+    anew with it (the screens open again). → {"ok"} or {"error"} saying what is wrong."""
+    def go():
+        import tomllib
+
+        from fedtail.core import config
+        try:
+            config.validate(tomllib.loads(text))
+        except tomllib.TOMLDecodeError as e:
+            raise ValueError(f"TOML: {e}") from None
+        path = _core().paths.config_file
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(text, "utf-8")
+        os.replace(tmp, path)
+        with _lock:
+            _make(_s["demo"])
+        return {"ok": True}
+    return _answer(go)
+
+
+# ---- sync with the account's other devices ----------------------------------------------
+
+def sync_status():
+    """→ {"enabled", "key", "login", "where", "pending", "last": {at, error}}."""
+    def go():
+        core = _core()
+        st = core.sync_status()
+        if st is None:
+            return {"enabled": False, "key": bool(core.sync_key())}
+        return {"enabled": True, **st}
+    return _answer(go)
+
+
+def sync_login_begin():
+    """The sync server's own token (read:accounts only): → {"url"} — its page shows a
+    code, sync_login_finish takes it."""
+    def go():
+        pending = _core().sync_login_begin()
+        _s["sync_pending"] = pending
+        return {"url": pending["url"]}
+    return _answer(go)
+
+
+def sync_login_finish(code):
+    def go():
+        pending = _s.get("sync_pending")
+        if not pending:
+            raise RuntimeError("sync_login_begin() first")
+        _core().sync_login_end(pending, (code or "").strip())
+        _s["sync_pending"] = None
+        return {"instance": pending["instance"]}
+    return _answer(go)
+
+
+def sync_key():
+    return _answer(lambda: {"key": _core().sync_key() or ""})
+
+
+def sync_join(text):
+    return _answer(lambda: {"kid": _core().sync_join(text)})
+
+
+def sync_now():
+    def go():
+        done = _core().sync_now()
+        return {"sent": done[0], "got": done[1]} if done else {"failed": True}
+    return _answer(go)

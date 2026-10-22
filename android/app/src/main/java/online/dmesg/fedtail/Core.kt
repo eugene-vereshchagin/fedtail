@@ -34,6 +34,17 @@ object Core {
     suspend fun read(ids: List<String>) = obj("read", JSONArray(ids).toString())
     suspend fun refresh() = obj("refresh")
     suspend fun pause(on: Boolean) = obj("pause", on)
+    suspend fun thread(id: String) = obj("thread", id)
+    suspend fun post(body: JSONObject) = obj("post", body.toString())
+    suspend fun act(action: String, id: String) = obj("act", action, id)
+    suspend fun configText() = obj("config_text")
+    suspend fun configSave(text: String) = obj("config_save", text)
+    suspend fun syncStatus() = obj("sync_status")
+    suspend fun syncLoginBegin() = obj("sync_login_begin")
+    suspend fun syncLoginFinish(code: String) = obj("sync_login_finish", code)
+    suspend fun syncKey() = obj("sync_key")
+    suspend fun syncJoin(text: String) = obj("sync_join", text)
+    suspend fun syncNow() = obj("sync_now")
 
     /** Blocks up to [seconds] for a change in the lanes; → the version now. */
     suspend fun waitChange(since: Int, seconds: Int): Int =

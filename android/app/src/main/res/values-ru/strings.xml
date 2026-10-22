@@ -24,4 +24,33 @@
     <string name="refresh">Обновить</string>
     <string name="lane_empty">Здесь пока пусто</string>
     <string name="shared_by">%1$s продвигает</string>
+    <string name="back">Назад</string>
+    <string name="write">Написать</string>
+    <string name="write_here">Что нового?</string>
+    <string name="new_post">Новый пост</string>
+    <string name="reply">Ответ</string>
+    <string name="send">Отправить</string>
+    <string name="thread">Тред</string>
+    <string name="vis_public">Всем</string>
+    <string name="vis_unlisted">Тихо всем</string>
+    <string name="vis_followers">Подписчикам</string>
+    <string name="vis_direct">Лично</string>
+    <string name="vis_as_parent">Кто увидит: как у поста, на который отвечаешь, если не выберешь сам</string>
+    <string name="config">Конфиг</string>
+    <string name="save">Сохранить</string>
+    <string name="sync">Синхронизация</string>
+    <string name="sync_off">Синхронизация выключена. Включи в конфиге: [sync] enabled = true, и сервер или папку (docs/ru/sync.md).</string>
+    <string name="sync_where">Где</string>
+    <string name="sync_login">Вход на сервер синхронизации</string>
+    <string name="sync_key_id">Id ключа</string>
+    <string name="sync_pending">Не отправлено</string>
+    <string name="sync_last">Последний раз</string>
+    <string name="sync_now">Синхронизировать сейчас</string>
+    <string name="sync_done">Отправлено / получено: %1$s</string>
+    <string name="sync_login_go">Войти на сервер синхронизации</string>
+    <string name="sync_key_intro">Ключ шифрует то, что устройства передают друг другу. Делается на первом устройстве, на остальные его переносят. Никому не показывай.</string>
+    <string name="sync_key_show">Показать ключ этого устройства</string>
+    <string name="copy">Скопировать</string>
+    <string name="sync_key_paste">Ключ с другого устройства</string>
+    <string name="sync_join">Взять этот ключ</string>
 </resources>

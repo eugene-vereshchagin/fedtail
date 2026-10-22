@@ -25,4 +25,33 @@
     <string name="refresh">Refresh</string>
     <string name="lane_empty">Nothing here yet</string>
     <string name="shared_by">%1$s boosted</string>
+    <string name="back">Back</string>
+    <string name="write">Write</string>
+    <string name="write_here">What\'s new?</string>
+    <string name="new_post">New post</string>
+    <string name="reply">Reply</string>
+    <string name="send">Send</string>
+    <string name="thread">Thread</string>
+    <string name="vis_public">Public</string>
+    <string name="vis_unlisted">Quiet public</string>
+    <string name="vis_followers">Followers</string>
+    <string name="vis_direct">Direct</string>
+    <string name="vis_as_parent">Who sees it: as the post it answers, unless you pick</string>
+    <string name="config">Config</string>
+    <string name="save">Save</string>
+    <string name="sync">Sync</string>
+    <string name="sync_off">Sync is off. Turn it on in the config: [sync] enabled = true, then the server or the folder (docs/en/sync.md).</string>
+    <string name="sync_where">Where</string>
+    <string name="sync_login">Sync server login</string>
+    <string name="sync_key_id">Key id</string>
+    <string name="sync_pending">Not sent yet</string>
+    <string name="sync_last">Last time</string>
+    <string name="sync_now">Sync now</string>
+    <string name="sync_done">Sent / got: %1$s</string>
+    <string name="sync_login_go">Log in to the sync server</string>
+    <string name="sync_key_intro">The key seals what your devices tell each other. Made on the first device; carry it over to the others. Show it to nobody.</string>
+    <string name="sync_key_show">Show this device\'s key</string>
+    <string name="copy">Copy</string>
+    <string name="sync_key_paste">The key from another device</string>
+    <string name="sync_join">Use this key</string>
 </resources>

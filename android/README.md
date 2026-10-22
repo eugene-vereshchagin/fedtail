@@ -33,6 +33,14 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
   waits on `bridge.wait()` for anything that changed; out of sight polling pauses.
 * **Demo** (dev builds): `adb shell am start -n online.dmesg.fedtail.dev/online.dmesg.fedtail.MainActivity --ez demo true`
   — the made-up world of fedtail's screenshots (`tools/showcase.py`), in a profile of its own.
+* **A thread**: a tap on a card opens its thread from the root, depth as an indent (up to
+  six levels), each comment with its /N, standing on the post tapped.
+* **Writing**: ✎ for a new post, 💬 on a card for a reply; who sees it as chips (a reply
+  left alone keeps its parent's — the core decides, as on the desktop). ☆ likes.
+* **Config**: the file itself, edited in the app (no settings pages, as on the desktop);
+  checked before it is written, and the core is made anew with it.
+* **Sync**: status, a round now, logging in to the sync server (its page shows a code to
+  paste), showing this device's key and taking another device's.
 * Plain Material 3 for now; the look (fedtail's themes, the card, threads as trees) is
   designed next, from mockups.
 

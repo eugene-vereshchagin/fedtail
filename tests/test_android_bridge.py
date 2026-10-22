@@ -103,3 +103,66 @@ class BridgeTest(TmpDir):
         self.assertEqual(self.call("pause", False), {"ok": True})
         self.assertEqual(self.call("refresh"), {"ok": True})
         self.assertTrue((self.files / "data" / "fedtail" / "demo" / "state.db").exists())
+
+    def demo(self):
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", True))
+        self.assertNotIn("error", got, got.get("trace"))
+        self.call("open")
+
+    def test_thread_and_writing(self):
+        self.demo()
+        th = self.call("thread", "101")
+        ids = [p["sid"] for p in th["posts"]]
+        self.assertEqual(ids[0], "100")  # from the root, whatever was opened
+        self.assertIn("103", ids)
+        self.assertTrue(all("depth" in p and "number" in p and "text" in p for p in th["posts"]))
+        self.assertGreater(max(p["depth"] for p in th["posts"]), 0)
+        sent = self.call("post", json.dumps({"text": "a reply from the phone",
+                                             "reply_to": "103"}))
+        self.assertTrue(sent["id"])
+        from tests import fakes
+        self.assertEqual(fakes.FakeApi.world.posted[-1][2], "103")
+        liked = self.call("act", "like", "106")
+        self.assertIn("text", liked)
+        self.assertIn("error", json.loads(self.bridge.post(json.dumps({"text": "  "}))))
+
+    def test_config_is_edited_in_the_app(self):
+        self.demo()
+        text = self.call("config_text")["text"]
+        self.assertIn("[sync]", text)
+        bad = json.loads(self.bridge.config_save(text + "\n[feed]\norder = \"sideways\"\n"))
+        self.assertIn("error", bad)
+        self.assertEqual(self.call("config_text")["text"], text)  # nothing landed
+        self.assertIn("error", json.loads(self.bridge.config_save("this = is = not toml")))
+        old_core = self.bridge._s["core"]
+        mine = text.replace('[sync]\n', '[sync]\n# mine\n')
+        self.assertEqual(self.call("config_save", mine), {"ok": True})
+        self.assertIsNot(self.bridge._s["core"], old_core)  # made anew with it
+        self.assertIn("# mine", self.call("config_text")["text"])
+
+    def test_sync_from_the_phone(self):
+        from fedtail.core.sync import crypto
+        if not crypto.available():
+            self.skipTest("needs cryptography")
+        self.demo()
+        self.assertEqual(self.call("sync_status"), {"enabled": False, "key": False})
+        meet = self.tmp / "meet"
+        meet.mkdir()
+        text = self.call("config_text")["text"]
+        head, _, sync = text.partition("[sync]\n")
+        sync = sync.replace("enabled = false", "enabled = true", 1)
+        sync = sync.replace('backend = "server"', 'backend = "folder"', 1)
+        sync = sync.replace('folder = ""', f'folder = "{meet.as_posix()}"', 1)
+        on = head + "[sync]\n" + sync
+        self.assertEqual(self.call("config_save", on), {"ok": True})
+        self.call("open")
+        st = self.call("sync_status")
+        self.assertTrue(st["enabled"])
+        self.assertEqual(st["backend"], "folder")
+        self.assertEqual(self.call("sync_now"), {"sent": 0, "got": 0})
+        key = self.call("sync_key")["key"]
+        self.assertTrue(key)
+        other = crypto.key_text(crypto.new_key())
+        self.assertTrue(self.call("sync_join", other)["kid"])
+        self.assertEqual(self.call("sync_key")["key"], other)
+        self.assertIn("error", json.loads(self.bridge.sync_join("nonsense")))

@@ -25,7 +25,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // demo: the made-up world of fedtail's screenshots (CI's emulator), dev builds only
-        model.start(BuildConfig.DEBUG && intent.getBooleanExtra("demo", false))
+        val demo = BuildConfig.DEBUG && intent.getBooleanExtra("demo", false)
+        model.start(demo, openThread = if (demo) intent.getStringExtra("thread") else null)
         handleLogin(intent)
         setContent {
             FedtailTheme {

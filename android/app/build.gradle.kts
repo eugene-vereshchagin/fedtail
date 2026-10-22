@@ -118,6 +118,7 @@ chaquopy {
         System.getenv("CHAQUOPY_BUILD_PYTHON")?.let { buildPython(it) }
         pip {
             install("requests")
+            install("cryptography") // sync's AES-GCM (core/sync/crypto.py)
         }
     }
     sourceSets {
