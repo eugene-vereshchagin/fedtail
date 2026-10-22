@@ -206,13 +206,19 @@ language = "auto"
 
 # The interface: "qt" — a window; "tui" — in a terminal (needs Textual: python3-textual or
 # pip install textual), the same as `fedtail --ui tui`; "web" — in a browser (`--ui web`);
-# "gtk" — a GTK 4 window for GNOME and other GTK desktops, a frame so far (python3-gi
-# gir1.2-gtk-4.0; `--ui gtk`).
+# "gtk" — a GTK 4 window for GNOME and other GTK desktops (python3-gi gir1.2-gtk-4.0;
+# `--ui gtk`).
 frontend = "qt"
 
 # The GTK interface: libadwaita — "auto" (when installed), "on" (don't start without it),
 # "off" (plain GTK: looks more at home in XFCE, MATE, Cinnamon).
 adwaita = "auto"
+
+# The GTK interface: talking to screen readers (Orca) over the accessibility bus. "auto"
+# — only while a screen reader is on: KDE runs the bus always, and with no reader GTK
+# went to it for every widget — a menu took two seconds to open. "on" — always, "off" —
+# never.
+accessibility = "auto"
 
 # The GTK interface: its own title bar with the buttons (as in GNOME) — "on"; the
 # desktop's frame — "off"; "auto" — its own with libadwaita and in GNOME and its kin,

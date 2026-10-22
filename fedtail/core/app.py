@@ -594,7 +594,12 @@ class Core(SocialMixin):
             self._ask_prefetch(new_statuses)
             mine = [st["id"] for st in new_statuses if st["account"]["id"] == self.me["id"]]
             if first_run and fc["first_run_mark_read"]:
-                self.store.mark_read([st["id"] for st in new_statuses])
+                # what another client (fedtail on another machine, the server's web) has
+                # left unread stays unread: everything read was this machine's first start
+                # telling the server "all read" with its next marker (22.10: a new Windows
+                # install moved the Linux one's place by fifty posts)
+                keep = self._unread_by_marker(new_statuses)
+                self.store.mark_read([st["id"] for st in new_statuses if st["id"] not in keep])
             elif mine:
                 self.store.mark_read(mine)
             # a post I replied to (from any client) counts as read
@@ -679,6 +684,27 @@ class Core(SocialMixin):
 
     # ---- read position shared with other clients (markers) -------------------------
     MARKERS = {"home": "home", "notifications": "mentions"}  # marker timeline -> our source
+
+    def _unread_by_marker(self, statuses):
+        """First start: the ids newer than where the server's home marker says reading
+        stopped (read.sync_markers) — they stay unread; the marker is taken as known,
+        so the next round doesn't push "all read" over it. No marker, no server answer:
+        nothing kept (all read, as feed.first_run_mark_read says)."""
+        if not self.cfg["read"].get("sync_markers", True):
+            return set()
+        try:
+            remote = self.api.markers(("home",))
+        except Exception as e:  # noqa: BLE001 — an old server without markers
+            log.info("markers at first start: %s", e)
+            return set()
+        last = ((remote or {}).get("home") or {}).get("last_read_id")
+        if not last:
+            return set()
+        self.store.kv_set("marker.home", last)
+        keep = {st["id"] for st in statuses if id_after(st["id"], last)}
+        log.info("first start: read up to %s elsewhere, %d newer stay unread", last,
+                 len(keep))
+        return keep
 
     def _sync_markers(self):
         """Pull: what another client marked as read up to its marker is read here too.

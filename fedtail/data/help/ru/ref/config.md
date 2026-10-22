@@ -89,8 +89,9 @@
 | `ui.icon_count` | `["replies", "mentions", "subs", "requests"]` | Какие ленты не считать на иконке, даже если они есть в icon_count (например, при |
 | `ui.icon_count_except` | `[]` |  |
 | `ui.language` | `"auto"` | Язык интерфейса: "auto" (из LANG), "ru", "en". |
-| `ui.frontend` | `"qt"` | Интерфейс: "qt" — окно; "tui" — в терминале (нужен Textual: python3-textual или pip install textual), то же, что `fedtail --ui tui`; "web" — в браузере (`--ui web`); "gtk" — окно на GTK 4 для GNOME и прочих GTK-столов, пока каркас (python3-gi gir1.2-gtk-4.0; `--ui gtk`). |
+| `ui.frontend` | `"qt"` | Интерфейс: "qt" — окно; "tui" — в терминале (нужен Textual: python3-textual или pip install textual), то же, что `fedtail --ui tui`; "web" — в браузере (`--ui web`); "gtk" — окно на GTK 4 для GNOME и прочих GTK-столов (python3-gi gir1.2-gtk-4.0; `--ui gtk`). |
 | `ui.adwaita` | `"auto"` | GTK-интерфейс: libadwaita — "auto" (если установлена), "on" (без неё не запускаться), "off" (чистый GTK: в XFCE, MATE, Cinnamon смотрится родней). |
+| `ui.accessibility` | `"auto"` | GTK-интерфейс: связь с экранными дикторами (Orca) по шине доступности. "auto" — только когда диктор включён: в KDE шина работает всегда, и без диктора GTK на каждый виджет ходил в неё — меню открывалось по две секунды. "on" — всегда, "off" — никогда. |
 | `ui.gtk_headerbar` | `"auto"` | GTK-интерфейс: свой заголовок окна с кнопками (как в GNOME) — "on"; рамка рабочего стола — "off"; "auto" — свой с libadwaita и в GNOME и родне, рамка стола в KDE, XFCE, MATE, Cinnamon. |
 | `ui.desktop_entry` | `true` | Пункт меню и значок (~/.local/share/applications, иконки): при каждом запуске окна (qt, gtk) проверять, что они есть и указывают на этот fedtail (переехала папка, новая сборка в один файл), и чинить; старые записи под прежним именем (fedtail.desktop) — убирать. С deb-пакетом его пункт меню главный, свой рядом не делается. |
 

@@ -566,7 +566,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Federation status: how my server is doing and what fails | has | 0.16.0 | ≡ → “Debugging” → “Federation status” | own (from what this run saw) | — |
 | Leak hunting: trends, an object census, memory snapshots | has | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging” | own (gc, tracemalloc) | — |
 | The database doesn't grow for ever: cleanup and a size budget | has | 0.17.0 | `[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours` | SQLite, incremental vacuum | — |
-| Screen readers | partly | 0.9.0 | `ui.alt_text` | — | Mastodon web, Tusky, Ivory |
+| Screen readers | partly | 0.9.0 | `ui.alt_text`, `ui.accessibility` | — | Mastodon web, Tusky, Ivory |
 | Interface language | has | 0.1.0 | `ui.language` | — | everyone |
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
 | “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `ui.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
@@ -600,7 +600,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **The database doesn't grow for ever: cleanup and a size budget.** Every `gc_hours` (and at the first poll after start) posts nothing points at are forgotten: no lane, followed thread, “Activity” entry or reply draft. My own posts stay, and so do the boosted post, the quoted one and the parents up the whole thread of every post that stays, so visible replies aren't fetched again. Whatever was stored recently (an open thread, a profile) lives `grace_hours` more. “Activity” keeps the latest `keep_activity` entries. The file really shrinks (incremental vacuum). If the database is still over `max_mb` (1 GB by default), lanes get 30 % shorter until it fits (never below 300) and grow back to `keep_per_lane` once there is room. Short ids (`#a3f`) are never forgotten. What was forgotten and how big the database is — the `storage gc` line in the log.
 
-**Screen readers.** Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca.
+**Screen readers.** Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca. The GTK window talks to the accessibility bus only while a screen reader is on (`ui.accessibility = "auto"`; `"on"` — always): KDE runs that bus always, and with no reader a menu took two seconds to open.
 
 **Interface language.** `"auto"` (from LANG), `"ru"`, `"en"`.
 

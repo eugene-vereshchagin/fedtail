@@ -1,0 +1,80 @@
+"""docs/WINDOWS.md stays true: its pip packages are CI's Windows job's, its test command is
+CI's, the tools and the switches it names exist."""
+
+import re
+import shlex
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DOC = ROOT / "docs" / "WINDOWS.md"
+CI = ROOT / ".github" / "workflows" / "ci.yml"
+
+
+def commands():
+    """Every line of the doc's powershell blocks, as words."""
+    out = []
+    for block in re.findall(r"```powershell\n(.*?)```", DOC.read_text("utf-8"), re.S):
+        for line in block.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and not line.startswith("$env:"):
+                out.append(shlex.split(line))
+    return out
+
+
+def ci_windows_job():
+    text = CI.read_text("utf-8")
+    start = text.index("\n  windows:\n")
+    end = text.index("\n  windows-build:", start)
+    return text[start:end]
+
+
+def after_python(words):
+    """py -3.13 [-X faulthandler] REST → REST."""
+    rest = words[1:]
+    if rest and rest[0].startswith("-3"):
+        rest = rest[1:]
+    while rest[:1] == ["-X"]:
+        rest = rest[2:]
+    return rest
+
+
+class WindowsDocTest(unittest.TestCase):
+    def test_packages_are_ci_s(self):
+        job = ci_windows_job()
+        ci = set(re.search(r"pip install ([^\n]+)", job).group(1).split())
+        pips = [after_python(w) for w in commands() if w[0] == "py" and "pip" in w]
+        self.assertTrue(pips)
+        for p in pips:
+            self.assertEqual({x for x in p[p.index("install") + 1:] if not x.startswith("-")},
+                             ci)
+
+    def test_the_test_command_is_ci_s(self):
+        job = ci_windows_job()
+        ci = re.search(r"python (-X faulthandler -m unittest [^\n|]+?)\s*(?:2>|\||$)", job,
+                       re.M).group(1).split()
+        tests = [w for w in commands() if "unittest" in w]
+        self.assertTrue(tests)
+        for t in tests:  # (Russian and English)
+            self.assertEqual(t[2:], ci)  # py -3.13 + the same words
+        for var in re.findall(r"^\s+(\w+): \S+", job.split("steps:")[0], re.M):
+            self.assertIn(f"$env:{var}", DOC.read_text("utf-8"))
+
+    def test_tools_and_switches_exist(self):
+        main = (ROOT / "fedtail" / "__main__.py").read_text("utf-8")
+        for words in commands():
+            if words[0] != "py":
+                continue
+            rest = after_python(words)
+            if rest[:2] == ["-m", "fedtail"]:
+                for flag in rest[2:]:
+                    self.assertIn(f'"{flag}"', main, flag)
+            elif rest and rest[0].startswith("tools/"):
+                tool = ROOT / rest[0]
+                self.assertTrue(tool.exists(), rest[0])
+                src = tool.read_text("utf-8")
+                for flag in (x for x in rest[1:] if x.startswith("--")):
+                    self.assertIn(f'"{flag}"', src, f"{rest[0]} {flag}")
+
+    def test_linked_from_the_testers_page(self):
+        self.assertIn("WINDOWS.md", (ROOT / "docs" / "TESTING.md").read_text("utf-8"))

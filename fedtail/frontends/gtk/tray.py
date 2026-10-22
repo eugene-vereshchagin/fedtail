@@ -61,6 +61,17 @@ MENU_XML = """<node><interface name="com.canonical.dbusmenu">
 </interface></node>"""
 
 
+def _pixmap_variant(pixmaps):
+    """a(iiay) of the pixmaps, the bytes handed over whole (GLib.Variant("a(iiay)", …)
+    goes byte by byte through Python: a third of a second for three sizes)."""
+    ay = GLib.VariantType.new("ay")
+    items = [GLib.Variant.new_tuple(GLib.Variant("i", w), GLib.Variant("i", h),
+                                    GLib.Variant.new_from_bytes(ay, GLib.Bytes.new(bytes(data)),
+                                                                True))
+             for w, h, data in pixmaps]
+    return GLib.Variant.new_array(GLib.VariantType.new("(iiay)"), items)
+
+
 def _pixmaps():
     """The opossum as the tray wants it: ARGB32, big-endian, at a few sizes."""
     from importlib import resources
@@ -96,6 +107,7 @@ class Tray:
         self.title, self.tip, self.attention = title, title, False
         self.revision = 1
         self.pixmaps = _pixmaps()
+        self._pixmap_variant = _pixmap_variant(self.pixmaps)  # made once: see there
         self.name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
         item = Gio.DBusNodeInfo.new_for_xml(ITEM_XML).interfaces[0]
         menu_info = Gio.DBusNodeInfo.new_for_xml(MENU_XML).interfaces[0]
@@ -142,20 +154,23 @@ class Tray:
 
     # ---- org.kde.StatusNotifierItem ---------------------------------------------------
     def _item_prop(self, _conn, _sender, _path, _iface, prop):
+        """One property, made only when asked: the panel asks again after every
+        NewToolTip, and the icon's pixels as a PyGObject-built variant took 0.3 s each
+        time (the night of 22.10: a freeze per new post)."""
         icon = "online.dmesg.fedtail"
-        values = {
-            "Category": GLib.Variant("s", "Communications"),
-            "Id": GLib.Variant("s", "fedtail"),
-            "Title": GLib.Variant("s", self.title),
-            "Status": GLib.Variant("s", self._status()),
-            "IconName": GLib.Variant("s", "" if self.pixmaps else icon),
-            "IconPixmap": GLib.Variant("a(iiay)", self.pixmaps),
-            "AttentionIconName": GLib.Variant("s", ""),
-            "ToolTip": GLib.Variant("(sa(iiay)ss)", ("", [], self.tip, "")),
-            "ItemIsMenu": GLib.Variant("b", False),
-            "Menu": GLib.Variant("o", MENU_PATH),
-        }
-        return values.get(prop)
+        make = {
+            "Category": lambda: GLib.Variant("s", "Communications"),
+            "Id": lambda: GLib.Variant("s", "fedtail"),
+            "Title": lambda: GLib.Variant("s", self.title),
+            "Status": lambda: GLib.Variant("s", self._status()),
+            "IconName": lambda: GLib.Variant("s", "" if self.pixmaps else icon),
+            "IconPixmap": lambda: self._pixmap_variant,
+            "AttentionIconName": lambda: GLib.Variant("s", ""),
+            "ToolTip": lambda: GLib.Variant("(sa(iiay)ss)", ("", [], self.tip, "")),
+            "ItemIsMenu": lambda: GLib.Variant("b", False),
+            "Menu": lambda: GLib.Variant("o", MENU_PATH),
+        }.get(prop)
+        return make() if make is not None else None
 
     def _item_call(self, _conn, _sender, _path, _iface, method, _params, inv):
         if method in ("Activate", "SecondaryActivate"):

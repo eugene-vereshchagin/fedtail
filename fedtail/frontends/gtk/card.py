@@ -463,7 +463,10 @@ class Card(Gtk.Box):
         video or a gif: its still frame with ▶ over it."""
         pic = Gtk.Picture()
         pic.set_can_shrink(True)
-        pic.set_content_fit(Gtk.ContentFit.COVER)
+        # the box has the picture's shape when the server said its size: filled; a size
+        # not said (a square box) — the whole picture in it, not cut to a square
+        pic.set_content_fit(Gtk.ContentFit.COVER if m.width and m.height
+                            else Gtk.ContentFit.CONTAIN)
         pic.add_css_class("ft-thumb")
         pic.set_overflow(Gtk.Overflow.HIDDEN)
         pic.set_alternative_text(m.alt or _("a11y_no_alt"))

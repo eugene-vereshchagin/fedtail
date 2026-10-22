@@ -214,11 +214,11 @@ status = "partly"
 since = "0.9.0"
 name.ru = "Экранные дикторы"
 name.en = "Screen readers"
-config = "`ui.alt_text`"
+config = "`ui.alt_text`, `ui.accessibility`"
 others = "Mastodon web, Tusky, Ivory"
 clients = ["Mastodon web", "Tusky", "Ivory"]
-details.ru = "Подписи к картинкам и имена кнопок для дикторов есть, но вживую с Orca интерфейс не проверяли."
-details.en = "Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca."
+details.ru = "Подписи к картинкам и имена кнопок для дикторов есть, но вживую с Orca интерфейс не проверяли. GTK-окно говорит с шиной доступности, только пока диктор включён (`ui.accessibility = \"auto\"`; `\"on\"` — всегда): в KDE шина работает всегда, и без диктора меню открывалось по две секунды."
+details.en = "Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca. The GTK window talks to the accessibility bus only while a screen reader is on (`ui.accessibility = \"auto\"`; `\"on\"` — always): KDE runs that bus always, and with no reader a menu took two seconds to open."
 
 [[feature]]
 id = "ui-language"

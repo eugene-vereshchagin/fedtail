@@ -10,6 +10,8 @@
 Проще всего — одним файлом из [релиза](https://github.com/eugene-vereshchagin/fedtail/releases): `fedtail-…-linux-x86_64` (`chmod +x`, запустить)
 или `fedtail-…-windows.exe`. Обновиться — скачать файл новее.
 
+Из исходников на Windows — [WINDOWS.md](WINDOWS.md) (Python, git, запуск, тесты, самопроверка).
+
 Из исходников, Debian 13 (trixie), KDE или любой другой рабочий стол:
 
 ```sh
@@ -68,7 +70,7 @@ trace to fix it by.
 **Install:** one file from a [release](https://github.com/eugene-vereshchagin/fedtail/releases) (`…-linux-x86_64`: `chmod +x`, run; or
 `…-windows.exe`), or from the source on Debian 13: the `apt install` line above, `git clone`,
 `python3 -m fedtail`;
-`--install-desktop` adds a menu entry. **Update:** `git pull`, then
+`--install-desktop` adds a menu entry. From the source on Windows: [WINDOWS.md](WINDOWS.md). **Update:** `git pull`, then
 `python3 -m fedtail --update-config`.
 
 **Try first:** whole threads (a tree, numbered, filled from other servers); nothing lost

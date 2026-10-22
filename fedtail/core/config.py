@@ -14,6 +14,7 @@ DEFAULTS = {
     "ui": {
         "frontend": "qt",
         "adwaita": "auto",
+        "accessibility": "auto",
         "gtk_headerbar": "auto",
         "desktop_entry": True,
         "language": "auto",
@@ -259,6 +260,7 @@ CHOICES = {
     ("account", "markdown"): {"auto", "on", "off"},
     ("ui", "frontend"): {"qt", "tui", "web", "gtk"},
     ("ui", "adwaita"): {"auto", "on", "off"},
+    ("ui", "accessibility"): {"auto", "on", "off"},
     ("ui", "gtk_headerbar"): {"auto", "on", "off"},
     ("ui", "language"): {"auto", "ru", "en"},
     ("ui", "image_viewer"): {"internal", "browser"},

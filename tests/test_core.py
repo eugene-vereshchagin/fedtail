@@ -1883,6 +1883,21 @@ class CoreTest(TmpDir):
         core.poll_once()
         self.assertNotIn("014", core.store.read_set(["014"]))
 
+    def test_first_start_keeps_the_server_marker(self):
+        """A new machine's first start: what another client left unread (newer than the
+        server's home marker) stays unread, and the marker isn't pushed to "all read"."""
+        core, w = self.make(feed={"page_size": 40, "first_run_mark_read": True})
+        for i in range(10, 16):
+            w.add(status(f"0{i}", BOB, minute=i), home=True)
+        w.markers["home"] = "012"  # the Linux one read up to here
+        core.connect().result()
+        core.poll_once()  # the first start
+        self.assertEqual(sorted(core.store.read_set([f"0{i}" for i in range(10, 16)])),
+                         ["010", "011", "012"])
+        self.assertEqual(core.unread_count("home"), 3)
+        core.poll_once()
+        self.assertEqual(w.markers["home"], "012")  # not moved by this machine
+
     def test_mention_suggestions(self):
         core, w = self.make()
         core.connect().result()

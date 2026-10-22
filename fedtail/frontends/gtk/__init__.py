@@ -14,7 +14,39 @@ from . import gi_setup  # here, so a missing GTK is told at load time (frontends
 log = logging.getLogger("fedtail")
 
 
+def screen_reader_on():
+    """Is a screen reader running (org.a11y.Status.ScreenReaderEnabled on the session
+    bus)? No bus, no answer in a moment: no."""
+    from .gi_setup import Gio, GLib
+    try:
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        got = bus.call_sync("org.a11y.Bus", "/org/a11y/bus",
+                            "org.freedesktop.DBus.Properties", "Get",
+                            GLib.Variant("(ss)", ("org.a11y.Status", "ScreenReaderEnabled")),
+                            None, Gio.DBusCallFlags.NONE, 300, None)
+        return bool(got.unpack()[0])
+    except Exception as e:  # noqa: BLE001 — no bus, no a11y service: nobody listens
+        log.debug("screen reader: %s", e)
+        return False
+
+
+def accessibility(mode):
+    """ui.accessibility: GTK talks to the accessibility bus — always ("on"), never
+    ("off"), or only while a screen reader is on ("auto"). KDE keeps that bus up with
+    nobody reading, and GTK 4 then makes an accessible object on it for every widget:
+    the ≡ menu took 2 s to open, a lane's cards their share too. GTK reads GTK_A11Y when
+    it makes its first widget — this runs before. Returns whether it's on."""
+    import os
+    if os.environ.get("GTK_A11Y"):  # set by hand: as it says
+        return os.environ["GTK_A11Y"].lower() != "none"
+    on = mode == "on" or (mode == "auto" and screen_reader_on())
+    if not on:
+        os.environ["GTK_A11Y"] = "none"
+    return on
+
+
 def run(core, instance, argv):
+    a11y = accessibility(core.cfg["ui"].get("accessibility", "auto"))
     from .gi_setup import Gio, GLib, Gtk
     if gi_setup.gtk_version()[:2] < gi_setup.MIN_GTK:
         need, have = gi_setup.MIN_GTK, gi_setup.gtk_version()
@@ -42,11 +74,12 @@ def run(core, instance, argv):
         theme = themes.apply(core.cfg)
         win = MainWindow(app, core, view, bridge, theme)
         state["win"] = win
-        log.info("GTK %d.%d.%d, libadwaita %s, theme %s (%s), from %s",
+        log.info("GTK %d.%d.%d, libadwaita %s, theme %s (%s), from %s, accessibility %s",
                  *gi_setup.gtk_version(),
                  f"{Adw.get_major_version()}.{Adw.get_minor_version()}" if Adw
                  else "none", theme.id, "dark" if theme.dark else "light",
-                 "one-file build" if getattr(sys, "frozen", False) else "source")
+                 "one-file build" if getattr(sys, "frozen", False) else "source",
+                 "on" if a11y else "off (ui.accessibility)")
 
         def message(msg):
             GLib.idle_add(lambda: (win.present(), GLib.SOURCE_REMOVE)[1])

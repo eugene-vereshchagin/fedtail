@@ -41,6 +41,20 @@
   count ("and 297 more"), not 300 notifications in eight pages; × dismisses the whole
   group on the server. GoToSocial and older Mastodon: fedtail groups them itself, as
   before (the first 404 settles it).
+- A new machine's first start keeps what you left unread elsewhere: posts newer than the
+  server's home marker (another fedtail, the server's web) stay unread, and the marker
+  isn't moved to "all read" by the new one — a fresh Windows install had moved the
+  Linux one's place by fifty posts.
+- GTK is quicker on KDE: it talks to the accessibility bus only while a screen reader
+  is on (`ui.accessibility = "auto"`; "on" — always): with KDE's bus up and nobody
+  reading, the ≡ menu took 2 s to open. The tray answers the panel without rebuilding
+  the icon's pixels each time (0.1–0.3 s per new post).
+- GTK: a picture in a card is never cut at the bottom — given less height than its
+  shape wants, it narrows; a picture whose size the server didn't say is shown whole in
+  its box, not cut to a square.
+- docs/WINDOWS.md: fedtail on Windows from the source — Python and git by winget, the
+  packages, running, the tests as CI runs them, the selfcheck; tests/test_windows_doc.py
+  keeps it the same as CI and the code.
 - GTK: pictures and files go into a post by dragging them onto the editor or pasting
   them (Ctrl+V — a file manager's copied files, a screenshot; Ctrl+Shift+V — always as
   text); dropped on the window, they start a new post (as in Qt). The deb package

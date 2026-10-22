@@ -202,6 +202,12 @@ def fit_box(child, width, height, least=96):
                 return least, max(least, round(self.h * width / self.w)), -1, -1
 
             def do_size_allocate(self, width, height, baseline):
+                # given less height than the shape wants at this width (a parent that
+                # hands out least heights — GTK 4.18's box did, and the picture's bottom
+                # was cut off), the child narrows instead: smaller, never cut
+                want = round(self.h * width / self.w)
+                if height < want:
+                    width = max(1, round(self.w * height / self.h))
                 self.child.allocate(width, height, -1, None)
 
             def do_dispose(self):

@@ -89,8 +89,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `ui.icon_count` | `["replies", "mentions", "subs", "requests"]` | Which lanes not to count on the icon, even if they are in icon_count (say, with |
 | `ui.icon_count_except` | `[]` |  |
 | `ui.language` | `"auto"` | The interface language: "auto" (from LANG), "ru", "en". |
-| `ui.frontend` | `"qt"` | The interface: "qt" — a window; "tui" — in a terminal (needs Textual: python3-textual or pip install textual), the same as `fedtail --ui tui`; "web" — in a browser (`--ui web`); "gtk" — a GTK 4 window for GNOME and other GTK desktops, a frame so far (python3-gi gir1.2-gtk-4.0; `--ui gtk`). |
+| `ui.frontend` | `"qt"` | The interface: "qt" — a window; "tui" — in a terminal (needs Textual: python3-textual or pip install textual), the same as `fedtail --ui tui`; "web" — in a browser (`--ui web`); "gtk" — a GTK 4 window for GNOME and other GTK desktops (python3-gi gir1.2-gtk-4.0; `--ui gtk`). |
 | `ui.adwaita` | `"auto"` | The GTK interface: libadwaita — "auto" (when installed), "on" (don't start without it), "off" (plain GTK: looks more at home in XFCE, MATE, Cinnamon). |
+| `ui.accessibility` | `"auto"` | The GTK interface: talking to screen readers (Orca) over the accessibility bus. "auto" — only while a screen reader is on: KDE runs the bus always, and with no reader GTK went to it for every widget — a menu took two seconds to open. "on" — always, "off" — never. |
 | `ui.gtk_headerbar` | `"auto"` | The GTK interface: its own title bar with the buttons (as in GNOME) — "on"; the desktop's frame — "off"; "auto" — its own with libadwaita and in GNOME and its kin, the desktop's frame in KDE, XFCE, MATE, Cinnamon. |
 | `ui.desktop_entry` | `true` | The menu entry and the icon (~/.local/share/applications, icons): at every start of a window (qt, gtk) check they're there and point to this fedtail (a moved checkout, a new one-file build) and mend them; old entries of the former name (fedtail.desktop) go. With the deb package its menu entry is the one: none of ours beside it. |
 
