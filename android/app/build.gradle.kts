@@ -81,6 +81,9 @@ val copyFedtail = tasks.register<Sync>("copyFedtail") {
 }
 
 tasks.named("preBuild") { dependsOn(copyFedtail) }
+// Chaquopy's own tasks read the copy: they wait for it (mergeDebugPythonSources & co.)
+tasks.matching { it.name != copyFedtail.name && it.name.contains("Python") }
+    .configureEach { dependsOn(copyFedtail) }
 
 chaquopy {
     defaultConfig {
