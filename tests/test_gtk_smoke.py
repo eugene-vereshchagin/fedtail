@@ -368,6 +368,16 @@ class GtkSmokeTest(_GtkBase):
         vote.emit("clicked")
         self.assertTrue(pump(lambda: not any(isinstance(w, Gtk.CheckButton)
                                              for w in _walk(card)), 5))
+        # "refresh": fresh counts from the server
+        self.world.statuses["020"]["poll"]["options"][0]["votes_count"] = 40
+        self.world.statuses["020"]["poll"]["votes_count"] = 42
+        foot = next(w for w in _walk(card) if isinstance(w, Gtk.Label)
+                    and i18n._("poll_refresh") in (w.get_text() or ""))
+        foot.emit("activate-link", "fedtail:poll-refresh")
+
+        def texts():
+            return " ".join(w.get_text() for w in _walk(card) if isinstance(w, Gtk.Label))
+        self.assertTrue(pump(lambda: "95%" in texts(), 5), texts())
 
     def test_profile_buttons_as_in_qt(self):
         """A profile's buttons come from common/profile.py (as Qt offers them) and do

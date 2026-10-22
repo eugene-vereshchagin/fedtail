@@ -110,6 +110,11 @@ class Card(Gtk.Box):
         """Counters and my marks changed (status_updated): only the buttons move."""
         self.entry = entry
         self._fill_actions()
+        box = getattr(self, "poll_box", None)
+        post = self.post
+        if box is not None and post.poll is not None and post.poll != getattr(
+                self, "poll_shown", None):  # fresh counts (refresh, a vote elsewhere)
+            self._fill_poll(box, post, getattr(self, "poll_peek", False))
 
     # ---- building ----------------------------------------------------------------
     def _build(self, parent, number, my_replies):
@@ -394,6 +399,7 @@ class Card(Gtk.Box):
         """Options to pick and Vote (or a peek at the results), as in Qt; the results
         as lines with a bar each — after voting, when it's over, on my own post."""
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.poll_box = box
         self._fill_poll(box, p, False)
         return box
 
@@ -401,6 +407,7 @@ class Card(Gtk.Box):
         while (c := box.get_first_child()) is not None:
             box.remove(c)
         poll = p.poll
+        self.poll_shown, self.poll_peek = poll, peek
         mine = p.author.id == self.ctx.me_id
         if poll.voted or poll.expired or mine or peek:
             total = max(1, (poll.voters if poll.multiple else None) or poll.votes or 0)
@@ -463,7 +470,20 @@ class Card(Gtk.Box):
             parts.append(_("poll_until", when=self.ctx.theme.date(poll.expires)))
         if poll.multiple:
             parts.append(_("poll_multiple"))
-        box.append(_label(" · ".join(parts), ("ft-muted",)))
+        foot = GLib.markup_escape_text(" · ".join(parts))
+        if not poll.expired:  # fresh counts from the server, as Qt's "refresh"
+            foot += " · " + link_markup("fedtail:poll-refresh", _("poll_refresh"))
+        lab = _label(foot, ("ft-muted",), markup=True)
+        lab.connect("activate-link", lambda _l, _u: (self.refresh_poll(box, p, peek), True)[1])
+        box.append(lab)
+
+    def refresh_poll(self, box, p, peek):
+        def done(post):
+            post = real(post) if post is not None and hasattr(post, "id") else \
+                self.ctx.view.by_id(p.id)
+            if post is not None and getattr(post, "poll", None) is not None:
+                self._fill_poll(box, real(post), peek)
+        self.ctx.win.call(self.ctx.view.refresh_poll(p), done, self.ctx.win.error)
 
     def _quote_of(self, quote, mode):
         """The quoted post framed in this one (feed.quotes = "card") or a line with a
