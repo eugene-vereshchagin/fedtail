@@ -1089,6 +1089,23 @@ class GtkSplitTest(_GtkBase):
     """ui.layout = "split": the roster window, the lanes in tabs, the input line."""
     UI = {"layout": "split"}
 
+    def test_last_tab_closed_the_window_goes(self):
+        """The last tab closed: the messages window hides, the roster stays (as Qt's);
+        opening something from the roster brings it back."""
+        win = self.win
+        win.present()
+        pump(lambda: "home" in win.lane_tabs, 5)
+        for name in list(win.lane_tabs):
+            win.close_lane_tab(name)
+        for key in list(getattr(win, "extra_tabs", {})):
+            win.close_extra(key)
+        for root in list(win.threads):
+            win.close_thread(root)
+        self.assertTrue(pump(lambda: not win.get_visible(), 3))
+        self.assertTrue(win.roster.get_visible())
+        win.roster.open("home")
+        self.assertTrue(pump(lambda: win.get_visible() and "home" in win.lane_tabs, 3))
+
     def test_menus_made_ahead_open_on_one_click(self):
         """≡ in the roster: its popover made ahead (as after start), so one click opens it
         — built on the click, the release after a long build closed it again."""

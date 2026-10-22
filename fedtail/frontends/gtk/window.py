@@ -356,6 +356,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tabs.set_show_tabs(False)
         self.tab_rows = TabRows(self.tabs, hidden=(self.stack,),
                                 wrap=self.theme.shape.get("tab_rows", "wrap") == "wrap")
+        # the last tab closed: the messages window goes, the roster stays (as Qt's)
+        self.tabs.connect("page-removed", lambda *_a: GLib.idle_add(self._maybe_go))
         area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         area.append(self.tab_rows)
         rw.set_vexpand(True)
@@ -399,6 +401,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self.tabs.set_current_page(self.tabs.page_num(lv))
         self.update_badges()
         return lv
+
+    def _maybe_go(self):
+        if self.roster is not None and not self.quitting and self.get_visible() and \
+                not self.tab_rows.pages():
+            self.set_visible(False)
+        return GLib.SOURCE_REMOVE
 
     def close_lane_tab(self, name):
         lv = self.lane_tabs.pop(name, None)

@@ -64,7 +64,8 @@
   GTK's own containers (pictures, headers, wrapping rows) let their children go when
   they go — they were kept ("Finalizing … still has children left"). The ≡ menu says
   in the log how long it took to make and to show.
-- GTK's split layout starts with the roster only, as Qt's (both windows came up). The
+- GTK's split layout starts with the roster only, as Qt's (both windows came up), and
+  closing the last tab hides the messages window, the roster staying. The
   first menu GTK builds in a run took 1.5–2 s on KDE (later ones: milliseconds), and the
   click's release, handled after that freeze, closed the menu it had opened — ≡ took a
   double click. Every ≡ is now made after start, timed in the log; one click opens it.
