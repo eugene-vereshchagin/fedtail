@@ -623,6 +623,15 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(len(rows), 3)  # the two likes of one post are one row
         # on screen in an active window: seen
         self.assertTrue(pump(lambda: self.core.activity_unread() == 0, 5))
+        # Clear: asked first, then gone here and on the server
+        self.assertTrue(lane.clear_btn.get_visible())
+        asked = []
+        self.win.confirm = lambda _t, _x, then: asked.append(then)
+        lane.clear_btn.emit("clicked")
+        self.assertEqual(len(asked), 1)
+        asked[0]()
+        self.assertTrue(pump(lambda: not self.world.activity and not
+                             [w for w in _walk(lane.list) if hasattr(w, "newest_sort")], 5))
 
     def test_command_line(self):
         bar = self.win.cmdline

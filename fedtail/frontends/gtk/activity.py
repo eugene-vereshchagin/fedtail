@@ -77,12 +77,29 @@ class ActivityLane(_Lane):
         read.add_css_class("flat")
         read.connect("clicked", lambda _b: self.view.mark_activity_seen())
         self.header.append(read)
+        self.clear_btn = Gtk.Button(label=_("activity_clear"))  # here and on the server
+        self.clear_btn.add_css_class("flat")
+        tip(self.clear_btn, _("activity_clear_tip"))
+        self.clear_btn.connect("clicked", lambda _b: self.clear())
+        self.clear_btn.set_visible(self._can_clear())
+        self.header.append(self.clear_btn)
         self._seen_timer = 0
         self.positioned = False
         self.adj.connect("value-changed", lambda _a: self._schedule_seen())
 
+    def _can_clear(self):
+        try:
+            return bool(self.view.supports("dismiss"))
+        except Exception:  # noqa: BLE001 — not connected yet
+            return False
+
+    def clear(self):
+        self.win.confirm(_("activity_clear"), _("activity_clear_q"),
+                         lambda: self.win.call(self.view.clear_activity()))
+
     def refresh(self):
         self.dirty = False
+        self.clear_btn.set_visible(self._can_clear())
         kept = self.adj.get_value() if self.positioned else None
         self._clear()
         oldest_first = self.win.cfg["feed"]["order"] == "oldest_first"
