@@ -253,25 +253,29 @@ def button(win, menu, icon="open-menu-symbolic", accounts_only=False):
     b = Gtk.MenuButton(icon_name=icon)
     tip(b, _("accounts") if accounts_only else _("menu"))
     made = [None]
+    asked = [0.0]  # when this opening was asked for (the popover reports when it shows)
+
+    def shown(_p):
+        import time
+        log.info("menu on screen %.0f ms after it was asked for",
+                 (time.monotonic() - asked[0]) * 1000)
 
     def make(btn):
         import time
-        t = time.monotonic()
+        t = asked[0] = time.monotonic()
         model = menu.accounts_model() if accounts_only else menu.model()
         sig = signature(model)
         t_model = time.monotonic() - t
-        if sig != made[0]:
+        built = sig != made[0]
+        if built:
             made[0] = sig
             btn.set_menu_model(model)
             pop = btn.get_popover()
-            if pop is not None:  # how long until it's on screen, for the log
-                shown_at = [time.monotonic()]
-                pop.connect("map", lambda _p: log.info(
-                    "menu on screen %.0f ms after it was asked for",
-                    (time.monotonic() - shown_at[0]) * 1000))
+            if pop is not None:
+                pop.connect("map", shown)
         took = time.monotonic() - t
         (log.info if took > 0.2 else log.debug)(
             "menu made in %.0f ms (model %.0f ms, %s)", took * 1000, t_model * 1000,
-            "built anew" if made[0] is sig else "as before")
+            "built anew" if built else "as before")
     b.set_create_popup_func(make)
     return b
