@@ -111,7 +111,8 @@ class GtkSmokeTest(_GtkBase):
     def test_lanes_and_cards(self):
         self.assertIn("home", self.win.lane_rows)
         lane = self._lane("home")
-        self.assertGreaterEqual(len(lane.rows), 3)
+        # (built in batches between frames: a busy machine may not have them all yet)
+        self.assertTrue(pump(lambda: len(lane.rows) >= 3, 5), len(lane.rows))
         texts = [c.post.text for c in lane.rows.values()]
         self.assertTrue(any("привет" in t for t in texts))
         # the reply's warning hides its text in an expander

@@ -137,8 +137,11 @@ def sweep(app, root, out, label):
             shoot_menu(m, out, f"{label}-btn{n}-{type(b).__name__}"
                        f"{'-' + b.objectName() if b.objectName() else ''}")
     for w in [root] + root.findChildren(QWidget):
-        if w.contextMenuPolicy() != Qt.ContextMenuPolicy.CustomContextMenu or \
-                not w.isVisible():
+        try:
+            if w.contextMenuPolicy() != Qt.ContextMenuPolicy.CustomContextMenu or \
+                    not w.isVisible():
+                continue
+        except RuntimeError:  # gone meanwhile: a right click before rebuilt it
             continue
         k = (type(w).__name__, w.objectName())
         if kinds.get(k, 0) >= 2:
