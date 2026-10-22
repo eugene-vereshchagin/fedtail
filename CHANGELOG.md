@@ -27,6 +27,19 @@
   stopped reading the store in the window's thread every round: 0.3–0.6 s stalls); a
   gifv in a Qt card draws at most 12 frames a second, made small first; the dock stops
   asking the X server for the pointer while the window is in the background.
+- GTK caught up with Qt in nearly all: a thread's header (subscribe, why its replies
+  come, "open every CW" — Qt has it too now), profiles paging back and then from the
+  author's own server, pinned and featured posts and people, groups of tags, a tag's
+  "feature on my profile", the curtain on Esc, the status line's words, the federation
+  status's Copy and Count anew, a picture's focus point, the camelCase hint, text
+  selected with "Quote in reply", a contact card on hover (split), the account a post
+  came by (merged window), a video player over the window (Gtk.Video) and a tray icon
+  (StatusNotifierItem over D-Bus, KDE's and the AppIndicator extension's).
+- Qt: a suggestion (@name, #tag, :emoji:) goes in with Enter or Tab — it took a click.
+- GTK 4.18: no "reported min height … natural height" warnings by the thousand — a
+  card, a lane's header, a profile's top and a person's row are no longer horizontal
+  boxes with wrapping text in them (4.18 takes such a box's least height at its least
+  width); `gtk/measure.py` checks for it, on 4.14 too.
 - GTK in a narrow window (or with big fonts): the lane never goes past the window's
   edge any more — a picture narrows with the window, its shape kept (it asked for its
   full width and held the lane wider); the words on a post's buttons end in "…"; the
