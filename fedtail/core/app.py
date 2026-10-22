@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 from .. import diag, protocols
+from ..protocols.base import RateLimited
 from ..protocols.mastodon import api as api_module
 from ..protocols.mastodon import counters
 from ..protocols.mastodon.api import ApiError, Capabilities
@@ -394,6 +395,8 @@ class Core(SocialMixin):
         while not self._stop.is_set():
             try:
                 self.poll_once()
+            except RateLimited as e:  # the server says wait: _pace() waits, said once
+                log.info("poll: the server's limit is spent (%s) — the round cut short", e)
             except Exception as e:  # never let the poller die silently
                 if self._stop.is_set():
                     return
@@ -419,6 +422,7 @@ class Core(SocialMixin):
             self._urgent = False
 
     RESERVE = 20  # requests kept for what I do by hand (a like, a reply), besides a round
+    RESET_MARGIN = 5  # seconds after the server's window ends before asking again
 
     def _pace(self):
         """Seconds to keep quiet before the next round: the server's rate limit (its
@@ -427,10 +431,14 @@ class Core(SocialMixin):
         budget = getattr(self.api, "budget", None)
         if budget is None:
             return 0
-        per_round = getattr(self, "_round_requests", 0)
+        # the dearest of the last rounds: a round cut short by a 429 cost 1 and let a
+        # whole one start with 9 left (the night of 22.10: 429 again three minutes on)
+        per_round = max(getattr(self, "_round_costs", None) or [0])
         if not (budget.spent() or budget.low(2 * per_round + self.RESERVE)):
             return 0
-        wait = max(0.0, budget.reset - time.time())
+        # the server's window ends a little after its X-RateLimit-Reset says: it still
+        # answered 429 right at it
+        wait = max(0.0, budget.reset - time.time() + self.RESET_MARGIN)
         if wait and getattr(self, "_quiet_said", None) != budget.reset:
             self._quiet_said = budget.reset
             log.info("rate limit: %d of %d left, a round takes %d — quiet for %.0f s",
@@ -455,6 +463,11 @@ class Core(SocialMixin):
         finally:
             took = time.monotonic() - t
             self._round_requests = getattr(self.api, "requests", 0) - before
+            costs = getattr(self, "_round_costs", None)
+            if costs is None:
+                costs = self._round_costs = []
+            costs.append(self._round_requests)
+            del costs[:-6]  # the last six rounds
             self._poll_count += 1
             self._last_poll_s = round(took, 2)
             self._poll_max_s = max(getattr(self, "_poll_max_s", 0.0), took)

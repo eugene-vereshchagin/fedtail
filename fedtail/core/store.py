@@ -416,11 +416,23 @@ class Store:
         # lane, a thread, a catch-up after a restart
         mine = [r[0] for r in rows if self.me_id and r[4] == self.me_id]
         with self._tx() as db:
+            # the same posts as stored (a followed thread read again, a lane's overlap):
+            # no new version — every lane's cache (app.lane_entries) keys on it, and
+            # dropping them each round made the sidebar's counts read the store in the
+            # GUI thread, waiting on the poll's lock (the night of 22.10: 0.3–0.6 s)
+            old = {}
+            for i in range(0, len(rows), 500):
+                part = [r[0] for r in rows[i:i + 500]]
+                marks = ",".join("?" * len(part))
+                old.update(db.execute(f"SELECT id, data FROM statuses WHERE id IN ({marks})",
+                                      part))
+            changed = any(old.get(r[0]) != r[1] for r in rows)
             db.executemany("INSERT OR REPLACE INTO statuses (id, data, created_at, reply_to, "
                            "author, touched) VALUES (?, ?, ?, ?, ?, ?)", rows)
             if mine:
                 db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in mine])
-            self.status_version += 1
+            if changed:
+                self.status_version += 1
             if self._tags is not None:
                 for st in statuses:
                     for t in (st.get("reblog") or st).get("tags") or ():
@@ -778,7 +790,7 @@ class Store:
         """Followed threads to look at now: alive lately, longest unchecked first."""
         with self.lock:
             rows = self.db.execute(
-                "SELECT root_id, since, last_activity FROM subs WHERE last_activity > ? "
+                "SELECT root_id, since, last_activity, checked FROM subs WHERE last_activity > ? "
                 "AND checked < ? ORDER BY checked ASC LIMIT ?",
                 (active_after, checked_before, limit)).fetchall()
         return rows

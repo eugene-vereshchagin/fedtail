@@ -573,6 +573,19 @@ class StoreTest(TmpDir):
         self.assertEqual(s.count_items("home"), 2)
         s.close()
 
+    def test_the_same_posts_again_keep_the_version(self):
+        """A followed thread read again every round: the lanes' caches stay."""
+        s = Store(self.tmp / "s.db")
+        sts = [status(str(i), BOB, minute=i) for i in range(1, 4)]
+        s.put_statuses(sts)
+        v = s.status_version
+        s.put_statuses([dict(x) for x in sts])
+        self.assertEqual(s.status_version, v)
+        sts[1]["favourites_count"] = 7  # something did change: a new version
+        s.put_statuses(sts)
+        self.assertEqual(s.status_version, v + 1)
+        s.close()
+
 
 class LaneRenameTest(TmpDir):
     """0.15: lanes are named as they show ("people" is "home"…); the old names still
@@ -2202,3 +2215,37 @@ class ConversationsTest(unittest.TestCase):
         self.assertEqual(thread["top"]["id"], "1")  # its root, though not in the lane
         self.assertEqual([m["id"] for m in thread["members"]], ["2", "4"])
         self.assertEqual((thread["unread"], thread["last"]["id"]), (1, "4"))
+
+
+class SubsPaceTest(unittest.TestCase):
+    """Followed threads don't spend the server's limit (the night of 22.10)."""
+
+    def test_a_quiet_thread_is_asked_less_often(self):
+        from datetime import UTC, datetime, timedelta
+
+        from fedtail.core import subs
+        now = datetime(2026, 10, 22, 12, tzinfo=UTC)
+
+        def ago(**kw):
+            return (now - timedelta(**kw)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        self.assertEqual(subs.every(ago(minutes=10), now, 5), timedelta(minutes=5))
+        self.assertEqual(subs.every(ago(hours=2), now, 5), timedelta(minutes=15))
+        self.assertEqual(subs.every(ago(hours=30), now, 5), timedelta(minutes=60))
+        self.assertEqual(subs.every(ago(days=5), now, 5), timedelta(minutes=180))
+        self.assertEqual(subs.every("nonsense", now, 5), timedelta(minutes=5))
+
+    def test_threads_take_a_quarter_of_what_is_left(self):
+        from fedtail.core import subs
+        from fedtail.protocols.base import Budget
+
+        class Api:
+            budget = Budget()
+        api = Api()
+        self.assertEqual(subs.budget_share(api, 30, now=1000), 30)  # the server says nothing
+        api.budget = Budget(300, 280, 2000)
+        self.assertEqual(subs.budget_share(api, 30, now=1000), 30)
+        api.budget = Budget(300, 40, 2000)
+        self.assertEqual(subs.budget_share(api, 30, now=1000), 10)
+        api.budget = Budget(300, 3, 2000)
+        self.assertEqual(subs.budget_share(api, 30, now=1000), 0)
+        self.assertEqual(subs.budget_share(api, 30, now=3000), 30)  # a new window

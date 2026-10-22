@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from ..protocols.base import ServerError
 from ..protocols.mastodon import counters
 from ..protocols.mastodon.api import ApiError
 from .model import real
@@ -210,7 +211,7 @@ class SocialMixin:
             return
         try:
             convs = self._api("conversations", self.api.conversations, 40)
-        except (ApiError, requests.RequestException) as e:
+        except (ServerError, requests.RequestException) as e:  # a 429 too (RateLimited)
             # a nicety: a slow answer here must not fail the whole poll (it did, with
             # "Read timed out" shown to the user, the lanes not fetched at all)
             log.info("conversations: %s", e.__class__.__name__)

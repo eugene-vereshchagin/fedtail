@@ -147,13 +147,53 @@ def silenced(store, api, status, left_too):
     return root
 
 
+# a thread quiet for a while is asked about less often: (quiet for at least, hours) →
+# times subs.interval_minutes. A thread alive now: every interval; quiet a day: every
+# hour (at 5 minutes); quiet three days: every three. The night of 22.10: 97 threads,
+# each asked every 5 minutes — 56% of all requests, the server's limit spent, 1.7 h of
+# 10 waiting for it.
+QUIET = ((72, 36), (24, 12), (1, 3))
+SHARE = 4  # of what the server still allows this window, at most a quarter for threads
+
+
+def every(last_activity, now, interval_minutes):
+    """How often a thread is asked about, from when it was last alive."""
+    try:
+        last = datetime.fromisoformat((last_activity or "").replace("Z", "+00:00"))
+    except ValueError:
+        return timedelta(minutes=interval_minutes)
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=UTC)
+    quiet_h = (now - last).total_seconds() / 3600
+    times = next((t for hours, t in QUIET if quiet_h >= hours), 1)
+    return timedelta(minutes=interval_minutes * times)
+
+
+def budget_share(api, max_threads, now=None):
+    """How many threads this round may ask about: max_threads, or a quarter of what the
+    server still allows this window when it says (so the lanes keep theirs)."""
+    b = getattr(api, "budget", None)
+    if b is None or not b.limit:
+        return max_threads
+    if b.reset and b.reset < (now if now is not None else datetime.now(UTC).timestamp()):
+        return max_threads  # the window is over: it starts anew
+    return max(0, min(max_threads, b.remaining // SHARE))
+
+
 def check(store, api, me_id, interval_minutes, active_days, max_threads):
     """Ask the server about followed threads that are due. Returns new item ids."""
     now = datetime.now(UTC)
-    due = store.subs_due(_iso(now - timedelta(days=active_days)),
-                         _iso(now - timedelta(minutes=interval_minutes)), max_threads)
+    limit = budget_share(api, max_threads)
+    if limit <= 0:
+        log.info("subs: the server's limit is nearly spent — threads wait")
+        return []
+    candidates = store.subs_due(_iso(now - timedelta(days=active_days)),
+                                _iso(now - timedelta(minutes=interval_minutes)),
+                                max_threads * 10)
+    due = [r for r in candidates
+           if (r[3] or "") < _iso(now - every(r[2], now, interval_minutes))][:limit]
     new = []
-    for root, since, _last in due:
+    for root, since, _last, _checked in due:
         try:
             ctx = api.context(root)
         except ApiError as e:

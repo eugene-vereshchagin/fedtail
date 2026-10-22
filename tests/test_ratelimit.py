@@ -74,7 +74,7 @@ class PaceTest(RosterTest):
         core.events.on("error", lambda _n, p: errors.append(p))
         self.assertEqual(core._pace(), 0)  # a fake server says nothing of a limit
         core.api.budget = Budget(300, 15, time.time() + 90)
-        core._round_requests = 12
+        core._round_costs = [12]
         wait = core._pace()
         self.assertGreater(wait, 80)
         core._pace()
@@ -83,6 +83,33 @@ class PaceTest(RosterTest):
         self.assertEqual(errors, [])  # not lane by lane
         core.api.budget = Budget(300, 250, time.time() + 90)
         self.assertEqual(core._pace(), 0)
+
+    def test_a_round_cut_by_a_429_doesnt_make_the_next_look_cheap(self):
+        """The night of 22.10: a round cut short cost 1, the next started with 9 left
+        and earned a 429 again. The dearest of the last rounds counts."""
+        core, _w = self.make()
+        core._round_costs = [42, 41, 1]
+        core.api.budget = Budget(300, 60, time.time() + 90)
+        self.assertGreater(core._pace(), 80)  # 60 < 2 × 42 + 20: wait
+        core._round_costs = [1, 1, 1]
+        self.assertEqual(core._pace(), 0)
+
+    def test_a_429_cuts_the_round_quietly(self):
+        from fedtail.protocols.base import RateLimited
+        core, _w = self.make()
+        errors = []
+        core.events.on("error", lambda _n, p: errors.append(p))
+
+        def once():
+            core._stop.set()
+            raise RateLimited("too many", time.time() + 60)
+        core.poll_once = once
+        core.cfg["poll"]["interval_seconds"] = 0.01
+        core.cfg["poll"]["stream_gap_seconds"] = 0
+        with self.assertNoLogs("fedtail.core.app", level="ERROR"):
+            core._poll_loop()
+        self.assertEqual(errors, [])
+        self.assertEqual(getattr(core, "_poll_failures", 0), 0)
 
 
 class FakeHasNoBudget(unittest.TestCase):

@@ -834,7 +834,9 @@ refresh_minutes = 10
 # What to subscribe to by itself: "posts" — your own posts, "comments" — threads you comment in.
 auto = ["posts", "comments"]
 
-# How often to reread each thread, minutes.
+# How often to reread a live thread, minutes; a quiet one is reread less often (an hour
+# quiet — 3 times, a day — 12, three days — 36), and threads take at most a quarter of
+# what the server still allows.
 interval_minutes = 5
 
 # A thread where nothing happened for this many days is not checked any more.

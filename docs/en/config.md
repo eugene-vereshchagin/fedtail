@@ -278,7 +278,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | Key | Default | What it does |
 |---|---|---|
 | `subs.auto` | `["posts", "comments"]` | Thread subscriptions, as on Point. The server tells you only of replies that mention you; if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to and puts what's new into "Subscriptions". Subscribe/unsubscribe — in a post's ⋯ menu or with the button in the thread's header. What to subscribe to by itself: "posts" — your own posts, "comments" — threads you comment in. |
-| `subs.interval_minutes` | `5` | How often to reread each thread, minutes. |
+| `subs.interval_minutes` | `5` | How often to reread a live thread, minutes; a quiet one is reread less often (an hour quiet — 3 times, a day — 12, three days — 36), and threads take at most a quarter of what the server still allows. |
 | `subs.active_days` | `14` | A thread where nothing happened for this many days is not checked any more. |
 | `subs.max_threads` | `30` | How many threads to check in one round (the rest — in the next). |
 | `subs.replies_to_me` | `false` | Replies to you come to "Replies to me" anyway. true — show them in "Subscriptions" too. |
