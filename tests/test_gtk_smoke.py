@@ -638,6 +638,20 @@ class GtkSmokeTest(_GtkBase):
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 
+    def test_a_pictures_menu_saves_it(self):
+        from fedtail.model import Media
+        card = next(iter(self._lane("home").rows.values()))
+        m = Media(card.post.ref, "image", url="https://e.test/a.png")
+        asked = []
+        self.win.images.save = lambda url, where: (asked.append(url), _done("/x/a.png"))[1]
+        pop = card._media_menu(card, m)
+        buttons = [w for w in _walk(pop) if isinstance(w, Gtk.Button)]
+        self.assertEqual([b.get_label() for b in buttons],
+                         [i18n._("save_image"), i18n._("open_browser"), i18n._("copy_link")])
+        buttons[0].emit("clicked")
+        self.assertTrue(pump(lambda: asked, 2))
+        self.assertEqual(asked, ["https://e.test/a.png"])
+
     def test_tag_tab_follows_and_features(self):
         from fedtail.frontends.gtk.people import TagRow
         page = self.win.open_tag("linux")

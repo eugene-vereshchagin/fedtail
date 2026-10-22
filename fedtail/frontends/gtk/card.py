@@ -349,8 +349,36 @@ class Card(Gtk.Box):
         else:
             click.connect("released", lambda *_a: self.ctx.open_url(full))
         over.add_controller(click)
+        right = Gtk.GestureClick(button=3)  # its own menu, not the post's
+        right.connect("pressed", lambda g, *_a: (
+            g.set_state(Gtk.EventSequenceState.CLAIMED), self._media_menu(over, m)))
+        over.add_controller(right)
         over.set_cursor(Gdk.Cursor.new_from_name("pointer", None))
         return over
+
+    def _media_menu(self, anchor, m):
+        """Save it, open it in the browser, copy its link — as Qt's."""
+        url = m.url or m.remote_url or m.preview
+        pop = Gtk.Popover()
+        pop.set_has_arrow(False)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        items = [(_("save_image") if m.kind == "image" else _("save_media"),
+                  lambda: self.ctx.save_media(m)),
+                 (_("open_browser"), lambda: self.ctx.open_url(url)),
+                 (_("copy_link"), lambda: (self.get_clipboard().set(url),
+                                           self.ctx.status(url)))]
+        for label, fn in items:
+            b = Gtk.Button(label=label)
+            b.add_css_class("flat")
+            b.get_child().set_xalign(0)
+            b.connect("clicked", lambda _b, f=fn: (pop.popdown(), f()))
+            box.append(b)
+        pop.set_child(box)
+        pop.set_parent(anchor)
+        pop.connect("closed", lambda p: p.unparent())
+        pop.popup()
+        self.media_pop = pop
+        return pop
 
     def _reveal_media(self):
         self.media_revealed = True

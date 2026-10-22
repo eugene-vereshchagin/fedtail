@@ -73,6 +73,9 @@ class Ctx:
         from . import viewer
         return viewer.show(self.win, media, index)
 
+    def save_media(self, m):
+        self.win.save_media(m)
+
 
 class LaneRow(Gtk.ListBoxRow):
     def __init__(self, name, title, theme=None):
@@ -1598,6 +1601,16 @@ class MainWindow(Gtk.ApplicationWindow):
             else:
                 self.open_url(url)
         self.call(self.view.resolve(url), got, lambda _e: self.open_url(url))
+
+    def save_media(self, m):
+        """A picture or a video to ui.save_dir, as Qt's save_image."""
+        url = m.url or m.remote_url or m.preview
+        if not url:
+            return
+        from ...core import saving
+        self.call(self.images.save(url, saving.save_dir(self.cfg)),
+                  lambda p: self.status(_("saved_to", path=str(p))),
+                  lambda e: self.error(_("save_failed", err=e)))
 
     def open_url(self, url):
         if not richtext.openable(url):
