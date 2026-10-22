@@ -113,7 +113,11 @@ class WebTest(TmpDir):
         time.sleep(0.2)  # the server has taken it (and waits for its request)
         extra = socket.create_connection(self.srv.server_address[:2], timeout=5)
         extra.sendall(b"GET / HTTP/1.0\r\n\r\n")
-        self.assertEqual(extra.recv(100), b"")  # closed at the door
+        try:
+            got = extra.recv(100)
+        except (ConnectionResetError, ConnectionAbortedError):  # Windows: closed with a reset
+            got = b""
+        self.assertEqual(got, b"")  # closed at the door
         extra.close()
 
     def test_no_key_no_entry(self):

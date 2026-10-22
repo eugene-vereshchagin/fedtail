@@ -63,7 +63,9 @@ class CliTest(unittest.TestCase):
         import os
         import tempfile
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
-            env = dict(os.environ, APPDATA=d)
+            import site
+            # pip's user installs live under %APPDATA% too: keep them in sight
+            env = dict(os.environ, APPDATA=d, PYTHONUSERBASE=site.getuserbase())
             out = subprocess.run([sys.executable, "-m", "fedtail", "--install-desktop",
                                   "--profile", "croco"], cwd=ROOT, env=env,
                                  capture_output=True, text=True)

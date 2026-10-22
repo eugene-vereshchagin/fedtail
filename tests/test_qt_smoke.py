@@ -2641,7 +2641,7 @@ class QtSmokeTest(unittest.TestCase):
                              "for_new_accounts": "filter", "for_private_mentions": "filter",
                              "for_limited_accounts": "filter"}
         self.world.held = [{"id": "r1", "account": BOB, "notifications_count": "3",
-                            "last_status": {"content": "<p>здравствуйте</p>"}}]
+                            "last_status": {"id": "s9", "content": "<p>здравствуйте</p>"}}]
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         dlg = self.win.show_filtered()

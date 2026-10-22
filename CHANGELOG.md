@@ -22,6 +22,10 @@
   an endpoint on an ntfy topic, decrypts what comes (RFC 8291) and shows it, then
   unsubscribes — the check before relying on UnifiedPush on a phone.
 
+- Windows: `latest.log` exists there too — a hard link to the current log where symlinks
+  aren't allowed (no developer mode), so the file the docs tell you to send is there.
+  The tests pass on Windows with pip's user installs and its connection resets.
+
 - tools/gallery.py: the pictures for the site's gallery and the docs — every interface
   on one made-up world (tools/showcase.py, now shared by Qt's and GTK's screenshots),
   with gallery.toml (titles and a line each, Russian and English); part of
