@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.18.0 — in progress
+## 0.18.0 — 2026-10-22
 
 - The four interfaces offer the same things. The web page's ⋯ menu of a post is the
   windows' own (common/actions.py: the same items, the same order) and its links are

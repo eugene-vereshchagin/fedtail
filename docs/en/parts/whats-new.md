@@ -1,4 +1,4 @@
-**0.18.0 (in progress):**
+**0.18.0:**
 
 - Read marks and thread subscriptions shared by all your devices
 - Open every CW in a thread at once
