@@ -14,13 +14,27 @@ def _bad_at(w):
     (from its least one to past the one it has): GTK asks at widths it never gives
     (4.18: the Card at 744 while it had another), and that's where it goes wrong."""
     horizontal, vertical = Gtk.Orientation.HORIZONTAL, Gtk.Orientation.VERTICAL
-    lo_w = max(1, w.measure(horizontal, -1)[0])
-    top = max(lo_w, w.get_width()) + 160
+    lo_w, nat_w = w.measure(horizontal, -1)[:2]
+    lo_w = max(1, lo_w)
+    top = max(lo_w, nat_w, w.get_width(), 760) + 160
     widths = sorted(set(range(lo_w, top, 8)) | {w.get_width(), 744})
+    box418 = None
+    if isinstance(w, Gtk.Box) and w.get_orientation() == horizontal:
+        # GTK 4.18's own rule (gtkboxlayout.c): a horizontal box's least height is its
+        # children's least at their least width (measured at -1), whatever width it
+        # gets — 4.14 here never shows it, so it is worked out the same way
+        kids, c = [], w.get_first_child()
+        while c is not None:
+            if c.get_visible():
+                kids.append(c.measure(vertical, -1)[0])
+            c = c.get_next_sibling()
+        box418 = max(kids, default=0)
     for width in widths:
         if width < lo_w:
             continue
         least, natural = w.measure(vertical, width)[:2]
+        if box418 is not None:
+            least = max(least, box418)
         if least > natural:
             return width, least, natural
     return None
@@ -33,7 +47,7 @@ def bad_heights(root, stop=None):
     out = []
 
     def check(w):
-        if not w.get_visible() or w.get_width() <= 0:
+        if not w.get_visible():  # (not placed yet is fine: that's when GTK asks)
             return False
         hit = _bad_at(w)
         if hit is None:
@@ -69,3 +83,65 @@ def report(roots, stop=None, most=12, limit=60):
     return [f"{n}×  {path}: least {lo} > natural {nat} at width {w}"
             for path, (n, lo, nat, w) in sorted(seen.items(), key=lambda kv: -kv[1][0])
             ][:most]
+
+
+def watch(cards, most=3, out=print):
+    """GTK's own warning ("Card … reported min height … in measure() with for_size=…")
+    caught as it happens — the card is in the state GTK found it in (built, not placed,
+    its pictures not come), which a check afterwards never sees. The first `most` are
+    taken apart: which widget inside goes wrong. cards() → the cards there are now.
+    Everything else logged goes on to the terminal as before."""
+    import ctypes
+    import re
+    import sys
+
+    from .gi_setup import GLib
+    pattern = re.compile(r"(\w+) (0x[0-9a-f]+) \(\w+\) reported min height (\d+) and natural "
+                         r"height (\d+) in measure\(\) with for_size=(\d+)")
+    get_pointer = ctypes.pythonapi.PyCapsule_GetPointer
+    get_pointer.restype = ctypes.c_void_p
+    get_pointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+    state = {"seen": 0, "busy": False, "said": 0}
+
+    def text_of(fields):
+        for f in fields:
+            if f.key == "MESSAGE" and f.value:
+                raw = ctypes.string_at(f.value) if f.length < 0 else \
+                    ctypes.string_at(f.value, f.length)
+                return raw.decode("utf-8", "replace")
+        return ""
+
+    def writer(level, fields, *_a):
+        msg = text_of(fields)
+        m = pattern.search(msg)
+        if m and not state["busy"]:
+            state["seen"] += 1
+            if state["said"] < most:
+                state["busy"] = True
+                try:
+                    addr = int(m.group(2), 16)
+                    card = next((c for c in cards()
+                                 if get_pointer(c.__gpointer__, None) == addr), None)
+                    state["said"] += 1
+                    out(f"  GTK: {m.group(1)} min {m.group(3)} > natural {m.group(4)} at "
+                        f"{m.group(5)} — " + ("the card isn't among the lane's" if card is None
+                                              else "inside it:"))
+                    if card is not None:
+                        lines = bad_heights(card) or [("(nothing inside, measured now: it "
+                                                        "goes wrong only mid-build)", 0, 0, 0)]
+                        for path, lo, nat, width in lines[:6]:
+                            out(f"     {path}: least {lo} > natural {nat} at width {width}")
+                        out(f"     mapped {card.get_mapped()}, width {card.get_width()}, "
+                            f"post {getattr(getattr(card, 'post', None), 'id', '?')}")
+                finally:
+                    state["busy"] = False
+            return GLib.LogWriterOutput.HANDLED
+        if m:
+            return GLib.LogWriterOutput.HANDLED
+        if level & (GLib.LogLevelFlags.LEVEL_DEBUG | GLib.LogLevelFlags.LEVEL_INFO):
+            return GLib.LogWriterOutput.HANDLED
+        print(msg, file=sys.stderr, flush=True)
+        return GLib.LogWriterOutput.HANDLED
+
+    GLib.log_set_writer_func(writer, None)
+    return state

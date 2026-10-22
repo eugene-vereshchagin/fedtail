@@ -123,6 +123,8 @@ def _measure_check(win):
           flush=True)
     for line in lines:
         print("     " + line, flush=True)
+    if len(MEASURE) > 2:
+        print(f"  GTK's warnings so far: {MEASURE[2]['seen']}", flush=True)
 
 
 # ---- measuring --------------------------------------------------------------------------
@@ -293,6 +295,10 @@ def run(layout, theme, posts, profile, maximized=False):
     def first_poll():
         core.poll_once()
         return lambda: _home(win) is not None and getattr(_home(win), "positioned", False)
+    if MEASURE[0]:  # GTK's warnings caught as they happen, the card taken apart
+        from fedtail.frontends.gtk.measure import watch
+        MEASURE.append(watch(lambda: [c for lv in win.lane_views.values()
+                                      for c in getattr(lv, "rows", {}).values()]))
     meter.scenario("first poll, home lane on screen", first_poll)
     meter.scenario("settle (pictures, faces)", lambda: None)
     _measure_check(win)

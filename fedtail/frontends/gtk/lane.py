@@ -88,14 +88,17 @@ class LaneView(Gtk.Box):
         self.title.add_css_class("ft-lane-title")
         self.title.set_hexpand(True)
         self.title.set_ellipsize(Pango.EllipsizeMode.END)  # never wider than the window
+        self.title.set_valign(Gtk.Align.CENTER)
         header.append(self.title)
         self.pill = Gtk.Label()
         self.pill.add_css_class("ft-new-pill")
         self.pill.set_visible(False)
+        self.pill.set_valign(Gtk.Align.CENTER)  # the header two rows high: still a pill
         header.append(self.pill)
         self.info = Gtk.Label(xalign=1)
         self.info.add_css_class("ft-muted")
         self.info.set_ellipsize(Pango.EllipsizeMode.END)
+        self.info.set_valign(Gtk.Align.CENTER)
         header.append(self.info)
         # as Qt's header: All | Posts only | New, conversations, ↓ To new, Mark all
         # read, ▾ Show, Refresh (F5)

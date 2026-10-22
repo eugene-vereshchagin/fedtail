@@ -71,7 +71,11 @@ class Card(Gtk.Box):
 
     def __init__(self, ctx, key, entry, parent=None, unread=False, short_id=None,
                  depth=0, number=None, my_replies=()):
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        # vertical, the face laid over the column's left margin: GTK 4.18 takes a
+        # horizontal box's least height as its children's at their least width — the
+        # text wrapped word by word — above the natural one at the width it has, and
+        # warned of every card ("reported min height 225 and natural height 199")
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.ctx, self.key = ctx, key
         self.entry = entry
         self.short_id = short_id
@@ -81,11 +85,19 @@ class Card(Gtk.Box):
         if depth:
             self.set_margin_start(min(depth, 8) * 18)
         shape = ctx.theme.shape
-        if shape.get("card_avatars", True) and ctx.images is not None:
-            self.append(Avatar(ctx, self.post.author, int(shape.get("avatar", 40))))
         self.column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.column.set_hexpand(True)
-        self.append(self.column)
+        body = Gtk.Overlay()
+        body.set_child(self.column)
+        if shape.get("card_avatars", True) and ctx.images is not None:
+            size = int(shape.get("avatar", 40))
+            face = Avatar(ctx, self.post.author, size)
+            face.set_halign(Gtk.Align.START)
+            face.set_valign(Gtk.Align.START)
+            body.add_overlay(face)
+            self.column.set_margin_start(size + 10)
+            self.column.set_size_request(-1, size)  # a short post: the face still fits
+        self.append(body)
         self._build(parent, number, my_replies)
         self.set_unread(unread)
         click = Gtk.GestureClick(button=3)  # a right click: the post's menu
