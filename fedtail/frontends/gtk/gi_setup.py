@@ -165,3 +165,146 @@ def _clamp_class():
 
     _CLAMP.append(Clamp)
     return Clamp
+
+
+_FIT = []
+
+
+def fit_box(child, width, height, least=96):
+    """child in a box of width × height that narrows with the window, its shape kept
+    (height for width) — never below `least` px wide. A size request instead was a
+    minimum: a picture 800 px wide kept the lane past an 800 px window's edge, and an
+    overlay over it told GTK two different least heights."""
+    if not _FIT:
+        class Fit(Gtk.Widget):
+            def __init__(self, child, width, height, least):
+                super().__init__()
+                self.w, self.h = max(1, int(width)), max(1, int(height))
+                self.least = min(self.w, least)
+                self.child = child
+                child.set_parent(self)
+                self.set_overflow(Gtk.Overflow.HIDDEN)
+
+            def do_get_request_mode(self):
+                return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+            def do_measure(self, orientation, for_size):
+                if orientation == Gtk.Orientation.HORIZONTAL:
+                    return self.least, self.w, -1, -1
+                # the least height is the same at any width (GTK holds a widget's least
+                # height for a width never to grow as the width does: a picture's does,
+                # and it said "Expect overlapping widgets"); the natural one keeps the
+                # shape — a lane gives the natural one
+                width = self.w if for_size < 0 else max(self.least, min(for_size, self.w))
+                least = max(1, round(self.h * self.least / self.w))
+                return least, max(least, round(self.h * width / self.w)), -1, -1
+
+            def do_size_allocate(self, width, height, baseline):
+                self.child.allocate(width, height, -1, None)
+
+            def do_dispose(self):
+                if self.child is not None:
+                    self.child.unparent()
+                    self.child = None
+        _FIT.append(Fit)
+    return _FIT[0](child, width, height, least)
+
+
+_WRAP = []
+
+
+def wrap_box(spacing=4, row_spacing=2, align_end=False):
+    """Children in a row that wraps to the next line where the width runs out, each at
+    its natural width, lines left (or right) aligned — what a FlowBox isn't (a grid:
+    columns as wide as the widest, a narrow one stacks them all). append(w), remove(w),
+    get_first_child() as a box's."""
+    if not _WRAP:
+        class Wrap(Gtk.Widget):
+            def __init__(self, spacing, row_spacing, align_end):
+                super().__init__()
+                self.spacing, self.row_spacing, self.align_end = \
+                    spacing, row_spacing, align_end
+
+            _cache = None  # width -> lines, while the children stay as they are
+
+            def append(self, w):
+                w.set_parent(self)
+                self._cache = None
+
+            def remove(self, w):
+                w.unparent()
+                self._cache = None
+
+            def _kids(self):
+                c = self.get_first_child()
+                while c is not None:
+                    if c.get_visible():
+                        yield c
+                    c = c.get_next_sibling()
+
+            def _lines(self, width):
+                """[(height, [(child, w, h)])] for this width — the same width asked by
+                the measure and then the allocation is worked out once."""
+                cache = self._cache
+                if cache is None:
+                    cache = self._cache = {}
+                got = cache.get(width)
+                if got is None:
+                    if len(cache) > 6:
+                        cache.clear()
+                    got = cache[width] = self._lay(width)
+                return got
+
+            def _lay(self, width):
+                lines, line, used, tall = [], [], 0, 0
+                hor, ver = Gtk.Orientation.HORIZONTAL, Gtk.Orientation.VERTICAL
+                for c in self._kids():
+                    lo, nat = c.measure(hor, -1)[:2]
+                    w = max(lo, min(nat, width))
+                    if line and used + self.spacing + w > width:
+                        lines.append((tall, line))
+                        line, used, tall = [], 0, 0
+                    h = c.measure(ver, w)[1]
+                    used += (self.spacing if line else 0) + w
+                    tall = max(tall, h)
+                    line.append((c, w, h))
+                if line:
+                    lines.append((tall, line))
+                return lines
+
+            def do_get_request_mode(self):
+                return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+            def do_measure(self, orientation, for_size):
+                kids = list(self._kids())
+                if orientation == Gtk.Orientation.HORIZONTAL:
+                    # a layout starts with the width: what the children say may have
+                    # changed (a counter, a theme), so the lines are worked out anew
+                    self._cache = None
+                    lo = max((c.measure(orientation, -1)[0] for c in kids), default=0)
+                    nat = sum(c.measure(orientation, -1)[1] for c in kids) + \
+                        self.spacing * max(0, len(kids) - 1)
+                    return lo, max(lo, nat), -1, -1
+                if for_size < 0:  # at the least width: the most lines
+                    for_size = self.do_measure(Gtk.Orientation.HORIZONTAL, -1)[0]
+                lines = self._lines(for_size)
+                h = sum(t for t, _ in lines) + self.row_spacing * max(0, len(lines) - 1)
+                return h, h, -1, -1
+
+            def do_size_allocate(self, width, height, baseline):
+                y = 0
+                for tall, line in self._lines(width):
+                    used = sum(w for _, w, _ in line) + self.spacing * (len(line) - 1)
+                    x = max(0, width - used) if self.align_end else 0
+                    for c, w, _h in line:
+                        r = Gdk.Rectangle()
+                        r.x, r.y, r.width, r.height = x, y, w, tall
+                        c.size_allocate(r, -1)
+                        x += w + self.spacing
+                    y += tall + self.row_spacing
+
+            def do_dispose(self):
+                while (c := self.get_first_child()) is not None:
+                    c.unparent()
+        _WRAP.append(Wrap)
+    return _WRAP[0](spacing, row_spacing, align_end)

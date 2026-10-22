@@ -98,8 +98,11 @@ class Theme:
         return f"""
 window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; {fam} }}
 .ft-sidebar {{ background: {c['sidebar']}; border-right: 1px solid {c['sidebar_border']}; }}
-.ft-sidebar row {{ color: {c['sidebar_text']}; padding: 4px 8px; border-radius: {br}px; }}
-.ft-sidebar row:selected {{ background: {c['selected']}; color: {c['selected_text']}; }}
+.ft-sidebar row {{ color: {c['sidebar_text']}; padding: 4px 8px; border-radius: {br}px;
+  background: transparent; box-shadow: none; border: none; }}
+.ft-sidebar row:hover {{ background: alpha({c['sidebar_text']}, 0.08); }}
+.ft-sidebar row:selected, .ft-sidebar row:selected:hover {{ background: {c['selected']};
+  color: {c['selected_text']}; }}
 .ft-sidebar .ft-account {{ color: {c['sidebar_muted']}; }}
 .ft-sidebar button, .ft-sidebar .ft-name {{ color: {c['sidebar_text']}; }}
 .ft-sidebar .ft-muted {{ color: {c['sidebar_muted']}; }}
@@ -142,7 +145,6 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
              border-radius: {br}px; color: {c['muted']}; padding: 0 6px; min-height: 22px; }}
 menubutton.ft-action > button {{ background: transparent; border-color: transparent;
     box-shadow: none; min-height: 22px; padding: 0 6px; }}
-.ft-actions > flowboxchild {{ padding: 0; margin: 0; background: transparent; }}
 .ft-action:hover {{ background: {c['button']}; border-color: {c['button_border']}; }}
 .ft-card label link, .ft-ctx label link, .ft-myreply label link {{
     text-decoration-line: none; }}

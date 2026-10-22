@@ -27,13 +27,22 @@
   stopped reading the store in the window's thread every round: 0.3–0.6 s stalls); a
   gifv in a Qt card draws at most 12 frames a second, made small first; the dock stops
   asking the X server for the pointer while the window is in the background.
-- GTK: a post's buttons wrap to a second row in a narrow window or with big fonts
-  instead of pushing the lane past the window's edge; Clear in Activity; a tag's tab
+- GTK in a narrow window (or with big fonts): the lane never goes past the window's
+  edge any more — a picture narrows with the window, its shape kept (it asked for its
+  full width and held the lane wider); the words on a post's buttons end in "…"; the
+  lane's header wraps its buttons to a second row instead of cutting the last ones;
+  the sidebar's rows have no theme's pills under them (Breeze), the name in it is never
+  cut to "М…"; Clear in Activity; a tag's tab
   with "Feature on my profile"; a picture's right-click menu (save, open, copy link);
   a poll's "refresh".
 - selfcheck: `--night` runs every window on a display of its own (xvfb-run) — a locked
   screen made GTK draw a frame a second and the benches meaningless; the tests run
-  there too, away from the desktop's focus.
+  there too, away from the desktop's focus. The window is tried at the sizes of real
+  screens up to 4K, portrait too, at shares of the screen (half, quarter, three
+  quarters, half the height), and with its bottom dragged as well as its side; at scale
+  1.5 and 2 (Qt), twice the pixels and the text 1.5× (GTK) — `sizes.txt` says what each
+  did. `gtk_bench --measure` names a widget that tells GTK a least height above its
+  natural one.
 - Sync between your devices: read marks you made and threads you followed, left or
   muted travel to your other devices (`sync.*`, off by default; docs/en/sync.md). Each
   device keeps a journal, sealed with AES-256-GCM under a key only your devices have, and

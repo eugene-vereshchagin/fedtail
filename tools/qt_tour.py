@@ -9,13 +9,15 @@ Besides the ≡ menu, every menu the window has is opened: each button's that ha
 and each right click (the widgets that answer one get it, a couple of each kind).
 
     python3 tools/qt_tour.py OUT_DIR [--quick] [--native] [--maximized] [--pace 2]
-                             [--real[=PROFILE]]
+                             [--scale 1.5] [--real[=PROFILE]]
 
 --native: the desktop's own Qt platform (the real fonts, style and icons, windows flash
 on the screen); without it, offscreen (nothing shows, the look is plainer).
---maximized: the window as big as the screen. --pace: every wait that many times longer
-(a slow machine: pictures, icons, lanes have time to come). --real: your own account,
-read-only, instead of the fake server (tools/real.py)."""
+--maximized: the window as big as the screen. --scale 1.5: the whole window at that
+scale (QT_SCALE_FACTOR: a HiDPI screen, 125/150/200 % in the desktop's settings).
+--pace: every wait that many times longer (a slow machine: pictures, icons, lanes
+have time to come). --real: your own account, read-only, instead of the fake server
+(tools/real.py)."""
 
 from __future__ import annotations
 
@@ -33,6 +35,10 @@ from tools import real  # noqa: E402
 NATIVE = "--native" in sys.argv
 MAXIMIZED = "--maximized" in sys.argv
 PACE = float(sys.argv[sys.argv.index("--pace") + 1]) if "--pace" in sys.argv else 1.0
+SCALE = sys.argv[sys.argv.index("--scale") + 1] if "--scale" in sys.argv else ""
+if SCALE:  # before Qt starts: the whole window drawn at that scale, as on a HiDPI screen
+    os.environ["QT_SCALE_FACTOR"] = SCALE
+    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
 if NATIVE:  # (tools/screenshots.py, imported below, would make it offscreen)
     os.environ["QT_QPA_PLATFORM"] = os.environ.get("QT_QPA_PLATFORM") or (
         "windows" if os.name == "nt" else
@@ -175,7 +181,12 @@ def _modal_guard(app, what):
     return timer
 
 
-SIZES = ((1920, 1080), (1366, 768), (1024, 768), (800, 600), (640, 480), (480, 860))
+# real screens, landscape and portrait (a monitor turned, a phone-like strip), small to 4K
+SIZES = ((3840, 2160), (2560, 1440), (1920, 1080), (1600, 1200), (1366, 768),
+         (1280, 1024), (1024, 768), (1080, 1920), (800, 600), (640, 480), (480, 860))
+# and the window as a share of the screen it's on: maximized, a half tiled left, a
+# quarter, three quarters, a half by height (a window under another)
+SHARES = ((1.0, 1.0), (0.5, 1.0), (0.75, 0.75), (1.0, 0.5), (0.5, 0.5), (0.33, 1.0))
 
 
 def _in_scroll(w, top):
@@ -239,16 +250,22 @@ def sizes(app, out, win, label):
     if was_max:
         win.showNormal()
         pump(app, 0.3)
-    for w, h in SIZES:
+    screen = win.screen().availableGeometry()
+    asked = [(w, h, f"{w}x{h}") for w, h in SIZES] + [
+        (int(screen.width() * fw), int(screen.height() * fh),
+         f"{int(fw * 100)}x{int(fh * 100)}pct") for fw, fh in SHARES]
+    lines.append(f"{label}: the screen {screen.width()}×{screen.height()} (logical px)"
+                 + (f", scale {SCALE}" if SCALE else ""))
+    for w, h, tag in asked:
         win.resize(w, h)
         pump(app, 0.6)
         got = win.size()
-        name = f"size-{label}-{w}x{h}"
+        name = f"size-{label}-{tag}"
         save(win, out, name)
         probs = layout_problems(win)
         note = "" if got == QSize(w, h) else \
             f" — the window would not go below {got.width()}×{got.height()}"
-        lines.append(f"{label} {w}×{h}{note}: {len(probs)} problems")
+        lines.append(f"{label} {tag} = {w}×{h}{note}: {len(probs)} problems")
         lines += ["    " + p for p in probs[:25]]
         if got.width() > w and w >= 800:
             ERRORS.append(f"{name}: the window can't be {w} px wide (it stays "
@@ -268,6 +285,25 @@ def sizes(app, out, win, label):
                  f"{time.monotonic() - t0:.1f} s, the slowest {worst * 1000:.0f} ms")
     if worst > 0.25:
         ERRORS.append(f"{label}: dragging the window's edge stops for {worst * 1000:.0f} ms")
+    # and the bottom edge: 1100 ↔ 360 high (a lane's end, the input line, the dock)
+    worst, steps, t0 = 0.0, 0, time.monotonic()
+    for y in list(range(1100, 360, -24)) + list(range(360, 1101, 24)):
+        a = time.monotonic()
+        win.resize(1280, y)
+        app.processEvents()
+        worst = max(worst, time.monotonic() - a)
+        steps += 1
+    win.resize(1280, 360)
+    pump(app, 0.4)
+    save(win, out, f"size-{label}-1280x360")
+    probs = layout_problems(win)
+    lines.append(f"{label} drag the bottom 1100↔360: {steps} steps in "
+                 f"{time.monotonic() - t0:.1f} s, the slowest {worst * 1000:.0f} ms; "
+                 f"at 360 high: {len(probs)} problems")
+    lines += ["    " + p for p in probs[:25]]
+    if worst > 0.25:
+        ERRORS.append(f"{label}: dragging the window's bottom stops for "
+                      f"{worst * 1000:.0f} ms")
     split = getattr(win, "split", None)
     if split is not None and split.count() > 1 and split.widget(0).isVisible():
         total = sum(split.sizes())

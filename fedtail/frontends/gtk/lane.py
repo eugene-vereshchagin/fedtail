@@ -26,7 +26,7 @@ from ...i18n import _
 from ...model import Share, real
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator
-from .gi_setup import GLib, Gtk, Pango, clamp, hscroll, set_clamp, tip
+from .gi_setup import GLib, Gtk, Pango, clamp, set_clamp, tip, wrap_box
 
 log = logging.getLogger(__name__)
 
@@ -99,8 +99,12 @@ class LaneView(Gtk.Box):
         header.append(self.info)
         # as Qt's header: All | Posts only | New, conversations, ↓ To new, Mark all
         # read, ▾ Show, Refresh (F5)
-        tools = Gtk.Box(spacing=6, halign=Gtk.Align.END, valign=Gtk.Align.CENTER)
-        header.append(hscroll(tools, end=True))
+        # one row at the right where there's room, wrapping to more in a narrow window
+        # (a scroller cut the last ones at the edge, unseen)
+        tools = wrap_box(spacing=6, row_spacing=4, align_end=True)
+        tools.set_valign(Gtk.Align.CENTER)
+        tools.set_hexpand(False)
+        header.append(tools)
         self._filter_buttons = {}
         if len(self.lm.filters) > 1:
             group, words = None, {"all": ("show_all", "show_all_tip"),

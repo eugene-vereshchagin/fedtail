@@ -301,8 +301,8 @@ class GtkSmokeTest(_GtkBase):
         lane = self._lane("home")
         card = next(c for c in lane.rows.values() if c.post.id == "011")
         # ☆ by the word, or the desktop icon theme's star (the system theme: "desktop")
-        self.assertTrue("☆" in "".join(b.get_label() or "" for b in _walk(card.actions)
-                                       if isinstance(b, Gtk.Button))
+        self.assertTrue("☆" in "".join(b.get_text() or "" for b in _walk(card.actions)
+                                       if isinstance(b, Gtk.Label))
                         or any(isinstance(w, Gtk.Image) for w in _walk(card.actions)))
         self.win.on_link("fedtail:fav/011")
         self.assertTrue(pump(lambda: card.post.mine.liked, 5))
@@ -732,14 +732,17 @@ class GtkPanelsTest(_GtkBase):
         one = Card(self.win.ctx, "090", self._post_with_pictures(1))
         grid = one.media_box
         cell = grid.get_child_at(0, 0)
-        w, h = cell.get_size_request()
+        w, h = cell.w, cell.h  # the box it asks for (fit_box): narrower with the window
         # one alone: as tall as ui.image_height allows within the lane, its shape kept
         self.assertGreater(h, 300)
         self.assertEqual(w, 2 * h)
+        V = Gtk.Orientation.VERTICAL
+        self.assertEqual(cell.measure(V, w // 2)[1], h // 2)  # half as wide: half as tall
+        self.assertLess(cell.measure(Gtk.Orientation.HORIZONTAL, -1)[0], 200)
         four = Card(self.win.ctx, "091", self._post_with_pictures(4))
         self.assertIsNotNone(four.media_box.get_child_at(2, 0))  # three in a row
         self.assertIsNotNone(four.media_box.get_child_at(0, 1))
-        self.assertEqual(four.media_box.get_child_at(0, 0).get_size_request()[1], 115)
+        self.assertEqual(four.media_box.get_child_at(0, 0).h, 115)
 
     def test_viewer_over_the_window(self):
         from fedtail.frontends.gtk import viewer

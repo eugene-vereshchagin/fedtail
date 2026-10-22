@@ -329,7 +329,7 @@ def main():
             # at night the screen locks: GTK then draws a frame a second and every
             # bench waits a second a turn (the night of 22.10: 2 h, timed out), a
             # tour's shots come out empty. A display of its own never locks.
-            run.wrap = [xvfb, "-a", "-s", "-screen 0 1920x1080x24"]
+            run.wrap = [xvfb, "-a", "-s", "-screen 0 3840x2160x24"]  # room for 4K
             print("windows: on xvfb (the night: the screen locks)")
         elif a.night:
             print("windows: on this desktop — no xvfb-run (sudo apt install xvfb): keep "
@@ -368,6 +368,14 @@ def main():
                                                    "--native", "--maximized", "--pace",
                                                    str(pace)], timeout=3600, folder=d,
                              note="maximized")
+                if a.night:  # a HiDPI screen: 150 % and 200 % in the desktop's settings
+                    for scale in ("1.5", "2"):
+                        d = out / f"qt-tour-x{scale}"
+                        run.step(f"qt-tour-x{scale}",
+                                 ["tools/qt_tour.py", str(d), "--quick", "--scale", scale,
+                                  "--pace", str(pace)]
+                                 + (["--native"] if native else []),
+                                 timeout=3600, folder=d, note=f"scale {scale}")
         if "bench" in only:
             big = ["--maximized"] if a.maximized else []
             if qt and has_display():
@@ -387,6 +395,14 @@ def main():
                 d = out / "gtk-shots"
                 run.step("gtk-shots", ["tools/gtk_screenshots.py", str(d)] +
                          (["system", "point", "qip-retro"] if a.quick else []), timeout=3600)
+                # the window at the sizes of real screens and at shares of the screen,
+                # plain, at twice the pixels, and with the text 1.5× (sizes.txt each)
+                for tag, extra in (("", []), ("-x2", ["--scale", "2"]),
+                                   ("-dpi1.5", ["--dpi", "1.5"]))[:1 if a.quick else 3]:
+                    d = out / f"gtk-sizes{tag}"
+                    run.step(f"gtk-sizes{tag}", ["tools/gtk_screenshots.py", str(d),
+                                                 "system", "--sizes"] + extra,
+                             timeout=1800, folder=d, note=" ".join(extra))
             else:
                 run.skip("gtk-shots", "no GTK 4 (python3-gi, gir1.2-gtk-4.0)")
         if "tui" in only:

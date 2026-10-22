@@ -12,7 +12,7 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
-from .gi_setup import Gdk, GLib, Gtk, Pango, tip
+from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 
@@ -222,13 +222,10 @@ class Card(Gtk.Box):
         self.set_my_replies(my_replies)
 
         bar = Gtk.Box(spacing=4)
-        # the buttons wrap to a second row when the window is narrow (or the fonts are
-        # big): never wider than the lane, as a box of them was
-        self.actions = Gtk.FlowBox(column_spacing=4, row_spacing=0, homogeneous=False,
-                                   max_children_per_line=40, min_children_per_line=1)
-        self.actions.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.actions.add_css_class("ft-actions")
-        self.actions.set_valign(Gtk.Align.START)
+        # never wider than the lane: in a narrow window (or with big fonts) the words on
+        # the buttons end in "…", the pictures stay (a wrapping row of them cost the
+        # scrolling a quarter more: Python laying out every card)
+        self.actions = Gtk.Box(spacing=4)
         self.actions.set_hexpand(True)
         bar.append(self.actions)
         self.more = Gtk.MenuButton()
@@ -308,7 +305,7 @@ class Card(Gtk.Box):
                     cell = self._picture(m, tw, th, decode_side(
                         tw, th, m.width, m.height, self.ctx.cfg,
                         self.get_scale_factor() or 1.0) or 1200, images, full)
-                cell.set_size_request(tw, th)
+                cell = fit_box(cell, tw, th)  # narrows with the window, its shape kept
                 if m.alt:
                     tip(cell, m.alt)
                 grid.attach(cell, pos % 3, pos // 3, 1, 1)
@@ -567,14 +564,18 @@ class Card(Gtk.Box):
             else:
                 text = ("" if img is not None else bt.glyph + " ") + bt.label + bt.count
             b = Gtk.Button()
+            words = Gtk.Label(label=text.strip()) if text.strip() else None
+            if words is not None:
+                words.set_ellipsize(Pango.EllipsizeMode.END)
+                words.set_width_chars(min(3, len(text.strip())))
             if img is not None:
                 inner = Gtk.Box(spacing=4)
                 inner.append(img)
-                if text.strip():
-                    inner.append(Gtk.Label(label=text.strip()))
+                if words is not None:
+                    inner.append(words)
                 b.set_child(inner)
             else:
-                b.set_label(text)
+                b.set_child(words or Gtk.Label())
             b.add_css_class("ft-action")
             b.add_css_class("flat")
             if bt.active:
@@ -586,7 +587,6 @@ class Card(Gtk.Box):
                 right.connect("pressed", lambda *_a, u=bt.who: self.ctx.on_link(u))
                 b.add_controller(right)
             self.actions.append(b)
-            b.get_parent().set_focusable(False)  # the button takes focus, not its holder
 
     def _fill_menu(self, button):
         """The ⋯ menu, made when it opens: what's in it is common/actions.py's."""

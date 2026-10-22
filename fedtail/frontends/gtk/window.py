@@ -194,7 +194,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # the version at the foot
         side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         side.add_css_class("ft-sidebar")
-        side.set_size_request(272, -1)  # the name and ≡ ↔ ❯ beside it fit
+        side.set_size_request(240, -1)  # the header's own needs widen it (width_chars)
         side.append(self._me_head())
         write = Gtk.Button(label=self.theme.word("compose", _("write")))  # as in Qt
         write.add_css_class("ft-primary")
@@ -221,8 +221,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self.footer = Gtk.Label(xalign=0, label=self._footer_text())
         self.footer.add_css_class("ft-muted")
         self.footer.add_css_class("caption")
-        self.footer.set_wrap(True)  # a long build (a dev one, "dirty") wraps, never
-        self.footer.set_wrap_mode(Pango.WrapMode.WORD_CHAR)  # widens the sidebar
+        # a long build (a dev one, "dirty") ends in "…", never widens the sidebar — a
+        # wrapped one told GTK two least heights ("Expect overlapping widgets")
+        self.footer.set_ellipsize(Pango.EllipsizeMode.END)
         for m in ("start", "end", "bottom"):
             getattr(self.footer, "set_margin_" + m)(8)
         foot_click = Gtk.GestureClick()
@@ -507,6 +508,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.who = Gtk.Label(xalign=0)
         self.who.add_css_class("ft-muted")
         self.who.set_ellipsize(Pango.EllipsizeMode.END)
+        for lab in (self.me_name, self.who):  # a name never cut down to "М…": the
+            lab.set_width_chars(7)            # sidebar grows instead (a wider ≡ ▾)
         names.append(self.me_name)
         names.append(self.who)
         head.append(names)
