@@ -516,7 +516,7 @@ class MainWindow(Gtk.ApplicationWindow):
             elif self.tabs.get_current_page() > 0:
                 self._close_current_tab()
             elif mode == "tray":
-                self.minimize()
+                self.hide_away()
             elif not self.curtain_shown():
                 self.close_all()
             return True
@@ -1094,6 +1094,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---- start -----------------------------------------------------------------------
     def start(self):
+        if getattr(self, "tray", None) is None:
+            from . import tray
+            self.tray = tray.make(self)  # (None: the desktop shows no tray)
         if not self.core.logged_in:
             login.LoginDialog(self, self._connect).present()
             return
@@ -1267,6 +1270,8 @@ class MainWindow(Gtk.ApplicationWindow):
             row.set_count(numbers[name])
         if self.curtain_shown():
             self._curtain_text(numbers)
+        if getattr(self, "tray", None) is not None:  # how much is new, on the tray too
+            self.tray.set_count(self.get_title() or "fedtail", sum(numbers.values()))
         folded = sidebar.folded(self.view)
         for group, head in self.sections.items():
             head.show_fold(group in folded, sum(numbers.get(n, 0) for n in head.names))
@@ -1871,6 +1876,10 @@ class MainWindow(Gtk.ApplicationWindow):
             app.quit()
 
     def _close_request(self, _win):
+        if getattr(self, "tray", None) is not None and self.cfg["ui"].get(
+                "close_to_tray", True) and not self.quitting:
+            self.hide_away()  # to the tray, as Qt's (ui.close_to_tray)
+            return True
         if self.roster is not None and not self.quitting and self.roster.get_visible():
             self.set_visible(False)  # the messages window goes; the roster stays (QIP)
             return True
@@ -1881,9 +1890,36 @@ class MainWindow(Gtk.ApplicationWindow):
             self.columns_changed()
         self.quitting = True
         self._stop()
+        if getattr(self, "tray", None) is not None:
+            self.tray.close()
+            self.tray = None
         if self.roster is not None and self.roster.get_visible():
             self.roster.close()
         return False
+
+    # ---- the tray ---------------------------------------------------------------------
+    def hide_away(self):
+        """Off the screen at once: to the tray if there is one, else minimized."""
+        if getattr(self, "tray", None) is None:
+            self.minimize()
+            return
+        if self.roster is not None:
+            self.roster.set_visible(False)
+        self.set_visible(False)
+
+    def show_from_tray(self):
+        if self.roster is not None:
+            self.roster.present()
+        self.present()
+
+    def toggle_from_tray(self):
+        """A click on the tray icon: away if it's in front, else back (as Qt's)."""
+        shown = self.roster.get_visible() if self.roster is not None else \
+            self.get_visible() and self.is_active()
+        if shown:
+            self.hide_away()
+        else:
+            self.show_from_tray()
 
     def _stop(self, *_a):
         if self.composer is not None:  # what was typed waits as a draft
