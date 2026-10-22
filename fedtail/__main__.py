@@ -199,6 +199,8 @@ def main(argv=None):
     from . import diag
     folder = diag.setup(where, cfg, console_debug=args.debug)
     diag.session_header(where.profile, {"logs": str(folder)})
+    if not getattr(sys, "frozen", False):  # from the source: say where to look
+        print(f"fedtail: logs in {folder} (latest.log)", file=sys.stderr)
     diag.start_stats(cfg)
 
     ui = args.ui or cfg["ui"]["frontend"]

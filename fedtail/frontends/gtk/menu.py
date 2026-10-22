@@ -267,15 +267,19 @@ def button(win, menu, icon="open-menu-symbolic", accounts_only=False):
         sig = signature(model)
         t_model = time.monotonic() - t
         built = sig != made[0]
+        t_set = 0.0
         if built:
             made[0] = sig
+            t1 = time.monotonic()
             btn.set_menu_model(model)
+            t_set = time.monotonic() - t1
             pop = btn.get_popover()
             if pop is not None:
                 pop.connect("map", shown)
         took = time.monotonic() - t
         (log.info if took > 0.2 else log.debug)(
-            "menu made in %.0f ms (model %.0f ms, %s)", took * 1000, t_model * 1000,
-            "built anew" if built else "as before")
+            "menu made in %.0f ms (model %.0f ms, %s%s)", took * 1000, t_model * 1000,
+            "built anew" if built else "as before",
+            f", GTK's popover {t_set * 1000:.0f} ms" if built else "")
     b.set_create_popup_func(make)
     return b

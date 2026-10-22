@@ -64,6 +64,10 @@
   GTK's own containers (pictures, headers, wrapping rows) let their children go when
   they go — they were kept ("Finalizing … still has children left"). The ≡ menu says
   in the log how long it took to make and to show.
+- GTK's split layout starts with the roster only, as Qt's (both windows came up); the
+  icon theme is read in the background after start — the first ≡ took 2 s reading it.
+- fedtail from the source says at start where its logs are (`fedtail: logs in …`);
+  docs/WINDOWS.md has every Windows path and the commands to open and follow the log.
 - The debugging corner of the status bar says the same in Qt and GTK, in one order:
   theme · toolkit and version · style · font · display · scale · build (Qt's had an
   empty "· ·" where its style's name was).

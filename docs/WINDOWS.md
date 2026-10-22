@@ -61,9 +61,27 @@ git pull
 py -3.13 -m fedtail --update-config
 ```
 
-Где что лежит: конфиг — `%APPDATA%\fedtail\<профиль>\`, данные и логи —
-`%LOCALAPPDATA%\fedtail\<профиль>\logs\` (присылать `latest.log`; меню ≡ → Отладка →
-«Открыть папку логов»). Отчёт для багрепорта: `py -3.13 -m fedtail --bug-report`.
+## Логи
+
+Где лежат (профиль по умолчанию — `default`; запущенный из исходников fedtail при старте
+сам пишет в консоль `fedtail: logs in …`):
+
+| что | где |
+|---|---|
+| логи (присылать `latest.log`) | `%LOCALAPPDATA%\fedtail\default\logs\` |
+| падения (стеки) | там же, `crash.log` |
+| конфиг, вход | `%APPDATA%\fedtail\default\` |
+| база, кэш картинок | `%LOCALAPPDATA%\fedtail\default\` |
+
+Открыть папку логов, смотреть лог вживую, собрать отчёт для багрепорта:
+
+```powershell
+explorer "$env:LOCALAPPDATA\fedtail\default\logs"
+Get-Content "$env:LOCALAPPDATA\fedtail\default\logs\latest.log" -Tail 50 -Wait
+py -3.13 -m fedtail --bug-report
+```
+
+Из окна: меню ≡ → Отладка → «Открыть папку логов».
 
 ## 4. Тесты
 
@@ -76,7 +94,8 @@ py -3.13 -X faulthandler -m unittest discover -s tests -t . -v
 ```
 
 Пропущенные (skipped) — то, чего на Windows нет: GTK, `.desktop`, D-Bus. Упавшие — присылать
-вывод целиком.
+вывод целиком: удобнее всего дописать к команде тестов `2>&1 | Tee-Object tests.txt` —
+вывод останется в `tests.txt` в папке fedtail. Своих логов тесты не пишут: всё в выводе.
 
 ## 5. Самопроверка (как на Linux)
 
@@ -126,8 +145,12 @@ code.
    fedtail has any part: its log by the error's Request ID says what (GoToSocial: "password
    hash didn't match" — the email is right, the password came different); open the link on
    another machine and bring the code back. Update: `git pull`, `py -3.13 -m fedtail
-   --update-config`. Config: `%APPDATA%\fedtail\<profile>\`; data and logs:
-   `%LOCALAPPDATA%\fedtail\<profile>\logs\` (send `latest.log`).
+   --update-config`. Logs (fedtail from the source says where at start: `fedtail: logs in
+   …`): `%LOCALAPPDATA%\fedtail\default\logs\latest.log`, crashes in `crash.log` there;
+   config and login: `%APPDATA%\fedtail\default\`. Open the folder: `explorer
+   "$env:LOCALAPPDATA\fedtail\default\logs"`; follow the log: `Get-Content
+   "$env:LOCALAPPDATA\fedtail\default\logs\latest.log" -Tail 50 -Wait`. Test output to a
+   file: add `2>&1 | Tee-Object tests.txt` to the test command.
 
 4. Tests, as CI runs them:
 

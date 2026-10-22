@@ -85,10 +85,29 @@ def run(core, instance, argv):
                  ("" if a11y or Gtk.Button().get_at_context() is None
                   else " — but GTK made one anyway (GTK_A11Y not taken)"))
 
+        # the split layout starts with the roster only (as Qt's): the messages window
+        # comes when something in it is opened
+        front = win.roster if win.roster is not None else win
+
         def message(msg):
-            GLib.idle_add(lambda: (win.present(), GLib.SOURCE_REMOVE)[1])
+            GLib.idle_add(lambda: (front.present(), GLib.SOURCE_REMOVE)[1])
         instance.listen(message)
-        win.present()
+        front.present()
+
+        def warm_icons():
+            # the icon theme is read the first time GTK needs a symbolic icon — a menu's
+            # submenu arrow, its check marks: where nothing asked before (the split
+            # layout's own pictures), that came on the first click of ≡ (2 s on KDE)
+            import time
+            t = time.monotonic()
+            it = Gtk.IconTheme.get_for_display(win.get_display())
+            for name in ("pan-end-symbolic", "object-select-symbolic", "go-previous-symbolic"):
+                it.has_icon(name)
+            took = time.monotonic() - t
+            (log.info if took > 0.2 else log.debug)(
+                "icon theme %s read in %.0f ms", it.get_theme_name(), took * 1000)
+            return GLib.SOURCE_REMOVE
+        GLib.timeout_add(1500, warm_icons)
         GLib.idle_add(lambda: (win.start(), GLib.SOURCE_REMOVE)[1])
 
     app.connect("activate", activate)
