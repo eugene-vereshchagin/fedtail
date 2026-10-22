@@ -104,6 +104,15 @@ class Card(Gtk.Box):
         click.connect("pressed", lambda _g, _n, x, y: self._menu_at(x, y))
         self.add_controller(click)
 
+    def mark(self, words, css="ft-muted"):
+        """A word at the end of the card's top line: "you came from here" in a thread,
+        "📌 pinned" on a profile (as Qt's)."""
+        lab = _label(words, (css,))
+        lab.set_hexpand(True)
+        lab.set_xalign(1)
+        self.head.append(lab)
+        return lab
+
     # ---- state -------------------------------------------------------------------
     @property
     def post(self) -> Post:
@@ -145,7 +154,9 @@ class Card(Gtk.Box):
         head = Gtk.Box(spacing=6)
         mark = "*" if ctx.theme.shape.get("unread_mark") == "star" else "●"
         self.dot = _label(mark, ("ft-dot",))
+        tip(self.dot, _("unread_tip"))
         head.append(self.dot)
+        self.head = head
         name = _label(name_of(p.author), ("ft-name",))
         name.set_ellipsize(Pango.EllipsizeMode.END)
         head.append(name)

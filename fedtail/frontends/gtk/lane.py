@@ -127,12 +127,18 @@ class LaneView(Gtk.Box):
                 self._filter_buttons[which] = b
                 seg.append(b)
             tools.append(seg)
-        if self.lm.conversations_offered():
-            conv = Gtk.ToggleButton(label=_("conv_mode"))
+        if self.lm.conversations_offered():  # as Qt's: Feed | Conversations
+            seg = Gtk.Box()
+            seg.add_css_class("linked")
+            feed = Gtk.ToggleButton(label=_("view_feed"))
+            tip(feed, _("view_feed_tip"))
+            conv = Gtk.ToggleButton(label=_("conv_mode"), group=feed)
             tip(conv, _("conv_mode_tip"))
-            conv.set_active(self.lm.conversations())
+            (conv if self.lm.conversations() else feed).set_active(True)
             conv.connect("toggled", lambda b: self.set_conversations(b.get_active()))
-            tools.append(conv)
+            seg.append(feed)
+            seg.append(conv)
+            tools.append(seg)
         self.to_new = Gtk.Button(label="↓ " + _("to_new"))
         tip(self.to_new, _("to_new_tip"))
         self.to_new.connect("clicked", lambda _b: self.jump_first_unread())
@@ -158,6 +164,15 @@ class LaneView(Gtk.Box):
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         column.set_margin_start(8)
         column.set_margin_end(8)
+        self.empty_note = Gtk.Label(label=_("browse_empty"), wrap=True,
+                                    justify=Gtk.Justification.CENTER)
+        self.empty_note.add_css_class("ft-muted")
+        self.empty_note.add_css_class("title-4")
+        for m in ("start", "end"):
+            getattr(self.empty_note, "set_margin_" + m)(24)
+        self.empty_note.set_margin_top(48)
+        self.empty_note.set_visible(False)
+        column.append(self.empty_note)
         if not self.newest_first:
             column.append(self.older)
         column.append(self.list)
@@ -194,6 +209,9 @@ class LaneView(Gtk.Box):
         self.dirty = False
         built = self.lm.build(self.positioned)
         self.info.set_text(built.info)
+        # a live lane the server gives empty (mastodon.social and the like keep them
+        # for their own): said in the lane, big, as Qt does
+        self.empty_note.set_visible(bool(getattr(built, "empty", False)))
         specs = built.specs
         self.sep_above = None
         keys, sep = [], False
@@ -632,7 +650,9 @@ class LaneView(Gtk.Box):
     def _pill(self, n):
         self.pill.set_visible(n > 0)
         if n:
-            self.pill.set_text(_("unread_n", n=n))
+            self.pill.set_text(_("new_n", n=n))
+        # nothing new: it still works — to the newest end of the lane (as Qt says)
+        tip(self.to_new, _("to_new_tip") if n else _("to_end_tip"))
 
     def update_post(self, post):
         for card in self.rows.values():

@@ -1326,6 +1326,8 @@ class MainWindow(Gtk.ApplicationWindow):
                             number=it.number)
                 if it.post.id == root:
                     card.add_css_class("ft-focus")
+                    if len(items) > 1:
+                        card.mark(_("came_from"))  # as Qt: where the reader came from
                     focus = card
                 box.append(card)
             if items:
@@ -1399,12 +1401,31 @@ class MainWindow(Gtk.ApplicationWindow):
                 return
             title.set_text("@" + acc.handle)
             box.append(self._profile_head(acc, own))
+            if self.cfg["feed"].get("profile_pinned", True):
+                self.call(self.view.pinned(acc_id), got_pinned, lambda _e: None)
             self.call(self.view.account_posts(acc_id), got_posts)
 
         def got_posts(posts):
             short = self.view.short_ids(posts)
             for p in posts:
+                if real(p).id in pinned_ids:
+                    continue  # shown on top already
                 box.append(Card(self.ctx, p.id, p, short_id=short.get(real(p).id)))
+
+        pinned_ids = set()
+
+        def got_pinned(posts):
+            """What they pinned, first, marked 📌 (feed.profile_pinned), as in Qt."""
+            short = self.view.short_ids(posts or [])
+            head = box.get_first_child()
+            for p in reversed(posts or []):
+                pinned_ids.add(real(p).id)
+                card = Card(self.ctx, "pin:" + p.id, p, short_id=short.get(real(p).id))
+                card.mark("📌 " + _("pinned"))
+                if head is not None:
+                    box.insert(card, 1)
+                else:
+                    box.prepend(card)
         self.call(self.view.account(acc_id), got_account,
                   lambda err: title.set_text(_("load_failed", err=err)))
 
