@@ -10,9 +10,9 @@ of cards asks.
 
 What it keeps of a label: Pango markup (what frontends/pango.py makes of a post's HTML),
 links (<a href>: drawn in the link colour, the pointer a hand over them, a click goes to
-on_link), the colour and font from the theme's CSS. What it doesn't: selecting text (the
-post labels never allowed it), the label's accessible text is set once, not on every
-change."""
+on_link), the colour and font from the theme's CSS; text selected by dragging (drawn as a
+selection, on_select(text) on a right click over it: Qt's "Quote in reply" and Copy).
+What it doesn't: the label's accessible text is set once, not on every change."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ class TextBlock(Gtk.Widget):
     """markup: Pango markup with <a href> links; link_color: "#rrggbb";
     on_link(url): a link clicked."""
 
-    def __init__(self, markup, link_color="#3584e4", on_link=None, css=()):
+    def __init__(self, markup, link_color="#3584e4", on_link=None, css=(), on_select=None):
         super().__init__()
         for c in css:
             self.add_css_class(c)
@@ -73,6 +73,16 @@ class TextBlock(Gtk.Widget):
         self._heights = {}  # width → height: lists ask for a few widths over and over
         self._serial = None
         self._over_link = False
+        self.on_select = on_select
+        self.sel = None  # (start byte, end byte) of the selected text, or None
+        if on_select is not None:
+            drag = Gtk.GestureDrag()  # selecting, as in a label that allows it
+            drag.connect("drag-begin", self._drag_begin)
+            drag.connect("drag-update", self._drag_update)
+            self.add_controller(drag)
+            right = Gtk.GestureClick(button=3)
+            right.connect("pressed", self._right)
+            self.add_controller(right)
         if self.links:
             click = Gtk.GestureClick()
             click.connect("released", self._clicked)
@@ -121,7 +131,61 @@ class TextBlock(Gtk.Widget):
 
     def do_snapshot(self, snapshot):
         self._at(self.get_width())
-        snapshot.append_layout(self.layout, self.get_color())
+        if not self.sel or self.sel[0] == self.sel[1]:
+            snapshot.append_layout(self.layout, self.get_color())
+            return
+        shown = self.layout.copy()  # the selection as a background over a copy
+        attrs = (self.layout.get_attributes() or Pango.AttrList()).copy()
+        a, b = sorted(self.sel)
+        bg = Pango.attr_background_new(0x3584, 0xe4e4, 0x6060)
+        bg.start_index, bg.end_index = a, b
+        attrs.insert(bg)
+        shown.set_attributes(attrs)
+        snapshot.append_layout(shown, self.get_color())
+
+    # ---- selecting -----------------------------------------------------------------------
+    def _index(self, x, y):
+        _inside, index, trailing = self.layout.xy_to_index(int(x * Pango.SCALE),
+                                                           int(y * Pango.SCALE))
+        if trailing:  # past the middle of the character: after it
+            text = self.layout.get_text().encode("utf-8")
+            index += len(text[index:].decode("utf-8", "ignore")[:trailing].encode("utf-8"))
+        return index
+
+    def _drag_begin(self, gesture, x, y):
+        if self.link_at(x, y) is not None:
+            gesture.set_state(Gtk.EventSequenceState.DENIED)  # a link's click
+            return
+        i = self._index(x, y)
+        self.sel = (i, i)
+        self.queue_draw()
+
+    def _drag_update(self, gesture, dx, dy):
+        ok, x, y = gesture.get_start_point()
+        if not ok or self.sel is None:
+            return
+        if abs(dx) + abs(dy) > 3:
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        self.sel = (self.sel[0], self._index(x + dx, y + dy))
+        self.queue_draw()
+
+    def selected(self):
+        """The selected text, or ""."""
+        if not self.sel:
+            return ""
+        a, b = sorted(self.sel)
+        return self.layout.get_text().encode("utf-8")[a:b].decode("utf-8", "ignore").strip()
+
+    def select(self, start, end):
+        """Select by byte offsets (the tests; a double click could)."""
+        self.sel = (start, end)
+        self.queue_draw()
+
+    def _right(self, gesture, _n, x, y):
+        text = self.selected()
+        if text and self.on_select is not None:
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)  # not the post's menu
+            self.on_select(text, x, y)
 
     # ---- links ---------------------------------------------------------------------------
     def link_at(self, x, y):

@@ -1767,6 +1767,23 @@ class MainWindow(Gtk.ApplicationWindow):
             return None
         return self.compose_panel(reply_to, invite, edit, quote, text)
 
+    def quote_reply(self, st, text, whole=False):
+        """Reply quoting `text` (post.quote_prefix): into the reply to this post that is
+        open already — where its cursor is, to answer sentence by sentence — or a new
+        one (as Qt's)."""
+        if self.view.me is None:
+            return None
+        st = real(st)
+        c = self.composer
+        if c is not None and c.reply_to is not None and c.reply_to.id == st.id and \
+                not c.edit and not c.invite:
+            c.insert_quote(text, whole)
+            return c
+        panel = self.compose_panel(reply_to=st)
+        if panel is not None:
+            panel.insert_quote(text, whole, at_end=True)
+        return panel
+
     def compose_panel(self, reply_to=None, invite=False, edit=None, quote=None, text=""):
         """The full editor, whatever the layout."""
         from .compose import ComposeWindow

@@ -365,8 +365,39 @@ class Card(Gtk.Box):
             html = richtext.strip_emoji(html, p.emojis)
         # one Pango layout, not a wrapping label: a quarter of the cost (textblock.py)
         from .textblock import TextBlock
-        return TextBlock(pango.markup(html, sanitized=True), self.ctx.theme.c["link"].name(),
-                         lambda uri: self._link(None, uri), css=("ft-body",))
+        self.body_block = TextBlock(pango.markup(html, sanitized=True),
+                                    self.ctx.theme.c["link"].name(),
+                                    lambda uri: self._link(None, uri), css=("ft-body",),
+                                    on_select=self._selection_menu)
+        return self.body_block
+
+    def _selection_menu(self, text, _x, _y):
+        """A right click on selected text: quote it in a reply, copy it (as Qt's)."""
+        pop = Gtk.Popover()
+        pop.set_has_arrow(False)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        items = []
+        if self._can_quote():
+            items.append((_("quote_in_reply"), lambda: self.ctx.win.quote_reply(
+                self.entry, text)))
+        items.append((_("copy"), lambda: (self.get_clipboard().set(text),
+                                         self.ctx.status(text[:120]))))
+        for label, fn in items:
+            b = Gtk.Button(label=label)
+            b.add_css_class("flat")
+            b.get_child().set_xalign(0)
+            b.connect("clicked", lambda _b, f=fn: (pop.popdown(), f()))
+            box.append(b)
+        pop.set_child(box)
+        pop.set_parent(self.body_block)
+        pop.connect("closed", lambda p: p.unparent())
+        pop.popup()
+        self.selection_pop = pop
+        return pop
+
+    def _can_quote(self):
+        return self.ctx.me_id is not None and \
+            bool(self.ctx.cfg["post"].get("quote_prefix", "> "))
 
     def _media(self, p):
         """Pictures as the Qt card has them: one alone — ui.image_height tall, as wide
@@ -660,7 +691,8 @@ class Card(Gtk.Box):
                            in_thread=c.in_thread,
                            long_form=bool(c.cfg["feed"].get("long_form", True)),
                            lists=True,
-                           translate=bool(getattr(c.view.caps, "translation", False)))
+                           translate=bool(getattr(c.view.caps, "translation", False)),
+                           quote_reply=self._can_quote())
 
     def _fill_actions(self):
         if not hasattr(self, "actions"):
@@ -717,7 +749,8 @@ class Card(Gtk.Box):
             if it.kind == "separator":
                 box.append(Gtk.Separator())
                 continue
-            if it.kind not in ("link", "open", "copy", "long_form", "translate", "lists"):
+            if it.kind not in ("link", "open", "copy", "long_form", "translate", "lists",
+                               "quote_reply"):
                 continue  # as another account: not in GTK yet
             b = Gtk.Button(label=it.label)
             b.add_css_class("flat")
@@ -738,6 +771,12 @@ class Card(Gtk.Box):
             self.ctx.win.lists_popover(it.data, self.more)
         elif it.kind == "translate":
             self.translate()
+        elif it.kind == "quote_reply":  # ↩ quoting what's selected, or all of it
+            from ...model.text import html_to_text, without_quote_fallback
+            block = getattr(self, "body_block", None)
+            sel = block.selected() if block is not None else ""
+            self.ctx.win.quote_reply(self.entry, sel or html_to_text(
+                without_quote_fallback(self.post.text)), whole=not sel)
         elif it.kind == "long_form":
             self.ctx.win.read_whole(it.data)
         elif it.kind == "link":

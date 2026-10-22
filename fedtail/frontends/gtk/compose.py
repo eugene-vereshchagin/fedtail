@@ -506,6 +506,21 @@ class ComposeWindow(Gtk.Box):
         self._media_or_poll()
         self._changed()
 
+    def insert_quote(self, text, whole=False, at_end=False):
+        """`text` in as a quote (post.quote_prefix) where the cursor is (at_end: after
+        what's there), the cursor after it, ready for the answer — as Qt's."""
+        from ...model.text import join_quote, quote_lines
+        q = quote_lines(text, self.cfg["post"].get("quote_prefix", "> ") or "> ",
+                        strip_mentions=whole)
+        if not q:
+            return
+        buf = self.buffer
+        it = buf.get_end_iter() if at_end else buf.get_iter_at_mark(buf.get_insert())
+        before = buf.get_text(buf.get_start_iter(), it, False)
+        buf.insert(it, join_quote(before, q) + q)
+        buf.place_cursor(it)
+        self.text.grab_focus()
+
     def _focus_dialog(self, item):
         from .focus import FocusDialog
 

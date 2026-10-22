@@ -751,6 +751,30 @@ class GtkSmokeTest(_GtkBase):
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 
+    def test_select_text_and_quote_it_in_a_reply(self):
+        """As Qt: text selected in a post — right click: Quote in reply, Copy; the
+        quote goes into the reply already open, where its cursor is."""
+        lane = self._lane("home")
+        card = next(c for c in lane.rows.values() if c.post.id == "011")
+        block = card.body_block
+        n = len("привет".encode())
+        block.select(0, n)
+        self.assertEqual(block.selected(), "привет")
+        pop = card._selection_menu(block.selected(), 0, 0)
+        labels = [w.get_label() for w in _walk(pop) if isinstance(w, Gtk.Button)]
+        self.assertEqual(labels, [i18n._("quote_in_reply"), i18n._("copy")])
+        quote = next(w for w in _walk(pop) if isinstance(w, Gtk.Button)
+                     and w.get_label() == i18n._("quote_in_reply"))
+        quote.emit("clicked")
+        dlg = self.win.composer
+        self.assertIsNotNone(dlg)
+        self.assertIn("> привет", dlg._text())
+        block.select(n + 1, n + 1 + len("жирно".encode()))
+        again = self.win.quote_reply(card.entry, block.selected())
+        self.assertIs(again, dlg)  # the same reply, the second quote in it
+        self.assertIn("> жирно", dlg._text())
+        dlg.close()
+
     def test_which_account_of_mine_got_it(self):
         """All accounts in one window: "→ @account" on the card, in its own colour."""
         from fedtail.frontends.common.lane import account_color
