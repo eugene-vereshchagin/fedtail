@@ -26,6 +26,7 @@
       <button id="write2" type="button" class="icon" aria-label="write">✎</button>
       <button id="more" type="button" class="tool big" aria-haspopup="menu">≡</button>
     </header>
+    <div id="lanebar" hidden></div>
     <div id="posts" tabindex="0"></div>
     <form id="cmdline" autocomplete="off">
       <input id="cmd" type="text" spellcheck="false" enterkeyhint="send">
@@ -50,10 +51,19 @@
     <button id="quote-sel" type="button" class="tool" hidden></button>
     <input id="cw" type="text" hidden>
     <textarea id="text" rows="6"></textarea>
+    <div id="attached" hidden></div>
+    <div id="pollbox" hidden></div>
+    <div id="schedbox" hidden><label><span id="sched-label"></span>
+      <input id="sched-at" type="datetime-local"></label></div>
     <div class="dlg-foot">
       <button id="cw-toggle" type="button" class="tool"></button>
+      <button id="attach" type="button" class="tool">📎</button>
+      <input id="files" type="file" multiple hidden>
+      <button id="poll-toggle" type="button" class="tool">📊</button>
+      <button id="sensitive" type="button" class="tool" hidden>⚠🖼</button>
+      <button id="sched-toggle" type="button" class="tool">🕒</button>
       <select id="vis"></select>
-      <input id="lang" type="text" maxlength="8" size="4">
+      <select id="lang"></select>
       <span id="chars"></span>
       <button id="send" type="submit" class="primary"></button>
     </div>

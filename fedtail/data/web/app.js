@@ -10,6 +10,7 @@ const state = {
   soundSeq: -1, played: [], noteSeq: -1, shown: [],
   replyTo: null, readQueue: new Set(), side: null, older: false, busy: false,
   edit: null, quote: null,  // the editor correcting my post / quoting one
+  media: [], poll: null, sensitive: false,  // the editor's pictures, poll, "sensitive"
 };
 
 // ---- small things ------------------------------------------------------------------
@@ -91,11 +92,24 @@ function avatar(acc, cls) {
   return img;
 }
 
+function bitEl(b, cls) {  // a piece of the card's words: plain, or a fedtail: link
+  if (!b) return null;
+  const x = b.link ? el("a", cls || "", b.text) : el("span", cls || "", b.text);
+  if (b.link) x.href = b.link;
+  if (b.tip) x.title = b.tip;
+  return x;
+}
+
 function renderPost(p, inThread) {
   const card = el("article", "post" + (p.unread ? " unread" : "") + (p.own ? " own" : ""));
   card.dataset.id = p.id;
   if (inThread && p.depth) card.style.setProperty("--depth", String(Math.min(p.depth, 8)));
-  if (p.shared_by) {
+  const wd = p.words;  // the windows' words around the card (common/cardtext.py)
+  if (wd && wd.boosted) {
+    const s = el("div", "shared");
+    s.append(bitEl(wd.boosted));
+    card.append(s);
+  } else if (p.shared_by) {
     const s = el("div", "shared", "♻ ");
     const by = el("a", "", p.shared_by.name || p.shared_by.handle);
     by.href = "#";
@@ -124,12 +138,21 @@ function renderPost(p, inThread) {
     v.title = w(VIS[p.visibility]);
     meta.append(v);
   }
-  const t = el("span", "time", when(p.created) + (p.edited ? " · " + w("web_edited") : ""));
-  t.title = new Date(p.created).toLocaleString(locale());
-  meta.append(t);
+  if (wd) {  // who sees it: the mark above (🔒 ✉ 🔓), the word in its tip
+    wd.meta.filter((b) => b.kind !== "vis").forEach((b, i) => {
+      if (i) meta.append(" · ");
+      meta.append(bitEl(b, b.kind === "time" ? "time" : "mark"));
+    });
+  } else {
+    const t = el("span", "time", when(p.created) + (p.edited ? " · " + w("web_edited") : ""));
+    t.title = new Date(p.created).toLocaleString(locale());
+    meta.append(t);
+  }
   head.append(meta);
   card.append(head);
-  if (p.context) {
+  if (wd && !inThread) {
+    if (wd.context) card.append(bitEl(wd.context, "ctx"));
+  } else if (p.context) {
     const c = el("div", "ctx", p.context.missing ? "↳ " + w("web_parent_gone")
       : "↳ @" + p.context.handle + ": " + p.context.text);
     if (p.context.id) c.onclick = () => openThread(p.context.id);
@@ -143,13 +166,21 @@ function renderPost(p, inThread) {
   if (p.poll) content.append(renderPoll(p));
   if (p.media.length) content.append(renderMedia(p));
   if (p.card && !p.media.length) content.append(renderCard(p.card));
-  if (p.quote) content.append(renderQuote(p.quote));
-  if (p.warning) {
+  if (p.quote && !p.quote.note) content.append(renderQuote(p.quote));
+  else if (wd && wd.quote) content.append(bitEl(wd.quote, "quote-line"));
+  else if (p.quote) content.append(renderQuote(p.quote));
+  if (wd && wd.reactions) content.append(el("div", "muted reactions", wd.reactions));
+  const warning = wd ? wd.warning : (p.warning ? "⚠ " + p.warning : "");
+  if (warning) {
     const d = el("details", "cw");
-    d.open = !!state.me.expand_cw;
-    d.append(el("summary", "", "⚠ " + p.warning), content);
+    d.open = !!state.me.expand_cw && !(wd && wd.folded);
+    d.append(el("summary", "", warning), content);
     card.append(d);
   } else card.append(content);
+  if (wd) {
+    for (const b of wd.my_replies) card.append(bitEl(b, "myreply"));
+    if (wd.conversation) card.append(bitEl(wd.conversation, "ctx conv"));
+  }
   card.append(renderActions(p, inThread));
   card._post = p;
   card._inThread = !!inThread;
@@ -582,6 +613,54 @@ async function loadLanes() {
   return lanes;
 }
 
+function laneBar(data) {  // the lane's choices, as the windows' header has them
+  const bar = $("#lanebar");
+  bar.textContent = "";
+  const seg = (items, pick) => {
+    const box = el("span", "seg");
+    for (const [label, tip, on, fn] of items) {
+      const b = el("button", on ? "on" : "", label);
+      b.type = "button";
+      b.title = tip || "";
+      b.onclick = fn;
+      box.append(b);
+    }
+    bar.append(box);
+  };
+  const set = async (body) => {
+    await api("/api/lane_set", Object.assign({ name: data.name }, body)).catch((e) => toast(e.message));
+    selectLane(data.name, false);
+  };
+  if (data.filters && data.filters.length)
+    seg(data.filters.map(([f, label, tip]) => [label, tip, f === data.filter, () => set({ filter: f })]));
+  const c = data.conversations;
+  if (c && c.offered)
+    seg([[c.words[0], c.tips[0], !c.on, () => set({ conversations: false })],
+         [c.words[1], c.tips[1], c.on, () => set({ conversations: true })]]);
+  const m = data.media;
+  if (m) {
+    const b = el("button", "tool" + (m.active ? " on" : ""), "▾ " + m.label);
+    b.type = "button";
+    b.title = m.tip;
+    b.onclick = (e) => {
+      e.stopPropagation();
+      popup(b, m.kinds.map(([k, label, on]) => [(on ? "☑ " : "☐ ") + label,
+                                                () => set({ media: k, on: !on })])
+                 .concat(["-", [m.all, () => set({ media: "reset" })]]));
+    };
+    bar.append(b);
+  }
+  if (data.posts.some((x) => x.unread)) {
+    const b = el("button", "tool", "↓ " + w("to_new"));
+    b.type = "button";
+    b.title = w("to_new_tip");
+    b.onclick = () => setCursor(state.posts.findIndex((x) => x.unread), false, "start");
+    bar.append(b);
+  }
+  if (data.info) bar.append(el("span", "muted", data.info));
+  bar.hidden = !bar.childElementCount;
+}
+
 async function selectLane(name, keep) {
   const changed = state.lane !== name;
   if (changed && $("#find") && !$("#find").hidden) closeFind();
@@ -592,11 +671,12 @@ async function selectLane(name, keep) {
     a.classList.toggle("on", a.dataset.lane === name);
   let data;
   try {
-    data = await api("/api/lane?name=" + encodeURIComponent(name));
+    data = await api("/api/lane?name=" + encodeURIComponent(name) + (keep ? "&keep=1" : ""));
     if (changed) api("/api/active", { name: data.name }).catch(() => {});  // a POST: GET only reads
   } catch (e) { toast(w("web_load_error", { err: e.message })); return; }
   if (state.lane !== name) return;  // another lane was picked meanwhile
   if (data.place) {  // Activity, Requests: not posts — the place, in the lane's stead
+    $("#lanebar").hidden = true;
     $("#title").textContent = data.title;
     document.title = data.title + " — fedtail";
     state.posts = [];
@@ -617,8 +697,18 @@ async function selectLane(name, keep) {
   const more = olderButton();
   if (!data.posts.length) box.append(el("div", "empty", w("web_empty")));
   if (more && !newestFirst) box.append(more);
-  for (const p of data.posts) box.append(renderPost(p, false));
+  for (const p of data.posts) {
+    const card = renderPost(p, false);
+    if (data.divider && data.divider.before === p.id) {  // "new below", fixed where reading stood
+      const d = el("div", "divider", data.divider.text);
+      if (newestFirst) box.append(card, d); else box.append(d, card);
+      continue;
+    }
+    box.append(card);
+  }
   if (more && newestFirst) box.append(more);
+  laneBar(data);
+  if (data.empty_browse && !data.posts.length) box.textContent = w("browse_empty");
   watchRead(box);
   const again = anchor && box.querySelector(`.post[data-id="${CSS.escape(anchor.dataset.id)}"]`);
   if (again) {
@@ -1106,6 +1196,14 @@ function compose(replyTo) {
   const d = $("#compose");
   state.replyTo = replyTo || null;
   state.edit = state.quote = null;
+  state.media = [];
+  state.poll = null;
+  state.sensitive = false;
+  drawAttached();
+  drawPoll();
+  $("#schedbox").hidden = true;
+  $("#sched-at").value = "";
+  $("#lang").value = (state.me.editor || {}).language || "";
   const t = $("#text");
   $("#compose-title").textContent = replyTo ? w("reply") : w("web_new_post");
   const line = $("#reply-line");
@@ -1145,7 +1243,9 @@ function showCw(on) {
 
 function counter() {
   const n = [...$("#text").value].length + [...$("#cw").value].length;
-  $("#chars").textContent = n ? String(n) : "";
+  const limit = (state.me.editor || {}).limit || 500;
+  $("#chars").textContent = n ? n + " / " + limit : "";
+  $("#chars").classList.toggle("over", n > limit);
   const key = state.replyTo ? "draft." + state.replyTo.sid : "draft.new";
   store(key, $("#text").value);
 }
@@ -1163,15 +1263,103 @@ async function send(e) {
   state.busy = true;
   $("#send").disabled = true;
   try {
-    await api("/api/post", { text, reply_to: state.replyTo ? state.replyTo.sid : null,
-                             visibility: $("#vis").value, cw: $("#cw").hidden ? "" : $("#cw").value,
-                             lang: $("#lang").value, edit: state.edit, quote: state.quote });
+    const r = await api("/api/post", {
+      text, reply_to: state.replyTo ? state.replyTo.sid : null,
+      visibility: $("#vis").value, cw: $("#cw").hidden ? "" : $("#cw").value,
+      lang: $("#lang").value, edit: state.edit, quote: state.quote,
+      media: state.media.map((m) => ({ token: m.token, alt: m.alt })),
+      sensitive: state.sensitive && state.media.length > 0,
+      poll: state.poll && !state.media.length ? {
+        options: state.poll.options, expires_in: state.poll.expires_in,
+        multiple: state.poll.multiple } : null,
+      scheduled_at: $("#schedbox").hidden ? null : ($("#sched-at").value || null) });
     store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
     $("#text").value = "";
-    toast(w("sent"));
+    toast(r.message || w("sent"));
     closeCompose();
   } catch (err) { toast(err.message); }
   finally { state.busy = false; $("#send").disabled = false; }
+}
+
+// ---- the editor's extras: pictures with descriptions, a poll, later ---------------------
+async function attachFiles(files) {
+  const max = (state.me.editor || {}).max_media || 4;
+  for (const f of files) {
+    if (state.media.length >= max) { toast(w("media_limit", { n: max })); break; }
+    try {
+      const r = await fetch("/api/upload", { method: "POST", body: f, headers: {
+        "X-Fedtail": "1", "X-Name": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
+      const got = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(got.error || String(r.status));
+      state.media.push({ token: got.token, alt: "", name: f.name,
+                         url: f.type.startsWith("image/") ? URL.createObjectURL(f) : "" });
+    } catch (e) { toast(e.message); }
+  }
+  if (state.media.length) { state.poll = null; drawPoll(); }
+  drawAttached();
+}
+
+function drawAttached() {
+  const box = $("#attached");
+  box.textContent = "";
+  box.hidden = !state.media.length;
+  $("#sensitive").hidden = !state.media.length;
+  $("#sensitive").classList.toggle("on", state.sensitive);
+  $("#poll-toggle").disabled = state.media.length > 0;  // pictures or a poll
+  state.media.forEach((m, i) => {
+    const cell = el("div", "att");
+    if (m.url) { const img = el("img"); img.src = m.url; img.alt = m.alt; cell.append(img); }
+    else cell.append(el("span", "muted", "▣ " + m.name));
+    const alt = el("input");
+    alt.placeholder = w("alt_prompt");
+    alt.value = m.alt;
+    alt.oninput = () => { m.alt = alt.value; };
+    const x = el("button", "tool", "✕");
+    x.type = "button";
+    x.title = w("detach");
+    x.onclick = () => { state.media.splice(i, 1); drawAttached(); };
+    cell.append(alt, x);
+    box.append(cell);
+  });
+}
+
+function drawPoll() {
+  const box = $("#pollbox");
+  box.textContent = "";
+  box.hidden = !state.poll;
+  $("#attach").disabled = !!state.poll;
+  if (!state.poll) return;
+  const ed = state.me.editor || {};
+  state.poll.options.forEach((o, i) => {
+    const inp = el("input");
+    inp.placeholder = w("poll_option", { n: i + 1 });
+    inp.value = o;
+    inp.oninput = () => { state.poll.options[i] = inp.value; };
+    box.append(inp);
+  });
+  const row = el("div", "row");
+  if (state.poll.options.length < (ed.max_options || 4)) {
+    const more = el("button", "tool", "+");
+    more.type = "button";
+    more.onclick = () => { state.poll.options.push(""); drawPoll(); };
+    row.append(more);
+  }
+  const len = el("select");
+  for (const [secs, label] of ed.poll_lengths || []) {
+    const o = el("option", "", label);
+    o.value = secs;
+    len.append(o);
+  }
+  len.value = state.poll.expires_in;
+  len.onchange = () => { state.poll.expires_in = Number(len.value); };
+  const multi = el("label", "check");
+  const c = el("input");
+  c.type = "checkbox";
+  c.checked = state.poll.multiple;
+  c.onchange = () => { state.poll.multiple = c.checked; };
+  multi.append(c, " ", w("poll_several"));
+  row.append(len, multi);
+  box.append(row);
 }
 
 // ---- the command line (Point) ----------------------------------------------------------
@@ -1212,7 +1400,10 @@ document.addEventListener("click", async (e) => {
       const [page, anchor] = arg.split("#");
       openPlace("help", page, "", "", state.place && state.place.into === "main" ? "main" : "side",
                 anchor);
-    } else if (kind === "resolve") {
+    } else if (!["resolve"].includes(kind)) {  // history, a post action…: the windows' way
+      linkAct(href, null);
+    }
+    if (kind === "resolve") {
       // not found here: to the browser — a web address only, never file:, javascript:…
       const web = /^https?:\/\//i.test(arg);
       try {
@@ -1379,8 +1570,29 @@ async function start() {
   $("#cw-toggle").textContent = "⚠";
   $("#cw-toggle").title = w("cw_add");
   $("#cw-toggle").onclick = () => showCw($("#cw").hidden);
-  $("#lang").placeholder = "lang";
-  $("#lang").title = w("lang_label");
+  $("#lang").title = w("lang_tip");
+  for (const [code, label] of (me.editor || {}).languages || [["", ""]]) {
+    const o = el("option", "", label);
+    o.value = code;
+    $("#lang").append(o);
+  }
+  $("#attach").title = w("attach");
+  $("#attach").onclick = () => $("#files").click();
+  $("#files").onchange = () => { attachFiles([...$("#files").files]); $("#files").value = ""; };
+  $("#text").addEventListener("paste", (e) => {  // a screenshot pasted: a picture of the post
+    const files = [...(e.clipboardData || {}).files || []];
+    if (files.length) { e.preventDefault(); attachFiles(files); }
+  });
+  $("#poll-toggle").title = w("poll_add_tip");
+  $("#poll-toggle").onclick = () => {
+    state.poll = state.poll ? null : { options: ["", ""], expires_in: 86400, multiple: false };
+    drawPoll();
+  };
+  $("#sensitive").title = w("sensitive_mark_tip");
+  $("#sensitive").onclick = () => { state.sensitive = !state.sensitive; drawAttached(); };
+  $("#sched-toggle").title = w("schedule_tip");
+  $("#sched-label").textContent = w("schedule_when");
+  $("#sched-toggle").onclick = () => { $("#schedbox").hidden = !$("#schedbox").hidden; };
   $("#text").placeholder = w("write");
   const vis = $("#vis");
   for (const v of ["public", "unlisted", "followers", "direct"]) {

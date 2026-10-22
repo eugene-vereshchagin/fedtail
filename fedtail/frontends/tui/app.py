@@ -41,7 +41,8 @@ log = logging.getLogger(__name__)
 
 STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "time": "dim", "boost": "green", "direct": "yellow", "muted": "dim",
-         "unread": "bold green"}
+         "unread": "bold green", "quote": "italic", "myreply": "dim cyan",
+         "conv": "cyan", "divider": "bold green"}
 
 
 def _cmd_line():
@@ -56,6 +57,8 @@ def _cmd_line():
 def render(shown):
     """Shown → one rich Text block."""
     t = Text()
+    for kind, line in getattr(shown, "above", ()):
+        t.append(line + "\n", style=STYLE.get(kind, ""))
     for i, (kind, part) in enumerate(shown.head):
         if i:
             t.append(" ")
@@ -68,6 +71,8 @@ def render(shown):
         t.append("\n" + line)
     if shown.foot:
         t.append("\n" + shown.foot, style="dim")
+    for kind, line in getattr(shown, "below", ()):
+        t.append("\n" + line, style=STYLE.get(kind, ""))
     return t
 
 
@@ -563,6 +568,7 @@ class FedtailApp(App, PostsMixin):
                 Binding("slash", "search", _("search_title"), show=False),
                 Binding("w", "editor", _("tui_editor"), show=False),
                 Binding("ctrl+f", "find", _("find_next"), show=False),
+                Binding("s", "lane_choices", _("media_filter"), show=False),
                 Binding("a", "request(True)", show=False),
                 Binding("d", "request(False)", show=False),
                 Binding("left_square_bracket", "lane_step(-1)", _("tui_lane_prev")),
@@ -725,23 +731,37 @@ class FedtailApp(App, PostsMixin):
         if name in ("activity", "requests"):  # not posts: rows of their own
             await self._fill_other(lv, name, first)
             return
-        entries = core.entries(name)
-        if core.cfg["feed"]["order"] == "newest_first":
-            entries = list(reversed(entries))
+        from ..common.lane import SEPARATOR
+        m = self.lane_model(name)
+        if first:  # opened anew: "new below" stands where reading stands now
+            m.separator = None
+            m.left()
+        built = m.build(not first)
         keep = getattr(lv.highlighted_child, "key", None)
-        unread = core.unread(entries)
-        short = core.short_ids(entries)
-        parents = core.parents(entries)
         width = max(30, lv.size.width - 4 if lv.size.width else 76)
-        items = []
-        for item_id, e in entries:
-            shown = show_post(core, e, short.get(real(e).id), e.id in unread,
-                              width=width, parent=parents.get(e.id))
-            items.append(PostItem(e, render(shown), key=item_id))
+        items, entries, unread = [], [], set()
+        for sp in built.specs:
+            if sp.key == SEPARATOR:  # "new below", fixed where reading stood
+                div = ListItem(Static(Text("── " + sp.extra.get("separator", "") + " ──",
+                                           style=STYLE["divider"])))
+                div.key = SEPARATOR
+                items.append(div)
+                continue
+            e = sp.entry
+            entries.append((sp.key, e))
+            if sp.unread:
+                unread.add(e.id)
+            shown = show_post(core, e, sp.extra.get("short_id"), sp.unread, width=width,
+                              parent=sp.parent, spec=sp)
+            items.append(PostItem(e, render(shown), key=sp.key))
         title = core.lane_title(name) or _("lane_" + name)
-        self._main("#title", Static).update(
-            Text(title, style="bold") + Text(f"  {_('tui_unread', n=len(unread))}"
-                                             if unread else "", style="dim"))
+        line = Text(title, style="bold") + Text(f"  {_('tui_unread', n=len(unread))}"
+                                                if unread else "", style="dim")
+        if built.info:
+            line += Text("  · " + built.info, style="yellow")
+        elif m.current_filter() != "all" or m.conversations():
+            line += Text("  · " + self.lane_choice_words(m), style="dim")
+        self._main("#title", Static).update(line)
         await lv.clear()
         await lv.extend(items)
         if not items:
@@ -750,7 +770,11 @@ class FedtailApp(App, PostsMixin):
         if keep in keys and not first:
             lv.index = keys.index(keep)
         else:
-            lv.index = self._start_index(entries, unread)
+            start = m.start_key(built.specs)
+            if start == SEPARATOR and keys.index(start) + 1 < len(keys):
+                start = keys[keys.index(start) + 1]  # the first new one, under the divider
+            lv.index = keys.index(start) if start in keys else self._start_index(entries,
+                                                                                  unread)
         self.update_lane_counts()
         self.load_pictures(items)
 
@@ -833,6 +857,61 @@ class FedtailApp(App, PostsMixin):
             core.mark_activity_seen()  # on screen: seen, as in the window
         self.update_lane_counts()
 
+    # ---- a lane's choices (common/lane.py LaneModel: the windows' own) ---------------
+    def lane_model(self, name):
+        from ..common.lane import LaneModel
+        models = self.__dict__.setdefault("_models", {})
+        if name not in models:
+            models[name] = LaneModel(self.core, name)
+        return models[name]
+
+    def lane_choice_words(self, m):
+        words = {"all": "show_all", "posts": "posts_only", "unread": "unread_only"}
+        bits = [_(words[m.current_filter()])]
+        if m.conversations():
+            bits.append(_("conv_mode"))
+        return " · ".join(bits)
+
+    def action_lane_choices(self):
+        """s: what the lane shows — All | Posts only | New, Feed | Conversations, and the
+        media funnel (as the windows' lane header)."""
+        from ..common.lane import MEDIA_KINDS
+        from .screens import MenuScreen
+        if not self.lane or self.lane in ("activity", "requests"):
+            return
+        m = self.lane_model(self.lane)
+        words = {"all": "show_all", "posts": "posts_only", "unread": "unread_only"}
+        items = []
+        if len(m.filters) > 1:
+            now = m.current_filter()
+            items += [(("● " if f == now else "○ ") + _(words[f]), ("filter", f))
+                      for f in m.filters] + ["-"]
+        if m.conversations_offered():
+            on = m.conversations()
+            items += [(("● " if not on else "○ ") + _("view_feed"), ("conv", False)),
+                      (("● " if on else "○ ") + _("conv_mode"), ("conv", True)), "-"]
+        items += [(("☑ " if k in m.media.wanted else "☐ ") + _("filter_" + k), ("media", k))
+                  for k in MEDIA_KINDS]
+        items += [(("☑ " if m.media.boosts else "☐ ") + _("filter_boosts"), ("media", "boosts")),
+                  (_("filter_all"), ("media", "reset"))]
+
+        def chosen(v):
+            if v is None:
+                return
+            what, arg = v
+            if what == "filter":
+                m.set_filter(arg)
+            elif what == "conv":
+                m.set_conversations(arg)
+            elif arg == "reset":
+                m.media.reset()
+            elif arg == "boosts":
+                m.media.boosts = not m.media.boosts
+            else:
+                m.media.toggle(arg, arg not in m.media.wanted)
+            self.call_next(self.refresh_posts, True)
+        self.push_screen(MenuScreen(_("media_filter"), items), chosen)
+
     def _start_index(self, entries, unread):
         """feed.start_at: the first unread (oldest first) or the newest."""
         newest = 0 if self.core.cfg["feed"]["order"] == "newest_first" else len(entries) - 1
@@ -901,8 +980,11 @@ class FedtailApp(App, PostsMixin):
             return
         if self.core.cfg["read"]["mark_read"] == "on_scroll":
             entry = e.item.entry
-            if entry.id in self.core.unread([entry]):
-                self.core.mark_read([entry])
+            ids = [entry.id]
+            if self.lane and self.screen is self.screen_stack[0]:  # a conversation: all of it
+                ids = self.lane_model(self.lane).read(ids) or ids
+            if entry.id in self.core.unread([entry]) or len(ids) > 1:
+                self.core.mark_read(ids)
                 self.update_lane_counts()
 
     async def on_input_submitted(self, e: Input.Submitted):

@@ -106,6 +106,78 @@ class WebTest(TmpDir):
         except urllib.error.HTTPError as e:
             return e.code, e.headers, e.read().decode()
 
+    def upload(self, data, name):
+        r = urllib.request.Request(self.base + "/api/upload", data=data, headers={
+            "Cookie": f"{web.COOKIE}={self.key}", "X-Fedtail": "1",
+            "X-Name": urllib.parse.quote(name), "Content-Type": "application/octet-stream"})
+        try:
+            with urllib.request.urlopen(r, timeout=30) as resp:
+                return resp.status, json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read() or b"{}")
+
+    def test_editor_media_poll_schedule_and_lane_choices(self):
+        """The editor as the windows': a picture with its description, a poll, later;
+        a lane's choices (common/lane.py): posts only, the media funnel."""
+        me = json.loads(self.req("/api/me")[2])
+        self.assertEqual(me["editor"]["limit"], self.core.caps.max_characters)
+        self.assertEqual(me["editor"]["languages"][0][0], "")
+        code, got = self.upload(b"\x89PNG fake", "кот.png")
+        self.assertEqual(code, 200)
+        token = got["token"]
+        self.assertTrue(token.endswith(".png"))
+        stored = self.core.paths.data_dir / "web-uploads" / token
+        self.assertTrue(stored.is_file())
+        code, _h, body = self.req("/api/post", {"text": "смотрите", "visibility": "public",
+                                                "media": [{"token": token, "alt": "кот"}],
+                                                "sensitive": True})
+        self.assertEqual(code, 200, body)
+        self.assertEqual(self.w.uploads[-1][1], "кот")
+        self.assertTrue(self.w.extras[-1]["sensitive"])
+        self.assertFalse(stored.exists())  # sent: the copy gone
+        self.assertEqual(self.req("/api/post", {"text": "x", "media": [{"token": "../x"}]})[0],
+                         400)
+        self.assertEqual(self.upload(b"", "x.png")[0], 413)
+        self.req("/api/post", {"text": "что выбрать?", "visibility": "public",
+                               "poll": {"options": ["а", "б", ""], "expires_in": 3600}})
+        self.assertEqual(self.w.extras[-1]["poll"],
+                         {"options": ["а", "б"], "expires_in": 3600, "multiple": False})
+        r = json.loads(self.req("/api/post", {"text": "утром", "visibility": "public",
+                                              "scheduled_at": "2099-10-15T09:30"})[2])
+        self.assertTrue(r["scheduled"])
+        self.assertTrue(self.w.scheduled[-1]["scheduled_at"].endswith("Z"))
+        # the lane's choices: posts only hides replies
+        lane = json.loads(self.req("/api/lane?name=home")[2])
+        self.assertEqual([f[0] for f in lane["filters"]], ["all", "posts", "unread"])
+        self.req("/api/lane_set", {"name": "home", "filter": "posts"})
+        lane = json.loads(self.req("/api/lane?name=home")[2])
+        self.assertEqual(lane["filter"], "posts")
+        self.assertFalse(any(p["reply_to"] for p in lane["posts"]))
+        self.req("/api/lane_set", {"name": "home", "filter": "all"})
+        self.req("/api/lane_set", {"name": "home", "media": "text", "on": False})
+        lane = json.loads(self.req("/api/lane?name=home")[2])
+        self.assertTrue(lane["media"]["active"])
+        self.assertTrue(all(p["media"] for p in lane["posts"]))
+        self.req("/api/lane_set", {"name": "home", "media": "reset"})
+        lane = json.loads(self.req("/api/lane?name=home")[2])
+        self.assertFalse(lane["media"]["active"])
+        words = lane["posts"][0]["words"]
+        self.assertEqual(words["meta"][0]["kind"], "time")
+
+    def test_page_script_parses(self):
+        """app.js is valid JavaScript (node --check, where node is): a slip shows here,
+        not as a blank page."""
+        import shutil
+        import subprocess
+        from pathlib import Path
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("no node")
+        js = Path(web.__file__).resolve().parent.parent.parent / "data" / "web" / "app.js"
+        r = subprocess.run([node, "--check", str(js)], capture_output=True, text=True,
+                           timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_key_file_and_login_link(self):
         path = self.core.paths.data_dir / "web.key"
         self.assertEqual(web.load_key(self.core.paths.data_dir), self.key)  # kept

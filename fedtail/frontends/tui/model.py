@@ -21,6 +21,9 @@ class Shown:
     body: list = field(default_factory=list)   # [str]
     cw: str = ""
     foot: str = ""
+    above: list = field(default_factory=list)  # [(kind, text)] over the head: boosted
+    below: list = field(default_factory=list)  # [(kind, text)] under the text: a quote,
+    #                                            reactions, "you replied", a conversation
 
 
 def when(t):
@@ -31,13 +34,21 @@ def when(t):
     return dt.strftime("%H:%M") if dt.date() == today else dt.strftime("%d.%m %H:%M")
 
 
-def show_post(core, entry, alias=None, unread=False, number=None, width=80, parent=None):
+def show_post(core, entry, alias=None, unread=False, number=None, width=80, parent=None,
+              spec=None):
     """entry: a Post or a Share (core.view). parent: the Post this one answers (for the
-    context line), "missing", or None."""
+    context line), "missing", or None. spec: its CardSpec (common/lane.py) — the card's
+    words then are the windows' (common/cardtext.py): who boosted it and when, edited,
+    old, the warning a filter folds, the quote, reactions, "you replied", the
+    conversation."""
     p = real(entry)
     acc = p.author
     tcfg = core.cfg.get("tui", {})
     out = Shown()
+    words = None
+    if spec is not None:
+        from ..common.cardtext import card_words
+        words = card_words(spec, core.cfg, when, in_thread=number is not None)
     if number is not None:
         out.head.append(("num", f"/{number}" if number else "#"))
     if alias:
@@ -47,7 +58,13 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if name and name != acc.username:
         out.head.append(("name", name))
     out.head.append(("time", when(p.created)))
-    if isinstance(entry, Share):
+    if words is not None:
+        if words.boosted is not None:
+            out.above.append(("boost", words.boosted.text))
+        for b in words.meta:
+            if b.kind in ("edited", "old"):
+                out.head.append(("muted", b.text))
+    elif isinstance(entry, Share):
         out.head.append(("boost", "♻ @" + (entry.by.handle or "?")))
     if p.visibility == "direct":
         out.head.append(("direct", "✉"))
@@ -63,9 +80,12 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
                 snippet(parent, max(20, width - 20))
         else:
             out.context = "↳ …"
-    if p.warning:
+    if words is not None and words.warning:
+        out.cw = words.warning
+    elif p.warning:
         out.cw = "⚠ " + p.warning
-    if not p.warning or config.expand_cw(core.cfg):
+    folded = words is not None and words.folded
+    if (not p.warning and not folded) or (config.expand_cw(core.cfg) and not folded):
         for para in html_to_text(p.text).split("\n"):
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
@@ -82,6 +102,15 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if p.mine.bookmarked:
         foot.append("🔖")
     out.foot = "  ".join(foot)
+    if words is not None:
+        if words.quote is not None:
+            out.below.append(("quote", words.quote.text))
+        if words.reactions:
+            out.below.append(("muted", words.reactions))
+        for b in words.my_replies:
+            out.below.append(("myreply", b.text))
+        if words.conversation is not None:
+            out.below.append(("conv", words.conversation.text))
     return out
 
 

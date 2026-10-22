@@ -149,6 +149,45 @@ class TuiPlacesTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: len(w.posted) == before + 1, what="sent")
             self.assertIn("from the editor", w.posted[-1][0])
 
+            # the editor's extras (Ctrl+O): a poll; then a picture with its description
+            from fedtail.frontends.tui.screens import AskScreen
+            await self.wait(pilot, lambda: not isinstance(app.screen, ComposeScreen))
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            await pilot.press(*"choose")
+            await pilot.press("ctrl+o")
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            app.screen.dismiss("poll")
+            await self.wait(pilot, lambda: isinstance(app.screen, AskScreen))
+            await pilot.press(*"yes | no")
+            await pilot.press("enter")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen) and
+                            app.screen.poll is not None, what="poll set")
+            await pilot.press("ctrl+s")
+            await self.wait(pilot, lambda: w.extras[-1]["poll"] is not None, what="poll sent")
+            self.assertEqual(w.extras[-1]["poll"]["options"], ["yes", "no"])
+            pic = self.tmp / "cat.png"
+            pic.write_bytes(b"\x89PNG")
+            await self.wait(pilot, lambda: not isinstance(app.screen, ComposeScreen))
+            await pilot.press("w")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen))
+            await pilot.press(*"look")
+            await pilot.press("ctrl+o")
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
+            app.screen.dismiss("attach")
+            await self.wait(pilot, lambda: isinstance(app.screen, AskScreen))
+            app.screen.query_one("#ask").value = str(pic)
+            await pilot.press("enter")
+            await self.wait(pilot, lambda: isinstance(app.screen, AskScreen) and
+                            app.screen.q_title == i18n._("alt_title"), what="alt asked")
+            await pilot.press(*"a cat")
+            await pilot.press("enter")
+            await self.wait(pilot, lambda: isinstance(app.screen, ComposeScreen) and
+                            app.screen.media, what="attached")
+            await pilot.press("ctrl+s")
+            await self.wait(pilot, lambda: w.uploads and w.uploads[-1][1] == "a cat",
+                            what="picture sent")
+
             # Ctrl+F: find in the lane
             await self.wait(pilot, lambda: not isinstance(app.screen, ComposeScreen))
             app.find("bob's")

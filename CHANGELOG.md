@@ -28,6 +28,17 @@
   windows), find in the lane (Ctrl+F), "sure?" before the risky things; links, menu
   items and profile buttons do what they do in the windows (common/links.py,
   common/profile.py through the terminal's own host).
+- The web page and the terminal draw a lane the windows' way (common/lane.py LaneModel):
+  the "new below" divider where reading stood, All | Posts only | New, Feed |
+  Conversations, the media funnel (the web: a bar over the lane; the terminal: `s`);
+  and a card says what the windows' cards say (common/cardtext.py): who boosted it and
+  when, edited (→ its versions), old, what it answers, a server filter's fold, the
+  quote or why it isn't shown, reactions, "you replied", the conversation's line.
+- Web editor: pictures and files (📎, or pasted) with a description each, "sensitive",
+  a poll (choices, how long, several or one), later (a date and time), the languages
+  of `post.languages`, the server's character limit counted.
+- Terminal editor: Ctrl+O — attach a file (with its description), "sensitive", a poll,
+  later.
 - Qt: a profile's buttons come from common/profile.py too, as in GTK, the web and the
   terminal.
 - One scenario, four interfaces (tests/scenario.py, tests/drivers.py,

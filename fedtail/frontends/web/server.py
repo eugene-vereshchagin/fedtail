@@ -49,6 +49,8 @@ MAX_CLIENTS = 32        # connections at once (a phone and a laptop need a handf
 SOCKET_SECONDS = WAIT_SECONDS + 35  # a client that sends nothing this long is dropped
 # the browser hung up: nothing to answer, nothing to report
 GONE = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
+_UPLOAD = re.compile(r"[A-Za-z0-9_-]{16}(\.[a-z0-9]{1,6})?")
+MAX_UPLOAD = 40 * 1024 * 1024  # bytes a file of a post may have (servers take less)
 _ID = re.compile(r"[A-Za-z0-9_.-]{1,100}")
 
 
@@ -189,9 +191,37 @@ QUOTE_STATES = {"pending", "rejected", "revoked", "deleted", "unauthorized",
                 "blocked_account", "blocked_domain", "muted_account"}
 
 
+def bit_json(b):
+    return {"text": b.text, "link": b.link, "tip": b.tip, "kind": b.kind} \
+        if b is not None else None
+
+
+def words_json(view, spec, date):
+    """The words around a card (common/cardtext.py): the windows' own."""
+    from ..common.cardtext import card_words
+    w = card_words(spec, view.cfg, date)
+    return {"boosted": bit_json(w.boosted), "meta": [bit_json(b) for b in w.meta],
+            "context": bit_json(w.context), "warning": w.warning, "folded": w.folded,
+            "my_replies": [bit_json(b) for b in w.my_replies],
+            "conversation": bit_json(w.conversation), "reactions": w.reactions,
+            "quote": bit_json(w.quote)}
+
+
+def web_date(when):
+    """A time as the cards say it: today's hour, else the day too (the windows' way)."""
+    if not when:
+        return ""
+    from datetime import datetime
+    local = when.astimezone()
+    if local.date() == datetime.now().astimezone().date():
+        return local.strftime("%H:%M")
+    return local.strftime("%d.%m.%Y %H:%M")
+
+
 def post_json(view, entry, alias=None, unread=False, parent=None, number=None, depth=None,
-              item_id=None):
-    """A lane entry (Post or Share) as the page draws it."""
+              item_id=None, spec=None):
+    """A lane entry (Post or Share) as the page draws it; spec (common/lane.py): the
+    card's own words come with it."""
     p = real(entry)
     html = view.in_app(p) if view.cfg["ui"]["links_in_app"] else p.text
     me = view.me
@@ -213,6 +243,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     }
     if isinstance(entry, Share):
         out["shared_by"] = account_json(entry.by)
+    if spec is not None:
+        out["words"] = words_json(view, spec, web_date)
+        out["item"] = spec.key
     if number is not None:
         out["number"], out["depth"] = number, depth or 0
     if p.reply_to and number is None:
@@ -355,6 +388,13 @@ class Web:
         self.core = core if isinstance(core, View) else View(core)
         self.key = key
         self.cmds = Commands(self.core)
+        self.models = {}  # lane -> LaneModel (common/lane.py)
+        try:  # attachments of posts never sent last time: gone
+            d = self.core.paths.data_dir / "web-uploads"
+            for f in d.iterdir() if d.is_dir() else ():
+                f.unlink(missing_ok=True)
+        except (OSError, AttributeError):  # (a core without a profile folder: tests)
+            pass
         self.version = 0
         self.changed = threading.Condition()
         self.links = {}  # one-time login token -> good until (time.monotonic)
@@ -494,7 +534,50 @@ class Web:
                 "sound": {"volume": c["sound"]["volume"],
                           "when_focused": c["sound"]["when_focused"]},
                 "notify": {"when_focused": c["notify"]["when_focused"]},
+                "editor": self.editor_facts(),
                 "words": {k: _(k) for k in WORDS}}
+
+    def editor_facts(self):
+        """What the editor needs: the server's limits, the languages to pick from (the
+        windows': common/compose.py), the poll's lengths."""
+        from ..common import compose as cc
+        caps = self.core.caps
+        langs = [["", _("lang_default")]] + [[code, cc.language_label(code)]
+                                             for code in cc.languages(self.core.cfg)]
+        return {"limit": int(getattr(caps, "max_characters", 500) or 500),
+                "max_media": int(getattr(caps, "max_media", 4) or 4),
+                "max_options": int(getattr(caps, "max_poll_options", 4) or 4),
+                "languages": langs, "language": self.core.cfg["post"].get("language", ""),
+                "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES]}
+
+    # ---- attachments: the page sends the file, the post names it by its token ----------
+    def uploads_dir(self):
+        d = self.core.paths.data_dir / "web-uploads"
+        d.mkdir(mode=0o700, parents=True, exist_ok=True)
+        return d
+
+    def upload(self, data, name):
+        """A file for a post to come: kept in the profile's folder (0600) until the post
+        goes or the next start; its token is all the page gets back."""
+        if not data:
+            raise ValueError("empty")
+        ext = Path(name or "").suffix.lower()
+        if not re.fullmatch(r"\.[a-z0-9]{1,6}", ext or ""):
+            ext = ""
+        token = secrets.token_urlsafe(12)
+        path = self.uploads_dir() / (token + ext)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        return {"token": token + ext, "size": len(data)}
+
+    def upload_path(self, token):
+        if not isinstance(token, str) or not _UPLOAD.fullmatch(token):
+            raise ValueError("bad attachment")
+        path = self.uploads_dir() / token
+        if not path.is_file():
+            raise ValueError("attachment gone")
+        return path
 
     @staticmethod
     def help_url():
@@ -523,18 +606,87 @@ class Web:
             raise KeyError(name)
         return name
 
-    def lane(self, name):
+    def model(self, name):
+        """The lane's choices and cards (common/lane.py LaneModel, as the windows')."""
+        from ..common.lane import LaneModel
+        m = self.models.get(name)
+        if m is None:
+            m = self.models[name] = LaneModel(self.core, name)
+        return m
+
+    def lane(self, name, keep=False):
+        """The cards of a lane: the windows' (LaneModel: "new below", All | Posts | New,
+        conversations, the media funnel), with each card's words. keep: the page is
+        standing in the lane already (the divider stays where it was)."""
+        from ..common.lane import MEDIA_KINDS, SEPARATOR
         name = self._lane_name(name)
         core = self.core
+        title = core.lane_title(name) or _("lane_" + name)
         if name in ("activity", "requests"):  # not posts: a place in the lane's stead
-            return {"name": name, "title": core.lane_title(name) or _("lane_" + name),
-                    "posts": [], "older": False, "place": name}
-        entries = core.entries(name)  # read only: activate() remembers what's open
+            return {"name": name, "title": title, "posts": [], "older": False, "place": name}
+        m = self.model(name)
+        built = m.build(bool(keep))
+        specs = [sp for sp in built.specs]
+        if m.newest_first:  # the page turns newest-first lanes round itself
+            specs.reverse()
+        posts, divider, pending = [], None, None
+        entries = [sp.entry for sp in specs if sp.key != SEPARATOR]
+        short = core.short_ids(entries)
+        unread = core.unread(entries)
+        for sp in specs:
+            if sp.key == SEPARATOR:  # "new below": before the card that follows it
+                pending = sp.extra.get("separator", "")
+                continue
+            e = sp.entry
+            if pending is not None:
+                divider, pending = {"before": e.id, "text": pending}, None
+            posts.append(post_json(core, e, short.get(real(e).id), e.id in unread,
+                                   sp.parent if sp.parent is not None else None,
+                                   item_id=sp.key, spec=sp))
         lane = core.lane_by_name[name]
-        return {"name": name, "title": core.lane_title(name) or _("lane_" + name),
-                "posts": self._posts([e for _i, e in entries],
-                                     items=[i for i, _e in entries]),
-                "older": bool(lane.source) and not lane.lazy}
+        words = {"all": ("show_all", "show_all_tip"), "posts": ("posts_only", "posts_only_tip"),
+                 "unread": ("unread_only", "unread_only_tip")}
+        return {"name": name, "title": title, "posts": posts, "info": built.info,
+                "divider": divider,
+                "older": bool(lane.source) and not lane.lazy, "empty_browse": built.empty,
+                "filters": [[f, _(words[f][0]), _(words[f][1])] for f in m.filters]
+                if len(m.filters) > 1 else [],
+                "filter": m.current_filter(),
+                "conversations": {"offered": m.conversations_offered(), "on": m.conversations(),
+                                  "words": [_("view_feed"), _("conv_mode")],
+                                  "tips": [_("view_feed_tip"), _("conv_mode_tip")]},
+                "media": {"active": m.media.active(), "label": _("media_filter"),
+                          "tip": _("media_filter_tip"), "all": _("filter_all"),
+                          "kinds": [[k, _("filter_" + k), k in m.media.wanted]
+                                    for k in MEDIA_KINDS] +
+                                   [["boosts", _("filter_boosts"), m.media.boosts]]}}
+
+    def lane_set(self, body):
+        """A lane's choice from its header: filter, conversations, the media funnel."""
+        from ..common.lane import MEDIA_KINDS
+        name = self._lane_name(body.get("name"))
+        m = self.model(name)
+        if body.get("filter") in m.filters:
+            m.set_filter(body["filter"])
+        if isinstance(body.get("conversations"), bool) and m.conversations_offered():
+            m.set_conversations(body["conversations"])
+        kind = body.get("media")
+        if kind == "reset":
+            m.media.reset()
+        elif kind == "boosts":
+            m.media.boosts = bool(body.get("on"))
+        elif kind in MEDIA_KINDS:
+            m.media.toggle(kind, bool(body.get("on")))
+        return {"ok": True}
+
+    def read(self, ids):
+        """Posts seen: marked read — a conversation card's whole conversation with it."""
+        members = {}
+        for m in self.models.values():
+            members.update(m.conv_members)
+        out = [x for i in ids for x in members.get(i, [i])]
+        self.core.mark_read(out[:2000])
+        return {"ok": True}
 
     def find(self, name, query):
         """Ctrl+F: the posts of a lane that have every word (common/find.py's rule:
@@ -739,8 +891,28 @@ class Web:
         if vis not in ("public", "unlisted", "followers", "direct"):
             raise ValueError(vis)
         lang = (body.get("lang") or "").strip() or None
+        media = []
+        for m in (body.get("media") or [])[:20]:
+            if isinstance(m, dict):
+                media.append((str(self.upload_path(m.get("token"))),
+                              str(m.get("alt") or "")[:1500]))
+        poll = None
+        if isinstance(body.get("poll"), dict) and not media:
+            from ..common import compose as cc
+            pb = body["poll"]
+            poll = cc.poll_data(True, [str(o) for o in pb.get("options") or []][:20],
+                                int(pb.get("expires_in") or 86400), bool(pb.get("multiple")))
+        from ..common.compose import when_utc
+        when = when_utc(body.get("scheduled_at"))
         p = core.post(text, vis, parent, cw, language=lang,
-                      quote=str(body["quote"]) if body.get("quote") else None).result()
+                      quote=str(body["quote"]) if body.get("quote") else None,
+                      media=media, sensitive=bool(body.get("sensitive")), poll=poll,
+                      scheduled_at=when).result()
+        for path, _alt in media:  # sent: the copies go
+            Path(path).unlink(missing_ok=True)
+        if when:
+            return {"id": None, "url": "", "scheduled": True,
+                    "message": _("scheduled_msg", when=when.replace("T", " ")[:16])}
         return {"id": p.id if p else None, "url": p.url if p else ""}
 
     def command(self, line, confirmed=False):
@@ -853,7 +1025,9 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "my_profile", "web_more", "web_menu", "web_keys", "web_keys_text", "web_copied",
          "web_about", "help_news", "web_notify", "web_notify_on", "web_notify_off",
          "find_placeholder", "find_prev", "find_next", "find_close", "find_none",
-         "find_count")
+         "find_count", "to_new", "to_new_tip", "browse_empty", "media_limit", "alt_prompt",
+         "detach", "poll_option", "poll_several", "lang_tip", "attach", "poll_add_tip",
+         "sensitive_mark_tip", "schedule_tip", "schedule_when")
 
 
 class Server(ThreadingHTTPServer):
@@ -957,7 +1131,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, static_text(name), ctype)
         routes = {"/api/me": lambda: self.web.me(),
                   "/api/lanes": lambda: self.web.lanes(),
-                  "/api/lane": lambda: self.web.lane(q.get("name", "")),
+                  "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
@@ -978,6 +1152,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):  # noqa: N802
         if not self._authorized() or self.headers.get("X-Fedtail") != "1":
             return self._forbidden()
+        if urlsplit(self.path).path == "/api/upload":  # a file, not JSON
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                n = -1
+            if n <= 0 or n > MAX_UPLOAD:
+                return self._json({"error": "size"}, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+            data = self.rfile.read(n)
+            from urllib.parse import unquote
+            name = unquote(self.headers.get("X-Name") or "")
+            return self._run(lambda: self.web.upload(data, name))
         try:
             n = int(self.headers.get("Content-Length") or 0)
             if n < 0:  # read(-1) would read to the end: no limit at all
@@ -990,8 +1175,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         web = self.web
         routes = {
-            "/api/read": lambda: (web.core.mark_read([str(i) for i in body.get("ids", [])
-                                                      ][:500]), {"ok": True})[1],
+            "/api/read": lambda: web.read([str(i) for i in body.get("ids", [])][:500]),
+            "/api/lane_set": lambda: web.lane_set(body),
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
             "/api/older": lambda: web.older(body.get("name")),

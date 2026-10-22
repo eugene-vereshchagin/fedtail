@@ -513,9 +513,11 @@ class ComposeScreen(Screen):
     Ctrl+S — send; Esc — away (the draft is kept, as in the windows)."""
 
     BINDINGS = [Binding("ctrl+s", "send", _("tui_send")),
+                Binding("ctrl+o", "extras", "📎 " + _("tui_extras")),
                 Binding("escape", "leave", _("web_cancel"))]
     CSS = """
     ComposeScreen { layout: vertical; padding: 0 1; }
+    ComposeScreen #c-extras { height: auto; color: $accent; }
     ComposeScreen #c-title { height: 1; background: $primary-background; padding: 0 1; }
     ComposeScreen #c-context { height: auto; max-height: 8; color: $text-muted; }
     ComposeScreen #c-hint { height: auto; color: $text-muted; }
@@ -535,6 +537,10 @@ class ComposeScreen(Screen):
         self.key = None
         self.start = None
         self.initial = None
+        self.media = []        # [(path, description)]
+        self.poll = None       # {"options", "expires_in", "multiple"}
+        self.sensitive = False
+        self.when = ""         # "2026-10-23 09:30": later, else now
 
     def compose(self) -> ComposeResult:
         from ..common import compose as cc
@@ -586,11 +592,16 @@ class ComposeScreen(Screen):
             yield Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
             yield Input(value=st.language or "", placeholder=_("lang_label"), id="c-lang")
         yield TextArea("", id="c-text")
+        yield Static("", id="c-extras")
         yield Footer()
 
     def on_mount(self):
         ta = self.query_one("#c-text", TextArea)
         ta.text = self.start.text or ""
+        self.media = [tuple(m)[:2] for m in self.start.media or ()]
+        self.sensitive = bool(self.start.sensitive)
+        self.poll = self.start.poll or None
+        self.show_extras()
         ta.focus()
         ta.move_cursor(ta.document.end)
         self.initial = self._snapshot()
@@ -598,7 +609,109 @@ class ComposeScreen(Screen):
     def _snapshot(self):
         from ..common import compose as cc
         text, cw, vis, lang = self._fields()
-        return cc.snapshot(text, cw, vis, [], lang or None, False, None)
+        return cc.snapshot(text, cw, vis, [list(m) for m in self.media], lang or None,
+                           self.sensitive, self.poll)
+
+    # ---- pictures, a poll, later (Ctrl+O) -------------------------------------------------
+    def show_extras(self):
+        from ..common import compose as cc
+        bits = []
+        for path, alt in self.media:
+            from pathlib import Path
+            bits.append("📎 " + Path(path).name + (f" — {alt}" if alt else
+                                                    " — " + _("no_alt")))
+        if self.media and self.sensitive:
+            bits.append("⚠ " + _("sensitive_mark"))
+        if self.poll:
+            words = dict((s, _(k)) for s, k in cc.POLL_TIMES)
+            bits.append("📊 " + " / ".join(self.poll["options"]) + " · " +
+                        words.get(self.poll["expires_in"], "") +
+                        (" · " + _("poll_several") if self.poll.get("multiple") else ""))
+        if self.when:
+            bits.append("🕒 " + _("schedule_when") + " " + self.when)
+        box = self.query_one("#c-extras", Static)
+        box.update("\n".join(bits))
+        box.display = bool(bits)
+
+    def action_extras(self):
+        caps = self.app.core.caps
+        items = []
+        if not self.poll and len(self.media) < getattr(caps, "max_media", 4):
+            items.append((_("attach"), "attach"))
+        for i, (path, _alt) in enumerate(self.media):
+            from pathlib import Path
+            items.append(("✕ " + _("detach") + " " + Path(path).name, ("detach", i)))
+        if self.media:
+            items.append((("☑ " if self.sensitive else "☐ ") + _("sensitive_mark"),
+                          "sensitive"))
+        if not self.media:
+            items.append(((_("detach") + " " if self.poll else "") + _("poll_add"), "poll"))
+        items.append(((_("detach") + " " if self.when else "") + _("schedule"), "when"))
+
+        def chosen(v):
+            if v == "attach":
+                self.app.push_screen(AskScreen(_("attach"), _("tui_attach_path")),
+                                     self._attached)
+            elif isinstance(v, tuple):
+                del self.media[v[1]]
+            elif v == "sensitive":
+                self.sensitive = not self.sensitive
+            elif v == "poll":
+                if self.poll:
+                    self.poll = None
+                else:
+                    self.app.push_screen(AskScreen(_("poll_add"), _("tui_poll_options")),
+                                         self._polled)
+                    return
+            elif v == "when":
+                if self.when:
+                    self.when = ""
+                else:
+                    self.app.push_screen(AskScreen(_("schedule"), _("tui_when")),
+                                         self._scheduled)
+                    return
+            self.show_extras()
+        self.app.push_screen(MenuScreen("📎 " + _("tui_extras"), items), chosen)
+
+    def _attached(self, path):
+        from pathlib import Path
+        if not path:
+            return
+        p = Path(path.strip().strip("'\"")).expanduser()
+        if not p.is_file():
+            self.app.show_error(_("save_failed", err=str(p)))
+            return
+
+        def described(alt):
+            self.media.append((str(p), (alt or "").strip()))
+            self.show_extras()
+        self.app.push_screen(AskScreen(_("alt_title"), _("alt_prompt"), allow_empty=True),
+                             described)
+
+    def _polled(self, text):
+        from ..common import compose as cc
+        if not text:
+            return
+        options = [o.strip() for o in text.replace(";", "|").split("|") if o.strip()]
+        poll = cc.poll_data(True, options[:getattr(self.app.core.caps, "max_poll_options", 4)],
+                            86400, False)
+        if poll is None:
+            self.app.show_error(_("tui_poll_options"))
+            return
+        self.poll = poll
+        self.show_extras()
+
+    def _scheduled(self, text):
+        from ..common import compose as cc
+        if not text:
+            return
+        try:
+            cc.when_utc(text)
+        except ValueError:
+            self.app.show_error(_("tui_when"))
+            return
+        self.when = text.strip()
+        self.show_extras()
 
     def _fields(self):
         return (self.query_one("#c-text", TextArea).text,
@@ -615,11 +728,15 @@ class ComposeScreen(Screen):
             return
         core = self.app.core
         self.sending = True
+        from ..common import compose as cc
         if self.edit is not None:
             fut = core.edit(self.edit, text, cw)
         else:
             fut = core.post(text, vis, self.reply_to, cw, language=lang or None,
-                            quote=self.quote, draft_key=self.key)
+                            quote=self.quote, draft_key=self.key, media=list(self.media),
+                            sensitive=self.sensitive and bool(self.media),
+                            poll=None if self.media else self.poll,
+                            scheduled_at=cc.when_utc(self.when))
 
         def ok(_p):
             self.sending = False

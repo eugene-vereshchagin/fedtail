@@ -90,6 +90,22 @@ def keep(snap, initial, has_draft):
     return "save"
 
 
+def when_utc(local):
+    """"When to send" as typed (an ISO date and time of this computer, "2026-10-23 09:30"
+    or a browser's datetime-local) → what the server wants (UTC, ISO 8601); None — now.
+    ValueError for words that aren't a time."""
+    if not local or not str(local).strip():
+        return None
+    from datetime import UTC, datetime
+    try:
+        t = datetime.fromisoformat(str(local).strip())
+    except ValueError:
+        raise ValueError(str(local)) from None
+    if t.tzinfo is None:
+        t = t.astimezone()  # this computer's zone (the browser's, on localhost)
+    return t.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
 def poll_data(enabled, options, expires_in, multiple):
     """The poll to send, or None: off, or fewer than two options filled in."""
     if not enabled:

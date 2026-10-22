@@ -289,3 +289,36 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
               padding: 4px 10px; background: var(--bg); }
 #find-count { white-space: nowrap; font-size: 13px; }
 .post.found { outline: 2px solid var(--warn); outline-offset: -2px; }
+
+/* ---- a lane's choices and the card's words (common/lane.py, common/cardtext.py) ----- */
+#lanebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 12px;
+           border-bottom: 1px solid var(--line); background: var(--card); font-size: 13px; }
+#lanebar[hidden] { display: none; }
+#lanebar .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px;
+                overflow: hidden; }
+#lanebar .seg button { background: none; border: 0; padding: 3px 10px; color: var(--muted); }
+#lanebar .seg button + button { border-left: 1px solid var(--line); }
+#lanebar .seg button.on { background: var(--ctx); color: var(--text); font-weight: 600; }
+#lanebar button.tool.on { color: var(--warn); }
+.divider { text-align: center; color: var(--unread); font-size: 13px; font-weight: 600;
+           margin: 4px auto 10px; max-width: 760px; border-top: 1px solid var(--unread);
+           padding-top: 2px; }
+.post .myreply { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.post .conv { display: block; margin-top: 4px; }
+.post .quote-line { display: block; color: var(--muted); font-size: 14px; margin-top: 4px; }
+.post .reactions { font-size: 13px; margin-top: 4px; }
+.post .meta .mark { color: var(--muted); }
+
+/* ---- the editor's extras ---------------------------------------------------------------- */
+#attached { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+#attached[hidden], #pollbox[hidden], #schedbox[hidden] { display: none; }
+#attached .att { display: flex; gap: 8px; align-items: center; }
+#attached img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
+#attached input, #pollbox input:not([type=checkbox]), #pollbox select, #schedbox input {
+  flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px;
+  background: var(--bg); }
+#pollbox { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+#pollbox .row { display: flex; gap: 8px; align-items: center; }
+#schedbox { margin-top: 6px; }
+#chars.over { color: var(--danger); font-weight: 700; }
+#sensitive.on { color: var(--warn); }

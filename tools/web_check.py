@@ -177,6 +177,12 @@ def with_playwright(base, key, out):
             page.click("#write")
             page.wait_for_timeout(300)
             page.screenshot(path=str(out / "desktop-05-compose.png"))
+            page.click("#poll-toggle")
+            page.click("#sched-toggle")
+            page.wait_for_timeout(200)
+            if page.locator("#pollbox input").count() < 2:
+                ERRORS.append("editor: the poll has no choices to fill in")
+            page.screenshot(path=str(out / "desktop-05b-compose-poll.png"))
             page.click("#compose-close")
             img = page.locator("#posts article.post img[src*='img.example'], "
                                 "#posts article.post .media img").first
