@@ -82,6 +82,8 @@ class ChimeTest(unittest.TestCase):
             self.assertFalse(sounds.enabled(c))
             self.assertTrue(sounds.enabled(cfg(enabled="on")))
         self.assertFalse(sounds.enabled(cfg(enabled="off")))
+        c, _w = config.validate({"sound": {"enabled": False}})  # the first dev builds' word
+        self.assertEqual(c["sound"]["enabled"], "off")
 
     def test_config_checks(self):
         for bad in ({"volume": 120}, {"lanes": ["nope"]}, {"scheme": 3}, {"enabled": "yes"}):

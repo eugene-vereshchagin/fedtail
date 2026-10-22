@@ -407,6 +407,8 @@ def validate(user):
             errors.append(f"[{section}] must be a section, not a value")
             continue
         for key, val in values.items():
+            if (section, key) == ("sound", "enabled") and isinstance(val, bool):
+                val = "on" if val else "off"  # the first 0.19 dev builds had true/false
             if (section, key) == ("debug", "keep"):  # 0.3: a size for the folder instead
                 warnings.append("debug.keep is gone: debug.keep_mb caps the log folder")
                 continue
