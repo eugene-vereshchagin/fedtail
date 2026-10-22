@@ -252,6 +252,13 @@ class GtkSmokeTest(_GtkBase):
         self.win.open_thread(reply.post)
         self.assertTrue(pump(lambda: self.win.tabs.get_n_pages() == 2 and
                              any(True for _ in _cards(self.win)), 5))
+        # the header, as Qt's: what it is, Subscribe
+        head = self.win.threads["013"].head
+        self.assertTrue(pump(lambda: head.root is not None, 3))
+        self.assertIn(i18n._("thread_info", n=1).split()[0], head.info.get_text())
+        was = bool(self.view.subscribed(head.root))
+        head.sub.set_active(not was)
+        self.assertTrue(pump(lambda: bool(self.view.subscribed(head.root)) != was, 3))
         self.win.close_thread("013")
         self.assertEqual(self.win.tabs.get_n_pages(), 1)
 

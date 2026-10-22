@@ -1267,6 +1267,9 @@ class MainWindow(Gtk.ApplicationWindow):
         page.focus_id = root
         page.posts = []
         self.threads[root] = page
+        from .threadhead import ThreadHead
+        page.head = ThreadHead(self, root)  # as Qt's: what it is, Subscribe, Refresh
+        box.append(page.head)
 
         def got(items):
             ctx = Ctx(self.cfg, self.view, self.theme, self.bridge, self, in_thread=True,
@@ -1289,12 +1292,23 @@ class MainWindow(Gtk.ApplicationWindow):
                 box.append(card)
             if items:
                 title.set_text(_("thread") + ": " + _short(items[0].post))
+                page.head.show(posts, short)
             if unread:
                 self.view.mark_read(sorted(unread))
             if focus is not None:
                 GLib.idle_add(lambda: (_scroll_to(page, box, focus), GLib.SOURCE_REMOVE)[1])
         self.bridge.call(self.view.thread(root), got,
                          lambda err: title.set_text(_("load_failed", err=err)))
+
+    def reload_thread(self, root):
+        """The thread anew from the server, in the same place among the tabs."""
+        page = self.threads.get(root)
+        at = self.tabs.page_num(page) if page is not None else -1
+        self.close_thread(root)
+        self.open_thread(root)
+        page = self.threads.get(root)
+        if page is not None and at >= 0:
+            self.tabs.reorder_child(page, at)
 
     def close_thread(self, root):
         page = self.threads.pop(root, None)

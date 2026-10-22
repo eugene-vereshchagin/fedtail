@@ -46,10 +46,12 @@ def tip(widget, text):
     with an accessibility bus about (KDE's) every such update is a round trip — a few
     of them per card held the window for a third of a second per batch of cards.
     Called again on the same widget: the new text (or none)."""
-    first = not hasattr(widget, "_ft_tip")
     widget._ft_tip = text or ""
-    if not first or not text:
+    # connected once, when there is a text at last (first given empty, then set: it
+    # never showed)
+    if not text or getattr(widget, "_ft_tip_on", False):
         return
+    widget._ft_tip_on = True
 
     def query(w, _x, _y, _kb, tooltip):
         text = getattr(w, "_ft_tip", "")
