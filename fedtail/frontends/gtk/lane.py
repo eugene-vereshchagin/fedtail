@@ -26,7 +26,7 @@ from ...i18n import _
 from ...model import Share, real
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator
-from .gi_setup import GLib, Gtk, Pango, clamp, set_clamp, tip, wrap_box
+from .gi_setup import GLib, Gtk, Pango, clamp, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
 
@@ -82,24 +82,23 @@ class LaneView(Gtk.Box):
         self._anchor = None      # (key, its offset from the top of the view) while held
         self._ticking = 0
 
-        header = Gtk.Box(spacing=8)
-        header.add_css_class("ft-lane-header")
+        words = Gtk.Box(spacing=8)  # the title, "N new", what's shown; the buttons beside
         self.title = Gtk.Label(label=ctx.theme.word("lane_title", title), xalign=0)
         self.title.add_css_class("ft-lane-title")
         self.title.set_hexpand(True)
         self.title.set_ellipsize(Pango.EllipsizeMode.END)  # never wider than the window
         self.title.set_valign(Gtk.Align.CENTER)
-        header.append(self.title)
+        words.append(self.title)
         self.pill = Gtk.Label()
         self.pill.add_css_class("ft-new-pill")
         self.pill.set_visible(False)
         self.pill.set_valign(Gtk.Align.CENTER)  # the header two rows high: still a pill
-        header.append(self.pill)
+        words.append(self.pill)
         self.info = Gtk.Label(xalign=1)
         self.info.add_css_class("ft-muted")
         self.info.set_ellipsize(Pango.EllipsizeMode.END)
         self.info.set_valign(Gtk.Align.CENTER)
-        header.append(self.info)
+        words.append(self.info)
         # as Qt's header: All | Posts only | New, conversations, ↓ To new, Mark all
         # read, ▾ Show, Refresh (F5)
         # one row at the right where there's room, wrapping to more in a narrow window
@@ -107,7 +106,8 @@ class LaneView(Gtk.Box):
         tools = wrap_box(spacing=6, row_spacing=4, align_end=True)
         tools.set_valign(Gtk.Align.CENTER)
         tools.set_hexpand(False)
-        header.append(tools)
+        header = side_by_side(words, tools, 8)  # not a box: GTK 4.18 (gi_setup.py)
+        header.add_css_class("ft-lane-header")
         self._filter_buttons = {}
         if len(self.lm.filters) > 1:
             group, words = None, {"all": ("show_all", "show_all_tip"),

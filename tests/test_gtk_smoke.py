@@ -689,6 +689,11 @@ class GtkSmokeTest(_GtkBase):
         bad = report([c for c in lane.rows.values() if c.get_mapped()], stop=Card)
         self.assertEqual(bad, [], f"GTK {Gtk.get_major_version()}."
                                   f"{Gtk.get_minor_version()}.{Gtk.get_micro_version()}")
+        from fedtail.frontends.gtk.measure import boxes_418
+        for size in ((1000, 700), (640, 480)):  # the whole window, wide and narrow
+            self.win.set_default_size(*size)
+            pump(timeout=0.4)
+            self.assertEqual(boxes_418(self.win), [], f"at {size}")
 
     def test_tag_tab_follows_and_features(self):
         from fedtail.frontends.gtk.people import TagRow

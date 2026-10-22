@@ -123,6 +123,15 @@ def _measure_check(win):
           flush=True)
     for line in lines:
         print("     " + line, flush=True)
+    from fedtail.frontends.gtk.measure import boxes_418
+    seen = {}
+    for path, lo, nat, w in boxes_418(win):
+        seen.setdefault(path, (lo, nat, w, 0))
+        seen[path] = seen[path][:3] + (seen[path][3] + 1,)
+    print("  the window's boxes by GTK 4.18's rule: " + ("all sane" if not seen else ""),
+          flush=True)
+    for path, (lo, nat, w, n) in sorted(seen.items(), key=lambda kv: -kv[1][3])[:10]:
+        print(f"     {n}×  {path}: least {lo} > natural {nat} at width {w}", flush=True)
     if len(MEASURE) > 2:
         print(f"  GTK's warnings so far: {MEASURE[2]['seen']}", flush=True)
 

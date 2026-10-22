@@ -145,3 +145,39 @@ def watch(cards, most=3, out=print):
 
     GLib.log_set_writer_func(writer, None)
     return state
+
+
+def boxes_418(root):
+    """Every horizontal box under root that GTK 4.18 would warn of: its children's
+    least height at their least width above its natural height at the width it has.
+    [(path, least, natural, width)] — the whole window walked, cheap (a measure or two a
+    box)."""
+    out = []
+    hor, ver = Gtk.Orientation.HORIZONTAL, Gtk.Orientation.VERTICAL
+
+    def walk(w):
+        if not w.get_visible():
+            return
+        if isinstance(w, Gtk.Box) and w.get_orientation() == hor and w.get_width() > 0:
+            kids, c = [], w.get_first_child()
+            while c is not None:
+                if c.get_visible():
+                    kids.append(c.measure(ver, -1)[0])
+                c = c.get_next_sibling()
+            least = max(kids, default=0)
+            natural = w.measure(ver, w.get_width())[1]
+            if least > natural:
+                chain, p = [], w
+                for _i in range(5):
+                    if p is None:
+                        break
+                    chain.append(type(p).__name__ + "".join(
+                        "." + x for x in p.get_css_classes()[:2]))
+                    p = p.get_parent()
+                out.append((" < ".join(chain), least, natural, w.get_width()))
+        c = w.get_first_child()
+        while c is not None:
+            walk(c)
+            c = c.get_next_sibling()
+    walk(root)
+    return out

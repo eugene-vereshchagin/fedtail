@@ -308,3 +308,63 @@ def wrap_box(spacing=4, row_spacing=2, align_end=False):
                     c.unparent()
         _WRAP.append(Wrap)
     return _WRAP[0](spacing, row_spacing, align_end)
+
+
+_SIDE = []
+
+
+def side_by_side(left, right, spacing=8):
+    """left at its natural width (narrower when it must, down to its least), right in
+    the rest — a header's words and its buttons. Not a horizontal box: GTK 4.18 takes a
+    box's least height as its children's at their least width, and a row of buttons
+    that wraps is tallest there ("GtkBox reported min height 210 and natural height
+    87"). Here the height is asked at the width each one gets."""
+    if not _SIDE:
+        class Side(Gtk.Widget):
+            def __init__(self, left, right, spacing):
+                super().__init__()
+                self.left, self.right, self.spacing = left, right, spacing
+                left.set_parent(self)
+                right.set_parent(self)
+
+            def _split(self, width):
+                hor = Gtk.Orientation.HORIZONTAL
+                l_lo, l_nat = self.left.measure(hor, -1)[:2]
+                r_lo = self.right.measure(hor, -1)[0]
+                room = max(0, width - self.spacing)
+                lw = max(l_lo, min(l_nat, room - r_lo))
+                return lw, max(r_lo, room - lw)
+
+            def do_get_request_mode(self):
+                return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+            def do_measure(self, orientation, for_size):
+                hor = Gtk.Orientation.HORIZONTAL
+                if orientation == hor:
+                    l_lo, l_nat = self.left.measure(hor, -1)[:2]
+                    r_lo, r_nat = self.right.measure(hor, -1)[:2]
+                    return (l_lo + self.spacing + r_lo, l_nat + self.spacing + r_nat,
+                            -1, -1)
+                if for_size < 0:
+                    for_size = self.do_measure(hor, -1)[1]
+                lw, rw = self._split(for_size)
+                ver = Gtk.Orientation.VERTICAL
+                h = max(self.left.measure(ver, lw)[1], self.right.measure(ver, rw)[1])
+                return h, h, -1, -1
+
+            def do_size_allocate(self, width, height, baseline):
+                lw, rw = self._split(width)
+                a = Gdk.Rectangle()
+                a.x, a.y, a.width, a.height = 0, 0, lw, height
+                self.left.size_allocate(a, -1)
+                b = Gdk.Rectangle()
+                b.x, b.y, b.width, b.height = width - rw, 0, rw, height
+                self.right.size_allocate(b, -1)
+
+            def do_dispose(self):
+                for c in (self.left, self.right):
+                    if c is not None and c.get_parent() is self:
+                        c.unparent()
+                self.left = self.right = None
+        _SIDE.append(Side)
+    return _SIDE[0](left, right, spacing)
