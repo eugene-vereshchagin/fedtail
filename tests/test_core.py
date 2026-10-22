@@ -1930,6 +1930,38 @@ class CoreTest(TmpDir):
         cfg, errors = config.validate({"notify": {"lanes": ["mentions", "list:Друзья"]}})
         self.assertEqual(errors, [])
 
+    def test_subs_a_slow_thread_waits(self):
+        """A followed thread the server times out on: the others are still checked,
+        the reader sees no error, and it isn't asked again at once."""
+        from fedtail.core import subs
+        alice = fakes.acct("A", "alice@example.org")
+        core, w = self.make()
+        core.connect().result()
+        core.poll_once()
+        core.cfg["subs"]["interval_minutes"] = 0
+        w.add(status("100", ME, minute=20), home=True)
+        w.add(status("200", ME, minute=21), home=True)
+        core.poll_once()
+        w.add(status("101", alice, "100", "ME", minute=22))
+        w.add(status("201", alice, "200", "ME", minute=23))
+        asked = []
+        real_context = core.api.context
+
+        def context(sid):
+            asked.append(sid)
+            if sid == "100":
+                raise TimeoutError("read timed out")
+            return real_context(sid)
+        core.api.context = context
+        self.events.clear()
+        new = subs.check(core.store, core.api, core.me["id"], 60, 30, 10)
+        self.assertEqual(sorted(asked), ["100", "200"])
+        self.assertTrue(new)  # 201 came
+        self.assertFalse([e for e in self.events if e[0] == "error"])
+        asked.clear()
+        subs.check(core.store, core.api, core.me["id"], 60, 30, 10)
+        self.assertEqual(asked, [])  # both checked just now: wait their turn
+
     def test_thread_subscriptions(self):
         alice = fakes.acct("A", "alice@example.org")
         core, w = self.make()

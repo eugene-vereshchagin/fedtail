@@ -5,6 +5,13 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- Faster after reading: which posts are read is kept in memory (the sidebar counted every
+  lane from the database after each read mark and froze the window for 0.4 s on a big
+  profile). A followed thread the server times out on no longer stops the others nor
+  shows an error: it waits its turn (it was asked again every poll).
+- Self-check: many tabs opened and closed round after round in Qt, GTK and the terminal
+  (tools/tabs_stress.py — leaks, slowing down), each theme's Qt and GTK windows side by
+  side with their colours compared (tools/theme_compare.py).
 - Sounds, as a part of the theme like its pictures: the messenger themes bring sets of
   their own (qip-retro, mra, psi, point — synthesised by tools/make_sounds.py, ours),
   system plays the desktop's sound theme, terminal and bnw beep. A batch of news chimes

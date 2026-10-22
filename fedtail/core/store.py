@@ -190,6 +190,10 @@ class Store:
         self.items_version = {}
         self.status_version = 0
         self.read_version = 0  # bumped by every read mark (Core caches unread counts by it)
+        # every read mark, in memory: the sidebar counts every lane after each read mark
+        # and asking SQLite for thousands of ids each time froze the window (413 ms on a
+        # real profile); None — read from the table at the next question
+        self._read = None
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
         self.db.execute("PRAGMA synchronous=NORMAL")
@@ -379,6 +383,7 @@ class Store:
                 out["read"] = db.execute(
                     "DELETE FROM read WHERE status_id NOT IN (SELECT id FROM statuses)"
                 ).rowcount
+                self._read = None
             if out["statuses"]:
                 self.status_version += 1
             if out["activity"]:
@@ -432,6 +437,8 @@ class Store:
                            "author, touched) VALUES (?, ?, ?, ?, ?, ?)", rows)
             if mine:
                 db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in mine])
+                if self._read is not None:
+                    self._read.update(mine)
             if changed:
                 self.status_version += 1
             if self._tags is not None:
@@ -936,7 +943,10 @@ class Store:
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):
         with self._tx() as db:
-            db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in status_ids])
+            ids = list(status_ids)
+            db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in ids])
+            if self._read is not None:
+                self._read.update(ids)
             self.read_version += 1
 
     def mark_mine_read(self):
@@ -946,6 +956,7 @@ class Store:
         with self._tx() as db:
             cur = db.execute("INSERT OR IGNORE INTO read SELECT id FROM statuses "
                              "WHERE author = ?", (self.me_id,))
+            self._read = None
             self.read_version += 1
             return cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
 
@@ -958,15 +969,12 @@ class Store:
         return json.loads(row[0]).get("account") if row else None
 
     def read_set(self, status_ids):
-        ids = list(status_ids)
-        out = set()
+        """Which of these posts are read (from memory: the table once a run)."""
         with self.lock:
-            for i in range(0, len(ids), 500):
-                chunk = ids[i:i + 500]
-                marks = ",".join("?" * len(chunk))
-                q = f"SELECT status_id FROM read WHERE status_id IN ({marks})"
-                out.update(r[0] for r in self.db.execute(q, chunk))
-        return out
+            if self._read is None:
+                self._read = {r[0] for r in self.db.execute("SELECT status_id FROM read")}
+            known = self._read
+            return {i for i in status_ids if i in known}
 
     # ---- drafts ---------------------------------------------------------------
     def save_draft(self, key, data):

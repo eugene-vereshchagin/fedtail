@@ -39,8 +39,8 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STEPS = ("tests", "windows", "qt", "bench", "gtk", "tui", "web", "behaviour", "parity",
-         "gallery")
+STEPS = ("tests", "windows", "qt", "bench", "gtk", "tui", "web", "behaviour", "tabs",
+         "themes", "parity", "gallery")
 
 
 def probe(code):
@@ -432,6 +432,32 @@ def main():
             wrap = run.wrap or (["xvfb-run", "-a"] if sys.platform.startswith("linux") and
                                 not has_display() and shutil.which("xvfb-run") else ())
             run.step("behaviour", cmd, timeout=900, wrap=wrap)  # GTK needs a display
+        if "tabs" in only:  # many tabs opened and closed, round after round: leaks, time
+            rounds, many = (("3", "15") if a.quick else ("20", "40") if a.night
+                            else ("6", "30"))
+            for ui, have in (("qt", qt), ("gtk", gtk), ("tui", tui)):
+                if not have:
+                    run.skip(f"tabs-{ui}", f"no {ui}")
+                    continue
+                d = out / f"tabs-{ui}"
+                run.step(f"tabs-{ui}", ["tools/tabs_stress.py", str(d), "--ui", ui,
+                                        "--rounds", rounds, "--tabs", many]
+                         + (["--native"] if ui == "qt" and native else []),
+                         timeout=3600, folder=d, note=f"{rounds} rounds × {many}")
+                if a.night and ui != "tui":  # the split layout's tabs are its own
+                    d = out / f"tabs-{ui}-split"
+                    run.step(f"tabs-{ui}-split", ["tools/tabs_stress.py", str(d), "--ui", ui,
+                                                  "--rounds", "8", "--tabs", many,
+                                                  "--layout", "split", "--theme", "qip-retro"]
+                             + (["--native"] if ui == "qt" and native else []),
+                             timeout=3600, folder=d, note="split, qip-retro")
+        if "themes" in only:  # after the tours: each theme's Qt and GTK pictures compared
+            if pil and (out / "qt-tour").is_dir() and (out / "gtk-shots").is_dir():
+                d = out / "themes"
+                run.step("themes", ["tools/theme_compare.py", str(out), str(d)],
+                         timeout=900, folder=d, note="Qt and GTK side by side")
+            else:
+                run.skip("themes", "needs Pillow and both the Qt tour and the GTK shots")
         if "parity" in only:  # after the walks: their menus go side by side
             run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
         # the gallery (tools/gallery.py): only asked by name (--only gallery) — the
@@ -467,6 +493,15 @@ def main():
                 d = r / "web"
                 run.step("real-web", ["tools/web_check.py", str(d)] + flag, timeout=900,
                          folder=d, note="your account", py=web_py)
+            if "tabs" in only:
+                for ui, have in (("qt", qt), ("gtk", gtk), ("tui", tui)):
+                    if have:
+                        d = r / f"tabs-{ui}"
+                        run.step(f"real-tabs-{ui}",
+                                 ["tools/tabs_stress.py", str(d), "--ui", ui, "--rounds",
+                                  "6" if a.night else "3", "--tabs", "30"] + flag
+                                 + (["--native"] if ui == "qt" and native else []),
+                                 timeout=3600, folder=d, note="your account")
             if not a.no_blur:
                 n = blur(r)
                 print(f"your account's screenshots: {n} blurred", flush=True)
