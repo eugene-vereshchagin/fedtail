@@ -127,8 +127,8 @@ py -3.13 tools/selfcheck.py --night
 ```
 
 `--quick` — 3–5 минут, без ключей — 20–40 минут, `--night` — всё, на ночь (с твоим аккаунтом
-только на чтение, скриншоты размыты). В конце — папка `selfcheck-<дата>` с `report.md` и zip
-рядом: zip и присылать. Прервал — `py -3.13 tools/selfcheck.py --clean` уберёт недоделанное.
+только на чтение, скриншоты размыты). В конце — папка `C:\Users\<ты>\fedtail_log\<дата_время>\`: все картинки и логи,
+`report.md` и в ней же zip — его и присылать. Прервал — `py -3.13 tools/selfcheck.py --clean` уберёт недоделанное.
 
 ---
 
@@ -191,4 +191,5 @@ code.
    ```
 
 6. Selfcheck: `py -3.13 tools/devenv.py` once (Playwright), then `py -3.13 tools/selfcheck.py
-   --quick` / no flags / `--night`; send the zip next to the `selfcheck-<date>` folder.
+   --quick` / no flags / `--night`; send the zip from
+   `%USERPROFILE%\fedtail_log\<date_time>\`.

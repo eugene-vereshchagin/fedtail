@@ -21,7 +21,9 @@ screenshots are blurred (the layout stays, the words don't) unless --no-blur; th
 terminal's have their letters masked.
 
 What can't run here (no PySide6, no GTK, no Textual, no Playwright) is skipped and said
-so. At the end: report.md in the folder and one zip of all of it, to send back.
+so. Each run is a folder of its own: ~/fedtail_log/DATE_TIME/ (on Windows
+%USERPROFILE%/fedtail_log/DATE_TIME/) — every step's pictures and logs, report.md, and
+in the same folder the zip of all of it, to send back.
 Works on Linux, Windows and macOS (GTK: Linux only)."""
 
 from __future__ import annotations
@@ -216,22 +218,38 @@ def clean_temp(since=None):
     return n
 
 
+LOGS = Path.home() / "fedtail_log"  # every run: a folder DATE_TIME of its own in here
+STAMP = re.compile(r"\d{4}-\d\d-\d\d_\d\d-\d\d(-\d+)?$")
+
+
+def zip_of(run_dir):
+    return run_dir / f"fedtail-selfcheck-{run_dir.name}.zip"
+
+
+def runs(where):
+    """The runs' folders here: DATE_TIME (and the old selfcheck-DATE ones)."""
+    return sorted(d for d in where.iterdir() if d.is_dir() and
+                  (STAMP.match(d.name) or d.name.startswith("selfcheck-"))) \
+        if where.is_dir() else []
+
+
+def finished(d):
+    return not (d / "INTERRUPTED").exists() and (
+        zip_of(d).exists() or d.with_suffix(".zip").exists())
+
+
 def clean(where, everything):
     """Runs that didn't finish (stopped, killed, a crash: no zip, or INTERRUPTED in
     it) — or, with everything, every run here — and the tools' temporary folders."""
     gone = []
-    for d in sorted(where.glob("selfcheck-*")):
-        if d.is_dir():
-            unfinished = (d / "INTERRUPTED").exists() or not d.with_suffix(".zip").exists()
-            if everything or unfinished:
-                shutil.rmtree(d, ignore_errors=True)
-                gone.append(d.name + "/")
-        elif d.suffix == ".zip" and everything:
-            d.unlink()
-            gone.append(d.name)
+    for d in runs(where):
+        if everything or not finished(d):
+            shutil.rmtree(d, ignore_errors=True)
+            d.with_suffix(".zip").unlink(missing_ok=True)
+            gone.append(d.name + "/")
     n = clean_temp()
     print("removed: " + (", ".join(gone) or "no runs") + f"; temporary folders: {n}")
-    left = sorted(p.name for p in where.glob("selfcheck-*"))
+    left = [d.name for d in runs(where)]
     if left:
         print("kept (finished): " + ", ".join(left) + "  — --clean all removes them too")
     return 0
@@ -247,7 +265,8 @@ def logged_in(profile):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("out", nargs="?", help="the folder (default: selfcheck-DATE here)")
+    ap.add_argument("out", nargs="?",
+                    help="the run's folder (default: ~/fedtail_log/DATE_TIME)")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--night", action="store_true",
                     help="everything: every theme, every layout, maximized too, slower "
@@ -268,15 +287,22 @@ def main():
                          "the tools' temporary folders; --clean all: every run here")
     a = ap.parse_args()
     if a.clean:
-        return clean(Path(a.out or ".").resolve(), a.clean == "all")
+        return clean(Path(a.out).resolve() if a.out else LOGS, a.clean == "all")
     if a.night and a.quick:
         ap.error("--night or --quick, not both")
     pace = a.pace if a.pace is not None else (2.0 if a.night else 1.0)
     only = set((a.only or ",".join(STEPS)).split(","))
-    out = Path(a.out or "selfcheck-" + time.strftime("%Y%m%d-%H%M")).resolve()
+    if a.out:
+        out = Path(a.out).expanduser().resolve()
+    else:
+        out = LOGS / time.strftime("%Y-%m-%d_%H-%M")
+        n = 1
+        while out.exists():  # two runs in one minute: each its own
+            n += 1
+            out = LOGS / (time.strftime("%Y-%m-%d_%H-%M") + f"-{n}")
     out.mkdir(parents=True, exist_ok=True)
-    stale = [d.name for d in out.parent.glob("selfcheck-*") if d.is_dir() and d != out and
-             ((d / "INTERRUPTED").exists() or not d.with_suffix(".zip").exists())]
+    print(f"this run: {out}", flush=True)
+    stale = [d.name for d in runs(out.parent) if d != out and not finished(d)]
     if stale:
         print("unfinished runs here (not results): " + ", ".join(stale) +
               " — python3 tools/selfcheck.py --clean", flush=True)
@@ -517,11 +543,13 @@ def main():
         return 130
     clean_temp(started)
     report(run, out, facts)
-    archive = out.with_suffix(".zip")
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+    archive = zip_of(out)  # in the run's own folder, next to what it holds
+    part = archive.with_suffix(".part")
+    with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(out.rglob("*")):
-            if p.is_file():
+            if p.is_file() and p not in (archive, part):
                 z.write(p, p.relative_to(out.parent))
+    part.replace(archive)  # there only when whole: a zip here = the run finished
     print(f"\nreport: {out / 'report.md'}\nto send back: {archive}")
     return 0 if all(r[1] in ("ok", "skipped") for r in run.rows) else 1
 
