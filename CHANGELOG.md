@@ -17,6 +17,23 @@
   of what's built and waits (a hand's 6 and 15 screens a second, a fling, the thumb
   dragged); GTK builds ahead faster — while the reader keeps coming to an end, and
   while standing at it.
+- Kinder to the server's rate limit. A followed thread that has gone quiet is reread
+  less often (quiet an hour — 3× `subs.interval_minutes`, a day — 12×, three days —
+  36×), and threads take at most a quarter of what the server still allows: a night
+  with 97 followed threads spent 56% of its requests on them and waited 1.7 h of 10
+  for the limit. A 429 no longer fails a whole round with "poll failed"; the pause
+  after one counts what a full round costs, and waits a little past the server's reset.
+- Smoother: the same posts fetched again keep the lanes' caches (the sidebar's counts
+  stopped reading the store in the window's thread every round: 0.3–0.6 s stalls); a
+  gifv in a Qt card draws at most 12 frames a second, made small first; the dock stops
+  asking the X server for the pointer while the window is in the background.
+- GTK: a post's buttons wrap to a second row in a narrow window or with big fonts
+  instead of pushing the lane past the window's edge; Clear in Activity; a tag's tab
+  with "Feature on my profile"; a picture's right-click menu (save, open, copy link);
+  a poll's "refresh".
+- selfcheck: `--night` runs every window on a display of its own (xvfb-run) — a locked
+  screen made GTK draw a frame a second and the benches meaningless; the tests run
+  there too, away from the desktop's focus.
 - Sync between your devices: read marks you made and threads you followed, left or
   muted travel to your other devices (`sync.*`, off by default; docs/en/sync.md). Each
   device keeps a journal, sealed with AES-256-GCM under a key only your devices have, and
