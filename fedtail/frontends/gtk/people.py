@@ -73,9 +73,10 @@ class AccountRow(Gtk.Box):
 class TagRow(Gtk.Box):
     """#tag (its posts in a tab), how much it's used, Follow / Unfollow."""
 
-    def __init__(self, win, tag):
+    def __init__(self, win, tag, header=False):
         super().__init__(spacing=10)
         self.win, self.tag = win, tag
+        self.header = header
         self.add_css_class("ft-card")
         lab = Gtk.Label(xalign=0, hexpand=True)
         used = f"  ·  {tag.uses} / {tag.people}" if tag.uses or tag.people else ""
@@ -85,9 +86,39 @@ class TagRow(Gtk.Box):
         self.append(lab)
         self.follow = Gtk.Button()
         self.following = bool(tag.following)
-        self.follow.set_label(_("unfollow") if self.following else _("follow"))
         self.follow.connect("clicked", self._toggle)
+        self._words()
         self.append(self.follow)
+        self.feature = None
+        if header and win.view.supports("featured_tags"):
+            # on my profile (featured tags), as Qt's tag tab; not known yet: dead
+            self.featured = None
+            self.feature = Gtk.Button(label=_("tag_feature"))
+            tip(self.feature, _("tag_feature_tip"))
+            self.feature.set_sensitive(False)
+            self.feature.connect("clicked", self._toggle_feature)
+            self.append(self.feature)
+            win.call(win.view.featured_tag_names(), self._featured,
+                     lambda _e: self.feature.set_visible(False))
+
+    def _words(self):
+        if self.header:
+            self.follow.set_label(_("tag_unfollow") if self.following else _("tag_follow"))
+            tip(self.follow, _("tag_follow_tip"))
+        else:
+            self.follow.set_label(_("unfollow") if self.following else _("follow"))
+
+    def _featured(self, names):
+        self.featured = self.tag.name.lower() in (names or set())
+        self.feature.set_label(_("tag_unfeature") if self.featured else _("tag_feature"))
+        self.feature.set_sensitive(True)
+
+    def _toggle_feature(self, _b):
+        on = not self.featured
+        self.feature.set_sensitive(False)
+        self.win.call(self.win.view.feature_tag(self.tag.name, on),
+                      lambda _r: self._featured({self.tag.name.lower()} if on else set()),
+                      lambda e: (self.feature.set_sensitive(True), self.win.error(e)))
 
     def _toggle(self, _b):
         on = not self.following
@@ -95,7 +126,7 @@ class TagRow(Gtk.Box):
 
         def done(_r):
             self.following = on
-            self.follow.set_label(_("unfollow") if on else _("follow"))
+            self._words()
             self.follow.set_sensitive(True)
         self.win.call(self.win.view.follow_tag(self.tag.name, on), done,
                       lambda e: (self.follow.set_sensitive(True), self.win.error(e)))
@@ -248,7 +279,10 @@ def open_tag(win, tag):
 
     def info(t):
         if isinstance(t, Tag):
-            box.prepend(TagRow(win, t))
+            note = Gtk.Label(label=_("tag_info"), xalign=0, wrap=True)
+            note.add_css_class("ft-muted")
+            box.prepend(note)
+            box.prepend(TagRow(win, t, header=True))
     win.call(win.view.tag_info(tag), info, lambda _e: None)
     older = Gtk.Button(label=_("older_down"))
     older.add_css_class("flat")

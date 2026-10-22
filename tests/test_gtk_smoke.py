@@ -638,6 +638,24 @@ class GtkSmokeTest(_GtkBase):
         self.win.on_link(f"fedtail:alias/{alias}")
         self.assertEqual(bar.entry.get_text(), f"#{alias} ")
 
+    def test_tag_tab_follows_and_features(self):
+        from fedtail.frontends.gtk.people import TagRow
+        page = self.win.open_tag("linux")
+
+        def row():
+            return next((w for w in _walk(page) if isinstance(w, TagRow)), None)
+        self.assertTrue(pump(lambda: row() is not None, 3))
+        r = row()
+        self.assertEqual(r.follow.get_label(), i18n._("tag_follow"))
+        r.follow.emit("clicked")
+        self.assertTrue(pump(lambda: "linux" in self.world.followed_tags, 3))
+        self.assertTrue(pump(lambda: r.follow.get_label() == i18n._("tag_unfollow"), 3))
+        self.assertIsNotNone(r.feature)
+        self.assertTrue(pump(lambda: r.feature.get_sensitive(), 3))
+        r.feature.emit("clicked")
+        self.assertTrue(pump(lambda: "linux" in self.world.my_tags, 3))
+        self.assertTrue(pump(lambda: r.feature.get_label() == i18n._("tag_unfeature"), 3))
+
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkPanelsTest(_GtkBase):
