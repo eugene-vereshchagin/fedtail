@@ -9,7 +9,8 @@
   their own (qip-retro, mra, psi, point — synthesised by tools/make_sounds.py, ours),
   system plays the desktop's sound theme, terminal and bnw beep. A batch of news chimes
   once with its weightiest sound; `sound.*` says which lanes, the volume, the player,
-  signing in and sending; a theme's own set is a `sounds/` folder by it. Qt, GTK, the
+  signing in and sending (`sound.enabled = "auto"`: on in development versions, off in
+  releases; "on" / "off"); a theme's own set is a `sounds/` folder by it. Qt, GTK, the
   terminal (its bell, `tui.sound`) and the web page (in the browser) alike.
   ≡ → Debug → "Test the sound".
 - Web: a page that left while waiting for news (a reload, a closed tab) no longer

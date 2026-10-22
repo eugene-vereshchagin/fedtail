@@ -162,7 +162,7 @@ DEFAULTS = {
         "filtered": 'remind',
     },
     "sound": {
-        "enabled": True,
+        "enabled": "auto",
         "lanes": ["direct", "replies", "mentions", "subs", "requests"],
         "except": [],
         "online": True,
@@ -297,6 +297,7 @@ CHOICES = {
     ("lists", "hide_members"): {"all", "exclusive", "off"},
     ("tui", "pictures"): {"inline", "key", "off"},
     ("tui", "sound"): {"bell", "scheme", "off"},
+    ("sound", "enabled"): {"auto", "on", "off"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
               "local", "federated", "requests", "direct", "my_likes"}

@@ -255,13 +255,13 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 
 | Key | Default | What it does |
 |---|---|---|
-| `sound.enabled` | `true` | Sounds. The sound scheme is a part of the theme, like the pictures: the messenger themes (qip-*, mra-*, psi) bring their own set, system plays the desktop's sounds (the KDE/GNOME sound theme), terminal and bnw the terminal's beep, the rest what they inherit. One program plays them all: pw-play, paplay or aplay (Linux), afplay (macOS), Windows itself; none of them — silence. |
+| `sound.enabled` | `"auto"` | Sounds. The sound scheme is a part of the theme, like the pictures: the messenger themes (qip-*, mra-*, psi) bring their own set, system plays the desktop's sounds (the KDE/GNOME sound theme), terminal and bnw the terminal's beep, the rest what they inherit. One program plays them all: pw-play, paplay or aplay (Linux), afplay (macOS), Windows itself; none of them — silence. "auto" — sounds in development versions (X.Y.Z.devN — git between releases), none in releases and the builds made from them; "on" — always; "off" — never. |
 | `sound.lanes` | `["direct", "replies", "mentions", "subs", "requests"]` | Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:<br>direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",<br>requests → "request", activity → "activity", every other lane → "message". |
 | `sound.except` | `[]` | Never chime about these, even if lanes names them. |
 | `sound.online` | `true` | The "online" sound — when fedtail has connected to the server. |
 | `sound.sent` | `true` | The "sent" sound — when a post has gone out. |
 | `sound.when_focused` | `true` | Chime while the fedtail window is active too (notifications keep quiet then — sounds don't). |
-| `sound.scheme` | `"theme"` | Whose scheme: "theme" — the theme's; a theme's name ("qip-retro", "mra", "psi") — its sounds whatever the look; "none" — no sounds (the same as enabled = false). |
+| `sound.scheme` | `"theme"` | Whose scheme: "theme" — the theme's; a theme's name ("qip-retro", "mra", "psi") — its sounds whatever the look; "none" — no sounds (the same as enabled = "off"). |
 | `sound.volume` | `80` | Volume, 0 to 100 — where the player can (pw-play, paplay, afplay, the browser). |
 | `sound.player` | `"auto"` | What plays them: "auto" — the first found of those above; or a command of yours, {file} being the file's path: "mpv --no-video {file}". |
 | `sound.min_gap_seconds` | `3` | No more than one sound in this many seconds (a batch of news chimes once — the weightiest). |

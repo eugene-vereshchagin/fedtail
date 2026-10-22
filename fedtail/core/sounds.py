@@ -22,6 +22,20 @@ LANE_EVENT = {"direct": "direct", "replies": "reply", "mentions": "mention",
               "subs": "thread", "requests": "request", "activity": "activity"}
 
 
+def enabled(cfg):
+    """sound.enabled: "on", "off" or "auto" — on for development versions (X.Y.Z.devN, a
+    checkout between releases: whoever tests it hears it), off for releases and the
+    builds made from them."""
+    s = (cfg or {}).get("sound") or {}
+    mode = s.get("enabled", "auto")
+    if mode is True or mode is False:  # an older word for it
+        return mode
+    if mode != "auto":
+        return mode == "on"
+    from .. import __version__
+    return ".dev" in __version__
+
+
 def event_for_lane(name):
     """The sound a lane's news makes: its own, or "message" (home, lists, bots…)."""
     return LANE_EVENT.get(name, "message")
@@ -56,7 +70,7 @@ class Chime:
     @property
     def on(self):
         s = self.cfg.get("sound") or {}
-        return bool(s.get("enabled", True)) and s.get("scheme", "theme") != "none"
+        return enabled(self.cfg) and s.get("scheme", "theme") != "none"
 
     def lane_wanted(self, name):
         s = self.cfg["sound"]

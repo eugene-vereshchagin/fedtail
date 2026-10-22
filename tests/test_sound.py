@@ -23,7 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def cfg(**sound):
-    c, errors = config.validate({"sound": sound} if sound else {})
+    sound.setdefault("enabled", "on")
+    c, errors = config.validate({"sound": sound})
     assert not errors, errors
     return c
 
@@ -64,15 +65,26 @@ class ChimeTest(unittest.TestCase):
 
     def test_off_and_moments(self):
         clock = Clock()
-        self.assertIsNone(Chime(cfg(enabled=False), clock=clock).for_news(["replies"]))
+        self.assertIsNone(Chime(cfg(enabled="off"), clock=clock).for_news(["replies"]))
         self.assertIsNone(Chime(cfg(scheme="none"), clock=clock).for_news(["replies"]))
         ch = Chime(cfg(sent=False), clock=clock)
         self.assertIsNone(ch.for_moment("sent"))
         self.assertEqual(ch.for_moment("online"), "online")
         self.assertIsNone(ch.for_moment("reply"))  # not a moment
 
+    def test_auto_is_on_in_development_only(self):
+        from fedtail.core import sounds
+        c, _w = config.validate({})
+        self.assertEqual(c["sound"]["enabled"], "auto")
+        with mock.patch("fedtail.__version__", "0.19.0.dev3"):
+            self.assertTrue(sounds.enabled(c))
+        with mock.patch("fedtail.__version__", "0.19.0"):
+            self.assertFalse(sounds.enabled(c))
+            self.assertTrue(sounds.enabled(cfg(enabled="on")))
+        self.assertFalse(sounds.enabled(cfg(enabled="off")))
+
     def test_config_checks(self):
-        for bad in ({"volume": 120}, {"lanes": ["nope"]}, {"scheme": 3}):
+        for bad in ({"volume": 120}, {"lanes": ["nope"]}, {"scheme": 3}, {"enabled": "yes"}):
             with self.assertRaises(config.ConfigError, msg=bad):
                 config.validate({"sound": bad})
         c, _w = config.validate({"sound": {"lanes": ["comments"]}})  # an old name
@@ -100,7 +112,7 @@ class CoreSoundTest(unittest.TestCase):
         return core, FakeApi.world
 
     def test_a_reply_sounds_and_a_home_post_doesnt(self):
-        core, w = self.make()
+        core, w = self.make(sound={"enabled": "on"})
         core.chime.clock = Clock()
         core.connect().result()
         self.assertIn(("sound", "online"), self.events)
@@ -120,7 +132,7 @@ class CoreSoundTest(unittest.TestCase):
         self.assertEqual(sounds()[before:], ["reply"])  # home is not in sound.lanes
 
     def test_sound_without_notifications(self):
-        core, w = self.make(notify={"lanes": []}, sound={"lanes": ["home"]})
+        core, w = self.make(notify={"lanes": []}, sound={"lanes": ["home"], "enabled": "on"})
         core.chime.clock = Clock()
         core.connect().result()
         core.poll_once()
@@ -131,7 +143,7 @@ class CoreSoundTest(unittest.TestCase):
         self.assertIn(("sound", "message"), self.events)
 
     def test_sent(self):
-        core, _w = self.make(sound={"min_gap_seconds": 0})
+        core, _w = self.make(sound={"min_gap_seconds": 0, "enabled": "on"})
         core.connect().result()
         core.post("hello", "public").result()
         self.assertIn(("sound", "sent"), self.events)
@@ -163,7 +175,7 @@ class ThemeSetsTest(unittest.TestCase):
         self.assertIsNone(soundpack.scheme("system", cfg()).find("online"))
         self.assertEqual(soundpack.scheme("terminal", cfg()).find("reply").kind, "bell")
         self.assertIsNone(soundpack.scheme("qip-retro", cfg(scheme="none")).find("reply"))
-        self.assertIsNone(soundpack.scheme("qip-retro", cfg(enabled=False)).find("reply"))
+        self.assertIsNone(soundpack.scheme("qip-retro", cfg(enabled="off")).find("reply"))
         self.assertIsNone(soundpack.scheme("qip-retro", cfg()).find("nonsense"))
         # sound.scheme borrows another theme's sounds whatever the look
         snd = soundpack.scheme("system", cfg(scheme="psi")).find("message")

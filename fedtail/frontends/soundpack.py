@@ -148,8 +148,9 @@ def _scheme_of(name):
 def scheme(theme_id, cfg=None):
     """The Scheme to sound with: sound.scheme's ("theme" — this theme's; a theme's name
     — that one's; "none" — silence), and none at all with sound.enabled = false."""
+    from ..core.sounds import enabled
     s = (cfg or {}).get("sound") or {}
-    if s and not s.get("enabled", True):
+    if s and not enabled(cfg):
         return Scheme(theme_id or "", "none")
     want = s.get("scheme", "theme") if s else "theme"
     if want == "none":

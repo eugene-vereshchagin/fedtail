@@ -160,8 +160,9 @@ class Sounds:
         self.scheme = self._scheme(theme_id)
 
     def wanted(self, focused):
+        from ...core.sounds import enabled
         s = self.cfg.get("sound") or {}
-        return s.get("enabled", True) and (not focused or s.get("when_focused", True))
+        return enabled(self.cfg) and (not focused or s.get("when_focused", True))
 
     def play(self, event, focused=False):
         """Play the sound of a core event. Returns what was done: "file", "desktop",

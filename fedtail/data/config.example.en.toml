@@ -786,7 +786,9 @@ filtered = "remind"
 # sound theme), terminal and bnw the terminal's beep, the rest what they inherit. One
 # program plays them all: pw-play, paplay or aplay (Linux), afplay (macOS), Windows itself;
 # none of them — silence.
-enabled = true
+# "auto" — sounds in development versions (X.Y.Z.devN — git between releases), none in
+# releases and the builds made from them; "on" — always; "off" — never.
+enabled = "auto"
 
 # Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:
 #   direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",
@@ -806,7 +808,7 @@ sent = true
 when_focused = true
 
 # Whose scheme: "theme" — the theme's; a theme's name ("qip-retro", "mra", "psi") — its
-# sounds whatever the look; "none" — no sounds (the same as enabled = false).
+# sounds whatever the look; "none" — no sounds (the same as enabled = "off").
 scheme = "theme"
 
 # Volume, 0 to 100 — where the player can (pw-play, paplay, afplay, the browser).
