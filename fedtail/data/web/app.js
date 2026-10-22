@@ -7,7 +7,7 @@
 const $ = (s) => document.querySelector(s);
 const state = {
   me: null, words: {}, lane: null, lanes: [], posts: [], cursor: -1, version: -1,
-  soundSeq: -1, played: [],
+  soundSeq: -1, played: [], noteSeq: -1, shown: [],
   replyTo: null, readQueue: new Set(), side: null, older: false, busy: false,
   edit: null, quote: null,  // the editor correcting my post / quoting one
 };
@@ -413,6 +413,7 @@ async function postMenu(p, anchor) {
       else if (it.kind === "copy") items.push([it.label, () => copyText(it.text)]);
       else if (it.kind === "quote_reply") items.push(["❝ " + it.label, () => quoteReply(p)]);
       else if (it.kind === "link") items.push([it.label, () => linkAct(it.url, p)]);
+      else if (it.page) items.push([it.label + " …", () => openThing(it.page)]);
     }
     items.push("-");
   }
@@ -431,11 +432,8 @@ async function linkAct(url, p, confirmed) {
     return;
   }
   if (r.copy) copyText(r.copy);
-  if (r.open) {
-    if (r.open.thread) openThread(r.open.thread);
-    else if (r.open.account) openAccount(r.open.account);
-    else if (r.open.url) window.open(r.open.url, "_blank", "noopener");
-  }
+  if (r.alias) { const c = $("#cmd"); c.value = "#" + r.alias + " "; c.focus(); }
+  if (r.open) openThing(r.open);
   if (r.compose) composeFrom(r.compose, p);
   if (r.read_up_to) readUpTo(r.read_up_to);
   if (r.message) toast(r.message);
@@ -488,16 +486,22 @@ async function copyText(text) {
 }
 
 function mainMenu() {
+  const places = (state.me.places || []).filter((x) => !["help", "news", "about"].includes(x.name))
+    .map((x) => [x.title + " …", () => openPlace(x.name)]);
   popup($("#more"), [
     ["✎ " + w("write"), () => compose(null)],
     [w("my_profile"), () => state.me.me && openAccount(state.me.me.id)],
     [w("refresh"), refresh],
     [w("web_mark_read"), markAllRead],
     "-",
-    [w("help_title") + " ↗", () => window.open(state.me.help_url, "_blank", "noopener")],
+    ...places,
+    "-",
+    ...(canNotify() && Notification.permission !== "granted"
+      ? [[w("web_notify"), askNotify]] : []),
+    [w("help_title"), () => openPlace("help")],
+    [w("help_news"), () => openPlace("news")],
     [w("web_keys"), () => info(w("web_keys_text"))],
-    [w("about"), () => info(w("web_about", { version: state.me.version, handle: state.me.handle }),
-                           [[state.me.homepage, state.me.homepage]])],
+    [w("about"), () => openPlace("about")],
   ]);
 }
 
@@ -580,6 +584,7 @@ async function loadLanes() {
 
 async function selectLane(name, keep) {
   const changed = state.lane !== name;
+  if (changed && $("#find") && !$("#find").hidden) closeFind();
   state.lane = name;
   if (location.hash.slice(1) !== encodeURIComponent(name))
     history.replaceState(null, "", "#" + encodeURIComponent(name));
@@ -591,6 +596,12 @@ async function selectLane(name, keep) {
     if (changed) api("/api/active", { name: data.name }).catch(() => {});  // a POST: GET only reads
   } catch (e) { toast(w("web_load_error", { err: e.message })); return; }
   if (state.lane !== name) return;  // another lane was picked meanwhile
+  if (data.place) {  // Activity, Requests: not posts — the place, in the lane's stead
+    $("#title").textContent = data.title;
+    document.title = data.title + " — fedtail";
+    state.posts = [];
+    return openPlace(data.place, "", "", "", "main");
+  }
   const newestFirst = state.me.order === "newest_first";
   if (newestFirst) data.posts.reverse();
   const box = $("#posts");
@@ -699,6 +710,68 @@ async function markAllRead() {
   countUnread();
   if (ids.length) await api("/api/read", { ids }).catch((e) => toast(e.message));
   loadLanes();
+}
+
+// ---- Ctrl+F: find in the lane (the server matches as the windows do) -------------------
+const finder = { ids: [], at: -1, timer: null };
+function findBar() {
+  let bar = $("#find");
+  if (bar) return bar;
+  bar = el("form", "");
+  bar.id = "find";
+  const inp = el("input");
+  inp.id = "find-q";
+  inp.placeholder = w("find_placeholder");
+  const count = el("span", "muted");
+  count.id = "find-count";
+  const b = (label, title, fn) => {
+    const x = el("button", "tool", label);
+    x.type = "button";
+    x.title = title;
+    x.onclick = fn;
+    return x;
+  };
+  bar.append(inp, count, b("↑", w("find_prev"), () => findStep(-1)),
+             b("↓", w("find_next"), () => findStep(1)), b("×", w("find_close"), closeFind));
+  bar.onsubmit = (e) => { e.preventDefault(); findStep(1); };
+  inp.oninput = () => { clearTimeout(finder.timer); finder.timer = setTimeout(findNow, 250); };
+  inp.onkeydown = (e) => {
+    if (e.key === "Escape") { e.preventDefault(); closeFind(); }
+    else if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); findStep(-1); }
+  };
+  $("#posts").before(bar);
+  return bar;
+}
+
+function openFind() { findBar().hidden = false; $("#find-q").focus(); $("#find-q").select(); }
+function closeFind() {
+  const bar = $("#find");
+  if (bar) bar.hidden = true;
+  for (const c of document.querySelectorAll("#posts .post.found")) c.classList.remove("found");
+  finder.ids = [];
+  $("#posts").focus();
+}
+
+async function findNow() {
+  const q = $("#find-q").value;
+  let r = { ids: [], text: "" };
+  try { if (q.trim()) r = await api("/api/find?" + new URLSearchParams({ lane: state.lane, q })); }
+  catch (e) { toast(e.message); }
+  finder.ids = r.ids;
+  finder.at = -1;
+  for (const c of document.querySelectorAll("#posts .post"))
+    c.classList.toggle("found", r.ids.includes(c.dataset.id));
+  $("#find-count").textContent = r.text;
+  if (r.ids.length) findStep(1);
+}
+
+function findStep(d) {
+  const n = finder.ids.length;
+  if (!n) return;
+  finder.at = finder.at < 0 ? (d > 0 ? 0 : n - 1) : (finder.at + d + n) % n;
+  const i = state.posts.findIndex((x) => x.id === finder.ids[finder.at]);
+  if (i >= 0) setCursor(i);
+  $("#find-count").textContent = w("find_count", { i: finder.at + 1, n });
 }
 
 // ---- the cursor (j / k) ---------------------------------------------------------------
@@ -837,9 +910,9 @@ async function profileAct(id, key, answer, confirmed) {
     return;
   }
   if (r.copy) copyText(r.copy);
-  if (r.open && r.open.url) window.open(r.open.url, "_blank", "noopener");
   if (r.compose) composeFrom(r.compose, null);
   if (r.message) toast(r.message);
+  if (r.open) { openThing(r.open); return; }
   if (r.refresh) await openAccount(id);
 }
 
@@ -854,6 +927,173 @@ function showSide(title) {
 }
 
 function closeSide() { $("#side").hidden = true; state.side = null; $("#posts").focus(); }
+
+// ---- places: silence, lists, search, a tag, the help… as the server lays them out
+// (common/places.py: the same place, the same buttons in the terminal) ------------------
+function openThing(o) {  // where an action leads
+  if (!o) return;
+  if (o.thread) openThread(o.thread);
+  else if (o.account) openAccount(o.account);
+  else if (o.url) window.open(o.url, "_blank", "noopener");
+  else if (o.page) openPlace(o.page, o.arg, o.tab, o.cursor,
+                             state.place && state.place.into === "main" && o.page === state.place.name
+                               ? "main" : "side", o.anchor);
+  else if (o.back) { if (state.place && state.place.into === "side") closeSide(); }
+}
+
+async function openPlace(name, arg, tab, cursor, into, anchor) {
+  into = into || "side";
+  const box = into === "side" ? $("#side-body") : $("#posts");
+  const token = into === "side" ? showSide("…") : (state.side_main = (state.side_main || 0) + 1);
+  const q = new URLSearchParams({ name, arg: arg || "", tab: tab || "", cursor: cursor || "" });
+  let pg;
+  try { pg = await api("/api/page?" + q); }
+  catch (e) { box.textContent = w("web_load_error", { err: e.message }); return; }
+  if (into === "side" ? state.side !== token : state.side_main !== token) return;
+  if (into === "main" && state.lane && !["activity", "requests"].includes(state.lane)
+      && name !== state.lane) return;
+  state.place = { name, arg: arg || "", tab: pg.tab, into };
+  if (into === "side") $("#side-title").textContent = pg.title;
+  renderPlace(pg, box);
+  if (anchor) {
+    const at = document.getElementById(anchor);
+    if (at) at.scrollIntoView({ block: "start" });
+  } else box.scrollTop = 0;
+}
+
+function renderPlace(pg, box) {
+  box.textContent = "";
+  const page = el("section", "place place-" + pg.name);
+  if (pg.hint) page.append(el("div", "muted hint", pg.hint));
+  if (pg.tabs.length) {
+    const tabs = el("div", "tabs");
+    for (const [key, label] of pg.tabs) {
+      const b = el("button", key === pg.tab ? "on" : "", label);
+      b.type = "button";
+      b.onclick = () => openPlace(pg.name, pg.arg, key, "", state.place.into);
+      tabs.append(b);
+    }
+    page.append(tabs);
+  }
+  const form = pg.form.length ? renderForm(pg.form) : null;
+  if (form && pg.name === "search") page.append(form.box);  // the box first, then the finds
+  for (const r of pg.rows) page.append(renderRow(r));
+  if (!pg.rows.length && pg.empty) page.append(el("div", "empty", pg.empty));
+  if (form && pg.name !== "search") page.append(form.box);
+  if (pg.submit || pg.more) {
+    const row = el("div", "row");
+    if (pg.submit) row.append(placeButton(pg.submit, form && form.values));
+    if (pg.more) row.append(placeButton(pg.more));
+    (form ? form.box : page).append(row);
+    if (form) form.box.onsubmit = (e) => { e.preventDefault(); placeAct(pg.submit.act, form.values()); };
+  }
+  box.append(page);
+  watchRead(box);
+}
+
+function renderRow(r) {
+  if (r.kind === "post") return renderPost(r.post, false);
+  if (r.kind === "heading") return el("h3", "place-head", r.title);
+  if (r.kind === "html") {
+    const d = el("div", "body html");
+    d.innerHTML = r.html;  // cleaned on the server (the help: made there from our Markdown)
+    return d;
+  }
+  const row = el("div", "item" + (r.kind === "account" ? " person" : ""));
+  if (r.account) {
+    const a = avatar(r.account, "ava small");
+    a.onclick = () => openAccount(r.account.id);
+    row.append(a);
+  }
+  const t = el("div", "item-text");
+  t.append(el("b", "", r.title));
+  if (r.line) t.append(el("div", "muted", r.line));
+  row.append(t);
+  if (r.buttons.length) {
+    const bs = el("div", "item-btns");
+    for (const b of r.buttons) bs.append(placeButton(b));
+    row.append(bs);
+  }
+  return row;
+}
+
+function placeButton(b, values) {
+  const x = el("button", b.primary ? "primary small" : "tool small", b.label);
+  x.type = "button";
+  if (b.tip) x.title = b.tip;
+  x.onclick = () => placeAct(b.act, values ? values() : null);
+  return x;
+}
+
+function renderForm(fields) {
+  const box = el("form", "place-form");
+  const get = {};
+  for (const f of fields) {
+    const lab = el("label", "field field-" + f.kind);
+    if (f.kind === "check") {
+      const c = el("input");
+      c.type = "checkbox";
+      c.checked = !!f.value;
+      lab.append(c, " ", f.label);
+      get[f.name] = () => c.checked;
+    } else if (f.kind === "checks") {
+      if (f.label) lab.append(el("span", "", f.label));
+      const boxes = f.choices.map(([v, words]) => {
+        const c = el("input");
+        c.type = "checkbox";
+        c.checked = (f.value || []).includes(v);
+        const l = el("label", "check");
+        l.append(c, " ", words);
+        lab.append(l);
+        return [v, c];
+      });
+      get[f.name] = () => boxes.filter(([, c]) => c.checked).map(([v]) => v);
+    } else if (f.kind === "choice") {
+      lab.append(el("span", "", f.label));
+      const sel = el("select");
+      for (const [v, words] of f.choices) {
+        const o = el("option", "", words);
+        o.value = v;
+        sel.append(o);
+      }
+      sel.value = f.value;
+      lab.append(sel);
+      get[f.name] = () => sel.value;
+    } else {
+      lab.append(el("span", "", f.label));
+      const inp = el(f.kind === "text" ? "textarea" : "input");
+      inp.value = f.value || "";
+      if (f.kind === "text") inp.rows = 4;
+      lab.append(inp);
+      get[f.name] = () => inp.value;
+    }
+    box.append(lab);
+  }
+  const values = () => Object.fromEntries(Object.entries(get).map(([k, f]) => [k, f()]));
+  return { box, values };
+}
+
+async function placeAct(act, values, confirmed, answer) {
+  let r;
+  try {
+    r = await api("/api/place", { act, values: values || {}, confirmed: !!confirmed,
+                                  answer: answer === undefined ? null : answer });
+  } catch (e) { toast(e.message); return; }
+  if (r.confirm) { if (window.confirm(r.confirm)) await placeAct(act, values, true, answer); return; }
+  if (r.ask) {
+    const got = window.prompt(r.ask.title + "\n\n" + r.ask.question, r.ask.text || "");
+    if (got !== null) await placeAct(act, values, confirmed, got);
+    return;
+  }
+  if (r.message) toast(r.message);
+  if (r.compose) composeFrom(r.compose, null);
+  if (r.open) { openThing(r.open); return; }
+  if (r.refresh && state.place) {
+    const pl = state.place;
+    await openPlace(pl.name, pl.arg, pl.tab, "", pl.into);
+    if (pl.into === "main") loadLanes();
+  }
+}
 
 // ---- doing things -----------------------------------------------------------------------
 async function act(action, p) {
@@ -967,11 +1207,11 @@ document.addEventListener("click", async (e) => {
     const arg = decodeURIComponent(rest.join("/"));
     if (kind === "account") openAccount(arg);
     else if (kind === "thread") openThread(arg);
-    else if (kind === "tag") {  // the tag's page on my server
-      const server = state.me.server || "";
-      if (/^https:\/\//i.test(server))
-        window.open(server.replace(/\/$/, "") + "/tags/" + encodeURIComponent(arg),
-                    "_blank", "noopener");
+    else if (kind === "tag") openPlace("tag", arg);
+    else if (kind === "help") {  // a page of the help, and a place on it
+      const [page, anchor] = arg.split("#");
+      openPlace("help", page, "", "", state.place && state.place.into === "main" ? "main" : "side",
+                anchor);
     } else if (kind === "resolve") {
       // not found here: to the browser — a web address only, never file:, javascript:…
       const web = /^https?:\/\//i.test(arg);
@@ -1001,6 +1241,11 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest("#compose")) send(e);
     return;
   }
+  if ((e.ctrlKey || e.metaKey) && e.key === "f" && !$("#compose").open) {
+    e.preventDefault();
+    openFind();
+    return;
+  }
   if ($("#compose").open || e.ctrlKey || e.metaKey || e.altKey) return;
   const p = current();
   const keys = {
@@ -1010,7 +1255,7 @@ document.addEventListener("keydown", (e) => {
     m: () => p && act("bookmark", p), o: () => p && openThread(p.sid),
     Enter: () => p && openThread(p.sid), n: () => compose(null),
     p: () => p && openAccount(p.account.id), x: markAllRead, R: refresh,
-    q: () => p && quoteReply(p),
+    q: () => p && quoteReply(p), "/": () => openPlace("search"),
     ":": () => $("#cmd").focus(), Escape: () => (isNavOpen() ? closeNav() : closeSide()),
   };
   if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
@@ -1051,13 +1296,38 @@ function playSound(snd) {
   a.play().catch(() => { /* the browser wants a click on the page first */ });
 }
 
+// ---- notifications: the windows' words (notify.*), shown by the browser ----------------
+function canNotify() { return "Notification" in window && window.isSecureContext; }
+
+async function askNotify() {
+  if (!canNotify()) return;
+  const got = await Notification.requestPermission();
+  toast(w(got === "granted" ? "web_notify_on" : "web_notify_off"));
+}
+
+function showNote(note) {
+  state.shown.push(note.title);
+  if (!canNotify() || Notification.permission !== "granted") return;
+  const looking = document.hasFocus() && !document.hidden;
+  if (looking && (!state.me.notify.when_focused || note.lane === state.lane)) return;
+  const n = new Notification(note.title, { body: note.body, tag: "fedtail-" + note.lane });
+  n.onclick = () => {
+    window.focus();
+    if (note.thread) openThread(note.thread); else selectLane(note.lane);
+    n.close();
+  };
+}
+
 // ---- live: the server answers when something changed ---------------------------------
 async function follow() {
   for (;;) {
     try {
-      const r = await api("/api/wait?v=" + state.version + "&s=" + state.soundSeq);
+      const r = await api("/api/wait?v=" + state.version + "&s=" + state.soundSeq +
+                          "&n=" + state.noteSeq);
       state.soundSeq = r.s;
+      state.noteSeq = r.n;
       for (const snd of r.sounds || []) playSound(snd);
+      for (const note of r.notes || []) showNote(note);
       if (r.v !== state.version) {
         const first = state.version < 0;
         state.version = r.v;
@@ -1074,6 +1344,7 @@ async function start() {
   const me = await api("/api/me");
   state.me = me;
   state.words = me.words;
+  try { me.places = await api("/api/places"); } catch (e) { me.places = []; }
   // dates and times as fedtail's language writes them, not the browser's (a Russian
   // window said "10:25 PM")
   if (me.lang) document.documentElement.lang = me.lang;

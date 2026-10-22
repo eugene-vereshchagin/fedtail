@@ -119,6 +119,8 @@ fedtail/
     sources.py       server streams, forward catch-up with min_id
     store.py         SQLite: statuses, items, read marks, drafts, aliases, …
     subs.py          thread subscriptions (Point-style)
+    sounds.py        which sound a batch of news makes, and the gap between sounds (event
+                     `sound`; the theme's files: frontends/soundpack.py)
     sync/            read marks and thread states shared by the account's devices (§12):
                      engine.py (Sync: record, round, apply, the key), crypto.py (AES-GCM),
                      backends.py (fedtail-sync over HTTP, a folder; well-known discovery)
@@ -130,12 +132,16 @@ fedtail/
                      app.css)
     richtext.py      server HTML → the safe subset shown (QLabel, the web page); no Qt
     tui/             the terminal interface (Textual): model.py — posts as lines and the
-                     command line, no Textual (tested alone); app.py — the screens
+                     command line, no Textual (tested alone); app.py — the screens;
+                     host.py — what links and profile buttons ask (common/links.py);
+                     screens.py — a question, a menu, a place, the editor
     cli.py           terminal commands (lanes/show/tail/post/read): plain stdout,
                      no Qt, no single-instance lock; `fedtail COMMAND …`
     notifytext.py    what a desktop notification says (no Qt, tested)
     iconart.py       the app icon as SVG, drawn from a theme's [icon] colours
     themefile.py     theme TOML files: find, inherit, validate (no Qt)
+    soundpack.py     a theme's sounds: own set, the desktop's, a beep (no toolkit)
+    mdhtml.py        the help's Markdown as HTML for the web page
     helpdocs.py      the in-app help and the "What's this?" hints (no Qt): pages from
                      data/help/<lang>/, links resolved (help page, deep dive, GitHub, web),
                      search, the hint behind a tooltip's text
@@ -151,6 +157,10 @@ fedtail/
       commands.py    the Point command line: Commands (run), preview, History — the
                      terminal, the web page and both windows
       activity.py    the Activity lane's rows: grouping, act_key, the words, notices
+      places.py      every place beyond the lanes (search, lists, silence, help…): rows,
+                     buttons, forms — the web page and the terminal draw them as they are
+      profile.py     a profile's buttons and what each does (all four interfaces)
+      sound.py       playing the theme's sounds (a player of the system, one at a time)
     gtk/             the GTK 4 frontend (PyGObject, libadwaita optional): docs/GTK.md
     qt/              the Qt Widgets frontend (PySide6)
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics
@@ -581,6 +591,7 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `first_poll_done` | None | the first round of polling is over | "getting the lanes…" leaves the status bar |
 | `capabilities_changed` | feature | the server answered "no such thing" | buttons hide at once |
 | `prefetch` / `prefetch_video` | [urls] | after a poll | pictures/videos fetched ahead |
+| `sound` | event name | news (core/sounds.py), connected, a post sent | the theme's sound (common/sound.py) |
 
 ## 14. The Qt frontend
 

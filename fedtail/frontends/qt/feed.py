@@ -1747,55 +1747,32 @@ class AccountWidget(_PagedTab):
         top.addLayout(col, 1)
         lay.addLayout(top)
 
+        from ..common import profile as prof
         from .flow import FlowLayout
         buttons = FlowLayout(spacing=8)  # too many for one line: they wrap, not shrink
-        if not self.mine:
-            following = rel.following
-            label = _("unfollow") if following else \
-                (_("follow_requested") if rel.requested else _("follow"))
-            fb = _button(label, self._toggle_follow, name="primary" if not following else "tool")
-            buttons.addWidget(fb)
-            if following:
-                buttons.addWidget(_button("🔔 " + (_("bell_off") if rel.notifying
-                                                   else _("bell_on")),
-                                          self._toggle_bell, tip=_("bell_tip")))
-                if self.core.cfg["feed"].get("per_person_follow", True):
-                    # what of theirs comes to Home: boosts or not, which languages
-                    buttons.addWidget(_button(
-                        "♻ " + (_("boosts_hide") if rel.showing_shares else _("boosts_show")),
-                        self._toggle_boosts, tip=_("boosts_person_tip")))
-                    langs = list(rel.languages or ())
-                    buttons.addWidget(_button(
-                        "🌐 " + (", ".join(langs) if langs else _("langs_all")),
-                        self._pick_languages, tip=_("langs_person_tip")))
-            buttons.addWidget(_button(_("mention"), lambda: self.win.compose(
-                text=f"@{acc.handle} ")))
-            buttons.addWidget(_button(_("unmute") if rel.muting else _("mute"),
-                                      self._toggle_mute))
-            buttons.addWidget(_button(_("unblock") if rel.blocking else _("block"),
-                                      self._toggle_block))
-            if rel.followed_by and self.core.supports("remove_follower"):
-                buttons.addWidget(_button(_("remove_follower"), self._remove_follower))
-            if following and self.core.supports("endorse"):
-                buttons.addWidget(_button(
-                    _("unendorse") if rel.endorsed else _("endorse"),
-                    self._toggle_endorse, tip=_("endorse_tip")))
-            if self.win.ctx.fill_list_menu is not None:
+        # the buttons are common/profile.py's — the same in GTK, the terminal and the web;
+        # what they do too (prof.do through the window's link host), but for the private
+        # note (several lines here) and the lists (a menu on the button)
+        for act in prof.actions(acc, rel, self.mine, self.core.cfg, self.core.supports,
+                                lists=self.win.ctx.fill_list_menu is not None):
+            if act.key == "edit_profile":
+                continue  # in the header already
+            name = "primary" if act.primary else "tool"
+            if act.key == "lists":
                 from PySide6.QtWidgets import QMenu
-                lb = _button(_("add_to_list"), lambda: None)
+                lb = _button(act.label, lambda: None)
                 menu = QMenu(lb)
                 menu.aboutToShow.connect(lambda m=menu: self.win.ctx.fill_list_menu(m, acc))
                 lb.setMenu(menu)
                 buttons.addWidget(lb)
-        for which, n in (("following", acc.following), ("followers", acc.followers)):
-            if n:
-                buttons.addWidget(_button(_(f"people_{which}_n", n=n),
-                                          lambda _c=False, w=which: self.win.open_people(acc, w)))
-        if not self.mine:
-            buttons.addWidget(_button(_("note_edit"), self.edit_note))
-        buttons.addWidget(_button(_("copy_handle"), lambda: self.win.copy_handle(acc.handle),
-                                  tip=_("copy_handle_tip")))
-        buttons.addWidget(_button(_("open_browser"), lambda: self.win.open_url(acc.url)))
+                continue
+            if act.key == "note":
+                fn = self.edit_note
+            else:
+                fn = (lambda _c=False, k=act.key: prof.do(
+                    k, self.acc, self.relation, self.win.ctx.view, self.win.links.host,
+                    self._changed))
+            buttons.addWidget(_button(act.label, fn, name=name, tip=act.tip or None))
         lay.addLayout(buttons)
         from ...model.text import note_text
         note = note_text(rel.note).strip()
@@ -1805,6 +1782,13 @@ class AccountWidget(_PagedTab):
             label.setWordWrap(True)
             label.setToolTip(_("note_tip"))
             lay.addWidget(label)
+
+    def _changed(self, rel):
+        """A profile button done (common/profile.py): the relation as it is now."""
+        if isinstance(rel, Relationship):
+            self._relation(rel)
+        else:
+            self.reload_account()
 
     def edit_note(self):
         """My private note on this person — only I see it, on my server."""

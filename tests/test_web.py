@@ -42,6 +42,31 @@ class WebTest(TmpDir):
         self.addCleanup(self.srv.shutdown)
         self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
 
+    def test_notifications_and_places(self):
+        """What the windows notify about comes to the page with the news (the browser
+        shows it); the places of the ≡ menu open and their buttons work."""
+        webs = self.srv.web
+        self.assertEqual(webs.notes_since(-1), ([], 0))  # a page that just opened: nothing
+        self.w.add(status("050", BOB, "001", "ME", minute=50, text="ping"), mention=True)
+        self.core.poll_once()
+        got = json.loads(self.req("/api/wait?v=-5&s=0&n=0")[2])
+        self.assertTrue(got["notes"])
+        self.assertIn("ping", got["notes"][0]["body"])
+        names = [x["name"] for x in json.loads(self.req("/api/places")[2])]
+        for n in ("search", "lists", "silence", "help"):
+            self.assertIn(n, names)
+        page = json.loads(self.req("/api/page?name=lists")[2])
+        self.assertEqual(page["submit"]["act"], ["lists", "new", ""])
+        r = json.loads(self.req("/api/place", {"act": ["lists", "new", ""],
+                                               "values": {"title": "Друзья"}})[2])
+        self.assertTrue(r.get("refresh"))
+        page = json.loads(self.req("/api/page?name=lists")[2])
+        self.assertEqual([x["title"] for x in page["rows"]], ["Друзья"])
+        self.assertEqual(self.req("/api/place", {"act": ["lists", "boom", ""]})[0], 400)
+        self.assertEqual(self.req("/api/page?name=nope")[0], 400)
+        help_page = json.loads(self.req("/api/page?name=help")[2])
+        self.assertIn("<h1", help_page["rows"][0]["html"])
+
     def test_a_page_that_hangs_up_is_no_error(self):
         # a reload or a closed tab while /api/wait waits: the answer has nowhere to go —
         # no traceback on the terminal (it was two BrokenPipeErrors), the server goes on
@@ -297,10 +322,10 @@ class WebTest(TmpDir):
         p = view.by_id("002")
         ctx = actions.Ctx(cfg=view.cfg, me_id=view.me.id, supports=view.supports,
                           subscribed=view.subscribed, thread_quiet=view.thread_quiet,
-                          quote_reply=True)
+                          lists=True, long_form=True, quote_reply=True)
         want = [it.label for it in actions.menu(p, ctx, view.short_ids([p]).get(p.id),
                                                  p.id in view.unread([p]))
-                if it.kind in ("link", "open", "copy", "separator", "quote_reply")]
+                if it.kind != "act_as"]  # all but "as another account": one a page
         while want and not want[0]:  # (a separator first is dropped)
             want.pop(0)
         self.assertEqual([i["label"] for i in items], want)
@@ -347,7 +372,10 @@ class WebTest(TmpDir):
         self.assertEqual(r["compose"], {"text": "@bob@social.example "})
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "block"})[2])
         self.assertIn("confirm", r)
-        self.assertEqual(self.req("/api/profile_act", {"id": "B", "key": "lists"})[0], 400)
+        # the lists: a place the page opens (common/places.py)
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "lists"})[2])
+        self.assertEqual(r["open"], {"page": "list_of", "arg": "B", "tab": ""})
+        self.assertEqual(self.req("/api/profile_act", {"id": "B", "key": "boom"})[0], 400)
 
     def test_page_has_the_menus(self):
         body = self.req("/")[2]

@@ -135,6 +135,11 @@ class FakeApi:
         self.w.scheduled = [s for s in self.w.scheduled if s["id"] != sid]
         return {}
 
+    def translate(self, sid, lang="en"):
+        st = self.w.statuses[sid]
+        return {"content": "<p>[" + lang + "] " + st["content"][3:-4] + "</p>",
+                "detected_source_language": "xx", "provider": "fake"}
+
     def domain_blocks(self):
         return sorted(self.w.blocked_domains)
 
@@ -281,7 +286,8 @@ class FakeApi:
                      limit, max_id, min_id)
 
     def list_accounts(self, list_id):
-        return [{"id": a} for a in sorted(self.w.lists[list_id]["members"])]
+        known = {a["id"]: a for a in self.w.accounts()}
+        return [known.get(a) or {"id": a} for a in sorted(self.w.lists[list_id]["members"])]
 
     def create_list(self, title, exclusive=False):
         self.w.seq += 1

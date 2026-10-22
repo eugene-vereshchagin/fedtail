@@ -13,6 +13,29 @@
   releases; "on" / "off"); a theme's own set is a `sounds/` folder by it. Qt, GTK, the
   terminal (its bell, `tui.sound`) and the web page (in the browser) alike.
   ≡ → Debug → "Test the sound".
+- The places beyond the lanes are decided once, without a toolkit (common/places.py):
+  search, lists, tags, silence, held-back notifications, scheduled posts, follow
+  requests, activity, trends, suggestions, the directory, the server, editing my
+  profile, the help, what's new, about, the federation status; a tag, whom someone
+  follows, who liked a post, its quotes and versions, a report, the whole text, a
+  translation. The web page and the terminal draw them, so they behave alike.
+- Web: every place in the ≡ menu; Activity and Follow requests with the windows'
+  groups and buttons; ⋯ → Add to list, Read it whole, Translate; every profile button;
+  find in the lane (Ctrl+F); the help right on the page; the browser's notifications
+  (≡ → Notifications in the browser), in the windows' words.
+- Terminal: a post's ⋯ menu (`.`), the ≡ menu (`g`) with every place, search (`/`), a
+  profile's buttons under 1…9, the post editor (`w`, Ctrl+S sends, drafts as in the
+  windows), find in the lane (Ctrl+F), "sure?" before the risky things; links, menu
+  items and profile buttons do what they do in the windows (common/links.py,
+  common/profile.py through the terminal's own host).
+- Qt: a profile's buttons come from common/profile.py too, as in GTK, the web and the
+  terminal.
+- One scenario, four interfaces (tests/scenario.py, tests/drivers.py,
+  tools/behaviour.py): open a lane, the ⋯ menu, like, boost, bookmark, a thread, follow
+  and mute a thread, reply, a profile, follow someone, delete, the command line, read up
+  to here, all read — through each interface's own way in, held against
+  frontends/common; and whether each window has every place a link may ask for. A step
+  of `tools/selfcheck.py`, a table in its report.
 - Web: a page that left while waiting for news (a reload, a closed tab) no longer
   prints two BrokenPipeError tracebacks on the terminal.
 

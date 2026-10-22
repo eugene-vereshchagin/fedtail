@@ -1,8 +1,12 @@
 """The Textual application: lanes on the left, posts on the right, the command
 line at the bottom. Keys as in the window: j / k, Enter — the thread, r — reply,
-f — like, b — boost, m — bookmark, n — a new post, x — the lane read, Esc — back;
-[ / ] or 1…9 — another lane, h / l — to the lanes / the posts, Tab — between them;
-v — the post's pictures full screen (drawn with half blocks, see pictures.py)."""
+f — like, b — boost, m — bookmark, . — the post's ⋯ menu, n — a line to post, w — the
+editor, x — the lane read, g — the ≡ menu (every place: search, lists, silence, help…),
+/ — search, Ctrl+F — find in the lane, Esc — back; [ / ] or 1…9 — another lane,
+h / l — to the lanes / the posts, Tab — between them; v — the post's pictures full
+screen (drawn with half blocks, see pictures.py). What a menu item, a profile's button
+or a link does is the windows' (common/links.py, common/profile.py) through TuiHost
+(host.py); the places are common/places.py's (screens.py)."""
 
 import asyncio
 import logging
@@ -299,6 +303,15 @@ class PostsMixin(Ui):
     def status_changed(self, st):
         self.app.refresh_lane()
 
+    def action_post_menu(self):
+        st = self.current()
+        if st is not None:
+            self.app.post_menu(st, self)
+
+    def action_editor(self):
+        st = self.current()
+        self.app.host.compose(reply_to=st)
+
 
 class ThreadScreen(Screen, PostsMixin):
     BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
@@ -308,6 +321,8 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("o", "browser", _("open_browser"), show=False),
                 Binding("p", "profile", _("tui_profile")),
                 Binding("v", "pictures", _("tui_picture"), show=False),
+                Binding("full_stop", "post_menu", "⋯"),
+                Binding("w", "editor", _("tui_editor"), show=False),
                 Binding("colon", "command", ":", show=False)]
     # the screen doesn't scroll as a whole, the list does (see ProfileScreen)
     CSS = """
@@ -347,7 +362,9 @@ class ThreadScreen(Screen, PostsMixin):
             text = render(shown)
             if pad:
                 text = Text("\n").join(Text(pad) + line for line in text.split())
-            items.append(PostItem(n.post, text, key=n.post.id))
+            item = PostItem(n.post, text, key=n.post.id)
+            item.depth = n.depth
+            items.append(item)
             if n.post.id == self.status_id:
                 focus = i
         root = posts[0] if posts else None
@@ -387,9 +404,12 @@ class ProfileScreen(Screen, PostsMixin):
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
                 Binding("o", "browser", _("open_browser"), show=False),
                 Binding("v", "pictures", _("tui_picture"), show=False),
+                Binding("full_stop", "post_menu", "⋯", show=False),
+                *[Binding(str(i), f"button({i})", show=False) for i in range(1, 10)],
                 Binding("colon", "command", ":", show=False)]
     CSS = """
     ProfileScreen { overflow: hidden hidden; layout: vertical; }
+    ProfileScreen #buttons { height: auto; padding: 0 1; }
     ProfileScreen #about { height: auto; max-height: 14; padding: 0 1 1 1;
                            border-bottom: solid $primary; overflow-y: auto; }
     ProfileScreen #posts-head { height: 1; padding: 0 1; color: $text-muted; }
@@ -404,6 +424,7 @@ class ProfileScreen(Screen, PostsMixin):
     def compose(self) -> ComposeResult:
         yield Static(_("tui_profile") + " …", id="title")
         yield Static("…", id="about")
+        yield Static("", id="buttons")
         yield Static(_("tui_profile_posts"), id="posts-head")
         yield ListView(id="posts")
         yield _cmd_line()
@@ -429,6 +450,31 @@ class ProfileScreen(Screen, PostsMixin):
         self.rel = rel
         self.show_about()
 
+    def own(self):
+        me = self.app.core.me
+        return bool(me and self.acc_id == me.id)
+
+    def buttons(self):
+        """The profile's buttons, the windows' (common/profile.py): keys 1…9."""
+        from ..common import profile as prof
+        if not self.acc:
+            return []
+        core = self.app.core
+        return prof.actions(self.acc, self.rel, self.own(), core.cfg, core.supports,
+                            lists=True)
+
+    def action_button(self, n):
+        from ..common import profile as prof
+        acts = self.buttons()
+        if not (0 < n <= len(acts)):
+            return
+        key = acts[n - 1].key
+
+        def changed(rel):
+            if rel is not None:
+                self.got_relation(rel)
+        prof.do(key, self.acc, self.rel, self.app.core, self.app.host, changed)
+
     def show_about(self):
         acc = self.acc
         if not acc:
@@ -451,7 +497,13 @@ class ProfileScreen(Screen, PostsMixin):
         for f in acc.fields:
             t.append("\n" + f.name + ": ", style="bold")
             t.append(html_to_text(f.value))
+        from ..common import profile as prof
+        line = prof.note_line(self.rel, self.own())
+        if line:
+            t.append("\n" + line, style="italic")
         self.query_one("#about", Static).update(t)
+        from .screens import profile_line
+        self.query_one("#buttons", Static).update(profile_line(self.buttons()))
 
     async def fill(self, page):
         core = self.app.core
@@ -506,6 +558,11 @@ class FedtailApp(App, PostsMixin):
                 Binding("o", "browser", _("open_browser"), show=False),
                 Binding("p", "profile", _("tui_profile")),
                 Binding("v", "pictures", _("tui_picture"), show=False),
+                Binding("full_stop", "post_menu", "⋯"),
+                Binding("g", "main_menu", "≡ " + _("menu")),
+                Binding("slash", "search", _("search_title"), show=False),
+                Binding("w", "editor", _("tui_editor"), show=False),
+                Binding("ctrl+f", "find", _("find_next"), show=False),
                 Binding("a", "request(True)", show=False),
                 Binding("d", "request(False)", show=False),
                 Binding("left_square_bracket", "lane_step(-1)", _("tui_lane_prev")),
@@ -523,6 +580,10 @@ class FedtailApp(App, PostsMixin):
         super().__init__()
         self.core = core if isinstance(core, View) else View(core)
         core = self.core
+        from ..common.links import Links
+        from .host import TuiHost
+        self.host = TuiHost(self)  # what a link, a menu item, a profile button asks for
+        self.links = Links(core, self.host)
         self._instance = instance
         self.cmds = Commands(core)
         self.delete_guard = DeleteGuard()
@@ -645,6 +706,7 @@ class FedtailApp(App, PostsMixin):
                 item.update(*lane_label(self.core, item.lane, self.lanes_width - 2))
 
     async def select_lane(self, name):
+        self._found = None
         self.lane = name
         self.core.set_active_lane(name)
         self.core.set_state("lane", name)
@@ -883,6 +945,225 @@ class FedtailApp(App, PostsMixin):
             field.disabled = False
             self.show_error(_("send_failed_text", err=err))
         self.later(fut, ok=ok, fail=fail)
+
+    # ---- what the host and the screens ask of the app -----------------------------------
+    @staticmethod
+    def date_words(when):
+        return when.astimezone().strftime("%d.%m.%Y %H:%M") if when else ""
+
+    def thread_screen(self, sid):
+        return ThreadScreen(sid)
+
+    def profile_screen(self, acc_id):
+        return ProfileScreen(acc_id)
+
+    def open_thing(self, o):
+        """Where an action leads: {"thread"}, {"account"}, {"url"}, {"page", "arg", …}."""
+        if not o:
+            return
+        if o.get("thread"):
+            self.push_screen(ThreadScreen(o["thread"]))
+        elif o.get("account"):
+            self.push_screen(ProfileScreen(o["account"]))
+        elif o.get("url"):
+            self.host.open_url(o["url"])
+        elif o.get("page"):
+            from .screens import PlaceScreen
+            self.push_screen(PlaceScreen(o["page"], o.get("arg", ""), o.get("tab", ""),
+                                         o.get("cursor", ""), o.get("anchor", "")))
+
+    def copy_text(self, text):
+        """To the clipboard: the terminal's own (OSC 52), where it has one."""
+        copy = getattr(self, "copy_to_clipboard", None)
+        if copy is not None:
+            try:
+                copy(text)
+            except Exception as e:  # noqa: BLE001 — a terminal without it: said below
+                log.debug("clipboard: %s", e)
+        self.notify(_("web_copied") + ": " + text)
+
+    def put_in_command_line(self, text):
+        cmd = self._main("#cmd", Input) if self.screen is self.screen_stack[0] else \
+            self.screen.query_one("#cmd", Input)
+        cmd.value = text
+        cmd.cursor_position = len(text)
+        cmd.focus()
+
+    def read_up_to(self, sid):
+        """This post and everything older in the lane: read (⋯ → read up to here)."""
+        if not self.lane:
+            return
+        ids = [e.id for _i, e in self.core.entries(self.lane)]
+        if sid in ids:
+            self.core.mark_read(ids[:ids.index(sid) + 1])
+            self.refresh_lane()
+
+    def post_reply(self, st, _where=None):
+        alias = self.core.short_ids([st]).get(real(st).id)
+        self.put_in_command_line(f"#{alias} " if alias else "")
+
+    def post_fav(self, st, where=None):
+        self.later(self.core.like(st), ok=lambda _s: (where or self).status_changed(_s))
+
+    def post_boost(self, st, where=None):
+        if real(st).visibility in ("public", "unlisted"):
+            self.later(self.core.share(st), ok=lambda _s: (where or self).status_changed(_s))
+
+    def post_bookmark(self, st, where=None):
+        self.later(self.core.bookmark(st), ok=lambda _s: (where or self).status_changed(_s))
+
+    def menu_ctx(self, in_thread=False):
+        from ..common import actions
+        core = self.core
+        me = core.me
+        return actions.Ctx(cfg=core.cfg, me_id=me.id if me else None, supports=core.supports,
+                           subscribed=core.subscribed, thread_quiet=core.thread_quiet,
+                           lists=True, long_form=bool(core.cfg["feed"].get("long_form", True)),
+                           translate=bool(getattr(core.caps, "translation", False)),
+                           quote_reply=True, in_thread=in_thread)
+
+    def post_menu_items(self, st, in_thread=False):
+        """A post's ⋯ menu, the windows' own (common/actions.py): [(label, item)]."""
+        from ..common import actions
+        core = self.core
+        short = core.short_ids([st]).get(real(st).id)
+        unread = st.id in core.unread([st])
+        out = []
+        for it in actions.menu(st, self.menu_ctx(in_thread), short, unread):
+            if it.kind == "separator":
+                if out and out[-1] != "-":
+                    out.append("-")
+            elif it.kind != "act_as":  # one account a terminal
+                out.append((it.label + (" …" if it.kind in ("lists", "long_form",
+                                                             "translate") else ""), it))
+        while out and out[-1] == "-":
+            out.pop()
+        return out
+
+    def post_menu(self, st, where=None):
+        from .screens import MenuScreen
+        items = self.post_menu_items(st, isinstance(where, ThreadScreen))
+
+        def chosen(it):
+            if it is not None:
+                self.do_menu_item(st, it)
+        self.push_screen(MenuScreen("⋯ " + "@" + real(st).author.handle, items), chosen)
+
+    def do_menu_item(self, st, it):
+        """One item of a post's ⋯ menu, as the windows do it."""
+        if it.kind == "link":
+            self.links.open(it.url)
+        elif it.kind == "open":
+            self.host.open_url(it.url)
+        elif it.kind == "copy":
+            self.copy_text(it.text)
+        elif it.kind == "lists":
+            self.host.open_lists(it.data)
+        elif it.kind in ("long_form", "translate"):
+            self.open_thing({"page": it.kind, "arg": real(st).id})
+        elif it.kind == "quote_reply":
+            from ...model.text import quote_lines
+            self.host.compose(reply_to=st, text=quote_lines(
+                real(st).text, self.core.cfg["post"].get("quote_prefix", "> "),
+                strip_mentions=True))
+
+    def main_menu_items(self):
+        """The ≡ menu: writing, the places (common/places.py), help, debug, quit."""
+        from ..common.places import Places
+        places = [(t + " …", ("place", n)) for n, t in Places(self.core).menu()
+                  if n not in ("help", "news", "about", "federation")]
+        return ([("✎ " + _("write"), ("do", "editor")),
+                 (_("my_profile"), ("do", "my_profile")),
+                 (_("refresh"), ("do", "refresh")),
+                 (_("tui_all_read"), ("do", "all_read")), "-"]
+                + places + ["-",
+                            (_("help_title") + " …", ("place", "help")),
+                            (_("help_news") + " …", ("place", "news")),
+                            (_("about") + " …", ("place", "about")), "-",
+                            (_("debug_federation"), ("place", "federation")),
+                            (_("debug_report"), ("do", "bug_report")),
+                            (_("debug_logs"), ("do", "logs")),
+                            (_("debug_sound"), ("do", "test_sound")),
+                            (_("debug_stacks"), ("do", "stacks")), "-",
+                            (_("quit"), ("do", "quit"))])
+
+    def action_main_menu(self):
+        from .screens import MenuScreen
+
+        def chosen(v):
+            if v is None:
+                return
+            kind, what = v
+            if kind == "place":
+                self.open_thing({"page": what})
+            else:
+                self.call_next(self.menu_do, what)
+        self.push_screen(MenuScreen("≡ fedtail", self.main_menu_items()), chosen)
+
+    async def menu_do(self, what):
+        from ... import diag
+        if what == "editor":
+            self.host.compose()
+        elif what == "my_profile" and self.core.me:
+            self.push_screen(ProfileScreen(self.core.me.id))
+        elif what == "refresh":
+            self.action_refresh()
+        elif what == "all_read":
+            self.action_all_read()
+        elif what == "bug_report":
+            try:
+                diag.log_stats()
+                out = diag.bug_report(self.core.paths, cfg=self.core.cfg)
+                self.notify(_("debug_report_done", path=str(out)), timeout=20)
+            except OSError as e:
+                self.show_error(e)
+        elif what == "logs":
+            self.notify(str(diag.logs_dir(self.core.paths, self.core.cfg)), timeout=20)
+        elif what == "test_sound" and self.sounds is not None:
+            self.notify(self.sounds.test())
+        elif what == "stacks":
+            diag.dump_stacks("menu")
+            self.notify(_("debug_stacks_done"))
+        elif what == "quit":
+            self.exit()
+
+    def action_search(self):
+        self.open_thing({"page": "search"})
+
+    # ---- Ctrl+F: find in the lane (the windows' rule: every word, text, names, #id) -----
+    def action_find(self):
+        if getattr(self, "_found", None) and self._found["lane"] == self.lane:
+            self._find_step()
+            return
+        from .screens import AskScreen
+
+        def got(q):
+            if q is not None:
+                self.find(q)
+        self.push_screen(AskScreen(_("find_next"), _("find_placeholder")), got)
+
+    def find(self, query):
+        from ...model.text import haystack, matches
+        from ..common.find import count_text
+        lv = self._main("#posts", ListView)
+        items = [it for it in lv.children if isinstance(it, PostItem)]
+        short = self.core.short_ids([it.entry for it in items])
+        hits = [i for i, it in enumerate(lv.children) if isinstance(it, PostItem) and
+                matches(query, haystack(it.entry, short.get(real(it.entry).id)))]
+        self._found = {"lane": self.lane, "hits": hits, "at": -1, "query": query}
+        if not hits:
+            self._found = None
+            self.notify(count_text(query, -1, 0)[0], severity="warning")
+            return
+        self._find_step()
+
+    def _find_step(self):
+        f = self._found
+        f["at"] = (f["at"] + 1) % len(f["hits"])
+        lv = self._main("#posts", ListView)
+        lv.index = f["hits"][f["at"]]
+        lv.focus()
+        self.notify(_("find_count", i=f["at"] + 1, n=len(f["hits"])))
 
     # ---- actions -------------------------------------------------------------------
     def action_new(self):

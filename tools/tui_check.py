@@ -159,6 +159,37 @@ async def walk(out):
         await pilot.pause(0.6)
         shot("05-command-help")
         await pilot.press("escape")
+        # the ⋯ menu of a post, the ≡ menu, and every place in it (common/places.py)
+        from fedtail.frontends.tui.screens import MenuScreen, PlaceScreen
+        posts.focus()
+        posts.index = 0
+        await pilot.press("full_stop")
+        if await wait(pilot, lambda: isinstance(app.screen, MenuScreen), "⋯ menu"):
+            NOTES.append("⋯ menu: " + " | ".join(app.screen.labels()))
+            shot("07-post-menu")
+            await pilot.press("escape")
+        await pilot.press("g")
+        if await wait(pilot, lambda: isinstance(app.screen, MenuScreen), "≡ menu"):
+            NOTES.append("≡ menu: " + " | ".join(app.screen.labels()))
+            shot("08-main-menu")
+            await pilot.press("escape")
+        places = [v[1] for it in app.main_menu_items() if it != "-"
+                  for v in [it[1]] if v[0] == "place"]
+        for name in places:
+            app.open_thing({"page": name})
+            if not await wait(pilot, lambda: isinstance(app.screen, PlaceScreen) and
+                              app.screen.page is not None, f"place {name}"):
+                while app.screen is not app.screen_stack[0]:
+                    app.pop_screen()
+                continue
+            await pilot.pause(0.4)
+            shot(f"09-place-{name}")
+            for i in range(len(app.screen.page.tabs) - 1):
+                await pilot.press("right_square_bracket")
+                await pilot.pause(0.5)
+                shot(f"09-place-{name}-{i + 1}")
+            await pilot.press("escape")
+            await pilot.pause(0.2)
         # every key the main screen offers: none may raise
         for b in app.BINDINGS:
             if b.key in ("q", "tab", "colon", "escape") or "request" in b.action:

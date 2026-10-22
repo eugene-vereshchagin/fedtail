@@ -139,7 +139,8 @@ _STRINGS = {
         "web_more": "Ещё", "web_menu": "Меню", "web_keys": "Клавиши",
         "web_copied": "Ссылка скопирована",
         "web_about": "fedtail {version} — клиент федиверса. Ты — @{handle}.",
-        "web_keys_text": "j / k — следующий / предыдущий пост\nr — ответить, q — ответить с "
+        "web_keys_text": "/ — поиск, Ctrl+F — найти в ленте\nj / k — следующий / предыдущий пост\n"
+                         "r — ответить, q — ответить с "
                          "цитатой\nf — ★, b — ♻, m — закладка\no или Enter — тред, p — "
                          "профиль\nn — написать, x — всё прочитано, R — обновить\n: — "
                          "командная строка\nEsc — закрыть панель / картинку, ← / → — "
@@ -772,6 +773,14 @@ _STRINGS = {
         "debug_notify": "Проверить уведомление",
         "debug_notify_sent": "Пробное уведомление отправлено ({backend})",
         "debug_sound": "Проверить звук",
+        "help_news": "Что нового",
+        "yes_short": "Да", "no_short": "Нет",
+        "tui_yes_no": "y или Enter — да · n или Esc — нет",
+        "tui_tab_prev": "Вкладка ←", "tui_tab_next": "Вкладка →",
+        "tui_submit": "Готово", "tui_send": "Отправить", "tui_editor": "Редактор",
+        "web_notify": "Уведомления в браузере",
+        "web_notify_on": "Уведомления в браузере включены",
+        "web_notify_off": "Браузер не разрешил уведомления (разрешить — в настройках сайта)",
         "debug_sound_played": "Звук «{event}» темы {theme}: {how}",
         "debug_sound_silent": "Тема {theme} молчит о «{event}» (или нечем играть — см. лог)",
         "notify_test_body": "Уведомления работают.",
@@ -1030,7 +1039,8 @@ _STRINGS = {
         "web_more": "More", "web_menu": "Menu", "web_keys": "Keys",
         "web_copied": "Link copied",
         "web_about": "fedtail {version}, a fediverse client. You are @{handle}.",
-        "web_keys_text": "j / k — next / previous post\nr — reply, q — reply with quote\n"
+        "web_keys_text": "/ — search, Ctrl+F — find in the lane\nj / k — next / previous post\n"
+                         "r — reply, q — reply with quote\n"
                          "f — ★, b — ♻, m — bookmark\no or Enter — thread, p — profile\n"
                          "n — write, x — all read, R — refresh\n: — the command line\n"
                          "Esc — close the panel / picture, ← / → — through the pictures\n"
@@ -1642,6 +1652,14 @@ _STRINGS = {
         "debug_notify": "Send a test notification",
         "debug_notify_sent": "Test notification sent ({backend})",
         "debug_sound": "Test the sound",
+        "help_news": "What's new",
+        "yes_short": "Yes", "no_short": "No",
+        "tui_yes_no": "y or Enter — yes · n or Esc — no",
+        "tui_tab_prev": "Tab ←", "tui_tab_next": "Tab →",
+        "tui_submit": "Done", "tui_send": "Send", "tui_editor": "Editor",
+        "web_notify": "Notifications in the browser",
+        "web_notify_on": "Notifications in the browser are on",
+        "web_notify_off": "The browser didn't allow notifications (the site's settings can)",
         "debug_sound_played": "The {theme} theme's \u201c{event}\u201d sound: {how}",
         "debug_sound_silent": "The {theme} theme is silent about \u201c{event}\u201d "
                               "(or nothing to play it with — see the log)",

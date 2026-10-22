@@ -840,6 +840,13 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import lists
         return lists.lane_menu(self, row)
 
+    def open_lists(self, account):
+        """"Add to list" from common/profile.py: the popover by what has the focus (the
+        profile's own button opens it by itself, at the button)."""
+        anchor = self.get_focus() or getattr(self, "status_line", None)
+        if anchor is not None:
+            self.lists_popover(account, anchor)  # it pops up by itself
+
     def lists_popover(self, account, anchor):
         """"Add to list" for someone: the lists, ticked where they are (gtk/lists.py)."""
         from . import lists

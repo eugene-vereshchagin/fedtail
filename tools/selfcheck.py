@@ -7,7 +7,8 @@ logged-in fedtail — the same on your own account (a copy, read-only).
     python3 tools/selfcheck.py --night         # all of it, for the night (1–3 hours)
     python3 tools/selfcheck.py                 # the fake server only (20–40 minutes)
     python3 tools/selfcheck.py --quick         # a few themes, one layout (3–5 minutes)
-    python3 tools/selfcheck.py --only qt,web   # some steps: tests qt bench gtk tui web parity
+    python3 tools/selfcheck.py --only qt,web   # some steps: tests qt bench gtk tui web
+                                               #   behaviour parity
     python3 tools/selfcheck.py --real          # and your account too (--real=PROFILE)
     python3 tools/selfcheck.py --only gallery  # the site's and the docs' pictures (only so)
     python3 tools/selfcheck.py --clean         # after Ctrl+C: the unfinished runs gone
@@ -38,7 +39,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STEPS = ("tests", "qt", "bench", "gtk", "tui", "web", "parity", "gallery")
+STEPS = ("tests", "qt", "bench", "gtk", "tui", "web", "behaviour", "parity", "gallery")
 
 
 def probe(code):
@@ -146,6 +147,10 @@ def report(run, out, facts, interrupted=False):
         if name.startswith("bench") or state != "ok":
             md += ["Log, the end:", "", "```", tail(log, 160 if name.startswith("bench")
                                                    else 40), "```"]
+    behaviour = out / "behaviour.md"
+    if behaviour.exists():
+        md += ["", "## behaviour (all of it in behaviour.md)", "",
+               behaviour.read_text("utf-8")[:6000]]
     parity = out / "parity.md"
     if parity.exists():
         head = parity.read_text("utf-8").split("\n## ", 1)[0]
@@ -417,6 +422,11 @@ def main():
             run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d, py=web_py,
                      note="Playwright" if pw else "no Playwright: no walk "
                      "(python3 tools/devenv.py — once)")
+        if "behaviour" in only:  # the same scenario through every interface here
+            cmd = ["tools/behaviour.py", str(out / "behaviour.md")]
+            wrap = run.wrap or (["xvfb-run", "-a"] if sys.platform.startswith("linux") and
+                                not has_display() and shutil.which("xvfb-run") else ())
+            run.step("behaviour", cmd, timeout=900, wrap=wrap)  # GTK needs a display
         if "parity" in only:  # after the walks: their menus go side by side
             run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
         # the gallery (tools/gallery.py): only asked by name (--only gallery) — the

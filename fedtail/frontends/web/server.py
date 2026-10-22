@@ -79,6 +79,10 @@ def load_key(data_dir):
     return key
 
 
+def _btn_json(b):
+    return {"label": b.label, "act": list(b.act), "primary": b.primary, "tip": b.tip}
+
+
 def _int(value, default):
     try:
         return int(value)
@@ -220,10 +224,10 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     return out
 
 
-# a profile's buttons the page has (common/profile.py): not yet the lists' submenu nor
-# the tabs of whom they follow
-WEB_PROFILE_ACTS = ("follow", "bell", "boosts", "langs", "mention", "mute", "block",
-                    "remove_follower", "endorse", "note", "copy_handle", "open_browser")
+# a profile's buttons (common/profile.py): every one
+WEB_PROFILE_ACTS = ("edit_profile", "follow", "bell", "boosts", "langs", "mention", "mute",
+                    "block", "remove_follower", "endorse", "lists", "following", "followers",
+                    "note", "copy_handle", "open_browser")
 
 
 class _WebHost:
@@ -263,6 +267,50 @@ class _WebHost:
 
     def open_account(self, acc_id):
         self.out["open"] = {"account": acc_id}
+
+    def _place(self, name, arg="", tab=""):
+        self.out["open"] = {"page": name, "arg": arg, "tab": tab}
+
+    # the places a link or a profile button opens: the page draws them (common/places.py)
+    def open_tag(self, tag):
+        self._place("tag", tag)
+
+    def show_history(self, post):
+        self._place("history", real(post).id)
+
+    def report(self, post):
+        self._place("report", post.id)
+
+    def open_reactions(self, post, kind):
+        self._place("reactions", post.id, kind)
+
+    def open_quotes(self, post):
+        self._place("quotes", post.id)
+
+    def open_people(self, acc, which):
+        self._place("people", acc.id, which)
+
+    def edit_profile(self):
+        self._place("profile_edit")
+
+    def open_lists(self, acc):
+        self._place("list_of", acc.id)
+
+    def put_alias(self, alias):
+        self.out["alias"] = alias
+
+    def resolve_link(self, url):
+        """A fediverse address: what my server finds there, else the browser."""
+        try:
+            found = self.view.resolve(url).result(timeout=30)
+        except Exception:  # noqa: BLE001 — the browser then
+            found = None
+        if isinstance(found, Account):
+            self.open_account(found.id)
+        elif found is not None:
+            self.open_thread(found.id)
+        elif url.startswith(("https://", "http://")):
+            self.open_url(url)
 
     def copy_handle(self, handle):
         self.out["copy"] = "@" + handle.lstrip("@")
@@ -318,6 +366,10 @@ class Web:
         self.sound_seq = 0
         self.sound_log = collections.deque(maxlen=8)  # (seq, event)
         self.core.on("sound", lambda _n, p: self.chime(p))
+        # desktop notifications, shown by the browser (notifytext: the windows' words)
+        self.note_seq = 0
+        self.note_log = collections.deque(maxlen=20)  # (seq, {title, body, lane, thread})
+        self.core.on("notify", lambda _n, p: self.notified(p))
 
     def login_link(self, base):
         """A link that logs a browser in once, within LINK_SECONDS: what the history,
@@ -344,6 +396,30 @@ class Web:
             self.sound_seq += 1
             self.sound_log.append((self.sound_seq, str(event)))
         self.bump()
+
+    def notified(self, items):
+        from .. import notifytext
+        cfg = self.core.cfg["notify"]
+        if not cfg.get("enabled", True):
+            return
+        try:
+            notes = notifytext.build(self.core.model_of(list(items)), cfg["privacy"],
+                                     self.core.lane_title)
+        except Exception:  # noqa: BLE001 — a note is never worth a failed poll
+            log.exception("web notify")
+            return
+        with self.changed:
+            for n in notes:
+                self.note_seq += 1
+                self.note_log.append((self.note_seq, {"title": n.title, "body": n.body,
+                                                      "lane": n.lane, "thread": n.thread}))
+        self.bump()
+
+    def notes_since(self, seq):
+        """The notes newer than seq (none for a page that just opened), and the newest."""
+        with self.changed:
+            got = [n for k, n in self.note_log if k > seq] if seq >= 0 else []
+            return got[-5:], self.note_seq
 
     def sounds_since(self, seq):
         """What the page should play: [{event, kind}] newer than seq ("file" — fetch
@@ -376,10 +452,11 @@ class Web:
         except OSError:
             return None
 
-    def wait_answer(self, since, sound_since):
+    def wait_answer(self, since, sound_since, note_since=-1):
         v = self.wait(since)
         sounds, last = self.sounds_since(sound_since)
-        return {"v": v, "s": last, "sounds": sounds}
+        notes, last_note = self.notes_since(note_since)
+        return {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes}
 
     def bump(self):
         with self.changed:
@@ -416,6 +493,7 @@ class Web:
                 "lang": i18n.current_language(),
                 "sound": {"volume": c["sound"]["volume"],
                           "when_focused": c["sound"]["when_focused"]},
+                "notify": {"when_focused": c["notify"]["when_focused"]},
                 "words": {k: _(k) for k in WORDS}}
 
     @staticmethod
@@ -448,12 +526,29 @@ class Web:
     def lane(self, name):
         name = self._lane_name(name)
         core = self.core
+        if name in ("activity", "requests"):  # not posts: a place in the lane's stead
+            return {"name": name, "title": core.lane_title(name) or _("lane_" + name),
+                    "posts": [], "older": False, "place": name}
         entries = core.entries(name)  # read only: activate() remembers what's open
         lane = core.lane_by_name[name]
         return {"name": name, "title": core.lane_title(name) or _("lane_" + name),
                 "posts": self._posts([e for _i, e in entries],
                                      items=[i for i, _e in entries]),
                 "older": bool(lane.source) and not lane.lazy}
+
+    def find(self, name, query):
+        """Ctrl+F: the posts of a lane that have every word (common/find.py's rule:
+        text, warning, alt texts, name and @handle, #id), in the lane's order."""
+        from ...model.text import haystack, matches
+        name = self._lane_name(name)
+        if not query.strip():
+            return {"ids": [], "text": ""}
+        es = [e for _i, e in self.core.entries(name)]
+        short = self.core.short_ids(es)
+        ids = [e.id for e in es if matches(query, haystack(e, short.get(real(e).id)))]
+        from ..common.find import count_text
+        text, _none = count_text(query, 0 if ids else -1, len(ids))
+        return {"ids": ids, "text": text}
 
     def older(self, name):
         """Older posts of a lane from the server (the "More" at its end)."""
@@ -501,7 +596,7 @@ class Web:
         from ..common import profile as prof
         own = bool(me and acc and acc.id == me.id)
         acts = [{"key": a.key, "label": a.label, "tip": a.tip, "primary": a.primary}
-                for a in prof.actions(acc, rel, own, core.cfg, core.supports)
+                for a in prof.actions(acc, rel, own, core.cfg, core.supports, lists=True)
                 if a.key in WEB_PROFILE_ACTS] if acc else []
         since = rel is not None and rel.following and core.followed_since(acc_id, rel)
         return {"account": info,
@@ -551,9 +646,9 @@ class Web:
 
     def post_menu(self, sid):
         """A post's ⋯ menu: the very items the Qt and GTK windows show (common/actions:
-        what is offered, when, in which order) — the page only lays them out. Items
-        the page can't do yet (a list's submenu, as another account, the whole text,
-        translation) are left out."""
+        what is offered, when, in which order) — the page only lays them out; a list's
+        submenu, the whole text and the translation open as places (common/places.py).
+        Left out: "as another account" (one account a page)."""
         from ..common import actions
         core = self.core
         p = self._post_by_id(sid)
@@ -561,6 +656,8 @@ class Web:
         cfg = core.cfg
         ctx = actions.Ctx(cfg=cfg, me_id=me.id if me else None, supports=core.supports,
                           subscribed=core.subscribed, thread_quiet=core.thread_quiet,
+                          lists=True, long_form=bool(cfg["feed"].get("long_form", True)),
+                          translate=bool(getattr(core.caps, "translation", False)),
                           quote_reply=bool(cfg["post"].get("quote_prefix", "> ")))
         short = core.short_ids([p]).get(real(p).id)
         unread = p.id in core.unread([p])
@@ -569,6 +666,12 @@ class Web:
             if it.kind in ("link", "open", "copy", "separator", "quote_reply"):
                 items.append({"kind": it.kind, "label": it.label, "url": it.url,
                               "text": it.text})
+            elif it.kind == "lists":  # a place: the lists, ticked where they are
+                items.append({"kind": "lists", "label": it.label, "url": "", "text": "",
+                              "page": {"page": "list_of", "arg": it.data.id}})
+            elif it.kind in ("long_form", "translate"):
+                items.append({"kind": it.kind, "label": it.label, "url": "", "text": "",
+                              "page": {"page": it.kind, "arg": p.id}})
         while items and items[0]["kind"] == "separator":
             items.pop(0)
         return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
@@ -660,6 +763,71 @@ class Web:
                 return {"ok": True, "message": _("deleted")}
         return {"ok": True, "message": result if isinstance(result, str) else message}
 
+    # ---- places (common/places.py) ------------------------------------------------
+    def places(self):
+        from ..common.places import Places
+        return Places(self.core, self._date_time)
+
+    @staticmethod
+    def _date_time(when):
+        return when.astimezone().strftime("%d.%m.%Y %H:%M") if when else ""
+
+    def place_menu(self):
+        return [{"name": n, "title": t} for n, t in self.places().menu()]
+
+    def page(self, name, arg="", tab="", cursor=""):
+        from ..common.places import PLACES
+        if name not in PLACES:
+            raise KeyError(name)
+        pg = self.places().page(name, arg, tab, cursor)
+        posts = [r.data for r in pg.rows if r.kind == "post"]
+        made = iter(self._posts(posts, parents=True)) if posts else iter(())
+        rows = []
+        for r in pg.rows:
+            row = {"kind": r.kind, "title": r.title, "line": r.line, "key": r.key,
+                   "buttons": [_btn_json(b) for b in r.buttons]}
+            if r.kind == "post":
+                row["post"] = next(made)
+            elif r.kind == "account" and r.data is not None:
+                row["account"] = account_json(r.data)
+            elif r.kind == "html":
+                row["html"] = web_clean(r.title) if name not in ("help", "news") else r.title
+                row["title"] = ""
+            elif r.kind == "pre":
+                row["html"] = "<pre>" + escape(r.title) + "</pre>"
+                row["kind"], row["title"] = "html", ""
+            rows.append(row)
+        return {"name": pg.name, "title": pg.title, "arg": pg.arg, "hint": pg.hint,
+                "tabs": [list(t) for t in pg.tabs], "tab": pg.tab, "rows": rows,
+                "form": [{"name": f.name, "label": f.label, "value": f.value, "kind": f.kind,
+                          "choices": [list(c) for c in f.choices]} for f in pg.form],
+                "submit": _btn_json(pg.submit) if pg.submit else None,
+                "more": _btn_json(pg.more) if pg.more else None, "empty": pg.empty}
+
+    def place_act(self, body):
+        act = body.get("act")
+        if not (isinstance(act, list) and len(act) == 3 and all(isinstance(x, str)
+                                                               for x in act)):
+            raise ValueError("act")
+        values = body.get("values") if isinstance(body.get("values"), dict) else {}
+        answer = body.get("answer") if isinstance(body.get("answer"), str) else None
+        out = self.places().act(*act, values=values, confirmed=body.get("confirmed") is True,
+                                answer=answer)
+        got = {k: v for k, v in (("message", out.message), ("confirm", out.confirm),
+                                 ("open", out.open), ("compose", out.compose)) if v}
+        if out.ask:
+            got["ask"] = {"title": out.ask[0], "question": out.ask[1], "text": out.ask[2]}
+        if out.refresh:
+            got["refresh"] = True
+        if out.error:
+            raise ValueError(out.error)
+        return got
+
+    def help_link(self, url, current):
+        """A help page's link (fedtail:help/… or the web): where it goes."""
+        from ..common.places import Places
+        return Places(self.core).help_target(url, current).open
+
     def resolve(self, url):
         found = self.core.resolve(url).result()
         if found is None:
@@ -683,7 +851,9 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "unmute_thread", "copy_link", "delete", "delete_q", "help_title", "about",
          "edit", "quote",
          "my_profile", "web_more", "web_menu", "web_keys", "web_keys_text", "web_copied",
-         "web_about")
+         "web_about", "help_news", "web_notify", "web_notify_on", "web_notify_off",
+         "find_placeholder", "find_prev", "find_next", "find_close", "find_none",
+         "find_count")
 
 
 class Server(ThreadingHTTPServer):
@@ -791,8 +961,12 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
+                  "/api/places": lambda: self.web.place_menu(),
+                  "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
+                  "/api/page": lambda: self.web.page(q.get("name", ""), q.get("arg", ""),
+                                                     q.get("tab", ""), q.get("cursor", "")),
                   "/api/wait": lambda: self.web.wait_answer(
-                      _int(q.get("v"), -1), _int(q.get("s"), -1))}
+                      _int(q.get("v"), -1), _int(q.get("s"), -1), _int(q.get("n"), -1))}
         if u.path.startswith("/sound/"):
             data = self.web.sound_file(u.path[len("/sound/"):])
             if data is None:
@@ -828,6 +1002,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/active": lambda: web.activate(body.get("name")),
             "/api/resolve": lambda: web.resolve(str(body.get("url", ""))),
             "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
+            "/api/place": lambda: web.place_act(body),
             "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/link": lambda: web.link(str(body.get("url", "")),
                                           bool(body.get("confirmed"))),

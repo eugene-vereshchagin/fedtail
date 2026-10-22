@@ -1,6 +1,8 @@
 **0.19.0 (in progress):**
 
 - A sound scheme
+- The terminal — everything the windows have
+- The web — everything the windows have
 
 **0.18.0:**
 

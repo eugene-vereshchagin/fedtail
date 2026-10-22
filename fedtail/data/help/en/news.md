@@ -8,6 +8,8 @@ What's new in the latest versions, and the plans.
 **0.19.0 (in progress):**
 
 - A sound scheme
+- The terminal — everything the windows have
+- The web — everything the windows have
 
 **0.18.0:**
 
@@ -30,8 +32,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
-| The terminal — everything the windows have | Interfaces | `ui.frontend = "tui"` | large (0.19) |
-| The web — everything the windows have | Interfaces | `ui.frontend = "web"` | large (0.19) |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |
 | An installer and a signature for Windows | Builds and installing | — | — |

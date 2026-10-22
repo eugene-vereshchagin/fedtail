@@ -57,25 +57,27 @@ details.en = "fedtail in a browser tab: lanes, threads as trees, profiles, a “
 
 [[feature]]
 id = "tui-full"
-status = "planned"
+status = "partly"
+since = "0.19.0"
 name.ru = "Терминал — всё, что в окнах"
 name.en = "The terminal — everything the windows have"
-config = "`ui.frontend = \"tui\"`"
-size.ru = "крупный (0.19)"
-size.en = "large (0.19)"
-details.ru = "Меню поста, профиль со всеми кнопками, списки, поиск, тишина, справка, аккаунты — в пределах терминала; поведение то же, что в окнах (общий сценарий проверки)."
-details.en = "A post's menu, a profile with all its buttons, lists, search, silence, help, accounts — as far as a terminal goes; the same behaviour as the windows' (one checking scenario)."
+config = "`ui.frontend = \"tui\"`, `tui.sound`"
+size.ru = "крупный (0.19, продолжается)"
+size.en = "large (0.19, going on)"
+details.ru = "С 0.19: меню поста `.` (⋯) — те же пункты, что в окнах, и делают то же (ссылки — через общий `common/links.py`, «уверен?» — вопросом); меню `g` (≡) — все места: поиск (`/`), списки, теги, тишина, отфильтрованные, запланированные, заявки, активность, тренды, рекомендации, каталог, о сервере, правка профиля, справка (Markdown, ссылки между страницами), «что нового», о программе, состояние федерации, отчёт для разбора, проверка звука; профиль — кнопки окон под цифрами `1`…`9`; редактор поста `w` (предупреждение, кому видно, язык, черновики — как в окнах; Ctrl+S — отправить); поиск по ленте Ctrl+F (ещё раз — к следующему). Места — те же, что в вебе (`common/places.py`). Поведение сверяется с окнами общим сценарием (`tools/behaviour.py`). Чего ещё нет — `tools/parity.py`."
+details.en = "Since 0.19: a post's menu `.` (⋯) — the windows' items, doing the same (links through the shared `common/links.py`, “sure?” asked); the `g` menu (≡) — every place: search (`/`), lists, tags, silence, held-back notifications, scheduled, follow requests, activity, trends, suggestions, the directory, the server, editing my profile, the help (Markdown, links between its pages), what's new, about, the federation status, a bug report, testing the sound; a profile — the windows' buttons under `1`…`9`; the post editor `w` (the warning, who sees it, the language, drafts — as in the windows; Ctrl+S — send); find in the lane Ctrl+F (again — the next one). The places are the web's (`common/places.py`). The behaviour is held against the windows by one scenario (`tools/behaviour.py`). What's still missing — `tools/parity.py`."
 
 [[feature]]
 id = "web-full"
-status = "planned"
+status = "partly"
+since = "0.19.0"
 name.ru = "Веб — всё, что в окнах"
 name.en = "The web — everything the windows have"
 config = "`ui.frontend = \"web\"`"
-size.ru = "крупный (0.19)"
-size.en = "large (0.19)"
-details.ru = "Списки, тишина, поиск по ленте, правка профиля, заявки, «Активность» с группами, уведомления браузера; поведение то же, что в окнах."
-details.en = "Lists, silence, find in the lane, editing my profile, follow requests, Activity with its groups, the browser's notifications; the same behaviour as the windows'."
+size.ru = "крупный (0.19, продолжается)"
+size.en = "large (0.19, going on)"
+details.ru = "С 0.19 в меню ≡ — все места, сбоку: поиск (`/`), списки (новый, переименовать, эксклюзивный, состав, удалить), теги, тишина (фильтры по словам, заглушённые, заблокированные, серверы), отфильтрованные уведомления, запланированные, заявки, активность, тренды, рекомендации, каталог, о сервере, правка профиля, справка прямо на странице, «что нового», о программе, состояние федерации; «Активность» и «Заявки» — с группами и кнопками окон; в меню ⋯ — «Добавить в список», «Читать целиком», «Перевести»; в профиле — все кнопки окон (списки, кого читает, читатели, правка своего); поиск по ленте Ctrl+F; уведомления браузера (≡ → «Уведомления в браузере» — разрешить) теми же словами, что у окон (`notify.privacy`); звуки темы. Места — те же, что в терминале (`common/places.py`). Поведение сверяется с окнами общим сценарием (`tools/behaviour.py`). Чего ещё нет — `tools/parity.py`."
+details.en = "Since 0.19 the ≡ menu has every place, at the side: search (`/`), lists (new, rename, exclusive, members, delete), tags, silence (word filters, muted, blocked, servers), held-back notifications, scheduled, follow requests, activity, trends, suggestions, the directory, the server, editing my profile, the help right on the page, what's new, about, the federation status; “Activity” and “Follow requests” have the windows' groups and buttons; the ⋯ menu has “Add to list”, “Read it whole”, “Translate”; a profile has all the windows' buttons (lists, whom they follow, followers, editing my own); find in the lane Ctrl+F; the browser's notifications (≡ → “Notifications in the browser” — allow) in the windows' words (`notify.privacy`); the theme's sounds. The places are the terminal's (`common/places.py`). The behaviour is held against the windows by one scenario (`tools/behaviour.py`). What's still missing — `tools/parity.py`."
 
 [[feature]]
 id = "gtk"

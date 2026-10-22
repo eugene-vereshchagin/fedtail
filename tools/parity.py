@@ -75,7 +75,19 @@ def collect():
             keys |= k
             prefixes |= p
             texts.append(t)
-        for m in common_used(texts):
+        used, todo = set(), list(common_used(texts))
+        while todo:  # what common's modules use in turn (places → activity) counts too
+            m = todo.pop()
+            if m in used:
+                continue
+            used.add(m)
+            text = common[m][2]
+            inner = set(re.findall(r"from\s+\.(\w+)\s+import", text)) | {
+                x.strip().split()[0] for grp in re.findall(r"from\s+\.\s+import\s+([\w, ]+)",
+                                                           text) for x in grp.split(",")
+                if x.strip()}
+            todo += [x for x in inner if x in common and x not in used]
+        for m in used:
             keys |= common[m][0]
             prefixes |= common[m][1]
         keys |= {k for k in known if any(k.startswith(p) for p in prefixes)}

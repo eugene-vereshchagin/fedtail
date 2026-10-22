@@ -10,7 +10,7 @@ me (Relationship) and what my server can do. `do()` carries one out through a `h
   confirm(title, text, then)         ask first; then() on yes
   ask_text(title, question, then, text="")   a line to type; then(text)
   compose(text=...)  open_people(acc, which)  copy_handle(handle)  open_url(url)
-  edit_profile()
+  edit_profile()  open_lists(acc)
   status(text)  error(text)
 
 and `changed(rel)` gets the relationship as it is afterwards (the server's answer, or
@@ -162,6 +162,8 @@ def do(key, acc, rel, view, host, changed):
                       note_text(old), allow_empty=True)
     elif key == "edit_profile":
         host.edit_profile()
+    elif key == "lists":  # "Add to list": which lists they're in, a tick each
+        host.open_lists(acc)
     elif key == "copy_handle":
         host.copy_handle(acc.handle)
     elif key == "open_browser":

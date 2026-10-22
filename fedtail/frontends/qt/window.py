@@ -253,14 +253,29 @@ class _LinkHost:
         if QMessageBox.question(self.win, title, text) == QMessageBox.StandardButton.Yes:
             then()
 
-    def compose(self, reply_to=None, invite=False, edit=None, quote=None):
+    def compose(self, reply_to=None, invite=False, edit=None, quote=None, text=None):
         if edit is not None or invite or quote is not None:
             Compose(self.win, reply_to=reply_to, invite=invite, edit=edit, quote=quote).show()
         else:
-            self.win.compose(reply_to)
+            self.win.compose(reply_to, text=text or "")
 
     def put_alias(self, alias):
         self.win.cmdline.put_alias(alias)
+
+    def open_lists(self, acc):
+        """"Add to list" (common/profile.py): the lists menu at the pointer."""
+        from PySide6.QtGui import QCursor
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu(self.win)
+        self.win.fill_list_menu(menu, acc)
+        menu.popup(QCursor.pos())
+
+    def ask_text(self, title, question, then, text="", allow_empty=False):
+        """A line to type (common/profile.py: a private note, the languages in Home)."""
+        from PySide6.QtWidgets import QInputDialog
+        got, ok = QInputDialog.getText(self.win, title, question, text=text)
+        if ok and (got.strip() or allow_empty):
+            then(got)
 
     def redrafted(self, d):
         self.win._redrafted(d)

@@ -23,6 +23,8 @@ python3 tools/gtk_screenshots.py out/ system point     # the same for GTK (runs 
 python3 tools/devenv.py                  # once: Playwright + Chromium in a venv (PEP 668)
 python3 tools/selfcheck.py --night      # all below at once (+ your account) → report.md + zip
 python3 tools/parity.py out.md           # which interface lacks what (docs/TESTPLAN.md)
+python3 tools/behaviour.py out.md        # one scenario through every interface, compared
+python3 tools/make_sounds.py             # the themes' sound sets (--check: are they current)
 python3 tools/gallery.py out/            # the site's/docs' pictures + gallery.toml (built-in themes)
 python3 tools/qt_tour.py out/ --native   # every theme, menu (inventory) and dialog of Qt
 python3 tools/qt_bench.py / gtk_bench.py # freezes: start, lanes, scroll, menu, themes

@@ -142,6 +142,16 @@ def with_playwright(base, key, out):
             page.screenshot(path=str(out / "desktop-03-main-menu.png"))
             page.keyboard.press("Escape")
             page.mouse.click(5, 5)
+            walk_places(page, out)
+            # Ctrl+F: a word every fake post has, and one none has
+            page.click("#posts")
+            page.keyboard.press("Control+f")
+            page.fill("#find-q", "пост номер 1")
+            page.wait_for_timeout(700)
+            if page.locator("#posts .post.found").count() == 0:
+                ERRORS.append("Ctrl+F: nothing marked for a word the lane has")
+            page.screenshot(path=str(out / "desktop-09-find.png"))
+            page.keyboard.press("Escape")
             more = page.locator("#posts article.post button", has_text="⋯").first
             if more.count():
                 more.click()
@@ -178,6 +188,44 @@ def with_playwright(base, key, out):
                 page.mouse.click(5, 5)
             page.close()
         browser.close()
+
+
+def walk_places(page, out):
+    """Every place of the ≡ menu (common/places.py) in the side panel, each of its tabs:
+    a screenshot each, and an error where one didn't load; a link inside the help."""
+    from fedtail.i18n import _
+    failed = _("web_load_error", err="").strip()
+    names = page.evaluate("(state.me.places || []).map(p => p.name)")
+    names += [n for n in ("help", "news") if n not in names]
+    NOTES.append("places: " + ", ".join(names))
+    for n in names:
+        page.evaluate(f"openPlace({json.dumps(n)})")
+        page.wait_for_timeout(700)
+        body = page.inner_text("#side-body")
+        if failed and failed in body or body.strip() == "…":
+            ERRORS.append(f"place {n}: didn't load: {body[:200]}")
+        page.screenshot(path=str(out / f"desktop-07-place-{n}.png"))
+        tabs = page.locator("#side-body .tabs button")
+        for i in range(tabs.count()):
+            label = tabs.nth(i).inner_text()
+            tabs.nth(i).click()
+            page.wait_for_timeout(500)
+            body = page.inner_text("#side-body")
+            if failed and failed in body:
+                ERRORS.append(f"place {n}, tab {label}: didn't load: {body[:200]}")
+            page.screenshot(path=str(out / f"desktop-07-place-{n}-{i}.png"))
+    page.evaluate("openPlace('help')")
+    page.wait_for_timeout(600)
+    inner = page.locator('#side-body a[href^="fedtail:help/"]')
+    if inner.count():
+        inner.first.click()
+        page.wait_for_timeout(600)
+        if page.locator("#side-body h1, #side-body h2").count() == 0:
+            ERRORS.append("help: a link inside the help opened no page")
+        page.screenshot(path=str(out / "desktop-08-help-link.png"))
+    else:
+        ERRORS.append("help: no links between its pages")
+    page.evaluate("closeSide()")
 
 
 def _png(url):
