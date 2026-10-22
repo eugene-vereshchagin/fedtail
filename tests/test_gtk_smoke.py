@@ -18,6 +18,7 @@ except ImportError:
 from fedtail import i18n  # noqa: E402
 from fedtail.core import auth, config, paths  # noqa: E402
 from fedtail.core.app import Core  # noqa: E402
+from fedtail.model import real  # noqa: E402
 
 from . import fakes  # noqa: E402
 from .fakes import BOB, ME, NEWS, FakeApi, status  # noqa: E402
@@ -729,6 +730,26 @@ class GtkSmokeTest(_GtkBase):
         self.win.open_search("bob")
         pump(timeout=0.6)
         self.assertEqual(boxes_418(self.win), [], "the search: people")
+
+    def test_a_profile_pages_back_then_from_their_server(self):
+        """As Qt: the posts page by page; my server out of older ones — "▼ older —
+        from their server" for someone from elsewhere."""
+        self.win.open_account("B")
+        self.assertTrue(pump(lambda: getattr(self.win.accounts.get("B"), "posts_part",
+                                             None) is not None, 5))
+        part = self.win.accounts["B"].posts_part
+        self.assertTrue(pump(lambda: part.cards, 5))
+        self.assertTrue(all(real(c.entry).author.id == "B" or c.entry is not None
+                            for c in part.cards))
+        for _i in range(5):  # to the end of what my server has
+            if part.older_origin:
+                break
+            pump(lambda: part.more_btn.get_sensitive(), 3)
+            part.more_btn.emit("clicked")
+            pump(timeout=0.3)
+        self.assertTrue(part.older_origin)
+        self.assertEqual(part.more_btn.get_label(),
+                         i18n._("older_from_origin", host=part.host))
 
     def test_a_group_of_tags(self):
         """Several tags typed into the search: their tab, as Qt's; "＋ to lanes" puts it

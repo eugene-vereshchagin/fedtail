@@ -1408,30 +1408,8 @@ class MainWindow(Gtk.ApplicationWindow):
             posts_head.add_css_class("caption-heading")
             posts_head.set_margin_top(8)
             box.append(posts_head)
-            if self.cfg["feed"].get("profile_pinned", True):
-                self.call(self.view.pinned(acc_id), got_pinned, lambda _e: None)
-            self.call(self.view.account_posts(acc_id), got_posts)
-
-        def got_posts(posts):
-            short = self.view.short_ids(posts)
-            for p in posts:
-                if real(p).id in pinned_ids:
-                    continue  # shown on top already
-                box.append(Card(self.ctx, p.id, p, short_id=short.get(real(p).id)))
-
-        pinned_ids = set()
-
-        def got_pinned(posts):
-            """What they pinned, first, marked 📌 (feed.profile_pinned), as in Qt."""
-            short = self.view.short_ids(posts or [])
-            # right under "Posts" (the head and that line first; until they're there,
-            # at the top)
-            at = 2 if box.get_row_at_index(1) is not None else 0
-            for p in reversed(posts or []):
-                pinned_ids.add(real(p).id)
-                card = Card(self.ctx, "pin:" + p.id, p, short_id=short.get(real(p).id))
-                card.mark("📌 " + _("pinned"))
-                box.insert(card, at)
+            from .profileposts import ProfilePosts
+            page.posts_part = ProfilePosts(self, box, acc)  # pinned, pages, their server
         self.call(self.view.account(acc_id), got_account,
                   lambda err: title.set_text(_("load_failed", err=err)))
 
