@@ -222,7 +222,13 @@ class Card(Gtk.Box):
         self.set_my_replies(my_replies)
 
         bar = Gtk.Box(spacing=4)
-        self.actions = Gtk.Box(spacing=4)
+        # the buttons wrap to a second row when the window is narrow (or the fonts are
+        # big): never wider than the lane, as a box of them was
+        self.actions = Gtk.FlowBox(column_spacing=4, row_spacing=0, homogeneous=False,
+                                   max_children_per_line=40, min_children_per_line=1)
+        self.actions.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.actions.add_css_class("ft-actions")
+        self.actions.set_valign(Gtk.Align.START)
         self.actions.set_hexpand(True)
         bar.append(self.actions)
         self.more = Gtk.MenuButton()
@@ -580,6 +586,7 @@ class Card(Gtk.Box):
                 right.connect("pressed", lambda *_a, u=bt.who: self.ctx.on_link(u))
                 b.add_controller(right)
             self.actions.append(b)
+            b.get_parent().set_focusable(False)  # the button takes focus, not its holder
 
     def _fill_menu(self, button):
         """The ⋯ menu, made when it opens: what's in it is common/actions.py's."""

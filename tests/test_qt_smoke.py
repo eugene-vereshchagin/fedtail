@@ -2603,7 +2603,10 @@ class QtSmokeTest(unittest.TestCase):
 
     def test_time_slider_goes_where_clicked(self):
         from PySide6.QtCore import QPoint, Qt
-        from PySide6.QtTest import QTest
+        try:
+            from PySide6.QtTest import QTest
+        except ImportError:  # Debian's python3-pyside6.qttest isn't there
+            self.skipTest("no PySide6.QtTest")
 
         from fedtail.frontends.qt.player import SeekSlider
         sl = SeekSlider()
@@ -2641,7 +2644,8 @@ class QtSmokeTest(unittest.TestCase):
                              "for_new_accounts": "filter", "for_private_mentions": "filter",
                              "for_limited_accounts": "filter"}
         self.world.held = [{"id": "r1", "account": BOB, "notifications_count": "3",
-                            "last_status": {"content": "<p>здравствуйте</p>"}}]
+                            "last_status": {"id": "s1", "account": BOB,
+                                            "content": "<p>здравствуйте</p>"}}]
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
         dlg = self.win.show_filtered()

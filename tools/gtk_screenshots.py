@@ -84,10 +84,21 @@ def pump(seconds):
 def shoot(win, path):
     """The window as a PNG: GTK renders it into a texture, no window manager needed."""
     paintable = Gtk.WidgetPaintable.new(win)
-    w, h = win.get_width(), win.get_height()
-    snap = Gtk.Snapshot()
-    paintable.snapshot(snap, w, h)
-    node = snap.to_node()
+    for _try in range(20):  # not drawn yet (a real desktop, the screen locked): wait
+        w, h = win.get_width(), win.get_height()
+        snap = Gtk.Snapshot()
+        paintable.snapshot(snap, w, h)
+        node = snap.to_node()
+        if node is not None:
+            break
+        ctx = GLib.MainContext.default()
+        for _i in range(50):
+            ctx.iteration(False)
+        time.sleep(0.1)
+    else:
+        print(f"{path}: the window drew nothing (minimized? the screen locked?) — "
+              "skipped", flush=True)
+        return
     renderer = win.get_native().get_renderer()
     texture = renderer.render_texture(node, None)
     texture.save_to_png(str(path))

@@ -140,17 +140,39 @@ def sweep(app, root, out, label):
         kinds[k] = kinds.get(k, 0) + 1
         del CAUGHT[:]
         before = {id(x) for x in app.topLevelWidgets() if x.isVisible()}
+        guard = _modal_guard(app, f"right click on {k}")
         try:
             w.customContextMenuRequested.emit(QPoint(min(8, w.width() // 2),
                                                      min(8, w.height() // 2)))
         except Exception:  # noqa: BLE001
             ERRORS.append(f"right click on {k}: " + traceback.format_exc(limit=5))
+        finally:
+            guard.stop()
         for i, m in enumerate(list(CAUGHT)):
             shoot_menu(m, out, f"{label}-ctx-{k[0]}{'-' + k[1] if k[1] else ''}-{i}")
         for x in app.topLevelWidgets():  # a right click that opened a window: closed
             if x.isVisible() and id(x) not in before and not isinstance(x, QMenu):
                 x.close()
     pump(app, 0.2)
+
+
+def _modal_guard(app, what):
+    """While a click is made: a window it exec()s (a question, a dialog) would wait
+    for a person all night (the tour ran out of time so) — closed, and said."""
+    from PySide6.QtCore import QTimer
+    timer = QTimer()
+    timer.setInterval(300)
+
+    def close():
+        w = app.activeModalWidget()
+        if w is not None:
+            ERRORS.append(f"{what}: opened a modal window ({type(w).__name__}) — closed")
+            w.close()
+            if hasattr(w, "reject"):
+                w.reject()
+    timer.timeout.connect(close)
+    timer.start()
+    return timer
 
 
 SIZES = ((1920, 1080), (1366, 768), (1024, 768), (800, 600), (640, 480), (480, 860))
@@ -430,6 +452,8 @@ def tour_menus(app, out, core, win):
 
 
 def main():
+    import faulthandler  # stuck (selfcheck's time runs out): where, every 10 minutes
+    faulthandler.dump_traceback_later(600, repeat=True)
     import logging
     out = Path(next((a for a in sys.argv[1:] if not a.startswith("--")), "qt-tour"))
     out.mkdir(parents=True, exist_ok=True)

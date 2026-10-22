@@ -98,6 +98,12 @@ class _GtkBase(unittest.TestCase):
     def _lane(self, name):
         return self.win.lane_views.get(name)
 
+    def _need_active(self):
+        """Seen means on screen in the active window: on a desktop where another
+        window has the focus (or the screen is locked, at night) it never is."""
+        if not pump(lambda: self.win.is_active(), 2):
+            self.skipTest("the window isn't active (another one has the focus)")
+
 
 @unittest.skipUnless(HAVE_GTK, "no GTK 4 or no display")
 class GtkSmokeTest(_GtkBase):
@@ -117,6 +123,7 @@ class GtkSmokeTest(_GtkBase):
 
     def test_seen_posts_get_read(self):
         """The window is active and every post fits: all are seen, so all are read."""
+        self._need_active()
         lane = self._lane("home")
         self.assertTrue(pump(lambda: not any(c.unread for c in lane.rows.values()), 5))
         self.assertFalse(self.view.unread([c.entry for c in lane.rows.values()]))
@@ -632,7 +639,8 @@ class GtkSmokeTest(_GtkBase):
         rows = [w for w in _walk(lane.list) if hasattr(w, "newest_sort")]
         self.assertEqual(len(rows), 3)  # the two likes of one post are one row
         # on screen in an active window: seen
-        self.assertTrue(pump(lambda: self.core.activity_unread() == 0, 5))
+        if pump(lambda: self.win.is_active(), 2):
+            self.assertTrue(pump(lambda: self.core.activity_unread() == 0, 5))
         # Clear: asked first, then gone here and on the server
         self.assertTrue(lane.clear_btn.get_visible())
         asked = []

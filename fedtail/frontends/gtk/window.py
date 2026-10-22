@@ -194,7 +194,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # the version at the foot
         side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         side.add_css_class("ft-sidebar")
-        side.set_size_request(220, -1)
+        side.set_size_request(272, -1)  # the name and ≡ ↔ ❯ beside it fit
         side.append(self._me_head())
         write = Gtk.Button(label=self.theme.word("compose", _("write")))  # as in Qt
         write.add_css_class("ft-primary")
@@ -221,6 +221,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.footer = Gtk.Label(xalign=0, label=self._footer_text())
         self.footer.add_css_class("ft-muted")
         self.footer.add_css_class("caption")
+        self.footer.set_wrap(True)  # a long build (a dev one, "dirty") wraps, never
+        self.footer.set_wrap_mode(Pango.WrapMode.WORD_CHAR)  # widens the sidebar
         for m in ("start", "end", "bottom"):
             getattr(self.footer, "set_margin_" + m)(8)
         foot_click = Gtk.GestureClick()
@@ -256,7 +258,7 @@ class MainWindow(Gtk.ApplicationWindow):
         bar = self.read_write if self.split_mode else paned
         bar.set_resize_start_child(False)
         bar.set_shrink_start_child(False)
-        bar.set_position(240)
+        bar.set_position(272)
 
         # the status bar: whose this window is at the left, what happens, and in the
         # debugging mode how the window is drawn at the right

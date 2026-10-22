@@ -1278,7 +1278,10 @@ class MainWindow(QMainWindow):
         server takes only people I follow into lists: for someone else the lists stay
         dead (not clickable at all) under "follow first", with Follow right there. Until
         the server says which it is, they are dead too — never "as if followed"."""
-        menu.clear()
+        try:
+            menu.clear()
+        except RuntimeError:  # the post's menu was made anew under it: this one's gone
+            return
         inside = self.core.lists_of(account.id)
         note = menu.addAction(_("list_follow_first"))
         note.setEnabled(False)

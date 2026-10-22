@@ -142,6 +142,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
              border-radius: {br}px; color: {c['muted']}; padding: 0 6px; min-height: 22px; }}
 menubutton.ft-action > button {{ background: transparent; border-color: transparent;
     box-shadow: none; min-height: 22px; padding: 0 6px; }}
+.ft-actions > flowboxchild {{ padding: 0; margin: 0; background: transparent; }}
 .ft-action:hover {{ background: {c['button']}; border-color: {c['button_border']}; }}
 .ft-card label link, .ft-ctx label link, .ft-myreply label link {{
     text-decoration-line: none; }}

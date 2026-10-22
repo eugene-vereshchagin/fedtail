@@ -313,6 +313,8 @@ def run(layout, theme, posts, profile, maximized=False):
 
 
 def main():
+    import faulthandler  # stuck (selfcheck's time runs out): where, every 10 minutes
+    faulthandler.dump_traceback_later(600, repeat=True)
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--layout", choices=LAYOUTS)
     ap.add_argument("--theme")

@@ -66,14 +66,17 @@ class Run:
     def __init__(self, out):
         self.out = out
         self.rows = []
+        self.wrap = ()  # every window on a display of its own (the night: xvfb-run)
 
-    def step(self, name, args, timeout, folder=None, note="", py=None):
+    def step(self, name, args, timeout, folder=None, note="", py=None, wrap=None):
+        wrap = self.wrap if wrap is None else wrap
         log = self.out / f"{name}.log"
         print(f"→ {name} …", flush=True)
         t0 = time.monotonic()
         try:
             with open(log, "w", encoding="utf-8") as f:
-                code = subprocess.run([py or sys.executable] + args, cwd=ROOT, env=env(),
+                code = subprocess.run(list(wrap) + [py or sys.executable] + args,
+                                      cwd=ROOT, env=env(),
                                       stdout=f, stderr=subprocess.STDOUT,
                                       timeout=timeout).returncode
         except subprocess.TimeoutExpired:
@@ -321,7 +324,17 @@ def main():
         for k, v in facts:
             print(f"{k}: {v}")
         quick = ["--quick"] if a.quick else []
-        native = has_display() and not a.offscreen
+        xvfb = shutil.which("xvfb-run") if sys.platform.startswith("linux") else None
+        if a.night and xvfb:
+            # at night the screen locks: GTK then draws a frame a second and every
+            # bench waits a second a turn (the night of 22.10: 2 h, timed out), a
+            # tour's shots come out empty. A display of its own never locks.
+            run.wrap = [xvfb, "-a", "-s", "-screen 0 1920x1080x24"]
+            print("windows: on xvfb (the night: the screen locks)")
+        elif a.night:
+            print("windows: on this desktop — no xvfb-run (sudo apt install xvfb): keep "
+                  "the screen from locking for the night, or the benches mean nothing")
+        native = (has_display() or bool(run.wrap)) and not a.offscreen
 
         # ---- the fake server --------------------------------------------------------------
         if "tests" in only:
@@ -332,7 +345,13 @@ def main():
                    "sys.argv = ['unittest', 'discover', '-s', 'tests', '-t', '.', '-v'"
                    + (", '--durations', '15'" if py >= (3, 12) else "") + "]; "
                    "unittest.main(module=None)"]
-            run.step("tests", cmd, timeout=1800)
+            # a display of their own where there's xvfb-run: on the desktop another
+            # window takes the focus (or the screen locks at night) and the tests of
+            # "seen in the active window" can't see anything
+            xvfb = shutil.which("xvfb-run") if sys.platform.startswith("linux") else None
+            run.step("tests", cmd, timeout=1800,
+                     wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else (),
+                     note="xvfb" if xvfb else "this desktop")
         if "qt" in only:
             if not qt:
                 run.skip("qt-tour", "no PySide6 (pip install PySide6)")

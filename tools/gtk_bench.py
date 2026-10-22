@@ -113,11 +113,21 @@ class Meter:
         self.ctx = GLib.MainContext.default()
         self.rows = []
         self.worst, self.slow, self.turns = 0.0, 0, 0
+        self.second_turns = 0  # turns of a second each, one after another
 
     def _turn(self, d):
         self.worst = max(self.worst, d)
         self.slow += d * 1000 > SLOW_MS
         self.turns += 1
+        # a frame drawn once a second, again and again: the window isn't on screen (the
+        # screen locked, covered) and the swap waits — the night of 22.10 ran 2 hours
+        # so and measured nothing. Said and stopped.
+        self.second_turns = self.second_turns + 1 if 0.95 < d < 1.1 else 0
+        if self.second_turns >= 15:
+            print("\nSTOPPED: the window draws a frame a second — it isn't on screen "
+                  "(the screen locked or covered). Run it on xvfb (xvfb-run -a) or keep "
+                  "the screen on; these numbers mean nothing.", flush=True)
+            raise SystemExit(3)
 
     def run(self, seconds=0.0, until=None, limit=30.0):
         """Turn the loop for `seconds`, or until until() (at most `limit`)."""
@@ -397,6 +407,8 @@ def _switch_tabs(meter, win):
 
 
 def main():
+    import faulthandler  # stuck (selfcheck's time runs out): where, every 10 minutes
+    faulthandler.dump_traceback_later(600, repeat=True)
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--layout", choices=LAYOUTS)
     ap.add_argument("--theme")
