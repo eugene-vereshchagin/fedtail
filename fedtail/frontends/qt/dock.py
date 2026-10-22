@@ -432,6 +432,10 @@ def _under_pointer(view):
     from PySide6.QtGui import QCursor
     from PySide6.QtWidgets import QApplication
     vp = view.viewport()
+    if not vp.window().isActiveWindow():
+        # the pointer is someone else's: QCursor.pos() and widgetAt() ask the X server
+        # and wait for it (0.3–0.5 s, the night of 22.10, the window in the background)
+        return None
     pos = QCursor.pos()
     if not vp.rect().contains(vp.mapFromGlobal(pos)):
         return None

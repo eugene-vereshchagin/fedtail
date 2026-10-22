@@ -14,6 +14,7 @@ python3-pyside6.qtmultimediawidgets): without it — or with ui.video_player =
 import functools
 import logging
 import os
+import time
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
@@ -36,6 +37,7 @@ log = logging.getLogger(__name__)
 INFINITE = -1  # QMediaPlayer.Loops.Infinite as the int setLoops takes
 MAX_LOOPS = 3      # gifvs playing at once (the ones on screen; the rest show a still)
 VISIBLE_CHECK_MS = 600
+FRAME_FPS = 12     # a gifv in a card: at most this many frames a second drawn
 SEEK_MS = 5000
 
 
@@ -380,6 +382,7 @@ class InlineLoop(QObject):
         from PySide6.QtMultimedia import QMediaPlayer, QVideoSink
         super().__init__(label)
         self.label, self.m, self.fit = label, m, fit
+        self._last_frame, self._slow, self.too_slow = 0.0, 0, False
         self.player = None
         self.sink = None
         self._QMediaPlayer, self._QVideoSink = QMediaPlayer, QVideoSink
@@ -397,7 +400,7 @@ class InlineLoop(QObject):
             return False
 
     def _check(self):
-        if self._on_screen():
+        if self._on_screen() and not self.too_slow:
             self.play()
         elif self.player is not None:
             self.pause()
@@ -423,13 +426,34 @@ class InlineLoop(QObject):
             self.player.pause()
 
     def _frame(self, frame):
+        # every frame came to the GUI thread whole: converted, scaled, rounded — 0.6–1.7 s
+        # stalls a frame on the night of 22.10 (software decoding). A card's loop is a
+        # preview: at most FRAME_FPS, and made small before anything else is done to it
+        now = time.monotonic()
+        if now - self._last_frame < 1.0 / FRAME_FPS:
+            return
+        self._last_frame = now
         img = frame.toImage()
         if img.isNull():
             return
         try:
+            ratio = self.label.devicePixelRatioF() or 1.0
+            w, h = int(self.label.width() * ratio), int(self.label.height() * ratio)
+            if w > 0 and h > 0 and (img.width() > 2 * w or img.height() > 2 * h):
+                img = img.scaled(2 * w, 2 * h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                 Qt.TransformationMode.FastTransformation)
             self.label.setPixmap(self.fit(QPixmap.fromImage(img)))
         except RuntimeError:
             self._gone()
+        took = time.monotonic() - now
+        if took > 0.1:  # still dear here: fewer frames for this one
+            self._slow += 1
+            if self._slow >= 3:
+                log.info("gifv: a frame takes %.0f ms — this one stays still", took * 1000)
+                self.too_slow = True  # a click still opens it in the player
+                self.pause()
+        else:
+            self._slow = 0
 
     def _gone(self, *_a):
         _Loops.stop(self)
