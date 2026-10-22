@@ -39,7 +39,13 @@ jobs:
         working-directory: android
         env:
           CHAQUOPY_BUILD_PYTHON: ${{ steps.py.outputs.python-path }}
-        run: ./gradlew --no-daemon --stacktrace assembleDebug
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon assembleDebug 2>&1 | tee ../gradle.log
+      # the reason as annotations: readable through the API where the log isn't
+      - name: Why it failed
+        if: failure()
+        run: python3 .github/android_why.py gradle.log
       - uses: actions/upload-artifact@v4
         with:
           name: fedtail-android-dev-${{ github.run_number }}
