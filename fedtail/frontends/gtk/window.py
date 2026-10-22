@@ -234,6 +234,8 @@ class MainWindow(Gtk.ApplicationWindow):
         side.append(self.footer)
 
         self.stack = Gtk.Stack()
+        self.curtain = self._build_curtain()  # every lane closed (Esc), as Qt's
+        self.stack.add_named(self.curtain, "__curtain__")
         self.tabs = Gtk.Notebook()
         self.tabs.set_scrollable(True)
         self.tabs.set_show_tabs(False)
@@ -494,6 +496,88 @@ class MainWindow(Gtk.ApplicationWindow):
         add("<Control>q", self.close)
         add("<Control>w", self._close_current_tab)
         self.add_controller(ctl)
+        keys = Gtk.EventControllerKey()  # Esc and Enter, as Qt's (ui.esc)
+        keys.connect("key-pressed", self._key)
+        self.add_controller(keys)
+
+    def _key(self, _ctl, keyval, _code, state):
+        """Esc closes what's on top; the last one closes every lane behind a curtain
+        (ui.esc = "curtain"; "tray": the window goes; "off": nothing). Enter on the
+        curtain opens the last lane."""
+        mods = state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK |
+                        Gdk.ModifierType.SHIFT_MASK)
+        if mods:
+            return False
+        mode = self.cfg["ui"].get("esc", "curtain")
+        if keyval == Gdk.KEY_Escape and mode != "off":
+            if self.find_bar.get_visible():
+                self.find_bar.close_bar()
+            elif self.tabs.get_current_page() > 0:
+                self._close_current_tab()
+            elif mode == "tray":
+                self.minimize()
+            elif not self.curtain_shown():
+                self.close_all()
+            return True
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and self.curtain_shown() and \
+                not isinstance(self.get_focus(), (Gtk.Text, Gtk.TextView)):
+            name = self.view.get_state("lane") or self._start_lane()
+            if name in self.lane_rows:
+                self.sidebar.select_row(self.lane_rows[name])
+                return True
+        return False
+
+    # ---- the curtain: every lane closed ------------------------------------------------
+    def _build_curtain(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                      valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
+        box.add_css_class("ft-view")
+        from importlib import resources
+        try:
+            pic = resources.files("fedtail").joinpath("data/icons/fedtail.png")
+            icon = Gtk.Image.new_from_paintable(Gdk.Texture.new_from_filename(str(pic)))
+            icon.set_pixel_size(96)
+            box.append(icon)
+        except (GLib.Error, OSError):
+            pass
+        title = Gtk.Label(label=_("curtain_title"))
+        title.add_css_class("ft-lane-title")
+        title.add_css_class("title-2")
+        box.append(title)
+        self.curtain_info = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
+                                      max_width_chars=60)
+        self.curtain_info.add_css_class("ft-muted")
+        box.append(self.curtain_info)
+        hint = Gtk.Label(label=_("curtain_hint"))
+        hint.add_css_class("ft-muted")
+        box.append(hint)
+        return box
+
+    def curtain_shown(self):
+        return self.stack.get_visible_child() is getattr(self, "curtain", None)
+
+    def close_all(self):
+        """Esc: no lane, thread or profile on screen; nothing gets marked read, so
+        whatever comes meanwhile waits, counted on the left."""
+        self.find_bar.close_bar()
+        current = self.stack.get_visible_child()
+        if current is not None and hasattr(current, "hidden"):
+            current.hidden()
+        self.stack.set_visible_child(self.curtain)
+        self.tabs.set_current_page(0)
+        self.sidebar.unselect_all()
+        self.view.set_active_lane(None)
+        self.view.set_active_lanes([])
+        self._curtain_text()
+        log.info("all lanes closed (Esc)")
+
+    def _curtain_text(self, numbers=None):
+        numbers = numbers if numbers is not None else sidebar.counts(self.view,
+                                                                    self.lane_rows)
+        waiting = [(self.lane_title(n), numbers[n]) for n in self.lane_rows if numbers.get(n)]
+        self.curtain_info.set_text(
+            _("curtain_waiting", items=", ".join(f"{t} — {c}" for t, c in waiting))
+            if waiting else _("curtain_empty"))
 
     # ---- the head of the sidebar ---------------------------------------------------------
     def _me_head(self):
@@ -1098,11 +1182,15 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sidebar.append(row)
         self.update_badges()
         start = current or self._start_lane()
-        if start in self.lane_rows:
+        if start == "none" and not current:  # ui.start_lane: every lane closed
+            self.close_all()
+        elif start in self.lane_rows:
             self.sidebar.select_row(self.lane_rows[start])
 
     def _start_lane(self):
         want = self.cfg["ui"].get("start_lane") or "last"
+        if want == "none":
+            return want
         if want == "last":
             want = self.view.get_state("lane") or "home"
         return want if want in self.lane_rows else next(iter(self.lane_rows), None)
@@ -1130,6 +1218,7 @@ class MainWindow(Gtk.ApplicationWindow):
             lv.shown()
             return
         if self.columns is not None:  # in columns: that column (added if not there)
+            self.stack.set_visible_child(self.columns)  # (behind the curtain, maybe)
             if name not in self.columns.frames:
                 self.columns.add(name, self._lane_view(name))
                 self.columns_changed()
@@ -1175,6 +1264,8 @@ class MainWindow(Gtk.ApplicationWindow):
         numbers = sidebar.counts(self.view, self.lane_rows)
         for name, row in self.lane_rows.items():
             row.set_count(numbers[name])
+        if self.curtain_shown():
+            self._curtain_text(numbers)
         folded = sidebar.folded(self.view)
         for group, head in self.sections.items():
             head.show_fold(group in folded, sum(numbers.get(n, 0) for n in head.names))

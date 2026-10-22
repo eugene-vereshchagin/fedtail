@@ -435,6 +435,23 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(len(asked), 1)
         self.assertEqual(prof.parse_langs("ru; en  de"), ["ru", "en", "de"])
 
+    def test_esc_closes_every_lane_behind_a_curtain(self):
+        """As Qt (ui.esc = "curtain"): Esc — no lane on screen, what comes waits,
+        counted; Enter — the last lane again."""
+        from gi.repository import Gdk
+        self.assertTrue(self.win._key(None, Gdk.KEY_Escape, 0, 0))
+        self.assertTrue(self.win.curtain_shown())
+        self.assertIsNone(self.win.sidebar.get_selected_row())
+        self.world.add(status("030", BOB, minute=30, text="пока шторка"), home=True)
+        self.core.poll_once()
+        self.assertTrue(pump(lambda: i18n._("lane_home") in
+                             self.win.curtain_info.get_text(), 5),
+                        self.win.curtain_info.get_text())
+        self.win.set_focus(None)  # (not the Enter of a field: the command line's)
+        self.assertTrue(self.win._key(None, Gdk.KEY_Return, 0, 0))
+        self.assertFalse(self.win.curtain_shown())
+        self.assertEqual(self.win._current_lane(), "home")
+
     def test_the_status_line_says_what_qt_says(self):
         """Connecting, the server down (again in 20 s), a link not opened, deleted."""
         self.assertTrue(self.win._hello.startswith("@"))

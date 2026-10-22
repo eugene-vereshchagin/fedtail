@@ -104,6 +104,31 @@ class Card(Gtk.Box):
         click.connect("pressed", lambda _g, _n, x, y: self._menu_at(x, y))
         self.add_controller(click)
 
+    def _booster_menu(self, anchor, acc):
+        """Their profile, their @address, a list of mine — for whoever boosted."""
+        from urllib.parse import quote
+        pop = Gtk.Popover()
+        pop.set_has_arrow(False)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        items = [(_("open_profile"), lambda: self.ctx.on_link(f"fedtail:account/{acc.id}")),
+                 (_("copy_handle"), lambda: self.ctx.on_link(
+                     "fedtail:copyhandle/" + quote(acc.handle, safe="")))]
+        if acc.id != self.ctx.me_id and self.ctx.win.cfg["lists"]["enabled"]:
+            items.append((_("add_to_list") + " ▾",
+                          lambda: self.ctx.win.lists_popover(acc, anchor)))
+        for label, fn in items:
+            b = Gtk.Button(label=label)
+            b.add_css_class("flat")
+            b.get_child().set_xalign(0)
+            b.connect("clicked", lambda _b, f=fn: (pop.popdown(), f()))
+            box.append(b)
+        pop.set_child(box)
+        pop.set_parent(anchor)
+        pop.connect("closed", lambda p: p.unparent())
+        pop.popup()
+        self.booster_pop = pop
+        return pop
+
     def set_cw(self, open_):
         """Open or close what's behind the content warning (a thread's "show all")."""
         if getattr(self, "cw_inner", None) is None:
@@ -158,6 +183,10 @@ class Card(Gtk.Box):
                     _("boost_time", when=ctx.theme.date(self.entry.created)))
             boost = _label("♻ " + text, ("ft-muted",), markup=True)
             boost.connect("activate-link", self._link)
+            right = Gtk.GestureClick(button=3)  # who boosted: their own menu, as Qt's
+            right.connect("pressed", lambda g, *_a, who=by, lab=boost: (
+                g.set_state(Gtk.EventSequenceState.CLAIMED), self._booster_menu(lab, who)))
+            boost.add_controller(right)
             col.append(boost)
         head = Gtk.Box(spacing=6)
         mark = "*" if ctx.theme.shape.get("unread_mark") == "star" else "●"
@@ -391,11 +420,28 @@ class Card(Gtk.Box):
         pic.set_overflow(Gtk.Overflow.HIDDEN)
         pic.set_alternative_text(m.alt or _("a11y_no_alt"))
         src = m.preview or full
-        if src:
-            self.ctx.images.get(src, pic.set_paintable, max_side=side)
         over = Gtk.Overlay()
         over.set_child(pic)
         over.set_overflow(Gtk.Overflow.HIDDEN)
+        # "loading…" over the box until it comes; if it never does, said (a click still
+        # opens it) — as Qt's
+        state = _label(_("image_loading"), ("ft-muted",), wrap=True)
+        state.set_halign(Gtk.Align.CENTER)
+        state.set_valign(Gtk.Align.CENTER)
+        state.set_justify(Gtk.Justification.CENTER)
+        over.add_overlay(state)
+
+        def came(paintable):
+            pic.set_paintable(paintable)
+            state.set_visible(False)
+
+        def failed():
+            state.set_text(_("image_failed") if m.kind == "image" else
+                           "▶ " + _("media_" + m.kind) + "\n" + _("media_click"))
+        if src:
+            self.ctx.images.get(src, came, max_side=side, failed=failed, original=full)
+        else:
+            failed()
         if m.kind != "image":
             play = Gtk.Label(label="▶")
             play.add_css_class("ft-play")
