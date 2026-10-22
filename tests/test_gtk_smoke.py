@@ -667,6 +667,17 @@ class GtkSmokeTest(_GtkBase):
         dlg._add_media(str(png))
         self.assertFalse(dlg.poll_btn.get_sensitive())  # pictures or a poll, not both
         self.assertTrue(dlg.sensitive_btn.get_visible())
+        # the focus point and the description, in a window of their own (as Qt's)
+        fd = dlg._focus_dialog(dlg.media[0])
+        fd._clicked(0, 0)  # the top left corner
+        self.assertEqual(fd.focus, [-1.0, 1.0])
+        fd.text.get_buffer().set_text("полоска")
+        fd._ok()
+        self.assertEqual(dlg._media_list(), [[str(png), "полоска", [-1.0, 1.0]]])
+        dlg.media[0][1].set_text("")
+        # #tags all small: screen readers spell them as one word — said
+        dlg.buffer.set_text("#georgianews")
+        self.assertTrue(pump(lambda: dlg.camel.get_visible(), 2))
         asked = []
         dlg._ask_alt = lambda n, *_a: asked.append(n)
         dlg.buffer.set_text("с картинкой")

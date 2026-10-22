@@ -113,9 +113,14 @@ class ComposeWindow(Gtk.Box):
         self.suggest.add_css_class("ft-muted")
         self.suggest.set_visible(False)
         box.append(self.suggest)
+        # ♿ #tags all small: screen readers spell them as one word (post.camelcase_hint)
+        self.camel = Gtk.Label(xalign=0, wrap=True)
+        self.camel.add_css_class("ft-muted")
+        self.camel.set_visible(False)
+        box.append(self.camel)
         self.media_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.append(self.media_box)  # a row per picture: name, description, ✕
-        self.media = []             # [[path, description entry]]
+        self.media = []             # [[path, description entry, focus [x, y] or None]]
         self.poll_box = self._build_poll()
         box.append(self.poll_box)
 
@@ -357,9 +362,9 @@ class ComposeWindow(Gtk.Box):
         if st.language:
             self._set_language(st.language)
         from pathlib import Path
-        for path, desc, *_focus in st.media:
+        for path, desc, *focus in st.media:
             if Path(path).exists():
-                self._add_media(path, desc)
+                self._add_media(path, desc, focus[0] if focus else None)
         self.sensitive_btn.set_active(st.sensitive)
         if st.poll:
             self.poll_btn.set_active(True)
@@ -433,7 +438,8 @@ class ComposeWindow(Gtk.Box):
         return VISIBILITIES[self.vis.get_selected()]
 
     def _media_list(self):
-        return [[path, e.get_text().strip()] for path, e in self.media]
+        return [[path, e.get_text().strip()] + ([list(f)] if f else [])
+                for path, e, f in self.media]
 
     def poll_data(self):
         secs = rules.POLL_TIMES[self.poll_time.get_selected()][0]
@@ -470,7 +476,7 @@ class ComposeWindow(Gtk.Box):
                     self._add_media(path)
         dlg.open_multiple(self.get_root(), None, done)
 
-    def _add_media(self, path, desc=""):
+    def _add_media(self, path, desc="", focus=None):
         from pathlib import Path
         limit = getattr(self.view.caps, "max_media", 4) or 4
         if len(self.media) >= limit:
@@ -483,16 +489,31 @@ class ComposeWindow(Gtk.Box):
         alt.set_hexpand(True)
         alt.connect("changed", lambda _e: self._changed())
         row.append(alt)
+        item = [path, alt, list(focus) if focus else None]
+        if path.lower().rsplit(".", 1)[-1] in ("png", "jpg", "jpeg", "gif", "webp"):
+            aim = Gtk.Button(label="◎")  # where on the picture the main thing is (Qt's)
+            aim.add_css_class("flat")
+            tip(aim, _("focus_tip"))
+            aim.connect("clicked", lambda _b: self._focus_dialog(item))
+            row.append(aim)
         rm = Gtk.Button(label="✕")
         rm.add_css_class("flat")
         tip(rm, _("detach"))
-        item = [path, alt]
         rm.connect("clicked", lambda _b: self._remove_media(item, row))
         row.append(rm)
         self.media.append(item)
         self.media_box.append(row)
         self._media_or_poll()
         self._changed()
+
+    def _focus_dialog(self, item):
+        from .focus import FocusDialog
+
+        def done(desc, focus):
+            item[1].set_text(desc)
+            item[2] = focus
+            self._changed()
+        return FocusDialog(self.get_root(), item[0], item[1].get_text(), item[2], done)
 
     def _remove_media(self, item, row):
         self.media.remove(item)
@@ -565,6 +586,10 @@ class ComposeWindow(Gtk.Box):
         text = (_("chain_count", n=c.parts) + " · " if c.parts > 1 else "") + f"{c.n} / {c.limit}"
         self.counter.set_text(text)
         (self.counter.add_css_class if c.over else self.counter.remove_css_class)("error")
+        flat = c.flat_tags if self.cfg["post"].get("camelcase_hint", True) else []
+        self.camel.set_visible(bool(flat))
+        if flat:
+            self.camel.set_text(_("camel_hint", tags=", ".join("#" + t for t in flat[:3])))
 
     def _suggest(self):
         """What fits the #tag, @name or :emoji: before the cursor, as a line under the
@@ -650,7 +675,8 @@ class ComposeWindow(Gtk.Box):
                 self._alt_ok = True
                 self.send(scheduled_at)
             else:
-                bare = next((e for _p, e in self.media if not e.get_text().strip()), None)
+                bare = next((e for _p, e, _f in self.media if not e.get_text().strip()),
+                            None)
                 if bare is not None:
                     bare.grab_focus()
         dlg.choose(self.get_root(), None, done)

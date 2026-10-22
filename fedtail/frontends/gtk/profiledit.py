@@ -29,7 +29,17 @@ class ProfileEditor:
         box = _box(0)
         scroll.set_child(box)
         outer.append(scroll)
+        # the banner and the face as they are now (as Qt's): "no banner" until one
+        self.header_pic = Gtk.Overlay()
+        self.header_pic.set_size_request(-1, 120)
+        self.header_pic.add_css_class("ft-thumb")
+        self.header_none = Gtk.Label(label=_("no_header"))
+        self.header_none.add_css_class("ft-muted")
+        self.header_pic.set_child(self.header_none)
+        box.append(self.header_pic)
+        self.face = Gtk.Box()
         pics = Gtk.Box(spacing=8)
+        pics.append(self.face)
         self.avatar_note = Gtk.Label(xalign=0)
         self.header_note = Gtk.Label(xalign=0)
         for label, fn, note in ((_("change_avatar"), self._pick_avatar, self.avatar_note),
@@ -92,6 +102,16 @@ class ProfileEditor:
         self.discoverable.set_active(bool(me.discoverable))
         self.hint.set_text("")
         self.save_btn.set_sensitive(True)
+        from .card import Avatar
+        self.face.append(Avatar(self.win.ctx, me, 72))  # (the picture comes by itself)
+        url = me.header_static or me.header
+        if url and "missing" not in url and self.win.images is not None:
+            def show(paintable):
+                pic = Gtk.Picture.new_for_paintable(paintable)
+                pic.set_can_shrink(True)
+                pic.set_content_fit(Gtk.ContentFit.COVER)
+                self.header_pic.set_child(pic)
+            self.win.images.get(url, show)
 
     def _pick(self, title, then):
         dlg = Gtk.FileDialog(title=title)
@@ -123,6 +143,14 @@ class ProfileEditor:
         def got(path):
             self.header_path = path
             self.header_note.set_text(path.rsplit("/", 1)[-1])
+            try:  # the new one shown at once
+                from .gi_setup import Gdk
+                pic = Gtk.Picture.new_for_paintable(Gdk.Texture.new_from_filename(path))
+                pic.set_can_shrink(True)
+                pic.set_content_fit(Gtk.ContentFit.COVER)
+                self.header_pic.set_child(pic)
+            except GLib.Error:
+                pass
         self._pick(_("change_header"), got)
 
     def changes(self):
