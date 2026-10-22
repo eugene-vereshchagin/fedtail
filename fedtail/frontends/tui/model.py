@@ -151,6 +151,8 @@ def show_activity(a, width=80, unread=False):
     else:
         what = _(word) if word else _("act_other")
     out.head.append(("boost", what))
+    if a.count > 1:  # a server's group: the rest of them
+        out.head.append(("time", _("act_more", n=a.count - 1)))
     out.head.append(("time", when(a.created)))
     if unread:
         out.head.append(("unread", "●"))

@@ -741,8 +741,10 @@ to `leaks.WATCH`.
   closed thread and profile tabs leave no widgets behind.
 * CI (`.github/workflows/ci.yml`): ruff; tests on Python 3.11–3.13 with pip
   PySide6; tests on Debian 13 with Qt from apt (the real target; it has no
-  QtTest); `tools/screenshots.py` renders every theme with made-up data and
-  force-pushes PNGs to the `screenshots` branch. `.github/annotate.py` turns
+  QtTest); run by hand (`workflow_dispatch`, main only), `tools/screenshots.py`
+  renders every theme with made-up data and force-pushes PNGs to the `screenshots`
+  branch — the README's pictures; never on a push. The site's gallery
+  (`tools/gallery.py`) is made only when asked: `selfcheck.py --only gallery`. `.github/annotate.py` turns
   failures into annotations (job logs aren't always downloadable).
 * Lint: `ruff check .` (line length 100).
 * Docs: `python3 tools/docs_build.py` writes every generated document,

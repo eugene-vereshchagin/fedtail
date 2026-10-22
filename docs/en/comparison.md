@@ -152,7 +152,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Desktop notifications with privacy levels | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Activity: likes, boosts, follows | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Grouping notifications | ◐ | ✓ |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
+| Grouping notifications | ✓ | ✓ |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
 | Approve a reply, like, boost (GoToSocial) | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Notifications from strangers apart | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Severed relationships and moderators' warnings | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -160,6 +160,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Server announcements | ✓ | ✓ |   |   | ✓ | ✓ |   |   |   |   | ✓ |   |   |   |
 | The unread number on the icon | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |   |   |
 | Direct messages read here are read on the server too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| The server's grouped notifications (v2) | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
 ## Several accounts
 
@@ -194,6 +195,6 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Commands in a terminal | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | A terminal interface (Textual) | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
-| GTK4 + libadwaita | ◐ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
+| GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 132 compared.
+Only in fedtail — **33** features of the 133 compared.

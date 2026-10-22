@@ -164,6 +164,7 @@ DEFAULTS = {
         "types": ["favourite", "reblog", "follow"],
         "approvals": True,
         "server_notices": True,
+        "server_groups": True,
     },
     "lists": {
         "enabled": True,

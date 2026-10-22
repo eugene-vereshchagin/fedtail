@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  # by hand (Actions → CI → Run workflow): the gallery is made only this way
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -189,9 +191,10 @@ jobs:
           path: dist/fedtail_*_all.deb
 
   # real screenshots of the window with made-up data, published to the
-  # `screenshots` branch so the look can be reviewed without running the app
+  # `screenshots` branch so the look can be reviewed without running the app.
+  # Only when run by hand on main: the README's pictures live there and change seldom
   screenshots:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     container: debian:trixie
     permissions:

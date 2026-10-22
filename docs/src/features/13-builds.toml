@@ -28,8 +28,8 @@ status = "has"
 since = "0.10.0"
 name.ru = "deb-пакет"
 name.en = "A deb package"
-note.ru = "собирается в CI в Debian 13"
-note.en = "built in CI on Debian 13"
+note.ru = "собирается в CI в Debian 13; с 0.18 GTK 4 в «Рекомендует», окно GTK — действие пункта меню («fedtail (GTK)», правый клик)"
+note.en = "built in CI on Debian 13; since 0.18 GTK 4 in Recommends, the GTK window an action of the menu entry (“fedtail (GTK)”, right click)"
 
 [[feature]]
 id = "windows-exe"

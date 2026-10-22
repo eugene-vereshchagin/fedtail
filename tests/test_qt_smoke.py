@@ -2195,7 +2195,7 @@ class QtSmokeTest(unittest.TestCase):
         st = dict(st, favourites_count=1)
         self.core.store.put_statuses([st])
         row = PostRow(CardSpec(key="011", entry=E(st), unread=True), self.win.ctx)
-        self.assertEqual(row._menu.actions(), [])  # nothing built until it opens
+        self.assertIsNone(row._menu)  # nothing built until it opens
         row.ensure_menu()
         texts = [a.text() for m in row.findChildren(QMenu) for a in m.actions()]
         from fedtail.i18n import _

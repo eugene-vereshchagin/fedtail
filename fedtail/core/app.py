@@ -805,12 +805,12 @@ class Core(SocialMixin):
         fc = self.cfg["feed"]
         newest, _sort = self.store.activity_newest()
         if newest is None:
-            self.store.activity_put(self.api.notifications(types, limit=fc["page_size"]))
+            self.store.activity_put(self._notifications(types, limit=fc["page_size"]))
             self.store.kv_set("activity_seen", self.store.activity_newest()[1])
             return []
         new, cursor = [], newest
         while True:
-            page = self.api.notifications(types, limit=fc["page_size"], min_id=cursor)
+            page = self._notifications(types, limit=fc["page_size"], min_id=cursor)
             if not page:
                 break
             new += self.store.activity_put(page)
@@ -819,6 +819,19 @@ class Core(SocialMixin):
                 break
             cursor = nxt
         return new
+
+    def _notifications(self, types, **page):
+        """A page of notifications: the server's own groups where it has them
+        (activity.server_groups, Mastodon 4.3+), else one by one (GoToSocial, older
+        Mastodon, Akkoma) — the first "no such thing" answer settles it for the run."""
+        if self.cfg["activity"].get("server_groups", True) and self.supports("grouped") \
+                and hasattr(self.api, "notification_groups"):
+            from .social import NotSupported
+            try:
+                return self._api("grouped", self.api.notification_groups, types, **page)
+            except NotSupported:
+                log.info("no grouped notifications on this server: one by one")
+        return self.api.notifications(types, **page)
 
     def activity_entries(self, limit=300):
         return self.store.activity_recent(limit)

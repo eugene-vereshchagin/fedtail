@@ -35,13 +35,15 @@ details.en = "The “Activity” lane: who liked, boosted, followed, a poll ende
 
 [[feature]]
 id = "grouping"
-status = "partly"
+status = "has"
 since = "0.2.0"
 name.ru = "Группировка уведомлений"
 name.en = "Grouping notifications"
-config = "`activity.types`"
-api.ru = "fedtail группирует сам, `/api/v2/notifications` не использует"
-api.en = "fedtail groups them itself, it doesn't use `/api/v2/notifications`"
+config = "`activity.types`, `activity.server_groups`"
+api.ru = "своя группировка; с 0.18 — и серверная, `/api/v2/notifications` (Mastodon 4.3+)"
+api.en = "its own grouping; since 0.18 the server's too, `/api/v2/notifications` (Mastodon 4.3+)"
+details.ru = "Соседние уведомления одного вида об одном посте — одна строка: кто (первые несколько, «и ещё N»), что, когда. Где сервер группирует сам (Mastodon 4.3+), fedtail берёт его группы: 300 лайков одного поста — один запрос и одна строка со счётом, а не 300 уведомлений восемью страницами; × у такой строки убирает с сервера всю группу. GoToSocial и Mastodon постарше группировать не умеют — там fedtail группирует сам, как раньше. `activity.server_groups = false` — всегда самому."
+details.en = "Neighbouring notifications of one kind about one post are one row: who (the first few, “and N more”), what, when. Where the server groups them itself (Mastodon 4.3+), fedtail takes its groups: 300 likes of one post are one request and one row with the count, not 300 notifications in eight pages; × on such a row dismisses the whole group on the server. GoToSocial and older Mastodon can't group — there fedtail groups them itself, as before. `activity.server_groups = false` — always itself."
 others = "Mastodon web, Ivory, Phanpy, Ice Cubes"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Ice Cubes"]
 
@@ -148,10 +150,13 @@ why.en = "A desktop has enough with the live stream and polling; push is for pho
 
 [[feature]]
 id = "grouped-v2"
-status = "undecided"
+status = "has"
+since = "0.18.0"
 name.ru = "Сгруппированные уведомления сервера (v2)"
 name.en = "The server's grouped notifications (v2)"
+config = "`activity.server_groups`"
+api = "`/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss`"
 others = "Mastodon web, Ivory, Phanpy"
 clients = ["Mastodon web", "Ivory", "Phanpy"]
-note.ru = "Своя группировка уже есть."
-note.en = "fedtail's own grouping is there already."
+note.ru = "Mastodon 4.3+; где сервер не умеет (GoToSocial) — своя группировка, см. «Группировка уведомлений»."
+note.en = "Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”."

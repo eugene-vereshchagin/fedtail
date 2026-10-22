@@ -249,7 +249,13 @@ class SocialMixin:
     def dismiss_activity(self, nid):
         """One notification gone: from Activity always, from the server when it can."""
         def job():
-            if self.can_dismiss_one():
+            key = self.store.activity_group_of(nid)
+            if key and self.supports("grouped"):
+                try:  # the server's group: all of it (Mastodon 4.3+)
+                    self.api.dismiss_notification_group(key)
+                except ApiError as e:
+                    log.debug("dismiss group %s: %s", key, e)
+            elif self.can_dismiss_one():
                 try:
                     self._api("dismiss_one", self.api.dismiss_notification, nid)
                 except NotSupported:

@@ -326,6 +326,15 @@ new post, `p` — the author's profile (`F` there follows), `x` — the lane rea
 [Textual](https://textual.textualize.io/): `sudo apt install python3-textual` on Debian 13, or
 `pip install textual`. `[tui]` in the config: `theme`, `lanes_width`, `show_context`.
 
+## In GTK
+
+For GNOME and the other GTK desktops: `fedtail --ui gtk` (or `ui.frontend = "gtk"`) — the same
+lanes, threads, profiles, editor and menus as the Qt window, in GTK 4, with libadwaita where it
+is (`ui.adwaita`); the "system" theme looks like Adwaita. It needs `sudo apt install python3-gi
+gir1.2-gtk-4.0 gir1.2-adw-1` on Debian 13 (the deb package recommends them, and puts
+"fedtail (GTK)" on a right click on fedtail in the menu); the video player wants
+`libgtk-4-media-gstreamer`. Linux only — on Windows there's Qt.
+
 ## In a browser
 
 `fedtail --ui web` (or `ui.frontend = "web"`) runs fedtail as a page in your browser: lanes,

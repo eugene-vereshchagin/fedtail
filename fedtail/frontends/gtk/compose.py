@@ -192,6 +192,14 @@ class ComposeWindow(Gtk.Box):
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
+        # pictures and files: dropped on the editor or pasted (Ctrl+V) — attachments;
+        # the paste is looked at before the text field takes it as text
+        from . import dropin
+        dropin.add_drop(self, self._data_dir, self.add_paths)
+        paste = Gtk.EventControllerKey()
+        paste.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        paste.connect("key-pressed", self._paste_key)
+        self.add_controller(paste)
         self.buffer = self.text.get_buffer()
         self._load(text)
         self.buffer.connect("changed", lambda _b: self._changed())
@@ -475,6 +483,28 @@ class ComposeWindow(Gtk.Box):
                 if path:
                     self._add_media(path)
         dlg.open_multiple(self.get_root(), None, done)
+
+    def _data_dir(self):
+        return self.view.paths.data_dir
+
+    def add_paths(self, paths):
+        """Files in as attachments (a drop, a paste, a drop on the window), each once."""
+        known = {m[0] for m in self.media}
+        for path in paths:
+            if path not in known:
+                known.add(path)
+                self._add_media(path)
+
+    def _paste_key(self, _ctl, keyval, _code, state):
+        from gi.repository import Gdk
+
+        from . import dropin
+        if not state & Gdk.ModifierType.CONTROL_MASK or keyval not in (Gdk.KEY_v, Gdk.KEY_V):
+            return False
+        if state & Gdk.ModifierType.SHIFT_MASK:
+            return False  # Ctrl+Shift+V: always as text
+        return dropin.paste(self, self._data_dir, self.add_paths,
+                            as_text=self.buffer.insert_at_cursor)
 
     def _add_media(self, path, desc="", focus=None):
         from pathlib import Path

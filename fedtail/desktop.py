@@ -40,6 +40,13 @@ def entry_text(profile=None, source_dir=None, icon="fedtail"):
         exec_line = f"fedtail{args}"
         path_line = ""
     name = "fedtail" if profile == main_profile() else f"fedtail ({profile})"
+    # the GTK window as an action of the same entry (right click on it in the menu or on
+    # the task bar): one app, one icon, one id — a second entry would fight over them.
+    # The one-file build has no GTK in it.
+    gtk = "" if getattr(sys, "frozen", False) else (
+        "\n[Desktop Action gtk]\n"
+        "Name=fedtail (GTK)\n"
+        f"Exec={exec_line} --ui gtk\n")  # Path= of the entry holds for its actions too
     return (
         "[Desktop Entry]\n"
         "Type=Application\n"
@@ -56,6 +63,8 @@ def entry_text(profile=None, source_dir=None, icon="fedtail"):
         "Keywords=mastodon;gotosocial;fediverse;point;juick;bnw;\n"
         "StartupWMClass=fedtail\n"
         "StartupNotify=true\n"
+        + ("Actions=gtk;\n" if gtk else "")
+        + gtk
     )
 
 
@@ -63,7 +72,9 @@ def handler_text(entry):
     """The desktop entry for web+ap:// links: the same fedtail, `open %u`, not in the
     menu."""
     out = []
-    for line in entry.splitlines():
+    for line in entry.split("\n[Desktop Action")[0].splitlines():
+        if line.startswith("Actions="):
+            continue
         if line.startswith("Exec="):
             line += " open %u"
         elif line.startswith("Name="):

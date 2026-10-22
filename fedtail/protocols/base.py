@@ -67,13 +67,15 @@ CLIENT = frozenset("""
     async_refresh authorize_follow authorize_url block block_domain blocks bookmark
     bookmarks cancel_scheduled clear_notifications context conversations create_filter
     create_list custom_emojis delete_filter delete_list delete_status directory
-    dismiss_announcement dismiss_notification dismiss_suggestion domain_blocks
+    dismiss_announcement dismiss_notification dismiss_notification_group
+    dismiss_suggestion domain_blocks
     edit_status endorse endorsements familiar_followers favourite favourited_by
     favourites feature_tag featured_tags federated filters follow follow_options
     follow_requests follow_tag followed_tags followers following get_token home
     instance instance_page instance_rules interaction_requests list_accounts list_add
     list_remove list_timeline lists local markers me mentions mute mute_conversation
-    mutes my_featured_tags notification_policy notification_requests notifications
+    mutes my_featured_tags notification_groups notification_policy notification_requests
+    notifications
     notify_posts pin pinned poll post_status preferences quotes react_announcement
     read_conversation reblog reblogged_by register_app reject_follow relationship
     relationships remove_from_followers report revoke_quote scheduled search set_markers

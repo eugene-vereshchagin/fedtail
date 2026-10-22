@@ -500,6 +500,16 @@ class MainWindow(Gtk.ApplicationWindow):
         keys = Gtk.EventControllerKey()  # Esc and Enter, as Qt's (ui.esc)
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
+        # pictures dropped anywhere on the window start a new post with them (as Qt's)
+        from . import dropin
+        dropin.add_drop(self, lambda: self.view.paths.data_dir, self._dropped)
+
+    def _dropped(self, paths):
+        c = self.composer
+        if c is None or c.closed or c.edit:
+            c = self.compose_panel()
+        if c is not None:
+            c.add_paths(paths)
 
     def _key(self, _ctl, keyval, _code, state):
         """Esc closes what's on top; the last one closes every lane behind a curtain

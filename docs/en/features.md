@@ -482,24 +482,27 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 ## Notifications and activity
 
-| What | Status | Since | Config | API / protocol | Others |
-|---|---|---|---|---|---|
-| Desktop notifications with privacy levels | has | 0.2.0 | `[notify]`: `enabled`, `lanes`, `except`, `privacy`, `when_focused`, `backend` | own | only in fedtail (Tokodon — without privacy) |
-| Activity: likes, boosts, follows | has | 0.2.0 | `activity.types` | `/api/v1/notifications` | everyone |
-| Grouping notifications | partly | 0.2.0 | `activity.types` | fedtail groups them itself, it doesn't use `/api/v2/notifications` | Mastodon web, Ivory, Phanpy, Ice Cubes |
-| Approve a reply, like, boost (GoToSocial) | has | 0.13.0 | `activity.approvals` | `/api/v1/interaction_requests` | only in fedtail |
-| Notifications from strangers apart | has | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ |
-| Severed relationships and moderators' warnings | has | 0.14.0 | `activity.server_notices` | notifications `severed_relationships`, `moderation_warning` | Mastodon web |
-| Dismiss a notification, clear them all | has | 0.11.0 | — | `notifications/:id/dismiss`, `notifications/clear` | everyone |
-| Server announcements | has | 0.9.0 | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon |
-| The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon |
-| Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail |
+| What | Status | Since | Config | API / protocol | Others | Note |
+|---|---|---|---|---|---|---|
+| Desktop notifications with privacy levels | has | 0.2.0 | `[notify]`: `enabled`, `lanes`, `except`, `privacy`, `when_focused`, `backend` | own | only in fedtail (Tokodon — without privacy) | — |
+| Activity: likes, boosts, follows | has | 0.2.0 | `activity.types` | `/api/v1/notifications` | everyone | — |
+| Grouping notifications | has | 0.2.0 | `activity.types`, `activity.server_groups` | its own grouping; since 0.18 the server's too, `/api/v2/notifications` (Mastodon 4.3+) | Mastodon web, Ivory, Phanpy, Ice Cubes | — |
+| Approve a reply, like, boost (GoToSocial) | has | 0.13.0 | `activity.approvals` | `/api/v1/interaction_requests` | only in fedtail | — |
+| Notifications from strangers apart | has | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ | — |
+| Severed relationships and moderators' warnings | has | 0.14.0 | `activity.server_notices` | notifications `severed_relationships`, `moderation_warning` | Mastodon web | — |
+| Dismiss a notification, clear them all | has | 0.11.0 | — | `notifications/:id/dismiss`, `notifications/clear` | everyone | — |
+| Server announcements | has | 0.9.0 | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
+| The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon | — |
+| Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
+| The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
 
 <details><summary>In detail</summary>
 
 **Desktop notifications with privacy levels.** Which lanes to notify about — `notify.lanes` (the same names as in `[lanes]`; `"lists"` — all lists, `"list:Friends"` — one, `"all"` — everything); which never — `notify.except` (a blacklist over `lanes`, say with `["all"]`). `privacy`: `"full"` — who and what, `"sender"` — only who (fine to read with others around), `"count"` — only how many. About the lane in front of your eyes it keeps quiet by default (`when_focused`). `backend`: `"auto"` (notify-send, else the tray), `"desktop"`, `"tray"`.
 
 **Activity: likes, boosts, follows.** The “Activity” lane: who liked, boosted, followed, a poll ended, a post you boosted was edited, a new post under a bell — with the time of each event. `["all"]` — everything there is and what will be added.
+
+**Grouping notifications.** Neighbouring notifications of one kind about one post are one row: who (the first few, “and N more”), what, when. Where the server groups them itself (Mastodon 4.3+), fedtail takes its groups: 300 likes of one post are one request and one row with the count, not 300 notifications in eight pages; × on such a row dismisses the whole group on the server. GoToSocial and older Mastodon can't group — there fedtail groups them itself, as before. `activity.server_groups = false` — always itself.
 
 **Approve a reply, like, boost (GoToSocial).** Interaction requests waiting for approval under your who-may-do-what settings come with “Approve” and “Reject” buttons.
 
@@ -621,7 +624,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | Commands in a terminal | has | 0.9.0 | `[cli]`: `enabled`, `color`, `max_lines`, `tail_lanes` | tut (TUI), toot (CLI) |
 | A terminal interface (Textual) | has | 0.10.0 | `ui.frontend = "tui"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows` | tut |
 | Web on localhost | has | 0.10.0 | `ui.frontend = "web"`, `[web]`: `host`, `port`, `open_browser` | Phanpy, Elk — web clients |
-| GTK4 + libadwaita | partly — all of Qt's but small things | 0.17.0 | `ui.frontend = "gtk"`, `ui.adwaita` | Tuba |
+| GTK4 + libadwaita | has | 0.17.0 | `ui.frontend = "gtk"`, `ui.adwaita` | Tuba |
 | Toga (BeeWare) | planned | — | — | — |
 
 <details><summary>In detail</summary>
@@ -632,7 +635,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 
 **Web on localhost.** fedtail in a browser tab: lanes, threads as trees, profiles, a “Write” button (content warning, who sees it, language, drafts), pictures in a grid with a viewer, video and audio, polls with voting, link cards, quotes, custom emoji, “More” at a lane's end, the Point command line; on a phone the lanes slide in from the side, light and dark follow the system. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = "0.0.0.0"` — from the phone on the home network too; no encryption, for your own network only. The ≡ menu (write, my profile, refresh, all read, help, keys, about); a post's ⋯ menu — the same as the Qt and GTK windows', the same items in the same order (since 0.18: open, copy the link, the #id and the handle, reply with quote, call into the thread, bookmark, who quoted, subscribe / mute the thread, mute / block the author and the server, report, edit, pin, delete, delete and redraft — the risky ones ask first); a profile's buttons as in the windows too (follow, the bell, boosts and languages in Home, mention, mute, block, remove from followers, endorse, a note). A reply shows the whole post: select a piece and “❝ Quote in reply” puts it where the cursor is. The viewer goes through a post's pictures with ← / →.
 
-**GTK4 + libadwaita.** To look native in GNOME and other GTK desktops. It has: login, lanes in groups with their unread counts, posts as cards (the face, what a reply answers, the content warning, pictures, a poll's results, the quoted post, the link's card, “you replied”), the post's buttons and menu — the same as Qt's, asking before the risky ones, seen means read, “All read”, “earlier”, threads in tabs, writing / replying / quoting / calling in / correcting with drafts, who sees it, the warning, pictures with descriptions, a poll and Tab completion, the Point command line (Ctrl+L), profiles in tabs, Activity, follow requests, notifications, fedtail's themes. Since 0.18 also: find in the lane (Ctrl+F), the split layout, the picture viewer, help as a panel, voting in polls, translating a post, “read it whole”, an edit's history, reporting, who liked and boosted, quotes of my post, “read up to here”, a profile with all of Qt's buttons and editing my own, quotes saying why one can't be shown. Also since 0.18: a thread's header (subscribe, “open every CW”, why its replies show), a profile paging back and on — from the author's server, pinned posts and featured on a profile, lists (add, members, rename, delete, exclusive), groups of tags, a tag's follow and “feature on my profile”, the server's announcements, the curtain on Esc, a video player over the window (needs `libgtk-4-media-gstreamer`), the tray (StatusNotifierItem over D-Bus), selecting text with “Quote in reply”, a contact card on hover in split, a picture's focus point and description, the account mark in the merged window. What Qt has and GTK doesn't — `tools/parity.py` (but menu items' tooltips: GTK menus have none). Needs `python3-gi gir1.2-gtk-4.0`; libadwaita (`gir1.2-adw-1`) is optional.
+**GTK4 + libadwaita.** To look native in GNOME and other GTK desktops. It has: login, lanes in groups with their unread counts, posts as cards (the face, what a reply answers, the content warning, pictures, a poll's results, the quoted post, the link's card, “you replied”), the post's buttons and menu — the same as Qt's, asking before the risky ones, seen means read, “All read”, “earlier”, threads in tabs, writing / replying / quoting / calling in / correcting with drafts, who sees it, the warning, pictures with descriptions, a poll and Tab completion, the Point command line (Ctrl+L), profiles in tabs, Activity, follow requests, notifications, fedtail's themes. Since 0.18 also: find in the lane (Ctrl+F), the split layout, the picture viewer, help as a panel, voting in polls, translating a post, “read it whole”, an edit's history, reporting, who liked and boosted, quotes of my post, “read up to here”, a profile with all of Qt's buttons and editing my own, quotes saying why one can't be shown. Also since 0.18: a thread's header (subscribe, “open every CW”, why its replies show), a profile paging back and on — from the author's server, pinned posts and featured on a profile, lists (add, members, rename, delete, exclusive), groups of tags, a tag's follow and “feature on my profile”, the server's announcements, the curtain on Esc, a video player over the window (needs `libgtk-4-media-gstreamer`), the tray (StatusNotifierItem over D-Bus), selecting text with “Quote in reply”, a contact card on hover in split, a picture's focus point and description, the account mark in the merged window, pictures and files into a post by dragging and from the clipboard (Ctrl+V, screenshots too; dropped on the window — a new post with them). In the deb package GTK is in Recommends, and the GTK window is “fedtail (GTK)” on a right click on the menu entry. What Qt has and GTK doesn't — `tools/parity.py` (but menu items' tooltips: GTK menus have none). Needs `python3-gi gir1.2-gtk-4.0`; libadwaita (`gir1.2-adw-1`) is optional.
 
 **Toga (BeeWare).** Native widgets of Windows, macOS, GTK, Android from one code. To try out.
 
@@ -646,7 +649,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 |---|---|---|---|
 | From the source: `python3 -m fedtail` | has | 0.1.0 | PySide6 and requests |
 | Linux: one file | has | 0.5.0 | `fedtail-X.Y.Z-linux-x86_64`, built on Debian 12 |
-| A deb package | has | 0.10.0 | built in CI on Debian 13 |
+| A deb package | has | 0.10.0 | built in CI on Debian 13; since 0.18 GTK 4 in Recommends, the GTK window an action of the menu entry (“fedtail (GTK)”, right click) |
 | Windows: one .exe | has | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
 | A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`ui.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
 | An apt repository of its own | planned | — | from the releases' deb packages |
@@ -705,5 +708,4 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | A link's timeline (Mastodon 4.3+) | Mastodon web | Every post about a popular link. GoToSocial can't do it. |
 | Sending emoji reactions | Phanpy, Elk, Fedilab | Akkoma, Pleroma, Misskey; GoToSocial can't do it. |
 | Spell checking in the compose panel | Tuba | Not a priority. Qt has none of its own: it needs an outside library (hunspell or enchant) as an optional dependency. |
-| The server's grouped notifications (v2) | Mastodon web, Ivory, Phanpy | fedtail's own grouping is there already. |
 | The token from an external command (`pass`, `gopass`) | tut | It's unclear what this would add over a file readable by its owner only. |

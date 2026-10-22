@@ -36,6 +36,24 @@
   came by (merged window), a video player over the window (Gtk.Video) and a tray icon
   (StatusNotifierItem over D-Bus, KDE's and the AppIndicator extension's).
 - Qt: a suggestion (@name, #tag, :emoji:) goes in with Enter or Tab — it took a click.
+- The server's own groups of notifications (Mastodon 4.3+, `/api/v2/notifications`,
+  `activity.server_groups`): 300 likes of one post are one request and one row with its
+  count ("and 297 more"), not 300 notifications in eight pages; × dismisses the whole
+  group on the server. GoToSocial and older Mastodon: fedtail groups them itself, as
+  before (the first 404 settles it).
+- GTK: pictures and files go into a post by dragging them onto the editor or pasting
+  them (Ctrl+V — a file manager's copied files, a screenshot; Ctrl+Shift+V — always as
+  text); dropped on the window, they start a new post (as in Qt). The deb package
+  recommends GTK 4 (`python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`), and the GTK window
+  is "fedtail (GTK)" on a right click on the menu entry. GTK is no longer "partly".
+- The chosen lane shows in dark themes left at "auto" (Adwaita dark, Breeze dark): its
+  row was nearly the sidebar's own colour.
+- Qt opens a lane faster: a lane of 41–80 posts no longer builds every card at once
+  (one first build, 40 by default, as for longer ones), and a post's ⋯ menu is made
+  when it's first opened, not an empty one with every card.
+- The gallery (`tools/gallery.py`) and the README's screenshots are made only when
+  asked: `selfcheck.py --only gallery`, and CI's screenshots job by hand (Actions → CI
+  → Run workflow) — not every night and every push.
 - GTK 4.18: no "reported min height … natural height" warnings by the thousand — a
   card, a lane's header, a profile's top and a person's row are no longer horizontal
   boxes with wrapping text in them (4.18 takes such a box's least height at its least

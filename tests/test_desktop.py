@@ -29,6 +29,22 @@ class AppIdTest(unittest.TestCase):
             self.assertEqual(desktop.desktop_id("2nd"), "online.dmesg.fedtail.p2nd")
 
 
+class GtkActionTest(unittest.TestCase):
+    def test_gtk_is_an_action_of_the_entry(self):
+        text = desktop.entry_text("main", icon="fedtail")
+        head, action = text.split("\n[Desktop Action gtk]\n")
+        self.assertIn("Actions=gtk;", head)
+        self.assertIn("--ui gtk", action)
+        self.assertNotIn("Path=", action)  # not a key of an action
+
+    def test_the_link_handler_has_no_action(self):
+        text = desktop.handler_text(desktop.entry_text("main", icon="fedtail"))
+        self.assertNotIn("Desktop Action", text)
+        self.assertNotIn("Actions=", text)
+        self.assertEqual(text.count("Exec="), 1)
+        self.assertIn(" open %u", text)
+
+
 @unittest.skipIf(os.name == "nt", "a .desktop entry: Linux and the like")
 class EnsureTest(unittest.TestCase):
     def setUp(self):

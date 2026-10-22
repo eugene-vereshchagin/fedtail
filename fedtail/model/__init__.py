@@ -309,6 +309,8 @@ class Activity:
     details: Notice | None = None  # for a notice: the parts of it
     asks: str = ""                 # for a request: "reply", "like" or "share"
     group_key: str = ""            # the server's grouping key, when it groups them
+    count: int = 1                 # a server's group: how many notifications in all
+    people: tuple = ()             # …and who, the newest first (a sample: up to 8)
 
     @property
     def id(self):

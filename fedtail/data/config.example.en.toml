@@ -797,6 +797,12 @@ approvals = true
 # the moderators. They come here too. false — don't show.
 server_notices = true
 
+# The server's own groups of notifications (Mastodon 4.3+): 300 likes of one post come
+# as one group with its count — one request instead of eight pages, one row "and 297
+# more"; × dismisses the whole group on the server. Where the server can't (GoToSocial,
+# older Mastodon), fedtail groups them itself. false — always itself.
+server_groups = true
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  8. Lists

@@ -72,6 +72,44 @@ def software_of(inst):
     return "mastodon", False
 
 
+# what the server may fold into one group (the rest come one by one, as groups of one)
+GROUPED_TYPES = ("favourite", "reblog", "follow")
+
+
+def flatten_groups(resp):
+    """/api/v2/notifications' answer ({accounts, statuses, notification_groups}) as
+    v1-like notifications, one per group, newest first: its newest notification's id
+    (paging goes on by notification ids), time and person, its post, and `_group`: the
+    group's key, how many notifications it holds in all, and the people the server
+    gave as a sample (the newest first)."""
+    resp = resp if isinstance(resp, dict) else {}
+    accounts = {str(a.get("id")): a for a in resp.get("accounts") or ()
+                if isinstance(a, dict) and a.get("id")}
+    statuses = {str(st.get("id")): st for st in resp.get("statuses") or ()
+                if isinstance(st, dict) and st.get("id")}
+    out = []
+    for g in resp.get("notification_groups") or ():
+        if not isinstance(g, dict) or not g.get("most_recent_notification_id"):
+            continue
+        sample = [accounts[str(i)] for i in g.get("sample_account_ids") or ()
+                  if str(i) in accounts]
+        n = {"id": str(g["most_recent_notification_id"]), "type": g.get("type") or "",
+             "created_at": g.get("latest_page_notification_at") or "",
+             "account": sample[0] if sample else {},
+             "group_key": g.get("group_key") or "",
+             "_group": {"key": g.get("group_key") or "",
+                        "count": int(g.get("notifications_count") or 1),
+                        "accounts": sample}}
+        if g.get("status_id") and str(g["status_id"]) in statuses:
+            n["status"] = statuses[str(g["status_id"])]
+        for k in ("event", "relationship_severance_event", "moderation_warning", "report",
+                  "emoji"):
+            if g.get(k):
+                n[k] = g[k]
+        out.append(n)
+    return out
+
+
 def capabilities_from_instance(inst, v2=None):
     """inst: /api/v1/instance; v2: /api/v2/instance when the server has it — the v1
     document doesn't say whether it translates."""
@@ -430,6 +468,20 @@ class Api:
         p = self._page(limit, max_id, min_id)
         p["types[]"] = list(types)
         return self.get("/api/v1/notifications", p)
+
+    def notification_groups(self, types, limit=40, max_id=None, min_id=None,
+                            grouped=GROUPED_TYPES):
+        """Mastodon 4.3+: the server's own groups (/api/v2/notifications) — 300 likes of
+        one post are one group with its count and the latest few people, not 300
+        notifications in eight pages. Returned flattened, one v1-like notification per
+        group (flatten_groups), so the store and the rest take them as they are."""
+        p = self._page(limit, max_id, min_id)
+        p["types[]"] = list(types)
+        p["grouped_types[]"] = list(grouped)
+        return flatten_groups(self.get("/api/v2/notifications", p))
+
+    def dismiss_notification_group(self, key):
+        return self.post(f"/api/v2/notifications/{seg(key)}/dismiss")
 
     def status(self, sid):
         return self.get(f"/api/v1/statuses/{seg(sid)}")

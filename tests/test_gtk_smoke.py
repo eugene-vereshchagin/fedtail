@@ -652,6 +652,65 @@ class GtkSmokeTest(_GtkBase):
         pump(timeout=0.2)
         self.assertFalse(self.view.get_draft(again.key))
 
+    def test_pictures_dropped_and_pasted(self):
+        """As Qt's: files and pictures dropped on the editor or pasted with Ctrl+V become
+        attachments (a picture without a file kept as PNG in the profile's folder); a
+        drop on the window starts a post with them; text on the clipboard stays text."""
+        import struct
+        import zlib
+
+        from gi.repository import Gio
+
+        from fedtail.frontends.gtk import dropin
+        png = Path(self._tmp.name) / "drop.png"
+
+        def chunk(k, d):
+            return struct.pack(">I", len(d)) + k + d + struct.pack(">I", zlib.crc32(k + d))
+        png.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(
+            ">IIBBBBB", 2, 1, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(
+                b"\x00" + b"\x10\x20\x30" * 2)) + chunk(b"IEND", b""))
+        texture = Gdk.Texture.new_from_filename(str(png))
+        note = Path(self._tmp.name) / "note.txt"
+        note.write_text("x")
+        files = Gdk.FileList.new_from_list([Gio.File.new_for_path(str(png)),
+                                            Gio.File.new_for_path(str(note))])
+        data = self.view.paths.data_dir
+        self.assertEqual(dropin.paths_of(files, data), [str(png)])  # media only
+        pasted = dropin.paths_of(texture, data)
+        self.assertEqual(len(pasted), 1)
+        self.assertTrue(Path(pasted[0]).is_file())
+        self.assertEqual(Path(pasted[0]).parent, Path(data) / "attachments")
+
+        dlg = self.win.compose()
+        dlg.add_paths([str(png), str(png)])  # each once
+        self.assertEqual([m[0] for m in dlg.media], [str(png)])
+        # Ctrl+V: a picture on the clipboard goes in as an attachment
+        clip = dlg.get_clipboard()
+        clip.set_content(Gdk.ContentProvider.new_for_value(texture))
+        self.assertEqual(dropin.wants_paste(clip), "picture")
+        self.assertTrue(dlg._paste_key(None, Gdk.KEY_v, 0, Gdk.ModifierType.CONTROL_MASK))
+        self.assertTrue(pump(lambda: len(dlg.media) == 2, 3))
+        # files copied in a file manager
+        clip.set_content(Gdk.ContentProvider.new_for_value(
+            Gdk.FileList.new_from_list([Gio.File.new_for_path(str(png))])))
+        self.assertEqual(dropin.wants_paste(clip), "files")
+        # text: not ours, the text field pastes it
+        clip.set("просто текст")
+        self.assertIsNone(dropin.wants_paste(clip))
+        self.assertFalse(dlg._paste_key(None, Gdk.KEY_v, 0, Gdk.ModifierType.CONTROL_MASK))
+        dlg.buffer.set_text("")
+        dlg.close()
+        # dropped on the window: a new post with the picture
+        self.win._dropped([str(png)])
+        c = self.win.composer
+        self.assertIsNotNone(c)
+        self.assertFalse(c.closed)
+        # (the first editor's two pictures came back with its draft: the drop adds none)
+        self.assertEqual([m[0] for m in c.media].count(str(png)), 1)
+        for item in list(c.media):
+            c._remove_media(item, c.media_box.get_first_child())
+        c.close()
+
     def test_editor_pictures_and_poll(self):
         import struct
         import zlib

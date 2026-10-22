@@ -4,7 +4,7 @@ import re
 from dataclasses import replace
 from urllib.parse import quote, unquote
 
-from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QPoint, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QGuiApplication, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -193,6 +193,7 @@ class PostRow(QWidget):
         # a right click anywhere on the card opens the post's ⋯ menu; connected once,
         # the menu itself is rebuilt with the card
         self._menu = None
+        self._has_menu = False  # a ⋯ button was made (_more_button)
         self.card.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.card.customContextMenuRequested.connect(self._card_menu)
         row.addWidget(self.card)
@@ -215,8 +216,9 @@ class PostRow(QWidget):
         return lab
 
     def _card_menu(self, pos):
-        if self._menu is not None:
-            self._menu.exec(self.card.mapToGlobal(pos))
+        menu = self._menu_now()
+        if menu is not None:
+            menu.exec(self.card.mapToGlobal(pos))
 
     def _text_menu(self, lab, pos):
         """A right click on the post's text: the post's menu too (a long post is all
@@ -794,22 +796,36 @@ class PostRow(QWidget):
             b.setText("⋯")
         else:
             b.setIcon(ic)
-        # the menu is filled when it opens, not with every card: two dozen actions and
-        # submenus per card were most of the widgets a lane held (and what it reads
-        # then — unread, subscribed, pinned — is how things are now)
-        menu = QMenu(b)
-        menu.aboutToShow.connect(lambda m=menu: self._fill_more(m, self.spec.entry))
-        b.setMenu(menu)
-        self._menu = menu  # also shown on a right click on the card (see __init__)
-        b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        # the menu is made and filled when it opens, not with every card: two dozen
+        # actions and submenus per card were most of the widgets a lane held, and even an
+        # empty QMenu per card (a window of its own) added up when a lane opened; what it
+        # reads then — unread, subscribed, pinned — is how things are now
+        self._has_menu = True  # also shown on a right click on the card (see __init__)
+        if self._menu is not None:
+            self._menu.clear()  # the card was rebuilt: what was in it may be stale
+        b.clicked.connect(lambda _c=False, w=b: self._pop_more(w))
         return b
+
+    def _menu_now(self):
+        """The post's ⋯ menu, made the first time it's needed (filled as it shows)."""
+        if self._menu is None and self._has_menu:
+            menu = QMenu(self.card)
+            menu.aboutToShow.connect(lambda m=menu: self._fill_more(m, self.spec.entry))
+            self._menu = menu
+        return self._menu
+
+    def _pop_more(self, b):
+        menu = self._menu_now()
+        if menu is not None:
+            menu.exec(b.mapToGlobal(QPoint(0, b.height())))
 
     def ensure_menu(self):
         """The post's menu with its actions in it (a right click on the text copies
         them before the menu has ever opened)."""
-        if self._menu is not None and not self._menu.actions():
-            self._fill_more(self._menu, self.spec.entry)
-        return self._menu
+        menu = self._menu_now()
+        if menu is not None and not menu.actions():
+            self._fill_more(menu, self.spec.entry)
+        return menu
 
     def _actions_ctx(self):
         """What common/actions.py needs to know about this window."""

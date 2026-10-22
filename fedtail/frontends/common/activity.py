@@ -56,6 +56,19 @@ def groups(entries):
     return out
 
 
+def who_of(entries):
+    """([Account] each once, newest first; how many in all) of a row's entries: each
+    entry's person and the people a server's group names — and a server's group counts
+    those it doesn't name too (300 likes, 8 people given)."""
+    people = list({p.id: p for a in entries
+                   for p in ((a.who,) if a.who is not None else ()) + tuple(a.people)
+                   }.values())
+    in_groups = {p.id for a in entries if a.people for p in a.people}
+    total = max(len(people), sum(a.count for a in entries if a.people) +
+                sum(1 for p in people if p.id not in in_groups))
+    return people, total
+
+
 @dataclass
 class Row:
     kind: str          # act_key of its first entry
@@ -79,7 +92,7 @@ def rows(entries, seen, date, oldest_first=True):
         es = g["entries"]
         first = es[0]
         kind = act_key(first)
-        people = list({a.who.id: a.who for a in es if a.who is not None}.values())
+        people, total = who_of(es)
         times = sorted((a.created for a in es if a.created), reverse=True)
         when = date(times[0]) if times else ""
         if len(times) > 1 and date(times[-1]) != when:
@@ -87,7 +100,8 @@ def rows(entries, seen, date, oldest_first=True):
         notice = notice_text(first.details) if first.kind == "notice" and \
             first.details is not None else ""
         out.append(Row(kind, _("act_" + kind) if kind in ACT_KINDS else kind,
-                       people[:MAX_NAMES], max(0, len(people) - MAX_NAMES), when, notice,
+                       people[:MAX_NAMES], max(0, total - min(len(people), MAX_NAMES)), when,
+                       notice,
                        first.post, es, max(a.sort for a in es),
                        any(a.sort > seen for a in es), first.kind == "request"))
     if oldest_first:

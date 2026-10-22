@@ -333,6 +333,14 @@ fedtail -p work show home             # другой профиль
 [Textual](https://textual.textualize.io/): `sudo apt install python3-textual` в Debian 13 или
 `pip install textual`. В конфиге `[tui]`: `theme`, `lanes_width`, `show_context`.
 
+## В GTK
+
+Для GNOME и прочих GTK-столов: `fedtail --ui gtk` (или `ui.frontend = "gtk"`) — те же ленты,
+треды, профили, редактор и меню, что в окне Qt, на GTK 4, с libadwaita, где она есть
+(`ui.adwaita`); тема «system» — как Adwaita. Нужно `sudo apt install python3-gi gir1.2-gtk-4.0
+gir1.2-adw-1` в Debian 13 (deb-пакет их рекомендует и кладёт «fedtail (GTK)» в правый клик по
+fedtail в меню); видеоплееру — `libgtk-4-media-gstreamer`. Только Linux — в Windows есть Qt.
+
 ## В браузере
 
 `fedtail --ui web` (или `ui.frontend = "web"`) — fedtail страницей в браузере: ленты, посты с

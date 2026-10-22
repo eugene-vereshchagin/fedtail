@@ -320,8 +320,11 @@ class FeedView(QScrollArea):
         self._grow_soon()
 
     def _all_at_once(self):
+        """Every card built: threads and profiles, and a lane no longer than one first
+        build. (It was two: a lane of 41–80 posts built them all when it opened, twice
+        the cards laid out at once — the second-long freeze of the night logs.)"""
         n = self.build_at_once
-        return not self.windowed or not n or len(self.model) <= 2 * n
+        return not self.windowed or not n or len(self.model) <= n
 
     def _window(self, keep_position, around, old_keys):
         keys = [s.key for s in self.model]
@@ -2166,11 +2169,11 @@ class ActivityWidget(QWidget):
         v = QVBoxLayout(card)
         v.setContentsMargins(16, 10, 16, 10)
         v.setSpacing(4)
-        names = list(dict.fromkeys(
-            f'<a href="fedtail:account/{esc(a.who.id)}" style="text-decoration:none;'
-            f'color:{self.win.theme.c["text"].name()};"><b>{display_name(a.who)}</b></a>'
-            for a in es if a.who is not None))
-        more = len(names) - self.MAX_NAMES
+        people, total = activity.who_of(es)  # a server's group names some, counts all
+        names = [f'<a href="fedtail:account/{esc(p.id)}" style="text-decoration:none;'
+                 f'color:{self.win.theme.c["text"].name()};"><b>{display_name(p)}</b></a>'
+                 for p in people]
+        more = total - min(len(names), self.MAX_NAMES)
         who = ", ".join(names[:self.MAX_NAMES]) + \
             (" " + _("act_more", n=more) if more > 0 else "")
         # when: the newest of the group, and since when if they came over a while

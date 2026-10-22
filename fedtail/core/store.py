@@ -176,6 +176,7 @@ def sort_key(created_at, item_id):
 
 
 HIDDEN_KEEP = 2000  # notifications hidden by hand, remembered
+GROUPS_KEEP = 2000  # the server's notification groups: key → the row standing for it
 
 
 class Store:
@@ -819,11 +820,26 @@ class Store:
             self.put_statuses(sts)
         new = []
         hidden = self.kv_get("activity_hidden", {}) or {}
+        hidden_groups = self.kv_get("activity_hidden_groups", {}) or {}
+        groups = self.kv_get("activity_groups", {}) or {}
+        groups_before = dict(groups)
         with self._tx() as db:
             for n in notifications:
                 if n["id"] in hidden:  # hidden here by hand: it stays hidden
                     continue
+                group = n.get("_group")
+                key = (group or {}).get("key") or ""
+                if key and key in hidden_groups:  # …and so does a hidden group
+                    continue
                 acc = n.get("account") or {}
+                if group:
+                    # the server's group: one row, the newest; the row it had before goes
+                    acc = dict(acc, _group=group)
+                    old = groups.get(key)
+                    if old and old != n["id"]:
+                        db.execute("DELETE FROM activity WHERE id = ?", (old,))
+                    if key:
+                        groups[key] = n["id"]
                 # the server's own notices carry their details: kept with the account
                 notice = n.get("event") or n.get("relationship_severance_event") or \
                     n.get("moderation_warning")
@@ -837,13 +853,30 @@ class Store:
                     new.append(n)
             if new:
                 self._bump("activity")
+        if groups != groups_before:
+            if len(groups) > GROUPS_KEEP:  # the oldest groups are long gone from the screen
+                groups = dict(list(groups.items())[-GROUPS_KEEP:])
+            self.kv_set("activity_groups", groups)
         return new
+
+    def activity_group_of(self, nid):
+        """The server's group key of this Activity row, or "" (not a group)."""
+        with self.lock:
+            row = self.db.execute("SELECT account FROM activity WHERE id = ?",
+                                  (nid,)).fetchone()
+        if not row:
+            return ""
+        try:
+            return ((json.loads(row[0]) or {}).get("_group") or {}).get("key") or ""
+        except (ValueError, AttributeError):
+            return ""
 
     def activity_delete(self, ids=None):
         """Some notifications gone from Activity (ids), or all of them (None)."""
         with self._tx() as db:
             if ids is None:
                 db.execute("DELETE FROM activity")
+                db.execute("DELETE FROM kv WHERE key = 'activity_groups'")
             else:
                 db.executemany("DELETE FROM activity WHERE id = ?", [(i,) for i in ids])
             self._bump("activity")
@@ -857,6 +890,16 @@ class Store:
                 list(ids)).fetchall() if ids else []
         hidden = self.kv_get("activity_hidden", {}) or {}
         hidden.update(dict(rows))
+        # a server's group comes back under a new id with its next notification: hidden
+        # by its key too
+        keys = {k: sort for k, sort in ((self.activity_group_of(i), sort) for i, sort in rows)
+                if k}
+        if keys:
+            hg = self.kv_get("activity_hidden_groups", {}) or {}
+            hg.update(keys)
+            if len(hg) > HIDDEN_KEEP:
+                hg = dict(sorted(hg.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
+            self.kv_set("activity_hidden_groups", hg)
         if len(hidden) > HIDDEN_KEEP:  # the oldest go: the server won't send them again
             hidden = dict(sorted(hidden.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
         self.kv_set("activity_hidden", hidden)

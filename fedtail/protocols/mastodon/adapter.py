@@ -371,6 +371,10 @@ def activity(raw, profile=""):
     if isinstance(p, Share):
         p = p.post
     who = raw.get("account")
+    group = raw.get("_group") or (who.get("_group") if isinstance(who, dict) else None)
+    group = group if isinstance(group, dict) else {}
+    people = tuple(account(a, profile) for a in group.get("accounts") or ()
+                   if isinstance(a, dict) and a.get("id"))
     return Activity(
         ref=_ref(profile, raw.get("id")),
         kind=ACTIVITY_KIND.get(raw.get("type"), "other"),
@@ -382,7 +386,9 @@ def activity(raw, profile=""):
         notice=_notice(raw),
         details=_details(raw),
         asks=ASKS.get(raw.get("type"), ""),
-        group_key=_str(raw.get("group_key")),
+        group_key=_str(raw.get("group_key") or group.get("key")),
+        count=max(1, _int(group.get("count")) or 1),
+        people=people,
     )
 
 

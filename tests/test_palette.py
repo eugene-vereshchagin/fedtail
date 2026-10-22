@@ -67,6 +67,17 @@ class ResolveTest(unittest.TestCase):
         self.assertEqual(c["header"], palette.mix(c["view"], c["accent"], 0.16))
         self.assertEqual(c["header_end"], c["header"])
 
+    def test_chosen_lane_shows_in_the_dark(self):
+        """The selected row stands out of the sidebar: KDE's Breeze dark and Adwaita
+        dark (the GTK system theme) — before, the two came out nearly one colour."""
+        adw = Desktop(base=Color.parse("#1d1d20"), window=Color.parse("#222226"),
+                      text=Color.parse("#ffffff"), highlight=Color.parse("#3584e4"),
+                      link=Color.parse("#78aeed"))
+        for d in (DARK, adw, LIGHT):
+            c = palette.auto_colors(d)
+            self.assertGreaterEqual(abs(c["selected"].lightness() - c["sidebar"].lightness()),
+                                    10, d)
+
     def test_words(self):
         self.assertEqual(palette.word({"lowercase": True, "t": "== {text} =="}, "t", "Home"),
                          "== home ==")

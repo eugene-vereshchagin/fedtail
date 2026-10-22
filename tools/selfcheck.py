@@ -9,7 +9,7 @@ logged-in fedtail — the same on your own account (a copy, read-only).
     python3 tools/selfcheck.py --quick         # a few themes, one layout (3–5 minutes)
     python3 tools/selfcheck.py --only qt,web   # some steps: tests qt bench gtk tui web parity
     python3 tools/selfcheck.py --real          # and your account too (--real=PROFILE)
-    python3 tools/selfcheck.py --only gallery  # the site's and the docs' pictures only
+    python3 tools/selfcheck.py --only gallery  # the site's and the docs' pictures (only so)
     python3 tools/selfcheck.py --clean         # after Ctrl+C: the unfinished runs gone
     python3 tools/selfcheck.py --clean all     # every run here
 
@@ -419,8 +419,9 @@ def main():
                      "(python3 tools/devenv.py — once)")
         if "parity" in only:  # after the walks: their menus go side by side
             run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
-        # the gallery (tools/gallery.py): with --night, or asked by --only gallery
-        if "gallery" in only and (a.night or a.only):
+        # the gallery (tools/gallery.py): only asked by name (--only gallery) — the
+        # pictures change seldom, the night has better things to do
+        if "gallery" in only and a.only:
             run.step("gallery", ["tools/gallery.py", str(out / "gallery")], timeout=1800,
                      py=web_py, note="the site's and the docs' pictures (built-in themes only)")
 

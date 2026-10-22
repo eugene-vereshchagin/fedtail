@@ -2,9 +2,10 @@
 
     python3 packaging/deb.py            → dist/fedtail_<version>_all.deb
 
-Pure Python, Architecture: all; Qt, requests (and, if wanted, Textual) come from
-apt. Needs dpkg-deb. The menu entry and the icon go where the desktop looks for
-them, so after `sudo apt install ./fedtail_….deb` fedtail is in the menu.
+Pure Python, Architecture: all; Qt, requests, GTK 4 (and, if wanted, Textual) come
+from apt. The GTK window is an action of the menu entry ("fedtail (GTK)"). Needs
+dpkg-deb. The menu entry and the icon go where the desktop looks for them, so after
+`sudo apt install ./fedtail_….deb` fedtail is in the menu.
 """
 
 import gzip
@@ -23,7 +24,8 @@ from fedtail.version import APP_ID  # noqa: E402
 
 DEPENDS = "python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets"
 RECOMMENDS = ("python3-pyside6.qtdbus, python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, "
-              "python3-pyside6.qtmultimediawidgets, python3-cryptography")
+              "python3-pyside6.qtmultimediawidgets, python3-cryptography, "
+              "python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1")
 SUGGESTS = "python3-textual, python3-pil"
 MAINTAINER = "Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>"
 HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"
@@ -80,7 +82,8 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
         " A desktop client for GoToSocial, Mastodon, Akkoma and anything else that\n"
         " speaks the Mastodon API: whole threads as trees, every reply shows what it\n"
         " answers, lanes that never jump, everything is a config option. Also runs\n"
-        " in a terminal (with python3-textual) and as a page in a browser.\n", "utf-8")
+        " in a terminal (with python3-textual), as a GTK 4 window (fedtail --ui gtk)\n"
+        " and as a page in a browser.\n", "utf-8")
     out_dir.mkdir(parents=True, exist_ok=True)
     deb = out_dir / f"fedtail_{ver}_all.deb"
     subprocess.run(["dpkg-deb", "--root-owner-group", "-Zxz", "--build", str(work), str(deb)],

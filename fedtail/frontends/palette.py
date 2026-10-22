@@ -141,11 +141,14 @@ def auto_colors(d):
     dark = base.lightness() < 128
     green = Color(0x3c, 0x9a, 0x3c)
     accent = hl.darker(135) if dark else hl.darker(145)
+    sidebar = win.lighter(112) if dark else win.darker(104)
     return {
         "window": win,
-        "sidebar": win.lighter(112) if dark else win.darker(104),
+        "sidebar": sidebar,
         "sidebar_border": mix(win, text, 0.15),
-        "selected": base.lighter(130) if dark else base,
+        # dark: a step towards the text from the sidebar — base.lighter() of a near-black
+        # base came out the sidebar's own colour, and the chosen lane didn't show
+        "selected": mix(sidebar, text, 0.14) if dark else base,
         "selected_text": text,
         "view": base,
         "header_border": mix(base, text, 0.12),
