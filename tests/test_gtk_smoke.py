@@ -544,6 +544,25 @@ class GtkSmokeTest(_GtkBase):
         bar.close_bar()
         self.assertFalse(bar.get_visible())
 
+    def test_find_deeper_and_in_every_lane(self):
+        """As Qt: "Deeper" looks through everything stored for the lane; "In every
+        lane" — everything stored, lane by lane, and goes to the lane of the match."""
+        bar = self.win.find_bar
+        bar.open()
+        bar.entry.set_text("коммент")
+        bar.search(jump=True)
+        self.assertTrue(bar.deeper.get_visible())
+        bar.deeper.emit("clicked")
+        self.assertTrue(pump(lambda: bar.deeper.get_sensitive(), 3))
+        bar.everywhere.set_active(True)
+        self.assertTrue(pump(lambda: bar.all_hits, 5))
+        self.assertFalse(bar.deeper.get_visible())
+        lanes = {h["lane"] for h in bar.all_hits}
+        self.assertIn("home", lanes)
+        self.assertTrue(pump(lambda: bar._marked is not None, 3))
+        bar.everywhere.set_active(False)  # (remembered: off again for the next tests)
+        bar.close_bar()
+
     def test_reply_in_the_editor(self):
         from fedtail.frontends.gtk.compose import ComposeWindow
         post = self.view.by_id("011")
