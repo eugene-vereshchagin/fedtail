@@ -110,10 +110,10 @@ def run(core, instance, argv):
             t = time.monotonic()
             Gtk.accelerator_get_label(Gdk.KEY_q, Gdk.ModifierType.CONTROL_MASK)
             steps.append(("key names", time.monotonic() - t))
-            t = time.monotonic()
-            pop = Gtk.PopoverMenu.new_from_model(win.menu.model())
-            steps.append(("a popover menu", time.monotonic() - t))
-            del pop
+            for btn, make in list(getattr(win.menu, "buttons", ())):
+                t = time.monotonic()
+                make(btn)  # its popover, made now — the click finds it ready
+                steps.append(("a menu", time.monotonic() - t))
             total = sum(x for _n, x in steps)
             (log.info if total > 0.2 else log.debug)(
                 "menus warmed in %.0f ms: %s", total * 1000,

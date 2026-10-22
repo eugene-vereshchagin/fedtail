@@ -1089,6 +1089,19 @@ class GtkSplitTest(_GtkBase):
     """ui.layout = "split": the roster window, the lanes in tabs, the input line."""
     UI = {"layout": "split"}
 
+    def test_menus_made_ahead_open_on_one_click(self):
+        """≡ in the roster: its popover made ahead (as after start), so one click opens it
+        — built on the click, the release after a long build closed it again."""
+        btns = list(self.win.menu.buttons)
+        self.assertGreaterEqual(len(btns), 2)  # the roster's ≡ and its accounts at least
+        for b, make in btns:
+            make(b)
+            self.assertIsNotNone(b.get_popover())
+        b = self.win.roster.menu_btn
+        b.popup()
+        self.assertTrue(pump(lambda: b.get_popover().get_mapped(), 3))
+        b.popdown()
+
     def test_a_contact_card_on_hover(self):
         """As QIP (and Qt's split layout): who this is, beside the face."""
         from dataclasses import replace

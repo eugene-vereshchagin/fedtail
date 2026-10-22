@@ -65,9 +65,9 @@
   they go — they were kept ("Finalizing … still has children left"). The ≡ menu says
   in the log how long it took to make and to show.
 - GTK's split layout starts with the roster only, as Qt's (both windows came up). The
-  first menu GTK builds in a run took 1.5–2 s on KDE (later ones: milliseconds): that
-  one-time cost is paid after start instead of on the first click of ≡, its parts timed
-  in the log.
+  first menu GTK builds in a run took 1.5–2 s on KDE (later ones: milliseconds), and the
+  click's release, handled after that freeze, closed the menu it had opened — ≡ took a
+  double click. Every ≡ is now made after start, timed in the log; one click opens it.
 - Debug → Federation status works again in GTK and the web: someone waiting to go into
   a list (a name and a link) was taken for a hashtag on the way to the window.
 - A Qt window started in a terminal where the tests had set `QT_QPA_PLATFORM=offscreen`

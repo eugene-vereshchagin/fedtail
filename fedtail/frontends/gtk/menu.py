@@ -32,6 +32,7 @@ class MainMenu:
 
     def __init__(self, win):
         self.win = win
+        self.buttons = []  # (MenuButton, make) of every ≡ made from this menu
         a = self._act
         a("write", win.compose)
         a("refresh", win.view.poll_now)
@@ -282,4 +283,8 @@ def button(win, menu, icon="open-menu-symbolic", accounts_only=False):
             "built anew" if built else "as before",
             f", GTK's popover {t_set * 1000:.0f} ms" if built else "")
     b.set_create_popup_func(make)
+    # made ahead after start (gtk/__init__.warm_menu): built on the click, the first one
+    # froze for 1.5 s on KDE, and the click's release, handled after the freeze, closed
+    # the menu it had just opened — it took a second click (the split layout's ≡)
+    getattr(menu, "buttons", []).append((b, make))
     return b
