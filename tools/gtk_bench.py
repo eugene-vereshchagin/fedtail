@@ -104,6 +104,23 @@ class _Answer:
         return False
 
 
+def _measure_check(win):
+    """Cards that tell GTK a least height above the natural one (GTK 4.18 warns of
+    them by the thousand): which widget inside does it, on the cards built now."""
+    from fedtail.frontends.gtk.card import Card
+    from fedtail.frontends.gtk.gi_setup import Gtk
+    from fedtail.frontends.gtk.measure import report
+    lv = _home(win)
+    cards = [c for c in getattr(lv, "rows", {}).values() if c.get_mapped()]
+    lines = report(cards, stop=Card)
+    v = f"{Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()}"
+    print(f"  measuring {len(cards)} cards on GTK {v}: "
+          + ("all sane" if not lines else "least height above the natural one in"),
+          flush=True)
+    for line in lines:
+        print("     " + line, flush=True)
+
+
 # ---- measuring --------------------------------------------------------------------------
 class Meter:
     """Runs the main loop, timing each turn of it."""
@@ -272,10 +289,12 @@ def run(layout, theme, posts, profile, maximized=False):
         return lambda: _home(win) is not None and getattr(_home(win), "positioned", False)
     meter.scenario("first poll, home lane on screen", first_poll)
     meter.scenario("settle (pictures, faces)", lambda: None)
+    _measure_check(win)
 
     lv = _home(win)
     if lv is not None and hasattr(lv, "adj"):
         meter.scenario("scroll home to the end", lambda: scroll(meter, lv, False))
+        _measure_check(win)  # the cards near the end: other kinds than the first ones
         meter.scenario("scroll home back to the top", lambda: scroll(meter, lv, True))
         meter.scenario("fling home to the end (4 pages a frame)",
                        lambda: scroll(meter, lv, False, 4))

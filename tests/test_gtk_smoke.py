@@ -679,6 +679,17 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: asked, 2))
         self.assertEqual(asked, ["https://e.test/a.png"])
 
+    def test_every_widget_measures_sanely(self):
+        """No widget of a card says its least height is more than its natural one at
+        the width it has (GTK 4.18 warned so of the Card, 7 500 lines a bench)."""
+        from fedtail.frontends.gtk.card import Card
+        from fedtail.frontends.gtk.measure import report
+        lane = self._lane("home")
+        pump(lambda: lane.positioned and not lane._pending(), 5)
+        bad = report([c for c in lane.rows.values() if c.get_mapped()], stop=Card)
+        self.assertEqual(bad, [], f"GTK {Gtk.get_major_version()}."
+                                  f"{Gtk.get_minor_version()}.{Gtk.get_micro_version()}")
+
     def test_tag_tab_follows_and_features(self):
         from fedtail.frontends.gtk.people import TagRow
         page = self.win.open_tag("linux")
