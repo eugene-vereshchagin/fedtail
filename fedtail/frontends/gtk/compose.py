@@ -674,7 +674,9 @@ class ComposeWindow(Gtk.Box):
     def _failed(self, err):
         self.send_btn.set_sensitive(True)
         self.send_btn.set_label(_("send"))
-        self.hint.set_text(_("send_failed_text", err=err))
+        maybe = getattr(err, "maybe_sent", False)  # no answer: the post may be out
+        self.hint.set_text((_("send_maybe") + ". " if maybe else "")
+                           + _("send_failed_text", err=err))
 
     def _closing(self, *_a):
         if self._autosave:

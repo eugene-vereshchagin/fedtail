@@ -419,6 +419,17 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(len(asked), 1)
         self.assertEqual(prof.parse_langs("ru; en  de"), ["ru", "en", "de"])
 
+    def test_the_status_line_says_what_qt_says(self):
+        """Connecting, the server down (again in 20 s), a link not opened, deleted."""
+        self.assertTrue(self.win._hello.startswith("@"))
+        self.win._connect_failed("HTTP 502: Bad Gateway")
+        self.assertIn(i18n._("server_down", err="HTTP 502: Bad Gateway"),
+                      self.win.status_line.get_text())
+        self.win.open_url("file:///etc/passwd")
+        self.assertEqual(self.win.status_line.get_text(), i18n._("link_refused"))
+        self.win.on_event("status_deleted", "999")
+        self.assertEqual(self.win.status_line.get_text(), i18n._("deleted"))
+
     def test_translate_and_read_whole(self):
         """⋯ → Translate puts the server's translation in the text's place (the original
         a click away); 📄 the whole text opens a page — as in Qt."""
@@ -426,6 +437,11 @@ class GtkSmokeTest(_GtkBase):
         lane = self._lane("home")
         card = next(c for c in lane.rows.values() if c.post.id == "011")
         self.view.translate = lambda p: _done(Translation("<p>hello</p>", "ru", "test"))
+        from dataclasses import replace
+        self.core.caps = replace(self.core.caps, translation=False)
+        card.translate()  # a server that can't: said, as in Qt
+        self.assertIn(i18n._("translate_none"), self.win.status_line.get_text())
+        self.core.caps = replace(self.core.caps, translation=True)
         card.translate()
         self.assertTrue(pump(lambda: getattr(card, "showing_translation", False), 3))
         card.translate()

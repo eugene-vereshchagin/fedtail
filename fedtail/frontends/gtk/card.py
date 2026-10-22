@@ -651,6 +651,10 @@ class Card(Gtk.Box):
         if tr is not None:
             self._show_text(not self.showing_translation)
             return
+        caps = getattr(self.ctx.view, "caps", None)  # as Qt: the server says it can't
+        if caps is not None and not getattr(caps, "translation", True):
+            self.ctx.win.error(_("translate_none"))
+            return
 
         def got(t):
             self.translation = t

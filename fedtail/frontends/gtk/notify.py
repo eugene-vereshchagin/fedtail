@@ -26,7 +26,10 @@ class Notifier:
         bus = app.get_dbus_connection() if app is not None else None
         self.backend = "gio" if bus is not None else (
             "notify-send" if shutil.which("notify-send") else "none")
-        log.info("notifications: %s", self.backend)
+        # nowhere to show them: said once the lanes are in (as Qt's)
+        self.problem = _("notify_nothing") if self.backend == "none" else ""
+        log.info("notifications: %s%s", self.backend,
+                 f" — {self.problem}" if self.problem else "")
         if app is not None and app.lookup_action(ACTION) is None:
             act = Gio.SimpleAction.new(ACTION, GLib.VariantType.new("s"))
             act.connect("activate", lambda _a, v: self.opened(v.get_string()))
@@ -63,9 +66,18 @@ class Notifier:
         elif self.backend == "notify-send":
             argv = notifytext.desktop_argv([shutil.which("notify-send"), "--app-name=fedtail"],
                                            note)
-            threading.Thread(target=subprocess.run, args=(argv,),
-                             kwargs={"capture_output": True, "timeout": 30},
-                             daemon=True).start()
+            def run():
+                try:
+                    r = subprocess.run(argv, capture_output=True, timeout=30)
+                    why = r.stderr.decode(errors="replace").strip() if r.returncode \
+                        else ""
+                except (OSError, subprocess.TimeoutExpired) as e:
+                    why = str(e)
+                if why:
+                    log.warning("notify-send: %s", why)
+                    GLib.idle_add(lambda: (self.win.error(_("notify_failed", err=why)),
+                                           GLib.SOURCE_REMOVE)[1])
+            threading.Thread(target=run, daemon=True).start()
 
     def opened(self, target):
         """A notification was clicked: the window, at what it was about."""

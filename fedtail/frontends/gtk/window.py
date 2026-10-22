@@ -1008,13 +1008,49 @@ class MainWindow(Gtk.ApplicationWindow):
         self._connect()
 
     def _connect(self):
-        self.status(_("loading"))
-        self.bridge.call(self.view.connect(), self._connected,
-                         lambda err: self.status(_("error", err=err)))
+        self.status(_("connecting"), seconds=0)
+        self.bridge.call(self.view.connect(), self._connected, self._connect_failed)
+
+    def _connect_failed(self, err):
+        """As Qt: a token no longer taken — said, and the login from scratch; the server
+        not answering — said, and again in 20 s."""
+        err = str(err)
+        if "HTTP 401" in err or "HTTP 403" in err:
+            self.alert(_("auth_failed_title"), _("auth_failed"))
+            self.view.logout()
+            self.start()
+            return
+        self.status(_("server_down", err=err), seconds=0)
+        def again():
+            if not self.quitting and self.get_visible():  # (not a window closed since)
+                self._connect()
+            return GLib.SOURCE_REMOVE
+        GLib.timeout_add_seconds(20, again)
+
+    def alert(self, title, text):
+        """A message with OK, as Qt's QMessageBox.warning (never blocks)."""
+        dlg = Gtk.AlertDialog()
+        dlg.set_message(title)
+        dlg.set_detail(text)
+        dlg.show(self)
 
     def _connected(self, _me):
         self._show_me()
-        self.status(_("first_poll"), seconds=0)  # until the first round is in
+        me = self.view.me
+        # until the first round is in, the bar says whose window it is and that the
+        # lanes are coming (as Qt's)
+        self._hello = _("connected", acct=me.handle if me else "?",
+                        server=(self.view.auth or {}).get("server", "")) if me else ""
+        self._waiting_text = f"{self._hello} · {_('first_poll')}" if self._hello \
+            else _("first_poll")
+        self.status(self._waiting_text, seconds=0)
+        if self.view.new_options:  # the config doesn't mention new options yet
+            GLib.timeout_add_seconds(9, lambda: (self.status(
+                _("new_options", n=len(self.view.new_options)), seconds=30),
+                GLib.SOURCE_REMOVE)[1])
+        problem = getattr(self.notifier, "problem", "")
+        if problem and self.cfg["notify"].get("enabled", True):
+            self._after_first_poll = problem
         if self.roster is not None:
             self.roster.present()
             self.roster.refresh()
@@ -1205,6 +1241,7 @@ class MainWindow(Gtk.ApplicationWindow):
         elif name == "status_updated" and payload is not None:
             self._post_changed(payload)
         elif name == "status_deleted":
+            self.status(_("deleted"), seconds=4)
             for lv in self.lane_views.values():
                 if lv.get_mapped():
                     lv.refresh()
@@ -1232,8 +1269,8 @@ class MainWindow(Gtk.ApplicationWindow):
         elif name == "error":
             self.status(_("error", err=payload))
         elif name == "first_poll_done":
-            if self.status_line.get_text() == _("first_poll"):
-                self.status("")
+            if self.status_line.get_text() == getattr(self, "_waiting_text", None):
+                self.status(getattr(self, "_hello", ""), seconds=5)
             later = getattr(self, "_after_first_poll", "")
             if later:
                 self._after_first_poll = ""
@@ -1241,6 +1278,7 @@ class MainWindow(Gtk.ApplicationWindow):
         elif name == "rate_limited":  # once, with when; not an error per lane
             self.status(results.rate_text(payload), seconds=20)
         elif name == "auth_failed":
+            self.alert(_("auth_failed_title"), _("auth_failed"))
             server = (self.view.auth or {}).get("server", "")
             acct = self.view.auth_handle
             login.LoginDialog(self, self._connect,
@@ -1611,6 +1649,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def resolve_link(self, url):
         """A fediverse link: the post here when the server knows it, else outside."""
+        self.status(_("resolving", url=url))
+
         def got(found):
             from ...model import Account, Post, Share
             if isinstance(found, (Post, Share)):
@@ -1618,7 +1658,10 @@ class MainWindow(Gtk.ApplicationWindow):
             elif isinstance(found, Account):
                 self.open_account(found.id)
             else:
+                self.status(_("resolve_browser"), seconds=4)
                 self.open_url(url)
+                return
+            self.status("")
         self.call(self.view.resolve(url), got, lambda _e: self.open_url(url))
 
     def save_media(self, m):
@@ -1634,6 +1677,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def open_url(self, url):
         if not richtext.openable(url):
             log.warning("not opened (scheme not allowed): %.80s", url)
+            self.status(_("link_refused"), seconds=6)
             return
         from ...sysenv import open_external
         if open_external(url):
