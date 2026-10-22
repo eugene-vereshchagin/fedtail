@@ -56,6 +56,28 @@ details.ru = "fedtail во вкладке браузера: ленты, тред
 details.en = "fedtail in a browser tab: lanes, threads as trees, profiles, a “Write” button (content warning, who sees it, language, drafts), pictures in a grid with a viewer, video and audio, polls with voting, link cards, quotes, custom emoji, “More” at a lane's end, the Point command line; on a phone the lanes slide in from the side, light and dark follow the system. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = \"0.0.0.0\"` — from the phone on the home network too; no encryption, for your own network only. The ≡ menu (write, my profile, refresh, all read, help, keys, about); a post's ⋯ menu — the same as the Qt and GTK windows', the same items in the same order (since 0.18: open, copy the link, the #id and the handle, reply with quote, call into the thread, bookmark, who quoted, subscribe / mute the thread, mute / block the author and the server, report, edit, pin, delete, delete and redraft — the risky ones ask first); a profile's buttons as in the windows too (follow, the bell, boosts and languages in Home, mention, mute, block, remove from followers, endorse, a note). A reply shows the whole post: select a piece and “❝ Quote in reply” puts it where the cursor is. The viewer goes through a post's pictures with ← / →."
 
 [[feature]]
+id = "tui-full"
+status = "planned"
+name.ru = "Терминал — всё, что в окнах"
+name.en = "The terminal — everything the windows have"
+config = "`ui.frontend = \"tui\"`"
+size.ru = "крупный (0.19)"
+size.en = "large (0.19)"
+details.ru = "Меню поста, профиль со всеми кнопками, списки, поиск, тишина, справка, аккаунты — в пределах терминала; поведение то же, что в окнах (общий сценарий проверки)."
+details.en = "A post's menu, a profile with all its buttons, lists, search, silence, help, accounts — as far as a terminal goes; the same behaviour as the windows' (one checking scenario)."
+
+[[feature]]
+id = "web-full"
+status = "planned"
+name.ru = "Веб — всё, что в окнах"
+name.en = "The web — everything the windows have"
+config = "`ui.frontend = \"web\"`"
+size.ru = "крупный (0.19)"
+size.en = "large (0.19)"
+details.ru = "Списки, тишина, поиск по ленте, правка профиля, заявки, «Активность» с группами, уведомления браузера; поведение то же, что в окнах."
+details.en = "Lists, silence, find in the lane, editing my profile, follow requests, Activity with its groups, the browser's notifications; the same behaviour as the windows'."
+
+[[feature]]
 id = "gtk"
 status = "has"
 since = "0.17.0"

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0 — in progress
+
+- The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
+  filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
+  terminal interface and a full web page.
+
 ## 0.18.0 — 2026-10-22
 
 - The four interfaces offer the same things. The web page's ⋯ menu of a post is the
