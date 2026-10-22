@@ -2,6 +2,9 @@ name: CI
 
 on:
   push:
+    # the android branch builds only its APK (android.yml): the desktop's whole run goes
+    # when it comes back into main
+    branches-ignore: [android]
   pull_request:
   # by hand (Actions → CI → Run workflow): the gallery is made only this way
   workflow_dispatch:

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">fedtail</string>
+    <string name="starting">Starting the core…</string>
+    <string name="core_ok">The core is alive</string>
+    <string name="core_failed">The core didn\'t start</string>
+    <string name="label_version">fedtail</string>
+    <string name="label_python">Python</string>
+    <string name="label_ssl">TLS</string>
+    <string name="label_store">Database</string>
+    <string name="label_profiles">Profiles</string>
+    <string name="label_sync">Sync (cryptography)</string>
+    <string name="label_started">Started in</string>
+    <string name="yes">yes</string>
+    <string name="no">no</string>
+    <string name="none">none yet</string>
+</resources>

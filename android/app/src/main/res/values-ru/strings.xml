@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="starting">Запускаю ядро…</string>
+    <string name="core_ok">Ядро живо</string>
+    <string name="core_failed">Ядро не запустилось</string>
+    <string name="label_version">fedtail</string>
+    <string name="label_python">Python</string>
+    <string name="label_ssl">TLS</string>
+    <string name="label_store">База</string>
+    <string name="label_profiles">Профили</string>
+    <string name="label_sync">Синхронизация (cryptography)</string>
+    <string name="label_started">Запуск за</string>
+    <string name="yes">да</string>
+    <string name="no">нет</string>
+    <string name="none">пока нет</string>
+</resources>

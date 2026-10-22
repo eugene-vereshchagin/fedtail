@@ -8,3 +8,9 @@ dist/
 /debian/.debhelper/
 /debian/fedtail/
 fedtail/_build.py
+# android/ (Gradle)
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/.kotlin/
