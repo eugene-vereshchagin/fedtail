@@ -276,23 +276,9 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(counted, key = { it.first.name }) { (lane, mine) ->
-                    val on = lane.name == model.current
-                    Column(Modifier.height(68.dp).clip(RoundedCornerShape(14.dp))
-                        .background(when {
-                            on -> MaterialTheme.colorScheme.onSurface
-                            mine && lane.unread > 0 -> MaterialTheme.colorScheme.secondaryContainer
-                            else -> MaterialTheme.colorScheme.surfaceVariant
-                        })
-                        .clickable { go(lane.name) }.padding(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center) {
-                        val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
-                        Text(if (lane.unread > 0) "${lane.unread}" else "·", fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold, color = fg)
-                        Text(lane.title, fontSize = 11.5.sp, color = fg, maxLines = 2,
-                            lineHeight = 13.sp, textAlign = TextAlign.Center,
-                            overflow = TextOverflow.Ellipsis)
-                    }
+                    LaneTile(lane, mine, on = lane.name == model.current,
+                        modifier = Modifier.fillMaxWidth(),
+                        plain = MaterialTheme.colorScheme.surfaceVariant) { go(lane.name) }
                 }
             }
             if (browsed.isNotEmpty()) {

@@ -1148,8 +1148,8 @@ open_browser = true
 # edited right in the app: ⋮ → "Config". On a computer these settings do nothing.
 
 [phone]
-# The overview of lanes — the home screen: "tiles" — as tiles (each lane's count and its
-# first unread post); "list" — as a list, a row per lane.
+# The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and
+# the name); "list" — a list, a row per lane, with its first unread post.
 overview = "tiles"
 
 # How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and

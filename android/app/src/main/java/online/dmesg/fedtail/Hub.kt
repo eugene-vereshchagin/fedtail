@@ -47,8 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,19 +116,15 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                     val mine = sec.kind == "you"
                     item(key = "h-" + sec.kind) { SectionHead(sec) }
                     if (tiles) {
-                        // yours: big tiles with the first unread; the rest: small ones
-                        val per = when {
-                            mine -> 2
-                            pane -> 2
-                            else -> 3
-                        }
+                        // the switcher's tiles (mockup "3"): four in a row, the count over
+                        // the name; yours with news tinted, the open one dark
+                        val per = if (pane) 3 else 4
                         val rows = sec.lanes.chunked(per)
                         items(rows.size, key = { "t-" + sec.kind + it }) { r ->
                             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 rows[r].forEach { lane ->
-                                    LaneTile(lane, mine, big = mine,
-                                        on = lane.name == model.current,
+                                    LaneTile(lane, mine, on = lane.name == model.current,
                                         modifier = Modifier.weight(1f)) { model.showLane(lane.name) }
                                 }
                                 repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
@@ -157,46 +155,28 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
     }
 }
 
-/** A lane as a tile (phone.overview = "tiles"): big — yours, with the first unread post. */
+/** A lane as a tile — the overview's (phone.overview = "tiles") and the switcher's. */
 @Composable
-private fun LaneTile(
-    lane: HubLane, mine: Boolean, big: Boolean, on: Boolean, modifier: Modifier,
+fun LaneTile(
+    lane: HubLane, mine: Boolean, on: Boolean, modifier: Modifier,
+    plain: Color = MaterialTheme.colorScheme.surface, // on a white sheet: the grey one
     onClick: () -> Unit,
 ) {
     val news = lane.unread > 0
     val bg = when {
         on -> MaterialTheme.colorScheme.onSurface
         mine && news -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.surface
+        else -> plain
     }
     val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
-    val accent = when {
-        on -> MaterialTheme.colorScheme.surface
-        mine -> MaterialTheme.colorScheme.secondary
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Column(modifier.heightIn(min = if (big) 92.dp else 72.dp).clip(RoundedCornerShape(14.dp))
-        .background(bg).clickable(onClick = onClick)
-        .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
-        horizontalAlignment = if (big) Alignment.Start else Alignment.CenterHorizontally) {
-        if (big) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(lane.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = fg,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (news) Text("${lane.unread}", fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                    color = accent)
-            }
-            if (lane.peek.isNotBlank()) {
-                Text(lane.peek, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 2,
-                    overflow = TextOverflow.Ellipsis, color = fg.copy(alpha = 0.75f))
-            }
-        } else {
-            Text(if (news) "${lane.unread}" else "", fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                color = accent)
-            Text(lane.title, fontSize = 12.5.sp, color = fg, maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
-        }
+    Column(modifier.height(68.dp).clip(RoundedCornerShape(14.dp)).background(bg)
+        .clickable(onClick = onClick).padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center) {
+        Text(if (news) "${lane.unread}" else "", fontSize = 19.sp, fontWeight = FontWeight.Bold,
+            color = fg)
+        Text(lane.title, fontSize = 11.5.sp, lineHeight = 13.sp, color = fg, maxLines = 2,
+            textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
     }
 }
 
