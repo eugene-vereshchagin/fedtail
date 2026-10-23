@@ -2568,6 +2568,33 @@ class QtSmokeTest(unittest.TestCase):
         t = themes.apply(self.app, cfg)
         self.assertEqual(t.bg, "#000000")
 
+    def test_theme_font_beats_the_desktops_class_fonts(self):
+        """A platform theme (KDE) gives labels, lists, buttons, the status bar fonts of
+        their own; a theme's font goes on them too — bnw's monospace came out sans on
+        KDE everywhere but the inputs."""
+        from PySide6.QtGui import QFont
+        from PySide6.QtWidgets import QApplication
+
+        from fedtail.frontends.qt import theme as themes
+        sans = QFont("Sans Serif", 13)
+        try:
+            for c in themes.CLASS_FONTS:  # as the desktop's theme would
+                QApplication.setFont(sans, c)
+            themes._desktop = None
+            themes.apply(self.app, config.validate({"ui": {"theme": "bnw"}})[0])
+            app_font = QApplication.font()
+            for c in ("QLabel", "QStatusBar", "QAbstractItemView", "QPushButton"):
+                self.assertEqual(QApplication.font(c).families()[:1],
+                                 app_font.families()[:1], c)
+            # back to the desktop's: its own class fonts come back with it
+            themes.apply(self.app, config.validate({"ui": {"fonts": "system"}})[0])
+            self.assertEqual(QApplication.font("QLabel").pointSize(), 13)
+        finally:
+            for c in themes.CLASS_FONTS:
+                QApplication.setFont(QApplication.font(), c)
+            themes._desktop = None
+            themes.apply(self.app, config.validate({})[0])
+
     def test_paper_brings_its_font_and_ui_font_wins(self):
         from fedtail.frontends.qt import theme as themes
         try:

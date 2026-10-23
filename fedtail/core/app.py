@@ -169,6 +169,17 @@ class Core(SocialMixin):
     def submit(self, fn, *a, **kw):
         return self.pool.submit(fn, *a, **kw)
 
+    def call_api(self, name, *a, **kw):
+        """The server's `name`(…) in the pool. Before the connection is made (a profile
+        or a tag opened while still connecting) the future fails with "connecting…",
+        instead of an AttributeError in the window's own thread."""
+        def go():
+            if self.api is None:
+                from ..i18n import _
+                raise ApiError(0, _("connecting"))
+            return getattr(self.api, name)(*a, **kw)
+        return self.pool.submit(go)
+
     ERROR_QUIET_S = 600
 
     def emit(self, name, payload=None):
@@ -1010,7 +1021,7 @@ class Core(SocialMixin):
                if k not in self.FILTER_POLICY or v not in ("accept", "filter", "drop")}
         if bad:
             raise ValueError(f"filter policy: {bad}")
-        return self.submit(self.api.set_notification_policy, **changes)
+        return self.call_api("set_notification_policy", **changes)
 
     def announcements(self):
         """The server's announcements not dismissed yet, oldest first; [] when
@@ -1028,22 +1039,22 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def dismiss_announcement(self, aid):
-        return self.submit(self.api.dismiss_announcement, aid)
+        return self.call_api("dismiss_announcement", aid)
 
     def scheduled(self):
-        return self.submit(self.api.scheduled)
+        return self.call_api("scheduled")
 
     def cancel_scheduled(self, sid):
-        return self.submit(self.api.cancel_scheduled, sid)
+        return self.call_api("cancel_scheduled", sid)
 
     def set_note(self, acc_id, text, old=""):
         """My private note on them; fedtail's follow-date line (in `old`) stays on."""
         from .model import note_followed, note_with_followed
-        return self.submit(self.api.set_note, acc_id,
+        return self.call_api("set_note", acc_id,
                            note_with_followed(text, note_followed(old)))
 
     def filters(self):
-        return self.submit(self.api.filters)
+        return self.call_api("filters")
 
     def silenced_people(self):
         """{"muted": [accounts], "blocked": [accounts]} for the Silence dialog."""
@@ -1058,10 +1069,10 @@ class Core(SocialMixin):
 
     def add_filter(self, title, keywords, action="warn", contexts=None):
         args = (title, keywords, action) + ((tuple(contexts),) if contexts else ())
-        return self.submit(self.api.create_filter, *args)
+        return self.call_api("create_filter", *args)
 
     def delete_filter(self, filter_id):
-        return self.submit(self.api.delete_filter, filter_id)
+        return self.call_api("delete_filter", filter_id)
 
     def _hidden_authors(self):
         """Who the lanes in lists.hide_in leave out: everyone in a list
@@ -2080,7 +2091,7 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def account(self, acc_id):
-        return self.submit(self.api.account, acc_id)
+        return self.call_api("account", acc_id)
 
     def posts_from_origin(self, acc, have_uris=()):
         """Someone from another server my server knows little about: their newest public
@@ -2296,7 +2307,7 @@ class Core(SocialMixin):
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification
         (in Likes & boosts, with activity.types including "status")."""
-        return self.submit(self.api.notify_posts, acc_id, on)
+        return self.call_api("notify_posts", acc_id, on)
 
     def followed_among(self, accounts):
         """Which of these accounts I follow — why a thread I'm not subscribed to still
@@ -2380,13 +2391,13 @@ class Core(SocialMixin):
         return self.bg.submit(job)
 
     def tag_info(self, name):
-        return self.submit(self.api.tag, name)
+        return self.call_api("tag", name)
 
     def follow_tag(self, name, on=True):
-        return self.submit(self.api.follow_tag, name, on)
+        return self.call_api("follow_tag", name, on)
 
     def followed_tags(self):
-        return self.submit(self.api.followed_tags)
+        return self.call_api("followed_tags")
 
     # ---- completing hashtags while writing -------------------------------------------
     def prepare_tags(self):
@@ -2502,7 +2513,7 @@ class Core(SocialMixin):
     # ---- my profile ------------------------------------------------------------
     def my_profile(self):
         """My account as the editor needs it (bio and fields as typed)."""
-        return self.submit(self.api.verify_credentials)
+        return self.call_api("verify_credentials")
 
     def update_profile(self, **changes):
         def job():
@@ -2658,7 +2669,7 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def history(self, status):
-        return self.submit(self.api.status_history, real(status)["id"])
+        return self.call_api("status_history", real(status)["id"])
 
     def _update(self, st):
         self.store.put_statuses([st])
@@ -2688,13 +2699,13 @@ class Core(SocialMixin):
     def translate(self, status):
         """The post in the interface's language, by my server (a future)."""
         from ..i18n import current_language
-        return self.submit(self.api.translate, real(status)["id"], current_language())
+        return self.call_api("translate", real(status)["id"], current_language())
 
     def report(self, status, comment="", forward=False, category="other"):
         """Tell my server's moderators about a post (and its author); forward: also the
         moderators of the author's server, without saying who reported."""
         s = real(status)
-        return self.submit(self.api.report, s["account"]["id"], [s["id"]], comment,
+        return self.call_api("report", s["account"]["id"], [s["id"]], comment,
                            forward, category)
 
     def featured(self, acc_id):

@@ -550,7 +550,16 @@ def main():
             if p.is_file() and p not in (archive, part):
                 z.write(p, p.relative_to(out.parent))
     part.replace(archive)  # there only when whole: a zip here = the run finished
-    print(f"\nreport: {out / 'report.md'}\nto send back: {archive}")
+    # and a small one: the words only (logs, reports, menus) — what a chat takes when
+    # the whole is too big, and most of what's needed to read the night
+    light = archive.with_name(archive.stem + "-text.zip")
+    with zipfile.ZipFile(light, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in sorted(out.rglob("*")):
+            if p.is_file() and p.suffix in (".md", ".txt", ".log", ".json", ".toml"):
+                z.write(p, p.relative_to(out.parent))
+    print(f"\nreport: {out / 'report.md'}\nto send back: {archive} "
+          f"({archive.stat().st_size / 2**20:.0f} MB)\n  too big? the words only: {light} "
+          f"({light.stat().st_size / 2**20:.1f} MB)")
     return 0 if all(r[1] in ("ok", "skipped") for r in run.rows) else 1
 
 

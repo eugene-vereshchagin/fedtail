@@ -9,6 +9,7 @@ or a link does is the windows' (common/links.py, common/profile.py) through TuiH
 (host.py); the places are common/places.py's (screens.py)."""
 
 import asyncio
+import inspect
 import logging
 import threading
 import webbrowser
@@ -215,16 +216,30 @@ class Ui:
     """What both screens need: run a core future, hear back in the UI thread."""
 
     def later(self, fut, ok=None, fail=None):
+        """fut's answer to ok (or its error to fail) in the interface's thread — unless
+        this screen was closed meanwhile: a thread that loaded after Esc took it away
+        found no "#posts" and brought the whole terminal down (the night of 23.10)."""
         app = self.app
+        me = self
+
+        async def guarded(fn, arg):
+            if me is not app and not getattr(me, "is_attached", True):
+                return
+            got = fn(arg)
+            if inspect.isawaitable(got):
+                await got
 
         def done(f):
             if f.cancelled():
                 return
             exc = f.exception()
             if exc is not None:
-                app.in_ui(fail or app.show_error, str(exc))
+                if fail is None:
+                    app.in_ui(app.show_error, str(exc))
+                else:
+                    app.in_ui(guarded, fail, str(exc))
             elif ok:
-                app.in_ui(ok, f.result())
+                app.in_ui(guarded, ok, f.result())
         fut.add_done_callback(done)
         return fut
 
@@ -745,6 +760,7 @@ class FedtailApp(App, PostsMixin):
                 div = ListItem(Static(Text("── " + sp.extra.get("separator", "") + " ──",
                                            style=STYLE["divider"])))
                 div.key = SEPARATOR
+                div.disabled = True  # j / k step over it, as over the windows' divider
                 items.append(div)
                 continue
             e = sp.entry

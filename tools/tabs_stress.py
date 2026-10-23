@@ -32,6 +32,7 @@ os.environ["XDG_CONFIG_HOME"] = str(Path(_tmp) / "config")
 os.environ["XDG_DATA_HOME"] = str(Path(_tmp) / "data")
 
 ERRORS, ROWS, NOTES = [], [], []
+ARGS = {"rounds": 0}
 # a round's leftovers may grow a little (caches warm up); past this, round after
 # round, it is a leak
 GROW_WIDGETS = 40
@@ -153,8 +154,35 @@ def targets(core, n):
     return out
 
 
+def connected(core, pump):
+    """Wait for the connection (your account: the server may be slow): the tabs
+    opened before it would all fail with "connecting"."""
+    end = time.monotonic() + 60
+    while time.monotonic() < end:
+        if core.api is not None and core.me is not None:
+            return True
+        pump(0.1)
+    ERRORS.append("not connected in 60 s")
+    return False
+
+
+TYPES = {}  # round → Counter of the Python objects' types alive after it
+
+
+def type_census():
+    from collections import Counter
+    def name(o):
+        t = type(o)
+        mod = t.__dict__.get("__module__", "") if isinstance(t.__dict__.get("__module__"),
+                                                            str) else ""
+        return (mod.split(".")[0] + "." if mod else "") + t.__qualname__
+    return Counter(name(o) for o in gc.get_objects())
+
+
 def note_round(ui, rnd, opened, t_open, t_close, alive, objs, mb):
     ROWS.append((ui, rnd, opened, t_open, t_close, alive, objs, mb))
+    if rnd == 2 or rnd == ARGS["rounds"]:
+        TYPES[rnd] = type_census()
     print(f"  round {rnd:2d}: {opened} tabs, open {t_open:6.1f} s, close {t_close:5.1f} s, "
           f"widgets {alive}, objects {objs}, {mb:.0f} MB", flush=True)
 
@@ -165,6 +193,11 @@ def judge(ui):
         return
     base = rows[1]  # the first round warms the caches up
     last = rows[-1]
+    if 2 in TYPES and last[1] in TYPES and last[1] != 2:
+        grew = TYPES[last[1]] - TYPES[2]
+        if grew:  # what is left behind, by kind: where a leak is
+            NOTES.append(f"{ui}: objects that grew, rounds 2…{last[1]}: "
+                         + ", ".join(f"{k} +{v}" for k, v in grew.most_common(15)))
     if last[5] - base[5] > GROW_WIDGETS:
         ERRORS.append(f"{ui}: widgets left after closing grow round after round: "
                       f"{base[5]} → {last[5]} (rounds 2…{last[1]}) — a leak")
@@ -212,6 +245,7 @@ def run_qt(a):
     win.show()
     win.start()
     pump(2.0 if REAL else 0.5)
+    connected(core, pump)
     core.poll_once()
     pump(3.0 if REAL else 1.0)
     todo = targets(core, a.tabs)
@@ -292,6 +326,7 @@ def run_gtk(a):
     win.present()
     win.start()
     pump(2.0 if REAL else 0.5)
+    connected(core, pump)
     core.poll_once()
     pump(3.0 if REAL else 1.0)
     todo = targets(core, a.tabs)
@@ -359,6 +394,12 @@ def run_tui(a):
             app.core.media_bytes = lambda url: (f := Future(), f.set_result(None))[0]
         async with app.run_test(size=(160, 50)) as pilot:
             await pilot.pause(1.0 if REAL else 0.3)
+            for _ in range(600):  # the connection first: a profile opened before it fails
+                if core.api is not None and core.me is not None:
+                    break
+                await pilot.pause(0.1)
+            else:
+                ERRORS.append("tui: not connected in 60 s")
             await asyncio.get_running_loop().run_in_executor(None, core.poll_once)
             await pilot.pause(2.0 if REAL else 0.5)
             todo = targets(core, a.tabs)
@@ -416,6 +457,7 @@ def main():
     ap.add_argument("--native", action="store_true", help="Qt: on the screen, not offscreen")
     ap.add_argument("--real", nargs="?", const="", help="your account (tools/real.py)")
     a = ap.parse_args()
+    ARGS["rounds"] = a.rounds
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     catch = Catch()

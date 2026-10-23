@@ -643,7 +643,12 @@ class Qt(_Window):
         self.win.images.get = lambda *a, **k: None  # no network
         self.win.show()
         self.win.start()
-        self.pump(until=lambda: core.me is not None and "home" in self.win.lane_widgets)
+        # the lanes come with the connection; a lane's widget only when it is chosen
+        # (the start lane may be another: the profile's last one)
+        self.pump(until=lambda: core.me is not None and "home" in self.win.lane_items,
+                  timeout=30)
+        self.win.select_lane("home")
+        self.pump(until=lambda: "home" in self.win.lane_widgets, timeout=20)
 
     def stop(self):
         from PySide6.QtWidgets import QMessageBox
@@ -791,8 +796,9 @@ class Gtk(_Window):
         self.win.confirm = lambda _t, _x, then: then()  # "sure?" — yes
         self.win.present()
         self.win.start()
-        self.pump(until=lambda: self.win.lane_rows)
-        self.pump(until=lambda: "home" in self.win.lane_views)
+        self.pump(until=lambda: self.win.lane_rows, timeout=30)
+        self.win.select_lane("home")  # a lane's view is made when it is chosen
+        self.pump(until=lambda: "home" in self.win.lane_views, timeout=20)
 
     def stop(self):
         self.win.quitting = True

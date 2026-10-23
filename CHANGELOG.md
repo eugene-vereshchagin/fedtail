@@ -9,6 +9,12 @@
   lane from the database after each read mark and froze the window for 0.4 s on a big
   profile). A followed thread the server times out on no longer stops the others nor
   shows an error: it waits its turn (it was asked again every poll).
+- KDE: a theme's font now reaches labels, lists, buttons and the status bar too (KDE
+  gives those classes fonts of its own, and they won: bnw's monospace came out sans
+  everywhere but the inputs). A profile or a tag opened while still connecting says
+  "connecting…" instead of an error in the window. The terminal: a thread or profile
+  that loads after its screen was closed no longer brings the terminal down; j / k step
+  over the "new below" line.
 - Self-check: many tabs opened and closed round after round in Qt, GTK and the terminal
   (tools/tabs_stress.py — leaks, slowing down), each theme's Qt and GTK windows side by
   side with their colours compared (tools/theme_compare.py).
