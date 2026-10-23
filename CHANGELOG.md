@@ -28,6 +28,14 @@
 - The editor (Qt and GTK): what the post is and what to do with it in one row when there's room
   — the two halves keep to their sides and go into two rows only in a narrow window; the
   character count sits in the text field's own bottom right corner.
+- Themes' pictures: nord, contrast, juick, night, paper and solarized draw plain shapes
+  (the "silhouette" style) instead of the messengers' glossy buttons; the sidebar's ≡ ↔ ❯
+  are plain in every theme (qip's looked like a button on a button); psi's ≡ was Psi's
+  "info" picture — now a menu; "whole width" in the system theme is the desktop's own
+  "fit to width" (Breeze), not arrows drawn by fedtail.
+- night, solarized, pink: their fonts as fixed weights (Source Sans 3, Source Code Pro,
+  Nunito — the variable files start at ExtraLight, and Qt drew night's text thin and hard
+  to read).
 - point: its pictures as on point.im — plain warm grey silhouettes (no blue, no raised
   rim; a menu's lines, an envelope's flap cut out of the shape: [pictures] style =
   "silhouette"), and bigger by the lanes and on the sidebar's top buttons ([shape]

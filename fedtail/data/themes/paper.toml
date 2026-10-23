@@ -56,6 +56,10 @@ avatar = 36
 [words]
 date = "{day} {mon}, {time}"
 
+[pictures]
+# plain shapes in one colour, the lines cut out — not the messengers' glossy buttons
+style = "silhouette"
+
 [icon]
 bg_top = "#c08a54"
 bg_bottom = "#6e421d"

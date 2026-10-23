@@ -105,7 +105,8 @@ ALIASES = {"federated": "public", "bookmarks": "bookmark", "my_likes": "star_ful
 # "desktop": the desktop icon theme's names for each, the first found wins
 FREEDESKTOP = {
     "menu": ("application-menu", "open-menu-symbolic"),
-    "wide": (),  # none fits: Qt draws its arrows, GTK the glyph
+    # the desktop's own "fit to width" (Breeze has it): its look, not arrows drawn here
+    "wide": ("zoom-fit-width", "zoom-fit-best", "view-fullscreen"),
     "columns": ("view-split-left-right",),
     "close": ("window-close", "window-close-symbolic"),
     "more": ("overflow-menu", "application-menu", "view-more-symbolic"),
@@ -307,6 +308,7 @@ class Picture:
     path2x: str = ""
 
 
+PLAIN = frozenset({"menu", "wide", "columns"})
 OUTLINE_CONTRAST = 70  # of HSL lightness, 0–255: less, and the outline is lost
 
 
@@ -327,10 +329,14 @@ def picture(pset, name, accent, svg_ok=True, bg=None):
         log.debug("picture %s: %s", p, e)
         return None
     own = pset.color_of(name) or pset.color_of(p.stem) or pset.color
+    # the sidebar's top buttons (≡ ↔ ❯) are buttons already: their pictures plain, not
+    # a glossy button drawn on a button (qip's looked raised twice, 23.10)
+    style = "silhouette" if name in PLAIN and pset.style != "none" \
+        else pset.style
     try:
-        return Picture("svg", text=styled(text, pset.style, own or accent, bg))
+        return Picture("svg", text=styled(text, style, own or accent, bg))
     except ValueError:  # a colour that isn't one (themefile warned): the accent
-        return Picture("svg", text=styled(text, pset.style, accent, bg))
+        return Picture("svg", text=styled(text, style, accent, bg))
 
 
 def has_png(pset):

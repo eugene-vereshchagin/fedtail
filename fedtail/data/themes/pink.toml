@@ -7,8 +7,8 @@ inherit = "system"
 family = "Comfortaa, Nunito, Quicksand, Noto Sans, sans-serif"
 post_scale = 1.08
 # Comfortaa and Nunito come with fedtail (SIL OFL 1.1): nothing to install
-files = ["fonts/Comfortaa-Variable.ttf", "fonts/Nunito-Variable.ttf",
-         "fonts/Nunito-Italic-Variable.ttf"]
+files = ["fonts/Comfortaa-Variable.ttf", "fonts/Nunito-Regular.ttf", "fonts/Nunito-Bold.ttf",
+         "fonts/Nunito-Italic.ttf", "fonts/Nunito-BoldItalic.ttf"]
 
 [colors]
 window = "#fbeff4"

@@ -19,7 +19,6 @@ Which file is which (fedtail name <- Psi+ iconset file):
   star_full.png <- iconsets/roster/default/online.png
   follow.png <- iconsets/system/default/add.png
   list.png <- iconsets/system/default/groupchat.png
-  menu.png <- iconsets/system/default/info.png
   nobody.png <- iconsets/system/default/default_avatar.png
   private.png <- iconsets/system/default/ssl_yes.png
   profile.png <- iconsets/system/default/vcard.png
@@ -33,3 +32,4 @@ Which file is which (fedtail name <- Psi+ iconset file):
   unfollow.png <- iconsets/system/default/remove.png
   unlisted.png <- iconsets/system/default/ssl_no.png
   warning.png <- iconsets/system/default/events.png
+  menu.svg <- fedtail's own (drawn for fedtail, GPL-3): Psi's set has no menu picture

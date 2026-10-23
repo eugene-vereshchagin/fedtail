@@ -65,6 +65,10 @@ account_subtitle = "{acct}"
 separator = "{text} ({n})"
 date = "{dd}.{mm} {time}"
 
+[pictures]
+# plain shapes in one colour, the lines cut out — not the messengers' glossy buttons
+style = "silhouette"
+
 [icon]
 bg_top = "#4a4a4a"
 bg_bottom = "#262626"
