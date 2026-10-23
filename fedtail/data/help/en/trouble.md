@@ -14,6 +14,13 @@ Logs, a bug report, the federation status.
 The detailed log is on in development versions and off in releases; `--debug` turns it on for
 one run.
 
+## Logging in: a saved password doesn't work
+
+Seen on a phone with GoToSocial: the server's sign-in page opens in the browser, and a
+password filled in by a password manager or pasted from the clipboard is refused — only one
+typed by hand from scratch gets in. Why is not known yet. The way round: type the password.
+It is needed once: after that fedtail keeps a token, not the password.
+
 ## Federation status
 
 ≡ → "Debugging" → "Federation status…": how your server is doing, how many requests and with

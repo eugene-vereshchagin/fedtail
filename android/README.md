@@ -24,6 +24,9 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
 * **Logging in**: the server's page opens in the browser; after "allow" the server sends
   it back to `fedtail://oauth?code=…`, which this app catches (`MainActivity`, singleTask).
   A server that won't take that address gets the desktop's way: the code shown, pasted.
+  Works on a Pixel 8 against GoToSocial — but there the sign-in page took only a password
+  typed by hand: a saved (autofilled) or pasted one was refused (cause unknown yet; in the
+  help's "If it breaks").
 * **Lanes**: the drawer lists them with unread counts; a lane's cards come from the web
   interface's JSON layer (`frontends/web/server.py`, class `Web`) — the very cards, "new
   below" divider and order the windows and the browser page use. A lane opens on its first
