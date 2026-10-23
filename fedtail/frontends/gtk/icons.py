@@ -115,11 +115,13 @@ def image(name, theme, size=16):
         return None
     if how(theme) == "desktop":
         n = _desktop_name(name)
-        if n is None:
-            return None
-        img = Gtk.Image.new_from_icon_name(n)
-        img.set_pixel_size(size)
-        return img
+        if n is not None:
+            img = Gtk.Image.new_from_icon_name(n)
+            img.set_pixel_size(size)
+            return img
+        # the desktop's icon theme hasn't it (none at all outside a desktop session, on
+        # xvfb; an icon theme without that name): fedtail's own drawing stands in, as in
+        # Qt — not a row of lanes with pictures here and none there (the night of 23.10)
     tex = texture(name, theme, size)
     if tex is None:
         return None

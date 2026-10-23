@@ -20,6 +20,11 @@
   (PT Sans, Arimo, Fira Mono…) are loaded and its whole list of families is used — GTK
   took only the first and fontconfig chose for it; the lane header shows the theme's
   pictures for "all read", the funnel and refresh, as Qt.
+- Pictures where the desktop has none: on Windows (and macOS) Qt drew no pictures on the
+  lanes but one and an empty Refresh button (Windows' own icon engine knows a few names,
+  and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
+  wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
+  lane title and "N new" pill the size of Qt's.
 - Self-check: many tabs opened and closed round after round in Qt, GTK and the terminal
   (tools/tabs_stress.py — leaks, slowing down), each theme's Qt and GTK windows side by
   side with their colours compared (tools/theme_compare.py).

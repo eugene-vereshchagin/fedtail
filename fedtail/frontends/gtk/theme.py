@@ -99,8 +99,9 @@ class Theme:
         return f"""
 window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; {fam} }}
 .ft-sidebar {{ background: {c['sidebar']}; border-right: 1px solid {c['sidebar_border']}; }}
-.ft-sidebar row {{ color: {c['sidebar_text']}; padding: 4px 8px; border-radius: {br}px;
-  background: transparent; box-shadow: none; border: none; }}
+.ft-sidebar row {{ color: {c['sidebar_text']}; padding: 5px 8px; border-radius: {br}px;
+  background: transparent; box-shadow: none; border: none; min-height: 0;
+  margin: 1px 0; }}
 .ft-sidebar row:hover {{ background: alpha({c['sidebar_text']}, 0.08); }}
 .ft-sidebar row:selected, .ft-sidebar row:selected:hover {{ background: {c['selected']};
   color: {c['selected_text']}; }}
@@ -114,12 +115,12 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-view, .ft-view > viewport, .ft-feed {{ background: {c['view']}; }}
 .ft-lane-header {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
                    padding: 4px 10px; }}
-.ft-lane-title {{ font-weight: bold; color: {c['text']}; }}
+.ft-lane-title {{ font-weight: bold; color: {c['text']}; font-size: 1.55em; }}
 .ft-lane-header togglebutton:checked, .ft-lane-header button:checked {{
     background: {c['accent']}; color: {c['on_accent']}; }}
 .ft-active {{ color: {c['accent']}; }}
 .ft-new-pill {{ background: {c['new_pill']}; color: {c['on_new_pill']};
-               border-radius: 9px; padding: 0 8px; }}
+               border-radius: 11px; padding: 2px 10px; font-weight: 600; }}
 .ft-feed > row {{ background: transparent; padding: 3px 0; }}
 .ft-feed > row:hover, .ft-feed > row:focus {{ background: transparent; outline: none; }}
 .ft-card {{ {card} padding: 8px 12px; color: {c['text']}; }}

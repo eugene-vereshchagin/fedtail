@@ -75,6 +75,12 @@ def _desktop(name):
     return _cache[key]
 
 
+def _desktop_usable():
+    """A freedesktop icon theme to ask: Linux and the BSDs, not Windows or macOS."""
+    import sys
+    return not (sys.platform.startswith("win") or sys.platform == "darwin")
+
+
 def icon(name, theme, size=16):
     """A QIcon of this picture as the theme has it (an empty one when it goes without:
     "words", a messenger's picture outside its place, none to be found)."""
@@ -82,7 +88,14 @@ def icon(name, theme, size=16):
     if not name or not iconpack.shown(mode, name, getattr(theme, "split_layout", False)):
         return QIcon()
     if mode == "desktop":
-        return _desktop(name)
+        if _desktop_usable():
+            ic = _desktop(name)
+            if not ic.isNull():
+                return ic
+        # no desktop icon theme to ask (Windows, macOS; KDE has Breeze), or it hasn't
+        # the picture: fedtail's own drawing stands in. Windows' own engine answers some
+        # names from its symbol font and others with an empty picture: the night of 23.10
+        # the lanes had no pictures but one, Refresh was a blank button
     s = pset(theme)
     accent = theme.c["accent"].name()
     if QSvgRenderer is None and not _said:
