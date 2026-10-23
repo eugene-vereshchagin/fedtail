@@ -76,6 +76,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var hubOrder by mutableStateOf(listOf<String>()) // lanes with news, in reading order
     var hubUnread by mutableStateOf(0)
     var hubWithNews by mutableStateOf(0)
+    var hubPinned by mutableStateOf(listOf<String>()) // phone.pinned, as lanes here
 
     var current by mutableStateOf<String?>(null) // null: the overview of lanes
     var title by mutableStateOf("")
@@ -217,8 +218,26 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
         val order = got.optJSONArray("order") ?: JSONArray()
         hubOrder = (0 until order.length()).map { order.getString(it) }
+        val pin = got.optJSONArray("pinned") ?: JSONArray()
+        hubPinned = (0 until pin.length()).map { pin.getString(it) }
         hubUnread = got.optInt("unread")
         hubWithNews = got.optInt("with_news")
+    }
+
+    /** The tiles: phone.pinned in its order, or (none pinned) every lane with a count;
+     *  each with "is it yours" (tinted when there's news). */
+    fun tileLanes(): List<Pair<HubLane, Boolean>> {
+        val all = hub.flatMap { s -> s.lanes.map { it to (s.kind == "you") } }
+        if (hubPinned.isEmpty()) return all.filter { (l, _) -> hub.any { s -> s.kind != "browse" && l in s.lanes } }
+        return hubPinned.mapNotNull { name -> all.firstOrNull { it.first.name == name } }
+    }
+
+    /** Under the tiles, as rows: (lane, only browsed — no count). */
+    fun restLanes(): List<Pair<HubLane, Boolean>> {
+        val tiles = tileLanes().map { it.first.name }.toSet()
+        return hub.flatMap { s -> s.lanes.map { it to (s.kind == "browse") } }
+            .filter { it.first.name !in tiles }
+            .sortedBy { if (it.second) 1 else 0 }
     }
 
     fun laneTitle(name: String): String =

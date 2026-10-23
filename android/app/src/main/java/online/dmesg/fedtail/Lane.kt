@@ -247,9 +247,8 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var find by remember { mutableStateOf("") }
     val want = { title: String -> find.isBlank() || title.contains(find.trim(), ignoreCase = true) }
-    val counted = model.hub.filter { it.kind != "browse" }
-        .flatMap { s -> s.lanes.map { it to (s.kind == "you") } }.filter { want(it.first.title) }
-    val browsed = model.hub.filter { it.kind == "browse" }.flatMap { it.lanes }.filter { want(it.title) }
+    val counted = model.tileLanes().filter { want(it.first.title) }
+    val browsed = model.restLanes().filter { want(it.first.title) }
     val go = { name: String -> close(); model.showLane(name) }
     ModalBottomSheet(onDismissRequest = close, sheetState = sheet,
         containerColor = MaterialTheme.colorScheme.surface) {
@@ -272,6 +271,13 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
                         modifier = Modifier.fillMaxWidth())
                 }
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SmallHead(stringResource(if (model.hubPinned.isEmpty()) R.string.hub_title
+                                         else R.string.sec_pinned), Modifier.weight(1f))
+                TextButton(onClick = { close(); model.openConfig() }) {
+                    Text(stringResource(R.string.change))
+                }
+            }
             LazyVerticalGrid(GridCells.Fixed(4), Modifier.heightIn(max = 420.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -281,15 +287,9 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
                 }
             }
             if (browsed.isNotEmpty()) {
-                Text(stringResource(R.string.sec_browse).uppercase(), fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                browsed.forEach { lane ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).clickable { go(lane.name) },
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text(lane.title, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                SmallHead(stringResource(R.string.sec_rest))
+                Column {
+                    browsed.forEach { (lane, only) -> RestRow(lane, only, inset = 0.dp) { go(lane.name) } }
                 }
             }
         }

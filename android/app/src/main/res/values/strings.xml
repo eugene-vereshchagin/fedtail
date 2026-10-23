@@ -91,4 +91,6 @@
     <string name="pick_post">Tap a post: its thread opens here</string>
     <string name="sec_rest">The rest</string>
     <string name="browsed">browsed</string>
+    <string name="sec_pinned">Pinned</string>
+    <string name="change">change</string>
 </resources>

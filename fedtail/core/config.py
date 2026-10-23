@@ -244,6 +244,7 @@ DEFAULTS = {
     },
     "phone": {
         "overview": "tiles",
+        "pinned": [],
         "layout": "auto",
     },
     "cli": {
@@ -312,7 +313,7 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),
               ("ui", "icon_count"), ("ui", "icon_count_except"), ("ui", "columns"),
               ("ui", "start_lane"),
-              ("lists", "hide_in"), ("cli", "tail_lanes")]
+              ("lists", "hide_in"), ("cli", "tail_lanes"), ("phone", "pinned")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = {"read", "threads"}
@@ -477,6 +478,15 @@ def validate(user):
                     and x.startswith("list:") and len(x) > 5)]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
+    pinned = cfg["phone"]["pinned"]
+    if not (isinstance(pinned, list) and all(isinstance(x, str) for x in pinned)):
+        errors.append("phone.pinned must be a list of lane names")
+    else:
+        bad = [x for x in pinned if x not in LANE_NAMES
+               and not (x.startswith("list:") and len(x) > 5)]
+        if bad:
+            errors.append(f"phone.pinned: unknown lanes {bad}; known: "
+                          f"{', '.join(sorted(LANE_NAMES))}, list:TITLE")
     if "all" in cfg["activity"]["types"]:  # everything there is, now and later
         cfg["activity"]["types"] = sorted(ACTIVITY_TYPES)
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]

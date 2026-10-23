@@ -1152,6 +1152,11 @@ open_browser = true
 # the name); "list" — a list, a row per lane, with its first unread post.
 overview = "tiles"
 
+# Which lanes are tiles, and in which order: ["home", "replies", "mentions", "direct",
+# "subs", "bots", "list:News", "activity"] (a list — "list:" and its title). The other
+# lanes — rows under the tiles. [] — every lane with a count is a tile.
+pinned = []
+
 # How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and
 # a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread
 # side by side); "one", "two", "three" — always that many, if they fit.

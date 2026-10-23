@@ -256,9 +256,10 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Avatar(p, 24)
+                // no weight here: the spacer's is the only one, so /N stands at the right edge
                 Text(p.name, fontWeight = if (focused) FontWeight.Bold else FontWeight.SemiBold,
                     fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false))
+                    modifier = Modifier.widthIn(max = 220.dp))
                 Text(shownTime(p.created), fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))

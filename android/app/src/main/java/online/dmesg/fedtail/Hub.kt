@@ -37,6 +37,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -53,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -121,14 +123,20 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
     }
 }
 
-/** The tiles (mockup "3"): every counted lane — yours first, tinted when there's news, the
- *  open one dark — four in a row; below, the lanes only browsed, as rows. */
+/** The tiles (mockup "3"): phone.pinned in its order (or every counted lane) — yours tinted
+ *  when there's news, the open one dark — four in a row; below, the rest as rows. */
 private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppModel, pane: Boolean) {
-    val counted = model.hub.filter { it.kind != "browse" }
-        .flatMap { s -> s.lanes.map { it to (s.kind == "you") } }
+    val tiles = model.tileLanes()
     val per = if (pane) 3 else 4
-    val rows = counted.chunked(per)
-    item(key = "gap") { Spacer(Modifier.height(8.dp)) }
+    val rows = tiles.chunked(per)
+    item(key = "h-tiles") {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            SmallHead(stringResource(if (model.hubPinned.isEmpty()) R.string.hub_title
+                                     else R.string.sec_pinned), Modifier.weight(1f))
+            TextButton(onClick = { model.openConfig() }) { Text(stringResource(R.string.change)) }
+        }
+    }
     items(rows.size, key = { "t-$it" }) { r ->
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -139,24 +147,38 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
             repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
         }
     }
-    val rest = model.hub.firstOrNull { it.kind == "browse" }?.lanes.orEmpty()
+    val rest = model.restLanes()
     if (rest.isEmpty()) return
     item(key = "h-rest") {
-        Text(stringResource(R.string.sec_rest).uppercase(), fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp))
+        SmallHead(stringResource(R.string.sec_rest),
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp))
     }
-    items(rest, key = { "r-" + it.name }) { lane ->
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { model.showLane(lane.name) },
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                Text(stringResource(R.string.browsed), fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+    items(rest, key = { "r-" + it.first.name }) { (lane, browsed) ->
+        RestRow(lane, browsed) { model.showLane(lane.name) }
+    }
+}
+
+@Composable
+fun SmallHead(text: String, modifier: Modifier = Modifier) {
+    Text(text.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier)
+}
+
+/** A lane under the tiles: its count on the right, or "browsed" for one without counts. */
+@Composable
+fun RestRow(lane: HubLane, browsed: Boolean, inset: Dp = 16.dp, onClick: () -> Unit) {
+    Column(Modifier.padding(horizontal = inset)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(onClick = onClick),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text(when {
+                browsed -> stringResource(R.string.browsed)
+                lane.unread > 0 -> "${lane.unread}"
+                else -> ""
+            }, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
     }
 }
 

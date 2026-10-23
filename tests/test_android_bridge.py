@@ -212,3 +212,14 @@ class BridgeTest(TmpDir):
         self.assertTrue(self.call("menu", "103")["subscribed"])
         self.assertIn("found", self.call("resolve", "https://nowhere.example/@x/1"))
         self.assertIn("error", json.loads(self.bridge.thread_act("sideways", "103")))
+
+    def test_pinned_lanes_come_as_tiles_in_their_order(self):
+        self.demo()
+        self.assertEqual(self.call("hub")["pinned"], [])  # none: every counted lane
+        text = self.call("config_text")["text"]
+        mine = text.replace("pinned = []", 'pinned = ["home", "list:новости", "replies"]', 1)
+        self.assertEqual(self.call("config_save", mine), {"ok": True})
+        self.call("open")
+        self.assertEqual(self.call("hub")["pinned"], ["home", "list:L1", "replies"])
+        bad = text.replace("pinned = []", 'pinned = ["sideways"]', 1)
+        self.assertIn("phone.pinned", json.loads(self.bridge.config_save(bad))["error"])

@@ -409,4 +409,5 @@ The Android app (the android/ folder of the repository). Its config is this same
 | Key | Default | What it does |
 |---|---|---|
 | `phone.overview` | `"tiles"` | The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and the name); "list" — a list, a row per lane, with its first unread post. |
+| `phone.pinned` | `[]` | Which lanes are tiles, and in which order: ["home", "replies", "mentions", "direct", "subs", "bots", "list:News", "activity"] (a list — "list:" and its title). The other lanes — rows under the tiles. [] — every lane with a count is a tile. |
 | `phone.layout` | `"auto"` | How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread side by side); "one", "two", "three" — always that many, if they fit. |

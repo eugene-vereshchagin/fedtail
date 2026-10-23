@@ -284,11 +284,29 @@ def hub():
             sections[kind].sort(key=lambda x, o=order: o.index(x["name"])
                                 if x["name"] in o else len(o))
         walk = [x for k in ("you", "reading", "lists") for x in sections[k]]
+        every = [x for v in sections.values() for x in v]
         return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],
+                "pinned": _pinned(core.cfg["phone"]["pinned"], every),
                 "order": [x["name"] for x in walk if x["unread"]],
                 "unread": sum(x["unread"] for x in walk),
                 "with_news": sum(1 for x in walk if x["unread"])}
     return _answer(go)
+
+
+def _pinned(wanted, lanes):
+    """phone.pinned → the lanes' names here, in its order: a lane by its name, a list by
+    "list:" and its title (or its id); what isn't here (a list gone) is left out."""
+    out = []
+    for want in wanted:
+        if want.startswith("list:"):
+            key = want[5:].casefold()
+            got = next((x["name"] for x in lanes if x["name"].startswith("list:") and
+                        (x["title"].casefold() == key or x["name"][5:].casefold() == key)), None)
+        else:
+            got = next((x["name"] for x in lanes if x["name"] == want), None)
+        if got and got not in out:
+            out.append(got)
+    return out
 
 
 def _peek(core, name):

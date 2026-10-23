@@ -90,4 +90,6 @@
     <string name="pick_post">Нажми на пост — его тред откроется здесь</string>
     <string name="sec_rest">Остальные</string>
     <string name="browsed">листается</string>
+    <string name="sec_pinned">Закреплённые</string>
+    <string name="change">изменить</string>
 </resources>
