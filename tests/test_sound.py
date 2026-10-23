@@ -214,9 +214,11 @@ class PlayerTest(unittest.TestCase):
     def test_linux_players_in_order(self):
         snd = soundpack.Sound("file", "/x/reply.wav", "reply")
         p = Player(cfg(volume=50), which=self.which({"paplay", "aplay"}), platform="linux")
-        self.assertEqual(p.command(snd), ["/usr/bin/paplay", "--volume=32768", "/x/reply.wav"])
+        self.assertEqual(p.command(snd), ["/usr/bin/paplay", "--property=media.role=event",
+                                          "--volume=32768", "/x/reply.wav"])
         p = Player(cfg(), which=self.which({"pw-play", "paplay"}), platform="linux")
         self.assertEqual(p.command(snd)[0], "/usr/bin/pw-play")
+        self.assertIn("--media-role=Notification", p.command(snd))  # an event, not music
         p = Player(cfg(), which=self.which({"aplay"}), platform="linux")
         self.assertEqual(p.command(snd), ["/usr/bin/aplay", "/x/reply.wav"])
         self.assertIsNone(Player(cfg(), which=self.which(set()), platform="linux").command(snd))

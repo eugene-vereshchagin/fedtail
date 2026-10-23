@@ -31,8 +31,10 @@ log = logging.getLogger(__name__)
 
 # (program, how it takes the volume 0..100: None — it can't)
 LINUX_PLAYERS = (
-    ("pw-play", lambda v: [f"--volume={v / 100:.2f}"]),
-    ("paplay", lambda v: [f"--volume={int(65536 * v / 100)}"]),
+    # a notification, not music: the desktop's own volume for event sounds governs it,
+    # and the sound server treats it as an event (not as a player that wants the card)
+    ("pw-play", lambda v: ["--media-role=Notification", f"--volume={v / 100:.2f}"]),
+    ("paplay", lambda v: ["--property=media.role=event", f"--volume={int(65536 * v / 100)}"]),
     ("aplay", None),
 )
 MAC_PLAYER = ("afplay", lambda v: ["-v", f"{v / 100:.2f}"])

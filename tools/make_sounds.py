@@ -12,7 +12,8 @@ Sets (frontends/soundpack.py says what each event is):
     themes/point/sounds/      dry wooden ticks, the quietest of the messengers
     sounds/fallback/          what the "desktop" source plays without canberra-gtk-play
 
-Everything is mono, 16-bit, 22050 Hz WAV: Windows plays WAV by itself, every Linux player
+Everything is mono, 16-bit, 48 kHz WAV (the sound server's own rate: no clock switch of
+the card, USB headsets included): Windows plays WAV by itself, every Linux player
 too. Deterministic (noise from a fixed seed), so --check can compare bytes.
 """
 
@@ -28,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "fedtail" / "data"
-RATE = 22050
+RATE = 48000  # the rate PipeWire runs at: no switch of the device clock to play a chime
 
 
 # ---- building blocks: each returns a list of floats (-1..1) -----------------------

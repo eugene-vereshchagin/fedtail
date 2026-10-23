@@ -25,6 +25,9 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- fedtail's own sounds are 48 kHz (the sound server's rate: a 22 kHz chime could make it
+  switch the card's clock, and a USB headset's microphone with it) and are played as
+  notifications, not music (pw-play --media-role, paplay media.role=event).
 - The tests and the self-check no longer play anything (FEDTAIL_SOUND=off, set by them;
   sound.enabled is "auto" — on — in development versions, and a run played hundreds of
   chimes and beeps through the desktop's sound server).
