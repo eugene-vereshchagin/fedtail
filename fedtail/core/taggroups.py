@@ -12,7 +12,7 @@ PREFIX = "tags:"
 _TAG = re.compile(r"^([+-]?)#([\w·‌]+)$")
 
 
-def parse(text):
+def parse(text, one_ok=False):
     """{"any": [...], "all": [...], "none": [...]} from "#a #b +#c -#d", or None when it
     isn't only tags or is a single plain one (that's the ordinary tag lane)."""
     words = (text or "").split()
@@ -29,8 +29,8 @@ def parse(text):
             spec[kind].append(tag)
     if not spec["any"] and not spec["all"]:
         return None
-    if len(spec["any"]) + len(spec["all"]) < 2 and not spec["none"]:
-        return None  # one tag: its own lane, as always
+    if len(spec["any"]) + len(spec["all"]) < 2 and not spec["none"] and not one_ok:
+        return None  # one tag typed in the search: its own tab, as always
     return spec
 
 
@@ -55,7 +55,8 @@ def is_tags(name):
 
 
 def spec_of(name):
-    return parse(name[len(PREFIX):]) if is_tags(name) else None
+    # a saved lane may be one tag (its tab's "＋ to lanes")
+    return parse(name[len(PREFIX):], one_ok=True) if is_tags(name) else None
 
 
 def title(spec):

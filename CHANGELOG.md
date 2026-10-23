@@ -25,6 +25,9 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- One hashtag kept as a lane of its own: its tab has "＋ to lanes" too (only a group of
+  several tags had it), and it lives in the sidebar's "Tags" — Qt, GTK, the web page, the
+  terminal.
 - Self-check: a step that runs out of time or is stopped takes everything it started
   with it (xvfb-run, the tool, its children): before, only xvfb-run went, and a tour
   went on for hours in a window nobody saw. A run says when tools of earlier runs are

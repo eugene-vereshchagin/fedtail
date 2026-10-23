@@ -412,6 +412,11 @@ class Places:
                 page.rows.append(self._tag_row(t))
         except Exception as e:  # noqa: BLE001 — the posts still show
             log.info("tag info: %s", e.__class__.__name__)
+        from ...core import taggroups
+        if not cursor and taggroups.lane_name(taggroups.normal({"any": [name]})) \
+                not in v.lane_by_name:  # one tag kept as a lane of its own, under "Tags"
+            page.rows.append(Row("item", _("tags_save_tip"), key="tag-save", buttons=(
+                self._btn(_("tags_save"), "tag", "save", name),)))
         posts = _wait(v.tag_timeline(name, cursor or None)) or []
         page.rows += [Row("post", data=p, key=p.id) for p in posts]
         if posts and len(posts) >= v.cfg["feed"]["page_size"]:
@@ -425,6 +430,10 @@ class Places:
     def _a_tag_more(self, data, _v, _c, _ans):
         name, _s, cursor = data.partition(" ")
         return Out(open={"page": "tag", "arg": name, "cursor": cursor})
+
+    def _a_tag_save(self, name, _v, _c, _ans):
+        _wait(self.view.save_tag_group({"any": [name]}))
+        return Out(message=_("tags_saved", tags="#" + name), refresh=True)
 
     def _a_tag_follow(self, name, _v, _c, _ans):
         _wait(self.view.follow_tag(name, True))

@@ -1976,8 +1976,17 @@ class TagWidget(_PagedTab):
             self.feature_btn.setEnabled(False)
             win.bridge.call(self.core.featured_tag_names(), ok=self._featured,
                             fail=lambda _e: self.feature_btn.hide())
+        # one tag kept as a lane of its own, in the sidebar's "Tags" (as a group of them)
+        from ...core import taggroups
+        self.spec = taggroups.normal({"any": [tag]})
+        self.key = "#" + tag
+        if taggroups.lane_name(self.spec) not in self.core.lane_by_name:
+            self.save_btn = self.header.add(_button(_("tags_save"), self._save,
+                                                    tip=_("tags_save_tip")))
         win.bridge.call(self.core.tag_info(tag), ok=self._info, fail=lambda _e: None)
         self.more()
+
+    _save = TagGroupWidget._save
 
     def _featured(self, names):
         self.featured = self.tag.lower() in (names or set())

@@ -1401,6 +1401,11 @@ class CoreTest(TmpDir):
         self.assertEqual(core.lane_title(name), "#georgia #грузия")
         core.drop_tag_group(name).result()
         self.assertNotIn(name, core.lane_by_name)
+        # one tag kept as a lane of its own (its tab's "＋ to lanes")
+        one = core.save_tag_group({"any": ["tbilisi"]}).result()
+        self.assertIn(one, core.lane_by_name)
+        self.assertEqual(core.lane_title(one), "#tbilisi")
+        core.drop_tag_group(one).result()
         core.cfg["lanes"]["tag_groups"] = [{"name": "Грузия", "any": ["georgia"],
                                             "none": ["politics"]}]
         core._apply_lists([], {})

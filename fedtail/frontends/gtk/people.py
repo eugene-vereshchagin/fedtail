@@ -327,8 +327,34 @@ def open_tag(win, tag):
             box.prepend(note)
             box.prepend(TagRow(win, t, header=True))
     win.call(win.view.tag_info(tag), info, lambda _e: None)
+    _save_row(win, box, {"any": [tag]}, "#" + tag)  # one tag as a lane of its own (as Qt)
     _paged(win, box, lambda max_id: win.view.tag_timeline(tag, max_id))
     return page
+
+
+def _save_row(win, box, spec, words):
+    """"＋ to lanes": the tag (or tags) kept in the sidebar's "Tags" — unless it is there."""
+    from ...core import taggroups
+    spec = taggroups.normal(spec)
+    lane = taggroups.lane_name(spec)
+    if lane in win.lane_rows:
+        return
+    save = Gtk.Button(label=_("tags_save"), halign=Gtk.Align.START)
+    tip(save, _("tags_save_tip"))
+
+    def saved(name):
+        save.set_visible(False)
+        win.status(_("tags_saved", tags=words), seconds=6)
+        GLib.timeout_add(300, lambda: (win.lane_rows.get(name) is not None and
+                                       win.sidebar.select_row(win.lane_rows[name]),
+                                       GLib.SOURCE_REMOVE)[1])
+
+    def do_save(_b):
+        save.set_sensitive(False)
+        win.call(win.view.save_tag_group(spec), saved,
+                 lambda e: (save.set_sensitive(True), win.error(e)))
+    save.connect("clicked", do_save)
+    box.append(save)
 
 
 def open_tag_group(win, spec):
