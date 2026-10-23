@@ -442,7 +442,15 @@ def resolve(url):
 # the user's notes and order stay), checked first; the core is made anew once, when the
 # page is left (settings_apply). Chapters, order and explanations are the example file's
 # in the file's language; the desktop's terminal and browser chapters aren't shown here.
-NOT_ON_PHONE = {"tui", "web", "cli"}
+# Only what the phone does something with: the terminal's, the browser's and the command
+# line's chapters stay off, and so do sound and notifications (no sound here; notifications
+# come later, with their own settings); of [ui] and [debug] — the few the phone heeds
+# (the rest is the Qt and GTK windows': fonts, docks, columns, the GTK header bar…).
+NOT_ON_PHONE = {"tui", "web", "cli", "sound", "notify"}
+ONLY_ON_PHONE = {
+    "ui": {"language", "start_lane", "command_line", "expand_cw", "arts_mode", "links_in_app"},
+    "debug": {"level", "mode"},
+}
 
 
 def _chapters(example):
@@ -484,6 +492,8 @@ def settings():
                 continue
             for key, lines in opts:
                 if key not in config.DEFAULTS[section]:
+                    continue
+                if section in ONLY_ON_PHONE and key not in ONLY_ON_PHONE[section]:
                     continue
                 default = config.DEFAULTS[section][key]
                 kind = {bool: "bool", int: "int", float: "float", str: "str",

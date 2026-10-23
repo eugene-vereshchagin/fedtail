@@ -231,6 +231,9 @@ class BridgeTest(TmpDir):
         self.assertTrue(titles)
         opts = {(o["section"], o["key"]): o for c in got["chapters"] for o in c["options"]}
         self.assertNotIn(("web", "port"), opts)  # the desktop's browser: not here
+        self.assertNotIn(("ui", "gtk_headerbar"), opts)  # the windows' own
+        self.assertNotIn(("ui", "font"), opts)
+        self.assertIn(("ui", "language"), opts)
         order = opts[("feed", "order")]
         self.assertEqual(order["type"], "str")
         self.assertIn("newest_first", order["choices"])
