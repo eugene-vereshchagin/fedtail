@@ -309,7 +309,7 @@ class MergedTest(TmpDir):
             core.poll_once()
         got = m.lane_entries("home")
         self.assertEqual([st["id"] for _i, st in got], ["010", "work~501"])  # bob, no dup
-        self.assertEqual(got[1][1]["_via"], "@w")
+        self.assertEqual(got[1][1]["_via"], "@w@work.example")  # whole: names repeat
         self.assertEqual(got[1][1]["account"]["id"], "work~B")
         self.assertEqual(m.unread_ids(got), {"010", "work~501"})
         self.assertEqual(m.unread_count("home"), 2)
@@ -341,6 +341,32 @@ class MergedTest(TmpDir):
         m.set_active_lanes([])
         self.assertEqual(m.others["work"]._active_lanes, set())
 
+    def test_post_from_any_account(self):
+        """The editor's "From": a new post from the other account; a reply from it to a
+        post the main one got — found on its server first; the draft goes."""
+        m = self.m
+        mine = self.home.add(status("020", BOB, minute=20), home=True)
+        self.work.remote[mine["uri"]] = dict(mine, id="777")
+        for core in (m.primary, m.others["work"]):
+            core.connect().result()
+            core.poll_once()
+        accounts, first = m.post_accounts(None)
+        self.assertEqual([k for k, _h in accounts], ["", "work"])
+        self.assertEqual(first, "")
+        self.assertEqual(accounts[1][1], "@w@work.example")
+        self.assertEqual(m.post_accounts("work~5")[1], "work")  # a reply: whose post
+        st = m.post("from work", "public", account="work").result()
+        self.assertTrue(st["id"].startswith("work~"))
+        self.assertEqual(self.work.posted[-1][0], "from work")
+        m.primary.store.save_draft("d1", {"text": "x"})
+        st = m.post("@bob a reply from work", "public", "020", account="work",
+                    draft_key="d1").result()
+        self.assertEqual(self.work.posted[-1][2], "777")  # the reply to work's copy
+        self.assertIsNone(m.primary.store.get_draft("d1"))
+        # the usual way: no "From" — the account that got it
+        m.post("plain", "public", "020").result()
+        self.assertEqual(self.home.posted[-1][0], "plain")
+
     def test_act_as_the_other_account(self):
         """A post my main account got, liked from work: looked up on work's server."""
         m = self.m
@@ -350,7 +376,7 @@ class MergedTest(TmpDir):
             core.connect().result()
             core.poll_once()
         st = m.store.get_status("020")
-        self.assertEqual(m.act_accounts(st), [("work", "@w")])
+        self.assertEqual(m.act_accounts(st), [("work", "@w@work.example")])
         got = m.act_as(st, "work", "fav").result()
         self.assertEqual(got["id"], "work~777")
         self.assertTrue(self.work.statuses["777"]["favourited"])

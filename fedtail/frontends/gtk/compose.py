@@ -129,6 +129,25 @@ class ComposeWindow(Gtk.Box):
         self.vis = Gtk.DropDown.new_from_strings(
             [vis_word(v) for v in VISIBILITIES])
         tip(self.vis, _("web_visibility"))
+        # all accounts in one window: which one it goes from, its whole @name@server (as Qt)
+        self.from_keys = []
+        accounts, first = self.view.post_accounts(self.reply_to)
+        if len(accounts) > 1 and not self.edit:
+            self.from_keys = [k for k, _h in accounts]
+            self.from_drop = Gtk.DropDown.new_from_strings(
+                [_("post_from", acct=h) for _k, h in accounts])
+            self.from_drop.set_selected(self.from_keys.index(first)
+                                        if first in self.from_keys else 0)
+            tip(self.from_drop, _("post_from_tip"))
+            self._from_first = first
+
+            def said(*_a):
+                k = self.from_keys[self.from_drop.get_selected()]
+                if self.reply_to is not None and k != self._from_first:
+                    self.win.status(_("post_from_other", acct=accounts[
+                        self.from_drop.get_selected()][1]))
+            self.from_drop.connect("notify::selected", said)
+            bar.append(self.from_drop)
         bar.append(self.vis)
         self._langs = [""]
         self.lang = Gtk.DropDown.new_from_strings([_("lang_default")])
@@ -699,7 +718,9 @@ class ComposeWindow(Gtk.Box):
         fut = self.view.post(text, self.visibility(), self.reply_to, cw, media=media,
                              draft_key=self.key, language=self.language() or None,
                              sensitive=self.sensitive_btn.get_active(), poll=self.poll_data(),
-                             quote=self.quote, scheduled_at=scheduled_at)
+                             quote=self.quote, scheduled_at=scheduled_at,
+                             **({"account": self.from_keys[self.from_drop.get_selected()]}
+                                if self.from_keys else {}))
         self.win.call(fut, self._sent, self._failed)
 
     def _ask_alt(self, n, scheduled_at=None):

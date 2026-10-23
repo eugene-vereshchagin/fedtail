@@ -685,6 +685,16 @@ class View:
         raw = self._raw(real(parent)) if parent is not None else None
         return adapter.visibility_in(self._core.reply_visibility(raw))
 
+    def post_accounts(self, reply_to=None):
+        """([(key, "@name@server")], the key to start with): whom the editor may post as
+        (all accounts in one window); ([], "") — just this one."""
+        pick = getattr(self._core, "post_accounts", None)
+        if pick is None:
+            return [], ""
+        rid = None if reply_to is None else reply_to if isinstance(reply_to, str) \
+            else real(reply_to).id
+        return pick(rid)
+
     def post(self, text, visibility, reply_to=None, warning="", language=None, quote=None,
              **kw):
         """A new post or a reply (reply_to, quote: a Post or its id). Future: the Post

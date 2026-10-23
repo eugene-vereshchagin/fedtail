@@ -585,7 +585,17 @@ class ComposeScreen(Screen):
         elif st.hint:
             yield Static(_(st.hint), id="c-hint")
         vis = "followers" if st.visibility == "private" else st.visibility
+        # all accounts in one window: whom it goes from, whole @name@server (as the windows)
+        rid = None if self.reply_to is None else getattr(real(self.reply_to), "id",
+                                                         self.reply_to)
+        pick = getattr(core, "post_accounts", None)
+        accounts, first = pick(rid) if pick is not None else ([], "")
+        self.accounts = accounts if len(accounts) > 1 and self.edit is None else []
         with Horizontal(id="c-row"):
+            if self.accounts:
+                yield Select([(_("post_from", acct=h), k) for k, h in self.accounts],
+                             value=first if first in [k for k, _h in self.accounts] else "",
+                             allow_blank=False, id="c-from")
             yield Select([(_(VIS_WORD[v]), v) for v in VISIBILITIES],
                          value=vis if vis in VISIBILITIES else "followers", allow_blank=False,
                          id="c-vis")
@@ -596,6 +606,8 @@ class ComposeScreen(Screen):
         yield Footer()
 
     def on_mount(self):
+        if self.accounts:
+            self.query_one("#c-from", Select).tooltip = _("post_from_tip")
         ta = self.query_one("#c-text", TextArea)
         ta.text = self.start.text or ""
         self.media = [tuple(m)[:2] for m in self.start.media or ()]
@@ -736,7 +748,9 @@ class ComposeScreen(Screen):
                             quote=self.quote, draft_key=self.key, media=list(self.media),
                             sensitive=self.sensitive and bool(self.media),
                             poll=None if self.media else self.poll,
-                            scheduled_at=cc.when_utc(self.when))
+                            scheduled_at=cc.when_utc(self.when),
+                            **({"account": self.query_one("#c-from", Select).value}
+                               if self.accounts else {}))
 
         def ok(_p):
             self.sending = False

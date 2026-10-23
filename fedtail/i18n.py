@@ -891,6 +891,11 @@ _STRINGS = {
         "act_as_reply": "↩ Ответ от {acct}",
         "act_as_wait": "Ищу пост на сервере другого аккаунта…",
         "act_as_done": "Сделано от {acct}",
+        "post_from": "От {acct}",
+        "post_from_tip": "С какого аккаунта уйдёт пост (все аккаунты в одном окне). "
+                         "Ответ от другого аккаунта, не того, что получил пост: пост "
+                         "сперва найдётся на его сервере",
+        "post_from_other": "Ответ уйдёт от {acct}: пост найдётся на его сервере",
         "act_as_none": "Сервер {acct} не нашёл этот пост (он не публичный, или сервер "
                        "не смог его забрать)",
         "tag_info": "посты с этим тегом, какие знает твой сервер",
@@ -1777,6 +1782,11 @@ _STRINGS = {
         "act_as_reply": "↩ Reply as {acct}",
         "act_as_wait": "Looking the post up on the other account's server…",
         "act_as_done": "Done as {acct}",
+        "post_from": "From {acct}",
+        "post_from_tip": "Which account the post goes from (all accounts in one window). "
+                         "A reply from another account than the one that got the post: "
+                         "the post is looked up on its server first",
+        "post_from_other": "The reply goes from {acct}: the post is looked up on its server",
         "act_as_none": "{acct}'s server couldn't find this post (it isn't public, or the "
                        "server couldn't fetch it)",
         "tag_info": "posts with this tag that your server knows",

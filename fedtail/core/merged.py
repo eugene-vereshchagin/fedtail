@@ -24,6 +24,21 @@ log = logging.getLogger(__name__)
 SEP = "~"
 
 
+def full_handle(core):
+    """"@name@server" of a core's own account ("" before it has connected)."""
+    me = getattr(core, "me", None)
+    if not me:
+        return ""
+    acct = me.get("acct") or me.get("username") or ""
+    if "@" not in acct:
+        from urllib.parse import urlsplit
+        server = (getattr(core, "auth", None) or {}).get("server") or me.get("url") or ""
+        host = urlsplit(server if "//" in server else "https://" + server).hostname
+        if host:
+            acct += "@" + host
+    return "@" + acct
+
+
 class MergedCore:
     def __init__(self, primary, others):
         """others: {profile name: Core}, in the order they should be listed."""
@@ -41,8 +56,25 @@ class MergedCore:
 
     # ---- ids --------------------------------------------------------------------
     def via(self, tag):
-        me = self.others[tag].me
-        return "@" + me["acct"] if me else tag
+        """An account of this window as "@name@server" — whole: the same name on two
+        servers must not look like one account (23.10)."""
+        return full_handle(self.others[tag]) or tag
+
+    def handle(self, tag):
+        """The same for the main account too (tag None or "")."""
+        return full_handle(self.primary) if not tag else self.via(tag)
+
+    def post_accounts(self, reply_to=None):
+        """[(key, "@name@server")] the editor offers under "From": "" — the main
+        account, a tag — another; and the one it starts with (the account that got the
+        post replied to, the main one for a new post)."""
+        out = [("", self.handle(None))] + [(t, self.via(t)) for t in self.others]
+        first = ""
+        if reply_to is not None:
+            _core, tag, _sid = self.split(reply_to["id"] if isinstance(reply_to, dict)
+                                          else reply_to)
+            first = tag or ""
+        return out, first
 
     def split(self, x):
         """A (possibly prefixed) id → (core, tag or None, the id on that core)."""
@@ -342,9 +374,55 @@ class MergedCore:
         core, _tag, own = self.own(status)
         return core.reply_visibility(own)
 
-    def post(self, text, visibility, reply_to=None, *a, **kw):
+    def post(self, text, visibility, reply_to=None, *a, account=None, **kw):
+        """account: "" — the main one, a tag — another (the editor's "From"); None — the
+        account that got the post replied to (the main one for a new post). From another
+        account than that, the post replied to (and a quote) is looked up on its server
+        first; the draft, kept by this window's main account, goes once it's out."""
         core, tag, rid = self.split(reply_to) if reply_to else (self.primary, None, None)
-        return self._wrapped(tag, core.post(text, visibility, rid, *a, **kw))
+        if account is None or (account or None) == tag:
+            return self._wrapped(tag, core.post(text, visibility, rid, *a, **kw))
+        new_tag = account or None
+        target = self.primary if new_tag is None else self.others[new_tag]
+        draft = kw.pop("draft_key", None)
+        quote = kw.pop("quote", None)
+
+        def job():
+            there = self._lookup(reply_to, target, self.handle(new_tag)) if reply_to else None
+            q = self._lookup(quote, target, self.handle(new_tag)) if quote else None
+            st = target.post(text, visibility, there["id"] if there else None, *a,
+                             quote=q["id"] if q else None, **kw).result()
+            if draft:
+                self.primary.store.delete_draft(draft)
+            return self.wrap(new_tag, st)
+        return self.primary.bg.submit(job)
+
+    def _lookup(self, status, target, who):
+        """The post (an id or a dict in window terms) as target's server has it: by its
+        ActivityPub id, then by its web address (GoToSocial and kin find a post by one
+        and not the other). LookupError, said plainly, when neither finds it."""
+        from ..i18n import _
+        from .model import real
+        if not isinstance(status, dict):
+            core, tag, sid = self.split(status)
+            got = core.store.get_status(sid)
+            status = self.wrap(tag, got) if got is not None else {"id": status}
+        _core, _mine, own = self.own(status)
+        if _core is target and isinstance(own, dict) and own.get("id"):
+            return own
+        post = real(own) if isinstance(own, dict) else {}
+        ways = list(dict.fromkeys(x for x in (post.get("uri"), post.get("url")) if x))
+        for q in ways:
+            try:
+                found = target.api.search(q, kind="statuses", resolve=True, limit=5)
+            except Exception as e:  # noqa: BLE001 — the next way, or "not found"
+                log.info("as %s: %s: %s", who, q, e)
+                continue
+            st = next(iter((found or {}).get("statuses") or []), None)
+            if st is not None:
+                target.store.put_statuses([st])
+                return st
+        raise LookupError(_("act_as_none", acct=who))
 
     def thread(self, sid):
         core, tag, own = self.split(sid)
@@ -358,39 +436,19 @@ class MergedCore:
         """[(tag, "@acct")]: the accounts that could act on this post besides the one that
         received it (tag None is this window's own account)."""
         _core, mine, _own = self.own(status)
-        me = self.primary.me
-        out = [] if mine is None else [(None, "@" + me["acct"] if me else "")]
+        out = [] if mine is None else [(None, self.handle(None))]
         return out + [(t, self.via(t)) for t in self.others if t != mine]
 
     def act_as(self, status, tag, action):
         """Like ("fav"), boost ("boost") or find for a reply ("find") the post from
         another account: it is looked up on that account's server by its address, and
         the action goes from there. The result is the post in this window's terms."""
-        from ..i18n import _
         from .model import real
-        _core, _mine, own = self.own(status)
-        post = real(own)
-        # the post's ActivityPub id first, its web page next: GoToSocial and some
-        # others find a post by one and not the other (23.10: "@veresk: not found")
-        ways = list(dict.fromkeys(x for x in (post.get("uri"), post.get("url")) if x))
         target = self.primary if tag is None else self.others[tag]
-        who = self.via(tag) if tag else ("@" + self.primary.me["acct"]
-                                         if self.primary.me else "")
+        who = self.handle(tag)
 
         def job():
-            st = None
-            for q in ways:
-                try:
-                    found = target.api.search(q, kind="statuses", resolve=True, limit=5)
-                except Exception as e:  # noqa: BLE001 — the next way, or "not found"
-                    log.info("act as %s: %s: %s", who, q, e)
-                    continue
-                st = next(iter((found or {}).get("statuses") or []), None)
-                if st is not None:
-                    target.store.put_statuses([st])
-                    break
-            if st is None:
-                raise LookupError(_("act_as_none", acct=who))
+            st = self._lookup(status, target, who)
             if action == "fav" and not real(st).get("favourited"):
                 st = target.favourite(st).result()
             elif action == "boost" and not real(st).get("reblogged"):

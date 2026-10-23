@@ -2542,8 +2542,14 @@ class Core(SocialMixin):
             return narrower(pv, default)
         return default
 
+    def post_accounts(self, reply_to=None):
+        """The editor's "From": one account here — nothing to choose (core/merged.py has
+        the window with all of them)."""
+        return [], ""
+
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
-             language=None, sensitive=False, poll=None, quote=None, scheduled_at=None):
+             language=None, sensitive=False, poll=None, quote=None, scheduled_at=None,
+             account=None):
         """media: [(path, description)] or [(path, description, (x, y) focus point)].
         language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,

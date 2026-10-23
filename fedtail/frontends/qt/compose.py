@@ -251,6 +251,22 @@ class Compose(QDialog):
         for v in VISIBILITIES:
             self.vis.addItem(_("vis_" + VIS_KEY.get(v, v)), v)
         row.addWidget(self.vis)
+        # all accounts in one window: which one it goes from, its whole @name@server
+        # (one name on two servers looked like one account — 23.10)
+        self.from_box = None
+        accounts, first = self.core.post_accounts(self.reply_to)
+        if len(accounts) > 1 and not self.edit:
+            self.from_box = QComboBox()
+            self.from_box.setObjectName("postFrom")
+            self.from_box.setToolTip(_("post_from_tip"))
+            self.from_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+            for key, handle in accounts:
+                self.from_box.addItem(_("post_from", acct=handle), key)
+            self.from_box.setCurrentIndex(max(0, self.from_box.findData(first)))
+            self._from_first = first
+            self.from_box.currentIndexChanged.connect(self._from_changed)
+            row.insertWidget(0, self.from_box)
+            self._from_changed()
         self.lang = QComboBox()
         self.lang.setToolTip(_("lang_tip"))
         self.lang.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -811,6 +827,20 @@ class Compose(QDialog):
         dlg.open()
         return dlg
 
+    def _from_changed(self, *_a):
+        """The title says whom it goes from; a reply from another account says how."""
+        if self.from_box is None:
+            return
+        handle = self.from_box.currentText()
+        base = self.windowTitle().split(" · ")[0]
+        self.setWindowTitle(f"{base} · {handle}")
+        key = self.from_box.currentData()
+        if self.reply_to is not None and key != self._from_first:
+            acct = handle.split(" ", 1)[-1]
+            self.from_box.setToolTip(_("post_from_other", acct=acct))
+        else:
+            self.from_box.setToolTip(_("post_from_tip"))
+
     def send(self, scheduled_at=None, alt_checked=False):
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
@@ -839,7 +869,9 @@ class Compose(QDialog):
                              self.cw.text().strip(), media=media, draft_key=self.key,
                              language=self._language(),
                              sensitive=self.sensitive_btn.isChecked(), poll=self.poll_data(),
-                             quote=self.quote, scheduled_at=scheduled_at)
+                             quote=self.quote, scheduled_at=scheduled_at,
+                             **({"account": self.from_box.currentData()}
+                                if self.from_box is not None else {}))
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
 
     def _ask_alt(self, bare, scheduled_at):

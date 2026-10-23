@@ -25,6 +25,11 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- All accounts in one window: the editor has "From @name@server" — a new post from any of
+  them (it was the main one only), a reply from another account than the one that got
+  the post (found on its server first). The accounts are named whole everywhere — "→
+  @name@server" on a card, the "As…" items — the same name on two servers no longer
+  looks like one account. Qt, GTK, the web page, the terminal.
 - All accounts in one window: switching it on or off no longer leaves nothing running
   (the restart waited 1.5 s, a window still closing was "already running", the new one
   left — now it waits for the old one to be gone). Liking, boosting or replying as
