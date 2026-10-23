@@ -25,6 +25,9 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- The tests and the self-check no longer play anything (FEDTAIL_SOUND=off, set by them;
+  sound.enabled is "auto" — on — in development versions, and a run played hundreds of
+  chimes and beeps through the desktop's sound server).
 - Self-check: many tabs opened and closed round after round in Qt, GTK and the terminal
   (tools/tabs_stress.py — leaks, slowing down), each theme's Qt and GTK windows side by
   side with their colours compared (tools/theme_compare.py).

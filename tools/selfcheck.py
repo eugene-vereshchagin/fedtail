@@ -56,7 +56,8 @@ def probe(code):
 
 
 def env():
-    e = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    e = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8",
+             FEDTAIL_SOUND=os.environ.get("FEDTAIL_SOUND", "off"))  # no chimes all night
     e["PYTHONPATH"] = str(ROOT) + os.pathsep + e.get("PYTHONPATH", "")
     return e
 

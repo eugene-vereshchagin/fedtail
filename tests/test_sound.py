@@ -272,10 +272,27 @@ class FakePlayer:
         return True
 
 
+class SilentTest(unittest.TestCase):
+    """FEDTAIL_SOUND=off (the tests, the self-check): nothing reaches the speakers."""
+
+    def test_nothing_runs_and_no_beep(self):
+        from fedtail.frontends.common import sound
+        beeps = []
+        with mock.patch.dict(os.environ, {"FEDTAIL_SOUND": "off"}), \
+                mock.patch.object(sound.subprocess, "run") as run:
+            sound.Player._subprocess(["pw-play", "/x.wav"])
+            run.assert_not_called()
+            s = Sounds(cfg(when_focused=True), "terminal", bell=lambda: beeps.append(1),
+                       player=FakePlayer(), only_bell=True)
+            s.play("message", focused=True)
+        self.assertEqual(beeps, [])
+
+
 class SoundsTest(unittest.TestCase):
     def setUp(self):
         soundpack.forget()
 
+    @mock.patch.dict(os.environ, {"FEDTAIL_SOUND": ""})  # the bell itself is under test
     def test_focus_bell_and_terminal(self):
         beeps = []
         s = Sounds(cfg(when_focused=False), "qip-retro", bell=lambda: beeps.append(1),

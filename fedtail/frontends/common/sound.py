@@ -37,6 +37,15 @@ LINUX_PLAYERS = (
 )
 MAC_PLAYER = ("afplay", lambda v: ["-v", f"{v / 100:.2f}"])
 CANBERRA = "canberra-gtk-play"
+# FEDTAIL_SOUND=off: nothing reaches the speakers, whatever sound.enabled says — the
+# tests and the dev tools set it (a self-check played hundreds of chimes and beeps
+# through the desktop's sound server; on 23.10 the microphone went with them)
+SILENT_ENV = "FEDTAIL_SOUND"
+
+
+def silenced():
+    import os
+    return os.environ.get(SILENT_ENV, "").strip().lower() in ("off", "0", "no", "silent")
 TIMEOUT = 15  # seconds a player may take before it's left behind
 
 
@@ -119,6 +128,8 @@ class Player:
 
     @staticmethod
     def _subprocess(argv):
+        if silenced():
+            return
         if argv[0].startswith("winsound:"):
             import winsound  # noqa: PLC0415 — Windows only
             winsound.PlaySound(argv[0][len("winsound:"):], winsound.SND_FILENAME)
@@ -176,7 +187,8 @@ class Sounds:
             if self.bell is None:
                 return ""
             try:
-                self.bell()
+                if not silenced():
+                    self.bell()
             except Exception as e:  # noqa: BLE001 — a beep is never worth more
                 log.debug("sound: bell: %s", e)
                 return ""
