@@ -17,10 +17,12 @@ a copy of their logic.
     login_begin(server) / login_finish(code) OAuth: back to fedtail://oauth, or a code
     open()                                   connect, start polling → me + lanes
     lanes() / lane(name, keep)               the sidebar; a lane's cards
+    hub()                                    every lane by kind, its count, its first unread
     read(ids) / refresh() / pause(on)        marks; a round now; out of sight
     wait(since, seconds)                     blocks until something changed → version
     thread(id)                               a thread as a tree: numbers and depths
     post(body) / act(action, id)             write or answer; like, boost, bookmark
+    command(line, confirmed) / command_preview(line)   Point's command line (ui.command_line)
     config_text() / config_save(text)        the config file, edited in the app
     sync_*                                   sync with the other devices (core/sync)
 
@@ -84,6 +86,8 @@ def _make(demo):
     where = paths.resolve(profile)
     where.ensure()
     cfg, _warnings = config.load(where.config_file)
+    if _phone_defaults(where):
+        cfg, _warnings = config.load(where.config_file)
     i18n.setup(cfg["ui"]["language"])
     kw = {}
     if demo:
@@ -98,6 +102,32 @@ def _make(demo):
             auth.save(where.auth_file, {"server": DEMO_SERVER, "token": "demo"})
     core = Core(cfg, where, **kw)
     _s.update(core=core, web=Web(core, None), demo=demo, profile=profile)
+
+
+# what the phone does otherwise than the desktop: written into the config file once (the
+# example the core writes says the desktop's defaults); after that the file is the truth
+PHONE_DEFAULTS = {("ui", "command_line"): "false"}  # Point's line: off, a word away
+PHONE_MARK = "phone_defaults"
+
+
+def _phone_defaults(where):
+    import re
+    mark = where.data_dir / PHONE_MARK
+    if mark.exists() or not where.config_file.exists():
+        return False
+    text = where.config_file.read_text("utf-8")
+    for (section, key), value in PHONE_DEFAULTS.items():
+        head = re.search(rf"^\[{section}\]\s*$", text, re.M)
+        if head is None:
+            continue
+        nxt = re.search(r"^\[", text[head.end():], re.M)
+        end = head.end() + (nxt.start() if nxt else len(text[head.end():]))
+        body = re.sub(rf"^{key} = .*$", f"{key} = {value}", text[head.end():end], count=1,
+                      flags=re.M)
+        text = text[:head.end()] + body + text[end:]
+    where.config_file.write_text(text, "utf-8")
+    mark.write_text("1\n", "utf-8")
+    return True
 
 
 def _core():
@@ -192,9 +222,10 @@ def open():  # noqa: A001 — what Kotlin calls it
             done.wait(60)
         web = _s["web"]
         me = web.me()
-        return {"me": {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
-                                                "start_at", "mark_read", "visibility")},
-                "lanes": web.lanes()}
+        out = {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
+                                      "start_at", "mark_read", "visibility", "sensitive_media")}
+        out["command_line"] = bool(core.cfg["ui"]["command_line"])
+        return {"me": out, "lanes": web.lanes()}
     return _answer(go)
 
 
@@ -210,6 +241,73 @@ def lane(name, keep=False):
         _texts(got.get("posts", []))
         return got
     return _answer(go)
+
+
+# the overview's sections, in the order "read in a row" walks them: what is addressed to
+# you first, then what you follow, then the lists; lanes without counts are only browsed
+YOU = ("direct", "replies", "mentions", "requests", "activity")
+READING = ("subs", "home", "bots")  # threads you follow, then people, then bots
+BROWSED = ("my_posts",)  # counted, but your own posts are nothing to catch up on
+PEEK = 90
+
+
+def hub():
+    """The overview of every lane: {"sections": [{"key": you|reading|lists|browse,
+    "lanes": [{name, title, unread, peek}]}], "order": [lanes with news, in reading order],
+    "unread", "with_news"}. peek: who and what of the lane's first unread post."""
+    def go():
+        from fedtail.core.lanes import is_list
+        core = _core()
+        sections = {k: [] for k in ("you", "reading", "lists", "browse")}
+        for x in _s["web"].lanes():
+            name = x["name"]
+            lane = core.lane_by_name.get(name)
+            lazy = lane is None or lane.lazy or lane.source is None
+            if name in ("activity", "requests"):
+                kind = "you"
+            elif lazy or name in BROWSED:
+                kind = "browse"
+            elif name in YOU:
+                kind = "you"
+            elif is_list(name):
+                kind = "lists"
+            else:
+                kind = "reading"
+            unread = 0 if kind == "browse" else int(x["unread"] or 0)
+            sections[kind].append({"name": name, "title": x["title"], "unread": unread,
+                                   "peek": _peek(core, name) if unread and not lazy else ""})
+        for kind, order in (("you", YOU), ("reading", READING)):
+            sections[kind].sort(key=lambda x, o=order: o.index(x["name"])
+                                if x["name"] in o else len(o))
+        walk = [x for k in ("you", "reading", "lists") for x in sections[k]]
+        return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],
+                "order": [x["name"] for x in walk if x["unread"]],
+                "unread": sum(x["unread"] for x in walk),
+                "with_news": sum(1 for x in walk if x["unread"])}
+    return _answer(go)
+
+
+def _peek(core, name):
+    """"Who: the first words" of the lane's first unread post (oldest first)."""
+    from fedtail.core.model import real
+    from fedtail.model.text import html_to_text
+    try:
+        entries = core.lane_entries(name)
+        unread = core.unread_ids(entries)
+    except Exception:  # noqa: BLE001 — a lane not made yet: no peek, the count still shows
+        return ""
+    for _item, st in entries:
+        if st.get("id") not in unread:
+            continue
+        p = real(st)
+        acc = p.get("account") or {}
+        who = acc.get("display_name") or acc.get("username") or ""
+        words = " ".join(html_to_text(p.get("content") or "").split())
+        if not words and p.get("media_attachments"):
+            words = "🖼"
+        words = words if len(words) <= PEEK else words[:PEEK - 1] + "…"
+        return f"{who}: {words}" if who else words
+    return ""
 
 
 def read(ids_json):
@@ -269,6 +367,22 @@ def act(action, post_id):
         got = _s["web"].act(action, post_id)
         return _texts([got])[0]
     return _answer(go)
+
+
+# ---- Point's command line (ui.command_line; off on the phone unless the file says on) ------
+
+def command_preview(line):
+    """What Enter would do with the line, in words ("" for an empty one)."""
+    def go():
+        from fedtail.frontends.common.commands import preview
+        return {"text": preview(_s["web"].core, line or "")}  # the model view, as Qt's
+    return _answer(go)
+
+
+def command(line, confirmed=False):
+    """→ {"ok", "message"?, "open": {"thread"|"account"}?, "confirm"?: ask, then again
+    with confirmed} — the web page's own call."""
+    return _answer(lambda: _s["web"].command(line or "", bool(confirmed)))
 
 
 # ---- the config, edited in the app (no settings pages: the file itself) ------------------

@@ -27,11 +27,26 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
   Works on a Pixel 8 against GoToSocial — but there the sign-in page took only a password
   typed by hand: a saved (autofilled) or pasted one was refused (cause unknown yet; in the
   help's "If it breaks").
-* **Lanes**: the drawer lists them with unread counts; a lane's cards come from the web
-  interface's JSON layer (`frontends/web/server.py`, class `Web`) — the very cards, "new
-  below" divider and order the windows and the browser page use. A lane opens on its first
-  unread post; what stood whole on screen when scrolling stopped is marked read (and goes
-  into sync's journal like any read mark). Pull down or ⟳ asks the server at once.
+* **The overview of lanes** is home (`Hub.kt`, `bridge.hub()`): every lane by kind — for
+  you (Direct, Replies, Mentions, Requests, Activity), reading (Subscriptions, Home, Bots),
+  lists — with its count and its first unread post ("who: the first words"); lanes without
+  counts (Federated, Local, tag lanes, Bookmarks, My posts) are chips to browse. "Read in
+  a row" opens the first lane with news, yours first.
+* **A lane** (`Lane.kt`): the cards of the web interface's JSON layer
+  (`frontends/web/server.py`, class `Web`) — the very cards, "new below" divider and order
+  the windows and the browser page use. It opens on its first unread post; what stood
+  whole on screen when scrolling stopped is marked read (and goes into sync's journal).
+  Under the title, the other lanes with news as chips; a tap on the title — the switcher
+  (search, the counted lanes as tiles, the browsed ones); at the end of the lane, "read —
+  next: Mentions · 3", and a swipe to the left goes there. Pull down or ⟳ asks the server.
+* **Pictures** (Coil): avatars, previews (one wide by its proportions, more two per row),
+  sensitive ones blurred until tapped (`feed.sensitive_media`), a link's card; a tap opens
+  the viewer — pinch to zoom, ‹ ›, the description below. Video and sound open in the
+  browser for now. Fetched straight from their servers, never with the account's token.
+* **Point's command line** (`ui.command_line`): off on the phone — the app writes
+  `command_line = false` into the config once (`bridge.PHONE_DEFAULTS`); set it to true
+  and the lane gets the line at the bottom ("#abc text" answers, "#abc" opens…, what Enter
+  will do said above it), a tap on a card's #abc puts it there.
 * **Live**: while the app is on screen the core polls as on the desktop, and the screen
   waits on `bridge.wait()` for anything that changed; out of sight polling pauses.
 * **Demo** (dev builds): `adb shell am start -n online.dmesg.fedtail.dev/online.dmesg.fedtail.MainActivity --ez demo true`
@@ -44,8 +59,8 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
   checked before it is written, and the core is made anew with it.
 * **Sync**: status, a round now, logging in to the sync server (its page shows a code to
   paste), showing this device's key and taking another device's.
-* Plain Material 3 for now; the look (fedtail's themes, the card, threads as trees) is
-  designed next, from mockups.
+* The look is the mockups' variant A ("calm": `Theme.kt`), light and dark by the
+  phone's setting; fedtail's other themes (terminal, Point, Juick) come later.
 
 Dev builds are signed with `dev.keystore` (in the repository on purpose: it signs only
 `online.dmesg.fedtail.dev`), so each one installs over the last.
@@ -55,7 +70,7 @@ Dev builds are signed with `dev.keystore` (in the repository on purpose: it sign
 CI builds the dev APK on every push to the `android` branch (`.github/workflows/android.yml`;
 the desktop's CI leaves this branch alone) and attaches it to the run as an artifact. Then
 it starts the APK on an emulator and photographs it (`.github/android_shots.sh`): the login
-screen and the demo world's Home lane, with Python's and Android's log — as an artifact and
+screen, the demo world's overview of lanes, its Home lane and a thread, with Python's and Android's log — as an artifact and
 in the `android-shots` branch (one commit, rewritten by every run). A failed build says
 why in annotations (`.github/android_why.py`).
 

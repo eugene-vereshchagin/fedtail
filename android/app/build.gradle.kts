@@ -140,4 +140,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // pictures: avatars, previews, the viewer — straight from their servers, never with
+    // the account's token (as the desktop's images.py); memory + disk cache of its own
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }

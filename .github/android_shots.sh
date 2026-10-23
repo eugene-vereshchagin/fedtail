@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The dev APK on CI's emulator: installed, started twice, photographed.
 #   1-login.png  — a fresh start, no account: the login screen
-#   2-demo.png   — the demo world (the one every fedtail screenshot shows), the Home lane
-#   3-thread.png — a thread of that world, as a tree
+#   2-lanes.png  — the demo world (the one every fedtail screenshot shows): the overview
+#   3-home.png   — its Home lane
+#   4-thread.png — a thread of that world, as a tree
 #   logcat.txt   — what Python and Android said meanwhile (a crash is there)
 # Run by reactivecircus/android-emulator-runner (android.yml) from the repository's root.
 set -u
@@ -23,10 +24,13 @@ adb shell am start -W -n "$ACT"
 shot 1-login 25
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$ACT" --ez demo true
-shot 2-demo 30
+shot 2-lanes 30
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$ACT" --ez demo true --es lane home
+shot 3-home 25
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$ACT" --ez demo true --es thread 101
-shot 3-thread 25
+shot 4-thread 25
 
 # everything the app said (Python's stdout/stderr come as python.* tags), and crashes
 adb logcat -d -v time > "$OUT/logcat-all.txt" || true

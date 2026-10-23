@@ -166,3 +166,36 @@ class BridgeTest(TmpDir):
         self.assertTrue(self.call("sync_join", other)["kid"])
         self.assertEqual(self.call("sync_key")["key"], other)
         self.assertIn("error", json.loads(self.bridge.sync_join("nonsense")))
+
+    def test_the_overview_of_lanes(self):
+        self.demo()
+        hub = self.call("hub")
+        kinds = {s["key"]: [x["name"] for x in s["lanes"]] for s in hub["sections"]}
+        self.assertEqual(list(kinds)[0], "you")  # what is addressed to you comes first
+        self.assertIn("replies", kinds["you"])
+        self.assertIn("home", kinds["reading"])
+        self.assertIn("federated", kinds["browse"])  # no counts: only browsed
+        lanes = {x["name"]: x for s in hub["sections"] for x in s["lanes"]}
+        self.assertEqual(lanes["federated"]["unread"], 0)
+        self.assertTrue(lanes["home"]["unread"])
+        self.assertIn(":", lanes["home"]["peek"])  # who: what
+        # reading in a row: only lanes with news, yours first
+        self.assertEqual(hub["order"], [x for x in hub["order"] if lanes[x]["unread"]])
+        self.assertLess(hub["order"].index("replies"), hub["order"].index("home"))
+        self.assertEqual(hub["unread"], sum(lanes[x]["unread"] for x in hub["order"]))
+
+    def test_the_command_line_is_off_on_the_phone_unless_asked(self):
+        self.demo()
+        self.assertFalse(self.call("open")["me"]["command_line"])
+        text = self.call("config_text")["text"]
+        self.assertEqual(self.call("config_save", text + "\n"), {"ok": True})
+        self.assertFalse(self.call("open")["me"]["command_line"])  # the file didn't say
+        self.assertIn("command_line = false", text)  # written into the file, once
+        on = text.replace("command_line = false", "command_line = true", 1)
+        self.assertEqual(self.call("config_save", on), {"ok": True})
+        self.assertTrue(self.call("open")["me"]["command_line"])
+        alias = self.call("lane", "home", False)["posts"][0]["alias"]
+        self.assertIn(alias, self.call("command_preview", f"#{alias} hello")["text"])
+        got = self.call("command", f"#{alias}", False)
+        self.assertTrue(got["ok"])
+        self.assertIn("thread", got["open"])

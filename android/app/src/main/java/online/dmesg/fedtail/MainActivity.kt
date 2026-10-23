@@ -7,16 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
 /**
- * The one window. Plain Material 3 for now (colours from the wallpaper): this step proves
- * logging in, a lane, scrolling and read marks on a phone; the look is designed next.
+ * The one window: the overview of lanes, a lane, and what opens over it (Screens.kt).
  */
 class MainActivity : ComponentActivity() {
     private val model: AppModel by viewModels()
@@ -26,7 +19,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // demo: the made-up world of fedtail's screenshots (CI's emulator), dev builds only
         val demo = BuildConfig.DEBUG && intent.getBooleanExtra("demo", false)
-        model.start(demo, openThread = if (demo) intent.getStringExtra("thread") else null)
+        model.start(demo, openThread = if (demo) intent.getStringExtra("thread") else null,
+            openLane = if (demo) intent.getStringExtra("lane") else null)
         handleLogin(intent)
         setContent {
             FedtailTheme {
@@ -60,12 +54,4 @@ class MainActivity : ComponentActivity() {
         model.onBackground()
         super.onStop()
     }
-}
-
-@Composable
-fun FedtailTheme(content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    val colors = if (isSystemInDarkTheme()) dynamicDarkColorScheme(context)
-    else dynamicLightColorScheme(context)
-    MaterialTheme(colorScheme = colors, content = content)
 }

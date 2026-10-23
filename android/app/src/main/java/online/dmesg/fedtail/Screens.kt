@@ -92,6 +92,8 @@ fun App(model: AppModel, openBrowser: (String) -> Unit) {
             model.message = null
         }
     }
+    // the lane's place in the list outlives a thread or a picture opened over it
+    val laneState = rememberLazyListState()
     when (val s = model.screen) {
         Screen.Starting -> Centered { Starting() }
         is Screen.Failed -> Problem(s.text)
@@ -99,11 +101,13 @@ fun App(model: AppModel, openBrowser: (String) -> Unit) {
             Login(model, openBrowser, Modifier.padding(pad))
         }
         Screen.Main -> {
-            BackHandler(enabled = model.place != null) { model.back() }
+            BackHandler(enabled = model.place != null || model.current != null) { model.back() }
             when (val p = model.place) {
-                null -> Main(model, snack)
-                is Place.Thread -> ThreadPlace(model, snack)
+                null -> if (model.current == null) HubScreen(model, snack)
+                        else LaneScreen(model, snack, openBrowser, laneState)
+                is Place.Thread -> ThreadPlace(model, snack, openBrowser)
                 is Place.Compose -> ComposePlace(model, p, snack)
+                is Place.Media -> MediaViewer(p, close = { model.back() }, openBrowser)
                 Place.Config -> ConfigPlace(model, snack)
                 Place.Sync -> SyncPlace(model, snack, openBrowser)
             }
@@ -204,221 +208,19 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
     }
 }
 
-// ---- lanes -------------------------------------------------------------------------------
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun Main(model: AppModel, snack: SnackbarHostState) {
-    val drawer = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
-    ModalNavigationDrawer(drawerState = drawer, drawerContent = {
-        ModalDrawerSheet {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text(model.handle.let { if (it.isBlank()) "fedtail" else "@$it" } +
-                        if (model.demo) "  · demo" else "",
-                    Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-                model.lanes.forEach { lane ->
-                    if (lane.group != null && lane.group.isNotBlank()) {
-                        Text(lane.group, Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    NavigationDrawerItem(
-                        label = { Text(lane.title) },
-                        badge = { if (lane.unread > 0) Badge { Text("${lane.unread}") } },
-                        selected = lane.name == model.current,
-                        onClick = {
-                            model.showLane(lane.name)
-                            scope.launch { drawer.close() }
-                        },
-                        modifier = Modifier.padding(horizontal = 12.dp))
-                }
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                NavigationDrawerItem(label = { Text(stringResource(R.string.sync)) },
-                    selected = false, modifier = Modifier.padding(horizontal = 12.dp),
-                    onClick = { scope.launch { drawer.close() }; model.openSync() })
-                NavigationDrawerItem(label = { Text(stringResource(R.string.config)) },
-                    selected = false, modifier = Modifier.padding(horizontal = 12.dp),
-                    onClick = { scope.launch { drawer.close() }; model.openConfig() })
-            }
-        }
-    }) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(model.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawer.open() } }) {
-                            Icon(Icons.Filled.Menu, stringResource(R.string.lanes))
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { model.refresh() }) {
-                            Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
-                        }
-                    })
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { model.compose(null) }) {
-                    Icon(Icons.Filled.Edit, stringResource(R.string.write))
-                }
-            },
-            snackbarHost = { SnackbarHost(snack) },
-        ) { pad ->
-            PullToRefreshBox(isRefreshing = model.refreshing, onRefresh = { model.refresh() },
-                modifier = Modifier.padding(pad).fillMaxSize()) {
-                val state = rememberLazyListState()
-                LaunchedEffect(model.opening) { aim(state, model.posts, model.newestFirst) }
-                MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it) }
-                PostList(model.posts, state, model.divider, onOpen = { model.openThread(it.sid) },
-                    onReply = { model.compose(it) }, onLike = { model.like(it) })
-            }
-        }
-    }
-}
-
-/** A list opened anew stands on its first unread post, like the desktop; never jumps after. */
-private suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean) {
-    if (posts.isEmpty()) return
-    val firstUnread = posts.indexOfFirst { it.unread }
-    state.scrollToItem(when {
-        firstUnread >= 0 -> firstUnread
-        newestFirst -> 0
-        else -> posts.size - 1
-    })
-}
-
-/** Read marks: what stood whole on screen when scrolling stopped (read.mark_read). */
-@Composable
-private fun MarkWhileScrolling(state: LazyListState, on: Boolean, mark: (List<String>) -> Unit) {
-    LaunchedEffect(state, on) {
-        if (!on) return@LaunchedEffect
-        snapshotFlow { state.isScrollInProgress to state.layoutInfo.visibleItemsInfo.size }
-            .collect { (scrolling, _) ->
-                if (scrolling) return@collect
-                delay(350)
-                val info = state.layoutInfo
-                mark(info.visibleItemsInfo.filter {
-                    it.offset >= info.viewportStartOffset &&
-                        it.offset + it.size <= info.viewportEndOffset
-                }.mapNotNull { it.key as? String })
-            }
-    }
-}
-
-@Composable
-private fun PostList(
-    posts: List<PostItem>, state: LazyListState, divider: Pair<String, String>?,
-    onOpen: (PostItem) -> Unit, onReply: (PostItem) -> Unit, onLike: (PostItem) -> Unit,
-    focus: String? = null,
-) {
-    if (posts.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.lane_empty),
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        return
-    }
-    LazyColumn(state = state, modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(posts, key = { it.key }) { p ->
-            Column {
-                divider?.takeIf { it.first == p.key }?.let { (_, words) ->
-                    Text(words, Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 16.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-                PostCard(p, focused = p.sid == focus, onOpen = { onOpen(p) },
-                    onReply = { onReply(p) }, onLike = { onLike(p) })
-            }
-        }
-    }
-}
-
-private val timeOnly = DateTimeFormatter.ofPattern("HH:mm")
-private val dayAndTime = DateTimeFormatter.ofPattern("dd.MM HH:mm")
-
-private fun shownTime(iso: String): String = try {
-    val t = OffsetDateTime.parse(iso).atZoneSameInstant(ZoneId.systemDefault())
-    if (t.toLocalDate() == LocalDate.now()) t.format(timeOnly) else t.format(dayAndTime)
-} catch (e: Exception) {
-    ""
-}
-
-@Composable
-private fun PostCard(
-    p: PostItem, focused: Boolean, onOpen: () -> Unit, onReply: () -> Unit, onLike: () -> Unit,
-) {
-    // a thread's depth as an indent, up to a limit: deeper ones say /N instead
-    val indent = (minOf(p.depth, 6) * 12).dp
-    Row(Modifier.fillMaxWidth().padding(start = 8.dp + indent, end = 8.dp)) {
-        // unread: a bar of the theme's accent on the left, as the desktop's themes do
-        Box(Modifier.width(3.dp).height(48.dp).background(
-            if (p.unread) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.surface))
-        Card(Modifier.fillMaxWidth().padding(start = 4.dp).clickable(onClick = onOpen)) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (p.sharedBy.isNotBlank()) {
-                    Text(stringResource(R.string.shared_by, p.sharedBy),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    p.number?.let {
-                        Text("/$it ", style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    Text(p.name, fontWeight = if (focused) FontWeight.Bold else FontWeight.SemiBold,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false))
-                    Spacer(Modifier.width(6.dp))
-                    Text("@" + p.handle, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Text(shownTime(p.created), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (p.contextText.isNotBlank() && p.number == null) {
-                    Text("↳ @${p.contextHandle}: ${p.contextText}", maxLines = 2,
-                        overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (p.warning.isNotBlank()) {
-                    Text("⚠ " + p.warning, style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.error)
-                }
-                Text(p.text, style = MaterialTheme.typography.bodyMedium)
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (p.alias.isNotBlank()) {
-                        Text("#" + p.alias, style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onReply) {
-                        Text("💬 ${p.replies}", style = MaterialTheme.typography.labelMedium)
-                    }
-                    Text("↻ ${p.shares}", style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = onLike) {
-                        Text((if (p.liked) "★ " else "☆ ") + p.likes,
-                            style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ---- a thread ----------------------------------------------------------------------------
 
 @Composable
-private fun ThreadPlace(model: AppModel, snack: SnackbarHostState) {
+private fun ThreadPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit) {
     val focus = (model.place as? Place.Thread)?.focus
-    PlaceScaffold(stringResource(R.string.thread), model, snack) { mod ->
-        Box(mod) {
+    val act = CardActions(
+        open = {}, reply = { model.compose(it) }, like = { model.like(it) },
+        media = { list, i -> model.openMedia(list, i) }, link = openBrowser,
+        alias = { model.putAlias(it) })
+    val root = model.threadPosts.firstOrNull()
+    PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
+        ?.let { " #$it" } ?: ""), model, snack) { mod ->
+        Box(mod.background(MaterialTheme.colorScheme.surface)) {
             val state = rememberLazyListState()
             LaunchedEffect(model.threadOpening) {
                 val i = model.threadPosts.indexOfFirst { it.sid == focus }
@@ -426,8 +228,8 @@ private fun ThreadPlace(model: AppModel, snack: SnackbarHostState) {
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it, inThread = true) }
             if (model.threadPosts.isEmpty()) Centered { CircularProgressIndicator() }
-            else PostList(model.threadPosts, state, null, focus = focus,
-                onOpen = {}, onReply = { model.compose(it) }, onLike = { model.like(it) })
+            else PostList(model.threadPosts, state, null, act, model.hideSensitive,
+                thread = true, focus = focus)
         }
     }
 }
