@@ -57,6 +57,7 @@ header_bar = "#474747"
 
 [shape]
 icons = "own"
+icon_size = 22           # point.im's menu: big plain silhouettes
 radius = 0
 button_radius = 3
 card_style = "rule"
@@ -76,12 +77,12 @@ posts_only = "segmented"
 [pictures]
 # point.im's: plain silhouettes, one grey-blue (a megaphone for the feed, a house for
 # my blog, a speech bubble for the comments) — drawn for fedtail, not taken from the site
-style = "flat"
-color = "#97a8bd"
+style = "silhouette"      # plain, no rim, the inner lines cut out
+color = "#a29b94"         # grey with a touch of brown, as on point.im (not blue)
 
 [pictures.colors]
-star_full = "#97a8bd"     # the bookmarks' star: grey too, as on point.im
-send = "#97a8bd"
+star_full = "#a29b94"     # the bookmarks' star: grey too, as on point.im
+send = "#a29b94"
 
 [words]
 compose = "{text}"

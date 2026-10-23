@@ -136,10 +136,10 @@ def nobody(theme, size):
     return image("nobody", theme, size)
 
 
-def dress(button, name, theme, words="", glyph=""):
+def dress(button, name, theme, words="", glyph="", size=16):
     """A button with its picture (and its words, if any); without a picture, the
     words, or the glyph standing in for it."""
-    img = image(name, theme)
+    img = image(name, theme, size)
     if img is None:
         button.set_child(None)
         button.set_label(words or glyph)

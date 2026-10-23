@@ -127,10 +127,11 @@ class LaneItem(QWidget):
         from . import icons as pictures
         if pictures.pictures(theme):
             icon = QLabel()
-            ic = pictures.icon(iconpack.lane_picture(name), theme, 18)
+            px = int(theme.shape.get("icon_size", 18) or 18)
+            ic = pictures.icon(iconpack.lane_picture(name), theme, px)
             if not ic.isNull():
-                icon.setPixmap(ic.pixmap(18, 18))
-            icon.setFixedWidth(18)
+                icon.setPixmap(ic.pixmap(px, px))
+            icon.setFixedWidth(px)
             h.addWidget(icon)
         self.label = QLabel()
         self.label.setObjectName("laneName")
@@ -639,11 +640,12 @@ class MainWindow(QMainWindow):
         b.setToolTip(tip)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setFixedSize(32, 32)
-        b.setIconSize(QSize(18, 18))
+        px = int(self.theme.shape.get("icon_size", 18) or 18)
+        b.setIconSize(QSize(px, px))
         from . import icons
-        ic = icons.icon(picture, self.theme, 18)
+        ic = icons.icon(picture, self.theme, px)
         if ic.isNull() and drawn and icons.how(self.theme) == "desktop":
-            ic = drawn(18)
+            ic = drawn(px)
         if ic.isNull():
             b.setText(glyph)
             # one glyph in a 32 px square: the theme's button padding would ask 36 for it

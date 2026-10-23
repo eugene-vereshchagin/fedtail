@@ -29,7 +29,7 @@ CHOICES = {
     ("shape", "roster_rows"): {"lines", "faces"},
     ("shape", "tab_rows"): {"wrap", "one"},
     ("shape", "icons"): {"desktop", "own", "words"},
-    ("pictures", "style"): {"gloss", "agent", "flat", "qip", "none"},
+    ("pictures", "style"): {"gloss", "agent", "flat", "silhouette", "qip", "none"},
     ("sound", "source"): {"desktop", "own", "bell", "none"},
 }
 

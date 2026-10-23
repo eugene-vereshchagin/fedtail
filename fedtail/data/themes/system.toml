@@ -85,6 +85,7 @@ card_avatars = true
 avatar = 40
 avatar_shape = "circle"  # "circle", "square" (point.im) or "rounded"
 sidebar_avatar = true
+icon_size = 18           # px of the pictures by the lanes and on the sidebar's top buttons
 icons = "desktop"        # the pictures on the buttons and by the lanes: "desktop" — the
                          # desktop's icon theme (Breeze…), as here; "own" — the theme's
                          # own set, a folder next to its file: themes/mine.toml →
@@ -121,7 +122,8 @@ from = ""                # a theme whose set this one borrows: "mra" (mra-blue d
 color = ""               # every picture's colour, "" — colors.accent (point: one grey-blue)
 style = "gloss"          # how an SVG's blank colours ({c} {l} {d}) are filled: "gloss" (a
                          # gradient and a shine), "agent" (brighter, a softer outline),
-                         # "flat" (plain colour, no shine), "qip" (a strong shine, a thick
+                         # "flat" (plain colour, no shine), "silhouette" (plain colour, no
+                         # rim, the inner lines cut out: point.im), "qip" (a strong shine, a thick
                          # dark outline), "none" (filled, nothing else touched)
 
 [pictures.colors]

@@ -85,13 +85,14 @@ class LaneRow(Gtk.ListBoxRow):
         if theme is not None:  # the lane's picture, as the theme has it
             from .. import iconpack
             from . import icons
-            pic = icons.image(iconpack.lane_picture(name), theme, 18) \
+            pic = icons.image(iconpack.lane_picture(name), theme,
+                              int(theme.shape.get("icon_size", 18) or 18)) \
                 if icons.pictures(theme) else None
             if pic is not None:
                 box.append(pic)
             elif icons.pictures(theme):
                 spacer = Gtk.Box()
-                spacer.set_size_request(18, -1)
+                spacer.set_size_request(int(theme.shape.get("icon_size", 18) or 18), -1)
                 box.append(spacer)
         lab = Gtk.Label(label=title, xalign=0)
         lab.set_hexpand(True)
@@ -711,9 +712,10 @@ class MainWindow(Gtk.ApplicationWindow):
         """≡ ↔ ❯ with the theme's pictures (or the desktop's, or the glyphs)."""
         from . import icons
         t = self.theme
-        icons.dress(self.menu_btn, "menu", t, glyph="≡")
-        icons.dress(self.wide_btn, "wide", t, glyph="↔")
-        icons.dress(self.columns_btn, "columns", t, glyph="❯")
+        px = int(t.shape.get("icon_size", 18) or 18)  # as Qt's: the theme's size
+        icons.dress(self.menu_btn, "menu", t, glyph="≡", size=px)
+        icons.dress(self.wide_btn, "wide", t, glyph="↔", size=px)
+        icons.dress(self.columns_btn, "columns", t, glyph="❯", size=px)
 
     def _debug_corner(self):
         """In the debugging mode: how the window is drawn — theme, GTK, libadwaita,
