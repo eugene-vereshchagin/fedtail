@@ -546,6 +546,20 @@ def tour_menus(app, out, core, win):
             pump(app, 0.3)
 
 
+def try_every_theme(app, win, themes):
+    """≡ → Try a theme, every one in turn on the living window, and back: the night of
+    23.10 a trial (juick-classic, a gif looping in a card) brought the program down. A
+    crash here is the tool's crash: the step's log shows where (faulthandler)."""
+    was = win.theme.id
+    for name in list(themes) + [was]:
+        print(f"try theme {name}", flush=True)
+        try:
+            win.try_theme(name)
+        except Exception:  # noqa: BLE001
+            ERRORS.append(f"try theme {name}: " + traceback.format_exc(limit=6))
+        pump(app, 0.4)
+
+
 def write_out(out, done=False):
     """What the tour found so far, on disk: after each window too — a tour stopped by
     the self-check's clock (the night of 23.10: all of them) still leaves its menus,
@@ -574,6 +588,7 @@ def write_out(out, done=False):
 
 def main():
     import faulthandler  # stuck (selfcheck's time runs out): where, every 10 minutes
+    faulthandler.enable(all_threads=True)  # and a crash (a segfault in Qt): where too
     faulthandler.dump_traceback_later(600, repeat=True)
     import logging
     out = Path(next((a for a in sys.argv[1:] if not a.startswith("--")), "qt-tour"))
@@ -624,6 +639,7 @@ def main():
             if first:  # the menus and the windows: once is enough
                 tour_menus(app, out, core, win)
                 write_out(out)
+                try_every_theme(app, win, themes)
                 first = False
             if name in SIZE_THEMES or (quick and first_sizes):
                 first_sizes = False

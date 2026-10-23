@@ -745,6 +745,11 @@ class MainWindow(QMainWindow):
             return
         app = QApplication.instance()
         old = self.theme
+        # the videos and the gifs looping in cards stopped first: their players went
+        # with the cards below while still decoding — and Qt fell over (23.10)
+        from . import player as player_module
+        player_module.stop_all(self)
+        app.processEvents()  # the players' last frames delivered, to nobody harmed
         # Qt restyles every widget there is, seen or not: the lanes out of sight let
         # their cards go first (drawn anew when opened), or a trial took seconds
         for w in self.lane_widgets.values():

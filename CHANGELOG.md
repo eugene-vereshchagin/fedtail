@@ -28,6 +28,9 @@
 - The editor (Qt and GTK): what the post is and what to do with it in one row when there's room
   — the two halves keep to their sides and go into two rows only in a narrow window; the
   character count sits in the text field's own bottom right corner.
+- Trying a theme (≡ → Try a theme) stops the videos and the gifs looping in cards first:
+  with one decoding, the restyle brought the program down (a segfault in Qt). The Qt tour
+  now tries every theme on its living window.
 - Themes say which window layout they're made for (layouts = ["split"]: qip, mra, psi);
   ui.themes_by_layout offers in "Try a theme" only those of the layout on — "auto": so in
   releases, every theme in development versions.
