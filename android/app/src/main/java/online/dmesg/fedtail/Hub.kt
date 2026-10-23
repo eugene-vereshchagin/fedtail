@@ -96,6 +96,8 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },
                                     onClick = { menu = false; model.openSync() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.settings)) },
+                                    onClick = { menu = false; model.openSettings() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.config)) },
                                     onClick = { menu = false; model.openConfig() })
                             }
@@ -134,7 +136,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
             verticalAlignment = Alignment.CenterVertically) {
             SmallHead(stringResource(if (model.hubPinned.isEmpty()) R.string.hub_title
                                      else R.string.sec_pinned), Modifier.weight(1f))
-            TextButton(onClick = { model.openConfig() }) { Text(stringResource(R.string.change)) }
+            TextButton(onClick = { model.openSettings("pinned") }) { Text(stringResource(R.string.change)) }
         }
     }
     items(rows.size, key = { "t-$it" }) { r ->

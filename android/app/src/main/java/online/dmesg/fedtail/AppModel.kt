@@ -26,9 +26,19 @@ sealed interface Place {
     data class Thread(val focus: String) : Place
     data class Compose(val replyTo: PostItem?) : Place
     data class Media(val items: List<MediaItem>, val index: Int) : Place
+    data object Settings : Place
     data object Config : Place
     data object Sync : Place
 }
+
+/** One option of the settings page: the config file's, with its explanation. value and
+ *  dflt as JSON text ("\"tiles\"", "true", "[\"home\"]"), to compare and to write back. */
+data class Setting(
+    val section: String, val key: String, val type: String, val value: String,
+    val dflt: String, val choices: List<String>?, val help: String,
+)
+
+data class SettingsChapter(val title: String, val options: List<Setting>)
 
 data class LaneItem(val name: String, val title: String, val unread: Int, val group: String?)
 
@@ -103,6 +113,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var cmdConfirm by mutableStateOf<String?>(null) // "delete this?" — asked before doing
     var cmdBusy by mutableStateOf(false)
 
+    var settings by mutableStateOf(listOf<SettingsChapter>())
+
     var configText by mutableStateOf("")
     var configError by mutableStateOf<String?>(null)
     var saving by mutableStateOf(false)
@@ -123,9 +135,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private var threadOnStart: String? = null
     private var laneOnStart: String? = null
 
-    fun start(demo: Boolean, openThread: String? = null, openLane: String? = null) {
+    private var settingsOnStart = false
+
+    fun start(
+        demo: Boolean, openThread: String? = null, openLane: String? = null,
+        openSettings: Boolean = false,
+    ) {
         if (started) return
         started = true
+        settingsOnStart = openSettings
         this.demo = demo
         threadOnStart = openThread
         laneOnStart = openLane
@@ -201,6 +219,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         watch()
         threadOnStart?.let { openThread(it) }
         threadOnStart = null
+        if (settingsOnStart) openSettings()
+        settingsOnStart = false
     }
 
     private suspend fun loadHub() {
@@ -348,7 +368,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Back: the place on top closes; with none, a lane goes back to the overview. */
     fun back(): Boolean {
         if (places.isNotEmpty()) {
+            val left = places.last()
             places = places.dropLast(1)
+            if (left == Place.Settings) applySettings()
+            if (left == Place.Config && place == Place.Settings) {
+                viewModelScope.launch { loadSettings() } // the file was edited by hand
+            }
             return true
         }
         if (current != null && columns == 1) {
@@ -503,6 +528,64 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- the settings page: the config's options, written into the file one by one ------
+    var settingsQuery = "" // what the page's search starts with ("pinned" from "change")
+
+    fun openSettings(query: String = "") {
+        settingsQuery = query
+        places = places + Place.Settings
+        viewModelScope.launch { loadSettings() }
+    }
+
+    private suspend fun loadSettings() {
+        val got = Core.settings()
+        Core.failed(got)?.let { message = it; return }
+        val chs = got.optJSONArray("chapters") ?: JSONArray()
+        settings = (0 until chs.length()).map { i ->
+            val c = chs.getJSONObject(i)
+            val opts = c.optJSONArray("options") ?: JSONArray()
+            SettingsChapter(c.optString("title"), (0 until opts.length()).map { j ->
+                val o = opts.getJSONObject(j)
+                val ch = o.optJSONArray("choices")
+                Setting(o.optString("section"), o.optString("key"), o.optString("type"),
+                    jsonText(o.opt("value")), jsonText(o.opt("default")),
+                    ch?.let { a -> (0 until a.length()).map { a.getString(it) } },
+                    o.optString("help"))
+            })
+        }
+    }
+
+    /** One option into the file (checked there first); the page shows what it is now. */
+    fun setSetting(opt: Setting, json: String) {
+        viewModelScope.launch {
+            val got = Core.settingSet(opt.section, opt.key, json)
+            Core.failed(got)?.let { message = it; return@launch }
+            val now = jsonText(got.opt("value"))
+            settings = settings.map { c ->
+                c.copy(options = c.options.map {
+                    if (it.section == opt.section && it.key == opt.key) it.copy(value = now) else it
+                })
+            }
+        }
+    }
+
+    /** Leaving the page: what changed takes effect — the core made anew, once. */
+    private fun applySettings() {
+        viewModelScope.launch {
+            val got = Core.settingsApply()
+            if (got.optBoolean("restarted")) restartScreens()
+        }
+    }
+
+    private suspend fun restartScreens() {
+        watcher?.cancel()
+        version = -1
+        places = emptyList()
+        current = null
+        screen = Screen.Starting
+        afterStart()
+    }
+
     fun saveConfig() {
         if (saving) return
         saving = true
@@ -511,13 +594,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             saving = false
             Core.failed(got)?.let { configError = it; return@launch }
             configError = null
-            // the core was made anew with the file: open everything again
-            watcher?.cancel()
-            version = -1
-            places = emptyList()
-            current = null
-            screen = Screen.Starting
-            afterStart()
+            restartScreens() // the core was made anew with the file: open everything again
         }
     }
 
@@ -582,6 +659,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- JSON → items ------------------------------------------------------------------
+    private fun jsonText(x: Any?): String = when (x) {
+        null, JSONObject.NULL -> "null"
+        is String -> JSONObject.quote(x)
+        else -> x.toString()
+    }
+
     private fun parseLanes(arr: JSONArray) = (0 until arr.length()).map {
         val o = arr.getJSONObject(it)
         LaneItem(o.optString("name"), o.optString("title"), o.optInt("unread"),

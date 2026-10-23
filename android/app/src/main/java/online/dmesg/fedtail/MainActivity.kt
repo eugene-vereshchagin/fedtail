@@ -20,7 +20,8 @@ class MainActivity : ComponentActivity() {
         // demo: the made-up world of fedtail's screenshots (CI's emulator), dev builds only
         val demo = BuildConfig.DEBUG && intent.getBooleanExtra("demo", false)
         model.start(demo, openThread = if (demo) intent.getStringExtra("thread") else null,
-            openLane = if (demo) intent.getStringExtra("lane") else null)
+            openLane = if (demo) intent.getStringExtra("lane") else null,
+            openSettings = demo && intent.getBooleanExtra("settings", false))
         handleLogin(intent)
         setContent {
             FedtailTheme {

@@ -25,6 +25,8 @@ a copy of their logic.
     menu(id) / thread_act(action, id)        a card's ⋯: its state; follow or leave the thread
     resolve(url)                             a link in a post: a thread here, or the browser
     command(line, confirmed) / command_preview(line)   Point's command line (ui.command_line)
+    settings() / setting_set(…) / settings_apply()   the settings page: the config's options
+                                             by chapter, written into the file one at a time
     config_text() / config_save(text)        the config file, edited in the app
     sync_*                                   sync with the other devices (core/sync)
 
@@ -432,6 +434,97 @@ def resolve(url):
             return _s["web"].resolve(url)
         except Exception:  # noqa: BLE001 — unknown or slow: the browser
             return {"found": None}
+    return _answer(go)
+
+
+# ---- the settings page: the config file's options, one control each --------------------
+# The file stays the truth: every change is written into it (config_update.set_option —
+# the user's notes and order stay), checked first; the core is made anew once, when the
+# page is left (settings_apply). Chapters, order and explanations are the example file's
+# in the file's language; the desktop's terminal and browser chapters aren't shown here.
+NOT_ON_PHONE = {"tui", "web", "cli"}
+
+
+def _chapters(example):
+    """{section: chapter title} from the example's "#  N. Title" banners."""
+    import re
+    out, title = {}, ""
+    for line in example.splitlines():
+        m = re.match(r"^#\s+\d+\.\s+(\S.*?)\s*$", line)
+        if m and "...." not in line:
+            title = m.group(1)
+            continue
+        m = re.match(r"^\[([A-Za-z0-9_]+)\]\s*$", line)
+        if m:
+            out.setdefault(m.group(1), title)
+    return out
+
+
+def _file_cfg(text):
+    import tomllib
+
+    from fedtail.core import config
+    return config.validate(tomllib.loads(text))[0]
+
+
+def settings():
+    """→ {"chapters": [{"title", "options": [{section, key, type, value, default, choices,
+    help}]}]} — every option, its value now (from the file), its explanation."""
+    def go():
+        from fedtail.core import config
+        from fedtail.core.config_update import parse_example
+        path = _core().paths.config_file
+        text = path.read_text("utf-8")
+        cfg = _file_cfg(text)
+        example = config.example_text(config.language_of(text))
+        titles = _chapters(example)
+        chapters = {}
+        for section, opts in parse_example(example).items():
+            if section in NOT_ON_PHONE or section not in config.DEFAULTS:
+                continue
+            for key, lines in opts:
+                if key not in config.DEFAULTS[section]:
+                    continue
+                default = config.DEFAULTS[section][key]
+                kind = {bool: "bool", int: "int", float: "float", str: "str",
+                        list: "list"}.get(type(default))
+                if kind is None:
+                    continue
+                words = "\n".join(x.lstrip()[1:].strip() for x in lines[:-1])
+                choices = config.CHOICES.get((section, key))
+                chapters.setdefault(titles.get(section, section), []).append({
+                    "section": section, "key": key, "type": kind,
+                    "value": cfg[section][key], "default": default,
+                    "choices": sorted(choices) if choices else None, "help": words})
+        return {"chapters": [{"title": t, "options": o} for t, o in chapters.items()]}
+    return _answer(go)
+
+
+def setting_set(section, key, value_json):
+    """One option into the file, checked first (a wrong value never lands): → {"ok",
+    "value": what it is now} or {"error": what's wrong}."""
+    def go():
+        from fedtail.core.config_update import set_option
+        path = _core().paths.config_file
+        text = set_option(path.read_text("utf-8"), section, key, json.loads(value_json))
+        cfg = _file_cfg(text)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(text, "utf-8")
+        os.replace(tmp, path)
+        _s["settings_changed"] = True
+        return {"ok": True, "value": cfg[section][key]}
+    return _answer(go)
+
+
+def settings_apply():
+    """Leaving the settings page: if anything changed, the core is made anew with the
+    file (the screens open again). → {"restarted"}."""
+    def go():
+        if not _s.pop("settings_changed", False):
+            return {"restarted": False}
+        with _lock:
+            _make(_s["demo"])
+        return {"restarted": True}
     return _answer(go)
 
 

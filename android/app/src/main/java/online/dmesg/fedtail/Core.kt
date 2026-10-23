@@ -43,6 +43,10 @@ object Core {
     suspend fun menu(id: String) = obj("menu", id)
     suspend fun threadAct(action: String, id: String) = obj("thread_act", action, id)
     suspend fun resolve(url: String) = obj("resolve", url)
+    suspend fun settings() = obj("settings")
+    suspend fun settingSet(section: String, key: String, json: String) =
+        obj("setting_set", section, key, json)
+    suspend fun settingsApply() = obj("settings_apply")
     suspend fun configText() = obj("config_text")
     suspend fun configSave(text: String) = obj("config_save", text)
     suspend fun syncStatus() = obj("sync_status")

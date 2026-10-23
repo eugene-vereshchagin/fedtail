@@ -116,6 +116,7 @@ fun App(model: AppModel, openBrowser: (String) -> Unit) {
             when {
                 // over everything, whatever the width
                 p is Place.Media -> MediaViewer(p, close = { model.back() }, openBrowser)
+                p == Place.Settings -> SettingsPlace(model, snack)
                 p == Place.Config -> ConfigPlace(model, snack)
                 p == Place.Sync -> SyncPlace(model, snack, openBrowser)
                 cols == 1 -> when (p) {
@@ -229,7 +230,7 @@ private fun Problem(text: String) {
 /** A place over the lane: a bar with ← and a title, maybe an action on the right. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlaceScaffold(
+fun PlaceScaffold(
     title: String, model: AppModel, snack: SnackbarHostState,
     actions: @Composable () -> Unit = {}, content: @Composable (Modifier) -> Unit,
 ) {

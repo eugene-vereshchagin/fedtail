@@ -223,3 +223,30 @@ class BridgeTest(TmpDir):
         self.assertEqual(self.call("hub")["pinned"], ["home", "list:L1", "replies"])
         bad = text.replace("pinned = []", 'pinned = ["sideways"]', 1)
         self.assertIn("phone.pinned", json.loads(self.bridge.config_save(bad))["error"])
+
+    def test_the_settings_page(self):
+        self.demo()
+        got = self.call("settings")
+        titles = [c["title"] for c in got["chapters"]]
+        self.assertTrue(titles)
+        opts = {(o["section"], o["key"]): o for c in got["chapters"] for o in c["options"]}
+        self.assertNotIn(("web", "port"), opts)  # the desktop's browser: not here
+        order = opts[("feed", "order")]
+        self.assertEqual(order["type"], "str")
+        self.assertIn("newest_first", order["choices"])
+        self.assertTrue(order["help"])
+        self.assertEqual(opts[("ui", "command_line")]["value"], False)  # the phone's
+        self.assertEqual(opts[("phone", "pinned")]["type"], "list")
+        before = self.bridge._s["core"]
+        self.assertEqual(self.call("setting_set", "feed", "order", '"newest_first"')["value"],
+                         "newest_first")
+        self.assertIn('order = "newest_first"', self.call("config_text")["text"])
+        bad = json.loads(self.bridge.setting_set("feed", "order", '"sideways"'))
+        self.assertIn("error", bad)
+        self.assertIn('order = "newest_first"', self.call("config_text")["text"])  # kept
+        self.assertEqual(self.call("setting_set", "phone", "pinned", '["home"]')["value"],
+                         ["home"])
+        self.assertIs(self.bridge._s["core"], before)  # not remade at every tap…
+        self.assertEqual(self.call("settings_apply"), {"restarted": True})  # …but on leaving
+        self.assertIsNot(self.bridge._s["core"], before)
+        self.assertEqual(self.call("settings_apply"), {"restarted": False})

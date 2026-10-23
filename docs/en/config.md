@@ -402,7 +402,7 @@ The interface in a terminal — `fedtail --ui tui` (or ui.frontend = "tui"): lan
 
 ## 15. On a phone and a tablet
 
-The Android app (the android/ folder of the repository). Its config is this same file, edited right in the app: ⋮ → "Config". On a computer these settings do nothing.
+The Android app (the android/ folder of the repository). Its config is this same file: in the app ⋮ → "Settings" (each option with its explanation) or "Config" (the file itself). On a computer these settings do nothing.
 
 ### `[phone]`
 

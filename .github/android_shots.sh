@@ -4,6 +4,7 @@
 #   2-lanes.png  — the demo world (the one every fedtail screenshot shows): the overview
 #   3-home.png   — its Home lane
 #   4-thread.png — a thread of that world, as a tree
+#   6-settings.png — the settings page (the config's options, each with its explanation)
 #   5-wide.png   — a tablet's screen (wm size): the overview, the lane and a thread side by side
 #   logcat.txt   — what Python and Android said meanwhile (a crash is there)
 # Run by reactivecircus/android-emulator-runner (android.yml) from the repository's root.
@@ -32,6 +33,9 @@ shot 3-home 25
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$ACT" --ez demo true --es thread 101
 shot 4-thread 25
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$ACT" --ez demo true --ez settings true
+shot 6-settings 25
 adb shell am force-stop "$APP"
 adb shell wm size 2560x1600
 adb shell wm density 320
