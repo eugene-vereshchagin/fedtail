@@ -891,6 +891,8 @@ _STRINGS = {
         "act_as_reply": "↩ Ответ от {acct}",
         "act_as_wait": "Ищу пост на сервере другого аккаунта…",
         "act_as_done": "Сделано от {acct}",
+        "act_as_none": "Сервер {acct} не нашёл этот пост (он не публичный, или сервер "
+                       "не смог его забрать)",
         "tag_info": "посты с этим тегом, какие знает твой сервер",
         "resolving": "Ищу через свой сервер: {url}",
         "resolve_browser": "Не нашлось — открываю в браузере",
@@ -1775,6 +1777,8 @@ _STRINGS = {
         "act_as_reply": "↩ Reply as {acct}",
         "act_as_wait": "Looking the post up on the other account's server…",
         "act_as_done": "Done as {acct}",
+        "act_as_none": "{acct}'s server couldn't find this post (it isn't public, or the "
+                       "server couldn't fetch it)",
         "tag_info": "posts with this tag that your server knows",
         "resolving": "Looking it up through your server: {url}",
         "resolve_browser": "Not found — opening in the browser",

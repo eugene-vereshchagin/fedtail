@@ -528,6 +528,10 @@ def apply(app, cfg, name=None):
         [QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family()]
     pt = f.pointSizeF() if f.pointSizeF() > 0 else 10.0
     app.setStyleSheet(theme.stylesheet(pt, mono[0]))
+    import sys
+    card = sys.modules.get(__package__ + ".card")
+    if card is not None:  # the buttons' widths, measured under the old look: anew
+        card._HINTS.clear()
     return theme
 
 

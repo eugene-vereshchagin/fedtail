@@ -926,7 +926,7 @@ class MainWindow(QMainWindow):
         primary = getattr(self.core, "primary", self.core)
         primary.set_state("merge", ["all"] if on else [])
         log.info("merge %s: restarting", "on" if on else "off")
-        profiles.launch(primary.paths.profile, after=1.5)
+        profiles.launch(primary.paths.profile, after=0.5, wait_for=__import__("os").getpid())
         QTimer.singleShot(200, self.quit)
 
     def add_profile(self):

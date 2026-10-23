@@ -359,7 +359,11 @@ class MergedTest(TmpDir):
         self.assertEqual(found["id"], "work~777")
         self.assertEqual(m.act_accounts(found)[0][0], None)  # and back: the main one
         with self.assertRaises(LookupError):
-            m.act_as(dict(st, uri="https://nowhere.example/1"), "work", "boost").result()
+            m.act_as(dict(st, uri="https://nowhere.example/1", url="https://nowhere.example/@x/1"),
+                     "work", "boost").result()
+        # by its address, when its id isn't known there (GoToSocial and kin)
+        got = m.act_as(dict(st, uri="https://nowhere.example/1"), "work", "find").result()
+        self.assertEqual(got["id"], "work~777")
 
 
 class PathsAuthTest(TmpDir):

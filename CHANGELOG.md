@@ -25,6 +25,13 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- All accounts in one window: switching it on or off no longer leaves nothing running
+  (the restart waited 1.5 s, a window still closing was "already running", the new one
+  left — now it waits for the old one to be gone). Liking, boosting or replying as
+  another account looks the post up there by its id and then by its address, and says
+  plainly when that server can't find it.
+- A lane opening: the post buttons' widths measured once per kind of button, not on
+  every card (0.4–0.5 s of a frozen window).
 - A video whose server gives the video itself as its preview (no thumbnails: Akkoma and
   kin) is no longer fetched as a picture (which failed and threw in the picture
   thread); the card shows ▶ — Qt, GTK, the terminal. Empty lines at the start and end of

@@ -1265,6 +1265,24 @@ def _decode_side(lab, tw, th, w, h, cfg):
 
 
 
+_HINTS = {}  # (words, style, has a picture, font, stylesheet's id) → width
+
+
+def _hint_width(b):
+    """A button's width as Qt would ask it — once for each kind of button: every card
+    has the same few ("Reply", "Like · 3"…), and asking each of them its size hint
+    styled them all one by one (0.4 s when a lane opened, 23.10)."""
+    key = (b.text(), int(b.toolButtonStyle().value) if hasattr(b, "toolButtonStyle")
+           else 0, not b.icon().isNull(), b.font().key(), b.objectName(),
+           id(b.style()))
+    w = _HINTS.get(key)
+    if w is None:
+        if len(_HINTS) > 2000:
+            _HINTS.clear()
+        w = _HINTS[key] = b.sizeHint().width()
+    return w
+
+
 class _ActionsBox(QWidget):
     """The row of buttons under a post. Too narrow for the labels (a narrow window, a
     long word in a translation): the buttons go short — icon or glyph and the count —
@@ -1283,7 +1301,7 @@ class _ActionsBox(QWidget):
             # froze the window for a second when a lane opened
             self.full = [(b.text(), b.toolButtonStyle()) for b, _t, _i in self.short]
             lay = self.layout()
-            self._full_width = sum(b.sizeHint().width() for b, _t, _i in self.short) + \
+            self._full_width = sum(_hint_width(b) for b, _t, _i in self.short) + \
                 lay.spacing() * (lay.count() + 1) + 40  # the ⋯ button and some air
         go_short = self._full_width > self.width()
         if go_short == self.is_short:

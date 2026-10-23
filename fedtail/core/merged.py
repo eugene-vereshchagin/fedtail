@@ -366,18 +366,31 @@ class MergedCore:
         """Like ("fav"), boost ("boost") or find for a reply ("find") the post from
         another account: it is looked up on that account's server by its address, and
         the action goes from there. The result is the post in this window's terms."""
+        from ..i18n import _
         from .model import real
         _core, _mine, own = self.own(status)
-        uri = real(own).get("uri") or real(own).get("url")
+        post = real(own)
+        # the post's ActivityPub id first, its web page next: GoToSocial and some
+        # others find a post by one and not the other (23.10: "@veresk: not found")
+        ways = list(dict.fromkeys(x for x in (post.get("uri"), post.get("url")) if x))
         target = self.primary if tag is None else self.others[tag]
+        who = self.via(tag) if tag else ("@" + self.primary.me["acct"]
+                                         if self.primary.me else "")
 
         def job():
-            if not uri:
-                raise RuntimeError("no address")
-            got = target.resolve(uri).result()
-            if not got or got[0] != "status":
-                raise LookupError(f"{self.via(tag) if tag else 'this account'}: not found")
-            st = got[1]
+            st = None
+            for q in ways:
+                try:
+                    found = target.api.search(q, kind="statuses", resolve=True, limit=5)
+                except Exception as e:  # noqa: BLE001 — the next way, or "not found"
+                    log.info("act as %s: %s: %s", who, q, e)
+                    continue
+                st = next(iter((found or {}).get("statuses") or []), None)
+                if st is not None:
+                    target.store.put_statuses([st])
+                    break
+            if st is None:
+                raise LookupError(_("act_as_none", acct=who))
             if action == "fav" and not real(st).get("favourited"):
                 st = target.favourite(st).result()
             elif action == "boost" and not real(st).get("reblogged"):

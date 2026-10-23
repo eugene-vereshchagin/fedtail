@@ -113,19 +113,53 @@ def command(profile):
 RUN_FLAGS = []
 
 
-def launch(profile, after=0.0):
+# the restart's little helper: waits until the old process is gone (up to a minute),
+# then starts the new one. A fixed pause wasn't enough: a window still closing (a slow
+# server holding a request for 15 s) was "already running", so the new one only asked
+# it to show itself and left — and then the old one closed: nothing ran (23.10)
+_RELAUNCH = """
+import os, subprocess, sys, time
+pid, after, argv, cwd = {pid}, {after}, {argv!r}, {cwd!r}
+time.sleep(after)
+end = time.time() + 60
+def alive(p):
+    if os.name == "nt":
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x00100000, False, p)  # SYNCHRONIZE
+        if not h:
+            return False
+        try:
+            return k.WaitForSingleObject(h, 0) == 0x102  # WAIT_TIMEOUT: still running
+        finally:
+            k.CloseHandle(h)
+    try:
+        os.kill(p, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+while pid and alive(pid) and time.time() < end:
+    time.sleep(0.2)
+time.sleep(0.3)  # its single-instance socket let go
+subprocess.Popen(argv, cwd=cwd)
+"""
+
+
+def launch(profile, after=0.0, wait_for=None):
     """Start fedtail with that profile, detached. If it is already running, the new
     process asks it to show itself and leaves (SingleInstance). after: seconds to
-    wait first (a restart of this very profile: let this window close)."""
+    wait first; wait_for: a process id to outlive first (a restart of this very
+    profile: this process, closing)."""
     argv, cwd = command(profile)
     argv = list(argv) + RUN_FLAGS
     log.info("starting profile %s%s", profile, f" in {after} s" if after else "")
     from .. import sysenv
     env = sysenv.child_env() or dict(os.environ)
-    if after:  # a small Python waits, then starts it: works the same on every system
-        argv = [sys.executable, "-c",
-                f"import subprocess, time; time.sleep({float(after)}); "
-                f"subprocess.Popen({argv!r}, cwd={cwd!r})"]
+    if after or wait_for:  # a small Python waits, then starts it: the same everywhere
+        argv = [sys.executable, "-c", _RELAUNCH.format(
+            pid=int(wait_for or 0), after=float(after), argv=argv, cwd=cwd)]
     detached = {"creationflags": 0x00000008 | 0x00000200} if paths.WINDOWS else \
         {"start_new_session": True}  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
