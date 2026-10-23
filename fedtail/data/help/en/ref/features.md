@@ -200,7 +200,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Your own posts are always read | has | 0.13.0 | — | own | — |
 | The first run doesn't start with a pile | has | 0.1.0 | `feed.first_run_mark_read` | own | — |
 | The reading place is shared with other clients | has | 0.8.0 | `read.sync_markers` | `/api/v1/markers` | Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes |
-| Read marks, thread subscriptions and lane order shared by all your devices | has | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.what`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | own: a fedtail-sync server (one file, `syncserver/fedtail_sync.py`) or a shared folder; it is entered with a `read:accounts`-only token | only in fedtail (markers are just the place in Home and notifications) |
+| Read marks, thread subscriptions and lane order shared by all your devices | has | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.read`, `sync.threads`, `sync.lanes`, `sync.drafts`, `sync.activity`, `sync.tiles`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | own: a fedtail-sync server (one file, `syncserver/fedtail_sync.py`) or a shared folder; it is entered with a `read:accounts`-only token | only in fedtail (markers are just the place in Home and notifications) |
 | Cards are built around the reading place | has | 0.11.0 | `feed.build_at_once`, `feed.render_limit` | own | only in fedtail |
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `ui.esc`, `ui.start_lane` | own | only in fedtail |
 

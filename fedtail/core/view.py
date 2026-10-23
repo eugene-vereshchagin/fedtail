@@ -73,6 +73,8 @@ PASS = {
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_join", "sync_login_begin", "sync_login_end", "sync_now", "sync_status",
+    # the phone's tiles: plain lane names (sync.tiles carries them)
+    "pinned_tiles", "set_pinned_tiles",
     # plain data for a page of its own (fedstatus.py), no server objects in it: someone
     # waiting for a list (name, url) was taken for a hashtag and the page fell over
     "federation_status",

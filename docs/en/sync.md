@@ -10,13 +10,17 @@ Sync is a **service of its own**, apart from your fediverse server: fedtail sync
 when you tell it where (`sync.url` or `sync.folder`). Without that there is no sync —
 the status bar says "⇅ off", About says why.
 
-What travels (`sync.what`):
+What travels — a switch for each in `[sync]` (all on by default; off keeps that thing on
+this device only):
 
-| what | what it means | how two devices agree |
+| switch | what it means | how two devices agree |
 |---|---|---|
-| `read` | read marks **you** made: scrolling, opening, "mark read" | a mark is never taken back, so they simply add up |
-| `threads` | a thread you followed, left or muted by hand | the newest setting wins |
-| `lanes` | your lanes as you arranged them: the order of lists (servers keep none, so every device would show them as they came) and the tag lanes you saved | the newest arrangement wins |
+| `sync.read` | read marks **you** made: scrolling, opening, "mark read" | a mark is never taken back, so they simply add up |
+| `sync.threads` | a thread you followed, left or muted by hand | the newest setting wins |
+| `sync.lanes` | your lanes as you arranged them: the order of lists (servers keep none, so every device would show them as they came) and the tag lanes you saved | the newest arrangement wins |
+| `sync.drafts` | drafts: begun on one device, finished on another; sent or emptied — gone everywhere. Text, content warning, poll, who sees it; pictures are files of each computer and stay where they were added | the newest version of each draft wins |
+| `sync.activity` | notifications you dismissed from Activity | they only add up, like read marks |
+| `sync.tiles` | which lanes the phone pins as tiles | the newest set wins |
 
 What stays on each device: the marks fedtail makes by itself (everything read on the
 first run, older history, your own posts), automatic subscriptions to your own posts
@@ -197,6 +201,6 @@ config.
 ## Not yet
 
 * Carrying the key with a QR code from the window (now: `fedtail sync key` / `join`).
-* Drafts started on one device, finished on another.
+* Pictures of a draft travelling with it (now: they stay on the device they were added on).
 * WebDAV spoken directly (now: mounted as a folder).
 * Packing old journals into a snapshot (now: they just add up, within the quota).

@@ -326,7 +326,12 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 |---|---|---|
 | `sync.url` | `""` | Read marks, thread subscriptions and the order of your own lanes the same on all your devices (a desktop, a laptop, a phone). Sync is a service of its own, apart from your fediverse server: without an address below there is simply no sync (the status bar and About say so). What travels is sealed with a key only your devices have: whatever stores it sees no posts and no read marks. How to set it up: docs/en/sync.md; in short — the address here, `fedtail sync login`, then `fedtail sync key` on the first device and `fedtail sync join` on the others. url — the fedtail-sync server's address, as its admin gave it (say, "https://sync.example.org"). Empty — no sync server. |
 | `sync.folder` | `""` | Or, instead of a server, a folder every device sees: a NAS share, WebDAV mounted, a Syncthing folder (~ is your home folder). Not both: url or folder. |
-| `sync.what` | `["read", "threads", "lanes"]` | What travels: "read" — read marks you made (not the first run's "everything read"), "threads" — threads you followed, left or muted by hand, "lanes" — your lanes as you arranged them: the order of lists (servers keep none) and the tag lanes you saved. |
+| `sync.read` | `true` | What travels — a switch for each; off keeps it on this device only. Read marks you made (not the first run's "everything read", not older history). |
+| `sync.threads` | `true` | Threads you followed, left or muted by hand. |
+| `sync.lanes` | `true` | Your lanes as you arranged them: the order of lists (servers keep none) and the tag lanes you saved. |
+| `sync.drafts` | `true` | Drafts: begun on one device, finished on another; sent or emptied — gone everywhere. Text, content warning, poll, who sees it; pictures are files of each computer and stay where they were added. |
+| `sync.activity` | `true` | Notifications you dismissed from Activity: gone on every device. |
+| `sync.tiles` | `true` | Which lanes the phone pins as tiles. |
 | `sync.interval_seconds` | `60` | How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after it was made anyway. |
 
 ## 12. Database and logs

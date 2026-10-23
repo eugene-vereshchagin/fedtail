@@ -890,7 +890,8 @@ class Store:
 
     def activity_hide(self, ids):
         """Notifications gone from Activity for good, while the server keeps them (it can't
-        dismiss one): remembered, so the next fetch doesn't bring them back."""
+        dismiss one): remembered, so the next fetch doesn't bring them back.
+        → [(id, sort, group key or "")] of the ones that were here (for sync)."""
         with self.lock:
             rows = self.db.execute(
                 f"SELECT id, sort FROM activity WHERE id IN ({','.join('?' * len(ids))})",
@@ -910,7 +911,47 @@ class Store:
         if len(hidden) > HIDDEN_KEEP:  # the oldest go: the server won't send them again
             hidden = dict(sorted(hidden.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
         self.kv_set("activity_hidden", hidden)
+        groups = {i: self.activity_group_of(i) for i, _sort in rows}
         self.activity_delete(ids)
+        return [(i, sort, groups.get(i, "")) for i, sort in rows]
+
+    def activity_hide_known(self, items):
+        """Notifications another device dismissed (core/sync): [(id, sort, group key)] —
+        remembered as hidden here too, and gone from Activity if they are in it.
+        → whether anything was here to go."""
+        if not items:
+            return False
+        hidden = self.kv_get("activity_hidden", {}) or {}
+        hg = self.kv_get("activity_hidden_groups", {}) or {}
+        keys = set()
+        for nid, sort, key in items:
+            hidden[nid] = max(hidden.get(nid, ""), sort)
+            if key:
+                hg[key] = max(hg.get(key, ""), sort)
+                keys.add(key)
+        if len(hidden) > HIDDEN_KEEP:
+            hidden = dict(sorted(hidden.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
+        if len(hg) > HIDDEN_KEEP:
+            hg = dict(sorted(hg.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
+        self.kv_set("activity_hidden", hidden)
+        self.kv_set("activity_hidden_groups", hg)
+        ids = {nid for nid, _s, _k in items}
+        with self.lock:
+            rows = self.db.execute("SELECT id, account FROM activity").fetchall()
+        gone = []
+        for nid, acc in rows:
+            if nid in ids:
+                gone.append(nid)
+            elif keys:
+                try:
+                    k = ((json.loads(acc) or {}).get("_group") or {}).get("key")
+                except (ValueError, AttributeError):
+                    k = None
+                if k in keys:
+                    gone.append(nid)
+        if gone:
+            self.activity_delete(gone)
+        return bool(gone)
 
     def activity_newest(self):
         """(id, sort) of the newest notification fetched — hidden ones count: the next

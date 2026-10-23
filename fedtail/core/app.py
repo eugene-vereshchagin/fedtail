@@ -1138,7 +1138,7 @@ class Core(SocialMixin):
         ids.insert(j, ids.pop(i))
         self.store.kv_set("list_order", ids)
         if self.sync:
-            self.sync.record_lanes("list_order")
+            self.sync.record_setting("list_order")
         self._apply_lists(list(self.lists), self.list_members)
 
     def list_people(self, list_id):
@@ -1186,7 +1186,7 @@ class Core(SocialMixin):
             saved.append(dict(taggroups.normal(spec), name=name))
             self.store.kv_set("tag_groups", saved)
             if self.sync:
-                self.sync.record_lanes("tag_groups")
+                self.sync.record_setting("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
             return taggroups.lane_name(spec)
         return self.submit(job)
@@ -1208,7 +1208,7 @@ class Core(SocialMixin):
                 out.append(g)
             self.store.kv_set("tag_groups", out)
             if self.sync:
-                self.sync.record_lanes("tag_groups")
+                self.sync.record_setting("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
             return new
         return self.submit(job)
@@ -1219,7 +1219,7 @@ class Core(SocialMixin):
                      if taggroups.lane_name(g) != lane_name]
             self.store.kv_set("tag_groups", saved)
             if self.sync:
-                self.sync.record_lanes("tag_groups")
+                self.sync.record_setting("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
         return self.submit(job)
 
@@ -2619,7 +2619,7 @@ class Core(SocialMixin):
                 st = self.api.post_status(text, visibility, reply_to, spoiler, ids,
                                           self.markdown, **extra)
                 if draft_key:
-                    self.store.delete_draft(draft_key)
+                    self.delete_draft(draft_key)
                 log.info("scheduled for %s", scheduled_at)
                 return dict(st or {}, scheduled=True)
             started = time.time()
@@ -2656,7 +2656,7 @@ class Core(SocialMixin):
             try:
                 self.sound_moment("sent")
                 if draft_key:
-                    self.store.delete_draft(draft_key)
+                    self.delete_draft(draft_key)
                 self.store.put_statuses(chain)
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
                 self._auto_subscribe([st])
@@ -2692,7 +2692,7 @@ class Core(SocialMixin):
             st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
             self.store.put_statuses([st])
             if draft_key:
-                self.store.delete_draft(draft_key)
+                self.delete_draft(draft_key)
             self.emit("status_updated", st)
             return st
         return self.submit(job)
@@ -2895,9 +2895,24 @@ class Core(SocialMixin):
     def save_draft(self, key, data):
         if self.cfg["post"]["drafts_autosave"]:
             self.store.save_draft(key, data)
+            if self.sync:
+                self.sync.record_draft(key)
 
     def delete_draft(self, key):
+        """A draft sent or emptied: gone here, and on my other devices (sync.drafts)."""
         self.store.delete_draft(key)
+        if self.sync:
+            self.sync.record_draft(key)
+
+    # the lanes a phone pins as tiles (its overview of lanes); kept here so that sync can
+    # carry them (sync.tiles) — a desktop keeps them without showing them
+    def pinned_tiles(self):
+        return list(self.store.kv_get("pinned_tiles", []) or [])
+
+    def set_pinned_tiles(self, names):
+        self.store.kv_set("pinned_tiles", [str(n) for n in names])
+        if self.sync:
+            self.sync.record_setting("pinned_tiles")
 
     def get_state(self, key, default=None):
         return self.store.kv_get(f"ui.{key}", default)

@@ -202,7 +202,7 @@
 | Свои посты всегда прочитаны | есть | 0.13.0 | — | своё | — |
 | Первый запуск не начинается с завала | есть | 0.1.0 | `feed.first_run_mark_read` | своё | — |
 | Позиция чтения общая с другими клиентами | есть | 0.8.0 | `read.sync_markers` | `/api/v1/markers` | Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes |
-| Прочитанное, подписки на треды и порядок лент — общие на всех твоих устройствах | есть | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.what`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | своё: сервер fedtail-sync (один файл, `syncserver/fedtail_sync.py`) или общая папка; вход по токену только `read:accounts` | только в fedtail (markers — лишь место в «Ленте» и уведомлениях) |
+| Прочитанное, подписки на треды и порядок лент — общие на всех твоих устройствах | есть | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.read`, `sync.threads`, `sync.lanes`, `sync.drafts`, `sync.activity`, `sync.tiles`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | своё: сервер fedtail-sync (один файл, `syncserver/fedtail_sync.py`) или общая папка; вход по токену только `read:accounts` | только в fedtail (markers — лишь место в «Ленте» и уведомлениях) |
 | Карточки строятся вокруг места чтения | есть | 0.11.0 | `feed.build_at_once`, `feed.render_limit` | своё | только в fedtail |
 | Esc — шторка, а не закрытие окна | есть | 0.3.0 | `ui.esc`, `ui.start_lane` | своё | только в fedtail |
 

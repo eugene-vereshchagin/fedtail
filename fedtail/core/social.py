@@ -260,7 +260,9 @@ class SocialMixin:
                     self._api("dismiss_one", self.api.dismiss_notification, nid)
                 except NotSupported:
                     pass  # hidden here all the same
-            self.store.activity_hide([nid])
+            hidden = self.store.activity_hide([nid])
+            if self.sync:
+                self.sync.record_activity(hidden)
             self.emit("activity_updated", None)
         return self.submit(job)
 
@@ -302,7 +304,9 @@ class SocialMixin:
                     self._api("dismiss_one", self.api.dismiss_notification, entry["id"])
                 except ApiError as e:  # gone with the answer, or no such call here
                     log.debug("dismiss %s: %s", entry["id"], e)
-            self.store.activity_hide([entry["id"]])
+            hidden = self.store.activity_hide([entry["id"]])
+            if self.sync:
+                self.sync.record_activity(hidden)
             self.emit("activity_updated", None)
             return found
         return self.submit(job)

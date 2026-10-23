@@ -12,9 +12,14 @@
   and in fedtail-sync (its `public_url` is ignored with a warning). The right of the status
   bar shows how it goes (Qt, GTK): "⇅ 21:40" — synced then, "⇅ …", "⇅ !" — a problem (the
   tooltip says which), "⇅ off"; About has a "Sync" row everywhere.
-- Sync carries your lanes as you arranged them (`sync.what` "lanes", on by default): the
-  order of lists — servers keep none, so every device showed them as they came — and the
-  tag lanes saved from a search. The newest arrangement wins.
+- What sync carries is a switch for each in `[sync]`, all on by default (`sync.what` is
+  gone; a config still having it gets its list turned into the switches, with a warning):
+  `read`, `threads`, and new — `lanes`: the order of lists (servers keep none, so every
+  device showed them as they came) and the tag lanes saved from a search; `drafts`: begun
+  on one device, finished on another, sent or emptied — gone everywhere (pictures stay on
+  the device they were added on); `activity`: notifications dismissed from Activity go on
+  every device; `tiles`: which lanes the phone pins as tiles (`Core.pinned_tiles` /
+  `set_pinned_tiles`).
 - Faster after reading: which posts are read is kept in memory (the sidebar counted every
   lane from the database after each read mark and froze the window for 0.4 s on a big
   profile). A followed thread the server times out on no longer stops the others nor

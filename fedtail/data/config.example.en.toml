@@ -957,10 +957,27 @@ url = ""
 # Syncthing folder (~ is your home folder). Not both: url or folder.
 folder = ""
 
-# What travels: "read" — read marks you made (not the first run's "everything read"),
-# "threads" — threads you followed, left or muted by hand, "lanes" — your lanes as you
-# arranged them: the order of lists (servers keep none) and the tag lanes you saved.
-what = ["read", "threads", "lanes"]
+# What travels — a switch for each; off keeps it on this device only.
+# Read marks you made (not the first run's "everything read", not older history).
+read = true
+
+# Threads you followed, left or muted by hand.
+threads = true
+
+# Your lanes as you arranged them: the order of lists (servers keep none) and the tag
+# lanes you saved.
+lanes = true
+
+# Drafts: begun on one device, finished on another; sent or emptied — gone everywhere.
+# Text, content warning, poll, who sees it; pictures are files of each computer and stay
+# where they were added.
+drafts = true
+
+# Notifications you dismissed from Activity: gone on every device.
+activity = true
+
+# Which lanes the phone pins as tiles.
+tiles = true
 
 # How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after
 # it was made anyway.

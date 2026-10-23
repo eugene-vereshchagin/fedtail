@@ -526,11 +526,20 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `sync.cursor`, reset when `sync.where` changes) → `crypto.unseal` → `Sync.apply`:
   reads unioned (`read_changed`), thread states through `sync_newer` →
   `Core.apply_thread_state` (subs.subscribe / leave, no re-recording). Lanes
-  (`sync.what` "lanes"): `Core.move_list` and the saved tag lanes (`save_tag_group`,
-  `add_tag_to_group`, `drop_tag_group`) call `Sync.record_lanes(key)` with the whole new
+  (`sync.lanes`): `Core.move_list` and the saved tag lanes (`save_tag_group`,
+  `add_tag_to_group`, `drop_tag_group`) call `Sync.record_setting(key)` with the whole new
   kv value (`list_order`, `tag_groups`; key `k:<name>` in `sync_lww`, the newest wins;
   `Sync._stamp` keeps one device's times strictly rising); `apply` puts a newer one in
-  kv and calls `Core.apply_lanes_state` → `_apply_lists` (sidebar redrawn). Every round
+  kv and calls `Core.apply_lanes_state` → `_apply_lists` (sidebar redrawn). Tiles
+  (`sync.tiles`): `Core.set_pinned_tiles` → kv `pinned_tiles`, the same way; applied →
+  `tiles_changed`. Drafts (`sync.drafts`): `Core.save_draft` / `delete_draft` (also on a
+  sent post) mark the key dirty; the round's `_flush_drafts` sends each one's last
+  version without `media` (files of that computer; a pictures-only draft isn't sent),
+  `None` for gone (key `d:<draft key>`, the newest wins); applied, the local `media` for
+  that key stays, → `drafts_changed`. Activity (`sync.activity`): `dismiss_activity` /
+  `answer_interaction` record what `store.activity_hide` returns, `(id, sort, group
+  key)`; applied by `store.activity_hide_known` (unioned into `activity_hidden` /
+  `_groups`, the rows go) → `activity_updated`. Every round
   and every problem emits `sync_changed`; `frontends/common/syncline.py` turns
   `sync_status()` into the status bar's "⇅ 21:40 / … / ! / off" (Qt, GTK) and About's
   row. Backends
@@ -602,6 +611,8 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `prefetch` / `prefetch_video` | [urls] | after a poll | pictures/videos fetched ahead |
 | `sound` | event name | news (core/sounds.py), connected, a post sent | the theme's sound (common/sound.py) |
 | `sync_changed` | None | a sync round done or a sync problem met | the status bar's "⇅" word (common/syncline.py) |
+| `drafts_changed` | [draft keys] | another device changed drafts (sync) | — (a compose box opened later reads the new one) |
+| `tiles_changed` | [lane names] | another device pinned other tiles (sync) | the phone's overview of lanes |
 
 ## 14. The Qt frontend
 

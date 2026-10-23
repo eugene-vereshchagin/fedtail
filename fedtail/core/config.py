@@ -202,7 +202,12 @@ DEFAULTS = {
     "sync": {
         "url": "",
         "folder": "",
-        "what": ["read", "threads", "lanes"],
+        "read": True,
+        "threads": True,
+        "lanes": True,
+        "drafts": True,
+        "activity": True,
+        "tiles": True,
         "interval_seconds": 60,
     },
     "storage": {
@@ -308,7 +313,7 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("lists", "hide_in"), ("cli", "tail_lanes")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
-SYNC_WHAT = {"read", "threads", "lanes"}
+SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles")  # sync.<each>
 MINIMUM = {
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
@@ -425,6 +430,15 @@ def validate(user):
                     cfg["ui"]["esc"] = "off"
                 warnings.append('ui.esc_hides is now ui.esc ("curtain", "tray" or "off")')
                 continue
+            if (section, key) == ("sync", "what"):
+                # 0.19: a switch of its own for each thing that travels
+                if isinstance(val, list):
+                    for k in SYNC_WHAT:
+                        if k not in values:
+                            cfg["sync"][k] = k in val
+                warnings.append("sync.what is now a switch for each: sync.read, sync.threads, "
+                                "sync.lanes, sync.drafts, sync.activity, sync.tiles")
+                continue
             if section == "sync" and key in ("enabled", "backend"):
                 # gone in 0.19: sync is on when it has somewhere to go (url or folder)
                 warnings.append(f"sync.{key} is gone: sync works when sync.url or "
@@ -484,9 +498,6 @@ def validate(user):
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
     if bad_auto:
         errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")
-    bad_what = [x for x in cfg["sync"]["what"] if x not in SYNC_WHAT]
-    if bad_what:
-        errors.append(f"sync.what: unknown {bad_what}; known: {', '.join(sorted(SYNC_WHAT))}")
     vol = cfg["sound"]["volume"]
     if not 0 <= vol <= 100:
         errors.append(f"sound.volume = {vol}: from 0 to 100")

@@ -162,7 +162,7 @@ class FolderSyncTest(Devices):
         self.assertEqual(self.desk.store.sync_pending_count(), 0)
 
     def test_nothing_recorded_when_not_wanted(self):
-        core = self.device("quiet", self.world, what=["threads"])
+        core = self.device("quiet", self.world, read=False)
         core.mark_read(["7"])
         self.assertEqual(core.store.sync_pending_count(), 0)
 
@@ -194,10 +194,65 @@ class FolderSyncTest(Devices):
         self.assertEqual([x["id"] for x in self.desk.lists], ["L3", "L2", "L1"])
 
     def test_lanes_stay_home_when_not_wanted(self):
-        core = self.device("quiet", self.world, what=["read"])
+        core = self.device("quiet", self.world, lanes=False)
         core._apply_lists([{"id": "L1", "title": "a", "exclusive": False},
                            {"id": "L2", "title": "b", "exclusive": False}], {})
         core.move_list("L2", -1)
+        self.assertEqual(core.store.sync_pending_count(), 0)
+
+    def test_drafts_travel_without_their_pictures_and_go_when_sent(self):
+        self.desk.save_draft("reply:77", {"text": "half a thought", "cw": "", "media":
+                                          [["/home/me/cat.jpg", "a cat"]],
+                                          "visibility": "public"})
+        self.desk.save_draft("reply:77", {"text": "a whole thought", "cw": "", "media":
+                                          [["/home/me/cat.jpg", "a cat"]],
+                                          "visibility": "public"})
+        self.desk.save_draft("new", {"text": "", "cw": "", "media": [["/x.png", ""]]})
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.store.save_draft("reply:77", {"text": "old", "media": [["/sd/dog.jpg", ""]]})
+        self.phone.sync_now()
+        got = self.phone.get_draft("reply:77")
+        self.assertEqual(got["text"], "a whole thought")  # the last version only
+        self.assertEqual(got["media"], [["/sd/dog.jpg", ""]])  # its own pictures stay
+        self.assertIsNone(self.phone.get_draft("new"))  # pictures only: nothing to carry
+        self.assertTrue(any(n == "drafts_changed" for n, _ in self.phone.events_seen))
+        self.phone.delete_draft("reply:77")  # sent from the phone
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertIsNone(self.desk.get_draft("reply:77"))
+
+    def test_dismissed_activity_goes_everywhere(self):
+        for core in (self.desk, self.phone):
+            core.store.activity_put([
+                {"id": "n1", "type": "favourite", "created_at": "2026-10-01T10:00:00Z",
+                 "account": {"id": "9", "acct": "bob"}},
+                {"id": "n2", "type": "favourite", "created_at": "2026-10-01T11:00:00Z",
+                 "account": {"id": "9", "acct": "bob"}}])
+        self.desk.dismiss_activity("n1").result()
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.events_seen.clear()
+        self.phone.sync_now()
+        left = [e["id"] for e in self.phone.activity_entries()]
+        self.assertEqual(left, ["n2"])
+        self.assertIn("n1", self.phone.store.kv_get("activity_hidden"))
+        self.assertTrue(any(n == "activity_updated" for n, _ in self.phone.events_seen))
+
+    def test_pinned_tiles_travel(self):
+        self.desk.set_pinned_tiles(["home", "mentions", "list:L1"])
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.assertEqual(self.phone.pinned_tiles(), ["home", "mentions", "list:L1"])
+        self.assertIn(("tiles_changed", ["home", "mentions", "list:L1"]),
+                      self.phone.events_seen)
+
+    def test_each_switch_keeps_its_thing_home(self):
+        core = self.device("quiet", self.world, drafts=False, activity=False, tiles=False)
+        core.save_draft("new", {"text": "x"})
+        core.set_pinned_tiles(["home"])
+        core.sync._flush_drafts()
         self.assertEqual(core.store.sync_pending_count(), 0)
 
     def test_folder_backend_pages_and_skips_its_own(self):
@@ -237,9 +292,16 @@ class SyncOffTest(TmpDir):
             {"sync": {"url": "https://sync.example"}})[0]))
         self.assertTrue(engine.wanted(config.validate({"sync": {"folder": "~/meet"}})[0]))
 
+    def test_the_old_what_list_becomes_switches(self):
+        cfg, warns = config.validate({"sync": {"what": ["read"], "drafts": True}})
+        self.assertEqual({k: cfg["sync"][k] for k in config.SYNC_WHAT},
+                         {"read": True, "threads": False, "lanes": False, "drafts": True,
+                          "activity": False, "tiles": False})
+        self.assertTrue(any("sync.what is now" in w for w in warns))
+
     def test_config_is_checked(self):
         with self.assertRaises(config.ConfigError):
-            config.validate({"sync": {"what": ["everything"]}})
+            config.validate({"sync": {"read": "yes"}})
         with self.assertRaises(config.ConfigError):
             config.validate({"sync": {"url": "http://sync.example"}})
         with self.assertRaises(config.ConfigError):
