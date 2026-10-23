@@ -25,6 +25,9 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- The editor (Qt): what the post is and what to do with it in one row when there's room
+  — the two halves keep to their sides and go into two rows only in a narrow window; the
+  character count sits in the text field's own bottom right corner.
 - point: its pictures as on point.im — plain warm grey silhouettes (no blue, no raised
   rim; a menu's lines, an envelope's flap cut out of the shape: [pictures] style =
   "silhouette"), and bigger by the lanes and on the sidebar's top buttons ([shape]

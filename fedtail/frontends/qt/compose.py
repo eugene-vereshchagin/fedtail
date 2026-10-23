@@ -38,6 +38,42 @@ from ..common import compose as rules
 from .card import VIS_KEY
 from .text import display_name, esc
 
+
+class _Hint(QLabel):
+    """A line of what happened (draft restored, saved…): there only when it says
+    something."""
+
+    def setText(self, text):
+        super().setText(text)
+        self.setVisible(bool(text))
+
+
+class _Bar(QWidget):
+    """The editor's bottom: what the post is on the left, what to do with it on the
+    right — one row when both fit, else the two halves in two rows, each keeping to
+    its side."""
+
+    def __init__(self, left, right):
+        super().__init__()
+        from PySide6.QtWidgets import QBoxLayout
+        self.left, self.right = left, right
+        self.box = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
+        self.box.setContentsMargins(0, 0, 0, 0)
+        self.box.setSpacing(8)
+        self.box.addWidget(left, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.box.addWidget(right, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.setMinimumWidth(240)  # narrower: two rows (the layout alone would hold it wide)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        from PySide6.QtWidgets import QBoxLayout
+        need = self.left.sizeHint().width() + self.right.sizeHint().width() + 24
+        want = QBoxLayout.Direction.LeftToRight if self.width() >= need else \
+            QBoxLayout.Direction.TopToBottom
+        if self.box.direction() != want:
+            self.box.setDirection(want)
+
+
 MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",
              ".mp4", ".webm", ".mov", ".mp3", ".ogg", ".m4a", ".flac")
 MEDIA_FILTER = " ".join("*" + e for e in MEDIA_EXT)
@@ -245,7 +281,9 @@ class Compose(QDialog):
         lay.addWidget(self.media)
         self._build_poll(lay)
 
-        row = QHBoxLayout()
+        tools_w = QWidget()
+        row = QHBoxLayout(tools_w)
+        row.setContentsMargins(0, 0, 0, 0)
         self.vis = QComboBox()
         self.vis.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         for v in VISIBILITIES:
@@ -306,18 +344,20 @@ class Compose(QDialog):
         self.detach_btn = rm
         rm.clicked.connect(self.detach)
         row.addWidget(rm)
-        row.addStretch(1)
-        self.counter = QLabel()
+        # the count in the text field's own corner, bottom right (no row of its own)
+        self.counter = QLabel(self.text)
         self.counter.setObjectName("counter")
-        row.addWidget(self.counter)
-        lay.addLayout(row)
-        # what the post is (above) and what to do with it (below): two rows, so nothing
-        # gets squeezed into "ontent war" in a narrow window
-        row = QHBoxLayout()
-        self.hint = QLabel()
+        self.counter.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.hint = _Hint()
         self.hint.setObjectName("muted")
         self.hint.setWordWrap(True)
-        row.addWidget(self.hint, 1)
+        self.hint.setVisible(False)
+        lay.addWidget(self.hint)
+        # what the post is (left) and what to do with it (right): one row when there's
+        # room, two in a narrow window — the halves keep to their sides
+        acts_w = QWidget()
+        row = QHBoxLayout(acts_w)
+        row.setContentsMargins(0, 0, 0, 0)
         close_btn = QPushButton(_("close"))
         close_btn.setObjectName("tool")
         close_btn.setToolTip(_("close_tip"))
@@ -344,7 +384,7 @@ class Compose(QDialog):
         self.send_btn.setDefault(True)
         self.send_btn.clicked.connect(self.send)
         row.addWidget(self.send_btn)
-        lay.addLayout(row)
+        lay.addWidget(_Bar(tools_w, acts_w))
 
         for seq in ("Ctrl+Return", "Ctrl+Enter"):
             QShortcut(QKeySequence(seq), self).activated.connect(self.send)
@@ -633,8 +673,20 @@ class Compose(QDialog):
             self.add_paths(paths)
         return bool(paths)
 
+    def _place_counter(self):
+        c, t = getattr(self, "counter", None), self.text
+        if c is None:
+            return
+        c.adjustSize()
+        bar = t.verticalScrollBar()
+        right = bar.width() if bar.isVisible() else 0
+        c.move(max(0, t.width() - c.width() - right - 10), max(0, t.height() - c.height() - 6))
+        c.raise_()
+
     def eventFilter(self, obj, e):
         t = e.type()
+        if obj is self.text and t == QEvent.Type.Resize:
+            self._place_counter()
         if self.inline and obj is self.win and t == QEvent.Type.Resize:
             self._place()  # the panel follows the window
             return False
@@ -789,6 +841,7 @@ class Compose(QDialog):
         else:
             self.counter.setText(f"{c.n} / {c.limit}")
         over = "true" if c.over else "false"
+        self._place_counter()
         if self.counter.property("over") != over:
             self.counter.setProperty("over", over)
             self.counter.style().unpolish(self.counter)
