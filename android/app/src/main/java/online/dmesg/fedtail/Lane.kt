@@ -277,8 +277,7 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(counted, key = { it.first.name }) { (lane, mine) ->
                     LaneTile(lane, mine, on = lane.name == model.current,
-                        modifier = Modifier.fillMaxWidth(),
-                        plain = MaterialTheme.colorScheme.surfaceVariant) { go(lane.name) }
+                        modifier = Modifier.fillMaxWidth()) { go(lane.name) }
                 }
             }
             if (browsed.isNotEmpty()) {

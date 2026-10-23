@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -64,8 +65,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) {
     var menu by remember { mutableStateOf(false) }
+    val tiles = model.overview == "tiles"
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        // tiles: grey tiles on white, as the switcher's sheet (mockup "3"); a list: white rows on grey
+        containerColor = if (tiles) MaterialTheme.colorScheme.surface
+                         else MaterialTheme.colorScheme.background,
         topBar = {
             Column {
                 TopAppBar(
@@ -111,45 +115,68 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
             modifier = Modifier.padding(pad).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
                 item(key = "row") { ReadInRow(model) }
-                val tiles = model.overview == "tiles"
-                model.hub.filter { it.kind != "browse" }.forEach { sec ->
-                    val mine = sec.kind == "you"
-                    item(key = "h-" + sec.kind) { SectionHead(sec) }
-                    if (tiles) {
-                        // the switcher's tiles (mockup "3"): four in a row, the count over
-                        // the name; yours with news tinted, the open one dark
-                        val per = if (pane) 3 else 4
-                        val rows = sec.lanes.chunked(per)
-                        items(rows.size, key = { "t-" + sec.kind + it }) { r ->
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                rows[r].forEach { lane ->
-                                    LaneTile(lane, mine, on = lane.name == model.current,
-                                        modifier = Modifier.weight(1f)) { model.showLane(lane.name) }
-                                }
-                                repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
-                            }
-                        }
-                    } else {
-                        items(sec.lanes, key = { "l-" + it.name }) { lane ->
-                            HubRow(lane, mine, on = lane.name == model.current) {
-                                model.showLane(lane.name)
-                            }
-                        }
-                    }
-                }
-                model.hub.firstOrNull { it.kind == "browse" }?.let { sec ->
-                    item(key = "h-browse") { SectionHead(sec) }
-                    item(key = "browse") {
-                        FlowRow(Modifier.padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            sec.lanes.forEach { lane ->
-                                Chip(lane.title) { model.showLane(lane.name) }
-                            }
-                        }
-                    }
-                }
+                if (tiles) tileGrid(model, pane) else laneRows(model)
+            }
+        }
+    }
+}
+
+/** The tiles (mockup "3"): every counted lane — yours first, tinted when there's news, the
+ *  open one dark — four in a row; below, the lanes only browsed, as rows. */
+private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppModel, pane: Boolean) {
+    val counted = model.hub.filter { it.kind != "browse" }
+        .flatMap { s -> s.lanes.map { it to (s.kind == "you") } }
+    val per = if (pane) 3 else 4
+    val rows = counted.chunked(per)
+    item(key = "gap") { Spacer(Modifier.height(8.dp)) }
+    items(rows.size, key = { "t-$it" }) { r ->
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            rows[r].forEach { (lane, mine) ->
+                LaneTile(lane, mine, on = lane.name == model.current,
+                    modifier = Modifier.weight(1f)) { model.showLane(lane.name) }
+            }
+            repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
+        }
+    }
+    val rest = model.hub.firstOrNull { it.kind == "browse" }?.lanes.orEmpty()
+    if (rest.isEmpty()) return
+    item(key = "h-rest") {
+        Text(stringResource(R.string.sec_rest).uppercase(), fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp))
+    }
+    items(rest, key = { "r-" + it.name }) { lane ->
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { model.showLane(lane.name) },
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.browsed), fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+        }
+    }
+}
+
+/** The list (phone.overview = "list"): sections, a row per lane with its first unread post. */
+@OptIn(ExperimentalLayoutApi::class)
+private fun androidx.compose.foundation.lazy.LazyListScope.laneRows(model: AppModel) {
+    model.hub.filter { it.kind != "browse" }.forEach { sec ->
+        val mine = sec.kind == "you"
+        item(key = "h-" + sec.kind) { SectionHead(sec) }
+        items(sec.lanes, key = { "l-" + it.name }) { lane ->
+            HubRow(lane, mine, on = lane.name == model.current) { model.showLane(lane.name) }
+        }
+    }
+    model.hub.firstOrNull { it.kind == "browse" }?.let { sec ->
+        item(key = "h-browse") { SectionHead(sec) }
+        item(key = "browse") {
+            FlowRow(Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                sec.lanes.forEach { lane -> Chip(lane.title) { model.showLane(lane.name) } }
             }
         }
     }
@@ -159,7 +186,7 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
 @Composable
 fun LaneTile(
     lane: HubLane, mine: Boolean, on: Boolean, modifier: Modifier,
-    plain: Color = MaterialTheme.colorScheme.surface, // on a white sheet: the grey one
+    plain: Color = MaterialTheme.colorScheme.surfaceVariant,
     onClick: () -> Unit,
 ) {
     val news = lane.unread > 0
@@ -169,13 +196,14 @@ fun LaneTile(
         else -> plain
     }
     val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
-    Column(modifier.height(68.dp).clip(RoundedCornerShape(14.dp)).background(bg)
+    Column(modifier.height(84.dp).clip(RoundedCornerShape(16.dp)).background(bg)
         .clickable(onClick = onClick).padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center) {
-        Text(if (news) "${lane.unread}" else "", fontSize = 19.sp, fontWeight = FontWeight.Bold,
-            color = fg)
-        Text(lane.title, fontSize = 11.5.sp, lineHeight = 13.sp, color = fg, maxLines = 2,
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
+        if (news) {
+            Text("${lane.unread}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = fg)
+        }
+        Text(lane.title, fontSize = 13.sp, lineHeight = 15.sp, color = fg, maxLines = 2,
             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
     }
 }

@@ -89,4 +89,6 @@
     <string name="open_browser">Open in the browser</string>
     <string name="pick_lane">Pick a lane on the left</string>
     <string name="pick_post">Tap a post: its thread opens here</string>
+    <string name="sec_rest">The rest</string>
+    <string name="browsed">browsed</string>
 </resources>

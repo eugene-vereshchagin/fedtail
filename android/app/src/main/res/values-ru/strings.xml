@@ -88,4 +88,6 @@
     <string name="open_browser">Открыть в браузере</string>
     <string name="pick_lane">Выбери ленту слева</string>
     <string name="pick_post">Нажми на пост — его тред откроется здесь</string>
+    <string name="sec_rest">Остальные</string>
+    <string name="browsed">листается</string>
 </resources>
