@@ -25,6 +25,8 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- "＋ to lanes ▾" beside a tag's Follow — in a search's results and on the tag's tab: the
+  tag as a lane of its own, or one more tag of a lane of tags already in the sidebar.
 - One hashtag kept as a lane of its own: its tab has "＋ to lanes" too (only a group of
   several tags had it), and it lives in the sidebar's "Tags" — Qt, GTK, the web page, the
   terminal.

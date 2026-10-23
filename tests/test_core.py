@@ -1406,6 +1406,19 @@ class CoreTest(TmpDir):
         self.assertIn(one, core.lane_by_name)
         self.assertEqual(core.lane_title(one), "#tbilisi")
         core.drop_tag_group(one).result()
+        # one more tag into a lane of tags (the tag's "＋ to lanes ▾")
+        from fedtail.core.view import View
+        from fedtail.frontends.common import taglanes
+        two = core.save_tag_group({"any": ["georgia", "грузия"]}).result()
+        view = View(core)
+        keys = [k for k, _w, on in taglanes.choices(view, "tbilisi") if on]
+        self.assertEqual(keys, [taglanes.OWN, two])
+        moved = taglanes.apply(view, two, "#Tbilisi").result()
+        self.assertEqual(core.lane_title(moved), "#georgia #tbilisi #грузия")
+        self.assertNotIn(two, core.lane_by_name)
+        self.assertEqual([on for k, _w, on in taglanes.choices(view, "tbilisi")
+                          if k == moved], [False])  # in it already
+        core.drop_tag_group(moved).result()
         core.cfg["lanes"]["tag_groups"] = [{"name": "Грузия", "any": ["georgia"],
                                             "none": ["politics"]}]
         core._apply_lists([], {})

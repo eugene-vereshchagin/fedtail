@@ -588,6 +588,11 @@ _STRINGS = {
         "langs_person_title": "Языки @{acct}",
         "langs_person_ask": "Коды языков через запятую (ru, en, ka…); пусто — все",
         "tags_info": "любой из тегов; +#тег — обязательно, -#тег — кроме",
+        "tags_own_lane": "Отдельной лентой", "tags_into_lane": "В ленту «{lane}»",
+        "tags_lanes_menu": "＋ в ленты ▾",
+        "tags_lanes_tip": "Держать тег слева, в группе «Теги»: отдельной лентой или "
+                          "вместе с другими тегами",
+        "tags_added": "#{tag} — в ленте «{lane}»",
         "tags_save": "＋ в ленты", "tags_save_tip": "Держать эту ленту слева, в группе «Теги»",
         "tags_saved": "{tags} — теперь лента слева, в «Тегах»",
         "tags_drop": "Убрать из лент",
@@ -1490,6 +1495,11 @@ _STRINGS = {
         "langs_person_title": "Languages of @{acct}",
         "langs_person_ask": "Language codes, comma separated (ru, en, ka…); empty — all",
         "tags_info": "any of the tags; +#tag — must have, -#tag — without",
+        "tags_own_lane": "A lane of its own", "tags_into_lane": "Into “{lane}”",
+        "tags_lanes_menu": "＋ to lanes ▾",
+        "tags_lanes_tip": "Keep the tag in the sidebar, under Tags: a lane of its own or "
+                          "with other tags",
+        "tags_added": "#{tag} is in “{lane}” now",
         "tags_save": "＋ to lanes", "tags_save_tip": "Keep this lane in the sidebar, under Tags",
         "tags_saved": "{tags} is a lane now, under Tags",
         "tags_drop": "Remove from lanes",

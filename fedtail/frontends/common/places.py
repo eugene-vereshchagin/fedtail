@@ -109,7 +109,7 @@ PLACES = {
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
     "quotes": "quotes_title", "history": "history_title", "report": "report_title",
-    "long_form": "long_form_title", "translate": "translate",
+    "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "server", "profile_edit",
@@ -394,7 +394,8 @@ class Places:
             self._btn(_("tag_info"), "tag", "open", t.name),
             self._btn(_("tag_unfollow") if t.following else _("tag_follow"), "tag",
                       "unfollow" if t.following else "follow", t.name,
-                      tip=_("tag_follow_tip"))))
+                      tip=_("tag_follow_tip")),
+            self._btn(_("tags_lanes_menu"), "tag", "lanes", t.name, tip=_("tags_lanes_tip"))))
 
     def _p_tags(self, _arg, _tab, _cur):
         page = Page("tags", _("followed_tags"), empty="—")
@@ -412,11 +413,6 @@ class Places:
                 page.rows.append(self._tag_row(t))
         except Exception as e:  # noqa: BLE001 — the posts still show
             log.info("tag info: %s", e.__class__.__name__)
-        from ...core import taggroups
-        if not cursor and taggroups.lane_name(taggroups.normal({"any": [name]})) \
-                not in v.lane_by_name:  # one tag kept as a lane of its own, under "Tags"
-            page.rows.append(Row("item", _("tags_save_tip"), key="tag-save", buttons=(
-                self._btn(_("tags_save"), "tag", "save", name),)))
         posts = _wait(v.tag_timeline(name, cursor or None)) or []
         page.rows += [Row("post", data=p, key=p.id) for p in posts]
         if posts and len(posts) >= v.cfg["feed"]["page_size"]:
@@ -431,9 +427,28 @@ class Places:
         name, _s, cursor = data.partition(" ")
         return Out(open={"page": "tag", "arg": name, "cursor": cursor})
 
-    def _a_tag_save(self, name, _v, _c, _ans):
-        _wait(self.view.save_tag_group({"any": [name]}))
-        return Out(message=_("tags_saved", tags="#" + name), refresh=True)
+    def _a_tag_lanes(self, name, _v, _c, _ans):
+        return Out(open={"page": "taglanes", "arg": name})
+
+    def _p_taglanes(self, name, _tab, _cur):
+        """"＋ to lanes": the tag as a lane of its own, or into a lane of tags kept in
+        the sidebar — the windows' menu (common/taglanes.py), as rows."""
+        from . import taglanes
+        name = name.lstrip("#")
+        page = Page("taglanes", "#" + name + " — " + _("tags_lanes_menu").rstrip(" ▾"),
+                    arg=name, hint=_("tags_lanes_tip"))
+        for key, words, on in taglanes.choices(self.view, name):
+            page.rows.append(Row("item", words, "" if on else "✓", key=key, buttons=(
+                self._btn(_("tags_save"), "taglane", "add", f"{key} {name}"),) if on else ()))
+        return page
+
+    def _a_taglane_add(self, data, _v, _c, _ans):
+        from . import taglanes
+        key, _s, name = data.partition(" ")
+        lane = _wait(taglanes.apply(self.view, key, name))
+        title = self.view.lane_title(lane) or lane
+        return Out(message=_("tags_saved", tags="#" + name) if key == taglanes.OWN
+                   else _("tags_added", tag=name, lane=title), refresh=True)
 
     def _a_tag_follow(self, name, _v, _c, _ans):
         _wait(self.view.follow_tag(name, True))

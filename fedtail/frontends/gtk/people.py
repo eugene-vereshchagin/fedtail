@@ -73,6 +73,47 @@ class AccountRow(Gtk.Box):
                       lambda e: (self.follow.set_sensitive(True), self.win.error(e)))
 
 
+def tag_lanes_button(win, tag):
+    """"＋ to lanes ▾" beside a tag's Follow: a lane of its own, or into a lane of tags
+    kept in the sidebar (common/taglanes.py) — as Qt's."""
+    from ..common import taglanes
+    view = win.view
+    btn = Gtk.MenuButton(label=_("tags_lanes_menu"))
+    tip(btn, _("tags_lanes_tip"))
+    pop = Gtk.Popover()
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+    pop.set_child(box)
+    btn.set_popover(pop)
+
+    def go(key):
+        pop.popdown()
+
+        def done(name):
+            title = view.lane_title(name) or name
+            win.status(_("tags_saved", tags="#" + tag) if key == taglanes.OWN
+                       else _("tags_added", tag=tag, lane=title), seconds=6)
+            GLib.timeout_add(300, lambda: (win.lane_rows.get(name) is not None and
+                                           win.sidebar.select_row(win.lane_rows[name]),
+                                           GLib.SOURCE_REMOVE)[1])
+        win.call(taglanes.apply(view, key, tag), done, win.error)
+
+    def fill(*_a):
+        child = box.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            box.remove(child)
+            child = nxt
+        for key, words, on in taglanes.choices(view, tag):
+            b = Gtk.Button(label=words)
+            b.add_css_class("flat")
+            b.get_child().set_xalign(0)
+            b.set_sensitive(on)
+            b.connect("clicked", lambda _b, k=key: go(k))
+            box.append(b)
+    pop.connect("show", fill)
+    return btn
+
+
 class TagRow(Gtk.Box):
     """#tag (its posts in a tab), how much it's used, Follow / Unfollow."""
 
@@ -93,6 +134,7 @@ class TagRow(Gtk.Box):
         self.follow.connect("clicked", self._toggle)
         self._words()
         self.append(self.follow)
+        self.append(tag_lanes_button(win, tag.name))  # into the sidebar's Tags (as Qt)
         self.feature = None
         if header and win.view.supports("featured_tags"):
             # on my profile (featured tags), as Qt's tag tab; not known yet: dead
@@ -327,34 +369,8 @@ def open_tag(win, tag):
             box.prepend(note)
             box.prepend(TagRow(win, t, header=True))
     win.call(win.view.tag_info(tag), info, lambda _e: None)
-    _save_row(win, box, {"any": [tag]}, "#" + tag)  # one tag as a lane of its own (as Qt)
     _paged(win, box, lambda max_id: win.view.tag_timeline(tag, max_id))
     return page
-
-
-def _save_row(win, box, spec, words):
-    """"＋ to lanes": the tag (or tags) kept in the sidebar's "Tags" — unless it is there."""
-    from ...core import taggroups
-    spec = taggroups.normal(spec)
-    lane = taggroups.lane_name(spec)
-    if lane in win.lane_rows:
-        return
-    save = Gtk.Button(label=_("tags_save"), halign=Gtk.Align.START)
-    tip(save, _("tags_save_tip"))
-
-    def saved(name):
-        save.set_visible(False)
-        win.status(_("tags_saved", tags=words), seconds=6)
-        GLib.timeout_add(300, lambda: (win.lane_rows.get(name) is not None and
-                                       win.sidebar.select_row(win.lane_rows[name]),
-                                       GLib.SOURCE_REMOVE)[1])
-
-    def do_save(_b):
-        save.set_sensitive(False)
-        win.call(win.view.save_tag_group(spec), saved,
-                 lambda e: (save.set_sensitive(True), win.error(e)))
-    save.connect("clicked", do_save)
-    box.append(save)
 
 
 def open_tag_group(win, spec):

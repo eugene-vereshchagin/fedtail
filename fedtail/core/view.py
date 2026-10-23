@@ -76,6 +76,9 @@ PASS = {
     # plain data for a page of its own (fedstatus.py), no server objects in it: someone
     # waiting for a list (name, url) was taken for a hashtag and the page fell over
     "federation_status",
+    # the lanes of tags, plain {"any", "all", "none", "name", "saved"}: a "name" in them
+    # must not be taken for a server's list
+    "tag_groups",
 }
 # what never goes through: the server's own data, unconverted
 BLOCKED = {"store", "api", "events", "_core"}

@@ -1185,6 +1185,26 @@ class Core(SocialMixin):
             return taggroups.lane_name(spec)
         return self.submit(job)
 
+    def add_tag_to_group(self, lane_name, tag):
+        """A tag into a saved lane of tags (one more of its "any"). Its lane is called
+        by what it holds, so it gets a new name: returned."""
+        tag = tag.lstrip("#").lower()
+
+        def job():
+            saved = self.store.kv_get("tag_groups", []) or []
+            out, new = [], lane_name
+            for g in saved:
+                if taggroups.lane_name(g) == lane_name:
+                    g = dict(taggroups.normal(g), name=g.get("name") or "")
+                    if tag not in g["any"] + g["all"]:
+                        g["any"] = sorted(set(g["any"]) | {tag})
+                    new = taggroups.lane_name(g)
+                out.append(g)
+            self.store.kv_set("tag_groups", out)
+            self._apply_lists(list(self.lists), self.list_members)
+            return new
+        return self.submit(job)
+
     def drop_tag_group(self, lane_name):
         def job():
             saved = [g for g in self.store.kv_get("tag_groups", []) or []
