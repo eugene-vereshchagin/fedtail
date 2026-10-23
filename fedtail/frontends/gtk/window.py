@@ -1042,34 +1042,9 @@ class MainWindow(Gtk.ApplicationWindow):
                      yes=_("logout_yes"))
 
     def about(self):
-        import platform
-        from importlib import resources
-
-        from ... import version
-        from ...model.text import html_to_text
-        info = version.info()
-        about = Gtk.AboutDialog(transient_for=self, modal=True)
-        about.set_program_name("fedtail")
-        about.set_version(info["version"])
-        # the opossum holding its own tail, as in Qt's About (else the window's icon)
-        try:
-            pic = resources.files("fedtail").joinpath("data/icons/fedtail.png")
-            about.set_logo(Gdk.Texture.new_from_filename(str(pic)))
-        except (GLib.Error, OSError):
-            about.set_logo_icon_name(self.get_icon_name() or "online.dmesg.fedtail")
-        about.set_website(version.HOMEPAGE)
-        # the same words as Qt's: what it is, which build, on what, who made it
-        tagline = html_to_text(_("about_text", version=info["version"])).split("\n")[-1]
-        lines = [tagline.strip()]
-        if info["commit"]:
-            lines.append(_("about_build", commit=info["commit"], date=info["date"]))
-        lines.append("Python " + platform.python_version() + " · GTK " +
-                     ".".join(str(x) for x in gtk_version()))
-        lines.append(_("made_by_long"))
-        about.set_comments("\n\n".join(x for x in lines if x))
-        about.set_authors([version.AUTHOR + " " + version.AUTHOR_URL, "Claude (Anthropic)"])
-        about.set_license_type(Gtk.License.GPL_3_0)
-        about.present()
+        """About fedtail: the same cards as Qt's (gtk/about.py, common/about.py)."""
+        from .about import show
+        show(self)
 
     # ---- ↔ and ❯ ------------------------------------------------------------------------
     def set_full_width(self, on):

@@ -72,7 +72,7 @@ from .find import FindBar
 from .hints import HintMode
 from .images import Images
 from .login import LoginDialog
-from .notify import Notifier, icon_path, mascot_path
+from .notify import Notifier, icon_path
 from .opener import open_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
@@ -2376,33 +2376,10 @@ class MainWindow(QMainWindow):
         open_path(out.parent)
 
     def about(self):
-        import platform
-
-        from PySide6 import __version__ as pyside
-
-        info = version.info()
-        lines = [_("about_text", version=info["version"])]
-        if info["commit"]:
-            lines.append(_("about_build", commit=info["commit"], date=info["date"]))
-        lines.append(_("about_env", py=platform.python_version(), qt=pyside))
-        lines.append(_("made_by_long"))
-        from urllib.parse import quote
-        author = "fedtail:resolve/" + quote(version.AUTHOR_URL, safe="")
-        lines.append(_("about_links", repo=version.HOMEPAGE, author_link=author,
-                       author=version.AUTHOR))
-        box = QMessageBox(self)
-        box.setWindowTitle("fedtail")
-        # the opossum holding its own tail — whatever the window's icon is
-        box.setIconPixmap(QIcon(mascot_path()).pixmap(160, 160))
-        box.setTextFormat(Qt.TextFormat.RichText)
-        box.setText("<br>".join(lines))
-        # links: the code to the browser; the author opens here, with Follow on the page
-        label = box.findChild(QLabel, "qt_msgbox_label")
-        if label is not None:
-            label.setOpenExternalLinks(False)
-            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
-            label.linkActivated.connect(lambda url: (box.accept(), self.on_link(url)))
-        box.exec()
+        """About fedtail: cards of what it is and what it runs on (qt/about.py)."""
+        from .about import AboutDialog
+        dlg = AboutDialog(self)
+        dlg.exec()
 
     def show_raise(self):
         self.showNormal()

@@ -785,26 +785,24 @@ class Places:
         return self._p_help("news", "", "")
 
     def _p_about(self, _arg, _tab, _cur):
-        """What fedtail is, which build, who made it — the windows' About, in words."""
-        import platform
-
+        """What fedtail is, which build, on what — the windows' About cards
+        (common/about.py), as rows."""
         from ... import version
-        from ...model.text import html_to_text
-        info = version.info()
+        from . import about
+        a = about.facts(self.view, getattr(self, "toolkit", ""),
+                        getattr(self, "toolkit_version", ""))
         page = Page("about", _("about"))
-        page.rows.append(Row("heading", "fedtail " + info["version"]))
-        tagline = html_to_text(_("about_text", version=info["version"])).split("\n")[-1]
-        page.rows.append(Row("text", tagline.strip()))
-        if info.get("commit"):
-            page.rows.append(Row("text", _("about_build", commit=info["commit"],
-                                           date=info["date"])))
-        page.rows.append(Row("text", "Python " + platform.python_version()))
-        page.rows.append(Row("text", _("made_by_long")))
+        page.rows.append(Row("heading", "fedtail " + a.version))
+        page.rows.append(Row("text", a.tagline))
+        for label, value in a.tiles + a.rows:
+            page.rows.append(Row("item", value, label, key="about:" + label))
+        page.rows.append(Row("text", a.made_by))
         page.rows.append(Row("item", version.HOMEPAGE, key="repo", buttons=(
             self._btn(_("open_browser"), "url", "open", version.HOMEPAGE),)))
         page.rows.append(Row("item", version.AUTHOR, version.AUTHOR_URL, key="author",
                              buttons=(self._btn(_("open_browser"), "url", "open",
                                                 version.AUTHOR_URL),)))
+        page.rows.append(Row("pre", a.text()))  # to select and copy, for a bug report
         return page
 
     def _p_federation(self, _arg, _tab, _cur):

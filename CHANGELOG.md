@@ -25,6 +25,11 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- About, as cards (Qt and GTK): the opossum and the name, tiles — version, platform,
+  architecture, build, commit date, profile — and rows: Python, the toolkit, the commit,
+  the accounts, the server and what it runs, the theme, the data folder; "Copy the
+  information" for a bug report. The web page and the terminal say the same in rows
+  (common/about.py).
 - All accounts in one window: the editor has "From @name@server" — a new post from any of
   them (it was the main one only), a reply from another account than the one that got
   the post (found on its server first). The accounts are named whole everywhere — "→

@@ -677,6 +677,12 @@ _STRINGS = {
         "made_by": "написан нейросетью Claude<br>под присмотром кожаного мешка",
         "made_by_long": "Код написан нейросетью Claude (Anthropic) — от первой строки до "
                         "иконки. Кожаный мешок придумывал, тестировал и ругался.",
+        "about_version": "Версия", "about_platform": "Платформа", "about_arch": "Архитектура",
+        "about_build_kind": "Сборка", "about_dev": "Разработка", "about_release": "Релиз",
+        "about_commit_date": "Дата коммита", "about_profile": "Профиль",
+        "about_commit": "Коммит", "about_account": "Аккаунт", "about_accounts": "Аккаунты",
+        "about_server": "Сервер", "about_theme": "Тема", "about_data": "Данные",
+        "about_copy": "Скопировать информацию", "about_copied": "Скопировано",
         "about_build": "Сборка: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Код: <a href="{repo}">GitHub</a><br>Автор в федиверсе: '
                        '<a href="{author_link}">{author}</a> — откроется здесь, '
@@ -1571,6 +1577,12 @@ _STRINGS = {
         "made_by": "written by Claude, an AI<br>supervised by a meatbag",
         "made_by_long": "The code is written by Claude (Anthropic), an AI — from the first "
                         "line to the icon. A meatbag came up with it, tested it and swore.",
+        "about_version": "Version", "about_platform": "Platform", "about_arch": "Architecture",
+        "about_build_kind": "Build", "about_dev": "Development", "about_release": "Release",
+        "about_commit_date": "Commit date", "about_profile": "Profile",
+        "about_commit": "Commit", "about_account": "Account", "about_accounts": "Accounts",
+        "about_server": "Server", "about_theme": "Theme", "about_data": "Data",
+        "about_copy": "Copy the information", "about_copied": "Copied",
         "about_build": "Build: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Code: <a href="{repo}">GitHub</a><br>The author in the fediverse: '
                        '<a href="{author_link}">{author}</a> — opens here, with Follow',
