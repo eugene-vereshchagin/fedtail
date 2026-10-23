@@ -33,11 +33,8 @@ _STRINGS = {
         "cli_no_post": "не знаю пост {alias}",
         "cli_posted": "отправлено {alias} ({vis}) {url}",
         "cli_login_first": "этот профиль не вошёл на сервер: сначала открой окно (fedtail) и войди",
-        "sync_no_folder": "Синхронизация: в sync.folder не указана папка",
         "sync_login_first": "Синхронизация: нет токена для сервера синхронизации — "
                             "выполни fedtail sync login",
-        "sync_no_server": "Синхронизация: {server} не называет сервер синхронизации — "
-                          "укажи sync.url",
         "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
                          "устройства — перенеси ключ: fedtail sync key там, "
                          "fedtail sync join здесь",
@@ -48,7 +45,21 @@ _STRINGS = {
         "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
         "sync_full": "Синхронизация: место на сервере кончилось (квота)",
         "sync_failed": "Синхронизация не удалась: {why}",
-        "sync_off": "синхронизация выключена: sync.enabled = true в конфиге",
+        "sync_off": "синхронизации нет: это отдельный сервис, укажи sync.url "
+                    "(или sync.folder) в конфиге — как, см. docs/ru/sync.md",
+        "sync_bar_off": "⇅ нет",
+        "sync_bar_off_tip": "Синхронизации с другими устройствами нет: в конфиге не указан "
+                            "sync.url (или sync.folder). Это отдельный сервис, как его "
+                            "подключить — docs/ru/sync.md",
+        "sync_bar_wait": "⇅ …",
+        "sync_bar_wait_tip": "Синхронизация: {where} — ещё не было ни одного обмена",
+        "sync_bar_ok": "⇅ {time}",
+        "sync_bar_ok_tip": "Синхронизировано в {time}: {where}\nотправлено {sent}, "
+                           "получено {got}, ждёт отправки {pending}",
+        "sync_bar_bad": "⇅ !",
+        "sync_bar_bad_tip": "Синхронизация: {where}\n{error}",
+        "about_sync": "Синхронизация",
+        "about_sync_off": "нет (sync.url не задан)",
         "sync_status": "хранилище: {backend} {where}\nвход: {login}\nустройство: {device}\n"
                        "ключ: {kid}\nне отправлено: {pending}\nпоследний раз: {last}",
         "sync_nothing": "—",
@@ -963,9 +974,7 @@ _STRINGS = {
         "cli_posted": "sent {alias} ({vis}) {url}",
         "cli_login_first": "this profile is not logged in: open the window (fedtail), "
                            "log in first",
-        "sync_no_folder": "Sync: no folder in sync.folder",
         "sync_login_first": "Sync: no token for the sync server — run fedtail sync login",
-        "sync_no_server": "Sync: {server} names no sync server — set sync.url",
         "sync_need_key": "Sync: the account already has a journal sealed by another "
                          "device's key — carry the key over: fedtail sync key there, "
                          "fedtail sync join here",
@@ -975,7 +984,21 @@ _STRINGS = {
         "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
         "sync_full": "Sync: no room left on the server (quota)",
         "sync_failed": "Sync failed: {why}",
-        "sync_off": "sync is off: sync.enabled = true in the config",
+        "sync_off": "no sync: it is a service of its own — set sync.url (or sync.folder) "
+                    "in the config; how: docs/en/sync.md",
+        "sync_bar_off": "⇅ off",
+        "sync_bar_off_tip": "No sync with your other devices: sync.url (or sync.folder) is "
+                            "not set in the config. It is a service of its own; how to "
+                            "connect it — docs/en/sync.md",
+        "sync_bar_wait": "⇅ …",
+        "sync_bar_wait_tip": "Sync: {where} — nothing exchanged yet",
+        "sync_bar_ok": "⇅ {time}",
+        "sync_bar_ok_tip": "Synced at {time}: {where}\nsent {sent}, got {got}, "
+                           "waiting to go {pending}",
+        "sync_bar_bad": "⇅ !",
+        "sync_bar_bad_tip": "Sync: {where}\n{error}",
+        "about_sync": "Sync",
+        "about_sync_off": "off (sync.url not set)",
         "sync_status": "store: {backend} {where}\nlogin: {login}\ndevice: {device}\n"
                        "key: {kid}\nnot sent: {pending}\nlast time: {last}",
         "sync_nothing": "—",

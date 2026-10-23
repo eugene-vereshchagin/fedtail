@@ -114,10 +114,12 @@ class Core(SocialMixin):
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
-        # read marks and thread states shared with the account's other devices (sync.*):
+        # read marks, thread states and my lanes' arrangement shared with the account's
+        # other devices (sync.*): on when sync.url or sync.folder says where they meet;
         # recorded whenever it is on, sent by the thread polling starts
         self.sync = None
-        if cfg.get("sync", {}).get("enabled"):
+        from .sync.engine import wanted
+        if wanted(cfg):
             from .sync import Sync
             self.sync = Sync(self)
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
@@ -1135,6 +1137,8 @@ class Core(SocialMixin):
             return
         ids.insert(j, ids.pop(i))
         self.store.kv_set("list_order", ids)
+        if self.sync:
+            self.sync.record_lanes("list_order")
         self._apply_lists(list(self.lists), self.list_members)
 
     def list_people(self, list_id):
@@ -1181,6 +1185,8 @@ class Core(SocialMixin):
                      if taggroups.key(g) != taggroups.key(spec)]
             saved.append(dict(taggroups.normal(spec), name=name))
             self.store.kv_set("tag_groups", saved)
+            if self.sync:
+                self.sync.record_lanes("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
             return taggroups.lane_name(spec)
         return self.submit(job)
@@ -1201,6 +1207,8 @@ class Core(SocialMixin):
                     new = taggroups.lane_name(g)
                 out.append(g)
             self.store.kv_set("tag_groups", out)
+            if self.sync:
+                self.sync.record_lanes("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
             return new
         return self.submit(job)
@@ -1210,6 +1218,8 @@ class Core(SocialMixin):
             saved = [g for g in self.store.kv_get("tag_groups", []) or []
                      if taggroups.lane_name(g) != lane_name]
             self.store.kv_set("tag_groups", saved)
+            if self.sync:
+                self.sync.record_lanes("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
         return self.submit(job)
 
@@ -1417,6 +1427,12 @@ class Core(SocialMixin):
 
     def sync_status(self):
         return self.sync.status() if self.sync else None
+
+    def apply_lanes_state(self, keys):
+        """Another device rearranged my lanes (core/sync: the order of lists, saved tag
+        lanes) — the new values are in the store already: the sidebar follows."""
+        log.info("sync: %s from another device", ", ".join(keys))
+        self._apply_lists(list(self.lists), self.list_members)
 
     def apply_thread_state(self, root, state):
         """Another device set this thread's state (core/sync): do the same here, without

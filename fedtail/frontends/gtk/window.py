@@ -280,6 +280,10 @@ class MainWindow(Gtk.ApplicationWindow):
             getattr(bar, "set_margin_" + m)(6)
         bar.append(self.profile_label)
         bar.append(self.status_line)
+        # sync with my other devices (or that there is none: off without sync.url)
+        self.sync_label = Gtk.Label(xalign=1)
+        self.sync_label.add_css_class("ft-muted")
+        bar.append(self.sync_label)
         corner = self._debug_corner()
         self.corner_label = None
         if corner:
@@ -289,6 +293,7 @@ class MainWindow(Gtk.ApplicationWindow):
             bar.append(lab)
             self.corner_label = lab
         self._profile_text()
+        self._sync_text()
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         outer.add_css_class("fedtail-main")
         # the editor comes over the window's middle (as Qt's), not as a window of its own
@@ -695,6 +700,13 @@ class MainWindow(Gtk.ApplicationWindow):
         info = version.info()
         build = info["version"] + (f" · {info['date']}" if info["date"] else "")
         return f"fedtail {build}\n" + _("made_by").replace("<br>", "\n")
+
+    def _sync_text(self):
+        """"⇅ 21:40" / "⇅ off" / "⇅ !" in the status bar, the details as its tooltip."""
+        from ..common import syncline
+        text, tip_text = syncline.bar(self.view)
+        self.sync_label.set_text(text)
+        self.sync_label.set_tooltip_text(tip_text)
 
     def _profile_text(self):
         """"default: @me@server ★" at the left of the status bar."""
@@ -1344,7 +1356,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def on_event(self, name, payload):
         if getattr(getattr(self.core, "store", None), "closed", False):
             return  # queued before the exit, come after the database closed
-        if name == "read_changed":  # marks only: no lane is rebuilt for them
+        if name == "sync_changed":
+            self._sync_text()
+        elif name == "read_changed":  # marks only: no lane is rebuilt for them
             for lname, lv in self.lane_views.items():
                 if lname in SPECIAL:
                     continue

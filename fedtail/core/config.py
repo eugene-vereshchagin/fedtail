@@ -200,11 +200,9 @@ DEFAULTS = {
         "stream": 'auto',
     },
     "sync": {
-        "enabled": False,
-        "backend": "server",
         "url": "",
         "folder": "",
-        "what": ["read", "threads"],
+        "what": ["read", "threads", "lanes"],
         "interval_seconds": 60,
     },
     "storage": {
@@ -258,7 +256,6 @@ CHOICES = {
     ("ui", "icons"): {'theme', 'desktop', 'own', 'additional', 'words'},
     ("ui", "split_tabs"): {'keep', 'close'},
     ("poll", "stream"): {'auto', 'off'},
-    ("sync", "backend"): {'server', 'folder'},
     ("ui", "image_decode"): {'box', 'full'},
     ("feed", "prefetch"): {'previews', 'all', 'off'},
     ("ui", "alt_text"): {'caption', 'tooltip'},
@@ -311,7 +308,7 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("lists", "hide_in"), ("cli", "tail_lanes")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
-SYNC_WHAT = {"read", "threads"}
+SYNC_WHAT = {"read", "threads", "lanes"}
 MINIMUM = {
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
@@ -428,6 +425,11 @@ def validate(user):
                     cfg["ui"]["esc"] = "off"
                 warnings.append('ui.esc_hides is now ui.esc ("curtain", "tray" or "off")')
                 continue
+            if section == "sync" and key in ("enabled", "backend"):
+                # gone in 0.19: sync is on when it has somewhere to go (url or folder)
+                warnings.append(f"sync.{key} is gone: sync works when sync.url or "
+                                "sync.folder is set, and is off without them")
+                continue
             if key not in DEFAULTS[section]:
                 from .config_update import RENAMED
                 if (section, key) in RENAMED:  # an older name: say what it is now
@@ -492,6 +494,8 @@ def validate(user):
     if url and not (url.startswith("https://") or
                     url.startswith(("http://localhost", "http://127.0.0.1"))):
         errors.append(f"sync.url = {url!r}: https:// (http:// only to this computer)")
+    if url and cfg["sync"]["folder"]:
+        errors.append("sync.url and sync.folder are both set: one place to meet, not two")
     if not cfg["lanes"]["enabled"]:
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):

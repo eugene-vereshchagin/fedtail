@@ -5,6 +5,16 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- Sync is a service of its own now, apart from the fediverse server: it is on when the
+  config says where (`sync.url`, or `sync.folder`) and off otherwise. `sync.enabled` and
+  `sync.backend` are gone (a config still having them gets a warning, nothing breaks), and
+  so is the lookup through `/.well-known/fedtail-sync` on the account's server — in fedtail
+  and in fedtail-sync (its `public_url` is ignored with a warning). The right of the status
+  bar shows how it goes (Qt, GTK): "⇅ 21:40" — synced then, "⇅ …", "⇅ !" — a problem (the
+  tooltip says which), "⇅ off"; About has a "Sync" row everywhere.
+- Sync carries your lanes as you arranged them (`sync.what` "lanes", on by default): the
+  order of lists — servers keep none, so every device showed them as they came — and the
+  tag lanes saved from a search. The newest arrangement wins.
 - Faster after reading: which posts are read is kept in memory (the sidebar counted every
   lane from the database after each read mark and froze the window for 0.4 s on a big
   profile). A followed thread the server times out on no longer stops the others nor

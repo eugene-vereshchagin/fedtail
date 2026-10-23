@@ -487,6 +487,12 @@ class MainWindow(QMainWindow):
         self.statusBar().messageChanged.connect(
             lambda msg: self.profile_label.setVisible(not msg))
         self._profile_text()
+        # right in the status bar, always seen: sync with my other devices (or that
+        # there is none — it is a service of its own, off without sync.url)
+        self.sync_label = QLabel()
+        self.sync_label.setObjectName("muted")
+        self.statusBar().addPermanentWidget(self.sync_label)
+        self._sync_text()
 
         for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
                         ("Ctrl+Q", self.quit),
@@ -691,6 +697,13 @@ class MainWindow(QMainWindow):
         self.core.set_state("sidebar_width", {"cfg": self.cfg["ui"]["sidebar_width"],
                                               "width": width})
         log.info("sidebar width %d", width)
+
+    def _sync_text(self):
+        """"⇅ 21:40" / "⇅ off" / "⇅ !" at the right of the status bar."""
+        from ..common import syncline
+        text, tip = syncline.bar(self.core)
+        self.sync_label.setText(text)
+        self.sync_label.setToolTip(tip)
 
     def _profile_text(self):
         """"default: @me@server ★" at the left of the status bar."""
@@ -1589,7 +1602,9 @@ class MainWindow(QMainWindow):
                 log.debug("event %s: %.0f ms", name, ms)
 
     def _on_event(self, name, payload):
-        if name == "lanes_updated":
+        if name == "sync_changed":
+            self._sync_text()
+        elif name == "lanes_updated":
             for lane in payload:
                 w = self.lane_widgets.get(lane)
                 if isinstance(w, LaneWidget):

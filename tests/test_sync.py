@@ -67,8 +67,7 @@ class Devices(TmpDir):
     def device(self, name, world, **sync):
         FakeApi.world = world
         user = {"feed": {"first_run_mark_read": False}, "ui": {"language": "en"},
-                "sync": {"enabled": True, "backend": "folder",
-                         "folder": str(self.tmp / "meet"), **sync}}
+                "sync": {"folder": str(self.tmp / "meet"), **sync}}
         cfg, _ = config.validate(user)
         p = paths.resolve(name, config=str(self.tmp / f"{name}.toml"),
                           data=str(self.tmp / name))
@@ -167,6 +166,40 @@ class FolderSyncTest(Devices):
         core.mark_read(["7"])
         self.assertEqual(core.store.sync_pending_count(), 0)
 
+    def test_list_order_and_saved_tag_lanes_travel(self):
+        for core in (self.desk, self.phone):  # the same account: the same lists
+            core._apply_lists([{"id": "L1", "title": "one", "exclusive": False},
+                               {"id": "L2", "title": "two", "exclusive": False},
+                               {"id": "L3", "title": "three", "exclusive": False}], {})
+        self.desk.move_list("L3", -1)
+        self.desk.move_list("L3", -1)
+        self.desk.save_tag_group({"any": ["tbilisi", "georgia"]}, "Georgia").result()
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.events_seen.clear()
+        self.phone.sync_now()
+        self.assertEqual([x["id"] for x in self.phone.lists], ["L3", "L1", "L2"])
+        self.assertEqual([g["name"] for g in self.phone.tag_groups if g["saved"]], ["Georgia"])
+        self.assertTrue(any(n == "lists_changed" for n, _ in self.phone.events_seen))
+        # moved on the phone later: the desk follows; nothing comes back as an echo
+        self.phone.move_list("L2", -1)
+        self.phone.sync_now()
+        self.desk.sync_now()
+        self.assertEqual([x["id"] for x in self.desk.lists], ["L3", "L2", "L1"])
+        self.assertEqual(self.desk.store.sync_pending_count(), 0)
+        # an old order from long ago changes nothing; a strange shape is not taken
+        self.assertFalse(self.desk.store.sync_newer("k:list_order", 1, "zz", "[]"))
+        self.assertEqual(self.desk.sync.apply(
+            {"d": "zz", "ops": [{"k": "list_order", "v": "L1", "at": 2 ** 50}]}), 0)
+        self.assertEqual([x["id"] for x in self.desk.lists], ["L3", "L2", "L1"])
+
+    def test_lanes_stay_home_when_not_wanted(self):
+        core = self.device("quiet", self.world, what=["read"])
+        core._apply_lists([{"id": "L1", "title": "a", "exclusive": False},
+                           {"id": "L2", "title": "b", "exclusive": False}], {})
+        core.move_list("L2", -1)
+        self.assertEqual(core.store.sync_pending_count(), 0)
+
     def test_folder_backend_pages_and_skips_its_own(self):
         b = backends.FolderBackend(self.tmp / "meet")
         for i in range(backends.PAGE + 5):
@@ -194,7 +227,15 @@ class SyncOffTest(TmpDir):
         out = io.StringIO()
         with self.assertRaises(SystemExit) as e:
             cli.run(core, ["sync", "status"], stream=out)
-        self.assertIn("sync.enabled", str(e.exception.code))
+        self.assertIn("sync.url", str(e.exception.code))
+
+    def test_off_without_an_address_and_the_old_switch_is_told(self):
+        cfg, warns = config.validate({"sync": {"enabled": True, "backend": "server"}})
+        self.assertFalse(engine.wanted(cfg))
+        self.assertTrue(any("sync.enabled is gone" in w for w in warns))
+        self.assertTrue(engine.wanted(config.validate(
+            {"sync": {"url": "https://sync.example"}})[0]))
+        self.assertTrue(engine.wanted(config.validate({"sync": {"folder": "~/meet"}})[0]))
 
     def test_config_is_checked(self):
         with self.assertRaises(config.ConfigError):
@@ -202,9 +243,32 @@ class SyncOffTest(TmpDir):
         with self.assertRaises(config.ConfigError):
             config.validate({"sync": {"url": "http://sync.example"}})
         with self.assertRaises(config.ConfigError):
-            config.validate({"sync": {"backend": "carrier pigeon"}})
+            config.validate({"sync": {"url": "https://sync.example", "folder": "~/meet"}})
         cfg, _ = config.validate({"sync": {"url": "https://sync.example"}})
         self.assertEqual(cfg["sync"]["interval_seconds"], 60)
+
+
+class SyncLineTest(Devices):
+    """The status bar's word and About's row (frontends/common/syncline.py)."""
+
+    def test_off_waiting_done_and_trouble(self):
+        from fedtail.frontends.common import about, syncline
+        off = self.device("off", self.world, folder="")
+        self.assertEqual(syncline.bar(off)[0], "⇅ off")
+        self.assertIn("sync.url", syncline.bar(off)[1])
+        self.assertIn("sync.url", dict(about.facts(off).rows)["Sync"])
+        self.assertEqual(syncline.bar(self.desk)[0], "⇅ …")
+        if HAVE_CRYPTO:
+            self.desk.mark_read(["1"])
+            self.desk.sync_now()
+            text, tip = syncline.bar(self.desk)
+            self.assertRegex(text, r"^⇅ \d\d:\d\d$")
+            self.assertIn("sent 1", tip)
+            self.assertTrue(any(n == "sync_changed" for n, _ in self.desk.events_seen))
+            self.assertIsNone(self.phone.sync_now())  # no key here yet
+            self.assertEqual(syncline.bar(self.phone)[0], "⇅ !")
+            self.assertIn("sync join", syncline.bar(self.phone)[1])
+        self.assertIn(str(self.tmp / "meet"), syncline.about(self.desk))
 
 
 # ---- the server ---------------------------------------------------------------------------
@@ -220,7 +284,7 @@ class ServerTest(TmpDir):
         self.app = syncserver.Server(
             {"db": str(self.tmp / "s.db"), "instances": ["me.example"], "quota_mb": 1,
              "listen": "127.0.0.1:0",
-             "max_blob_kb": 64, "public_url": "https://sync.me.example"},
+             "max_blob_kb": 64},
             verify=lambda host, token: self.TOKENS.get((host, token)))
         self.httpd = syncserver.make_http_server(self.app)
         self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
@@ -245,8 +309,7 @@ class ServerTest(TmpDir):
 
     def test_whose_journal_is_whose(self):
         self.assertEqual(self.call("GET", "/v1"), (200, {"fedtail-sync": 1}))
-        self.assertEqual(self.call("GET", "/.well-known/fedtail-sync"),
-                         (200, {"url": "https://sync.me.example"}))
+        self.assertEqual(self.call("GET", "/.well-known/fedtail-sync")[0], 404)  # gone
         self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"one", device="d1")[0], 200)
         self.assertEqual(self.call("POST", "/v1/blobs", "t-me2", b"two", device="d2")[0], 200)
         self.assertEqual(self.call("POST", "/v1/blobs", "t-you", b"theirs")[0], 200)
@@ -258,9 +321,14 @@ class ServerTest(TmpDir):
         self.assertEqual(self.call("DELETE", "/v1/blobs", "t-me"), (200, {"deleted": 2}))
         self.assertEqual(len(self.call("GET", "/v1/blobs", "t-you")[1]["blobs"]), 1)
 
-    def test_found_through_the_well_known(self):
-        self.assertEqual(backends.discover(self.url), "https://sync.me.example")
-        self.assertIsNone(backends.discover(self.url + "/nothing-here"))
+    def test_an_older_config_with_public_url_still_starts(self):
+        cfg = self.tmp / "s.toml"
+        cfg.write_text('instances = ["me.example"]\npublic_url = "https://x.example"\n')
+        with self.assertLogs("fedtail-sync", "WARNING"):
+            self.assertEqual(self.mod.load_config(cfg), {"instances": ["me.example"]})
+        cfg.write_text('instancez = ["me.example"]\n')
+        with self.assertRaises(SystemExit):
+            self.mod.load_config(cfg)
 
     def test_strangers_and_greed_refused(self):
         self.assertEqual(self.call("GET", "/v1/blobs")[0], 401)

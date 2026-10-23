@@ -2,7 +2,8 @@
 
 A backend knows two things: put a blob (`push`) and give the blobs other devices put
 since a cursor (`pull`). It never opens a blob — they are sealed (crypto.py) — so any
-dumb store will do; adding one is a class here and a word in `sync.backend`.
+dumb store will do; adding one is a class here and an option in `[sync]` that says
+where it is (as `url` and `folder` do).
 
 * `HttpBackend` — fedtail-sync (syncserver/fedtail_sync.py) or anything speaking its two
   calls. The device proves who it is with a token of the account limited to
@@ -12,9 +13,8 @@ dumb store will do; adding one is a class here and a word in `sync.backend`.
   Syncthing folder. Each device writes only into its own subfolder, so two devices
   never write the same file.
 
-`discover()` asks the account's own server where its sync server is:
-`https://<server>/.well-known/fedtail-sync` → `{"url": "https://…"}` (an admin adds it
-to the web server in front of the instance; docs/en/sync.md).
+The sync server is a service of its own, apart from the fediverse server: the user
+names it in `sync.url`; nothing is looked up.
 """
 
 import base64
@@ -134,20 +134,3 @@ class FolderBackend:
                     break
                 cursor[sub.name] = n
         return out, cursor, more
-
-
-def discover(instance, session=None):
-    """The sync server the account's own server points at, or None."""
-    s = session or requests
-    try:
-        r = s.get(f"{instance.rstrip('/')}/.well-known/fedtail-sync", timeout=TIMEOUT,
-                  headers={"Accept": "application/json", "User-Agent": version.USER_AGENT})
-        if r.status_code != 200:
-            return None
-        url = str(r.json().get("url") or "")
-    except (requests.RequestException, ValueError, AttributeError):
-        return None
-    if url.startswith("https://") or url.startswith(("http://localhost", "http://127.0.0.1")):
-        return url
-    log.warning("sync: the server's well-known points at %r, not https: ignored", url)
-    return None

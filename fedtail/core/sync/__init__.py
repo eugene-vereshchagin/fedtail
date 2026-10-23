@@ -6,7 +6,7 @@ only they have:
 
     engine.py    Sync: what is recorded, the round (send, fetch, apply), the key's birth
     crypto.py    AES-GCM sealing, the key and its text form, the key file
-    backends.py  where the blobs meet: a fedtail-sync server, a folder; discovery
+    backends.py  where the blobs meet: a fedtail-sync server (sync.url), a folder
 
 The server side is syncserver/fedtail_sync.py. docs/en/sync.md says how to set it all up.
 """

@@ -13,7 +13,7 @@ What's new in the latest versions, and the plans.
 
 **0.18.0:**
 
-- Read marks and thread subscriptions shared by all your devices
+- Read marks, thread subscriptions and lane order shared by all your devices
 - Open every CW in a thread at once
 - Short post names the same on every device
 - The server's grouped notifications (v2)

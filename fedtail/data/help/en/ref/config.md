@@ -324,11 +324,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 
 | Key | Default | What it does |
 |---|---|---|
-| `sync.enabled` | `false` | Read marks and thread subscriptions the same on all your devices (a desktop, a laptop, a phone). Off by default. What travels is sealed with a key only your devices have: whatever stores it sees no posts and no read marks. Setting up: docs/en/sync.md, in short: `fedtail sync login` (a sync server) or a folder, then `fedtail sync key` here and `fedtail sync join` on the other devices. |
-| `sync.backend` | `"server"` | Where the devices meet: "server" — a fedtail-sync server; "folder" — a folder every device sees (a NAS share, WebDAV mounted, Syncthing). |
-| `sync.url` | `""` | The sync server's address. Empty — the one your fediverse server names (https://<server>/.well-known/fedtail-sync), if its admin set one up. |
-| `sync.folder` | `""` | The folder for backend = "folder" (~ is your home folder). |
-| `sync.what` | `["read", "threads"]` | What travels: "read" — read marks you made (not the first run's "everything read"), "threads" — threads you followed, left or muted by hand. |
+| `sync.url` | `""` | Read marks, thread subscriptions and the order of your own lanes the same on all your devices (a desktop, a laptop, a phone). Sync is a service of its own, apart from your fediverse server: without an address below there is simply no sync (the status bar and About say so). What travels is sealed with a key only your devices have: whatever stores it sees no posts and no read marks. How to set it up: docs/en/sync.md; in short — the address here, `fedtail sync login`, then `fedtail sync key` on the first device and `fedtail sync join` on the others. url — the fedtail-sync server's address, as its admin gave it (say, "https://sync.example.org"). Empty — no sync server. |
+| `sync.folder` | `""` | Or, instead of a server, a folder every device sees: a NAS share, WebDAV mounted, a Syncthing folder (~ is your home folder). Not both: url or folder. |
+| `sync.what` | `["read", "threads", "lanes"]` | What travels: "read" — read marks you made (not the first run's "everything read"), "threads" — threads you followed, left or muted by hand, "lanes" — your lanes as you arranged them: the order of lists (servers keep none) and the tag lanes you saved. |
 | `sync.interval_seconds` | `60` | How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after it was made anyway. |
 
 ## 12. Database and logs

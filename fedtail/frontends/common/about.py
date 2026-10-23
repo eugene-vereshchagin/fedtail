@@ -92,6 +92,8 @@ def facts(view, toolkit="", toolkit_version=""):
     theme = (cfg.get("ui") or {}).get("theme")
     if theme:
         rows.append((_("about_theme"), theme))
+    from . import syncline
+    rows.append((_("about_sync"), syncline.about(getattr(view, "_core", view))))
     if paths is not None:
         rows.append((_("about_data"), str(paths.data_dir)))
     a.rows = rows

@@ -51,7 +51,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Catching up with no holes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | When a post counts as read | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The reading place is shared with other clients | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |   |
-| Read marks and thread subscriptions shared by all your devices | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Read marks, thread subscriptions and lane order shared by all your devices | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
