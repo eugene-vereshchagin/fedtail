@@ -495,6 +495,16 @@ def main():
         # ---- your own account -------------------------------------------------------------
         if real_profile:
             flag = [f"--real={real_profile}"]
+            # every step on your account waits for room in the server's rate limit first
+            real_step = run.step
+
+            def gated(name, args, *a, **k):
+                if name.startswith("real-"):
+                    subprocess.run([sys.executable, "tools/real.py",
+                                    f"--wait={real_profile}"], cwd=ROOT, env=env(),
+                                   timeout=900, check=False)
+                return real_step(name, args, *a, **k)
+            run.step = gated
             r = out / "real"
             r.mkdir(exist_ok=True)
             if "qt" in only and qt:

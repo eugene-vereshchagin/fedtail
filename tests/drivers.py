@@ -682,8 +682,8 @@ class Qt(_Window):
     def menu(self, sid):
         from fedtail.frontends.common import actions
         r = self._row(sid)
-        card = getattr(r, "card", r)
-        ctx = card._actions_ctx()
+        # the row itself makes the menu (PostRow); its .card is only the frame
+        ctx = (r if hasattr(r, "_actions_ctx") else r.card)._actions_ctx()
         return menu_keys([(it.kind, it.url) for it in actions.menu(
             r.spec.entry, ctx, short_id=r.spec.extra.get("short_id"), unread=r.spec.unread)])
 

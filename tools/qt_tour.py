@@ -216,6 +216,30 @@ SIZES = ((3840, 2160), (2560, 1440), (1920, 1080), (1600, 1200), (1366, 768),
 SHARES = ((1.0, 1.0), (0.5, 1.0), (0.75, 0.75), (1.0, 0.5), (0.5, 0.5), (0.33, 1.0))
 
 
+def too_wide(win):
+    """Who holds the window wide: the deepest visible widgets that ask the most width
+    (their minimum size hint), with the chain of their parents' names."""
+    from PySide6.QtWidgets import QWidget
+    rows = []
+    for w in win.findChildren(QWidget):
+        if not w.isVisible() or w.isWindow():
+            continue
+        need = max(w.minimumWidth(), w.minimumSizeHint().width())
+        if need < 300:
+            continue
+        kids = [c for c in w.findChildren(QWidget) if c.isVisible() and
+                max(c.minimumWidth(), c.minimumSizeHint().width()) >= need - 20]
+        if kids:  # a child asks as much: that one is nearer the cause
+            continue
+        path, p = [], w
+        while p is not None and p is not win and len(path) < 4:
+            path.append(type(p).__name__ + (f"#{p.objectName()}" if p.objectName() else ""))
+            p = p.parentWidget()
+        rows.append((need, " < ".join(path)))
+    rows.sort(reverse=True)
+    return "; ".join(f"{n} px: {pth}" for n, pth in rows[:4]) or "(nobody in particular)"
+
+
 def _in_scroll(w, top):
     """Inside a scroll area's contents (out of view there on purpose), or in a menu."""
     from PySide6.QtWidgets import QAbstractScrollArea
@@ -296,7 +320,7 @@ def sizes(app, out, win, label):
         lines += ["    " + p for p in probs[:25]]
         if got.width() > w and w >= 800:
             ERRORS.append(f"{name}: the window can't be {w} px wide (it stays "
-                          f"{got.width()}): something in it is too wide")
+                          f"{got.width()}): too wide — " + too_wide(win))
         for p in probs:
             if w >= 1024:  # at a real screen's size nothing should be cut
                 ERRORS.append(f"{name}: {p}")
@@ -485,6 +509,11 @@ def tour_menus(app, out, core, win):
         sweep(app, win.roster, out, "roster")
     from fedtail.frontends.qt.card import PostRow
     cards = [c for c in win.findChildren(PostRow) if c.isVisible()]
+    if not cards:  # the sweep's clicks may have left another lane or tab in front
+        win.select_lane("home" if "home" in win.lane_order else win.lane_order[0])
+        win.tabs.setCurrentIndex(0)
+        pump(app, 1.5)
+        cards = [c for c in win.findChildren(PostRow) if c.isVisible()]
     if cards:
         menu = cards[0].ensure_menu()
         if menu is not None:

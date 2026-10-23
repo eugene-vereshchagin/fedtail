@@ -2582,13 +2582,16 @@ class QtSmokeTest(unittest.TestCase):
                 QApplication.setFont(sans, c)
             themes._desktop = None
             themes.apply(self.app, config.validate({"ui": {"theme": "bnw"}})[0])
+            desktops = themes._desktop[2]["QLabel"]  # what the desktop had (Windows may
+            # keep its own whatever was set above: compared with that, not with 13)
             app_font = QApplication.font()
             for c in ("QLabel", "QStatusBar", "QAbstractItemView", "QPushButton"):
                 self.assertEqual(QApplication.font(c).families()[:1],
                                  app_font.families()[:1], c)
             # back to the desktop's: its own class fonts come back with it
             themes.apply(self.app, config.validate({"ui": {"fonts": "system"}})[0])
-            self.assertEqual(QApplication.font("QLabel").pointSize(), 13)
+            self.assertEqual(QApplication.font("QLabel").families()[:1],
+                             desktops.families()[:1])
         finally:
             for c in themes.CLASS_FONTS:
                 QApplication.setFont(QApplication.font(), c)

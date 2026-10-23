@@ -646,6 +646,9 @@ class MainWindow(QMainWindow):
             ic = drawn(18)
         if ic.isNull():
             b.setText(glyph)
+            # one glyph in a 32 px square: the theme's button padding would ask 36 for it
+            # and cut it (Windows, monospace themes: the tour's "button cut")
+            b.setStyleSheet("QToolButton#menu { padding: 0px; }")
         else:
             b.setIcon(ic)
         return b
