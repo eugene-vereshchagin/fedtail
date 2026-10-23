@@ -1914,14 +1914,10 @@ class MainWindow(QMainWindow):
 
     def read_up_to(self, sid):
         """This post and everything older in the view it's in: read."""
+        from ..common.lane import read_up_to
         view = self.current_view()
         specs = [s for s in (view.model if view is not None else []) if s.entry is not None]
-        at = next((i for i, s in enumerate(specs) if s.entry.id == sid), None)
-        if at is None:
-            self.core.mark_read([sid])
-            return
-        older = specs[:at + 1] if self.cfg["feed"]["order"] == "oldest_first" else specs[at:]
-        self.core.mark_read([s.entry.id for s in older if s.unread])
+        self.core.mark_read(read_up_to([s.entry for s in specs], sid))
 
     def current_view(self):
         """The FeedView on screen: the current lane, thread or profile."""

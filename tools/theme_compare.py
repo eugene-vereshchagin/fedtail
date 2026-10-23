@@ -87,8 +87,8 @@ def main():
     gtk = {}
     for f in sorted((src / "gtk-shots").glob("gtk-*.png")):
         m = re.fullmatch(r"gtk-(.+)-(light|dark)\.png", f.name)
-        if m:
-            gtk.setdefault(m.group(1), f)
+        if m and (m.group(2) == "light" or m.group(1) not in gtk):
+            gtk[m.group(1)] = f  # the light one when both: Qt's tour is in light
     qt = {}
     for f in sorted((src / "qt-tour").glob("*-single.png")):
         name = f.name[:-len("-single.png")]

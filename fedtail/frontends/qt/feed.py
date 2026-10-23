@@ -860,6 +860,14 @@ class _Header(QWidget):
         self.info.setTextFormat(Qt.TextFormat.PlainText)
         self.h.addWidget(self.info, 2)
 
+        # a narrow window: the header gives way instead of holding the window wide (the
+        # tour of 23.10: no lane narrower than 860–1350 px, by theme and font) — first
+        # the pictures' buttons drop their words, then the words' buttons keep only
+        # their glyph ("↓ To new" → "↓"), then the note goes
+        self.setMinimumWidth(160)
+        self._words = {}  # button → (its words, its tooltip) as made
+        self._level = 0
+
     def add(self, w):
         # the split layout: a button with a picture shows only the picture, its words
         # in the tooltip — a row of words over every lane was a heap of buttons
@@ -868,7 +876,37 @@ class _Header(QWidget):
             w.setToolTip(w.toolTip() or w.text())
             w.setText("")
         self.h.addWidget(w)
+        if isinstance(w, QPushButton) and w.text() and w.objectName() != "seg":
+            self._words[w] = (w.text(), w.toolTip())
         return w
+
+    def _apply(self, level):
+        for b, (text, tip) in self._words.items():
+            if level >= 1 and not b.icon().isNull():
+                b.setText("")
+                b.setToolTip(tip or text)
+            elif level >= 2 and " " in text and len(text.split(" ", 1)[0]) <= 2:
+                b.setText(text.split(" ", 1)[0])  # the glyph that leads the words
+                b.setToolTip(tip or text)
+            else:
+                b.setText(text)
+                b.setToolTip(tip)
+        self.info.setVisible(level < 3)
+        self._level = level
+
+    def _need(self):
+        return self.h.sizeHint().width()
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if not self._words:
+            return
+        width = self.width()
+        level = 0
+        for level in range(4):  # the fullest that fits
+            self._apply(level)
+            if self._need() <= width:
+                break
 
 
 class LaneWidget(QWidget):

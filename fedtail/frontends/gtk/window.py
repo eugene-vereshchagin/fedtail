@@ -1487,7 +1487,9 @@ class MainWindow(Gtk.ApplicationWindow):
             if items:
                 title.set_text(_("thread") + ": " + _short(items[0].post))
                 page.head.show(posts, short)
-            if unread:
+            # read as it opens — unless read.mark_read = "manual" (as Qt's thread: the
+            # behaviour check of 23.10 found GTK marking a thread read regardless)
+            if unread and self.cfg["read"]["mark_read"] != "manual":
                 self.view.mark_read(sorted(unread))
             if focus is not None:
                 GLib.idle_add(lambda: (_scroll_to(page, box, focus), GLib.SOURCE_REMOVE)[1])
