@@ -25,6 +25,10 @@
   and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
   wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
   lane title and "N new" pill the size of Qt's.
+- Self-check: a step that runs out of time or is stopped takes everything it started
+  with it (xvfb-run, the tool, its children): before, only xvfb-run went, and a tour
+  went on for hours in a window nobody saw. A run says when tools of earlier runs are
+  still alive; --clean stops them.
 - About, as cards (Qt and GTK): the opossum and the name, tiles — version, platform,
   architecture, build, commit date, profile — and rows: Python, the toolkit, the commit,
   the accounts, the server and what it runs, the theme, the data folder; "Copy the

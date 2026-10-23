@@ -67,6 +67,27 @@ def has_display():
         os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
+def kill_tree(proc):
+    """A step and everything it started (xvfb-run, the tool, its children)."""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                           capture_output=True, timeout=30, check=False)
+        else:
+            import signal
+            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        pass
+
+
 class Run:
     def __init__(self, out):
         self.out = out
@@ -78,14 +99,23 @@ class Run:
         log = self.out / f"{name}.log"
         print(f"→ {name} …", flush=True)
         t0 = time.monotonic()
-        try:
-            with open(log, "w", encoding="utf-8") as f:
-                code = subprocess.run(list(wrap) + [py or sys.executable] + args,
-                                      cwd=ROOT, env=env(),
-                                      stdout=f, stderr=subprocess.STDOUT,
-                                      timeout=timeout).returncode
-        except subprocess.TimeoutExpired:
-            code = "timeout"
+        with open(log, "w", encoding="utf-8") as f:
+            # each step a process group of its own, and the whole group goes when its
+            # time is up or the run is stopped: killing only the child left the tool
+            # under xvfb-run running for hours, a window nobody saw (23.10: five tours
+            # of the night still alive at six in the evening)
+            group = {"creationflags": 0x00000200} if os.name == "nt" else \
+                {"start_new_session": True}  # CREATE_NEW_PROCESS_GROUP
+            proc = subprocess.Popen(list(wrap) + [py or sys.executable] + args, cwd=ROOT,
+                                    env=env(), stdout=f, stderr=subprocess.STDOUT, **group)
+            try:
+                code = proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                kill_tree(proc)
+                code = "timeout"
+            except BaseException:  # Ctrl+C, the terminal closed: the step goes too
+                kill_tree(proc)
+                raise
         took = time.monotonic() - t0
         problems = ""
         if folder is not None and (folder / "errors.txt").exists():
@@ -239,6 +269,31 @@ def finished(d):
         zip_of(d).exists() or d.with_suffix(".zip").exists())
 
 
+TOOLS = ("qt_tour.py", "gtk_screenshots.py", "qt_bench.py", "gtk_bench.py", "tui_check.py",
+         "web_check.py", "tabs_stress.py", "behaviour.py", "windows_check.py")
+
+
+def leftovers():
+    """[(pid, command)] of tools of an earlier run still alive (Linux: /proc) — a step
+    stopped the old way left its tool running, unseen, for hours."""
+    out = []
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return out
+    for d in proc.iterdir():
+        if not d.name.isdigit() or int(d.name) == os.getpid():
+            continue
+        try:
+            argv = (d / "cmdline").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        words = [a.decode("utf-8", "replace") for a in argv if a]
+        if any(w.endswith(("tools/" + t, "tools\\" + t)) for w in words for t in TOOLS) \
+                and not any(w.endswith("tools/selfcheck.py") for w in words):
+            out.append((int(d.name), " ".join(words)[:160]))
+    return out
+
+
 def clean(where, everything):
     """Runs that didn't finish (stopped, killed, a crash: no zip, or INTERRUPTED in
     it) — or, with everything, every run here — and the tools' temporary folders."""
@@ -248,8 +303,16 @@ def clean(where, everything):
             shutil.rmtree(d, ignore_errors=True)
             d.with_suffix(".zip").unlink(missing_ok=True)
             gone.append(d.name + "/")
+    stray = leftovers()
+    import signal
+    for pid, _cmd in stray:  # tools of runs stopped before: gone too
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
     n = clean_temp()
-    print("removed: " + (", ".join(gone) or "no runs") + f"; temporary folders: {n}")
+    print("removed: " + (", ".join(gone) or "no runs") + f"; temporary folders: {n}"
+          + (f"; tools left running by earlier runs, stopped: {len(stray)}" if stray else ""))
     left = [d.name for d in runs(where)]
     if left:
         print("kept (finished): " + ", ".join(left) + "  — --clean all removes them too")
@@ -303,6 +366,11 @@ def main():
             out = LOGS / (time.strftime("%Y-%m-%d_%H-%M") + f"-{n}")
     out.mkdir(parents=True, exist_ok=True)
     print(f"this run: {out}", flush=True)
+    stray = leftovers()
+    if stray:
+        print(f"tools of earlier runs still running ({len(stray)}): they slow this one "
+              "down and hold windows nobody sees — python3 tools/selfcheck.py --clean "
+              "stops them\n  " + "\n  ".join(f"{p}: {c}" for p, c in stray), flush=True)
     stale = [d.name for d in runs(out.parent) if d != out and not finished(d)]
     if stale:
         print("unfinished runs here (not results): " + ", ".join(stale) +
