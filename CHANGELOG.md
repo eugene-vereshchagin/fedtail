@@ -28,6 +28,10 @@
 - The editor (Qt and GTK): what the post is and what to do with it in one row when there's room
   — the two halves keep to their sides and go into two rows only in a narrow window; the
   character count sits in the text field's own bottom right corner.
+- Pictures are plain shapes by default ([pictures] style = "silhouette"); the messengers
+  keep theirs (mra "agent", qip "qip"). In a development version a picture a theme's set
+  lacks (and the desktop's icon theme has not) is drawn from the fallback set in bright
+  red, so a theme's gaps are seen at once (FEDTAIL_MARK_MISSING=0: as usual).
 - Themes' pictures: nord, contrast, juick, night, paper and solarized draw plain shapes
   (the "silhouette" style) instead of the messengers' glossy buttons; the sidebar's ≡ ↔ ❯
   are plain in every theme (qip's looked like a button on a button); psi's ≡ was Psi's

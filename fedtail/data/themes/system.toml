@@ -120,11 +120,15 @@ posts_only = "segmented" # the choices over a lane (All | Posts | New, Feed | Co
 # themes it inherits, then from the theme named here, then from fedtail's fallback set.
 from = ""                # a theme whose set this one borrows: "mra" (mra-blue does)
 color = ""               # every picture's colour, "" — colors.accent (point: one grey-blue)
-style = "gloss"          # how an SVG's blank colours ({c} {l} {d}) are filled: "gloss" (a
-                         # gradient and a shine), "agent" (brighter, a softer outline),
-                         # "flat" (plain colour, no shine), "silhouette" (plain colour, no
-                         # rim, the inner lines cut out: point.im), "qip" (a strong shine, a thick
-                         # dark outline), "none" (filled, nothing else touched)
+style = "silhouette"     # how an SVG's blank colours ({c} {l} {d}) are filled:
+                         # "silhouette" (plain colour, no rim, the inner lines cut out —
+                         # the default), "flat" (plain colour, a darker rim), "gloss" (a
+                         # gradient and a shine), "agent" (brighter, a softer outline: mra),
+                         # "qip" (a strong shine, a thick dark outline), "none" (filled,
+                         # nothing else touched)
+# In a development version a picture the theme's set lacks (and the desktop's icon theme
+# has not) comes from the fallback set in bright red — what to draw is seen at once.
+# FEDTAIL_MARK_MISSING=0 in the environment: in its usual colour.
 
 [pictures.colors]
 # a picture of its own colour whatever the theme (the rest take colors.accent)

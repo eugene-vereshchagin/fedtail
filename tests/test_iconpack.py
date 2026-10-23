@@ -136,3 +136,27 @@ class IconPackTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MissingInRedTest(unittest.TestCase):
+    """A development version: what a theme's set lacks comes from the fallback in red —
+    the theme's gaps seen at once; its own pictures as they are."""
+
+    def test_red_from_the_fallback_only(self):
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"FEDTAIL_MARK_MISSING": "1"}):
+            iconpack.mark_missing.cache_clear()
+            iconpack.picture.cache_clear()
+            try:
+                bare = iconpack.Set(dirs=(str(iconpack.FALLBACK_DIR),))
+                pic = iconpack.picture(bare, "reply", "#336699")
+                self.assertIn(iconpack.MISSING_RED, pic.text)
+                own = iconpack.for_theme(type("T", (), {
+                    "icon_dirs": [str(themefile.BUILTIN_DIR / "point" / "icons")],
+                    "pictures": {"style": "silhouette", "color": "#a29b94"}})())
+                self.assertNotIn(iconpack.MISSING_RED,
+                                 iconpack.picture(own, "reply", "#336699").text)
+            finally:
+                iconpack.mark_missing.cache_clear()
+                iconpack.picture.cache_clear()

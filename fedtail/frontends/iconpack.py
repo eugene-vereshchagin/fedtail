@@ -309,6 +309,21 @@ class Picture:
 
 
 PLAIN = frozenset({"menu", "wide", "columns"})
+MISSING_RED = "#ff1744"
+
+
+@functools.lru_cache(maxsize=1)
+def mark_missing():
+    """Pictures from the fallback set in red: in a development version (FEDTAIL_MARK_MISSING
+    = 0 / 1 decides otherwise) — a theme's gaps seen at a glance."""
+    import os
+    env = os.environ.get("FEDTAIL_MARK_MISSING", "").strip().lower()
+    if env in ("0", "off", "no", "false"):
+        return False
+    if env in ("1", "on", "yes", "true"):
+        return True
+    from .. import __version__
+    return ".dev" in __version__
 OUTLINE_CONTRAST = 70  # of HSL lightness, 0–255: less, and the outline is lost
 
 
@@ -329,6 +344,9 @@ def picture(pset, name, accent, svg_ok=True, bg=None):
         log.debug("picture %s: %s", p, e)
         return None
     own = pset.color_of(name) or pset.color_of(p.stem) or pset.color
+    if mark_missing() and p.parent.resolve() == FALLBACK_DIR:
+        # a development version: what the theme lacks, in red (system.toml [pictures])
+        return Picture("svg", text=styled(text, "silhouette", MISSING_RED, bg))
     # the sidebar's top buttons (≡ ↔ ❯) are buttons already: their pictures plain, not
     # a glossy button drawn on a button (qip's looked raised twice, 23.10)
     style = "silhouette" if name in PLAIN and pset.style != "none" \
