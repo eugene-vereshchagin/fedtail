@@ -150,6 +150,15 @@ def account(raw, profile=""):
     )
 
 
+AV_EXT = (".webm", ".mp4", ".m4v", ".mov", ".mkv", ".ogv", ".ogg", ".oga", ".opus",
+          ".mp3", ".m4a", ".flac", ".wav", ".aac")
+
+
+def _is_av_file(link):
+    path = link.split("?", 1)[0].split("#", 1)[0].lower()
+    return path.endswith(AV_EXT)
+
+
 def media(raw, profile=""):
     raw = _dict(raw)
     meta = _dict(raw.get("meta"))
@@ -163,11 +172,20 @@ def media(raw, profile=""):
         duration = float(size.get("duration") or meta.get("duration") or 0)
     except (TypeError, ValueError):
         duration = 0.0
+    kind = MEDIA_KIND.get(raw.get("type"), "unknown")
+    url = _str(raw.get("url")) or _str(raw.get("remote_url"))
+    preview = _str(raw.get("preview_url"))
+    if kind != "image" and preview and (preview in (url, _str(raw.get("remote_url")))
+                                        or _is_av_file(preview)):
+        # a server without thumbnails for video gives the video itself as the preview
+        # (Akkoma, suya.place: a 3 MB webm fetched to be shown as a picture, and failed);
+        # no preview then: the card draws its stand-in (the blurhash, ▶)
+        preview = ""
     return Media(
         ref=_ref(profile, raw.get("id")),
-        kind=MEDIA_KIND.get(raw.get("type"), "unknown"),
-        url=_str(raw.get("url")) or _str(raw.get("remote_url")),
-        preview=_str(raw.get("preview_url")),
+        kind=kind,
+        url=url,
+        preview=preview,
         remote_url=_str(raw.get("remote_url")),
         alt=_str(raw.get("description")),
         width=_int(size.get("width")),

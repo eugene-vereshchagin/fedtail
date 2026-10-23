@@ -178,11 +178,31 @@ class _Sanitizer(HTMLParser):
 
 def sanitize(h):
     """Rebuild server HTML from the allowed tags only, attributes dropped but a
-    web link's href."""
+    web link's href; the blank lines at its start and end gone."""
     p = _Sanitizer()
     p.feed(h or "")
     p.close()
-    return "".join(p.out)
+    return trim_blank("".join(p.out))
+
+
+_BLANK = r"(?:\s|<br>|<p>(?:\s|<br>)*</p>)"
+_LEAD = re.compile(rf"^{_BLANK}+")
+_LEAD_IN_P = re.compile(r"^(<p>)(?:\s|<br>)+")
+_TAIL = re.compile(rf"{_BLANK}+$")
+_TAIL_IN_P = re.compile(r"(?:\s|<br>)+(</p>)$")
+
+
+def trim_blank(h):
+    """Empty paragraphs, line breaks and spaces (no-break ones too) at the start and the
+    end of a post: gone. A WordPress article came with a screenful of nothing before
+    its first words — its pictures were paragraphs of their own, empty once the
+    pictures went to the gallery below."""
+    while True:
+        was = h
+        h = _LEAD_IN_P.sub(r"\1", _LEAD.sub("", h))
+        h = _TAIL_IN_P.sub(r"\1", _TAIL.sub("", h))
+        if h == was:
+            return h
 
 
 def esc(s):

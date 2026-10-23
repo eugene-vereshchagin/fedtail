@@ -163,7 +163,11 @@ class PictureScreen(Screen):
         pic.update("…")
         cols = max(10, self.size.width - 2)
         rows = max(4, self.size.height - 4 - (2 if m.alt else 0))
-        url = m.url if m.kind == "image" and m.url else (m.preview or m.url)
+        # a picture whole; a video's still frame (never the video fetched as a picture)
+        url = (m.url or m.preview) if m.kind == "image" else m.preview
+        if not url:
+            pic.update("▶ " + _("media_" + m.kind))
+            return
         at = self.at
 
         def done(f):
@@ -810,7 +814,9 @@ class FedtailApp(App, PostsMixin):
             m = first_picture(item.entry)
             if m is None:
                 continue
-            url = m.preview or m.url
+            url = m.preview or (m.url if m.kind == "image" else "")
+            if not url:
+                continue
             key = (url, cols, rows)
             if key in cache:
                 item.set_picture(cache[key])

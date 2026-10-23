@@ -510,7 +510,8 @@ class Card(Gtk.Box):
         pic.add_css_class("ft-thumb")
         pic.set_overflow(Gtk.Overflow.HIDDEN)
         pic.set_alternative_text(m.alt or _("a11y_no_alt"))
-        src = m.preview or full
+        # a video's still frame only — never the video itself fetched as a picture (as Qt)
+        src = (m.preview or full) if m.kind == "image" else m.preview
         over = Gtk.Overlay()
         over.set_child(pic)
         over.set_overflow(Gtk.Overflow.HIDDEN)

@@ -207,7 +207,7 @@ class Cache:
         log.debug("image %s %s: queue %.2f s, %s, decode %.0f ms -> %dx%d", "big" if big
                   else "feed", _short(url), waited,
                   f"download {got[0]} B {dl:.2f} s" if got else "from disk", dec_ms,
-                  *self.size(img))
+                  *(self.size(img) if img is not None else (0, 0)))
         return (url, max_side), img
 
     def _download(self, url, max_side, patient=False, big=False):

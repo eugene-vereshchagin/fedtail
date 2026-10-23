@@ -198,3 +198,34 @@ class LooksSentTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TrimBlankTest(unittest.TestCase):
+    """A post's empty lines at its start and end go (a WordPress article came with a
+    screenful of nothing: its pictures' paragraphs, empty without them)."""
+
+    def test_trimmed(self):
+        from fedtail.frontends.richtext import sanitize
+        self.assertEqual(sanitize('<p><img src="x"></p><p>&nbsp;</p><p><br><br> Hi <b>you</b>'
+                                  '</p><p></p><br>\n'), "<p>Hi <b>you</b></p>")
+        self.assertEqual(sanitize("<p>a</p><p>b</p>"), "<p>a</p><p>b</p>")
+        self.assertEqual(sanitize("<p>a<br><br>b</p>"), "<p>a<br><br>b</p>")  # inside: kept
+
+
+class VideoPreviewTest(unittest.TestCase):
+    """A server without thumbnails gives the video itself as its preview: none, then."""
+
+    def test_video_as_its_own_preview(self):
+        from fedtail.protocols.mastodon import adapter
+        m = adapter.media({"id": "1", "type": "video", "url": "https://s/v.webm",
+                           "preview_url": "https://s/v.webm"})
+        self.assertEqual(m.preview, "")
+        m = adapter.media({"id": "2", "type": "video", "url": "https://s/v",
+                           "preview_url": "https://s/other.mp4?x=1"})
+        self.assertEqual(m.preview, "")
+        m = adapter.media({"id": "3", "type": "video", "url": "https://s/v.mp4",
+                           "preview_url": "https://s/v.jpg"})
+        self.assertEqual(m.preview, "https://s/v.jpg")
+        m = adapter.media({"id": "4", "type": "image", "url": "https://s/a.png",
+                           "preview_url": "https://s/a.png"})
+        self.assertEqual(m.preview, "https://s/a.png")
