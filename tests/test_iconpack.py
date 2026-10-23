@@ -160,3 +160,20 @@ class MissingInRedTest(unittest.TestCase):
             finally:
                 iconpack.mark_missing.cache_clear()
                 iconpack.picture.cache_clear()
+
+
+class ThemesByLayoutTest(unittest.TestCase):
+    """ui.themes_by_layout: the messengers' themes offered for the split layout only;
+    "auto" — on in releases, off in development versions."""
+
+    def test_offered_by_layout(self):
+        def offered(layout, mode, keep=()):
+            return themefile.for_layout({"ui": {"layout": layout, "themes_by_layout": mode}},
+                                        keep)
+        self.assertEqual(themefile.layouts_of("mra-blue"), ("split",))  # its own word
+        self.assertIn("qip-retro", offered("split", "on"))
+        self.assertNotIn("qip-retro", offered("single", "on"))
+        self.assertIn("qip-retro", offered("single", "on", keep=("qip-retro",)))  # on now
+        self.assertIn("nord", offered("single", "on"))
+        self.assertIn("qip-retro", offered("single", "off"))
+        self.assertEqual(themefile.by_layout({"ui": {}}), False)  # a development version

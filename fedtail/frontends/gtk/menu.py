@@ -224,7 +224,7 @@ class MainMenu:
         win = self.win
         m = Gio.Menu()
         configured = win.cfg["ui"]["theme"]
-        for name in themefile.available():
+        for name in themefile.for_layout(win.cfg, keep=(configured, win.theme.id)):
             label = ("✓ " if name == win.theme.id else "") + name + \
                 ("  · " + _("theme_in_config") if name == configured else "")
             _item(m, label, "theme", target=name)

@@ -28,6 +28,10 @@
 - The editor (Qt and GTK): what the post is and what to do with it in one row when there's room
   — the two halves keep to their sides and go into two rows only in a narrow window; the
   character count sits in the text field's own bottom right corner.
+- Themes say which window layout they're made for (layouts = ["split"]: qip, mra, psi);
+  ui.themes_by_layout offers in "Try a theme" only those of the layout on — "auto": so in
+  releases, every theme in development versions.
+- The sidebar's ≡ ↔ ❯: their pictures a third bigger (they looked lost in the buttons).
 - Pictures are plain shapes by default ([pictures] style = "silhouette"); the messengers
   keep theirs (mra "agent", qip "qip"). In a development version a picture a theme's set
   lacks (and the desktop's icon theme has not) is drawn from the fallback set in bright

@@ -12,6 +12,10 @@
 
 name = "System (KDE)"
 inherit = ""
+# the window layouts the theme is made for: ["single", "split"] (both — what a theme
+# that doesn't say gets), ["split"] (the messengers'); ui.themes_by_layout offers only
+# those of the layout on (the configured and the current theme always)
+layouts = ["single", "split"]
 
 [font]
 family = ""          # "" = the desktop font; otherwise e.g. "Noto Sans"

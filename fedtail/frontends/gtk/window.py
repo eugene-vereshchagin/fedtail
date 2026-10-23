@@ -712,7 +712,8 @@ class MainWindow(Gtk.ApplicationWindow):
         """≡ ↔ ❯ with the theme's pictures (or the desktop's, or the glyphs)."""
         from . import icons
         t = self.theme
-        px = int(t.shape.get("icon_size", 18) or 18)  # as Qt's: the theme's size
+        # as Qt's: a third bigger than the lanes' pictures, 26 px at most
+        px = min(26, round(int(t.shape.get("icon_size", 18) or 18) * 4 / 3))
         icons.dress(self.menu_btn, "menu", t, glyph="≡", size=px)
         icons.dress(self.wide_btn, "wide", t, glyph="↔", size=px)
         icons.dress(self.columns_btn, "columns", t, glyph="❯", size=px)

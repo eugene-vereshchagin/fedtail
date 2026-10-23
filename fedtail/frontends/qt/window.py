@@ -640,7 +640,9 @@ class MainWindow(QMainWindow):
         b.setToolTip(tip)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setFixedSize(32, 32)
-        px = int(self.theme.shape.get("icon_size", 18) or 18)
+        # the buttons' pictures fill them as the desktop's toolbars do (18 of 32 px looked
+        # lost): a third bigger than the lanes', 26 at most
+        px = min(26, round(int(self.theme.shape.get("icon_size", 18) or 18) * 4 / 3))
         b.setIconSize(QSize(px, px))
         from . import icons
         ic = icons.icon(picture, self.theme, px)
@@ -728,7 +730,7 @@ class MainWindow(QMainWindow):
         t.setToolTip(_("try_theme_tip"))
         t.setToolTipsVisible(True)
         configured = self.cfg["ui"]["theme"]
-        for name in themefile.available():
+        for name in themefile.for_layout(self.cfg, keep=(configured, self.theme.id)):
             label = name + ("  · " + _("theme_in_config") if name == configured else "")
             act = t.addAction(label, lambda n=name: self.try_theme(n))
             act.setCheckable(True)

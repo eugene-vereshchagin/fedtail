@@ -6,6 +6,8 @@
 # in the spirit, not a copy of anyone's skin.
 name = "Agent (violet)"
 inherit = "system"
+# made for the split layout (a roster and a messages window); ui.themes_by_layout
+layouts = ["split"]
 
 [font]
 family = "Tahoma, Arial, Arimo, DejaVu Sans, sans-serif"

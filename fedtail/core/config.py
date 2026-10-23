@@ -42,6 +42,7 @@ DEFAULTS = {
         "arts_mode": True,
         "max_width": 760,
         "layout": "single",
+        "themes_by_layout": "auto",
         "roster_on_top": False,
         "roster_threads": 15,
         "faces": True,
@@ -252,6 +253,7 @@ DEFAULTS = {
 
 CHOICES = {
     ("ui", "layout"): {'single', 'columns', 'split', 'qip'},
+    ("ui", "themes_by_layout"): {"auto", "on", "off"},
     ("ui", "app_icon"): {'possum', 'bubble'},
     ("ui", "icons"): {'theme', 'desktop', 'own', 'additional', 'words'},
     ("ui", "split_tabs"): {'keep', 'close'},

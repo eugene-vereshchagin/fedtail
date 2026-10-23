@@ -106,6 +106,11 @@ max_width = 760
 # close_to_tray). The old name "qip" is understood too.
 layout = "single"
 
+# Themes for this window layout: "Try a theme" offers only those made for it (a theme
+# says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for
+# both). "auto" — so in releases, every theme in development versions; "on"; "off".
+themes_by_layout = "auto"
+
 # With layout = "split": the roster stays above other windows.
 roster_on_top = false
 

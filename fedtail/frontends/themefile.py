@@ -112,6 +112,55 @@ def available():
     return sorted(names)
 
 
+LAYOUT_KINDS = ("single", "split")
+
+
+def layout_kind(layout):
+    """ui.layout as a theme says what it's for: "split" (and its older "qip") or
+    "single" (one window, columns too)."""
+    return "split" if layout in ("split", "qip") else "single"
+
+
+def layouts_of(name):
+    """The window layouts a theme is made for: its own top-level `layouts` (or the one
+    it inherits); both when it doesn't say."""
+    seen = set()
+    while name and name not in seen:
+        seen.add(name)
+        try:
+            data = _read(_find(name))
+        except ThemeError:
+            break
+        got = data.get("layouts")
+        if isinstance(got, list) and got:
+            return tuple(x for x in got if x in LAYOUT_KINDS) or LAYOUT_KINDS
+        name = data.get("inherit") or ""
+    return LAYOUT_KINDS
+
+
+def by_layout(cfg):
+    """ui.themes_by_layout: offer only the themes made for the window's layout — "auto"
+    is on in releases and off in development versions (every theme to try)."""
+    mode = str((cfg.get("ui") or {}).get("themes_by_layout", "auto")).lower()
+    if mode in ("on", "true"):
+        return True
+    if mode in ("off", "false"):
+        return False
+    from .. import __version__
+    return ".dev" not in __version__
+
+
+def for_layout(cfg, keep=()):
+    """The themes to offer (≡ → Try a theme): all of them, or — ui.themes_by_layout —
+    those made for this layout; the ones in keep (the theme on now, the configured one)
+    always."""
+    names = available()
+    if not by_layout(cfg):
+        return names
+    kind = layout_kind((cfg.get("ui") or {}).get("layout", "single"))
+    return [n for n in names if n in keep or kind in layouts_of(n)]
+
+
 def _find(name):
     for d in (user_dir(), BUILTIN_DIR):
         p = d / f"{name}.toml"
@@ -267,7 +316,7 @@ def validate(theme, ref):
     """Raise on wrong values; return warnings for unknown keys."""
     warnings, errors = [], []
     for section, values in theme.items():
-        if section in ("name", "inherit", "id", "icon_dirs", "sound_dirs"):
+        if section in ("name", "inherit", "id", "icon_dirs", "sound_dirs", "layouts"):
             continue
         if section not in ref or not isinstance(ref[section], dict):
             warnings.append(f"unknown section [{section}]")
