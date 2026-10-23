@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -26,7 +27,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -47,7 +53,13 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -58,17 +70,46 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
+import org.json.JSONObject
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** What a card can ask for; the lane and the thread give the same. */
+/** What a card can ask for; the lane and the thread give the same (AppModel.cardActions). */
 class CardActions(
     val open: (PostItem) -> Unit, val reply: (PostItem) -> Unit, val like: (PostItem) -> Unit,
-    val media: (List<MediaItem>, Int) -> Unit, val link: (String) -> Unit,
+    val media: (List<MediaItem>, Int) -> Unit,
+    val link: (String) -> Unit,     // a link in a post: a thread here if my server knows it
     val alias: (String) -> Unit,
+    val share: (PostItem) -> Unit, val bookmark: (PostItem) -> Unit,
+    val info: suspend (PostItem) -> JSONObject,      // the ⋯ menu: followed? its address
+    val thread: (PostItem, String) -> Unit,          // sub / unsub the thread
+    val browser: (String) -> Unit,
 )
+
+fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
+    open = { openThread(it.sid) }, reply = { compose(it) }, like = { act(it, "like") },
+    media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
+    alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
+    info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser)
+
+private val EMOJI = Regex("""<img\b[^>]*\balt="([^"]*)"[^>]*>""")
+
+/** A post's HTML as text with live links (custom emoji as their :code: for now). */
+fun postText(html: String, plain: String, linkColor: Color, onLink: (String) -> Unit): AnnotatedString {
+    if (html.isBlank()) return AnnotatedString(plain)
+    return try {
+        val a = AnnotatedString.fromHtml(EMOJI.replace(html) { it.groupValues[1] },
+            linkStyles = TextLinkStyles(style = SpanStyle(color = linkColor)),
+            linkInteractionListener = { link -> (link as? LinkAnnotation.Url)?.let { onLink(it.url) } })
+        var end = a.length
+        while (end > 0 && a[end - 1].isWhitespace()) end--
+        a.subSequence(0, end)
+    } catch (e: Exception) {
+        AnnotatedString(plain)
+    }
+}
 
 /** Read marks: what stood whole on screen when scrolling stopped (read.mark_read). */
 @Composable
@@ -239,13 +280,16 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
             Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary))
         }
-        Text(p.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
-            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
-                .alpha(if (dim) 0.85f else 1f))
-        Spacer(Modifier.width(6.dp))
-        Text("@" + p.handle.substringBefore("@"), fontSize = 13.sp, maxLines = 1,
-            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // the name comes first: the handle gets what's left, at most a short piece
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text(p.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
+                    .alpha(if (dim) 0.85f else 1f))
+            Spacer(Modifier.width(6.dp))
+            Text("@" + p.handle.substringBefore("@"), fontSize = 13.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 110.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         Spacer(Modifier.width(8.dp))
         Text(shownTime(p.created), fontSize = 13.sp, maxLines = 1,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -279,7 +323,10 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     }
     if (!open) return
     if (p.text.isNotBlank()) {
-        Text(p.text, fontSize = 15.sp, lineHeight = 21.sp)
+        val onLink by rememberUpdatedState(act.link)
+        val color = MaterialTheme.colorScheme.primary
+        val words = remember(p.html, p.text, color) { postText(p.html, p.text, color) { onLink(it) } }
+        Text(words, fontSize = 15.sp, lineHeight = 21.sp)
     }
     if (p.media.isNotEmpty()) {
         MediaGrid(p.media, blurred = hideSensitive && p.sensitive) { i -> act.media(p.media, i) }
@@ -381,6 +428,43 @@ private fun Actions(p: PostItem, act: CardActions) {
                 stringResource(R.string.like), Modifier.size(18.dp),
                 tint = if (p.liked) MaterialTheme.colorScheme.secondary else grey)
             if (p.likes > 0) Text(" ${p.likes}", fontSize = 13.sp, color = grey)
+        }
+        Spacer(Modifier.weight(1f))
+        CardMenu(p, act)
+    }
+}
+
+/** A card's ⋯: boost, bookmark, follow the thread, the link — copied or in the browser. */
+@Composable
+private fun CardMenu(p: PostItem, act: CardActions) {
+    var open by remember { mutableStateOf(false) }
+    var info by remember { mutableStateOf<JSONObject?>(null) }
+    val clipboard = LocalClipboardManager.current
+    LaunchedEffect(open) { if (open) info = act.info(p) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Filled.MoreVert, stringResource(R.string.more),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            val url = info?.optString("url")?.ifBlank { null } ?: p.url
+            DropdownMenuItem(text = { Text(stringResource(if (p.shared) R.string.unboost else R.string.boost)) },
+                onClick = { open = false; act.share(p) })
+            DropdownMenuItem(text = { Text(stringResource(if (p.bookmarked) R.string.unbookmark
+                                                          else R.string.bookmark)) },
+                onClick = { open = false; act.bookmark(p) })
+            info?.let { i ->
+                val subbed = i.optBoolean("subscribed")
+                DropdownMenuItem(text = { Text(stringResource(if (subbed) R.string.unsub_thread
+                                                              else R.string.sub_thread)) },
+                    onClick = { open = false; act.thread(p, if (subbed) "unsub" else "sub") })
+            }
+            if (url.isNotBlank()) {
+                DropdownMenuItem(text = { Text(stringResource(R.string.copy_link)) },
+                    onClick = { open = false; clipboard.setText(AnnotatedString(url)) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.open_browser)) },
+                    onClick = { open = false; act.browser(url) })
+            }
         }
     }
 }

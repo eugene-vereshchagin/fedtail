@@ -79,4 +79,14 @@
     <string name="like">Like</string>
     <string name="play">Play</string>
     <string name="close">Close</string>
+    <string name="boost">Boost</string>
+    <string name="unboost">Undo boost</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="unbookmark">Remove the bookmark</string>
+    <string name="sub_thread">Follow the thread</string>
+    <string name="unsub_thread">Leave the thread</string>
+    <string name="copy_link">Copy the link</string>
+    <string name="open_browser">Open in the browser</string>
+    <string name="pick_lane">Pick a lane on the left</string>
+    <string name="pick_post">Tap a post: its thread opens here</string>
 </resources>

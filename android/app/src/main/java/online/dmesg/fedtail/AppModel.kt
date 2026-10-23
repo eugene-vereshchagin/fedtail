@@ -49,7 +49,8 @@ data class PostItem(
     val key: String, val id: String, val sid: String, val alias: String, val name: String,
     val handle: String, val avatar: String, val created: String, val text: String,
     val warning: String, val sensitive: Boolean, val media: List<MediaItem>,
-    val card: LinkCard?, val poll: String,
+    val card: LinkCard?, val poll: String, val html: String, val url: String,
+    val shared: Boolean, val bookmarked: Boolean,
     val unread: Boolean, val sharedBy: String, val contextHandle: String,
     val contextText: String, val replies: Int, val shares: Int, val likes: Int,
     val liked: Boolean, val number: Int?, val depth: Int,
@@ -65,6 +66,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var defaultVisibility by mutableStateOf("followers")
     var hideSensitive by mutableStateOf(true)
     var commandLine by mutableStateOf(false)
+    var overview by mutableStateOf("tiles") // phone.overview: tiles | list
+    var layoutPref by mutableStateOf("auto") // phone.layout: auto | one | two | three
+    var columns = 1                          // what the screen fits now (Screens.kt says)
+    private var startLane: String? = null
 
     var lanes by mutableStateOf(listOf<LaneItem>())
     var hub by mutableStateOf(listOf<HubSection>())
@@ -180,7 +185,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
         commandLine = me.optBoolean("command_line")
-        lanes = parseLanes(got.optJSONArray("lanes") ?: JSONArray())
+        overview = me.optString("overview", "tiles")
+        layoutPref = me.optString("layout", "auto")
+        val arr = got.optJSONArray("lanes") ?: JSONArray()
+        lanes = parseLanes(arr)
+        startLane = (0 until arr.length()).map { arr.getJSONObject(it) }
+            .firstOrNull { it.optBoolean("start") }?.optString("name")
+            ?: lanes.firstOrNull { it.name == "home" }?.name ?: lanes.firstOrNull()?.name
         loadHub()
         current = null
         screen = Screen.Main
@@ -223,6 +234,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val from = after?.let { names.indexOf(it) } ?: -1
         val rest = all.drop(from + 1) + all.take(maxOf(from, 0))
         return rest.firstOrNull { it.unread > 0 && it.name != after }
+    }
+
+    /** Columns side by side: the lane pane never stands empty — the lane of last time. */
+    fun openStartLane() {
+        if (current == null) (startLane ?: lanes.firstOrNull()?.name)?.let { showLane(it) }
     }
 
     fun readInRow() {
@@ -316,7 +332,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             places = places.dropLast(1)
             return true
         }
-        if (current != null) {
+        if (current != null && columns == 1) {
             toOverview()
             return true
         }
@@ -324,7 +340,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openThread(postId: String) {
-        places = places + Place.Thread(postId)
+        // three columns: the thread pane shows one thread — a new one takes its place
+        val keep = if (columns >= 3 && place is Place.Thread) places.dropLast(1) else places
+        places = keep + Place.Thread(postId)
         threadPosts = emptyList()
         viewModelScope.launch {
             val got = Core.thread(postId)
@@ -377,6 +395,43 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }
             posts = posts.map(swap)
             threadPosts = threadPosts.map(swap)
+        }
+    }
+
+    /** like / share / bookmark, toggled; the card takes what the server says now. */
+    fun act(p: PostItem, action: String) {
+        viewModelScope.launch {
+            val got = Core.act(action, p.sid)
+            Core.failed(got)?.let { message = it; return@launch }
+            val now = parsePost(got)
+            val swap = { x: PostItem ->
+                if (x.sid == p.sid) x.copy(liked = now.liked, likes = now.likes, shared = now.shared,
+                    shares = now.shares, bookmarked = now.bookmarked) else x
+            }
+            posts = posts.map(swap)
+            threadPosts = threadPosts.map(swap)
+        }
+    }
+
+    /** A card's ⋯: whether its thread is followed, its address. */
+    suspend fun menuOf(p: PostItem): JSONObject = Core.menu(p.sid)
+
+    fun threadAct(p: PostItem, action: String) {
+        viewModelScope.launch {
+            val got = Core.threadAct(action, p.sid)
+            message = Core.failed(got) ?: got.optString("message").ifBlank { null }
+        }
+    }
+
+    /** A link tapped in a post: a post my server knows opens as a thread; else the browser. */
+    fun openLink(url: String, openBrowser: (String) -> Unit) {
+        viewModelScope.launch {
+            val got = Core.resolve(url)
+            if (got.optString("found") == "thread" && got.optString("id").isNotBlank()) {
+                openThread(got.optString("id"))
+            } else {
+                openBrowser(url)
+            }
         }
     }
 
@@ -552,6 +607,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     "${str(x, "title")} — ${x.optInt("share")}%"
                 } + str(p, "summary")).filter { it.isNotBlank() }.joinToString("\n")
             } ?: "",
+            html = str(o, "html"), url = str(o, "url"),
+            shared = mine.optBoolean("shared"), bookmarked = mine.optBoolean("bookmarked"),
             unread = o.optBoolean("unread"),
             sharedBy = by?.let { str(it, "name").ifBlank { str(it, "handle") } } ?: "",
             contextHandle = str(ctx, "handle"),

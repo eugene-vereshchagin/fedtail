@@ -60,7 +60,7 @@ import androidx.compose.ui.unit.sp
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun HubScreen(model: AppModel, snack: SnackbarHostState) {
+fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) {
     var menu by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -97,7 +97,7 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState) {
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { model.compose(null) },
+            if (!pane) FloatingActionButton(onClick = { model.compose(null) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary) {
                 Icon(Icons.Filled.Edit, stringResource(R.string.write))
@@ -109,10 +109,35 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState) {
             modifier = Modifier.padding(pad).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
                 item(key = "row") { ReadInRow(model) }
+                val tiles = model.overview == "tiles"
                 model.hub.filter { it.kind != "browse" }.forEach { sec ->
+                    val mine = sec.kind == "you"
                     item(key = "h-" + sec.kind) { SectionHead(sec) }
-                    items(sec.lanes, key = { "l-" + it.name }) { lane ->
-                        HubRow(lane, mine = sec.kind == "you") { model.showLane(lane.name) }
+                    if (tiles) {
+                        // yours: big tiles with the first unread; the rest: small ones
+                        val per = when {
+                            mine -> 2
+                            pane -> 2
+                            else -> 3
+                        }
+                        val rows = sec.lanes.chunked(per)
+                        items(rows.size, key = { "t-" + sec.kind + it }) { r ->
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rows[r].forEach { lane ->
+                                    LaneTile(lane, mine, big = mine,
+                                        on = lane.name == model.current,
+                                        modifier = Modifier.weight(1f)) { model.showLane(lane.name) }
+                                }
+                                repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
+                            }
+                        }
+                    } else {
+                        items(sec.lanes, key = { "l-" + it.name }) { lane ->
+                            HubRow(lane, mine, on = lane.name == model.current) {
+                                model.showLane(lane.name)
+                            }
+                        }
                     }
                 }
                 model.hub.firstOrNull { it.kind == "browse" }?.let { sec ->
@@ -128,6 +153,49 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState) {
                     }
                 }
             }
+        }
+    }
+}
+
+/** A lane as a tile (phone.overview = "tiles"): big — yours, with the first unread post. */
+@Composable
+private fun LaneTile(
+    lane: HubLane, mine: Boolean, big: Boolean, on: Boolean, modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val news = lane.unread > 0
+    val bg = when {
+        on -> MaterialTheme.colorScheme.onSurface
+        mine && news -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
+    val accent = when {
+        on -> MaterialTheme.colorScheme.surface
+        mine -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Column(modifier.heightIn(min = if (big) 92.dp else 72.dp).clip(RoundedCornerShape(14.dp))
+        .background(bg).clickable(onClick = onClick)
+        .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        horizontalAlignment = if (big) Alignment.Start else Alignment.CenterHorizontally) {
+        if (big) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(lane.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = fg,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(if (news) "${lane.unread}" else "·", fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold, color = accent)
+            }
+            if (lane.peek.isNotBlank()) {
+                Text(lane.peek, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis, color = fg.copy(alpha = 0.75f))
+            }
+        } else {
+            Text(if (news) "${lane.unread}" else "·", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                color = accent)
+            Text(lane.title, fontSize = 12.5.sp, color = fg, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -181,8 +249,9 @@ private fun SectionHead(sec: HubSection) {
 }
 
 @Composable
-private fun HubRow(lane: HubLane, mine: Boolean, onClick: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+private fun HubRow(lane: HubLane, mine: Boolean, on: Boolean, onClick: () -> Unit) {
+    Surface(color = if (on) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 8.dp),

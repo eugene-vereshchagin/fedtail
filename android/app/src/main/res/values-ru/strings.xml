@@ -78,4 +78,14 @@
     <string name="like">Нравится</string>
     <string name="play">Воспроизвести</string>
     <string name="close">Закрыть</string>
+    <string name="boost">Бустнуть</string>
+    <string name="unboost">Отменить буст</string>
+    <string name="bookmark">В закладки</string>
+    <string name="unbookmark">Убрать из закладок</string>
+    <string name="sub_thread">Подписаться на тред</string>
+    <string name="unsub_thread">Отписаться от треда</string>
+    <string name="copy_link">Скопировать ссылку</string>
+    <string name="open_browser">Открыть в браузере</string>
+    <string name="pick_lane">Выбери ленту слева</string>
+    <string name="pick_post">Нажми на пост — его тред откроется здесь</string>
 </resources>

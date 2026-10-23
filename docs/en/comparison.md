@@ -193,8 +193,9 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Commands in a terminal | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| Android: a phone and a tablet | ◐ |   | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |
 | A terminal interface (Textual) | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 133 compared.
+Only in fedtail — **33** features of the 134 compared.

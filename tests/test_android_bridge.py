@@ -199,3 +199,16 @@ class BridgeTest(TmpDir):
         got = self.call("command", f"#{alias}", False)
         self.assertTrue(got["ok"])
         self.assertIn("thread", got["open"])
+
+    def test_a_cards_menu_and_links(self):
+        self.demo()
+        got = self.call("open")
+        self.assertEqual(got["me"]["overview"], "tiles")
+        self.assertEqual(got["me"]["layout"], "auto")
+        m = self.call("menu", "103")
+        self.assertIn("subscribed", m)
+        self.assertIn("url", m)
+        self.assertTrue(self.call("thread_act", "sub", "103")["message"])
+        self.assertTrue(self.call("menu", "103")["subscribed"])
+        self.assertIn("found", self.call("resolve", "https://nowhere.example/@x/1"))
+        self.assertIn("error", json.loads(self.bridge.thread_act("sideways", "103")))

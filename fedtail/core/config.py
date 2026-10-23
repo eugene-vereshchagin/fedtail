@@ -242,6 +242,10 @@ DEFAULTS = {
         "port": 8765,
         "open_browser": True,
     },
+    "phone": {
+        "overview": "tiles",
+        "layout": "auto",
+    },
     "cli": {
         "enabled": True,
         "color": "auto",
@@ -291,6 +295,8 @@ CHOICES = {
     ("debug", "level"): {"debug", "info", "warning"},
     ("debug", "mode"): {"auto", "on", "off"},
     ("cli", "color"): {"auto", "always", "never"},
+    ("phone", "overview"): {"tiles", "list"},
+    ("phone", "layout"): {"auto", "one", "two", "three"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "fonts"): {"theme", "system", "custom"},
     ("ui", "compose"): {"inline", "window"},

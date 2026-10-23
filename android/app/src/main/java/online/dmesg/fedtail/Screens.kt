@@ -1,5 +1,10 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.runtime.SideEffect
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -100,18 +105,92 @@ fun App(model: AppModel, openBrowser: (String) -> Unit) {
         Screen.Login -> Scaffold(snackbarHost = { SnackbarHost(snack) }) { pad ->
             Login(model, openBrowser, Modifier.padding(pad))
         }
-        Screen.Main -> {
-            BackHandler(enabled = model.place != null || model.current != null) { model.back() }
-            when (val p = model.place) {
-                null -> if (model.current == null) HubScreen(model, snack)
-                        else LaneScreen(model, snack, openBrowser, laneState)
-                is Place.Thread -> ThreadPlace(model, snack, openBrowser)
-                is Place.Compose -> ComposePlace(model, p, snack)
-                is Place.Media -> MediaViewer(p, close = { model.back() }, openBrowser)
-                Place.Config -> ConfigPlace(model, snack)
-                Place.Sync -> SyncPlace(model, snack, openBrowser)
+        Screen.Main -> BoxWithConstraints(Modifier.fillMaxSize()) {
+            val cols = columnsFor(model.layoutPref, maxWidth)
+            SideEffect { model.columns = cols }
+            LaunchedEffect(cols) { if (cols > 1) model.openStartLane() }
+            BackHandler(enabled = model.place != null || (cols == 1 && model.current != null)) {
+                model.back()
+            }
+            val p = model.place
+            when {
+                // over everything, whatever the width
+                p is Place.Media -> MediaViewer(p, close = { model.back() }, openBrowser)
+                p == Place.Config -> ConfigPlace(model, snack)
+                p == Place.Sync -> SyncPlace(model, snack, openBrowser)
+                cols == 1 -> when (p) {
+                    null -> if (model.current == null) HubScreen(model, snack)
+                            else LaneScreen(model, snack, openBrowser, laneState)
+                    is Place.Thread -> ThreadPlace(model, snack, openBrowser)
+                    is Place.Compose -> ComposePlace(model, p, snack)
+                    else -> {}
+                }
+                else -> Columns(model, snack, openBrowser, laneState, cols, p)
             }
         }
+    }
+}
+
+/** How many columns: phone.layout, and what the width fits (a forced count only if it does). */
+fun columnsFor(pref: String, width: Dp): Int {
+    val fits = when {
+        width >= 900.dp -> 3
+        width >= 560.dp -> 2
+        else -> 1
+    }
+    return when (pref) {
+        "one" -> 1
+        "two" -> minOf(2, fits)
+        "three" -> fits
+        else -> when {  // auto: three only on a wide tablet, two from a phone on its side up
+            width >= 1000.dp -> 3
+            width >= 600.dp -> 2
+            else -> 1
+        }
+    }
+}
+
+/**
+ * A tablet (or a phone on its side): the overview, the lane and — on a wide screen — the
+ * thread side by side, as the desktop's columns. The editor opens where the thread would.
+ */
+@Composable
+private fun Columns(
+    model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit,
+    laneState: androidx.compose.foundation.lazy.LazyListState, cols: Int, p: Place?,
+) {
+    Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(Modifier.width(if (cols >= 3) 300.dp else 320.dp).fillMaxHeight()) {
+            HubScreen(model, snack, pane = true)
+        }
+        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        val side = p is Place.Thread || p is Place.Compose
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            when {
+                cols == 2 && p is Place.Thread -> ThreadPlace(model, snack, openBrowser)
+                cols == 2 && p is Place.Compose -> ComposePlace(model, p, snack)
+                model.current != null -> LaneScreen(model, snack, openBrowser, laneState, pane = true)
+                else -> Hint(stringResource(R.string.pick_lane))
+            }
+        }
+        if (cols >= 3) {
+            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Box(Modifier.width(420.dp).fillMaxHeight()) {
+                when {
+                    side && p is Place.Thread -> ThreadPlace(model, snack, openBrowser)
+                    side && p is Place.Compose -> ComposePlace(model, p, snack)
+                    else -> Hint(stringResource(R.string.pick_post))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Hint(text: String) {
+    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -213,10 +292,7 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
 @Composable
 private fun ThreadPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit) {
     val focus = (model.place as? Place.Thread)?.focus
-    val act = CardActions(
-        open = {}, reply = { model.compose(it) }, like = { model.like(it) },
-        media = { list, i -> model.openMedia(list, i) }, link = openBrowser,
-        alias = { model.putAlias(it) })
+    val act = model.cardActions(openBrowser)
     val root = model.threadPosts.firstOrNull()
     PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
         ?.let { " #$it" } ?: ""), model, snack) { mod ->

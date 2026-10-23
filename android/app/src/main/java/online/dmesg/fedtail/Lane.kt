@@ -87,13 +87,11 @@ import kotlinx.coroutines.delay
 @Composable
 fun LaneScreen(
     model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit, state: LazyListState,
+    pane: Boolean = false, // beside the overview (a tablet): no way back to it, no strip
 ) {
     var switcher by remember { mutableStateOf(false) }
     val name = model.current ?: return
-    val act = CardActions(
-        open = { model.openThread(it.sid) }, reply = { model.compose(it) },
-        like = { model.like(it) }, media = { list, i -> model.openMedia(list, i) },
-        link = openBrowser, alias = { model.putAlias(it) })
+    val act = model.cardActions(openBrowser)
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -103,7 +101,7 @@ fun LaneScreen(
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surface),
                         navigationIcon = {
-                            IconButton(onClick = { model.toOverview() }) {
+                            if (!pane) IconButton(onClick = { model.toOverview() }) {
                                 Icon(Glyphs.Grid, stringResource(R.string.hub_title))
                             }
                         },
@@ -121,7 +119,7 @@ fun LaneScreen(
                                 Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
                             }
                         })
-                    NewsStrip(model, name)
+                    if (!pane) NewsStrip(model, name)
                     if (model.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
                     else HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }

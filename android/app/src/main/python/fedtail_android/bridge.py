@@ -22,6 +22,8 @@ a copy of their logic.
     wait(since, seconds)                     blocks until something changed → version
     thread(id)                               a thread as a tree: numbers and depths
     post(body) / act(action, id)             write or answer; like, boost, bookmark
+    menu(id) / thread_act(action, id)        a card's ⋯: its state; follow or leave the thread
+    resolve(url)                             a link in a post: a thread here, or the browser
     command(line, confirmed) / command_preview(line)   Point's command line (ui.command_line)
     config_text() / config_save(text)        the config file, edited in the app
     sync_*                                   sync with the other devices (core/sync)
@@ -225,6 +227,8 @@ def open():  # noqa: A001 — what Kotlin calls it
         out = {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
                                       "start_at", "mark_read", "visibility", "sensitive_media")}
         out["command_line"] = bool(core.cfg["ui"]["command_line"])
+        out["overview"] = core.cfg["phone"]["overview"]
+        out["layout"] = core.cfg["phone"]["layout"]
         return {"me": out, "lanes": web.lanes()}
     return _answer(go)
 
@@ -383,6 +387,34 @@ def command(line, confirmed=False):
     """→ {"ok", "message"?, "open": {"thread"|"account"}?, "confirm"?: ask, then again
     with confirmed} — the web page's own call."""
     return _answer(lambda: _s["web"].command(line or "", bool(confirmed)))
+
+
+# ---- a card's ⋯ menu, links in posts ---------------------------------------------------
+
+def menu(post_id):
+    """What a card's ⋯ needs to say: {"subscribed", "muted", "own", "url"}."""
+    def go():
+        got = _s["web"].post_menu(post_id)
+        url = next((x["url"] for x in got["items"] if x.get("kind") == "open" and x.get("url")),
+                   "")
+        return {k: got[k] for k in ("subscribed", "muted", "own")} | {"url": url}
+    return _answer(go)
+
+
+def thread_act(action, post_id):
+    """sub / unsub / mute / unmute the thread a post is in → {"message"}."""
+    return _answer(lambda: _s["web"].thread_act(action, post_id))
+
+
+def resolve(url):
+    """A link tapped in a post: {"found": "thread", "id"} when my server knows it as a
+    post, else {"found": "account"|None} — the screen opens the browser then."""
+    def go():
+        try:
+            return _s["web"].resolve(url)
+        except Exception:  # noqa: BLE001 — unknown or slow: the browser
+            return {"found": None}
+    return _answer(go)
 
 
 # ---- the config, edited in the app (no settings pages: the file itself) ------------------

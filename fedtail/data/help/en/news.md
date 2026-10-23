@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **0.19.0 (in progress):**
 
 - A sound scheme
+- Android: a phone and a tablet
 - The terminal — everything the windows have
 - The web — everything the windows have
 

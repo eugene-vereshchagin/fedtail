@@ -54,6 +54,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 - [12. Database and logs](#12-database-and-logs) — `[storage]`, `[debug]`
 - [13. In a terminal](#13-in-a-terminal) — `[cli]`, `[tui]`
 - [14. In a browser](#14-in-a-browser) — `[web]`
+- [15. On a phone and a tablet](#15-on-a-phone-and-a-tablet) — `[phone]`
 
 ## 1. Look and window
 
@@ -398,3 +399,14 @@ The interface in a terminal — `fedtail --ui tui` (or ui.frontend = "tui"): lan
 | `web.host` | `"127.0.0.1"` | Which address to wait on. "127.0.0.1" — from this computer only; "0.0.0.0" — from the home network too (from the phone: the one-time link fedtail prints at start, with the computer's address instead of 127.0.0.1; good for 15 minutes). Everything goes unencrypted there, so for your own network only; from outside — through a VPN or a proxy with TLS. |
 | `web.port` | `8765` | The port. |
 | `web.open_browser` | `true` | Open the browser at start. |
+
+## 15. On a phone and a tablet
+
+The Android app (the android/ folder of the repository). Its config is this same file, edited right in the app: ⋮ → "Config". On a computer these settings do nothing.
+
+### `[phone]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `phone.overview` | `"tiles"` | The overview of lanes — the home screen: "tiles" — as tiles (each lane's count and its first unread post); "list" — as a list, a row per lane. |
+| `phone.layout` | `"auto"` | How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread side by side); "one", "two", "three" — always that many, if they fit. |

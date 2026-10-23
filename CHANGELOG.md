@@ -5,6 +5,10 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- The Android app (the `android` branch, dev builds from CI): the overview of lanes as home —
+  tiles or a list (`phone.overview`), "read in a row", "read — next" at a lane's end; two
+  or three columns on a tablet (`phone.layout`); pictures with a viewer, live links, a
+  card's ⋯ menu; Point's command line off on the phone.
 - Sounds, as a part of the theme like its pictures: the messenger themes bring sets of
   their own (qip-retro, mra, psi, point — synthesised by tools/make_sounds.py, ours),
   system plays the desktop's sound theme, terminal and bnw beep. A batch of news chimes

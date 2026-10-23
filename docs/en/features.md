@@ -622,6 +622,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 |---|---|---|---|---|
 | A Qt window | has | 0.1.0 | `ui.frontend = "qt"` | the main one |
 | Commands in a terminal | has | 0.9.0 | `[cli]`: `enabled`, `color`, `max_lines`, `tail_lanes` | tut (TUI), toot (CLI) |
+| Android: a phone and a tablet | partly | 0.19.0 | `[phone]`: `overview`, `layout` | Tusky, Fedilab, Moshidon |
 | A terminal interface (Textual) | has | 0.10.0 | `ui.frontend = "tui"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows` | tut |
 | Web on localhost | has | 0.10.0 | `ui.frontend = "web"`, `[web]`: `host`, `port`, `open_browser` | Phanpy, Elk — web clients |
 | The terminal — everything the windows have | partly | 0.19.0 | `ui.frontend = "tui"`, `tui.sound` | — |
@@ -632,6 +633,8 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 <details><summary>In detail</summary>
 
 **Commands in a terminal.** `fedtail lanes`, `fedtail show replies -n 20`, `fedtail tail` (the new as it comes), `fedtail post "text"`, `fedtail post --reply a3f "text"`, `fedtail read replies`. The same profile, database and read marks as the window; works without Qt.
+
+**Android: a phone and a tablet.** On the `android` branch for now, dev builds from CI. Native screens (Kotlin, Jetpack Compose) over the same Python core the desktop runs. Home is the overview of lanes: tiles or a list (`phone.overview`), each lane's count and first unread post, “Read in a row” — yours first. In a lane — the lanes with news as a strip, a switcher with a search, “read → next” at the end and a swipe there. Threads as trees, replies, likes, pictures with a viewer, the config edited in the app, read marks synced. On a tablet — two or three columns, as on the desktop (`phone.layout`). Point's command line is off on the phone (`ui.command_line`).
 
 **A terminal interface (Textual).** Lanes on the left, posts on the right, the command line at the bottom. The same keys, `x` — the lane is read, `:` — the command line. Lanes — `[` / `]`, digits `1`…`9`, `h` — into the lane list (`j` / `k` there), `l` — back to the posts, Tab — to and fro. “Activity” and “Follow requests” have rows of their own (in requests `a` — accept, `d` — reject). Pictures are drawn with half blocks: the first one small right in the lane (`tui.pictures`, `tui.picture_rows`), `v` — all of them full screen, ← / → between them, `o` — the original in the browser; needs Pillow (`python3-pil`) and a true colour terminal. Works over ssh. Needs `python3-textual`.
 
