@@ -179,6 +179,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-tabrows {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
                padding: 3px 4px 0 4px; }}
 .ft-tabrows > flowboxchild {{ padding: 0; }}
+.ft-compose-bar > flowboxchild {{ padding: 0; background: none; }}
 .ft-tabchip {{ border: 1px solid {c['card_border']}; border-bottom: none;
               border-radius: {br}px {br}px 0 0; padding: 0 2px 0 8px; color: {c['muted']}; }}
 .ft-tabrows > flowboxchild.ft-current .ft-tabchip {{ background: {c['view']};

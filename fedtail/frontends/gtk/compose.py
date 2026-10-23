@@ -18,7 +18,7 @@ from ...model import VISIBILITIES, Scheduled, real
 from ...model.text import snippet
 from ..common import compose as rules
 from ..common.actions import vis_word
-from .gi_setup import GLib, Gtk, Pango, hscroll, tip
+from .gi_setup import GLib, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
 
@@ -171,18 +171,22 @@ class ComposeWindow(Gtk.Box):
         self.sensitive_btn.set_visible(False)
         self.sensitive_btn.connect("toggled", lambda _b: self._changed())
         bar.append(self.sensitive_btn)
-        self.counter = Gtk.Label()
+        # the count in the text field's own corner, bottom right (as Qt's)
+        self.counter = Gtk.Label(halign=Gtk.Align.END, valign=Gtk.Align.END)
         self.counter.add_css_class("ft-muted")
-        self.counter.set_xalign(1)
-        line = Gtk.Box(spacing=8)
-        line.append(hscroll(bar))
-        line.append(self.counter)  # always in sight, whatever the width
-        box.append(line)
-        # what to do with it, on a row of its own: nothing squeezed in a narrow window
-        row = Gtk.Box(spacing=6)
-        self.hint = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        self.counter.set_can_target(False)
+        self.counter.set_margin_end(14)
+        self.counter.set_margin_bottom(6)
+        over.add_overlay(self.counter)
+        # a line of what happened (draft restored, saved…): there only when it says something
+        self.hint = Gtk.Label(xalign=0, wrap=True)
         self.hint.add_css_class("ft-muted")
-        row.append(self.hint)
+        self.hint.set_visible(False)
+        self.hint.connect("notify::label", lambda lab, *_a: lab.set_visible(bool(lab.get_label())))
+        box.append(self.hint)
+        # what to do with it: on the right of the same row when there's room, a row of
+        # its own in a narrow window — each half keeping to its side (as Qt's)
+        row = Gtk.Box(spacing=6)
         close = Gtk.Button(label=_("close"))
         tip(close, _("close_tip"))
         close.connect("clicked", lambda _b: self.close())
@@ -205,7 +209,19 @@ class ComposeWindow(Gtk.Box):
         self.send_btn.add_css_class("ft-primary")
         self.send_btn.connect("clicked", lambda _b: self.send())
         row.append(self.send_btn)
-        box.append(hscroll(row))
+        bottom = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False,
+                             min_children_per_line=1, max_children_per_line=2,
+                             column_spacing=8, row_spacing=6)
+        bottom.add_css_class("ft-compose-bar")
+        bar.set_halign(Gtk.Align.START)
+        row.set_halign(Gtk.Align.END)
+        row.set_hexpand(True)
+        bottom.append(bar)
+        bottom.append(row)
+        for child in (bottom.get_child_at_index(0), bottom.get_child_at_index(1)):
+            child.set_can_focus(False)  # the buttons inside take the focus, not the halves
+        bottom.get_child_at_index(1).set_hexpand(True)
+        box.append(bottom)
         self.append(inner)
 
         keys = Gtk.EventControllerKey()
