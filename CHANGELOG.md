@@ -15,6 +15,11 @@
   "connecting…" instead of an error in the window. The terminal: a thread or profile
   that loads after its screen was closed no longer brings the terminal down; j / k step
   over the "new below" line.
+- GTK, closer to Qt (the KDE window is the reference): the messenger themes head a
+  card "Name (time)" in their colours as Qt does; a theme's fonts that come with fedtail
+  (PT Sans, Arimo, Fira Mono…) are loaded and its whole list of families is used — GTK
+  took only the first and fontconfig chose for it; the lane header shows the theme's
+  pictures for "all read", the funnel and refresh, as Qt.
 - Self-check: many tabs opened and closed round after round in Qt, GTK and the terminal
   (tools/tabs_stress.py — leaks, slowing down), each theme's Qt and GTK windows side by
   side with their colours compared (tools/theme_compare.py).

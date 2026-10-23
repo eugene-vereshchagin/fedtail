@@ -851,6 +851,25 @@ class GtkSmokeTest(_GtkBase):
         self.assertRegex(account_color("@w"), r"^#[0-9a-f]{6}$")
         self.assertEqual(account_color("@w"), account_color("@W"))
 
+    def test_messenger_themes_head_the_card_as_a_chat(self):
+        """shape.card_header = "chat" (qip, mra, icq): "Name (time)" in one line, as Qt's —
+        not the name, the @address and the time apart (the night of 23.10)."""
+
+        from fedtail.frontends.gtk.card import Card
+        theme = self.win.ctx.theme
+        was = theme.shape, theme.words
+        try:
+            theme.shape = dict(was[0], card_header="chat")
+            theme.words = dict(was[1], chat="{name} ({when})")
+            card = Card(self.win.ctx, "x", self.view.by_id("011"))
+        finally:
+            theme.shape, theme.words = was
+        labels = [w.get_text() for w in _walk(card) if isinstance(w, Gtk.Label)]
+        post = self.view.by_id("011")
+        self.assertTrue(any(t.startswith(post.author.name or post.author.handle) and "(" in t
+                            for t in labels), labels)
+        self.assertFalse(any(t == "@" + post.author.handle for t in labels), labels)
+
     def test_a_pictures_menu_saves_it(self):
         from fedtail.model import Media
         card = next(iter(self._lane("home").rows.values()))

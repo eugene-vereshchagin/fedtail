@@ -190,9 +190,12 @@ def _modal_guard(app, what):
         # a menu shown by the C++ exec() itself (the patched one wasn't called: the
         # night of 23.10 every tour stood 1–1.5 h on a card's right click): kept for its
         # picture, as caught, and closed — the click returns
-        pop = app.activePopupWidget()
-        if pop is not None:
-            from PySide6.QtWidgets import QMenu
+        from PySide6.QtWidgets import QMenu
+        pops = [app.activePopupWidget()] + [
+            # a menu shown without its grab (X11 on xvfb, your account's tour of 23.10:
+            # an hour on a picture's right click) isn't the "active popup": any shown one
+            x for x in app.topLevelWidgets() if isinstance(x, QMenu) and x.isVisible()]
+        for pop in dict.fromkeys(p for p in pops if p is not None):
             if isinstance(pop, QMenu):
                 CAUGHT.append(pop)
                 NATIVE_MENUS.append(what)

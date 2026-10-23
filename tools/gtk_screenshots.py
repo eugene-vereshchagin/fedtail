@@ -148,7 +148,7 @@ def run(out, theme_name, dark, extras=False, layout="single"):
     view.media_bytes = fake_media
     win = MainWindow(None, core, view, Bridge(view), themes.apply(cfg))
     win.images.http.get = fake_get  # the picture cache: no network either
-    win.set_default_size(1000, 700)
+    win.set_default_size(1280, 860)  # as the Qt tour: the two side by side
     win.present()
     win.start()
     pump(1.0)
@@ -217,7 +217,7 @@ def shoot_sizes(win, out, stem):
                              f"{head.get_width()}: buttons cut")
         SIZE_NOTES.append(f"  {tag} = {w}×{h}: " + ("; ".join(probs) or "fine"))
         shoot(win, out / f"{stem}-size-{tag}.png")
-    win.set_default_size(1000, 700)
+    win.set_default_size(1280, 860)
     pump(0.4)
 
 

@@ -85,7 +85,8 @@ class Run:
         if not f.exists():
             return {}
         rows = {}
-        for m in re.findall(r"^\| ([\w:()]+) \| (.+) \|$", f.read_text("utf-8"), re.M):
+        first = f.read_text("utf-8").split("\n## ")[0]  # the table, not the differences
+        for m in re.findall(r"^\| ([\w:()]+) \| (.+) \|$", first, re.M):
             if m[0] != "step":
                 rows[m[0]] = [c.strip() for c in m[1].split("|")]
         return rows
