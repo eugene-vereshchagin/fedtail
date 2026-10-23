@@ -184,15 +184,15 @@ private fun LaneTile(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(lane.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = fg,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(if (news) "${lane.unread}" else "·", fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold, color = accent)
+                if (news) Text("${lane.unread}", fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                    color = accent)
             }
             if (lane.peek.isNotBlank()) {
                 Text(lane.peek, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 2,
                     overflow = TextOverflow.Ellipsis, color = fg.copy(alpha = 0.75f))
             }
         } else {
-            Text(if (news) "${lane.unread}" else "·", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+            Text(if (news) "${lane.unread}" else "", fontSize = 20.sp, fontWeight = FontWeight.Bold,
                 color = accent)
             Text(lane.title, fontSize = 12.5.sp, color = fg, maxLines = 1,
                 overflow = TextOverflow.Ellipsis)

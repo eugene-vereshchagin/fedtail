@@ -4,7 +4,7 @@
 #   2-lanes.png  — the demo world (the one every fedtail screenshot shows): the overview
 #   3-home.png   — its Home lane
 #   4-thread.png — a thread of that world, as a tree
-#   5-wide.png   — the phone on its side: the overview and the lane in two columns
+#   5-wide.png   — a tablet's screen (wm size): the overview, the lane and a thread side by side
 #   logcat.txt   — what Python and Android said meanwhile (a crash is there)
 # Run by reactivecircus/android-emulator-runner (android.yml) from the repository's root.
 set -u
@@ -33,11 +33,12 @@ adb shell am force-stop "$APP"
 adb shell am start -W -n "$ACT" --ez demo true --es thread 101
 shot 4-thread 25
 adb shell am force-stop "$APP"
-adb shell settings put system accelerometer_rotation 0
-adb shell settings put system user_rotation 1
-adb shell am start -W -n "$ACT" --ez demo true --es lane home
+adb shell wm size 2560x1600
+adb shell wm density 320
+adb shell am start -W -n "$ACT" --ez demo true --es lane home --es thread 101
 shot 5-wide 25
-adb shell settings put system user_rotation 0
+adb shell wm size reset
+adb shell wm density reset
 
 # everything the app said (Python's stdout/stderr come as python.* tags), and crashes
 adb logcat -d -v time > "$OUT/logcat-all.txt" || true
