@@ -24,17 +24,6 @@ from ..common import timed
 CONTEXTS = ["home", "notifications", "public", "thread", "account"]
 
 
-def filter_extra(f):
-    """What else a filter says: how many single posts it hides, when it ends."""
-    out = ""
-    if f.posts:
-        out += " · " + _("posts_n", n=f.posts)
-    if f.expires is not None:
-        when = f.expires.astimezone().strftime("%d.%m.%Y %H:%M")
-        out += " · " + _("filter_until", until=when)
-    return out
-
-
 class SilenceDialog(QDialog):
     TABS = ("filters", "muted", "blocked", "domains")  # in this order; tab= picks one
 
@@ -176,7 +165,7 @@ class SilenceDialog(QDialog):
             how = _("filter_hide") if f.action == "hide" else _("filter_warn")
             it = QListWidgetItem(f"{f.title or words} — {how}"
                                  + (f" ({words})" if words and words != f.title else "")
-                                 + filter_extra(f))
+                                 + timed.filter_extra(f))
             it.setData(Qt.ItemDataRole.UserRole, f.id)
             self.filter_list.addItem(it)
 

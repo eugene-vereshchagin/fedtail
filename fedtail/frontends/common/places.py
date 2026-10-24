@@ -204,10 +204,7 @@ class Places(MorePlaces):
             for f in _wait(v.filters()):
                 words = ", ".join(f.words)
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
-                line = " · ".join(x for x in (
-                    how, words, _("posts_n", n=f.posts) if f.posts else "",
-                    _("filter_until", until=f.expires.astimezone().strftime("%d.%m %H:%M"))
-                    if f.expires else "") if x)
+                line = " · ".join(x for x in (how, words, *timed.filter_bits(f)) if x)
                 page.rows.append(Row("item", f.title or words, line, key=f.id,
                                      buttons=(self._btn(_("filter_delete"), "silence",
                                                         "filter_delete", f.id),)))

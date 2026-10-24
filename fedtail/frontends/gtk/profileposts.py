@@ -6,7 +6,7 @@ older, "▼ older — from their server", a few posts at a time as mine fetches 
 from __future__ import annotations
 
 from ...i18n import _
-from ...model import Share, real
+from ...model import real
 from ..common import timed
 from .card import Card
 from .gi_setup import Gtk, tip
@@ -78,13 +78,7 @@ class ProfilePosts:
         self.more()
 
     def _keeps(self, e):
-        """Their own server's posts are not filtered by it: the same rule here."""
-        if self.show == "all":
-            return True
-        p = real(e)
-        if self.show == "media":
-            return not isinstance(e, Share) and bool(p.media)
-        return not p.reply_to or p.reply_to_author == self.acc.id
+        return timed.keeps(e, self.show, self.acc.id)
 
     # ---- showing ----------------------------------------------------------------------
     def render(self):

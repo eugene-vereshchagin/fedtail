@@ -79,5 +79,43 @@ class TimedTest(unittest.TestCase):
         self.assertEqual(h.done[0], ("call", "fut"))
 
 
+class Bits(unittest.TestCase):
+    def setUp(self):
+        i18n.setup("en")
+
+    def test_filter_bits(self):
+        from datetime import UTC, datetime
+
+        from fedtail.model import WordFilter
+        self.assertEqual(timed.filter_extra(WordFilter("F")), "")
+        f = WordFilter("F", posts=2, expires=datetime(2030, 1, 2, 3, 4, tzinfo=UTC))
+        bits = timed.filter_bits(f)
+        self.assertEqual(bits[0], i18n._("posts_n", n=2))
+        self.assertIn("2030", bits[1])
+        self.assertEqual(timed.filter_extra(f), " · " + " · ".join(bits))
+
+    def test_keeps(self):
+        from types import SimpleNamespace as NS
+
+        from fedtail.model import Share
+        own = NS(reply_to="", reply_to_author="", media=())
+        to_me = NS(reply_to="9", reply_to_author="B", media=())
+        to_other = NS(reply_to="9", reply_to_author="N", media=())
+        pic = NS(reply_to="", reply_to_author="", media=("m",))
+        import fedtail.frontends.common.timed as t
+        real_was = t.real
+        t.real = lambda e: e
+        try:
+            self.assertTrue(all(t.keeps(e, "all", "B") for e in (own, to_other)))
+            self.assertEqual([t.keeps(e, "posts", "B") for e in (own, to_me, to_other)],
+                             [True, True, False])
+            self.assertEqual([t.keeps(e, "media", "B") for e in (own, pic)], [False, True])
+            boost = Share.__new__(Share)
+            t.real = lambda e: pic
+            self.assertFalse(t.keeps(boost, "media", "B"))
+        finally:
+            t.real = real_was
+
+
 if __name__ == "__main__":
     unittest.main()

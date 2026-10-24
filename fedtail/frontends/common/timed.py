@@ -10,6 +10,7 @@ mutes for good at once, as before."""
 import time
 
 from ...i18n import _
+from ...model import Share, real
 
 # (seconds, i18n key); 0 — for good
 SPANS = ((0, "span_ever"), (3600, "span_hour"), (86400, "span_day"),
@@ -50,6 +51,33 @@ def until(secs, now=None):
     return time.strftime("%d.%m %H:%M", time.localtime((now or time.time()) + secs))
 
 
+def filter_bits(f):
+    """What else a filter says, as words: how many single posts it hides, when it ends."""
+    out = []
+    if f.posts:
+        out.append(_("posts_n", n=f.posts))
+    if f.expires is not None:
+        out.append(_("filter_until", until=f.expires.astimezone().strftime("%d.%m.%Y %H:%M")))
+    return out
+
+
+def filter_extra(f):
+    """filter_bits as a tail for a line ("" or " · …")."""
+    return "".join(" · " + b for b in filter_bits(f))
+
+
+def keeps(entry, show, acc_id):
+    """Is this post of acc_id's one the profile shows with show? Posts from their own
+    server come unfiltered: the same rule as the server's (replies only to themselves
+    in "posts"; own posts with pictures in "media")."""
+    if show == "all":
+        return True
+    p = real(entry)
+    if show == "media":
+        return not isinstance(entry, Share) and bool(p.media)
+    return not p.reply_to or p.reply_to_author == acc_id
+
+
 def mute(view, host, acc, done=None):
     """Mute acc, asking how long and whether their notifications still come. done(r)
     when the server said yes (r: what view.mute gave)."""
@@ -70,5 +98,6 @@ def mute(view, host, acc, done=None):
            lambda secs, ticked: go(int(secs or 0), bool(ticked)), check=_("mute_posts_only"))
 
 
-__all__ = ["PROFILE_SHOWS", "REPLIES_POLICIES", "SPANS", "mute", "profile_show",
+__all__ = ["PROFILE_SHOWS", "REPLIES_POLICIES", "SPANS", "filter_bits", "filter_extra",
+           "keeps", "mute", "profile_show",
            "profile_shows", "replies_policies", "spans", "until"]

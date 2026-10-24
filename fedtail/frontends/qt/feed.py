@@ -1559,13 +1559,7 @@ class AccountWidget(_PagedTab):
         self.more()
 
     def _keeps(self, e):
-        """Their own server's posts are not filtered by it: the same rule here."""
-        if self.show == "all":
-            return True
-        p = real_entry(e)
-        if self.show == "media":
-            return not isinstance(e, Share) and bool(p.media)
-        return not p.reply_to or p.reply_to_author == self.acc_id
+        return timed.keeps(e, self.show, self.acc_id)
 
     def _page(self, page):
         if self._first_page is None:

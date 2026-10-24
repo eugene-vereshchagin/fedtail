@@ -82,17 +82,6 @@ def ask_text(parent, title, question, then, text="", ok_label=None, allow_empty=
     return win
 
 
-def filter_extra(f):
-    """What else a filter says: how many single posts it hides, when it ends."""
-    out = ""
-    if f.posts:
-        out += " · " + _("posts_n", n=f.posts)
-    if f.expires is not None:
-        when = f.expires.astimezone().strftime("%d.%m.%Y %H:%M")
-        out += " · " + _("filter_until", until=when)
-    return out
-
-
 def choose(parent, title, text, options, then, check=None):
     """One of options ([(key, label)]) by radio buttons, and a tick box when check (its
     label) is given; then(key, ticked) on OK — never on Cancel or close."""
@@ -286,7 +275,7 @@ def silence(win, tab="filters"):
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
                 filters.append(row_of(f"{f.title or w} — {how}"
                                       + (f" ({w})" if w and w != f.title else "")
-                                      + filter_extra(f), f.id))
+                                      + timed.filter_extra(f), f.id))
 
         def got_people(s):
             if n != gen[0]:
