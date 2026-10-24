@@ -48,17 +48,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -96,19 +99,46 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
 
 private val EMOJI = Regex("""<img\b[^>]*\balt="([^"]*)"[^>]*>""")
 
-/** A post's HTML as text with live links (custom emoji as their :code: for now). */
-fun postText(html: String, plain: String, linkColor: Color, onLink: (String) -> Unit): AnnotatedString {
+/** A post's HTML as text, its links coloured and marked "URL" (custom emoji as their
+ *  :code: for now). Plain marks, not Compose's own link handling: that takes every tap
+ *  on the text, and a tap beside a link must open the thread (PostWords decides). */
+fun postText(html: String, plain: String, linkColor: Color): AnnotatedString {
     if (html.isBlank()) return AnnotatedString(plain)
     return try {
-        val a = AnnotatedString.fromHtml(EMOJI.replace(html) { it.groupValues[1] },
-            linkStyles = TextLinkStyles(style = SpanStyle(color = linkColor)),
-            linkInteractionListener = { link -> (link as? LinkAnnotation.Url)?.let { onLink(it.url) } })
+        val a = AnnotatedString.fromHtml(EMOJI.replace(html) { it.groupValues[1] })
         var end = a.length
         while (end > 0 && a[end - 1].isWhitespace()) end--
-        a.subSequence(0, end)
+        buildAnnotatedString {
+            append(a.text.substring(0, end))
+            a.spanStyles.forEach { r ->
+                if (r.start < end) addStyle(r.item, r.start, minOf(r.end, end))
+            }
+            a.getLinkAnnotations(0, end).forEach { r ->
+                val url = (r.item as? LinkAnnotation.Url)?.url ?: return@forEach
+                val stop = minOf(r.end, end)
+                addStyle(SpanStyle(color = linkColor), r.start, stop)
+                addStringAnnotation("URL", url, r.start, stop)
+            }
+        }
     } catch (e: Exception) {
         AnnotatedString(plain)
     }
+}
+
+/** A post's words: a tap on a link follows it, a tap anywhere else is the card's own. */
+@Composable
+private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit, onTap: () -> Unit) {
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val link by rememberUpdatedState(onLink)
+    val tap by rememberUpdatedState(onTap)
+    Text(words, fontSize = 15.sp, lineHeight = 21.sp, onTextLayout = { layout = it },
+        modifier = Modifier.pointerInput(words) {
+            detectTapGestures { pos ->
+                val at = layout?.getOffsetForPosition(pos)
+                val url = at?.let { words.getStringAnnotations("URL", it, it).firstOrNull()?.item }
+                if (url != null) link(url) else tap()
+            }
+        })
 }
 
 /** Read marks: what stood whole on screen when scrolling stopped (read.mark_read). */
@@ -324,10 +354,9 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     }
     if (!open) return
     if (p.text.isNotBlank()) {
-        val onLink by rememberUpdatedState(act.link)
         val color = MaterialTheme.colorScheme.primary
-        val words = remember(p.html, p.text, color) { postText(p.html, p.text, color) { onLink(it) } }
-        Text(words, fontSize = 15.sp, lineHeight = 21.sp)
+        val words = remember(p.html, p.text, color) { postText(p.html, p.text, color) }
+        PostWords(words, act.link) { act.open(p) }
     }
     if (p.media.isNotEmpty()) {
         MediaGrid(p.media, blurred = hideSensitive && p.sensitive) { i -> act.media(p.media, i) }

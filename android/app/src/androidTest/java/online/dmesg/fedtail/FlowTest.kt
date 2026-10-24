@@ -9,6 +9,8 @@ import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isOff
+import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -147,7 +149,12 @@ class FlowTest {
         val before = file.readText().contains("command_line = true")
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.waitUntil(15_000) { file.readText().contains("command_line = true") != before }
-        compose.onAllNodes(isToggleable()).onFirst().performClick()  // and back as it was
+        // the switch shows what the file says now — only then back as it was
+        val shown = if (before) isOff() else isOn()
+        compose.waitUntil(15_000) {
+            compose.onAllNodes(isToggleable() and shown).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.waitUntil(15_000) { file.readText().contains("command_line = true") == before }
         assertTrue(file.readText().contains("[ui]"))
     }
