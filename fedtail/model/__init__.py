@@ -1,7 +1,7 @@
 """fedtail's own data model: what the core hands the frontends, whatever the protocol.
 
 Every protocol (``fedtail/protocols/<name>/``) turns its server's objects into these;
-nothing outside ``fedtail/protocols/`` reads a server's JSON (docs/PROTOCOLS.md). The
+nothing outside ``fedtail/protocols/`` reads a server's JSON (docs/en/dev/protocols.md). The
 vocabulary is ActivityPub's — a post is a Note, a boost an Announce ("share"), a poll a
 Question — not the shape of one server's API.
 

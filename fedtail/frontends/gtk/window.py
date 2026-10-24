@@ -1,7 +1,7 @@
 """The main GTK window: lanes on the left with their unread counts, the lane or thread
 on the right (a tab each, the lanes' own tab first), a status line at the bottom.
 
-Stage 1 of docs/GTK.md. What a card needs from the window goes through `Ctx` (like
+Stage 1 of docs/en/dev/gtk.md. What a card needs from the window goes through `Ctx` (like
 qt/window.py ViewContext), so cards never import the window.
 """
 

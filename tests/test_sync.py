@@ -333,9 +333,9 @@ class SyncLineTest(Devices):
         self.assertIn(str(self.tmp / "meet"), syncline.about(self.desk))
 
 
-# ---- the server ---------------------------------------------------------------------------
+# ---- the client against the real server (the server's own tests: syncserver/tests/) -------
 
-class ServerTest(TmpDir):
+class ClientServerTest(TmpDir):
     TOKENS = {("me.example", "t-me"): "1", ("me.example", "t-me2"): "1",
               ("me.example", "t-you"): "2"}
 
@@ -368,48 +368,6 @@ class ServerTest(TmpDir):
                 return r.status, json.loads(r.read())
         except urllib.error.HTTPError as e:
             return e.code, json.loads(e.read())
-
-    def test_whose_journal_is_whose(self):
-        self.assertEqual(self.call("GET", "/v1"), (200, {"fedtail-sync": 1}))
-        self.assertEqual(self.call("GET", "/.well-known/fedtail-sync")[0], 404)  # gone
-        self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"one", device="d1")[0], 200)
-        self.assertEqual(self.call("POST", "/v1/blobs", "t-me2", b"two", device="d2")[0], 200)
-        self.assertEqual(self.call("POST", "/v1/blobs", "t-you", b"theirs")[0], 200)
-        code, got = self.call("GET", "/v1/blobs?after=0&exclude=d1", "t-me")
-        self.assertEqual(code, 200)
-        self.assertEqual([b["device"] for b in got["blobs"]], ["d2"])  # not d1, not you
-        self.assertEqual(got["last"], 2)
-        self.assertEqual(self.call("GET", "/v1/blobs?after=2", "t-me")[1]["blobs"], [])
-        self.assertEqual(self.call("DELETE", "/v1/blobs", "t-me"), (200, {"deleted": 2}))
-        self.assertEqual(len(self.call("GET", "/v1/blobs", "t-you")[1]["blobs"]), 1)
-
-    def test_an_older_config_with_public_url_still_starts(self):
-        cfg = self.tmp / "s.toml"
-        cfg.write_text('instances = ["me.example"]\npublic_url = "https://x.example"\n')
-        with self.assertLogs("fedtail-sync", "WARNING"):
-            self.assertEqual(self.mod.load_config(cfg), {"instances": ["me.example"]})
-        cfg.write_text('instancez = ["me.example"]\n')
-        with self.assertRaises(SystemExit):
-            self.mod.load_config(cfg)
-
-    def test_strangers_and_greed_refused(self):
-        self.assertEqual(self.call("GET", "/v1/blobs")[0], 401)
-        self.assertEqual(self.call("GET", "/v1/blobs", "nope")[0], 401)
-        self.assertEqual(self.call("GET", "/v1/blobs", "t-me", instance="https://else.example")[0],
-                         403)
-        self.assertEqual(self.call("GET", "/v1/blobs", "t-me", instance="http://me.example")[0],
-                         401)  # not https: no host at all
-        self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"x" * 70 * 1024)[0], 413)
-        for _ in range(17):
-            self.call("POST", "/v1/blobs", "t-me", b"x" * 60 * 1024)
-        self.assertEqual(self.call("POST", "/v1/blobs", "t-me", b"x" * 60 * 1024)[0], 507)
-
-    def test_any_instance_means_public_ones_only(self):
-        app = self.mod.Server({"db": ":memory:", "instances": ["*"]}, verify=lambda h, t: "1")
-        self.assertFalse(app.allowed_host("localhost"))
-        self.assertFalse(app.allowed_host("127.0.0.1"))
-        self.assertIsNone(self.mod.host_of("https://x.example/path"))
-        self.assertEqual(self.mod.host_of("https://X.Example/"), "x.example")
 
     @need_crypto
     def test_two_devices_through_the_server(self):

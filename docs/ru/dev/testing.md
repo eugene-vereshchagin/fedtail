@@ -1,7 +1,5 @@
 # Альфа-тест fedtail
 
-[English below](#english)
-
 Спасибо, что пробуешь. fedtail — ранняя версия: что-то будет ломаться, и это нормально;
 главное — чтобы каждая поломка оставила след, по которому её можно починить.
 
@@ -10,7 +8,7 @@
 Проще всего — одним файлом из [релиза](https://github.com/eugene-vereshchagin/fedtail/releases): `fedtail-…-linux-x86_64` (`chmod +x`, запустить)
 или `fedtail-…-windows.exe`. Обновиться — скачать файл новее.
 
-Из исходников на Windows — [WINDOWS.md](WINDOWS.md) (Python, git, запуск, тесты, самопроверка).
+Из исходников на Windows — [windows.md](windows.md) (Python, git, запуск, тесты, самопроверка).
 
 Из исходников, Debian 13 (trixie), KDE или любой другой рабочий стол:
 
@@ -44,7 +42,7 @@ python3 -m fedtail --install-desktop    # пункт в меню и иконка
 - **Темы**: `ui.theme` в конфиге (≡ → «Открыть конфиг»), список — там же в пояснении.
 - **Сутки без перезапуска.** Оставь окно на ночь — утром пришли журнал: в нём строки
   `trend` и, если что-то утекает, `possible leak`. Как поставить охоту на утечку всерьёз
-  (трассировка памяти, снимки) — [DEBUGGING.md](DEBUGGING.md#ночной-прогон-поиск-утечек).
+  (трассировка памяти, снимки) — [debugging.md](debugging.md#ночной-прогон-поиск-утечек).
 
 ## Нашёл проблему
 
@@ -60,29 +58,3 @@ python3 -m fedtail --install-desktop    # пункт в меню и иконка
 В журнале нет токена и текстов постов: только адреса запросов, id постов, время и ошибки.
 Архив `--bug-report` не берёт ни токен, ни базу. Конфиг в него попадает — посмотри, нет ли
 там того, чем делиться не хочешь.
-
-<a id="english"></a>
-## English
-
-Thanks for trying fedtail. It's early: things will break, and each breakage should leave a
-trace to fix it by.
-
-**Install:** one file from a [release](https://github.com/eugene-vereshchagin/fedtail/releases) (`…-linux-x86_64`: `chmod +x`, run; or
-`…-windows.exe`), or from the source on Debian 13: the `apt install` line above, `git clone`,
-`python3 -m fedtail`;
-`--install-desktop` adds a menu entry. From the source on Windows: [WINDOWS.md](WINDOWS.md). **Update:** `git pull`, then
-`python3 -m fedtail --update-config`.
-
-**Try first:** whole threads (a tree, numbered, filled from other servers); nothing lost
-(Esc closes the lanes, new things wait unread); replies to me and thread subscriptions;
-notifications (≡ → Debugging → Send a test notification); the command line (`Ctrl+L`,
-`?`); several accounts (right-click your avatar); themes (`ui.theme`); a night without a
-restart — send the log in the morning: its `trend` and `possible leak` lines say what grew
-(a full leak hunt: DEBUGGING.md, "A night run").
-
-**Found a problem:** say what you did, expected and got (a screenshot helps), and attach
-`latest.log` from the log folder (menu ≡ → Debugging → Open the log folder; usually
-`~/.local/share/fedtail/default/logs/`; a release build keeps it only with `debug.mode = "on"`
-or `--debug`) or the archive from `python3 -m fedtail --bug-report`.
-A frozen window: `kill -USR1 <pid>` first. Logs hold no token and no post texts; the
-archive holds no token and no database, but does include your config.

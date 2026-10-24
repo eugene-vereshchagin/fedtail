@@ -6,7 +6,7 @@ around where reading starts, built in small batches between frames so the window
 stops answering, more joining as the view nears an end, the far end trimmed past
 MAX_ROWS.
 
-Nothing jumps (docs/DESIGN.md): rows are kept by key and never rebuilt while on screen;
+Nothing jumps (docs/en/dev/design.md): rows are kept by key and never rebuilt while on screen;
 when rows go in or out above what is being read, the view moves by exactly the height
 they added or took away. Posts seen while the window is active are marked read.
 

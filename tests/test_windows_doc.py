@@ -1,5 +1,5 @@
-"""docs/WINDOWS.md stays true: its pip packages are CI's Windows job's, its test command is
-CI's, the tools and the switches it names exist."""
+"""docs/{ru,en}/dev/windows.md stay true: their pip packages are CI's Windows job's, their
+test command is CI's, the tools and the switches they name exist."""
 
 import re
 import shlex
@@ -7,14 +7,15 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DOC = ROOT / "docs" / "WINDOWS.md"
+DOCS = [ROOT / "docs" / lang / "dev" / "windows.md" for lang in ("ru", "en")]
 CI = ROOT / ".github" / "workflows" / "ci.yml"
 
 
 def commands():
     """Every line of the doc's powershell blocks, as words."""
     out = []
-    for block in re.findall(r"```powershell\n(.*?)```", DOC.read_text("utf-8"), re.S):
+    text = "".join(d.read_text("utf-8") for d in DOCS)
+    for block in re.findall(r"```powershell\n(.*?)```", text, re.S):
         for line in block.splitlines():
             line = line.strip()
             if line and not line.startswith("#") and not line.startswith("$env:"):
@@ -58,7 +59,8 @@ class WindowsDocTest(unittest.TestCase):
         for t in tests:  # (Russian and English)
             self.assertEqual(t[2:], ci)  # py -3.13 + the same words
         for var in re.findall(r"^\s+(\w+): \S+", job.split("steps:")[0], re.M):
-            self.assertIn(f"$env:{var}", DOC.read_text("utf-8"))
+            for doc in DOCS:
+                self.assertIn(f"$env:{var}", doc.read_text("utf-8"))
 
     def test_tools_and_switches_exist(self):
         main = (ROOT / "fedtail" / "__main__.py").read_text("utf-8")
@@ -77,7 +79,9 @@ class WindowsDocTest(unittest.TestCase):
                     self.assertIn(f'"{flag}"', src, f"{rest[0]} {flag}")
 
     def test_linked_from_the_testers_page(self):
-        self.assertIn("WINDOWS.md", (ROOT / "docs" / "TESTING.md").read_text("utf-8"))
+        for lang in ("ru", "en"):
+            page = ROOT / "docs" / lang / "dev" / "testing.md"
+            self.assertIn("windows.md", page.read_text("utf-8"))
 
 
 class WindowsCheckTest(unittest.TestCase):

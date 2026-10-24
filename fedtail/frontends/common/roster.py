@@ -1,5 +1,5 @@
 """The roster (the lanes, followed threads and private talks as a messenger's contact
-list, docs/LAYOUTS.md) without a toolkit: an item's key and what it opens, the lines
+list, docs/en/dev/layouts.md) without a toolkit: an item's key and what it opens, the lines
 a row shows, what the search and "only new" leave, what "all read" marks, and how the
 roster looks (kept in the profile's state)."""
 

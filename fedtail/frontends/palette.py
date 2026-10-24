@@ -2,7 +2,7 @@
 colours that follow or tint others, mixing and contrast.
 
 frontends/qt/theme.py does the same with QColor today; this module is the shared
-version the GTK frontend is built on (docs/GTK.md, stage 0), and a test checks the
+version the GTK frontend is built on (docs/en/dev/gtk.md, stage 0), and a test checks the
 two agree wherever PySide6 is installed. Colour arithmetic copies QColor's: lightness
 is HSL's, lighter()/darker() scale HSV's value and take saturation off when the value
 runs past the top, so a theme looks the same on both toolkits.

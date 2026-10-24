@@ -1,7 +1,5 @@
 # fedtail на Windows из исходников: запуск и тесты
 
-[English below](#english)
-
 Для тестировщиков и разработчиков: как поставить fedtail на Windows 10/11 из git, запустить
 и прогнать те же проверки, что на Linux. Людям проще одним файлом — `fedtail-…-windows.exe`
 из [релиза](https://github.com/eugene-vereshchagin/fedtail/releases).
@@ -129,67 +127,3 @@ py -3.13 tools/selfcheck.py --night
 `--quick` — 3–5 минут, без ключей — 20–40 минут, `--night` — всё, на ночь (с твоим аккаунтом
 только на чтение, скриншоты размыты). В конце — папка `C:\Users\<ты>\fedtail_log\<дата_время>\`: все картинки и логи,
 `report.md` и в ней же zip — его и присылать. Прервал — `py -3.13 tools/selfcheck.py --clean` уберёт недоделанное.
-
----
-
-<a id="english"></a>
-# fedtail on Windows from the source: running and testing
-
-For testers and developers: fedtail on Windows 10/11 from git, run, and the same checks as on
-Linux. People are better off with the one file `fedtail-…-windows.exe` from a release. The
-commands are PowerShell's; `tests/test_windows_doc.py` checks this file against CI and the
-code.
-
-1. Python and git, one package per winget command (an old winget takes no more), then a new
-   PowerShell:
-
-   ```powershell
-   winget install -e --id Python.Python.3.13
-   winget install -e --id Git.Git
-   ```
-
-2. The code and the packages (the same as CI's Windows job):
-
-   ```powershell
-   git clone https://github.com/eugene-vereshchagin/fedtail.git
-   cd fedtail
-   py -3.13 -m pip install --user requests PySide6-Essentials textual cryptography
-   ```
-
-3. Run: `py -3.13 -m fedtail` (server address → sign in in the browser → the code back into
-   fedtail); `py -3.13 -m fedtail --install-desktop` — a Start menu shortcut. A sign-in page
-   saying the right password is wrong is the server refusing what the form sent, before
-   fedtail has any part: its log by the error's Request ID says what (GoToSocial: "password
-   hash didn't match" — the email is right, the password came different); open the link on
-   another machine and bring the code back. Update: `git pull`, `py -3.13 -m fedtail
-   --update-config`. Logs (fedtail from the source says where at start: `fedtail: logs in
-   …`): `%LOCALAPPDATA%\fedtail\default\logs\latest.log`, crashes in `crash.log` there;
-   config and login: `%APPDATA%\fedtail\default\`. Open the folder: `explorer
-   "$env:LOCALAPPDATA\fedtail\default\logs"`; follow the log: `Get-Content
-   "$env:LOCALAPPDATA\fedtail\default\logs\latest.log" -Tail 50 -Wait`. Test output to a
-   file: add `2>&1 | Tee-Object tests.txt` to the test command.
-
-4. Tests, as CI runs them:
-
-   ```powershell
-   $env:QT_QPA_PLATFORM = "offscreen"
-   $env:PYTHONIOENCODING = "utf-8"
-   py -3.13 -X faulthandler -m unittest discover -s tests -t . -v
-   Remove-Item Env:QT_QPA_PLATFORM
-   ```
-
-   (the last line, or a new PowerShell: with `offscreen` left, fedtail's window would go
-   nowhere — fedtail notices it, ignores it and says so)
-
-5. This page in one command — everything here that runs without a person, in order, in a
-   profile of its own in a temporary folder (your fedtail, its shortcut and logs untouched);
-   `windows-check/report.md` says what was done and skipped, `errors.txt` what failed (the
-   self-check does the same as its `windows` step):
-
-   ```powershell
-   py -3.13 tools/windows_check.py windows-check --tests
-   ```
-
-6. Selfcheck: `py -3.13 tools/devenv.py` once (Playwright), then `py -3.13 tools/selfcheck.py
-   --quick` / no flags / `--night`; send the zip from
-   `%USERPROFILE%\fedtail_log\<date_time>\`.

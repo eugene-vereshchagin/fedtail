@@ -3,7 +3,7 @@
 A thin layer over Core (or MergedCore — all accounts in one window): every method
 here takes and returns model objects (Post, Share, Account, ThreadItem…), and the
 server's JSON never leaves the core. Frontends use this and nothing else of the core
-that carries posts or accounts (docs/PROTOCOLS.md, stage 2); a test checks that the
+that carries posts or accounts (docs/en/dev/protocols.md, stage 2); a test checks that the
 frontends moved to it read no protocol fields.
 
 Methods written out below have model-shaped signatures of their own. Any other method
@@ -228,7 +228,7 @@ class View:
 
     def raw(self, x):
         """The core's own status for a model object or an id — for core methods not
-        behind the View yet (docs/PROTOCOLS.md, stage 2). Frontends hand it on and never
+        behind the View yet (docs/en/dev/protocols.md, stage 2). Frontends hand it on and never
         look inside."""
         return self._raw(x)
 
@@ -578,7 +578,7 @@ class View:
     def roster(self):
         """[RosterGroup] — the lanes, grouped as the sidebar groups them, each with its
         unread count and newest post: what a messenger-style roster shows (docs/
-        LAYOUTS.md). Cheap: lane entries are cached by the core; asked again whenever
+        docs/en/dev/layouts.md). Cheap: lane entries are cached by the core; asked again whenever
         what's new or read changes."""
         from .lanes import grouped
         c = self._core

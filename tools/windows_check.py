@@ -1,4 +1,4 @@
-"""docs/WINDOWS.md, done on this Windows: every command of the page that can run without a
+"""docs/en/dev/windows.md, done on this Windows: every command of the page that can run without a
 person — in order, in a profile of its own (APPDATA and LOCALAPPDATA point at a
 temporary folder: your own fedtail, its shortcut and its logs aren't touched).
 
@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DOC = ROOT / "docs" / "WINDOWS.md"
+DOC = ROOT / "docs" / "en" / "dev" / "windows.md"
 SKIP = {  # what a person does: (the first words) → why it isn't run here
     ("winget",): "installs Python and git: done already, this runs in them",
     ("git", "clone"): "the checkout this runs from",
@@ -36,8 +36,8 @@ SKIP = {  # what a person does: (the first words) → why it isn't run here
 
 
 def commands():
-    """The page's PowerShell lines, as words, in order (the English half repeats the
-    Russian one: once is enough)."""
+    """The page's PowerShell lines, as words, in order (docs/ru/dev/windows.md has
+    the very same commands: the English page is enough)."""
     out, seen = [], set()
     text = DOC.read_text("utf-8")
     for block in re.findall(r"```powershell\n(.*?)```", text, re.S):
@@ -90,7 +90,7 @@ def main():
     dry = "--dry-run" in sys.argv
     with_tests = "--tests" in sys.argv
     out = Path(args[0] if args else "windows-check")
-    lines, errors = ["# docs/WINDOWS.md, done here", "",
+    lines, errors = ["# docs/en/dev/windows.md, done here", "",
                      f"Python {sys.version.split()[0]} · {sys.platform}", "",
                      "| command | what | result |", "|---|---|---|"], []
     if sys.platform != "win32" and not dry:

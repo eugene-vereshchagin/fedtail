@@ -1,4 +1,4 @@
-"""What a protocol gives the core (docs/PROTOCOLS.md, stage 3).
+"""What a protocol gives the core (docs/en/dev/protocols.md, stage 3).
 
 A protocol is a package under ``fedtail/protocols/`` that exposes a ``PROTOCOL``:
 
@@ -95,7 +95,7 @@ KNOWN = {
 
 @dataclass
 class Capabilities:
-    """What my server can do — one place for it (docs/PROTOCOLS.md, stage 4).
+    """What my server can do — one place for it (docs/en/dev/protocols.md, stage 4).
 
     What the server says about itself (software, version, the limits) comes with the
     connection; whether it has a feature is learned: a probe's answers (≡ → Server info

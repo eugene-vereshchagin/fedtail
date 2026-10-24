@@ -1,4 +1,4 @@
-"""The protocol layer stays a layer (docs/PROTOCOLS.md, stage 3): the Mastodon API's
+"""The protocol layer stays a layer (docs/en/dev/protocols.md, stage 3): the Mastodon API's
 paths live only under protocols/, the core calls only the client methods listed in
 protocols/base.py, the Mastodon client has every one of them, and frontends don't
 import a protocol's insides."""
