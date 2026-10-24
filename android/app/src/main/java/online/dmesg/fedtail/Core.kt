@@ -23,7 +23,12 @@ object Core {
     fun failed(o: JSONObject): String? = if (o.has("error")) o.optString("error") else null
 
     suspend fun start(context: Context, lang: String, demo: Boolean): JSONObject = obj(
-        "start", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang, demo)
+        "start", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang, demo, true)
+
+    suspend fun selfcheckSteps(): JSONArray = JSONArray(call("selfcheck_steps"))
+    suspend fun selfcheckStep(name: String) = obj("selfcheck_step", name)
+    suspend fun selfcheckReport(results: JSONArray, device: JSONObject) =
+        obj("selfcheck_report", results.toString(), device.toString())
 
     suspend fun state() = obj("state")
     suspend fun loginBegin(server: String) = obj("login_begin", server)

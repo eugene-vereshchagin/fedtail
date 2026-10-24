@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.content.FileProvider
+import java.io.File
 
 /**
  * The one window: the overview of lanes, a lane, and what opens over it (Screens.kt).
@@ -27,9 +29,21 @@ class MainActivity : ComponentActivity() {
             FedtailTheme {
                 App(model, openBrowser = { url ->
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                })
+                }, share = { path -> shareFile(path) })
             }
         }
+    }
+
+    /** The self-check's report to a messenger, mail or files: the system's share sheet. */
+    private fun shareFile(path: String) {
+        val uri = FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.files", File(path))
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/gzip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, File(path).name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(send, null))
     }
 
     override fun onNewIntent(intent: Intent) {

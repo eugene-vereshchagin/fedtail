@@ -89,7 +89,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun App(model: AppModel, openBrowser: (String) -> Unit) {
+fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit = {}) {
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(model.message) {
         model.message?.let {
@@ -117,6 +117,7 @@ fun App(model: AppModel, openBrowser: (String) -> Unit) {
                 // over everything, whatever the width
                 p is Place.Media -> MediaViewer(p, close = { model.back() }, openBrowser)
                 p == Place.Settings -> SettingsPlace(model, snack)
+                p == Place.SelfCheck -> SelfCheckPlace(model, snack, share)
                 p == Place.Config -> ConfigPlace(model, snack)
                 p == Place.Sync -> SyncPlace(model, snack, openBrowser)
                 cols == 1 -> when (p) {

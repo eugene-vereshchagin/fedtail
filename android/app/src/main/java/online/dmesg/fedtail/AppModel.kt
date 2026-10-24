@@ -27,6 +27,7 @@ sealed interface Place {
     data class Compose(val replyTo: PostItem?) : Place
     data class Media(val items: List<MediaItem>, val index: Int) : Place
     data object Settings : Place
+    data object SelfCheck : Place
     data object Config : Place
     data object Sync : Place
 }
@@ -558,6 +559,47 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val got = Core.configText()
             Core.failed(got)?.let { configError = it; return@launch }
             configText = got.optString("text")
+        }
+    }
+
+    // ---- the self-check (dev builds): this phone, this account, read-only ---------------
+    data class Check(val name: String, val ok: Boolean?, val ms: Int, val detail: String)
+
+    var checks by mutableStateOf(listOf<Check>())
+    var checking by mutableStateOf(false)
+
+    fun openSelfCheck() {
+        places = places + Place.SelfCheck
+    }
+
+    fun runSelfCheck() {
+        if (checking) return
+        checking = true
+        viewModelScope.launch {
+            val names = Core.selfcheckSteps()
+            checks = (0 until names.length()).map { Check(names.getString(it), null, 0, "") }
+            for (i in checks.indices) {
+                val r = Core.selfcheckStep(checks[i].name)
+                checks = checks.toMutableList().also {
+                    it[i] = Check(r.optString("name"), r.optBoolean("ok"), r.optInt("ms"),
+                        r.optString("detail"))
+                }
+            }
+            checking = false
+        }
+    }
+
+    /** The report (the desktop's bug report + the steps) → its file, to hand over. */
+    fun selfCheckReport(device: JSONObject, share: (String) -> Unit) {
+        viewModelScope.launch {
+            val results = JSONArray()
+            checks.forEach {
+                results.put(JSONObject().put("name", it.name).put("ok", it.ok == true)
+                    .put("ms", it.ms).put("detail", it.detail))
+            }
+            val got = Core.selfcheckReport(results, device)
+            Core.failed(got)?.let { message = it; return@launch }
+            share(got.optString("path"))
         }
     }
 

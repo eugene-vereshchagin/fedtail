@@ -31,6 +31,7 @@ android {
         targetSdk = 35
         versionCode = buildNumber
         versionName = fedtailVersion
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // phones, and the emulator; nothing else is worth the megabytes
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -143,4 +144,12 @@ dependencies {
     // pictures: avatars, previews, the viewer — straight from their servers, never with
     // the account's token (as the desktop's images.py); memory + disk cache of its own
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // UI tests on the emulator (src/androidTest): Compose's test rule over the real app
+    androidTestImplementation(compose)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

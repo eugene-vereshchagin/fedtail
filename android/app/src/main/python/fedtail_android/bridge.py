@@ -61,8 +61,10 @@ def _answer(fn):
 
 # ---- the stage ------------------------------------------------------------------------
 
-def start(files_dir, cache_dir, lang="", demo=False):
-    """Set the stage for the core and make it; → info() as JSON."""
+def start(files_dir, cache_dir, lang="", demo=False, logs=False):
+    """Set the stage for the core and make it; → info() as JSON. logs: the desktop's
+    session logs and crash traces (diag.setup) in the profile's data folder — the app
+    asks for them; the tests on a desktop don't."""
     global _started
     t = time.monotonic()
     os.environ["XDG_CONFIG_HOME"] = os.path.join(files_dir, "config")
@@ -74,6 +76,8 @@ def start(files_dir, cache_dir, lang="", demo=False):
     for d in ("config", "data"):
         os.makedirs(os.path.join(files_dir, d), exist_ok=True)
     _started = t
+    _s["cache_dir"] = cache_dir
+    _s["logs"] = bool(logs)
     with _lock:
         _make(bool(demo))
     return info()
@@ -105,6 +109,11 @@ def _make(demo):
         kw["api_class"] = FakeApi
         if not auth.load(where.auth_file):
             auth.save(where.auth_file, {"server": DEMO_SERVER, "token": "demo"})
+    if _s.get("logs") and not _s.get("logging"):
+        from fedtail import diag
+        diag.setup(where, cfg)
+        diag.session_header(where.profile, {"ui": "android"})
+        _s["logging"] = True
     core = Core(cfg, where, **kw)
     _s.update(core=core, web=Web(core, None), demo=demo, profile=profile)
 
@@ -495,6 +504,163 @@ def settings_apply():
         with _lock:
             _make(_s["demo"])
         return {"restarted": True}
+    return _answer(go)
+
+
+# ---- the self-check (dev builds): this phone, this account, read-only -------------------
+# Each step reads — the server is asked, nothing is posted, liked or marked; it says ok
+# or what broke, and how long it took. The report is the desktop's bug report (the logs,
+# the config, the system — never the token or the database) with the steps added.
+CHECKS = ("core", "server", "hub", "lanes", "browse", "thread", "pictures", "link",
+          "settings", "sync")
+
+
+def selfcheck_steps():
+    return json.dumps(list(CHECKS))
+
+
+def selfcheck_step(name):
+    """One step → {"name", "ok", "ms", "detail"}."""
+    t = time.monotonic()
+    try:
+        detail = _CHECK[name]()
+        ok = True
+    except Exception as e:  # noqa: BLE001 — the report says what broke
+        import logging
+        logging.getLogger("fedtail.android").exception("selfcheck %s", name)
+        detail, ok = f"{e.__class__.__name__}: {e}", False
+    return json.dumps({"name": name, "ok": ok, "ms": round((time.monotonic() - t) * 1000),
+                       "detail": detail}, ensure_ascii=False)
+
+
+def _check_core():
+    got = json.loads(info())
+    if got.get("error"):
+        raise RuntimeError(got["error"])
+    return (f"fedtail {got['version']}, Python {got['python']} {got['abi']}, "
+            f"{got['ssl']}, db {got.get('store')}")
+
+
+def _check_server():
+    me = _s["web"].me()
+    if not me.get("handle"):
+        raise RuntimeError("not logged in")
+    return f"@{me['handle']} on {me.get('server')}"
+
+
+def _check_hub():
+    got = json.loads(hub())
+    if "error" in got:
+        raise RuntimeError(got["error"])
+    return f"{got['unread']} new in {got['with_news']} lanes; tiles {got['pinned'] or 'all'}"
+
+
+def _lanes(lazy):
+    core, out = _core(), []
+    for x in _s["web"].lanes():
+        lane = core.lane_by_name.get(x["name"])
+        if lane is None or bool(lane.lazy or lane.source is None) != lazy:
+            continue
+        t = time.monotonic()
+        got = _s["web"].lane(x["name"], True)
+        out.append(f"{x['name']} {len(got.get('posts', []))} posts "
+                   f"{round((time.monotonic() - t) * 1000)} ms")
+    return "; ".join(out) or "none"
+
+
+def _first_post(want=lambda p: True):
+    for x in _s["web"].lanes():
+        try:
+            posts = _s["web"].lane(x["name"], True).get("posts", [])
+        except Exception:  # noqa: BLE001
+            continue
+        for p in posts:
+            if want(p):
+                return p
+    return None
+
+
+def _check_thread():
+    p = _first_post()
+    if p is None:
+        return "no posts to try"
+    got = _s["web"].thread(p["sid"])
+    return f"#{p.get('alias')}: {len(got.get('posts', []))} posts"
+
+
+def _check_pictures():
+    import requests
+
+    from fedtail.version import USER_AGENT
+    p = _first_post(lambda x: x.get("media") or (x.get("account") or {}).get("avatar"))
+    if p is None:
+        return "no pictures to try"
+    urls = [m.get("preview") or m.get("url") for m in p.get("media", [])][:2]
+    urls += [(p.get("account") or {}).get("avatar")]
+    out = []
+    for url in [u for u in urls if u]:
+        t = time.monotonic()
+        # never with the token: pictures live on other servers
+        r = requests.get(url, timeout=20, headers={"User-Agent": USER_AGENT})
+        r.raise_for_status()
+        out.append(f"{len(r.content) // 1024} KB {round((time.monotonic() - t) * 1000)} ms")
+    return "; ".join(out)
+
+
+def _check_link():
+    p = _first_post(lambda x: x.get("url"))
+    if p is None:
+        return "no post with an address"
+    got = _s["web"].resolve(p["url"])
+    return f"{p['url'].split('/')[2]} → {got.get('found')}"
+
+
+def _check_settings():
+    got = json.loads(settings())
+    if "error" in got:
+        raise RuntimeError(got["error"])
+    return f"{sum(len(c['options']) for c in got['chapters'])} options in " \
+           f"{len(got['chapters'])} chapters"
+
+
+def _check_sync():
+    st = _core().sync_status()
+    if st is None:
+        return "off"
+    last = st.get("last") or {}
+    if last.get("error"):
+        raise RuntimeError(last["error"])
+    return f"{st.get('backend')} {st.get('where')}, pending {st.get('pending')}, " \
+           f"last {last.get('at', '—')}"
+
+
+_CHECK = {"core": _check_core, "server": _check_server, "hub": _check_hub,
+          "lanes": lambda: _lanes(False), "browse": lambda: _lanes(True),
+          "thread": _check_thread, "pictures": _check_pictures, "link": _check_link,
+          "settings": _check_settings, "sync": _check_sync}
+
+
+def selfcheck_report(results_json, device_json):
+    """The steps and the phone's facts into the log folder, then the desktop's bug report
+    (diag.bug_report: logs, config, system; no token, no database) → {"path"}."""
+    def go():
+        from datetime import datetime
+
+        from fedtail import diag
+        core = _core()
+        folder = diag.logs_dir(core.paths, core.cfg)
+        folder.mkdir(parents=True, exist_ok=True)
+        lines = [f"self-check {datetime.now():%Y-%m-%d %H:%M:%S}"]
+        lines += [f"{k}: {v}" for k, v in json.loads(device_json or "{}").items()]
+        for r in json.loads(results_json or "[]"):
+            lines.append(f"{'ok ' if r.get('ok') else 'BAD'} {r.get('name'):9} "
+                         f"{r.get('ms', 0):6} ms  {r.get('detail', '')}")
+        (folder / "selfcheck.txt").write_text("\n".join(lines) + "\n", "utf-8")
+        dest = os.path.join(_s.get("cache_dir") or str(core.paths.data_dir), "reports")
+        os.makedirs(dest, exist_ok=True)
+        for old in os.listdir(dest):  # one report at a time: the last one
+            os.remove(os.path.join(dest, old))
+        return {"path": str(diag.bug_report(core.paths, dest, core.cfg))}
     return _answer(go)
 
 

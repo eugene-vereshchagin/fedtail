@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the app hands to another app (FileProvider): the self-check's report, only. -->
+<paths>
+    <cache-path name="reports" path="reports/" />
+</paths>

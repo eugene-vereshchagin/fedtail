@@ -100,6 +100,10 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                     onClick = { menu = false; model.openSettings() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.config)) },
                                     onClick = { menu = false; model.openConfig() })
+                                if (BuildConfig.DEBUG) {  // dev builds only
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.selfcheck)) },
+                                        onClick = { menu = false; model.openSelfCheck() })
+                                }
                             }
                         }
                     })

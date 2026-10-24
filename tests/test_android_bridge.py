@@ -252,3 +252,29 @@ class BridgeTest(TmpDir):
         self.assertEqual(self.call("settings_apply"), {"restarted": True})  # …but on leaving
         self.assertIsNot(self.bridge._s["core"], before)
         self.assertEqual(self.call("settings_apply"), {"restarted": False})
+
+    def test_the_self_check(self):
+        self.demo()
+        steps = json.loads(self.bridge.selfcheck_steps())
+        self.assertIn("lanes", steps)
+        results = []
+        with mock.patch("requests.get") as get:  # the made-up world's pictures
+            get.return_value.content = b"x" * 2048
+            for name in steps:
+                r = json.loads(self.bridge.selfcheck_step(name))
+                self.assertEqual(r["name"], name)
+                self.assertIn("ms", r)
+                results.append(r)
+        bad = [r for r in results if not r["ok"]]
+        self.assertEqual(bad, [], bad)
+        self.assertIn("home", next(r for r in results if r["name"] == "lanes")["detail"])
+        got = self.call("selfcheck_report", json.dumps(results),
+                        json.dumps({"device": "Pixel 8", "android": "16"}))
+        import tarfile
+        with tarfile.open(got["path"]) as tar:
+            names = tar.getnames()
+            text = tar.extractfile("logs/selfcheck.txt").read().decode()
+        self.assertIn("Pixel 8", text)
+        self.assertIn("system.txt", names)
+        self.assertFalse(any(n.endswith(("auth.json", "state.db")) for n in names))
+        self.assertFalse(json.loads(self.bridge.selfcheck_step("nowhere"))["ok"])

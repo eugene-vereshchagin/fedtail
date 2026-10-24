@@ -71,6 +71,23 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
 Dev builds are signed with `dev.keystore` (in the repository on purpose: it signs only
 `online.dmesg.fedtail.dev`), so each one installs over the last.
 
+## Testing
+
+* **The Python door** — `tests/test_android_bridge.py`, on any computer (and first in CI):
+  starting in the app's folders, logging in, the demo world's lanes and marks, the
+  overview and the tiles, a thread and writing, a card's menu, the settings page, sync,
+  the self-check and its report.
+* **The UI on an emulator** — `app/src/androidTest` (Compose tests, `FlowTest.kt`): the
+  overview → a lane → a thread → back, "read in a row", the switcher's search, a setting
+  written into config.toml, the tiles changed. CI runs them after the screenshots
+  (`.github/android_uitests.sh`); a failure is an annotation and a line in `uitests.txt`
+  on the `android-shots` branch.
+* **The self-check** (dev builds: ⋮ → Self-check) — on the real phone with the real
+  account, read-only: the core, the server, every lane (and how long each took), a
+  thread, pictures, a link, the settings, sync; "Share the report" hands over the
+  desktop's bug report (`diag.bug_report`: logs, config, system — never the token or the
+  database) with the steps and the phone's facts in it.
+
 ## Building
 
 CI builds the dev APK on every push to the `android` branch (`.github/workflows/android.yml`;

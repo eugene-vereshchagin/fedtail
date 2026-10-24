@@ -46,7 +46,7 @@ jobs:
           CHAQUOPY_BUILD_PYTHON: ${{ steps.py.outputs.python-path }}
         run: |
           set -o pipefail
-          ./gradlew --no-daemon assembleDebug 2>&1 | tee ../gradle.log
+          ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest 2>&1 | tee ../gradle.log
       # the reason as annotations: readable through the API where the log isn't
       - name: Why it failed
         if: failure()
@@ -64,15 +64,21 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Screenshots on an emulator
+      # one emulator for both: the screenshots, then the UI tests (androidTest: Compose
+      # tests on the demo world — they tap and check, where the screenshots only look)
+      - name: Screenshots and UI tests on an emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          CHAQUOPY_BUILD_PYTHON: ${{ steps.py.outputs.python-path }}
         with:
           api-level: 34
           arch: x86_64
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: bash .github/android_shots.sh
+          script: |
+            bash .github/android_shots.sh
+            bash .github/android_uitests.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
