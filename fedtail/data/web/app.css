@@ -353,3 +353,7 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
                          margin-top: 8px; }
 #preview-body .warning { color: var(--warn); margin-top: 8px; }
 #lanes a[hidden] { display: none; }
+
+/* choose(): one of a few answers (how long a mute lasts…) */
+.choose-options { display: flex; flex-direction: column; gap: 0.3em; margin: 0.6em 0; }
+.choose-check { display: block; margin: 0.4em 0 0.8em; }

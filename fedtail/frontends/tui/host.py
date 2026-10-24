@@ -53,6 +53,15 @@ class TuiHost:
                 then(answer)
         self.app.push_screen(AskScreen(title, question, text, allow_empty), got)
 
+    def choose(self, title, text, options, done, check=None):
+        """One of a few answers, and maybe a box to tick (common/timed.py)."""
+        from .screens import ChooseScreen
+
+        def got(answer):
+            if answer is not None:
+                done(*answer)
+        self.app.push_screen(ChooseScreen(title, text, options, check), got)
+
     # ---- places --------------------------------------------------------------------------
     def open_url(self, url):
         if url and openable(url):  # the web only: never a file or a share from a post

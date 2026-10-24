@@ -173,6 +173,73 @@ class MenuScreen(ModalScreen):
         self.dismiss(None)
 
 
+class ChooseScreen(ModalScreen):
+    """One of a few answers (how long a mute lasts…), and maybe a box to tick: Enter on
+    an answer — dismissed with (key, ticked), space or t — the box, Esc — None. The
+    host's choose() (common/timed.py) is this."""
+
+    BINDINGS = [Binding("escape,q", "cancel", _("tui_back")),
+                Binding("space,t", "tick", "☑"),
+                Binding("j", "down", show=False), Binding("k", "up", show=False)]
+    CSS = """
+    ChooseScreen { align: center middle; }
+    ChooseScreen > Vertical { width: 64; height: auto; max-height: 90%;
+                              border: thick $primary; background: $surface; }
+    ChooseScreen #choose-title { padding: 0 1; background: $primary-background;
+                                 text-style: bold; }
+    ChooseScreen #choose-text { padding: 0 1; }
+    ChooseScreen ListView { height: auto; max-height: 20; }
+    ChooseScreen #choose-check { padding: 0 1; }
+    """
+
+    def __init__(self, title, text, options, check=None):
+        super().__init__()
+        self.c_title, self.text = str(title or ""), str(text or "")
+        self.options = list(options)
+        self.check = str(check) if check else ""
+        self.ticked = False
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Static(self.c_title, id="choose-title")
+            if self.text:
+                yield Static(self.text, id="choose-text")
+            yield ListView(*[ChoiceItem(label, key) for key, label in self.options],
+                           id="choose")
+            if self.check:
+                yield Static(self.check_line(), id="choose-check")
+
+    def check_line(self):
+        return Text(("☑ " if self.ticked else "☐ ") + self.check + "  (t)")
+
+    def on_mount(self):
+        lv = self.query_one("#choose", ListView)
+        lv.focus()
+        lv.index = 0
+
+    def labels(self):
+        return [label for _k, label in self.options]
+
+    def action_tick(self):
+        if self.check:
+            self.ticked = not self.ticked
+            self.query_one("#choose-check", Static).update(self.check_line())
+
+    def on_list_view_selected(self, e: ListView.Selected):
+        e.stop()
+        if isinstance(e.item, ChoiceItem):
+            self.dismiss((e.item.value, self.ticked))
+
+    def action_down(self):
+        self.query_one("#choose", ListView).action_cursor_down()
+
+    def action_up(self):
+        self.query_one("#choose", ListView).action_cursor_up()
+
+    def action_cancel(self):
+        self.dismiss(None)
+
+
 # ---- a place: common/places.py drawn in the terminal -------------------------------------
 
 def _md_parser():

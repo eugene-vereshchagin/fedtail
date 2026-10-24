@@ -423,19 +423,47 @@ class WebTest(TmpDir):
         got = json.loads(self.req("/api/link", {"url": "fedtail:thread/002"})[2])
         self.assertEqual(got["open"], {"thread": "002"})
         self.assertEqual(self.req("/api/link", {"url": "fedtail:boom/002"})[0], 200)
+        # how long a mute lasts: asked, then done with the pick ("3600" as a string too)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:mute/002"})[2])
+        self.assertIn("choose", got)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:mute/002",
+                                                "chosen": {"key": "3600"}})[2])
+        self.assertIn("message", got)
+        self.assertEqual(self.w.mute_terms["B"], {"duration": 3600, "notifications": True})
+        odd = json.loads(self.req("/api/link", {"url": "fedtail:mute/002",
+                                                "chosen": {"key": "7"}})[2])
+        self.assertIn("choose", odd)  # not one of the answers: asked again
+        # hide this one post: in the menu, asked first, then a server filter has it
+        self.assertIn("fedtail:hidepost/002",
+                      [i["url"] for i in json.loads(self.req("/api/post_menu?id=002")[2])
+                       ["items"]])
+        got = json.loads(self.req("/api/link", {"url": "fedtail:hidepost/002"})[2])
+        self.assertIn("confirm", got)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:hidepost/002",
+                                                "confirmed": True})[2])
+        self.assertEqual(got["message"], i18n._("post_hidden"))
+        self.assertIn("002", self.core.hidden_posts)
         host = _WebHost(view, False)
         host.error("x")
         self.assertEqual(host.out, {"error": "x"})
 
     def test_profile_buttons_are_the_windows(self):
-        """A profile's buttons (common/profile.py), done through the server: mute at
-        once, a note asked for first, Mention opens the editor."""
+        """A profile's buttons (common/profile.py), done through the server: mute
+        asks how long first, a note asked for first, Mention opens the editor."""
         got = json.loads(self.req("/api/account?id=B")[2])
         keys = [a["key"] for a in got["actions"]]
         for k in ("follow", "mention", "mute", "block", "note", "copy_handle"):
             self.assertIn(k, keys)
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "mute"})[2])
+        self.assertEqual([o["key"] for o in r["choose"]["options"]],
+                         [0, 3600, 86400, 604800, 2592000])
+        self.assertEqual(r["choose"]["check"], i18n._("mute_posts_only"))
+        self.assertNotIn("B", self.w.muted)  # nothing yet: the page asks
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "mute",
+                                                     "chosen": {"key": 86400,
+                                                                "ticked": True}})[2])
         self.assertTrue(r.get("refresh"))
+        self.assertEqual(self.w.mute_terms["B"], {"duration": 86400, "notifications": False})
         got = json.loads(self.req("/api/account?id=B")[2])
         self.assertIn(i18n._("unmute"), [a["label"] for a in got["actions"]])
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "note"})[2])
@@ -448,6 +476,28 @@ class WebTest(TmpDir):
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "lists"})[2])
         self.assertEqual(r["open"], {"page": "list_of", "arg": "B", "tab": ""})
         self.assertEqual(self.req("/api/profile_act", {"id": "B", "key": "boom"})[0], 400)
+
+    def test_profile_shows_posts_replies_media(self):
+        self.w.add(status("010", BOB, minute=10, text="own"))
+        pic = self.w.add(status("011", BOB, minute=11, text="pic"))
+        pic["media_attachments"] = [{"id": "m1", "type": "image", "url": "https://x/p.png"}]
+        got = json.loads(self.req("/api/account?id=B")[2])  # feed.profile_show: posts
+        self.assertEqual([s["key"] for s in got["shows"] if s["on"]], ["posts"])
+        self.assertEqual([s["label"] for s in got["shows"]],
+                         [i18n._("profile_show_posts"), i18n._("profile_show_all"),
+                          i18n._("profile_show_media")])
+        self.assertEqual(got["show_tip"], i18n._("profile_show_tip"))
+        ids = lambda g: sorted(p["id"] for p in g["posts"])  # noqa: E731
+        self.assertNotIn("002", ids(got))  # a reply to someone else
+        every = json.loads(self.req("/api/account?id=B&show=all")[2])
+        self.assertIn("002", ids(every))
+        media = json.loads(self.req("/api/account?id=B&show=media")[2])
+        self.assertEqual(ids(media), ["011"])
+        odd = json.loads(self.req("/api/account?id=B&show=boom")[2])
+        self.assertEqual([s["key"] for s in odd["shows"] if s["on"]], ["posts"])
+        js = self.req("/app.js")[2]
+        for wanted in ("function profileShows", "function chooseDlg", "r.choose"):
+            self.assertIn(wanted, js)
 
     def test_page_has_the_menus(self):
         body = self.req("/")[2]

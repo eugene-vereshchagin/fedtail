@@ -26,6 +26,7 @@ from dataclasses import dataclass, field, replace
 
 from ...i18n import _
 from ...model import Account, Post, Share, real
+from . import timed
 from .placesmore import MorePlaces
 
 log = logging.getLogger(__name__)
@@ -203,7 +204,11 @@ class Places(MorePlaces):
             for f in _wait(v.filters()):
                 words = ", ".join(f.words)
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
-                page.rows.append(Row("item", f.title or words, f"{how} · {words}", key=f.id,
+                line = " · ".join(x for x in (
+                    how, words, _("posts_n", n=f.posts) if f.posts else "",
+                    _("filter_until", until=f.expires.astimezone().strftime("%d.%m %H:%M"))
+                    if f.expires else "") if x)
+                page.rows.append(Row("item", f.title or words, line, key=f.id,
                                      buttons=(self._btn(_("filter_delete"), "silence",
                                                         "filter_delete", f.id),)))
             ctx = tuple((c, _("filter_ctx_" + c)) for c in
@@ -212,7 +217,10 @@ class Places(MorePlaces):
                          Field("action", _("filter_new"), "warn", "choice",
                                (("warn", _("filter_warn")), ("hide", _("filter_hide")))),
                          Field("contexts", "", ["home", "public", "thread", "account"],
-                               "checks", ctx))
+                               "checks", ctx),
+                         Field("expires", _("filter_for"), "0", "choice",
+                               tuple((str(s), label) for s, label in timed.spans()),
+                               tip=_("filter_for_q")))
             page.submit = self._btn(_("filter_add"), "silence", "filter_add", primary=True)
             return page
         s = _wait(v.silenced_people())
@@ -235,7 +243,12 @@ class Places(MorePlaces):
             return Out(error=_("filter_words"))
         how = "hide" if values.get("action") == "hide" else "warn"
         ctx = [c for c in values.get("contexts") or () if isinstance(c, str)] or ["home"]
-        _wait(self.view.add_filter(", ".join(words), words, how, ctx))
+        try:
+            secs = int(str(values.get("expires") or "0"))
+        except ValueError:
+            secs = 0
+        _wait(self.view.add_filter(", ".join(words), words, how, ctx,
+                                   expires_in=secs if secs > 0 else None))
         return Out(refresh=True)
 
     def _a_silence_filter_delete(self, fid, _v, _c, _ans):
@@ -257,19 +270,27 @@ class Places(MorePlaces):
     # ---- lists ------------------------------------------------------------------------
     def _p_lists(self, _arg, _tab, _cur):
         page = Page("lists", _("lists_header"), empty="—")
+        policies = dict(timed.replies_policies())
         for x in self.view.lists:
-            page.rows.append(Row("item", x.title, _("list_exclusive") if x.exclusive else "",
+            line = " · ".join(b for b in (_("list_exclusive") if x.exclusive else "",
+                                          policies.get(x.replies, "")) if b)
+            page.rows.append(Row("item", x.title, line,
                                  key=x.id, buttons=(
                 self._btn(_("list_people"), "lists", "people", x.id),
                 self._btn(_("list_rename"), "lists", "rename", x.id),
                 self._btn(_("list_exclusive"), "lists", "exclusive", x.id,
                           tip=_("list_exclusive_tip")),
+                # whose replies its lane shows: list → followed → none → list
+                self._btn(_("replies_policy"), "lists", "replies", x.id,
+                          tip=_("replies_policy_tip")),
                 self._btn(_("list_delete"), "lists", "delete", x.id),
                 # the order of the lists, as the windows' sidebar moves them (shared)
                 self._btn("↑ " + _("list_up"), "lists", "move", f"{x.id} -1"),
                 self._btn("↓ " + _("list_down"), "lists", "move", f"{x.id} 1"))))
         page.form = (Field("title", _("list_name_q")),
-                     Field("exclusive", _("list_exclusive"), False, "check"))
+                     Field("exclusive", _("list_exclusive"), False, "check"),
+                     Field("replies", _("replies_policy"), "list", "choice",
+                           tuple(timed.replies_policies()), tip=_("replies_policy_tip")))
         page.submit = self._btn(_("list_new"), "lists", "new", primary=True)
         return page
 
@@ -288,7 +309,10 @@ class Places(MorePlaces):
         title = str(values.get("title") or "").strip()
         if not title:
             return Out(error=_("list_name_q"))
-        _wait(self.view.create_list(title, bool(values.get("exclusive"))))
+        policy = str(values.get("replies") or "")
+        _wait(self.view.create_list(title, bool(values.get("exclusive")),
+                                    replies_policy=policy if policy in
+                                    dict(timed.REPLIES_POLICIES) else None))
         return Out(refresh=True, message=_("list_created", title=title))
 
     def _a_lists_rename(self, list_id, _v, _c, answer):
@@ -302,6 +326,16 @@ class Places(MorePlaces):
         x = self._list(list_id)
         _wait(self.view.update_list(list_id, x.title, not x.exclusive))
         return Out(refresh=True)
+
+    def _a_lists_replies(self, list_id, _v, _c, _ans):
+        """The next of whose replies the list shows: list → followed → none."""
+        x = self._list(list_id)
+        keys = [k for k, _label in timed.REPLIES_POLICIES]
+        now = keys.index(x.replies) if x.replies in keys else 0
+        nxt = keys[(now + 1) % len(keys)]
+        _wait(self.view.update_list(list_id, x.title, x.exclusive, replies_policy=nxt))
+        return Out(refresh=True, message=_("replies_policy") + ": " +
+                   dict(timed.replies_policies())[nxt])
 
     def _a_lists_delete(self, list_id, _v, confirmed, _ans):
         x = self._list(list_id)
