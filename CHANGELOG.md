@@ -6,6 +6,8 @@
   the Windows tests, the same behaviour checked across Qt, GTK, the web and the terminal
   are in; the full terminal interface and the full web page go on in 0.20 — what each
   interface lacks so far, and why, is the "Four interfaces" table of the feature list.
+- Windows: a new avatar or header no longer goes to the server under the picture's whole
+  local path (with the user's folder name in it) — only the file's own name.
 - GTK matches Qt where it didn't: ⏸ in the video player and the gif's own key hint, the
   menu items' tooltips (where GTK shows them), the profile's tooltip in the status bar, a
   click on a post's face opens the profile (and a screen reader names it), the columns'
