@@ -6,7 +6,8 @@ older, "▼ older — from their server", a few posts at a time as mine fetches 
 from __future__ import annotations
 
 from ...i18n import _
-from ...model import real
+from ...model import Share, real
+from ..common import timed
 from .card import Card
 from .gi_setup import Gtk, tip
 
@@ -24,9 +25,12 @@ class ProfilePosts:
         self.older_origin = False
         self.origin_next = None
         self.host = ""
+        self.show = timed.profile_show(win.cfg)  # posts / all / media (the switch)
         handle = acc.handle or ""
         if "@" in handle and win.cfg["feed"].get("remote_profiles", True):
             self.host = handle.split("@", 1)[1]
+        self.switch = self._switch()
+        box.append(self.switch)
         self.more_btn = Gtk.Button(label=_("older_down"))
         self.more_btn.add_css_class("flat")
         self.more_btn.connect("clicked", lambda _b: self.more())
@@ -35,6 +39,52 @@ class ProfilePosts:
         if win.cfg["feed"].get("profile_pinned", True):
             win.call(self.view.pinned(acc.id), self._pinned, lambda _e: None)
         self.more()
+
+    # ---- posts / posts and replies / media ------------------------------------------
+    def _switch(self):
+        """Three linked buttons, as other clients have: which of their posts to show."""
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        row.add_css_class("linked")
+        row.set_halign(Gtk.Align.START)
+        for side in ("top", "bottom", "start"):
+            getattr(row, "set_margin_" + side)(4)
+        self.show_buttons, first = {}, None
+        for key, label in timed.profile_shows():
+            b = Gtk.ToggleButton(label=label)
+            tip(b, _("profile_show_tip"))
+            if first is None:
+                first = b
+            else:
+                b.set_group(first)
+            b.set_active(key == self.show)
+            b.connect("toggled", lambda b, k=key: b.get_active() and self.set_show(k))
+            self.show_buttons[key] = b
+            row.append(b)
+        return row
+
+    def set_show(self, show):
+        """Another kind of posts: everything read again from the top."""
+        if show == self.show:
+            return
+        self.show = show
+        if not self.show_buttons[show].get_active():
+            self.show_buttons[show].set_active(True)
+        self.items, self.first_page = [], None
+        self.origin_asked = self.older_origin = False
+        self.origin_next = None
+        self.more_btn.set_label(_("older_down"))
+        tip(self.more_btn, "")
+        self.render()
+        self.more()
+
+    def _keeps(self, e):
+        """Their own server's posts are not filtered by it: the same rule here."""
+        if self.show == "all":
+            return True
+        p = real(e)
+        if self.show == "media":
+            return not isinstance(e, Share) and bool(p.media)
+        return not p.reply_to or p.reply_to_author == self.acc.id
 
     # ---- showing ----------------------------------------------------------------------
     def render(self):
@@ -69,7 +119,7 @@ class ProfilePosts:
 
     def _merge(self, entries):
         known = {e.id for e in self.items}
-        new = [e for e in entries or () if e.id not in known]
+        new = [e for e in entries or () if e.id not in known and self._keeps(e)]
         if new:
             self.items = sorted(self.items + new, key=lambda e: e.sort, reverse=True)
             self.view.ensure_parents(new)
@@ -87,7 +137,9 @@ class ProfilePosts:
             return self._more_from_origin()
         self.more_btn.set_sensitive(False)
         last = self.items[-1].id if self.items else None
-        self.win.call(self.view.account_posts(self.acc.id, last), self._page,
+        want = self.show  # a page for a kind switched away from meanwhile: dropped
+        self.win.call(self.view.account_posts(self.acc.id, last, show=want),
+                      lambda page: want == self.show and self._page(page),
                       lambda e: (self.more_btn.set_sensitive(True), self.win.error(e)))
 
     def _page(self, page):

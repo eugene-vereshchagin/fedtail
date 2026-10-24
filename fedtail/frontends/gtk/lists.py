@@ -118,6 +118,7 @@ def lane_menu(win, row):
         ex.connect("toggled", lambda c: win.call(core.update_list(x.id, x.title,
                                                                    c.get_active())))
         box.append(ex)
+        _replies_choice(box, win, core, x)
         box.append(Gtk.Separator())
         item(_("list_delete"), lambda: win.confirm(
             _("list_delete"), _("list_delete_q", title=x.title),
@@ -140,6 +141,32 @@ def lane_menu(win, row):
     pop.connect("closed", lambda p: p.unparent())
     pop.popup()
     return pop
+
+
+def _replies_choice(box, win, core, x):
+    """Whose replies the list's lane shows (the server's replies_policy): three radio
+    buttons, the list's own picked."""
+    from ..common import timed
+    from .gi_setup import tip
+    head = Gtk.Label(label=_("replies_policy"), xalign=0)
+    head.add_css_class("ft-muted")
+    tip(head, _("replies_policy_tip"))
+    box.append(head)
+    now = x.replies or "list"  # the server's default when it doesn't say
+    first, radios = None, {}
+    for key, label in timed.replies_policies():
+        r = Gtk.CheckButton(label=label)
+        if first is None:
+            first = r
+        else:
+            r.set_group(first)
+        r.set_active(key == now)
+        tip(r, _("replies_policy_tip"))
+        r.connect("toggled", lambda c, k=key: c.get_active() and k != now and win.call(
+            core.update_list(x.id, x.title, x.exclusive, replies_policy=k)))
+        radios[key] = r
+        box.append(r)
+    return radios
 
 
 def _rename(win, x):

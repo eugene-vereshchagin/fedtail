@@ -502,8 +502,14 @@ class GtkSmokeTest(_GtkBase):
             self.assertIn(i18n._(key), labels())
         mute = next(b for b in _walk(page) if isinstance(b, Gtk.Button)
                     and b.get_label() == i18n._("mute"))
-        mute.emit("clicked")
+        mute.emit("clicked")  # how long first, and posts only or not
+        ask = self.win._asking
+        self.assertEqual([k for k, _r in ask.radios][:2], [0, 3600])
+        ask.radios[2][1].set_active(True)  # a day
+        ask.tick.set_active(True)
+        ask.ok.emit("clicked")
         self.assertTrue(pump(lambda: i18n._("unmute") in labels(), 5))
+        self.assertEqual(self.world.mute_terms["B"], {"duration": 86400, "notifications": False})
         asked = []
         self.win.ask_text = lambda title, q, then, text="", allow_empty=False: \
             asked.append(then)
@@ -1019,6 +1025,87 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(part.older_origin)
         self.assertEqual(part.more_btn.get_label(),
                          i18n._("older_from_origin", host=part.host))
+
+    def test_choose_answers_only_on_ok(self):
+        from fedtail.frontends.gtk.dialogs import choose
+        got = []
+        w = choose(self.win, "t", "q", [("a", "A"), ("b", "B")], lambda *a: got.append(a))
+        self.assertIsNone(w.tick)
+        w.radios[1][1].set_active(True)
+        w.ok.emit("clicked")
+        self.assertEqual(got, [("b", False)])
+        w = choose(self.win, "t", "q", [("a", "A")], lambda *a: got.append(a), check="x")
+        w.close()  # closed: no answer
+        self.assertEqual(len(got), 1)
+
+    def test_profile_posts_replies_media(self):
+        """Above someone's posts, as in Qt: posts (no replies to others), all, media."""
+        self.world.add(status("014", BOB, "gone", "X", minute=14, text="чужой разговор"))
+        pic = self.world.statuses["013"]
+        pic["media_attachments"] = [{"id": "m", "type": "image", "url": "https://e.test/a.png"}]
+        self.win.open_account("B")
+        self.assertTrue(pump(lambda: getattr(self.win.accounts.get("B"), "posts_part",
+                                             None) is not None, 5))
+        part = self.win.accounts["B"].posts_part
+        self.assertEqual(part.show, "posts")
+        ids = lambda: sorted(real(c.entry).id for c in part.cards)  # noqa: E731
+        self.assertTrue(pump(lambda: ids() == ["011"], 5), ids())
+        part.show_buttons["all"].set_active(True)
+        self.assertTrue(pump(lambda: ids() == ["011", "013", "014"], 5), ids())
+        part.show_buttons["media"].set_active(True)
+        self.assertTrue(pump(lambda: ids() == ["013"], 5), ids())
+        self.assertFalse(part.show_buttons["all"].get_active())
+
+    def test_timed_filters_hidden_posts_and_list_replies(self):
+        from fedtail.frontends.gtk import dialogs, lists
+        from fedtail.protocols.mastodon import adapter
+        dlg = dialogs.silence(self.win)
+        dlg.words.set_text("спойлер")
+        dlg.span.set_selected(2)  # a day
+        dlg.add.emit("clicked")
+        self.assertTrue(pump(lambda: self.world.filters, 5))
+        made = next(iter(self.world.filters.values()))
+        self.assertEqual(made["expires_in"], 86400)
+        when = adapter.word_filter(made).expires.astimezone().strftime("%d.%m.%Y %H:%M")
+
+        def rows():
+            out, r = [], dlg.filters.get_first_child()
+            while r is not None:
+                out.append(r.get_child().get_label())
+                r = r.get_next_sibling()
+            return out
+        self.assertTrue(pump(lambda: any(i18n._("filter_until", until=when) in t
+                                         for t in rows()), 5), rows())
+        # hide this post: in the ⋯ menu (common/actions.py), asked once
+        from fedtail.frontends.common import actions
+        card = self._lane("home").rows["011"]
+        self.assertIn("fedtail:hidepost/011",
+                      [i.url for i in actions.menu(card.entry, card._actx())])
+        self.win.confirm = lambda title, text, then, yes="": then()
+        self.win.on_link("fedtail:hidepost/011")
+        self.assertTrue(pump(lambda: "011" in self.core.hidden_posts, 5))
+        dlg.reload()
+        self.assertTrue(pump(lambda: any(i18n._("posts_n", n=1) in t for t in rows()), 5),
+                        rows())
+        dlg.close()
+        # whose replies a list shows: three radio buttons in the list's menu
+        made = []
+        self.win.call(self.view.create_list("Друзья"), made.append)
+        self.assertTrue(pump(lambda: made and f"list:{made[0].id}" in self.win.lane_rows, 5))
+        pop = lists.lane_menu(self.win, self.win.lane_rows[f"list:{made[0].id}"])
+        radios = [b for b in _walk(pop) if isinstance(b, Gtk.CheckButton)
+                  and b.get_label() in dict(self._policies()).values()]
+        self.assertEqual(len(radios), 3)
+        self.assertTrue(radios[0].get_active())  # "list", the server's default
+        radios[2].set_active(True)
+        self.assertTrue(pump(lambda: self.world.lists[made[0].id]["replies_policy"] == "none",
+                             5))
+        pop.popdown()
+
+    @staticmethod
+    def _policies():
+        from fedtail.frontends.common import timed
+        return timed.replies_policies()
 
     def test_a_group_of_tags(self):
         """Several tags typed into the search: their tab, as Qt's; "＋ to lanes" puts it

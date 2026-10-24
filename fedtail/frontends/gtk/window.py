@@ -1789,6 +1789,12 @@ class MainWindow(Gtk.ApplicationWindow):
         from .dialogs import ask_text
         return ask_text(self, title, question, then, text, allow_empty=allow_empty)
 
+    def choose(self, title, text, options, done, check=None):
+        """One of a few (common/timed.py: how long a mute lasts, posts only)."""
+        from .dialogs import choose
+        self._asking = choose(self, title, text, options, done, check=check)  # (tests)
+        return self._asking
+
     def open_people(self, acc, which):
         """Whom someone follows, or who follows them: a tab of people."""
         from .people import open_people
