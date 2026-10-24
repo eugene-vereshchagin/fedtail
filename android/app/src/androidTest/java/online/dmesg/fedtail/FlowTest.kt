@@ -2,7 +2,12 @@ package online.dmesg.fedtail
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -50,12 +55,37 @@ class FlowTest {
     }
 
     /** Python starts slowly on an emulator: the first screen gets a minute and a half. */
-    private fun waitText(text: String, ms: Long = 90_000) = compose.waitUntil(ms) {
+    private fun waitText(text: String, ms: Long = 90_000) = waitFor("text \"$text\"", ms) {
         compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
-    private fun waitDescription(text: String, ms: Long = 30_000) = compose.waitUntil(ms) {
-        compose.onAllNodesWithContentDescription(text).fetchSemanticsNodes().isNotEmpty()
+    private fun waitDescription(text: String, ms: Long = 30_000) =
+        waitFor("description \"$text\"", ms) {
+            compose.onAllNodesWithContentDescription(text).fetchSemanticsNodes().isNotEmpty()
+        }
+
+    /** Waits; on a timeout says what it waited for and what the screen held instead. */
+    private fun waitFor(what: String, ms: Long, ok: () -> Boolean) {
+        try {
+            compose.waitUntil(ms) { ok() }
+        } catch (e: ComposeTimeoutException) {
+            val screen = try {
+                compose.onAllNodes(isRoot()).fetchSemanticsNodes().joinToString("\n---\n") {
+                    it.printTree()
+                }
+            } catch (x: Throwable) {
+                "(no screen: $x)"
+            }
+            throw AssertionError("waited ${ms / 1000} s for $what; the screen:\n$screen", e)
+        }
+    }
+
+    private fun SemanticsNode.printTree(depth: Int = 0): String {
+        val words = (config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") ?: "") +
+            (config.getOrNull(SemanticsProperties.ContentDescription)
+                ?.joinToString(" ", prefix = " [", postfix = "]") ?: "")
+        val me = if (words.isBlank()) "" else "  ".repeat(depth) + words.trim() + "\n"
+        return me + children.joinToString("") { it.printTree(depth + 1) }
     }
 
     private fun back() = scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -101,8 +131,9 @@ class FlowTest {
     fun aSettingGoesIntoTheConfigFile() {
         launch("settings" to true)
         waitText("Settings")
-        waitText("command_line", 30_000)
+        waitText("Find a setting", 30_000)
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("command_line")
+        waitText("ui.command_line", 15_000)             // the search left that one card
         val file = File(ApplicationProvider.getApplicationContext<Context>().filesDir,
             "config/fedtail/demo/config.toml")
         val before = file.readText().contains("command_line = true")

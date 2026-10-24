@@ -17,10 +17,11 @@ def main(folder, out):
             bad = case.find("failure") if case.find("failure") is not None else case.find("error")
             if bad is not None:
                 failed += 1
-                first = (bad.get("message") or bad.text or "").strip().splitlines()[:3]
-                why = " / ".join(first)[:900]
+                text = (bad.get("message") or bad.text or "").strip()
+                why = " / ".join(text.splitlines()[:2])[:900]
                 print(f"::error::UI test {name}: {why}")
-                lines.append(f"FAIL {name}: {why}")
+                # the file gets it whole: what the test waited for and the screen it saw
+                lines.append(f"FAIL {name}:\n{(bad.text or text)[:6000]}\n")
             else:
                 lines.append(f"ok   {name} ({case.get('time', '?')} s)")
     if not lines:
