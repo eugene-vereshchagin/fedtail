@@ -5,6 +5,15 @@
 - The plan for 0.19 (docs/en/dev/roadmap.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- Bug reports leave the machine by themselves if you like: `debug.report_repo = "user/repo"`
+  (or any git address) — the report from the Debugging menu, `--bug-report` and the nightly
+  selfcheck's text zip (`--send`, `--send-full` for the whole) are pushed into that private
+  repository over ssh with your own keys, a commit each; the reports already there are never
+  downloaded.
+- "Report a bug on GitHub…" in the ≡ menu of every interface: a draft issue with the
+  version, the system and the latest errors of the log, server addresses, nicknames, IPs,
+  tokens and paths replaced by placeholders — shown to read and edit first; then GitHub opens
+  with it filled in and you send it yourself.
 - "Translate" on every post if you like (`feed.translate_all = true`, as in Fedilab): in your
   own language too, and on posts that give none.
 - No tray icon if you don't want one (`ui.tray = false`): notifications then go through the

@@ -1098,6 +1098,20 @@ object_census = true
 # there too.
 tracemalloc = false
 
+# Where bug reports go (≡ → "Debugging" → "Collect a report", `--bug-report`, the
+# nightly tools/selfcheck.py): a private git repository, over ssh, with your own keys.
+# "user/repo" — on GitHub, or a full address: "git@host:user/repo.git", "ssh://…".
+# A report goes into reports/YYYY-MM/ as a commit of its own; the older ones aren't
+# downloaded. Nothing is asked (no key or no access — it says so). "" — a file on disk only.
+# This is for the developer and those he gave access: the repository must be private.
+report_repo = ""
+
+# Where "Report a bug on GitHub…" leads: the public tracker. Before it opens you see the
+# text — the version, the system and the latest errors, with addresses, nicknames and
+# paths already replaced by placeholders; you may edit it, and you send it yourself in the
+# browser. "" — fedtail's own tracker; "user/repo" — another (your own build, a fork).
+issue_repo = ""
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  13. In a terminal

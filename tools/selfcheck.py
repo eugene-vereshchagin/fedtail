@@ -352,6 +352,12 @@ def main():
     ap.add_argument("--no-real", action="store_true", help="--night without your account")
     ap.add_argument("--no-blur", action="store_true",
                     help="your account's screenshots as they are")
+    ap.add_argument("--send", metavar="USER/REPO", default=None,
+                    help="push the run's text zip into this private git repository over "
+                         "ssh (default: debug.report_repo of the main profile's config; "
+                         "\"\" — don't)")
+    ap.add_argument("--send-full", action="store_true",
+                    help="push the full zip (pictures and all) as well")
     ap.add_argument("--clean", nargs="?", const="unfinished", choices=("unfinished", "all"),
                     help="remove the runs that didn't finish (stopped by hand, killed) and "
                          "the tools' temporary folders; --clean all: every run here")
@@ -656,7 +662,40 @@ def main():
     print(f"\nreport: {out / 'report.md'}\nto send back: {archive} "
           f"({archive.stat().st_size / 2**20:.0f} MB)\n  too big? the words only: {light} "
           f"({light.stat().st_size / 2**20:.1f} MB)")
+    send_run(a, [light] + ([archive] if a.send_full else []))
     return 0 if all(r[1] in ("ok", "skipped") for r in run.rows) else 1
+
+
+def report_repo(arg):
+    """--send, or debug.report_repo of the main profile's config ("" — not set)."""
+    if arg is not None:
+        return arg
+    try:
+        sys.path.insert(0, str(ROOT))
+        from fedtail.core import config, paths
+        cfg, _w = config.load(paths.resolve(None).config_file)
+        return cfg["debug"].get("report_repo", "")
+    except Exception as e:  # noqa: BLE001 — no config, a broken one: nothing to send to
+        print(f"send: no repository ({e})")
+        return ""
+
+
+def send_run(a, files):
+    """The run's zips into the private repository (fedtail/reportsend.py), under
+    selfcheck/YYYY-MM/; what went wrong is said, the run's result stays its own."""
+    repo = report_repo(a.send)
+    if not repo:
+        return
+    from fedtail import reportsend
+    from fedtail.core import paths
+    cache = paths.data_base() / "report-repo"
+    for f in files:
+        try:
+            where = reportsend.send(f, repo, cache, folder="selfcheck",
+                                    message=f"selfcheck: {f.name}")
+            print(f"sent: {repo}: {where}")
+        except reportsend.SendError as e:
+            print(f"not sent to {repo}: {f.name}: {e}")
 
 
 if __name__ == "__main__":

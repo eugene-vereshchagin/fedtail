@@ -1637,6 +1637,20 @@ class QtSmokeTest(unittest.TestCase):
             other.quitting = True
             other.close()
 
+    def test_report_a_bug_on_github(self):
+        """≡ → "Report a bug on GitHub…": the draft to read, scrubbed of the server;
+        "Open GitHub" opens the new-issue page and nothing else leaves."""
+        from fedtail.frontends.qt.issue import IssueDialog
+        self.assertIn(i18n._("issue_menu"), [a.text() for a in self.win._app_menu().actions()])
+        dlg = IssueDialog(self.win)
+        self.assertIn(i18n._("issue_system"), dlg.text.toPlainText())
+        dlg.text.setPlainText("сломалось на https://example.test/@mira/1")
+        opened = []
+        self.win.open_url = opened.append
+        dlg.go()
+        self.assertTrue(opened[0].startswith("https://github.com/"))
+        self.assertNotIn("example.test", opened[0])
+
     def test_settings_window_writes_one_line(self):
         """≡ → Settings: the chapters of config.toml; a tick goes into the file at once,
         that line only, and Restart turns up; the search finds over every chapter."""

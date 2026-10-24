@@ -234,6 +234,8 @@ DEFAULTS = {
         "leak_samples": 12,
         "object_census": True,
         "tracemalloc": False,
+        "report_repo": "",
+        "issue_repo": "",
     },
     "tui": {
         "theme": "",

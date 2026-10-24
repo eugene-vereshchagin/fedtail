@@ -68,6 +68,7 @@ class MainMenu:
         a("snapshot", win.debug_snapshot)
         a("help", win.open_help)
         a("about", win.about)
+        a("issue", win.report_issue)
         # after the menu has gone: quitting from inside the popover's own click left the
         # window up (the tray's Quit, which runs later, always worked)
         a("quit", lambda: GLib.idle_add(lambda: (win.quit_app(), GLib.SOURCE_REMOVE)[1]))
@@ -179,6 +180,7 @@ class MainMenu:
         helps = Gio.Menu()
         _item(helps, _("help_title"), "help")
         _item(helps, _("whats_this"), "whats_this")
+        _item(helps, _("issue_menu"), "issue")
         _item(helps, _("about"), "about")
         top.append_section(None, helps)
         last = Gio.Menu()

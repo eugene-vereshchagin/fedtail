@@ -105,7 +105,7 @@ PLACES = {
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
     "help": "help_title", "news": "help_news", "about": "about",
-    "federation": "fed_title", "settings": "settings_title",
+    "federation": "fed_title", "settings": "settings_title", "issue": "issue_title",
     # opened from somewhere: a post, a person, a tag
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
@@ -114,7 +114,7 @@ PLACES = {
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "server", "profile_edit",
-        "settings", "help", "news", "about", "federation")
+        "settings", "help", "news", "about", "issue", "federation")
 
 
 def _wait(fut):
@@ -430,6 +430,32 @@ class Places:
 
     def _a_tag_lanes(self, name, _v, _c, _ans):
         return Out(open={"page": "taglanes", "arg": name})
+
+    # ---- "Report a bug on GitHub…": a draft to read, then the tracker in the browser --
+    def _p_issue(self, _arg, _tab, _cur):
+        """The public issue's text (fedtail/issue.py), already scrubbed, to read and
+        edit; the button opens GitHub's new-issue page with it — sending is the
+        person's own click there."""
+        from ... import issue
+        page = Page("issue", _("issue_title"), hint=_("issue_check"))
+        d = issue.draft(self.view.paths, self.view.cfg, known=self._mine())
+        page.form = (Field("body", _("issue_title"), d.body, "text"),)
+        page.submit = self._btn(_("issue_open"), "issue", "open", primary=True)
+        return page
+
+    def _mine(self):
+        """Words that say who this is — the @name and the server — for scrub()."""
+        from ...core.merged import full_handle
+        name, _s, host = full_handle(getattr(self.view, "_core", self.view)).lstrip(
+            "@").partition("@")
+        me = getattr(self.view, "me", None)
+        return [host, name, str(getattr(me, "name", "") or "")]
+
+    def _a_issue_open(self, _d, values, _c, _ans):
+        from ... import issue
+        body = issue.scrub(str(values.get("body", "")), self._mine())  # what was typed too
+        return Out(open={"url": issue.issue_url(self.view.cfg, "", body)},
+                   message=_("issue_opened"))
 
     # ---- settings: the lines of config.toml (common/settings.py) ---------------------
     def _p_settings(self, query, tab, _cur):

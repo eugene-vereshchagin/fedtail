@@ -1028,6 +1028,7 @@ class MainWindow(QMainWindow):
         whats.setToolTip(_("whats_this_tip"))
         whats.toggled.connect(self.hints.set_on)
         m.setToolTipsVisible(True)
+        m.addAction(_("issue_menu"), self.report_issue)
         m.addAction(_("about"), self.about)
         m.addSeparator()
         m.addAction(_("quit") + "\tCtrl+Q", self.quit)
@@ -2406,6 +2407,26 @@ class MainWindow(QMainWindow):
             return
         self.statusBar().showMessage(_("debug_report_done", path=str(out)), 15000)
         open_path(out.parent)
+        self.send_report(out)
+
+    def send_report(self, out):
+        """Into debug.report_repo too, if one is set (fedtail/reportsend.py): git and
+        ssh take a while — in the background, the result on the status bar."""
+        from ... import reportsend
+        repo = self.cfg["debug"].get("report_repo", "")
+        if not repo:
+            return
+        self.statusBar().showMessage(_("bugreport_sending", repo=repo))
+        self.bridge.call(
+            self.core.submit(reportsend.send_report, out, self.cfg, self.core.paths.data_dir),
+            ok=lambda where: self.statusBar().showMessage(_("bugreport_sent", where=where), 15000),
+            fail=lambda err: self.statusBar().showMessage(
+                _("bugreport_send_failed", repo=repo, err=err), 30000))
+
+    def report_issue(self):
+        """"Report a bug on GitHub…": the scrubbed draft to read first (qt/issue.py)."""
+        from .issue import IssueDialog
+        IssueDialog(self).exec()
 
     def open_settings(self, query=""):
         """The settings window (qt/settings.py): one at a time, brought up again."""

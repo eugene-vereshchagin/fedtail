@@ -200,6 +200,23 @@ class MainTest(unittest.TestCase):
             code, _out, _err = self.run_main("--ui", "tui")
         self.assertEqual(code, 0)
 
+    def test_bug_report_sent_to_the_repository(self):
+        w = self.where()
+        w.ensure()
+        w.config_file.write_text('[debug]\nreport_repo = "me/reports"\n', "utf-8")
+        from fedtail import reportsend
+        with mock.patch("fedtail.diag.bug_report", return_value=Path("/x/r.tar.gz")), \
+                mock.patch.object(reportsend, "send_report", return_value="me/reports: r/x"):
+            code, out, _err = self.run_main("--bug-report")
+        self.assertEqual(code, 0)
+        self.assertIn("sent to me/reports: r/x", out)
+        with mock.patch("fedtail.diag.bug_report", return_value=Path("/x/r.tar.gz")), \
+                mock.patch.object(reportsend, "send_report",
+                                  side_effect=reportsend.SendError("Permission denied")):
+            code, _out, err = self.run_main("--bug-report")
+        self.assertEqual(code, 1)
+        self.assertIn("not sent to me/reports: Permission denied", err)
+
     def test_bug_report(self):
         with mock.patch("fedtail.diag.bug_report", return_value=Path("/x/report.tar.gz")) \
                 as rep:

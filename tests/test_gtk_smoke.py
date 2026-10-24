@@ -153,6 +153,19 @@ class GtkSmokeTest(_GtkBase):
         self.assertLessEqual(lane.list.get_width(), lane.get_width())
         self.assertLessEqual(lane.get_width(), self.win.get_width())
 
+    def test_report_a_bug_on_github(self):
+        """As Qt's: the scrubbed draft, then GitHub's new-issue page."""
+        from fedtail.frontends.gtk.issue import IssueWindow
+        self.assertIsNotNone(self.win.lookup_action("issue"))
+        w = IssueWindow(self.win)
+        self.assertIn(i18n._("issue_system"), w.body())
+        w.text.get_buffer().set_text("сломалось на https://example.test/@mira/1")
+        opened = []
+        self.win.open_url = opened.append
+        w.go()
+        self.assertTrue(opened[0].startswith("https://github.com/"))
+        self.assertNotIn("example.test", opened[0])
+
     def test_settings_window_writes_one_line(self):
         """The settings window as Qt's: a switch goes into config.toml at once, that line
         only; the search finds over every chapter."""

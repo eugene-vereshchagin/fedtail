@@ -704,6 +704,21 @@ _STRINGS = {
         "about_commit": "Коммит", "about_account": "Аккаунт", "about_accounts": "Аккаунты",
         "about_server": "Сервер", "about_theme": "Тема", "about_data": "Данные",
         "about_copy": "Скопировать информацию", "about_copied": "Скопировано",
+        "issue_menu": "Сообщить об ошибке на GitHub…",
+        "issue_title": "Сообщить об ошибке",
+        "issue_check": "Это уйдёт в открытый трекер, его видят все. Прочитай: адреса, ники и "
+                       "пути уже заменены на заглушки, но если в тексте осталось что-то "
+                       "твоё — сотри. Дальше откроется GitHub: там пишешь заголовок и жмёшь "
+                       "«Submit» сам. Нужен аккаунт на GitHub.",
+        "issue_open": "Открыть GitHub", "issue_what": "Что случилось",
+        "issue_what_hint": "(что делал, что ждал увидеть и что увидел вместо этого)",
+        "issue_steps": "Как повторить", "issue_system": "Версия и система",
+        "issue_errors": "Последние ошибки журнала", "issue_no_errors": "(ошибок нет)",
+        "issue_cut": "(дальше обрезано: адрес не вместил бы всего)",
+        "issue_opened": "GitHub открыт в браузере",
+        "bugreport_sent": "Отчёт отправлен: {where}",
+        "bugreport_send_failed": "Отчёт сохранён, но не отправлен в {repo}: {err}",
+        "bugreport_sending": "Отправляю отчёт в {repo}…",
         "settings": "Настройки…", "settings_title": "Настройки",
         "settings_hint": "Всё хранится в {file}: здесь меняются его строки, комментарии и "
                          "остальное в нём остаются как есть. Большинство настроек "
@@ -1641,6 +1656,22 @@ _STRINGS = {
         "about_commit": "Commit", "about_account": "Account", "about_accounts": "Accounts",
         "about_server": "Server", "about_theme": "Theme", "about_data": "Data",
         "about_copy": "Copy the information", "about_copied": "Copied",
+        "issue_menu": "Report a bug on GitHub…",
+        "issue_title": "Report a bug",
+        "issue_check": "This goes to a public tracker everyone can read. Read it through: "
+                       "addresses, nicknames and paths are already replaced by placeholders, "
+                       "but if something of yours is still there, delete it. GitHub opens "
+                       "next: you write the title there and press “Submit” yourself. A GitHub "
+                       "account is needed.",
+        "issue_open": "Open GitHub", "issue_what": "What happened",
+        "issue_what_hint": "(what you did, what you expected and what you saw instead)",
+        "issue_steps": "How to repeat it", "issue_system": "Version and system",
+        "issue_errors": "The latest errors of the log", "issue_no_errors": "(no errors)",
+        "issue_cut": "(cut here: the address wouldn't hold it all)",
+        "issue_opened": "GitHub is open in the browser",
+        "bugreport_sent": "Report sent: {where}",
+        "bugreport_send_failed": "The report is saved but didn't go to {repo}: {err}",
+        "bugreport_sending": "Sending the report to {repo}…",
         "settings": "Settings…", "settings_title": "Settings",
         "settings_hint": "Everything lives in {file}: this changes its lines, and its "
                          "comments and the rest stay as they are. Most settings take "

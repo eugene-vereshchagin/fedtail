@@ -168,6 +168,29 @@ others = "—"
 details.ru = "В режиме отладки (`mode = \"auto\"` — включён в версиях для разработки, выключен в релизах): журнал запросов, опросов, действий (без текстов постов), ошибки с трассировкой, статистика памяти и потоков раз в `stats_minutes`, сторож зависаний (`watchdog_seconds`, `stall_ms`), медленные запросы, рост памяти. `crash.log` — стеки при падении, `kill -USR1` — стеки по запросу. Логи прошлой версии новая удаляет сама. `--bug-report` собирает архив за двое суток без токена и базы. Подробно — [debugging.md](/docs/ru/dev/debugging.md)."
 details.en = "In the debugging mode (`mode = \"auto\"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself. `--bug-report` packs two days of it, without the token and the database. In detail — [debugging.md](/docs/en/dev/debugging.md)."
 
+
+[[feature]]
+id = "report-repo"
+status = "has"
+since = "0.19.0"
+name.ru = "Отчёт сразу в свой закрытый репозиторий"
+name.en = "A bug report straight into your private repository"
+config = "`debug.report_repo`, `tools/selfcheck.py --send`"
+others = "—"
+details.ru = "Задан `debug.report_repo` (`\"user/repo\"` на GitHub или любой git-адрес) — отчёт из меню «Отладка», `--bug-report` и архив ночного selfcheck сами уходят туда по ssh твоими ключами: отдельный коммит в `reports/ГГГГ-ММ/` (`selfcheck/…`). Старые отчёты при этом не скачиваются; ssh ничего не спрашивает — нет ключа или доступа, так и скажет. Репозиторий должен быть закрытым: в отчёте логи и конфиг (токена и базы нет)."
+details.en = "With `debug.report_repo` set (`\"user/repo\"` on GitHub or any git address), the report from the Debugging menu, `--bug-report` and the nightly selfcheck's archive go there by themselves over ssh with your own keys: a commit of its own in `reports/YYYY-MM/` (`selfcheck/…`). The older reports aren't downloaded; ssh asks nothing — no key or no access, it says so. The repository must be private: a report holds the logs and the config (never the token or the database)."
+
+[[feature]]
+id = "report-issue"
+status = "has"
+since = "0.19.0"
+name.ru = "Сообщить об ошибке на GitHub — с проверкой"
+name.en = "Report a bug on GitHub — checked first"
+config = "`debug.issue_repo`"
+others.ru = "Fedilab, Tusky (письмо разработчику)"
+others.en = "Fedilab, Tusky (a mail to the developer)"
+details.ru = "≡ → «Сообщить об ошибке на GitHub…» во всех четырёх интерфейсах: черновик issue — что случилось, как повторить, версия, система, последние ошибки журнала. Адреса серверов, ники, IP, токены и пути в нём уже заменены заглушками, и всё это видно до отправки: текст можно поправить. Дальше открывается GitHub со всем вписанным, отправляешь сам. Трекер — самого fedtail или `debug.issue_repo`."
+details.en = "≡ → “Report a bug on GitHub…” in all four interfaces: a draft issue — what happened, how to repeat it, the version, the system, the latest errors of the log. Server addresses, nicknames, IPs, tokens and paths are already replaced by placeholders, and all of it is shown before anything leaves: the text can be edited. Then GitHub opens with it all filled in, and you send it yourself. The tracker — fedtail's own, or `debug.issue_repo`."
 [[feature]]
 id = "federation-status"
 status = "has"

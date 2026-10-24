@@ -169,6 +169,14 @@ def main(argv=None):
         out = diag.bug_report(where, cfg=cfg)
         print(f"fedtail: report {out}\n  Send this file. It has the logs and the config, "
               f"no token and no database.")
+        from . import reportsend
+        try:
+            sent = reportsend.send_report(out, cfg, where.data_dir)
+        except reportsend.SendError as e:
+            print(f"fedtail: not sent to {cfg['debug']['report_repo']}: {e}", file=sys.stderr)
+            return 1
+        if sent:
+            print(f"fedtail: sent to {sent}")
         return 0
 
     i18n.setup(cfg["ui"]["language"])

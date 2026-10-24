@@ -1348,11 +1348,24 @@ class FedtailApp(App, PostsMixin):
                 html_to_text(without_quote_fallback(real(st).text)),
                 self.core.cfg["post"].get("quote_prefix", "> "), strip_mentions=True))
 
+    def send_report(self, out):
+        """Into debug.report_repo too, if one is set (fedtail/reportsend.py)."""
+        from ... import reportsend
+        repo = self.core.cfg["debug"].get("report_repo", "")
+        if not repo:
+            return
+        self.notify(_("bugreport_sending", repo=repo))
+        self.later(self.core.submit(reportsend.send_report, out, self.core.cfg,
+                                    self.core.paths.data_dir),
+                   ok=lambda where: self.notify(_("bugreport_sent", where=where), timeout=20),
+                   fail=lambda err: self.notify(_("bugreport_send_failed", repo=repo, err=err),
+                                                severity="error", timeout=30))
+
     def main_menu_items(self):
         """The ≡ menu: writing, the places (common/places.py), help, debug, quit."""
         from ..common.places import Places
         places = [(t + " …", ("place", n)) for n, t in Places(self.core).menu()
-                  if n not in ("help", "news", "about", "federation")]
+                  if n not in ("help", "news", "about", "issue", "federation")]
         return ([("✎ " + _("write"), ("do", "editor")),
                  (_("my_profile"), ("do", "my_profile")),
                  (_("refresh"), ("do", "refresh")),
@@ -1360,7 +1373,8 @@ class FedtailApp(App, PostsMixin):
                 + places + ["-",
                             (_("help_title") + " …", ("place", "help")),
                             (_("help_news") + " …", ("place", "news")),
-                            (_("about") + " …", ("place", "about")), "-",
+                            (_("about") + " …", ("place", "about")),
+                            (_("issue_menu"), ("place", "issue")), "-",
                             (_("debug_federation"), ("place", "federation")),
                             (_("debug_report"), ("do", "bug_report")),
                             (_("debug_logs"), ("do", "logs")),
@@ -1396,6 +1410,7 @@ class FedtailApp(App, PostsMixin):
                 diag.log_stats()
                 out = diag.bug_report(self.core.paths, cfg=self.core.cfg)
                 self.notify(_("debug_report_done", path=str(out)), timeout=20)
+                self.send_report(out)
             except OSError as e:
                 self.show_error(e)
         elif what == "logs":

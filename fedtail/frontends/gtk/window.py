@@ -906,6 +906,26 @@ class MainWindow(Gtk.ApplicationWindow):
             return
         self.status(_("debug_report_done", path=str(out)), seconds=15)
         self.open_path(out.parent)
+        self.send_report(out)
+
+    def send_report(self, out):
+        """Into debug.report_repo too, if one is set (fedtail/reportsend.py), in the
+        background — as Qt's."""
+        from ... import reportsend
+        repo = self.cfg["debug"].get("report_repo", "")
+        if not repo:
+            return
+        self.status(_("bugreport_sending", repo=repo))
+        self.bridge.call(
+            self.core.submit(reportsend.send_report, out, self.cfg, self.view.paths.data_dir),
+            ok=lambda where: self.status(_("bugreport_sent", where=where), seconds=15),
+            fail=lambda err: self.status(_("bugreport_send_failed", repo=repo, err=err),
+                                         seconds=30))
+
+    def report_issue(self):
+        """"Report a bug on GitHub…" (gtk/issue.py), as Qt's."""
+        from .issue import IssueWindow
+        IssueWindow(self).present()
 
     def set_hints(self, on):
         from . import gi_setup
