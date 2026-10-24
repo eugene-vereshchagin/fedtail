@@ -8,7 +8,122 @@
 - The Android app (the `android` branch, dev builds from CI): the overview of lanes as home —
   tiles or a list (`phone.overview`), "read in a row", "read — next" at a lane's end; two
   or three columns on a tablet (`phone.layout`); pictures with a viewer, live links, a
-  card's ⋯ menu; Point's command line off on the phone.
+  card's ⋯ menu; Point's command line off on the phone; the settings page — the
+  desktop's settings window (`common/settings.py`), only what the phone heeds; the tiles
+  picked and ordered in the app ("change"), kept by the core and carried by `sync.tiles`.
+- A settings window (≡ → Settings, in Qt, GTK, the web page and the terminal): the
+  chapters of config.toml on the left, their options as cards on the right — a switch,
+  a number, a choice (each choice with what it means), ticks for lists of lanes — with
+  the reference's explanation under each, "Default" where it is set otherwise, and a
+  search over all of them. The file stays the one place the settings live: a change
+  goes into it at once, that one line (a commented-out option is switched on in place,
+  a missing one goes into its section with its explanation), the comments and the rest
+  stay as they are, the old file is kept as config.toml.bak, and a change that wouldn't
+  read back or pass the checks is refused with the file untouched. Edited outside while
+  the window is open, the file is read again. Most options are read at start: after a
+  change the window offers Restart. What the window shows and does is
+  `frontends/common/settings.py` (for the phone too), the line editing
+  `core/config_edit.py`.
+- Sync is a service of its own now, apart from the fediverse server: it is on when the
+  config says where (`sync.url`, or `sync.folder`) and off otherwise. `sync.enabled` and
+  `sync.backend` are gone (a config still having them gets a warning, nothing breaks), and
+  so is the lookup through `/.well-known/fedtail-sync` on the account's server — in fedtail
+  and in fedtail-sync (its `public_url` is ignored with a warning). The right of the status
+  bar shows how it goes (Qt, GTK): "⇅ 21:40" — synced then, "⇅ …", "⇅ !" — a problem (the
+  tooltip says which), "⇅ off"; About has a "Sync" row everywhere.
+- What sync carries is a switch for each in `[sync]`, all on by default (`sync.what` is
+  gone; a config still having it gets its list turned into the switches, with a warning):
+  `read`, `threads`, and new — `lanes`: the order of lists (servers keep none, so every
+  device showed them as they came) and the tag lanes saved from a search; `drafts`: begun
+  on one device, finished on another, sent or emptied — gone everywhere (pictures stay on
+  the device they were added on); `activity`: notifications dismissed from Activity go on
+  every device; `tiles`: which lanes the phone pins as tiles (`Core.pinned_tiles` /
+  `set_pinned_tiles`).
+- Faster after reading: which posts are read is kept in memory (the sidebar counted every
+  lane from the database after each read mark and froze the window for 0.4 s on a big
+  profile). A followed thread the server times out on no longer stops the others nor
+  shows an error: it waits its turn (it was asked again every poll).
+- KDE: a theme's font now reaches labels, lists, buttons and the status bar too (KDE
+  gives those classes fonts of its own, and they won: bnw's monospace came out sans
+  everywhere but the inputs). A profile or a tag opened while still connecting says
+  "connecting…" instead of an error in the window. The terminal: a thread or profile
+  that loads after its screen was closed no longer brings the terminal down; j / k step
+  over the "new below" line.
+- GTK, closer to Qt (the KDE window is the reference): the messenger themes head a
+  card "Name (time)" in their colours as Qt does; a theme's fonts that come with fedtail
+  (PT Sans, Arimo, Fira Mono…) are loaded and its whole list of families is used — GTK
+  took only the first and fontconfig chose for it; the lane header shows the theme's
+  pictures for "all read", the funnel and refresh, as Qt.
+- Pictures where the desktop has none: on Windows (and macOS) Qt drew no pictures on the
+  lanes but one and an empty Refresh button (Windows' own icon engine knows a few names,
+  and answers the rest with nothing); fedtail's own drawings stand in there, and in GTK
+  wherever the icon theme lacks a picture. GTK's sidebar rows are as dense as Qt's, its
+  lane title and "N new" pill the size of Qt's.
+- The editor (Qt and GTK): what the post is and what to do with it in one row when there's room
+  — the two halves keep to their sides and go into two rows only in a narrow window; the
+  character count sits in the text field's own bottom right corner.
+- Trying a theme (≡ → Try a theme) stops the videos and the gifs looping in cards first:
+  with one decoding, the restyle brought the program down (a segfault in Qt). The Qt tour
+  now tries every theme on its living window.
+- Themes say which window layout they're made for (layouts = ["split"]: qip, mra, psi);
+  ui.themes_by_layout offers in "Try a theme" only those of the layout on — "auto": so in
+  releases, every theme in development versions.
+- The sidebar's ≡ ↔ ❯: their pictures a third bigger (they looked lost in the buttons).
+- Pictures are plain shapes by default ([pictures] style = "silhouette"); the messengers
+  keep theirs (mra "agent", qip "qip"). In a development version a picture a theme's set
+  lacks (and the desktop's icon theme has not) is drawn from the fallback set in bright
+  red, so a theme's gaps are seen at once (FEDTAIL_MARK_MISSING=0: as usual).
+- Themes' pictures: nord, contrast, juick, night, paper and solarized draw plain shapes
+  (the "silhouette" style) instead of the messengers' glossy buttons; the sidebar's ≡ ↔ ❯
+  are plain in every theme (qip's looked like a button on a button); psi's ≡ was Psi's
+  "info" picture — now a menu; "whole width" in the system theme is the desktop's own
+  "fit to width" (Breeze), not arrows drawn by fedtail.
+- night, solarized, pink: their fonts as fixed weights (Source Sans 3, Source Code Pro,
+  Nunito — the variable files start at ExtraLight, and Qt drew night's text thin and hard
+  to read).
+- point: its pictures as on point.im — plain warm grey silhouettes (no blue, no raised
+  rim; a menu's lines, an envelope's flap cut out of the shape: [pictures] style =
+  "silhouette"), and bigger by the lanes and on the sidebar's top buttons ([shape]
+  icon_size, 22 here; 18 elsewhere).
+- "＋ to lanes ▾" beside a tag's Follow — in a search's results and on the tag's tab: the
+  tag as a lane of its own, or one more tag of a lane of tags already in the sidebar.
+- One hashtag kept as a lane of its own: its tab has "＋ to lanes" too (only a group of
+  several tags had it), and it lives in the sidebar's "Tags" — Qt, GTK, the web page, the
+  terminal.
+- Self-check: a step that runs out of time or is stopped takes everything it started
+  with it (xvfb-run, the tool, its children): before, only xvfb-run went, and a tour
+  went on for hours in a window nobody saw. A run says when tools of earlier runs are
+  still alive; --clean stops them.
+- About, as cards (Qt and GTK): the opossum and the name, tiles — version, platform,
+  architecture, build, commit date, profile — and rows: Python, the toolkit, the commit,
+  the accounts, the server and what it runs, the theme, the data folder; "Copy the
+  information" for a bug report. The web page and the terminal say the same in rows
+  (common/about.py).
+- All accounts in one window: the editor has "From @name@server" — a new post from any of
+  them (it was the main one only), a reply from another account than the one that got
+  the post (found on its server first). The accounts are named whole everywhere — "→
+  @name@server" on a card, the "As…" items — the same name on two servers no longer
+  looks like one account. Qt, GTK, the web page, the terminal.
+- All accounts in one window: switching it on or off no longer leaves nothing running
+  (the restart waited 1.5 s, a window still closing was "already running", the new one
+  left — now it waits for the old one to be gone). Liking, boosting or replying as
+  another account looks the post up there by its id and then by its address, and says
+  plainly when that server can't find it.
+- A lane opening: the post buttons' widths measured once per kind of button, not on
+  every card (0.4–0.5 s of a frozen window).
+- A video whose server gives the video itself as its preview (no thumbnails: Akkoma and
+  kin) is no longer fetched as a picture (which failed and threw in the picture
+  thread); the card shows ▶ — Qt, GTK, the terminal. Empty lines at the start and end of
+  a post are gone (a WordPress article came with a screenful of nothing first).
+- fedtail's own sounds are 48 kHz (the sound server's rate: a 22 kHz chime could make it
+  switch the card's clock, and a USB headset's microphone with it) and are played as
+  notifications, not music (pw-play --media-role, paplay media.role=event).
+- The tests and the self-check no longer play anything (FEDTAIL_SOUND=off, set by them;
+  sound.enabled is "auto" — on — in development versions, and a run played hundreds of
+  chimes and beeps through the desktop's sound server).
+- Self-check: many tabs opened and closed round after round in Qt, GTK and the terminal
+  (tools/tabs_stress.py — leaks, slowing down), each theme's Qt and GTK windows side by
+  side with their colours compared (tools/theme_compare.py).
 - Sounds, as a part of the theme like its pictures: the messenger themes bring sets of
   their own (qip-retro, mra, psi, point — synthesised by tools/make_sounds.py, ours),
   system plays the desktop's sound theme, terminal and bnw beep. A batch of news chimes

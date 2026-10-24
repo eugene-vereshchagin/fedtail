@@ -180,6 +180,14 @@ def budget_share(api, max_threads, now=None):
     return max(0, min(max_threads, b.remaining // SHARE))
 
 
+def slow(store, root, since, err):
+    """A thread the server didn't give (a big thread on a slow server timing out): marked
+    checked, so it waits its turn instead of being asked again at once every poll and
+    holding up the others — and not the reader's error, only the log's."""
+    log.warning("subs: thread %s not loaded (%s); next time", root, err)
+    store.sub_checked(root, now_iso(), since, [])
+
+
 def check(store, api, me_id, interval_minutes, active_days, max_threads):
     """Ask the server about followed threads that are due. Returns new item ids."""
     now = datetime.now(UTC)
@@ -200,7 +208,13 @@ def check(store, api, me_id, interval_minutes, active_days, max_threads):
             if e.status == 404:  # the thread is gone
                 store.sub_remove(root, remember=False)
                 continue
-            raise
+            if e.status in (401, 403, 429):  # the token, the limit: the round stops
+                raise
+            slow(store, root, since, e)
+            continue
+        except Exception as e:  # noqa: BLE001 — a timeout, the network: this one waits
+            slow(store, root, since, e)
+            continue
         desc = ctx.get("descendants", [])
         known = store.sub_members(root)
         fresh = [s for s in desc if s["id"] not in known

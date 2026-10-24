@@ -4,6 +4,8 @@
 # ui.layout = "split". Own icons and colours only.
 name = "Psi"
 inherit = "system"
+# made for the split layout (a roster and a messages window); ui.themes_by_layout
+layouts = ["split"]
 
 [font]
 family = ""

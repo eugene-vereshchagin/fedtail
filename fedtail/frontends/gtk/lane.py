@@ -143,12 +143,15 @@ class LaneView(Gtk.Box):
         tip(self.to_new, _("to_new_tip"))
         self.to_new.connect("clicked", lambda _b: self.jump_first_unread())
         tools.append(self.to_new)
-        read = Gtk.Button(label=_("mark_all_read"))
+        read = Gtk.Button()
+        self._dress(read, "mark_read", _("mark_all_read"), keep_words=True)
         read.connect("clicked", lambda _b: self.mark_all_read())
         if not self.lazy:
             tools.append(read)
         tools.append(self._media_button())
-        refresh = Gtk.Button(label=_("refresh") + " (F5)")
+        refresh = Gtk.Button()  # as Qt's: the theme's picture alone, or the words
+        self._dress(refresh, "refresh", _("refresh") + " (F5)")
+        tip(refresh, _("refresh") + " (F5)")
         refresh.connect("clicked", lambda _b: ctx.view.poll_now())
         tools.append(refresh)
         self.append(header)
@@ -279,9 +282,28 @@ class LaneView(Gtk.Box):
         self.lm.set_conversations(on)
         self._reset()
 
+    def _dress(self, button, picture, words, keep_words=False):
+        """A header button as Qt's: the theme's picture (with the words beside it when
+        keep_words), or the words alone when the theme has none."""
+        from . import icons
+        img = icons.image(picture, self.ctx.theme, 16)
+        if img is None:
+            button.set_label(words)
+            return
+        if keep_words:
+            box = Gtk.Box(spacing=4)
+            box.append(img)
+            box.append(Gtk.Label(label=words))
+            button.set_child(box)
+        else:
+            button.set_child(img)
+
     def _media_button(self):
         """The funnel: posts with pictures, gifs, video… only, boosts or not."""
-        button = Gtk.MenuButton(label="▾ " + _("media_filter"))
+        from . import icons
+        funnel = icons.image("filter", self.ctx.theme, 16)
+        button = Gtk.MenuButton(label="▾ " + _("media_filter")) if funnel is None \
+            else Gtk.MenuButton(child=funnel)
         tip(button, _("media_filter_tip"))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         checks, quiet = {}, []

@@ -140,6 +140,19 @@ class TuiPlacesTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             self.assertTrue(app.screen.query(Markdown))
             await pilot.press("escape")
 
+            # the settings: a chapter as a form; Ctrl+S writes what changed into the file
+            app.open_thing({"page": "settings"})
+            await self.wait(pilot, lambda: isinstance(app.screen, PlaceScreen) and
+                            app.screen.page is not None, what="settings")
+            box = app.screen.form_widgets["ui.bookmark_button"]
+            box.value = not box.value
+            await pilot.press("ctrl+s")
+            cfg_file = core.paths.config_file
+            await self.wait(pilot, lambda: "bookmark_button = " + (
+                "true" if box.value else "false") in cfg_file.read_text("utf-8"),
+                what="settings saved")
+            await pilot.press("escape")
+
             # the editor: w, text, Ctrl+S sends
             before = len(w.posted)
             await pilot.press("w")

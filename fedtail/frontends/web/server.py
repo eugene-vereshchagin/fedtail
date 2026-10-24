@@ -542,12 +542,16 @@ class Web:
         windows': common/compose.py), the poll's lengths."""
         from ..common import compose as cc
         caps = self.core.caps
+        accounts, _first = self.core.post_accounts(None)
         langs = [["", _("lang_default")]] + [[code, cc.language_label(code)]
                                              for code in cc.languages(self.core.cfg)]
         return {"limit": int(getattr(caps, "max_characters", 500) or 500),
                 "max_media": int(getattr(caps, "max_media", 4) or 4),
                 "max_options": int(getattr(caps, "max_poll_options", 4) or 4),
                 "languages": langs, "language": self.core.cfg["post"].get("language", ""),
+                # all accounts in one window: whom a post may go from, whole @name@server
+                "accounts": [[k, _("post_from", acct=h)] for k, h in accounts]
+                if len(accounts) > 1 else [],
                 "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES]}
 
     # ---- attachments: the page sends the file, the post names it by its token ----------
@@ -904,10 +908,16 @@ class Web:
                                 int(pb.get("expires_in") or 86400), bool(pb.get("multiple")))
         from ..common.compose import when_utc
         when = when_utc(body.get("scheduled_at"))
+        extra = {}
+        if body.get("account") is not None:  # the editor's "From" (all accounts in one)
+            keys = [k for k, _h in core.post_accounts(None)[0]]
+            if str(body["account"]) not in keys:
+                raise ValueError("account")
+            extra["account"] = str(body["account"])
         p = core.post(text, vis, parent, cw, language=lang,
                       quote=str(body["quote"]) if body.get("quote") else None,
                       media=media, sensitive=bool(body.get("sensitive")), poll=poll,
-                      scheduled_at=when).result()
+                      scheduled_at=when, **extra).result()
         for path, _alt in media:  # sent: the copies go
             Path(path).unlink(missing_ok=True)
         if when:
@@ -972,7 +982,8 @@ class Web:
         return {"name": pg.name, "title": pg.title, "arg": pg.arg, "hint": pg.hint,
                 "tabs": [list(t) for t in pg.tabs], "tab": pg.tab, "rows": rows,
                 "form": [{"name": f.name, "label": f.label, "value": f.value, "kind": f.kind,
-                          "choices": [list(c) for c in f.choices]} for f in pg.form],
+                          "choices": [list(c) for c in f.choices], "tip": f.tip}
+                         for f in pg.form],
                 "submit": _btn_json(pg.submit) if pg.submit else None,
                 "more": _btn_json(pg.more) if pg.more else None, "empty": pg.empty}
 
@@ -1013,7 +1024,8 @@ class Web:
 WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", "thread",
          "write", "send", "sent", "tui_back", "web_thread", "follow", "unfollow",
          "acc_follows_you", "web_cw", "web_show", "web_load_error", "web_empty",
-         "web_reply_to", "web_cancel", "web_cmd", "web_visibility", "vis_public",
+         "web_reply_to", "post_from_tip", "post_from_other", "web_cancel", "web_cmd",
+         "web_visibility", "vis_public",
          "vis_unlisted", "vis_private", "vis_direct", "web_media", "web_sensitive",
          "web_parent_gone", "web_mark_read", "tui_profile", "open_browser", "refresh",
          "more", "no_older", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",

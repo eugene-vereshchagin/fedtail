@@ -391,8 +391,8 @@ private fun SyncPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (S
             }
             if (!info.optBoolean("enabled")) {
                 Text(stringResource(R.string.sync_off), style = MaterialTheme.typography.bodyMedium)
-                OutlinedButton(onClick = { model.back(); model.openConfig() }) {
-                    Text(stringResource(R.string.config))
+                OutlinedButton(onClick = { model.back(); model.openSettings("sync") }) {
+                    Text(stringResource(R.string.settings))
                 }
             } else {
                 val last = info.optJSONObject("last")

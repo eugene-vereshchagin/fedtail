@@ -73,6 +73,47 @@ class AccountRow(Gtk.Box):
                       lambda e: (self.follow.set_sensitive(True), self.win.error(e)))
 
 
+def tag_lanes_button(win, tag):
+    """"＋ to lanes ▾" beside a tag's Follow: a lane of its own, or into a lane of tags
+    kept in the sidebar (common/taglanes.py) — as Qt's."""
+    from ..common import taglanes
+    view = win.view
+    btn = Gtk.MenuButton(label=_("tags_lanes_menu"))
+    tip(btn, _("tags_lanes_tip"))
+    pop = Gtk.Popover()
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+    pop.set_child(box)
+    btn.set_popover(pop)
+
+    def go(key):
+        pop.popdown()
+
+        def done(name):
+            title = view.lane_title(name) or name
+            win.status(_("tags_saved", tags="#" + tag) if key == taglanes.OWN
+                       else _("tags_added", tag=tag, lane=title), seconds=6)
+            GLib.timeout_add(300, lambda: (win.lane_rows.get(name) is not None and
+                                           win.sidebar.select_row(win.lane_rows[name]),
+                                           GLib.SOURCE_REMOVE)[1])
+        win.call(taglanes.apply(view, key, tag), done, win.error)
+
+    def fill(*_a):
+        child = box.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            box.remove(child)
+            child = nxt
+        for key, words, on in taglanes.choices(view, tag):
+            b = Gtk.Button(label=words)
+            b.add_css_class("flat")
+            b.get_child().set_xalign(0)
+            b.set_sensitive(on)
+            b.connect("clicked", lambda _b, k=key: go(k))
+            box.append(b)
+    pop.connect("show", fill)
+    return btn
+
+
 class TagRow(Gtk.Box):
     """#tag (its posts in a tab), how much it's used, Follow / Unfollow."""
 
@@ -93,6 +134,7 @@ class TagRow(Gtk.Box):
         self.follow.connect("clicked", self._toggle)
         self._words()
         self.append(self.follow)
+        self.append(tag_lanes_button(win, tag.name))  # into the sidebar's Tags (as Qt)
         self.feature = None
         if header and win.view.supports("featured_tags"):
             # on my profile (featured tags), as Qt's tag tab; not known yet: dead

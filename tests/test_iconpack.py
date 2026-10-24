@@ -136,3 +136,44 @@ class IconPackTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MissingInRedTest(unittest.TestCase):
+    """A development version: what a theme's set lacks comes from the fallback in red —
+    the theme's gaps seen at once; its own pictures as they are."""
+
+    def test_red_from_the_fallback_only(self):
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"FEDTAIL_MARK_MISSING": "1"}):
+            iconpack.mark_missing.cache_clear()
+            iconpack.picture.cache_clear()
+            try:
+                bare = iconpack.Set(dirs=(str(iconpack.FALLBACK_DIR),))
+                pic = iconpack.picture(bare, "reply", "#336699")
+                self.assertIn(iconpack.MISSING_RED, pic.text)
+                own = iconpack.for_theme(type("T", (), {
+                    "icon_dirs": [str(themefile.BUILTIN_DIR / "point" / "icons")],
+                    "pictures": {"style": "silhouette", "color": "#a29b94"}})())
+                self.assertNotIn(iconpack.MISSING_RED,
+                                 iconpack.picture(own, "reply", "#336699").text)
+            finally:
+                iconpack.mark_missing.cache_clear()
+                iconpack.picture.cache_clear()
+
+
+class ThemesByLayoutTest(unittest.TestCase):
+    """ui.themes_by_layout: the messengers' themes offered for the split layout only;
+    "auto" — on in releases, off in development versions."""
+
+    def test_offered_by_layout(self):
+        def offered(layout, mode, keep=()):
+            return themefile.for_layout({"ui": {"layout": layout, "themes_by_layout": mode}},
+                                        keep)
+        self.assertEqual(themefile.layouts_of("mra-blue"), ("split",))  # its own word
+        self.assertIn("qip-retro", offered("split", "on"))
+        self.assertNotIn("qip-retro", offered("single", "on"))
+        self.assertIn("qip-retro", offered("single", "on", keep=("qip-retro",)))  # on now
+        self.assertIn("nord", offered("single", "on"))
+        self.assertIn("qip-retro", offered("single", "off"))
+        self.assertEqual(themefile.by_layout({"ui": {}}), False)  # a development version

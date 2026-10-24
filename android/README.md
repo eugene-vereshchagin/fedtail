@@ -55,8 +55,14 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
   six levels), each comment with its /N, standing on the post tapped.
 * **Writing**: ✎ for a new post, 💬 on a card for a reply; who sees it as chips (a reply
   left alone keeps its parent's — the core decides, as on the desktop). ☆ likes.
-* **Config**: the file itself, edited in the app (no settings pages, as on the desktop);
-  checked before it is written, and the core is made anew with it.
+* **Settings** (`Settings.kt`, `bridge.settings()`): the desktop's settings window as a
+  page — the same model (`frontends/common/settings.py`: chapters, names, explanations,
+  choices with what each means, ticks for lanes), only the options the phone heeds
+  (`bridge.NOT_ON_PHONE`, `ONLY_ON_PHONE`); a change is that one line of config.toml
+  (`core/config_edit.py`), the core made anew once the page is left. "As a file" — the
+  file itself, edited in the app, checked before it is written.
+* **Tiles**: which lanes and in which order — "change" over them (↑ ↓ ✕, ＋); the core
+  keeps them (`pinned_tiles`), sync carries them to the other devices (`sync.tiles`).
 * **Sync**: status, a round now, logging in to the sync server (its page shows a code to
   paste), showing this device's key and taking another device's.
 * The look is the mockups' variant A ("calm": `Theme.kt`), light and dark by the

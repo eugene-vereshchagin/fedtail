@@ -1,6 +1,7 @@
 """Keeping the user's config aware of every option.
 
-The app never edits config.toml on its own. Instead:
+The app never edits config.toml on its own (the settings window changes the lines the
+person changes there, core/config_edit.py). Instead:
 
 * on every start it writes config.example.ru.toml and config.example.en.toml next to
   it — the complete reference for this version, in Russian and in English, in
@@ -13,9 +14,6 @@ The app never edits config.toml on its own. Instead:
   brings the explanations of the options already there up to date (new themes, new
   choices) and drops commented-out options this version no longer has. The user's
   values and their own notes stay as they are;
-* `set_option` puts one value into the file (the phone's settings page does that, a
-  value at a time): the line of that option, else a new line in its section; the
-  rest of the file — comments, order, the user's notes — stays as it was;
 * `python3 -m fedtail --rebuild-config` writes the file anew from the reference, in
   its chapters, with the user's values put in (their own notes don't survive that;
   a .bak is kept).
@@ -244,45 +242,6 @@ def _toml(value):
     if isinstance(value, dict):
         return "{ " + ", ".join(f"{k} = {_toml(v)}" for k, v in value.items()) + " }"
     return json.dumps(str(value), ensure_ascii=False)
-
-
-def set_option(user_text, section, key, value):
-    """The user's file with section.key = value: its line rewritten when the option is
-    set there, else written under its commented-out line, else at the end of its
-    section; a section the file lacks is added at its end."""
-    lines = user_text.splitlines()
-    new = f"{key} = {_toml(value)}"
-    start = end = None
-    for i, line in enumerate(lines):
-        m = _HEADER.match(line)
-        if m and not line.lstrip().startswith("#"):
-            if start is not None:
-                end = i
-                break
-            if m.group(1) == section:
-                start = i
-    if start is None:
-        tail = "" if not lines or not lines[-1].strip() else "\n"
-        return user_text.rstrip("\n") + f"\n{tail}\n[{section}]\n{new}\n"
-    end = len(lines) if end is None else end
-    commented = None
-    for i in range(start + 1, end):
-        m = _OPTION.match(lines[i])
-        if not m or m.group(1) != key:
-            continue
-        if lines[i].lstrip().startswith("#"):
-            commented = commented if commented is not None else i
-            continue
-        lines[i] = new
-        return "\n".join(lines) + "\n"
-    if commented is not None:
-        lines.insert(commented + 1, new)
-    else:
-        last = end
-        while last > start + 1 and not lines[last - 1].strip():
-            last -= 1  # before the blank lines that part it from the next section
-        lines.insert(last, new)
-    return "\n".join(lines) + "\n"
 
 
 def rebuild(user_text, example_text, report=None):

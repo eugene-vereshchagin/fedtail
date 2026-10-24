@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import re
 import shlex
+import site
 import subprocess
 import sys
 import tempfile
@@ -100,7 +101,11 @@ def main():
     home.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, APPDATA=str(Path(tmp) / "Roaming"),
                LOCALAPPDATA=str(Path(tmp) / "Local"), USERPROFILE=str(home), HOME=str(home),
-               PYTHONIOENCODING="utf-8", QT_QPA_PLATFORM="offscreen")
+               PYTHONIOENCODING="utf-8", QT_QPA_PLATFORM="offscreen",
+               # pip install --user put the packages under the real %APPDATA%: with
+               # APPDATA moved, Python wouldn't find them (the night of 23.10: "no
+               # module named requests" at every step)
+               PYTHONUSERBASE=site.getuserbase())
     for var in ("XDG_CONFIG_HOME", "XDG_DATA_HOME"):
         env.pop(var, None)
     for line in commands():

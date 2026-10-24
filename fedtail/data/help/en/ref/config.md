@@ -11,7 +11,7 @@ Which feature stands behind a key and how other clients do it —
 
 ## How the config works
 
-Every setting is here, with its default value and an explanation. Change what you need and restart fedtail. The program only reads this file and never writes it.
+Every setting is here, with its default value and an explanation. Change what you need and restart fedtail. Or open ≡ → Settings: the window edits this very file — just the line you changed, the comments and the rest stay as they are (the old file is config.toml.bak). The program never rewrites it on its own.
 
 A value written here stays yours even if a new version changes the default. Want the program's default always — comment the line out (# at the start) or delete it.
 
@@ -69,6 +69,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `ui.mono_font` | `""` | With fonts = "custom", the fixed-width one, for #ids and /N; "" — the system's. |
 | `ui.max_width` | `760` | The width of the posts column in pixels, 0 = the full width. The ↔ button at the top left switches it for now (remembered until the next start), the config isn't touched. |
 | `ui.layout` | `"single"` | How the window opens: "single" — one lane on the right, "columns" — several lanes side by side, in columns, as in TweetDeck. The ❯ button at the top left switches it too, but the window always starts as set here. "split" — as in QIP, Psi or the Mail.ru Agent: the lanes in a narrow roster window (what's new in each, a line of the newest post and its author's face), and the main window is the messages window, without the sidebar, an input line at its bottom; a double click on a roster item opens it, closing its last tab closes it. Closing the roster closes fedtail (to the tray with close_to_tray). The old name "qip" is understood too. |
+| `ui.themes_by_layout` | `"auto"` | Themes for this window layout: "Try a theme" offers only those made for it (a theme says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for both). "auto" — so in releases, every theme in development versions; "on"; "off". |
 | `ui.roster_on_top` | `false` | With layout = "split": the roster stays above other windows. |
 | `ui.roster_threads` | `15` | With layout = "split": how many followed threads and private talks stand in the roster as items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only. |
 | `ui.faces` | `true` | With layout = "split": faces, as in QIP — over a lane's posts the author of the one under the cursor, with what to do (follow, lists, a private message, the profile); by the input line, whom I write to. |
@@ -324,11 +325,14 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 
 | Key | Default | What it does |
 |---|---|---|
-| `sync.enabled` | `false` | Read marks and thread subscriptions the same on all your devices (a desktop, a laptop, a phone). Off by default. What travels is sealed with a key only your devices have: whatever stores it sees no posts and no read marks. Setting up: docs/en/sync.md, in short: `fedtail sync login` (a sync server) or a folder, then `fedtail sync key` here and `fedtail sync join` on the other devices. |
-| `sync.backend` | `"server"` | Where the devices meet: "server" — a fedtail-sync server; "folder" — a folder every device sees (a NAS share, WebDAV mounted, Syncthing). |
-| `sync.url` | `""` | The sync server's address. Empty — the one your fediverse server names (https://<server>/.well-known/fedtail-sync), if its admin set one up. |
-| `sync.folder` | `""` | The folder for backend = "folder" (~ is your home folder). |
-| `sync.what` | `["read", "threads"]` | What travels: "read" — read marks you made (not the first run's "everything read"), "threads" — threads you followed, left or muted by hand. |
+| `sync.url` | `""` | Read marks, thread subscriptions and the order of your own lanes the same on all your devices (a desktop, a laptop, a phone). Sync is a service of its own, apart from your fediverse server: without an address below there is simply no sync (the status bar and About say so). What travels is sealed with a key only your devices have: whatever stores it sees no posts and no read marks. How to set it up: docs/en/sync.md; in short — the address here, `fedtail sync login`, then `fedtail sync key` on the first device and `fedtail sync join` on the others. url — the fedtail-sync server's address, as its admin gave it (say, "https://sync.example.org"). Empty — no sync server. |
+| `sync.folder` | `""` | Or, instead of a server, a folder every device sees: a NAS share, WebDAV mounted, a Syncthing folder (~ is your home folder). Not both: url or folder. |
+| `sync.read` | `true` | What travels — a switch for each; off keeps it on this device only. Read marks you made (not the first run's "everything read", not older history). |
+| `sync.threads` | `true` | Threads you followed, left or muted by hand. |
+| `sync.lanes` | `true` | Your lanes as you arranged them: the order of lists (servers keep none) and the tag lanes you saved. |
+| `sync.drafts` | `true` | Drafts: begun on one device, finished on another; sent or emptied — gone everywhere. Text, content warning, poll, who sees it; pictures are files of each computer and stay where they were added. |
+| `sync.activity` | `true` | Notifications you dismissed from Activity: gone on every device. |
+| `sync.tiles` | `true` | Which lanes the phone pins as tiles. |
 | `sync.interval_seconds` | `60` | How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after it was made anyway. |
 
 ## 12. Database and logs
@@ -409,5 +413,4 @@ The Android app (the android/ folder of the repository). Its config is this same
 | Key | Default | What it does |
 |---|---|---|
 | `phone.overview` | `"tiles"` | The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and the name); "list" — a list, a row per lane, with its first unread post. |
-| `phone.pinned` | `[]` | Which lanes are tiles, and in which order: ["home", "replies", "mentions", "direct", "subs", "bots", "list:News", "activity"] (a list — "list:" and its title). The other lanes — rows under the tiles. [] — every lane with a count is a tile. |
 | `phone.layout` | `"auto"` | How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread side by side); "one", "two", "three" — always that many, if they fit. |

@@ -127,14 +127,11 @@ def open_quotes(win, post):
 
 def read_up_to(win, sid):
     """This post and everything older in the lane it's in: read."""
+    from ..common.lane import read_up_to as up_to
     lv = win.lane_views.get(win._current_lane() or "")
-    keys = list(getattr(lv, "keys", ()) or ())
-    if lv is None or sid not in keys:
-        win.view.mark_read([sid])
-        return
-    at = keys.index(sid)
-    older = keys[at:] if lv.newest_first else keys[:at + 1]
-    win.view.mark_read([k for k in older if k in lv.unread])
+    specs = getattr(lv, "specs", None) or {}
+    entries = [specs[k].entry for k in getattr(lv, "keys", ()) or () if k in specs]
+    win.view.mark_read(up_to(entries, sid))
 
 
 def read_whole(win, st):

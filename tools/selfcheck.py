@@ -21,7 +21,9 @@ screenshots are blurred (the layout stays, the words don't) unless --no-blur; th
 terminal's have their letters masked.
 
 What can't run here (no PySide6, no GTK, no Textual, no Playwright) is skipped and said
-so. At the end: report.md in the folder and one zip of all of it, to send back.
+so. Each run is a folder of its own: ~/fedtail_log/DATE_TIME/ (on Windows
+%USERPROFILE%/fedtail_log/DATE_TIME/) — every step's pictures and logs, report.md, and
+in the same folder the zip of all of it, to send back.
 Works on Linux, Windows and macOS (GTK: Linux only)."""
 
 from __future__ import annotations
@@ -39,8 +41,8 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-STEPS = ("tests", "windows", "qt", "bench", "gtk", "tui", "web", "behaviour", "parity",
-         "gallery")
+STEPS = ("tests", "windows", "qt", "bench", "gtk", "tui", "web", "behaviour", "tabs",
+         "themes", "parity", "gallery")
 
 
 def probe(code):
@@ -54,7 +56,8 @@ def probe(code):
 
 
 def env():
-    e = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    e = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8",
+             FEDTAIL_SOUND=os.environ.get("FEDTAIL_SOUND", "off"))  # no chimes all night
     e["PYTHONPATH"] = str(ROOT) + os.pathsep + e.get("PYTHONPATH", "")
     return e
 
@@ -62,6 +65,27 @@ def env():
 def has_display():
     return os.name == "nt" or sys.platform == "darwin" or bool(
         os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def kill_tree(proc):
+    """A step and everything it started (xvfb-run, the tool, its children)."""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                           capture_output=True, timeout=30, check=False)
+        else:
+            import signal
+            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        pass
 
 
 class Run:
@@ -75,14 +99,23 @@ class Run:
         log = self.out / f"{name}.log"
         print(f"→ {name} …", flush=True)
         t0 = time.monotonic()
-        try:
-            with open(log, "w", encoding="utf-8") as f:
-                code = subprocess.run(list(wrap) + [py or sys.executable] + args,
-                                      cwd=ROOT, env=env(),
-                                      stdout=f, stderr=subprocess.STDOUT,
-                                      timeout=timeout).returncode
-        except subprocess.TimeoutExpired:
-            code = "timeout"
+        with open(log, "w", encoding="utf-8") as f:
+            # each step a process group of its own, and the whole group goes when its
+            # time is up or the run is stopped: killing only the child left the tool
+            # under xvfb-run running for hours, a window nobody saw (23.10: five tours
+            # of the night still alive at six in the evening)
+            group = {"creationflags": 0x00000200} if os.name == "nt" else \
+                {"start_new_session": True}  # CREATE_NEW_PROCESS_GROUP
+            proc = subprocess.Popen(list(wrap) + [py or sys.executable] + args, cwd=ROOT,
+                                    env=env(), stdout=f, stderr=subprocess.STDOUT, **group)
+            try:
+                code = proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                kill_tree(proc)
+                code = "timeout"
+            except BaseException:  # Ctrl+C, the terminal closed: the step goes too
+                kill_tree(proc)
+                raise
         took = time.monotonic() - t0
         problems = ""
         if folder is not None and (folder / "errors.txt").exists():
@@ -216,22 +249,71 @@ def clean_temp(since=None):
     return n
 
 
+LOGS = Path.home() / "fedtail_log"  # every run: a folder DATE_TIME of its own in here
+STAMP = re.compile(r"\d{4}-\d\d-\d\d_\d\d-\d\d(-\d+)?$")
+
+
+def zip_of(run_dir):
+    return run_dir / f"fedtail-selfcheck-{run_dir.name}.zip"
+
+
+def runs(where):
+    """The runs' folders here: DATE_TIME (and the old selfcheck-DATE ones)."""
+    return sorted(d for d in where.iterdir() if d.is_dir() and
+                  (STAMP.match(d.name) or d.name.startswith("selfcheck-"))) \
+        if where.is_dir() else []
+
+
+def finished(d):
+    return not (d / "INTERRUPTED").exists() and (
+        zip_of(d).exists() or d.with_suffix(".zip").exists())
+
+
+TOOLS = ("qt_tour.py", "gtk_screenshots.py", "qt_bench.py", "gtk_bench.py", "tui_check.py",
+         "web_check.py", "tabs_stress.py", "behaviour.py", "windows_check.py")
+
+
+def leftovers():
+    """[(pid, command)] of tools of an earlier run still alive (Linux: /proc) — a step
+    stopped the old way left its tool running, unseen, for hours."""
+    out = []
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return out
+    for d in proc.iterdir():
+        if not d.name.isdigit() or int(d.name) == os.getpid():
+            continue
+        try:
+            argv = (d / "cmdline").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        words = [a.decode("utf-8", "replace") for a in argv if a]
+        if any(w.endswith(("tools/" + t, "tools\\" + t)) for w in words for t in TOOLS) \
+                and not any(w.endswith("tools/selfcheck.py") for w in words):
+            out.append((int(d.name), " ".join(words)[:160]))
+    return out
+
+
 def clean(where, everything):
     """Runs that didn't finish (stopped, killed, a crash: no zip, or INTERRUPTED in
     it) — or, with everything, every run here — and the tools' temporary folders."""
     gone = []
-    for d in sorted(where.glob("selfcheck-*")):
-        if d.is_dir():
-            unfinished = (d / "INTERRUPTED").exists() or not d.with_suffix(".zip").exists()
-            if everything or unfinished:
-                shutil.rmtree(d, ignore_errors=True)
-                gone.append(d.name + "/")
-        elif d.suffix == ".zip" and everything:
-            d.unlink()
-            gone.append(d.name)
+    for d in runs(where):
+        if everything or not finished(d):
+            shutil.rmtree(d, ignore_errors=True)
+            d.with_suffix(".zip").unlink(missing_ok=True)
+            gone.append(d.name + "/")
+    stray = leftovers()
+    import signal
+    for pid, _cmd in stray:  # tools of runs stopped before: gone too
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
     n = clean_temp()
-    print("removed: " + (", ".join(gone) or "no runs") + f"; temporary folders: {n}")
-    left = sorted(p.name for p in where.glob("selfcheck-*"))
+    print("removed: " + (", ".join(gone) or "no runs") + f"; temporary folders: {n}"
+          + (f"; tools left running by earlier runs, stopped: {len(stray)}" if stray else ""))
+    left = [d.name for d in runs(where)]
     if left:
         print("kept (finished): " + ", ".join(left) + "  — --clean all removes them too")
     return 0
@@ -247,7 +329,8 @@ def logged_in(profile):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("out", nargs="?", help="the folder (default: selfcheck-DATE here)")
+    ap.add_argument("out", nargs="?",
+                    help="the run's folder (default: ~/fedtail_log/DATE_TIME)")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--night", action="store_true",
                     help="everything: every theme, every layout, maximized too, slower "
@@ -268,15 +351,27 @@ def main():
                          "the tools' temporary folders; --clean all: every run here")
     a = ap.parse_args()
     if a.clean:
-        return clean(Path(a.out or ".").resolve(), a.clean == "all")
+        return clean(Path(a.out).resolve() if a.out else LOGS, a.clean == "all")
     if a.night and a.quick:
         ap.error("--night or --quick, not both")
     pace = a.pace if a.pace is not None else (2.0 if a.night else 1.0)
     only = set((a.only or ",".join(STEPS)).split(","))
-    out = Path(a.out or "selfcheck-" + time.strftime("%Y%m%d-%H%M")).resolve()
+    if a.out:
+        out = Path(a.out).expanduser().resolve()
+    else:
+        out = LOGS / time.strftime("%Y-%m-%d_%H-%M")
+        n = 1
+        while out.exists():  # two runs in one minute: each its own
+            n += 1
+            out = LOGS / (time.strftime("%Y-%m-%d_%H-%M") + f"-{n}")
     out.mkdir(parents=True, exist_ok=True)
-    stale = [d.name for d in out.parent.glob("selfcheck-*") if d.is_dir() and d != out and
-             ((d / "INTERRUPTED").exists() or not d.with_suffix(".zip").exists())]
+    print(f"this run: {out}", flush=True)
+    stray = leftovers()
+    if stray:
+        print(f"tools of earlier runs still running ({len(stray)}): they slow this one "
+              "down and hold windows nobody sees — python3 tools/selfcheck.py --clean "
+              "stops them\n  " + "\n  ".join(f"{p}: {c}" for p, c in stray), flush=True)
+    stale = [d.name for d in runs(out.parent) if d != out and not finished(d)]
     if stale:
         print("unfinished runs here (not results): " + ", ".join(stale) +
               " — python3 tools/selfcheck.py --clean", flush=True)
@@ -432,6 +527,32 @@ def main():
             wrap = run.wrap or (["xvfb-run", "-a"] if sys.platform.startswith("linux") and
                                 not has_display() and shutil.which("xvfb-run") else ())
             run.step("behaviour", cmd, timeout=900, wrap=wrap)  # GTK needs a display
+        if "tabs" in only:  # many tabs opened and closed, round after round: leaks, time
+            rounds, many = (("3", "15") if a.quick else ("20", "40") if a.night
+                            else ("6", "30"))
+            for ui, have in (("qt", qt), ("gtk", gtk), ("tui", tui)):
+                if not have:
+                    run.skip(f"tabs-{ui}", f"no {ui}")
+                    continue
+                d = out / f"tabs-{ui}"
+                run.step(f"tabs-{ui}", ["tools/tabs_stress.py", str(d), "--ui", ui,
+                                        "--rounds", rounds, "--tabs", many]
+                         + (["--native"] if ui == "qt" and native else []),
+                         timeout=3600, folder=d, note=f"{rounds} rounds × {many}")
+                if a.night and ui != "tui":  # the split layout's tabs are its own
+                    d = out / f"tabs-{ui}-split"
+                    run.step(f"tabs-{ui}-split", ["tools/tabs_stress.py", str(d), "--ui", ui,
+                                                  "--rounds", "8", "--tabs", many,
+                                                  "--layout", "split", "--theme", "qip-retro"]
+                             + (["--native"] if ui == "qt" and native else []),
+                             timeout=3600, folder=d, note="split, qip-retro")
+        if "themes" in only:  # after the tours: each theme's Qt and GTK pictures compared
+            if pil and (out / "qt-tour").is_dir() and (out / "gtk-shots").is_dir():
+                d = out / "themes"
+                run.step("themes", ["tools/theme_compare.py", str(out), str(d)],
+                         timeout=900, folder=d, note="Qt and GTK side by side")
+            else:
+                run.skip("themes", "needs Pillow and both the Qt tour and the GTK shots")
         if "parity" in only:  # after the walks: their menus go side by side
             run.step("parity", ["tools/parity.py", str(out / "parity.md")], timeout=300)
         # the gallery (tools/gallery.py): only asked by name (--only gallery) — the
@@ -443,6 +564,16 @@ def main():
         # ---- your own account -------------------------------------------------------------
         if real_profile:
             flag = [f"--real={real_profile}"]
+            # every step on your account waits for room in the server's rate limit first
+            real_step = run.step
+
+            def gated(name, args, *a, **k):
+                if name.startswith("real-"):
+                    subprocess.run([sys.executable, "tools/real.py",
+                                    f"--wait={real_profile}"], cwd=ROOT, env=env(),
+                                   timeout=900, check=False)
+                return real_step(name, args, *a, **k)
+            run.step = gated
             r = out / "real"
             r.mkdir(exist_ok=True)
             if "qt" in only and qt:
@@ -467,6 +598,15 @@ def main():
                 d = r / "web"
                 run.step("real-web", ["tools/web_check.py", str(d)] + flag, timeout=900,
                          folder=d, note="your account", py=web_py)
+            if "tabs" in only:
+                for ui, have in (("qt", qt), ("gtk", gtk), ("tui", tui)):
+                    if have:
+                        d = r / f"tabs-{ui}"
+                        run.step(f"real-tabs-{ui}",
+                                 ["tools/tabs_stress.py", str(d), "--ui", ui, "--rounds",
+                                  "6" if a.night else "3", "--tabs", "30"] + flag
+                                 + (["--native"] if ui == "qt" and native else []),
+                                 timeout=3600, folder=d, note="your account")
             if not a.no_blur:
                 n = blur(r)
                 print(f"your account's screenshots: {n} blurred", flush=True)
@@ -482,12 +622,23 @@ def main():
         return 130
     clean_temp(started)
     report(run, out, facts)
-    archive = out.with_suffix(".zip")
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+    archive = zip_of(out)  # in the run's own folder, next to what it holds
+    part = archive.with_suffix(".part")
+    with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(out.rglob("*")):
-            if p.is_file():
+            if p.is_file() and p not in (archive, part):
                 z.write(p, p.relative_to(out.parent))
-    print(f"\nreport: {out / 'report.md'}\nto send back: {archive}")
+    part.replace(archive)  # there only when whole: a zip here = the run finished
+    # and a small one: the words only (logs, reports, menus) — what a chat takes when
+    # the whole is too big, and most of what's needed to read the night
+    light = archive.with_name(archive.stem + "-text.zip")
+    with zipfile.ZipFile(light, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in sorted(out.rglob("*")):
+            if p.is_file() and p.suffix in (".md", ".txt", ".log", ".json", ".toml"):
+                z.write(p, p.relative_to(out.parent))
+    print(f"\nreport: {out / 'report.md'}\nto send back: {archive} "
+          f"({archive.stat().st_size / 2**20:.0f} MB)\n  too big? the words only: {light} "
+          f"({light.stat().st_size / 2**20:.1f} MB)")
     return 0 if all(r[1] in ("ok", "skipped") for r in run.rows) else 1
 
 

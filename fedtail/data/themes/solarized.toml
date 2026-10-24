@@ -7,8 +7,10 @@ inherit = "system"
 family = "Source Sans 3, Noto Sans, sans-serif"
 mono = "Source Code Pro, DejaVu Sans Mono, monospace"
 # Source Sans 3 and Source Code Pro (Adobe) come with fedtail (SIL OFL 1.1): nothing to install
-files = ["fonts/SourceSans3-Variable.ttf", "fonts/SourceSans3-Italic-Variable.ttf",
-         "fonts/SourceCodePro-Variable.ttf", "fonts/SourceCodePro-Italic-Variable.ttf"]
+files = ["fonts/SourceSans3-Regular.ttf", "fonts/SourceSans3-Bold.ttf",
+         "fonts/SourceSans3-Italic.ttf", "fonts/SourceSans3-BoldItalic.ttf",
+         "fonts/SourceCodePro-Regular.ttf", "fonts/SourceCodePro-Bold.ttf",
+         "fonts/SourceCodePro-Italic.ttf", "fonts/SourceCodePro-BoldItalic.ttf"]
 
 [colors]
 window = "#eee8d5"
@@ -50,6 +52,10 @@ dot = "#d33682"
 icons = "own"
 radius = 6
 button_radius = 4
+
+[pictures]
+# plain shapes in one colour, the lines cut out — not the messengers' glossy buttons
+style = "silhouette"
 
 [icon]
 bg_top = "#268bd2"

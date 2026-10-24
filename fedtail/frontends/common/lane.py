@@ -310,6 +310,32 @@ class LaneModel:
         return [m for i in ids for m in self.conv_members.get(i, [i])]
 
 
+def read_up_to(entries, sid):
+    """⋯ → "Read up to here": the ids of this post and of every one older than it among
+    entries (a lane, a thread, a profile — whichever way round it is shown), by their
+    time, not by where they stand: Qt went by feed.order, wrong in a profile shown newest
+    first, and kept only those its view marked unread (none in a profile) — the
+    behaviour check of 23.10 found it marking nothing. [sid] when sid isn't among them."""
+    entries = [e for e in entries if e is not None]
+    target = next((e for e in entries if e.id == sid or real(e).id == sid), None)
+    if target is None:
+        return [sid]
+    def time(e):  # a boost stands where it was boosted
+        return getattr(e, "created", None) or real(e).created
+    when = time(target)
+    if when is None:  # no times: by place, as shown
+        at = entries.index(target)
+        return [e.id for e in entries[:at + 1]]
+    out = []
+    for e in entries:
+        t = time(e)
+        if e is target or (t is not None and t <= when):
+            out.append(e.id)
+            if real(e).id != e.id:
+                out.append(real(e).id)
+    return list(dict.fromkeys(out))
+
+
 def age_days(p, cfg):
     """How many days old a post is, when that's more than feed.old_days; else 0 — an
     old post pulled from someone's outbox is marked "old", not read as news."""

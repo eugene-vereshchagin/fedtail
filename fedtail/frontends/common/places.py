@@ -64,6 +64,7 @@ class Field:
     value: object = ""
     kind: str = "line"
     choices: tuple = ()
+    tip: str = ""  # what it means: under the field, or on hover
 
 
 @dataclass
@@ -104,16 +105,16 @@ PLACES = {
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
     "help": "help_title", "news": "help_news", "about": "about",
-    "federation": "fed_title",
+    "federation": "fed_title", "settings": "settings_title",
     # opened from somewhere: a post, a person, a tag
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
     "quotes": "quotes_title", "history": "history_title", "report": "report_title",
-    "long_form": "long_form_title", "translate": "translate",
+    "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "server", "profile_edit",
-        "help", "news", "about", "federation")
+        "settings", "help", "news", "about", "federation")
 
 
 def _wait(fut):
@@ -394,7 +395,8 @@ class Places:
             self._btn(_("tag_info"), "tag", "open", t.name),
             self._btn(_("tag_unfollow") if t.following else _("tag_follow"), "tag",
                       "unfollow" if t.following else "follow", t.name,
-                      tip=_("tag_follow_tip"))))
+                      tip=_("tag_follow_tip")),
+            self._btn(_("tags_lanes_menu"), "tag", "lanes", t.name, tip=_("tags_lanes_tip"))))
 
     def _p_tags(self, _arg, _tab, _cur):
         page = Page("tags", _("followed_tags"), empty="—")
@@ -425,6 +427,90 @@ class Places:
     def _a_tag_more(self, data, _v, _c, _ans):
         name, _s, cursor = data.partition(" ")
         return Out(open={"page": "tag", "arg": name, "cursor": cursor})
+
+    def _a_tag_lanes(self, name, _v, _c, _ans):
+        return Out(open={"page": "taglanes", "arg": name})
+
+    # ---- settings: the lines of config.toml (common/settings.py) ---------------------
+    def _p_settings(self, query, tab, _cur):
+        """A chapter of the settings as a form (tabs: the chapters), or what matches
+        `query` in all of them; rows: what differs from the defaults there, each with
+        "Default" (the line commented out)."""
+        from . import settings
+        chapters = settings.model(self.view)
+        name = settings.config_file(self.view).name
+        page = Page("settings", _("settings_title"), arg=query,
+                    hint=_("settings_hint", file=name),
+                    tabs=tuple((c.key, f"{c.number}. {c.title}") for c in chapters))
+        if query:
+            options = [o for _c, hits in settings.find(chapters, query) for o in hits]
+            page.empty = _("settings_none")
+        else:
+            ch = next((c for c in chapters if c.key == tab), chapters[0])
+            page.tab = ch.key
+            options = ch.options
+        for o in options:
+            if o.changed:
+                page.rows.append(Row("item", o.title, f"{o.name} = {o.shown()}", key=o.name,
+                                     buttons=(self._btn(
+                                         _("settings_reset"), "settings", "reset", o.name,
+                                         tip=_("settings_reset_tip",
+                                               value=o.default_shown())),)))
+        page.form = tuple(self._setting_field(o) for o in options)
+        page.submit = self._btn(_("settings_save"), "settings", "save", query, primary=True)
+        return page
+
+    @staticmethod
+    def _setting_field(o):
+        tip = (o.about + "\n" if o.about else "") + o.name
+        if o.kind == "bool":
+            return Field(o.name, o.title, bool(o.value), "check", tip=tip)
+        if o.kind in ("choice", "checks"):
+            def words(v, w):
+                w = w if len(w) <= 60 else w[:57].rsplit(" ", 1)[0] + "…"
+                return w if o.kind == "checks" or w == str(v) else f"{v} — {w}"
+            return Field(o.name, o.title, o.value, o.kind,
+                         tuple((v, words(v, w)) for v, w in o.choices), tip=tip)
+        return Field(o.name, o.title, o.line(), "line", tip=tip)
+
+    def _a_settings_save(self, _query, values, _c, _ans):
+        from . import settings
+        try:
+            changes = settings.changes_of(settings.model(self.view), values)
+            if not changes:
+                return Out(refresh=True)
+            return Out(message=settings.save(self.view, changes), refresh=True)
+        except (ValueError, settings.SaveError) as e:
+            return Out(error=str(e))
+
+    def _a_settings_reset(self, name, _v, _c, _ans):
+        from . import settings
+        section, _s, key = name.partition(".")
+        try:
+            return Out(message=settings.save(self.view, {(section, key): settings.UNSET}),
+                       refresh=True)
+        except settings.SaveError as e:
+            return Out(error=str(e))
+
+    def _p_taglanes(self, name, _tab, _cur):
+        """"＋ to lanes": the tag as a lane of its own, or into a lane of tags kept in
+        the sidebar — the windows' menu (common/taglanes.py), as rows."""
+        from . import taglanes
+        name = name.lstrip("#")
+        page = Page("taglanes", "#" + name + " — " + _("tags_lanes_menu").rstrip(" ▾"),
+                    arg=name, hint=_("tags_lanes_tip"))
+        for key, words, on in taglanes.choices(self.view, name):
+            page.rows.append(Row("item", words, "" if on else "✓", key=key, buttons=(
+                self._btn(_("tags_save"), "taglane", "add", f"{key} {name}"),) if on else ()))
+        return page
+
+    def _a_taglane_add(self, data, _v, _c, _ans):
+        from . import taglanes
+        key, _s, name = data.partition(" ")
+        lane = _wait(taglanes.apply(self.view, key, name))
+        title = self.view.lane_title(lane) or lane
+        return Out(message=_("tags_saved", tags="#" + name) if key == taglanes.OWN
+                   else _("tags_added", tag=name, lane=title), refresh=True)
 
     def _a_tag_follow(self, name, _v, _c, _ans):
         _wait(self.view.follow_tag(name, True))
@@ -785,26 +871,24 @@ class Places:
         return self._p_help("news", "", "")
 
     def _p_about(self, _arg, _tab, _cur):
-        """What fedtail is, which build, who made it — the windows' About, in words."""
-        import platform
-
+        """What fedtail is, which build, on what — the windows' About cards
+        (common/about.py), as rows."""
         from ... import version
-        from ...model.text import html_to_text
-        info = version.info()
+        from . import about
+        a = about.facts(self.view, getattr(self, "toolkit", ""),
+                        getattr(self, "toolkit_version", ""))
         page = Page("about", _("about"))
-        page.rows.append(Row("heading", "fedtail " + info["version"]))
-        tagline = html_to_text(_("about_text", version=info["version"])).split("\n")[-1]
-        page.rows.append(Row("text", tagline.strip()))
-        if info.get("commit"):
-            page.rows.append(Row("text", _("about_build", commit=info["commit"],
-                                           date=info["date"])))
-        page.rows.append(Row("text", "Python " + platform.python_version()))
-        page.rows.append(Row("text", _("made_by_long")))
+        page.rows.append(Row("heading", "fedtail " + a.version))
+        page.rows.append(Row("text", a.tagline))
+        for label, value in a.tiles + a.rows:
+            page.rows.append(Row("item", value, label, key="about:" + label))
+        page.rows.append(Row("text", a.made_by))
         page.rows.append(Row("item", version.HOMEPAGE, key="repo", buttons=(
             self._btn(_("open_browser"), "url", "open", version.HOMEPAGE),)))
         page.rows.append(Row("item", version.AUTHOR, version.AUTHOR_URL, key="author",
                              buttons=(self._btn(_("open_browser"), "url", "open",
                                                 version.AUTHOR_URL),)))
+        page.rows.append(Row("pre", a.text()))  # to select and copy, for a bug report
         return page
 
     def _p_federation(self, _arg, _tab, _cur):

@@ -136,8 +136,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
             verticalAlignment = Alignment.CenterVertically) {
             SmallHead(stringResource(if (model.hubPinned.isEmpty()) R.string.hub_title
                                      else R.string.sec_pinned), Modifier.weight(1f))
-            TextButton(onClick = { model.openSettings("pinned") }) { Text(stringResource(R.string.change)) }
+            TextButton(onClick = { model.editTiles = !model.editTiles }) {
+                Text(stringResource(if (model.editTiles) R.string.done else R.string.change))
+            }
         }
+    }
+    if (model.editTiles) {
+        pinEditor(model)
+        return
     }
     items(rows.size, key = { "t-$it" }) { r ->
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -157,6 +163,37 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
     }
     items(rest, key = { "r-" + it.first.name }) { (lane, browsed) ->
         RestRow(lane, browsed) { model.showLane(lane.name) }
+    }
+}
+
+/** "Change" over the tiles: the tiles as rows to move (↑ ↓) or take away (✕), and the
+ *  other lanes to add (＋). The core keeps the order; sync carries it to the other devices. */
+private fun androidx.compose.foundation.lazy.LazyListScope.pinEditor(model: AppModel) {
+    val tiles = model.tileLanes().map { it.first }
+    items(tiles, key = { "p-" + it.name }) { lane ->
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            TextButton(onClick = { model.moveTile(lane.name, -1) }) { Text("↑", fontSize = 18.sp) }
+            TextButton(onClick = { model.moveTile(lane.name, +1) }) { Text("↓", fontSize = 18.sp) }
+            TextButton(onClick = { model.pinTile(lane.name, false) }) { Text("✕", fontSize = 16.sp) }
+        }
+        HorizontalDivider(Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+    }
+    val rest = model.restLanes().map { it.first }
+    if (rest.isEmpty()) return
+    item(key = "p-h-rest") {
+        SmallHead(stringResource(R.string.sec_rest),
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp))
+    }
+    items(rest, key = { "p-r-" + it.name }) { lane ->
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { model.pinTile(lane.name, true) }) { Text("＋", fontSize = 18.sp) }
+        }
+        HorizontalDivider(Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.surfaceVariant)
     }
 }
 

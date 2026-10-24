@@ -33,11 +33,8 @@ _STRINGS = {
         "cli_no_post": "не знаю пост {alias}",
         "cli_posted": "отправлено {alias} ({vis}) {url}",
         "cli_login_first": "этот профиль не вошёл на сервер: сначала открой окно (fedtail) и войди",
-        "sync_no_folder": "Синхронизация: в sync.folder не указана папка",
         "sync_login_first": "Синхронизация: нет токена для сервера синхронизации — "
                             "выполни fedtail sync login",
-        "sync_no_server": "Синхронизация: {server} не называет сервер синхронизации — "
-                          "укажи sync.url",
         "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
                          "устройства — перенеси ключ: fedtail sync key там, "
                          "fedtail sync join здесь",
@@ -48,7 +45,21 @@ _STRINGS = {
         "sync_auth_refused": "Синхронизация: сервер не принял токен — fedtail sync login заново",
         "sync_full": "Синхронизация: место на сервере кончилось (квота)",
         "sync_failed": "Синхронизация не удалась: {why}",
-        "sync_off": "синхронизация выключена: sync.enabled = true в конфиге",
+        "sync_off": "синхронизации нет: это отдельный сервис, укажи sync.url "
+                    "(или sync.folder) в конфиге — как, см. docs/ru/sync.md",
+        "sync_bar_off": "⇅ нет",
+        "sync_bar_off_tip": "Синхронизации с другими устройствами нет: в конфиге не указан "
+                            "sync.url (или sync.folder). Это отдельный сервис, как его "
+                            "подключить — docs/ru/sync.md",
+        "sync_bar_wait": "⇅ …",
+        "sync_bar_wait_tip": "Синхронизация: {where} — ещё не было ни одного обмена",
+        "sync_bar_ok": "⇅ {time}",
+        "sync_bar_ok_tip": "Синхронизировано в {time}: {where}\nотправлено {sent}, "
+                           "получено {got}, ждёт отправки {pending}",
+        "sync_bar_bad": "⇅ !",
+        "sync_bar_bad_tip": "Синхронизация: {where}\n{error}",
+        "about_sync": "Синхронизация",
+        "about_sync_off": "нет (sync.url не задан)",
         "sync_status": "хранилище: {backend} {where}\nвход: {login}\nустройство: {device}\n"
                        "ключ: {kid}\nне отправлено: {pending}\nпоследний раз: {last}",
         "sync_nothing": "—",
@@ -588,6 +599,11 @@ _STRINGS = {
         "langs_person_title": "Языки @{acct}",
         "langs_person_ask": "Коды языков через запятую (ru, en, ka…); пусто — все",
         "tags_info": "любой из тегов; +#тег — обязательно, -#тег — кроме",
+        "tags_own_lane": "Отдельной лентой", "tags_into_lane": "В ленту «{lane}»",
+        "tags_lanes_menu": "＋ в ленты ▾",
+        "tags_lanes_tip": "Держать тег слева, в группе «Теги»: отдельной лентой или "
+                          "вместе с другими тегами",
+        "tags_added": "#{tag} — в ленте «{lane}»",
         "tags_save": "＋ в ленты", "tags_save_tip": "Держать эту ленту слева, в группе «Теги»",
         "tags_saved": "{tags} — теперь лента слева, в «Тегах»",
         "tags_drop": "Убрать из лент",
@@ -677,6 +693,27 @@ _STRINGS = {
         "made_by": "написан нейросетью Claude<br>под присмотром кожаного мешка",
         "made_by_long": "Код написан нейросетью Claude (Anthropic) — от первой строки до "
                         "иконки. Кожаный мешок придумывал, тестировал и ругался.",
+        "about_version": "Версия", "about_platform": "Платформа", "about_arch": "Архитектура",
+        "about_build_kind": "Сборка", "about_dev": "Разработка", "about_release": "Релиз",
+        "about_commit_date": "Дата коммита", "about_profile": "Профиль",
+        "about_commit": "Коммит", "about_account": "Аккаунт", "about_accounts": "Аккаунты",
+        "about_server": "Сервер", "about_theme": "Тема", "about_data": "Данные",
+        "about_copy": "Скопировать информацию", "about_copied": "Скопировано",
+        "settings": "Настройки…", "settings_title": "Настройки",
+        "settings_hint": "Всё хранится в {file}: здесь меняются его строки, комментарии и "
+                         "остальное в нём остаются как есть. Большинство настроек "
+                         "вступают в силу после перезапуска.",
+        "settings_save": "Записать", "settings_saved": "Записано в {file}: {names}",
+        "settings_restart": "Перезапустить", "settings_restart_tip":
+            "Большинство настроек читаются при запуске",
+        "settings_reset": "По умолчанию", "settings_reset_tip":
+            "Закомментировать строку в файле: дальше — умолчание программы ({value})",
+        "settings_in_file": "задано в файле", "settings_default": "по умолчанию: {value}",
+        "settings_search": "Найти настройку…", "settings_none": "Ничего не нашлось",
+        "settings_open_file": "Открыть файл", "settings_found": "Найдено",
+        "settings_need_number": "нужно число", "settings_at_least": "не меньше {n}",
+        "settings_set_here": "Заданы в файле",
+        "settings_changed_outside": "Файл изменили снаружи — перечитан",
         "about_build": "Сборка: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Код: <a href="{repo}">GitHub</a><br>Автор в федиверсе: '
                        '<a href="{author_link}">{author}</a> — откроется здесь, '
@@ -891,6 +928,13 @@ _STRINGS = {
         "act_as_reply": "↩ Ответ от {acct}",
         "act_as_wait": "Ищу пост на сервере другого аккаунта…",
         "act_as_done": "Сделано от {acct}",
+        "post_from": "От {acct}",
+        "post_from_tip": "С какого аккаунта уйдёт пост (все аккаунты в одном окне). "
+                         "Ответ от другого аккаунта, не того, что получил пост: пост "
+                         "сперва найдётся на его сервере",
+        "post_from_other": "Ответ уйдёт от {acct}: пост найдётся на его сервере",
+        "act_as_none": "Сервер {acct} не нашёл этот пост (он не публичный, или сервер "
+                       "не смог его забрать)",
         "tag_info": "посты с этим тегом, какие знает твой сервер",
         "resolving": "Ищу через свой сервер: {url}",
         "resolve_browser": "Не нашлось — открываю в браузере",
@@ -945,9 +989,7 @@ _STRINGS = {
         "cli_posted": "sent {alias} ({vis}) {url}",
         "cli_login_first": "this profile is not logged in: open the window (fedtail), "
                            "log in first",
-        "sync_no_folder": "Sync: no folder in sync.folder",
         "sync_login_first": "Sync: no token for the sync server — run fedtail sync login",
-        "sync_no_server": "Sync: {server} names no sync server — set sync.url",
         "sync_need_key": "Sync: the account already has a journal sealed by another "
                          "device's key — carry the key over: fedtail sync key there, "
                          "fedtail sync join here",
@@ -957,7 +999,21 @@ _STRINGS = {
         "sync_auth_refused": "Sync: the server refused the token — fedtail sync login again",
         "sync_full": "Sync: no room left on the server (quota)",
         "sync_failed": "Sync failed: {why}",
-        "sync_off": "sync is off: sync.enabled = true in the config",
+        "sync_off": "no sync: it is a service of its own — set sync.url (or sync.folder) "
+                    "in the config; how: docs/en/sync.md",
+        "sync_bar_off": "⇅ off",
+        "sync_bar_off_tip": "No sync with your other devices: sync.url (or sync.folder) is "
+                            "not set in the config. It is a service of its own; how to "
+                            "connect it — docs/en/sync.md",
+        "sync_bar_wait": "⇅ …",
+        "sync_bar_wait_tip": "Sync: {where} — nothing exchanged yet",
+        "sync_bar_ok": "⇅ {time}",
+        "sync_bar_ok_tip": "Synced at {time}: {where}\nsent {sent}, got {got}, "
+                           "waiting to go {pending}",
+        "sync_bar_bad": "⇅ !",
+        "sync_bar_bad_tip": "Sync: {where}\n{error}",
+        "about_sync": "Sync",
+        "about_sync_off": "off (sync.url not set)",
         "sync_status": "store: {backend} {where}\nlogin: {login}\ndevice: {device}\n"
                        "key: {kid}\nnot sent: {pending}\nlast time: {last}",
         "sync_nothing": "—",
@@ -1477,6 +1533,11 @@ _STRINGS = {
         "langs_person_title": "Languages of @{acct}",
         "langs_person_ask": "Language codes, comma separated (ru, en, ka…); empty — all",
         "tags_info": "any of the tags; +#tag — must have, -#tag — without",
+        "tags_own_lane": "A lane of its own", "tags_into_lane": "Into “{lane}”",
+        "tags_lanes_menu": "＋ to lanes ▾",
+        "tags_lanes_tip": "Keep the tag in the sidebar, under Tags: a lane of its own or "
+                          "with other tags",
+        "tags_added": "#{tag} is in “{lane}” now",
         "tags_save": "＋ to lanes", "tags_save_tip": "Keep this lane in the sidebar, under Tags",
         "tags_saved": "{tags} is a lane now, under Tags",
         "tags_drop": "Remove from lanes",
@@ -1564,6 +1625,27 @@ _STRINGS = {
         "made_by": "written by Claude, an AI<br>supervised by a meatbag",
         "made_by_long": "The code is written by Claude (Anthropic), an AI — from the first "
                         "line to the icon. A meatbag came up with it, tested it and swore.",
+        "about_version": "Version", "about_platform": "Platform", "about_arch": "Architecture",
+        "about_build_kind": "Build", "about_dev": "Development", "about_release": "Release",
+        "about_commit_date": "Commit date", "about_profile": "Profile",
+        "about_commit": "Commit", "about_account": "Account", "about_accounts": "Accounts",
+        "about_server": "Server", "about_theme": "Theme", "about_data": "Data",
+        "about_copy": "Copy the information", "about_copied": "Copied",
+        "settings": "Settings…", "settings_title": "Settings",
+        "settings_hint": "Everything lives in {file}: this changes its lines, and its "
+                         "comments and the rest stay as they are. Most settings take "
+                         "effect after a restart.",
+        "settings_save": "Save", "settings_saved": "Saved in {file}: {names}",
+        "settings_restart": "Restart", "settings_restart_tip":
+            "Most settings are read at start",
+        "settings_reset": "Default", "settings_reset_tip":
+            "Comment the line out in the file: the program's default from then on ({value})",
+        "settings_in_file": "set in the file", "settings_default": "default: {value}",
+        "settings_search": "Find a setting…", "settings_none": "Nothing found",
+        "settings_open_file": "Open the file", "settings_found": "Found",
+        "settings_need_number": "a number, please", "settings_at_least": "at least {n}",
+        "settings_set_here": "Set in the file",
+        "settings_changed_outside": "The file changed outside — read again",
         "about_build": "Build: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Code: <a href="{repo}">GitHub</a><br>The author in the fediverse: '
                        '<a href="{author_link}">{author}</a> — opens here, with Follow',
@@ -1775,6 +1857,13 @@ _STRINGS = {
         "act_as_reply": "↩ Reply as {acct}",
         "act_as_wait": "Looking the post up on the other account's server…",
         "act_as_done": "Done as {acct}",
+        "post_from": "From {acct}",
+        "post_from_tip": "Which account the post goes from (all accounts in one window). "
+                         "A reply from another account than the one that got the post: "
+                         "the post is looked up on its server first",
+        "post_from_other": "The reply goes from {acct}: the post is looked up on its server",
+        "act_as_none": "{acct}'s server couldn't find this post (it isn't public, or the "
+                       "server couldn't fetch it)",
         "tag_info": "posts with this tag that your server knows",
         "resolving": "Looking it up through your server: {url}",
         "resolve_browser": "Not found — opening in the browser",

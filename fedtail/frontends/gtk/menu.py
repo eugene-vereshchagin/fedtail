@@ -53,6 +53,7 @@ class MainMenu:
         a("make_main", win.make_main)
         a("relogin", win.relogin)
         a("logout", win.log_out)
+        a("settings", win.open_settings)
         a("config", lambda: win.open_path(win.view.paths.config_file))
         a("themes", lambda: win.open_path(win.themes_dir()))
         a("data", lambda: win.open_path(win.view.paths.data_dir))
@@ -150,6 +151,7 @@ class MainMenu:
         top.append_section(None, first)
 
         files = Gio.Menu()
+        _item(files, _("settings"), "settings")
         _item(files, _("open_config"), "config")
         _item(files, _("open_themes"), "themes")
         files.append_submenu(_("try_theme"), self._themes())
@@ -224,7 +226,7 @@ class MainMenu:
         win = self.win
         m = Gio.Menu()
         configured = win.cfg["ui"]["theme"]
-        for name in themefile.available():
+        for name in themefile.for_layout(win.cfg, keep=(configured, win.theme.id)):
             label = ("✓ " if name == win.theme.id else "") + name + \
                 ("  · " + _("theme_in_config") if name == configured else "")
             _item(m, label, "theme", target=name)

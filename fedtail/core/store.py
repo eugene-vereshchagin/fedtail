@@ -190,6 +190,10 @@ class Store:
         self.items_version = {}
         self.status_version = 0
         self.read_version = 0  # bumped by every read mark (Core caches unread counts by it)
+        # every read mark, in memory: the sidebar counts every lane after each read mark
+        # and asking SQLite for thousands of ids each time froze the window (413 ms on a
+        # real profile); None — read from the table at the next question
+        self._read = None
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
         self.db.execute("PRAGMA synchronous=NORMAL")
@@ -379,6 +383,7 @@ class Store:
                 out["read"] = db.execute(
                     "DELETE FROM read WHERE status_id NOT IN (SELECT id FROM statuses)"
                 ).rowcount
+                self._read = None
             if out["statuses"]:
                 self.status_version += 1
             if out["activity"]:
@@ -432,6 +437,8 @@ class Store:
                            "author, touched) VALUES (?, ?, ?, ?, ?, ?)", rows)
             if mine:
                 db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in mine])
+                if self._read is not None:
+                    self._read.update(mine)
             if changed:
                 self.status_version += 1
             if self._tags is not None:
@@ -883,7 +890,8 @@ class Store:
 
     def activity_hide(self, ids):
         """Notifications gone from Activity for good, while the server keeps them (it can't
-        dismiss one): remembered, so the next fetch doesn't bring them back."""
+        dismiss one): remembered, so the next fetch doesn't bring them back.
+        → [(id, sort, group key or "")] of the ones that were here (for sync)."""
         with self.lock:
             rows = self.db.execute(
                 f"SELECT id, sort FROM activity WHERE id IN ({','.join('?' * len(ids))})",
@@ -903,7 +911,47 @@ class Store:
         if len(hidden) > HIDDEN_KEEP:  # the oldest go: the server won't send them again
             hidden = dict(sorted(hidden.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
         self.kv_set("activity_hidden", hidden)
+        groups = {i: self.activity_group_of(i) for i, _sort in rows}
         self.activity_delete(ids)
+        return [(i, sort, groups.get(i, "")) for i, sort in rows]
+
+    def activity_hide_known(self, items):
+        """Notifications another device dismissed (core/sync): [(id, sort, group key)] —
+        remembered as hidden here too, and gone from Activity if they are in it.
+        → whether anything was here to go."""
+        if not items:
+            return False
+        hidden = self.kv_get("activity_hidden", {}) or {}
+        hg = self.kv_get("activity_hidden_groups", {}) or {}
+        keys = set()
+        for nid, sort, key in items:
+            hidden[nid] = max(hidden.get(nid, ""), sort)
+            if key:
+                hg[key] = max(hg.get(key, ""), sort)
+                keys.add(key)
+        if len(hidden) > HIDDEN_KEEP:
+            hidden = dict(sorted(hidden.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
+        if len(hg) > HIDDEN_KEEP:
+            hg = dict(sorted(hg.items(), key=lambda kv: kv[1])[-HIDDEN_KEEP:])
+        self.kv_set("activity_hidden", hidden)
+        self.kv_set("activity_hidden_groups", hg)
+        ids = {nid for nid, _s, _k in items}
+        with self.lock:
+            rows = self.db.execute("SELECT id, account FROM activity").fetchall()
+        gone = []
+        for nid, acc in rows:
+            if nid in ids:
+                gone.append(nid)
+            elif keys:
+                try:
+                    k = ((json.loads(acc) or {}).get("_group") or {}).get("key")
+                except (ValueError, AttributeError):
+                    k = None
+                if k in keys:
+                    gone.append(nid)
+        if gone:
+            self.activity_delete(gone)
+        return bool(gone)
 
     def activity_newest(self):
         """(id, sort) of the newest notification fetched — hidden ones count: the next
@@ -936,7 +984,10 @@ class Store:
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):
         with self._tx() as db:
-            db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in status_ids])
+            ids = list(status_ids)
+            db.executemany("INSERT OR IGNORE INTO read VALUES (?)", [(i,) for i in ids])
+            if self._read is not None:
+                self._read.update(ids)
             self.read_version += 1
 
     def mark_mine_read(self):
@@ -946,6 +997,7 @@ class Store:
         with self._tx() as db:
             cur = db.execute("INSERT OR IGNORE INTO read SELECT id FROM statuses "
                              "WHERE author = ?", (self.me_id,))
+            self._read = None
             self.read_version += 1
             return cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
 
@@ -958,15 +1010,12 @@ class Store:
         return json.loads(row[0]).get("account") if row else None
 
     def read_set(self, status_ids):
-        ids = list(status_ids)
-        out = set()
+        """Which of these posts are read (from memory: the table once a run)."""
         with self.lock:
-            for i in range(0, len(ids), 500):
-                chunk = ids[i:i + 500]
-                marks = ",".join("?" * len(chunk))
-                q = f"SELECT status_id FROM read WHERE status_id IN ({marks})"
-                out.update(r[0] for r in self.db.execute(q, chunk))
-        return out
+            if self._read is None:
+                self._read = {r[0] for r in self.db.execute("SELECT status_id FROM read")}
+            known = self._read
+            return {i for i in status_ids if i in known}
 
     # ---- drafts ---------------------------------------------------------------
     def save_draft(self, key, data):

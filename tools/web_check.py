@@ -88,7 +88,19 @@ def http_checks(base, key):
                "function selectLane", "function openThread", "function openAccount"):
         if fn not in js:
             ERRORS.append(f"app.js has no {fn}")
-    for path in ("/api/me", "/api/lanes", "/api/lane?name=home", "/api/thread?id=002"):
+    paths = ["/api/me", "/api/lanes", "/api/lane?name=home"]
+    if not REAL:  # the fake world's post; your account's: whatever home has first
+        paths.append("/api/thread?id=002")
+    else:
+        try:
+            rows = json.loads(get("/api/lane?name=home")).get("rows") or []
+            first = next((r.get("id") or (r.get("post") or {}).get("id") for r in rows
+                          if isinstance(r, dict) and (r.get("id") or r.get("post"))), None)
+            if first:
+                paths.append(f"/api/thread?id={first}")
+        except Exception:  # noqa: BLE001 — said by the lane's own check above
+            pass
+    for path in paths:
         try:
             json.loads(get(path))
         except Exception as e:  # noqa: BLE001
@@ -196,6 +208,15 @@ def with_playwright(base, key, out):
         browser.close()
 
 
+def didnt_load(what, body):
+    """A place that didn't load: an error — but your account's server saying "too many
+    requests" (429) is its limit, not ours: a note."""
+    if REAL and ("429" in body or "rate limit" in body):
+        NOTES.append(f"{what}: the server's rate limit (429) — not checked")
+    else:
+        ERRORS.append(f"{what}: didn't load: {body[:200]}")
+
+
 def walk_places(page, out):
     """Every place of the ≡ menu (common/places.py) in the side panel, each of its tabs:
     a screenshot each, and an error where one didn't load; a link inside the help."""
@@ -209,16 +230,20 @@ def walk_places(page, out):
         page.wait_for_timeout(700)
         body = page.inner_text("#side-body")
         if failed and failed in body or body.strip() == "…":
-            ERRORS.append(f"place {n}: didn't load: {body[:200]}")
+            didnt_load(f"place {n}", body)
         page.screenshot(path=str(out / f"desktop-07-place-{n}.png"))
         tabs = page.locator("#side-body .tabs button")
-        for i in range(tabs.count()):
-            label = tabs.nth(i).inner_text()
-            tabs.nth(i).click()
+        labels = tabs.all_inner_texts()  # a click redraws the panel: by words, not index
+        for i, label in enumerate(labels):
+            tab = page.locator("#side-body .tabs button", has_text=label).first
+            if not tab.count():
+                ERRORS.append(f"place {n}: the tab {label!r} went after a click")
+                continue
+            tab.click()
             page.wait_for_timeout(500)
             body = page.inner_text("#side-body")
             if failed and failed in body:
-                ERRORS.append(f"place {n}, tab {label}: didn't load: {body[:200]}")
+                didnt_load(f"place {n}, tab {label}", body)
             page.screenshot(path=str(out / f"desktop-07-place-{n}-{i}.png"))
     page.evaluate("openPlace('help')")
     page.wait_for_timeout(600)

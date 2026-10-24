@@ -42,6 +42,7 @@ DEFAULTS = {
         "arts_mode": True,
         "max_width": 760,
         "layout": "single",
+        "themes_by_layout": "auto",
         "roster_on_top": False,
         "roster_threads": 15,
         "faces": True,
@@ -199,11 +200,14 @@ DEFAULTS = {
         "stream": 'auto',
     },
     "sync": {
-        "enabled": False,
-        "backend": "server",
         "url": "",
         "folder": "",
-        "what": ["read", "threads"],
+        "read": True,
+        "threads": True,
+        "lanes": True,
+        "drafts": True,
+        "activity": True,
+        "tiles": True,
         "interval_seconds": 60,
     },
     "storage": {
@@ -244,7 +248,6 @@ DEFAULTS = {
     },
     "phone": {
         "overview": "tiles",
-        "pinned": [],
         "layout": "auto",
     },
     "cli": {
@@ -257,11 +260,11 @@ DEFAULTS = {
 
 CHOICES = {
     ("ui", "layout"): {'single', 'columns', 'split', 'qip'},
+    ("ui", "themes_by_layout"): {"auto", "on", "off"},
     ("ui", "app_icon"): {'possum', 'bubble'},
     ("ui", "icons"): {'theme', 'desktop', 'own', 'additional', 'words'},
     ("ui", "split_tabs"): {'keep', 'close'},
     ("poll", "stream"): {'auto', 'off'},
-    ("sync", "backend"): {'server', 'folder'},
     ("ui", "image_decode"): {'box', 'full'},
     ("feed", "prefetch"): {'previews', 'all', 'off'},
     ("ui", "alt_text"): {'caption', 'tooltip'},
@@ -313,10 +316,10 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),
               ("ui", "icon_count"), ("ui", "icon_count_except"), ("ui", "columns"),
               ("ui", "start_lane"),
-              ("lists", "hide_in"), ("cli", "tail_lanes"), ("phone", "pinned")]
+              ("lists", "hide_in"), ("cli", "tail_lanes")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
-SYNC_WHAT = {"read", "threads"}
+SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles")  # sync.<each>
 MINIMUM = {
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
@@ -433,6 +436,20 @@ def validate(user):
                     cfg["ui"]["esc"] = "off"
                 warnings.append('ui.esc_hides is now ui.esc ("curtain", "tray" or "off")')
                 continue
+            if (section, key) == ("sync", "what"):
+                # 0.19: a switch of its own for each thing that travels
+                if isinstance(val, list):
+                    for k in SYNC_WHAT:
+                        if k not in values:
+                            cfg["sync"][k] = k in val
+                warnings.append("sync.what is now a switch for each: sync.read, sync.threads, "
+                                "sync.lanes, sync.drafts, sync.activity, sync.tiles")
+                continue
+            if section == "sync" and key in ("enabled", "backend"):
+                # gone in 0.19: sync is on when it has somewhere to go (url or folder)
+                warnings.append(f"sync.{key} is gone: sync works when sync.url or "
+                                "sync.folder is set, and is off without them")
+                continue
             if key not in DEFAULTS[section]:
                 from .config_update import RENAMED
                 if (section, key) in RENAMED:  # an older name: say what it is now
@@ -478,15 +495,6 @@ def validate(user):
                     and x.startswith("list:") and len(x) > 5)]
     if bad:
         errors.append(f"lanes: unknown lanes {bad}; known: {', '.join(sorted(LANE_NAMES))}")
-    pinned = cfg["phone"]["pinned"]
-    if not (isinstance(pinned, list) and all(isinstance(x, str) for x in pinned)):
-        errors.append("phone.pinned must be a list of lane names")
-    else:
-        bad = [x for x in pinned if x not in LANE_NAMES
-               and not (x.startswith("list:") and len(x) > 5)]
-        if bad:
-            errors.append(f"phone.pinned: unknown lanes {bad}; known: "
-                          f"{', '.join(sorted(LANE_NAMES))}, list:TITLE")
     if "all" in cfg["activity"]["types"]:  # everything there is, now and later
         cfg["activity"]["types"] = sorted(ACTIVITY_TYPES)
     bad_types = [x for x in cfg["activity"]["types"] if x not in ACTIVITY_TYPES]
@@ -496,9 +504,6 @@ def validate(user):
     bad_auto = [x for x in cfg["subs"]["auto"] if x not in SUBS_AUTO]
     if bad_auto:
         errors.append(f"subs.auto: unknown {bad_auto}; known: {', '.join(sorted(SUBS_AUTO))}")
-    bad_what = [x for x in cfg["sync"]["what"] if x not in SYNC_WHAT]
-    if bad_what:
-        errors.append(f"sync.what: unknown {bad_what}; known: {', '.join(sorted(SYNC_WHAT))}")
     vol = cfg["sound"]["volume"]
     if not 0 <= vol <= 100:
         errors.append(f"sound.volume = {vol}: from 0 to 100")
@@ -506,6 +511,8 @@ def validate(user):
     if url and not (url.startswith("https://") or
                     url.startswith(("http://localhost", "http://127.0.0.1"))):
         errors.append(f"sync.url = {url!r}: https:// (http:// only to this computer)")
+    if url and cfg["sync"]["folder"]:
+        errors.append("sync.url and sync.folder are both set: one place to meet, not two")
     if not cfg["lanes"]["enabled"]:
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):

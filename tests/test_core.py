@@ -309,7 +309,7 @@ class MergedTest(TmpDir):
             core.poll_once()
         got = m.lane_entries("home")
         self.assertEqual([st["id"] for _i, st in got], ["010", "work~501"])  # bob, no dup
-        self.assertEqual(got[1][1]["_via"], "@w")
+        self.assertEqual(got[1][1]["_via"], "@w@work.example")  # whole: names repeat
         self.assertEqual(got[1][1]["account"]["id"], "work~B")
         self.assertEqual(m.unread_ids(got), {"010", "work~501"})
         self.assertEqual(m.unread_count("home"), 2)
@@ -341,6 +341,32 @@ class MergedTest(TmpDir):
         m.set_active_lanes([])
         self.assertEqual(m.others["work"]._active_lanes, set())
 
+    def test_post_from_any_account(self):
+        """The editor's "From": a new post from the other account; a reply from it to a
+        post the main one got — found on its server first; the draft goes."""
+        m = self.m
+        mine = self.home.add(status("020", BOB, minute=20), home=True)
+        self.work.remote[mine["uri"]] = dict(mine, id="777")
+        for core in (m.primary, m.others["work"]):
+            core.connect().result()
+            core.poll_once()
+        accounts, first = m.post_accounts(None)
+        self.assertEqual([k for k, _h in accounts], ["", "work"])
+        self.assertEqual(first, "")
+        self.assertEqual(accounts[1][1], "@w@work.example")
+        self.assertEqual(m.post_accounts("work~5")[1], "work")  # a reply: whose post
+        st = m.post("from work", "public", account="work").result()
+        self.assertTrue(st["id"].startswith("work~"))
+        self.assertEqual(self.work.posted[-1][0], "from work")
+        m.primary.store.save_draft("d1", {"text": "x"})
+        st = m.post("@bob a reply from work", "public", "020", account="work",
+                    draft_key="d1").result()
+        self.assertEqual(self.work.posted[-1][2], "777")  # the reply to work's copy
+        self.assertIsNone(m.primary.store.get_draft("d1"))
+        # the usual way: no "From" — the account that got it
+        m.post("plain", "public", "020").result()
+        self.assertEqual(self.home.posted[-1][0], "plain")
+
     def test_act_as_the_other_account(self):
         """A post my main account got, liked from work: looked up on work's server."""
         m = self.m
@@ -350,7 +376,7 @@ class MergedTest(TmpDir):
             core.connect().result()
             core.poll_once()
         st = m.store.get_status("020")
-        self.assertEqual(m.act_accounts(st), [("work", "@w")])
+        self.assertEqual(m.act_accounts(st), [("work", "@w@work.example")])
         got = m.act_as(st, "work", "fav").result()
         self.assertEqual(got["id"], "work~777")
         self.assertTrue(self.work.statuses["777"]["favourited"])
@@ -359,7 +385,11 @@ class MergedTest(TmpDir):
         self.assertEqual(found["id"], "work~777")
         self.assertEqual(m.act_accounts(found)[0][0], None)  # and back: the main one
         with self.assertRaises(LookupError):
-            m.act_as(dict(st, uri="https://nowhere.example/1"), "work", "boost").result()
+            m.act_as(dict(st, uri="https://nowhere.example/1", url="https://nowhere.example/@x/1"),
+                     "work", "boost").result()
+        # by its address, when its id isn't known there (GoToSocial and kin)
+        got = m.act_as(dict(st, uri="https://nowhere.example/1"), "work", "find").result()
+        self.assertEqual(got["id"], "work~777")
 
 
 class PathsAuthTest(TmpDir):
@@ -1371,6 +1401,24 @@ class CoreTest(TmpDir):
         self.assertEqual(core.lane_title(name), "#georgia #грузия")
         core.drop_tag_group(name).result()
         self.assertNotIn(name, core.lane_by_name)
+        # one tag kept as a lane of its own (its tab's "＋ to lanes")
+        one = core.save_tag_group({"any": ["tbilisi"]}).result()
+        self.assertIn(one, core.lane_by_name)
+        self.assertEqual(core.lane_title(one), "#tbilisi")
+        core.drop_tag_group(one).result()
+        # one more tag into a lane of tags (the tag's "＋ to lanes ▾")
+        from fedtail.core.view import View
+        from fedtail.frontends.common import taglanes
+        two = core.save_tag_group({"any": ["georgia", "грузия"]}).result()
+        view = View(core)
+        keys = [k for k, _w, on in taglanes.choices(view, "tbilisi") if on]
+        self.assertEqual(keys, [taglanes.OWN, two])
+        moved = taglanes.apply(view, two, "#Tbilisi").result()
+        self.assertEqual(core.lane_title(moved), "#georgia #tbilisi #грузия")
+        self.assertNotIn(two, core.lane_by_name)
+        self.assertEqual([on for k, _w, on in taglanes.choices(view, "tbilisi")
+                          if k == moved], [False])  # in it already
+        core.drop_tag_group(moved).result()
         core.cfg["lanes"]["tag_groups"] = [{"name": "Грузия", "any": ["georgia"],
                                             "none": ["politics"]}]
         core._apply_lists([], {})
@@ -1929,6 +1977,38 @@ class CoreTest(TmpDir):
         self.assertEqual([(lane, st["id"]) for lane, st in notes], [("list:L2", "010")])
         cfg, errors = config.validate({"notify": {"lanes": ["mentions", "list:Друзья"]}})
         self.assertEqual(errors, [])
+
+    def test_subs_a_slow_thread_waits(self):
+        """A followed thread the server times out on: the others are still checked,
+        the reader sees no error, and it isn't asked again at once."""
+        from fedtail.core import subs
+        alice = fakes.acct("A", "alice@example.org")
+        core, w = self.make()
+        core.connect().result()
+        core.poll_once()
+        core.cfg["subs"]["interval_minutes"] = 0
+        w.add(status("100", ME, minute=20), home=True)
+        w.add(status("200", ME, minute=21), home=True)
+        core.poll_once()
+        w.add(status("101", alice, "100", "ME", minute=22))
+        w.add(status("201", alice, "200", "ME", minute=23))
+        asked = []
+        real_context = core.api.context
+
+        def context(sid):
+            asked.append(sid)
+            if sid == "100":
+                raise TimeoutError("read timed out")
+            return real_context(sid)
+        core.api.context = context
+        self.events.clear()
+        new = subs.check(core.store, core.api, core.me["id"], 60, 30, 10)
+        self.assertEqual(sorted(asked), ["100", "200"])
+        self.assertTrue(new)  # 201 came
+        self.assertFalse([e for e in self.events if e[0] == "error"])
+        asked.clear()
+        subs.check(core.store, core.api, core.me["id"], 60, 30, 10)
+        self.assertEqual(asked, [])  # both checked just now: wait their turn
 
     def test_thread_subscriptions(self):
         alice = fakes.acct("A", "alice@example.org")

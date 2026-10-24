@@ -55,6 +55,10 @@ button_radius = 4
 avatar = 48
 unread_mark = "star"
 
+[pictures]
+# plain shapes in one colour, the lines cut out — not the messengers' glossy buttons
+style = "silhouette"
+
 [icon]
 bg_top = "#000000"
 bg_bottom = "#000000"

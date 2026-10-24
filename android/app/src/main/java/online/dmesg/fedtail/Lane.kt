@@ -274,7 +274,7 @@ private fun Switcher(model: AppModel, close: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SmallHead(stringResource(if (model.hubPinned.isEmpty()) R.string.hub_title
                                          else R.string.sec_pinned), Modifier.weight(1f))
-                TextButton(onClick = { close(); model.openSettings("pinned") }) {
+                TextButton(onClick = { close(); model.editPins() }) {
                     Text(stringResource(R.string.change))
                 }
             }

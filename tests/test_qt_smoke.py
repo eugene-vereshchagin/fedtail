@@ -1622,6 +1622,35 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "040" not in lane.view.rows)
         self.assertEqual(self.win.lane_items["home"].count, len(lane.view.unread_keys()))
 
+    def test_settings_window_writes_one_line(self):
+        """≡ → Settings: the chapters of config.toml; a tick goes into the file at once,
+        that line only, and Restart turns up; the search finds over every chapter."""
+        from fedtail.frontends.common import settings
+        from fedtail.frontends.qt.settings import SettingsDialog
+        f = self.core.paths.config_file
+        f.write_text(config.example_text("ru"), "utf-8")
+        self.assertIn(i18n._("settings"), [a.text() for a in self.win._app_menu().actions()])
+        dlg = SettingsDialog(self.win)
+        dlg.show()
+        self.pump(0.1)
+        self.assertEqual(dlg.list.count(), len(dlg.chapters))
+        o = settings.option(dlg.chapters, "ui.bookmark_button")
+        before = f.read_text("utf-8")
+        dlg.controls[o.name].setChecked(not o.value)
+        self.pump(until=lambda: f.read_text("utf-8") != before)
+        after = f.read_text("utf-8")
+        self.assertEqual(len(before.splitlines()), len(after.splitlines()))
+        self.assertEqual(sum(a != b for a, b in zip(before.splitlines(), after.splitlines(),
+                                                    strict=True)), 1)
+        self.assertTrue(dlg.restart.isVisibleTo(dlg))
+        self.pump(0.1)  # drawn again: the card has Default now
+        self.assertTrue(settings.option(dlg.chapters, o.name).changed)
+        dlg.search.setText("шрифт")
+        dlg._searched()
+        self.assertIn("ui.font_size", dlg.controls)
+        self.assertNotIn("ui.bookmark_button", dlg.controls)
+        dlg.close()
+
     def test_menu_keeps_only_what_is_not_on_screen(self):
         _ = i18n._
         texts = [a.text().split("\t")[0] for a in self.win._app_menu().actions()]
@@ -2567,6 +2596,36 @@ class QtSmokeTest(unittest.TestCase):
         cfg, _ = config.validate({"ui": {"theme": "terminal"}})
         t = themes.apply(self.app, cfg)
         self.assertEqual(t.bg, "#000000")
+
+    def test_theme_font_beats_the_desktops_class_fonts(self):
+        """A platform theme (KDE) gives labels, lists, buttons, the status bar fonts of
+        their own; a theme's font goes on them too — bnw's monospace came out sans on
+        KDE everywhere but the inputs."""
+        from PySide6.QtGui import QFont
+        from PySide6.QtWidgets import QApplication
+
+        from fedtail.frontends.qt import theme as themes
+        sans = QFont("Sans Serif", 13)
+        try:
+            for c in themes.CLASS_FONTS:  # as the desktop's theme would
+                QApplication.setFont(sans, c)
+            themes._desktop = None
+            themes.apply(self.app, config.validate({"ui": {"theme": "bnw"}})[0])
+            desktops = themes._desktop[2]["QLabel"]  # what the desktop had (Windows may
+            # keep its own whatever was set above: compared with that, not with 13)
+            app_font = QApplication.font()
+            for c in ("QLabel", "QStatusBar", "QAbstractItemView", "QPushButton"):
+                self.assertEqual(QApplication.font(c).families()[:1],
+                                 app_font.families()[:1], c)
+            # back to the desktop's: its own class fonts come back with it
+            themes.apply(self.app, config.validate({"ui": {"fonts": "system"}})[0])
+            self.assertEqual(QApplication.font("QLabel").families()[:1],
+                             desktops.families()[:1])
+        finally:
+            for c in themes.CLASS_FONTS:
+                QApplication.setFont(QApplication.font(), c)
+            themes._desktop = None
+            themes.apply(self.app, config.validate({})[0])
 
     def test_paper_brings_its_font_and_ui_font_wins(self):
         from fedtail.frontends.qt import theme as themes

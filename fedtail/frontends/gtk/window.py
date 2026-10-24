@@ -85,13 +85,14 @@ class LaneRow(Gtk.ListBoxRow):
         if theme is not None:  # the lane's picture, as the theme has it
             from .. import iconpack
             from . import icons
-            pic = icons.image(iconpack.lane_picture(name), theme, 18) \
+            pic = icons.image(iconpack.lane_picture(name), theme,
+                              int(theme.shape.get("icon_size", 18) or 18)) \
                 if icons.pictures(theme) else None
             if pic is not None:
                 box.append(pic)
             elif icons.pictures(theme):
                 spacer = Gtk.Box()
-                spacer.set_size_request(18, -1)
+                spacer.set_size_request(int(theme.shape.get("icon_size", 18) or 18), -1)
                 box.append(spacer)
         lab = Gtk.Label(label=title, xalign=0)
         lab.set_hexpand(True)
@@ -279,6 +280,10 @@ class MainWindow(Gtk.ApplicationWindow):
             getattr(bar, "set_margin_" + m)(6)
         bar.append(self.profile_label)
         bar.append(self.status_line)
+        # sync with my other devices (or that there is none: off without sync.url)
+        self.sync_label = Gtk.Label(xalign=1)
+        self.sync_label.add_css_class("ft-muted")
+        bar.append(self.sync_label)
         corner = self._debug_corner()
         self.corner_label = None
         if corner:
@@ -288,6 +293,7 @@ class MainWindow(Gtk.ApplicationWindow):
             bar.append(lab)
             self.corner_label = lab
         self._profile_text()
+        self._sync_text()
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         outer.add_css_class("fedtail-main")
         # the editor comes over the window's middle (as Qt's), not as a window of its own
@@ -695,6 +701,13 @@ class MainWindow(Gtk.ApplicationWindow):
         build = info["version"] + (f" · {info['date']}" if info["date"] else "")
         return f"fedtail {build}\n" + _("made_by").replace("<br>", "\n")
 
+    def _sync_text(self):
+        """"⇅ 21:40" / "⇅ off" / "⇅ !" in the status bar, the details as its tooltip."""
+        from ..common import syncline
+        text, tip_text = syncline.bar(self.view)
+        self.sync_label.set_text(text)
+        self.sync_label.set_tooltip_text(tip_text)
+
     def _profile_text(self):
         """"default: @me@server ★" at the left of the status bar."""
         from ...core import paths
@@ -711,9 +724,11 @@ class MainWindow(Gtk.ApplicationWindow):
         """≡ ↔ ❯ with the theme's pictures (or the desktop's, or the glyphs)."""
         from . import icons
         t = self.theme
-        icons.dress(self.menu_btn, "menu", t, glyph="≡")
-        icons.dress(self.wide_btn, "wide", t, glyph="↔")
-        icons.dress(self.columns_btn, "columns", t, glyph="❯")
+        # as Qt's: a third bigger than the lanes' pictures, 26 px at most
+        px = min(26, round(int(t.shape.get("icon_size", 18) or 18) * 4 / 3))
+        icons.dress(self.menu_btn, "menu", t, glyph="≡", size=px)
+        icons.dress(self.wide_btn, "wide", t, glyph="↔", size=px)
+        icons.dress(self.columns_btn, "columns", t, glyph="❯", size=px)
 
     def _debug_corner(self):
         """In the debugging mode: how the window is drawn — theme, GTK, libadwaita,
@@ -970,12 +985,29 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def set_merged(self, on):
         """All accounts in one window or not: remembered, then fedtail restarts."""
-        from ...core import profiles
         primary = getattr(self.core, "primary", self.core)
         primary.set_state("merge", ["all"] if on else [])
         log.info("merge %s: restarting", "on" if on else "off")
-        profiles.launch(primary.paths.profile, after=1.5)
-        GLib.timeout_add(200, lambda: (self.close(), False)[1])
+        self.restart()
+
+    def restart(self):
+        """fedtail again, the same profile: once this process has gone."""
+        import os
+
+        from ...core import profiles
+        primary = getattr(self.core, "primary", self.core)
+        profiles.launch(primary.paths.profile, after=0.5, wait_for=os.getpid())
+        GLib.timeout_add(200, lambda: (self.quit_app(), False)[1])
+
+    def open_settings(self, query=""):
+        """The settings window (gtk/settings.py; what it shows: common/settings.py)."""
+        from .settings import SettingsWindow
+        win = getattr(self, "_settings", None)
+        if win is None or not win.get_visible():
+            win = self._settings = SettingsWindow(self)
+        if query:
+            win.search.set_text(query)
+        win.present()
 
     def add_account(self):
         from ...core import paths as paths_module
@@ -1042,34 +1074,9 @@ class MainWindow(Gtk.ApplicationWindow):
                      yes=_("logout_yes"))
 
     def about(self):
-        import platform
-        from importlib import resources
-
-        from ... import version
-        from ...model.text import html_to_text
-        info = version.info()
-        about = Gtk.AboutDialog(transient_for=self, modal=True)
-        about.set_program_name("fedtail")
-        about.set_version(info["version"])
-        # the opossum holding its own tail, as in Qt's About (else the window's icon)
-        try:
-            pic = resources.files("fedtail").joinpath("data/icons/fedtail.png")
-            about.set_logo(Gdk.Texture.new_from_filename(str(pic)))
-        except (GLib.Error, OSError):
-            about.set_logo_icon_name(self.get_icon_name() or "online.dmesg.fedtail")
-        about.set_website(version.HOMEPAGE)
-        # the same words as Qt's: what it is, which build, on what, who made it
-        tagline = html_to_text(_("about_text", version=info["version"])).split("\n")[-1]
-        lines = [tagline.strip()]
-        if info["commit"]:
-            lines.append(_("about_build", commit=info["commit"], date=info["date"]))
-        lines.append("Python " + platform.python_version() + " · GTK " +
-                     ".".join(str(x) for x in gtk_version()))
-        lines.append(_("made_by_long"))
-        about.set_comments("\n\n".join(x for x in lines if x))
-        about.set_authors([version.AUTHOR + " " + version.AUTHOR_URL, "Claude (Anthropic)"])
-        about.set_license_type(Gtk.License.GPL_3_0)
-        about.present()
+        """About fedtail: the same cards as Qt's (gtk/about.py, common/about.py)."""
+        from .about import show
+        show(self)
 
     # ---- ↔ and ❯ ------------------------------------------------------------------------
     def set_full_width(self, on):
@@ -1366,7 +1373,9 @@ class MainWindow(Gtk.ApplicationWindow):
     def on_event(self, name, payload):
         if getattr(getattr(self.core, "store", None), "closed", False):
             return  # queued before the exit, come after the database closed
-        if name == "read_changed":  # marks only: no lane is rebuilt for them
+        if name == "sync_changed":
+            self._sync_text()
+        elif name == "read_changed":  # marks only: no lane is rebuilt for them
             for lname, lv in self.lane_views.items():
                 if lname in SPECIAL:
                     continue
@@ -1487,7 +1496,9 @@ class MainWindow(Gtk.ApplicationWindow):
             if items:
                 title.set_text(_("thread") + ": " + _short(items[0].post))
                 page.head.show(posts, short)
-            if unread:
+            # read as it opens — unless read.mark_read = "manual" (as Qt's thread: the
+            # behaviour check of 23.10 found GTK marking a thread read regardless)
+            if unread and self.cfg["read"]["mark_read"] != "manual":
                 self.view.mark_read(sorted(unread))
             if focus is not None:
                 GLib.idle_add(lambda: (_scroll_to(page, box, focus), GLib.SOURCE_REMOVE)[1])

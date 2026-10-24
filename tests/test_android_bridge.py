@@ -216,13 +216,10 @@ class BridgeTest(TmpDir):
     def test_pinned_lanes_come_as_tiles_in_their_order(self):
         self.demo()
         self.assertEqual(self.call("hub")["pinned"], [])  # none: every counted lane
-        text = self.call("config_text")["text"]
-        mine = text.replace("pinned = []", 'pinned = ["home", "list:новости", "replies"]', 1)
-        self.assertEqual(self.call("config_save", mine), {"ok": True})
-        self.call("open")
+        self.assertEqual(self.call("pin", '["home", "list:L1", "nowhere", "replies"]'),
+                         {"ok": True})
         self.assertEqual(self.call("hub")["pinned"], ["home", "list:L1", "replies"])
-        bad = text.replace("pinned = []", 'pinned = ["sideways"]', 1)
-        self.assertIn("phone.pinned", json.loads(self.bridge.config_save(bad))["error"])
+        self.assertEqual(self.bridge._s["core"].pinned_tiles()[0], "home")  # the core's
 
     def test_the_settings_page(self):
         self.demo()
@@ -235,11 +232,11 @@ class BridgeTest(TmpDir):
         self.assertNotIn(("ui", "font"), opts)
         self.assertIn(("ui", "language"), opts)
         order = opts[("feed", "order")]
-        self.assertEqual(order["type"], "str")
-        self.assertIn("newest_first", order["choices"])
-        self.assertTrue(order["help"])
+        self.assertEqual(order["kind"], "choice")
+        self.assertIn("newest_first", [v for v, _w in order["choices"]])
+        self.assertTrue(order["title"] and order["about"])
         self.assertEqual(opts[("ui", "command_line")]["value"], False)  # the phone's
-        self.assertEqual(opts[("phone", "pinned")]["type"], "list")
+        self.assertEqual(opts[("phone", "overview")]["kind"], "choice")
         before = self.bridge._s["core"]
         self.assertEqual(self.call("setting_set", "feed", "order", '"newest_first"')["value"],
                          "newest_first")
@@ -247,8 +244,10 @@ class BridgeTest(TmpDir):
         bad = json.loads(self.bridge.setting_set("feed", "order", '"sideways"'))
         self.assertIn("error", bad)
         self.assertIn('order = "newest_first"', self.call("config_text")["text"])  # kept
-        self.assertEqual(self.call("setting_set", "phone", "pinned", '["home"]')["value"],
-                         ["home"])
+        self.assertEqual(self.call("setting_set", "phone", "overview", '"list"')["value"],
+                         "list")
+        self.assertEqual(self.call("setting_set", "phone", "overview", "null")["value"],
+                         "tiles")  # the default again
         self.assertIs(self.bridge._s["core"], before)  # not remade at every tap…
         self.assertEqual(self.call("settings_apply"), {"restarted": True})  # …but on leaving
         self.assertIsNot(self.bridge._s["core"], before)

@@ -40,7 +40,7 @@
     <string name="config">Config</string>
     <string name="save">Save</string>
     <string name="sync">Sync</string>
-    <string name="sync_off">Sync is off. Turn it on in the config: [sync] enabled = true, then the server or the folder (docs/en/sync.md).</string>
+    <string name="sync_off">Sync is off. Say where it goes in the settings: sync.url (a sync server) or sync.folder (a folder your devices share).</string>
     <string name="sync_where">Where</string>
     <string name="sync_login">Sync server login</string>
     <string name="sync_key_id">Key id</string>
@@ -98,4 +98,5 @@
     <string name="find_setting">Find a setting</string>
     <string name="default_is">by default: %1$s</string>
     <string name="reset">reset</string>
+    <string name="done">done</string>
 </resources>

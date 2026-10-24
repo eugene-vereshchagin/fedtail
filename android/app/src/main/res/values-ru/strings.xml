@@ -39,7 +39,7 @@
     <string name="config">Конфиг</string>
     <string name="save">Сохранить</string>
     <string name="sync">Синхронизация</string>
-    <string name="sync_off">Синхронизация выключена. Включи в конфиге: [sync] enabled = true, и сервер или папку (docs/ru/sync.md).</string>
+    <string name="sync_off">Синхронизация выключена. Укажи в настройках, куда: sync.url (сервер синхронизации) или sync.folder (общая папка устройств).</string>
     <string name="sync_where">Где</string>
     <string name="sync_login">Вход на сервер синхронизации</string>
     <string name="sync_key_id">Id ключа</string>
@@ -97,4 +97,5 @@
     <string name="find_setting">Найти настройку</string>
     <string name="default_is">по умолчанию: %1$s</string>
     <string name="reset">сбросить</string>
+    <string name="done">готово</string>
 </resources>

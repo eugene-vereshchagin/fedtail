@@ -17,13 +17,13 @@ in the config — "*" for anyone.
 It lives apart from the fedtail package on purpose: an admin copies this one file to
 the server, nothing else of fedtail is needed there.
 
-Behind nginx/Caddy for TLS. docs/en/sync.md has the config, a systemd unit, the proxy
-lines, and the `/.well-known/fedtail-sync` that lets fedtail find this server by itself.
+Behind nginx/Caddy or a Cloudflare tunnel for TLS, on a name of its own: it is a
+service apart from the fediverse server, and fedtail finds it only by the address the
+user puts in sync.url. docs/en/sync.md has the config, a systemd unit, the proxy lines.
 
-API (JSON; every call but the first two needs the token):
+API (JSON; every call but the first needs the token):
 
     GET    /v1                         {"fedtail-sync": version}
-    GET    /.well-known/fedtail-sync   {"url": public_url}  (when public_url is set)
     POST   /v1/blobs                   body: one blob; X-Fedtail-Device → {"seq": n}
     GET    /v1/blobs?after=N&limit=M&exclude=DEVICE
                                        {"blobs": [{"seq", "device", "data": base64}],
@@ -55,7 +55,6 @@ DEFAULTS = {
     "listen": "127.0.0.1:8471",
     "db": "fedtail-sync.db",
     "instances": [],            # hosts whose accounts are served; ["*"] — any
-    "public_url": "",           # this server as devices reach it (for the well-known)
     "quota_mb": 20,             # per account
     "max_blob_kb": 512,
     "requests_per_minute": 120,  # per account
@@ -71,6 +70,10 @@ CREATE TABLE IF NOT EXISTS blobs (
 );
 CREATE INDEX IF NOT EXISTS blobs_account ON blobs (account, seq);
 """
+# options of older versions: public_url fed /.well-known/fedtail-sync, gone with
+# fedtail 0.19 (it no longer looks the server up)
+RETIRED = {"public_url"}
+RETIRED_WHY = "no more /.well-known: fedtail takes the address from sync.url"
 TOKEN_TTL = 600      # a verified token is believed this long, seconds
 REFUSED_TTL = 60     # a refused one is refused without asking again this long
 PAGE_MAX = 500
@@ -243,10 +246,6 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if method == "GET" and url.path in ("/v1", "/v1/"):
                 return self._send(200, {"fedtail-sync": VERSION})
-            if method == "GET" and url.path == "/.well-known/fedtail-sync":
-                if not self.app.cfg["public_url"]:
-                    return self._send(404, {"error": "public_url is not set"})
-                return self._send(200, {"url": self.app.cfg["public_url"]})
             if url.path != "/v1/blobs":
                 return self._send(404, {"error": "no such thing"})
             acc = self.app.account(self.headers)
@@ -288,6 +287,9 @@ def make_http_server(app):
 def load_config(path):
     with open(path, "rb") as f:
         data = tomllib.load(f)
+    for gone in RETIRED & set(data):  # an older config: said, not fatal
+        log.warning("option %s is gone (%s) — ignored", gone, RETIRED_WHY)
+        del data[gone]
     unknown = set(data) - set(DEFAULTS)
     if unknown:
         raise SystemExit(f"fedtail-sync: unknown options {sorted(unknown)} in {path}")
@@ -302,13 +304,13 @@ def main(argv=None):
     p.add_argument("--instance", action="append", help="a server whose people are served "
                    "(again for more; * — anyone)")
     a = p.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     cfg = load_config(a.config) if a.config else {}
     for k in ("listen", "db"):
         if getattr(a, k):
             cfg[k] = getattr(a, k)
     if a.instance:
         cfg["instances"] = a.instance
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     app = Server(cfg)
     if not app.allowed:
         log.warning("no instances allowed: every request will be refused (set instances)")

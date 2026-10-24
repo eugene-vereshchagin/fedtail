@@ -1157,6 +1157,10 @@ function renderForm(fields) {
       lab.append(inp);
       get[f.name] = () => inp.value;
     }
+    if (f.tip) {  // the whole explanation on hover, its last line (the option's name) under it
+      lab.title = f.tip;
+      lab.append(el("small", "field-tip", f.tip.split("\n").slice(-1)[0]));
+    }
     box.append(lab);
   }
   const values = () => Object.fromEntries(Object.entries(get).map(([k, f]) => [k, f()]));
@@ -1204,6 +1208,7 @@ function compose(replyTo) {
   $("#schedbox").hidden = true;
   $("#sched-at").value = "";
   $("#lang").value = (state.me.editor || {}).language || "";
+  fillFrom(replyTo);
   const t = $("#text");
   $("#compose-title").textContent = replyTo ? w("reply") : w("web_new_post");
   const line = $("#reply-line");
@@ -1228,6 +1233,26 @@ function compose(replyTo) {
   if (!d.open) d.showModal();
   t.focus();
   t.setSelectionRange(t.value.length, t.value.length);
+}
+
+// all accounts in one window: whom it goes from — the account that got the post replied
+// to (its id says: "work~…"), the main one for a new post; whole @name@server each
+function fillFrom(replyTo) {
+  const sel = $("#from");
+  const accounts = (state.me.editor || {}).accounts || [];
+  sel.hidden = accounts.length < 2 || !!state.edit;
+  if (sel.hidden) return;
+  sel.textContent = "";
+  for (const [key, label] of accounts) {
+    const o = el("option", "", label);
+    o.value = key;
+    sel.append(o);
+  }
+  const sid = replyTo ? String(replyTo.sid || "") : "";
+  const tag = sid.includes("~") ? sid.split("~")[0] : "";
+  sel.value = accounts.some(([k]) => k === tag) ? tag : "";
+  sel.dataset.first = sel.value;
+  sel.title = w("post_from_tip");
 }
 
 const VIS_ORDER = ["public", "unlisted", "followers", "direct"];
@@ -1272,7 +1297,8 @@ async function send(e) {
       poll: state.poll && !state.media.length ? {
         options: state.poll.options, expires_in: state.poll.expires_in,
         multiple: state.poll.multiple } : null,
-      scheduled_at: $("#schedbox").hidden ? null : ($("#sched-at").value || null) });
+      scheduled_at: $("#schedbox").hidden ? null : ($("#sched-at").value || null),
+      account: $("#from").hidden ? null : $("#from").value });
     store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
     $("#text").value = "";
     toast(r.message || w("sent"));

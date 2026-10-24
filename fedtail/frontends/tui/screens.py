@@ -216,6 +216,8 @@ class PlaceScreen(Screen):
                         border-bottom: solid $primary-background; }
     PlaceScreen #form Input, PlaceScreen #form Select { width: 1fr; }
     PlaceScreen #form TextArea { height: 6; }
+    PlaceScreen #form .checks { height: auto; }
+    PlaceScreen #form .tip { height: auto; margin-bottom: 1; }
     PlaceScreen #posts { height: 1fr; }
     PlaceScreen #posts > ListItem { padding: 0 1 1 1; }
     """
@@ -314,6 +316,8 @@ class PlaceScreen(Screen):
         await box.remove_children()
         self.form_widgets = {}
         box.display = bool(page.form or page.submit)
+        # a place that is all form (the settings): the form takes the screen
+        box.styles.max_height = "75%" if page.name == "settings" else "60%"
         if not box.display:
             return
         widgets = []
@@ -325,7 +329,8 @@ class PlaceScreen(Screen):
                 if f.label:
                     widgets.append(Label(f.label))
                 boxes = [(v, Checkbox(words, v in (f.value or ()))) for v, words in f.choices]
-                widgets.append(Horizontal(*[b for _v, b in boxes], classes="checks"))
+                row = Horizontal if len(boxes) <= 4 else Vertical  # many: one under another
+                widgets.append(row(*[b for _v, b in boxes], classes="checks"))
                 w = boxes
             elif f.kind == "choice":
                 widgets.append(Label(f.label))
@@ -341,6 +346,8 @@ class PlaceScreen(Screen):
                 w = Input(value=str(f.value or ""), placeholder=f.label)
                 widgets.append(w)
             self.form_widgets[f.name] = w
+            if f.tip:
+                widgets.append(Static(Text(f.tip, style="dim"), classes="tip"))
         if page.submit is not None:
             widgets.append(Button(page.submit.label + "  (Ctrl+S)", id="submit",
                                   variant="primary" if page.submit.primary else "default"))
@@ -585,7 +592,17 @@ class ComposeScreen(Screen):
         elif st.hint:
             yield Static(_(st.hint), id="c-hint")
         vis = "followers" if st.visibility == "private" else st.visibility
+        # all accounts in one window: whom it goes from, whole @name@server (as the windows)
+        rid = None if self.reply_to is None else getattr(real(self.reply_to), "id",
+                                                         self.reply_to)
+        pick = getattr(core, "post_accounts", None)
+        accounts, first = pick(rid) if pick is not None else ([], "")
+        self.accounts = accounts if len(accounts) > 1 and self.edit is None else []
         with Horizontal(id="c-row"):
+            if self.accounts:
+                yield Select([(_("post_from", acct=h), k) for k, h in self.accounts],
+                             value=first if first in [k for k, _h in self.accounts] else "",
+                             allow_blank=False, id="c-from")
             yield Select([(_(VIS_WORD[v]), v) for v in VISIBILITIES],
                          value=vis if vis in VISIBILITIES else "followers", allow_blank=False,
                          id="c-vis")
@@ -596,6 +613,8 @@ class ComposeScreen(Screen):
         yield Footer()
 
     def on_mount(self):
+        if self.accounts:
+            self.query_one("#c-from", Select).tooltip = _("post_from_tip")
         ta = self.query_one("#c-text", TextArea)
         ta.text = self.start.text or ""
         self.media = [tuple(m)[:2] for m in self.start.media or ()]
@@ -736,7 +755,9 @@ class ComposeScreen(Screen):
                             quote=self.quote, draft_key=self.key, media=list(self.media),
                             sensitive=self.sensitive and bool(self.media),
                             poll=None if self.media else self.poll,
-                            scheduled_at=cc.when_utc(self.when))
+                            scheduled_at=cc.when_utc(self.when),
+                            **({"account": self.query_one("#c-from", Select).value}
+                               if self.accounts else {}))
 
         def ok(_p):
             self.sending = False

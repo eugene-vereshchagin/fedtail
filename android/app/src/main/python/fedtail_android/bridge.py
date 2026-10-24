@@ -18,6 +18,7 @@ a copy of their logic.
     open()                                   connect, start polling → me + lanes
     lanes() / lane(name, keep)               the sidebar; a lane's cards
     hub()                                    every lane by kind, its count, its first unread
+    pin(names)                               which lanes are the overview's tiles, in order
     read(ids) / refresh() / pause(on)        marks; a round now; out of sight
     wait(since, seconds)                     blocks until something changed → version
     thread(id)                               a thread as a tree: numbers and depths
@@ -288,27 +289,20 @@ def hub():
         walk = [x for k in ("you", "reading", "lists") for x in sections[k]]
         every = [x for v in sections.values() for x in v]
         return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],
-                "pinned": _pinned(core.cfg["phone"]["pinned"], every),
+                "pinned": [n for n in core.pinned_tiles() if any(x["name"] == n for x in every)],
                 "order": [x["name"] for x in walk if x["unread"]],
                 "unread": sum(x["unread"] for x in walk),
                 "with_news": sum(1 for x in walk if x["unread"])}
     return _answer(go)
 
 
-def _pinned(wanted, lanes):
-    """phone.pinned → the lanes' names here, in its order: a lane by its name, a list by
-    "list:" and its title (or its id); what isn't here (a list gone) is left out."""
-    out = []
-    for want in wanted:
-        if want.startswith("list:"):
-            key = want[5:].casefold()
-            got = next((x["name"] for x in lanes if x["name"].startswith("list:") and
-                        (x["title"].casefold() == key or x["name"][5:].casefold() == key)), None)
-        else:
-            got = next((x["name"] for x in lanes if x["name"] == want), None)
-        if got and got not in out:
-            out.append(got)
-    return out
+def pin(names_json):
+    """The tiles of the overview, in their order (the core keeps them and sync carries
+    them to the other devices: sync.tiles). [] — every counted lane is a tile."""
+    def go():
+        _core().set_pinned_tiles(list(json.loads(names_json or "[]")))
+        return {"ok": True}
+    return _answer(go)
 
 
 def _peek(core, name):
@@ -453,76 +447,42 @@ ONLY_ON_PHONE = {
 }
 
 
-def _chapters(example):
-    """{section: chapter title} from the example's "#  N. Title" banners."""
-    import re
-    out, title = {}, ""
-    for line in example.splitlines():
-        m = re.match(r"^#\s+\d+\.\s+(\S.*?)\s*$", line)
-        if m and "...." not in line:
-            title = m.group(1)
-            continue
-        m = re.match(r"^\[([A-Za-z0-9_]+)\]\s*$", line)
-        if m:
-            out.setdefault(m.group(1), title)
-    return out
-
-
-def _file_cfg(text):
-    import tomllib
-
-    from fedtail.core import config
-    return config.validate(tomllib.loads(text))[0]
+def _on_phone(o):
+    return o.section not in NOT_ON_PHONE and \
+        (o.section not in ONLY_ON_PHONE or o.key in ONLY_ON_PHONE[o.section])
 
 
 def settings():
-    """→ {"chapters": [{"title", "options": [{section, key, type, value, default, choices,
-    help}]}]} — every option, its value now (from the file), its explanation."""
+    """The desktop's settings window, as data (frontends/common/settings.py — the same
+    chapters, names, explanations and choices; only what the phone heeds): →
+    {"chapters": [{"title", "options": [{section, key, kind, title, about, value,
+    default, choices: [[value, words]], changed, group, minimum}]}]}."""
     def go():
-        from fedtail.core import config
-        from fedtail.core.config_update import parse_example
-        path = _core().paths.config_file
-        text = path.read_text("utf-8")
-        cfg = _file_cfg(text)
-        example = config.example_text(config.language_of(text))
-        titles = _chapters(example)
-        chapters = {}
-        for section, opts in parse_example(example).items():
-            if section in NOT_ON_PHONE or section not in config.DEFAULTS:
-                continue
-            for key, lines in opts:
-                if key not in config.DEFAULTS[section]:
-                    continue
-                if section in ONLY_ON_PHONE and key not in ONLY_ON_PHONE[section]:
-                    continue
-                default = config.DEFAULTS[section][key]
-                kind = {bool: "bool", int: "int", float: "float", str: "str",
-                        list: "list"}.get(type(default))
-                if kind is None:
-                    continue
-                words = "\n".join(x.lstrip()[1:].strip() for x in lines[:-1])
-                choices = config.CHOICES.get((section, key))
-                chapters.setdefault(titles.get(section, section), []).append({
-                    "section": section, "key": key, "type": kind,
-                    "value": cfg[section][key], "default": default,
-                    "choices": sorted(choices) if choices else None, "help": words})
-        return {"chapters": [{"title": t, "options": o} for t, o in chapters.items()]}
+        from fedtail.frontends.common import settings as common
+        out = []
+        for ch in common.model(_s["web"].core):
+            opts = [{"section": o.section, "key": o.key, "kind": o.kind, "title": o.title,
+                     "about": o.about, "value": o.value, "default": o.default,
+                     "choices": [[v, w] for v, w in o.choices], "changed": o.changed,
+                     "group": o.group, "minimum": o.minimum}
+                    for o in ch.options if _on_phone(o)]
+            if opts:
+                out.append({"title": ch.title, "options": opts})
+        return {"chapters": out}
     return _answer(go)
 
 
 def setting_set(section, key, value_json):
-    """One option into the file, checked first (a wrong value never lands): → {"ok",
-    "value": what it is now} or {"error": what's wrong}."""
+    """One option into the file — the desktop's way (core/config_edit: that one line,
+    checked, config.toml.bak); null puts the default back. → {"ok", "value"} or {"error"}."""
     def go():
-        from fedtail.core.config_update import set_option
-        path = _core().paths.config_file
-        text = set_option(path.read_text("utf-8"), section, key, json.loads(value_json))
-        cfg = _file_cfg(text)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(text, "utf-8")
-        os.replace(tmp, path)
+        from fedtail.frontends.common import settings as common
+        value = json.loads(value_json)
+        common.save(_s["web"].core, {(section, key): common.UNSET if value is None else value})
         _s["settings_changed"] = True
-        return {"ok": True, "value": cfg[section][key]}
+        now = common.option(common.model(_s["web"].core), f"{section}.{key}")
+        return {"ok": True, "value": now.value if now else value,
+                "changed": bool(now and now.changed)}
     return _answer(go)
 
 

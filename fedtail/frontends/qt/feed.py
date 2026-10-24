@@ -860,6 +860,14 @@ class _Header(QWidget):
         self.info.setTextFormat(Qt.TextFormat.PlainText)
         self.h.addWidget(self.info, 2)
 
+        # a narrow window: the header gives way instead of holding the window wide (the
+        # tour of 23.10: no lane narrower than 860–1350 px, by theme and font) — first
+        # the pictures' buttons drop their words, then the words' buttons keep only
+        # their glyph ("↓ To new" → "↓"), then the note goes
+        self.setMinimumWidth(160)
+        self._words = {}  # button → (its words, its tooltip) as made
+        self._level = 0
+
     def add(self, w):
         # the split layout: a button with a picture shows only the picture, its words
         # in the tooltip — a row of words over every lane was a heap of buttons
@@ -868,7 +876,37 @@ class _Header(QWidget):
             w.setToolTip(w.toolTip() or w.text())
             w.setText("")
         self.h.addWidget(w)
+        if isinstance(w, QPushButton) and w.text() and w.objectName() != "seg":
+            self._words[w] = (w.text(), w.toolTip())
         return w
+
+    def _apply(self, level):
+        for b, (text, tip) in self._words.items():
+            if level >= 1 and not b.icon().isNull():
+                b.setText("")
+                b.setToolTip(tip or text)
+            elif level >= 2 and " " in text and len(text.split(" ", 1)[0]) <= 2:
+                b.setText(text.split(" ", 1)[0])  # the glyph that leads the words
+                b.setToolTip(tip or text)
+            else:
+                b.setText(text)
+                b.setToolTip(tip)
+        self.info.setVisible(level < 3)
+        self._level = level
+
+    def _need(self):
+        return self.h.sizeHint().width()
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if not self._words:
+            return
+        width = self.width()
+        level = 0
+        for level in range(4):  # the fullest that fits
+            self._apply(level)
+            if self._need() <= width:
+                break
 
 
 class LaneWidget(QWidget):
@@ -1938,6 +1976,8 @@ class TagWidget(_PagedTab):
             self.feature_btn.setEnabled(False)
             win.bridge.call(self.core.featured_tag_names(), ok=self._featured,
                             fail=lambda _e: self.feature_btn.hide())
+        # one tag kept as a lane of its own, in the sidebar's "Tags" (as a group of them)
+        self.header.add(tag_lanes_button(win, tag))
         win.bridge.call(self.core.tag_info(tag), ok=self._info, fail=lambda _e: None)
         self.more()
 
@@ -2362,6 +2402,36 @@ class AccountRow(QFrame):
                              fail=lambda e: (self.btn.setEnabled(True), self.win.error(e)))
 
 
+def tag_lanes_button(win, tag):
+    """"＋ to lanes ▾" beside a tag's Follow: a lane of its own, or into a lane of tags
+    kept in the sidebar (common/taglanes.py)."""
+    from PySide6.QtWidgets import QMenu
+
+    from ..common import taglanes
+    view = win.ctx.view
+    b = _button(_("tags_lanes_menu"), lambda: None, tip=_("tags_lanes_tip"))
+    menu = QMenu(b)
+
+    def fill():
+        menu.clear()
+        for key, words, on in taglanes.choices(view, tag):
+            act = menu.addAction(words)
+            act.setEnabled(on)
+            act.triggered.connect(lambda _c=False, k=key, w=words: go(k, w))
+    menu.aboutToShow.connect(fill)
+    b.setMenu(menu)
+
+    def go(key, words):
+        def done(name):
+            title = view.lane_title(name) or name
+            win.statusBar().showMessage(
+                _("tags_saved", tags="#" + tag) if key == taglanes.OWN
+                else _("tags_added", tag=tag, lane=title), 6000)
+            QTimer.singleShot(300, lambda: win.select_lane(name))
+        win.bridge.call(taglanes.apply(view, key, tag), ok=done, fail=win.error)
+    return b
+
+
 class TagRow(QFrame):
     """#tag with how many people used it lately, Follow tag, and a click to open it.
     tag: a Tag."""
@@ -2382,6 +2452,7 @@ class TagRow(QFrame):
         h.addWidget(label, 1)
         self.btn = _button("", self._toggle)
         h.addWidget(self.btn)
+        h.addWidget(tag_lanes_button(win, tag.name))  # into the sidebar's Tags
         self._paint()
 
     def _paint(self):

@@ -31,11 +31,13 @@ sealed interface Place {
     data object Sync : Place
 }
 
-/** One option of the settings page: the config file's, with its explanation. value and
- *  dflt as JSON text ("\"tiles\"", "true", "[\"home\"]"), to compare and to write back. */
+/** One option of the settings page — the desktop's settings window's (common/settings.py):
+ *  kind bool | int | text | choice | checks | list; value, dflt and each choice's value as
+ *  JSON text ("\"tiles\"", "true", "[\"home\"]"), to compare and to write back. */
 data class Setting(
-    val section: String, val key: String, val type: String, val value: String,
-    val dflt: String, val choices: List<String>?, val help: String,
+    val section: String, val key: String, val kind: String, val title: String,
+    val about: String, val value: String, val dflt: String,
+    val choices: List<Pair<String, String>>, val changed: Boolean, val group: String,
 )
 
 data class SettingsChapter(val title: String, val options: List<Setting>)
@@ -258,6 +260,37 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         return hub.flatMap { s -> s.lanes.map { it to (s.kind == "browse") } }
             .filter { it.first.name !in tiles }
             .sortedBy { if (it.second) 1 else 0 }
+    }
+
+    var editTiles by mutableStateOf(false) // "change" over the tiles: rows to move / remove
+
+    fun editPins() {
+        editTiles = true
+        if (columns == 1) toOverview()
+    }
+
+    /** Pin or unpin a lane as a tile, or move it (by -1 / +1); [] back means "every lane". */
+    fun pinTile(name: String, on: Boolean) {
+        val now = tileLanes().map { it.first.name }
+        val next = if (on) (if (name in now) now else now + name) else now - name
+        savePins(next)
+    }
+
+    fun moveTile(name: String, by: Int) {
+        val now = tileLanes().map { it.first.name }.toMutableList()
+        val i = now.indexOf(name)
+        val j = i + by
+        if (i < 0 || j < 0 || j >= now.size) return
+        now[i] = now[j].also { now[j] = now[i] }
+        savePins(now)
+    }
+
+    private fun savePins(names: List<String>) {
+        hubPinned = names
+        viewModelScope.launch {
+            Core.failed(Core.pin(names))?.let { message = it }
+            loadHub()
+        }
     }
 
     fun laneTitle(name: String): String =
@@ -546,11 +579,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val opts = c.optJSONArray("options") ?: JSONArray()
             SettingsChapter(c.optString("title"), (0 until opts.length()).map { j ->
                 val o = opts.getJSONObject(j)
-                val ch = o.optJSONArray("choices")
-                Setting(o.optString("section"), o.optString("key"), o.optString("type"),
+                val ch = o.optJSONArray("choices") ?: JSONArray()
+                Setting(o.optString("section"), o.optString("key"), o.optString("kind"),
+                    o.optString("title"), o.optString("about"),
                     jsonText(o.opt("value")), jsonText(o.opt("default")),
-                    ch?.let { a -> (0 until a.length()).map { a.getString(it) } },
-                    o.optString("help"))
+                    (0 until ch.length()).map { k ->
+                        val pair = ch.getJSONArray(k)
+                        jsonText(pair.opt(0)) to pair.optString(1)
+                    },
+                    o.optBoolean("changed"), o.optString("group"))
             })
         }
     }
@@ -561,9 +598,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val got = Core.settingSet(opt.section, opt.key, json)
             Core.failed(got)?.let { message = it; return@launch }
             val now = jsonText(got.opt("value"))
+            val changed = got.optBoolean("changed")
             settings = settings.map { c ->
                 c.copy(options = c.options.map {
-                    if (it.section == opt.section && it.key == opt.key) it.copy(value = now) else it
+                    if (it.section == opt.section && it.key == opt.key)
+                        it.copy(value = now, changed = changed) else it
                 })
             }
         }

@@ -153,6 +153,30 @@ class GtkSmokeTest(_GtkBase):
         self.assertLessEqual(lane.list.get_width(), lane.get_width())
         self.assertLessEqual(lane.get_width(), self.win.get_width())
 
+    def test_settings_window_writes_one_line(self):
+        """The settings window as Qt's: a switch goes into config.toml at once, that line
+        only; the search finds over every chapter."""
+        from fedtail.frontends.common import settings
+        from fedtail.frontends.gtk.settings import SettingsWindow
+        self.assertIsNotNone(self.win.lookup_action("settings"))
+        f = self.core.paths.config_file
+        f.write_text(config.example_text("ru"), "utf-8")
+        w = SettingsWindow(self.win)
+        w.present()
+        pump(timeout=0.2)
+        o = settings.option(w.chapters, "ui.bookmark_button")
+        before = f.read_text("utf-8")
+        w.controls[o.name].set_active(not o.value)
+        self.assertTrue(pump(lambda: f.read_text("utf-8") != before))
+        after = f.read_text("utf-8")
+        self.assertEqual(sum(a != b for a, b in zip(before.splitlines(), after.splitlines(),
+                                                    strict=True)), 1)
+        self.assertTrue(w.restart.get_visible())
+        w.search.set_text("шрифт")
+        self.assertTrue(pump(lambda: "ui.font_size" in w.controls))
+        self.assertNotIn("ui.bookmark_button", w.controls)
+        w.close()
+
     def test_the_menu_and_what_it_opens(self):
         """≡ as Qt's: its items made, and each window or tab they open comes up
         without an error (on the fake server)."""
@@ -850,6 +874,25 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(any("→ @w" in t for t in labels), labels)
         self.assertRegex(account_color("@w"), r"^#[0-9a-f]{6}$")
         self.assertEqual(account_color("@w"), account_color("@W"))
+
+    def test_messenger_themes_head_the_card_as_a_chat(self):
+        """shape.card_header = "chat" (qip, mra, icq): "Name (time)" in one line, as Qt's —
+        not the name, the @address and the time apart (the night of 23.10)."""
+
+        from fedtail.frontends.gtk.card import Card
+        theme = self.win.ctx.theme
+        was = theme.shape, theme.words
+        try:
+            theme.shape = dict(was[0], card_header="chat")
+            theme.words = dict(was[1], chat="{name} ({when})")
+            card = Card(self.win.ctx, "x", self.view.by_id("011"))
+        finally:
+            theme.shape, theme.words = was
+        labels = [w.get_text() for w in _walk(card) if isinstance(w, Gtk.Label)]
+        post = self.view.by_id("011")
+        self.assertTrue(any(t.startswith(post.author.name or post.author.handle) and "(" in t
+                            for t in labels), labels)
+        self.assertFalse(any(t == "@" + post.author.handle for t in labels), labels)
 
     def test_a_pictures_menu_saves_it(self):
         from fedtail.model import Media

@@ -172,6 +172,43 @@ class Card(Gtk.Box):
             self._fill_poll(box, post, getattr(self, "poll_peek", False))
 
     # ---- building ----------------------------------------------------------------
+    def _chat_head(self, head, p):
+        """As in ICQ clients and as Qt's (shape.card_header = "chat"): "Name (15:25:43
+        23/06/2007)" bold in one line, mine in one colour, the others' in another; the
+        name leads to the profile, the time to the thread."""
+        ctx = self.ctx
+        mine = p.author.id == ctx.me_id
+        color = ctx.theme.c["chat_me" if mine else "chat_them"].name()
+        when = ctx.theme.date(p.created, ctx.theme.words.get("chat_date")) \
+            if p.created else ""
+
+        def part(url, text):
+            return (f'<a href="{GLib.markup_escape_text(url)}"><span foreground="{color}" '
+                    f'weight="bold">{GLib.markup_escape_text(text)}</span></a>')
+        line = GLib.markup_escape_text(ctx.theme.words.get("chat", "{name} ({when})"))
+        line = line.replace("{name}", part(f"fedtail:account/{p.author.id}",
+                                           name_of(p.author)))
+        line = line.replace("{when}", part(f"fedtail:thread/{p.id}", when))
+        lab = _label(line, ("ft-chat-name",), markup=True)
+        lab.set_ellipsize(Pango.EllipsizeMode.END)  # one line: cut, never wrapped
+        lab.connect("activate-link", self._link)
+        tip(lab, "@" + p.author.handle + " · " + actions.vis_word(p.visibility))
+        head.append(lab)
+        if p.edited:
+            ed = _label(link_markup(f"fedtail:history/{p.id}", _("edited_mark")),
+                        ("ft-muted",), markup=True)
+            ed.connect("activate-link", self._link)
+            head.append(ed)
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        head.append(spacer)
+        if self.short_id:
+            sid = _label(link_markup(f"fedtail:alias/{self.short_id}", "#" + self.short_id),
+                         ("ft-mono",), markup=True)
+            sid.connect("activate-link", self._link)
+            tip(sid, _("short_id_tip"))
+            head.append(sid)
+
     def _build(self, parent, number, my_replies):
         p, ctx, col = self.post, self.ctx, self.column
         if isinstance(self.entry, Share):  # who boosted it (their profile), and when
@@ -195,58 +232,61 @@ class Card(Gtk.Box):
         tip(self.dot, _("unread_tip"))
         head.append(self.dot)
         self.head = head
-        name = _label(name_of(p.author), ("ft-name",))
-        name.set_ellipsize(Pango.EllipsizeMode.END)
-        head.append(name)
-        handle = _label(link_markup(f"fedtail:account/{p.author.id}", "@" + p.author.handle),
-                        ("ft-muted",), markup=True)
-        handle.connect("activate-link", self._link)
-        handle.set_ellipsize(Pango.EllipsizeMode.END)
-        handle.set_hexpand(True)
-        head.append(handle)
-        if self.via:  # → @account, in a colour of its own (ui.account_colors), as Qt's
-            from ..common.lane import account_color
-            text = GLib.markup_escape_text("→ " + self.via)
-            if ctx.cfg["ui"].get("account_colors", True):
-                text = (f'<span background="{account_color(self.via)}" foreground="white">'
-                        f" {text} </span>")
-            via_lab = _label(text, ("ft-via",), markup=True)
-            tip(via_lab, _("via_tip", acct=self.via))
-            head.append(via_lab)
-        if number:
-            head.append(_label(f"/{number}", ("ft-mono",)))
-        if self.short_id:
-            sid = _label(link_markup(f"fedtail:alias/{self.short_id}", "#" + self.short_id),
-                         ("ft-mono",), markup=True)
-            sid.connect("activate-link", self._link)
-            tip(sid, _("short_id_tip"))
-            head.append(sid)
-        # the time (the thread), who sees it, "edited" — as Qt's header has them
-        meta = []
-        if p.created:
-            meta.append(link_markup(f"fedtail:thread/{p.id}", ctx.theme.date(p.created)))
-        from . import icons
-        vis_pic = icons.image(actions.vis_picture(p.visibility), ctx.theme, 14)
-        if vis_pic is None:  # the theme's picture of who sees it, or the word
-            meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
-        if p.edited:
-            meta.append(link_markup(f"fedtail:history/{p.id}", _("edited_mark")))
-        from ..common.lane import age_days
-        days = age_days(p, ctx.cfg)
-        if days:
-            meta.append(GLib.markup_escape_text(_("old_post", n=days)))
-        info = _label(" · ".join(meta), ("ft-muted",), markup=True)
-        tips = [actions.vis_word(p.visibility)]
-        if p.edited:
-            tips.append(_("edited_tip", when=ctx.theme.date(p.edited)))
-        if days:
-            tips.append(_("old_post_tip"))
-        tip(info, "\n".join(tips))
-        info.connect("activate-link", self._link)
-        head.append(info)
-        if vis_pic is not None:
-            tip(vis_pic, actions.vis_word(p.visibility))
-            head.append(vis_pic)
+        if ctx.theme.shape.get("card_header") == "chat":
+            self._chat_head(head, p)
+        else:
+            name = _label(name_of(p.author), ("ft-name",))
+            name.set_ellipsize(Pango.EllipsizeMode.END)
+            head.append(name)
+            handle = _label(link_markup(f"fedtail:account/{p.author.id}", "@" + p.author.handle),
+                            ("ft-muted",), markup=True)
+            handle.connect("activate-link", self._link)
+            handle.set_ellipsize(Pango.EllipsizeMode.END)
+            handle.set_hexpand(True)
+            head.append(handle)
+            if self.via:  # → @account, in a colour of its own (ui.account_colors), as Qt's
+                from ..common.lane import account_color
+                text = GLib.markup_escape_text("→ " + self.via)
+                if ctx.cfg["ui"].get("account_colors", True):
+                    text = (f'<span background="{account_color(self.via)}" foreground="white">'
+                            f" {text} </span>")
+                via_lab = _label(text, ("ft-via",), markup=True)
+                tip(via_lab, _("via_tip", acct=self.via))
+                head.append(via_lab)
+            if number:
+                head.append(_label(f"/{number}", ("ft-mono",)))
+            if self.short_id:
+                sid = _label(link_markup(f"fedtail:alias/{self.short_id}", "#" + self.short_id),
+                             ("ft-mono",), markup=True)
+                sid.connect("activate-link", self._link)
+                tip(sid, _("short_id_tip"))
+                head.append(sid)
+            # the time (the thread), who sees it, "edited" — as Qt's header has them
+            meta = []
+            if p.created:
+                meta.append(link_markup(f"fedtail:thread/{p.id}", ctx.theme.date(p.created)))
+            from . import icons
+            vis_pic = icons.image(actions.vis_picture(p.visibility), ctx.theme, 14)
+            if vis_pic is None:  # the theme's picture of who sees it, or the word
+                meta.append(GLib.markup_escape_text(VIS_WORD.get(p.visibility, p.visibility)))
+            if p.edited:
+                meta.append(link_markup(f"fedtail:history/{p.id}", _("edited_mark")))
+            from ..common.lane import age_days
+            days = age_days(p, ctx.cfg)
+            if days:
+                meta.append(GLib.markup_escape_text(_("old_post", n=days)))
+            info = _label(" · ".join(meta), ("ft-muted",), markup=True)
+            tips = [actions.vis_word(p.visibility)]
+            if p.edited:
+                tips.append(_("edited_tip", when=ctx.theme.date(p.edited)))
+            if days:
+                tips.append(_("old_post_tip"))
+            tip(info, "\n".join(tips))
+            info.connect("activate-link", self._link)
+            head.append(info)
+            if vis_pic is not None:
+                tip(vis_pic, actions.vis_word(p.visibility))
+                head.append(vis_pic)
         col.append(head)
 
         if parent == "missing":
@@ -470,7 +510,8 @@ class Card(Gtk.Box):
         pic.add_css_class("ft-thumb")
         pic.set_overflow(Gtk.Overflow.HIDDEN)
         pic.set_alternative_text(m.alt or _("a11y_no_alt"))
-        src = m.preview or full
+        # a video's still frame only — never the video itself fetched as a picture (as Qt)
+        src = (m.preview or full) if m.kind == "image" else m.preview
         over = Gtk.Overlay()
         over.set_child(pic)
         over.set_overflow(Gtk.Overflow.HIDDEN)

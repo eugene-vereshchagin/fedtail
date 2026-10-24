@@ -465,6 +465,26 @@ class InlineLoop(QObject):
                 pass
 
 
+def stop_all(window):
+    """Every video and looping gif of the window stopped, before the window is restyled
+    and its cards let go: a theme tried with a gif still decoding in a card (its player
+    deleted with the card mid-frame) took the whole program down (23.10, juick-classic)."""
+    for loop in list(_Loops.playing):
+        loop._gone()
+    for loop in window.findChildren(InlineLoop):
+        loop._gone()
+        if loop.player is not None:
+            try:
+                loop.player.setSource(QUrl())
+            except RuntimeError:
+                pass
+    for overlay in window.findChildren(VideoOverlay):
+        try:
+            overlay.close_player()
+        except RuntimeError:
+            pass
+
+
 class AudioBar(QWidget):
     """▶/⏸, a slider and the time: an audio attachment played in its card."""
 

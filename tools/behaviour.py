@@ -38,7 +38,8 @@ def main():
     ref = scenario.run(drivers.Reference())
     lines = ["# Behaviour: the same scenario in every interface", "",
              "Each step through the interface's own way in, held against frontends/common "
-             "(tests/scenario.py). ✓ — the same; ✗ — differs (below); — — not run here.", ""]
+             "(tests/scenario.py). ✓ — the same; ✗ — differs (below); · — not reached (the "
+             "run broke before it); — — not run here.", ""]
     names = ["web", "tui", "qt", "gtk"]
     results, why_not = {}, {}
     for d in [drivers.Web()] + [getattr(drivers, k)() for k in ("Tui", "Qt", "Gtk")
@@ -62,8 +63,10 @@ def main():
             if n not in results:
                 cells.append("—")
                 continue
+            broke = any(d[0] == "(run)" for d in results[n])
             bad = [d for d in results[n] if d[0] == sid]
-            cells.append("✗" if bad else "✓")
+            # a run that broke checked nothing: its steps aren't "the same"
+            cells.append("✗" if bad else "·" if broke else "✓")
         if sid == "(run)" and all(c != "✗" for c in cells):
             continue
         lines.append(f"| {sid} | " + " | ".join(cells) + " |")
@@ -81,6 +84,9 @@ def main():
         for sid, want, got in diffs:
             lines.append(f"| {sid} | {short(want)} | {short(got, 400)} |")
         lines.append("")
+        for sid, _want, got in diffs:
+            if sid == "(run)":  # the whole of it: the table cuts it short
+                lines += ["```", str(got).rstrip(), "```", ""]
     gaps = {k: v for k, v in test_behaviour.host_gaps().items() if v}
     lines += ["## Places a link may ask for, missing in a window", ""]
     lines += [f"- {k}: {', '.join(v)}" for k, v in gaps.items()] or ["none"]

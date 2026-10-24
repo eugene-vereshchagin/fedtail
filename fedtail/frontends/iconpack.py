@@ -40,7 +40,7 @@ from .palette import Color, readable_on
 log = logging.getLogger(__name__)
 
 FALLBACK_DIR = Path(__file__).resolve().parent.parent / "data" / "icons" / "fallback"
-STYLES = ("gloss", "agent", "flat", "qip", "none")
+STYLES = ("gloss", "agent", "flat", "silhouette", "qip", "none")
 SOURCES = ("desktop", "own", "words")             # a theme's [shape] icons
 CHOICES = ("theme", "desktop", "own", "additional", "words")  # ui.icons
 EXTS = (".svg", ".png")
@@ -105,7 +105,8 @@ ALIASES = {"federated": "public", "bookmarks": "bookmark", "my_likes": "star_ful
 # "desktop": the desktop icon theme's names for each, the first found wins
 FREEDESKTOP = {
     "menu": ("application-menu", "open-menu-symbolic"),
-    "wide": (),  # none fits: Qt draws its arrows, GTK the glyph
+    # the desktop's own "fit to width" (Breeze has it): its look, not arrows drawn here
+    "wide": ("zoom-fit-width", "zoom-fit-best", "view-fullscreen"),
     "columns": ("view-split-left-right",),
     "close": ("window-close", "window-close-symbolic"),
     "more": ("overflow-menu", "application-menu", "view-more-symbolic"),
@@ -246,12 +247,14 @@ def missing(theme_id, pset):
 # ---- colouring an SVG -------------------------------------------------------------------
 _SHINE = re.compile(r'<ellipse[^>]*opacity="\.35"/>')
 _WIDTH = re.compile(r'stroke-width="([\d.]+)"')
+_FIRST = re.compile(r"<(?:path|rect|circle|ellipse|polygon|polyline|line)\b[^>]*>")
 
 
 def styled(text, style, base, bg=None):
     """An SVG's blanks filled: {c} base, {l} its light top, {d} the outline — the way
     `style` draws (gloss: a gradient and a shine; agent: a brighter shine, a softer
-    outline; flat: plain colour, no shine; qip: a strong shine, a thick dark outline;
+    outline; flat: plain colour, no shine; silhouette: plain colour, no rim, the inner
+    lines cut out (point.im); qip: a strong shine, a thick dark outline;
     none: the blanks filled, nothing else touched). bg: what the pictures stand on —
     an outline as dark as a dark theme's background is drawn light instead (the
     outline-only pictures, a star, an @, vanished on nord)."""
@@ -261,6 +264,24 @@ def styled(text, style, base, bg=None):
         text = text.replace('opacity=".35"', 'opacity=".55"')
         text = _WIDTH.sub(lambda m: f'stroke-width="{float(m.group(1)) * 1.35:.2f}"', text)
         light, dark = base.lighter(150), base.darker(300)
+    elif style == "silhouette":
+        # point.im's way: one plain colour, no shine, no rim — a filled shape's lines
+        # (the ≡ of a menu, a list's bullets) cut out of it in the background's colour;
+        # a picture drawn only in lines keeps them in its own colour. A darker rim made
+        # every picture a little raised button (23.10)
+        # cut out only when the picture starts with a filled shape the lines lie on
+        # (a menu's box, an envelope); lines drawn first are the picture itself (a
+        # thread's branch, refresh's arc) and keep its colour
+        first = _FIRST.search(text.split("</defs>")[-1])
+        filled = bool(first) and ('fill="url(#g)"' in first.group(0)
+                                  or 'fill="{c}"' in first.group(0))
+        text = _SHINE.sub("", text).replace('fill="url(#g)"', 'fill="{c}"')
+        light = base
+        if filled and bg:
+            back = bg if isinstance(bg, Color) else Color.parse(str(bg))
+            return text.replace("{c}", base.name()).replace("{l}", light.name()) \
+                .replace("{d}", back.name())
+        dark = base
     elif style == "flat":
         text = _SHINE.sub("", text).replace('fill="url(#g)"', 'fill="{c}"')
         dark = base.darker(140)
@@ -287,6 +308,22 @@ class Picture:
     path2x: str = ""
 
 
+PLAIN = frozenset({"menu", "wide", "columns"})
+MISSING_RED = "#ff1744"
+
+
+@functools.lru_cache(maxsize=1)
+def mark_missing():
+    """Pictures from the fallback set in red: in a development version (FEDTAIL_MARK_MISSING
+    = 0 / 1 decides otherwise) — a theme's gaps seen at a glance."""
+    import os
+    env = os.environ.get("FEDTAIL_MARK_MISSING", "").strip().lower()
+    if env in ("0", "off", "no", "false"):
+        return False
+    if env in ("1", "on", "yes", "true"):
+        return True
+    from .. import __version__
+    return ".dev" in __version__
 OUTLINE_CONTRAST = 70  # of HSL lightness, 0–255: less, and the outline is lost
 
 
@@ -307,10 +344,17 @@ def picture(pset, name, accent, svg_ok=True, bg=None):
         log.debug("picture %s: %s", p, e)
         return None
     own = pset.color_of(name) or pset.color_of(p.stem) or pset.color
+    if mark_missing() and p.parent.resolve() == FALLBACK_DIR:
+        # a development version: what the theme lacks, in red (system.toml [pictures])
+        return Picture("svg", text=styled(text, "silhouette", MISSING_RED, bg))
+    # the sidebar's top buttons (≡ ↔ ❯) are buttons already: their pictures plain, not
+    # a glossy button drawn on a button (qip's looked raised twice, 23.10)
+    style = "silhouette" if name in PLAIN and pset.style != "none" \
+        else pset.style
     try:
-        return Picture("svg", text=styled(text, pset.style, own or accent, bg))
+        return Picture("svg", text=styled(text, style, own or accent, bg))
     except ValueError:  # a colour that isn't one (themefile warned): the accent
-        return Picture("svg", text=styled(text, pset.style, accent, bg))
+        return Picture("svg", text=styled(text, style, accent, bg))
 
 
 def has_png(pset):

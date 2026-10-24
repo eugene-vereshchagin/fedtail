@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -47,11 +49,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * The settings page (the phone only; the desktop keeps the file): every option of the
- * config file, by the example's chapters, with its explanation and a control by its
- * kind — a switch, the choices, a number, words, a list. Each change is written into
- * the file at once (checked first), and takes effect when the page is left. "As a file"
- * opens the file itself.
+ * The settings page — the desktop's settings window on a phone (common/settings.py gives
+ * both the same chapters, names, explanations and choices; only what the phone heeds is
+ * here). A change goes into config.toml at once, that one line (core/config_edit.py), and
+ * takes effect when the page is left. "As a file" opens the file itself.
  */
 @Composable
 fun SettingsPlace(model: AppModel, snack: SnackbarHostState) {
@@ -68,7 +69,8 @@ fun SettingsPlace(model: AppModel, snack: SnackbarHostState) {
             val shown = model.settings.map { c ->
                 c.copy(options = c.options.filter {
                     q.isEmpty() || "${it.section}.${it.key}".contains(q, true) ||
-                        it.help.contains(q, true) || c.title.contains(q, true)
+                        it.title.contains(q, true) || it.about.contains(q, true) ||
+                        c.title.contains(q, true)
                 })
             }.filter { it.options.isNotEmpty() }
             LazyColumn(contentPadding = PaddingValues(bottom = 48.dp)) {
@@ -78,7 +80,7 @@ fun SettingsPlace(model: AppModel, snack: SnackbarHostState) {
                             top = 20.dp, bottom = 4.dp))
                     }
                     items(c.options, key = { it.section + "." + it.key }) { opt ->
-                        OptionRow(opt) { json -> model.setSetting(opt, json) }
+                        OptionCard(opt) { json -> model.setSetting(opt, json) }
                     }
                 }
             }
@@ -86,42 +88,70 @@ fun SettingsPlace(model: AppModel, snack: SnackbarHostState) {
     }
 }
 
+/** One option as the desktop's card: its name, the explanation, the control, "Default". */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OptionRow(opt: Setting, set: (String) -> Unit) {
+private fun OptionCard(opt: Setting, set: (String) -> Unit) {
     var more by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${opt.section}.${opt.key}", fontFamily = FontFamily.Monospace, fontSize = 14.sp,
-                fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            if (opt.type == "bool") {
+            Column(Modifier.weight(1f)) {
+                Text(opt.title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text("${opt.section}.${opt.key}", fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (opt.kind == "bool") {
                 Switch(checked = opt.value == "true",
                     onCheckedChange = { set(if (it) "true" else "false") })
             }
         }
-        if (opt.help.isNotBlank()) {
-            Text(opt.help, fontSize = 13.sp, lineHeight = 18.sp,
+        if (opt.about.isNotBlank()) {
+            Text(opt.about, fontSize = 13.sp, lineHeight = 18.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = if (more) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable { more = !more })
         }
-        when {
-            opt.type == "bool" -> {}
-            opt.choices != null -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                opt.choices.forEach { c ->
-                    FilterChip(selected = opt.value == JSONObject.quote(c),
-                        onClick = { set(JSONObject.quote(c)) }, label = { Text(c) })
+        when (opt.kind) {
+            "bool" -> {}
+            // a choice with what each one means, as the desktop's card shows it
+            "choice" -> Column {
+                opt.choices.forEach { (value, words) ->
+                    Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { set(value) },
+                        verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = opt.value == value, onClick = { set(value) })
+                        Column(Modifier.weight(1f)) {
+                            Text(shown(value), fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                            if (words.isNotBlank() && words != shown(value)) {
+                                Text(words, fontSize = 13.sp, maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+            // ticks: lanes, kinds of activity…
+            "checks" -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val on = listOf(opt.value)
+                    .flatMap { v -> runCatching { JSONArray(v) }.getOrNull()?.let { a ->
+                        (0 until a.length()).map { JSONObject.quote(a.getString(it)) } } ?: emptyList() }
+                opt.choices.forEach { (value, words) ->
+                    FilterChip(selected = value in on, label = { Text(words.ifBlank { shown(value) }) },
+                        onClick = {
+                            val next = if (value in on) on - value else on + value
+                            set(JSONArray(next.map { shown(it) }).toString())
+                        })
                 }
             }
             else -> Typed(opt, set)
         }
-        if (opt.value != opt.dflt) {
+        if (opt.changed) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.default_is, shown(opt.dflt)), fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                TextButton(onClick = { set(opt.dflt) }) { Text(stringResource(R.string.reset)) }
+                TextButton(onClick = { set("null") }) { Text(stringResource(R.string.reset)) }
             }
         }
     }
@@ -133,19 +163,17 @@ private fun OptionRow(opt: Setting, set: (String) -> Unit) {
 private fun Typed(opt: Setting, set: (String) -> Unit) {
     val now = shown(opt.value)
     var text by remember(opt.value) { mutableStateOf(now) }
-    val numeric = opt.type == "int" || opt.type == "float"
     val write = {
-        val json = when (opt.type) {
+        val json = when (opt.kind) {
             "int" -> text.trim().toLongOrNull()?.toString()
-            "float" -> text.trim().replace(',', '.').toDoubleOrNull()?.toString()
-            "list" -> JSONArray(text.split(',').map { it.trim() }.filter { it.isNotEmpty() }).toString()
+            "list" -> JSONArray(text.split(',').map { it.trim().trim('"') }.filter { it.isNotEmpty() }).toString()
             else -> JSONObject.quote(text)
         }
         if (json != null) set(json)
     }
     OutlinedTextField(text, { text = it }, singleLine = true,
         keyboardOptions = KeyboardOptions(
-            keyboardType = if (numeric) KeyboardType.Number else KeyboardType.Text,
+            keyboardType = if (opt.kind == "int") KeyboardType.Number else KeyboardType.Text,
             imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { if (text != now) write() }),
         trailingIcon = {
@@ -161,7 +189,9 @@ private fun Typed(opt: Setting, set: (String) -> Unit) {
 private fun shown(json: String): String = try {
     when {
         json.startsWith("\"") -> JSONArray("[$json]").getString(0)
-        json.startsWith("[") -> JSONArray(json).let { a -> (0 until a.length()).joinToString(", ") { a.get(it).toString() } }
+        json.startsWith("[") -> JSONArray(json).let { a ->
+            (0 until a.length()).joinToString(", ") { a.get(it).toString() }
+        }
         else -> json
     }
 } catch (e: Exception) {

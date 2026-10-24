@@ -88,3 +88,53 @@ def core(snap, cfg):
     from fedtail.core.paths import Paths
     p = Paths(snap["profile"], snap["dir"] / "config.toml", snap["dir"] / "data")
     return Core(cfg, p, api_class=read_only_client())
+
+
+def wait_for_budget(profile="", need=150, longest=600, say=print):
+    """Before a step on your account: the server's rate limit (GoToSocial: 300 requests
+    in 5 minutes, per address — two computers behind one router share it) has room
+    for the step, or the step waits for the window to begin anew. The night of 23.10
+    the steps on the account came one after another and the later ones got only 429
+    ("not connected in 60 s", a tour that waited for the server all along). One GET.
+    Returns the seconds waited."""
+    import time
+
+    from fedtail.core import auth as authmod
+    from fedtail.core import paths
+    from fedtail.protocols.base import RateLimited
+    p = paths.resolve(profile or None)
+    data = authmod.load(p.auth_file)
+    if not data:
+        return 0
+    api = read_only_client()(data["server"], data["token"])
+    waited = 0.0
+    for _ in range(3):
+        try:
+            api.verify_credentials()
+        except RateLimited as e:
+            pause = max(5.0, min(longest - waited, (e.until or time.time() + 60) - time.time()
+                                 + 3))
+        except Exception as e:  # noqa: BLE001 — the step itself will say what's wrong
+            say(f"the server's limit: not known ({e})")
+            return waited
+        else:
+            b = getattr(api, "budget", None)
+            if b is None or not b.limit or b.remaining >= need:
+                if b is not None and b.limit:
+                    say(f"the server's limit: {b.remaining} of {b.limit} left")
+                return waited
+            pause = max(5.0, min(longest - waited, (b.reset or time.time() + 60)
+                                 - time.time() + 3))
+        if pause <= 0 or waited >= longest:
+            break
+        say(f"the server's limit is nearly spent: waiting {pause:.0f} s for a new window")
+        time.sleep(pause)
+        waited += pause
+    return waited
+
+
+if __name__ == "__main__":  # python3 tools/real.py --wait[=PROFILE]: the limit, then go
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    arg = next((a for a in sys.argv[1:] if a.startswith("--wait")), None)
+    if arg is not None:
+        wait_for_budget(arg.split("=", 1)[1] if "=" in arg else "")

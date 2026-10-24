@@ -95,12 +95,13 @@ class Theme:
                 if rule else
                 f"background: {c['card']}; border: 1px solid {c['card_border']}; "
                 f"border-radius: {r}px;")
-        fam = f'font-family: "{font_family}";' if font_family else ""
+        fam = f"font-family: {css_families(font_family)};" if font_family else ""
         return f"""
 window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; {fam} }}
 .ft-sidebar {{ background: {c['sidebar']}; border-right: 1px solid {c['sidebar_border']}; }}
-.ft-sidebar row {{ color: {c['sidebar_text']}; padding: 4px 8px; border-radius: {br}px;
-  background: transparent; box-shadow: none; border: none; }}
+.ft-sidebar row {{ color: {c['sidebar_text']}; padding: 5px 8px; border-radius: {br}px;
+  background: transparent; box-shadow: none; border: none; min-height: 0;
+  margin: 1px 0; }}
 .ft-sidebar row:hover {{ background: alpha({c['sidebar_text']}, 0.08); }}
 .ft-sidebar row:selected, .ft-sidebar row:selected:hover {{ background: {c['selected']};
   color: {c['selected_text']}; }}
@@ -114,12 +115,12 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-view, .ft-view > viewport, .ft-feed {{ background: {c['view']}; }}
 .ft-lane-header {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
                    padding: 4px 10px; }}
-.ft-lane-title {{ font-weight: bold; color: {c['text']}; }}
+.ft-lane-title {{ font-weight: bold; color: {c['text']}; font-size: 1.55em; }}
 .ft-lane-header togglebutton:checked, .ft-lane-header button:checked {{
     background: {c['accent']}; color: {c['on_accent']}; }}
 .ft-active {{ color: {c['accent']}; }}
 .ft-new-pill {{ background: {c['new_pill']}; color: {c['on_new_pill']};
-               border-radius: 9px; padding: 0 8px; }}
+               border-radius: 11px; padding: 2px 10px; font-weight: 600; }}
 .ft-feed > row {{ background: transparent; padding: 3px 0; }}
 .ft-feed > row:hover, .ft-feed > row:focus {{ background: transparent; outline: none; }}
 .ft-card {{ {card} padding: 8px 12px; color: {c['text']}; }}
@@ -178,6 +179,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-tabrows {{ background: {c['header']}; border-bottom: 1px solid {c['header_border']};
                padding: 3px 4px 0 4px; }}
 .ft-tabrows > flowboxchild {{ padding: 0; }}
+.ft-compose-bar > flowboxchild {{ padding: 0; background: none; }}
 .ft-tabchip {{ border: 1px solid {c['card_border']}; border-bottom: none;
               border-radius: {br}px {br}px 0 0; padding: 0 2px 0 8px; color: {c['muted']}; }}
 .ft-tabrows > flowboxchild.ft-current .ft-tabchip {{ background: {c['view']};
@@ -226,10 +228,17 @@ def apply(cfg, name=None):
     for w in warnings:
         log.warning("%s", w)
     mode = cfg["ui"].get("fonts", "theme")
+    if mode == "custom":
+        load_fonts(themefile.font_files(themefile.builtin_fonts()))
+    elif mode == "theme":
+        load_fonts(themefile.font_files(theme.font.get("files") or ()))
     family = {"custom": cfg["ui"].get("font") or "",
               "theme": theme.font.get("family") or ""}.get(mode, "")
-    family = family.split(",")[0].strip().strip('"')
-    theme.font_family = family  # what the window is written in ("" — the desktop's)
+    # the whole list goes to the CSS (Pango takes the first it has, as Qt does); the
+    # first of them this computer has is what the status line names. Only the first
+    # went before: "Tahoma" on a Linux without it became whatever fontconfig chose,
+    # while Qt drew PT Sans that comes with fedtail (the night of 23.10)
+    theme.font_family = first_available(family)
     css = theme.css(family, float(theme.font.get("post_scale") or 1.0))
     display = Gdk.Display.get_default()
     if display is None:
@@ -241,6 +250,80 @@ def apply(cfg, name=None):
     Gtk.StyleContext.add_provider_for_display(
         display, _provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     return theme
+
+
+GENERIC = {"serif", "sans-serif", "sans", "monospace", "cursive", "fantasy", "system-ui"}
+_loaded_fonts = set()
+
+
+def families(spec):
+    return [f.strip().strip('"') for f in (spec or "").split(",") if f.strip()]
+
+
+def css_families(spec):
+    """'Tahoma, PT Sans, sans-serif' as CSS: names quoted, the generic ones bare."""
+    return ", ".join(f if f in GENERIC else f'"{f}"' for f in families(spec))
+
+
+def first_available(spec):
+    """The first family of the list this computer has (the theme's own files loaded),
+    or the first named when none is known."""
+    names = families(spec)
+    try:
+        have = {f.get_name().lower() for f in _font_map().list_families()}
+    except Exception:  # noqa: BLE001 — no font map (tests without a display)
+        have = set()
+    for n in names:
+        if n.lower() in have:
+            return n
+    return names[0] if names else ""
+
+
+def _font_map():
+    """The font map GTK draws with (no PangoCairo typelib needed)."""
+    return Gtk.Label().get_pango_context().get_font_map()
+
+
+def load_fonts(paths):
+    """Fonts that come with the theme (or ~/.config/fedtail/fonts/) for this run, as Qt
+    loads them: Pango's own way where it has one (1.56+), fontconfig's otherwise."""
+    for path in paths:
+        if path in _loaded_fonts:
+            continue
+        _loaded_fonts.add(path)
+        ok = False
+        fm = None
+        try:
+            fm = _font_map()
+            if hasattr(fm, "add_font_file"):
+                ok = bool(fm.add_font_file(path))
+        except Exception:  # noqa: BLE001
+            ok = False
+        if not ok:
+            ok = _fontconfig_add(path)
+            if ok and fm is not None:  # Pango learns of fontconfig's new fonts
+                for again in ("config_changed", "changed"):
+                    if hasattr(fm, again):
+                        try:
+                            getattr(fm, again)()
+                        except Exception:  # noqa: BLE001
+                            pass
+                        break
+        log.info("font %s: %s", path.rsplit("/", 1)[-1], "loaded" if ok else "not loaded")
+
+
+def _fontconfig_add(path):
+    import ctypes
+    import ctypes.util
+    name = ctypes.util.find_library("fontconfig")
+    if not name:
+        return False
+    try:
+        fc = ctypes.CDLL(name)
+        fc.FcConfigAppFontAddFile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        return bool(fc.FcConfigAppFontAddFile(None, path.encode()))
+    except (OSError, AttributeError):
+        return False
 
 
 def _load_css(provider, css):

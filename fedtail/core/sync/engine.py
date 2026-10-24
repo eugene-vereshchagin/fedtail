@@ -1,6 +1,6 @@
 """The sync of one account between its devices: a journal out, the others' journals in.
 
-What travels (flags `sync.what`):
+What travels — a switch for each in `[sync]`:
 
 * "read" — read marks the user made (scrolling, opening, "mark read"). Not the ones
   fedtail makes by itself: the first run's "everything is read", older history, my own
@@ -9,6 +9,20 @@ What travels (flags `sync.what`):
 * "threads" — a thread's state set by hand: followed ("sub"), left ("left"), muted
   ("muted"). The newest setting wins (time in ms, the device's id breaking a tie);
   automatic subscriptions to my own posts aren't sent — every device makes them itself.
+* "lanes" — my own lanes as I arranged them: the order of lists (servers keep none, so
+  each device would show them as they came) and the tag lanes saved from a search. Each
+  is one value, the newest wins.
+* "drafts" — unsent posts, one per draft key ("new", "reply:<id>", "quote:<id>": post
+  ids are the account's, the same everywhere); the newest version wins, a sent or
+  emptied draft goes everywhere. Attachments are files of this computer: they stay here
+  (a draft from elsewhere keeps the ones this device had for it).
+* "activity" — notifications I dismissed from Activity (the server can't always forget
+  them): hidden on every device. Like read marks, they only add up.
+* "tiles" — which lanes the phone pins as tiles (kv "pinned_tiles", set through
+  `Core.set_pinned_tiles`): one value, the newest wins.
+
+Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server) or
+`sync.folder`. Nothing set — no sync, and nothing is recorded.
 
 Recording works without the sync thread (`fedtail read …` in a terminal, the window
 closed): the journal is in the store; whichever process of the profile runs the thread
@@ -33,11 +47,21 @@ from . import backends, crypto
 log = logging.getLogger(__name__)
 
 THREAD_STATES = ("sub", "left", "muted")
-WHAT = ("read", "threads")
+WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles")  # = config.SYNC_WHAT
+# kv values carried whole (the newest wins) → the switch that lets them travel; app.py
+# records them where they change
+SETTINGS = {"list_order": "lanes", "tag_groups": "lanes", "pinned_tiles": "tiles"}
+LANE_KEYS = tuple(k for k, w in SETTINGS.items() if w == "lanes")
 READ_CHUNK = 1000   # ids in one recorded op
 BATCH_OPS = 400     # ops in one sealed blob
 DEBOUNCE = 3        # seconds after a mark before sending: scrolling marks in bursts
 SCOPES = "read:accounts"  # all a sync server needs to know whose journal it is
+
+
+def wanted(cfg):
+    """Is sync on? It is when it has somewhere to go."""
+    s = cfg.get("sync") or {}
+    return bool(s.get("url") or s.get("folder"))
 
 
 def now_ms():
@@ -72,7 +96,7 @@ class Sync:
         self.store = core.store
         self.cfg = core.cfg["sync"]
         self.paths = core.paths
-        self.what = set(self.cfg["what"])
+        self.what = {k for k in WHAT if self.cfg.get(k)}
         self.device = self._device()
         self._wake = threading.Event()
         self._stop = threading.Event()
@@ -80,6 +104,9 @@ class Sync:
         self._thread = None
         self._said = set()  # problems shown to the user this run (each once)
         self._trouble = ""
+        self._last_at = 0  # stamps strictly rise: two changes in one ms keep their order
+        self._drafts = {}  # draft key → when it changed: sent at the next round, once
+        self._lock_at = threading.Lock()  # guards both
 
     def _device(self):
         d = self.store.kv_get("sync.device")
@@ -98,13 +125,66 @@ class Sync:
         if ids:
             self._wake.set()
 
+    def record_setting(self, key):
+        """A setting carried whole (SETTINGS) changed here: its new value goes out."""
+        if SETTINGS.get(key) not in self.what:
+            return
+        value = self.store.kv_get(key)
+        at = self._stamp()
+        self.store.sync_newer(f"k:{key}", at, self.device, json.dumps(value))
+        self.store.sync_record({"k": key, "v": value, "at": at})
+        self._wake.set()
+
+    record_lanes = record_setting  # the order of lists, saved tag lanes
+
+    def record_draft(self, key):
+        """A draft saved or gone here. Typing saves often: only the last version of each
+        goes out, at the next round (time stamped now, so the newest still wins)."""
+        if "drafts" not in self.what or not key:
+            return
+        with self._lock_at:
+            self._drafts[key] = self._stamp_locked()
+        self._wake.set()
+
+    def record_activity(self, hidden):
+        """Notifications dismissed here: [(id, sort, group key or "")]."""
+        if "activity" not in self.what:
+            return
+        rows = [[str(i), str(s or ""), str(g or "")] for i, s, g in hidden if i]
+        if rows:
+            self.store.sync_record({"h": rows})
+            self._wake.set()
+
+    def _flush_drafts(self):
+        with self._lock_at:
+            dirty, self._drafts = self._drafts, {}
+        for key, at in dirty.items():
+            d = self.store.get_draft(key)
+            value = None
+            if d:
+                value = {k: v for k, v in d.items() if k != "media"}
+                if not any(value.get(k) for k in ("text", "cw", "poll")):
+                    continue  # only pictures: nothing another device could use
+            self.store.sync_newer(f"d:{key}", at, self.device, json.dumps(value))
+            self.store.sync_record({"dr": key, "v": value, "at": at})
+
     def record_thread(self, root, state):
         if "threads" not in self.what or not root or state not in THREAD_STATES:
             return
-        at = now_ms()
+        at = self._stamp()
         self.store.sync_newer(f"t:{root}", at, self.device, state)
         self.store.sync_record({"t": str(root), "s": state, "at": at})
         self._wake.set()
+
+    def _stamp(self):
+        """Now in ms, never twice the same here: two moves in one millisecond must stay
+        in order (the newest wins, and equal times would leave the second unapplied)."""
+        with self._lock_at:
+            return self._stamp_locked()
+
+    def _stamp_locked(self):
+        self._last_at = max(now_ms(), self._last_at + 1)
+        return self._last_at
 
     # ---- the thread ----------------------------------------------------------------
     def start(self):
@@ -148,6 +228,7 @@ class Sync:
                 key = self._key(backend)
                 if key is None:
                     return None
+                self._flush_drafts()
                 sent = self._push(backend, key)
                 got = self._pull(backend, key) if pull else 0
             except backends.BackendError as e:
@@ -160,6 +241,7 @@ class Sync:
                 return None
             self.store.kv_set("sync.last", {"at": _iso(), "sent": sent, "got": got,
                                             "error": self._trouble})
+            self.core.emit("sync_changed", None)
             if sent or got:
                 log.info("sync: sent %d, got %d", sent, got)
             if not self._trouble:
@@ -170,40 +252,27 @@ class Sync:
         self._trouble = text
         last = self.store.kv_get("sync.last") or {}
         self.store.kv_set("sync.last", {**last, "error": text, "error_at": _iso()})
+        self.core.emit("sync_changed", None)
         if kind not in self._said:
             self._said.add(kind)
             log.warning("sync: %s", text)
             self.core.emit("error", text)
 
     # ---- where, and with what key ----------------------------------------------------
+    def kind(self):
+        return "folder" if self.cfg["folder"] else "server"
+
+    def where(self):
+        return self.cfg["folder"] or self.cfg["url"]
+
     def backend(self):
-        if self.cfg["backend"] == "folder":
-            if not self.cfg["folder"]:
-                self._problem("folder", _("sync_no_folder"))
-                return None
+        if self.cfg["folder"]:
             return backends.FolderBackend(self.cfg["folder"])
         a = load_auth(auth_path(self.paths))
         if not a:
             self._problem("login", _("sync_login_first"))
             return None
-        url = self.cfg["url"] or self._discovered(a["instance"])
-        if not url:
-            self._problem("server", _("sync_no_server", server=a["instance"]))
-            return None
-        return backends.HttpBackend(url, a["instance"], a["token"])
-
-    def _discovered(self, instance):
-        """The sync server the account's server names — asked once a day (once an hour
-        while it names none)."""
-        found = self.store.kv_get("sync.found") or {}
-        age = time.time() - float(found.get("at") or 0)
-        if found.get("instance") == instance and age < (86400 if found.get("url") else 3600):
-            return found.get("url")
-        url = backends.discover(instance)
-        self.store.kv_set("sync.found", {"instance": instance, "url": url, "at": time.time()})
-        if url:
-            log.info("sync: %s names its sync server %s", instance, url)
-        return url
+        return backends.HttpBackend(self.cfg["url"], a["instance"], a["token"])
 
     def _key(self, backend):
         key = crypto.load_key(key_path(self.paths))
@@ -261,7 +330,7 @@ class Sync:
 
     def apply(self, payload):
         """Another device's batch → this store. → how many ops it carried."""
-        reads, threads = [], []
+        reads, threads, lanes, hidden, drafts, tiles = [], [], [], [], [], False
         device = str(payload.get("d") or "")
         for op in payload.get("ops") or []:
             if not isinstance(op, dict):
@@ -273,6 +342,26 @@ class Sync:
                 if "threads" in self.what and self.store.sync_newer(
                         f"t:{op['t']}", int(op.get("at") or 0), device, op["s"]):
                     threads.append((op["t"], op["s"]))
+            elif op.get("k") in SETTINGS and "v" in op:
+                if SETTINGS[op["k"]] in self.what and self._setting_ok(op["k"], op["v"]) and \
+                        self.store.sync_newer(f"k:{op['k']}", int(op.get("at") or 0), device,
+                                              json.dumps(op["v"])):
+                    self.store.kv_set(op["k"], op["v"])
+                    if op["k"] in LANE_KEYS:
+                        lanes.append(op["k"])
+                    else:
+                        tiles = True
+            elif isinstance(op.get("h"), list):
+                if "activity" in self.what:
+                    hidden += [tuple(str(x) for x in r) for r in op["h"]
+                               if isinstance(r, list) and len(r) == 3]
+            elif isinstance(op.get("dr"), str) and "v" in op:
+                v = op["v"]
+                if "drafts" in self.what and (v is None or isinstance(v, dict)) and \
+                        self.store.sync_newer(f"d:{op['dr']}", int(op.get("at") or 0), device,
+                                              json.dumps(v)):
+                    self._apply_draft(op["dr"], v)
+                    drafts.append(op["dr"])
         if reads:
             fresh = list(set(reads) - self.store.read_set(reads))
             if fresh:
@@ -283,16 +372,42 @@ class Sync:
                 self.core.apply_thread_state(root, state)
             except Exception as e:  # noqa: BLE001 — one gone thread mustn't stop the rest
                 log.warning("sync: thread %s → %s: %s", root, state, e)
-        return len(reads) + len(threads)
+        if lanes:
+            try:
+                self.core.apply_lanes_state(lanes)
+            except Exception as e:  # noqa: BLE001 — the rest of the batch is applied
+                log.warning("sync: lanes %s: %s", lanes, e)
+        if tiles:
+            self.core.emit("tiles_changed", self.store.kv_get("pinned_tiles", []))
+        if hidden and self.store.activity_hide_known(hidden):
+            self.core.emit("activity_updated", None)
+        if drafts:
+            self.core.emit("drafts_changed", drafts)
+        return len(reads) + len(threads) + len(lanes) + int(tiles) + len(hidden) + len(drafts)
+
+    def _apply_draft(self, key, value):
+        """Another device's version of a draft; this device's attachments for it stay."""
+        if value is None:
+            self.store.delete_draft(key)
+            return
+        mine = self.store.get_draft(key) or {}
+        self.store.save_draft(key, {**value, "media": mine.get("media", [])})
+
+    @staticmethod
+    def _setting_ok(key, value):
+        """Only the shapes app.py keeps: lists of ids or names; a list of tag groups."""
+        if not isinstance(value, list):
+            return False
+        if key == "tag_groups":
+            return all(isinstance(g, dict) for g in value)
+        return all(isinstance(x, str) for x in value)
 
     # ---- for `fedtail sync status` ---------------------------------------------------
     def status(self):
         key = crypto.load_key(key_path(self.paths))
         a = load_auth(auth_path(self.paths))
-        return {"backend": self.cfg["backend"],
-                "where": self.cfg["folder"] if self.cfg["backend"] == "folder"
-                else (self.cfg["url"] or (self.store.kv_get("sync.found") or {}).get("url")
-                      or ""),
+        return {"backend": self.kind(),
+                "where": self.where(),
                 "login": a["instance"] if a else "",
                 "device": self.device,
                 "key": crypto.key_id(key).hex() if key else "",

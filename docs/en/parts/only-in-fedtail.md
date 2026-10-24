@@ -1,6 +1,6 @@
 - **Lanes:** Bots in a lane of their own · Who is in a list leaves the general lanes · Into a list — the author or the booster; only people you follow · Into a list right after a follow · An empty live lane says why it's empty · Filtering a lane by media and boosts · Repeated boosts don't bring an old post up again · Find in a lane · Sending to a slow server without doubles · Find in every lane at once
 - **Threads:** A whole thread: replies from the author's server · Thread subscriptions, as on Point
-- **Read marks and place:** Oldest on top, nothing jumps · Catching up with no holes · When a post counts as read · Read marks and thread subscriptions shared by all your devices · Cards are built around the reading place · Esc draws a curtain instead of closing the window
+- **Read marks and place:** Oldest on top, nothing jumps · Catching up with no holes · When a post counts as read · Read marks, thread subscriptions and lane order shared by all your devices · Cards are built around the reading place · Esc draws a curtain instead of closing the window
 - **The post card:** Arts mode · Honest counters
 - **Pictures and video:** Video without a hardware decoder (the default) · Pictures and video ahead of time, a disk cache
 - **Profiles:** Posts older than my server knows · “Following since …”

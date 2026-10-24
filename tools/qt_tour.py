@@ -66,6 +66,7 @@ from tools import screenshots as shots  # noqa: E402  (its world and pictures)
 ERRORS, MENUS = [], []
 LEAKS, LEAK_NOTES = [], []  # widgets alive after each window closed
 SIZE_NOTES = []  # sizes.txt: every size, what it did
+NATIVE_MENUS = []  # clicks whose menu went past the patched exec (closed by the guard)
 CAUGHT = []  # menus that were exec()'d: kept here instead of waiting for a click
 SEEN = set()  # (what was shot) — a menu with the same items once only
 # the sizes are tried with these (a proportional font, a monospace one, the messengers)
@@ -83,7 +84,20 @@ def pump(app, seconds):
 def save(widget, out, name):
     try:
         widget.adjustSize() if isinstance(widget, QMenu) else None
-        widget.grab().save(str(Path(out) / f"{name}.png"))
+        if widget.isVisible():
+            pix = widget.grab()
+        else:
+            # a menu caught before it showed: on Windows grab() of a widget never shown
+            # gives black (the night of 23.10: every menu a black box); render() paints
+            # it on its own
+            from PySide6.QtCore import Qt as _Qt
+            from PySide6.QtGui import QPixmap
+            widget.ensurePolished()
+            pix = QPixmap(widget.size() * widget.devicePixelRatioF())
+            pix.setDevicePixelRatio(widget.devicePixelRatioF())
+            pix.fill(_Qt.GlobalColor.transparent)
+            widget.render(pix)
+        pix.save(str(Path(out) / f"{name}.png"))
     except Exception as e:  # noqa: BLE001
         ERRORS.append(f"{name}: can't grab: {e}")
 
@@ -173,6 +187,19 @@ def _modal_guard(app, what):
     timer.setInterval(300)
 
     def close():
+        # a menu shown by the C++ exec() itself (the patched one wasn't called: the
+        # night of 23.10 every tour stood 1–1.5 h on a card's right click): kept for its
+        # picture, as caught, and closed — the click returns
+        from PySide6.QtWidgets import QMenu
+        pops = [app.activePopupWidget()] + [
+            # a menu shown without its grab (X11 on xvfb, your account's tour of 23.10:
+            # an hour on a picture's right click) isn't the "active popup": any shown one
+            x for x in app.topLevelWidgets() if isinstance(x, QMenu) and x.isVisible()]
+        for pop in dict.fromkeys(p for p in pops if p is not None):
+            if isinstance(pop, QMenu):
+                CAUGHT.append(pop)
+                NATIVE_MENUS.append(what)
+            pop.close()
         w = app.activeModalWidget()
         if w is not None:
             ERRORS.append(f"{what}: opened a modal window ({type(w).__name__}) — closed")
@@ -190,6 +217,30 @@ SIZES = ((3840, 2160), (2560, 1440), (1920, 1080), (1600, 1200), (1366, 768),
 # and the window as a share of the screen it's on: maximized, a half tiled left, a
 # quarter, three quarters, a half by height (a window under another)
 SHARES = ((1.0, 1.0), (0.5, 1.0), (0.75, 0.75), (1.0, 0.5), (0.5, 0.5), (0.33, 1.0))
+
+
+def too_wide(win):
+    """Who holds the window wide: the deepest visible widgets that ask the most width
+    (their minimum size hint), with the chain of their parents' names."""
+    from PySide6.QtWidgets import QWidget
+    rows = []
+    for w in win.findChildren(QWidget):
+        if not w.isVisible() or w.isWindow():
+            continue
+        need = max(w.minimumWidth(), w.minimumSizeHint().width())
+        if need < 300:
+            continue
+        kids = [c for c in w.findChildren(QWidget) if c.isVisible() and
+                max(c.minimumWidth(), c.minimumSizeHint().width()) >= need - 20]
+        if kids:  # a child asks as much: that one is nearer the cause
+            continue
+        path, p = [], w
+        while p is not None and p is not win and len(path) < 4:
+            path.append(type(p).__name__ + (f"#{p.objectName()}" if p.objectName() else ""))
+            p = p.parentWidget()
+        rows.append((need, " < ".join(path)))
+    rows.sort(reverse=True)
+    return "; ".join(f"{n} px: {pth}" for n, pth in rows[:4]) or "(nobody in particular)"
 
 
 def _in_scroll(w, top):
@@ -272,7 +323,7 @@ def sizes(app, out, win, label):
         lines += ["    " + p for p in probs[:25]]
         if got.width() > w and w >= 800:
             ERRORS.append(f"{name}: the window can't be {w} px wide (it stays "
-                          f"{got.width()}): something in it is too wide")
+                          f"{got.width()}): too wide — " + too_wide(win))
         for p in probs:
             if w >= 1024:  # at a real screen's size nothing should be cut
                 ERRORS.append(f"{name}: {p}")
@@ -461,6 +512,11 @@ def tour_menus(app, out, core, win):
         sweep(app, win.roster, out, "roster")
     from fedtail.frontends.qt.card import PostRow
     cards = [c for c in win.findChildren(PostRow) if c.isVisible()]
+    if not cards:  # the sweep's clicks may have left another lane or tab in front
+        win.select_lane("home" if "home" in win.lane_order else win.lane_order[0])
+        win.tabs.setCurrentIndex(0)
+        pump(app, 1.5)
+        cards = [c for c in win.findChildren(PostRow) if c.isVisible()]
     if cards:
         menu = cards[0].ensure_menu()
         if menu is not None:
@@ -488,10 +544,75 @@ def tour_menus(app, out, core, win):
             sweep(app, win.tabs.currentWidget(), out, name)
             win.close_tab(win.tabs.currentIndex())
             pump(app, 0.3)
+    settings_window(app, win, out)
+
+
+def settings_window(app, win, out):
+    """≡ → Settings, a picture of each chapter and of a search. Nothing in it is
+    clicked (the sweep would write into the profile's config.toml: on a real account
+    that's the user's own file)."""
+    from fedtail.frontends.qt.settings import SettingsDialog
+    try:
+        dlg = SettingsDialog(win)
+        dlg.show()
+        pump(app, 0.5)
+        for i in range(dlg.list.count()):
+            dlg.list.setCurrentRow(i)
+            pump(app, 0.3)
+            save(dlg, out, f"settings-{i + 1:02d}")
+        dlg.search.setText("font")
+        dlg._searched()
+        pump(app, 0.3)
+        save(dlg, out, "settings-search")
+        dlg.close()
+        pump(app, 0.2)
+    except Exception:  # noqa: BLE001
+        ERRORS.append("settings: " + traceback.format_exc(limit=6))
+
+
+def try_every_theme(app, win, themes):
+    """≡ → Try a theme, every one in turn on the living window, and back: the night of
+    23.10 a trial (juick-classic, a gif looping in a card) brought the program down. A
+    crash here is the tool's crash: the step's log shows where (faulthandler)."""
+    was = win.theme.id
+    for name in list(themes) + [was]:
+        print(f"try theme {name}", flush=True)
+        try:
+            win.try_theme(name)
+        except Exception:  # noqa: BLE001
+            ERRORS.append(f"try theme {name}: " + traceback.format_exc(limit=6))
+        pump(app, 0.4)
+
+
+def write_out(out, done=False):
+    """What the tour found so far, on disk: after each window too — a tour stopped by
+    the self-check's clock (the night of 23.10: all of them) still leaves its menus,
+    sizes and errors, not only its pictures."""
+    errors = list(ERRORS)
+    (out / "menus.txt").write_text("\n".join(MENUS), "utf-8")
+    (out / "sizes.txt").write_text("\n".join(SIZE_NOTES), "utf-8")
+    (out / "leaks.txt").write_text("\n".join(LEAK_NOTES) + "\n", "utf-8")
+    if NATIVE_MENUS:
+        (out / "native-menus.txt").write_text(
+            "menus shown past the patched QMenu.exec (closed by the guard):\n"
+            + "\n".join(sorted(set(NATIVE_MENUS))) + "\n", "utf-8")
+    if len(LEAKS) > 3:
+        grew = sum((LEAKS[-1][1] - LEAKS[0][1]).values())
+        per = grew / (len(LEAKS) - 1)
+        if per > 50:
+            errors.append(f"leak: {per:.0f} widgets stay alive after each window is "
+                          f"closed ({grew} over {len(LEAKS) - 1} windows; leaks.txt)")
+    if REAL:  # what the tool's clicks would have sent: stopped on purpose
+        errors = [e for e in errors if real.READ_ONLY not in e]
+    if not done:
+        errors.append("(unfinished: the tour is still going, or was stopped here)")
+    (out / "errors.txt").write_text("\n\n".join(errors) + "\n" if errors else "none\n",
+                                    "utf-8")
 
 
 def main():
     import faulthandler  # stuck (selfcheck's time runs out): where, every 10 minutes
+    faulthandler.enable(all_threads=True)  # and a crash (a segfault in Qt): where too
     faulthandler.dump_traceback_later(600, repeat=True)
     import logging
     out = Path(next((a for a in sys.argv[1:] if not a.startswith("--")), "qt-tour"))
@@ -541,6 +662,8 @@ def main():
                 ERRORS.append(f"{label}: on the status bar: {msg}")
             if first:  # the menus and the windows: once is enough
                 tour_menus(app, out, core, win)
+                write_out(out)
+                try_every_theme(app, win, themes)
                 first = False
             if name in SIZE_THEMES or (quick and first_sizes):
                 first_sizes = False
@@ -548,20 +671,9 @@ def main():
             elif win.roster is not None and layout == "split":
                 sweep(app, win.roster, out, label + "-roster")
             close_window(app, core, win, label)
+            write_out(out)
             print(f"{label}: {time.monotonic() - t0:.1f} s", flush=True)
-    (out / "menus.txt").write_text("\n".join(MENUS), "utf-8")
-    (out / "sizes.txt").write_text("\n".join(SIZE_NOTES), "utf-8")
-    (out / "leaks.txt").write_text("\n".join(LEAK_NOTES) + "\n", "utf-8")
-    if len(LEAKS) > 3:
-        grew = sum((LEAKS[-1][1] - LEAKS[0][1]).values())
-        per = grew / (len(LEAKS) - 1)
-        if per > 50:
-            ERRORS.append(f"leak: {per:.0f} widgets stay alive after each window is "
-                          f"closed ({grew} over {len(LEAKS) - 1} windows; leaks.txt)")
-    if REAL:  # what the tool's clicks would have sent: stopped on purpose
-        ERRORS[:] = [e for e in ERRORS if real.READ_ONLY not in e]
-    (out / "errors.txt").write_text("\n\n".join(ERRORS) + "\n" if ERRORS else "none\n",
-                                    "utf-8")
+    write_out(out, done=True)
     print(f"{len(ERRORS)} problems; {out}")
     return 1 if ERRORS else 0
 

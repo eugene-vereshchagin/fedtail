@@ -51,13 +51,19 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: app.lane is not None and
                             len(app.query_one("#posts").children) >= 2)
             posts = app.query_one("#posts", ListView)
-            self.assertTrue(all(isinstance(i, PostItem) for i in posts.children))
+            # posts, and "new below" where reading stood (Textual 8 draws it by the time
+            # this looks; 2.x a moment later)
+            from fedtail.frontends.common.lane import SEPARATOR
+            self.assertTrue(all(isinstance(i, PostItem) or getattr(i, "key", None) == SEPARATOR
+                                for i in posts.children))
             # j / k move, and reading on the way marks read (read.mark_read = on_scroll)
             posts.focus()
             posts.index = 0
-            await pilot.press("j")
+            kids = list(posts.children)
+            second = next(i for i, x in enumerate(kids) if i > 0 and isinstance(x, PostItem))
+            await pilot.press("j")  # the next post — over "new below", if it stands between
             await pilot.pause(0.1)
-            self.assertEqual(posts.index, 1)
+            self.assertEqual(posts.index, second)
             seen = posts.highlighted_child.entry.id
             self.assertNotIn(seen, core.unread_ids([(None, {"id": seen})]))
             await pilot.press("k")
@@ -92,7 +98,8 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             # p: the author's profile, with their posts; F follows
             from fedtail.frontends.tui.app import ProfileScreen
             posts.focus()
-            posts.index = [i.entry.id for i in posts.children].index("003")
+            posts.index = [getattr(i, "entry", None) and i.entry.id
+                           for i in posts.children].index("003")
             await pilot.press("p")
             await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
             await self.wait(pilot, lambda: len(app.screen.query_one("#posts").children) >= 1)
@@ -225,7 +232,8 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: len(app.query_one("#posts").children) >= 2)
             posts = app.query_one("#posts", ListView)
             posts.focus()
-            posts.index = [i.entry.id for i in posts.children].index("003")
+            posts.index = [getattr(i, "entry", None) and i.entry.id
+                           for i in posts.children].index("003")
             await pilot.press("p")
             await self.wait(pilot, lambda: isinstance(app.screen, ProfileScreen))
             await self.wait(pilot, lambda: len(app.screen.query_one("#posts").children) >= 1)

@@ -161,3 +161,18 @@ class PlacesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadUpToTest(unittest.TestCase):
+    """⋯ → "Read up to here", the same in Qt and GTK: by time, whichever way round."""
+
+    def test_by_time_either_order(self):
+        from fedtail.frontends.common.lane import read_up_to
+        from fedtail.protocols.mastodon import adapter
+
+        from .fakes import BOB, status
+        posts = [adapter.post(status(i, BOB, minute=m, vis="public"), "t")
+                 for i, m in (("010", 10), ("012", 12), ("020", 20))]
+        self.assertEqual(sorted(read_up_to(posts, "012")), ["010", "012"])
+        self.assertEqual(sorted(read_up_to(posts[::-1], "012")), ["010", "012"])
+        self.assertEqual(read_up_to(posts, "999"), ["999"])

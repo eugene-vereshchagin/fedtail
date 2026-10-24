@@ -416,6 +416,14 @@ def _families(spec):
 
 _loaded_fonts = set()
 
+# the classes a platform theme may give a font of their own (Qt's
+# QApplicationPrivate::initializeWidgetFontHash): a theme's font is set on them too
+CLASS_FONTS = ("QLabel", "QStatusBar", "QAbstractItemView", "QListView", "QHeaderView",
+               "QPushButton", "QCheckBox", "QRadioButton", "QToolButton", "QMenu",
+               "QMenuBar", "QMessageBox", "QTipLabel", "QDockWidgetTitle",
+               "QComboMenuItem", "QComboLineEdit", "QMdiSubWindowTitleBar", "QListBox",
+               "QMenuItem")
+
 
 def _load_fonts(theme_files):
     """Fonts that come with the theme or lie in ~/.config/fedtail/fonts/: given to Qt for
@@ -450,10 +458,13 @@ def apply(app, cfg, name=None):
             logging.getLogger(__name__).info("Qt has no KDE integration here (one-file "
                                              "build?): %s from kdeglobals", adopted)
         themefile.install_copies()
-        _desktop = (QPalette(app.palette()), QFont(app.font()))
+        _desktop = (QPalette(app.palette()), QFont(app.font()),
+                    {c: QFont(app.font(c)) for c in CLASS_FONTS})
     else:
         app.setPalette(QPalette(_desktop[0]))
         app.setFont(QFont(_desktop[1]))
+        for c, font in _desktop[2].items():
+            app.setFont(QFont(font), c)
     try:
         data, warnings = themefile.load(name)
     except themefile.ThemeError as e:
@@ -505,11 +516,22 @@ def apply(app, cfg, name=None):
     # emoji and flags come from a colour emoji font when the main one lacks them
     f.setFamilies([x for x in families if x not in EMOJI_FONTS] + list(EMOJI_FONTS))
     app.setFont(f)
+    if fam or size:
+        # the desktop's platform theme gives some classes fonts of their own (KDE: labels,
+        # buttons, lists, the status bar), and those beat the application's: on KDE the
+        # cards, the lanes and the status bar of a monospace theme came out in the
+        # desktop's sans while its inputs were monospace (the night of 23.10, bnw)
+        for c in CLASS_FONTS:
+            app.setFont(f, c)
     mono = _families({"custom": cfg["ui"].get("mono_font") or "",
                       "theme": theme.font["mono"]}.get(mode, "")) or \
         [QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family()]
     pt = f.pointSizeF() if f.pointSizeF() > 0 else 10.0
     app.setStyleSheet(theme.stylesheet(pt, mono[0]))
+    import sys
+    card = sys.modules.get(__package__ + ".card")
+    if card is not None:  # the buttons' widths, measured under the old look: anew
+        card._HINTS.clear()
     return theme
 
 

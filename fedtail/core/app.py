@@ -114,10 +114,12 @@ class Core(SocialMixin):
         self.auth = auth.load(paths.auth_file)
         self.api = None
         self.me = None
-        # read marks and thread states shared with the account's other devices (sync.*):
+        # read marks, thread states and my lanes' arrangement shared with the account's
+        # other devices (sync.*): on when sync.url or sync.folder says where they meet;
         # recorded whenever it is on, sent by the thread polling starts
         self.sync = None
-        if cfg.get("sync", {}).get("enabled"):
+        from .sync.engine import wanted
+        if wanted(cfg):
             from .sync import Sync
             self.sync = Sync(self)
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
@@ -168,6 +170,17 @@ class Core(SocialMixin):
     # ---- plumbing ------------------------------------------------------------
     def submit(self, fn, *a, **kw):
         return self.pool.submit(fn, *a, **kw)
+
+    def call_api(self, name, *a, **kw):
+        """The server's `name`(…) in the pool. Before the connection is made (a profile
+        or a tag opened while still connecting) the future fails with "connecting…",
+        instead of an AttributeError in the window's own thread."""
+        def go():
+            if self.api is None:
+                from ..i18n import _
+                raise ApiError(0, _("connecting"))
+            return getattr(self.api, name)(*a, **kw)
+        return self.pool.submit(go)
 
     ERROR_QUIET_S = 600
 
@@ -1025,7 +1038,7 @@ class Core(SocialMixin):
                if k not in self.FILTER_POLICY or v not in ("accept", "filter", "drop")}
         if bad:
             raise ValueError(f"filter policy: {bad}")
-        return self.submit(self.api.set_notification_policy, **changes)
+        return self.call_api("set_notification_policy", **changes)
 
     def announcements(self):
         """The server's announcements not dismissed yet, oldest first; [] when
@@ -1043,22 +1056,22 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def dismiss_announcement(self, aid):
-        return self.submit(self.api.dismiss_announcement, aid)
+        return self.call_api("dismiss_announcement", aid)
 
     def scheduled(self):
-        return self.submit(self.api.scheduled)
+        return self.call_api("scheduled")
 
     def cancel_scheduled(self, sid):
-        return self.submit(self.api.cancel_scheduled, sid)
+        return self.call_api("cancel_scheduled", sid)
 
     def set_note(self, acc_id, text, old=""):
         """My private note on them; fedtail's follow-date line (in `old`) stays on."""
         from .model import note_followed, note_with_followed
-        return self.submit(self.api.set_note, acc_id,
+        return self.call_api("set_note", acc_id,
                            note_with_followed(text, note_followed(old)))
 
     def filters(self):
-        return self.submit(self.api.filters)
+        return self.call_api("filters")
 
     def silenced_people(self):
         """{"muted": [accounts], "blocked": [accounts]} for the Silence dialog."""
@@ -1073,10 +1086,10 @@ class Core(SocialMixin):
 
     def add_filter(self, title, keywords, action="warn", contexts=None):
         args = (title, keywords, action) + ((tuple(contexts),) if contexts else ())
-        return self.submit(self.api.create_filter, *args)
+        return self.call_api("create_filter", *args)
 
     def delete_filter(self, filter_id):
-        return self.submit(self.api.delete_filter, filter_id)
+        return self.call_api("delete_filter", filter_id)
 
     def _hidden_authors(self):
         """Who the lanes in lists.hide_in leave out: everyone in a list
@@ -1139,6 +1152,8 @@ class Core(SocialMixin):
             return
         ids.insert(j, ids.pop(i))
         self.store.kv_set("list_order", ids)
+        if self.sync:
+            self.sync.record_setting("list_order")
         self._apply_lists(list(self.lists), self.list_members)
 
     def list_people(self, list_id):
@@ -1185,8 +1200,32 @@ class Core(SocialMixin):
                      if taggroups.key(g) != taggroups.key(spec)]
             saved.append(dict(taggroups.normal(spec), name=name))
             self.store.kv_set("tag_groups", saved)
+            if self.sync:
+                self.sync.record_setting("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
             return taggroups.lane_name(spec)
+        return self.submit(job)
+
+    def add_tag_to_group(self, lane_name, tag):
+        """A tag into a saved lane of tags (one more of its "any"). Its lane is called
+        by what it holds, so it gets a new name: returned."""
+        tag = tag.lstrip("#").lower()
+
+        def job():
+            saved = self.store.kv_get("tag_groups", []) or []
+            out, new = [], lane_name
+            for g in saved:
+                if taggroups.lane_name(g) == lane_name:
+                    g = dict(taggroups.normal(g), name=g.get("name") or "")
+                    if tag not in g["any"] + g["all"]:
+                        g["any"] = sorted(set(g["any"]) | {tag})
+                    new = taggroups.lane_name(g)
+                out.append(g)
+            self.store.kv_set("tag_groups", out)
+            if self.sync:
+                self.sync.record_setting("tag_groups")
+            self._apply_lists(list(self.lists), self.list_members)
+            return new
         return self.submit(job)
 
     def drop_tag_group(self, lane_name):
@@ -1194,6 +1233,8 @@ class Core(SocialMixin):
             saved = [g for g in self.store.kv_get("tag_groups", []) or []
                      if taggroups.lane_name(g) != lane_name]
             self.store.kv_set("tag_groups", saved)
+            if self.sync:
+                self.sync.record_setting("tag_groups")
             self._apply_lists(list(self.lists), self.list_members)
         return self.submit(job)
 
@@ -1401,6 +1442,12 @@ class Core(SocialMixin):
 
     def sync_status(self):
         return self.sync.status() if self.sync else None
+
+    def apply_lanes_state(self, keys):
+        """Another device rearranged my lanes (core/sync: the order of lists, saved tag
+        lanes) — the new values are in the store already: the sidebar follows."""
+        log.info("sync: %s from another device", ", ".join(keys))
+        self._apply_lists(list(self.lists), self.list_members)
 
     def apply_thread_state(self, root, state):
         """Another device set this thread's state (core/sync): do the same here, without
@@ -2095,7 +2142,7 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def account(self, acc_id):
-        return self.submit(self.api.account, acc_id)
+        return self.call_api("account", acc_id)
 
     def posts_from_origin(self, acc, have_uris=()):
         """Someone from another server my server knows little about: their newest public
@@ -2311,7 +2358,7 @@ class Core(SocialMixin):
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification
         (in Likes & boosts, with activity.types including "status")."""
-        return self.submit(self.api.notify_posts, acc_id, on)
+        return self.call_api("notify_posts", acc_id, on)
 
     def followed_among(self, accounts):
         """Which of these accounts I follow — why a thread I'm not subscribed to still
@@ -2395,13 +2442,13 @@ class Core(SocialMixin):
         return self.bg.submit(job)
 
     def tag_info(self, name):
-        return self.submit(self.api.tag, name)
+        return self.call_api("tag", name)
 
     def follow_tag(self, name, on=True):
-        return self.submit(self.api.follow_tag, name, on)
+        return self.call_api("follow_tag", name, on)
 
     def followed_tags(self):
-        return self.submit(self.api.followed_tags)
+        return self.call_api("followed_tags")
 
     # ---- completing hashtags while writing -------------------------------------------
     def prepare_tags(self):
@@ -2517,7 +2564,7 @@ class Core(SocialMixin):
     # ---- my profile ------------------------------------------------------------
     def my_profile(self):
         """My account as the editor needs it (bio and fields as typed)."""
-        return self.submit(self.api.verify_credentials)
+        return self.call_api("verify_credentials")
 
     def update_profile(self, **changes):
         def job():
@@ -2546,8 +2593,14 @@ class Core(SocialMixin):
             return narrower(pv, default)
         return default
 
+    def post_accounts(self, reply_to=None):
+        """The editor's "From": one account here — nothing to choose (core/merged.py has
+        the window with all of them)."""
+        return [], ""
+
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
-             language=None, sensitive=False, poll=None, quote=None, scheduled_at=None):
+             language=None, sensitive=False, poll=None, quote=None, scheduled_at=None,
+             account=None):
         """media: [(path, description)] or [(path, description, (x, y) focus point)].
         language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
@@ -2581,7 +2634,7 @@ class Core(SocialMixin):
                 st = self.api.post_status(text, visibility, reply_to, spoiler, ids,
                                           self.markdown, **extra)
                 if draft_key:
-                    self.store.delete_draft(draft_key)
+                    self.delete_draft(draft_key)
                 log.info("scheduled for %s", scheduled_at)
                 return dict(st or {}, scheduled=True)
             started = time.time()
@@ -2618,7 +2671,7 @@ class Core(SocialMixin):
             try:
                 self.sound_moment("sent")
                 if draft_key:
-                    self.store.delete_draft(draft_key)
+                    self.delete_draft(draft_key)
                 self.store.put_statuses(chain)
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
                 self._auto_subscribe([st])
@@ -2654,7 +2707,7 @@ class Core(SocialMixin):
             st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
             self.store.put_statuses([st])
             if draft_key:
-                self.store.delete_draft(draft_key)
+                self.delete_draft(draft_key)
             self.emit("status_updated", st)
             return st
         return self.submit(job)
@@ -2673,7 +2726,7 @@ class Core(SocialMixin):
         return self.submit(job)
 
     def history(self, status):
-        return self.submit(self.api.status_history, real(status)["id"])
+        return self.call_api("status_history", real(status)["id"])
 
     def _update(self, st):
         self.store.put_statuses([st])
@@ -2703,13 +2756,13 @@ class Core(SocialMixin):
     def translate(self, status):
         """The post in the interface's language, by my server (a future)."""
         from ..i18n import current_language
-        return self.submit(self.api.translate, real(status)["id"], current_language())
+        return self.call_api("translate", real(status)["id"], current_language())
 
     def report(self, status, comment="", forward=False, category="other"):
         """Tell my server's moderators about a post (and its author); forward: also the
         moderators of the author's server, without saying who reported."""
         s = real(status)
-        return self.submit(self.api.report, s["account"]["id"], [s["id"]], comment,
+        return self.call_api("report", s["account"]["id"], [s["id"]], comment,
                            forward, category)
 
     def featured(self, acc_id):
@@ -2857,9 +2910,24 @@ class Core(SocialMixin):
     def save_draft(self, key, data):
         if self.cfg["post"]["drafts_autosave"]:
             self.store.save_draft(key, data)
+            if self.sync:
+                self.sync.record_draft(key)
 
     def delete_draft(self, key):
+        """A draft sent or emptied: gone here, and on my other devices (sync.drafts)."""
         self.store.delete_draft(key)
+        if self.sync:
+            self.sync.record_draft(key)
+
+    # the lanes a phone pins as tiles (its overview of lanes); kept here so that sync can
+    # carry them (sync.tiles) — a desktop keeps them without showing them
+    def pinned_tiles(self):
+        return list(self.store.kv_get("pinned_tiles", []) or [])
+
+    def set_pinned_tiles(self, names):
+        self.store.kv_set("pinned_tiles", [str(n) for n in names])
+        if self.sync:
+            self.sync.record_setting("pinned_tiles")
 
     def get_state(self, key, default=None):
         return self.store.kv_get(f"ui.{key}", default)

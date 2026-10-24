@@ -72,7 +72,7 @@ from .find import FindBar
 from .hints import HintMode
 from .images import Images
 from .login import LoginDialog
-from .notify import Notifier, icon_path, mascot_path
+from .notify import Notifier, icon_path
 from .opener import open_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
@@ -127,10 +127,11 @@ class LaneItem(QWidget):
         from . import icons as pictures
         if pictures.pictures(theme):
             icon = QLabel()
-            ic = pictures.icon(iconpack.lane_picture(name), theme, 18)
+            px = int(theme.shape.get("icon_size", 18) or 18)
+            ic = pictures.icon(iconpack.lane_picture(name), theme, px)
             if not ic.isNull():
-                icon.setPixmap(ic.pixmap(18, 18))
-            icon.setFixedWidth(18)
+                icon.setPixmap(ic.pixmap(px, px))
+            icon.setFixedWidth(px)
             h.addWidget(icon)
         self.label = QLabel()
         self.label.setObjectName("laneName")
@@ -486,6 +487,12 @@ class MainWindow(QMainWindow):
         self.statusBar().messageChanged.connect(
             lambda msg: self.profile_label.setVisible(not msg))
         self._profile_text()
+        # right in the status bar, always seen: sync with my other devices (or that
+        # there is none — it is a service of its own, off without sync.url)
+        self.sync_label = QLabel()
+        self.sync_label.setObjectName("muted")
+        self.statusBar().addPermanentWidget(self.sync_label)
+        self._sync_text()
 
         for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
                         ("Ctrl+Q", self.quit),
@@ -639,13 +646,19 @@ class MainWindow(QMainWindow):
         b.setToolTip(tip)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setFixedSize(32, 32)
-        b.setIconSize(QSize(18, 18))
+        # the buttons' pictures fill them as the desktop's toolbars do (18 of 32 px looked
+        # lost): a third bigger than the lanes', 26 at most
+        px = min(26, round(int(self.theme.shape.get("icon_size", 18) or 18) * 4 / 3))
+        b.setIconSize(QSize(px, px))
         from . import icons
-        ic = icons.icon(picture, self.theme, 18)
+        ic = icons.icon(picture, self.theme, px)
         if ic.isNull() and drawn and icons.how(self.theme) == "desktop":
-            ic = drawn(18)
+            ic = drawn(px)
         if ic.isNull():
             b.setText(glyph)
+            # one glyph in a 32 px square: the theme's button padding would ask 36 for it
+            # and cut it (Windows, monospace themes: the tour's "button cut")
+            b.setStyleSheet("QToolButton#menu { padding: 0px; }")
         else:
             b.setIcon(ic)
         return b
@@ -685,6 +698,13 @@ class MainWindow(QMainWindow):
                                               "width": width})
         log.info("sidebar width %d", width)
 
+    def _sync_text(self):
+        """"⇅ 21:40" / "⇅ off" / "⇅ !" at the right of the status bar."""
+        from ..common import syncline
+        text, tip = syncline.bar(self.core)
+        self.sync_label.setText(text)
+        self.sync_label.setToolTip(tip)
+
     def _profile_text(self):
         """"default: @me@server ★" at the left of the status bar."""
         from ...core import paths
@@ -723,7 +743,7 @@ class MainWindow(QMainWindow):
         t.setToolTip(_("try_theme_tip"))
         t.setToolTipsVisible(True)
         configured = self.cfg["ui"]["theme"]
-        for name in themefile.available():
+        for name in themefile.for_layout(self.cfg, keep=(configured, self.theme.id)):
             label = name + ("  · " + _("theme_in_config") if name == configured else "")
             act = t.addAction(label, lambda n=name: self.try_theme(n))
             act.setCheckable(True)
@@ -738,6 +758,11 @@ class MainWindow(QMainWindow):
             return
         app = QApplication.instance()
         old = self.theme
+        # the videos and the gifs looping in cards stopped first: their players went
+        # with the cards below while still decoding — and Qt fell over (23.10)
+        from . import player as player_module
+        player_module.stop_all(self)
+        app.processEvents()  # the players' last frames delivered, to nobody harmed
         # Qt restyles every widget there is, seen or not: the lanes out of sight let
         # their cards go first (drawn anew when opened), or a trial took seconds
         for w in self.lane_widgets.values():
@@ -919,11 +944,18 @@ class MainWindow(QMainWindow):
 
     def set_merged(self, on):
         """All accounts in one window or not: remembered, then fedtail restarts."""
-        from ...core import profiles
         primary = getattr(self.core, "primary", self.core)
         primary.set_state("merge", ["all"] if on else [])
         log.info("merge %s: restarting", "on" if on else "off")
-        profiles.launch(primary.paths.profile, after=1.5)
+        self.restart()
+
+    def restart(self):
+        """fedtail again, the same profile: once this process has gone."""
+        import os
+
+        from ...core import profiles
+        primary = getattr(self.core, "primary", self.core)
+        profiles.launch(primary.paths.profile, after=0.5, wait_for=os.getpid())
         QTimer.singleShot(200, self.quit)
 
     def add_profile(self):
@@ -957,6 +989,7 @@ class MainWindow(QMainWindow):
         people.setEnabled(not people.isEmpty())
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
+        m.addAction(_("settings"), self.open_settings)
         m.addAction(_("open_config"), lambda: open_path(self.core.paths.config_file))
         m.addAction(_("open_themes"), lambda: open_path(themefile.user_dir()))
         m.addMenu(self._try_theme_menu(m))
@@ -1577,7 +1610,9 @@ class MainWindow(QMainWindow):
                 log.debug("event %s: %.0f ms", name, ms)
 
     def _on_event(self, name, payload):
-        if name == "lanes_updated":
+        if name == "sync_changed":
+            self._sync_text()
+        elif name == "lanes_updated":
             for lane in payload:
                 w = self.lane_widgets.get(lane)
                 if isinstance(w, LaneWidget):
@@ -1911,14 +1946,10 @@ class MainWindow(QMainWindow):
 
     def read_up_to(self, sid):
         """This post and everything older in the view it's in: read."""
+        from ..common.lane import read_up_to
         view = self.current_view()
         specs = [s for s in (view.model if view is not None else []) if s.entry is not None]
-        at = next((i for i, s in enumerate(specs) if s.entry.id == sid), None)
-        if at is None:
-            self.core.mark_read([sid])
-            return
-        older = specs[:at + 1] if self.cfg["feed"]["order"] == "oldest_first" else specs[at:]
-        self.core.mark_read([s.entry.id for s in older if s.unread])
+        self.core.mark_read(read_up_to([s.entry for s in specs], sid))
 
     def current_view(self):
         """The FeedView on screen: the current lane, thread or profile."""
@@ -2376,34 +2407,23 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(_("debug_report_done", path=str(out)), 15000)
         open_path(out.parent)
 
+    def open_settings(self, query=""):
+        """The settings window (qt/settings.py): one at a time, brought up again."""
+        from .settings import SettingsDialog
+        dlg = getattr(self, "_settings", None)
+        if dlg is None or not dlg.isVisible():
+            dlg = self._settings = SettingsDialog(self)
+        if query:
+            dlg.search.setText(query)
+        dlg.show()
+        dlg.raise_()
+        dlg.activateWindow()
+
     def about(self):
-        import platform
-
-        from PySide6 import __version__ as pyside
-
-        info = version.info()
-        lines = [_("about_text", version=info["version"])]
-        if info["commit"]:
-            lines.append(_("about_build", commit=info["commit"], date=info["date"]))
-        lines.append(_("about_env", py=platform.python_version(), qt=pyside))
-        lines.append(_("made_by_long"))
-        from urllib.parse import quote
-        author = "fedtail:resolve/" + quote(version.AUTHOR_URL, safe="")
-        lines.append(_("about_links", repo=version.HOMEPAGE, author_link=author,
-                       author=version.AUTHOR))
-        box = QMessageBox(self)
-        box.setWindowTitle("fedtail")
-        # the opossum holding its own tail — whatever the window's icon is
-        box.setIconPixmap(QIcon(mascot_path()).pixmap(160, 160))
-        box.setTextFormat(Qt.TextFormat.RichText)
-        box.setText("<br>".join(lines))
-        # links: the code to the browser; the author opens here, with Follow on the page
-        label = box.findChild(QLabel, "qt_msgbox_label")
-        if label is not None:
-            label.setOpenExternalLinks(False)
-            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
-            label.linkActivated.connect(lambda url: (box.accept(), self.on_link(url)))
-        box.exec()
+        """About fedtail: cards of what it is and what it runs on (qt/about.py)."""
+        from .about import AboutDialog
+        dlg = AboutDialog(self)
+        dlg.exec()
 
     def show_raise(self):
         self.showNormal()

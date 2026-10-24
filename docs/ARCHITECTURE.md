@@ -513,8 +513,9 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   source mentions) is marked read once per new marker; push — the newest item such that
   everything older is read goes to the server. Ids compare with `model.id_after`
   (numbers or same-length ULIDs).
-* **Sync between devices** (`core/sync/`, docs/en/sync.md; `sync.*`, off by default) —
-  `Sync` (engine.py) is made by `Core.__init__` when `sync.enabled`; `Core.mark_read`,
+* **Sync between devices** (`core/sync/`, docs/en/sync.md; `sync.*`, off unless
+  `sync.url` or `sync.folder` is set: a service of its own, never looked up) —
+  `Sync` (engine.py) is made by `Core.__init__` when `engine.wanted(cfg)`; `Core.mark_read`,
   `subscribe`, `unsubscribe`, `mute_thread` record into the store's `sync_out` (read
   marks only when the *user* made them — `store.mark_read` by the core itself isn't
   recorded), thread states also into `sync_lww` (key `t:<root>`, `(at ms, device)` —
@@ -524,11 +525,28 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `data/sync.key`, key id in clear) → `backend.push`; then `backend.pull(cursor)` (kv
   `sync.cursor`, reset when `sync.where` changes) → `crypto.unseal` → `Sync.apply`:
   reads unioned (`read_changed`), thread states through `sync_newer` →
-  `Core.apply_thread_state` (subs.subscribe / leave, no re-recording). Backends
+  `Core.apply_thread_state` (subs.subscribe / leave, no re-recording). Lanes
+  (`sync.lanes`): `Core.move_list` and the saved tag lanes (`save_tag_group`,
+  `add_tag_to_group`, `drop_tag_group`) call `Sync.record_setting(key)` with the whole new
+  kv value (`list_order`, `tag_groups`; key `k:<name>` in `sync_lww`, the newest wins;
+  `Sync._stamp` keeps one device's times strictly rising); `apply` puts a newer one in
+  kv and calls `Core.apply_lanes_state` → `_apply_lists` (sidebar redrawn). Tiles
+  (`sync.tiles`): `Core.set_pinned_tiles` → kv `pinned_tiles`, the same way; applied →
+  `tiles_changed`. Drafts (`sync.drafts`): `Core.save_draft` / `delete_draft` (also on a
+  sent post) mark the key dirty; the round's `_flush_drafts` sends each one's last
+  version without `media` (files of that computer; a pictures-only draft isn't sent),
+  `None` for gone (key `d:<draft key>`, the newest wins); applied, the local `media` for
+  that key stays, → `drafts_changed`. Activity (`sync.activity`): `dismiss_activity` /
+  `answer_interaction` record what `store.activity_hide` returns, `(id, sort, group
+  key)`; applied by `store.activity_hide_known` (unioned into `activity_hidden` /
+  `_groups`, the rows go) → `activity_updated`. Every round
+  and every problem emits `sync_changed`; `frontends/common/syncline.py` turns
+  `sync_status()` into the status bar's "⇅ 21:40 / … / ! / off" (Qt, GTK) and About's
+  row. Backends
   (backends.py): `HttpBackend` (fedtail-sync: `syncserver/fedtail_sync.py`, a stdlib file
   outside the package; token from `data/sync_auth.json`, a `read:accounts` app made by
-  `fedtail sync login`; URL from `sync.url` or `/.well-known/fedtail-sync` on the
-  account's server) and `FolderBackend` (one subfolder per device). No key and a store
+  `fedtail sync login`; URL from `sync.url` only) and `FolderBackend` (`sync.folder`, one
+  subfolder per device; both set is a config error). No key and a store
   with others' blobs → no new key, the error asks for `fedtail sync join`. Problems go
   out once as `error` events and stay in kv `sync.last` (`fedtail sync status`).
 * **Short names** — `store.aliases()`: a post with an old counter name (`aliases`
@@ -592,6 +610,9 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 | `capabilities_changed` | feature | the server answered "no such thing" | buttons hide at once |
 | `prefetch` / `prefetch_video` | [urls] | after a poll | pictures/videos fetched ahead |
 | `sound` | event name | news (core/sounds.py), connected, a post sent | the theme's sound (common/sound.py) |
+| `sync_changed` | None | a sync round done or a sync problem met | the status bar's "⇅" word (common/syncline.py) |
+| `drafts_changed` | [draft keys] | another device changed drafts (sync) | — (a compose box opened later reads the new one) |
+| `tiles_changed` | [lane names] | another device pinned other tiles (sync) | the phone's overview of lanes |
 
 ## 14. The Qt frontend
 

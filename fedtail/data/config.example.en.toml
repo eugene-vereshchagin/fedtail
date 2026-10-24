@@ -1,7 +1,9 @@
 # fedtail — profile config.
 #
 # Every setting is here, with its default value and an explanation. Change what you need
-# and restart fedtail. The program only reads this file and never writes it.
+# and restart fedtail. Or open ≡ → Settings: the window edits this very file — just the
+# line you changed, the comments and the rest stay as they are (the old file is
+# config.toml.bak). The program never rewrites it on its own.
 #
 # A value written here stays yours even if a new version changes the default. Want the
 # program's default always — comment the line out (# at the start) or delete it.
@@ -106,6 +108,11 @@ max_width = 760
 # last tab closes it. Closing the roster closes fedtail (to the tray with
 # close_to_tray). The old name "qip" is understood too.
 layout = "single"
+
+# Themes for this window layout: "Try a theme" offers only those made for it (a theme
+# says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for
+# both). "auto" — so in releases, every theme in development versions; "on"; "off".
+themes_by_layout = "auto"
 
 # With layout = "split": the roster stays above other windows.
 roster_on_top = false
@@ -937,27 +944,43 @@ stream = "auto"
 markdown = "auto"
 
 [sync]
-# Read marks and thread subscriptions the same on all your devices (a desktop, a laptop,
-# a phone). Off by default. What travels is sealed with a key only your devices have:
-# whatever stores it sees no posts and no read marks. Setting up: docs/en/sync.md, in
-# short: `fedtail sync login` (a sync server) or a folder, then `fedtail sync key` here
-# and `fedtail sync join` on the other devices.
-enabled = false
-
-# Where the devices meet: "server" — a fedtail-sync server; "folder" — a folder every
-# device sees (a NAS share, WebDAV mounted, Syncthing).
-backend = "server"
-
-# The sync server's address. Empty — the one your fediverse server names
-# (https://<server>/.well-known/fedtail-sync), if its admin set one up.
+# Read marks, thread subscriptions and the order of your own lanes the same on all your
+# devices (a desktop, a laptop, a phone). Sync is a service of its own, apart from your
+# fediverse server: without an address below there is simply no sync (the status bar
+# and About say so). What travels is sealed with a key only your devices have: whatever
+# stores it sees no posts and no read marks. How to set it up: docs/en/sync.md; in short —
+# the address here, `fedtail sync login`, then `fedtail sync key` on the first device and
+# `fedtail sync join` on the others.
+#
+# url — the fedtail-sync server's address, as its admin gave it (say,
+# "https://sync.example.org"). Empty — no sync server.
 url = ""
 
-# The folder for backend = "folder" (~ is your home folder).
+# Or, instead of a server, a folder every device sees: a NAS share, WebDAV mounted, a
+# Syncthing folder (~ is your home folder). Not both: url or folder.
 folder = ""
 
-# What travels: "read" — read marks you made (not the first run's "everything read"),
-# "threads" — threads you followed, left or muted by hand.
-what = ["read", "threads"]
+# What travels — a switch for each; off keeps it on this device only.
+# Read marks you made (not the first run's "everything read", not older history).
+read = true
+
+# Threads you followed, left or muted by hand.
+threads = true
+
+# Your lanes as you arranged them: the order of lists (servers keep none) and the tag
+# lanes you saved.
+lanes = true
+
+# Drafts: begun on one device, finished on another; sent or emptied — gone everywhere.
+# Text, content warning, poll, who sees it; pictures are files of each computer and stay
+# where they were added.
+drafts = true
+
+# Notifications you dismissed from Activity: gone on every device.
+activity = true
+
+# Which lanes the phone pins as tiles.
+tiles = true
 
 # How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after
 # it was made anyway.
@@ -1152,11 +1175,6 @@ open_browser = true
 # The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and
 # the name); "list" — a list, a row per lane, with its first unread post.
 overview = "tiles"
-
-# Which lanes are tiles, and in which order: ["home", "replies", "mentions", "direct",
-# "subs", "bots", "list:News", "activity"] (a list — "list:" and its title). The other
-# lanes — rows under the tiles. [] — every lane with a count is a tile.
-pinned = []
 
 # How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and
 # a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread
