@@ -33,6 +33,7 @@ from ...core.view import View
 from ...i18n import _
 from ...model import real
 from ...model.text import html_to_text, snippet
+from ..common import timed
 from ..richtext import openable
 from . import pictures, termcaps
 from .model import (
@@ -569,7 +570,8 @@ class ThreadScreen(Screen, PostsMixin):
 
 class ProfileScreen(Screen, PostsMixin):
     """Someone's profile: who, the bio, follows you or not; F — follow / unfollow;
-    their posts below (Enter — a thread).
+    their posts below (Enter — a thread); s — which of them: posts, posts and replies,
+    media (common/timed.py, feed.profile_show first).
 
     The header is a box of its own and the screen doesn't scroll as a whole: it used
     to, and highlighting the first post scrolled the header away — the profile
@@ -584,6 +586,8 @@ class ProfileScreen(Screen, PostsMixin):
                 Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("full_stop", "post_menu", "⋯", show=False),
                 Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
+                Binding("s", "show_next", _("profile_show_posts") + " / " +
+                        _("profile_show_media")),
                 *[Binding(str(i), f"button({i})", show=False) for i in range(1, 10)],
                 Binding("colon", "command", ":", show=False)]
     CSS = """
@@ -599,6 +603,7 @@ class ProfileScreen(Screen, PostsMixin):
         super().__init__()
         self.acc_id = acc_id
         self.acc, self.rel = None, None
+        self.show = None  # which of their posts: common/timed.py PROFILE_SHOWS
 
     def compose(self) -> ComposeResult:
         yield Static(_("tui_profile") + " …", id="title")
@@ -619,7 +624,27 @@ class ProfileScreen(Screen, PostsMixin):
         if not me or self.acc_id != me.id:
             self.later(core.relationship(self.acc_id), ok=self.got_relation,
                        fail=lambda _e: None)
-        self.later(core.account_posts(self.acc_id), ok=self.fill)
+        self.show = timed.profile_show(core.cfg)
+        self.load_posts()
+
+    def posts_head(self):
+        """"Posts: Posts · Posts and replies · Media (s)" — the one shown in brackets."""
+        bits = [f"[{label}]" if key == self.show else label
+                for key, label in timed.profile_shows()]
+        return _("tui_profile_posts") + ": " + " · ".join(bits) + "  (s)"
+
+    def load_posts(self):
+        head = self.query_one("#posts-head", Static)
+        head.update(Text(self.posts_head()))
+        head.tooltip = _("profile_show_tip")
+        self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
+
+    def action_show_next(self):
+        """Posts → posts and replies → media → posts, from the top each time."""
+        keys = [k for k, _label in timed.PROFILE_SHOWS]
+        at = keys.index(self.show) if self.show in keys else -1
+        self.show = keys[(at + 1) % len(keys)]
+        self.load_posts()
 
     def got_account(self, acc):
         self.acc = acc
@@ -712,7 +737,7 @@ class ProfileScreen(Screen, PostsMixin):
         self.query_one("#cmd", Input).focus()
 
     def status_changed(self, st):
-        self.later(self.app.core.account_posts(self.acc_id), ok=self.fill)
+        self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
 
     async def on_input_submitted(self, e: Input.Submitted):
         e.stop()

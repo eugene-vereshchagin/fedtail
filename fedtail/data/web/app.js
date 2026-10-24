@@ -498,14 +498,59 @@ async function postMenu(p, anchor) {
   popup(anchor, items);
 }
 
+// one of a few answers, and maybe a box to tick (the server's choose(): how long a mute
+// lasts…): resolves with {key, ticked}, or null when closed
+function chooseDlg(c) {
+  return new Promise((resolve) => {
+    const d = el("dialog", "choose-dlg");
+    const f = el("form");
+    f.method = "dialog";
+    f.append(el("h3", "", c.title));
+    if (c.text) f.append(el("p", "", c.text));
+    let tick = null;
+    const list = el("div", "choose-options");
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; d.close(); d.remove(); resolve(v); };
+    for (const o of c.options) {
+      const b = el("button", "", o.label);
+      b.type = "button";
+      b.onclick = () => finish({ key: o.key, ticked: !!(tick && tick.checked) });
+      list.append(b);
+    }
+    f.append(list);
+    if (c.check) {
+      const lab = el("label", "choose-check");
+      tick = el("input");
+      tick.type = "checkbox";
+      lab.append(tick, document.createTextNode(" " + c.check));
+      f.append(lab);
+    }
+    const cancel = el("button", "", w("web_cancel"));
+    cancel.type = "button";
+    cancel.onclick = () => finish(null);
+    f.append(cancel);
+    d.append(f);
+    d.addEventListener("close", () => finish(null));
+    document.body.append(d);
+    d.showModal();
+    const first = list.querySelector("button");
+    if (first) first.focus();
+  });
+}
+
 // a fedtail: link from the ⋯ menu: the server does it as every window does, and says
 // what is left for the page — a question first, a place to open, the editor, a copy
-async function linkAct(url, p, confirmed) {
+async function linkAct(url, p, confirmed, chosen) {
   let r;
-  try { r = await api("/api/link", { url, confirmed: !!confirmed }); }
+  try { r = await api("/api/link", { url, confirmed: !!confirmed, chosen: chosen || null }); }
   catch (e) { toast(e.message); return; }
   if (r.confirm) {
-    if (window.confirm(r.confirm)) await linkAct(url, p, true);
+    if (window.confirm(r.confirm)) await linkAct(url, p, true, chosen);
+    return;
+  }
+  if (r.choose) {
+    const got = await chooseDlg(r.choose);
+    if (got) await linkAct(url, p, confirmed, got);
     return;
   }
   if (r.copy) copyText(r.copy);
@@ -1090,11 +1135,28 @@ function threadHead(h, openedFrom) {
   return box;
 }
 
-async function openAccount(id) {
+// which of their posts the profile shows: posts, posts and replies, media (the server
+// says which and in which words); a press shows the profile again with that
+function profileShows(a, id) {
+  const bar = el("div", "row profile-shows");
+  bar.setAttribute("role", "group");
+  if (a.show_tip) bar.title = a.show_tip;
+  for (const s of a.shows || []) {
+    const b = el("button", s.on ? "primary" : "tool", s.label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", s.on ? "true" : "false");
+    b.onclick = () => { if (!s.on) openAccount(id, s.key); };
+    bar.append(b);
+  }
+  return bar;
+}
+
+async function openAccount(id, show) {
   if (!id) return;
   const token = showSide(w("tui_profile"));
   try {
-    const a = await api("/api/account?id=" + encodeURIComponent(id));
+    const a = await api("/api/account?id=" + encodeURIComponent(id)
+                        + (show ? "&show=" + encodeURIComponent(show) : ""));
     if (state.side !== token) return;
     const body = $("#side-body");
     body.textContent = "";
@@ -1140,6 +1202,7 @@ async function openAccount(id) {
       box.append(row);
       if (a.note_line) box.append(el("div", "muted", a.note_line));
       body.append(box);
+      body.append(profileShows(a, id));
       for (const p of a.posts) body.append(renderPost(p, false));
       if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
       return;
@@ -1164,17 +1227,26 @@ async function openAccount(id) {
     if (a.account.url) row.append(link(w("open_browser") + " ↗", a.account.url, "tool"));
     box.append(row);
     body.append(box);
+    body.append(profileShows(a, id));
     for (const p of a.posts) body.append(renderPost(p, false));
     if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
   } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
 }
 
-async function profileAct(id, key, answer, confirmed) {
+async function profileAct(id, key, answer, confirmed, chosen) {
   let r;
   try { r = await api("/api/profile_act", { id, key, answer: answer === undefined ? null : answer,
-                                             confirmed: !!confirmed }); }
+                                             confirmed: !!confirmed, chosen: chosen || null }); }
   catch (e) { toast(e.message); return; }
-  if (r.confirm) { if (window.confirm(r.confirm)) await profileAct(id, key, answer, true); return; }
+  if (r.confirm) {
+    if (window.confirm(r.confirm)) await profileAct(id, key, answer, true, chosen);
+    return;
+  }
+  if (r.choose) {
+    const got = await chooseDlg(r.choose);
+    if (got) await profileAct(id, key, answer, confirmed, got);
+    return;
+  }
   if (r.ask) {
     const got = window.prompt(r.ask.title + "\n\n" + r.ask.question, r.ask.text || "");
     if (got !== null) await profileAct(id, key, got, confirmed);

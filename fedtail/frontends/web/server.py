@@ -31,6 +31,7 @@ from ...core.view import View
 from ...i18n import _
 from ...model import Account, Share, real
 from ...model.text import reply_mentions, snippet
+from ..common import timed
 from ..common.commands import Commands
 from ..richtext import clean
 
@@ -281,6 +282,12 @@ WEB_PROFILE_ACTS = ("details", "edit_profile", "follow", "bell", "boosts", "lang
                     "following", "followers", "note", "copy_handle", "open_browser")
 
 
+def _chosen(body):
+    """The page's pick for a choose() question, or None."""
+    got = body.get("chosen")
+    return got if isinstance(got, dict) else None
+
+
 class _WebHost:
     """The window common/links.py talks to, for the web: it waits for each future
     here (the request waits with it) and writes down what the page should do."""
@@ -384,6 +391,20 @@ class _WebHost:
         self.out["compose"] = c
 
     answer = None
+    chosen = None  # {"key", "ticked"}: the page's answer to choose(), asked again with it
+
+    def choose(self, title, text, options, done, check=None):
+        """One of a few answers, and maybe a box to tick (common/timed.py): the page
+        asks, then sends the same thing again with what was picked."""
+        if isinstance(self.chosen, dict):
+            want = str(self.chosen.get("key"))
+            for key, _label in options:
+                if str(key) == want:
+                    done(key, self.chosen.get("ticked") is True)
+                    return
+        self.out["choose"] = {"title": str(title), "text": str(text or ""),
+                              "options": [{"key": k, "label": str(lb)} for k, lb in options],
+                              "check": str(check) if check else ""}
 
     def ask_text(self, title, question, then, text="", allow_empty=False):
         if self.answer is not None and (self.answer.strip() or allow_empty):
@@ -834,16 +855,20 @@ class Web:
                 "cw_show": _("cw_all_show"), "cw_hide": _("cw_all_hide"),
                 "cw_tip": _("cw_all_tip")}
 
-    def account(self, acc_id):
+    def account(self, acc_id, show=None):
+        """A profile; show: which of their posts (common/timed.py: posts, all, media),
+        feed.profile_show when not said."""
         core = self.core
         acc_id = one_id(acc_id)
+        if show not in dict(timed.PROFILE_SHOWS):
+            show = timed.profile_show(core.cfg)
         acc = core.account(acc_id).result()
         me = core.me
         try:
             rel = core.relationship(acc_id).result() if not me or acc_id != me.id else None
         except Exception:  # noqa: BLE001 — the profile shows without it
             rel = None
-        page = core.account_posts(acc_id).result()
+        page = core.account_posts(acc_id, show=show).result()
         info = account_json(acc)
         info.update(note=with_emojis(web_clean(acc.note), acc.emojis) if acc else "",
                     header=_https(acc.header_static) if acc else "",
@@ -868,13 +893,16 @@ class Web:
                 "meta": prof.meta(acc, rel, self._date, since or None)[1:] if acc else [],
                 "note_line": prof.note_line(rel, own),
                 "actions": acts,
+                "shows": [{"key": k, "label": label, "on": k == show}
+                          for k, label in timed.profile_shows()],
+                "show_tip": _("profile_show_tip"),
                 "posts": self._posts(page)}
 
     @staticmethod
     def _date(when):
         return when.astimezone().strftime("%d.%m.%Y") if when else ""
 
-    def profile_act(self, acc_id, key, answer=None, confirmed=False):
+    def profile_act(self, acc_id, key, answer=None, confirmed=False, chosen=None):
         """A profile's button (common/profile.py), done as the windows do it; what's
         left for the page comes back: a question, a line to type, the editor."""
         from ..common import profile as prof
@@ -886,6 +914,7 @@ class Web:
         rel = core.relationship(acc_id).result()
         host = _WebHost(core, confirmed)
         host.answer = answer
+        host.chosen = chosen
         prof.do(key, acc, rel, core, host, lambda _r: host.out.setdefault("refresh", True))
         if host.out.get("error"):
             raise ValueError(host.out["error"])
@@ -939,13 +968,14 @@ class Web:
         return {"subscribed": core.subscribed(p), "muted": core.thread_quiet(p),
                 "own": bool(me and real(p).author.id == me.id), "items": items}
 
-    def link(self, url, confirmed=False):
+    def link(self, url, confirmed=False, chosen=None):
         """A fedtail: link from the ⋯ menu, done the way every window does it
         (common/links.py); what the page must do then comes back: a message, a
         question first ("sure?" — asked again with confirmed), a place to open, the
         editor to fill, text to copy."""
         from ..common.links import Links
         host = _WebHost(self.core, confirmed)
+        host.chosen = chosen
         Links(self.core, host).open(str(url or ""))
         if host.out.get("error"):
             raise ValueError(host.out["error"])
@@ -1339,7 +1369,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/lanes": lambda: self.web.lanes(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
-                  "/api/account": lambda: self.web.account(q.get("id", "")),
+                  "/api/account": lambda: self.web.account(q.get("id", ""),
+                                                           q.get("show") or None),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
                   "/api/places": lambda: self.web.place_menu(),
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
@@ -1406,11 +1437,11 @@ class Handler(BaseHTTPRequestHandler):
             "/api/place": lambda: web.place_act(body),
             "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/link": lambda: web.link(str(body.get("url", "")),
-                                          bool(body.get("confirmed"))),
+                                          bool(body.get("confirmed")), _chosen(body)),
             "/api/profile_act": lambda: web.profile_act(
                 str(body.get("id", "")), str(body.get("key", "")),
                 body.get("answer") if isinstance(body.get("answer"), str) else None,
-                bool(body.get("confirmed"))),
+                bool(body.get("confirmed")), _chosen(body)),
         }
         self._run(routes.get(path))
 
