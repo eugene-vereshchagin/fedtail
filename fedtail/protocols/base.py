@@ -67,6 +67,7 @@ CLIENT = frozenset("""
     async_refresh authorize_follow authorize_url block block_domain blocks bookmark
     bookmarks cancel_scheduled clear_notifications context conversations create_filter
     create_list custom_emojis delete_filter delete_list delete_status directory
+    filter_status filter_statuses unfilter_status
     dismiss_announcement dismiss_notification dismiss_notification_group
     dismiss_suggestion domain_blocks
     edit_status endorse endorsements familiar_followers favourite favourited_by

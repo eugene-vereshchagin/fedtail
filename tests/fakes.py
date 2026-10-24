@@ -290,7 +290,8 @@ class FakeApi:
 
     # lists: {id: {"id", "title", "exclusive", "members": set()}}
     def lists(self):
-        return [{"id": i, "title": x["title"], "exclusive": x["exclusive"]}
+        return [{"id": i, "title": x["title"], "exclusive": x["exclusive"],
+                 "replies_policy": x.get("replies_policy", "list")}
                 for i, x in self.w.lists.items()]
 
     def list_timeline(self, list_id, limit=40, max_id=None, min_id=None):

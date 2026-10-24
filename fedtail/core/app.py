@@ -1101,7 +1101,8 @@ class Core(SocialMixin):
     def _refresh_lists(self):
         """Lists and who is in them, from the server; lanes follow."""
         self._retry_list_pending()
-        got = [{"id": x["id"], "title": x.get("title", ""), "exclusive": bool(x.get("exclusive"))}
+        got = [{"id": x["id"], "title": x.get("title", ""), "exclusive": bool(x.get("exclusive")),
+                "replies_policy": x.get("replies_policy") or ""}
                for x in self.api.lists()]
         members = {x["id"]: {a["id"] for a in self.api.list_accounts(x["id"])} for x in got}
         for list_id, acc_id, _since in self._list_pending():  # still waiting: in, here
