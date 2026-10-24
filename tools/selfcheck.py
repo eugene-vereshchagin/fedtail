@@ -453,6 +453,12 @@ def main():
             run.step("tests", cmd, timeout=1800,
                      wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else (),
                      note="xvfb" if xvfb else "this desktop")
+            if a.night and py >= (3, 12):
+                # the same tests once more, counting which lines of fedtail/ they run
+                d = out / "coverage"
+                run.step("coverage", ["tools/coverage_lite.py", str(d)], timeout=2400,
+                         wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else (),
+                         folder=d, note="lines of fedtail/ the tests run")
         if "qt" in only:
             if not qt:
                 run.skip("qt-tour", "no PySide6 (pip install PySide6)")

@@ -8,3 +8,4 @@ dist/
 /debian/.debhelper/
 /debian/fedtail/
 fedtail/_build.py
+/coverage/
