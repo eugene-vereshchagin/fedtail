@@ -194,7 +194,9 @@ fedtail/
     themes/*.toml        built-in themes (system.toml lists every key)
     icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
     icons/fedtail.svg    the drawn bubble (ui.app_icon = "bubble"; iconart.py themes it)
-syncserver/fedtail_sync.py  the fedtail-sync server: one stdlib file an admin copies (§12)
+syncserver/fedtail_sync.py  the fedtail-sync server: one stdlib file an admin copies (§12);
+                            a project of its own (README, PROTOCOL.md, CHANGELOG, tests/,
+                            tools/coverage.py) on its way to a repo of its own
 tests/               unittest; fakes.py is an in-memory Mastodon
 tools/screenshots.py renders the window with made-up data (CI publishes PNGs)
 tools/push_probe.py  does the account's server push? Web Push → an ntfy topic, decrypted

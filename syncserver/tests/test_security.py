@@ -1,5 +1,5 @@
 """fedtail-sync faces the internet: each way to hang it, flood it, fill it or turn it
-against someone, tried on a live server on localhost (syncserver/fedtail_sync.py)."""
+against someone, tried on a live server on localhost."""
 
 import http.client
 import http.server
@@ -10,71 +10,7 @@ import time
 import unittest
 from unittest import mock
 
-from .test_core import TmpDir
-from .test_sync import load_server
-
-GOOD = {"t-me": "1", "t-me2": "1", "t-you": "2"}
-
-
-class Live(TmpDir):
-    """A server on a free port, with the options given; verify() is a fake that counts."""
-
-    def start(self, verify=None, **cfg):
-        self.mod = load_server()
-        self.calls = []
-
-        def fake(host, token):
-            self.calls.append(token)
-            return GOOD.get(token)
-        conf = {"db": str(self.tmp / "s.db"), "instances": ["me.example"],
-                "listen": "127.0.0.1:0", **cfg}
-        self.app = self.mod.Server(conf, verify=verify or fake)
-        self.httpd = self.mod.make_http_server(self.app)
-        self.port = self.httpd.server_address[1]
-        t = threading.Thread(target=self.httpd.serve_forever, daemon=True)
-        t.start()
-        self.addCleanup(self.httpd.server_close)
-        self.addCleanup(self.httpd.shutdown)
-
-    def call(self, method, path, token=None, body=None, headers=None):
-        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
-        h = dict(headers or {})
-        if token:
-            h.setdefault("Authorization", f"Bearer {token}")
-            h.setdefault("X-Fedtail-Instance", "https://me.example")
-        c.request(method, path, body=body, headers=h)
-        r = c.getresponse()
-        data = r.read()
-        c.close()
-        try:
-            return r.status, json.loads(data)
-        except ValueError:
-            return r.status, data
-
-    def raw(self, data, wait=5.0):
-        """Bytes sent as they are; → what came back before the server closed."""
-        s = socket.create_connection(("127.0.0.1", self.port), timeout=wait)
-        s.sendall(data)
-        out = b""
-        try:
-            while True:
-                chunk = s.recv(65536)
-                if not chunk:
-                    break
-                out += chunk
-        except TimeoutError:
-            out += b"<still open>"
-        s.close()
-        return out
-
-    def closed_within(self, sock, seconds):
-        sock.settimeout(seconds)
-        try:
-            return sock.recv(1) == b""
-        except TimeoutError:
-            return False
-        except ConnectionError:
-            return True
+from .live import Live, Tmp, load_server
 
 
 class HangingTest(Live):
@@ -216,6 +152,7 @@ class DiskTest(Live):
         # the count survives a restart, and a wipe gives the room back
         used = self.app.total
         again = load_server().Server({"db": str(self.tmp / "s.db"), "instances": []})
+        self.addCleanup(again.db.close)
         self.assertEqual(again.total, used)
         self.assertEqual(self.call("DELETE", "/v1/blobs", "t-me")[0], 200)
         self.assertEqual(self.app.total, 0)
@@ -232,12 +169,11 @@ class ErrorTest(Live):
         self.assertEqual((code, body), (500, {"error": "internal error"}))
 
 
-class TokenCheckTest(TmpDir):
+class TokenCheckTest(Tmp):
     """How the server asks a fediverse server whose a token is."""
 
     def setUp(self):
         super().setUp()
-        self.mod = load_server()
         self.hits = []
         hits = self.hits
 
@@ -293,6 +229,7 @@ class TokenCheckTest(TmpDir):
 
     def test_star_refuses_lan_and_odd_hosts(self):
         app = self.mod.Server({"db": ":memory:", "instances": ["*"]}, verify=lambda h, t: "1")
+        self.addCleanup(app.db.close)
         for host in ("localhost", "127.0.0.1", "[::1]", "10.1.2.3", "169.254.169.254"):
             self.assertFalse(app.allowed_host(host), host)
         for given in ("https://x.example/../y", "x.example/path", "a b.example",

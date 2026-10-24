@@ -19,9 +19,10 @@ the server, nothing else of fedtail is needed there.
 
 Behind nginx/Caddy or a Cloudflare tunnel for TLS, on a name of its own: it is a
 service apart from the fediverse server, and fedtail finds it only by the address the
-user puts in sync.url. docs/en/sync.md has the config, a systemd unit, the proxy lines.
+user puts in sync.url. README.md (next to this file) has the config, a systemd unit,
+the proxy lines; PROTOCOL.md what it speaks.
 
-It faces the internet, so it guards itself (each a config option, docs/en/sync.md):
+It faces the internet, so it guards itself (each a config option, README.md):
 a connection is dropped after `timeout_seconds` of silence and only `max_connections`
 are served at once; every client address has `requests_per_minute_per_ip`, and the
 token checks it causes — calls to someone's fediverse server — are capped per address
@@ -63,7 +64,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
-VERSION = 1
+__version__ = "1.0.0"  # the server's own; it is released apart from fedtail
+VERSION = 1            # the protocol (GET /v1 says it); a client checks this one
 log = logging.getLogger("fedtail-sync")
 
 DEFAULTS = {
@@ -352,6 +354,31 @@ class Server:
                 log.info("expired %d blobs older than %d days", n, days)
 
 
+def real_ip(peer, given):
+    """The address requests count against: what a proxy on this machine says (`given`,
+    from the header client_ip_header names) when the peer is loopback and it holds an
+    address; the peer itself otherwise — so a client can't name itself someone else."""
+    try:
+        local = ipaddress.ip_address(peer.split("%", 1)[0]).is_loopback
+    except ValueError:
+        local = False
+    given = (given or "").strip()
+    if local and given:
+        try:
+            return str(ipaddress.ip_address(given))
+        except ValueError:
+            pass
+    return peer
+
+
+def cut(sock):
+    """Close a connection from another thread, whatever state it is in."""
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass  # closed already
+
+
 def _number(q, name, default):
     text = q.get(name, "")
     if text == "":
@@ -382,22 +409,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _real_ip(self):
-        """The address requests count against: a loopback peer's proxy header, if the
-        config names one and it holds an address; the peer itself otherwise."""
-        peer = self.client_address[0]
         name = self.app.cfg["client_ip_header"]
-        if name:
-            try:
-                local = ipaddress.ip_address(peer.split("%", 1)[0]).is_loopback
-            except ValueError:
-                local = False
-            given = (self.headers.get(name) or "").strip()
-            if local and given:
-                try:
-                    return str(ipaddress.ip_address(given))
-                except ValueError:
-                    pass
-        return peer
+        return real_ip(self.client_address[0], self.headers.get(name) if name else None)
 
     def _body(self):
         """Exactly Content-Length bytes, or Refused: no length, a strange one, too big,
@@ -425,8 +438,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"fedtail-sync": VERSION})
             if url.path != "/v1/blobs":
                 return self._send(404, {"error": "no such thing"})
-            if method not in ("GET", "POST", "DELETE"):
-                return self._send(405, {"error": "no such method"})
             acc = self.app.account(self.headers, self.client_ip)
             if method == "POST":
                 blob = self._body()
@@ -484,12 +495,7 @@ class HTTPServer(ThreadingHTTPServer):
     def process_request_thread(self, request, client_address):
         # a whole request in twice the timeout: a client trickling a byte now and then
         # (each under the timeout) is cut all the same
-        def cut():
-            try:
-                request.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-        timer = threading.Timer(2 * self.RequestHandlerClass.timeout, cut)
+        timer = threading.Timer(2 * self.RequestHandlerClass.timeout, cut, (request,))
         timer.daemon = True
         timer.start()
         try:
@@ -532,11 +538,13 @@ def load_config(path):
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog="fedtail-sync", description=__doc__.split("\n")[0])
-    p.add_argument("--config", help="a TOML file with the options (see docs/en/sync.md)")
+    p.add_argument("--config", help="a TOML file with the options (see README.md)")
     p.add_argument("--listen", help=f"address:port (default {DEFAULTS['listen']})")
     p.add_argument("--db", help="the SQLite file")
     p.add_argument("--instance", action="append", help="a server whose people are served "
                    "(again for more; * — anyone)")
+    p.add_argument("--version", action="version",
+                   version=f"fedtail-sync {__version__} (protocol {VERSION})")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     cfg = load_config(a.config) if a.config else {}
@@ -549,19 +557,28 @@ def main(argv=None):
     if not app.allowed:
         log.warning("no instances allowed: every request will be refused (set instances)")
     httpd = make_http_server(app)
-    log.info("fedtail-sync %d on %s, serving %s", VERSION, app.cfg["listen"],
+    log.info("fedtail-sync %s (protocol %d) on %s, serving %s", __version__, VERSION,
+             app.cfg["listen"],
              ", ".join(sorted(app.allowed)) or "nobody")
 
-    def expiring():
+    stop = threading.Event()
+
+    def expiring():  # keep_days: old journals go, once an hour
         while True:
             app.expire()
-            time.sleep(3600)
-    threading.Thread(target=expiring, daemon=True, name="expire").start()
+            if stop.wait(3600):
+                return
+    keeper = threading.Thread(target=expiring, daemon=True, name="expire")
+    keeper.start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        stop.set()
+        keeper.join(5)
+        httpd.server_close()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover — run as a program, not imported
     main()

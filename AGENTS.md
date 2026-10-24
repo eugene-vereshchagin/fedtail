@@ -15,6 +15,8 @@ clients, the config switch for each) — generated, see "Docs" below.
 ```sh
 python3 -m fedtail                       # run from the checkout (needs PySide6 + requests)
 python3 -m unittest discover -s tests -t .   # all tests; Qt ones skip without PySide6
+python3 -m unittest discover -s syncserver/tests -t syncserver   # the sync server's own
+python3 syncserver/tools/coverage.py --fail-under 100           # … every line of it (3.12+)
 QT_QPA_PLATFORM=offscreen python3 -m unittest tests.test_qt_smoke
 ruff check .                             # line length 100
 python3 tools/screenshots.py out/        # PNGs of every theme with made-up data
@@ -97,3 +99,14 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   and by hand.
 * No shortcut on F1 or Shift+F1, ever: they sit next to Esc.
 * Docstrings: Google style; every module starts with what it is for.
+
+## The sync server
+
+`syncserver/` is a project of its own that happens to live here for now and will move to a
+repo of its own: one file (`fedtail_sync.py`, standard library only, Python 3.11+), its own
+version (`__version__`, `syncserver/CHANGELOG.md`), README in both languages, the protocol
+(`syncserver/PROTOCOL.md` — the contract with fedtail: change it only with a new protocol
+number), its own tests (`syncserver/tests/`, nothing of fedtail imported) at 100 % of lines.
+It faces the internet: every new way in gets a limit and a test in
+`syncserver/tests/test_security.py`. fedtail's side talks to it only through `PROTOCOL.md`
+(`fedtail/core/sync/backends.py`); `tests/test_sync.py` runs the client against it.

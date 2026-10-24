@@ -10,6 +10,11 @@
   gave the focus back; "Reply with a quote" quotes the post's words, not its HTML; a
   redraw or an answer from the server arriving as the terminal closes is dropped quietly
   instead of an error on the way out.
+- fedtail-sync gets ready to leave for a repo of its own: its own version (1.0.0) and
+  changelog, `--version`, README in both languages with the install guide (moved there from
+  docs/*/sync.md), the protocol written down (`syncserver/PROTOCOL.md`), and its own tests
+  in `syncserver/tests/` — the standard library only, every line of the server run
+  (`syncserver/tools/coverage.py --fail-under 100`, in CI's security job).
 - The language of a post: Georgian is named «ქართული (ka)» again, not in Mtavruli capitals
   («Ქართული»): Georgian text has no capital letters.
 - fedtail-sync guards itself — it faces the internet and didn't: a silent or trickling
@@ -22,7 +27,7 @@
   public addresses, checked on the connected socket; an error inside says "internal error"
   only. Behind cloudflared or nginx, `client_ip_header` (`CF-Connecting-IP`, `X-Real-IP`)
   gives the limits the real address — believed from a loopback peer only. Tests for each
-  (`tests/test_syncserver_security.py`) and bandit run in a CI job a release waits for.
+  (`syncserver/tests/test_security.py`) and bandit run in a CI job a release waits for.
 - Sync: an action on one device always wins over what it has already seen from the
   others, however their clocks differ (a draft sent on the phone came back from the
   desktop when the desktop's clock was a little ahead).
