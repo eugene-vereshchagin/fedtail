@@ -11,8 +11,10 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
 
 * The core is **not** copied into this folder: the build's `copyFedtail` task takes the
   repository's `fedtail/` package (without the Qt, GTK, terminal and web interfaces) every
-  time, so the phone runs the core of the same commit as the desktop. The version comes
-  from `fedtail/__init__.py`, written into `_build.py` (no git on a phone).
+  time, so the phone runs the core of the same commit as the desktop. The version is the
+  desktop's (`fedtail/version.py`): `__version__`, the commits since the last `v*` tag and
+  the commit — `0.19.0.dev53+gc24dae1` on both for one commit — written into `_build.py`
+  (no git on a phone); Android's versionCode is made of it (0.19.0.dev53 → 190000053).
 * `bridge.py` is the one door from Kotlin: module functions, plain values. fedtail's paths
   follow XDG, so the app's private folders become `XDG_CONFIG_HOME` / `XDG_DATA_HOME` /
   `XDG_CACHE_HOME` — the core needs no Android branch for where its files live.

@@ -28,6 +28,8 @@ jobs:
       contents: write  # the screenshots go to the android-shots branch
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # the history and the tags: the build number is the desktop's
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

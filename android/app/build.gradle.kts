@@ -17,9 +17,35 @@ val repo: File = rootDir.parentFile
 // fedtail/__init__.py says the version being worked towards (0.19.0.dev0)
 val fedtailVersion: String = Regex("""__version__\s*=\s*"([^"]+)"""")
     .find(repo.resolve("fedtail/__init__.py").readText())!!.groupValues[1]
-// grows with every CI build; 1 on a desk
-val buildNumber: Int = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
-val commit: String = (System.getenv("GITHUB_SHA") ?: "").take(7)
+// The build number is the desktop's (fedtail/version.py): commits since the last release
+// tag v*, and the commit — so one commit is one version everywhere: 0.19.0.dev212+gabc1234
+// on the desktop and on the phone alike. CI checks out the whole history for it.
+fun git(vararg args: String): String = try {
+    val p = ProcessBuilder("git", *args).directory(repo).redirectErrorStream(true).start()
+    val out = p.inputStream.bufferedReader().readText().trim()
+    if (p.waitFor() == 0) out else ""
+} catch (e: Exception) {
+    ""
+}
+val commit: String = git("rev-parse", "--short", "HEAD")
+val sinceTag: Int = git("describe", "--tags", "--long", "--match", "v[0-9]*")
+    .takeIf { it.isNotEmpty() }?.split("-")?.let { it[it.size - 2].toIntOrNull() }
+    ?: git("rev-list", "--count", "HEAD").toIntOrNull() ?: 0
+val commitDate: String = git("log", "-1", "--format=%cs")
+val release: String = fedtailVersion.substringBefore(".dev")
+// as version.compose(): a dev version says how far past its tag, a release just itself
+val shownVersion: String = when {
+    commit.isEmpty() -> fedtailVersion
+    ".dev" in fedtailVersion -> "$release.dev$sinceTag+g$commit"
+    sinceTag == 0 -> release
+    else -> "$release+$sinceTag.g$commit"
+}
+// Android's own number (installing over an older one needs a bigger one): the version's
+// numbers, then the commits since its tag — 0.19.0.dev212 → 190 000 212
+val buildNumber: Int = release.split(".").map { it.toIntOrNull() ?: 0 }.let { v ->
+    ((v.getOrElse(0) { 0 } * 1000 + v.getOrElse(1) { 0 }) * 100 + v.getOrElse(2) { 0 }) * 100_000 +
+        minOf(sinceTag, 99_999)
+}
 
 android {
     namespace = "online.dmesg.fedtail"
@@ -30,7 +56,7 @@ android {
         minSdk = 31 // Android 12: older is "necrophilia" (the author's word)
         targetSdk = 35
         versionCode = buildNumber
-        versionName = fedtailVersion
+        versionName = shownVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // phones, and the emulator; nothing else is worth the megabytes
@@ -55,7 +81,6 @@ android {
             signingConfig = signingConfigs.getByName("dev")
             // the dev build stands next to the released one, never replaces it
             applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
         }
         release {
             isMinifyEnabled = false
@@ -99,12 +124,12 @@ val copyFedtail = tasks.register<Sync>("copyFedtail") {
         include("showcase.py")
     }
     into(corePython)
-    inputs.property("version", "$fedtailVersion $buildNumber $commit")
+    inputs.property("version", "$shownVersion $commitDate")
     doLast {
         // no git on a phone: version.py reads the build from here
-        val shown = if (commit.isEmpty()) fedtailVersion else "$fedtailVersion+$buildNumber.g$commit"
+        val shown = shownVersion
         corePython.get().file("fedtail/_build.py").asFile.writeText(
-            "BUILD = \"$shown\"\nCOMMIT = \"$commit\"\nDATE = \"\"\n")
+            "BUILD = \"$shown\"\nCOMMIT = \"$commit\"\nDATE = \"$commitDate\"\n")
     }
 }
 
