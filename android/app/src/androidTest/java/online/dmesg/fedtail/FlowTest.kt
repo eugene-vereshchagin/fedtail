@@ -108,7 +108,14 @@ class FlowTest {
         waitFor("a card", 90_000) {
             compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onAllNodes(card).onFirst().performClick()
+        // one standing whole on screen: the first may sit half under the title bar, and a
+        // tap at its middle would land on the bar
+        val nodes = compose.onAllNodes(card).fetchSemanticsNodes()
+        val bottom = compose.onAllNodes(isRoot()).fetchSemanticsNodes().maxOf { it.boundsInRoot.bottom }
+        val whole = nodes.indices.firstOrNull { i ->
+            nodes[i].boundsInRoot.top > 250f && nodes[i].boundsInRoot.bottom < bottom
+        } ?: nodes.indices.maxBy { nodes[it].boundsInRoot.top }
+        compose.onAllNodes(card)[whole].performClick()
         waitText("/1")                                  // the thread, numbered as a tree
         waitText("Thread")
         back()
