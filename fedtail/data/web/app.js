@@ -1158,6 +1158,8 @@ async function openAccount(id, show) {
     const a = await api("/api/account?id=" + encodeURIComponent(id)
                         + (show ? "&show=" + encodeURIComponent(show) : ""));
     if (state.side !== token) return;
+    const on = (a.shows || []).find((s) => s.on);
+    state.profileShow = on ? {id: id, show: on.key} : null;  // a button press keeps it
     const body = $("#side-body");
     body.textContent = "";
     const box = el("section", "profile");
@@ -1256,7 +1258,10 @@ async function profileAct(id, key, answer, confirmed, chosen) {
   if (r.compose) composeFrom(r.compose, null);
   if (r.message) toast(r.message);
   if (r.open) { openThing(r.open); return; }
-  if (r.refresh) await openAccount(id);
+  if (r.refresh) {
+    const kept = state.profileShow && state.profileShow.id === id ? state.profileShow.show : "";
+    await openAccount(id, kept);
+  }
 }
 
 let sideN = 0;
