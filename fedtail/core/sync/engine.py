@@ -332,9 +332,14 @@ class Sync:
         """Another device's batch → this store. → how many ops it carried."""
         reads, threads, lanes, hidden, drafts, tiles = [], [], [], [], [], False
         device = str(payload.get("d") or "")
+        seen = 0
         for op in payload.get("ops") or []:
             if not isinstance(op, dict):
                 continue
+            try:
+                seen = max(seen, int(op.get("at") or 0))
+            except (TypeError, ValueError):
+                op["at"] = 0
             if isinstance(op.get("r"), list):
                 if "read" in self.what:
                     reads += [str(i) for i in op["r"] if isinstance(i, (str, int))]
@@ -372,6 +377,9 @@ class Sync:
                 self.core.apply_thread_state(root, state)
             except Exception as e:  # noqa: BLE001 — one gone thread mustn't stop the rest
                 log.warning("sync: thread %s → %s: %s", root, state, e)
+        if seen:  # what I do from now on is newer than anything I've seen, whatever
+            with self._lock_at:  # the clocks of the devices say (a logical clock)
+                self._last_at = max(self._last_at, min(seen, now_ms() + 86_400_000))
         if lanes:
             try:
                 self.core.apply_lanes_state(lanes)

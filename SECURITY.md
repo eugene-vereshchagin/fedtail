@@ -21,4 +21,9 @@ What fedtail promises, so you know what counts as a hole:
 * Logs hold API paths, ids, timings and errors — not post texts. `--bug-report` leaves out the
   token and the database.
 
+* fedtail-sync, the sync server (`syncserver/`), never sees what you read: journals are
+  sealed with a key only your devices have. It can't be made to hang, to flood a fediverse
+  server with token checks, to fill its disk past its caps, or to call into its own network
+  (docs/en/sync.md, "How it guards itself").
+
 A way to break any of these is a security issue. Supported versions: the latest release.

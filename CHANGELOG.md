@@ -5,6 +5,20 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- fedtail-sync guards itself — it faces the internet and didn't: a silent or trickling
+  connection is dropped (`timeout_seconds`; it held a thread for ever), at most
+  `max_connections` at once, `requests_per_minute_per_ip`; random tokens can no longer make
+  it hammer a fediverse server with checks (`verifications_per_minute_per_ip`,
+  `verifications_per_minute`); a body is read only with an honest Content-Length (a
+  negative one read to the end of the stream); `total_mb` caps the disk for everyone; the
+  token check follows no redirect (one carried the token on) and with `"*"` talks only to
+  public addresses, checked on the connected socket; an error inside says "internal error"
+  only. Behind cloudflared or nginx, `client_ip_header` (`CF-Connecting-IP`, `X-Real-IP`)
+  gives the limits the real address — believed from a loopback peer only. Tests for each
+  (`tests/test_syncserver_security.py`) and bandit run in a CI job a release waits for.
+- Sync: an action on one device always wins over what it has already seen from the
+  others, however their clocks differ (a draft sent on the phone came back from the
+  desktop when the desktop's clock was a little ahead).
 - A settings window (≡ → Settings, in Qt, GTK, the web page and the terminal): the
   chapters of config.toml on the left, their options as cards on the right — a switch,
   a number, a choice (each choice with what it means), ticks for lists of lanes — with
