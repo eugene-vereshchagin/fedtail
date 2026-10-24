@@ -48,6 +48,32 @@ details.ru = "Фильтры слов — серверные, v2: где дей�
 details.en = "Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `ui.arts_mode`, a line on top says the server's filters don't apply there."
 
 [[feature]]
+id = "mute-timed"
+status = "has"
+since = "0.20.0"
+name.ru = "Заглушить на время; только посты"
+name.en = "Mute for a while; posts only"
+config = "—"
+api = "`accounts/:id/mute` `duration`, `notifications`"
+others = "Mastodon web, Ivory, Fedilab"
+clients = ["Mastodon web", "Ivory", "Fedilab"]
+details.ru = "«Заглушить» спрашивает, насколько: навсегда, на час, на сутки, на неделю, на месяц — потом сервер снимет заглушку сам. Галочка «Только посты» оставляет его уведомления. Фильтры слов тоже ставятся на срок."
+details.en = "“Mute” asks for how long: for good, an hour, a day, a week, a month — then the server lifts it by itself. The “Posts only” tick keeps their notifications coming. Word filters get a term too."
+
+[[feature]]
+id = "hide-post"
+status = "has"
+since = "0.20.0"
+name.ru = "Скрыть один пост"
+name.en = "Hide a single post"
+config = "—"
+api = "`/api/v2/filters/:id/statuses`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "«Скрыть этот пост» в меню ⋯: пост уходит сразу и везде — в серверный фильтр «fedtail: hidden posts», так что его не видно и в других клиентах. Вернуть — в «Для нежных и ранимых» убрать фильтр. Если сервер так не умеет (Mastodon до 4.0), пункта нет."
+details.en = "“Hide this post” in the ⋯ menu: the post goes at once and everywhere — into the server's filter “fedtail: hidden posts”, so other clients don't show it either. To bring it back, remove the filter in “For the tender and sensitive”. A server that can't (Mastodon before 4.0) gets no such item."
+
+[[feature]]
 id = "domain-block"
 status = "has"
 since = "0.8.0"

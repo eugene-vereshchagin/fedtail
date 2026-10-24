@@ -5,6 +5,13 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**0.20.0 (in progress):**
+
+- Whose replies a list shows
+- In a profile: posts, posts and replies, media
+- Mute for a while; posts only
+- Hide a single post
+
 **0.19.0:**
 
 - A bug report straight into your private repository

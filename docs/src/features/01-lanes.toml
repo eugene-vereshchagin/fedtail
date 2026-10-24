@@ -92,6 +92,19 @@ details.ru = "Списки с сервера — отдельные ленты �
 details.en = "The server's lists are lanes of their own in the “Lists” group. Create, rename, delete, make exclusive — from the menu; add a person — with a right click on their post. fedtail rereads the lists and who is in them every `lists.refresh_minutes` minutes."
 
 [[feature]]
+id = "list-replies"
+status = "has"
+since = "0.20.0"
+name.ru = "Чьи ответы показывать в списке"
+name.en = "Whose replies a list shows"
+config = "—"
+api = "`lists` `replies_policy`"
+others = "Mastodon web, Ivory, Phanpy, Elk, Ice Cubes"
+clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes"]
+details.ru = "У списка — выбор, какие ответы попадают в его ленту: ответы тем, кого читаешь, только участникам списка или никаких. Это настройка сервера, она одна во всех клиентах."
+details.en = "A list has a choice of which replies go into its lane: replies to anyone you follow, only to the list's members, or none. It's the server's setting, the same in every client."
+
+[[feature]]
 id = "list-members-leave"
 status = "has"
 since = "0.3.0"

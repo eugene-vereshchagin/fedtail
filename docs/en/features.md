@@ -76,6 +76,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Bots in a lane of their own | has | 0.1.0 | `lanes.enabled` (`"bots"`), `lanes.extra_bots` | the `account.bot` field | only in fedtail |
 | Personal lanes | has | 0.1.0 | `lanes.enabled`, `lanes.mentions_all`, `lanes.direct_apart` | notifications, `visibility=direct` | everyone, but laid out differently |
 | Lists as lanes | has | 0.2.0 | `[lists]`: `enabled`, `refresh_minutes` | `lists`, `timelines/list/:id` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Tokodon, Ice Cubes, Megalodon |
+| Whose replies a list shows | has | 0.20.0 | — | `lists` `replies_policy` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes |
 | Who is in a list leaves the general lanes | has | 0.3.0 | `lists.hide_members`, `lists.hide_in` | own | only in fedtail |
 | Who is in a list; your own order of lists | has | 0.13.0 | — | `lists/:id/accounts` | Mastodon web, Ivory (who is in a list); the order — only in fedtail |
 | Into a list — the author or the booster; only people you follow | has | 0.13.0 | — | `lists/:id/accounts` | only in fedtail |
@@ -115,6 +116,8 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 Splitting “replies to me” from “mentions” is what other clients don't do: usually it all lands in one notifications lane.
 
 **Lists as lanes.** The server's lists are lanes of their own in the “Lists” group. Create, rename, delete, make exclusive — from the menu; add a person — with a right click on their post. fedtail rereads the lists and who is in them every `lists.refresh_minutes` minutes.
+
+**Whose replies a list shows.** A list has a choice of which replies go into its lane: replies to anyone you follow, only to the list's members, or none. It's the server's setting, the same in every client.
 
 **Who is in a list leaves the general lanes.** Put a person or a bot in a list — their posts, their boosts and others' boosts of their posts are read in the list's lane and disappear from the general lanes, so they don't clutter them. `hide_members`: `"all"` — so with any list; `"exclusive"` — only with exclusive ones (the server itself takes such people out of Home, fedtail carries that to the other lanes); `"off"` — don't take out. Which lanes — `lists.hide_in` (by default Home, Bots, Federated, Local).
 
@@ -333,6 +336,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | Your own and other people's profiles | has | 0.2.0 | — | `accounts/:id`, `accounts/:id/statuses` | everyone |
+| In a profile: posts, posts and replies, media | has | 0.20.0 | `feed.profile_show` | `accounts/:id/statuses` `exclude_replies`, `only_media` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Pinned posts | has | 0.8.0 | `feed.profile_pinned` | `statuses?pinned=true` | everyone |
 | Featured tags and recommended people | has | 0.9.0 | `feed.profile_featured` | `featured_tags`, `endorsements` | Mastodon web |
 | A little-known person's profile — from their server | has | 0.8.0 | `feed.remote_profiles`, `feed.remote_posts` | ActivityPub outbox | Megalodon — partly (the lists) |
@@ -346,6 +350,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 <details><summary>In detail</summary>
 
 **Your own and other people's profiles.** The header, bio, fields, counts, posts; “followed by people you follow” (`familiar_followers`); follows and followers.
+
+**In a profile: posts, posts and replies, media.** Above a person's posts, a switch: “Posts” (without their replies to others; replies in their own threads stay), “Posts and replies”, “Media” (only with pictures and video). Which one first — `feed.profile_show`, “Posts” by default, as in other clients. The server does the picking.
 
 **Pinned posts.** At the top of a profile, marked 📌. `false` — the profile simply in time order.
 
@@ -449,6 +455,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Follows and follow requests | has | 0.1.0 | `"requests"` in `lanes.enabled` | `follow`, `follow_requests` | everyone |
 | Hide a person's boosts; the languages of a follow | has | 0.14.0 | `feed.per_person_follow` | `follow` with `reblogs=false`, `languages[]` | Mastodon web, Tusky, tut |
 | Mute, block, word filters | has | 0.3.0 | — | `mutes`, `blocks`, `/api/v2/filters` | everyone |
+| Mute for a while; posts only | has | 0.20.0 | — | `accounts/:id/mute` `duration`, `notifications` | Mastodon web, Ivory, Fedilab |
+| Hide a single post | has | 0.20.0 | — | `/api/v2/filters/:id/statuses` | Mastodon web |
 | Block a whole server | has | 0.8.0 | — | `/api/v1/domain_blocks` | Mastodon web, Ivory, Phanpy |
 | Report to the moderators | has | 0.8.0 | `post.report_forward` | `/api/v1/reports` | everyone |
 | A private note on a person | has | 0.8.0 | — | `accounts/:id/note` | Mastodon web, Ivory, Ice Cubes |
@@ -467,6 +475,10 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Hide a person's boosts; the languages of a follow.** On the profile of someone you follow: “♻ without their boosts” and “🌐 languages” — only their posts in these languages. The server keeps it, so it works in every client.
 
 **Mute, block, word filters.** Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `ui.arts_mode`, a line on top says the server's filters don't apply there.
+
+**Mute for a while; posts only.** “Mute” asks for how long: for good, an hour, a day, a week, a month — then the server lifts it by itself. The “Posts only” tick keeps their notifications coming. Word filters get a term too.
+
+**Hide a single post.** “Hide this post” in the ⋯ menu: the post goes at once and everywhere — into the server's filter “fedtail: hidden posts”, so other clients don't show it either. To bring it back, remove the filter in “For the tender and sensitive”. A server that can't (Mastodon before 4.0) gets no such item.
 
 **Block a whole server.** Nobody from there in any lane, follows across the border are cut.
 

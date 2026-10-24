@@ -4,6 +4,13 @@
 
 - The rest of the 0.19 plan: the full terminal interface and the full web page (the
   "Four interfaces" table shows what is left).
+- A profile shows "Posts", "Posts and replies" or "Media", switched above the posts;
+  which one first is `feed.profile_show` ("posts" by default, as in other clients).
+- Mute for a while (an hour, a day, a week, a month) and "posts only" — their notifications
+  still come; word filters get a term too.
+- "Hide this post" in the ⋯ menu: one post out of sight everywhere, through a filter of the
+  server's ("fedtail: hidden posts"), in other clients too.
+- A list's replies: to anyone you follow, to its members, or none (the server's setting).
 
 ## 0.19.0 — 2026-10-24
 

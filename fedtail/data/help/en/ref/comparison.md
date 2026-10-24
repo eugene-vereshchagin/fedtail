@@ -12,6 +12,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Bots in a lane of their own | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Personal lanes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Lists as lanes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |
+| Whose replies a list shows | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
 | Who is in a list leaves the general lanes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who is in a list; your own order of lists | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
 | Into a list — the author or the booster; only people you follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -95,6 +96,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Your own and other people's profiles | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| In a profile: posts, posts and replies, media | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
 | Pinned posts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Featured tags and recommended people | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | A little-known person's profile — from their server | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |   |   |
@@ -135,6 +137,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Follows and follow requests | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Hide a person's boosts; the languages of a follow | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Mute, block, word filters | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mute for a while; posts only | ✓ | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |
+| Hide a single post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Block a whole server | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 | Report to the moderators | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A private note on a person | ✓ | ✓ |   | ✓ |   |   |   | ✓ |   |   |   |   |   |   |
@@ -197,4 +201,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 133 compared.
+Only in fedtail — **33** features of the 137 compared.
