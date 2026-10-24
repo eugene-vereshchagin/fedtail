@@ -104,4 +104,5 @@
     <string name="selfcheck_share">Поделиться отчётом</string>
     <string name="selfcheck_all_ok">Всё в порядке</string>
     <string name="selfcheck_bad">Сломано: %1$d</string>
+    <string name="earlier">Раньше</string>
 </resources>

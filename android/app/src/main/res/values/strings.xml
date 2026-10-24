@@ -105,4 +105,5 @@
     <string name="selfcheck_share">Share the report</string>
     <string name="selfcheck_all_ok">All fine</string>
     <string name="selfcheck_bad">Broken: %1$d</string>
+    <string name="earlier">Earlier</string>
 </resources>

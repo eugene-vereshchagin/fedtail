@@ -160,10 +160,11 @@ fun MarkWhileScrolling(state: LazyListState, on: Boolean, mark: (List<String>) -
 }
 
 /** A lane opened anew stands on its first unread post, like the desktop; never jumps after. */
-suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean) {
+suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean, before: Int = 0) {
     if (posts.isEmpty()) return
     val firstUnread = posts.indexOfFirst { it.unread }
-    state.scrollToItem(when {
+    // before: items the list holds ahead of the posts ("earlier" at the top)
+    state.scrollToItem(before + when {
         firstUnread >= 0 -> firstUnread
         newestFirst -> 0
         else -> posts.size - 1
@@ -175,6 +176,7 @@ fun PostList(
     posts: List<PostItem>, state: LazyListState, divider: Pair<String, String>?,
     act: CardActions, hideSensitive: Boolean, thread: Boolean = false, focus: String? = null,
     footer: (@Composable () -> Unit)? = null,
+    header: (@Composable () -> Unit)? = null,
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
@@ -189,6 +191,7 @@ fun PostList(
         contentPadding = PaddingValues(start = if (thread) 0.dp else 8.dp,
             end = if (thread) 0.dp else 8.dp, top = 8.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(if (thread) 0.dp else 8.dp)) {
+        header?.let { h -> item(key = "header") { h() } }
         items(posts, key = { it.key }) { p ->
             Column {
                 divider?.takeIf { it.first == p.key }?.let { (_, words) -> NewBelow(words) }

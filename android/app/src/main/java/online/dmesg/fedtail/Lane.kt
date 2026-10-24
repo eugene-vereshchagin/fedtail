@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -153,13 +154,23 @@ fun LaneScreen(
                 }) {
             LaunchedEffect(model.opening) {
                 if (model.opening != model.aimed) { // opened anew — not just come back to
-                    aim(state, model.posts, model.newestFirst)
+                    aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1)
                     model.aimed = model.opening
                 }
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it) }
+            // "earlier" where the older posts would come: on top, or at the end when newest first
+            val earlier: @Composable () -> Unit = {
+                if (model.laneOlder) Earlier(model.loadingOlder) { model.loadOlder() }
+            }
             PostList(model.posts, state, model.divider, act, model.hideSensitive,
-                footer = { LaneEnd(model, name) })
+                header = if (model.newestFirst) null else earlier,
+                footer = {
+                    Column {
+                        if (model.newestFirst) earlier()
+                        LaneEnd(model, name)
+                    }
+                })
         }
     }
     if (switcher) Switcher(model) { switcher = false }
@@ -173,6 +184,15 @@ fun LaneScreen(
     }
 }
 
+/** "Earlier": the older posts of this lane, from the server. */
+@Composable
+private fun Earlier(busy: Boolean, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
+        if (busy) CircularProgressIndicator(Modifier.size(28.dp))
+        else TextButton(onClick = onClick) { Text(stringResource(R.string.earlier)) }
+    }
+}
+
 /** The lanes with news, this one first: a tap is a lane. */
 @Composable
 private fun NewsStrip(model: AppModel, name: String) {
@@ -183,7 +203,7 @@ private fun NewsStrip(model: AppModel, name: String) {
         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         item(key = name) { StripChip(model.title, "", on = true) {} }
         items(others, key = { it.name }) { l ->
-            StripChip(l.title, "${l.unread}", on = false) { model.showLane(l.name) }
+            StripChip(l.title, l.count, on = false) { model.showLane(l.name) }
         }
     }
 }
@@ -224,7 +244,7 @@ private fun LaneEnd(model: AppModel, name: String) {
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.next_lane), fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onPrimary)
-                    Text("${next.title} · ${next.unread}", fontSize = 17.sp,
+                    Text("${next.title} · ${next.count}", fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
                 }
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, null,

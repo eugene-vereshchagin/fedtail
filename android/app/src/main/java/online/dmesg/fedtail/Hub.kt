@@ -217,7 +217,7 @@ fun RestRow(lane: HubLane, browsed: Boolean, inset: Dp = 16.dp, onClick: () -> U
             Text(lane.title, fontSize = 16.sp, modifier = Modifier.weight(1f))
             Text(when {
                 browsed -> stringResource(R.string.browsed)
-                lane.unread > 0 -> "${lane.unread}"
+                lane.unread > 0 -> lane.count
                 else -> ""
             }, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -266,7 +266,7 @@ fun LaneTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
         if (news) {
-            Text("${lane.unread}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = fg)
+            Text(lane.count, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = fg)
         }
         Text(lane.title, fontSize = 13.sp, lineHeight = 15.sp, color = fg, maxLines = 2,
             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
@@ -340,7 +340,7 @@ private fun HubRow(lane: HubLane, mine: Boolean, on: Boolean, onClick: () -> Uni
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (lane.unread > 0) Count(lane.unread, mine)
+                if (lane.unread > 0) Count(lane.count, mine)
             }
             HorizontalDivider(Modifier.padding(start = 16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant)
@@ -349,7 +349,7 @@ private fun HubRow(lane: HubLane, mine: Boolean, on: Boolean, onClick: () -> Uni
 }
 
 @Composable
-fun Count(n: Int, mine: Boolean) {
+fun Count(n: String, mine: Boolean) {
     Box(Modifier.heightIn(min = 24.dp).clip(RoundedCornerShape(12.dp))
         .background(if (mine) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary)
         .padding(horizontal = 8.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {

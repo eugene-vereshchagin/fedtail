@@ -46,7 +46,13 @@ data class SettingsChapter(val title: String, val options: List<Setting>)
 data class LaneItem(val name: String, val title: String, val unread: Int, val group: String?)
 
 /** The overview's row: a lane, its count, who and what its first unread post is. */
-data class HubLane(val name: String, val title: String, val unread: Int, val peek: String)
+data class HubLane(
+    val name: String, val title: String, val unread: Int, val peek: String,
+    val capped: Boolean = false, // as many unread as the lane holds: maybe more past them
+) {
+    /** The count as shown: "300+" when there may be more than the lane holds. */
+    val count: String get() = if (capped) "$unread+" else "$unread"
+}
 
 /** kind: you | reading | lists | browse (bridge.hub) */
 data class HubSection(val kind: String, val lanes: List<HubLane>)
@@ -238,7 +244,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             HubSection(s.optString("key"), (0 until arr.length()).map { j ->
                 val l = arr.getJSONObject(j)
                 HubLane(l.optString("name"), l.optString("title"), l.optInt("unread"),
-                    l.optString("peek"))
+                    l.optString("peek"), l.optBoolean("capped"))
             })
         }
         val order = got.optJSONArray("order") ?: JSONArray()
@@ -343,11 +349,29 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         var list = parsePosts(got.optJSONArray("posts"))
         if (newestFirst) list = list.reversed()
         posts = list
+        laneOlder = got.optBoolean("older")
         val div = got.optJSONObject("divider")
         divider = div?.let { d ->
             list.firstOrNull { it.id == d.optString("before") }?.key?.let { it to d.optString("text") }
         }
         if (!keep) opening += 1
+    }
+
+    var laneOlder by mutableStateOf(false)   // "earlier" can bring older posts
+    var loadingOlder by mutableStateOf(false)
+
+    /** "Earlier" at the lane's top: older posts from the server (history counts as read). */
+    fun loadOlder() {
+        val name = current ?: return
+        if (loadingOlder) return
+        loadingOlder = true
+        viewModelScope.launch {
+            val got = Core.older(name)
+            Core.failed(got)?.let { message = it }
+            if (got.optInt("n") == 0 && !got.has("error")) laneOlder = false
+            loadLane(name, keep = true)
+            loadingOlder = false
+        }
     }
 
     fun refresh(pulled: Boolean = false) {

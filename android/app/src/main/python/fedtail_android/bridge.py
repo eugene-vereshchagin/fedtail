@@ -291,6 +291,9 @@ def hub():
                 kind = "reading"
             unread = 0 if kind == "browse" else int(x["unread"] or 0)
             sections[kind].append({"name": name, "title": x["title"], "unread": unread,
+                                   # a lane holds its newest feed.render_limit posts: as many
+                                   # unread means there may be more past them ("300+")
+                                   "capped": unread >= core.cfg["feed"]["render_limit"],
                                    "peek": _peek(core, name) if unread and not lazy else ""})
         for kind, order in (("you", YOU), ("reading", READING)):
             sections[kind].sort(key=lambda x, o=order: o.index(x["name"])
@@ -335,6 +338,12 @@ def _peek(core, name):
         words = words if len(words) <= PEEK else words[:PEEK - 1] + "…"
         return f"{who}: {words}" if who else words
     return ""
+
+
+def older(name):
+    """"Earlier" at a lane's top: older posts from the server (as the windows' button;
+    history counts as read). → {"n": how many came}."""
+    return _answer(lambda: _s["web"].older(name))
 
 
 def read(ids_json):

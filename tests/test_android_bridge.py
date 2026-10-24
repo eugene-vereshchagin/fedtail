@@ -169,7 +169,9 @@ class BridgeTest(TmpDir):
 
     def test_the_overview_of_lanes(self):
         self.demo()
+        self.assertIn("n", self.call("older", "home"))  # "earlier": the server asked
         hub = self.call("hub")
+        self.assertFalse(any(x["capped"] for s in hub["sections"] for x in s["lanes"]))
         kinds = {s["key"]: [x["name"] for x in s["lanes"]] for s in hub["sections"]}
         self.assertEqual(list(kinds)[0], "you")  # what is addressed to you comes first
         self.assertIn("replies", kinds["you"])

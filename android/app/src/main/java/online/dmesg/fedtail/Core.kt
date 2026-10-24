@@ -37,6 +37,7 @@ object Core {
     suspend fun lanes() = JSONArray(call("lanes"))
     suspend fun lane(name: String, keep: Boolean) = obj("lane", name, keep)
     suspend fun hub() = obj("hub")
+    suspend fun older(name: String) = obj("older", name)
     suspend fun pin(names: List<String>) = obj("pin", JSONArray(names).toString())
     suspend fun commandPreview(line: String) = obj("command_preview", line)
     suspend fun command(line: String, confirmed: Boolean) = obj("command", line, confirmed)
