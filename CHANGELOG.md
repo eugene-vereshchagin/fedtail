@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.19.0 — in progress
+## 0.19.0 — 2026-10-24
 
-- The plan for 0.19 (docs/en/dev/roadmap.md): a sound scheme in the themes, the Windows tests
-  filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
-  terminal interface and a full web page.
+- An intermediate release of the 0.19 plan (docs/en/dev/roadmap.md): the sound schemes,
+  the Windows tests, the same behaviour checked across Qt, GTK, the web and the terminal
+  are in; the full terminal interface and the full web page go on in 0.20 — what each
+  interface lacks so far, and why, is the "Four interfaces" table of the feature list.
 - GTK matches Qt where it didn't: ⏸ in the video player and the gif's own key hint, the
   menu items' tooltips (where GTK shows them), the profile's tooltip in the status bar, a
   click on a post's face opens the profile (and a screen reader names it), the columns'
