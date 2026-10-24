@@ -37,7 +37,7 @@ def possible_lines(path):
     out, todo = set(), [code]
     while todo:
         c = todo.pop()
-        out.update(line for _s, _e, line in c.co_lines() if line is not None)
+        out.update(line for _s, _e, line in c.co_lines() if line)
         todo.extend(k for k in c.co_consts if hasattr(k, "co_lines"))
     # the docstring and `def`/`class` lines run on import: they are there, not "code"
     return out
