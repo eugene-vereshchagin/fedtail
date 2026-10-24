@@ -163,7 +163,30 @@ def with_playwright(base, key, out):
             if page.locator("#posts .post.found").count() == 0:
                 ERRORS.append("Ctrl+F: nothing marked for a word the lane has")
             page.screenshot(path=str(out / "desktop-09-find.png"))
+            # "Deeper" (what's stored, not only shown) and "in every lane", as the windows
+            page.click("#find-deeper")
+            page.wait_for_timeout(700)
+            page.check("#find-every")
+            page.fill("#find-q", "пост")
+            page.wait_for_timeout(900)
+            if not page.inner_text("#find-count").strip():
+                ERRORS.append("find in every lane: no count for a word the posts have")
+            page.screenshot(path=str(out / "desktop-09b-find-everywhere.png"))
+            page.uncheck("#find-every")
             page.keyboard.press("Escape")
+            # the sidebar's sections fold and unfold (kept for every window)
+            group = page.locator("#lanes button.group").first
+            if group.count():
+                before = page.locator("#lanes a[data-lane]:visible").count()
+                group.click()
+                page.wait_for_timeout(500)
+                if page.locator("#lanes a[data-lane]:visible").count() >= before:
+                    ERRORS.append("sidebar: a folded section still shows its lanes")
+                page.screenshot(path=str(out / "desktop-09c-folded.png"))
+                page.locator("#lanes button.group").first.click()
+                page.wait_for_timeout(500)
+            else:
+                ERRORS.append("sidebar: no section headings")
             more = page.locator("#posts article.post button", has_text="⋯").first
             if more.count():
                 more.click()
@@ -195,6 +218,28 @@ def with_playwright(base, key, out):
             if page.locator("#pollbox input").count() < 2:
                 ERRORS.append("editor: the poll has no choices to fill in")
             page.screenshot(path=str(out / "desktop-05b-compose-poll.png"))
+            page.click("#poll-toggle")
+            # the line under the text: #CamelCase for screen readers; then the preview
+            page.fill("#text", "привет #fedtailrocks")
+            page.wait_for_timeout(900)
+            if page.is_hidden("#compose-hint"):
+                ERRORS.append("editor: no #CamelCase hint for a flat tag")
+            page.click("#preview")
+            page.wait_for_timeout(500)
+            if not page.is_visible("#preview-dlg") or \
+                    "fedtailrocks" not in page.inner_text("#preview-body"):
+                ERRORS.append("editor: the preview didn't show the text")
+            page.screenshot(path=str(out / "desktop-05c-preview.png"))
+            page.click("#preview-back")
+            page.once("dialog", lambda d: d.accept())  # "Throw this text away?"
+            page.click("#discard")
+            page.wait_for_timeout(300)
+            if page.is_visible("#compose"):
+                ERRORS.append("editor: Discard left the editor open")
+            page.click("#write")
+            page.wait_for_timeout(300)
+            if page.input_value("#text"):
+                ERRORS.append("editor: Discard kept the draft")
             page.click("#compose-close")
             img = page.locator("#posts article.post img[src*='img.example'], "
                                 "#posts article.post .media img").first
@@ -202,6 +247,11 @@ def with_playwright(base, key, out):
                 img.click()
                 page.wait_for_timeout(400)
                 page.screenshot(path=str(out / "desktop-06-viewer.png"))
+                if not page.inner_text("#viewer-save").strip():
+                    ERRORS.append("viewer: no Save")
+                page.keyboard.press("z")  # the picture at its own size, as the windows'
+                page.wait_for_timeout(200)
+                page.screenshot(path=str(out / "desktop-06b-viewer-full.png"))
                 page.keyboard.press("Escape")
                 page.mouse.click(5, 5)
             page.close()

@@ -121,6 +121,35 @@ def video(caps, mode="auto", which=None, loop=False):
     return "terminal", base + [f"--vo={vo}", "--terminal=yes"]
 
 
+# the terminals' own notifications: an escape code the terminal turns into a desktop one
+OSC_NOTIFY = {"kitty": "99", "Ghostty": "777", "WezTerm": "777", "foot": "777",
+              "iTerm.app": "9"}
+
+
+def notifier(caps, which=None):
+    """How to tell of something new from here: ("notify-send", path) — a desktop is
+    there; ("osc", "99" | "777" | "9") — the terminal shows it itself (kitty, Ghostty,
+    WezTerm, foot, iTerm2; not through tmux); ("none", None)."""
+    which = which or shutil.which
+    if caps.display and which("notify-send"):
+        return "notify-send", which("notify-send")
+    code = OSC_NOTIFY.get(caps.name)
+    if code and not caps.tmux:
+        return "osc", code
+    return "none", None
+
+
+def osc(code, title, body):
+    """The escape sequence that asks the terminal for a notification."""
+    clean = lambda s: "".join(c for c in str(s) if c >= " " and c not in "\x7f;")  # noqa: E731
+    title, body = clean(title)[:120], clean(body)[:400]
+    if code == "99":  # kitty: the title, then the body, the same id
+        return f"\x1b]99;i=1:d=0;{title}\x1b\\\x1b]99;i=1:p=body;{body}\x1b\\"
+    if code == "777":
+        return f"\x1b]777;notify;{title};{body}\x1b\\"
+    return f"\x1b]9;{title}: {body}\x1b\\"
+
+
 def summary(env=None, which=None, platform=None):
     """What was found, as lines (tools/tui_check.py puts them into its report)."""
     which = which or shutil.which
@@ -137,4 +166,5 @@ def summary(env=None, which=None, platform=None):
             f"textual-image: {ti}",
             f"picture viewer: {tool.name if tool else 'none (the app’s own view)'}",
             f"mpv: {which('mpv') or 'not found'}; a video plays: {how}",
-            f"desktop for a window: {'yes' if caps.display else 'no'}"]
+            f"desktop for a window: {'yes' if caps.display else 'no'}",
+            f"notifications: {notifier(caps, which)[0]}"]

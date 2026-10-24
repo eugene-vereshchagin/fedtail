@@ -334,7 +334,8 @@ def render_parity(lang):
     out = [f"## {t['parity_title']}", "", t["parity_intro"], ""]
     caps = reg.get("capability", [])
     for area, title in t["parity_areas"].items():
-        rows = [c for c in caps if c.get("area") == area]
+        rows = [c for c in caps if c.get("area") == area
+                and any(c.get(fe, "has") != "has" for fe in ("qt", "gtk", "tui", "web"))]
         if not rows:
             continue
         out += [f"### {title}", ""]

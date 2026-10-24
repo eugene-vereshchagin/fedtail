@@ -127,9 +127,20 @@ function renderPost(p, inThread) {
   head.append(names);
   const meta = el("div", "meta");
   if (inThread) meta.append(el("span", "num", p.number ? "/" + p.number : "#"));
+  if (p.unread) {  // the windows' mark of the new, its word on hover
+    const dot = el("span", "dot", "●");
+    dot.title = w("unread_tip");
+    meta.append(dot);
+  }
+  if (p.via) {  // all accounts in one window: which of mine got it
+    const v = el("span", "via", p.via.text);
+    v.title = p.via.tip;
+    meta.append(v);
+  }
+  if (p.came_from) meta.append(el("span", "came-from", p.came_from));
   if (p.alias) {
     const a = el("span", "alias", "#" + p.alias);
-    a.title = w("web_cmd");
+    a.title = w("short_id_tip");
     a.onclick = () => { const c = $("#cmd"); c.value = "#" + p.alias + " "; c.focus(); };
     meta.append(a);
   }
@@ -169,7 +180,11 @@ function renderPost(p, inThread) {
   if (p.quote && !p.quote.note) content.append(renderQuote(p.quote));
   else if (wd && wd.quote) content.append(bitEl(wd.quote, "quote-line"));
   else if (p.quote) content.append(renderQuote(p.quote));
-  if (wd && wd.reactions) content.append(el("div", "muted reactions", wd.reactions));
+  if (wd && wd.reactions) {
+    const r = el("div", "muted reactions", wd.reactions);
+    r.title = w("reactions_tip");
+    content.append(r);
+  }
   const warning = wd ? wd.warning : (p.warning ? "⚠ " + p.warning : "");
   if (warning) {
     const d = el("details", "cw");
@@ -226,9 +241,10 @@ function renderOne(m, all) {
     const put = () => {
       const img = el("img");
       img.alt = m.alt;
-      img.title = m.alt;
+      img.title = m.alt || w("image_loading");  // the windows' "loading…" till it comes
       img.loading = "lazy";
       img.referrerPolicy = "no-referrer";
+      img.onload = () => { img.title = m.alt; };
       img.onclick = () => view(m, all);
       // a preview the server couldn't make: the original; neither — say so, try later
       img.onerror = () => {
@@ -265,7 +281,7 @@ function renderOne(m, all) {
 }
 
 function broken(m) {  // nothing to show here: still a way to the file
-  const box = el("div", "broken", "▣ " + w("web_media"));
+  const box = el("div", "broken", "▣ " + (m.kind === "image" ? w("image_failed") : w("web_media")));
   if (m.url) box.append(" ", link(w("web_original") + " ↗", m.url));
   return box;
 }
@@ -281,7 +297,22 @@ function view(m, all) {  // a picture over the page; ←/→ through the post's;
   o.textContent = w("web_original") + " ↗";
   o.href = m.url || m.preview;
   o.hidden = !(m.url || m.preview);
+  state.viewer.url = m.url || m.preview;
+  $("#viewer").classList.remove("full");
+  $("#viewer-note").textContent = w("viewer_keys");
+  // the original that didn't come: say so (the windows' words), the link still there
+  $("#viewer-img").onerror = () => {
+    $("#viewer-note").textContent = w("viewer_unreachable", { err: "HTTP" });
+  };
   $("#viewer").hidden = false;
+}
+
+async function saveViewed() {  // "Save": the original into ui.save_dir on this machine
+  const v = state.viewer;
+  if (!v || !v.url) return;
+  toast(w("saving"));
+  try { toast((await api("/api/save", { url: v.url })).message); }
+  catch (e) { toast(e.message); }
 }
 
 function stepViewer(d) {
@@ -296,10 +327,10 @@ function closeViewer() {
   $("#viewer-img").removeAttribute("src");
 }
 
-function renderPoll(p) {
+function renderPoll(p, peek) {
   const poll = p.poll;
   const box = el("div", "poll");
-  const open = !poll.expired && !poll.voted && !p.own;
+  const open = !poll.expired && !poll.voted && !p.own && !peek;  // peek: the results first
   const picked = new Set();
   poll.options.forEach((o, i) => {
     const row = el(open ? "label" : "div", "opt" + (poll.mine.includes(i) ? " mine" : ""));
@@ -326,10 +357,25 @@ function renderPoll(p) {
     b.onclick = async () => {
       if (!picked.size) return;
       b.disabled = true;
+      b.textContent = w("poll_sending");
       try { redraw(await api("/api/vote", { id: p.sid, choices: [...picked] })); toast(w("poll_voted")); }
-      catch (e) { toast(e.message); b.disabled = false; }
+      catch (e) { toast(e.message); b.disabled = false; b.textContent = w("poll_vote"); }
     };
-    foot.prepend(b, " ");
+    // the results before voting (the windows' "Results"): the same poll, as bars
+    const look = el("button", "tool small", w("poll_results"));
+    look.type = "button";
+    look.onclick = () => box.replaceWith(renderPoll(p, true));
+    foot.prepend(b, " ", look, " ");
+  }
+  if (!poll.expired) {  // fresh counts from the server
+    const again = el("a", "", w("poll_refresh"));
+    again.href = "#";
+    again.onclick = async (e) => {
+      e.preventDefault();
+      try { redraw(await api("/api/poll_refresh", { id: p.sid })); }
+      catch (err) { toast(err.message); }
+    };
+    foot.append(" · ", again);
   }
   box.append(foot);
   return box;
@@ -477,7 +523,13 @@ function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invi
   compose(parent);
   state.edit = c.edit || null;
   state.quote = c.quote || null;
-  if (c.edit) $("#compose-title").textContent = w("edit");
+  if (c.edit) {  // an edit changes words: pictures and who sees it stay (as the windows say)
+    $("#compose-title").textContent = w("edit");
+    $("#attach").disabled = $("#vis").disabled = $("#poll-toggle").disabled = true;
+    $("#attach").title = $("#vis").title = w("edit_media_kept");
+    state.editNote = w("edit_media_kept");
+    hint("");
+  }
   if (c.quote) {
     $("#compose-title").textContent = w("quote");
     const line = $("#reply-line");
@@ -600,16 +652,38 @@ async function loadLanes() {
   state.lanes = lanes;
   const nav = $("#lanes");
   nav.textContent = "";
+  let head = null;  // the section the lanes below belong to: its heading folds them
   for (const l of lanes) {
-    if (l.group) nav.append(el("div", "group", l.group));
+    if (l.group) {  // a section heading, as the windows': a click folds or unfolds it
+      head = el("button", "group" + (l.folded ? " folded" : ""), (l.folded ? "▸ " : "▾ ") + l.group);
+      head.type = "button";
+      head.title = w("group_fold_tip");
+      head.dataset.section = l.section || "";
+      head._n = 0;
+      const section = l.section;
+      head.onclick = async () => {
+        try { await api("/api/fold", { group: section }); } catch (e) { toast(e.message); }
+        loadLanes();
+      };
+      nav.append(head);
+    }
     const a = el("a", l.name === state.lane ? "on" : "");
     a.href = "#" + encodeURIComponent(l.name);
     a.dataset.lane = l.name;
+    if (l.tip) a.title = l.tip;
     a.append(el("span", "lt", l.title));
     if (l.unread) a.append(el("span", "n", String(l.unread)));
     a.onclick = (e) => { e.preventDefault(); closeNav(); selectLane(l.name); };
+    // a folded section: its lanes hidden, their new posts a number on the heading
+    // (the lane on screen stays, as the windows keep it)
+    if (l.folded && l.name !== state.lane) {
+      a.hidden = true;
+      if (head) head._n += l.unread || 0;
+    }
     nav.append(a);
   }
+  for (const h of nav.querySelectorAll("button.group.folded"))
+    if (h._n) h.append(el("span", "n", String(h._n)));
   return lanes;
 }
 
@@ -656,6 +730,12 @@ function laneBar(data) {  // the lane's choices, as the windows' header has them
     b.title = w("to_new_tip");
     b.onclick = () => setCursor(state.posts.findIndex((x) => x.unread), false, "start");
     bar.append(b);
+  } else if (data.posts.length) {  // nothing new: the same button takes you to the freshest
+    const b = el("button", "tool", "⤓");
+    b.type = "button";
+    b.title = w("to_end_tip");
+    b.onclick = () => setCursor(state.me.order === "newest_first" ? 0 : state.posts.length - 1);
+    bar.append(b);
   }
   if (data.info) bar.append(el("span", "muted", data.info));
   bar.hidden = !bar.childElementCount;
@@ -663,7 +743,8 @@ function laneBar(data) {  // the lane's choices, as the windows' header has them
 
 async function selectLane(name, keep) {
   const changed = state.lane !== name;
-  if (changed && $("#find") && !$("#find").hidden) closeFind();
+  // another lane: the find bar goes — unless it is looking in every lane, which leads here
+  if (changed && $("#find") && !$("#find").hidden && !finder.hits) closeFind();
   state.lane = name;
   if (location.hash.slice(1) !== encodeURIComponent(name))
     history.replaceState(null, "", "#" + encodeURIComponent(name));
@@ -778,6 +859,8 @@ function watchRead(box) {
 function read(card) {
   if (!card.classList.contains("unread")) return;
   card.classList.remove("unread");
+  const dot = card.querySelector(".head .dot");
+  if (dot) dot.remove();
   state.readQueue.add(card.dataset.id);
   const p = state.posts.find((x) => x.id === card.dataset.id);
   if (p) p.unread = false;
@@ -795,7 +878,11 @@ async function flushRead() {
 
 async function markAllRead() {
   const ids = state.posts.filter((p) => p.unread).map((p) => p.id);
-  for (const c of document.querySelectorAll("#posts .post.unread")) c.classList.remove("unread");
+  for (const c of document.querySelectorAll("#posts .post.unread")) {
+    c.classList.remove("unread");
+    const dot = c.querySelector(".head .dot");
+    if (dot) dot.remove();
+  }
   for (const p of state.posts) p.unread = false;
   countUnread();
   if (ids.length) await api("/api/read", { ids }).catch((e) => toast(e.message));
@@ -821,7 +908,18 @@ function findBar() {
     x.onclick = fn;
     return x;
   };
-  bar.append(inp, count, b("↑", w("find_prev"), () => findStep(-1)),
+  // "deeper": everything stored for the lane; "in every lane": all of them (the windows')
+  const deeper = b(w("find_deeper"), w("find_deeper_tip"), findDeeper);
+  deeper.id = "find-deeper";
+  deeper.hidden = true;
+  const every = el("label", "check");
+  every.title = w("find_everywhere_tip");
+  const box = el("input");
+  box.type = "checkbox";
+  box.id = "find-every";
+  box.onchange = () => findNow();
+  every.append(box, " ", w("find_everywhere"));
+  bar.append(inp, count, deeper, every, b("↑", w("find_prev"), () => findStep(-1)),
              b("↓", w("find_next"), () => findStep(1)), b("×", w("find_close"), closeFind));
   bar.onsubmit = (e) => { e.preventDefault(); findStep(1); };
   inp.oninput = () => { clearTimeout(finder.timer); finder.timer = setTimeout(findNow, 250); };
@@ -839,11 +937,14 @@ function closeFind() {
   if (bar) bar.hidden = true;
   for (const c of document.querySelectorAll("#posts .post.found")) c.classList.remove("found");
   finder.ids = [];
+  finder.hits = null;
   $("#posts").focus();
 }
 
 async function findNow() {
   const q = $("#find-q").value;
+  finder.hits = null;
+  if ($("#find-every") && $("#find-every").checked) return findEverywhere(q);
   let r = { ids: [], text: "" };
   try { if (q.trim()) r = await api("/api/find?" + new URLSearchParams({ lane: state.lane, q })); }
   catch (e) { toast(e.message); }
@@ -852,10 +953,51 @@ async function findNow() {
   for (const c of document.querySelectorAll("#posts .post"))
     c.classList.toggle("found", r.ids.includes(c.dataset.id));
   $("#find-count").textContent = r.text;
+  $("#find-deeper").hidden = !q.trim();  // further back than the lane shows, on asking
   if (r.ids.length) findStep(1);
 }
 
-function findStep(d) {
+async function findDeeper() {
+  const q = $("#find-q").value;
+  const b = $("#find-deeper");
+  b.disabled = true;
+  $("#find-count").textContent = w("find_searching");
+  try {
+    const r = await api("/api/find_deeper?" + new URLSearchParams({ lane: state.lane, q }));
+    if (r.more) { await selectLane(state.lane, true); await findNow(); }
+    else $("#find-count").textContent = r.text || w("find_count", { i: finder.at + 1, n: finder.ids.length });
+  } catch (e) { toast(e.message); }
+  finally { b.disabled = false; }
+}
+
+async function findEverywhere(q) {  // every lane's store, in the sidebar's order
+  $("#find-deeper").hidden = true;
+  if (!q.trim()) { $("#find-count").textContent = ""; finder.hits = []; return; }
+  $("#find-count").textContent = w("find_searching");
+  try {
+    const r = await api("/api/find_everywhere?" + new URLSearchParams({ q }));
+    finder.hits = r.hits;
+    finder.at = -1;
+    $("#find-count").textContent = r.text;
+    if (r.hits.length) findStep(1);
+  } catch (e) { toast(e.message); }
+}
+
+async function findStep(d) {
+  if (finder.hits) {  // in every lane: to the match's lane, loaded down to it
+    const n = finder.hits.length;
+    if (!n) return;
+    finder.at = finder.at < 0 ? (d > 0 ? 0 : n - 1) : (finder.at + d + n) % n;
+    const h = finder.hits[finder.at];
+    await api("/api/reveal", { lane: h.lane, index: h.index }).catch(() => {});
+    await selectLane(h.lane, state.lane === h.lane);
+    const i = state.posts.findIndex((x) => x.item === h.item || x.id === h.id || x.sid === h.id);
+    if (i >= 0) setCursor(i);
+    for (const c of document.querySelectorAll("#posts .post"))
+      c.classList.toggle("found", c.dataset.id === h.id || c.dataset.id === h.item);
+    $("#find-count").textContent = w("find_count", { i: finder.at + 1, n }) + " · " + h.title;
+    return;
+  }
   const n = finder.ids.length;
   if (!n) return;
   finder.at = finder.at < 0 ? (d > 0 ? 0 : n - 1) : (finder.at + d + n) % n;
@@ -887,11 +1029,13 @@ function current() { return state.posts[state.cursor]; }
 // ---- the side panel: a thread or a profile --------------------------------------------
 async function openThread(id) {
   const token = showSide(w("web_thread"));
+  $("#side-body").textContent = w("thread_loading");
   try {
     const t = await api("/api/thread?id=" + encodeURIComponent(id));
     if (state.side !== token) return;  // something else was opened meanwhile
     const body = $("#side-body");
     body.textContent = "";
+    if (t.head) body.append(threadHead(t.head, id));
     let focus = null;
     for (const p of t.posts) {
       const card = renderPost(p, true);
@@ -907,6 +1051,43 @@ async function openThread(id) {
         if (ids.includes(card.dataset.id)) read(card);
     }
   } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
+}
+
+// a thread's head, as the windows': its first words, how many answers and #id (and why
+// it reaches me without following it), Follow, every warning opened or closed at once
+function threadHead(h, openedFrom) {
+  const box = el("div", "thread-head");
+  box.append(el("div", "th-title", h.title));
+  const info = el("div", "muted th-info", h.info + (h.via ? " · " + h.via : ""));
+  if (h.via_tip) info.title = h.via_tip;
+  box.append(info);
+  const row = el("div", "row");
+  const sub = el("button", "tool" + (h.subscribed ? " on" : ""), h.sub);
+  sub.type = "button";
+  sub.title = h.sub_tip;
+  sub.onclick = async () => {
+    sub.disabled = true;
+    try {
+      const r = await api("/api/thread_act", { action: h.subscribed ? "unsub" : "sub", id: h.sid });
+      toast(r.message);
+      openThread(openedFrom);
+    } catch (e) { toast(e.message); sub.disabled = false; }
+  };
+  row.append(sub);
+  if (h.cw) {
+    let open = !!state.me.expand_cw;
+    const cw = el("button", "tool", open ? h.cw_hide : h.cw_show);
+    cw.type = "button";
+    cw.title = h.cw_tip;
+    cw.onclick = () => {
+      open = !open;
+      cw.textContent = open ? h.cw_hide : h.cw_show;
+      for (const d of $("#side-body").querySelectorAll("details.cw")) d.open = open;
+    };
+    row.append(cw);
+  }
+  box.append(row);
+  return box;
 }
 
 async function openAccount(id) {
@@ -1138,6 +1319,27 @@ function renderForm(fields) {
         return [v, c];
       });
       get[f.name] = () => boxes.filter(([, c]) => c.checked).map(([v]) => v);
+    } else if (f.kind === "file") {  // a picture to upload: read here, sent as base64
+      lab.append(el("span", "", f.label));
+      const inp = el("input");
+      inp.type = "file";
+      inp.accept = "image/*";
+      let picked = null;
+      inp.onchange = async () => {  // uploaded as the editor's pictures are; its token goes
+        const file = inp.files && inp.files[0];
+        picked = null;
+        if (!file) return;
+        try {
+          const r = await fetch("/api/upload", { method: "POST", body: file, headers: {
+            "X-Fedtail": "1", "X-Name": encodeURIComponent(file.name),
+            "Content-Type": "application/octet-stream" } });
+          const got = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(got.error || String(r.status));
+          picked = { upload: got.token };
+        } catch (e) { toast(e.message); }
+      };
+      lab.append(inp);
+      get[f.name] = () => picked;
     } else if (f.kind === "choice") {
       lab.append(el("span", "", f.label));
       const sel = el("select");
@@ -1179,6 +1381,7 @@ async function placeAct(act, values, confirmed, answer) {
     if (got !== null) await placeAct(act, values, confirmed, got);
     return;
   }
+  if (r.copy) await copyText(r.copy);
   if (r.message) toast(r.message);
   if (r.compose) composeFrom(r.compose, null);
   if (r.open) { openThing(r.open); return; }
@@ -1229,6 +1432,11 @@ function compose(replyTo) {
   }
   if (!replyTo || !replyTo.warning) { $("#cw").value = ""; showCw(false); }
   $("#quote-sel").hidden = !(replyTo && replyTo.html && state.me.quote_prefix);
+  $("#vis").disabled = false;  // an edit before locked these (composeFrom)
+  $("#attach").title = w("attach");
+  $("#vis").title = w("web_visibility");
+  state.editNote = "";
+  hint("");
   counter();
   if (!d.open) d.showModal();
   t.focus();
@@ -1273,6 +1481,25 @@ function counter() {
   $("#chars").classList.toggle("over", n > limit);
   const key = state.replyTo ? "draft." + state.replyTo.sid : "draft.new";
   store(key, $("#text").value);
+  clearTimeout(state.checkTimer);  // the chain and the #CamelCase hint, as the windows count
+  state.checkTimer = setTimeout(checkText, 400);
+}
+
+// the line under the text: an edit's note, how many posts a chain makes, #CamelCase
+function hint(extra) {
+  const line = [state.editNote, extra].filter(Boolean).join(" · ");
+  $("#compose-hint").textContent = line;
+  $("#compose-hint").hidden = !line;
+}
+
+async function checkText() {
+  const text = $("#text").value;
+  if (!$("#compose").open) return;
+  if (!text.trim()) { hint(""); return; }
+  try {
+    const r = await api("/api/compose_check", { text, cw: $("#cw").hidden ? "" : $("#cw").value });
+    hint([r.chain, r.camel].filter(Boolean).join(" · "));
+  } catch (e) { /* the local counter stands */ }
 }
 
 function closeCompose() {
@@ -1281,30 +1508,114 @@ function closeCompose() {
   $("#posts").focus();
 }
 
-async function send(e) {
-  e.preventDefault();
-  const text = $("#text").value.trim();
-  if (!text || state.busy) return;
+// "Discard": the text and its draft gone, after a question (as the windows ask)
+function discard() {
+  if ($("#text").value.trim() && !window.confirm(w("discard_q"))) return;
+  store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
+  $("#text").value = "";
+  state.media = [];
+  state.poll = null;
+  closeCompose();
+}
+
+function postBody(extra) {
+  return Object.assign({
+    text: $("#text").value.trim(), reply_to: state.replyTo ? state.replyTo.sid : null,
+    visibility: $("#vis").value, cw: $("#cw").hidden ? "" : $("#cw").value,
+    lang: $("#lang").value, edit: state.edit, quote: state.quote,
+    media: state.media.map((m) => ({ token: m.token, alt: m.alt, focus: m.focus || null })),
+    sensitive: state.sensitive && state.media.length > 0,
+    poll: state.poll && !state.media.length ? {
+      options: state.poll.options, expires_in: state.poll.expires_in,
+      multiple: state.poll.multiple } : null,
+    scheduled_at: $("#schedbox").hidden ? null : ($("#sched-at").value || null),
+    account: $("#from").hidden ? null : $("#from").value }, extra || {});
+}
+
+async function send(e, extra) {
+  if (e) e.preventDefault();
+  const body = postBody(extra);
+  if (!body.text || state.busy) return;
   state.busy = true;
   $("#send").disabled = true;
   try {
-    const r = await api("/api/post", {
-      text, reply_to: state.replyTo ? state.replyTo.sid : null,
-      visibility: $("#vis").value, cw: $("#cw").hidden ? "" : $("#cw").value,
-      lang: $("#lang").value, edit: state.edit, quote: state.quote,
-      media: state.media.map((m) => ({ token: m.token, alt: m.alt })),
-      sensitive: state.sensitive && state.media.length > 0,
-      poll: state.poll && !state.media.length ? {
-        options: state.poll.options, expires_in: state.poll.expires_in,
-        multiple: state.poll.multiple } : null,
-      scheduled_at: $("#schedbox").hidden ? null : ($("#sched-at").value || null),
-      account: $("#from").hidden ? null : $("#from").value });
+    const r = await api("/api/post", body);
+    if (r.ask_alt) {  // a picture without a description: ask first (post.alt_reminder)
+      state.busy = false;
+      if (window.confirm(r.ask_alt.text + "\n\n" + r.ask_alt.send + "?")) {
+        return await send(null, Object.assign({}, extra, { alt_ok: true }));
+      }
+      const bare = [...$("#attached").querySelectorAll("input")].find((i) => !i.value.trim());
+      if (bare) bare.focus();
+      return;
+    }
     store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
     $("#text").value = "";
     toast(r.message || w("sent"));
     closeCompose();
   } catch (err) { toast(err.message); }
   finally { state.busy = false; $("#send").disabled = false; }
+}
+
+// "Preview": the post as it will read, Markdown or plain, a chain in its parts
+async function preview() {
+  const text = $("#text").value.trim();
+  if (!text) return;
+  const lang = $("#lang");
+  try {
+    const r = await api("/api/preview", {
+      text, cw: $("#cw").hidden ? "" : $("#cw").value, media: state.media.length,
+      visibility_words: $("#vis").selectedOptions[0] ? $("#vis").selectedOptions[0].textContent : "",
+      lang_words: lang.value && lang.selectedOptions[0] ? lang.selectedOptions[0].textContent : "" });
+    $("#preview-title").textContent = r.title;
+    $("#preview-head").textContent = r.head;
+    const body = $("#preview-body");
+    body.textContent = "";
+    if (r.cw) body.append(el("div", "warning", "⚠ " + r.cw));
+    r.parts.forEach((html, i) => {
+      const part = el("div", "pv-part");
+      if (r.parts.length > 1) part.append(el("div", "muted", (i + 1) + "/" + r.parts.length));
+      const inner = el("div", "content");
+      inner.innerHTML = html;  // the server's own safe HTML (mdhtml / escaped)
+      part.append(inner);
+      body.append(part);
+    });
+    $("#preview-back").textContent = r.back;
+    $("#preview-send").textContent = r.send;
+    $("#preview-dlg").showModal();
+  } catch (e) { toast(e.message); }
+}
+
+// "Another language…": a code asked for, kept in the list from then on
+async function otherLanguage() {
+  const sel = $("#lang");
+  const was = sel.dataset.was || "";
+  const code = window.prompt(w("lang_other_title") + "\n" + w("lang_other_ask"), "");
+  if (!code) { sel.value = was; return; }
+  try {
+    const r = await api("/api/add_language", { code });
+    if (![...sel.options].some((o) => o.value === r.code)) {
+      const o = el("option", "", r.label);
+      o.value = r.code;
+      sel.insertBefore(o, sel.lastElementChild);  // before "Another language…"
+    }
+    sel.value = r.code;
+  } catch (e) { toast(e.message); sel.value = was; }
+  sel.dataset.was = sel.value;
+}
+
+// a click on an attached picture: where the main thing is (focus, -1…1, y up)
+function aimFocus(m, img, e) {
+  const box = img.getBoundingClientRect();
+  const x = ((e.clientX - box.left) / box.width) * 2 - 1;
+  const y = 1 - ((e.clientY - box.top) / box.height) * 2;
+  m.focus = [Math.round(x * 100) / 100, Math.round(y * 100) / 100];
+  drawAttached();
+}
+
+function focusWords(m) {
+  const sign = (v) => (v >= 0 ? "+" : "") + v.toFixed(2);
+  return m.focus ? w("focus_at", { x: sign(m.focus[0]), y: sign(m.focus[1]) }) : w("focus_none");
 }
 
 // ---- the editor's extras: pictures with descriptions, a poll, later ---------------------
@@ -1334,8 +1645,26 @@ function drawAttached() {
   $("#poll-toggle").disabled = state.media.length > 0;  // pictures or a poll
   state.media.forEach((m, i) => {
     const cell = el("div", "att");
-    if (m.url) { const img = el("img"); img.src = m.url; img.alt = m.alt; cell.append(img); }
-    else cell.append(el("span", "muted", "▣ " + m.name));
+    if (m.url) {
+      const pic = el("div", "aim");
+      const img = el("img");
+      img.src = m.url;
+      img.alt = m.alt;
+      img.title = w("focus_tip");
+      img.onclick = (e) => aimFocus(m, img, e);
+      pic.append(img);
+      if (m.focus) {  // the mark where the crop will centre
+        const dot = el("span", "focus-mark");
+        dot.style.left = ((m.focus[0] + 1) * 50) + "%";
+        dot.style.top = ((1 - m.focus[1]) * 50) + "%";
+        pic.append(dot);
+      }
+      const where = el("button", "tool small", focusWords(m));
+      where.type = "button";
+      where.title = w("focus_centre");
+      where.onclick = () => { m.focus = null; drawAttached(); };
+      cell.append(pic, where);
+    } else cell.append(el("span", "muted", "▣ " + m.name));
     const alt = el("input");
     alt.placeholder = w("alt_prompt");
     alt.value = m.alt;
@@ -1450,6 +1779,14 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeViewer();
     else if (e.key === "ArrowLeft") stepViewer(-1);
     else if (e.key === "ArrowRight") stepViewer(1);
+    else if (e.key === "s" || e.key === "S") saveViewed();
+    else if (e.key === "o" || e.key === "O") window.open($("#viewer-open").href, "_blank", "noopener");
+    else if (e.key === "z" || e.key === "Z") $("#viewer").classList.toggle("full");
+    else if ((e.key === "r" || e.key === "R") && state.viewer) {  // the original, asked again
+      $("#viewer-img").removeAttribute("src");
+      $("#viewer-note").textContent = w("viewer_keys");
+      $("#viewer-img").src = state.viewer.url;
+    }
     return;
   }
   if (!$("#pop").hidden && e.key === "Escape") { e.preventDefault(); closePopup(); return; }
@@ -1587,14 +1924,26 @@ async function start() {
   $("#cmdline").addEventListener("submit", runCommand);
   $("#send").textContent = w("send");
   $("#compose-close").onclick = closeCompose;
-  $("#compose-close").title = w("web_close");
+  $("#compose-close").title = w("close_tip");
+  $("#discard").textContent = w("discard");
+  $("#discard").onclick = discard;
+  $("#preview").textContent = "👁";
+  $("#preview").title = w("preview") + ": " + w("preview_tip");
+  $("#preview").hidden = (me.editor || {}).preview === false;
+  $("#preview").onclick = preview;
+  $("#preview-back").onclick = () => $("#preview-dlg").close();
+  $("#preview-send").onclick = () => { $("#preview-dlg").close(); send(null); };
+  $("#lang").addEventListener("change", () => {
+    if ($("#lang").value === "\x00other") otherLanguage();
+    else $("#lang").dataset.was = $("#lang").value;
+  });
   $("#compose").addEventListener("cancel", (e) => { e.preventDefault(); closeCompose(); });
   $("#compose-form").addEventListener("submit", send);
   $("#text").addEventListener("input", counter);
   $("#cw").addEventListener("input", counter);
   $("#cw").placeholder = w("cw_placeholder");
   $("#cw-toggle").textContent = "⚠";
-  $("#cw-toggle").title = w("cw_add");
+  $("#cw-toggle").title = w("cw_add_tip");
   $("#cw-toggle").onclick = () => showCw($("#cw").hidden);
   $("#lang").title = w("lang_tip");
   for (const [code, label] of (me.editor || {}).languages || [["", ""]]) {
@@ -1629,8 +1978,18 @@ async function start() {
   vis.value = me.visibility;
   vis.title = w("web_visibility");
   $("#viewer").onclick = (e) => {
-    if (e.target.id !== "viewer-open" && !e.target.closest(".nav-btn")) closeViewer();
+    if (e.target.id !== "viewer-open" && e.target.id !== "viewer-save" &&
+        e.target.id !== "viewer-img" && !e.target.closest(".nav-btn")) closeViewer();
   };
+  $("#viewer-img").ondblclick = (e) => { e.stopPropagation(); $("#viewer").classList.toggle("full"); };
+  $("#viewer").addEventListener("wheel", (e) => {  // the wheel leafs through, as the windows'
+    if ($("#viewer").classList.contains("full")) return;
+    e.preventDefault();
+    stepViewer(e.deltaY > 0 ? 1 : -1);
+  }, { passive: false });
+  $("#viewer-save").textContent = "⤓ " + w("viewer_save");
+  $("#viewer-save").title = w("viewer_save_tip");
+  $("#viewer-save").onclick = (e) => { e.stopPropagation(); saveViewed(); };
   $("#viewer-prev").onclick = () => stepViewer(-1);
   $("#viewer-next").onclick = () => stepViewer(1);
   $("#more").title = w("web_menu");

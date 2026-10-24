@@ -109,8 +109,7 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await self.wait(pilot, lambda: not isinstance(app.screen, ProfileScreen))
 
             # another lane from the list
-            lanes = app.query_one("#lanes", ListView)
-            names = [i.lane for i in lanes.children]
+            names = app._lane_names()  # the lanes, the section headings left out
             self.assertIn("replies", names)
             await app.select_lane("replies")
             await self.wait(pilot, lambda: any("a reply to me" in i.entry.text
@@ -213,8 +212,12 @@ class TuiTest(TmpDir, unittest.IsolatedAsyncioTestCase):
             await pilot.press("j")
             await pilot.pause(0.1)
             self.assertEqual(lanes.index, before + 1)
+            while not hasattr(lanes.highlighted_child, "lane"):  # a section's heading
+                await pilot.press("j")
+                await pilot.pause(0.05)
+            target = lanes.highlighted_child.lane
             await pilot.press("l")
-            await self.wait(pilot, lambda: app.lane == names[before + 1])
+            await self.wait(pilot, lambda: app.lane == target)
 
             await app.select_lane("activity")
             await self.wait(pilot, lambda: any(isinstance(i, ActivityItem)

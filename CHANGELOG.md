@@ -9,6 +9,29 @@
   menu items' tooltips (where GTK shows them), the profile's tooltip in the status bar, a
   click on a post's face opens the profile (and a screen reader names it), the columns'
   tab is called so, `?` in the command line opens the commands' help in a window.
+- The web page and the terminal get what only the windows had, as places of their own:
+  "What the server can do", the server's notification policy, the server's announcements
+  (dismiss, react), the federation's state with Copy / Refresh / Reset, a profile's details
+  (counts, since, people you both follow, featured, pinned, moved) and their older posts
+  from their own server, a tag on my profile, a new avatar and header, the lists moved up
+  and down, About's Copy, the arts mode's note, and a search in the help.
+- The web page matches the windows where it didn't: the sidebar's sections fold (one state
+  for every interface), a thread has its head (first words, answers, #id, Follow, why it
+  comes, every warning at once), Ctrl+F goes "Deeper" and "In every lane", a poll shows how
+  many people voted and refreshes, the editor has Preview, Discard (after a question),
+  "Another language…", a picture's focus point, the alt-text reminder before sending, the
+  chain and #CamelCase line under the text and "an edit keeps the pictures"; the viewer
+  saves the original (S), shows it at its own size (Z, double click), leafs with the wheel;
+  the windows' tooltips, the ● of the new and "→ @account" (which of mine got it).
+- The terminal matches the windows where it didn't: a poll to vote in (`u`: Space, Enter;
+  `r` — the results, refresh; how many people, until when), Ctrl+F's `N` (back), `D`
+  (deeper), `E` (every lane) and Esc, `J` — to the new, older posts past a lane's end, the
+  sidebar's sections fold, a thread's head (answers, `c` — every warning, `s` — follow,
+  why it comes), the editor's count, chain and #CamelCase line, Ctrl+R — preview, "Another
+  language…", "Discard", the alt-text reminder, "an edit keeps the pictures"; the viewer
+  saves the original (`s`); notifications through notify-send or the terminal's own code
+  (kitty, Ghostty, WezTerm, foot, iTerm2); ≡ → Debugging (census, trim, tracing, snapshot,
+  the config and data folders, every account in one window, "⇄ @account" on a card).
 - Qt: a follow request's @name opens the person's profile in fedtail, as GTK's does — no
   more "profile ↗" link out to the browser.
 - "Four interfaces" in the feature list (docs/{ru,en}/features.md, and so the site): a table

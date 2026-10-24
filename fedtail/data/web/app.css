@@ -324,3 +324,32 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
 #schedbox { margin-top: 6px; }
 #chars.over { color: var(--danger); font-weight: 700; }
 #sensitive.on { color: var(--warn); }
+
+/* ---- parity with the windows: sections, marks, a thread's head, the editor's extras ---- */
+#lanes button.group { display: block; width: 100%; text-align: left; background: none;
+                      border: 0; cursor: pointer; font: inherit; }
+#lanes button.group:hover { color: var(--text); }
+.post .meta .dot { color: var(--unread); font-size: 10px; }
+.post .meta .via, .post .meta .came-from { color: var(--muted); font-size: 12px; }
+.thread-head { padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--card); }
+.thread-head .th-title { font-weight: 600; }
+.thread-head .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+#viewer.full img { max-width: none; max-height: none; }
+#viewer.full { overflow: auto; justify-content: flex-start; align-items: flex-start; }
+#viewer-bar button.tool { color: #9cf; margin-left: 10px; }
+#viewer-note { color: #ddd; font-size: 13px; min-height: 1em; }
+#compose-hint { font-size: 13px; margin-top: 4px; }
+#compose-hint[hidden] { display: none; }
+#attached .aim { position: relative; flex: none; cursor: crosshair; line-height: 0; }
+#attached .focus-mark { position: absolute; width: 10px; height: 10px; margin: -6px 0 0 -6px;
+                        border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 2px #000;
+                        pointer-events: none; }
+#attached button.small { font-size: 12px; white-space: nowrap; flex: none; }
+dialog#preview-dlg { max-width: 640px; width: 92vw; border: 1px solid var(--line);
+                     border-radius: 14px; background: var(--card); color: var(--text);
+                     padding: 12px 14px; }
+dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
+#preview-body .pv-part { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+                         margin-top: 8px; }
+#preview-body .warning { color: var(--warn); margin-top: 8px; }
+#lanes a[hidden] { display: none; }

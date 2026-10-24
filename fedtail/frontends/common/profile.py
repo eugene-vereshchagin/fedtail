@@ -52,8 +52,9 @@ def meta(acc, rel, date, followed_since=None, software=""):
     return bits
 
 
-def actions(acc, rel, mine, cfg, supports, lists=False):
-    """The profile's buttons, in order."""
+def actions(acc, rel, mine, cfg, supports, lists=False, details=False):
+    """The profile's buttons, in order. details: "Profile…" — the head's details as a
+    place of its own (the web page and the terminal: the windows show them in the tab)."""
     rel = rel or Relationship()
     out = []
     if mine:
@@ -91,6 +92,8 @@ def actions(acc, rel, mine, cfg, supports, lists=False):
     out.append(Act("copy_handle", _("copy_handle"), _("copy_handle_tip")))
     if acc.url:
         out.append(Act("open_browser", _("open_browser")))
+    if details:
+        out.append(Act("details", "ℹ " + _("profile_title") + "…"))
     return out
 
 
@@ -168,3 +171,5 @@ def do(key, acc, rel, view, host, changed):
         host.copy_handle(acc.handle)
     elif key == "open_browser":
         host.open_url(acc.url)
+    elif key == "details":  # the place of the profile's details (common/placesmore.py)
+        host._place("profile_info", acc.id)

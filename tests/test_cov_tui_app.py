@@ -195,8 +195,8 @@ class AppKeysTest(Base):
             self.assertEqual(posts.highlighted_child.entry.id, "003")
             app.action_find()  # the same lane: the next (the only) one
             self.assertEqual(app._found["at"], 0)
-            app.find("no such words at all")
-            self.assertIsNone(app._found)
+            app.find("no such words at all")  # kept for D / E: none in the lane
+            self.assertEqual(app._found["hits"], [])
 
             # keys of the lane list and the command line
             cmd_line = app.query_one("#cmd", Input)
@@ -221,7 +221,7 @@ class AppKeysTest(Base):
             app.action_to_lanes()
             await self.wait(pilot, lambda: lanes.has_focus)
             names = app._lane_names()
-            lanes.index = names.index("local")
+            lanes.index = [getattr(i, "lane", None) for i in lanes.children].index("local")
             app.action_to_posts()
             await self.wait(pilot, lambda: app.lane == "local")
             await app.action_lane_number(1)
@@ -339,7 +339,7 @@ class AppKeysTest(Base):
                 await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen))
                 menu = app.screen
                 value = next(v for x in menu.items if x != "-"
-                             for label, v in [x] if pick(label, v))
+                             for label, v, *_hint in [x] if pick(label, v))
                 menu.dismiss(value)
                 await pilot.pause(0.1)
             await choose(lambda _l, v: v == ("filter", "posts"))

@@ -57,6 +57,13 @@ def make_core():
                                         "url": f"https://img.example/{i}.png",
                                         "preview_url": f"https://img.example/{i}s.png"}]
         w.add(st, home=True)
+    poll = status("030", BOB, minute=30, vis="public", text="опрос")
+    poll["poll"] = {"id": "p30", "expires_at": "2099-01-01T00:00:00.000Z", "expired": False,
+                    "multiple": True, "votes_count": 3, "voters_count": 2, "voted": False,
+                    "own_votes": [], "emojis": [],
+                    "options": [{"title": "да", "votes_count": 2},
+                                {"title": "нет", "votes_count": 1}]}
+    w.add(poll, home=True)
     w.act("a0", "follow", BOB, minute=1)
     w.act("a1", "favourite", BOB, st=mine, minute=5)
     w.requests.append(fakes.acct("Q", "quinn@example.org"))
@@ -191,6 +198,7 @@ async def walk(out):
                 shot(f"09-place-{name}-{i + 1}")
             await pilot.press("escape")
             await pilot.pause(0.2)
+        await parity_walk(app, pilot, wait, shot)
         # every key the main screen offers: none may raise
         for b in app.BINDINGS:
             if b.key in ("q", "tab", "colon", "escape") or "request" in b.action:
@@ -207,6 +215,101 @@ async def walk(out):
         shot("06-after-keys")
         await pilot.press("q")
     core.shutdown()
+
+
+async def parity_walk(app, pilot, wait, shot):
+    """What the terminal caught up with the windows on (docs/src/parity.toml): a poll's
+    screen (looked at, never voted), the editor's preview, a thread's head with every
+    warning open, a sidebar section folded and back, the find keys (N, D, E, Esc), J,
+    the ≡ Debugging submenu. Read-only: nothing here writes to a server."""
+    from textual.widgets import ListView
+
+    from fedtail.frontends.tui.app import GroupItem, PostItem, ThreadScreen
+    from fedtail.frontends.tui.more import PollScreen, PreviewScreen
+    from fedtail.frontends.tui.screens import AskScreen, ComposeScreen, MenuScreen
+    from fedtail.model import real as real_post
+
+    async def back():
+        while app.screen is not app.screen_stack[0]:
+            await pilot.press("escape")
+            await pilot.pause(0.1)
+
+    try:
+        await app.select_lane("home")
+        await pilot.pause(0.4)
+        posts = app.query_one("#posts", ListView)
+        polls = [n for n, i in enumerate(posts.children)
+                 if isinstance(i, PostItem) and real_post(i.entry).poll is not None]
+        if polls:
+            posts.focus()
+            posts.index = polls[0]
+            await pilot.press("u")
+            if await wait(pilot, lambda: isinstance(app.screen, PollScreen), "poll"):
+                await pilot.press("space")
+                await pilot.pause(0.2)
+                shot("10-poll")
+                await pilot.press("r")
+                await pilot.pause(0.2)
+                shot("10-poll-results")
+            await back()
+        else:
+            NOTES.append("parity: no post with a poll in the lane")
+        app.push_screen(ComposeScreen(text="**жирный**\n---\nвторой"))
+        if await wait(pilot, lambda: isinstance(app.screen, ComposeScreen), "editor"):
+            await pilot.pause(0.3)
+            shot("11-compose")
+            await pilot.press("ctrl+r")
+            if await wait(pilot, lambda: isinstance(app.screen, PreviewScreen), "preview"):
+                await pilot.pause(0.3)
+                shot("11-preview")
+                await pilot.press("escape")
+            app.screen.action_extras()
+            if await wait(pilot, lambda: isinstance(app.screen, MenuScreen), "extras"):
+                NOTES.append("📎 menu: " + " | ".join(app.screen.labels()))
+                shot("11-extras")
+        await back()
+        posts.focus()
+        posts.index = len(posts.children) - 1
+        await pilot.press("enter")
+        if await wait(pilot, lambda: isinstance(app.screen, ThreadScreen), "thread"):
+            await pilot.pause(0.5)
+            await pilot.press("c")
+            await pilot.pause(0.3)
+            shot("12-thread-head")
+            NOTES.append("thread head: " + str(app.screen.info))
+        await back()
+        lanes = app.query_one("#lanes", ListView)
+        heads = [i for i, it in enumerate(lanes.children) if isinstance(it, GroupItem)]
+        if heads:
+            lanes.focus()
+            lanes.index = heads[-1]
+            await pilot.press("enter")
+            await pilot.pause(0.3)
+            shot("13-section-folded")
+            await pilot.press("enter")
+            await pilot.pause(0.3)
+        app.query_one("#posts", ListView).focus()
+        await pilot.press("ctrl+f")
+        if await wait(pilot, lambda: isinstance(app.screen, AskScreen), "find"):
+            await pilot.press(*"пост")
+            await pilot.press("enter")
+            await pilot.pause(0.3)
+            for key in ("ctrl+f", "N", "D", "J"):
+                await pilot.press(key)
+                await pilot.pause(0.3)
+            await pilot.press("E")
+            if await wait(pilot, lambda: isinstance(app.screen, MenuScreen), "find everywhere"):
+                shot("14-find-everywhere")
+            await back()
+            await pilot.press("escape")
+        app.debug_menu()
+        if await wait(pilot, lambda: isinstance(app.screen, MenuScreen), "≡ Debugging"):
+            NOTES.append("≡ Debugging: " + " | ".join(app.screen.labels()))
+            shot("15-debug-menu")
+        await back()
+    except Exception:  # noqa: BLE001
+        ERRORS.append("parity walk: " + traceback.format_exc(limit=6))
+        await back()
 
 
 def main():

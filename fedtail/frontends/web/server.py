@@ -92,6 +92,19 @@ def _int(value, default):
         return default
 
 
+def _focus(value):
+    """A picture's focus from the page: (x, y), each -1…1 (y up), or None."""
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+    try:
+        x, y = (float(v) for v in value)
+    except (TypeError, ValueError):
+        return None
+    if x != x or y != y:  # NaN
+        return None
+    return (round(max(-1.0, min(1.0, x)), 2), round(max(-1.0, min(1.0, y)), 2))
+
+
 def static_text(name):
     return resources.files("fedtail").joinpath(f"data/web/{name}").read_text("utf-8")
 
@@ -161,7 +174,9 @@ def poll_json(poll):
                         for o in poll.options],
             "multiple": poll.multiple, "expired": poll.expired, "voted": poll.voted,
             "mine": list(poll.my_votes),
+            # how many people, where the server says (Qt's footer); else the votes
             "summary": " · ".join(x for x in (
+                _("poll_people", n=poll.voters) if poll.voters is not None else
                 _("poll_votes", n=poll.votes),
                 _("poll_closed") if poll.expired else
                 (_("poll_until", when=poll.expires.astimezone().strftime("%d.%m %H:%M"))
@@ -243,6 +258,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     }
     if isinstance(entry, Share):
         out["shared_by"] = account_json(entry.by)
+    via = view.via(entry) if hasattr(view, "via") else ""
+    if via:  # all accounts in one window: which of mine got it (and acts on it)
+        out["via"] = {"text": "→ " + via, "tip": _("via_tip", acct=via)}
     if spec is not None:
         out["words"] = words_json(view, spec, web_date)
         out["item"] = spec.key
@@ -258,9 +276,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
 
 
 # a profile's buttons (common/profile.py): every one
-WEB_PROFILE_ACTS = ("edit_profile", "follow", "bell", "boosts", "langs", "mention", "mute",
-                    "block", "remove_follower", "endorse", "lists", "following", "followers",
-                    "note", "copy_handle", "open_browser")
+WEB_PROFILE_ACTS = ("details", "edit_profile", "follow", "bell", "boosts", "langs",
+                    "mention", "mute", "block", "remove_follower", "endorse", "lists",
+                    "following", "followers", "note", "copy_handle", "open_browser")
 
 
 class _WebHost:
@@ -389,6 +407,7 @@ class Web:
         self.key = key
         self.cmds = Commands(self.core)
         self.models = {}  # lane -> LaneModel (common/lane.py)
+        self._saver = None  # common/images.Cache for "Save", made when first asked
         try:  # attachments of posts never sent last time: gone
             d = self.core.paths.data_dir / "web-uploads"
             for f in d.iterdir() if d.is_dir() else ():
@@ -543,8 +562,11 @@ class Web:
         from ..common import compose as cc
         caps = self.core.caps
         accounts, _first = self.core.post_accounts(None)
+        added = self.core.get_state("languages_added", []) or []
         langs = [["", _("lang_default")]] + [[code, cc.language_label(code)]
-                                             for code in cc.languages(self.core.cfg)]
+                                             for code in cc.languages(self.core.cfg, added)]
+        # "Another language…" last, as in the windows (the page asks for the code)
+        langs.append([cc.OTHER_LANG, _("lang_other")])
         return {"limit": int(getattr(caps, "max_characters", 500) or 500),
                 "max_media": int(getattr(caps, "max_media", 4) or 4),
                 "max_options": int(getattr(caps, "max_poll_options", 4) or 4),
@@ -552,7 +574,8 @@ class Web:
                 # all accounts in one window: whom a post may go from, whole @name@server
                 "accounts": [[k, _("post_from", acct=h)] for k, h in accounts]
                 if len(accounts) > 1 else [],
-                "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES]}
+                "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES],
+                "preview": bool(self.core.cfg["post"].get("preview", True))}
 
     # ---- attachments: the page sends the file, the post names it by its token ----------
     def uploads_dir(self):
@@ -591,17 +614,36 @@ class Web:
         return f"{version.HOMEPAGE}/blob/main/fedtail/data/help/{language()}/index.md"
 
     def lanes(self):
-        from ..tui.model import lane_label, ordered_lanes, start_lane
+        """The sidebar as the windows have it (common/sidebar.py): its sections with
+        their titles and folded or not (one state for every window), each lane's count
+        and the tip the windows give it."""
+        from ..common import sidebar
+        from ..tui.model import lane_label, start_lane
+        core = self.core
+        folded = sidebar.folded(core)
         out = []
-        for group, names in ordered_lanes(self.core):
+        for group, names in sidebar.groups(core, core.cfg):
+            title = None
+            if group:
+                title = _("lists_header") if group == "lists" else _("grp_" + group)
             for i, name in enumerate(names):
-                title, n = lane_label(self.core, name, 60)
-                out.append({"name": name, "title": title, "unread": n,
-                            "group": group if i == 0 else None})
-        first = start_lane(self.core, [x["name"] for x in out])
+                label, n = lane_label(core, name, 60)
+                tip = _("tip_" + name)
+                out.append({"name": name, "title": label, "unread": n,
+                            "tip": "" if tip == "tip_" + name else tip,
+                            "group": title if i == 0 else None, "section": group,
+                            "folded": bool(group) and group in folded})
+        first = start_lane(core, [x["name"] for x in out])
         for x in out:
             x["start"] = x["name"] == first
         return out
+
+    def fold(self, group):
+        """A section of the sidebar folded or unfolded (kept for every window)."""
+        from ..common import sidebar
+        if not isinstance(group, str) or not group:
+            raise ValueError("group")
+        return {"folded": sidebar.fold(self.core, group)}
 
     def _lane_name(self, name):
         from ...core.lanes import canonical
@@ -706,6 +748,37 @@ class Web:
         text, _none = count_text(query, 0 if ids else -1, len(ids))
         return {"ids": ids, "text": text}
 
+    def find_deeper(self, name, query):
+        """"Deeper": everything stored for the lane, not only what it shows; the lane
+        grows down to an older match (core.deep_find, as the windows' find bar)."""
+        name = self._lane_name(name)
+        if not query.strip():
+            return {"more": False, "total": 0, "text": ""}
+        got = self.core.deep_find(name, query).result()
+        text = "" if got["more"] else (_("find_archive_none") if not got["total"] else "")
+        return {"more": bool(got["more"]), "total": int(got["total"]), "text": text}
+
+    def find_everywhere(self, query):
+        """"In every lane": what's stored, lane by lane in the sidebar's order — each
+        match with its lane's title (core.find_everywhere)."""
+        from ..common.find import count_text
+        if not query.strip():
+            return {"hits": [], "text": ""}
+        core = self.core
+        hits = [{"lane": h["lane"], "item": h["item"], "id": h["status_id"],
+                 "index": h["index"], "title": core.lane_title(h["lane"])
+                 or _("lane_" + h["lane"])}
+                for h in core.find_everywhere(query).result()
+                if h["lane"] in core.lane_by_name]
+        text, _none = count_text(query, 0 if hits else -1, len(hits),
+                                 hits[0]["title"] if hits else None, everywhere=True)
+        return {"hits": hits, "text": text}
+
+    def reveal(self, name, index):
+        """The lane loaded down to a match found further back than it shows."""
+        name = self._lane_name(name)
+        return {"grew": bool(self.core.reveal_in_lane(name, _int(index, 0)))}
+
     def older(self, name):
         """Older posts of a lane from the server (the "More" at its end)."""
         name = self._lane_name(name)
@@ -725,9 +798,41 @@ class Web:
         posts = [n.post for n in items]
         short = core.short_ids(posts)
         unread = core.unread(posts)
-        return {"focus": sid,
-                "posts": [post_json(core, n.post, short.get(n.post.id), n.post.id in unread,
-                                    number=n.number, depth=n.depth) for n in items]}
+        out = [post_json(core, n.post, short.get(n.post.id), n.post.id in unread,
+                         number=n.number, depth=n.depth) for n in items]
+        for p in out:  # the post the thread was opened from: "you came from here"
+            if p["sid"] == sid or p["id"] == sid:
+                p["came_from"] = _("came_from")
+        return {"focus": sid, "posts": out, "head": self.thread_head(posts, short)}
+
+    def thread_head(self, posts, short):
+        """The head the windows put over a thread (qt/feed.py ThreadWidget,
+        gtk/threadhead.py): its first words, how many answers, #id, Follow (and why it
+        reaches me without), every warning opened or closed at once."""
+        if not posts:
+            return None
+        core, root = self.core, posts[0]
+        on = bool(core.subscribed(root))
+        sid = short.get(root.id)
+        info = _("thread_info", n=len(posts) - 1) + (f" · #{sid}" if sid else "")
+        via = ""
+        if not on:  # not followed, yet the comments come: the server's Home says why
+            try:
+                followed = core.followed_among([p.author for p in posts]).result()
+            except Exception:  # noqa: BLE001 — a head without the reason, as the windows'
+                followed = []
+            if followed:
+                names = ", ".join("@" + a.handle.split("@")[0] for a in followed[:3])
+                if len(followed) > 3:
+                    names += " " + _("and_more", n=len(followed) - 3)
+                via = _("thread_via_home", names=names)
+        return {"sid": root.id, "title": snippet(root, 60) or "@" + root.author.handle,
+                "info": info, "via": via, "via_tip": _("thread_via_home_tip") if via else "",
+                "subscribed": on, "sub": _("subscribed") if on else _("sub_thread"),
+                "sub_tip": _("sub_tip"),
+                "cw": any(p.warning for p in posts),
+                "cw_show": _("cw_all_show"), "cw_hide": _("cw_all_hide"),
+                "cw_tip": _("cw_all_tip")}
 
     def account(self, acc_id):
         core = self.core
@@ -752,7 +857,8 @@ class Web:
         from ..common import profile as prof
         own = bool(me and acc and acc.id == me.id)
         acts = [{"key": a.key, "label": a.label, "tip": a.tip, "primary": a.primary}
-                for a in prof.actions(acc, rel, own, core.cfg, core.supports, lists=True)
+                for a in prof.actions(acc, rel, own, core.cfg, core.supports, lists=True,
+                                      details=True)
                 if a.key in WEB_PROFILE_ACTS] if acc else []
         since = rel is not None and rel.following and core.followed_since(acc_id, rel)
         return {"account": info,
@@ -874,6 +980,74 @@ class Web:
         got = core.vote(p, choices).result() or p
         return post_json(core, got, core.short_ids([got]).get(got.id))
 
+    def add_language(self, code):
+        """"Another language…": a code the editor lists from then on (kept as the windows
+        keep it: languages_added); its row for the page's list."""
+        from ..common import compose as cc
+        code = str(code or "").strip().lower()
+        if not cc.LANG_CODE.fullmatch(code):
+            raise ValueError(_("lang_other_ask"))
+        added = list(self.core.get_state("languages_added", []) or [])
+        if code not in added and code not in cc.languages(self.core.cfg):
+            self.core.set_state("languages_added", added + [code])
+        return {"code": code, "label": cc.language_label(code)}
+
+    def compose_check(self, body):
+        """What the editor shows beside the text as it is typed (common/compose.count, the
+        windows'): characters of the limit, how many posts a chain makes, the #CamelCase
+        hint for screen readers (post.camelcase_hint)."""
+        from ..common import compose as cc
+        caps = self.core.caps
+        c = cc.count(str(body.get("text") or ""), str(body.get("cw") or ""),
+                     int(getattr(caps, "max_characters", 500) or 500), self.core.cfg)
+        return {"n": c.n, "limit": c.limit, "over": c.over, "parts": c.parts,
+                "chain": _("chain_count", n=c.parts) if c.parts > 1 else "",
+                "camel": _("camel_hint", tags=", ".join("#" + t for t in c.flat_tags[:3]))
+                if c.flat_tags else ""}
+
+    def preview(self, body):
+        """The post as it will read (Qt's preview): who sees it, the language, a chain's
+        parts, the pictures, Markdown or plain — each part as safe HTML."""
+        from html import escape as esc
+
+        from ...model.text import chain_parts
+        from ..mdhtml import markdown_html
+        text = str(body.get("text") or "").strip()
+        cw = str(body.get("cw") or "").strip()
+        parts = (chain_parts(text) if self.core.cfg["post"].get("chain", True) else []) \
+            or [text]
+        md = bool(self.core.markdown)
+        n = _int(body.get("media"), 0)
+        head = " · ".join(x for x in (
+            str(body.get("visibility_words") or ""), str(body.get("lang_words") or ""),
+            _("chain_count", n=len(parts)) if len(parts) > 1 else "",
+            _("preview_media", n=n) if n else "",
+            _("preview_md") if md else _("preview_plain")) if x)
+        html = [markdown_html(p, lambda u: u if u.startswith("https://") else None)
+                if md else "<p>" + esc(p).replace("\n", "<br>") + "</p>" for p in parts]
+        return {"title": _("preview"), "head": head, "cw": cw, "parts": html,
+                "back": _("preview_back"), "send": _("send")}
+
+    def save_media(self, url):
+        """A picture's or a video's original into ui.save_dir on this machine, as the
+        windows' "Save" (common/images.py: no token along, public addresses only)."""
+        from ...core import saving
+        from ..common.images import Cache
+        url = str(url or "")
+        if not _https(url):
+            raise ValueError("url")
+        if self._saver is None:
+            self._saver = Cache(self.core, None)  # saving needs no toolkit
+        path = self._saver.save(url, saving.save_dir(self.core.cfg)).result()
+        return {"message": _("saved_to", path=str(path))}
+
+    def poll_refresh(self, sid):
+        """Fresh counts for a post's poll (the "refresh" in its footer)."""
+        core = self.core
+        p = self._post_by_id(sid)
+        got = core.refresh_poll(p).result() or core.by_id(p.id) or p
+        return post_json(core, got, core.short_ids([got]).get(got.id))
+
     def follow(self, acc_id, on):
         rel = self.core.follow(one_id(acc_id), bool(on)).result()
         return {"following": bool(rel.following or rel.requested) if rel else bool(on),
@@ -898,8 +1072,15 @@ class Web:
         media = []
         for m in (body.get("media") or [])[:20]:
             if isinstance(m, dict):
-                media.append((str(self.upload_path(m.get("token"))),
-                              str(m.get("alt") or "")[:1500]))
+                item = (str(self.upload_path(m.get("token"))), str(m.get("alt") or "")[:1500])
+                focus = _focus(m.get("focus"))
+                media.append(item + (focus,) if focus else item)
+        bare = sum(1 for m in media if not m[1].strip())
+        if bare and not body.get("alt_ok") and core.cfg["post"].get("alt_reminder", True):
+            # post.alt_reminder: a picture without a description — the page asks first,
+            # as the windows do; nothing is sent until it answers
+            return {"ask_alt": {"title": _("alt_missing_title"), "text": _("alt_missing", n=bare),
+                                "describe": _("alt_describe"), "send": _("alt_send_anyway")}}
         poll = None
         if isinstance(body.get("poll"), dict) and not media:
             from ..common import compose as cc
@@ -918,8 +1099,8 @@ class Web:
                       quote=str(body["quote"]) if body.get("quote") else None,
                       media=media, sensitive=bool(body.get("sensitive")), poll=poll,
                       scheduled_at=when, **extra).result()
-        for path, _alt in media:  # sent: the copies go
-            Path(path).unlink(missing_ok=True)
+        for m in media:  # sent: the copies go (a focus may ride along as the third)
+            Path(m[0]).unlink(missing_ok=True)
         if when:
             return {"id": None, "url": "", "scheduled": True,
                     "message": _("scheduled_msg", when=when.replace("T", " ")[:16])}
@@ -993,11 +1174,15 @@ class Web:
                                                                for x in act)):
             raise ValueError("act")
         values = body.get("values") if isinstance(body.get("values"), dict) else {}
+        # a file field (a new avatar): the page uploaded it, the place gets its path
+        values = {k: str(self.upload_path(v["upload"])) if isinstance(v, dict) and
+                  "upload" in v else v for k, v in values.items()}
         answer = body.get("answer") if isinstance(body.get("answer"), str) else None
         out = self.places().act(*act, values=values, confirmed=body.get("confirmed") is True,
                                 answer=answer)
         got = {k: v for k, v in (("message", out.message), ("confirm", out.confirm),
-                                 ("open", out.open), ("compose", out.compose)) if v}
+                                 ("open", out.open), ("compose", out.compose),
+                                 ("copy", out.copy)) if v}
         if out.ask:
             got["ask"] = {"title": out.ask[0], "question": out.ask[1], "text": out.ask[2]}
         if out.refresh:
@@ -1039,7 +1224,16 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "find_placeholder", "find_prev", "find_next", "find_close", "find_none",
          "find_count", "to_new", "to_new_tip", "browse_empty", "media_limit", "alt_prompt",
          "detach", "poll_option", "poll_several", "lang_tip", "attach", "poll_add_tip",
-         "sensitive_mark_tip", "schedule_tip", "schedule_when")
+         "sensitive_mark_tip", "schedule_tip", "schedule_when",
+         # what the windows have and the page now too (docs/src/parity.toml)
+         "group_fold_tip", "thread_loading", "find_deeper", "find_deeper_tip",
+         "find_everywhere", "find_everywhere_tip", "find_searching", "find_archive_none",
+         "poll_results", "poll_refresh", "poll_sending", "preview", "preview_tip",
+         "discard", "discard_q", "discard_q_title", "lang_other_title", "lang_other_ask",
+         "edit_media_kept", "focus_at", "focus_centre", "focus_none", "focus_tip",
+         "viewer_save", "viewer_save_tip", "viewer_keys", "viewer_unreachable", "saving",
+         "image_failed", "image_loading", "short_id_tip", "reactions_tip", "cw_add_tip",
+         "close_tip", "to_end_tip", "unread_tip")
 
 
 class Server(ThreadingHTTPServer):
@@ -1149,6 +1343,9 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
                   "/api/places": lambda: self.web.place_menu(),
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
+                  "/api/find_deeper": lambda: self.web.find_deeper(q.get("lane", ""),
+                                                                   q.get("q", "")),
+                  "/api/find_everywhere": lambda: self.web.find_everywhere(q.get("q", "")),
                   "/api/page": lambda: self.web.page(q.get("name", ""), q.get("arg", ""),
                                                      q.get("tab", ""), q.get("cursor", "")),
                   "/api/wait": lambda: self.web.wait_answer(
@@ -1191,6 +1388,13 @@ class Handler(BaseHTTPRequestHandler):
             "/api/lane_set": lambda: web.lane_set(body),
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
+            "/api/poll_refresh": lambda: web.poll_refresh(str(body.get("id"))),
+            "/api/fold": lambda: web.fold(body.get("group")),
+            "/api/reveal": lambda: web.reveal(body.get("lane"), body.get("index")),
+            "/api/compose_check": lambda: web.compose_check(body),
+            "/api/add_language": lambda: web.add_language(body.get("code")),
+            "/api/preview": lambda: web.preview(body),
+            "/api/save": lambda: web.save_media(body.get("url")),
             "/api/older": lambda: web.older(body.get("name")),
             "/api/follow": lambda: web.follow(str(body.get("id")), body.get("on")),
             "/api/post": lambda: web.post(body),
