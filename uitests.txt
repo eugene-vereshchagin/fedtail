@@ -1,0 +1,6 @@
+ok   FlowTest.theOverviewOpensALaneAndAThread (3.455 s)
+ok   FlowTest.readInARowLeavesTheOverviewForALaneWithNews (0.995 s)
+ok   FlowTest.aReplyInAThreadStaysInSight (2.317 s)
+ok   FlowTest.aSettingGoesIntoTheConfigFile (1.795 s)
+ok   FlowTest.theSwitcherFindsALaneByName (2.143 s)
+ok   FlowTest.theTilesCanBeChanged (1.059 s)
