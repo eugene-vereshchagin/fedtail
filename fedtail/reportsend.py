@@ -38,8 +38,9 @@ def remote_url(spec):
         name = spec if spec.endswith(".git") else spec + ".git"
         return DEFAULT_HOST + name
     if spec.startswith(("ssh://", "git@", "https://", "file://", "/")) or \
-            re.match(r"^[\w.-]+@[\w.-]+:", spec):
-        return spec
+            re.match(r"^[\w.-]+@[\w.-]+:", spec) or re.match(r"^[A-Za-z]:[\\/]", spec) or \
+            spec.startswith("\\\\"):
+        return spec  # (a folder on this machine or a share: C:\…, \\server\…)
     raise SendError(f"debug.report_repo = {spec!r}: not user/repo nor a git address")
 
 

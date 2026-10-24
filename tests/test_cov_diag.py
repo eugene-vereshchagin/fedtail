@@ -110,7 +110,7 @@ class DiagMoreTest(unittest.TestCase):
     def test_setup_off_the_main_thread_and_thread_crashes(self):
         cfg, _ = config.validate({"debug": {"mode": "on", "log_dir": str(self.tmp / "l")}})
         p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
-        with mock.patch.object(faulthandler, "register", side_effect=RuntimeError):
+        with mock.patch.object(faulthandler, "register", side_effect=RuntimeError, create=True):
             self.assertTrue(diag.setup(p, cfg))  # SIGUSR1 refused (a thread): no matter
         with self.assertLogs("fedtail.crash", "CRITICAL") as logs:
             try:

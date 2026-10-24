@@ -28,7 +28,8 @@ class RemoteUrlTest(unittest.TestCase):
         self.assertEqual(reportsend.remote_url("me/r.git"), "git@github.com:me/r.git")
         for url in ("git@example.org:me/r.git", "ssh://git@example.org/me/r.git",
                     "https://example.org/me/r.git", "/srv/git/r.git", "file:///srv/r.git",
-                    "user@box:repos/r.git"):
+                    "user@box:repos/r.git", "C:\\Users\\me\\r.git", "D:/git/r.git",
+                    "\\\\nas\\git\\r.git"):
             self.assertEqual(reportsend.remote_url(url), url)
         self.assertIsNone(reportsend.remote_url("  "))
         with self.assertRaises(reportsend.SendError):

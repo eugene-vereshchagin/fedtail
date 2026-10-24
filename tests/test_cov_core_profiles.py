@@ -53,7 +53,8 @@ class ProfilesTest(unittest.TestCase):
         with mock.patch.object(profiles.subprocess, "Popen") as popen:
             profiles.RUN_FLAGS[:] = ["--ui", "tui"]
             self.addCleanup(profiles.RUN_FLAGS.clear)
-            profiles.launch("w")
+            with mock.patch.object(profiles.paths, "WINDOWS", False):
+                profiles.launch("w")
             argv = popen.call_args[0][0]
             self.assertEqual(argv[-2:], ["--ui", "tui"])
             self.assertTrue(popen.call_args[1]["start_new_session"])
@@ -120,6 +121,7 @@ class InstanceTest(unittest.TestCase):
             self.assertEqual((self.tmp / "instance.key").stat().st_mode & 0o777, 0o600)
         self.assertIsNone(instance._pipe_key(self.tmp / "missing" / "x.sock", make=True))
 
+    @unittest.skipUnless(hasattr(socket, "AF_UNIX"), "the pipe is played by a unix socket")
     def test_the_windows_pipe(self):
         pipes = _UnixPipes(self.tmp)
         with mock.patch.object(instance, "WINDOWS", True), \
@@ -186,6 +188,7 @@ class InstanceTest(unittest.TestCase):
         si.close()  # the socket file never made: nothing to remove
         self.assertIsNone(si.sock)
 
+    @unittest.skipUnless(hasattr(socket, "AF_UNIX"), "a unix socket")
     def test_a_real_socket_with_nothing_said(self):
         si = instance.SingleInstance(self.tmp / "s.sock")
         got = []
