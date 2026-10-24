@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -22,6 +24,60 @@ from ...i18n import _
 from ..common import timed
 
 CONTEXTS = ["home", "notifications", "public", "thread", "account"]
+KEEP = -1  # the term as it is (the edit window's first choice)
+
+
+class FilterEditDialog(QDialog):
+    """A filter of mine, changed: its title, words, fold or hide, where, how long."""
+
+    def __init__(self, parent, f):
+        super().__init__(parent)
+        self.setWindowTitle(_("filter_edit_title", title=f.title or ", ".join(f.words)))
+        form = QFormLayout(self)
+        self.title = QLineEdit(f.title)
+        form.addRow(_("filter_title_label"), self.title)
+        self.words = QLineEdit(", ".join(f.words))
+        self.words.setPlaceholderText(_("filter_words"))
+        form.addRow(_("filter_new").rstrip(":"), self.words)
+        self.action = QComboBox()
+        self.action.addItem(_("filter_warn"), "warn")
+        self.action.addItem(_("filter_hide"), "hide")
+        self.action.setCurrentIndex(1 if f.action == "hide" else 0)
+        form.addRow("", self.action)
+        row = QHBoxLayout()
+        self.ctx_boxes = {}
+        for c in CONTEXTS:
+            box = QCheckBox(_("filter_ctx_" + c))
+            box.setChecked(c in f.contexts if f.contexts else c != "notifications")
+            self.ctx_boxes[c] = box
+            row.addWidget(box)
+        form.addRow(_("filter_where"), row)
+        self.span = QComboBox()
+        self.span.setToolTip(_("filter_for_q"))
+        self.span.addItem(timed.filter_extra(f).lstrip(" ·") or _("span_ever"), KEEP)
+        for secs, label in timed.spans():
+            self.span.addItem(label, secs)
+        form.addRow(_("filter_for"), self.span)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
+                                   | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def changes(self):
+        """What view.edit_filter takes: title, words, action, contexts, expires_in."""
+        return filter_changes(self.title.text(), self.words.text(), self.action.currentData(),
+                              [c for c, b in self.ctx_boxes.items() if b.isChecked()],
+                              self.span.currentData())
+
+
+def filter_changes(title, words, action, contexts, span):
+    """The edit window's answer as view.edit_filter's arguments (span KEEP: the term
+    stays; 0: for good)."""
+    return {"title": title.strip() or None,
+            "words": [x.strip() for x in words.split(",") if x.strip()],
+            "action": action, "contexts": list(contexts) or ["home"],
+            "expires_in": None if span == KEEP else int(span or 0)}
 
 
 class SilenceDialog(QDialog):
@@ -30,6 +86,7 @@ class SilenceDialog(QDialog):
     def __init__(self, win, tab="filters"):
         super().__init__(win)
         self.win, self.core = win, win.ctx.view  # filters and people as fedtail.model
+        self._filter_objs = {}  # id -> WordFilter, as last drawn
         self.setWindowTitle(_("silence_title"))
         self.setMinimumSize(560, 460)
         lay = QVBoxLayout(self)
@@ -65,7 +122,15 @@ class SilenceDialog(QDialog):
         rm = QPushButton(_("filter_delete"))
         rm.setObjectName("tool")
         rm.clicked.connect(self._delete_filter)
-        v.addWidget(rm, 0, Qt.AlignmentFlag.AlignLeft)
+        change = QPushButton(_("filter_edit"))
+        change.setObjectName("tool")
+        change.clicked.connect(lambda: self._edit_filter())
+        self.filter_list.itemDoubleClicked.connect(lambda _it: self._edit_filter())
+        btns = QHBoxLayout()
+        btns.addWidget(change)
+        btns.addWidget(rm)
+        btns.addStretch(1)
+        v.addLayout(btns)
 
         v.addWidget(QLabel(_("filter_new")))
         self.words = QLineEdit()
@@ -108,6 +173,27 @@ class SilenceDialog(QDialog):
                                                   self.action.currentData(), contexts,
                                                   expires_in=self.span.currentData() or None),
                              ok=lambda _f: (self.words.clear(), self.reload()),
+                             fail=self.win.error)
+
+    def _edit_filter(self, answer=None):
+        """Edit… the chosen filter. answer: what the window would give (tests); None —
+        the window asks."""
+        it = self.filter_list.currentItem()
+        f = self._filter_objs.get(it.data(Qt.ItemDataRole.UserRole)) if it else None
+        if f is None:
+            return
+        if answer is None:
+            dlg = FilterEditDialog(self, f)
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            answer = dlg.changes()
+        if not answer["words"] and not f.posts:
+            return  # a word filter with no words left: "Delete" is for that
+        if f.posts and not f.words:
+            answer["words"] = None  # the hidden posts' filter: no words to set
+        self.win.bridge.call(self.core.edit_filter(f.id, **answer),
+                             ok=lambda _r: (self.win.statusBar().showMessage(
+                                 _("filter_saved"), 6000), self.reload()),
                              fail=self.win.error)
 
     def _delete_filter(self):
@@ -160,6 +246,7 @@ class SilenceDialog(QDialog):
 
     def _filters(self, filters):
         self.filter_list.clear()
+        self._filter_objs = {f.id: f for f in filters}
         for f in filters:
             words = ", ".join(f.words)
             how = _("filter_hide") if f.action == "hide" else _("filter_warn")

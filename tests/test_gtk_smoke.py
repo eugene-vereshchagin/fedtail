@@ -1056,6 +1056,97 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: ids() == ["013"], 5), ids())
         self.assertFalse(part.show_buttons["all"].get_active())
 
+    def test_rest_of_the_api(self):
+        """0.20, as in Qt: a filter edited, a cover for a video, an edited post's
+        descriptions, a report by the server's rules, the profile's newer switches and
+        tag suggestions, the posts sharing a link, the server's terms, blocks and
+        translator."""
+        from fedtail.frontends.gtk import dialogs, postinfo
+
+        # a filter edited: the window's answer, then saved
+        made = self.core.add_filter("шум", ["крипта", "nft"]).result()
+        dlg = dialogs.silence(self.win)
+        self.assertTrue(pump(lambda: dlg.filters.get_row_at_index(0) is not None, 5))
+        dlg.filters.select_row(dlg.filters.get_row_at_index(0))
+        dlg.change_filter()  # the edit window, filled from the filter
+        ed = dlg.editing
+        self.assertEqual(ed.words.get_text(), "крипта, nft")
+        ed.words.set_text("nft, web3")
+        ed.action.set_selected(1)
+        ed.ok.emit("clicked")
+        self.assertTrue(pump(lambda: self.world.filters[made["id"]]["filter_action"] == "hide",
+                             5))
+        self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
+                         ["nft", "web3"])
+        self.assertEqual(dialogs.filter_changes("", "a, b", "warn", [], dialogs.KEEP),
+                         {"title": None, "words": ["a", "b"], "action": "warn",
+                          "contexts": ["home"], "expires_in": None})
+        dlg.close()
+
+        # a video gets a cover; it goes with it to the server (the 4th part)
+        c = self.win.compose_panel()
+        c.add_paths(["/tmp/clip.mp4"])
+        c.pick_cover("/tmp/clip.mp4", "/tmp/cover.jpg")
+        self.assertEqual(c._media_list(), [["/tmp/clip.mp4", "", None, "/tmp/cover.jpg"]])
+        c.covers.clear()
+        c.media.clear()
+
+        # my post edited: its picture's description changed, the picture stays
+        mine = self.world.add(status("121", ME, text="с картинкой"), home=True)
+        mine["media_attachments"] = [{"id": "m7", "type": "image", "description": "старое",
+                                      "url": "https://example.test/m7.png"}]
+        self.core.store.put_statuses([mine])
+        ed = self.win.compose_panel(edit=self.view.by_id("121"))
+        self.assertTrue(pump(lambda: ed._text() == "с картинкой", 5))
+        self.assertEqual(len(ed.remote), 1)
+        self.assertEqual(ed.media_changes(), {})
+        ed.remote[0][1].set_text("новое")
+        self.assertEqual(ed.media_changes(), {"m7": ("новое", None)})
+        ed.send()
+        self.assertTrue(pump(lambda: self.world.statuses["121"]["media_attachments"][0]
+                             .get("description") == "новое", 5))
+
+        # a report by the server's rules: they come when "breaks the rules" is picked
+        rep = postinfo.report(self.win, self.view.by_id("011"))
+        rep.kind.set_selected(2)  # violation
+        self.assertTrue(pump(lambda: rep.rule_ticks, 5))
+        rep.send(None)  # no rule ticked: not sent
+        self.assertEqual(self.world.reports, [])
+        rep.rule_ticks[0][1].set_active(True)
+        rep.send(None)
+        self.assertTrue(pump(lambda: self.world.reports, 5))
+        self.assertEqual(self.world.reports[-1][4:], ("violation", ["1"]))
+
+        # the profile's newer switches, sent only when changed; tags to put forward
+        prof = self.win.edit_profile()
+        self.assertTrue(pump(lambda: prof.loaded is not None and prof.suggest_buttons, 5))
+        self.assertEqual(prof.changes(), {})
+        prof.hide_collections.set_active(True)
+        prof.attribution.set_text("blog.example, news.example")
+        self.assertEqual(prof.changes(), {"hide_collections": True,
+                                          "attribution_domains": ["blog.example",
+                                                                  "news.example"]})
+        prof.suggest_buttons[0].emit("clicked")
+        self.assertTrue(pump(lambda: "fedi" in self.world.my_tags, 5))
+        prof.save()
+        self.assertTrue(pump(lambda: self.world.profile_updates, 5))
+        self.assertTrue(self.world.profile_updates[-1]["hide_collections"])
+
+        # who else shared a link: a tab of their posts; none — said so
+        self.world.statuses["011"]["card"] = {"url": "https://news.example/a"}
+        page = self.win.open_link_posts("https://news.example/a")
+        self.assertTrue(pump(lambda: page.link_more.get_parent() is not None, 5))
+        empty = self.win.open_link_posts("https://nothing.example/")
+        self.assertTrue(pump(lambda: empty.link_info.get_text() == i18n._("link_posts_none"),
+                             5))
+
+        # the server about itself: terms, whom it cut off, its translator
+        info = self.view.server_info().result()
+        page = dialogs.server_more_html(info, lambda h: h)
+        for words in (i18n._("server_terms"), "bad.example", i18n._("server_block_suspend"),
+                      i18n._("server_translates", langs="en → ru, de; ru → en")):
+            self.assertIn(words, page)
+
     def test_timed_filters_hidden_posts_and_list_replies(self):
         from fedtail.frontends.gtk import dialogs, lists
         from fedtail.protocols.mastodon import adapter

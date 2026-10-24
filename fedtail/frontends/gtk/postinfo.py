@@ -11,7 +11,7 @@ from ...i18n import _
 from ...model.text import snippet
 from ..richtext import history_html
 from .dialogs import Page, _box, _buttons, _window
-from .gi_setup import GLib, Gtk
+from .gi_setup import GLib, Gtk, tip
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +46,28 @@ def report(win, st):
     kind = Gtk.DropDown.new_from_strings([_("report_" + k) for k in kinds])
     kind.set_selected(3)
     box.append(kind)
+    # "Breaks the server's rules": which ones (the server's list, ticked)
+    rules_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+    rules_box.append(Gtk.Label(label=_("report_rules"), xalign=0))
+    rules_box.set_visible(False)
+    box.append(rules_box)
+    rule_ticks = []  # (rule id, Gtk.CheckButton)
+    asked = [False]
+
+    def got_rules(info):
+        for rid, (text, hint) in zip(info.rule_ids, info.rules, strict=False):
+            b = Gtk.CheckButton(label=text)
+            tip(b, hint or text)
+            rule_ticks.append((rid, b))
+            rules_box.append(b)
+
+    def kind_changed(*_a):
+        on = kinds[kind.get_selected()] == "violation"
+        rules_box.set_visible(on)
+        if on and not rule_ticks and not asked[0]:
+            asked[0] = True
+            win.call(win.view.server_info(), got_rules)
+    kind.connect("notify::selected", kind_changed)
     why = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, vexpand=True)
     why.add_css_class("ft-compose-text")
     frame = Gtk.Frame(child=why)
@@ -67,10 +89,17 @@ def report(win, st):
     def go(_b):
         buf = why.get_buffer()
         text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
+        what = kinds[kind.get_selected()]
+        ids = [rid for rid, b in rule_ticks if b.get_active()]
+        if what == "violation" and not ids:
+            win.status(_("report_rules_need"))
+            return
         dlg.close()
-        win.call(win.view.report(st, text, fwd.get_active(), kinds[kind.get_selected()]),
+        win.call(win.view.report(st, text, fwd.get_active(), what,
+                                 **({"rule_ids": ids} if ids else {})),
                  lambda _r: win.status(_("report_sent")))
     send.connect("clicked", go)
+    dlg.kind, dlg.rule_ticks, dlg.send = kind, rule_ticks, go  # (tests)
     box.append(_buttons(cancel, send))
     dlg.set_child(box)
     dlg.present()
@@ -122,6 +151,52 @@ def open_quotes(win, post):
         win.call(win.view.quotes_of(post, cursor[0]), got)
     more.connect("clicked", load)
     load()
+    return page
+
+
+def open_link_posts(win, url):
+    """Who else shared this link (Mastodon 4.3: the server keeps trending links only):
+    their posts, page by page, as the Qt window's tab."""
+    from urllib.parse import urlsplit
+
+    from .card import Card
+    key = f"link:{url}"
+    page = win.extra_tabs.get(key)
+    if page is not None:
+        win.tabs.set_current_page(win.tabs.page_num(page))
+        return page
+    page, box, _title = win._new_tab(_("link_posts_title",
+                                       host=urlsplit(url).hostname or url),
+                                     lambda: win.close_extra(key))
+    win.extra_tabs[key] = page
+    info = Gtk.Label(label=url, xalign=0, wrap=True)
+    info.add_css_class("ft-muted")
+    box.append(info)
+    more = Gtk.Button(label=_("older_down"))
+    more.add_css_class("flat")
+    last = [None]  # the oldest post shown: the next page is older than it
+    shown = [0]
+
+    def got(posts):
+        if more.get_parent() is not None:
+            box.remove(more.get_parent())
+        short = win.view.short_ids(posts)
+        for p in posts:
+            box.append(Card(win.ctx, p.id, p, short_id=short.get(p.id)))
+        shown[0] += len(posts)
+        if not shown[0]:
+            info.set_text(_("link_posts_none"))
+        if posts:
+            last[0] = posts[-1].id
+            more.set_sensitive(True)
+            box.append(more)
+
+    def load(*_a):
+        more.set_sensitive(False)
+        win.call(win.view.link_timeline(url, max_id=last[0]), got)
+    more.connect("clicked", load)
+    load()
+    page.link_info, page.link_more = info, more  # (tests)
     return page
 
 

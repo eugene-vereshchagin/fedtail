@@ -1815,6 +1815,10 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import postinfo
         return postinfo.open_reactions(self, st, kind)
 
+    def open_link_posts(self, url):
+        from . import postinfo
+        return postinfo.open_link_posts(self, url)
+
     def open_quotes(self, post):
         from . import postinfo
         return postinfo.open_quotes(self, post)

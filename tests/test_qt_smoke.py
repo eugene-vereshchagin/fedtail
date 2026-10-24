@@ -1144,6 +1144,108 @@ class QtSmokeTest(unittest.TestCase):
         acts[2].trigger()
         self.pump(until=lambda: self.world.lists["L1"]["replies_policy"] == "none")
 
+    def test_rest_of_the_api(self):
+        """0.20: a filter edited, a cover for a video, an edited post's descriptions, a
+        report by the server's rules, the profile's newer switches and tag suggestions,
+        the posts sharing a link, the server's terms, blocks and translator."""
+        from PySide6.QtCore import Qt
+
+        from fedtail.frontends.qt.compose import Compose
+        from fedtail.frontends.qt.profile import ProfileDialog
+        from fedtail.frontends.qt.silence import KEEP, FilterEditDialog, SilenceDialog
+        from fedtail.frontends.qt.social import LinkPostsWidget, server_html
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+
+        # a filter edited: words, hide, where, for good — the window's answer, then saved
+        made = self.core.add_filter("шум", ["крипта", "nft"]).result()
+        dlg = SilenceDialog(self.win)
+        self.pump(until=lambda: dlg.filter_list.count() == 1)
+        f = dlg._filter_objs[made["id"]]
+        edit = FilterEditDialog(dlg, f)
+        self.assertEqual(edit.words.text(), "крипта, nft")
+        self.assertEqual(edit.span.currentData(), KEEP)
+        edit.words.setText("nft, web3")
+        edit.action.setCurrentIndex(1)
+        got = edit.changes()
+        self.assertEqual((got["words"], got["action"], got["expires_in"]),
+                         (["nft", "web3"], "hide", None))
+        dlg.filter_list.setCurrentRow(0)
+        dlg._edit_filter(answer=got)
+        self.pump(until=lambda: self.world.filters[made["id"]]["filter_action"] == "hide")
+        self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
+                         ["nft", "web3"])
+        dlg.accept()
+
+        # a video gets a cover; the cover goes with it to the server (the 4th part)
+        c = Compose(self.win)
+        c.add_paths(["/tmp/clip.mp4"])
+        self.assertFalse(c.cover_btn.isHidden())
+        c.pick_cover("/tmp/cover.jpg")
+        self.assertEqual(c._media_list(), [["/tmp/clip.mp4", "", None, "/tmp/cover.jpg"]])
+        self.assertIn(i18n._("media_cover_set", name="cover.jpg"), c.media.item(0).text())
+        c._leave()
+
+        # my post edited: its picture's description changed, the picture stays
+        mine = self.world.add(status("121", ME, text="с картинкой"), home=True)
+        mine["media_attachments"] = [{"id": "m7", "type": "image", "description": "старое",
+                                      "url": "https://example.test/m7.png"}]
+        self.core.store.put_statuses([mine])
+        c = Compose(self.win, edit=mine)
+        c.show()
+        self.pump(until=lambda: c.text.toPlainText() == "с картинкой")
+        self.assertEqual(c.media.count(), 1)
+        self.assertEqual(c.media_changes(), {})
+        c.media.item(0).setData(Qt.ItemDataRole.UserRole + 1, "новое")
+        self.assertEqual(c.media_changes(), {"m7": ("новое", None)})
+        c.send()
+        self.pump(until=lambda: self.world.statuses["121"]["media_attachments"][0]
+                  .get("description") == "новое")
+
+        # a report by the server's rules: they come when "breaks the rules" is picked
+        rep = self.win.report(self.core.store.get_status("011"))
+        rep.kind.setCurrentIndex(rep.kind.findData("violation"))
+        self.pump(until=lambda: rep.rule_ticks)
+        rep.send()  # no rule ticked: not sent
+        self.assertEqual(self.world.reports, [])
+        rep.rule_ticks[0][1].setChecked(True)
+        rep.send()
+        self.pump(until=lambda: self.world.reports)
+        self.assertEqual(self.world.reports[-1][4:], ("violation", ["1"]))
+
+        # the profile's newer switches, sent only when changed; tags to put forward
+        prof = ProfileDialog(self.win)
+        prof.show()
+        self.pump(until=lambda: prof.save_btn.isEnabled() and prof.suggest_buttons)
+        self.assertEqual(prof.changes(), {})
+        prof.hide_collections.setChecked(True)
+        prof.attribution.setText("blog.example, news.example")
+        self.assertEqual(prof.changes(), {"hide_collections": True,
+                                          "attribution_domains": ["blog.example",
+                                                                  "news.example"]})
+        prof.suggest_buttons[0].click()
+        self.pump(until=lambda: "fedi" in self.world.my_tags)
+        prof.save()
+        self.pump(until=lambda: self.world.profile_updates)
+        self.assertTrue(self.world.profile_updates[-1]["hide_collections"])
+
+        # who else shared a link: a tab of their posts
+        self.world.statuses["011"]["card"] = {"url": "https://news.example/a"}
+        self.win.open_link_posts("https://news.example/a")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, LinkPostsWidget)
+        self.pump(until=lambda: [e.id for e in tab.items] == ["011"])
+        self.win.open_link_posts("https://nothing.example/")
+        empty = self.win.tabs.currentWidget()
+        self.pump(until=lambda: empty.header.info.text() == i18n._("link_posts_none"))
+
+        # the server about itself: terms, whom it cut off, its translator
+        page = server_html(self.win, self.win.ctx.view.server_info().result())
+        for words in (i18n._("server_terms"), "bad.example", i18n._("server_block_suspend"),
+                      i18n._("server_translates", langs="en → ru, de; ru → en")):
+            self.assertIn(words, page)
+
     def test_pinned_on_profile(self):
         from fedtail.frontends.qt.feed import AccountWidget
         self.world.statuses["011"]["pinned"] = True

@@ -178,6 +178,69 @@ class Page(Gtk.Window):
         return False
 
 
+FILTER_CONTEXTS = ("home", "notifications", "public", "thread", "account")
+KEEP = -1  # the term as it is (the edit window's first choice)
+
+
+def filter_changes(title, words, action, contexts, span):
+    """The edit window's answer as view.edit_filter's arguments (span KEEP: the term
+    stays; 0: for good) — as the Qt window's."""
+    return {"title": title.strip() or None,
+            "words": [x.strip() for x in words.split(",") if x.strip()],
+            "action": action, "contexts": list(contexts) or ["home"],
+            "expires_in": None if span == KEEP else int(span or 0)}
+
+
+def edit_filter(parent, f, then):
+    """A filter of mine, changed: title, words, fold or hide, where, how long;
+    then(changes) on OK (filter_changes)."""
+    w = _window(parent, _("filter_edit_title", title=f.title or ", ".join(f.words)), 520, -1)
+    w.set_modal(True)
+    box = _box()
+    box.append(Gtk.Label(label=_("filter_title_label"), xalign=0))
+    title = Gtk.Entry(text=f.title)
+    box.append(title)
+    box.append(Gtk.Label(label=_("filter_new").rstrip(":"), xalign=0))
+    words = Gtk.Entry(text=", ".join(f.words), placeholder_text=_("filter_words"))
+    box.append(words)
+    action = Gtk.DropDown.new_from_strings([_("filter_warn"), _("filter_hide")])
+    action.set_selected(1 if f.action == "hide" else 0)
+    box.append(action)
+    box.append(Gtk.Label(label=_("filter_where"), xalign=0))
+    row = Gtk.Box(spacing=8)
+    ctx = {}
+    for c in FILTER_CONTEXTS:
+        b = Gtk.CheckButton(label=_("filter_ctx_" + c),
+                            active=c in f.contexts if f.contexts else c != "notifications")
+        ctx[c] = b
+        row.append(b)
+    box.append(row)
+    span_row = Gtk.Box(spacing=8)
+    span_row.append(Gtk.Label(label=_("filter_for")))
+    spans = [(KEEP, timed.filter_extra(f).lstrip(" ·") or _("span_ever"))] + timed.spans()
+    span = Gtk.DropDown.new_from_strings([label for _s, label in spans])
+    tip(span, _("filter_for_q"))
+    span_row.append(span)
+    box.append(span_row)
+    cancel = Gtk.Button(label=_("cancel"))
+    ok = Gtk.Button(label="OK")
+    ok.add_css_class("suggested-action")
+
+    def done(*_a):
+        w.close()
+        then(filter_changes(title.get_text(), words.get_text(),
+                            "hide" if action.get_selected() == 1 else "warn",
+                            [c for c, b in ctx.items() if b.get_active()],
+                            spans[span.get_selected()][0]))
+    ok.connect("clicked", done)
+    cancel.connect("clicked", lambda _b: w.close())
+    box.append(_buttons(cancel, ok))
+    w.set_child(box)
+    w.title_entry, w.words, w.action, w.ctx, w.span, w.ok = title, words, action, ctx, span, ok
+    w.present()
+    return w
+
+
 def silence(win, tab="filters"):
     """≡ → For the tender and sensitive: word filters, muted, blocked, blocked servers —
     the lists as the server has them (fedtail.model: WordFilter, Silenced), undone
@@ -202,8 +265,12 @@ def silence(win, tab="filters"):
     fbox.append(hint)
     filters, sc = listbox()
     fbox.append(sc)
-    rm = Gtk.Button(label=_("filter_delete"), halign=Gtk.Align.START)
-    fbox.append(rm)
+    rm = Gtk.Button(label=_("filter_delete"))
+    change = Gtk.Button(label=_("filter_edit"))
+    rm_row = Gtk.Box(spacing=6)
+    rm_row.append(change)
+    rm_row.append(rm)
+    fbox.append(rm_row)
     fbox.append(Gtk.Label(label=_("filter_new"), xalign=0))
     words = Gtk.Entry(placeholder_text=_("filter_words"))
     fbox.append(words)
@@ -261,6 +328,7 @@ def silence(win, tab="filters"):
             lb.remove(c)
 
     gen = [0]
+    objs = {}  # id -> WordFilter, as last drawn
 
     def reload():
         gen[0] += 1
@@ -270,6 +338,8 @@ def silence(win, tab="filters"):
             if n != gen[0]:
                 return
             clear(filters)
+            objs.clear()
+            objs.update({f.id: f for f in fs})
             for f in fs:
                 w = ", ".join(f.words)
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
@@ -302,6 +372,25 @@ def silence(win, tab="filters"):
         win.call(view.add_filter(", ".join(ws), ws, how, ctx, expires_in=secs or None),
                  lambda _f: (words.set_text(""), reload()))
 
+    def change_filter(_b=None, answer=None):
+        """Edit… the chosen filter; answer: what the window gives (tests: at once)."""
+        r = filters.get_selected_row()
+        f = objs.get(r.data) if r is not None else None
+        if f is None:
+            return
+
+        def save(ch):
+            if not ch["words"] and not f.posts:
+                return  # a word filter with no words left: "Delete" is for that
+            if f.posts and not f.words:
+                ch["words"] = None  # the hidden posts' filter: no words to set
+            win.call(view.edit_filter(f.id, **ch),
+                     lambda _r: (win.status(_("filter_saved")), reload()))
+        if answer is not None:
+            save(answer)
+        else:
+            dlg.editing = edit_filter(dlg, f, save)
+
     def delete_filter(_b):
         r = filters.get_selected_row()
         if r is not None:
@@ -322,6 +411,8 @@ def silence(win, tab="filters"):
     add.connect("clicked", add_filter)
     words.connect("activate", add_filter)
     rm.connect("clicked", delete_filter)
+    change.connect("clicked", change_filter)
+    filters.connect("row-activated", lambda _lb, _r: change_filter())
     for key, (_lb, b) in people.items():
         b.connect("clicked", lambda _b, k=key: undo(k))
     box = _box(8, 6)
@@ -334,6 +425,7 @@ def silence(win, tab="filters"):
     reload()
     dlg.reload = reload
     dlg.words, dlg.span, dlg.add, dlg.filters = words, span, add, filters  # (tests)
+    dlg.change_filter, dlg.editing = change_filter, None
     dlg.present()
     return dlg
 
@@ -376,6 +468,28 @@ def scheduled(win):
     win.call(view.scheduled(), fill)
     dlg.present()
     return dlg
+
+
+def server_more_html(info, clean):
+    """What the newer servers say on top (Mastodon 4.3–4.4): the terms, the servers it
+    cut off, what its translator can do — after common/server.py's page."""
+    from html import escape as esc
+    parts = []
+    if info.terms:
+        parts.append(f"<h3>{esc(_('server_terms'))}</h3>" + clean(info.terms))
+    parts.append(f"<h3>{esc(_('server_blocks'))}</h3>")
+    if info.blocks:
+        words = {"suspend": _("server_block_suspend"), "silence": _("server_block_silence")}
+        parts.append("<ul>" + "".join(
+            f"<li>{esc(domain)} — {esc(words.get(sev, sev))}"
+            + (f"<br><small>{esc(why)}</small>" if why else "") + "</li>"
+            for domain, sev, why in info.blocks) + "</ul>")
+    else:
+        parts.append(f"<p>{esc(_('server_blocks_none'))}</p>")
+    langs = "; ".join(f"{src} → {', '.join(into)}" for src, into in info.translates if into)
+    parts.append("<p>" + esc(_("server_translates", langs=langs) if langs
+                             else _("server_translates_none")) + "</p>")
+    return "".join(parts)
 
 
 def server_info(win):
@@ -424,7 +538,8 @@ def server_info(win):
     def got_info(info):
         domain[0] = info.domain or info.title
         page.set_title(_("server_info") + " — " + (info.title or info.domain))
-        page.set_html(server.server_html(info, lambda h: h))
+        page.set_html(server.server_html(info, lambda h: h)
+                      + server_more_html(info, lambda h: h))
     win.call(view.server_info(), got_info)
     try:
         show(view.last_probe())

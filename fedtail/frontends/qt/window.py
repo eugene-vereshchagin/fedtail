@@ -76,7 +76,13 @@ from .notify import Notifier, icon_path
 from .opener import open_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
-from .social import AccountsWidget, QuotesWidget, ServerInfoDialog, TrendsWidget
+from .social import (
+    AccountsWidget,
+    LinkPostsWidget,
+    QuotesWidget,
+    ServerInfoDialog,
+    TrendsWidget,
+)
 from .viewer import ImageOverlay
 
 log = logging.getLogger(__name__)
@@ -1914,6 +1920,15 @@ class MainWindow(QMainWindow):
         w = QuotesWidget(self, post)
         self._add_tab(w, w.title)
 
+    def open_link_posts(self, url):
+        """Who else shared this link: a tab of their posts (common/links.py asks)."""
+        for w in self.extra_tabs():
+            if isinstance(w, LinkPostsWidget) and w.url == url:
+                self._front(w)
+                return
+        w = LinkPostsWidget(self, url)
+        self._add_tab(w, w.title)
+
     def open_tag(self, tag):
         for w in self.extra_tabs():
             if isinstance(w, TagWidget) and w.tag.lower() == tag.lower():
@@ -2304,6 +2319,30 @@ class MainWindow(QMainWindow):
             kind.addItem(_("report_" + key), key)
         kind.setCurrentIndex(3)
         lay.addWidget(kind)
+        # "Breaks the server's rules": which ones (the server's list, ticked)
+        rules_box = QWidget()
+        rules_lay = QVBoxLayout(rules_box)
+        rules_lay.setContentsMargins(0, 0, 0, 0)
+        rules_lay.addWidget(QLabel(_("report_rules")))
+        rule_ticks = []  # (rule id, QCheckBox)
+        rules_box.setVisible(False)
+        lay.addWidget(rules_box)
+
+        def got_rules(info):
+            for rid, (text, _hint) in zip(info.rule_ids, info.rules, strict=False):
+                box = QCheckBox(text)
+                box.setToolTip(_hint or text)
+                rule_ticks.append((rid, box))
+                rules_lay.addWidget(box)
+
+        def kind_changed(_i=None):
+            on = kind.currentData() == "violation"
+            rules_box.setVisible(on)
+            if on and not rule_ticks and not dlg.rules_asked:
+                dlg.rules_asked = True
+                self.bridge.call(self.ctx.view.server_info(), ok=got_rules, fail=self.error)
+        dlg.rules_asked = False
+        kind.currentIndexChanged.connect(kind_changed)
         why = QPlainTextEdit()
         why.setPlaceholderText(_("report_why"))
         lay.addWidget(why, 1)
@@ -2319,12 +2358,18 @@ class MainWindow(QMainWindow):
         lay.addWidget(buttons)
 
         def go():
+            ids = [rid for rid, box in rule_ticks if box.isChecked()]
+            if kind.currentData() == "violation" and not ids:
+                self.statusBar().showMessage(_("report_rules_need"), 6000)
+                return
             dlg.accept()
             self.bridge.call(self.ctx.view.report(st, why.toPlainText().strip(), fwd.isChecked(),
-                                              kind.currentData()),
+                                                  kind.currentData(),
+                                                  **({"rule_ids": ids} if ids else {})),
                              ok=lambda _r: self.statusBar().showMessage(_("report_sent"), 6000),
                              fail=self.error)
         send.clicked.connect(go)
+        dlg.kind, dlg.rule_ticks, dlg.send = kind, rule_ticks, go  # (tests)
         dlg.show()
         return dlg
 
