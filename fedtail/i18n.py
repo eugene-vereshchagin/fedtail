@@ -127,6 +127,11 @@ _STRINGS = {
         "tui_profile_failed": "Профиль не загрузился: {err}",
         "tui_lanes_keys": "Ленты", "tui_lane_prev": "Пред. лента", "tui_lane_next": "След. лента",
         "tui_picture": "Картинка", "tui_picture_of": "Картинка {i} из {n}",
+        "tui_play": "Играть", "tui_play_hint": "Enter — играть в mpv",
+        "tui_enter_back": "Enter — назад в fedtail ",
+        "tui_no_video": "У этого видео нет адреса, который можно открыть",
+        "tui_playing": "Играет в mpv, в своём окне",
+        "tui_video_browser": "Нет mpv (sudo apt install mpv) — видео открыто в браузере",
         "tui_no_pil": "Картинки в терминале рисует Pillow — поставь python3-pil "
                       "(o — открыть в браузере)",
         "tui_picture_failed": "Картинка не загрузилась: {err} (o — открыть в браузере)",
@@ -1075,6 +1080,11 @@ _STRINGS = {
         "tui_profile_failed": "The profile didn't load: {err}",
         "tui_lanes_keys": "Lanes", "tui_lane_prev": "Prev. lane", "tui_lane_next": "Next lane",
         "tui_picture": "Picture", "tui_picture_of": "Picture {i} of {n}",
+        "tui_play": "Play", "tui_play_hint": "Enter — play in mpv",
+        "tui_enter_back": "Enter — back to fedtail ",
+        "tui_no_video": "This video has no address that can be opened",
+        "tui_playing": "Playing in mpv, in a window of its own",
+        "tui_video_browser": "No mpv (sudo apt install mpv) — the video opened in the browser",
         "tui_no_pil": "Pictures in the terminal need Pillow — install python3-pil "
                       "(o — open in the browser)",
         "tui_picture_failed": "The picture didn't load: {err} (o — open in the browser)",

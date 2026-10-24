@@ -10,6 +10,14 @@
 - No tray icon if you don't want one (`ui.tray = false`): notifications then go through the
   desktop only and the cross closes fedtail. Windows: the tray icon no longer stays behind
   after fedtail quits — every restart used to leave one more until the mouse passed over.
+- The terminal shows pictures for real and plays video. With the `textual-image` package
+  (`pip install textual-image`) pictures go out as sixel (Konsole, WezTerm, foot) or the kitty
+  protocol (kitty) — in the lane and full screen; without it, half blocks as before
+  (`tui.pictures = "auto"`, `"blocks"`, `"key"`, `"off"`; the old `"inline"` is `"auto"`).
+  `v` hands the pictures to `chafa`, `timg` or kitty's `icat` when one is installed, the
+  interface stepping aside until Enter (`tui.viewer`). Video and gifs play in `mpv`: a
+  window of their own on a desktop, right in the terminal over ssh (sixel, kitty or
+  coloured text); no mpv — the browser, and it says so (`tui.video`).
 - The terminal: `#abc` or `@name` typed in the command line no longer closes it on
   Textual 2 (Debian 13) — the thread or profile it opened wasn't drawn yet when the line
   gave the focus back; "Reply with a quote" quotes the post's words, not its HTML; a

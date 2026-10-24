@@ -4,13 +4,19 @@ f — like, b — boost, m — bookmark, . — the post's ⋯ menu, n — a line
 editor, x — the lane read, g — the ≡ menu (every place: search, lists, silence, help…),
 / — search, Ctrl+F — find in the lane, Esc — back; [ / ] or 1…9 — another lane,
 h / l — to the lanes / the posts, Tab — between them; v — the post's pictures full
-screen (drawn with half blocks, see pictures.py). What a menu item, a profile's button
+screen (sixel or kitty graphics where the terminal can, half blocks elsewhere — see
+pictures.py; with chafa, timg or kitty's icat the picture is shown by them, the app
+suspended) and its video in mpv (termcaps.py). What a menu item, a profile's button
 or a link does is the windows' (common/links.py, common/profile.py) through TuiHost
 (host.py); the places are common/places.py's (screens.py)."""
 
 import asyncio
+import contextlib
 import inspect
 import logging
+import os
+import subprocess
+import tempfile
 import threading
 import webbrowser
 
@@ -22,12 +28,13 @@ from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
+from ... import sysenv
 from ...core.view import View
 from ...i18n import _
 from ...model import real
 from ...model.text import html_to_text, snippet
 from ..richtext import openable
-from . import pictures
+from . import pictures, termcaps
 from .model import (
     Commands,
     DeleteGuard,
@@ -86,11 +93,22 @@ class PostItem(ListItem):
         self.key = key
         self.text = text
         self.has_picture = False
+        self.graphic = None
 
     def set_picture(self, pic):
-        """The post's first picture under its text (tui.pictures = "inline")."""
+        """The post's first picture under its text, in half blocks."""
         self.has_picture = pic is not None
         self.body.update(self.text + Text("\n") + pic if pic is not None else self.text)
+
+    def set_graphic(self, widget):
+        """The post's first picture under its text for real (sixel, kitty): a widget of
+        its own under the text, the one before it gone."""
+        if self.graphic is not None:
+            self.graphic.remove()
+        self.graphic = widget
+        self.has_picture = widget is not None
+        if widget is not None:
+            self.mount(widget)
 
 
 class ActivityItem(ListItem):
@@ -111,6 +129,9 @@ class RequestItem(ListItem):
         self.key = account.id
 
 
+PLAYABLE = ("video", "gifv")
+
+
 def first_picture(entry):
     """The first picture of a post (Post or Share) worth drawing, or None."""
     for m in real(entry).media:
@@ -120,11 +141,13 @@ def first_picture(entry):
 
 
 class PictureScreen(Screen):
-    """A post's pictures over everything: ← / → through them, o — the original in the
-    browser, Esc — back. Drawn with half blocks as big as the terminal allows."""
+    """A post's pictures over everything: ← / → through them, Enter — play a video,
+    o — the original in the browser, Esc — back. As big as the terminal allows: sixel
+    or kitty graphics where it can, half blocks elsewhere."""
 
     BINDINGS = [Binding("escape,q,v", "app.pop_screen", _("tui_back")),
                 Binding("left,h,k", "step(-1)", "←"), Binding("right,l,j", "step(1)", "→"),
+                Binding("enter,p,space", "play", _("tui_play")),
                 Binding("o", "original", _("open_browser"))]
     CSS = """
     PictureScreen { align: center middle; }
@@ -154,28 +177,36 @@ class PictureScreen(Screen):
     def show(self):
         m = self.media[self.at]
         n = len(self.media)
-        self.query_one("#pic-title", Static).update(
-            _("tui_picture_of", i=self.at + 1, n=n) if n > 1 else _("tui_picture"))
+        title = _("tui_picture_of", i=self.at + 1, n=n) if n > 1 else _("tui_picture")
+        if m.kind in PLAYABLE:  # its still frame below: Enter plays it
+            title += " · ▶ " + _("tui_play_hint")
+        self.query_one("#pic-title", Static).update(title)
         self.query_one("#pic-alt", Static).update(Text(m.alt or "", style="dim"))
         pic = self.query_one("#pic", Static)
+        self._drop_graphic()
+        pic.display = True
         if not pictures.available():
             pic.update(_("tui_no_pil"))
             return
-        pic.update("…")
+        pic.update("▶ " + _("tui_play_hint") if m.kind in PLAYABLE else "…")
         cols = max(10, self.size.width - 2)
         rows = max(4, self.size.height - 4 - (2 if m.alt else 0))
         # a picture whole; a video's still frame (never the video fetched as a picture)
         url = (m.url or m.preview) if m.kind == "image" else m.preview
         if not url:
-            pic.update("▶ " + _("media_" + m.kind))
+            pic.update("▶ " + _("media_" + m.kind) + " — " + _("tui_play_hint"))
             return
         at = self.at
+        real_ones = pictures.graphics() is not None
 
         def done(f):
             try:
                 data = f.result()
             except Exception as e:  # noqa: BLE001 — said on the screen
                 self.app.in_ui(self._put, at, _("tui_picture_failed", err=e))
+                return
+            if real_ones:
+                self.app.in_ui(self._put_graphic, at, data, cols, rows)
                 return
             drawn = pictures.blocks(data, cols, rows)
             self.app.in_ui(self._put, at, drawn if drawn is not None else
@@ -185,6 +216,27 @@ class PictureScreen(Screen):
     def _put(self, at, what):
         if at == self.at and self.is_attached:
             self.query_one("#pic", Static).update(what)
+
+    def _put_graphic(self, at, data, cols, rows):
+        if at != self.at or not self.is_attached:
+            return
+        w = pictures.graphic(data, rows, classes="pic-img")
+        if w is None:
+            self._put(at, _("tui_picture_failed", err="?"))
+            return
+        w.styles.max_width = cols
+        self._drop_graphic()
+        self.query_one("#pic", Static).display = False
+        self.mount(w, before=self.query_one("#pic-alt"))
+
+    def _drop_graphic(self):
+        for old in self.query(".pic-img"):
+            old.remove()
+
+    def action_play(self):
+        m = self.media[self.at]
+        if m.kind in PLAYABLE:
+            self.app.play(m)
 
     def action_step(self, d):
         if len(self.media) > 1:
@@ -263,13 +315,23 @@ class PostsMixin(Ui):
         return self.query_one("#posts", ListView).highlighted_child
 
     def action_pictures(self):
+        """v: the post's pictures — shown by chafa/timg/icat with the app suspended
+        when one is there (tui.viewer = "auto"), else in the app; a post of videos
+        only — the first one plays (tui.video)."""
         st = self.current()
         media = [m for m in real(st).media if m.kind in ("image", "gifv", "video")
                  and (m.preview or m.url)] if st else []
-        if media:
-            self.app.push_screen(PictureScreen(media))
-        elif st:
-            self.app.notify(_("tui_no_pictures"))
+        if not media:
+            if st:
+                self.app.notify(_("tui_no_pictures"))
+            return
+        if all(m.kind in PLAYABLE for m in media):
+            self.app.play(media[0])
+            return
+        images = [m for m in media if m.kind == "image"]
+        if images and self.app.show_outside(images):
+            return
+        self.app.push_screen(PictureScreen(media))
 
     def action_cursor_down(self):
         self.query_one("#posts", ListView).action_cursor_down()
@@ -809,8 +871,10 @@ class FedtailApp(App, PostsMixin):
         """Draw each post's first picture under it, as the bytes come. Small and
         cached by address and size, so redrawing a lane costs nothing."""
         tcfg = self.core.cfg.get("tui", {})
-        if tcfg.get("pictures", "inline") != "inline" or not pictures.available():
+        how = pictures.mode(self.core.cfg)
+        if how not in ("auto", "blocks") or not pictures.available():
             return
+        real_ones = how == "auto" and pictures.graphics() is not None
         rows = max(2, int(tcfg.get("picture_rows", 8)))
         cols = rows * 4  # about a 2:1 box: room for a landscape photo
         cache = self._pictures
@@ -823,14 +887,18 @@ class FedtailApp(App, PostsMixin):
             url = m.preview or (m.url if m.kind == "image" else "")
             if not url:
                 continue
-            key = (url, cols, rows)
+            key = (url, cols, rows) if not real_ones else ("bytes", url)
             if key in cache:
-                item.set_picture(cache[key])
+                if real_ones:
+                    self._put_graphic(item, cache[key], rows)
+                else:
+                    item.set_picture(cache[key])
                 continue
 
             def done(f, item=item, key=key, url=url):
                 try:
-                    drawn = pictures.blocks(f.result(), cols, rows)
+                    drawn = f.result() if real_ones else pictures.blocks(f.result(), cols,
+                                                                         rows)
                 except Exception as e:  # noqa: BLE001 — no picture, the text stays
                     # the first one said aloud: "no pictures in the terminal" was
                     # silent before (a refused address, a proxy, a timeout)
@@ -843,13 +911,110 @@ class FedtailApp(App, PostsMixin):
                 if len(cache) > 400:
                     cache.clear()
                 cache[key] = drawn
-                self.in_ui(self._put_picture, item, drawn)
+                if real_ones:
+                    self.in_ui(self._put_graphic, item, drawn, rows)
+                else:
+                    self.in_ui(self._put_picture, item, drawn)
             self.core.media_bytes(url).add_done_callback(done)
 
     @staticmethod
     def _put_picture(item, drawn):
         if item.is_attached:
             item.set_picture(drawn)
+
+    @staticmethod
+    def _put_graphic(item, data, rows):
+        if item.is_attached:
+            w = pictures.graphic(data, rows, classes="inline-pic")
+            if w is not None:
+                item.set_graphic(w)
+
+    # ---- outside the app: a picture viewer, a video player ----------------------------
+    def caps(self):
+        return termcaps.detect()
+
+    def run_outside(self, argv, wait=False):
+        """argv in this terminal, the app suspended until it ends (and, with wait,
+        until Enter). False when the app can't be suspended (a test, Textual Web)."""
+        if self.is_headless:
+            return False
+        try:
+            with self.suspend():
+                subprocess.run(argv, env=sysenv.child_env(), check=False)
+                if wait:
+                    with contextlib.suppress(EOFError, KeyboardInterrupt):
+                        input("\n" + _("tui_enter_back"))
+        except Exception as e:  # noqa: BLE001 — SuspendNotSupported, a failed program
+            log.info("outside the app: %s: %s", argv[0], e)
+            return False
+        return True
+
+    def show_outside(self, media):
+        """The pictures by chafa / timg / kitty's icat, the app suspended: their real
+        size and colours in any terminal those know. True when it went that way."""
+        if self.core.cfg.get("tui", {}).get("viewer", "auto") != "auto" or self.is_headless:
+            return False
+        tool = termcaps.viewer(self.caps())
+        if tool is None:
+            return False
+        futs = [self.core.media_bytes(m.url or m.preview) for m in media[:8]]
+        size = self.size
+
+        def go(results):
+            files = []
+            try:
+                for data in results:
+                    fd, path = tempfile.mkstemp(prefix="fedtail-", suffix=".img")
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(data)
+                    files.append(path)
+                with self.suspend():
+                    for path in files:
+                        subprocess.run(tool.argv(path, size.width, size.height - 2),
+                                       env=sysenv.child_env(), check=False)
+                    with contextlib.suppress(EOFError, KeyboardInterrupt):
+                        input(_("tui_enter_back"))
+            except Exception as e:  # noqa: BLE001 — shown in the app instead
+                log.info("picture viewer %s: %s", tool.name, e)
+                self.push_screen(PictureScreen(media))
+            finally:
+                for path in files:
+                    with contextlib.suppress(OSError):
+                        os.unlink(path)
+
+        def gathered():
+            got = []
+            for f in futs:
+                try:
+                    got.append(f.result(timeout=60))
+                except Exception as e:  # noqa: BLE001 — a picture that didn't come
+                    log.info("picture viewer: %s", e)
+            if got:
+                self.in_ui(go, got)
+            else:
+                self.in_ui(self.notify, _("tui_picture_failed", err="?"))
+        threading.Thread(target=gathered, name="tui-viewer", daemon=True).start()
+        return True
+
+    def play(self, m):
+        """A video or gifv by mpv: in a window of its own on a desktop, drawn into the
+        terminal otherwise (tui.video); no mpv — the browser, and it says so."""
+        url = m.url or m.remote_url
+        if not url or not openable(url):
+            self.notify(_("tui_no_video"))
+            return
+        how, argv = termcaps.video(self.caps(), self.core.cfg.get("tui", {}).get(
+            "video", "auto"), loop=m.kind == "gifv")
+        if how == "window":
+            subprocess.Popen(argv + [url], env=sysenv.child_env(), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+            self.notify(_("tui_playing"))
+            return
+        if how == "terminal" and self.run_outside(argv + [url]):
+            return
+        webbrowser.open(m.remote_url or url)
+        self.notify(_("tui_video_browser") if argv is None else _("open_browser"))
 
     async def _fill_other(self, lv, name, first):
         core = self.core

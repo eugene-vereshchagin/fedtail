@@ -1,7 +1,8 @@
 """A walk through the terminal interface (Textual) on a fake server, headless: every
 lane, a thread, a profile, Activity, follow requests, the pictures screen, the command
 line, every key of the bindings — a screenshot (SVG, open it in a browser) of each, and
-whether the pictures in the lane were drawn. What went wrong goes to errors.txt.
+whether the pictures in the lane were drawn; which terminal graphics, picture viewer and
+mpv this machine has (notes.txt, "media —"). What went wrong goes to errors.txt.
 
     python3 tools/tui_check.py OUT_DIR [--real[=PROFILE]]
 
@@ -221,6 +222,10 @@ def main():
         return 2
     from fedtail import i18n
     i18n.setup("ru")
+    # real pictures and video: what this machine's terminal and programs allow (the
+    # terminal the self-check was started from; textual-image asks it only on a tty)
+    from fedtail.frontends.tui import termcaps
+    NOTES.extend("media — " + x for x in termcaps.summary())
     try:
         asyncio.run(walk(out))
     except Exception:  # noqa: BLE001
