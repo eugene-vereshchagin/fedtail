@@ -94,6 +94,10 @@ class TuiHost:
     def open_quotes(self, post):
         self._place("quotes", post.id)
 
+    def open_link_posts(self, url):
+        """Who else shared this link: the "link" place (common/places.py)."""
+        self._place("link", url)
+
     def open_people(self, acc, which):
         self._place("people", acc.id, which)
 

@@ -581,6 +581,11 @@ function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invi
     $("#attach").title = $("#vis").title = w("edit_media_kept");
     state.editNote = w("edit_media_kept");
     hint("");
+    // its pictures stay; their descriptions and focus can change (the windows' editor)
+    state.editMedia = (c.media || []).map((m) => ({ id: m.id, alt: m.alt || "", url: m.url,
+                                                   kind: m.kind, focus: m.focus || null,
+                                                   was: m.alt || "" }));
+    drawAttached();
   }
   if (c.quote) {
     $("#compose-title").textContent = w("quote");
@@ -1544,6 +1549,7 @@ function compose(replyTo) {
   state.replyTo = replyTo || null;
   state.edit = state.quote = null;
   state.media = [];
+  state.editMedia = [];
   state.poll = null;
   state.sensitive = false;
   drawAttached();
@@ -1663,7 +1669,10 @@ function postBody(extra) {
     text: $("#text").value.trim(), reply_to: state.replyTo ? state.replyTo.sid : null,
     visibility: $("#vis").value, cw: $("#cw").hidden ? "" : $("#cw").value,
     lang: $("#lang").value, edit: state.edit, quote: state.quote,
-    media: state.media.map((m) => ({ token: m.token, alt: m.alt, focus: m.focus || null })),
+    media: state.media.map((m) => ({ token: m.token, alt: m.alt, focus: m.focus || null,
+                                     cover: m.cover ? m.cover.token : null })),
+    media_edit: state.edit ? (state.editMedia || []).map((m) => ({
+      id: m.id, alt: m.alt, focus: m.focus || null })) : null,
     sensitive: state.sensitive && state.media.length > 0,
     poll: state.poll && !state.media.length ? {
       options: state.poll.options, expires_in: state.poll.expires_in,
@@ -1768,7 +1777,7 @@ async function attachFiles(files) {
         "X-Fedtail": "1", "X-Name": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
       const got = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(got.error || String(r.status));
-      state.media.push({ token: got.token, alt: "", name: f.name,
+      state.media.push({ token: got.token, alt: "", name: f.name, type: f.type || "",
                          url: f.type.startsWith("image/") ? URL.createObjectURL(f) : "" });
     } catch (e) { toast(e.message); }
   }
@@ -1776,9 +1785,66 @@ async function attachFiles(files) {
   drawAttached();
 }
 
+// a picture for a video's or a sound's cover: uploaded as attachments are, sent with it
+async function pickCover(m) {
+  const inp = el("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    try {
+      const r = await fetch("/api/upload", { method: "POST", body: f, headers: {
+        "X-Fedtail": "1", "X-Name": encodeURIComponent(f.name),
+        "Content-Type": "application/octet-stream" } });
+      const got = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(got.error || String(r.status));
+      m.cover = { token: got.token, name: f.name };
+      drawAttached();
+    } catch (e) { toast(e.message); }
+  };
+  inp.click();
+}
+
+// my post's own pictures in the editor of an edit: their words and focus, nothing else
+function drawEditMedia(box) {
+  for (const m of state.editMedia || []) {
+    const cell = el("div", "att");
+    if (m.url && m.kind === "image") {
+      const pic = el("div", "aim");
+      const img = el("img");
+      img.src = m.url;
+      img.alt = m.alt;
+      img.title = w("focus_tip");
+      img.referrerPolicy = "no-referrer";
+      img.onclick = (e) => aimFocus(m, img, e);
+      pic.append(img);
+      if (m.focus) {
+        const dot = el("span", "focus-mark");
+        dot.style.left = ((m.focus[0] + 1) * 50) + "%";
+        dot.style.top = ((1 - m.focus[1]) * 50) + "%";
+        pic.append(dot);
+      }
+      cell.append(pic, el("span", "muted small", focusWords(m)));
+    } else cell.append(el("span", "muted", "▣ " + (m.kind || "")));
+    const alt = el("input");
+    alt.placeholder = w("alt_prompt");
+    alt.title = w("alt_title");
+    alt.value = m.alt;
+    alt.oninput = () => { m.alt = alt.value; };
+    cell.append(alt);
+    box.append(cell);
+  }
+}
+
 function drawAttached() {
   const box = $("#attached");
   box.textContent = "";
+  if (state.edit && (state.editMedia || []).length) {
+    box.hidden = false;
+    drawEditMedia(box);
+    return;
+  }
   box.hidden = !state.media.length;
   $("#sensitive").hidden = !state.media.length;
   $("#sensitive").classList.toggle("on", state.sensitive);
@@ -1804,7 +1870,17 @@ function drawAttached() {
       where.title = w("focus_centre");
       where.onclick = () => { m.focus = null; drawAttached(); };
       cell.append(pic, where);
-    } else cell.append(el("span", "muted", "▣ " + m.name));
+    } else {
+      cell.append(el("span", "muted", "▣ " + m.name));
+      if (/^(video|audio)\//.test(m.type || "")) {  // a cover for it, as the windows offer
+        const cov = el("button", "tool small",
+                       m.cover ? w("media_cover_set", { name: m.cover.name }) : w("media_cover"));
+        cov.type = "button";
+        cov.title = w("media_cover_tip");
+        cov.onclick = () => pickCover(m);
+        cell.append(cov);
+      }
+    }
     const alt = el("input");
     alt.placeholder = w("alt_prompt");
     alt.value = m.alt;

@@ -116,6 +116,7 @@ PLACES = {
     "quotes": "quotes_title", "history": "history_title", "report": "report_title",
     "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
     "probe": "probe_tab", "announcements": "announce_title", "profile_info": "profile_title",
+    "filter": "filter_edit", "link": "link_posts",
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "server", "probe",
@@ -205,11 +206,10 @@ class Places(MorePlaces):
                 words = ", ".join(f.words)
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
                 line = " · ".join(x for x in (how, words, *timed.filter_bits(f)) if x)
-                page.rows.append(Row("item", f.title or words, line, key=f.id,
-                                     buttons=(self._btn(_("filter_delete"), "silence",
-                                                        "filter_delete", f.id),)))
-            ctx = tuple((c, _("filter_ctx_" + c)) for c in
-                        ("home", "notifications", "public", "thread", "account"))
+                page.rows.append(Row("item", f.title or words, line, key=f.id, buttons=(
+                    self._btn(_("filter_edit"), "silence", "filter_edit", f.id),
+                    self._btn(_("filter_delete"), "silence", "filter_delete", f.id))))
+            ctx = self._filter_contexts()
             page.form = (Field("words", _("filter_words")),
                          Field("action", _("filter_new"), "warn", "choice",
                                (("warn", _("filter_warn")), ("hide", _("filter_hide")))),
@@ -247,6 +247,55 @@ class Places(MorePlaces):
         _wait(self.view.add_filter(", ".join(words), words, how, ctx,
                                    expires_in=secs if secs > 0 else None))
         return Out(refresh=True)
+
+    @staticmethod
+    def _filter_contexts():
+        return tuple((c, _("filter_ctx_" + c)) for c in
+                     ("home", "notifications", "public", "thread", "account"))
+
+    def _a_silence_filter_edit(self, fid, _v, _c, _ans):
+        return Out(open={"page": "filter", "arg": fid})
+
+    def _filter(self, fid):
+        f = next((x for x in _wait(self.view.filters()) if x.id == fid), None)
+        if f is None:
+            raise LookupError(fid)
+        return f
+
+    def _p_filter(self, fid, _tab, _cur):
+        """One filter of mine as a form — the windows' "Edit…": its title, words, what it
+        does, where, how long from now ("—" keeps the end it has)."""
+        f = self._filter(fid)
+        page = Page("filter", _("filter_edit_title", title=f.title or ", ".join(f.words)),
+                    arg=fid, hint=" · ".join(timed.filter_bits(f)))
+        page.form = (
+            Field("title", _("filter_title_label"), f.title),
+            Field("words", _("filter_words"), ", ".join(f.words)),
+            Field("action", _("filter_new").rstrip(":"), f.action, "choice",
+                  (("warn", _("filter_warn")), ("hide", _("filter_hide")))),
+            Field("contexts", _("filter_where"), list(f.contexts) or ["home"], "checks",
+                  self._filter_contexts()),
+            Field("expires", _("filter_for"), "", "choice",
+                  (("", "—"),) + tuple((str(s), label) for s, label in timed.spans()),
+                  tip=_("filter_for_q")))
+        page.submit = self._btn(_("save"), "filter", "save", fid, primary=True)
+        return page
+
+    def _a_filter_save(self, fid, values, _c, _ans):
+        words = [x.strip() for x in str(values.get("words", "")).split(",") if x.strip()]
+        if not words and not self._filter(fid).posts:  # a filter of single posts has none
+            return Out(error=_("filter_words"))
+        ctx = [c for c in values.get("contexts") or () if isinstance(c, str)] or ["home"]
+        raw = str(values.get("expires") or "")
+        try:
+            secs = int(raw) if raw else None  # "" — the end it has stays
+        except ValueError:
+            secs = None
+        title = str(values.get("title") or "").strip() or ", ".join(words)
+        _wait(self.view.edit_filter(fid, title=title, words=words,
+                                    action="hide" if values.get("action") == "hide" else "warn",
+                                    contexts=ctx, expires_in=secs))
+        return Out(message=_("filter_saved"), open={"page": "silence", "tab": "filters"})
 
     def _a_silence_filter_delete(self, fid, _v, _c, _ans):
         _wait(self.view.delete_filter(fid))
@@ -838,17 +887,36 @@ class Places(MorePlaces):
         p = self._post(sid)
         page = Page("report", _("report_title", acct=real(p).author.handle), arg=sid)
         page.rows.append(Row("post", data=p, key=p.id))
-        page.form = (Field("category", _("report_why"), "other", "choice",
-                           tuple((r, _("report_" + r)) for r in self.REASONS)),
-                     Field("comment", _("report_why"), "", "text"),
-                     Field("forward", _("report_forward"), False, "check"))
+        form = [Field("category", _("report_why"), "other", "choice",
+                      tuple((r, _("report_" + r)) for r in self.REASONS))]
+        rules = self._rules()
+        if rules:  # "Breaks the server's rules": which (Mastodon asks for at least one)
+            form.append(Field("rules", _("report_rules"), [], "checks", rules,
+                              tip=_("report_violation")))
+        form += [Field("comment", _("report_why"), "", "text"),
+                 Field("forward", _("report_forward"), False, "check")]
+        page.form = tuple(form)
         page.submit = self._btn(_("report_send"), "report", "send", sid, primary=True)
         return page
 
+    def _rules(self):
+        """((rule id, its words), …) of my server ((): it doesn't say)."""
+        try:
+            info = _wait(self.view.server_info())
+        except Exception as e:  # noqa: BLE001 — a report still goes without them
+            log.info("report: rules: %s", e.__class__.__name__)
+            return ()
+        return tuple((rid, text) for rid, (text, _hint)
+                     in zip(info.rule_ids, info.rules, strict=False) if rid)
+
     def _a_report_send(self, sid, values, _c, _ans):
         cat = values.get("category") if values.get("category") in self.REASONS else "other"
+        rules = [str(r) for r in values.get("rules") or () if r] if cat == "violation" else []
+        if cat == "violation" and not rules and self._rules():
+            return Out(error=_("report_rules_need"))
+        extra = {"rule_ids": rules} if rules else {}
         _wait(self.view.report(self._post(sid), str(values.get("comment") or ""),
-                               bool(values.get("forward")), cat))
+                               bool(values.get("forward")), cat, **extra))
         return Out(message=_("report_sent"), open={"back": True})
 
     # ---- scheduled, trends, suggestions, directory -------------------------------------
@@ -936,6 +1004,20 @@ class Places(MorePlaces):
         if info.privacy:
             page.rows.append(Row("heading", _("server_privacy")))
             page.rows.append(Row("html", clean(info.privacy)))
+        if info.terms:
+            page.rows.append(Row("heading", _("server_terms")))
+            page.rows.append(Row("html", clean(info.terms)))
+        page.rows.append(Row("heading", _("server_blocks")))
+        if info.blocks:
+            for domain, severity, why in info.blocks:
+                word = _("server_block_" + severity) if severity in ("suspend", "silence") \
+                    else severity
+                page.rows.append(Row("text", domain, " · ".join(x for x in (word, why) if x)))
+        else:
+            page.rows.append(Row("text", _("server_blocks_none")))
+        langs = "; ".join(f"{src} → {', '.join(into)}" for src, into in info.translates)
+        page.rows.append(Row("text", _("server_translates", langs=langs) if langs
+                             else _("server_translates_none")))
         return page
 
     def _p_filtered(self, _arg, _tab, _cur):
@@ -997,11 +1079,34 @@ class Places(MorePlaces):
         form += [Field("locked", _("profile_locked"), bool(a and a.locked), "check"),
                  Field("bot", _("profile_bot"), bool(a and a.bot), "check"),
                  Field("discoverable", _("profile_discoverable"),
-                       bool(a and a.discoverable), "check")]
+                       bool(a and a.discoverable), "check"),
+                 Field("hide_collections", _("profile_hide_collections"),
+                       bool(mp.hide_collections), "check"),
+                 Field("indexable", _("profile_indexable"), bool(mp.indexable), "check"),
+                 Field("attribution_domains", _("profile_attribution"),
+                       ", ".join(mp.attribution_domains), tip=_("profile_attribution_tip"))]
         page = Page("profile_edit", _("edit_profile"), hint=_("profile_fields"))
         page.form = tuple(form)
         page.submit = self._btn(_("save"), "profile_edit", "save", primary=True)
+        self._tag_suggestions(page)
         return page
+
+    def _tag_suggestions(self, page):
+        """The tags I write about most and don't put forward yet: one click each to put
+        them on my profile ("Often writes about")."""
+        if not self.view.supports("featured_tags"):
+            return
+        try:
+            tags = _wait(self.view.featured_tag_suggestions()) or []
+        except Exception as e:  # noqa: BLE001 — a nicety (Mastodon 4.x)
+            log.info("featured tag suggestions: %s", e.__class__.__name__)
+            return
+        if tags:
+            page.rows.append(Row("heading", _("featured_suggest")))
+        for t in tags:
+            page.rows.append(Row("item", "#" + t.name, key=t.name, buttons=(
+                self._btn(_("tag_feature"), "tag", "feature", f"1 {t.name}",
+                          tip=_("tag_feature_tip")),)))
 
     def _a_profile_edit_save(self, _d, values, _c, _ans):
         fields = []
@@ -1015,12 +1120,48 @@ class Places(MorePlaces):
             got = picture_file(values.get(key))
             if got:
                 pictures[key] = got
+        flags = self._profile_flags(values)
         _wait(self.view.update_profile(
             name=str(values.get("name") or ""), bio=str(values.get("bio") or ""),
             fields=fields, locked=bool(values.get("locked")),
             bot=bool(values.get("bot")), discoverable=bool(values.get("discoverable")),
-            **pictures))
+            **pictures, **flags))
         return Out(message=_("profile_saved"), open={"back": True})
+
+    def _profile_flags(self, values):
+        """hide_collections, indexable, attribution_domains — only those changed (a server
+        that doesn't know one is never sent it)."""
+        try:
+            mp = _wait(self.view.my_profile())
+        except Exception as e:  # noqa: BLE001 — the rest is saved anyway
+            log.info("profile flags: %s", e.__class__.__name__)
+            return {}
+        out = {}
+        for key in ("hide_collections", "indexable"):
+            if key in values and bool(values[key]) != bool(getattr(mp, key)):
+                out[key] = bool(values[key])
+        if "attribution_domains" in values:
+            sites = [x.strip() for x in str(values["attribution_domains"] or "")
+                     .replace(" ", ",").split(",") if x.strip()]
+            if tuple(sites) != tuple(mp.attribution_domains):
+                out["attribution_domains"] = sites
+        return out
+
+    # ---- who else shared a link (Mastodon 4.3: trending links only) --------------------
+    def _p_link(self, url, _tab, cursor):
+        from urllib.parse import urlsplit
+        host = urlsplit(url).hostname or url
+        page = Page("link", _("link_posts_title", host=host), arg=url,
+                    empty=_("link_posts_none"))
+        posts = _wait(self.view.link_timeline(url, cursor or None)) or []
+        page.rows += [Row("post", data=p, key=p.id) for p in posts]
+        if posts and len(posts) >= self.view.cfg["feed"]["page_size"]:
+            page.more = self._btn(_("more"), "link", "more", f"{real(posts[-1]).id} {url}")
+        return page
+
+    def _a_link_more(self, data, _v, _c, _ans):
+        cursor, _s, url = data.partition(" ")
+        return Out(open={"page": "link", "arg": url, "cursor": cursor})
 
     # ---- the help, what's new ---------------------------------------------------------
     def _p_help(self, name, _tab, _cur):

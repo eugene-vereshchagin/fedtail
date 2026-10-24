@@ -193,11 +193,16 @@ class WebHostTest(TmpDir):
     def test_compose_and_redraft(self):
         h = web._WebHost(Host(), False)
         post = mock.Mock(id="P")
+        pic = mock.Mock(ref=mock.Mock(id="m1"), alt="a", kind="image", preview="",
+                        url="https://x/m1.png", focus=(0.5, -0.5))
         with mock.patch.object(web, "real", lambda p: mock.Mock(
-                visibility="public", id="R", author=mock.Mock(handle="bob@x"))):
+                visibility="public", id="R", author=mock.Mock(handle="bob@x"),
+                media=(pic,))):
             h.compose(edit=post)
-            self.assertEqual(h.out["compose"], {"edit": "P", "text": "src", "cw": "cw",
-                                                "visibility": "public"})
+            self.assertEqual(h.out["compose"], {
+                "edit": "P", "text": "src", "cw": "cw", "visibility": "public",
+                "media": [{"id": "m1", "alt": "a", "kind": "image",
+                           "url": "https://x/m1.png", "focus": [0.5, -0.5]}]})
             h.compose(quote=post)
             self.assertEqual(h.out["compose"], {"quote": "R", "quote_of": "@bob@x"})
         h.compose(reply_to=post, invite=True)

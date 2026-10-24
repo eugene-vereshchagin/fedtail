@@ -287,11 +287,17 @@ class PlacesUnitTest(unittest.TestCase):
 
     def test_server_and_filtered(self):
         info = NS(title="", domain="x.test", description="<p>d</p>", contact=acc("A"),
-                  email="a@x", rules=[], about="", privacy="")
+                  email="a@x", rules=[], about="", privacy="", terms="",
+                  blocks=(("bad.x", "silence", ""), ("odd.x", "noop", "why")),
+                  translates=())
         v = View(server_info=info)
         pg = Places(v).page("server")
         self.assertEqual(pg.title, "x.test")
         self.assertEqual(pg.rows[1].line, "Bob @bob@x · a@x")
+        lines = {r.title: r.line for r in pg.rows}
+        self.assertEqual(lines["bad.x"], _("server_block_silence"))
+        self.assertEqual(lines["odd.x"], "noop · why")  # a word it doesn't know: as said
+        self.assertIn(_("server_translates_none"), lines)
         info.contact = None
         self.assertEqual(Places(v).page("server").rows[1].line, "a@x")
         r1 = NS(id="R1", who=acc("B"), count=3)

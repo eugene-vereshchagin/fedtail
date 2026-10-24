@@ -671,6 +671,8 @@ class ComposeScreen(Screen):
         self.start = None
         self.initial = None
         self.media = []        # [(path, description)]
+        self.covers = {}       # a video's or a sound's path -> its cover picture's path
+        self.edit_alts = {}    # editing my post: its picture's id -> the new description
         self.poll = None       # {"options", "expires_in", "multiple"}
         self.sensitive = False
         self.when = ""         # "2026-10-23 09:30": later, else now
@@ -807,10 +809,15 @@ class ComposeScreen(Screen):
     def show_extras(self):
         from ..common import compose as cc
         bits = []
+        from pathlib import Path
         for path, alt in self.media:
-            from pathlib import Path
             bits.append("📎 " + Path(path).name + (f" — {alt}" if alt else
-                                                    " — " + _("no_alt")))
+                                                    " — " + _("no_alt")) +
+                        (" · " + _("media_cover_set", name=Path(self.covers[path]).name)
+                         if path in self.covers else ""))
+        for m in self._edit_media():
+            alt = self.edit_alts.get(m.ref.id, m.alt)
+            bits.append("📎 " + m.kind + (f" — {alt}" if alt else " — " + _("no_alt")))
         if self.media and self.sensitive:
             bits.append("⚠ " + _("sensitive_mark"))
         if self.poll:
@@ -829,9 +836,15 @@ class ComposeScreen(Screen):
         items = []
         if not self.poll and len(self.media) < getattr(caps, "max_media", 4):
             items.append((_("attach"), "attach"))
+        from pathlib import Path
         for i, (path, _alt) in enumerate(self.media):
-            from pathlib import Path
             items.append(("✕ " + _("detach") + " " + Path(path).name, ("detach", i)))
+            if self._playable(path):  # a cover for a video or a sound
+                items.append(("🖼 " + _("media_cover") + " " + Path(path).name,
+                              ("cover", path)))
+        for m in self._edit_media():  # my post's pictures stay; their words can change
+            items.append(("✎ " + _("alt_title") + ": " + m.kind + " " +
+                          (self.edit_alts.get(m.ref.id, m.alt) or "")[:30], ("alt", m.ref.id)))
         if self.media:
             items.append((("☑ " if self.sensitive else "☐ ") + _("sensitive_mark"),
                           "sensitive"))
@@ -846,8 +859,22 @@ class ComposeScreen(Screen):
             if v == "attach":
                 self.app.push_screen(AskScreen(_("attach"), _("tui_attach_path")),
                                      self._attached)
+            elif isinstance(v, tuple) and v[0] == "cover":
+                self.app.push_screen(AskScreen(_("media_cover"), _("media_cover_tip")),
+                                     lambda got, path=v[1]: self._covered(path, got))
+                return
+            elif isinstance(v, tuple) and v[0] == "alt":
+                m = next((x for x in self._edit_media() if x.ref.id == v[1]), None)
+                if m is not None:
+                    self.app.push_screen(
+                        AskScreen(_("alt_title"), _("alt_prompt"),
+                                  self.edit_alts.get(m.ref.id, m.alt), allow_empty=True),
+                        lambda alt, mid=m.ref.id: self._redescribed(mid, alt))
+                return
             elif isinstance(v, tuple):
+                path = self.media[v[1]][0]
                 del self.media[v[1]]
+                self.covers.pop(path, None)
             elif v == "sensitive":
                 self.sensitive = not self.sensitive
             elif v == "poll":
@@ -889,6 +916,46 @@ class ComposeScreen(Screen):
             self.show_extras()
         self.app.push_screen(AskScreen(_("alt_title"), _("alt_prompt"), allow_empty=True),
                              described)
+
+    @staticmethod
+    def _playable(path):
+        import mimetypes
+        kind = mimetypes.guess_type(str(path))[0] or ""
+        return kind.startswith(("video/", "audio/"))
+
+    def _edit_media(self):
+        """My post's own attachments, when this edits it ([] otherwise)."""
+        if self.edit is None:
+            return []
+        from ...model import real
+        return list(real(self.edit).media or ())
+
+    def _covered(self, path, got):
+        from pathlib import Path
+        if not got:
+            return
+        p = Path(got.strip().strip("'\"")).expanduser()
+        if not p.is_file():
+            self.app.show_error(_("save_failed", err=str(p)))
+            return
+        self.covers[path] = str(p)
+        self.show_extras()
+
+    def _redescribed(self, media_id, alt):
+        if alt is None:
+            return
+        self.edit_alts[media_id] = alt.strip()
+        self.show_extras()
+
+    def _media_out(self):
+        """The pictures to send: (path, description[, None, cover])."""
+        return [(path, alt, None, self.covers[path]) if path in self.covers else (path, alt)
+                for path, alt in self.media]
+
+    def _media_changes(self):
+        """{id: (description, focus)} of my post's pictures whose words changed."""
+        return {m.ref.id: (self.edit_alts[m.ref.id], m.focus) for m in self._edit_media()
+                if m.ref.id in self.edit_alts and self.edit_alts[m.ref.id] != m.alt}
 
     def _polled(self, text):
         from ..common import compose as cc
@@ -949,10 +1016,12 @@ class ComposeScreen(Screen):
         self.sending = True
         from ..common import compose as cc
         if self.edit is not None:
-            fut = core.edit(self.edit, text, cw)
+            changed = self._media_changes()
+            fut = core.edit(self.edit, text, cw, media=changed) if changed else \
+                core.edit(self.edit, text, cw)
         else:
             fut = core.post(text, vis, self.reply_to, cw, language=lang or None,
-                            quote=self.quote, draft_key=self.key, media=list(self.media),
+                            quote=self.quote, draft_key=self.key, media=self._media_out(),
                             sensitive=self.sensitive and bool(self.media),
                             poll=None if self.media else self.poll,
                             scheduled_at=cc.when_utc(self.when),
