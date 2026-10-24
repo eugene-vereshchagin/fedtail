@@ -9,6 +9,7 @@ import logging
 
 from ...i18n import _
 from .. import pango
+from ..common import timed
 from .gi_setup import GLib, Gtk, Pango, tip
 
 log = logging.getLogger(__name__)
@@ -77,6 +78,58 @@ def ask_text(parent, title, question, then, text="", ok_label=None, allow_empty=
     box.append(_buttons(cancel, ok))
     win.set_child(box)
     win.set_default_widget(ok)
+    win.present()
+    return win
+
+
+def filter_extra(f):
+    """What else a filter says: how many single posts it hides, when it ends."""
+    out = ""
+    if f.posts:
+        out += " · " + _("posts_n", n=f.posts)
+    if f.expires is not None:
+        when = f.expires.astimezone().strftime("%d.%m.%Y %H:%M")
+        out += " · " + _("filter_until", until=when)
+    return out
+
+
+def choose(parent, title, text, options, then, check=None):
+    """One of options ([(key, label)]) by radio buttons, and a tick box when check (its
+    label) is given; then(key, ticked) on OK — never on Cancel or close."""
+    win = _window(parent, title, 420, -1)
+    win.set_modal(True)
+    box = _box()
+    box.append(Gtk.Label(label=text, xalign=0, wrap=True))
+    radios, first = [], None
+    for key, label in options:
+        r = Gtk.CheckButton(label=label)
+        if first is None:
+            first = r
+            r.set_active(True)
+        else:
+            r.set_group(first)
+        radios.append((key, r))
+        box.append(r)
+    tick = None
+    if check:
+        tick = Gtk.CheckButton(label=check)
+        tick.set_margin_top(6)
+        box.append(tick)
+    cancel = Gtk.Button(label=_("cancel"))
+    ok = Gtk.Button(label="OK")
+    ok.add_css_class("suggested-action")
+
+    def done(*_a):
+        key = next((k for k, r in radios if r.get_active()), options[0][0])
+        ticked = bool(tick and tick.get_active())
+        win.close()
+        then(key, ticked)
+    ok.connect("clicked", done)
+    cancel.connect("clicked", lambda _b: win.close())
+    box.append(_buttons(cancel, ok))
+    win.set_child(box)
+    win.set_default_widget(ok)
+    win.radios, win.tick, win.ok = radios, tick, ok  # (tests answer it)
     win.present()
     return win
 
@@ -174,6 +227,13 @@ def silence(win, tab="filters"):
         contexts[c] = b
         row.append(b)
     fbox.append(row)
+    span_row = Gtk.Box(spacing=8)
+    span_row.append(Gtk.Label(label=_("filter_for")))
+    spans = timed.spans()  # how long: for good, an hour… (the server ends it)
+    span = Gtk.DropDown.new_from_strings([label for _s, label in spans])
+    tip(span, _("filter_for_q"))
+    span_row.append(span)
+    fbox.append(span_row)
     add = Gtk.Button(label=_("filter_add"), halign=Gtk.Align.START)
     add.add_css_class("suggested-action")
     fbox.append(add)
@@ -225,7 +285,8 @@ def silence(win, tab="filters"):
                 w = ", ".join(f.words)
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
                 filters.append(row_of(f"{f.title or w} — {how}"
-                                      + (f" ({w})" if w and w != f.title else ""), f.id))
+                                      + (f" ({w})" if w and w != f.title else "")
+                                      + filter_extra(f), f.id))
 
         def got_people(s):
             if n != gen[0]:
@@ -248,7 +309,8 @@ def silence(win, tab="filters"):
             return
         ctx = [c for c, b in contexts.items() if b.get_active()] or ["home"]
         how = "hide" if action.get_selected() == 1 else "warn"
-        win.call(view.add_filter(", ".join(ws), ws, how, ctx),
+        secs = spans[span.get_selected()][0] if span.get_selected() < len(spans) else 0
+        win.call(view.add_filter(", ".join(ws), ws, how, ctx, expires_in=secs or None),
                  lambda _f: (words.set_text(""), reload()))
 
     def delete_filter(_b):
@@ -282,6 +344,7 @@ def silence(win, tab="filters"):
     tabs.set_current_page(pages.get(tab, 0))
     reload()
     dlg.reload = reload
+    dlg.words, dlg.span, dlg.add, dlg.filters = words, span, add, filters  # (tests)
     dlg.present()
     return dlg
 

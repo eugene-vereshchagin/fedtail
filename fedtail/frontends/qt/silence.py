@@ -19,8 +19,20 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import _
+from ..common import timed
 
 CONTEXTS = ["home", "notifications", "public", "thread", "account"]
+
+
+def filter_extra(f):
+    """What else a filter says: how many single posts it hides, when it ends."""
+    out = ""
+    if f.posts:
+        out += " · " + _("posts_n", n=f.posts)
+    if f.expires is not None:
+        when = f.expires.astimezone().strftime("%d.%m.%Y %H:%M")
+        out += " · " + _("filter_until", until=when)
+    return out
 
 
 class SilenceDialog(QDialog):
@@ -83,6 +95,15 @@ class SilenceDialog(QDialog):
             row.addWidget(box)
         row.addStretch(1)
         v.addLayout(row)
+        span_row = QHBoxLayout()
+        span_row.addWidget(QLabel(_("filter_for")))
+        self.span = QComboBox()  # how long: for good, an hour… (the server ends it)
+        self.span.setToolTip(_("filter_for_q"))
+        for secs, label in timed.spans():
+            self.span.addItem(label, secs)
+        span_row.addWidget(self.span)
+        span_row.addStretch(1)
+        v.addLayout(span_row)
         add = QPushButton(_("filter_add"))
         add.setObjectName("primary")
         add.clicked.connect(self._add_filter)
@@ -95,7 +116,8 @@ class SilenceDialog(QDialog):
             return
         contexts = [c for c, b in self.ctx_boxes.items() if b.isChecked()] or ["home"]
         self.win.bridge.call(self.core.add_filter(", ".join(words), words,
-                                                  self.action.currentData(), contexts),
+                                                  self.action.currentData(), contexts,
+                                                  expires_in=self.span.currentData() or None),
                              ok=lambda _f: (self.words.clear(), self.reload()),
                              fail=self.win.error)
 
@@ -153,7 +175,8 @@ class SilenceDialog(QDialog):
             words = ", ".join(f.words)
             how = _("filter_hide") if f.action == "hide" else _("filter_warn")
             it = QListWidgetItem(f"{f.title or words} — {how}"
-                                 + (f" ({words})" if words and words != f.title else ""))
+                                 + (f" ({words})" if words and words != f.title else "")
+                                 + filter_extra(f))
             it.setData(Qt.ItemDataRole.UserRole, f.id)
             self.filter_list.addItem(it)
 

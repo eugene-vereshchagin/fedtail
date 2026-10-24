@@ -600,8 +600,14 @@ class QtSmokeTest(unittest.TestCase):
         dlg.filter_list.setCurrentRow(0)
         dlg._delete_filter()
         self.pump(until=lambda: dlg.filter_list.count() == 0)
-        self.win.on_link("fedtail:mute/013")
+        from fedtail.frontends.qt.dialogs import Choose
+        self.win.on_link("fedtail:mute/013")  # how long first
+        ask = next(w for w in self.win.findChildren(Choose) if w.isVisible())
+        ask.radios[1].setChecked(True)  # an hour
+        ask.tick.setChecked(True)       # posts only
+        ask.accept()
         self.pump(until=lambda: "B" in self.core.muted)
+        self.assertEqual(self.world.mute_terms["B"], {"duration": 3600, "notifications": False})
         dlg.reload()
         self.pump(until=lambda: dlg.muted_list.count() == 1)
         dlg.muted_list.setCurrentRow(0)
@@ -1068,6 +1074,75 @@ class QtSmokeTest(unittest.TestCase):
         send.click()
         self.pump(until=lambda: self.world.reports)
         self.assertEqual(self.world.reports[-1], ("B", ["011"], "реклама", True, "spam"))
+
+    def test_profile_posts_replies_media(self):
+        """Above someone's posts: posts (no replies to others), all, media — as other
+        clients; switching reads them again from the top."""
+        from fedtail.frontends.qt.feed import AccountWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.on_link("fedtail:account/B")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountWidget)
+        self.assertEqual(tab.show, "posts")
+        self.assertEqual(tab.show_buttons["posts"].toolTip(), i18n._("profile_show_tip"))
+        shown = lambda: sorted(k for k in tab.view.rows if not k.startswith("pin:"))  # noqa: E731
+        self.pump(until=lambda: shown() == ["011"])
+        tab.show_buttons["all"].click()
+        self.pump(until=lambda: shown() == ["011", "013", "014"])
+        tab.show_buttons["media"].click()
+        self.pump(until=lambda: shown() == ["013"])
+        self.assertTrue(tab.show_buttons["media"].isChecked())
+        self.assertFalse(tab.show_buttons["all"].isChecked())
+        tab.show = "posts"  # posts from their own server get the same rule here
+        self.assertFalse(tab._keeps(adapter.post(self.world.statuses["014"])))
+        self.assertTrue(tab._keeps(adapter.post(self.world.statuses["011"])))
+
+    def test_timed_filters_hidden_posts_and_list_replies(self):
+        from PySide6.QtWidgets import QMenu, QMessageBox
+
+        from fedtail.frontends.qt.silence import SilenceDialog
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        dlg = SilenceDialog(self.win)
+        dlg.words.setText("спойлер")
+        self.assertEqual(dlg.span.toolTip(), i18n._("filter_for_q"))
+        dlg.span.setCurrentIndex(2)  # a day
+        dlg._add_filter()
+        self.pump(until=lambda: dlg.filter_list.count() == 1)
+        self.assertEqual(next(iter(self.world.filters.values()))["expires_in"], 86400)
+        made = adapter.word_filter(next(iter(self.world.filters.values())))
+        self.assertIn(i18n._("filter_until", until=made.expires.astimezone().strftime(
+            "%d.%m.%Y %H:%M")), dlg.filter_list.item(0).text())
+        # hide this post: in the ⋯ menu, asked once, a filter of single posts
+        from fedtail.frontends.common import actions
+        self.core.poll_once()
+        entry = self.win.ctx.view.by_id("011")
+        urls = [i.url for i in actions.menu(entry, actions.Ctx(
+            cfg=self.core.cfg, me_id="ME", supports=self.core.supports))]
+        self.assertIn("fedtail:hidepost/011", urls)
+        keep = QMessageBox.question
+        QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
+        try:
+            self.win.on_link("fedtail:hidepost/011")
+            self.pump(until=lambda: "011" in self.core.hidden_posts)
+        finally:
+            QMessageBox.question = keep
+        dlg.reload()
+        self.pump(until=lambda: dlg.filter_list.count() == 2)
+        texts = [dlg.filter_list.item(i).text() for i in range(2)]
+        self.assertTrue(any(i18n._("posts_n", n=1) in t for t in texts), texts)
+        dlg.accept()
+        # whose replies a list shows
+        self.world.lists["L1"] = {"title": "Друзья", "exclusive": False, "members": set(),
+                                  "replies_policy": "list"}
+        x = adapter.user_list({"id": "L1", "title": "Друзья", "replies_policy": "list"})
+        m = QMenu(self.win)
+        sub = self.win._replies_menu(m, x)
+        acts = sub.actions()
+        self.assertEqual([a.isChecked() for a in acts], [True, False, False])
+        acts[2].trigger()
+        self.pump(until=lambda: self.world.lists["L1"]["replies_policy"] == "none")
 
     def test_pinned_on_profile(self):
         from fedtail.frontends.qt.feed import AccountWidget

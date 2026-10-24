@@ -278,6 +278,11 @@ class _LinkHost:
         if ok and (got.strip() or allow_empty):
             then(got)
 
+    def choose(self, title, text, options, done, check=None):
+        """One of a few (common/timed.py: how long a mute lasts, posts only)."""
+        from .dialogs import choose
+        return choose(self.win, title, text, options, done, check=check)
+
     def redrafted(self, d):
         self.win._redrafted(d)
 
@@ -1287,6 +1292,7 @@ class MainWindow(QMainWindow):
             ex.setToolTip(_("list_exclusive_tip"))
             ex.toggled.connect(lambda on: self.bridge.call(
                 self.core.update_list(x.id, x.title, on)))
+            self._replies_menu(m, x)
             m.addSeparator()
             m.addAction(_("list_delete"), lambda: self.delete_list(x))
         elif name and name.startswith("tags:"):
@@ -1302,6 +1308,27 @@ class MainWindow(QMainWindow):
         else:
             return
         m.exec(self.lanes.mapToGlobal(pos))
+
+    def _replies_menu(self, m, x):
+        """Whose replies the list's lane shows (the server's replies_policy): a submenu
+        of three, the list's own ticked."""
+        from PySide6.QtGui import QActionGroup
+
+        from ..common import timed
+        sub = m.addMenu(_("replies_policy"))
+        sub.setToolTipsVisible(True)
+        sub.menuAction().setToolTip(_("replies_policy_tip"))
+        group = QActionGroup(sub)
+        now = x.replies or "list"  # the server's default when it doesn't say
+        for key, label in timed.replies_policies():
+            a = sub.addAction(label)
+            a.setCheckable(True)
+            a.setChecked(key == now)
+            a.setToolTip(_("replies_policy_tip"))
+            group.addAction(a)
+            a.triggered.connect(lambda _c=False, k=key: k != now and self.bridge.call(
+                self.core.update_list(x.id, x.title, x.exclusive, replies_policy=k)))
+        return sub
 
     def open_list_people(self, x):
         """Who is in a list, a tab of people; each can be taken out right there."""

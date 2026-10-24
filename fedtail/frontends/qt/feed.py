@@ -28,7 +28,7 @@ from ...i18n import _
 from ...model import Relationship, Share
 from ...model import real as real_entry
 from ...model.text import snippet, snippet_html
-from ..common import activity
+from ..common import activity, timed
 from ..common.activity import ACT_KINDS, act_key
 from ..common.lane import (  # noqa: F401  (Qt's names for them)
     CONVERSATION_LANES,
@@ -1473,9 +1473,8 @@ class AccountWidget(_PagedTab):
         self._info_layout = QVBoxLayout(self.info)
         self._info_layout.setContentsMargins(20, 16, 20, 18)
         self._info_layout.setSpacing(10)
-        posts = QLabel(_("profile_posts"))
-        posts.setObjectName("sectionTitle")
-        self.view.header.addWidget(posts)
+        self.show = timed.profile_show(self.core.cfg)  # posts / all / media (the switch)
+        self.view.header.addWidget(self._posts_heading())
         self.relation = Relationship()  # between me and them, as last heard
         self._first_page = None
         self._origin_asked = False
@@ -1507,7 +1506,7 @@ class AccountWidget(_PagedTab):
     def render(self):
         """Pinned posts first (marked 📌), then the rest by time."""
         top = {e.id for e in self.pinned}
-        rest = self.shown([e for e in self.items if e.id not in top])
+        rest = self.shown([e for e in self.items if e.id not in top and self._keeps(e)])
         pinned = self.shown(self.pinned)
         short = self.core.short_ids(pinned + rest)
         parents = self.core.parents(pinned + rest)
@@ -1519,7 +1518,54 @@ class AccountWidget(_PagedTab):
         self.view.set_specs(specs, keep_position=True)
 
     def fetch(self, max_id):
-        return self.core.account_posts(self.acc_id, max_id)
+        return self.core.account_posts(self.acc_id, max_id, show=self.show)
+
+    # ---- posts / posts and replies / media ------------------------------------------
+    def _posts_heading(self):
+        """"Posts" and, beside it, which of them: three buttons, as other clients have."""
+        from PySide6.QtWidgets import QButtonGroup, QHBoxLayout, QWidget
+        row = QWidget()
+        lay = QHBoxLayout(row)
+        lay.setContentsMargins(0, 0, 0, 0)
+        posts = QLabel(_("profile_posts"))
+        posts.setObjectName("sectionTitle")
+        lay.addWidget(posts)
+        lay.addSpacing(12)
+        self.show_group = QButtonGroup(row)
+        self.show_buttons = {}
+        for key, label in timed.profile_shows():
+            b = _button(label, lambda _c=False, k=key: self.set_show(k),
+                        tip=_("profile_show_tip"))
+            b.setCheckable(True)
+            b.setChecked(key == self.show)
+            self.show_group.addButton(b)
+            self.show_buttons[key] = b
+            lay.addWidget(b)
+        lay.addStretch(1)
+        return row
+
+    def set_show(self, show):
+        """Another kind of posts: everything read again from the top."""
+        self.show_buttons[show].setChecked(True)
+        if show == self.show:
+            return
+        self.show = show
+        self.items, self._first_page = [], None
+        self._origin_asked = self._older_origin = self._mine_done = False
+        self._origin_next = None
+        self.btn_more.setText(_("older_down"))
+        self.btn_more.setToolTip("")
+        self.render()
+        self.more()
+
+    def _keeps(self, e):
+        """Their own server's posts are not filtered by it: the same rule here."""
+        if self.show == "all":
+            return True
+        p = real_entry(e)
+        if self.show == "media":
+            return not isinstance(e, Share) and bool(p.media)
+        return not p.reply_to or p.reply_to_author == self.acc_id
 
     def _page(self, page):
         if self._first_page is None:
@@ -1549,7 +1595,14 @@ class AccountWidget(_PagedTab):
 
     def more(self):
         if not self._older_origin:
-            return super().more()
+            self.btn_more.setEnabled(False)
+            max_id = self.items[-1].id if self.items else None
+            want = self.show  # a page for a kind switched away from meanwhile: dropped
+            self.win.bridge.call(self.fetch(max_id),
+                                 ok=lambda page: want == self.show and self._page(page),
+                                 fail=lambda e: (self.btn_more.setEnabled(True),
+                                                 self.win.error(e)))
+            return None
         host = self._remote_host()
         self.btn_more.setEnabled(False)
         self.btn_more.setText(_("origin_asking", host=host))
