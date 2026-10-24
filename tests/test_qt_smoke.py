@@ -1246,6 +1246,15 @@ class QtSmokeTest(unittest.TestCase):
         for words in (i18n._("server_terms"), "bad.example", i18n._("server_block_suspend"),
                       i18n._("server_translates", langs="en → ru, de; ru → en")):
             self.assertIn(words, page)
+        # the dialogs closed and gone before the next test: left to the interpreter's
+        # exit they went in the wrong order (CI, 3.12: a crash after the last test)
+        for w in (edit, dlg, c, rep, prof):
+            try:
+                w.close()
+                w.deleteLater()
+            except RuntimeError:  # gone already (sent: it closed itself)
+                pass
+        self.pump(0.1)
 
     def test_pinned_on_profile(self):
         from fedtail.frontends.qt.feed import AccountWidget
