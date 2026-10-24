@@ -316,8 +316,11 @@ class PlacesUnitTest(unittest.TestCase):
 
     def test_for_post(self):
         self.assertEqual(places.for_post(NS(id="P"))["report"], ("report", "P"))
-        from fedtail.model import Post
-        self.assertIs(places.for_post.__globals__["Post"], Post)
+        from fedtail.protocols.mastodon import adapter
+
+        from .fakes import BOB, status
+        share = adapter.post(dict(status("S", BOB), reblog=status("P", BOB)))
+        self.assertEqual(places.for_post(share)["history"], ("history", "P"))  # the post
 
     def test_acc_id(self):
         self.assertEqual(places._acc_id(acc("B")), "B")

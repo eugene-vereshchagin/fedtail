@@ -82,6 +82,7 @@ class ViewTest(TmpDir):
                                 "acct": "mira"})
         self.core = Core(cfg, p, api_class=FakeApi)
         self.core._origin_json = lambda url: None
+        self.core._origin_get = lambda url: None  # never another server
         self.addCleanup(self.core.shutdown)
         self.core.connect().result(timeout=T)
         self.core.poll_once()
@@ -107,6 +108,8 @@ class ViewTest(TmpDir):
         raw = v._in(stranger)  # never seen: made up from the model
         self.assertEqual((raw["id"], raw["acct"]), ("Z", NEWS["acct"]))
         self.assertEqual(v._raw("nope"), {"id": "nope"})
+        self.assertEqual(v.raw("010")["id"], "010")
+        self.assertEqual(v.raw_account(stranger)["id"], "Z")
 
     def test_raw_objects_kept_to_their_cap(self):
         v = self.v

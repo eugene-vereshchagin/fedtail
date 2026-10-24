@@ -45,6 +45,7 @@ class SocialErrorsTest(TmpDir):
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
         self.core._origin_json = lambda url: None
+        self.core._origin_get = lambda url: None  # never another server
         self.addCleanup(self.core.shutdown)
         self.core.connect().result(timeout=T)
         self.core.poll_once()
@@ -129,6 +130,7 @@ class SocialErrorsTest(TmpDir):
         c.caps.learn("grouped", True)
         c.api.dismiss_notification_group = boom()
         c.dismiss_activity("n1").result(timeout=T)
+        c.caps.learn("dismiss_one", True)
         c.api.dismiss_notification = boom(404)
         c.dismiss_activity("n2").result(timeout=T)  # can't, on the server: here it goes
         self.assertFalse(c.supports("dismiss_one"))
@@ -142,6 +144,7 @@ class SocialErrorsTest(TmpDir):
         entry = {"id": "n9", "type": "pending.reply", "account": BOB,
                  "status": {"id": "r1"}}
         self.w.interactions = [{"id": "q1", "account": BOB, "reply": {"id": "r1"}}]
+        c.caps.learn("dismiss_one", True)
         c.api.answer_interaction = boom(404)  # answered elsewhere already
         c.api.dismiss_notification = boom(500)
         self.assertFalse(c.answer_interaction(entry, True).result(timeout=T))

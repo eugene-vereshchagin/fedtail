@@ -91,6 +91,11 @@ class StoreEdgesTest(unittest.TestCase):
             self.assertEqual(len(self.s.kv_get("activity_hidden")), 2)
             self.assertEqual(len(self.s.kv_get("activity_hidden_groups")), 2)
 
+    def test_hidden_stays_hidden(self):
+        self.s.activity_put([note("h1")])
+        self.s.activity_hide(["h1"])
+        self.assertEqual(self.s.activity_put([note("h1")]), [])  # the next fetch has it
+
     def test_dismissed_elsewhere_by_group(self):
         self.assertFalse(self.s.activity_hide_known([]))
         self.s.activity_put([note("1", key="likes-of-5"), note("2", key="other"),

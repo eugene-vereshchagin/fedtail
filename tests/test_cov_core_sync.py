@@ -200,8 +200,9 @@ class EngineTest(Devices):
                 self.assertLogs("fedtail.core.sync.engine", "WARNING") as logs:
             n = s.apply({"d": "other", "ops": [
                 "not an op", {"t": "root", "s": "sub", "at": 5},
+                {"r": ["9"], "at": "not a time"},  # a stamp that isn't one: as 0
                 {"k": "list_order", "v": ["a"], "at": 5}]})
-        self.assertEqual(n, 2)  # the thread and the lanes: the junk op is no op
+        self.assertEqual(n, 3)  # a read, the thread and the lanes: the junk op is no op
         self.assertEqual(len(logs.output), 2)
 
 

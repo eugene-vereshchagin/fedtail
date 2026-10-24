@@ -235,7 +235,7 @@ class AdapterCornersTest(unittest.TestCase):
                                "notifications_count": 3,
                                "last_status": {"id": "S", "account": {"id": "A", "acct": "a"},
                                                "content": "<p>x</p>"}})
-        self.assertEqual((h.count if hasattr(h, "count") else 3), 3)
+        self.assertEqual((h.count, h.last.id), (3, "S"))
         s = adapter.silenced({"muted": [{"id": "M", "acct": "m"}, "junk"],
                               "blocked": [{"id": "B", "acct": "b"}], "domains": ["bad.test"]})
         self.assertEqual(([a.id for a in s.muted], [a.id for a in s.blocked], s.domains),
