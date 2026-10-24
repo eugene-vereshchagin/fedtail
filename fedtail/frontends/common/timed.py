@@ -78,6 +78,18 @@ def keeps(entry, show, acc_id):
     return not p.reply_to or p.reply_to_author == acc_id
 
 
+KEEP = -1  # the term as it is (a filter edit's first choice)
+
+
+def filter_changes(title, words, action, contexts, span):
+    """The edit window's answer as view.edit_filter's arguments (span KEEP: the term
+    stays; 0: for good)."""
+    return {"title": title.strip() or None,
+            "words": [x.strip() for x in words.split(",") if x.strip()],
+            "action": action, "contexts": list(contexts) or ["home"],
+            "expires_in": None if span == KEEP else int(span or 0)}
+
+
 def mute(view, host, acc, done=None):
     """Mute acc, asking how long and whether their notifications still come. done(r)
     when the server said yes (r: what view.mute gave)."""
@@ -98,6 +110,7 @@ def mute(view, host, acc, done=None):
            lambda secs, ticked: go(int(secs or 0), bool(ticked)), check=_("mute_posts_only"))
 
 
-__all__ = ["PROFILE_SHOWS", "REPLIES_POLICIES", "SPANS", "filter_bits", "filter_extra",
+__all__ = ["KEEP", "PROFILE_SHOWS", "REPLIES_POLICIES", "SPANS", "filter_bits",
+           "filter_changes", "filter_extra",
            "keeps", "mute", "profile_show",
            "profile_shows", "replies_policies", "spans", "until"]

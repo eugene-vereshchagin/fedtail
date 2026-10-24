@@ -14,6 +14,11 @@
 - "Hide this post" in the ⋯ menu: one post out of sight everywhere, through a filter of the
   server's ("fedtail: hidden posts"), in other clients too.
 - A list's replies: to anyone you follow, to its members, or none (the server's setting).
+- The rest of the Mastodon client API, in all four interfaces: filters edited ("Edit…"),
+  a cover for a video or a sound, an edited post's picture descriptions and focus, a report
+  by the server's rules, the profile's newer switches (hide follows, search of my posts,
+  article authorship) and tag suggestions, "Who else shared this link", and the server's
+  terms, blocked servers and translator (Translate is offered only where it can).
 - Web Push in the web page: ≡ → "Push notifications…" subscribes the browser at your
   server itself, so notifications come with the tab closed and fedtail off (over https or
   on localhost — the browser's rule; see the help, "Notifications").

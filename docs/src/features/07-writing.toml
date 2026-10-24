@@ -5,6 +5,19 @@ title.ru = "Писать"
 title.en = "Writing"
 
 [[feature]]
+id = "media-after"
+status = "has"
+since = "0.20.0"
+name.ru = "Обложка видео; описание картинок в правке поста"
+name.en = "A video's cover; picture descriptions in a post's edit"
+config = "—"
+api = "`/api/v2/media` `thumbnail`; `PUT /api/v1/statuses/:id` `media_attributes`"
+others = "Mastodon web, Ivory, Elk"
+clients = ["Mastodon web", "Ivory", "Elk"]
+details.ru = "У видео и звука во вложениях — «Обложка…»: картинка, которую видно до запуска. При правке своего поста его картинки можно заново описать и поставить фокус (в терминале — только описание)."
+details.en = "A video or a sound among the attachments gets “Cover…”: a picture shown until it's played. Editing your post, its pictures can be described anew and their focus set (in the terminal — the description only)."
+
+[[feature]]
 id = "compose"
 status = "has"
 since = "0.1.0"

@@ -337,6 +337,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 |---|---|---|---|---|---|
 | Your own and other people's profiles | has | 0.2.0 | — | `accounts/:id`, `accounts/:id/statuses` | everyone |
 | In a profile: posts, posts and replies, media | has | 0.20.0 | `feed.profile_show` | `accounts/:id/statuses` `exclude_replies`, `only_media` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
+| Who else shared a link | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
 | Pinned posts | has | 0.8.0 | `feed.profile_pinned` | `statuses?pinned=true` | everyone |
 | Featured tags and recommended people | has | 0.9.0 | `feed.profile_featured` | `featured_tags`, `endorsements` | Mastodon web |
 | A little-known person's profile — from their server | has | 0.8.0 | `feed.remote_profiles`, `feed.remote_posts` | ActivityPub outbox | Megalodon — partly (the lists) |
@@ -352,6 +353,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Your own and other people's profiles.** The header, bio, fields, counts, posts; “followed by people you follow” (`familiar_followers`); follows and followers.
 
 **In a profile: posts, posts and replies, media.** Above a person's posts, a switch: “Posts” (without their replies to others; replies in their own threads stay), “Posts and replies”, “Media” (only with pictures and video). Which one first — `feed.profile_show`, “Posts” by default, as in other clients. The server does the picking.
+
+**Who else shared a link.** In the ⋯ menu of a post with a link — “Who else shared this link”: posts with it, page by page. The server (Mastodon 4.3+) keeps only links that were trending; where it can't, there's no such item.
 
 **Pinned posts.** At the top of a profile, marked 📌. `false` — the profile simply in time order.
 
@@ -379,6 +382,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
+| A video's cover; picture descriptions in a post's edit | has | 0.20.0 | — | `/api/v2/media` `thumbnail`; `PUT /api/v1/statuses/:id` `media_attributes` | Mastodon web, Ivory, Elk |
 | The compose panel and drafts | has | 0.1.0 | `ui.compose`, `ui.compose_size`, `post.drafts_autosave` | `statuses` | everyone |
 | Visibility: private by default, a reply never wider than the post | has | 0.1.0 | `post.default_visibility`, `post.reply_never_wider` | `visibility`, `/api/v1/preferences` | only in fedtail (never wider) |
 | Markdown | has | 0.1.0 | `account.markdown`, `post.plain_posts` | `content_type` | GoToSocial and Akkoma clients |
@@ -403,6 +407,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Short post names the same on every device | has | 0.18.0 | — | own | only in fedtail (Point had the server's post numbers) |
 
 <details><summary>In detail</summary>
+
+**A video's cover; picture descriptions in a post's edit.** A video or a sound among the attachments gets “Cover…”: a picture shown until it's played. Editing your post, its pictures can be described anew and their focus set (in the terminal — the description only).
 
 **The compose panel and drafts.** `ui.compose = "inline"` — a panel inside the main window (the keyboard layout isn't reset: KDE keeps it per window); `"window"` — a window of its own. The panel's size — in percent of the window (`compose_size`), the ⤡ button switches normal and big. Drafts are saved as you type and survive closing.
 
@@ -457,6 +463,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Mute, block, word filters | has | 0.3.0 | — | `mutes`, `blocks`, `/api/v2/filters` | everyone |
 | Mute for a while; posts only | has | 0.20.0 | — | `accounts/:id/mute` `duration`, `notifications` | Mastodon web, Ivory, Fedilab |
 | Hide a single post | has | 0.20.0 | — | `/api/v2/filters/:id/statuses` | Mastodon web |
+| Editing a filter | has | 0.20.0 | — | `PUT /api/v2/filters/:id` | Mastodon web, Ivory, Fedilab |
+| Report: which rules it breaks | has | 0.20.0 | — | `/api/v1/reports` `rule_ids` | Mastodon web, Ivory, Tusky |
 | Block a whole server | has | 0.8.0 | — | `/api/v1/domain_blocks` | Mastodon web, Ivory, Phanpy |
 | Report to the moderators | has | 0.8.0 | `post.report_forward` | `/api/v1/reports` | everyone |
 | A private note on a person | has | 0.8.0 | — | `accounts/:id/note` | Mastodon web, Ivory, Ice Cubes |
@@ -466,6 +474,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The server's suggestions, the profile directory | has | 0.11.0 | — | `/api/v2/suggestions`, `/api/v1/directory` | Mastodon web, Tusky, Ivory |
 | About the server | has | 0.11.0 | — | `instance`, `instance/rules`, `extended_description` | Mastodon web, Ivory, Phanpy |
 | Your profile | has | 0.2.0 | — | `update_credentials` | Mastodon web, Ivory, Phanpy, Elk, Tokodon, Ice Cubes |
+| Profile: hide follows, posts found by search, article authorship, tag suggestions | has | 0.20.0 | — | `update_credentials` `hide_collections`, `indexable`, `attribution_domains`; `featured_tags/suggestions` | Mastodon web |
+| About the server: terms, whom it cut off, its translator | has | 0.20.0 | — | `instance/terms_of_service`, `instance/domain_blocks`, `instance/translation_languages` | Mastodon web |
 | Post visibility as set on the server | has | 0.11.0 | `post.default_visibility = "server"` | `/api/v1/preferences` | Mastodon web, Ivory |
 
 <details><summary>In detail</summary>
@@ -480,6 +490,10 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Hide a single post.** “Hide this post” in the ⋯ menu: the post goes at once and everywhere — into the server's filter “fedtail: hidden posts”, so other clients don't show it either. To bring it back, remove the filter in “For the tender and sensitive”. A server that can't (Mastodon before 4.0) gets no such item.
 
+**Editing a filter.** Each filter in “For the tender and sensitive” has “Edit…”: title, words, hide or fold, where it works and for how long more. Words taken out the server drops, new ones it adds.
+
+**Report: which rules it breaks.** The reason “breaks the server's rules” shows your server's rules as ticks; at least one is needed — the moderators see which.
+
 **Block a whole server.** Nobody from there in any lane, follows across the border are cut.
 
 **Report to the moderators.** About a person from another server — a “forward to their server too” tick (they won't learn who reported). In arts mode the item isn't there.
@@ -487,6 +501,10 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **About the server.** The description, rules, privacy policy.
 
 **Your profile.** Name, bio, fields, avatar, header.
+
+**Profile: hide follows, posts found by search, article authorship, tag suggestions.** In the profile editor: hide whom you follow and who follows you; whether a search of words finds your public posts; which sites may name you the author of their articles (Mastodon 4.4). And the tags you often write about — added to your profile with one click.
+
+**About the server: terms, whom it cut off, its translator.** “About the server” has the terms of service (4.4), the servers it cut off or limited (if it shows them) and what its translator can do. “Translate” isn't offered in a post's menu where your server's translator can't turn that language into yours.
 
 </details>
 

@@ -209,30 +209,7 @@ def server_html(win, info):
     """What my server says about itself (a ServerInfo), as a page."""
     css = win.theme.css("link")
     return server.server_html(info, lambda html: clean(html, css)) + \
-        server_more_html(info, lambda html: clean(html, css))
-
-def server_more_html(info, clean):
-    """What the newer servers say on top (Mastodon 4.3–4.4): the terms, the servers it
-    cut off, what its translator can do — after common/server.py's page."""
-    from html import escape as esc
-    parts = []
-    if info.terms:
-        parts.append(f"<h3>{esc(_('server_terms'))}</h3>" + clean(info.terms))
-    parts.append(f"<h3>{esc(_('server_blocks'))}</h3>")
-    if info.blocks:
-        words = {"suspend": _("server_block_suspend"), "silence": _("server_block_silence")}
-        parts.append("<ul>" + "".join(
-            f"<li>{esc(domain)} — {esc(words.get(sev, sev))}"
-            + (f"<br><small>{esc(why)}</small>" if why else "") + "</li>"
-            for domain, sev, why in info.blocks) + "</ul>")
-    else:
-        parts.append(f"<p>{esc(_('server_blocks_none'))}</p>")
-    langs = "; ".join(f"{src} → {', '.join(into)}" for src, into in info.translates if into)
-    parts.append("<p>" + esc(_("server_translates", langs=langs) if langs
-                             else _("server_translates_none")) + "</p>")
-    return "".join(parts)
-
-
+        server.server_more_html(info, lambda html: clean(html, css))
 
 class ServerInfoDialog(QDialog):
     """My server about itself (a ServerInfo): description, contact, rules, privacy;

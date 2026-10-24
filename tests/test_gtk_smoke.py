@@ -1061,6 +1061,7 @@ class GtkSmokeTest(_GtkBase):
         descriptions, a report by the server's rules, the profile's newer switches and
         tag suggestions, the posts sharing a link, the server's terms, blocks and
         translator."""
+        from fedtail.frontends.common import server, timed
         from fedtail.frontends.gtk import dialogs, postinfo
 
         # a filter edited: the window's answer, then saved
@@ -1078,7 +1079,7 @@ class GtkSmokeTest(_GtkBase):
                              5))
         self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
                          ["nft", "web3"])
-        self.assertEqual(dialogs.filter_changes("", "a, b", "warn", [], dialogs.KEEP),
+        self.assertEqual(timed.filter_changes("", "a, b", "warn", [], timed.KEEP),
                          {"title": None, "words": ["a", "b"], "action": "warn",
                           "contexts": ["home"], "expires_in": None})
         dlg.close()
@@ -1142,7 +1143,7 @@ class GtkSmokeTest(_GtkBase):
 
         # the server about itself: terms, whom it cut off, its translator
         info = self.view.server_info().result()
-        page = dialogs.server_more_html(info, lambda h: h)
+        page = server.server_more_html(info, lambda h: h)
         for words in (i18n._("server_terms"), "bad.example", i18n._("server_block_suspend"),
                       i18n._("server_translates", langs="en → ru, de; ru → en")):
             self.assertIn(words, page)

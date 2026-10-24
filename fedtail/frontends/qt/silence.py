@@ -24,9 +24,6 @@ from ...i18n import _
 from ..common import timed
 
 CONTEXTS = ["home", "notifications", "public", "thread", "account"]
-KEEP = -1  # the term as it is (the edit window's first choice)
-
-
 class FilterEditDialog(QDialog):
     """A filter of mine, changed: its title, words, fold or hide, where, how long."""
 
@@ -54,7 +51,7 @@ class FilterEditDialog(QDialog):
         form.addRow(_("filter_where"), row)
         self.span = QComboBox()
         self.span.setToolTip(_("filter_for_q"))
-        self.span.addItem(timed.filter_extra(f).lstrip(" ·") or _("span_ever"), KEEP)
+        self.span.addItem(timed.filter_extra(f).lstrip(" ·") or _("span_ever"), timed.KEEP)
         for secs, label in timed.spans():
             self.span.addItem(label, secs)
         form.addRow(_("filter_for"), self.span)
@@ -66,18 +63,9 @@ class FilterEditDialog(QDialog):
 
     def changes(self):
         """What view.edit_filter takes: title, words, action, contexts, expires_in."""
-        return filter_changes(self.title.text(), self.words.text(), self.action.currentData(),
+        return timed.filter_changes(self.title.text(), self.words.text(), self.action.currentData(),
                               [c for c, b in self.ctx_boxes.items() if b.isChecked()],
                               self.span.currentData())
-
-
-def filter_changes(title, words, action, contexts, span):
-    """The edit window's answer as view.edit_filter's arguments (span KEEP: the term
-    stays; 0: for good)."""
-    return {"title": title.strip() or None,
-            "words": [x.strip() for x in words.split(",") if x.strip()],
-            "action": action, "contexts": list(contexts) or ["home"],
-            "expires_in": None if span == KEEP else int(span or 0)}
 
 
 class SilenceDialog(QDialog):

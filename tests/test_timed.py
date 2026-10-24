@@ -119,3 +119,36 @@ class Bits(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SharedEditsTest(unittest.TestCase):
+    """What the windows' new editors hand on — shared, so the four agree."""
+
+    def setUp(self):
+        i18n.setup("en")
+
+    def test_filter_changes(self):
+        got = timed.filter_changes(" t ", "a, , b", "hide", [], timed.KEEP)
+        self.assertEqual(got, {"title": "t", "words": ["a", "b"], "action": "hide",
+                               "contexts": ["home"], "expires_in": None})
+        self.assertEqual(timed.filter_changes("", "a", "warn", ["thread"], 0)["expires_in"], 0)
+        self.assertIsNone(timed.filter_changes("  ", "a", "warn", [], 3600)["title"])
+
+    def test_flag_changes_and_server_extras(self):
+        from types import SimpleNamespace as NS
+
+        from fedtail.frontends.common import server
+        prof = NS(hide_collections=False, indexable=None, attribution_domains=("a.example",))
+        self.assertEqual(server.flag_changes(prof, False, False, "a.example"), {})
+        self.assertEqual(server.flag_changes(prof, True, True, "a.example; b.example"),
+                         {"hide_collections": True, "indexable": True,
+                          "attribution_domains": ["a.example", "b.example"]})
+        info = NS(terms="<p>t</p>", blocks=(("bad.example", "suspend", "spam & co"),),
+                  translates=(("en", ("ru",)),))
+        page = server.server_more_html(info, lambda h: h)
+        self.assertIn(i18n._("server_block_suspend"), page)
+        self.assertIn("spam &amp; co", page)
+        self.assertIn("en → ru", page)
+        empty = server.server_more_html(NS(terms="", blocks=(), translates=()), lambda h: h)
+        self.assertIn(i18n._("server_blocks_none").replace("'", "&#x27;"), empty)
+        self.assertIn(i18n._("server_translates_none"), empty)

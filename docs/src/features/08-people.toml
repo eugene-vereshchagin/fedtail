@@ -74,6 +74,32 @@ details.ru = "«Скрыть этот пост» в меню ⋯: пост ух�
 details.en = "“Hide this post” in the ⋯ menu: the post goes at once and everywhere — into the server's filter “fedtail: hidden posts”, so other clients don't show it either. To bring it back, remove the filter in “For the tender and sensitive”. A server that can't (Mastodon before 4.0) gets no such item."
 
 [[feature]]
+id = "filter-edit"
+status = "has"
+since = "0.20.0"
+name.ru = "Правка фильтра"
+name.en = "Editing a filter"
+config = "—"
+api = "`PUT /api/v2/filters/:id`"
+others = "Mastodon web, Ivory, Fedilab"
+clients = ["Mastodon web", "Ivory", "Fedilab"]
+details.ru = "У каждого фильтра в «Для нежных и ранимых» — «Изменить…»: название, слова, прятать или сворачивать, где действует и сколько ещё. Убранные слова сервер стирает, новые добавляет."
+details.en = "Each filter in “For the tender and sensitive” has “Edit…”: title, words, hide or fold, where it works and for how long more. Words taken out the server drops, new ones it adds."
+
+[[feature]]
+id = "report-rules"
+status = "has"
+since = "0.20.0"
+name.ru = "Жалоба: какие правила нарушены"
+name.en = "Report: which rules it breaks"
+config = "—"
+api = "`/api/v1/reports` `rule_ids`"
+others = "Mastodon web, Ivory, Tusky"
+clients = ["Mastodon web", "Ivory", "Tusky"]
+details.ru = "Причина «нарушает правила сервера» показывает правила твоего сервера галочками; хотя бы одну отметить надо — модераторы увидят, какое."
+details.en = "The reason “breaks the server's rules” shows your server's rules as ticks; at least one is needed — the moderators see which."
+
+[[feature]]
 id = "domain-block"
 status = "has"
 since = "0.8.0"
@@ -181,6 +207,32 @@ others = "Mastodon web, Ivory, Phanpy, Elk, Tokodon, Ice Cubes"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Tokodon", "Ice Cubes"]
 details.ru = "Имя, о себе, поля, аватар, шапка."
 details.en = "Name, bio, fields, avatar, header."
+
+[[feature]]
+id = "profile-flags"
+status = "has"
+since = "0.20.0"
+name.ru = "Профиль: скрыть подписки, поиск по постам, авторство статей, подсказки тегов"
+name.en = "Profile: hide follows, posts found by search, article authorship, tag suggestions"
+config = "—"
+api = "`update_credentials` `hide_collections`, `indexable`, `attribution_domains`; `featured_tags/suggestions`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "В редакторе профиля: скрыть, на кого ты подписан и кто на тебя; находит ли поиск по словам твои публичные посты; какие сайты могут указывать тебя автором статей (Mastodon 4.4). И теги, о которых ты часто пишешь, — добавить в профиль одним нажатием."
+details.en = "In the profile editor: hide whom you follow and who follows you; whether a search of words finds your public posts; which sites may name you the author of their articles (Mastodon 4.4). And the tags you often write about — added to your profile with one click."
+
+[[feature]]
+id = "server-extras"
+status = "has"
+since = "0.20.0"
+name.ru = "О сервере: соглашение, кого отрезал, переводчик"
+name.en = "About the server: terms, whom it cut off, its translator"
+config = "—"
+api = "`instance/terms_of_service`, `instance/domain_blocks`, `instance/translation_languages`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "В «О сервере» — пользовательское соглашение (4.4), список отрезанных и ограниченных серверов (если сервер его показывает) и что умеет его переводчик. «Перевести» в меню поста не появляется там, где переводчик твоего сервера с этого языка на твой не переводит."
+details.en = "“About the server” has the terms of service (4.4), the servers it cut off or limited (if it shows them) and what its translator can do. “Translate” isn't offered in a post's menu where your server's translator can't turn that language into yours."
 
 [[feature]]
 id = "server-visibility"

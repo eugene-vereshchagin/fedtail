@@ -24,19 +24,6 @@ from .card import _round
 FIELDS_SHOWN = 4  # Mastodon allows 4; more are kept if the server already has them
 
 
-def flag_changes(prof, hide_collections, indexable, attribution):
-    """The newer switches of a profile (Mastodon 4.x) that differ from the server's:
-    whom I follow hidden, my posts found by words, sites naming me their author
-    (attribution: as typed, comma-separated)."""
-    out = {}
-    for key, now in (("hide_collections", hide_collections), ("indexable", indexable)):
-        was = getattr(prof, key, None)
-        if was is not None and bool(now) != bool(was) or was is None and now:
-            out[key] = bool(now)
-    sites = [x.strip() for x in attribution.replace(";", ",").split(",") if x.strip()]
-    if sites != list(getattr(prof, "attribution_domains", ()) or ()):
-        out["attribution_domains"] = sites
-    return out
 IMAGE_FILTER = "*.png *.jpg *.jpeg *.gif *.webp"
 
 
@@ -215,7 +202,7 @@ class ProfileDialog(QDialog):
             {"locked": self.locked.isChecked(), "bot": self.bot.isChecked(),
              "discoverable": self.discoverable.isChecked()},
             self.avatar_path, self.header_path)
-        out.update(flag_changes(self.loaded, self.hide_collections.isChecked(),
+        out.update(server.flag_changes(self.loaded, self.hide_collections.isChecked(),
                                 self.indexable.isChecked(), self.attribution.text()))
         return out
 

@@ -17,21 +17,6 @@ FIELDS_SHOWN = 4  # Mastodon allows 4; more are kept if the server already has t
 IMAGE_EXT = ("png", "jpg", "jpeg", "gif", "webp")
 
 
-def flag_changes(prof, hide_collections, indexable, attribution):
-    """The newer switches of a profile (Mastodon 4.x) that differ from the server's:
-    whom I follow hidden, my posts found by words, sites naming me their author
-    (attribution: as typed, comma-separated) — as the Qt editor's."""
-    out = {}
-    for key, now in (("hide_collections", hide_collections), ("indexable", indexable)):
-        was = getattr(prof, key, None)
-        if was is not None and bool(now) != bool(was) or was is None and now:
-            out[key] = bool(now)
-    sites = [x.strip() for x in attribution.replace(";", ",").split(",") if x.strip()]
-    if sites != list(getattr(prof, "attribution_domains", ()) or ()):
-        out["attribution_domains"] = sites
-    return out
-
-
 class ProfileEditor:
     def __init__(self, win):
         self.win = win
@@ -216,7 +201,7 @@ class ProfileEditor:
             {"locked": self.locked.get_active(), "bot": self.bot.get_active(),
              "discoverable": self.discoverable.get_active()},
             self.avatar_path, self.header_path)
-        out.update(flag_changes(self.loaded, self.hide_collections.get_active(),
+        out.update(server.flag_changes(self.loaded, self.hide_collections.get_active(),
                                 self.indexable.get_active(), self.attribution.get_text()))
         return out
 

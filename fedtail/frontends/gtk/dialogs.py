@@ -179,21 +179,9 @@ class Page(Gtk.Window):
 
 
 FILTER_CONTEXTS = ("home", "notifications", "public", "thread", "account")
-KEEP = -1  # the term as it is (the edit window's first choice)
-
-
-def filter_changes(title, words, action, contexts, span):
-    """The edit window's answer as view.edit_filter's arguments (span KEEP: the term
-    stays; 0: for good) — as the Qt window's."""
-    return {"title": title.strip() or None,
-            "words": [x.strip() for x in words.split(",") if x.strip()],
-            "action": action, "contexts": list(contexts) or ["home"],
-            "expires_in": None if span == KEEP else int(span or 0)}
-
-
 def edit_filter(parent, f, then):
     """A filter of mine, changed: title, words, fold or hide, where, how long;
-    then(changes) on OK (filter_changes)."""
+    then(changes) on OK (timed.filter_changes)."""
     w = _window(parent, _("filter_edit_title", title=f.title or ", ".join(f.words)), 520, -1)
     w.set_modal(True)
     box = _box()
@@ -217,7 +205,7 @@ def edit_filter(parent, f, then):
     box.append(row)
     span_row = Gtk.Box(spacing=8)
     span_row.append(Gtk.Label(label=_("filter_for")))
-    spans = [(KEEP, timed.filter_extra(f).lstrip(" ·") or _("span_ever"))] + timed.spans()
+    spans = [(timed.KEEP, timed.filter_extra(f).lstrip(" ·") or _("span_ever"))] + timed.spans()
     span = Gtk.DropDown.new_from_strings([label for _s, label in spans])
     tip(span, _("filter_for_q"))
     span_row.append(span)
@@ -228,7 +216,7 @@ def edit_filter(parent, f, then):
 
     def done(*_a):
         w.close()
-        then(filter_changes(title.get_text(), words.get_text(),
+        then(timed.filter_changes(title.get_text(), words.get_text(),
                             "hide" if action.get_selected() == 1 else "warn",
                             [c for c, b in ctx.items() if b.get_active()],
                             spans[span.get_selected()][0]))
@@ -470,28 +458,6 @@ def scheduled(win):
     return dlg
 
 
-def server_more_html(info, clean):
-    """What the newer servers say on top (Mastodon 4.3–4.4): the terms, the servers it
-    cut off, what its translator can do — after common/server.py's page."""
-    from html import escape as esc
-    parts = []
-    if info.terms:
-        parts.append(f"<h3>{esc(_('server_terms'))}</h3>" + clean(info.terms))
-    parts.append(f"<h3>{esc(_('server_blocks'))}</h3>")
-    if info.blocks:
-        words = {"suspend": _("server_block_suspend"), "silence": _("server_block_silence")}
-        parts.append("<ul>" + "".join(
-            f"<li>{esc(domain)} — {esc(words.get(sev, sev))}"
-            + (f"<br><small>{esc(why)}</small>" if why else "") + "</li>"
-            for domain, sev, why in info.blocks) + "</ul>")
-    else:
-        parts.append(f"<p>{esc(_('server_blocks_none'))}</p>")
-    langs = "; ".join(f"{src} → {', '.join(into)}" for src, into in info.translates if into)
-    parts.append("<p>" + esc(_("server_translates", langs=langs) if langs
-                             else _("server_translates_none")) + "</p>")
-    return "".join(parts)
-
-
 def server_info(win):
     """My server about itself (common/server.py makes the page), and what it can do —
     the probe as a table, asked by a button, copied as Markdown."""
@@ -539,7 +505,7 @@ def server_info(win):
         domain[0] = info.domain or info.title
         page.set_title(_("server_info") + " — " + (info.title or info.domain))
         page.set_html(server.server_html(info, lambda h: h)
-                      + server_more_html(info, lambda h: h))
+                      + server.server_more_html(info, lambda h: h))
     win.call(view.server_info(), got_info)
     try:
         show(view.last_probe())
