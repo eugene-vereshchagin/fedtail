@@ -23,6 +23,7 @@ DEFAULTS = {
         "fonts": "theme",
         "font": "",
         "mono_font": "",
+        "tray": True,
         "close_to_tray": True,
         "esc": "curtain",
         "switch_closes": True,
@@ -108,6 +109,7 @@ DEFAULTS = {
         "sensitive_media": 'hide',
         "profile_pinned": True,
         "translate": True,
+        "translate_all": False,
         "profile_featured": True,
     },
     "read": {
@@ -238,8 +240,10 @@ DEFAULTS = {
         "sound": "bell",
         "lanes_width": 26,
         "show_context": True,
-        "pictures": "inline",
+        "pictures": "auto",
         "picture_rows": 8,
+        "viewer": "auto",
+        "video": "auto",
     },
     "web": {
         "host": "127.0.0.1",
@@ -299,7 +303,9 @@ CHOICES = {
     ("ui", "fonts"): {"theme", "system", "custom"},
     ("ui", "compose"): {"inline", "window"},
     ("lists", "hide_members"): {"all", "exclusive", "off"},
-    ("tui", "pictures"): {"inline", "key", "off"},
+    ("tui", "pictures"): {"auto", "blocks", "key", "off", "inline"},  # inline: before 0.19
+    ("tui", "viewer"): {"auto", "app"},
+    ("tui", "video"): {"auto", "window", "terminal", "browser"},
     ("tui", "sound"): {"bell", "scheme", "off"},
     ("sound", "enabled"): {"auto", "on", "off"},
 }

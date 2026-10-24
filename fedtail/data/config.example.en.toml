@@ -240,6 +240,10 @@ desktop_entry = true
 
 # ── Window, keys, start ─────────────────────────────────────────────────────────────
 
+# The tray icon (qt, gtk). false — no icon at all: notifications then go through the
+# desktop only (notify-send), the cross closes the program, Esc with ui.esc = "tray" minimizes.
+tray = true
+
 # The cross hides the window to the tray instead of closing the program.
 close_to_tray = true
 
@@ -534,6 +538,10 @@ profile_pinned = true
 # "Translate" in the ⋯ menu of a post in another language — if your server can translate
 # (Mastodon with DeepL or LibreTranslate). The translation — right in the card, with an "original" button.
 translate = true
+
+# "Translate" on every post, not only those in another language: in your own language
+# too, and on posts with no language given (the server works it out). As in Fedilab.
+translate_all = false
 
 # In a profile — the person's featured tags ("Often writes about: #tags") and whom they recommend
 # (Mastodon 4.4+). false — don't ask.
@@ -1133,13 +1141,28 @@ lanes_width = 26
 # Over a reply — a line "↳ @who: the start of what it answers". false — without it.
 show_context = true
 
-# Pictures in the terminal, drawn with half blocks (needs Pillow, python3-pil; a true
-# colour terminal). "inline" — a post's first picture small right in the lane, v — all of
-# them full screen; "key" — on v only; "off" — none (o — open the post in the browser).
-pictures = "inline"
+# Pictures in the terminal (need Pillow, python3-pil). "auto" — real pictures where the
+# terminal can show them: sixel (Konsole, WezTerm, foot, xterm in vt340 mode) or the kitty
+# protocol (kitty), with the textual-image package installed (pip install textual-image);
+# elsewhere drawn with half blocks (any true colour terminal). A post's first picture small
+# right in the lane, v — all of them big. "blocks" — half blocks always; "key" — on v only;
+# "off" — none (o — open the post in the browser).
+pictures = "auto"
 
 # How high a picture in the lane is, in lines.
 picture_rows = 8
+
+# v on a post with pictures: "auto" — shown by chafa, timg or kitty's icat when one of
+# them is installed (the interface steps aside, Enter brings it back): real size and
+# colours in Konsole, kitty, WezTerm and the rest; without them — in the interface itself.
+# "app" — always in the interface.
+viewer = "auto"
+
+# Video and gifs (v on a post with a video, Enter on it among the pictures) play in mpv:
+# "auto" — in a window of its own on a desktop, drawn right in the terminal otherwise (over
+# ssh: sixel, kitty, or coloured text); "window" — always a window; "terminal" — always
+# in the terminal; "browser" — open in the browser. No mpv — the browser, and it says so.
+video = "auto"
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════

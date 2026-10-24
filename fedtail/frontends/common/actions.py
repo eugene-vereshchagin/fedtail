@@ -166,7 +166,8 @@ def menu(entry, ctx, short_id=None, unread=False):
     if ctx.long_form and "@" in author.handle and p.uri:
         out.append(Item("long_form", _("long_form"), data=entry))
     lang = p.lang.split("-")[0]
-    if ctx.translate and lang and lang != current_language() and p.text:
+    every = ctx.cfg.get("feed", {}).get("translate_all", False)  # Fedilab's way: any post at all
+    if ctx.translate and p.text and (every or (lang and lang != current_language())):
         out.append(Item("translate", _("translate")))
     if ctx.quote_reply and ctx.me_id:
         out.append(Item("quote_reply", _("reply_quote")))

@@ -5,6 +5,11 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- "Translate" on every post if you like (`feed.translate_all = true`, as in Fedilab): in your
+  own language too, and on posts that give none.
+- No tray icon if you don't want one (`ui.tray = false`): notifications then go through the
+  desktop only and the cross closes fedtail. Windows: the tray icon no longer stays behind
+  after fedtail quits — every restart used to leave one more until the mouse passed over.
 - The terminal: `#abc` or `@name` typed in the command line no longer closes it on
   Textual 2 (Debian 13) — the thread or profile it opened wasn't drawn yet when the line
   gave the focus back; "Reply with a quote" quotes the post's words, not its HTML; a

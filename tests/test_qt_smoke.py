@@ -1622,6 +1622,21 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "040" not in lane.view.rows)
         self.assertEqual(self.win.lane_items["home"].count, len(lane.view.unread_keys()))
 
+    def test_tray_icon_goes_at_exit_and_can_be_off(self):
+        """The tray icon is dropped before fedtail leaves (Windows kept a dead one per
+        restart), dropping it twice is harmless, and ui.tray = false makes none."""
+        from fedtail.frontends.qt.window import MainWindow
+        self.win.drop_tray()
+        self.assertIsNone(self.win.tray)
+        self.win.drop_tray()
+        self.core.cfg["ui"]["tray"] = False
+        other = MainWindow(self.core, self.bridge, self.theme)
+        try:
+            self.assertIsNone(other.tray)
+        finally:
+            other.quitting = True
+            other.close()
+
     def test_settings_window_writes_one_line(self):
         """≡ → Settings: the chapters of config.toml; a tick goes into the file at once,
         that line only, and Restart turns up; the search finds over every chapter."""

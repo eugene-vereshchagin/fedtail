@@ -514,7 +514,7 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
                 lambda r=i: r < len(self.lane_order) and self.select_lane(self.lane_order[r]))
 
-        if QSystemTrayIcon.isSystemTrayAvailable():
+        if self.cfg["ui"].get("tray", True) and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
             menu = QMenu(self)
             menu.addAction(_("show"), self.show_raise)
@@ -2562,7 +2562,18 @@ class MainWindow(QMainWindow):
             e.ignore()
             return
         super().closeEvent(e)
+        self.drop_tray()
         QApplication.quit()
+
+    def drop_tray(self):
+        """The tray icon gone from the panel now. Windows keeps a dead process's icon
+        until the mouse passes over it — fedtail leaves through os._exit, past Qt's own
+        clean-up, so every restart left one more there."""
+        if self.tray is not None:
+            self.tray.hide()
+            self.tray.setContextMenu(None)
+            self.tray.deleteLater()
+            self.tray = None
 
     def _debug_corner(self):
         """In the debugging mode, the right end of the status bar says how this
@@ -2596,4 +2607,5 @@ class MainWindow(QMainWindow):
     def quit(self):
         self.quitting = True
         self.close()
+        self.drop_tray()
         QApplication.quit()

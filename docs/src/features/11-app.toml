@@ -66,12 +66,12 @@ status = "has"
 since = "0.8.0"
 name.ru = "Окно, трей, клавиши"
 name.en = "Window, tray, keys"
-config = "`ui.close_to_tray`, `ui.post_keys`"
+config = "`ui.tray`, `ui.close_to_tray`, `ui.post_keys`"
 others.ru = "клавиши — Mastodon web, Phanpy, Elk, Ivory, tut"
 others.en = "keys — Mastodon web, Phanpy, Elk, Ivory, tut"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "tut"]
-details.ru = "Крестик прячет в трей. `j`/`k` — по постам, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `o`/Enter — тред. `post_keys = false` — буквы ничего не делают."
-details.en = "The cross hides to the tray. `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing."
+details.ru = "Крестик прячет в трей; значка в трее можно не держать вовсе (`ui.tray = false`, с 0.19). `j`/`k` — по постам, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `o`/Enter — тред. `post_keys = false` — буквы ничего не делают."
+details.en = "The cross hides to the tray; the tray icon can go altogether (`ui.tray = false`, since 0.19). `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing."
 
 [[feature]]
 id = "links-inside"

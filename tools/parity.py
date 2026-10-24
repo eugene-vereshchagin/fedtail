@@ -29,8 +29,11 @@ FRONTENDS = {
 OWN = ("tui_", "web_", "gtk_", "qt_", "dock_", "roster_look_", "agent_", "kde_")
 KEY_PY = re.compile(r"""\b_\(\s*["']([a-z0-9_]+)["']""")
 KEY_JS = re.compile(r"""\bw\(\s*["']([a-z0-9_]+)["']""")
+# a key named as data ((("census", "debug_census"), …) then _(key)): any literal with an
+# underscore that is an i18n key counts too; one-word keys ("close") only through _()
+KEY_LIT = re.compile(r"""["']([a-z][a-z0-9]*_[a-z0-9_]+)["']""")
 # keys built from a prefix (_("lane_" + name)): the prefix is enough to say "uses them"
-PREFIX_PY = re.compile(r"""\b_\(\s*f?["']([a-z0-9_]+_)["']\s*\+""")
+PREFIX_PY = re.compile(r"""["']([a-z][a-z0-9_]*_)["']\s*\+""")  # key = "quote_" + state
 COMMON_IMPORT = re.compile(r"""(?:from\s+\.\.common(?:\.(\w+))?\s+import\s+([\w, ()\n]+))|"""
                            r"""(?:common\.(\w+))""")
 
@@ -44,8 +47,8 @@ def files(paths):
 
 def keys_in(f):
     text = f.read_text("utf-8", errors="replace")
-    found = set(KEY_PY.findall(text)) | (set(KEY_JS.findall(text)) if f.suffix == ".js"
-                                         else set())
+    found = set(KEY_PY.findall(text)) | set(KEY_LIT.findall(text)) | \
+        (set(KEY_JS.findall(text)) if f.suffix == ".js" else set())
     return found, set(PREFIX_PY.findall(text)), text
 
 

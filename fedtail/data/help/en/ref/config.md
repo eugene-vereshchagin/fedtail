@@ -100,6 +100,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 
 | Key | Default | What it does |
 |---|---|---|
+| `ui.tray` | `true` | The tray icon (qt, gtk). false — no icon at all: notifications then go through the desktop only (notify-send), the cross closes the program, Esc with ui.esc = "tray" minimizes. |
 | `ui.close_to_tray` | `true` | The cross hides the window to the tray instead of closing the program. |
 | `ui.esc` | `"curtain"` | Esc closes what's on top (a picture, the search), and the last Esc:<br>"curtain" — draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right; nothing is marked read — open it in the morning and the new has piled up;<br>"tray" — takes the window to the tray at once (without a tray — minimizes it);<br>"off" — does nothing. |
 | `ui.start_lane` | `"none"` | What is open at start:<br>"none" — nothing: every lane behind the curtain, the counts on the left (Enter opens the last one);<br>"last" — the lane open last time;<br>a lane's name — always that one: "home", "replies", "subs"… (as in [lanes]). |
@@ -178,6 +179,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `feed.sensitive_media` | `"hide"` | Pictures and videos the author marked "sensitive" (without a content warning, CW):<br>"hide" — under a cover, a click shows them; "show" — seen at once. Under a CW they are hidden together with the text anyway. |
 | `feed.profile_pinned` | `true` | Pinned posts — at the top of a profile, marked 📌. false — the profile simply in time order. |
 | `feed.translate` | `true` | "Translate" in the ⋯ menu of a post in another language — if your server can translate (Mastodon with DeepL or LibreTranslate). The translation — right in the card, with an "original" button. |
+| `feed.translate_all` | `false` | "Translate" on every post, not only those in another language: in your own language too, and on posts with no language given (the server works it out). As in Fedilab. |
 | `feed.profile_featured` | `true` | In a profile — the person's featured tags ("Often writes about: #tags") and whom they recommend (Mastodon 4.4+). false — don't ask. |
 
 ## 3. Read marks

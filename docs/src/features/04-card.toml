@@ -165,12 +165,12 @@ status = "has"
 since = "0.8.0"
 name.ru = "Перевод поста сервером"
 name.en = "Translation by the server"
-config = "`feed.translate`"
+config = "`feed.translate`, `feed.translate_all`"
 api = "`statuses/:id/translate`"
 others = "Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
-details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал»."
-details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button."
+details.ru = "«Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал». С `feed.translate_all = true` (с 0.19) — у каждого поста, как в Fedilab: и на твоём языке, и без указанного."
+details.en = "“Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `feed.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given."
 
 [[feature]]
 id = "reactions-show"

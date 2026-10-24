@@ -243,7 +243,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Polls: seeing and voting | has | 0.3.0 | — | `polls/:id`, `polls/:id/votes` | everyone |
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
-| Translation by the server | has | 0.8.0 | `feed.translate` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
+| Translation by the server | has | 0.8.0 | `feed.translate`, `feed.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Emoji reactions | partly — shown only | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `feed.honest_counters` (off), `feed.counters_via_accounts` | the author's server's API without a token | only in fedtail |
@@ -275,7 +275,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Edit history.** An edited post is marked so and has all its earlier versions.
 
-**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button.
+**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `feed.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given.
 
 **Emoji reactions.** Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Adding your own isn't possible yet; GoToSocial doesn't support them.
 
@@ -555,7 +555,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Trying a theme without a restart | has | 0.15.0 | ≡ → “Try a theme”; for good — `ui.theme` | — | Phanpy, Elk, Ice Cubes (they have few) |
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
 | The settings reference | has | 0.13.0 | — | `tools/docs_build.py` | tut (a man page and a site), MediaWiki (an article per setting) |
-| Window, tray, keys | has | 0.8.0 | `ui.close_to_tray`, `ui.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |
+| Window, tray, keys | has | 0.8.0 | `ui.tray`, `ui.close_to_tray`, `ui.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |
 | Links to posts and profiles — inside | has | 0.2.0 | `ui.links_in_app` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Open a link in the running fedtail | has | 0.14.0 | `fedtail open URL`; `--install-desktop` installs a `web+ap://` handler | own | Megalodon (share a link into the app) |
 | Everything is stored locally, readable offline | has | 0.1.0 | — | SQLite in the profile's data folder | Tusky — partly, Ice Cubes — a Home cache |
@@ -580,7 +580,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **The settings reference.** The config reference, built from the example configs: every setting with its description, choices and default, in tables by chapter, in Russian and in English. A test makes sure it keeps up with the files.
 
-**Window, tray, keys.** The cross hides to the tray. `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing.
+**Window, tray, keys.** The cross hides to the tray; the tray icon can go altogether (`ui.tray = false`, since 0.19). `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing.
 
 **Links to posts and profiles — inside.** @mentions, #tags and links to fediverse posts and profiles open in fedtail. Not found — the browser. Only web addresses go outside (and mailto:, xmpp:, gemini://, magnet:): fedtail won't open a link to a file or a network share from someone's post.
 

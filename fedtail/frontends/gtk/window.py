@@ -1149,7 +1149,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---- start -----------------------------------------------------------------------
     def start(self):
-        if getattr(self, "tray", None) is None:
+        if getattr(self, "tray", None) is None and self.cfg["ui"].get("tray", True):
             from . import tray
             self.tray = tray.make(self)  # (None: the desktop shows no tray)
         if not self.core.logged_in:

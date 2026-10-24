@@ -101,6 +101,8 @@ def run(core, instance, argv):
     try:
         return app.exec()
     finally:
+        win.drop_tray()  # however the loop ended: no icon left behind on Windows
+        app.processEvents()
         win.images.shutdown()
         core.shutdown()
 
