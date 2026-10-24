@@ -107,7 +107,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 **Personal lanes.**
 
 - “My posts” (`my_posts`) — my posts and comments.
-- “Direct” (`direct`) — messages visible to the mentioned only. With `lanes.direct_apart = true` (the default) they live only here and don't double up in “Replies to me” and “Mentions”.
+- “Direct” (`direct`) — messages visible to the mentioned only, as a dialogue: incoming and your own outgoing ones (sent from here, from another client, met in a thread), by the post's time. Yours are read at once and don't swell the count (since 0.20). With `lanes.direct_apart = true` (the default) the incoming ones live only here and don't double up in “Replies to me” and “Mentions”; yours never go there.
 - “Replies to me” (`replies`) — replies to my posts and comments, even if they @ me.
 - “Mentions” (`mentions`) — where I was tagged in someone else's conversation. `lanes.mentions_all = true` — show everything that mentions me here, replies too (they'll be in both lanes).
 - “Subscriptions” (`subs`) — what's new in threads I'm subscribed to (see Thread subscriptions).

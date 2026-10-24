@@ -62,7 +62,7 @@ others.en = "everyone, but laid out differently"
 clients = ["all"]
 details.ru = """
 - «Мои записи» (`my_posts`) — мои посты и комменты.
-- «Личные» (`direct`) — сообщения с видимостью «только упомянутым». При `lanes.direct_apart = true` (по умолчанию) они живут только здесь и не дублируются в «Ответах мне» и «Упоминаниях».
+- «Личные» (`direct`) — сообщения с видимостью «только упомянутым», диалогом: и входящие, и твои исходящие (отправленные отсюда, из другого клиента, встреченные в треде), по времени поста. Твои сразу прочитаны и счётчик не раздувают (с 0.20). При `lanes.direct_apart = true` (по умолчанию) входящие живут только здесь и не дублируются в «Ответах мне» и «Упоминаниях»; твои туда не попадают никогда.
 - «Ответы мне» (`replies`) — ответы на мои посты и комменты, даже если в них есть @я.
 - «Упоминания» (`mentions`) — где меня тегнули в чужом разговоре. `lanes.mentions_all = true` — показывать здесь вообще всё, где меня упомянули, ответы тоже (они окажутся в обеих лентах).
 - «Подписки» (`subs`) — новое в тредах, на которые я подписан (см. Подписки на треды).
@@ -70,7 +70,7 @@ details.ru = """
 Разделение «ответы мне» и «упоминания» — то, чего нет у других: обычно всё валится в одну ленту уведомлений."""
 details.en = """
 - “My posts” (`my_posts`) — my posts and comments.
-- “Direct” (`direct`) — messages visible to the mentioned only. With `lanes.direct_apart = true` (the default) they live only here and don't double up in “Replies to me” and “Mentions”.
+- “Direct” (`direct`) — messages visible to the mentioned only, as a dialogue: incoming and your own outgoing ones (sent from here, from another client, met in a thread), by the post's time. Yours are read at once and don't swell the count (since 0.20). With `lanes.direct_apart = true` (the default) the incoming ones live only here and don't double up in “Replies to me” and “Mentions”; yours never go there.
 - “Replies to me” (`replies`) — replies to my posts and comments, even if they @ me.
 - “Mentions” (`mentions`) — where I was tagged in someone else's conversation. `lanes.mentions_all = true` — show everything that mentions me here, replies too (they'll be in both lanes).
 - “Subscriptions” (`subs`) — what's new in threads I'm subscribed to (see Thread subscriptions).

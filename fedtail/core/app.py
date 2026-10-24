@@ -581,6 +581,9 @@ class Core(SocialMixin):
                     self.emit("error", f"{name}: {e}")
 
             self._step("sources")
+            if "direct" in self.lane_by_name and self._carry_my_direct():
+                self.emit("lanes_updated", {"direct": []})  # read already: no news, no sound
+            self._step("my direct")
             new_requests = []
             if "requests" in self.lane_by_name:
                 try:
@@ -738,7 +741,9 @@ class Core(SocialMixin):
             return
         push = {}
         for timeline, source in self.MARKERS.items():
-            items = self.store.items(source, 400)  # oldest -> newest
+            # oldest -> newest; the server's own items only (not mine put in "Direct")
+            items = [x for x in self.store.items(source, 400)
+                     if not str(x[0]).startswith("mine:")]
             if not items:
                 continue
             last = ((remote or {}).get(timeline) or {}).get("last_read_id")
@@ -1615,6 +1620,24 @@ class Core(SocialMixin):
 
     def set_posts_only(self, name, on):
         self.set_choice(f"posts_only.{name}", bool(on))
+
+    def _carry_my_direct(self, statuses=None):
+        """My direct messages into the mentions stream, where "Direct" reads: the
+        dialogue whole — theirs and mine, by the posts' own time. Mine are read (the store
+        marks every post of mine read), so no count grows. statuses: the ones just sent;
+        None — every one stored that isn't there yet. How many went in."""
+        source = self.lane_by_name["direct"].source if "direct" in self.lane_by_name \
+            else "mentions"
+        if statuses is None:
+            got = self.store.my_direct_outside(source)
+        else:
+            got = [s for s in statuses if s and s.get("visibility") == "direct"
+                   and self.me and s.get("account", {}).get("id") == self.me["id"]]
+        if not got:
+            return 0
+        # an item of its own ("mine:" + id): never one of the server's notification ids
+        return len(self.store.put_items(source, [("mine:" + s["id"], s, s.get("created_at", ""))
+                                                 for s in got]))
 
     def lane_entries(self, name):
         """[(item_id, status)] oldest → newest, at most the lane's render limit.
@@ -2754,6 +2777,8 @@ class Core(SocialMixin):
                     self.delete_draft(draft_key)
                 self.store.put_statuses(chain)
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
+                if "direct" in self.lane_by_name and self._carry_my_direct(chain):
+                    self.emit("lanes_updated", {"direct": []})  # the dialogue: mine at once
                 self._auto_subscribe([st])
                 if reply_to:
                     # "you replied" under the post answered: the lanes it is in look again

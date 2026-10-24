@@ -2,6 +2,9 @@
 
 ## 0.20.0 — in progress
 
+- "Direct" is a dialogue: your own direct messages are in it too (sent from here, from
+  another client or met in a thread), by the posts' time, read at once — the count is
+  only what came to you. They never show in "Replies to me" or "Mentions".
 - The rest of the 0.19 plan: the full terminal interface and the full web page (the
   "Four interfaces" table shows what is left).
 - A profile shows "Posts", "Posts and replies" or "Media", switched above the posts;

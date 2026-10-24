@@ -1937,6 +1937,56 @@ class CoreTest(TmpDir):
         core._lists_version += 1
         self.assertEqual(ids("replies"), ["020", "021"])
 
+    def test_direct_is_a_dialogue(self):
+        """"Direct": their messages and mine, by the posts' own time; mine read at once
+        (the count is theirs only), and never in Replies or Mentions."""
+        core, w = self.make(feed={"page_size": 10})
+        core.connect().result()
+        w.add(status("030", BOB, minute=30, vis="direct", text="привет"), mention=True)
+        # mine from another client, met by the poll (my posts) — sent before Bob's answer
+        w.add(status("025", fakes.ME, minute=25, vis="direct", text="ты тут?"), home=True)
+        w.add(status("026", fakes.ME, minute=26, vis="public", text="не личное"), home=True)
+        core.poll_once()
+        ids = lambda lane: [st["id"] for _, st in core.lane_entries(lane)]  # noqa: E731
+        self.assertEqual(ids("direct"), ["025", "030"])
+        self.assertEqual(core.unread_count("direct"), 1)  # Bob's only
+        # sent from here: in the dialogue at once, after Bob's (its own time), read
+        sent = core.post("@bob и ещё", "direct").result()
+        self.assertEqual(ids("direct"), ["025", "030", sent["id"]])
+        self.assertEqual(core.unread_count("direct"), 1)  # mine adds nothing
+        answer = core.post("да, тут", "direct", reply_to="030").result()
+        self.assertEqual(ids("direct")[-1], answer["id"])
+        self.assertEqual(core.unread_count("direct"), 0)  # answered: Bob's is read too
+        core.poll_once()  # met again by the poll: no double
+        self.assertEqual(ids("direct"), ["025", "030", sent["id"], answer["id"]])
+        for apart in (True, False):  # mine never go to Replies or Mentions
+            core.cfg["lanes"]["direct_apart"] = apart
+            core._lists_version += 1
+            self.assertNotIn(sent["id"], ids("replies") + ids("mentions"))
+            self.assertNotIn("025", ids("replies") + ids("mentions"))
+        self.assertIn("030", ids("mentions"))  # Bob's, direct_apart off: as before
+
+    def test_my_direct_from_a_thread_joins_too(self):
+        core, w = self.make()
+        core.connect().result()
+        core.store.put_statuses([status("040", fakes.ME, minute=40, vis="direct",
+                                        text="из треда")])
+        self.assertEqual(core._carry_my_direct(), 1)
+        self.assertEqual(core._carry_my_direct(), 0)  # once
+        self.assertEqual([st["id"] for _, st in core.lane_entries("direct")], ["040"])
+        # the server's list is paged from its own ids, never from one fedtail put in
+        self.assertIsNone(core.store.newest_item("mentions"))
+        self.assertIsNone(core.store.oldest_item("mentions"))
+        w.add(status("043", BOB, minute=43, vis="direct"), mention=True)
+        core.poll_once()
+        self.assertEqual(core.store.newest_item("mentions"), "n043")
+        self.assertEqual([st["id"] for _, st in core.lane_entries("direct")], ["040", "043"])
+        core.mark_read(["043"])
+        core._sync_markers()  # the server's marker: its own notification id, never "mine:…"
+        self.assertEqual(w.markers.get("notifications"), "n043")
+        self.assertEqual(core._carry_my_direct([status("041", BOB, vis="direct")]), 0)
+        self.assertEqual(core._carry_my_direct([status("042", fakes.ME, vis="public")]), 0)
+
     def test_people_from_origin(self):
         core, w = self.make()
         core.connect().result()

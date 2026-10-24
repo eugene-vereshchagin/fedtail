@@ -57,19 +57,27 @@ def _is_direct(st):
     return real(st).get("visibility") == "direct"
 
 
+def _mine(st, ctx):
+    return bool(ctx.me_id) and real(st)["account"]["id"] == ctx.me_id
+
+
 def _comments(st, ctx):
-    if ctx.direct_apart and _is_direct(st):
+    if ctx.direct_apart and _is_direct(st) or _mine(st, ctx):
         return False
     return is_comment_to_me(real(st), ctx.me_id)
 
 
 def _other_mentions(st, ctx):
-    if ctx.direct_apart and _is_direct(st):
+    # my own direct messages are in the mentions stream too (for "Direct", the whole
+    # dialogue): never here
+    if ctx.direct_apart and _is_direct(st) or _mine(st, ctx):
         return False
     return ctx.mentions_all or not is_comment_to_me(real(st), ctx.me_id)
 
 
 def _direct(st, ctx):
+    """Private messages: to me, and mine to others (app._carry_my_direct puts those in
+    the mentions stream) — one dialogue, by the posts' own time."""
     return _is_direct(st)
 
 
@@ -95,7 +103,8 @@ LANES = {
     "my_likes": Lane("my_likes", "favourites", _liked, lazy=True),
     "bots": Lane("bots", "home", _bots),
     "my_posts": Lane("my_posts", "mine", _all),
-    # private messages to me: the mentions stream, only what was sent to the named
+    # private messages to me and mine to others: the mentions stream (mine are added
+    # to it by app._carry_my_direct), only what was sent to the named
     "direct": Lane("direct", "mentions", _direct, by_status_time=True),
     "local": Lane("local", "local", _all, lazy=True),
     "federated": Lane("federated", "federated", _all, lazy=True),
