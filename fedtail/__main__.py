@@ -266,6 +266,9 @@ def _leave(code):
     except Exception:  # noqa: BLE001 — a last log line is never worth a crash
         log.debug("session summary failed", exc_info=True)
     log.info("==== session end, exit code %s", code)
+    flush = getattr(sys, "fedtail_coverage_flush", None)  # a self-check's night run
+    if flush is not None:
+        flush()
     logging.shutdown()
     sys.stdout.flush()
     sys.stderr.flush()

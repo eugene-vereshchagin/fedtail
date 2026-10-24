@@ -55,10 +55,16 @@ def probe(code):
     return False, last[-1] if last else ""
 
 
+COVERAGE = []  # the night run: [folder] every Python of every step leaves its lines in
+
+
 def env():
     e = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8",
              FEDTAIL_SOUND=os.environ.get("FEDTAIL_SOUND", "off"))  # no chimes all night
     e["PYTHONPATH"] = str(ROOT) + os.pathsep + e.get("PYTHONPATH", "")
+    if COVERAGE:  # tools/covhook/sitecustomize.py: each process notes the lines it ran
+        e["PYTHONPATH"] = str(ROOT / "tools" / "covhook") + os.pathsep + e["PYTHONPATH"]
+        e["FEDTAIL_COVERAGE"] = str(COVERAGE[0])
     return e
 
 
@@ -436,6 +442,11 @@ def main():
             print("windows: on this desktop — no xvfb-run (sudo apt install xvfb): keep "
                   "the screen from locking for the night, or the benches mean nothing")
         native = (has_display() or bool(run.wrap)) and not a.offscreen
+        if a.night and sys.version_info >= (3, 12):
+            # every step counts which lines of fedtail/ ran — the tests, the tours, the
+            # windows they open; the coverage step at the end puts it together
+            COVERAGE[:] = [out / "coverage" / "hits"]
+            print("coverage: every step counts the lines it runs")
 
         # ---- the fake server --------------------------------------------------------------
         if "tests" in only:
@@ -453,12 +464,6 @@ def main():
             run.step("tests", cmd, timeout=1800,
                      wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else (),
                      note="xvfb" if xvfb else "this desktop")
-            if a.night and py >= (3, 12):
-                # the same tests once more, counting which lines of fedtail/ they run
-                d = out / "coverage"
-                run.step("coverage", ["tools/coverage_lite.py", str(d)], timeout=2400,
-                         wrap=[xvfb, "-a", "-s", "-screen 0 1600x1000x24"] if xvfb else (),
-                         folder=d, note="lines of fedtail/ the tests run")
         if "qt" in only:
             if not qt:
                 run.skip("qt-tour", "no PySide6 (pip install PySide6)")
@@ -626,6 +631,12 @@ def main():
         print(f"\nstopped. Nothing to send from {out}; "
               "python3 tools/selfcheck.py --clean removes it.")
         return 130
+    if COVERAGE:
+        COVERAGE.clear()  # the report itself is not counted
+        d = out / "coverage"
+        run.step("coverage", ["tools/coverage_lite.py", str(d), "--report"], timeout=900,
+                 folder=d, note="lines of fedtail/ the whole night ran", wrap=())
+        shutil.rmtree(d / "hits", ignore_errors=True)  # put together: lines.json has it
     clean_temp(started)
     report(run, out, facts)
     archive = zip_of(out)  # in the run's own folder, next to what it holds

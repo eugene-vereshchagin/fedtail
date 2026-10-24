@@ -342,12 +342,15 @@ class LeaveTest(unittest.TestCase):
         t = threading.Thread(target=stop.wait, name="slow-download")
         t.start()
         self.addCleanup(lambda: (stop.set(), t.join()))
+        flush = mock.Mock()  # the self-check's coverage hook, when it runs
         with mock.patch.object(entry.os, "_exit", side_effect=SystemExit) as ex, \
                 mock.patch("logging.shutdown"), \
+                mock.patch.object(entry.sys, "fedtail_coverage_flush", flush, create=True), \
                 self.assertLogs("fedtail", "INFO") as logs:
             with self.assertRaises(SystemExit):
                 entry._leave(5)
         ex.assert_called_once_with(5)
+        flush.assert_called_once()
         self.assertTrue(any("slow-download" in x for x in logs.output))
         with mock.patch.object(entry.os, "_exit", side_effect=SystemExit) as ex, \
                 mock.patch("logging.shutdown"), \
