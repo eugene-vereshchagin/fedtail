@@ -985,12 +985,29 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def set_merged(self, on):
         """All accounts in one window or not: remembered, then fedtail restarts."""
-        from ...core import profiles
         primary = getattr(self.core, "primary", self.core)
         primary.set_state("merge", ["all"] if on else [])
         log.info("merge %s: restarting", "on" if on else "off")
-        profiles.launch(primary.paths.profile, after=0.5, wait_for=__import__("os").getpid())
-        GLib.timeout_add(200, lambda: (self.close(), False)[1])
+        self.restart()
+
+    def restart(self):
+        """fedtail again, the same profile: once this process has gone."""
+        import os
+
+        from ...core import profiles
+        primary = getattr(self.core, "primary", self.core)
+        profiles.launch(primary.paths.profile, after=0.5, wait_for=os.getpid())
+        GLib.timeout_add(200, lambda: (self.quit_app(), False)[1])
+
+    def open_settings(self, query=""):
+        """The settings window (gtk/settings.py; what it shows: common/settings.py)."""
+        from .settings import SettingsWindow
+        win = getattr(self, "_settings", None)
+        if win is None or not win.get_visible():
+            win = self._settings = SettingsWindow(self)
+        if query:
+            win.search.set_text(query)
+        win.present()
 
     def add_account(self):
         from ...core import paths as paths_module

@@ -11,7 +11,7 @@ Which feature stands behind a key and how other clients do it —
 
 ## How the config works
 
-Every setting is here, with its default value and an explanation. Change what you need and restart fedtail. The program only reads this file and never writes it.
+Every setting is here, with its default value and an explanation. Change what you need and restart fedtail. Or open ≡ → Settings: the window edits this very file — just the line you changed, the comments and the rest stay as they are (the old file is config.toml.bak). The program never rewrites it on its own.
 
 A value written here stays yours even if a new version changes the default. Want the program's default always — comment the line out (# at the start) or delete it.
 

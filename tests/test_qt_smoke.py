@@ -1622,6 +1622,35 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "040" not in lane.view.rows)
         self.assertEqual(self.win.lane_items["home"].count, len(lane.view.unread_keys()))
 
+    def test_settings_window_writes_one_line(self):
+        """≡ → Settings: the chapters of config.toml; a tick goes into the file at once,
+        that line only, and Restart turns up; the search finds over every chapter."""
+        from fedtail.frontends.common import settings
+        from fedtail.frontends.qt.settings import SettingsDialog
+        f = self.core.paths.config_file
+        f.write_text(config.example_text("ru"), "utf-8")
+        self.assertIn(i18n._("settings"), [a.text() for a in self.win._app_menu().actions()])
+        dlg = SettingsDialog(self.win)
+        dlg.show()
+        self.pump(0.1)
+        self.assertEqual(dlg.list.count(), len(dlg.chapters))
+        o = settings.option(dlg.chapters, "ui.bookmark_button")
+        before = f.read_text("utf-8")
+        dlg.controls[o.name].setChecked(not o.value)
+        self.pump(until=lambda: f.read_text("utf-8") != before)
+        after = f.read_text("utf-8")
+        self.assertEqual(len(before.splitlines()), len(after.splitlines()))
+        self.assertEqual(sum(a != b for a, b in zip(before.splitlines(), after.splitlines(),
+                                                    strict=True)), 1)
+        self.assertTrue(dlg.restart.isVisibleTo(dlg))
+        self.pump(0.1)  # drawn again: the card has Default now
+        self.assertTrue(settings.option(dlg.chapters, o.name).changed)
+        dlg.search.setText("шрифт")
+        dlg._searched()
+        self.assertIn("ui.font_size", dlg.controls)
+        self.assertNotIn("ui.bookmark_button", dlg.controls)
+        dlg.close()
+
     def test_menu_keeps_only_what_is_not_on_screen(self):
         _ = i18n._
         texts = [a.text().split("\t")[0] for a in self.win._app_menu().actions()]

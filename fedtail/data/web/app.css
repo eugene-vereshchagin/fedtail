@@ -262,6 +262,8 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
               border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
 .place-form .field { display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
 .place-form .field-check { flex-direction: row; align-items: center; gap: 6px; }
+.place-form .field-tip { color: var(--muted); font-size: 11px; font-family: monospace; }
+.place-form .field-check .field-tip { margin-left: auto; }
 .place-form .field-checks { flex-direction: row; flex-wrap: wrap; gap: 10px; }
 .place-form input:not([type=checkbox]), .place-form textarea, .place-form select {
   border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--bg);

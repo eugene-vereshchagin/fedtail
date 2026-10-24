@@ -699,6 +699,21 @@ _STRINGS = {
         "about_commit": "Коммит", "about_account": "Аккаунт", "about_accounts": "Аккаунты",
         "about_server": "Сервер", "about_theme": "Тема", "about_data": "Данные",
         "about_copy": "Скопировать информацию", "about_copied": "Скопировано",
+        "settings": "Настройки…", "settings_title": "Настройки",
+        "settings_hint": "Всё хранится в {file}: здесь меняются его строки, комментарии и "
+                         "остальное в нём остаются как есть. Большинство настроек "
+                         "вступают в силу после перезапуска.",
+        "settings_save": "Записать", "settings_saved": "Записано в {file}: {names}",
+        "settings_restart": "Перезапустить", "settings_restart_tip":
+            "Большинство настроек читаются при запуске",
+        "settings_reset": "По умолчанию", "settings_reset_tip":
+            "Закомментировать строку в файле: дальше — умолчание программы ({value})",
+        "settings_in_file": "задано в файле", "settings_default": "по умолчанию: {value}",
+        "settings_search": "Найти настройку…", "settings_none": "Ничего не нашлось",
+        "settings_open_file": "Открыть файл", "settings_found": "Найдено",
+        "settings_need_number": "нужно число", "settings_at_least": "не меньше {n}",
+        "settings_set_here": "Заданы в файле",
+        "settings_changed_outside": "Файл изменили снаружи — перечитан",
         "about_build": "Сборка: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Код: <a href="{repo}">GitHub</a><br>Автор в федиверсе: '
                        '<a href="{author_link}">{author}</a> — откроется здесь, '
@@ -1616,6 +1631,21 @@ _STRINGS = {
         "about_commit": "Commit", "about_account": "Account", "about_accounts": "Accounts",
         "about_server": "Server", "about_theme": "Theme", "about_data": "Data",
         "about_copy": "Copy the information", "about_copied": "Copied",
+        "settings": "Settings…", "settings_title": "Settings",
+        "settings_hint": "Everything lives in {file}: this changes its lines, and its "
+                         "comments and the rest stay as they are. Most settings take "
+                         "effect after a restart.",
+        "settings_save": "Save", "settings_saved": "Saved in {file}: {names}",
+        "settings_restart": "Restart", "settings_restart_tip":
+            "Most settings are read at start",
+        "settings_reset": "Default", "settings_reset_tip":
+            "Comment the line out in the file: the program's default from then on ({value})",
+        "settings_in_file": "set in the file", "settings_default": "default: {value}",
+        "settings_search": "Find a setting…", "settings_none": "Nothing found",
+        "settings_open_file": "Open the file", "settings_found": "Found",
+        "settings_need_number": "a number, please", "settings_at_least": "at least {n}",
+        "settings_set_here": "Set in the file",
+        "settings_changed_outside": "The file changed outside — read again",
         "about_build": "Build: {commit}, {date}", "about_env": "Python {py} · Qt {qt}",
         "about_links": 'Code: <a href="{repo}">GitHub</a><br>The author in the fediverse: '
                        '<a href="{author_link}">{author}</a> — opens here, with Follow',

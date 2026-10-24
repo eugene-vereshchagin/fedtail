@@ -64,6 +64,7 @@ class Field:
     value: object = ""
     kind: str = "line"
     choices: tuple = ()
+    tip: str = ""  # what it means: under the field, or on hover
 
 
 @dataclass
@@ -104,7 +105,7 @@ PLACES = {
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
     "help": "help_title", "news": "help_news", "about": "about",
-    "federation": "fed_title",
+    "federation": "fed_title", "settings": "settings_title",
     # opened from somewhere: a post, a person, a tag
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
@@ -113,7 +114,7 @@ PLACES = {
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "server", "profile_edit",
-        "help", "news", "about", "federation")
+        "settings", "help", "news", "about", "federation")
 
 
 def _wait(fut):
@@ -429,6 +430,67 @@ class Places:
 
     def _a_tag_lanes(self, name, _v, _c, _ans):
         return Out(open={"page": "taglanes", "arg": name})
+
+    # ---- settings: the lines of config.toml (common/settings.py) ---------------------
+    def _p_settings(self, query, tab, _cur):
+        """A chapter of the settings as a form (tabs: the chapters), or what matches
+        `query` in all of them; rows: what differs from the defaults there, each with
+        "Default" (the line commented out)."""
+        from . import settings
+        chapters = settings.model(self.view)
+        name = settings.config_file(self.view).name
+        page = Page("settings", _("settings_title"), arg=query,
+                    hint=_("settings_hint", file=name),
+                    tabs=tuple((c.key, f"{c.number}. {c.title}") for c in chapters))
+        if query:
+            options = [o for _c, hits in settings.find(chapters, query) for o in hits]
+            page.empty = _("settings_none")
+        else:
+            ch = next((c for c in chapters if c.key == tab), chapters[0])
+            page.tab = ch.key
+            options = ch.options
+        for o in options:
+            if o.changed:
+                page.rows.append(Row("item", o.title, f"{o.name} = {o.shown()}", key=o.name,
+                                     buttons=(self._btn(
+                                         _("settings_reset"), "settings", "reset", o.name,
+                                         tip=_("settings_reset_tip",
+                                               value=o.default_shown())),)))
+        page.form = tuple(self._setting_field(o) for o in options)
+        page.submit = self._btn(_("settings_save"), "settings", "save", query, primary=True)
+        return page
+
+    @staticmethod
+    def _setting_field(o):
+        tip = (o.about + "\n" if o.about else "") + o.name
+        if o.kind == "bool":
+            return Field(o.name, o.title, bool(o.value), "check", tip=tip)
+        if o.kind in ("choice", "checks"):
+            def words(v, w):
+                w = w if len(w) <= 60 else w[:57].rsplit(" ", 1)[0] + "…"
+                return w if o.kind == "checks" or w == str(v) else f"{v} — {w}"
+            return Field(o.name, o.title, o.value, o.kind,
+                         tuple((v, words(v, w)) for v, w in o.choices), tip=tip)
+        return Field(o.name, o.title, o.line(), "line", tip=tip)
+
+    def _a_settings_save(self, _query, values, _c, _ans):
+        from . import settings
+        try:
+            changes = settings.changes_of(settings.model(self.view), values)
+            if not changes:
+                return Out(refresh=True)
+            return Out(message=settings.save(self.view, changes), refresh=True)
+        except (ValueError, settings.SaveError) as e:
+            return Out(error=str(e))
+
+    def _a_settings_reset(self, name, _v, _c, _ans):
+        from . import settings
+        section, _s, key = name.partition(".")
+        try:
+            return Out(message=settings.save(self.view, {(section, key): settings.UNSET}),
+                       refresh=True)
+        except settings.SaveError as e:
+            return Out(error=str(e))
 
     def _p_taglanes(self, name, _tab, _cur):
         """"＋ to lanes": the tag as a lane of its own, or into a lane of tags kept in

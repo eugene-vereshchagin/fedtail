@@ -944,11 +944,18 @@ class MainWindow(QMainWindow):
 
     def set_merged(self, on):
         """All accounts in one window or not: remembered, then fedtail restarts."""
-        from ...core import profiles
         primary = getattr(self.core, "primary", self.core)
         primary.set_state("merge", ["all"] if on else [])
         log.info("merge %s: restarting", "on" if on else "off")
-        profiles.launch(primary.paths.profile, after=0.5, wait_for=__import__("os").getpid())
+        self.restart()
+
+    def restart(self):
+        """fedtail again, the same profile: once this process has gone."""
+        import os
+
+        from ...core import profiles
+        primary = getattr(self.core, "primary", self.core)
+        profiles.launch(primary.paths.profile, after=0.5, wait_for=os.getpid())
         QTimer.singleShot(200, self.quit)
 
     def add_profile(self):
@@ -982,6 +989,7 @@ class MainWindow(QMainWindow):
         people.setEnabled(not people.isEmpty())
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
+        m.addAction(_("settings"), self.open_settings)
         m.addAction(_("open_config"), lambda: open_path(self.core.paths.config_file))
         m.addAction(_("open_themes"), lambda: open_path(themefile.user_dir()))
         m.addMenu(self._try_theme_menu(m))
@@ -2398,6 +2406,18 @@ class MainWindow(QMainWindow):
             return
         self.statusBar().showMessage(_("debug_report_done", path=str(out)), 15000)
         open_path(out.parent)
+
+    def open_settings(self, query=""):
+        """The settings window (qt/settings.py): one at a time, brought up again."""
+        from .settings import SettingsDialog
+        dlg = getattr(self, "_settings", None)
+        if dlg is None or not dlg.isVisible():
+            dlg = self._settings = SettingsDialog(self)
+        if query:
+            dlg.search.setText(query)
+        dlg.show()
+        dlg.raise_()
+        dlg.activateWindow()
 
     def about(self):
         """About fedtail: cards of what it is and what it runs on (qt/about.py)."""

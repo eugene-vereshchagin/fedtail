@@ -5,6 +5,19 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- A settings window (≡ → Settings, in Qt, GTK, the web page and the terminal): the
+  chapters of config.toml on the left, their options as cards on the right — a switch,
+  a number, a choice (each choice with what it means), ticks for lists of lanes — with
+  the reference's explanation under each, "Default" where it is set otherwise, and a
+  search over all of them. The file stays the one place the settings live: a change
+  goes into it at once, that one line (a commented-out option is switched on in place,
+  a missing one goes into its section with its explanation), the comments and the rest
+  stay as they are, the old file is kept as config.toml.bak, and a change that wouldn't
+  read back or pass the checks is refused with the file untouched. Edited outside while
+  the window is open, the file is read again. Most options are read at start: after a
+  change the window offers Restart. What the window shows and does is
+  `frontends/common/settings.py` (for the phone too), the line editing
+  `core/config_edit.py`.
 - Sync is a service of its own now, apart from the fediverse server: it is on when the
   config says where (`sync.url`, or `sync.folder`) and off otherwise. `sync.enabled` and
   `sync.backend` are gone (a config still having them gets a warning, nothing breaks), and

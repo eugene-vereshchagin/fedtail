@@ -216,6 +216,8 @@ class PlaceScreen(Screen):
                         border-bottom: solid $primary-background; }
     PlaceScreen #form Input, PlaceScreen #form Select { width: 1fr; }
     PlaceScreen #form TextArea { height: 6; }
+    PlaceScreen #form .checks { height: auto; }
+    PlaceScreen #form .tip { height: auto; margin-bottom: 1; }
     PlaceScreen #posts { height: 1fr; }
     PlaceScreen #posts > ListItem { padding: 0 1 1 1; }
     """
@@ -314,6 +316,8 @@ class PlaceScreen(Screen):
         await box.remove_children()
         self.form_widgets = {}
         box.display = bool(page.form or page.submit)
+        # a place that is all form (the settings): the form takes the screen
+        box.styles.max_height = "75%" if page.name == "settings" else "60%"
         if not box.display:
             return
         widgets = []
@@ -325,7 +329,8 @@ class PlaceScreen(Screen):
                 if f.label:
                     widgets.append(Label(f.label))
                 boxes = [(v, Checkbox(words, v in (f.value or ()))) for v, words in f.choices]
-                widgets.append(Horizontal(*[b for _v, b in boxes], classes="checks"))
+                row = Horizontal if len(boxes) <= 4 else Vertical  # many: one under another
+                widgets.append(row(*[b for _v, b in boxes], classes="checks"))
                 w = boxes
             elif f.kind == "choice":
                 widgets.append(Label(f.label))
@@ -341,6 +346,8 @@ class PlaceScreen(Screen):
                 w = Input(value=str(f.value or ""), placeholder=f.label)
                 widgets.append(w)
             self.form_widgets[f.name] = w
+            if f.tip:
+                widgets.append(Static(Text(f.tip, style="dim"), classes="tip"))
         if page.submit is not None:
             widgets.append(Button(page.submit.label + "  (Ctrl+S)", id="submit",
                                   variant="primary" if page.submit.primary else "default"))

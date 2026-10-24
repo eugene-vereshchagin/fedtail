@@ -1157,6 +1157,10 @@ function renderForm(fields) {
       lab.append(inp);
       get[f.name] = () => inp.value;
     }
+    if (f.tip) {  // the whole explanation on hover, its last line (the option's name) under it
+      lab.title = f.tip;
+      lab.append(el("small", "field-tip", f.tip.split("\n").slice(-1)[0]));
+    }
     box.append(lab);
   }
   const values = () => Object.fromEntries(Object.entries(get).map(([k, f]) => [k, f()]));

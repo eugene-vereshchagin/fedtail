@@ -1,6 +1,7 @@
 """Keeping the user's config aware of every option.
 
-The app never edits config.toml on its own. Instead:
+The app never edits config.toml on its own (the settings window changes the lines the
+person changes there, core/config_edit.py). Instead:
 
 * on every start it writes config.example.ru.toml and config.example.en.toml next to
   it — the complete reference for this version, in Russian and in English, in

@@ -544,6 +544,30 @@ def tour_menus(app, out, core, win):
             sweep(app, win.tabs.currentWidget(), out, name)
             win.close_tab(win.tabs.currentIndex())
             pump(app, 0.3)
+    settings_window(app, win, out)
+
+
+def settings_window(app, win, out):
+    """≡ → Settings, a picture of each chapter and of a search. Nothing in it is
+    clicked (the sweep would write into the profile's config.toml: on a real account
+    that's the user's own file)."""
+    from fedtail.frontends.qt.settings import SettingsDialog
+    try:
+        dlg = SettingsDialog(win)
+        dlg.show()
+        pump(app, 0.5)
+        for i in range(dlg.list.count()):
+            dlg.list.setCurrentRow(i)
+            pump(app, 0.3)
+            save(dlg, out, f"settings-{i + 1:02d}")
+        dlg.search.setText("font")
+        dlg._searched()
+        pump(app, 0.3)
+        save(dlg, out, "settings-search")
+        dlg.close()
+        pump(app, 0.2)
+    except Exception:  # noqa: BLE001
+        ERRORS.append("settings: " + traceback.format_exc(limit=6))
 
 
 def try_every_theme(app, win, themes):

@@ -153,6 +153,30 @@ class GtkSmokeTest(_GtkBase):
         self.assertLessEqual(lane.list.get_width(), lane.get_width())
         self.assertLessEqual(lane.get_width(), self.win.get_width())
 
+    def test_settings_window_writes_one_line(self):
+        """The settings window as Qt's: a switch goes into config.toml at once, that line
+        only; the search finds over every chapter."""
+        from fedtail.frontends.common import settings
+        from fedtail.frontends.gtk.settings import SettingsWindow
+        self.assertIsNotNone(self.win.lookup_action("settings"))
+        f = self.core.paths.config_file
+        f.write_text(config.example_text("ru"), "utf-8")
+        w = SettingsWindow(self.win)
+        w.present()
+        pump(timeout=0.2)
+        o = settings.option(w.chapters, "ui.bookmark_button")
+        before = f.read_text("utf-8")
+        w.controls[o.name].set_active(not o.value)
+        self.assertTrue(pump(lambda: f.read_text("utf-8") != before))
+        after = f.read_text("utf-8")
+        self.assertEqual(sum(a != b for a, b in zip(before.splitlines(), after.splitlines(),
+                                                    strict=True)), 1)
+        self.assertTrue(w.restart.get_visible())
+        w.search.set_text("шрифт")
+        self.assertTrue(pump(lambda: "ui.font_size" in w.controls))
+        self.assertNotIn("ui.bookmark_button", w.controls)
+        w.close()
+
     def test_the_menu_and_what_it_opens(self):
         """≡ as Qt's: its items made, and each window or tab they open comes up
         without an error (on the fake server)."""
