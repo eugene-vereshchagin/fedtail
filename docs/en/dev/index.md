@@ -22,6 +22,7 @@ the tests and whether it fits.
 | [tools.md](tools.md) | every developer tool in `tools/` |
 | [ci.md](ci.md) | CI jobs and how a release is made |
 | [roadmap.md](roadmap.md) | the plan for the next version |
+| [feeds.md](feeds.md) | free lanes: atoms, rules, what can be reached, the problems (a design) |
 
 ## Run, test, lint
 
