@@ -36,6 +36,22 @@ def _box(margin=12, spacing=8):
     return box
 
 
+def info(parent, title, text):
+    """A window of text to read and close (Qt's QMessageBox.information)."""
+    win = _window(parent, title, 560, 420)
+    box = _box()
+    lab = Gtk.Label(label=text, xalign=0, yalign=0, wrap=True, selectable=True)
+    scroll = Gtk.ScrolledWindow(vexpand=True)
+    scroll.set_child(lab)
+    box.append(scroll)
+    ok = Gtk.Button(label=_("close"))
+    ok.connect("clicked", lambda _b: win.close())
+    box.append(_buttons(ok))
+    win.set_child(box)
+    win.present()
+    return win
+
+
 def ask_text(parent, title, question, then, text="", ok_label=None, allow_empty=False):
     """A line to type in; then(text) on OK (stripped; never empty unless allow_empty —
     an empty note, "all languages")."""

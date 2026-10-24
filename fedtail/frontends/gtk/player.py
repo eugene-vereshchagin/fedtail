@@ -43,6 +43,8 @@ class VideoPlayer(Gtk.Box):
         self.next_btn = self._button("▶", _("player_next_tip"), lambda: self.go(1))
         bar.append(self.prev_btn)
         bar.append(self.next_btn)
+        self.pause_btn = self._button("⏸", _("player_pause_tip"), self.toggle_pause)
+        bar.append(self.pause_btn)
         self.mute_btn = self._button("🔇", _("player_mute_tip"), self.toggle_mute)
         bar.append(self.mute_btn)
         bar.append(self._button("⤓  " + _("save_media"), _("save_media") + " (S)", self.save))
@@ -60,6 +62,7 @@ class VideoPlayer(Gtk.Box):
         keys.add_css_class("ft-viewer-keys")
         keys.set_margin_bottom(MARGIN // 2)
         self.append(keys)
+        self.keys = keys
         key = Gtk.EventControllerKey()
         key.connect("key-pressed", self._key)
         self.add_controller(key)
@@ -103,6 +106,11 @@ class VideoPlayer(Gtk.Box):
         many = len(self.media) > 1
         self.prev_btn.set_visible(many)
         self.next_btn.set_visible(many)
+        # a gif: just the picture, looping and silent — no pause, no sound (as Qt's)
+        self.pause_btn.set_visible(not loop)
+        self.mute_btn.set_visible(not loop)
+        self.keys.set_text(_(("gif_keys" if loop else "player_keys")
+                             + ("_many" if many else "")))
         self._caption()
 
     def _failed(self, err):
@@ -127,7 +135,9 @@ class VideoPlayer(Gtk.Box):
 
     def toggle_pause(self):
         if self.stream is not None:
-            (self.stream.pause if self.stream.get_playing() else self.stream.play)()
+            playing = self.stream.get_playing()
+            (self.stream.pause if playing else self.stream.play)()
+            self.pause_btn.set_label("▶" if playing else "⏸")
 
     def seek(self, us):
         if self.stream is not None and self.stream.is_seekable():

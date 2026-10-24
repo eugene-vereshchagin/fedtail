@@ -16,8 +16,12 @@ from .gi_setup import Gio, GLib, Gtk, tip
 log = logging.getLogger(__name__)
 
 
-def _item(menu, label, action, target=None, accel=None):
+def _item(menu, label, action, target=None, accel=None, hint=None):
+    """hint: the item's tooltip, as Qt's menus have them (GtkPopoverMenu shows the
+    "tooltip" attribute where the GTK in use knows it; elsewhere it's left unused)."""
     it = Gio.MenuItem.new(label, None)
+    if hint:
+        it.set_attribute_value("tooltip", GLib.Variant("s", hint))
     if target is None:
         it.set_detailed_action("win." + action)
     else:
@@ -122,7 +126,7 @@ class MainMenu:
         tender = Gio.Menu()
         if cfg["ui"].get("arts_mode"):
             note = Gio.Menu()
-            _item(note, _("tender_arts"), "noop")
+            _item(note, _("tender_arts"), "noop", hint=_("tender_arts_tip"))
             tender.append_section(None, note)
         lines = Gio.Menu()
         for action, key in (("filters", "silence_filters"), ("muted", "silence_muted"),
@@ -155,7 +159,9 @@ class MainMenu:
         _item(files, _("settings"), "settings")
         _item(files, _("open_config"), "config")
         _item(files, _("open_themes"), "themes")
-        files.append_submenu(_("try_theme"), self._themes())
+        sub = Gio.MenuItem.new_submenu(_("try_theme"), self._themes())
+        sub.set_attribute_value("tooltip", GLib.Variant("s", _("try_theme_tip")))
+        files.append_item(sub)
         _item(files, _("open_data"), "data")
         top.append_section(None, files)
 
@@ -169,7 +175,8 @@ class MainMenu:
         two = Gio.Menu()
         for action, key in (("census", "debug_census"), ("trim", "debug_trim"),
                             ("tracing", "debug_tracing"), ("snapshot", "debug_snapshot")):
-            _item(two, _(key), action)
+            _item(two, _(key), action,
+                  hint=_("debug_tracing_tip") if action == "tracing" else None)
         from ... import leaks
         self.enable("snapshot", leaks.tracing())
         dbg.append_section(None, two)
@@ -179,7 +186,7 @@ class MainMenu:
 
         helps = Gio.Menu()
         _item(helps, _("help_title"), "help")
-        _item(helps, _("whats_this"), "whats_this")
+        _item(helps, _("whats_this"), "whats_this", hint=_("whats_this_tip"))
         _item(helps, _("issue_menu"), "issue")
         _item(helps, _("about"), "about")
         top.append_section(None, helps)
@@ -206,14 +213,14 @@ class MainMenu:
         mine = Gio.Menu()
         _item(mine, _("my_profile"), "profile")
         _item(mine, _("server_info") + "…", "server")
-        _item(mine, _("accounts_merge"), "merged")
+        _item(mine, _("accounts_merge"), "merged", hint=_("accounts_merge_tip"))
         self.enable("merged", not win.cfg["ui"].get("merge"))
         _item(mine, _("account_add"), "add_account")
         m.append_section(None, mine)
         danger = Gio.Menu()
         alone = not getattr(win.core, "others", None)
         if me != paths.main_profile():
-            _item(danger, _("make_main"), "make_main")
+            _item(danger, _("make_main"), "make_main", hint=_("make_main_tip"))
         _item(danger, _("relogin"), "relogin")
         _item(danger, _("logout"), "logout")
         for name in ("relogin", "logout"):

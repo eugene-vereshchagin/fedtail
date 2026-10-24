@@ -37,13 +37,13 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
 | The picture viewer: leaf through, 1:1, the original, save | ✓ | ✓ | ◐ | ◐ | The terminal shows a picture full screen (chafa, kitty) or on a screen of its own; the web page — in its viewer, with “open the original”. Saving — in the window (on the web page — the browser's own). |
-| Video and sound inside the program | ✓ | ◐ | ◐ | ◐ | The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player; GTK has its own player without a pause button. |
+| Video and sound inside the program | ✓ | ✓ | ◐ | ◐ | The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player. |
 
 ### The editor
 
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
-| A warning about a picture without a description | ✓ | ◐ | — | — | The window asks before sending; GTK shows whether a picture has one, in fewer words. |
+| A warning about a picture without a description | ✓ | ✓ | — | — | Only the window asks before sending. |
 | A picture's focus for previews | ✓ | ✓ | — | — | The focus is set by clicking the picture — the window's. |
 | Previewing a post | ✓ | ✓ | — | — | How a post will look — in the window only. |
 | The editor: “discard”, another language, the #CamelCase hint | ✓ | ✓ | — | — | A draft is kept everywhere; discarding with a question, typing a language not in the list and the accessibility hint — in the window. |
@@ -64,4 +64,4 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 | Desktop notifications and testing them | ✓ | ✓ | — | ◐ | The terminal tells by a sound (`tui.sound`); the web page — by the browser's notifications, if allowed. |
 | Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | — | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
 | Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | — | — | Leak hunting is the window's, where leaks happen. |
-| Tooltips and “What's this?” | ✓ | ◐ | · | ◐ | A terminal has no pointer to hover — its hints are in the key line at the bottom; the web page has tooltips on some buttons; GTK lacks a few of Qt's. |
+| Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | A terminal has no pointer to hover — its hints are in the key line at the bottom; the web page has tooltips on some buttons. |

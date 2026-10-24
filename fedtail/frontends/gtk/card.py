@@ -95,6 +95,17 @@ class Card(Gtk.Box):
             face = Avatar(ctx, self.post.author, size)
             face.set_halign(Gtk.Align.START)
             face.set_valign(Gtk.Align.START)
+            # as Qt's: a click on the face opens the profile; a screen reader says so
+            acc_id = self.post.author.id
+            press = Gtk.GestureClick()
+            press.connect("released", lambda *_a: ctx.on_link(f"fedtail:account/{acc_id}"))
+            face.add_controller(press)
+            face.set_cursor_from_name("pointer")
+            try:  # set once, before it's shown: no round trip to the accessibility bus
+                face.update_property([Gtk.AccessibleProperty.LABEL],
+                                     [_("a11y_avatar", acct=self.post.author.handle)])
+            except (AttributeError, TypeError):  # an older PyGObject
+                pass
             body.add_overlay(face)
             self.column.set_margin_start(size + 10)
             self.column.set_size_request(-1, size)  # a short post: the face still fits

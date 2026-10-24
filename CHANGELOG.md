@@ -5,6 +5,10 @@
 - The plan for 0.19 (docs/en/dev/roadmap.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- GTK matches Qt where it didn't: ⏸ in the video player and the gif's own key hint, the
+  menu items' tooltips (where GTK shows them), the profile's tooltip in the status bar, a
+  click on a post's face opens the profile (and a screen reader names it), the columns'
+  tab is called so, `?` in the command line opens the commands' help in a window.
 - "Four interfaces" in the feature list (docs/{ru,en}/features.md, and so the site): a table
   of what isn't in all of Qt, GTK, the terminal and the web page, and why — kept honest by a
   test (tests/test_parity.py): a function added to or lost in one interface doesn't pass

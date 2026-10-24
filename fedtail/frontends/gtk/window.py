@@ -274,6 +274,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_line.set_ellipsize(Pango.EllipsizeMode.END)
         self.profile_label = Gtk.Label(xalign=0)
         self.profile_label.add_css_class("ft-muted")
+        tip(self.profile_label, _("footer_profile_tip"))
         bar = Gtk.Box(spacing=12)
         bar.add_css_class("ft-statusbar")
         for m in ("start", "end"):
@@ -1131,6 +1132,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.stack.add_named(self.columns, "__columns__")
             self.stack.set_visible_child(self.columns)
             self.tabs.set_current_page(0)
+            self.tabs.set_tab_label(self.stack, Gtk.Label(label=_("columns")))  # as Qt's
             self.view.set_active_lanes(names)
             log.info("columns: %s", ", ".join(names))
         else:
@@ -1139,6 +1141,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.stack.add_named(lv, name)
             self.stack.remove(self.columns)
             self.columns = None
+            self.tabs.set_tab_label(self.stack, Gtk.Label(label=_("gtk_lanes")))
             self.view.set_active_lanes([])
             log.info("columns off")
             row = self.lane_rows.get(focused or self._current_lane())

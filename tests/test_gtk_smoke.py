@@ -190,6 +190,47 @@ class GtkSmokeTest(_GtkBase):
         self.assertNotIn("ui.bookmark_button", w.controls)
         w.close()
 
+    def test_what_qt_has_gtk_has(self):
+        """The details docs/src/parity.toml once listed GTK without: menu tooltips,
+        the profile's tooltip, the face that opens a profile and tells a screen reader,
+        the columns' tab named so, the commands' help in a window."""
+        model = self.win.menu.model()
+        hints = {}
+
+        def walk(m):
+            for i in range(m.get_n_items()):
+                label = m.get_item_attribute_value(i, "label", None)
+                tip_v = m.get_item_attribute_value(i, "tooltip", None)
+                if label is not None and tip_v is not None:
+                    hints[label.get_string()] = tip_v.get_string()
+                for link in ("section", "submenu"):
+                    sub = m.get_item_link(i, link)
+                    if sub is not None:
+                        walk(sub)
+        walk(model)
+        for key, tipkey in (("whats_this", "whats_this_tip"), ("try_theme", "try_theme_tip"),
+                            ("accounts_merge", "accounts_merge_tip"),
+                            ("debug_tracing", "debug_tracing_tip")):
+            self.assertEqual(hints.get(i18n._(key)), i18n._(tipkey), key)
+        self.assertEqual(self.win.profile_label._ft_tip, i18n._("footer_profile_tip"))
+        lane = self._lane("home")
+        self.assertTrue(pump(lambda: any(True for _ in lane.cards()), 3)
+                        if hasattr(lane, "cards") else True)
+        self.win.set_columns(True)
+        label = self.win.tabs.get_tab_label(self.win.stack)
+        self.assertEqual(label.get_label(), i18n._("columns"))
+        self.win.set_columns(False)
+        self.assertEqual(self.win.tabs.get_tab_label(self.win.stack).get_label(),
+                         i18n._("gtk_lanes"))
+        from fedtail.frontends.gtk import dialogs
+        w = dialogs.info(self.win, i18n._("cmd_help_title"), i18n._("cmd_help"))
+        self.assertEqual(w.get_title(), i18n._("cmd_help_title"))
+        w.close()
+        if self.win.cmdline is not None:
+            self.win.cmdline.entry.set_text("?")
+            self.win.cmdline.run()
+            pump(timeout=0.2)
+
     def test_the_menu_and_what_it_opens(self):
         """≡ as Qt's: its items made, and each window or tab they open comes up
         without an error (on the fake server)."""
@@ -1057,9 +1098,16 @@ class GtkPanelsTest(_GtkBase):
         p = player.VideoPlayer(self.win, vids, 0)
         self.assertIs(self.win.player, p)
         self.assertTrue(p.next_btn.get_visible())
+        self.assertTrue(p.pause_btn.get_visible())  # as Qt's: ⏸ in the bar
+        self.assertEqual(p.keys.get_text(), i18n._("player_keys_many"))
+        p.toggle_pause()
+        self.assertEqual(p.pause_btn.get_label(), "▶" if not p.stream.get_playing()
+                         else "⏸")
         p.go(1)  # the gifv: a silent loop
         self.assertTrue(p.stream.get_loop())
         self.assertTrue(p.stream.get_muted())
+        self.assertFalse(p.pause_btn.get_visible())  # a gif: no pause, no sound
+        self.assertEqual(p.keys.get_text(), i18n._("gif_keys_many"))
         p.toggle_mute()
         self.assertFalse(p.stream.get_muted())
         p.open_outside()

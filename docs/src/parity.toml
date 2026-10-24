@@ -272,9 +272,8 @@ name.ru = "Видео и звук в самой программе"
 name.en = "Video and sound inside the program"
 tui = "partly"
 web = "partly"
-gtk = "partly"
-note.ru = "Терминал играет в mpv (окном или в самом терминале), веб — плеером браузера; у GTK свой плеер без кнопки паузы."
-note.en = "The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player; GTK has its own player without a pause button."
+note.ru = "Терминал играет в mpv (окном или в самом терминале), веб — плеером браузера."
+note.en = "The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player."
 keys = ["player_failed", "player_keys", "player_mute_tip", "player_next_tip",
         "player_prev_tip", "player_pause_tip", "gif_keys"]
 
@@ -287,11 +286,9 @@ name.ru = "Предупреждение о картинке без описан�
 name.en = "A warning about a picture without a description"
 tui = "no"
 web = "no"
-gtk = "partly"
-note.ru = "Перед отправкой спрашивает окно; GTK показывает, есть ли подпись, не так подробно."
-note.en = "The window asks before sending; GTK shows whether a picture has one, in fewer words."
-keys = ["alt_describe", "alt_missing", "alt_missing_title", "alt_send_anyway",
-        "alt_set", "no_alt"]
+note.ru = "Перед отправкой спрашивает только окно."
+note.en = "Only the window asks before sending."
+keys = ["alt_describe", "alt_missing", "alt_missing_title", "alt_send_anyway"]
 
 [[capability]]
 id = "focus-point"
@@ -490,9 +487,8 @@ name.ru = "Подсказки при наведении и «Что это?»"
 name.en = "Tooltips and “What's this?”"
 tui = "na"
 web = "partly"
-gtk = "partly"
-note.ru = "В терминале наводить нечем — подсказки там в строке клавиш внизу; в вебе подсказки у части кнопок; у GTK — без нескольких подсказок Qt."
-note.en = "A terminal has no pointer to hover — its hints are in the key line at the bottom; the web page has tooltips on some buttons; GTK lacks a few of Qt's."
+note.ru = "В терминале наводить нечем — подсказки там в строке клавиш внизу; в вебе подсказки у части кнопок."
+note.en = "A terminal has no pointer to hover — its hints are in the key line at the bottom; the web page has tooltips on some buttons."
 keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bookmarks",
         "tip_bots", "tip_direct", "tip_federated", "tip_home", "tip_local", "tip_mentions",
         "tip_my_likes", "tip_my_posts", "tip_replies", "tip_requests", "tip_subs",
@@ -535,11 +531,28 @@ keys = ["cw_add", "lang_default", "lang_tip", "poll_add_tip", "schedule_tip",
         "scheduled_msg", "sensitive_mark_tip", "sensitive_media"]
 
 [[wording]]
+in = ["tui", "web"]
+why.ru = "Окна показывают справку по командам отдельным окном и называют вкладку колонок «Колонки»; терминал и веб — справку местом «Справка», колонок у них нет."
+why.en = "The windows show the commands' help in a window of its own and call the columns' tab “Columns”; the terminal and the web page show the help as the Help place and have no columns."
+keys = ["cmd_help_title", "columns"]
+
+[[wording]]
 in = ["gtk", "tui", "web"]
-why.ru = "Слова, которые говорит только окно Qt; остальные — своими (`gtk_*`, `tui_*`, `web_*`) или иначе: команды — в справке, колонки — кнопкой ❯, серверы в «Тишине» — вкладкой «Заблокированные серверы»."
-why.en = "Words only the Qt window says; the others say it in their own (`gtk_*`, `tui_*`, `web_*`) or otherwise: the commands are in the help, columns are a ❯ button, servers in Silence are the “Blocked servers” tab."
-keys = ["cmd_help_title", "columns", "profile", "send_failed", "silence_domains",
-        "months"]
+why.ru = "То же самое, сделанное иначе: заявку в подписчики GTK открывает профилем здесь же (Qt — ссылкой в браузер), ошибку отправки пишет под полем (Qt — окном), серверы в «Тишине» зовёт «Заблокированные серверы», дату объявления пишет по теме."
+why.en = "The same, done otherwise: GTK opens a follow request's profile right here (Qt — a link to the browser), says a failed send under the field (Qt — a window), calls the servers in Silence “Blocked servers”, writes an announcement's date by the theme."
+keys = ["profile", "send_failed", "silence_domains", "months"]
+
+[[wording]]
+in = ["gtk", "tui", "web"]
+why.ru = "Подпись к картинке в редакторе: Qt пишет у значка «есть подпись / без подписи», GTK даёт поле подписи прямо в строке картинки, терминал и веб — в своём диалоге подписи."
+why.en = "A picture's description in the editor: Qt marks the icon “described / no description”, GTK puts the description field right in the picture's row, the terminal and the web page — in their own description dialog."
+keys = ["alt_set"]
+
+[[wording]]
+in = ["gtk", "web"]
+why.ru = "То же у GTK и веба: подпись правится прямо в строке картинки или в своём диалоге."
+why.en = "The same for GTK and the web page: the description is edited right in the picture's row or in a dialog of its own."
+keys = ["no_alt"]
 
 [[wording]]
 in = ["gtk", "tui", "web"]

@@ -52,8 +52,9 @@ class CommandLine(Gtk.Box):
             self._hint(_("cmd_unknown"))
             return
         self.history.add(line)
-        if c.kind == "help":
-            self._hint(_("cmd_help").replace("\n", "  "))
+        if c.kind == "help":  # the whole help in a window, as Qt's
+            from .dialogs import info
+            info(self.win, _("cmd_help_title"), _("cmd_help"))
             return
         fut, msg = self.cmds.run(line, unknown_as_post=True)
         if fut is None:
