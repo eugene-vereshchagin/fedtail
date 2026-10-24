@@ -194,6 +194,8 @@ def menu(entry, ctx, short_id=None, unread=False):
     for kind, count in (("favourited_by", p.counts.likes), ("reblogged_by", p.counts.shares)):
         if sup(kind) and count:
             out.append(Item("link", _("who_" + kind + "_n", n=count), url=make(kind, sid)))
+    if p.card and p.card.url.startswith("https://") and sup("link_timeline"):
+        out.append(Item("link", _("link_posts"), url=make("linkposts", sid)))
     if author.id == ctx.me_id and sup("quotes") and p.visibility in ("public", "unlisted"):
         out.append(Item("link", _("quotes_of"), url=make("quotes", sid)))
     quoted_post = p.quote.post if p.quote else None

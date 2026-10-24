@@ -160,6 +160,9 @@ class Links:
                    fail=h.error)
         elif action == "quotes":
             self._ask(h, "open_quotes", st)
+        elif action == "linkposts":  # who else shared the post's link (Mastodon 4.3)
+            if st.card and st.card.url:
+                self._ask(h, "open_link_posts", st.card.url)
         elif action == "revokequote":
             mine = st.quote.post if st.quote else None
             if mine:
