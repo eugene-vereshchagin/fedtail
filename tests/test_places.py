@@ -48,6 +48,8 @@ class PlacesTest(unittest.TestCase):
         self.w.lists["L1"] = {"title": "Friends", "exclusive": False, "members": {"B"}}
         self.core._refresh_lists()
         args["list_people"] = self.view.lists[0].id
+        args["filter"] = self.core.add_filter("noise", ["nft"]).result()["id"]
+        args["link"] = "https://news.example/a"
         for name in PLACES:
             with self.subTest(place=name):
                 try:

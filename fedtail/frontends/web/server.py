@@ -360,6 +360,10 @@ class _WebHost:
     def open_quotes(self, post):
         self._place("quotes", post.id)
 
+    def open_link_posts(self, url):
+        """Who else shared this link: the "link" place (common/places.py)."""
+        self._place("link", url)
+
     def open_people(self, acc, which):
         self._place("people", acc.id, which)
 
@@ -396,7 +400,12 @@ class _WebHost:
         if edit is not None:
             text, cw = self.view.source(edit).result(timeout=30)
             c = {"edit": edit.id, "text": text, "cw": cw,
-                 "visibility": real(edit).visibility}
+                 "visibility": real(edit).visibility,
+                 # its pictures stay; their descriptions and focus can change
+                 "media": [{"id": m.ref.id, "alt": m.alt, "kind": m.kind,
+                            "url": _https(m.preview or m.url),
+                            "focus": list(m.focus) if m.focus else None}
+                           for m in real(edit).media]}
         elif quote is not None:
             c = {"quote": real(quote).id, "quote_of": "@" + real(quote).author.handle}
         elif reply_to is not None:
@@ -1214,7 +1223,10 @@ class Web:
             raise ValueError("empty")
         cw = (body.get("cw") or "").strip()
         if body.get("edit"):  # my post corrected (the ⋯ menu's Edit)
-            p = core.edit(self._post_by_id(body["edit"]), text, cw).result()
+            mine = self._post_by_id(body["edit"])
+            changed = self._media_changes(mine, body.get("media_edit"))
+            p = (core.edit(mine, text, cw, media=changed) if changed else
+                 core.edit(mine, text, cw)).result()
             return {"id": p.id if p else None, "url": p.url if p else "", "edited": True}
         parent = self._post_by_id(body["reply_to"]) if body.get("reply_to") else None
         vis = body.get("visibility") or core.reply_visibility(parent)
@@ -1228,7 +1240,12 @@ class Web:
             if isinstance(m, dict):
                 item = (str(self.upload_path(m.get("token"))), str(m.get("alt") or "")[:1500])
                 focus = _focus(m.get("focus"))
-                media.append(item + (focus,) if focus else item)
+                # a video's or a sound's cover: a picture uploaded the same way
+                cover = str(self.upload_path(m["cover"])) if m.get("cover") else None
+                if cover:
+                    media.append(item + (focus, cover))
+                else:
+                    media.append(item + (focus,) if focus else item)
         bare = sum(1 for m in media if not m[1].strip())
         if bare and not body.get("alt_ok") and core.cfg["post"].get("alt_reminder", True):
             # post.alt_reminder: a picture without a description — the page asks first,
@@ -1255,10 +1272,30 @@ class Web:
                       scheduled_at=when, **extra).result()
         for m in media:  # sent: the copies go (a focus may ride along as the third)
             Path(m[0]).unlink(missing_ok=True)
+            if len(m) > 3 and m[3]:  # and the cover's
+                Path(m[3]).unlink(missing_ok=True)
         if when:
             return {"id": None, "url": "", "scheduled": True,
                     "message": _("scheduled_msg", when=when.replace("T", " ")[:16])}
         return {"id": p.id if p else None, "url": p.url if p else ""}
+
+    @staticmethod
+    def _media_changes(post, wanted):
+        """{media id: (description, focus)} for the pictures of my post whose words or
+        focus the editor changed ({}: none)."""
+        if not isinstance(wanted, list):
+            return {}
+        have = {m.ref.id: m for m in real(post).media}
+        out = {}
+        for w in wanted[:20]:
+            if not isinstance(w, dict) or str(w.get("id")) not in have:
+                continue
+            m = have[str(w["id"])]
+            alt = str(w.get("alt") or "")[:1500]
+            focus = _focus(w.get("focus"))
+            if alt != m.alt or (focus is not None and focus != m.focus):
+                out[m.ref.id] = (alt, focus)
+        return out
 
     def command(self, line, confirmed=False):
         """confirmed: D #id deletes only when asked twice — the page asks "sure?" in
@@ -1389,6 +1426,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "poll_results", "poll_refresh", "poll_sending", "preview", "preview_tip",
          "discard", "discard_q", "discard_q_title", "lang_other_title", "lang_other_ask",
          "edit_media_kept", "focus_at", "focus_centre", "focus_none", "focus_tip",
+         "media_cover", "media_cover_tip", "media_cover_set", "alt_title",
          "viewer_save", "viewer_save_tip", "viewer_keys", "viewer_unreachable", "saving",
          "image_failed", "image_loading", "short_id_tip", "reactions_tip", "cw_add_tip",
          "close_tip", "to_end_tip", "unread_tip")
