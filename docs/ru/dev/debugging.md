@@ -1,6 +1,4 @@
-# Отладка и логи / Debugging and logs
-
-[English below](#english)
+# Отладка и логи
 
 Версия для разработки (из git, номер вида `0.7.0.dev0`) пишет подробный журнал сама —
 это режим отладки, `debug.mode = "auto"`. Клиент держат открытым сутками, и если он
@@ -169,68 +167,3 @@ tracemalloc = false        # трассировка памяти с запуск
 ```
 
 `--debug` дополнительно выводит весь журнал в терминал.
-
----
-
-<a name="english"></a>
-## English
-
-Debug → Federation status: how your server answers (count, failures, usual and slow times),
-polling and the live stream, what the server can't do, who waits to go into a list, and which
-requests keep failing (404/410/401/timeouts) on your server and on others, grouped with ids
-folded and a word on what each means. "Copy" gives it as text for an issue. Memory of one
-run, nothing asked of the network for it.
-
-A development version (from git, numbered like `0.7.0.dev0`) keeps a detailed log by
-itself (`debug.mode = "auto"`). It's meant to stay open for days, so when it crashes, hangs
-or grows, the log shows what happened. Releases and the one-file builds keep only warnings
-and errors in the profile's data folder, `logs/`; `debug.mode = "on"` or `--debug` (one run)
-turns the detailed log on.
-
-**Where:** the profile's data folder, `logs/` (`~/.local/share/fedtail/<profile>/logs/`, the menu opens it; `debug.log_dir` for another place; a new version deletes the old version's logs) — a new
-`YYYY-MM-DD_HH-MM-SS.log` per start and per hour, `latest.log` links to the current one,
-the folder kept under `debug.keep_mb`;
-`crash.log` (all thread stacks on a fatal crash), `stacks.log` (stacks on demand
-and when the window freezes). Menu ≡ → Debugging → Open the logs folder.
-
-**What's in it:** a header per run (versions, desktop, pid); every API request
-with method, path, paging, status, time and size (never the token, post texts or
-request bodies); every poll with its timing and what came; errors with full
-tracebacks from any thread; a `stats` line every `debug.stats_minutes` (memory,
-CPU, threads, fds, database size and rows, pool queues, caches, Qt widgets and
-rows, image cache) — growth over time shows a leak; Qt's own messages; when the
-GUI thread doesn't answer for `debug.watchdog_seconds`, the stacks of all threads;
-shorter freezes (over `debug.stall_ms`): `GUI froze N ms: [label] stack` — the label
-says which job of ours (an event, a lane drawing, a picture coming in), `Qt itself`
-that Qt was laying out or painting; every picture's queue, download and decode time,
-and `img.*` / `freezes.*` in the stats line.
-
-**A development version (a number with .dev, from git):** the debugging mode is on by
-itself, and the start of every session in `fedtail.log` already holds what `--bug-report`
-would add: the versions (fedtail, Python, Qt / GTK), the system, the options changed and
-`config.toml` itself — sending the one log is enough. No token, no database in it.
-
-**When something happens:** `python3 -m fedtail --bug-report` makes
-`~/fedtail-report-<profile>-<date>.tar.gz` with the logs, crash and stack files,
-the config and a system summary — without `auth.json` and `state.db`. For a hang,
-first dump the stacks: menu → Debugging → Write thread stacks, or
-`kill -USR1 <pid>` (works even when the window is frozen).
-
-**A night run, hunting leaks:** a development build (or `debug.mode = "on"`); for a real
-hunt `debug.tracemalloc = true` too (or ≡ → Debugging → Memory tracing; slower, up to twice
-the memory). Use it as by day, take a "Memory snapshot" after a minute, leave it; in the
-morning another snapshot, "What grows: stats and object census now", then `--bug-report`.
-In the log: `stats` lines; `trend over N h` (each watched number at start → now, ± per
-hour over the session, and over the last minutes apart); `possible leak: X rose on each of the last 12 checks …` (not in the first half hour;
-again when the growth since start doubles); `census python` / `census qt_widgets` — which
-Python types and Qt widget classes grew since the last check and since the start;
-`session summary` / `session trend` at exit. `memory-<time>.txt` next to the logs: the lines
-of code holding the most memory and what grew since the first snapshot (code locations
-only). Memory does grow for the first half hour or so (lanes, pictures, caches): a leak is
-steady growth under the same use.
-
-**Settings:** the `[debug]` section (level, log size, stats interval, trimming, watchdog,
-freezes, slow requests, memory threshold, `leak_samples`, `object_census`, `tracemalloc`).
-`--debug` also prints the whole log to the terminal.
-
-For how the diagnostics are built, see ARCHITECTURE.md §18.

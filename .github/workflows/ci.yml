@@ -178,7 +178,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-requests python3-pyside6.qtwidgets python3-pyside6.qtdbus
-      - name: GTK 4 and a display for the GTK tests (docs/GTK.md)
+      - name: GTK 4 and a display for the GTK tests (docs/en/dev/gtk.md)
         run: apt-get install -y --no-install-recommends python3-gi gir1.2-gtk-4.0 xvfb xauth
       - name: Tests
         shell: bash

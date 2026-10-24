@@ -23,7 +23,7 @@
 > **Статус: публичная бета.** Автор пользуется каждый день на GoToSocial; Mastodon, Akkoma и
 > Friendica работают через тот же API. В первую очередь Linux (Debian 13 и новее), Windows —
 > на пробу. Нашёл ошибку — [заведи issue](https://github.com/eugene-vereshchagin/fedtail/issues) с `latest.log`, подробнее в
-> [docs/TESTING.md](docs/TESTING.md).
+> [docs/ru/dev/testing.md](docs/ru/dev/testing.md).
 
 **Содержание**
 
@@ -61,7 +61,7 @@ fedtail задуман как клиент «по-поинтовски» пов�
 теряешь, где остановился; каждый коммент виден в своём треде; треды деревом с нумерацией
 `/1 /2 …`, целиком — ответы, которых нет на твоём сервере, подтягиваются с сервера автора;
 подписка на треды (как `S #abc` на Point) и командная строка: `#abc текст`, `S #abc`, `@user`;
-приватность по умолчанию. Попробовать и прислать отзыв: [docs/TESTING.md](docs/TESTING.md).
+приватность по умолчанию. Попробовать и прислать отзыв: [docs/ru/dev/testing.md](docs/ru/dev/testing.md).
 
 ## Одним файлом, без установки
 
@@ -451,16 +451,17 @@ python3 -m unittest discover -s tests -t .   # тестам ядра диспл�
 ruff check .
 ```
 
-* [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — как устроено: модули, потоки, база, ленты,
-  цикл опроса, события, Qt-интерфейс, темы, конфиг, тесты, рецепты (по-английски).
-* [docs/DEBUGGING.md](docs/DEBUGGING.md) — логи и что присылать, если сломалось.
+* [docs/ru/dev/architecture.md](docs/ru/dev/architecture.md) — как устроено: модули, потоки, база, ленты,
+  цикл опроса, события, Qt-интерфейс, темы, конфиг, тесты, рецепты.
+* [docs/ru/dev/debugging.md](docs/ru/dev/debugging.md) — логи и что присылать, если сломалось.
 * [docs/ru/features.md](docs/ru/features.md) — что умеет и чего нет, с какой версии и где
   каждое включается в конфиге; [docs/ru/comparison.md](docs/ru/comparison.md) — рядом с
   другими клиентами, матрицей.
 * [docs/ru/config.md](docs/ru/config.md) — все настройки таблицами по главам, с умолчаниями.
 * Всё это есть и по-английски (`docs/en/`) и собирается командой `python3 tools/docs_build.py`
   из `docs/src/` и примеров конфига — править там, тест следит, чтобы не отставало.
-* [docs/DESIGN.md](docs/DESIGN.md) — ТЗ и очередь планов.
+* [docs/ru/dev/design.md](docs/ru/dev/design.md) — ТЗ и очередь планов; всё для разработчиков —
+  [docs/ru/dev/](docs/ru/dev/index.md) (инструменты, CI, тест-план, протоколы, GTK).
 * [AGENTS.md](AGENTS.md) — правила на одну страницу, для нейросетей и торопящихся людей.
 * [CONTRIBUTING.md](CONTRIBUTING.md) — как сообщить об ошибке, предложить изменение, запустить тесты.
 
@@ -473,7 +474,7 @@ ruff check .
 `python3 -m fedtail --bug-report` и пришли архив, который появится в домашней папке: журналы,
 трассировки падений, конфиг и сводка о системе — без токена и базы. Если окно зависло —
 сначала `kill -USR1 <pid>`: запишет, где застрял каждый поток. Подробно —
-[docs/DEBUGGING.md](docs/DEBUGGING.md).
+[docs/ru/dev/debugging.md](docs/ru/dev/debugging.md).
 
 ## Кто написал
 

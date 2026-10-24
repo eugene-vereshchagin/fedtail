@@ -2,7 +2,7 @@
 
 ## 0.19.0 — in progress
 
-- The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
+- The plan for 0.19 (docs/en/dev/roadmap.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
 - The terminal: `#abc` or `@name` typed in the command line no longer closes it on
@@ -188,7 +188,7 @@
   of `tools/selfcheck.py`, a table in its report.
 - Windows: tests that hold Windows' ways on any machine (where the files go, the Start
   menu shortcut's PowerShell, the single-instance pipe's key, the sounds through
-  winsound); `tools/windows_check.py` runs docs/WINDOWS.md on Windows in a profile of
+  winsound); `tools/windows_check.py` runs docs/en/dev/windows.md on Windows in a profile of
   its own (the self-check's `windows` step).
 - Web: a page that left while waiting for news (a reload, a closed tab) no longer
   prints two BrokenPipeError tracebacks on the terminal.
@@ -269,11 +269,11 @@
   GoToSocial isn't asked for grouped notifications or a user's server blocks any more
   (it has neither: a 404 at every start).
 - fedtail from the source says at start where its logs are (`fedtail: logs in …`);
-  docs/WINDOWS.md has every Windows path and the commands to open and follow the log.
+  docs/en/dev/windows.md has every Windows path and the commands to open and follow the log.
 - The debugging corner of the status bar says the same in Qt and GTK, in one order:
   theme · toolkit and version · style · font · display · scale · build (Qt's had an
   empty "· ·" where its style's name was).
-- docs/WINDOWS.md: fedtail on Windows from the source — Python and git by winget, the
+- docs/en/dev/windows.md: fedtail on Windows from the source — Python and git by winget, the
   packages, running, the tests as CI runs them, the selfcheck; tests/test_windows_doc.py
   keeps it the same as CI and the code.
 - GTK: pictures and files go into a post by dragging them onto the editor or pasting
@@ -355,7 +355,7 @@
   six sizes with what each cut or pushed out, its edge and the sidebar's dragged and
   timed, widgets left alive after a window closed, the benches, the parity of the four
   interfaces (tools/parity.py), and then the same on your own account (read-only,
-  screenshots blurred). docs/TESTPLAN.md: what is checked, what is left to the eye.
+  screenshots blurred). docs/en/dev/testplan.md: what is checked, what is left to the eye.
 - From the first night's report: Qt's own buttons (Close, Cancel) in the interface's
   language; nord's and night's outline pictures (a star, an @, refresh) were the
   background's colour — an outline too close to it is drawn light; check boxes and
@@ -451,7 +451,7 @@
   `--bug-report` would add — the versions (fedtail, Python, Qt or GTK, libadwaita), the
   system, the options changed from the defaults and `config.toml` itself — so the log
   alone is enough to send.
-- The GTK window grows up (stage 2–3 of docs/GTK.md): faces, pictures, the poll's
+- The GTK window grows up (stage 2–3 of docs/en/dev/gtk.md): faces, pictures, the poll's
   results, the quoted post, the link's card, "you replied" under a post; the buttons
   and the ⋯ menu of a post — the same as in Qt (copy the link, the #id or the address,
   quote, call into the thread, bookmark, read up to here, mute or follow the thread,
@@ -561,7 +561,7 @@
   the lanes in their groups with unread counts, posts as cards with what they answer,
   the content warning and attachments, seen posts marked read, "All read", "earlier",
   threads in tabs, ★ and ♻, every fedtail theme. The rest comes stage by stage
-  (docs/GTK.md); needs `python3-gi gir1.2-gtk-4.0`. Inside: the theme colours
+  (docs/en/dev/gtk.md); needs `python3-gi gir1.2-gtk-4.0`. Inside: the theme colours
   (`frontends/palette.py`) and post text for GTK labels (`frontends/pango.py`) are
   worked out without a toolkit, ready for Qt to share.
 - The server's rate limit is kept to: fedtail reads its X-RateLimit headers, keeps
@@ -571,7 +571,7 @@
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
 - **The split layout** (`ui.layout = "split"`, for one run `fedtail --layout split`;
   `"qip"`, its first name, is still understood) — fedtail as a messenger of the 2000s,
-  QIP, the Mail.ru Agent or Psi (docs/LAYOUTS.md):
+  QIP, the Mail.ru Agent or Psi (docs/en/dev/layouts.md):
   - The **roster**, a narrow window of its own, and fedtail starts with it alone: who I
     am and what's new in Activity on top, a search line, then folding groups — the
     lanes, followed threads and private talks ("Threads", "Talks", the freshest
@@ -733,7 +733,7 @@
   a line of its own. Lanes slide in on a phone; light and dark follow the system.
 - Inside: the terminal, the TUI and the web interface work on fedtail's own data model
   (`fedtail/model`, `fedtail/core/view.py`) instead of the server's JSON — stage 2 of
-  docs/PROTOCOLS.md; so does the Qt window, all of it. The Mastodon API itself lives in
+  docs/en/dev/protocols.md; so does the Qt window, all of it. The Mastodon API itself lives in
   `fedtail/protocols/mastodon/` behind a protocol interface (stage 3), and what the server
   can do is kept in one place (stage 4): a button the server refuses goes at once, and
   stays gone after a reconnect. Nothing changes in what they

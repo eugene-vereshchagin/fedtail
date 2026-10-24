@@ -2,8 +2,8 @@
 
 This document is for whoever works on the code next, human or AI. It describes
 how fedtail is put together, why, and where to change what. Read it top to
-bottom once; later use it as a map. `docs/DESIGN.md` (Russian) holds the product
-spec and the queue of planned work; `docs/DEBUGGING.md` explains the logs.
+bottom once; later use it as a map. `docs/en/dev/design.md` (Russian) holds the product
+spec and the queue of planned work; `docs/en/dev/debugging.md` explains the logs.
 
 Contents
 
@@ -41,7 +41,7 @@ every reply shows what it answers, your own answer is shown under a comment,
 threads open as trees at the post you came from, and lanes remember where you
 stopped and never jump. It takes after Point.im and Juick.
 
-Principles that shape the code (from DESIGN.md):
+Principles that shape the code (from design.md):
 
 * **Nothing jumps.** New posts never move what you are reading.
 * **Every reply knows its parent.** A quote of the parent is above every reply.
@@ -70,7 +70,7 @@ fedtail/
   sysenv.py          the one-file build: start other programs with the system's environment
   model/             fedtail's own data model: Post, Share, Account, Activity, Media, Poll…
                      frozen dataclasses in ActivityPub's vocabulary; knows no protocol
-                     (docs/PROTOCOLS.md); text.py: html_to_text, snippet, reply_mentions
+                     (docs/en/dev/protocols.md); text.py: html_to_text, snippet, reply_mentions
   protocols/         one package per protocol; get(name) → its Protocol
     base.py          Protocol (client, error, capabilities, adapter, stream), CLIENT — the
                      client methods the core calls, ServerError, Capabilities — what the
@@ -161,7 +161,7 @@ fedtail/
                      buttons, forms — the web page and the terminal draw them as they are
       profile.py     a profile's buttons and what each does (all four interfaces)
       sound.py       playing the theme's sounds (a player of the system, one at a time)
-    gtk/             the GTK 4 frontend (PyGObject, libadwaita optional): docs/GTK.md
+    gtk/             the GTK 4 frontend (PyGObject, libadwaita optional): docs/en/dev/gtk.md
     qt/              the Qt Widgets frontend (PySide6)
       __init__.py    run(): QApplication, theme, Bridge, MainWindow, diagnostics
       bridge.py      core futures and events → GUI thread (Qt signals)
@@ -203,7 +203,7 @@ tools/push_probe.py  does the account's server push? Web Push → an ntfy topic,
 tools/docs_build.py  builds every generated doc and expands includes (§19, docs)
 tools/config_doc.py  the config reference from an example config (docs_build calls it)
 .github/             CI workflow; annotate.py turns test failures into annotations
-docs/                DESIGN.md (spec, queue), ARCHITECTURE.md, DEBUGGING.md, TESTING.md
+docs/                ru/dev/, en/dev/ — the developer docs, in both languages
   src/features/*.toml  the feature list's source: a chapter a file, ru and en side by side
   ru/, en/             generated: features.md, comparison.md, config.md; parts/ to include
 ```
@@ -665,7 +665,7 @@ don't block) — `compose(reply_to, invite, edit, quote)` and the `open_*` place
 that lacks a place yet (GTK: report, quotes…) gets a "not here yet" status. Qt's host is
 `_LinkHost` in window.py, GTK's is its `MainWindow`.
 
-The GTK frontend (`frontends/gtk/`, docs/GTK.md has the plan and the stages):
+The GTK frontend (`frontends/gtk/`, docs/en/dev/gtk.md has the plan and the stages):
 
 * `__init__.py` run(): libadwaita if `ui.adwaita` allows, `Gtk.Application`
   NON_UNIQUE (fedtail has its own instance socket), app id `version.APP_ID`.
@@ -720,12 +720,12 @@ The GTK frontend (`frontends/gtk/`, docs/GTK.md has the plan and the stages):
 
 `i18n._("key", **kw)`; dicts for `ru` and `en` in `i18n.py`; a list value means
 plural forms chosen by `n` (Russian has three). A test checks both languages have
-the same keys. Code comments and docs are English; the UI defaults to the system
-language.
+the same keys. Code comments are English; the developer docs come in both languages; the UI defaults to
+the system language.
 
 ## 18. Diagnostics
 
-See `docs/DEBUGGING.md` for the user's side. In code: `fedtail/diag.py` sets up
+See `docs/en/dev/debugging.md` for the user's side. In code: `fedtail/diag.py` sets up
 the log (`SessionLog`: a file per start and per hour in `debug.log_dir/<profile>/`,
 `latest.log` linking the current one, capped by `debug.keep_mb`), `crash.log` (faulthandler), `stacks.log`
 (SIGUSR1, menu, watchdog), exception hooks for all threads, a stats thread with
@@ -832,5 +832,6 @@ the Core API (futures + events); see §13 for what to react to.
 * Qt deletes widgets under you: guard callbacks (`RuntimeError … already deleted`).
 * A test helper inserted between a decorator and its class silently drops the
   decorator — keep `@unittest.skipUnless(HAVE_QT…)` directly above the class.
-* Commit messages: what changed and why; English. Comments: English. Russian
-  for the user-facing config reference and README.ru.md.
+* Commit messages: what changed and why; English. Comments: English.
+  The developer docs come in both languages, `docs/ru/dev/` and `docs/en/dev/`, changed
+  together.

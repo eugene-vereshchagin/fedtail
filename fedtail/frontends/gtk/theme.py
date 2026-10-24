@@ -3,7 +3,7 @@
 GTK 4 has no desktop palette to ask (Qt has QPalette): what it can say is light or dark
 and, with libadwaita ≥ 1.6, the accent. So "auto" colours are worked out from Adwaita's
 own reference colours, light or dark, with the desktop's accent when known — the
-"system" theme on GTK means "as Adwaita" (docs/GTK.md).
+"system" theme on GTK means "as Adwaita" (docs/en/dev/gtk.md).
 """
 
 from __future__ import annotations

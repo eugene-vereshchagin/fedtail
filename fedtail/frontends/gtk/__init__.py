@@ -1,4 +1,4 @@
-"""GTK 4 frontend (PyGObject), libadwaita when there is one: docs/GTK.md.
+"""GTK 4 frontend (PyGObject), libadwaita when there is one: docs/en/dev/gtk.md.
 
 Stage 1 — the frame: log in, lanes with their counts, posts as cards, threads in tabs,
 reading marks, the theme files. Writing, pictures, the post menu and the rest come

@@ -1,5 +1,5 @@
 """Frontends read no protocol fields: they speak fedtail.model through core/view.py
-(docs/PROTOCOLS.md, stage 2) — every file under frontends/."""
+(docs/en/dev/protocols.md, stage 2) — every file under frontends/."""
 
 import re
 import unittest
@@ -28,7 +28,7 @@ class LayeringTest(unittest.TestCase):
 
     def test_shared_frontend_code_imports_no_toolkit(self):
         """frontends/common, palette.py, pango.py and the other shared modules are for
-        every toolkit: none of them may import one (docs/GTK.md, stage 0)."""
+        every toolkit: none of them may import one (docs/en/dev/gtk.md, stage 0)."""
         toolkit = re.compile(r"^\s*(from|import)\s+(PySide6|gi\b|textual|shiboken)", re.M)
         shared = [p for p in (ROOT / "frontends").rglob("*.py")
                   if p.parent.name in ("frontends", "common")]

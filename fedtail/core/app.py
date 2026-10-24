@@ -101,7 +101,7 @@ class Core(SocialMixin):
     def __init__(self, cfg, paths, api_class=None):
         self.cfg = cfg
         self.paths = paths
-        # what this account's server speaks (docs/PROTOCOLS.md): the client, its errors,
+        # what this account's server speaks (docs/en/dev/protocols.md): the client, its errors,
         # its live stream, its objects → fedtail.model
         self.proto = protocols.get()
         self.api_class = api_class or self.proto.client

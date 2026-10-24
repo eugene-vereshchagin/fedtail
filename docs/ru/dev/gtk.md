@@ -1,7 +1,7 @@
 # fedtail: GTK-фронтенд
 
 Статус: **черновик плана, 21 окт 2026**. Этап 0 начат (`palette.py`, `pango.py`), каркас (этап 1)
-готов; остальное по очереди. По мере готовности устройство переезжает в ARCHITECTURE.md (§14 — Qt, будет §14a — GTK).
+готов; остальное по очереди. По мере готовности устройство переезжает в architecture.md (§14 — Qt, будет §14a — GTK).
 
 ## Зачем и для кого
 
@@ -24,7 +24,7 @@ Qt — родное KDE-приложение. GTK — для «гномовод�
 
 Ядро и `core/view.View` (модель, не JSON сервера), `richtext` (санитайзер), `themefile` (темы
 без Qt), `helpdocs`, `notifytext`, `fedstatus`, `iconart`, `core/commands`, `model.text`,
-`View.roster()`. Протокольный слой (этапы 0–4 PROTOCOLS.md) — ровно то, что нужно: GTK
+`View.roster()`. Протокольный слой (этапы 0–4 protocols.md) — ровно то, что нужно: GTK
 сразу пишется на модели, сырых данных не видит.
 
 ## Главная проблема: логика, застрявшая в Qt
@@ -54,7 +54,7 @@ PySide6 нет). Общее не импортирует тулкит — это 
 
 Попутно найденные утечки, которые надо закрыть до копирования: `qt/silence.py` и
 `qt/announce.py` читают сырые словари сервера; `View.read_ids` лезет в `_core.store`;
-`richtext.plain_tip` заворачивает в Qt-шный `<qt>…</qt>`; в ARCHITECTURE §13 не описаны
+`richtext.plain_tip` заворачивает в Qt-шный `<qt>…</qt>`; в architecture.md §13 не описаны
 события `arrived`, `thread_grew`, `rate_limited`, `capabilities_changed`, `prefetch`,
 `prefetch_video`.
 

@@ -1,5 +1,5 @@
 """The split layout (a messenger's look: lanes in one window, the messages and an
-input line in another, docs/LAYOUTS.md) without a toolkit: what the input line starts
+input line in another, docs/en/dev/layouts.md) without a toolkit: what the input line starts
 with and says about itself, when what's typed there is a command, whose face goes
 beside it, and a private talk with one person."""
 
