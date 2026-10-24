@@ -442,8 +442,8 @@ class ComposeScreenTest(Base):
             await extras(lambda _l, v: v == "attach")  # a file that isn't there
             await self.wait(pilot, lambda: isinstance(app.screen, AskScreen))
             app.screen.dismiss("/no/such/file.png")
-            await self.wait(pilot, lambda: errors[-1] == i18n._("save_failed",
-                                                                err="/no/such/file.png"))
+            await self.wait(pilot, lambda: errors[-1] == i18n._(
+                "save_failed", err=str(Path("/no/such/file.png"))))  # as this system writes it
             await extras(lambda _l, v: v == "attach")
             await self.wait(pilot, lambda: isinstance(app.screen, AskScreen))
             app.screen.dismiss(None)  # never mind

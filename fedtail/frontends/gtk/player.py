@@ -135,9 +135,9 @@ class VideoPlayer(Gtk.Box):
 
     def toggle_pause(self):
         if self.stream is not None:
-            playing = self.stream.get_playing()
-            (self.stream.pause if playing else self.stream.play)()
-            self.pause_btn.set_label("▶" if playing else "⏸")
+            (self.stream.pause if self.stream.get_playing() else self.stream.play)()
+            # what it is now (a stream that can't play stays paused): ⏸ while it plays
+            self.pause_btn.set_label("⏸" if self.stream.get_playing() else "▶")
 
     def seek(self, us):
         if self.stream is not None and self.stream.is_seekable():

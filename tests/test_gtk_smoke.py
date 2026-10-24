@@ -185,9 +185,9 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(sum(a != b for a, b in zip(before.splitlines(), after.splitlines(),
                                                     strict=True)), 1)
         self.assertTrue(w.restart.get_visible())
-        w.search.set_text("шрифт")
-        self.assertTrue(pump(lambda: "ui.font_size" in w.controls))
-        self.assertNotIn("ui.bookmark_button", w.controls)
+        w.search.set_text("шрифт")  # (the entry waits a moment before it searches)
+        self.assertTrue(pump(lambda: "ui.bookmark_button" not in w.controls))
+        self.assertIn("ui.font_size", w.controls)
         w.close()
 
     def test_what_qt_has_gtk_has(self):
@@ -622,7 +622,18 @@ class GtkSmokeTest(_GtkBase):
         pump(timeout=0.3)
         new = [w for w in Gtk.Window.list_toplevels() if w not in before]
         self.assertEqual(len(new), 1)
-        self.assertIn(i18n._("made_by_long"), new[0].get_comments())
+        # the cards (gtk/about.py), as Qt's: every label's words, made_by_long among them
+        words = []
+
+        def walk(w):
+            if isinstance(w, Gtk.Label):
+                words.append(w.get_label())
+            child = w.get_first_child()
+            while child is not None:
+                walk(child)
+                child = child.get_next_sibling()
+        walk(new[0])
+        self.assertIn(i18n._("made_by_long"), words)
         new[0].close()
 
     def test_edit_my_profile(self):
@@ -1101,8 +1112,7 @@ class GtkPanelsTest(_GtkBase):
         self.assertTrue(p.pause_btn.get_visible())  # as Qt's: ⏸ in the bar
         self.assertEqual(p.keys.get_text(), i18n._("player_keys_many"))
         p.toggle_pause()
-        self.assertEqual(p.pause_btn.get_label(), "▶" if not p.stream.get_playing()
-                         else "⏸")
+        self.assertEqual(p.pause_btn.get_label(), "⏸" if p.stream.get_playing() else "▶")
         p.go(1)  # the gifv: a silent loop
         self.assertTrue(p.stream.get_loop())
         self.assertTrue(p.stream.get_muted())

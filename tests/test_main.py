@@ -222,7 +222,7 @@ class MainTest(unittest.TestCase):
                 as rep:
             code, out, _err = self.run_main("--bug-report")
         self.assertEqual(code, 0)
-        self.assertIn("/x/report.tar.gz", out)
+        self.assertIn(str(Path("/x/report.tar.gz")), out)
         rep.assert_called_once()
 
     # ---- this run only -------------------------------------------------------------------

@@ -362,7 +362,9 @@ class Api:
                 if path:
                     f = open(path, "rb")  # noqa: SIM115 — closed below
                     opened.append(f)
-                    files[key] = (path.rsplit("/", 1)[-1], f)
+                    # its name only: never a folder of this machine (Windows paths have
+                    # backslashes — split on "/" sent the whole of it to the server)
+                    files[key] = (os.path.basename(path), f)
             return self.patch("/api/v1/accounts/update_credentials", data=data,
                               files=files or None)
         finally:

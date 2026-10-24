@@ -5,6 +5,7 @@ loaded, the menu entry (desktop), the version from git or a build (version), the
 interface's language from the environment (i18n), and the model's text helpers."""
 
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -115,6 +116,7 @@ class DesktopTest(unittest.TestCase):
         self.assertIn(f'Exec="{sys.executable}" --profile work', text)
         self.assertNotIn("Path=", text)
 
+    @unittest.skipIf(os.name == "nt", "Windows installs through PowerShell (its own test)")
     def test_install_tells_the_desktop(self):
         with mock.patch.object(self.d.shutil, "which", lambda n: "/usr/bin/" + n), \
                 mock.patch.object(self.d.subprocess, "run") as run:
@@ -153,14 +155,23 @@ class VersionTest(unittest.TestCase):
     def test_from_git(self):
         answers = {"rev-parse": "abc1234", "log": "2026-10-24", "status": "",
                    "describe": "v0.18.0-7-gabc1234"}
+        # a checkout, not a package: no _build module, a .git folder (the deb build and
+        # an unpacked tarball have neither)
+        git_root = Path(tempfile.mkdtemp())
+        (git_root / ".git").mkdir()
+        self.addCleanup(shutil.rmtree, git_root, True)
         with mock.patch.object(self.v, "_git", lambda *a: answers[a[0]]), \
-                mock.patch.object(self.v.shutil, "which", return_value="/usr/bin/git"):
+                mock.patch.object(self.v.shutil, "which", return_value="/usr/bin/git"), \
+                mock.patch.object(self.v, "ROOT", git_root), \
+                mock.patch.dict(sys.modules, {"fedtail._build": None}):
             got = self.v.info()
         self.assertIn("abc1234", got["version"])
         self.assertEqual(got["commit"], "abc1234")
         self.v.info.cache_clear()
         with mock.patch.object(self.v, "_git", side_effect=ValueError), \
-                mock.patch.object(self.v.shutil, "which", return_value="/usr/bin/git"):
+                mock.patch.object(self.v.shutil, "which", return_value="/usr/bin/git"), \
+                mock.patch.object(self.v, "ROOT", git_root), \
+                mock.patch.dict(sys.modules, {"fedtail._build": None}):
             self.assertEqual(self.v.info()["commit"], "")
 
 

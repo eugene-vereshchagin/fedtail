@@ -845,7 +845,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "work~700" in lane.view.rows and "011" in lane.view.rows)
         marks = [w.text() for w in lane.view.rows["work~700"].findChildren(QLabel)
                  if w.objectName() == "via"]
-        self.assertEqual(marks, ["→ @w"])
+        self.assertEqual(marks, ["→ @w@work.example"])  # whole: names repeat on servers
         self.assertEqual([w for w in lane.view.rows["011"].findChildren(QLabel)
                           if w.objectName() == "via"], [])  # mine: no mark
         win.on_link("fedtail:fav/work~700")  # acts through work
@@ -1628,9 +1628,7 @@ class QtSmokeTest(unittest.TestCase):
         from PySide6.QtWidgets import QLabel
 
         from fedtail.frontends.qt.feed import RequestsWidget
-        self.world.requests.append(dict(BOB))
-        self.core.poll_once()
-        self.pump(0.2)
+        self.win.ctx.view.follow_requests = lambda: [adapter.account(BOB)]
         opened = []
         self.win.on_link = opened.append  # before the widget takes it
         w = RequestsWidget(self.win)

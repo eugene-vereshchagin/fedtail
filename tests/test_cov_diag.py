@@ -7,6 +7,7 @@ import ctypes
 import faulthandler
 import importlib
 import logging
+import os
 import sys
 import tempfile
 import threading
@@ -109,7 +110,7 @@ class DiagMoreTest(unittest.TestCase):
     def test_setup_off_the_main_thread_and_thread_crashes(self):
         cfg, _ = config.validate({"debug": {"mode": "on", "log_dir": str(self.tmp / "l")}})
         p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
-        with mock.patch.object(faulthandler, "register", side_effect=RuntimeError):
+        with mock.patch.object(faulthandler, "register", side_effect=RuntimeError, create=True):
             self.assertTrue(diag.setup(p, cfg))  # SIGUSR1 refused (a thread): no matter
         with self.assertLogs("fedtail.crash", "CRITICAL") as logs:
             try:
@@ -141,8 +142,9 @@ class DiagMoreTest(unittest.TestCase):
                 self.assertEqual(diag._proc_status(), {"VmRSS": 1})
             with mock.patch.object(diag, "_windows_memory", side_effect=OSError):
                 self.assertEqual(diag._proc_status(), {})
-        with mock.patch.object(Path, "read_text", side_effect=OSError):
-            self.assertEqual(diag._proc_status(), {})
+        with mock.patch.object(diag, "os", types.SimpleNamespace(name="posix")), \
+                mock.patch.object(Path, "read_text", side_effect=OSError):
+            self.assertEqual(diag._proc_status(), {})  # (on Windows too: as on Linux)
 
     def test_trim_memory_without_glibc(self):
         with mock.patch.object(ctypes, "CDLL", side_effect=OSError):
@@ -308,7 +310,8 @@ class DiagMoreTest(unittest.TestCase):
             importlib.reload(diag)
             diag._state.clear()
             diag._state.update(state)
-        self.assertIsNotNone(diag.resource)
+        if os.name != "nt":  # Windows has none at all
+            self.assertIsNotNone(diag.resource)
 
 
 if __name__ == "__main__":

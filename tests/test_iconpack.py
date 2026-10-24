@@ -176,4 +176,9 @@ class ThemesByLayoutTest(unittest.TestCase):
         self.assertIn("qip-retro", offered("single", "on", keep=("qip-retro",)))  # on now
         self.assertIn("nord", offered("single", "on"))
         self.assertIn("qip-retro", offered("single", "off"))
-        self.assertEqual(themefile.by_layout({"ui": {}}), False)  # a development version
+        from unittest import mock
+        # "auto": every theme in a development version, the layout's ones in a release
+        with mock.patch("fedtail.__version__", "0.19.0.dev3"):
+            self.assertEqual(themefile.by_layout({"ui": {}}), False)
+        with mock.patch("fedtail.__version__", "0.19.0"):
+            self.assertEqual(themefile.by_layout({"ui": {}}), True)
