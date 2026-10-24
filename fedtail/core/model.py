@@ -23,28 +23,6 @@ def real(st):
     return st.get("reblog") or st
 
 
-QUOTE_SHOWN = {"accepted"}
-
-
-def quoted(st):
-    """The post this one quotes: (state, quoted status or None, its id or None).
-    Mastodon 4.5+ gives {"state", "quoted_status"} or, nested deeper, just
-    {"state", "quoted_status_id"}; Akkoma and Fedibird put the whole status in
-    "quote" (or pleroma.quote). None when it quotes nothing."""
-    q = st.get("quote")
-    if not q:
-        q = (st.get("pleroma") or {}).get("quote")
-    if not isinstance(q, dict):
-        if st.get("quote_id"):
-            return "accepted", None, st["quote_id"]
-        return None
-    if "account" in q and "content" in q:  # a whole status (Akkoma, Fedibird)
-        return "accepted", q, q.get("id")
-    inner = q.get("quoted_status")
-    qid = (inner or {}).get("id") or q.get("quoted_status_id")
-    return q.get("state") or "accepted", inner, qid
-
-
 def id_after(a, b):
     """Is id a newer than id b? Mastodon ids are numbers in text, GoToSocial's are ULIDs
     of one length: both compare as numbers or as text of equal length."""
