@@ -22,6 +22,21 @@ from ..common import server
 from .card import _round
 
 FIELDS_SHOWN = 4  # Mastodon allows 4; more are kept if the server already has them
+
+
+def flag_changes(prof, hide_collections, indexable, attribution):
+    """The newer switches of a profile (Mastodon 4.x) that differ from the server's:
+    whom I follow hidden, my posts found by words, sites naming me their author
+    (attribution: as typed, comma-separated)."""
+    out = {}
+    for key, now in (("hide_collections", hide_collections), ("indexable", indexable)):
+        was = getattr(prof, key, None)
+        if was is not None and bool(now) != bool(was) or was is None and now:
+            out[key] = bool(now)
+    sites = [x.strip() for x in attribution.replace(";", ",").split(",") if x.strip()]
+    if sites != list(getattr(prof, "attribution_domains", ()) or ()):
+        out["attribution_domains"] = sites
+    return out
 IMAGE_FILTER = "*.png *.jpg *.jpeg *.gif *.webp"
 
 
@@ -76,8 +91,24 @@ class ProfileDialog(QDialog):
         self.locked = QCheckBox(_("profile_locked"))
         self.bot = QCheckBox(_("profile_bot"))
         self.discoverable = QCheckBox(_("profile_discoverable"))
-        for c in (self.locked, self.bot, self.discoverable):
+        self.hide_collections = QCheckBox(_("profile_hide_collections"))
+        self.indexable = QCheckBox(_("profile_indexable"))
+        for c in (self.locked, self.bot, self.discoverable, self.hide_collections,
+                  self.indexable):
             lay.addWidget(c)
+        lay.addWidget(QLabel(_("profile_attribution")))
+        self.attribution = QLineEdit()
+        self.attribution.setPlaceholderText("blog.example, news.example")
+        self.attribution.setToolTip(_("profile_attribution_tip"))
+        lay.addWidget(self.attribution)
+        # the tags I write about most, not yet on my profile: one click puts one there
+        self.suggest_row = QHBoxLayout()
+        self.suggest_label = QLabel(_("featured_suggest"))
+        self.suggest_label.setVisible(False)
+        self.suggest_row.addWidget(self.suggest_label)
+        self.suggest_row.addStretch(1)
+        lay.addLayout(self.suggest_row)
+        self.suggest_buttons = []
 
         self.hint = QLabel(_("loading"))
         self.hint.setObjectName("counter")
@@ -116,6 +147,12 @@ class ProfileDialog(QDialog):
         self.locked.setChecked(me.locked)
         self.bot.setChecked(me.bot)
         self.discoverable.setChecked(bool(me.discoverable))
+        self.hide_collections.setChecked(bool(prof.hide_collections))
+        self.indexable.setChecked(bool(prof.indexable))
+        self.attribution.setText(", ".join(prof.attribution_domains))
+        if self.core.supports("featured_tags"):
+            self.win.bridge.call(self.core.featured_tag_suggestions(), ok=self._suggest,
+                                 fail=lambda _e: None)
         self.hint.setText("")
         self.save_btn.setEnabled(True)
         # pictures come later, from the image cache
@@ -124,6 +161,25 @@ class ProfileDialog(QDialog):
                    lambda pm: self.avatar_img.setPixmap(_round(pm, 72)))
         if me.header_static or me.header:
             images.get(me.header_static or me.header, self._show_header)
+
+    def _suggest(self, tags):
+        """featured_tag_suggestions: a button per tag; a click features it."""
+        for t in tags or ():
+            name = getattr(t, "name", "")
+            if not name:
+                continue
+            b = QPushButton("#" + name)
+            b.setObjectName("tool")
+            b.clicked.connect(lambda _c=False, n=name, b=b: self._feature(n, b))
+            self.suggest_row.insertWidget(self.suggest_row.count() - 1, b)
+            self.suggest_buttons.append(b)
+        self.suggest_label.setVisible(bool(self.suggest_buttons))
+
+    def _feature(self, name, button):
+        button.setEnabled(False)
+        self.win.bridge.call(self.core.feature_tag(name, True),
+                             ok=lambda _r: button.setText("✓ #" + name),
+                             fail=lambda e: (button.setEnabled(True), self.win.error(e)))
 
     def _show_header(self, pm):
         w = max(self.header_img.width(), 520)
@@ -153,12 +209,15 @@ class ProfileDialog(QDialog):
     # ---- saving --------------------------------------------------------------------
     def changes(self):
         """Only what differs from the server, so nothing is overwritten by accident."""
-        return server.profile_changes(
+        out = server.profile_changes(
             self.loaded, self.name.text(), self.bio.toPlainText(),
             [(n.text(), v.text()) for n, v in self.field_edits],
             {"locked": self.locked.isChecked(), "bot": self.bot.isChecked(),
              "discoverable": self.discoverable.isChecked()},
             self.avatar_path, self.header_path)
+        out.update(flag_changes(self.loaded, self.hide_collections.isChecked(),
+                                self.indexable.isChecked(), self.attribution.text()))
+        return out
 
     def save(self):
         if self.loaded is None:

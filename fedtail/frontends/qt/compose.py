@@ -1,5 +1,6 @@
 """Writing a post or a reply. Drafts are saved as you type."""
 
+import json
 import logging
 import re
 from datetime import datetime
@@ -77,6 +78,19 @@ class _Bar(QWidget):
 MEDIA_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".heic",
              ".mp4", ".webm", ".mov", ".mp3", ".ogg", ".m4a", ".flac")
 MEDIA_FILTER = " ".join("*" + e for e in MEDIA_EXT)
+# what a cover picture goes with: a video or a sound (the server shows the cover until
+# it's played)
+COVERED_EXT = (".mp4", ".webm", ".mov", ".mp3", ".ogg", ".m4a", ".flac")
+COVER_FILTER = " ".join("*" + e for e in (".jpg", ".jpeg", ".png", ".webp", ".gif"))
+# the media list's item roles past path / description / focus
+ROLE_REMOTE = Qt.ItemDataRole.UserRole + 3   # an attachment of the post being edited: its id
+ROLE_COVER = Qt.ItemDataRole.UserRole + 4    # a cover picture's path
+ROLE_WAS = Qt.ItemDataRole.UserRole + 5      # its description and focus as they were
+
+
+def _was(desc, focus):
+    """An attachment's words and focus as one comparable string."""
+    return json.dumps([desc or "", [round(float(x), 2) for x in focus] if focus else None])
 
 log = logging.getLogger(__name__)
 
@@ -319,6 +333,12 @@ class Compose(QDialog):
             add.setEnabled(False)
             add.setToolTip(_("edit_media_kept"))
             self.setAcceptDrops(False)
+        self.cover_btn = QPushButton(_("media_cover"))
+        self.cover_btn.setObjectName("tool")
+        self.cover_btn.setToolTip(_("media_cover_tip"))
+        self.cover_btn.clicked.connect(lambda: self.pick_cover())
+        self.cover_btn.setVisible(False)
+        row.addWidget(self.cover_btn)
         self.cw_btn = QPushButton("⚠ " + _("cw_add"))
         self.cw_btn.setObjectName("tool")
         self.cw_btn.setCheckable(True)
@@ -501,9 +521,11 @@ class Compose(QDialog):
         self.cw.setText(st.cw)
         if st.language is not None:
             self.set_language(st.language)
-        for path, desc, *focus in st.media:
+        for path, desc, *rest in st.media:
             if Path(path).exists():
-                self._add_media(path, desc, focus[0] if focus else None)
+                cover = rest[1] if len(rest) > 1 and rest[1] and Path(rest[1]).exists() \
+                    else None
+                self._add_media(path, desc, rest[0] if rest else None, cover)
         self.sensitive_btn.setChecked(st.sensitive)
         if st.poll:
             self.poll_btn.setChecked(True)
@@ -520,6 +542,8 @@ class Compose(QDialog):
         self.initial = self._snapshot()
 
     def _load_edit(self):
+        for m in self.edit.media:  # their words and focus can change; they stay
+            self._add_remote(m)
         v = self.edit.visibility
         self.vis.setCurrentIndex(VISIBILITIES.index(v) if v in VISIBILITIES else 2)
         self.set_language(self.edit.lang or "")
@@ -714,15 +738,72 @@ class Compose(QDialog):
 
     # ---- media --------------------------------------------------------------------
     def _media_list(self):
+        """[path, description(, focus(, cover))] of the files to upload (not the
+        attachments of a post being edited: those are the server's already)."""
         out = []
         for i in range(self.media.count()):
             it = self.media.item(i)
+            if it.data(ROLE_REMOTE):
+                continue
             entry = [it.data(Qt.ItemDataRole.UserRole), it.data(Qt.ItemDataRole.UserRole + 1)]
             focus = it.data(Qt.ItemDataRole.UserRole + 2)
-            if focus:
-                entry.append(list(focus))
+            cover = it.data(ROLE_COVER)
+            if focus or cover:
+                entry.append(list(focus) if focus else None)
+            if cover:
+                entry.append(cover)
             out.append(entry)
         return out
+
+    def media_changes(self):
+        """Edit: {media id: (description, focus)} of the post's attachments whose words or
+        focus point were changed here."""
+        out = {}
+        for i in range(self.media.count()):
+            it = self.media.item(i)
+            mid = it.data(ROLE_REMOTE)
+            if not mid:
+                continue
+            desc = it.data(Qt.ItemDataRole.UserRole + 1) or ""
+            focus = it.data(Qt.ItemDataRole.UserRole + 2)
+            if _was(desc, focus) != it.data(ROLE_WAS):
+                out[mid] = (desc, tuple(focus) if focus else None)
+        return out
+
+    def _is_covered(self, it):
+        path = it.data(Qt.ItemDataRole.UserRole) or ""
+        return not it.data(ROLE_REMOTE) and Path(path).suffix.lower() in COVERED_EXT
+
+    def pick_cover(self, path=None):
+        """A cover for the chosen video or sound (or the first one): path, or asked."""
+        items = [self.media.item(i) for i in range(self.media.count())]
+        chosen = [it for it in self.media.selectedItems() if self._is_covered(it)]
+        it = (chosen or [x for x in items if self._is_covered(x)] or [None])[0]
+        if it is None:
+            return
+        if path is None:
+            last = self.core.get_state("last_media_dir", str(Path.home()))
+            path, _f = QFileDialog.getOpenFileName(self, _("media_cover"), last,
+                                                   f"{_('media_files')} ({COVER_FILTER})")
+        if path:
+            it.setData(ROLE_COVER, path)
+            self._label_item(it)
+            self._changed()
+
+    def _add_remote(self, m):
+        """An attachment of the post being edited: its description (and a picture's focus
+        point, its preview being at hand) can be changed; it can't go or be replaced."""
+        it = QListWidgetItem("")
+        local = self.win.images.local(m.preview or m.url) if m.kind == "image" else None
+        if local:
+            it.setIcon(QIcon(local))
+        it.setData(Qt.ItemDataRole.UserRole, local or "")
+        it.setData(Qt.ItemDataRole.UserRole + 1, m.alt)
+        it.setData(Qt.ItemDataRole.UserRole + 2, list(m.focus) if m.focus else None)
+        it.setData(ROLE_REMOTE, m.ref.id)
+        it.setData(ROLE_WAS, _was(m.alt, m.focus))
+        self._label_item(it)
+        self.media.addItem(it)
 
     def add_paths(self, paths):
         known = {m[0] for m in self._media_list()}
@@ -735,19 +816,22 @@ class Compose(QDialog):
         if paths:
             self._changed()
 
-    def _add_media(self, path, desc="", focus=None):
+    def _add_media(self, path, desc="", focus=None, cover=None):
         it = QListWidgetItem(QIcon(path), "")
         it.setData(Qt.ItemDataRole.UserRole, path)
         it.setData(Qt.ItemDataRole.UserRole + 1, desc)
         it.setData(Qt.ItemDataRole.UserRole + 2, list(focus) if focus else None)
+        it.setData(ROLE_COVER, cover or None)
         self._label_item(it)
         self.media.addItem(it)
         self._media_or_poll()
 
     def _label_item(self, it):
-        name = Path(it.data(Qt.ItemDataRole.UserRole)).name
+        name = Path(it.data(Qt.ItemDataRole.UserRole) or "").name
         desc = it.data(Qt.ItemDataRole.UserRole + 1)
-        it.setText(_("alt_set") if desc else _("no_alt"))
+        cover = it.data(ROLE_COVER)
+        it.setText((_("alt_set") if desc else _("no_alt"))
+                   + ("\n" + _("media_cover_set", name=Path(cover).name) if cover else ""))
         it.setToolTip(f"{name}\n{desc}" if desc else f"{name}\n{_('media_tip')}")
 
     def attach(self):
@@ -853,7 +937,9 @@ class Compose(QDialog):
                 self.camel.setText(_("camel_hint", tags=", ".join("#" + t for t in flat[:3])))
         has_media = self.media.count() > 0
         self.media.setVisible(has_media)
-        self.detach_btn.setVisible(has_media)
+        self.detach_btn.setVisible(has_media and not self.edit)  # an edit keeps them all
+        self.cover_btn.setVisible(any(self._is_covered(self.media.item(i))
+                                      for i in range(self.media.count())))
 
     def ask_schedule(self):
         """When to send it: the server keeps the post and sends it then."""
@@ -900,10 +986,11 @@ class Compose(QDialog):
         if self.core.cfg["post"].get("resize_images", True):
             media = [(fit_for_server(m[0], self.core.caps, self.core.paths.cache_dir),) +
                      tuple(m[1:]) for m in media]
-        if not text and not media:
+        if not text and not media and not (self.edit and self.media_changes()):
             return
         bare = [i for i in range(self.media.count())
-                if not self.media.item(i).data(Qt.ItemDataRole.UserRole + 1)]
+                if not self.media.item(i).data(Qt.ItemDataRole.UserRole + 1)
+                and not self.media.item(i).data(ROLE_REMOTE)]
         if bare and not alt_checked and not self.edit and \
                 self.core.cfg["post"].get("alt_reminder", True):
             self._ask_alt(bare, scheduled_at)
@@ -915,7 +1002,9 @@ class Compose(QDialog):
         self.send_btn.setEnabled(False)
         self.send_btn.setText(_("sending"))
         if self.edit:
-            fut = self.core.edit(self.edit, text, self.cw.text().strip(), draft_key=self.key)
+            changed = self.media_changes()
+            fut = self.core.edit(self.edit, text, self.cw.text().strip(), draft_key=self.key,
+                                 **({"media": changed} if changed else {}))
             self.win.bridge.call(fut, ok=self._edited, fail=self._failed)
             return
         fut = self.core.post(text, self.vis.currentData(), self.reply_to,
