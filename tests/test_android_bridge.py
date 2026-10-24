@@ -207,6 +207,7 @@ class BridgeTest(TmpDir):
         got = self.call("open")
         self.assertEqual(got["me"]["overview"], "tiles")
         self.assertEqual(got["me"]["layout"], "auto")
+        self.assertIn("expand_cw", got["me"])  # ui.expand_cw / ui.arts_mode: CWs open
         m = self.call("menu", "103")
         self.assertIn("subscribed", m)
         self.assertIn("url", m)

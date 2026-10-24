@@ -237,7 +237,8 @@ def open():  # noqa: A001 — what Kotlin calls it
         web = _s["web"]
         me = web.me()
         out = {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
-                                      "start_at", "mark_read", "visibility", "sensitive_media")}
+                                      "start_at", "mark_read", "visibility", "sensitive_media",
+                                      "expand_cw")}
         out["command_line"] = bool(core.cfg["ui"]["command_line"])
         out["overview"] = core.cfg["phone"]["overview"]
         out["layout"] = core.cfg["phone"]["layout"]

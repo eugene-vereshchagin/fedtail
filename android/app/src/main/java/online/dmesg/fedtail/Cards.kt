@@ -89,13 +89,15 @@ class CardActions(
     val info: suspend (PostItem) -> JSONObject,      // the ⋯ menu: followed? its address
     val thread: (PostItem, String) -> Unit,          // sub / unsub the thread
     val browser: (String) -> Unit,
+    val expandCw: Boolean = false,                   // ui.expand_cw or ui.arts_mode: CWs open
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
     open = { openThread(it.sid) }, reply = { compose(it) }, like = { act(it, "like") },
     media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
     alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
-    info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser)
+    info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
+    expandCw = expandCw)
 
 private val EMOJI = Regex("""<img\b[^>]*\balt="([^"]*)"[^>]*>""")
 
@@ -344,7 +346,9 @@ private fun Small(text: String) {
 /** The words (behind a warning, if any), pictures, a poll, a link's card. */
 @Composable
 private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
-    var open by rememberSaveable(p.key) { mutableStateOf(p.warning.isBlank()) }
+    var open by rememberSaveable(p.key, act.expandCw) {
+        mutableStateOf(p.warning.isBlank() || act.expandCw)
+    }
     if (p.warning.isNotBlank()) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)

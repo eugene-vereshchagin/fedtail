@@ -84,6 +84,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var markOnScroll by mutableStateOf(true)
     var defaultVisibility by mutableStateOf("followers")
     var hideSensitive by mutableStateOf(true)
+    var expandCw by mutableStateOf(false) // config.expand_cw: ui.expand_cw, or ui.arts_mode
     var commandLine by mutableStateOf(false)
     var overview by mutableStateOf("tiles") // phone.overview: tiles | list
     var layoutPref by mutableStateOf("auto") // phone.layout: auto | one | two | three
@@ -214,6 +215,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         markOnScroll = me.optString("mark_read", "on_scroll") == "on_scroll"
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
+        expandCw = me.optBoolean("expand_cw")
         commandLine = me.optBoolean("command_line")
         overview = me.optString("overview", "tiles")
         layoutPref = me.optString("layout", "auto")

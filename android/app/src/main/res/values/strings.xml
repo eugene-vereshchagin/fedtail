@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">fedtail</string>
-    <string name="starting">Starting the core…</string>
+    <string name="starting">Loading the lanes…</string>
     <string name="core_ok">The core is alive</string>
     <string name="core_failed">The core didn\'t start</string>
     <string name="label_version">fedtail</string>
