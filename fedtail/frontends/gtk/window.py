@@ -274,6 +274,10 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_line.set_ellipsize(Pango.EllipsizeMode.END)
         self.profile_label = Gtk.Label(xalign=0)
         self.profile_label.add_css_class("ft-muted")
+        # a narrow window: the bar's words give way ("…") instead of holding it wide
+        # (the sync mark beside them took the window past 600 px)
+        self.profile_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.profile_label.set_width_chars(8)
         tip(self.profile_label, _("footer_profile_tip"))
         bar = Gtk.Box(spacing=12)
         bar.add_css_class("ft-statusbar")
@@ -290,6 +294,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if corner:
             lab = Gtk.Label(label=corner)
             lab.add_css_class("ft-muted")
+            lab.set_ellipsize(Pango.EllipsizeMode.START)
             tip(lab, _("debug_corner_tip"))
             bar.append(lab)
             self.corner_label = lab

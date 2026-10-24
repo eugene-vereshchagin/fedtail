@@ -116,7 +116,8 @@ class InstanceTest(unittest.TestCase):
         key = instance._pipe_key(sock, make=True)
         self.assertEqual(len(key), 32)
         self.assertEqual(instance._pipe_key(sock), key)
-        self.assertEqual((self.tmp / "instance.key").stat().st_mode & 0o777, 0o600)
+        if os.name != "nt":  # Windows has no such modes: the profile's folder is the user's
+            self.assertEqual((self.tmp / "instance.key").stat().st_mode & 0o777, 0o600)
         self.assertIsNone(instance._pipe_key(self.tmp / "missing" / "x.sock", make=True))
 
     def test_the_windows_pipe(self):
