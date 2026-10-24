@@ -289,7 +289,10 @@ class PlaceScreen(Screen):
                 Binding("b", "boost", _("boost"), show=False),
                 Binding("m", "bookmark", _("bookmark"), show=False),
                 Binding("p", "profile", _("tui_profile"), show=False),
-                Binding("full_stop", "post_menu", "⋯", show=False)]
+                Binding("full_stop", "post_menu", "⋯", show=False),
+                # the help's pages, as the windows' ← and →
+                Binding("alt+left", "help_back", _("help_back")),
+                Binding("alt+right", "help_forward", _("help_forward"))]
     CSS = """
     PlaceScreen { overflow: hidden hidden; layout: vertical; }
     PlaceScreen #title { height: 1; padding: 0 1; background: $primary-background; }
@@ -548,6 +551,36 @@ class PlaceScreen(Screen):
     def action_back(self):
         self.app.pop_screen()
 
+    def _help_fwd(self):
+        """Pages left by ← (alt+left), for →; the app keeps them, the screens come and go."""
+        if not hasattr(self.app, "help_forward_pages"):
+            self.app.help_forward_pages = []
+        return self.app.help_forward_pages
+
+    def check_action(self, action, parameters):
+        if action in ("help_back", "help_forward"):
+            if self.name_ != "help":
+                return False
+            if action == "help_back":
+                stack = self.app.screen_stack
+                return len(stack) > 1 and getattr(stack[-2], "name_", "") == "help" or None
+            return bool(self._help_fwd()) or None
+        return True
+
+    def action_help_back(self):
+        """← in the help: the page before this one (the one under it on the stack)."""
+        stack = self.app.screen_stack
+        if self.name_ == "help" and len(stack) > 1 and getattr(stack[-2], "name_", "") == "help":
+            self._help_fwd().append((self.arg, self.anchor))
+            self.app.pop_screen()
+
+    def action_help_forward(self):
+        """→ in the help: the page ← left."""
+        fwd = self._help_fwd()
+        if self.name_ == "help" and fwd:
+            page, anchor = fwd.pop()
+            self.app.push_screen(PlaceScreen("help", page, anchor=anchor))
+
     def action_cursor_down(self):
         self.query_one("#posts", ListView).action_cursor_down()
 
@@ -591,6 +624,7 @@ class PlaceScreen(Screen):
         href = getattr(e, "href", "") or ""
         if href.startswith("fedtail:help/"):
             page, _s, anchor = href[len("fedtail:help/"):].partition("#")
+            self._help_fwd().clear()  # a new way: what ← left is gone, as in a browser
             self.app.push_screen(PlaceScreen("help", page, anchor=anchor))
         else:
             self.app.open_thing(self.places.help_target(href, self.arg or "index").open or {})

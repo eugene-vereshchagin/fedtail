@@ -629,8 +629,26 @@ function mainMenu() {
     [w("help_title"), () => openPlace("help")],
     [w("help_news"), () => openPlace("news")],
     [w("web_keys"), () => info(w("web_keys_text"))],
+    [w("try_theme") + " …", tryTheme],
     [w("about"), () => openPlace("about")],
   ]);
+}
+
+// ≡ → Try a theme: the windows' themes (their colours and font), for this run of
+// fedtail; ui.theme in the config is what the next start brings
+async function tryTheme() {
+  let t;
+  try { t = await api("/api/themes"); } catch (e) { toast(e.message); return; }
+  const got = await chooseDlg({ title: t.title, text: t.tip,
+                                options: t.themes.map((x) => ({ key: x.name,
+                                  label: (x.on ? "● " : "") + x.label })) });
+  if (!got || got.key === t.current) return;
+  try {
+    const r = await api("/api/theme", { name: got.key });
+    const link = $("#theme-css");
+    if (link) link.href = "/theme.css?v=" + encodeURIComponent(got.key) + "." + Date.now();
+    toast(r.message);
+  } catch (e) { toast(e.message); }
 }
 
 function info(text, links) {
@@ -1289,8 +1307,28 @@ function openThing(o) {  // where an action leads
   else if (o.back) { if (state.place && state.place.into === "side") closeSide(); }
 }
 
-async function openPlace(name, arg, tab, cursor, into, anchor) {
+// the help's pages, as the windows' ← and →: where I was, where I came back from
+const helpHist = { back: [], fwd: [] };
+
+function helpGo(step) {
+  const from = step < 0 ? helpHist.back : helpHist.fwd;
+  const to = step < 0 ? helpHist.fwd : helpHist.back;
+  if (!from.length || !state.place || state.place.name !== "help") return;
+  to.push(state.place.arg);
+  openPlace("help", from.pop(), "", "", state.place.into, "", true);
+}
+
+async function openPlace(name, arg, tab, cursor, into, anchor, byHistory) {
   into = into || "side";
+  if (name === "help" && !byHistory) {
+    if (state.place && state.place.name === "help" && state.place.arg !== (arg || "")) {
+      helpHist.back.push(state.place.arg);
+      helpHist.fwd.length = 0;
+    } else if (!state.place || state.place.name !== "help") {
+      helpHist.back.length = 0;
+      helpHist.fwd.length = 0;
+    }
+  }
   const box = into === "side" ? $("#side-body") : $("#posts");
   const token = into === "side" ? showSide("…") : (state.side_main = (state.side_main || 0) + 1);
   const q = new URLSearchParams({ name, arg: arg || "", tab: tab || "", cursor: cursor || "" });
@@ -1312,6 +1350,20 @@ async function openPlace(name, arg, tab, cursor, into, anchor) {
 function renderPlace(pg, box) {
   box.textContent = "";
   const page = el("section", "place place-" + pg.name);
+  if (pg.name === "help") {
+    const nav = el("div", "row help-nav");
+    for (const [label, tip, step, list] of [["←", w("help_back"), -1, helpHist.back],
+                                            ["→", w("help_forward"), 1, helpHist.fwd]]) {
+      const b = el("button", "tool", label);
+      b.type = "button";
+      b.title = tip;
+      b.setAttribute("aria-label", tip);
+      b.disabled = !list.length;
+      b.onclick = () => helpGo(step);
+      nav.append(b);
+    }
+    page.append(nav);
+  }
   if (pg.hint) page.append(el("div", "muted hint", pg.hint));
   if (pg.tabs.length) {
     const tabs = el("div", "tabs");

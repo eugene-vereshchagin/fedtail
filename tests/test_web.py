@@ -269,6 +269,34 @@ class WebTest(TmpDir):
         self.assertEqual(self.req("/app.js")[0], 200)
         self.assertEqual(self.req("/app.css")[0], 200)
 
+    def test_themes(self):
+        """≡ → Try a theme: the windows' themes as the page's colours, for this run."""
+        self.assertIn("/theme.css", self.req("/")[2])
+        code, headers, css = self.req("/theme.css")
+        self.assertEqual((code, css), (200, ""))  # system: the browser's light or dark
+        self.assertTrue(headers["Content-Type"].startswith("text/css"))
+        t = json.loads(self.req("/api/themes")[2])
+        names = [x["name"] for x in t["themes"]]
+        self.assertIn("night", names)
+        self.assertEqual((t["current"], t["configured"]), ("system", "system"))
+        self.assertIn(i18n._("theme_in_config"),
+                      next(x["label"] for x in t["themes"] if x["name"] == "system"))
+        r = json.loads(self.req("/api/theme", {"name": "night"})[2])
+        self.assertIn("night", r["message"])
+        css = self.req("/theme.css")[2]
+        self.assertIn("--bg: #", css)
+        self.assertIn("color-scheme: only dark", css)
+        self.assertIn("font-family:", css)
+        self.assertTrue(json.loads(self.req("/api/themes")[2])["themes"][names.index("night")]
+                        ["on"])
+        self.req("/api/theme", {"name": "juick"})
+        self.assertIn("only light", self.req("/theme.css")[2])
+        self.assertEqual(self.req("/api/theme", {"name": "../etc"})[0], 400)
+        self.assertEqual(self.core.cfg["ui"]["theme"], "system")  # the config stays
+        webs = self.srv.web
+        webs.theme = "no-such-theme"
+        self.assertEqual(webs.theme_css(), "")  # won't load: the page's own colours
+
     def test_lanes_and_posts_cleaned(self):
         _c, _h, body = self.req("/api/lanes")
         lanes = {x["name"]: x for x in json.loads(body)}

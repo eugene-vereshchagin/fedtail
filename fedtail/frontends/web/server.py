@@ -106,6 +106,19 @@ def _focus(value):
     return (round(max(-1.0, min(1.0, x)), 2), round(max(-1.0, min(1.0, y)), 2))
 
 
+def _light(colors):
+    """Is the theme a light one (its text darker than its page)?"""
+    def lum(c):
+        c = c if isinstance(c, str) and re.fullmatch(r"#[0-9a-fA-F]{6}.*", c) else ""
+        if not c:
+            return None
+        r, g, b = (int(c[i:i + 2], 16) for i in (1, 3, 5))
+        return 0.299 * r + 0.587 * g + 0.114 * b
+    text = lum(colors.get("text"))
+    page = lum(colors.get("view")) or lum(colors.get("window")) or lum(colors.get("card"))
+    return text is None or page is None or page > text
+
+
 def static_text(name):
     return resources.files("fedtail").joinpath(f"data/web/{name}").read_text("utf-8")
 
@@ -442,6 +455,7 @@ class Web:
         for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
                       "lists_changed"):
             self.core.on(event, lambda _n, _p: self.bump())
+        self.theme = ""  # one tried from the page's menu: until fedtail stops (ui.theme stays)
         # the theme's sounds: the page plays them (frontends/soundpack.py)
         self.sound_seq = 0
         self.sound_log = collections.deque(maxlen=8)  # (seq, event)
@@ -576,6 +590,74 @@ class Web:
                 "notify": {"when_focused": c["notify"]["when_focused"]},
                 "editor": self.editor_facts(),
                 "words": {k: _(k) for k in WORDS}}
+
+    # ---- the theme: the windows' colours and font, as the page's own --------------------
+    # CSS variable <- the theme's colour (the first one set, "auto" passed over)
+    THEME_VARS = (("--bg", ("view", "window")), ("--card", ("card",)),
+                  ("--text", ("text",)), ("--muted", ("muted",)),
+                  ("--line", ("card_border", "header_border")),
+                  ("--accent", ("accent", "link")), ("--accent-text", ("on_accent",)),
+                  ("--unread", ("card_border_unread", "accent")), ("--ctx", ("ctx",)),
+                  ("--danger", ("hot",)))
+
+    def theme_name(self):
+        return self.theme or self.core.cfg["ui"].get("theme") or "system"
+
+    def theme_css(self):
+        """The page's colours from the theme (themes/*.toml, the same files the windows
+        read): "" for system (the browser's light or dark) or a theme that won't load."""
+        from .. import themefile
+        name = self.theme_name()
+        try:
+            theme, _warnings = themefile.load(name)
+        except (themefile.ThemeError, OSError) as e:
+            log.info("web theme %s: %s", name, e)
+            return ""
+        colors = theme.get("colors") or {}
+        lines = []
+        for var, keys in self.THEME_VARS:
+            got = next((colors[k] for k in keys
+                        if isinstance(colors.get(k), str) and colors[k] != "auto"), "")
+            if got and re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|rgba?\([\d.,\s%]+\)",
+                                    got):
+                lines.append(f"  {var}: {got};")
+        if not any(x.startswith("  --bg:") for x in lines) or \
+                not any(x.startswith("  --text:") for x in lines):
+            lines = []  # the page and its text follow the system: the browser's own then
+        family = (theme.get("font") or {}).get("family") or ""
+        family = family if re.fullmatch(r"[\w\s,\"'-]*", family) else ""
+        if not lines and not family:
+            return ""
+        css = ":root, :root:root {\n" + "\n".join(lines) + "\n  --shadow: none;\n}\n" \
+            if lines else ""
+        if lines:  # the theme's own colours: light or dark is the theme's, not the browser's
+            css += ":root { color-scheme: only light; }\n" if _light(colors) else \
+                ":root { color-scheme: only dark; }\n"
+        if family:
+            css += f"body {{ font-family: {family}; }}\n"
+        return css
+
+    def themes(self):
+        """≡ → Try a theme: the names, which one is on, which the config says."""
+        from .. import themefile
+        configured = self.core.cfg["ui"].get("theme") or "system"
+        current = self.theme_name()
+        names = themefile.for_layout(self.core.cfg, keep=(configured, current))
+        return {"current": current, "configured": configured,
+                "themes": [{"name": n, "label": n + ("  · " + _("theme_in_config")
+                                                     if n == configured else ""),
+                            "on": n == current} for n in names],
+                "title": _("try_theme"), "tip": _("try_theme_tip")}
+
+    def try_theme(self, name):
+        """Another theme for the page, until fedtail stops; the config stays."""
+        from .. import themefile
+        name = str(name or "")
+        if name not in themefile.available():
+            raise ValueError(name)
+        self.theme = name
+        configured = self.core.cfg["ui"].get("theme") or "system"
+        return {"message": _("theme_tried", name=name, configured=configured)}
 
     def editor_facts(self):
         """What the editor needs: the server's limits, the languages to pick from (the
@@ -987,7 +1069,7 @@ class Web:
         p = self._post_by_id(sid)
         if action in ("sub", "unsub"):
             (core.subscribe if action == "sub" else core.unsubscribe)(p).result()
-            return {"message": _("subbed" if action == "sub" else "unsubbed")}
+            return {"message": _("subbed") if action == "sub" else _("unsubbed")}
         if action in ("mute", "unmute"):
             core.mute_thread(p, action == "mute").result()
             return {"message": _("thread_muted" if action == "mute" else "thread_unmuted")}
@@ -1256,6 +1338,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "detach", "poll_option", "poll_several", "lang_tip", "attach", "poll_add_tip",
          "sensitive_mark_tip", "schedule_tip", "schedule_when",
          # what the windows have and the page now too (docs/src/parity.toml)
+         "help_back", "help_forward",
          "group_fold_tip", "thread_loading", "find_deeper", "find_deeper_tip",
          "find_everywhere", "find_everywhere_tip", "find_searching", "find_archive_none",
          "poll_results", "poll_refresh", "poll_sending", "preview", "preview_tip",
@@ -1365,6 +1448,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in STATIC:
             name, ctype = STATIC[u.path]
             return self._send(HTTPStatus.OK, static_text(name), ctype)
+        if u.path == "/theme.css":
+            return self._send(HTTPStatus.OK, self.web.theme_css(), "text/css; charset=utf-8")
         routes = {"/api/me": lambda: self.web.me(),
                   "/api/lanes": lambda: self.web.lanes(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
@@ -1373,6 +1458,7 @@ class Handler(BaseHTTPRequestHandler):
                                                            q.get("show") or None),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
                   "/api/places": lambda: self.web.place_menu(),
+                  "/api/themes": lambda: self.web.themes(),
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
                   "/api/find_deeper": lambda: self.web.find_deeper(q.get("lane", ""),
                                                                    q.get("q", "")),
@@ -1436,6 +1522,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
             "/api/place": lambda: web.place_act(body),
             "/api/delete": lambda: web.delete(str(body.get("id"))),
+            "/api/theme": lambda: web.try_theme(body.get("name")),
             "/api/link": lambda: web.link(str(body.get("url", "")),
                                           bool(body.get("confirmed")), _chosen(body)),
             "/api/profile_act": lambda: web.profile_act(

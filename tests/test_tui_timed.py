@@ -80,3 +80,29 @@ class TuiTimedTest(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
+class TuiHelpHistoryTest(Base):
+    async def test_help_back_and_forward(self):
+        from fedtail.frontends.tui.screens import PlaceScreen
+        core, _w = self.make()
+        app = self.app_of(core)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.started(pilot, app)
+            app.push_screen(PlaceScreen("help", "index"))
+            await self.wait(pilot, lambda: getattr(app.screen, "name_", "") == "help")
+            first = app.screen
+            self.assertIsNot(first.check_action("help_back", ()), True)  # nothing before
+            first._help_fwd().clear()
+            app.push_screen(PlaceScreen("help", "keys"))
+            await self.wait(pilot, lambda: app.screen is not first)
+            self.assertTrue(app.screen.check_action("help_back", ()))
+            await pilot.press("alt+left")
+            await self.wait(pilot, lambda: app.screen is first)
+            self.assertEqual(app.help_forward_pages, [("keys", "")])
+            self.assertTrue(first.check_action("help_forward", ()))
+            await pilot.press("alt+right")
+            await self.wait(pilot, lambda: getattr(app.screen, "arg", "") == "keys")
+            self.assertEqual(app.help_forward_pages, [])
+            self.assertFalse(PlaceScreen("lists").check_action("help_back", ()))

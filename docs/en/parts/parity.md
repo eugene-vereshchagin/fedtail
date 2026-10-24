@@ -18,7 +18,6 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
-| A thread's head: how many posts, every CW at once, Follow as a button | ✓ | ✓ | ✓ | ◐ | The thread's head is everywhere; the web page, unfollowing a thread, doesn't say “it won't come any more”. |
 | Someone's older posts from their own server | ✓ | ✓ | ◐ | ◐ | They come page by page with a “more” button at the bottom, without a live “n of N” count. |
 
 ### Pictures and video
@@ -39,9 +38,8 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
 | The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | The terminal and the web page edit the same config.toml with a form by chapters; there's no search, no restart button and no “open the file”. |
-| Themes: try one, the themes folder | ✓ | ✓ | ◐ | — | The terminal has themes of its own (`tui.theme`); the web page knows no themes yet. |
+| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. |
 | Open the config and the data folder | ✓ | ✓ | ✓ | · | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. |
-| Help: search, back, forward | ✓ | ✓ | ◐ | ◐ | The help with its search is everywhere; the terminal's and the web page's pages have no back / forward history. |
 | Desktop notifications and testing them | ✓ | ✓ | ✓ | ◐ | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed, without a test in the menu. |
 | Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | — | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
 | Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | ✓ | — | Leak hunting is the windows' and the terminal's; the web page is a guest in a browser. |

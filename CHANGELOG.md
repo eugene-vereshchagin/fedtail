@@ -11,6 +11,10 @@
 - "Hide this post" in the ⋯ menu: one post out of sight everywhere, through a filter of the
   server's ("fedtail: hidden posts"), in other clients too.
 - A list's replies: to anyone you follow, to its members, or none (the server's setting).
+- The web page takes the windows' themes: their colours and font, and ≡ → "Try a theme"
+  for the run (`ui.theme` gives the one it starts with).
+- The help in the web page and the terminal goes back and forward between its pages
+  (← → on the page; Alt+← Alt+→ in the terminal), as in the windows.
 
 ## 0.19.0 — 2026-10-24
 

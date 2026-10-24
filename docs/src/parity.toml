@@ -151,9 +151,6 @@ id = "thread-head"
 area = "reading"
 name.ru = "Шапка треда: сколько постов, все CW разом, подписка кнопкой"
 name.en = "A thread's head: how many posts, every CW at once, Follow as a button"
-web = "partly"
-note.ru = "Шапка треда везде; веб, отписываясь от треда, не пишет «больше не придёт»."
-note.en = "The thread's head is everywhere; the web page, unfollowing a thread, doesn't say “it won't come any more”."
 keys = ["chain_count", "thread_info", "thread_loading", "thread_via_home",
         "thread_via_home_tip", "cw_all_hide", "cw_all_show", "cw_all_tip", "sub_tip",
         "subscribed", "unsubbed", "came_from"]
@@ -368,9 +365,9 @@ area = "app"
 name.ru = "Темы: попробовать, папка тем"
 name.en = "Themes: try one, the themes folder"
 tui = "partly"
-web = "no"
-note.ru = "У терминала свои темы (`tui.theme`); веб тем пока не знает."
-note.en = "The terminal has themes of its own (`tui.theme`); the web page knows no themes yet."
+web = "partly"
+note.ru = "У терминала свои темы (`tui.theme`). Веб берёт из тем окон цвета и шрифт и пробует их из меню ≡, но папку тем не открывает: страница — гость в браузере."
+note.en = "The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser."
 keys = ["try_theme", "theme_in_config", "theme_tried", "open_themes"]
 
 [[capability]]
@@ -388,11 +385,7 @@ id = "help-browse"
 area = "app"
 name.ru = "Справка: поиск, назад, вперёд"
 name.en = "Help: search, back, forward"
-tui = "partly"
-web = "partly"
-note.ru = "Справка с поиском есть везде; истории «назад / вперёд» у страниц терминала и веба нет."
-note.en = "The help with its search is everywhere; the terminal's and the web page's pages have no back / forward history."
-keys = ["help_back", "help_close_tip", "help_deep", "help_forward", "help_found",
+keys = ["help_back", "help_deep", "help_forward", "help_found",
         "help_none", "help_search"]
 
 [[capability]]
@@ -468,7 +461,7 @@ keys = ["close", "close_tab", "copy", "show", "open_action", "open_profile", "er
         "search_side", "search_side_tip", "long_form_wait", "menu_people", "new_options",
         "cmd_placeholder", "cmd_tip", "text_placeholder", "text_placeholder_md",
         "schedule_ok", "show_original", "sensitive_click", "cw_hide", "cw_show",
-        "a11y_no_alt", "tender_menu", "list_added"]
+        "a11y_no_alt", "tender_menu", "list_added", "help_close_tip"]
 
 [[wording]]
 in = ["web"]
