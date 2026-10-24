@@ -96,8 +96,21 @@ class FakeApi:
     def local(self, limit=40, max_id=None, min_id=None):
         return _page(self.w.local, limit, max_id, min_id)
 
-    def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None):
+    def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None,
+                         exclude_replies=False, only_media=False, tagged=None,
+                         exclude_reblogs=False):
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
+        if exclude_replies:  # like the server: replies to themselves stay
+            mine = [s for s in mine if not s.get("in_reply_to_id")
+                    or s.get("in_reply_to_account_id") == acc_id]
+        if only_media:
+            mine = [s for s in mine if (s.get("reblog") or s).get("media_attachments")]
+        if exclude_reblogs:
+            mine = [s for s in mine if not s.get("reblog")]
+        if tagged:
+            t = tagged.lstrip("#").lower()
+            mine = [s for s in mine if any((g.get("name") or "").lower() == t
+                                           for g in (s.get("tags") or ()))]
         return _page(mine, limit, max_id, min_id)
 
     def notification_policy(self):
@@ -289,15 +302,21 @@ class FakeApi:
         known = {a["id"]: a for a in self.w.accounts()}
         return [known.get(a) or {"id": a} for a in sorted(self.w.lists[list_id]["members"])]
 
-    def create_list(self, title, exclusive=False):
+    def create_list(self, title, exclusive=False, replies_policy=None):
         self.w.seq += 1
         i = f"L{self.w.seq}"
-        self.w.lists[i] = {"title": title, "exclusive": exclusive, "members": set()}
-        return {"id": i, "title": title, "exclusive": exclusive}
+        policy = replies_policy or "list"
+        self.w.lists[i] = {"title": title, "exclusive": exclusive, "members": set(),
+                           "replies_policy": policy}
+        return {"id": i, "title": title, "exclusive": exclusive, "replies_policy": policy}
 
-    def update_list(self, list_id, title, exclusive):
-        self.w.lists[list_id].update(title=title, exclusive=exclusive)
-        return {"id": list_id, "title": title, "exclusive": exclusive}
+    def update_list(self, list_id, title, exclusive, replies_policy=None):
+        lst = self.w.lists[list_id]
+        lst.update(title=title, exclusive=exclusive)
+        if replies_policy:
+            lst["replies_policy"] = replies_policy
+        return {"id": list_id, "title": title, "exclusive": exclusive,
+                "replies_policy": lst.get("replies_policy", "list")}
 
     def delete_list(self, list_id):
         self.w.lists.pop(list_id)
@@ -371,9 +390,13 @@ class FakeApi:
         self.w.statuses[sid] = st
         return st
 
-    def mute(self, acc_id, on=True):
+    def mute(self, acc_id, on=True, duration=0, notifications=True):
         (self.w.muted.add if on else self.w.muted.discard)(acc_id)
-        return {"id": acc_id, "muting": on}
+        if on:
+            self.w.mute_terms[acc_id] = {"duration": duration, "notifications": notifications}
+        else:
+            self.w.mute_terms.pop(acc_id, None)
+        return {"id": acc_id, "muting": on, "muting_notifications": on and notifications}
 
     def block(self, acc_id, on=True):
         (self.w.blocked.add if on else self.w.blocked.discard)(acc_id)
@@ -388,12 +411,27 @@ class FakeApi:
     def filters(self):
         return list(self.w.filters.values())
 
-    def create_filter(self, title, keywords, action="warn", contexts=("home",)):
+    def create_filter(self, title, keywords, action="warn", contexts=("home",),
+                      expires_in=None):
         self.w.seq += 1
         f = {"id": f"F{self.w.seq}", "title": title, "filter_action": action,
-             "context": list(contexts), "keywords": [{"keyword": k} for k in keywords]}
+             "context": list(contexts), "keywords": [{"keyword": k} for k in keywords],
+             "statuses": [], "expires_in": expires_in}
         self.w.filters[f["id"]] = f
         return f
+
+    def filter_statuses(self, filter_id):
+        return list(self.w.filters[filter_id].get("statuses") or [])
+
+    def filter_status(self, filter_id, status_id):
+        self.w.seq += 1
+        fs = {"id": f"FS{self.w.seq}", "status_id": status_id}
+        self.w.filters[filter_id].setdefault("statuses", []).append(fs)
+        return fs
+
+    def unfilter_status(self, filter_status_id):
+        for f in self.w.filters.values():
+            f["statuses"] = [x for x in f.get("statuses") or [] if x["id"] != filter_status_id]
 
     def delete_filter(self, filter_id):
         self.w.filters.pop(filter_id, None)
@@ -607,6 +645,7 @@ class World:
         self.following = set()
         self.followed_tags = set()
         self.muted, self.blocked, self.filters = set(), set(), {}
+        self.mute_terms = {}  # acc_id -> {duration, notifications} the mute was made with
         self.history = {}
         self.profile_updates = []
         self.markers = {}  # timeline -> last_read_id, as another client left it

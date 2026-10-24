@@ -1136,6 +1136,74 @@ class CoreTest(TmpDir):
         self.assertFalse(core.silenced(spam))
         self.assertTrue(core.silenced(w.statuses["100"]))  # B is still muted
 
+    def test_profile_shows_posts_replies_media(self):
+        core, w = self.make(feed={"page_size": 10})
+        w.add(status("120", BOB, minute=1))
+        w.add(status("121", BOB, reply_to="9", reply_acc="N", minute=2))  # to someone else
+        w.add(status("122", BOB, reply_to="120", reply_acc="B", minute=3))  # their thread
+        pic = w.add(status("123", BOB, minute=4))
+        pic["media_attachments"] = [{"id": "m1", "type": "image", "url": "u"}]
+        core.connect().result()
+
+        def ids(show):
+            return sorted(st["id"] for st in core.account_statuses("B", show=show).result())
+        self.assertEqual(ids("all"), ["120", "121", "122", "123"])
+        self.assertEqual(ids("posts"), ["120", "122", "123"])
+        self.assertEqual(ids("media"), ["123"])
+        self.assertEqual(ids("whatever"), ids("all"))  # unknown: everything
+
+    def test_mute_for_a_while_and_posts_only(self):
+        core, w = self.make()
+        core.connect().result()
+        core.mute("B", duration=3600, notifications=False).result()
+        self.assertEqual(w.mute_terms["B"], {"duration": 3600, "notifications": False})
+        self.assertIn("B", core.muted)
+        core.mute("B", False).result()
+        self.assertNotIn("B", w.mute_terms)
+        core.mute("B").result()  # plain: for good, notifications too
+        self.assertEqual(w.mute_terms["B"], {"duration": 0, "notifications": True})
+
+    def test_filter_for_a_while(self):
+        core, w = self.make()
+        core.connect().result()
+        f = core.add_filter("спойлеры", ["финал"], "warn", expires_in=86400).result()
+        self.assertEqual(w.filters[f["id"]]["expires_in"], 86400)
+        g = core.add_filter("навсегда", ["x"]).result()
+        self.assertIsNone(w.filters[g["id"]]["expires_in"])
+
+    def test_hide_one_post(self):
+        core, w = self.make(ui={"arts_mode": False})
+        w.add(status("130", BOB, minute=1), home=True)
+        w.add(status("131", BOB, minute=2), home=True)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.unhide_post("130").result(), False)  # no filter yet
+        core.hide_post(w.statuses["130"]).result()  # a dict does too
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["131"])
+        mine = [f for f in w.filters.values() if f["title"] == core.HIDDEN_POSTS]
+        self.assertEqual(len(mine), 1)
+        self.assertEqual(mine[0]["filter_action"], "hide")
+        self.assertEqual([x["status_id"] for x in mine[0]["statuses"]], ["130"])
+        core.hide_post("131").result()  # the same filter, not a second one
+        self.assertEqual(len([f for f in w.filters.values()
+                              if f["title"] == core.HIDDEN_POSTS]), 1)
+        self.assertTrue(core.unhide_post("130").result())
+        self.assertEqual([x["status_id"] for x in mine[0]["statuses"]], ["131"])
+        self.assertFalse(core.unhide_post("999").result())  # never hidden
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["130"])
+
+    def test_list_replies_policy(self):
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("друзья", replies_policy="followed").result()
+        self.assertEqual(w.lists[x["id"]]["replies_policy"], "followed")
+        core.update_list(x["id"], "друзья", False, replies_policy="none").result()
+        self.assertEqual(w.lists[x["id"]]["replies_policy"], "none")
+        core.update_list(x["id"], "други", False).result()  # untouched when not given
+        self.assertEqual(w.lists[x["id"]]["replies_policy"], "none")
+        y = core.create_list("просто").result()
+        self.assertEqual(w.lists[y["id"]]["replies_policy"], "list")
+
     def test_edit_my_post(self):
         core, w = self.make()
         mine = w.add(status("110", ME, text="очепятка"), home=True)

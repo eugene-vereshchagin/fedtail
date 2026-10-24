@@ -317,11 +317,22 @@ class MergedRoutingTest(TmpDir):
         self.assertIn("N", self.work.following)
         m.mute("work~N").result(timeout=T)
         self.assertIn("N", self.work.muted)
+        m.mute("work~N", duration=60, notifications=False).result(timeout=T)
+        self.assertEqual(self.work.mute_terms["N"], {"duration": 60, "notifications": False})
         m.block("work~N").result(timeout=T)
         self.assertIn("N", self.work.blocked)
         page = m.account_statuses("work~N").result(timeout=T)
         self.assertTrue(all(s["id"].startswith("work~") for s in page))
         m.account_statuses("work~N", "work~500").result(timeout=T)
+        media = m.account_statuses("work~N", show="media").result(timeout=T)
+        self.assertTrue(all(s["media_attachments"] for s in media))
+        m.hide_post("work~500").result(timeout=T)  # the work account's filter, its id
+        hid = [f for f in self.work.filters.values() if f["title"] == self.w.HIDDEN_POSTS]
+        self.assertEqual([x["status_id"] for x in hid[0]["statuses"]], ["500"])
+        self.assertIn("500", self.w.hidden_posts)
+        self.assertTrue(m.unhide_post({"id": "work~500"}).result(timeout=T))
+        m.hide_post("010").result(timeout=T)  # my own account's
+        self.assertIn("010", self.p.hidden_posts)
         self.assertIsInstance(m.familiar("work~N").result(timeout=T), list)
         m.endorse("work~N").result(timeout=T)
         m.remove_follower("work~N").result(timeout=T)

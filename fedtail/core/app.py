@@ -153,6 +153,7 @@ class Core(SocialMixin):
         self._completed = {}  # thread root id -> when its missing replies were looked for
         self._choices = {}  # this run's choices over lanes (see choice())
         self.muted, self.blocked = set(), set()
+        self.hidden_posts = set()  # "Hide this post": out of sight at once, not on the next fetch
         self.blocked_domains = set()
         self._silence_version = 0
         self._silence_checked = None
@@ -950,6 +951,9 @@ class Core(SocialMixin):
         filter says "hide"?"""
         quiet = self.muted | self.blocked
         s = real(status)
+        if self.hidden_posts and (s.get("id") in self.hidden_posts
+                                  or status.get("id") in self.hidden_posts):
+            return True
         if s["account"]["id"] in quiet or status["account"]["id"] in quiet:
             return True
         if self.blocked_domains and any(
@@ -961,8 +965,14 @@ class Core(SocialMixin):
         return any((f.get("filter") or {}).get("filter_action") == "hide"
                    for f in s.get("filtered") or [])
 
-    def mute(self, acc_id, on=True):
-        return self._silence(self.api.mute, self.muted, acc_id, on)
+    def mute(self, acc_id, on=True, duration=0, notifications=True):
+        """duration: seconds until the mute ends by itself (0 — for good); notifications:
+        theirs muted too, or still coming (a mute of their posts only)."""
+        if not on or (not duration and notifications):
+            return self._silence(self.api.mute, self.muted, acc_id, on)
+        return self._silence(lambda a, o: self.api.mute(a, o, duration=duration,
+                                                         notifications=notifications),
+                             self.muted, acc_id, on)
 
     def block(self, acc_id, on=True):
         return self._silence(self.api.block, self.blocked, acc_id, on)
@@ -1069,8 +1079,11 @@ class Core(SocialMixin):
                     "domains": sorted(self.blocked_domains)}
         return self.submit(job)
 
-    def add_filter(self, title, keywords, action="warn", contexts=None):
+    def add_filter(self, title, keywords, action="warn", contexts=None, expires_in=None):
+        """expires_in: seconds until the filter ends by itself (None — never)."""
         args = (title, keywords, action) + ((tuple(contexts),) if contexts else ())
+        if expires_in:
+            return self.call_api("create_filter", *args, expires_in=int(expires_in))
         return self.call_api("create_filter", *args)
 
     def delete_filter(self, filter_id):
@@ -1236,9 +1249,54 @@ class Core(SocialMixin):
     def lists_of(self, acc_id):
         return {lid for lid, m in self.list_members.items() if acc_id in m}
 
-    def create_list(self, title, exclusive=False, add=None):
+    HIDDEN_POSTS = "fedtail: hidden posts"  # the filter "Hide this post" keeps them in
+
+    def _hidden_filter(self, make=False):
+        mine = next((f for f in self.api.filters() or []
+                     if f.get("title") == self.HIDDEN_POSTS), None)
+        if mine is None and make:
+            mine = self.api.create_filter(self.HIDDEN_POSTS, [], "hide",
+                                          ("home", "public", "thread", "account",
+                                           "notifications"))
+        return mine
+
+    def _hidden_changed(self, sid, on):
+        (self.hidden_posts.add if on else self.hidden_posts.discard)(sid)
+        self._silence_version += 1
+        self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+
+    def hide_post(self, status):
+        """This very post out of sight everywhere (and in every client): put into a
+        filter of the server's, made the first time, that hides posts one by one."""
+        sid = status["id"] if isinstance(status, dict) else status
+
         def job():
-            x = self.api.create_list(title, exclusive)
+            got = self.api.filter_status(self._hidden_filter(make=True)["id"], sid)
+            self._hidden_changed(sid, True)
+            return got
+        return self.submit(job)
+
+    def unhide_post(self, status):
+        """The post back: out of the hidden posts' filter. True when it was there."""
+        sid = status["id"] if isinstance(status, dict) else status
+
+        def job():
+            self._hidden_changed(sid, False)
+            mine = self._hidden_filter()
+            if mine is None:
+                return False
+            for fs in self.api.filter_statuses(mine["id"]) or []:
+                if str(fs.get("status_id")) == str(sid):
+                    self.api.unfilter_status(fs["id"])
+                    return True
+            return False
+        return self.submit(job)
+
+    def create_list(self, title, exclusive=False, add=None, replies_policy=None):
+        """replies_policy: whose replies the list shows — "followed", "list", "none"."""
+        def job():
+            x = self.api.create_list(title, exclusive, replies_policy=replies_policy) \
+                if replies_policy else self.api.create_list(title, exclusive)
             try:
                 if add:  # refused (not followed yet): waits, as with an existing list
                     self._list_add_or_wait(x["id"], add)
@@ -1247,9 +1305,12 @@ class Core(SocialMixin):
             return x
         return self.submit(job)
 
-    def update_list(self, list_id, title, exclusive):
+    def update_list(self, list_id, title, exclusive, replies_policy=None):
         def job():
-            self.api.update_list(list_id, title, exclusive)
+            if replies_policy:
+                self.api.update_list(list_id, title, exclusive, replies_policy=replies_policy)
+            else:
+                self.api.update_list(list_id, title, exclusive)
             self._refresh_lists()
         return self.submit(job)
 
@@ -2118,10 +2179,16 @@ class Core(SocialMixin):
                 best = got
         return best
 
-    def account_statuses(self, acc_id, max_id=None):
+    PROFILE_SHOWS = {"all": {}, "posts": {"exclude_replies": True},
+                     "media": {"only_media": True}}
+
+    def account_statuses(self, acc_id, max_id=None, show="all"):
+        """Someone's posts, a page; show: "all" (posts and replies), "posts" (without
+        their replies to others — the server filters), "media" (only with pictures)."""
         def job():
             page = self.api.account_statuses(acc_id, limit=self.cfg["feed"]["page_size"],
-                                             max_id=max_id)
+                                             max_id=max_id,
+                                             **self.PROFILE_SHOWS.get(show, {}))
             self.store.put_statuses(page)
             return page
         return self.submit(job)

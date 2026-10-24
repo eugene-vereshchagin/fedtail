@@ -396,9 +396,17 @@ class Api:
         """The whole fediverse as this server knows it."""
         return self.get("/api/v1/timelines/public", self._page(limit, max_id, min_id))
 
-    def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None):
+    def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None,
+                         exclude_replies=False, only_media=False, tagged=None,
+                         exclude_reblogs=False):
+        """Someone's posts, newest first; the server filters: without replies (its own
+        threads still come), only with pictures, only with a tag, without boosts."""
+        extra = {"exclude_replies": "true" if exclude_replies else None,
+                 "only_media": "true" if only_media else None,
+                 "exclude_reblogs": "true" if exclude_reblogs else None,
+                 "tagged": tagged.lstrip("#") if tagged else None}
         return self.get(f"/api/v1/accounts/{seg(acc_id)}/statuses",
-                        self._page(limit, max_id, min_id))
+                        self._page(limit, max_id, min_id, **extra))
 
     def notification_policy(self):
         return self.get("/api/v2/notifications/policy")
@@ -575,8 +583,15 @@ class Api:
         return self.get("/api/v2/search", p) or {}
 
     # ---- silence: mute, block, filters ------------------------------------------
-    def mute(self, acc_id, on=True):
-        return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'mute' if on else 'unmute'}")
+    def mute(self, acc_id, on=True, duration=0, notifications=True):
+        """duration: seconds until it ends by itself (0 — for good); notifications:
+        theirs muted too (the server's default) or still coming."""
+        if not on:
+            return self.post(f"/api/v1/accounts/{seg(acc_id)}/unmute")
+        body = {"notifications": bool(notifications)}
+        if duration:
+            body["duration"] = int(duration)
+        return self.post(f"/api/v1/accounts/{seg(acc_id)}/mute", json=body)
 
     def block(self, acc_id, on=True):
         return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'block' if on else 'unblock'}")
@@ -600,8 +615,12 @@ class Api:
         return self.get("/api/v2/filters") or []
 
     def create_filter(self, title, keywords, action="warn", contexts=("home", "public",
-                                                                       "thread", "account")):
+                                                                       "thread", "account"),
+                      expires_in=None):
+        """expires_in: seconds until the filter ends by itself (None — never)."""
         data = {"title": title, "filter_action": action, "context[]": list(contexts)}
+        if expires_in:
+            data["expires_in"] = str(int(expires_in))
         for i, word in enumerate(keywords):
             data[f"keywords_attributes[{i}][keyword]"] = word
             data[f"keywords_attributes[{i}][whole_word]"] = "true"
@@ -609,6 +628,18 @@ class Api:
 
     def delete_filter(self, filter_id):
         return self.delete(f"/api/v2/filters/{seg(filter_id)}")
+
+    def filter_statuses(self, filter_id):
+        """The posts a filter hides one by one: [{id, status_id}]."""
+        return self.get(f"/api/v2/filters/{seg(filter_id)}/statuses") or []
+
+    def filter_status(self, filter_id, status_id):
+        """Hide this very post with that filter (not by its words)."""
+        return self.post(f"/api/v2/filters/{seg(filter_id)}/statuses",
+                         data={"status_id": status_id})
+
+    def unfilter_status(self, filter_status_id):
+        return self.delete(f"/api/v2/filters/statuses/{seg(filter_status_id)}")
 
     # ---- lists --------------------------------------------------------------
     def lists(self):
@@ -635,13 +666,19 @@ class Api:
             log.info("list %s: limit=0 gave nobody, pages gave %d", list_id, len(out))
         return out
 
-    def create_list(self, title, exclusive=False):
-        return self.post("/api/v1/lists", data={"title": title,
-                                                "exclusive": "true" if exclusive else "false"})
+    def create_list(self, title, exclusive=False, replies_policy=None):
+        """replies_policy: whose replies the list shows — "followed" (to anyone I
+        follow), "list" (to its members), "none"; None — the server's default."""
+        data = {"title": title, "exclusive": "true" if exclusive else "false"}
+        if replies_policy:
+            data["replies_policy"] = replies_policy
+        return self.post("/api/v1/lists", data=data)
 
-    def update_list(self, list_id, title, exclusive):
-        return self.put(f"/api/v1/lists/{seg(list_id)}",
-                        data={"title": title, "exclusive": "true" if exclusive else "false"})
+    def update_list(self, list_id, title, exclusive, replies_policy=None):
+        data = {"title": title, "exclusive": "true" if exclusive else "false"}
+        if replies_policy:
+            data["replies_policy"] = replies_policy
+        return self.put(f"/api/v1/lists/{seg(list_id)}", data=data)
 
     def delete_list(self, list_id):
         return self.delete(f"/api/v1/lists/{seg(list_id)}")

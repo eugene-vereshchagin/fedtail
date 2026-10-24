@@ -378,8 +378,10 @@ class View:
     def account(self, acc_id):
         return _then(self._core.account(acc_id), self.acc)
 
-    def account_posts(self, acc_id, max_id=None):
-        return _then(self._core.account_statuses(acc_id, max_id=max_id),
+    def account_posts(self, acc_id, max_id=None, show="all"):
+        """A page of someone's posts as entries; show: "all", "posts" (no replies),
+        "media" (core.PROFILE_SHOWS)."""
+        return _then(self._core.account_statuses(acc_id, max_id=max_id, show=show),
                      lambda page: [self.entry(st) for st in page or ()])
 
     def relationship(self, acc_id):
@@ -440,9 +442,10 @@ class View:
         return _then(self._core.update_profile(**{adapter.PROFILE_KEYS[k]: v
                                                   for k, v in changes.items()}), self.acc)
 
-    def create_list(self, title, exclusive=False, add=None):
+    def create_list(self, title, exclusive=False, add=None, replies_policy=None):
         """Future: the UserList made (add: someone to put in it at once)."""
-        return _then(self._core.create_list(title, exclusive, add=add),
+        return _then(self._core.create_list(title, exclusive, add=add,
+                                             replies_policy=replies_policy),
                      lambda x: adapter.user_list(x, self.profile))
 
     def follow(self, acc_id, on=True):
