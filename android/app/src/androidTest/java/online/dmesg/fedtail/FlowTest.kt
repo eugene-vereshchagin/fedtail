@@ -6,7 +6,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeTimeoutException
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -88,6 +90,9 @@ class FlowTest {
         return me + children.joinToString("") { it.printTree(depth + 1) }
     }
 
+    /** A post's card: clickable, with an author's @handle in its words. */
+    private val card = hasClickAction() and hasText("@", substring = true)
+
     private fun back() = scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
     @Test
@@ -96,9 +101,12 @@ class FlowTest {
         waitText("Read in a row")
         compose.onAllNodesWithText("Home").onFirst().performClick()
         waitDescription("Switch lane")                 // a lane's title bar
-        waitText("перед тем как менять")               // Кот's answer in Home
-        compose.onAllNodesWithText("перед тем как менять", substring = true).onFirst()
-            .performClick()
+        // a card — whichever stands first: the screenshots before have read some already,
+        // and a lane opens on its first unread post
+        waitFor("a card", 90_000) {
+            compose.onAllNodes(card).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onAllNodes(card).onFirst().performClick()
         waitText("/1")                                  // the thread, numbered as a tree
         waitText("Thread")
         back()
