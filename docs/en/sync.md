@@ -117,6 +117,13 @@ quota_mb = 20                 # per account; a year of reading is a few MB
 max_blob_kb = 512
 requests_per_minute = 120     # per account
 keep_days = 0                 # 0: kept until the account deletes its journal
+total_mb = 1024               # all accounts together; 0 — no cap
+timeout_seconds = 30          # a silent connection is dropped (a whole request: twice that)
+max_connections = 64          # served at once; more are closed at the door
+requests_per_minute_per_ip = 240
+verifications_per_minute_per_ip = 10   # token checks at a fediverse server, per address
+verifications_per_minute = 60          # ... in all
+client_ip_header = "CF-Connecting-IP"  # behind cloudflared/nginx on this machine; "" — none
 ```
 
 A systemd unit, `/etc/systemd/system/fedtail-sync.service`:
@@ -184,6 +191,33 @@ sync.your.domain {
 
 Check from outside: `curl -s https://sync.your.domain/v1` → `{"fedtail-sync": 1}`. Your
 people put that address in `sync.url` and run `fedtail sync login`.
+
+### How it guards itself
+
+It faces the internet, so every limit is on by default (the values above are the
+defaults, but for `client_ip_header`):
+
+| what someone might try | what stops it |
+|---|---|
+| open connections and stay silent, or trickle a byte now and then | dropped after `timeout_seconds` of silence; a whole request gets twice that |
+| open thousands of connections | `max_connections` at once; the rest are closed at the door |
+| flood it with requests | `requests_per_minute_per_ip` per address, `requests_per_minute` per account |
+| send random tokens so that it hammers someone's fediverse server with checks | a known token is believed for 10 minutes, a refused one is refused for a minute; real checks are capped per address and in all (`verifications_per_minute_per_ip`, `verifications_per_minute`) |
+| a lying or missing `Content-Length`, a chunked body | refused before reading (411, 400, 413); a body shorter than promised doesn't hold a thread |
+| fill the disk | `quota_mb` per account and `total_mb` for everyone (with `"*"` anyone with a server of their own could make accounts) |
+| make it call into your LAN (with `"*"`) | only public addresses, checked on the connected socket — a name that changes its address between the check and the call is caught; no redirect is followed, so the token goes nowhere else |
+| make it show its insides | an error inside answers "internal error"; the details go to its log |
+
+**Behind a proxy on the same machine** — cloudflared, nginx, Caddy — every request comes
+from 127.0.0.1, and the per-address limits would treat the whole world as one client. Set
+`client_ip_header` to the header that proxy puts the real address in: `CF-Connecting-IP`
+for Cloudflare, `X-Real-IP` for nginx with `proxy_set_header X-Real-IP $remote_addr;`. It
+is believed only from a loopback peer, and only if it holds an address — a client can't
+fake its way around the limit. Listening on anything but 127.0.0.1 makes it warn at start:
+it speaks plain HTTP.
+
+The tests of each of these are in `tests/test_syncserver_security.py`; CI runs them, with
+bandit, on every push, and a release can't go out without them.
 
 What the server keeps: per account (its id on its server), sealed blobs with the sending
 device's random id and a time. What it logs: one line per request — the address, the

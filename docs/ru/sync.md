@@ -118,6 +118,13 @@ quota_mb = 20                 # per account; a year of reading is a few MB
 max_blob_kb = 512
 requests_per_minute = 120     # per account
 keep_days = 0                 # 0: kept until the account deletes its journal
+total_mb = 1024               # all accounts together; 0 — no cap
+timeout_seconds = 30          # a silent connection is dropped (a whole request: twice that)
+max_connections = 64          # served at once; more are closed at the door
+requests_per_minute_per_ip = 240
+verifications_per_minute_per_ip = 10   # token checks at a fediverse server, per address
+verifications_per_minute = 60          # ... in all
+client_ip_header = "CF-Connecting-IP"  # behind cloudflared/nginx on this machine; "" — none
 ```
 
 Юнит systemd, `/etc/systemd/system/fedtail-sync.service`:
@@ -185,6 +192,32 @@ sync.your.domain {
 
 Проверка снаружи: `curl -s https://sync.твой.домен/v1` → `{"fedtail-sync": 1}`. Твои
 люди пишут этот адрес в `sync.url` и делают `fedtail sync login`.
+
+### Как он себя защищает
+
+Он смотрит в интернет, поэтому все ограничения включены по умолчанию (значения выше — и
+есть умолчания, кроме `client_ip_header`):
+
+| что можно попробовать | что этому мешает |
+|---|---|
+| открыть соединения и молчать или слать по байту раз в полминуты | обрыв после `timeout_seconds` тишины; на весь запрос — вдвое больше |
+| открыть тысячи соединений | одновременно не больше `max_connections`, остальные закрываются сразу |
+| завалить запросами | `requests_per_minute_per_ip` на адрес, `requests_per_minute` на аккаунт |
+| слать случайные токены, чтобы сервер долбил проверками чей-то сервер федиверса | известному токену верит 10 минут, отказанный отказан минуту; настоящие проверки ограничены на адрес и всего (`verifications_per_minute_per_ip`, `verifications_per_minute`) |
+| врать в `Content-Length`, не указывать его, слать кусками (chunked) | отказ до чтения (411, 400, 413); тело короче обещанного не держит поток |
+| забить диск | `quota_mb` на аккаунт и `total_mb` на всех (с `"*"` любой со своим сервером может наплодить аккаунтов) |
+| заставить его сходить в твою локалку (с `"*"`) | только публичные адреса, проверка на уже открытом соединении — имя, сменившее адрес между проверкой и запросом, ловится; за редиректами не ходит, так что токен никуда больше не уходит |
+| выведать его внутренности | ошибка внутри отвечает «internal error», подробности — только в его лог |
+
+**За прокси на той же машине** — cloudflared, nginx, Caddy — все запросы приходят с
+127.0.0.1, и лимиты на адрес считали бы весь мир одним клиентом. Укажи в `client_ip_header`
+заголовок, куда прокси кладёт настоящий адрес: `CF-Connecting-IP` у Cloudflare, `X-Real-IP`
+у nginx с `proxy_set_header X-Real-IP $remote_addr;`. Ему верят только от локального
+соседа и только если в нём адрес — клиент так лимит не обойдёт. Если слушать не на
+127.0.0.1, сервер при старте предупредит: он говорит обычным HTTP.
+
+Тесты на каждое из этого — в `tests/test_syncserver_security.py`; CI гоняет их вместе с
+bandit на каждый пуш, и без них релиз не выйдет.
 
 Что хранит сервер: для каждого аккаунта (его id на его сервере) — зашифрованные куски со
 случайным id устройства и временем. Что пишет в лог: строку на запрос — адрес, путь,

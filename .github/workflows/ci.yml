@@ -17,6 +17,25 @@ jobs:
       - run: pip install ruff
       - run: ruff check --output-format=github .
 
+  # fedtail-sync faces the internet: its security tests and a static check (bandit,
+  # and ruff's bandit rules over the sync code) must pass — on the oldest Python the
+  # server promises too
+  security:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install bandit ruff requests cryptography
+      - run: bandit -r syncserver fedtail/core/sync -ll
+      - run: ruff check --select S --output-format=github syncserver fedtail/core/sync
+      - run: python -m unittest -v tests.test_syncserver_security tests.test_sync
+
   # known vulnerabilities in what fedtail runs on (requests, urllib3, PySide6, textual):
   # reported as warnings, never holding a release — a new CVE upstream is news, not a
   # broken build
@@ -238,7 +257,7 @@ jobs:
   # with that version's CHANGELOG section as the notes
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, test, debian, windows-build, linux-build, deb]
+    needs: [lint, security, test, debian, windows-build, linux-build, deb]
     runs-on: ubuntu-latest
     permissions:
       contents: write
