@@ -40,7 +40,9 @@ log = logging.getLogger(__name__)
 COOKIE = "fedtail_web"
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-          "/app.css": ("app.css", "text/css; charset=utf-8")}
+          "/app.css": ("app.css", "text/css; charset=utf-8"),
+          # Web Push: shows what the user's server sends to this browser (data/web/sw.js)
+          "/sw.js": ("sw.js", "text/javascript; charset=utf-8")}
 CSP = ("default-src 'self'; img-src https: data:; media-src https: 'self'; style-src 'self'; "
        "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; "
        "form-action 'self'")
@@ -650,6 +652,31 @@ class Web:
         on = self.merged()
         return {"merged": on, "message": ("☑ " if on else "☐ ") + _("accounts_merge") +
                 " — " + _("settings_restart_tip")}
+
+    # ---- Web Push: the browser subscribes at my server itself (through fedtail) --------
+    def push_state(self):
+        """What the page needs to subscribe: the server's key ("" — no Web Push there)
+        and the subscription the server keeps for this token, if any."""
+        key = self.core.vapid_key().result()
+        sub = self.core.push_subscription().result() if key else None
+        return {"key": key, "endpoint": (sub or {}).get("endpoint", ""),
+                "words": {k: _(k) for k in ("web_push_on", "web_push_off", "web_push_none",
+                                            "web_push_insecure", "web_push_turn_off",
+                                            "web_push", "web_push_tip")}}
+
+    def push_on(self, body):
+        """The browser's subscription, to my server: it sends there from now on."""
+        endpoint = str(body.get("endpoint") or "")
+        keys = body.get("keys") if isinstance(body.get("keys"), dict) else {}
+        if not endpoint.startswith("https://") or not keys.get("p256dh") or \
+                not keys.get("auth"):
+            raise ValueError("subscription")
+        self.core.push_subscribe(endpoint, str(keys["p256dh"]), str(keys["auth"])).result()
+        return {"message": _("web_push_on")}
+
+    def push_off(self):
+        self.core.push_unsubscribe().result()
+        return {"message": _("web_push_off")}
 
     def themes(self):
         """≡ → Try a theme: the names, which one is on, which the config says."""
@@ -1355,6 +1382,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          # what the windows have and the page now too (docs/src/parity.toml)
          "help_back", "help_forward", "debug_notify", "debug_notify_sent", "notify_failed",
          "notify_test_body", "accounts_merge", "accounts_merge_tip", "try_theme",
+         "web_push", "web_push_tip",
          "try_theme_tip", "a11y_avatar",
          "group_fold_tip", "thread_loading", "find_deeper", "find_deeper_tip",
          "find_everywhere", "find_everywhere_tip", "find_searching", "find_archive_none",
@@ -1476,6 +1504,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
                   "/api/places": lambda: self.web.place_menu(),
                   "/api/themes": lambda: self.web.themes(),
+                  "/api/push": lambda: self.web.push_state(),
                   "/api/find": lambda: self.web.find(q.get("lane", ""), q.get("q", "")),
                   "/api/find_deeper": lambda: self.web.find_deeper(q.get("lane", ""),
                                                                    q.get("q", "")),
@@ -1541,6 +1570,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/theme": lambda: web.try_theme(body.get("name")),
             "/api/merge": lambda: web.toggle_merge(),
+            "/api/push_on": lambda: web.push_on(body),
+            "/api/push_off": lambda: web.push_off(),
             "/api/link": lambda: web.link(str(body.get("url", "")),
                                           bool(body.get("confirmed")), _chosen(body)),
             "/api/profile_act": lambda: web.profile_act(

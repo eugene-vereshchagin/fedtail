@@ -14,6 +14,9 @@
 - "Hide this post" in the ⋯ menu: one post out of sight everywhere, through a filter of the
   server's ("fedtail: hidden posts"), in other clients too.
 - A list's replies: to anyone you follow, to its members, or none (the server's setting).
+- Web Push in the web page: ≡ → "Push notifications…" subscribes the browser at your
+  server itself, so notifications come with the tab closed and fedtail off (over https or
+  on localhost — the browser's rule; see the help, "Notifications").
 - The web page takes the windows' themes: their colours and font, and ≡ → "Try a theme"
   for the run (`ui.theme` gives the one it starts with).
 - The help in the web page and the terminal goes back and forward between its pages

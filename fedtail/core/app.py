@@ -2903,8 +2903,13 @@ class Core(SocialMixin):
             return str(key or "")
         return self.submit(job)
 
+    # what a push subscription is told about: everything the activity shows
+    PUSH_ALERTS = {"mention": True, "status": True, "reblog": True, "follow": True,
+                   "follow_request": True, "favourite": True, "poll": True, "update": True}
+
     def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
-        return self.call_api("push_subscribe", endpoint, p256dh, auth, alerts, policy)
+        return self.call_api("push_subscribe", endpoint, p256dh, auth,
+                             alerts or self.PUSH_ALERTS, policy)
 
     def push_subscription(self):
         def job():

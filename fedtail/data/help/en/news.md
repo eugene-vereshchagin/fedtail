@@ -11,6 +11,7 @@ What's new in the latest versions, and the plans.
 - In a profile: posts, posts and replies, media
 - Mute for a while; posts only
 - Hide a single post
+- Push notifications (Web Push, UnifiedPush)
 
 **0.19.0:**
 
@@ -46,7 +47,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | Boost carousel | Sideways is awkward to read, and it fits badly with “nothing jumps” and read marks. Boosts are hidden with the filter, per person or with a list. |
 | Card templates (like tut's `toot.tmpl`) | A theme already sets the look of the whole app; a second layer of templates over themes adds nothing. |
 | AI helpers in the compose panel (as in Ice Cubes) | Writing is the author's job. |
-| Push notifications (Web Push, UnifiedPush) | A desktop has enough with the live stream and polling; push is for phones. |
 | A node admin panel in the client | Sitting in a client logged in as an admin is irresponsible. If a node ever needs setting up, there'll be a separate tool for it. |
 | Mastodon's annual report | It's about neither reading nor conversation. |
 | An XMPP gateway | Taken off the queue. |

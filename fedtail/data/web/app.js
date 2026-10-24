@@ -639,6 +639,7 @@ function mainMenu() {
     [w("try_theme") + " …", tryTheme, w("try_theme_tip")],
     "-",
     [w("debug_notify"), testNotify],
+    [w("web_push"), pushToggle, w("web_push_tip")],
     [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge, w("accounts_merge_tip")],
     [w("about"), () => openPlace("about")],
   ]);
@@ -2005,6 +2006,45 @@ async function testNotify() {
     new Notification("fedtail", { body: w("notify_test_body"), tag: "fedtail-test" });
     toast(w("debug_notify_sent", { backend: "browser" }));
   } catch (e) { toast(w("notify_failed", { err: e.message })); }
+}
+
+// ≡ → Push notifications: the browser subscribes at the user's server itself (fedtail
+// hands the subscription over); the server then sends even with this page closed
+function b64bytes(s) {
+  const pad = "=".repeat((4 - s.length % 4) % 4);
+  const raw = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+async function pushToggle() {
+  let st;
+  try { st = await api("/api/push"); } catch (e) { toast(e.message); return; }
+  const pw = st.words;
+  if (!window.isSecureContext || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    toast(pw.web_push_insecure);
+    return;
+  }
+  if (!st.key) { toast(pw.web_push_none); return; }
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && st.endpoint === sub.endpoint) {  // on here: the question is to turn it off
+      const got = await chooseDlg({ title: pw.web_push, text: pw.web_push_on,
+                                    options: [{ key: "off", label: pw.web_push_turn_off }] });
+      if (!got) return;
+      await sub.unsubscribe();
+      toast((await api("/api/push_off", {})).message);
+      return;
+    }
+    if (await Notification.requestPermission() !== "granted") {
+      toast(w("web_notify_off"));
+      return;
+    }
+    if (sub) await sub.unsubscribe();  // made with another key or another server's: anew
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true,
+                                            applicationServerKey: b64bytes(st.key) });
+    toast((await api("/api/push_on", sub.toJSON())).message);
+  } catch (e) { toast(e.message); }
 }
 
 // ≡ → All accounts in one window: from the next start of fedtail, as in the windows

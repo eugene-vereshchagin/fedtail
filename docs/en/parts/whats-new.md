@@ -4,6 +4,7 @@
 - In a profile: posts, posts and replies, media
 - Mute for a while; posts only
 - Hide a single post
+- Push notifications (Web Push, UnifiedPush)
 
 **0.19.0:**
 

@@ -142,11 +142,18 @@ clients = []
 
 [[feature]]
 id = "push"
-status = "wont"
+status = "partly"
+since = "0.20.0"
 name.ru = "Push-уведомления (Web Push, UnifiedPush)"
 name.en = "Push notifications (Web Push, UnifiedPush)"
-why.ru = "Десктопу хватает живого потока и опроса; push нужен телефонам."
-why.en = "A desktop has enough with the live stream and polling; push is for phones."
+status_note.ru = "Web Push в веб-версии"
+status_note.en = "Web Push in the web version"
+config = "—"
+api = "`/api/v1/push/subscription`"
+others = "Mastodon web, Elk, Phanpy, Tusky, Ivory"
+clients = ["Mastodon web", "Elk", "Phanpy", "Tusky", "Ivory"]
+details.ru = "Веб-страница подписывает браузер на push прямо у твоего сервера (≡ → «Push-уведомления…»): уведомления приходят и с закрытой вкладкой, и при выключенном fedtail. Нужен https или localhost. Окнам и терминалу push не нужен — им хватает живого потока и опроса; UnifiedPush — дело будущей версии для Android."
+details.en = "The web page subscribes the browser to push right at your server (≡ → “Push notifications…”): notifications come with the tab closed and fedtail off. Needs https or localhost. The windows and the terminal don't need push — the live stream and polling are enough; UnifiedPush is for the future Android version."
 
 [[feature]]
 id = "grouped-v2"

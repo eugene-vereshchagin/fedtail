@@ -307,6 +307,30 @@ class WebTest(TmpDir):
         self.assertEqual(self.core.get_state("merge"), ["all"])
         self.assertFalse(json.loads(self.req("/api/merge", {})[2])["merged"])
 
+    def test_web_push(self):
+        """The page subscribes the browser at the user's server; fedtail hands it over."""
+        code, headers, js = self.req("/sw.js")
+        self.assertEqual(code, 200)
+        self.assertIn("javascript", headers["Content-Type"])
+        self.assertIn("showNotification", js)
+        st = json.loads(self.req("/api/push")[2])
+        self.assertEqual((st["key"], st["endpoint"]), ("", ""))  # no Web Push there
+        self.assertIn("web_push_insecure", st["words"])
+        self.w.vapid = "BKEY"
+        self.assertEqual(json.loads(self.req("/api/push")[2])["key"], "BKEY")
+        bad = {"endpoint": "http://push.example/x", "keys": {"p256dh": "P", "auth": "A"}}
+        self.assertEqual(self.req("/api/push_on", bad)[0], 400)
+        self.assertEqual(self.req("/api/push_on", {"endpoint": "https://p.example/x"})[0], 400)
+        good = {"endpoint": "https://push.example/x", "keys": {"p256dh": "P", "auth": "A"}}
+        r = json.loads(self.req("/api/push_on", good)[2])
+        self.assertEqual(r["message"], i18n._("web_push_on"))
+        self.assertEqual(self.w.push["endpoint"], "https://push.example/x")
+        self.assertTrue(self.w.push["alerts"]["mention"])
+        self.assertEqual(json.loads(self.req("/api/push")[2])["endpoint"],
+                         "https://push.example/x")
+        self.req("/api/push_off", {})
+        self.assertIsNone(self.w.push)
+
     def test_lanes_and_posts_cleaned(self):
         _c, _h, body = self.req("/api/lanes")
         lanes = {x["name"]: x for x in json.loads(body)}
