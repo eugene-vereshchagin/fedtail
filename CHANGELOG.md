@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.0 — in progress
+
+- The rest of the 0.19 plan: the full terminal interface and the full web page (the
+  "Four interfaces" table shows what is left).
+
 ## 0.19.0 — 2026-10-24
 
 - An intermediate release of the 0.19 plan (docs/en/dev/roadmap.md): the sound schemes,
