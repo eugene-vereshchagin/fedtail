@@ -26,6 +26,9 @@ AUTOSAVE_MS = 1500
 BIG_PCT = 90  # ⤡: this share of the main window
 
 
+COVERED = ("mp4", "webm", "mov", "mp3", "ogg", "m4a", "flac")  # a cover goes with these
+
+
 class ComposeWindow(Gtk.Box):
     """The editor. Inline, the window's overlay holds it; else a Gtk.Window does
     (self.host). close() closes either, keeping the draft."""
@@ -121,6 +124,10 @@ class ComposeWindow(Gtk.Box):
         self.media_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.append(self.media_box)  # a row per picture: name, description, ✕
         self.media = []             # [[path, description entry, focus [x, y] or None]]
+        self.covers = {}            # path of a video or a sound -> its cover picture's path
+        self._cover_labels = {}     # path -> the label saying which cover
+        # edit: the post's attachments — [media id, description entry, focus, as they were]
+        self.remote = []
         self.poll_box = self._build_poll()
         box.append(self.poll_box)
 
@@ -405,9 +412,11 @@ class ComposeWindow(Gtk.Box):
         if st.language:
             self._set_language(st.language)
         from pathlib import Path
-        for path, desc, *focus in st.media:
+        for path, desc, *rest in st.media:
             if Path(path).exists():
-                self._add_media(path, desc, focus[0] if focus else None)
+                self._add_media(path, desc, rest[0] if rest else None)
+                if len(rest) > 1 and rest[1] and Path(rest[1]).exists():
+                    self.pick_cover(path, rest[1])
         self.sensitive_btn.set_active(st.sensitive)
         if st.poll:
             self.poll_btn.set_active(True)
@@ -422,6 +431,8 @@ class ComposeWindow(Gtk.Box):
         self.initial = self._snapshot()
 
     def _load_edit(self):
+        for m in self.edit.media:  # their words and focus can change; they stay
+            self._add_remote(m)
         self._set_vis(self.edit.visibility)
         self.vis.set_sensitive(False)
         d = self.view.get_draft(self.key)
@@ -481,8 +492,91 @@ class ComposeWindow(Gtk.Box):
         return VISIBILITIES[self.vis.get_selected()]
 
     def _media_list(self):
-        return [[path, e.get_text().strip()] + ([list(f)] if f else [])
-                for path, e, f in self.media]
+        out = []
+        for path, e, f in self.media:
+            entry = [path, e.get_text().strip()]
+            cover = self.covers.get(path)
+            if f or cover:
+                entry.append(list(f) if f else None)
+            if cover:
+                entry.append(cover)
+            out.append(entry)
+        return out
+
+    def media_changes(self):
+        """Edit: {media id: (description, focus)} of the post's attachments whose words or
+        focus point were changed here."""
+        out = {}
+        for item in self.remote:
+            mid, e, focus, was = item
+            now = (e.get_text().strip(), tuple(round(float(x), 2) for x in focus)
+                   if focus else None)
+            if now != was:
+                out[mid] = now
+        return out
+
+    def _add_remote(self, m):
+        """An attachment of the post being edited: its description (and a picture's focus
+        point, its preview being at hand) can be changed; it can't go or be replaced."""
+        row = Gtk.Box(spacing=6)
+        row.append(Gtk.Label(label=("🖼 " if m.kind == "image" else "🎞 ") + _("alt_title"),
+                             xalign=0))
+        alt = Gtk.Entry(placeholder_text=_("alt_prompt"))
+        alt.set_text(m.alt or "")
+        alt.set_hexpand(True)
+        alt.connect("changed", lambda _e: self._changed())
+        row.append(alt)
+        focus = list(m.focus) if m.focus else None
+        item = [m.ref.id, alt, focus,
+                ((m.alt or "").strip(), tuple(round(float(x), 2) for x in focus)
+                 if focus else None)]
+        images = getattr(self.win, "images", None)
+        local = images.local(m.preview or m.url) if images is not None and \
+            m.kind == "image" else None
+        if local:
+            aim = Gtk.Button(label="◎")
+            aim.add_css_class("flat")
+            tip(aim, _("focus_tip"))
+            aim.connect("clicked", lambda _b: self._focus_remote(item, local))
+            row.append(aim)
+        self.remote.append(item)
+        self.media_box.append(row)
+
+    def _focus_remote(self, item, local):
+        from .focus import FocusDialog
+
+        def done(desc, focus):
+            item[1].set_text(desc)
+            item[2] = focus
+            self._changed()
+        return FocusDialog(self.get_root(), local, item[1].get_text(), item[2], done)
+
+    def pick_cover(self, path, file=None):
+        """A cover picture for the video or the sound at path: file, or asked."""
+        if file:
+            self.covers[path] = file
+            self._cover_labels[path].set_text(_("media_cover_set",
+                                                name=file.rsplit("/", 1)[-1]))
+            self._changed()
+            return
+        dlg = Gtk.FileDialog(title=_("media_cover"))
+        flt = Gtk.FileFilter()
+        flt.set_name(_("media_cover"))
+        for ext in ("jpg", "jpeg", "png", "webp", "gif"):
+            flt.add_suffix(ext)
+        from gi.repository import Gio
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(flt)
+        dlg.set_filters(filters)
+
+        def done(d, res):
+            try:
+                f = d.open_finish(res)
+            except GLib.Error:
+                return  # cancelled
+            if f is not None and f.get_path():
+                self.pick_cover(path, f.get_path())
+        dlg.open(self.get_root(), None, done)
 
     def poll_data(self):
         secs = rules.POLL_TIMES[self.poll_time.get_selected()][0]
@@ -561,6 +655,16 @@ class ComposeWindow(Gtk.Box):
             tip(aim, _("focus_tip"))
             aim.connect("clicked", lambda _b: self._focus_dialog(item))
             row.append(aim)
+        if path.lower().rsplit(".", 1)[-1] in COVERED:  # a video or a sound: a cover
+            cover = Gtk.Button(label=_("media_cover"))
+            cover.add_css_class("flat")
+            tip(cover, _("media_cover_tip"))
+            cover.connect("clicked", lambda _b: self.pick_cover(path))
+            row.append(cover)
+            label = Gtk.Label(label="", xalign=0)
+            label.add_css_class("ft-muted")
+            self._cover_labels[path] = label
+            row.append(label)
         rm = Gtk.Button(label="✕")
         rm.add_css_class("flat")
         tip(rm, _("detach"))
@@ -597,6 +701,7 @@ class ComposeWindow(Gtk.Box):
 
     def _remove_media(self, item, row):
         self.media.remove(item)
+        self.covers.pop(item[0], None)
         self.media_box.remove(row)
         self._media_or_poll()
         self._changed()
@@ -715,7 +820,7 @@ class ComposeWindow(Gtk.Box):
         if self.cfg["post"].get("resize_images", True):
             media = [(rules.fit_for_server(m[0], self.view.caps, self.view.paths.cache_dir,
                                            _PixbufImages),) + tuple(m[1:]) for m in media]
-        if not text and not media:
+        if not text and not media and not (self.edit and self.media_changes()):
             return
         if any(not m[1] for m in media) and not getattr(self, "_alt_ok", False) and \
                 not self.edit and self.cfg["post"].get("alt_reminder", True):
@@ -728,7 +833,9 @@ class ComposeWindow(Gtk.Box):
         self.send_btn.set_label(_("sending"))
         cw = self.cw.get_text().strip() if self.cw.get_visible() else ""
         if self.edit:
-            fut = self.view.edit(self.edit, text, cw, draft_key=self.key)
+            changed = self.media_changes()
+            fut = self.view.edit(self.edit, text, cw, draft_key=self.key,
+                                 **({"media": changed} if changed else {}))
             self.win.call(fut, self._edited, self._failed)
             return
         fut = self.view.post(text, self.visibility(), self.reply_to, cw, media=media,

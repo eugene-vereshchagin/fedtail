@@ -91,3 +91,40 @@ def probe_rows(probe, date):
         what = _("probe_" + f.key) if _has("probe_" + f.key) else f.key
         rows.append((what, f"{PROBE_MARKS.get(f.state, '?')} {answer}", f.detail == "known"))
     return note, rows
+
+
+def server_more_html(info, clean):
+    """What the newer servers say on top (Mastodon 4.3–4.4): the terms, the servers it
+    cut off, what its translator can do — after common/server.py's page."""
+    from html import escape as esc
+    parts = []
+    if info.terms:
+        parts.append(f"<h3>{esc(_('server_terms'))}</h3>" + clean(info.terms))
+    parts.append(f"<h3>{esc(_('server_blocks'))}</h3>")
+    if info.blocks:
+        words = {"suspend": _("server_block_suspend"), "silence": _("server_block_silence")}
+        parts.append("<ul>" + "".join(
+            f"<li>{esc(domain)} — {esc(words.get(sev, sev))}"
+            + (f"<br><small>{esc(why)}</small>" if why else "") + "</li>"
+            for domain, sev, why in info.blocks) + "</ul>")
+    else:
+        parts.append(f"<p>{esc(_('server_blocks_none'))}</p>")
+    langs = "; ".join(f"{src} → {', '.join(into)}" for src, into in info.translates if into)
+    parts.append("<p>" + esc(_("server_translates", langs=langs) if langs
+                             else _("server_translates_none")) + "</p>")
+    return "".join(parts)
+
+
+def flag_changes(prof, hide_collections, indexable, attribution):
+    """The newer switches of a profile (Mastodon 4.x) that differ from the server's:
+    whom I follow hidden, my posts found by words, sites naming me their author
+    (attribution: as typed, comma-separated)."""
+    out = {}
+    for key, now in (("hide_collections", hide_collections), ("indexable", indexable)):
+        was = getattr(prof, key, None)
+        if was is not None and bool(now) != bool(was) or was is None and now:
+            out[key] = bool(now)
+    sites = [x.strip() for x in attribution.replace(";", ",").split(",") if x.strip()]
+    if sites != list(getattr(prof, "attribution_domains", ()) or ()):
+        out["attribution_domains"] = sites
+    return out

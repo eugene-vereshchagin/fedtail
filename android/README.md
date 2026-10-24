@@ -92,8 +92,9 @@ Dev builds are signed with `dev.keystore` (in the repository on purpose: it sign
 
 ## Building
 
-CI builds the dev APK on every push to the `android` branch (`.github/workflows/android.yml`;
-the desktop's CI leaves this branch alone) and attaches it to the run as an artifact. Then
+CI builds the dev APK on a push to main that touches the app or the core
+(`.github/workflows/android.yml`; a `[skip ci]` push builds nothing) and attaches it to
+the run as an artifact. Then
 it starts the APK on an emulator and photographs it (`.github/android_shots.sh`): the login
 screen, the demo world's overview of lanes, its Home lane and a thread, with Python's and Android's log — as an artifact and
 in the `android-shots` branch (one commit, rewritten by every run). A failed build says
@@ -107,5 +108,27 @@ cd android
 ./gradlew assembleDebug        # → app/build/outputs/apk/debug/
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## Releases
+
+One release for every platform: when `fedtail/__init__.py` says a release version, CI's
+`apk` job (`ci.yml`) builds the APK with the release key, and the `release` job puts
+`fedtail-X.Y.Z-android.apk` next to the Windows, Linux and Debian files. Its version is
+the desktop's — `X.Y.Z`, versionCode made of it.
+
+The release key never enters the repository. Made once, kept safe (losing it means the
+installed app can't be updated — a new key is a new app to Android):
+
+```sh
+keytool -genkeypair -v -keystore fedtail-release.keystore -alias fedtail \
+        -keyalg RSA -keysize 4096 -validity 36500
+base64 -w0 fedtail-release.keystore     # → the ANDROID_KEYSTORE secret
+```
+
+Repository → Settings → Secrets and variables → Actions: `ANDROID_KEYSTORE` (the base64),
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`fedtail`), `ANDROID_KEY_PASSWORD`.
+Without them a release goes out without the APK (a warning says so). The dev builds keep
+`dev.keystore` and their own id, `online.dmesg.fedtail.dev`: they stand next to the
+released app and never replace it.
 
 `tests/test_android_bridge.py` checks the Python door on any desktop Python, no phone needed.

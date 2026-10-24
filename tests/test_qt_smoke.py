@@ -600,8 +600,14 @@ class QtSmokeTest(unittest.TestCase):
         dlg.filter_list.setCurrentRow(0)
         dlg._delete_filter()
         self.pump(until=lambda: dlg.filter_list.count() == 0)
-        self.win.on_link("fedtail:mute/013")
+        from fedtail.frontends.qt.dialogs import Choose
+        self.win.on_link("fedtail:mute/013")  # how long first
+        ask = next(w for w in self.win.findChildren(Choose) if w.isVisible())
+        ask.radios[1].setChecked(True)  # an hour
+        ask.tick.setChecked(True)       # posts only
+        ask.accept()
         self.pump(until=lambda: "B" in self.core.muted)
+        self.assertEqual(self.world.mute_terms["B"], {"duration": 3600, "notifications": False})
         dlg.reload()
         self.pump(until=lambda: dlg.muted_list.count() == 1)
         dlg.muted_list.setCurrentRow(0)
@@ -845,7 +851,7 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "work~700" in lane.view.rows and "011" in lane.view.rows)
         marks = [w.text() for w in lane.view.rows["work~700"].findChildren(QLabel)
                  if w.objectName() == "via"]
-        self.assertEqual(marks, ["→ @w"])
+        self.assertEqual(marks, ["→ @w@work.example"])  # whole: names repeat on servers
         self.assertEqual([w for w in lane.view.rows["011"].findChildren(QLabel)
                           if w.objectName() == "via"], [])  # mine: no mark
         win.on_link("fedtail:fav/work~700")  # acts through work
@@ -1068,6 +1074,187 @@ class QtSmokeTest(unittest.TestCase):
         send.click()
         self.pump(until=lambda: self.world.reports)
         self.assertEqual(self.world.reports[-1], ("B", ["011"], "реклама", True, "spam"))
+
+    def test_profile_posts_replies_media(self):
+        """Above someone's posts: posts (no replies to others), all, media — as other
+        clients; switching reads them again from the top."""
+        from fedtail.frontends.qt.feed import AccountWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.on_link("fedtail:account/B")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, AccountWidget)
+        self.assertEqual(tab.show, "posts")
+        self.assertEqual(tab.show_buttons["posts"].toolTip(), i18n._("profile_show_tip"))
+        shown = lambda: sorted(k for k in tab.view.rows if not k.startswith("pin:"))  # noqa: E731
+        self.pump(until=lambda: shown() == ["011"])
+        tab.show_buttons["all"].click()
+        self.pump(until=lambda: shown() == ["011", "013", "014"])
+        tab.show_buttons["media"].click()
+        self.pump(until=lambda: shown() == ["013"])
+        self.assertTrue(tab.show_buttons["media"].isChecked())
+        self.assertFalse(tab.show_buttons["all"].isChecked())
+        tab.show = "posts"  # posts from their own server get the same rule here
+        self.assertFalse(tab._keeps(adapter.post(self.world.statuses["014"])))
+        self.assertTrue(tab._keeps(adapter.post(self.world.statuses["011"])))
+
+    def test_timed_filters_hidden_posts_and_list_replies(self):
+        from PySide6.QtWidgets import QMenu, QMessageBox
+
+        from fedtail.frontends.qt.silence import SilenceDialog
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        dlg = SilenceDialog(self.win)
+        dlg.words.setText("спойлер")
+        self.assertEqual(dlg.span.toolTip(), i18n._("filter_for_q"))
+        dlg.span.setCurrentIndex(2)  # a day
+        dlg._add_filter()
+        self.pump(until=lambda: dlg.filter_list.count() == 1)
+        self.assertEqual(next(iter(self.world.filters.values()))["expires_in"], 86400)
+        made = adapter.word_filter(next(iter(self.world.filters.values())))
+        self.assertIn(i18n._("filter_until", until=made.expires.astimezone().strftime(
+            "%d.%m.%Y %H:%M")), dlg.filter_list.item(0).text())
+        # hide this post: in the ⋯ menu, asked once, a filter of single posts
+        from fedtail.frontends.common import actions
+        self.core.poll_once()
+        entry = self.win.ctx.view.by_id("011")
+        urls = [i.url for i in actions.menu(entry, actions.Ctx(
+            cfg=self.core.cfg, me_id="ME", supports=self.core.supports))]
+        self.assertIn("fedtail:hidepost/011", urls)
+        keep = QMessageBox.question
+        QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
+        try:
+            self.win.on_link("fedtail:hidepost/011")
+            self.pump(until=lambda: "011" in self.core.hidden_posts)
+        finally:
+            QMessageBox.question = keep
+        dlg.reload()
+        self.pump(until=lambda: dlg.filter_list.count() == 2)
+        texts = [dlg.filter_list.item(i).text() for i in range(2)]
+        self.assertTrue(any(i18n._("posts_n", n=1) in t for t in texts), texts)
+        dlg.accept()
+        # whose replies a list shows
+        self.world.lists["L1"] = {"title": "Друзья", "exclusive": False, "members": set(),
+                                  "replies_policy": "list"}
+        x = adapter.user_list({"id": "L1", "title": "Друзья", "replies_policy": "list"})
+        m = QMenu(self.win)
+        sub = self.win._replies_menu(m, x)
+        acts = sub.actions()
+        self.assertEqual([a.isChecked() for a in acts], [True, False, False])
+        acts[2].trigger()
+        self.pump(until=lambda: self.world.lists["L1"]["replies_policy"] == "none")
+
+    def test_rest_of_the_api(self):
+        """0.20: a filter edited, a cover for a video, an edited post's descriptions, a
+        report by the server's rules, the profile's newer switches and tag suggestions,
+        the posts sharing a link, the server's terms, blocks and translator."""
+        from PySide6.QtCore import Qt
+
+        from fedtail.frontends.common.timed import KEEP
+        from fedtail.frontends.qt.compose import Compose
+        from fedtail.frontends.qt.profile import ProfileDialog
+        from fedtail.frontends.qt.silence import FilterEditDialog, SilenceDialog
+        from fedtail.frontends.qt.social import LinkPostsWidget, server_html
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.poll_once()
+
+        # a filter edited: words, hide, where, for good — the window's answer, then saved
+        made = self.core.add_filter("шум", ["крипта", "nft"]).result()
+        dlg = SilenceDialog(self.win)
+        self.pump(until=lambda: dlg.filter_list.count() == 1)
+        f = dlg._filter_objs[made["id"]]
+        edit = FilterEditDialog(dlg, f)
+        self.assertEqual(edit.words.text(), "крипта, nft")
+        self.assertEqual(edit.span.currentData(), KEEP)
+        edit.words.setText("nft, web3")
+        edit.action.setCurrentIndex(1)
+        got = edit.changes()
+        self.assertEqual((got["words"], got["action"], got["expires_in"]),
+                         (["nft", "web3"], "hide", None))
+        dlg.filter_list.setCurrentRow(0)
+        dlg._edit_filter(answer=got)
+        self.pump(until=lambda: self.world.filters[made["id"]]["filter_action"] == "hide")
+        self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
+                         ["nft", "web3"])
+        dlg.accept()
+
+        # a video gets a cover; the cover goes with it to the server (the 4th part)
+        c = Compose(self.win)
+        c.add_paths(["/tmp/clip.mp4"])
+        self.assertFalse(c.cover_btn.isHidden())
+        c.pick_cover("/tmp/cover.jpg")
+        self.assertEqual(c._media_list(), [["/tmp/clip.mp4", "", None, "/tmp/cover.jpg"]])
+        self.assertIn(i18n._("media_cover_set", name="cover.jpg"), c.media.item(0).text())
+        c._leave()
+
+        # my post edited: its picture's description changed, the picture stays
+        mine = self.world.add(status("121", ME, text="с картинкой"), home=True)
+        mine["media_attachments"] = [{"id": "m7", "type": "image", "description": "старое",
+                                      "url": "https://example.test/m7.png"}]
+        self.core.store.put_statuses([mine])
+        c = Compose(self.win, edit=mine)
+        c.show()
+        self.pump(until=lambda: c.text.toPlainText() == "с картинкой")
+        self.assertEqual(c.media.count(), 1)
+        self.assertEqual(c.media_changes(), {})
+        c.media.item(0).setData(Qt.ItemDataRole.UserRole + 1, "новое")
+        self.assertEqual(c.media_changes(), {"m7": ("новое", None)})
+        c.send()
+        self.pump(until=lambda: self.world.statuses["121"]["media_attachments"][0]
+                  .get("description") == "новое")
+
+        # a report by the server's rules: they come when "breaks the rules" is picked
+        rep = self.win.report(self.core.store.get_status("011"))
+        rep.kind.setCurrentIndex(rep.kind.findData("violation"))
+        self.pump(until=lambda: rep.rule_ticks)
+        rep.send()  # no rule ticked: not sent
+        self.assertEqual(self.world.reports, [])
+        rep.rule_ticks[0][1].setChecked(True)
+        rep.send()
+        self.pump(until=lambda: self.world.reports)
+        self.assertEqual(self.world.reports[-1][4:], ("violation", ["1"]))
+
+        # the profile's newer switches, sent only when changed; tags to put forward
+        prof = ProfileDialog(self.win)
+        prof.show()
+        self.pump(until=lambda: prof.save_btn.isEnabled() and prof.suggest_buttons)
+        self.assertEqual(prof.changes(), {})
+        prof.hide_collections.setChecked(True)
+        prof.attribution.setText("blog.example, news.example")
+        self.assertEqual(prof.changes(), {"hide_collections": True,
+                                          "attribution_domains": ["blog.example",
+                                                                  "news.example"]})
+        prof.suggest_buttons[0].click()
+        self.pump(until=lambda: "fedi" in self.world.my_tags)
+        prof.save()
+        self.pump(until=lambda: self.world.profile_updates)
+        self.assertTrue(self.world.profile_updates[-1]["hide_collections"])
+
+        # who else shared a link: a tab of their posts
+        self.world.statuses["011"]["card"] = {"url": "https://news.example/a"}
+        self.win.open_link_posts("https://news.example/a")
+        tab = self.win.tabs.currentWidget()
+        self.assertIsInstance(tab, LinkPostsWidget)
+        self.pump(until=lambda: [e.id for e in tab.items] == ["011"])
+        self.win.open_link_posts("https://nothing.example/")
+        empty = self.win.tabs.currentWidget()
+        self.pump(until=lambda: empty.header.info.text() == i18n._("link_posts_none"))
+
+        # the server about itself: terms, whom it cut off, its translator
+        page = server_html(self.win, self.win.ctx.view.server_info().result())
+        for words in (i18n._("server_terms"), "bad.example", i18n._("server_block_suspend"),
+                      i18n._("server_translates", langs="en → ru, de; ru → en")):
+            self.assertIn(words, page)
+        # the dialogs closed and gone before the next test: left to the interpreter's
+        # exit they went in the wrong order (CI, 3.12: a crash after the last test)
+        for w in (edit, dlg, c, rep, prof):
+            try:
+                w.close()
+                w.deleteLater()
+            except RuntimeError:  # gone already (sent: it closed itself)
+                pass
+        self.pump(0.1)
 
     def test_pinned_on_profile(self):
         from fedtail.frontends.qt.feed import AccountWidget
@@ -1621,6 +1808,50 @@ class QtSmokeTest(unittest.TestCase):
         self.bridge_wait(self.core.create_list("Друзья", add="B"))
         self.pump(until=lambda: "040" not in lane.view.rows)
         self.assertEqual(self.win.lane_items["home"].count, len(lane.view.unread_keys()))
+
+    def test_a_follow_request_opens_the_profile_here(self):
+        """The person asking to follow: their @name opens their profile in fedtail,
+        not in the browser (as GTK's)."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.feed import RequestsWidget
+        self.win.ctx.view.follow_requests = lambda: [adapter.account(BOB)]
+        opened = []
+        self.win.on_link = opened.append  # before the widget takes it
+        w = RequestsWidget(self.win)
+        label = next(x for x in w.findChildren(QLabel) if "fedtail:account/" in x.text())
+        self.assertFalse(label.openExternalLinks())
+        label.linkActivated.emit(f"fedtail:account/{BOB['id']}")
+        self.assertEqual(opened, [f"fedtail:account/{BOB['id']}"])
+
+    def test_tray_icon_goes_at_exit_and_can_be_off(self):
+        """The tray icon is dropped before fedtail leaves (Windows kept a dead one per
+        restart), dropping it twice is harmless, and ui.tray = false makes none."""
+        from fedtail.frontends.qt.window import MainWindow
+        self.win.drop_tray()
+        self.assertIsNone(self.win.tray)
+        self.win.drop_tray()
+        self.core.cfg["ui"]["tray"] = False
+        other = MainWindow(self.core, self.bridge, self.theme)
+        try:
+            self.assertIsNone(other.tray)
+        finally:
+            other.quitting = True
+            other.close()
+
+    def test_report_a_bug_on_github(self):
+        """≡ → "Report a bug on GitHub…": the draft to read, scrubbed of the server;
+        "Open GitHub" opens the new-issue page and nothing else leaves."""
+        from fedtail.frontends.qt.issue import IssueDialog
+        self.assertIn(i18n._("issue_menu"), [a.text() for a in self.win._app_menu().actions()])
+        dlg = IssueDialog(self.win)
+        self.assertIn(i18n._("issue_system"), dlg.text.toPlainText())
+        dlg.text.setPlainText("сломалось на https://example.test/@mira/1")
+        opened = []
+        self.win.open_url = opened.append
+        dlg.go()
+        self.assertTrue(opened[0].startswith("https://github.com/"))
+        self.assertNotIn("example.test", opened[0])
 
     def test_settings_window_writes_one_line(self):
         """≡ → Settings: the chapters of config.toml; a tick goes into the file at once,

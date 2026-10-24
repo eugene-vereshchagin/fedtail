@@ -14,3 +14,4 @@ fedtail/_build.py
 /android/app/build/
 /android/local.properties
 /android/.kotlin/
+/coverage/

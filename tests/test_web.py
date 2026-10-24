@@ -269,6 +269,68 @@ class WebTest(TmpDir):
         self.assertEqual(self.req("/app.js")[0], 200)
         self.assertEqual(self.req("/app.css")[0], 200)
 
+    def test_themes(self):
+        """≡ → Try a theme: the windows' themes as the page's colours, for this run."""
+        self.assertIn("/theme.css", self.req("/")[2])
+        code, headers, css = self.req("/theme.css")
+        self.assertEqual((code, css), (200, ""))  # system: the browser's light or dark
+        self.assertTrue(headers["Content-Type"].startswith("text/css"))
+        t = json.loads(self.req("/api/themes")[2])
+        names = [x["name"] for x in t["themes"]]
+        self.assertIn("night", names)
+        self.assertEqual((t["current"], t["configured"]), ("system", "system"))
+        self.assertIn(i18n._("theme_in_config"),
+                      next(x["label"] for x in t["themes"] if x["name"] == "system"))
+        r = json.loads(self.req("/api/theme", {"name": "night"})[2])
+        self.assertIn("night", r["message"])
+        css = self.req("/theme.css")[2]
+        self.assertIn("--bg: #", css)
+        self.assertIn("color-scheme: only dark", css)
+        self.assertIn("font-family:", css)
+        self.assertTrue(json.loads(self.req("/api/themes")[2])["themes"][names.index("night")]
+                        ["on"])
+        self.req("/api/theme", {"name": "juick"})
+        self.assertIn("only light", self.req("/theme.css")[2])
+        self.assertEqual(self.req("/api/theme", {"name": "../etc"})[0], 400)
+        self.assertEqual(self.core.cfg["ui"]["theme"], "system")  # the config stays
+        webs = self.srv.web
+        webs.theme = "no-such-theme"
+        self.assertEqual(webs.theme_css(), "")  # won't load: the page's own colours
+
+    def test_merge_switch(self):
+        me = json.loads(self.req("/api/me")[2])
+        self.assertFalse(me["merged"])
+        self.assertIn("accounts_merge_tip", me["words"])
+        r = json.loads(self.req("/api/merge", {})[2])
+        self.assertTrue(r["merged"])
+        self.assertTrue(r["message"].startswith("☑ "))
+        self.assertEqual(self.core.get_state("merge"), ["all"])
+        self.assertFalse(json.loads(self.req("/api/merge", {})[2])["merged"])
+
+    def test_web_push(self):
+        """The page subscribes the browser at the user's server; fedtail hands it over."""
+        code, headers, js = self.req("/sw.js")
+        self.assertEqual(code, 200)
+        self.assertIn("javascript", headers["Content-Type"])
+        self.assertIn("showNotification", js)
+        st = json.loads(self.req("/api/push")[2])
+        self.assertEqual((st["key"], st["endpoint"]), ("", ""))  # no Web Push there
+        self.assertIn("web_push_insecure", st["words"])
+        self.w.vapid = "BKEY"
+        self.assertEqual(json.loads(self.req("/api/push")[2])["key"], "BKEY")
+        bad = {"endpoint": "http://push.example/x", "keys": {"p256dh": "P", "auth": "A"}}
+        self.assertEqual(self.req("/api/push_on", bad)[0], 400)
+        self.assertEqual(self.req("/api/push_on", {"endpoint": "https://p.example/x"})[0], 400)
+        good = {"endpoint": "https://push.example/x", "keys": {"p256dh": "P", "auth": "A"}}
+        r = json.loads(self.req("/api/push_on", good)[2])
+        self.assertEqual(r["message"], i18n._("web_push_on"))
+        self.assertEqual(self.w.push["endpoint"], "https://push.example/x")
+        self.assertTrue(self.w.push["alerts"]["mention"])
+        self.assertEqual(json.loads(self.req("/api/push")[2])["endpoint"],
+                         "https://push.example/x")
+        self.req("/api/push_off", {})
+        self.assertIsNone(self.w.push)
+
     def test_lanes_and_posts_cleaned(self):
         _c, _h, body = self.req("/api/lanes")
         lanes = {x["name"]: x for x in json.loads(body)}
@@ -423,19 +485,47 @@ class WebTest(TmpDir):
         got = json.loads(self.req("/api/link", {"url": "fedtail:thread/002"})[2])
         self.assertEqual(got["open"], {"thread": "002"})
         self.assertEqual(self.req("/api/link", {"url": "fedtail:boom/002"})[0], 200)
+        # how long a mute lasts: asked, then done with the pick ("3600" as a string too)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:mute/002"})[2])
+        self.assertIn("choose", got)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:mute/002",
+                                                "chosen": {"key": "3600"}})[2])
+        self.assertIn("message", got)
+        self.assertEqual(self.w.mute_terms["B"], {"duration": 3600, "notifications": True})
+        odd = json.loads(self.req("/api/link", {"url": "fedtail:mute/002",
+                                                "chosen": {"key": "7"}})[2])
+        self.assertIn("choose", odd)  # not one of the answers: asked again
+        # hide this one post: in the menu, asked first, then a server filter has it
+        self.assertIn("fedtail:hidepost/002",
+                      [i["url"] for i in json.loads(self.req("/api/post_menu?id=002")[2])
+                       ["items"]])
+        got = json.loads(self.req("/api/link", {"url": "fedtail:hidepost/002"})[2])
+        self.assertIn("confirm", got)
+        got = json.loads(self.req("/api/link", {"url": "fedtail:hidepost/002",
+                                                "confirmed": True})[2])
+        self.assertEqual(got["message"], i18n._("post_hidden"))
+        self.assertIn("002", self.core.hidden_posts)
         host = _WebHost(view, False)
         host.error("x")
         self.assertEqual(host.out, {"error": "x"})
 
     def test_profile_buttons_are_the_windows(self):
-        """A profile's buttons (common/profile.py), done through the server: mute at
-        once, a note asked for first, Mention opens the editor."""
+        """A profile's buttons (common/profile.py), done through the server: mute
+        asks how long first, a note asked for first, Mention opens the editor."""
         got = json.loads(self.req("/api/account?id=B")[2])
         keys = [a["key"] for a in got["actions"]]
         for k in ("follow", "mention", "mute", "block", "note", "copy_handle"):
             self.assertIn(k, keys)
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "mute"})[2])
+        self.assertEqual([o["key"] for o in r["choose"]["options"]],
+                         [0, 3600, 86400, 604800, 2592000])
+        self.assertEqual(r["choose"]["check"], i18n._("mute_posts_only"))
+        self.assertNotIn("B", self.w.muted)  # nothing yet: the page asks
+        r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "mute",
+                                                     "chosen": {"key": 86400,
+                                                                "ticked": True}})[2])
         self.assertTrue(r.get("refresh"))
+        self.assertEqual(self.w.mute_terms["B"], {"duration": 86400, "notifications": False})
         got = json.loads(self.req("/api/account?id=B")[2])
         self.assertIn(i18n._("unmute"), [a["label"] for a in got["actions"]])
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "note"})[2])
@@ -448,6 +538,28 @@ class WebTest(TmpDir):
         r = json.loads(self.req("/api/profile_act", {"id": "B", "key": "lists"})[2])
         self.assertEqual(r["open"], {"page": "list_of", "arg": "B", "tab": ""})
         self.assertEqual(self.req("/api/profile_act", {"id": "B", "key": "boom"})[0], 400)
+
+    def test_profile_shows_posts_replies_media(self):
+        self.w.add(status("010", BOB, minute=10, text="own"))
+        pic = self.w.add(status("011", BOB, minute=11, text="pic"))
+        pic["media_attachments"] = [{"id": "m1", "type": "image", "url": "https://x/p.png"}]
+        got = json.loads(self.req("/api/account?id=B")[2])  # feed.profile_show: posts
+        self.assertEqual([s["key"] for s in got["shows"] if s["on"]], ["posts"])
+        self.assertEqual([s["label"] for s in got["shows"]],
+                         [i18n._("profile_show_posts"), i18n._("profile_show_all"),
+                          i18n._("profile_show_media")])
+        self.assertEqual(got["show_tip"], i18n._("profile_show_tip"))
+        ids = lambda g: sorted(p["id"] for p in g["posts"])  # noqa: E731
+        self.assertNotIn("002", ids(got))  # a reply to someone else
+        every = json.loads(self.req("/api/account?id=B&show=all")[2])
+        self.assertIn("002", ids(every))
+        media = json.loads(self.req("/api/account?id=B&show=media")[2])
+        self.assertEqual(ids(media), ["011"])
+        odd = json.loads(self.req("/api/account?id=B&show=boom")[2])
+        self.assertEqual([s["key"] for s in odd["shows"] if s["on"]], ["posts"])
+        js = self.req("/app.js")[2]
+        for wanted in ("function profileShows", "function chooseDlg", "r.choose"):
+            self.assertIn(wanted, js)
 
     def test_page_has_the_menus(self):
         body = self.req("/")[2]

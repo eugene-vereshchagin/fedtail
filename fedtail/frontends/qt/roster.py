@@ -1,4 +1,4 @@
-"""The roster window of ``ui.layout = "split"`` (docs/LAYOUTS.md): a narrow window of its
+"""The roster window of ``ui.layout = "split"`` (docs/en/dev/layouts.md): a narrow window of its
 own, as in QIP, Psi+ or the Mail.ru Agent — who I am on top, a search line, then the
 lanes in groups, each with its unread count, a line of its newest post and the face of
 its author. A double click (or Enter) opens the lane in the main window, which in this layout is the

@@ -55,10 +55,16 @@ def probe(code):
     return False, last[-1] if last else ""
 
 
+COVERAGE = []  # the night run: [folder] every Python of every step leaves its lines in
+
+
 def env():
     e = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8",
              FEDTAIL_SOUND=os.environ.get("FEDTAIL_SOUND", "off"))  # no chimes all night
     e["PYTHONPATH"] = str(ROOT) + os.pathsep + e.get("PYTHONPATH", "")
+    if COVERAGE:  # tools/covhook/sitecustomize.py: each process notes the lines it ran
+        e["PYTHONPATH"] = str(ROOT / "tools" / "covhook") + os.pathsep + e["PYTHONPATH"]
+        e["FEDTAIL_COVERAGE"] = str(COVERAGE[0])
     return e
 
 
@@ -346,6 +352,12 @@ def main():
     ap.add_argument("--no-real", action="store_true", help="--night without your account")
     ap.add_argument("--no-blur", action="store_true",
                     help="your account's screenshots as they are")
+    ap.add_argument("--send", metavar="USER/REPO", default=None,
+                    help="push the run's text zip into this private git repository over "
+                         "ssh (default: debug.report_repo of the main profile's config; "
+                         "\"\" — don't)")
+    ap.add_argument("--send-full", action="store_true",
+                    help="push the full zip (pictures and all) as well")
     ap.add_argument("--clean", nargs="?", const="unfinished", choices=("unfinished", "all"),
                     help="remove the runs that didn't finish (stopped by hand, killed) and "
                          "the tools' temporary folders; --clean all: every run here")
@@ -436,6 +448,11 @@ def main():
             print("windows: on this desktop — no xvfb-run (sudo apt install xvfb): keep "
                   "the screen from locking for the night, or the benches mean nothing")
         native = (has_display() or bool(run.wrap)) and not a.offscreen
+        if a.night and sys.version_info >= (3, 12):
+            # every step counts which lines of fedtail/ ran — the tests, the tours, the
+            # windows they open; the coverage step at the end puts it together
+            COVERAGE[:] = [out / "coverage" / "hits"]
+            print("coverage: every step counts the lines it runs")
 
         # ---- the fake server --------------------------------------------------------------
         if "tests" in only:
@@ -518,10 +535,10 @@ def main():
             run.step("web", ["tools/web_check.py", str(d)], timeout=900, folder=d, py=web_py,
                      note="Playwright" if pw else "no Playwright: no walk "
                      "(python3 tools/devenv.py — once)")
-        if "windows" in only and sys.platform == "win32":  # docs/WINDOWS.md, done here
+        if "windows" in only and sys.platform == "win32":  # docs/en/dev/windows.md, done here
             d = out / "windows"
             run.step("windows", ["tools/windows_check.py", str(d)], timeout=1200, folder=d,
-                     note="docs/WINDOWS.md in a profile of its own")
+                     note="docs/en/dev/windows.md in a profile of its own")
         if "behaviour" in only:  # the same scenario through every interface here
             cmd = ["tools/behaviour.py", str(out / "behaviour.md")]
             wrap = run.wrap or (["xvfb-run", "-a"] if sys.platform.startswith("linux") and
@@ -620,6 +637,12 @@ def main():
         print(f"\nstopped. Nothing to send from {out}; "
               "python3 tools/selfcheck.py --clean removes it.")
         return 130
+    if COVERAGE:
+        COVERAGE.clear()  # the report itself is not counted
+        d = out / "coverage"
+        run.step("coverage", ["tools/coverage_lite.py", str(d), "--report"], timeout=900,
+                 folder=d, note="lines of fedtail/ the whole night ran", wrap=())
+        shutil.rmtree(d / "hits", ignore_errors=True)  # put together: lines.json has it
     clean_temp(started)
     report(run, out, facts)
     archive = zip_of(out)  # in the run's own folder, next to what it holds
@@ -639,7 +662,40 @@ def main():
     print(f"\nreport: {out / 'report.md'}\nto send back: {archive} "
           f"({archive.stat().st_size / 2**20:.0f} MB)\n  too big? the words only: {light} "
           f"({light.stat().st_size / 2**20:.1f} MB)")
+    send_run(a, [light] + ([archive] if a.send_full else []))
     return 0 if all(r[1] in ("ok", "skipped") for r in run.rows) else 1
+
+
+def report_repo(arg):
+    """--send, or debug.report_repo of the main profile's config ("" — not set)."""
+    if arg is not None:
+        return arg
+    try:
+        sys.path.insert(0, str(ROOT))
+        from fedtail.core import config, paths
+        cfg, _w = config.load(paths.resolve(None).config_file)
+        return cfg["debug"].get("report_repo", "")
+    except Exception as e:  # noqa: BLE001 — no config, a broken one: nothing to send to
+        print(f"send: no repository ({e})")
+        return ""
+
+
+def send_run(a, files):
+    """The run's zips into the private repository (fedtail/reportsend.py), under
+    selfcheck/YYYY-MM/; what went wrong is said, the run's result stays its own."""
+    repo = report_repo(a.send)
+    if not repo:
+        return
+    from fedtail import reportsend
+    from fedtail.core import paths
+    cache = paths.data_base() / "report-repo"
+    for f in files:
+        try:
+            where = reportsend.send(f, repo, cache, folder="selfcheck",
+                                    message=f"selfcheck: {f.name}")
+            print(f"sent: {repo}: {where}")
+        except reportsend.SendError as e:
+            print(f"not sent to {repo}: {f.name}: {e}")
 
 
 if __name__ == "__main__":

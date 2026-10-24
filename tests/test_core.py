@@ -1136,6 +1136,74 @@ class CoreTest(TmpDir):
         self.assertFalse(core.silenced(spam))
         self.assertTrue(core.silenced(w.statuses["100"]))  # B is still muted
 
+    def test_profile_shows_posts_replies_media(self):
+        core, w = self.make(feed={"page_size": 10})
+        w.add(status("120", BOB, minute=1))
+        w.add(status("121", BOB, reply_to="9", reply_acc="N", minute=2))  # to someone else
+        w.add(status("122", BOB, reply_to="120", reply_acc="B", minute=3))  # their thread
+        pic = w.add(status("123", BOB, minute=4))
+        pic["media_attachments"] = [{"id": "m1", "type": "image", "url": "u"}]
+        core.connect().result()
+
+        def ids(show):
+            return sorted(st["id"] for st in core.account_statuses("B", show=show).result())
+        self.assertEqual(ids("all"), ["120", "121", "122", "123"])
+        self.assertEqual(ids("posts"), ["120", "122", "123"])
+        self.assertEqual(ids("media"), ["123"])
+        self.assertEqual(ids("whatever"), ids("all"))  # unknown: everything
+
+    def test_mute_for_a_while_and_posts_only(self):
+        core, w = self.make()
+        core.connect().result()
+        core.mute("B", duration=3600, notifications=False).result()
+        self.assertEqual(w.mute_terms["B"], {"duration": 3600, "notifications": False})
+        self.assertIn("B", core.muted)
+        core.mute("B", False).result()
+        self.assertNotIn("B", w.mute_terms)
+        core.mute("B").result()  # plain: for good, notifications too
+        self.assertEqual(w.mute_terms["B"], {"duration": 0, "notifications": True})
+
+    def test_filter_for_a_while(self):
+        core, w = self.make()
+        core.connect().result()
+        f = core.add_filter("спойлеры", ["финал"], "warn", expires_in=86400).result()
+        self.assertEqual(w.filters[f["id"]]["expires_in"], 86400)
+        g = core.add_filter("навсегда", ["x"]).result()
+        self.assertIsNone(w.filters[g["id"]]["expires_in"])
+
+    def test_hide_one_post(self):
+        core, w = self.make(ui={"arts_mode": False})
+        w.add(status("130", BOB, minute=1), home=True)
+        w.add(status("131", BOB, minute=2), home=True)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.unhide_post("130").result(), False)  # no filter yet
+        core.hide_post(w.statuses["130"]).result()  # a dict does too
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["131"])
+        mine = [f for f in w.filters.values() if f["title"] == core.HIDDEN_POSTS]
+        self.assertEqual(len(mine), 1)
+        self.assertEqual(mine[0]["filter_action"], "hide")
+        self.assertEqual([x["status_id"] for x in mine[0]["statuses"]], ["130"])
+        core.hide_post("131").result()  # the same filter, not a second one
+        self.assertEqual(len([f for f in w.filters.values()
+                              if f["title"] == core.HIDDEN_POSTS]), 1)
+        self.assertTrue(core.unhide_post("130").result())
+        self.assertEqual([x["status_id"] for x in mine[0]["statuses"]], ["131"])
+        self.assertFalse(core.unhide_post("999").result())  # never hidden
+        self.assertEqual([st["id"] for _, st in core.lane_entries("home")], ["130"])
+
+    def test_list_replies_policy(self):
+        core, w = self.make()
+        core.connect().result()
+        x = core.create_list("друзья", replies_policy="followed").result()
+        self.assertEqual(w.lists[x["id"]]["replies_policy"], "followed")
+        core.update_list(x["id"], "друзья", False, replies_policy="none").result()
+        self.assertEqual(w.lists[x["id"]]["replies_policy"], "none")
+        core.update_list(x["id"], "други", False).result()  # untouched when not given
+        self.assertEqual(w.lists[x["id"]]["replies_policy"], "none")
+        y = core.create_list("просто").result()
+        self.assertEqual(w.lists[y["id"]]["replies_policy"], "list")
+
     def test_edit_my_post(self):
         core, w = self.make()
         mine = w.add(status("110", ME, text="очепятка"), home=True)
@@ -1868,6 +1936,56 @@ class CoreTest(TmpDir):
         core.cfg["lanes"]["direct_apart"] = False
         core._lists_version += 1
         self.assertEqual(ids("replies"), ["020", "021"])
+
+    def test_direct_is_a_dialogue(self):
+        """"Direct": their messages and mine, by the posts' own time; mine read at once
+        (the count is theirs only), and never in Replies or Mentions."""
+        core, w = self.make(feed={"page_size": 10})
+        core.connect().result()
+        w.add(status("030", BOB, minute=30, vis="direct", text="привет"), mention=True)
+        # mine from another client, met by the poll (my posts) — sent before Bob's answer
+        w.add(status("025", fakes.ME, minute=25, vis="direct", text="ты тут?"), home=True)
+        w.add(status("026", fakes.ME, minute=26, vis="public", text="не личное"), home=True)
+        core.poll_once()
+        ids = lambda lane: [st["id"] for _, st in core.lane_entries(lane)]  # noqa: E731
+        self.assertEqual(ids("direct"), ["025", "030"])
+        self.assertEqual(core.unread_count("direct"), 1)  # Bob's only
+        # sent from here: in the dialogue at once, after Bob's (its own time), read
+        sent = core.post("@bob и ещё", "direct").result()
+        self.assertEqual(ids("direct"), ["025", "030", sent["id"]])
+        self.assertEqual(core.unread_count("direct"), 1)  # mine adds nothing
+        answer = core.post("да, тут", "direct", reply_to="030").result()
+        self.assertEqual(ids("direct")[-1], answer["id"])
+        self.assertEqual(core.unread_count("direct"), 0)  # answered: Bob's is read too
+        core.poll_once()  # met again by the poll: no double
+        self.assertEqual(ids("direct"), ["025", "030", sent["id"], answer["id"]])
+        for apart in (True, False):  # mine never go to Replies or Mentions
+            core.cfg["lanes"]["direct_apart"] = apart
+            core._lists_version += 1
+            self.assertNotIn(sent["id"], ids("replies") + ids("mentions"))
+            self.assertNotIn("025", ids("replies") + ids("mentions"))
+        self.assertIn("030", ids("mentions"))  # Bob's, direct_apart off: as before
+
+    def test_my_direct_from_a_thread_joins_too(self):
+        core, w = self.make()
+        core.connect().result()
+        core.store.put_statuses([status("040", fakes.ME, minute=40, vis="direct",
+                                        text="из треда")])
+        self.assertEqual(core._carry_my_direct(), 1)
+        self.assertEqual(core._carry_my_direct(), 0)  # once
+        self.assertEqual([st["id"] for _, st in core.lane_entries("direct")], ["040"])
+        # the server's list is paged from its own ids, never from one fedtail put in
+        self.assertIsNone(core.store.newest_item("mentions"))
+        self.assertIsNone(core.store.oldest_item("mentions"))
+        w.add(status("043", BOB, minute=43, vis="direct"), mention=True)
+        core.poll_once()
+        self.assertEqual(core.store.newest_item("mentions"), "n043")
+        self.assertEqual([st["id"] for _, st in core.lane_entries("direct")], ["040", "043"])
+        core.mark_read(["043"])
+        core._sync_markers()  # the server's marker: its own notification id, never "mine:…"
+        self.assertEqual(w.markers.get("notifications"), "n043")
+        self.assertEqual(core._carry_my_direct([status("041", BOB, vis="direct")]), 0)
+        self.assertEqual(core._carry_my_direct([status("042", fakes.ME, vis="public")]), 0)
 
     def test_people_from_origin(self):
         core, w = self.make()

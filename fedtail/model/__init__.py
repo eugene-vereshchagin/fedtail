@@ -1,7 +1,7 @@
 """fedtail's own data model: what the core hands the frontends, whatever the protocol.
 
 Every protocol (``fedtail/protocols/<name>/``) turns its server's objects into these;
-nothing outside ``fedtail/protocols/`` reads a server's JSON (docs/PROTOCOLS.md). The
+nothing outside ``fedtail/protocols/`` reads a server's JSON (docs/en/dev/protocols.md). The
 vocabulary is ActivityPub's — a post is a Note, a boost an Announce ("share"), a poll a
 Question — not the shape of one server's API.
 
@@ -403,6 +403,10 @@ class ServerInfo:
     rules: tuple[tuple[str, str], ...] = ()  # (rule, hint)
     about: str = ""                # HTML: the long description
     privacy: str = ""              # HTML: the privacy policy
+    rule_ids: tuple[str, ...] = ()  # the rules' ids, in the order of rules (for reports)
+    terms: str = ""                # HTML: the terms of service
+    blocks: tuple[tuple[str, str, str], ...] = ()  # (server, severity, why) it cut off
+    translates: tuple[tuple[str, tuple[str, ...]], ...] = ()  # (from, (into, …))
 
 
 @dataclass(frozen=True, slots=True)
@@ -437,6 +441,10 @@ class MyProfile:
     account: Account
     bio: str = ""
     fields: tuple[tuple[str, str], ...] = ()
+    discoverable: bool | None = None       # in the directory and suggestions
+    hide_collections: bool | None = None   # whom I follow and who follows me: hidden
+    indexable: bool | None = None          # my public posts found by a search of words
+    attribution_domains: tuple[str, ...] = ()  # sites that may name me their author
 
 
 @dataclass(frozen=True, slots=True)
@@ -460,6 +468,9 @@ class WordFilter:
     title: str = ""
     words: tuple[str, ...] = ()
     action: str = "warn"           # warn | hide
+    contexts: tuple[str, ...] = ()  # where it works: home, notifications, public, thread…
+    expires: datetime | None = None  # when it ends by itself (None — never)
+    posts: int = 0                 # posts it hides one by one ("Hide this post")
 
 
 @dataclass(frozen=True, slots=True)

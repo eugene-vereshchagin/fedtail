@@ -19,7 +19,7 @@ go privately, see [SECURITY.md](SECURITY.md).
 ## Proposing a change
 
 Ideas are welcome as issues first: fedtail has a point of view (see the README and
-[docs/DESIGN.md](docs/DESIGN.md)), and every behaviour is meant to be a config flag rather
+[docs/en/dev/design.md](docs/en/dev/design.md)), and every behaviour is meant to be a config flag rather
 than a fork in the road.
 
 For code:
@@ -30,7 +30,7 @@ QT_QPA_PLATFORM=offscreen python3 -m unittest tests.test_qt_smoke
 ruff check .                                 # line length 100
 ```
 
-Read [AGENTS.md](AGENTS.md) (one page of rules) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+Read [AGENTS.md](AGENTS.md) (one page of rules) and [docs/en/dev/architecture.md](docs/en/dev/architecture.md)
 (the map). In short: the core never imports Qt; every option goes into `config.DEFAULTS` and the
 `fedtail/data/config.example.ru.toml` and `config.example.en.toml` (with its explanation in
 each); every string into both `ru` and `en`; every fix
@@ -53,5 +53,5 @@ By contributing you agree that your work is licensed under GPL-3.0-or-later, lik
 
 **Изменения:** сначала идея в issue — у fedtail есть свой взгляд на вещи, и любое поведение
 должно быть флагом в конфиге. Для кода — тесты, `ruff check .`, правила в
-[AGENTS.md](AGENTS.md), карта в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Вклад
+[AGENTS.md](AGENTS.md), карта в [docs/ru/dev/architecture.md](docs/ru/dev/architecture.md). Вклад
 лицензируется под GPL-3.0-or-later.

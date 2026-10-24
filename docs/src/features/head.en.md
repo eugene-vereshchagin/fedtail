@@ -9,8 +9,8 @@ reasons.
 
 The full settings reference is [config.md](/docs/en/config.md), in tables by chapter. The same
 as one "fedtail and other clients" matrix — [comparison.md](/docs/en/comparison.md). How the
-code is built — [ARCHITECTURE.md](/docs/ARCHITECTURE.md); the spec and the queue —
-[DESIGN.md](/docs/DESIGN.md) (in Russian).
+code is built — [architecture.md](/docs/en/dev/architecture.md); the spec and the queue —
+[design.md](/docs/en/dev/design.md).
 
 > **This file is built** from `docs/src/features/*.toml` by `python3 tools/docs_build.py` —
 > edit there, not here. A test checks this file keeps up.

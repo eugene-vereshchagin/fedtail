@@ -22,14 +22,17 @@ thread (the web server's request threads, the terminal's workers).
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ...i18n import _
 from ...model import Account, Post, Share, real
+from . import timed
+from .placesmore import MorePlaces
 
 log = logging.getLogger(__name__)
 
 WAIT = 60  # seconds a server call may take before the place says it failed
+POLICY_CHOICES = ("accept", "filter", "drop")  # the server's notification policy
 
 
 @dataclass(frozen=True)
@@ -95,6 +98,7 @@ class Out:
     #                            {"page": name, "arg": a, "tab": t, "cursor": c, "anchor": x}
     compose: dict | None = None
     refresh: bool = False      # draw the place again
+    copy: str = ""             # put this text on the clipboard (with message said)
 
 
 # the places, in the order of the ≡ menu (title words)
@@ -105,16 +109,19 @@ PLACES = {
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
     "help": "help_title", "news": "help_news", "about": "about",
-    "federation": "fed_title", "settings": "settings_title",
+    "federation": "fed_title", "settings": "settings_title", "issue": "issue_title",
     # opened from somewhere: a post, a person, a tag
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
     "quotes": "quotes_title", "history": "history_title", "report": "report_title",
     "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
+    "probe": "probe_tab", "announcements": "announce_title", "profile_info": "profile_title",
+    "filter": "filter_edit", "link": "link_posts",
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
-        "activity", "trends", "suggestions", "directory", "server", "profile_edit",
-        "settings", "help", "news", "about", "federation")
+        "activity", "trends", "suggestions", "directory", "server", "probe",
+        "announcements", "profile_edit",
+        "settings", "help", "news", "about", "issue", "federation")
 
 
 def _wait(fut):
@@ -129,7 +136,7 @@ def _acc_id(a):
     return a.id if isinstance(a, Account) else str(a)
 
 
-class Places:
+class Places(MorePlaces):
     """The places on one View.
 
     Args:
@@ -159,6 +166,9 @@ class Places:
                 continue
             if n in ("suggestions", "directory") and not sup(n):
                 continue
+            if n == "announcements" and \
+                    (self.view.cfg.get("ui") or {}).get("announcements") == "off":
+                continue
             out.append((n, _(PLACES[n])))
         return out
 
@@ -178,7 +188,13 @@ class Places:
         return Btn(label, (place, key, str(data)), primary, tip)
 
     # ---- silence: filters, muted, blocked, servers ---------------------------------
-    def _p_silence(self, _arg, tab, _cur):
+    def _p_silence(self, arg, tab, cur):
+        page = self._silence(arg, tab, cur)
+        if self.view.cfg["ui"].get("arts_mode"):  # as the windows' menu says it
+            page.hint = _("tender_arts") + (" · " + page.hint if page.hint else "")
+        return page
+
+    def _silence(self, _arg, tab, _cur):
         v = self.view
         tab = tab or "filters"
         tabs = (("filters", _("silence_filters")), ("muted", _("silence_muted")),
@@ -189,16 +205,19 @@ class Places:
             for f in _wait(v.filters()):
                 words = ", ".join(f.words)
                 how = _("filter_hide") if f.action == "hide" else _("filter_warn")
-                page.rows.append(Row("item", f.title or words, f"{how} · {words}", key=f.id,
-                                     buttons=(self._btn(_("filter_delete"), "silence",
-                                                        "filter_delete", f.id),)))
-            ctx = tuple((c, _("filter_ctx_" + c)) for c in
-                        ("home", "notifications", "public", "thread", "account"))
+                line = " · ".join(x for x in (how, words, *timed.filter_bits(f)) if x)
+                page.rows.append(Row("item", f.title or words, line, key=f.id, buttons=(
+                    self._btn(_("filter_edit"), "silence", "filter_edit", f.id),
+                    self._btn(_("filter_delete"), "silence", "filter_delete", f.id))))
+            ctx = self._filter_contexts()
             page.form = (Field("words", _("filter_words")),
                          Field("action", _("filter_new"), "warn", "choice",
                                (("warn", _("filter_warn")), ("hide", _("filter_hide")))),
                          Field("contexts", "", ["home", "public", "thread", "account"],
-                               "checks", ctx))
+                               "checks", ctx),
+                         Field("expires", _("filter_for"), "0", "choice",
+                               tuple((str(s), label) for s, label in timed.spans()),
+                               tip=_("filter_for_q")))
             page.submit = self._btn(_("filter_add"), "silence", "filter_add", primary=True)
             return page
         s = _wait(v.silenced_people())
@@ -221,8 +240,62 @@ class Places:
             return Out(error=_("filter_words"))
         how = "hide" if values.get("action") == "hide" else "warn"
         ctx = [c for c in values.get("contexts") or () if isinstance(c, str)] or ["home"]
-        _wait(self.view.add_filter(", ".join(words), words, how, ctx))
+        try:
+            secs = int(str(values.get("expires") or "0"))
+        except ValueError:
+            secs = 0
+        _wait(self.view.add_filter(", ".join(words), words, how, ctx,
+                                   expires_in=secs if secs > 0 else None))
         return Out(refresh=True)
+
+    @staticmethod
+    def _filter_contexts():
+        return tuple((c, _("filter_ctx_" + c)) for c in
+                     ("home", "notifications", "public", "thread", "account"))
+
+    def _a_silence_filter_edit(self, fid, _v, _c, _ans):
+        return Out(open={"page": "filter", "arg": fid})
+
+    def _filter(self, fid):
+        f = next((x for x in _wait(self.view.filters()) if x.id == fid), None)
+        if f is None:
+            raise LookupError(fid)
+        return f
+
+    def _p_filter(self, fid, _tab, _cur):
+        """One filter of mine as a form — the windows' "Edit…": its title, words, what it
+        does, where, how long from now ("—" keeps the end it has)."""
+        f = self._filter(fid)
+        page = Page("filter", _("filter_edit_title", title=f.title or ", ".join(f.words)),
+                    arg=fid, hint=" · ".join(timed.filter_bits(f)))
+        page.form = (
+            Field("title", _("filter_title_label"), f.title),
+            Field("words", _("filter_words"), ", ".join(f.words)),
+            Field("action", _("filter_new").rstrip(":"), f.action, "choice",
+                  (("warn", _("filter_warn")), ("hide", _("filter_hide")))),
+            Field("contexts", _("filter_where"), list(f.contexts) or ["home"], "checks",
+                  self._filter_contexts()),
+            Field("expires", _("filter_for"), "", "choice",
+                  (("", "—"),) + tuple((str(s), label) for s, label in timed.spans()),
+                  tip=_("filter_for_q")))
+        page.submit = self._btn(_("save"), "filter", "save", fid, primary=True)
+        return page
+
+    def _a_filter_save(self, fid, values, _c, _ans):
+        words = [x.strip() for x in str(values.get("words", "")).split(",") if x.strip()]
+        if not words and not self._filter(fid).posts:  # a filter of single posts has none
+            return Out(error=_("filter_words"))
+        ctx = [c for c in values.get("contexts") or () if isinstance(c, str)] or ["home"]
+        raw = str(values.get("expires") or "")
+        try:
+            secs = int(raw) if raw else None  # "" — the end it has stays
+        except ValueError:
+            secs = None
+        title = str(values.get("title") or "").strip() or ", ".join(words)
+        _wait(self.view.edit_filter(fid, title=title, words=words,
+                                    action="hide" if values.get("action") == "hide" else "warn",
+                                    contexts=ctx, expires_in=secs))
+        return Out(message=_("filter_saved"), open={"page": "silence", "tab": "filters"})
 
     def _a_silence_filter_delete(self, fid, _v, _c, _ans):
         _wait(self.view.delete_filter(fid))
@@ -243,18 +316,34 @@ class Places:
     # ---- lists ------------------------------------------------------------------------
     def _p_lists(self, _arg, _tab, _cur):
         page = Page("lists", _("lists_header"), empty="—")
+        policies = dict(timed.replies_policies())
         for x in self.view.lists:
-            page.rows.append(Row("item", x.title, _("list_exclusive") if x.exclusive else "",
+            line = " · ".join(b for b in (_("list_exclusive") if x.exclusive else "",
+                                          policies.get(x.replies, "")) if b)
+            page.rows.append(Row("item", x.title, line,
                                  key=x.id, buttons=(
                 self._btn(_("list_people"), "lists", "people", x.id),
                 self._btn(_("list_rename"), "lists", "rename", x.id),
                 self._btn(_("list_exclusive"), "lists", "exclusive", x.id,
                           tip=_("list_exclusive_tip")),
-                self._btn(_("list_delete"), "lists", "delete", x.id))))
+                # whose replies its lane shows: list → followed → none → list
+                self._btn(_("replies_policy"), "lists", "replies", x.id,
+                          tip=_("replies_policy_tip")),
+                self._btn(_("list_delete"), "lists", "delete", x.id),
+                # the order of the lists, as the windows' sidebar moves them (shared)
+                self._btn("↑ " + _("list_up"), "lists", "move", f"{x.id} -1"),
+                self._btn("↓ " + _("list_down"), "lists", "move", f"{x.id} 1"))))
         page.form = (Field("title", _("list_name_q")),
-                     Field("exclusive", _("list_exclusive"), False, "check"))
+                     Field("exclusive", _("list_exclusive"), False, "check"),
+                     Field("replies", _("replies_policy"), "list", "choice",
+                           tuple(timed.replies_policies()), tip=_("replies_policy_tip")))
         page.submit = self._btn(_("list_new"), "lists", "new", primary=True)
         return page
+
+    def _a_lists_move(self, data, _v, _c, _ans):
+        list_id, _s, step = data.rpartition(" ")
+        self.view.move_list(list_id, int(step))
+        return Out(refresh=True)
 
     def _list(self, list_id):
         for x in self.view.lists:
@@ -266,7 +355,10 @@ class Places:
         title = str(values.get("title") or "").strip()
         if not title:
             return Out(error=_("list_name_q"))
-        _wait(self.view.create_list(title, bool(values.get("exclusive"))))
+        policy = str(values.get("replies") or "")
+        _wait(self.view.create_list(title, bool(values.get("exclusive")),
+                                    replies_policy=policy if policy in
+                                    dict(timed.REPLIES_POLICIES) else None))
         return Out(refresh=True, message=_("list_created", title=title))
 
     def _a_lists_rename(self, list_id, _v, _c, answer):
@@ -280,6 +372,16 @@ class Places:
         x = self._list(list_id)
         _wait(self.view.update_list(list_id, x.title, not x.exclusive))
         return Out(refresh=True)
+
+    def _a_lists_replies(self, list_id, _v, _c, _ans):
+        """The next of whose replies the list shows: list → followed → none."""
+        x = self._list(list_id)
+        keys = [k for k, _label in timed.REPLIES_POLICIES]
+        now = keys.index(x.replies) if x.replies in keys else 0
+        nxt = keys[(now + 1) % len(keys)]
+        _wait(self.view.update_list(list_id, x.title, x.exclusive, replies_policy=nxt))
+        return Out(refresh=True, message=_("replies_policy") + ": " +
+                   dict(timed.replies_policies())[nxt])
 
     def _a_lists_delete(self, list_id, _v, confirmed, _ans):
         x = self._list(list_id)
@@ -311,6 +413,12 @@ class Places:
         v = self.view
         acc = _wait(v.account(acc_id))
         page = Page("list_of", _("add_to_list"), arg=acc_id, hint=acc_line(acc), empty="—")
+        try:  # a server takes into lists only those I follow: said first, as the windows
+            rel = _wait(v.relationship(acc_id))
+            if rel is not None and not rel.following:
+                page.hint += " · " + _("list_follow_first")
+        except Exception:  # noqa: BLE001 — not known: said so, the lists all the same
+            page.hint += " · " + _("list_checking")
         inside = set(v.lists_of(acc_id) or ())
         for x in v.lists:
             on = x.id in inside
@@ -324,7 +432,9 @@ class Places:
 
     def _a_list_of_toggle(self, data, _v, _c, _ans):
         list_id, acc_id, on = data.split(" ")
-        _wait(self.view.set_in_list(list_id, acc_id, on != "1"))
+        got = _wait(self.view.set_in_list(list_id, acc_id, on != "1"))
+        if got == "pending":  # not followed yet: it goes in once the server lets it
+            return Out(refresh=True, message=_("list_pending"))
         return Out(refresh=True, message=_("list_removed" if on == "1" else "list_added"))
 
     def _a_list_of_new(self, acc_id, values, _c, _ans):
@@ -411,7 +521,11 @@ class Places:
         try:
             t = _wait(v.tag_info(name))
             if t is not None:
-                page.rows.append(self._tag_row(t))
+                row = self._tag_row(t)
+                feature = self._feature_button(name)
+                if feature is not None:
+                    row = replace(row, buttons=row.buttons + (feature,))
+                page.rows.append(row)
         except Exception as e:  # noqa: BLE001 — the posts still show
             log.info("tag info: %s", e.__class__.__name__)
         posts = _wait(v.tag_timeline(name, cursor or None)) or []
@@ -428,8 +542,52 @@ class Places:
         name, _s, cursor = data.partition(" ")
         return Out(open={"page": "tag", "arg": name, "cursor": cursor})
 
+    def _feature_button(self, name):
+        """"On my profile" ("often writes about") for a tag, or None (no such thing on
+        the server, or it didn't say)."""
+        if not self.view.supports("featured_tags"):
+            return None
+        try:
+            on = name.lower() in (_wait(self.view.featured_tag_names()) or ())
+        except Exception as e:  # noqa: BLE001 — the tag still shows
+            log.info("featured tags: %s", e.__class__.__name__)
+            return None
+        return self._btn(_("tag_unfeature") if on else _("tag_feature"), "tag", "feature",
+                         f"{int(not on)} {name}", tip=_("tag_feature_tip"))
+
+    def _a_tag_feature(self, data, _v, _c, _ans):
+        on, _s, name = data.partition(" ")
+        _wait(self.view.feature_tag(name, on == "1"))
+        return Out(refresh=True)
+
     def _a_tag_lanes(self, name, _v, _c, _ans):
         return Out(open={"page": "taglanes", "arg": name})
+
+    # ---- "Report a bug on GitHub…": a draft to read, then the tracker in the browser --
+    def _p_issue(self, _arg, _tab, _cur):
+        """The public issue's text (fedtail/issue.py), already scrubbed, to read and
+        edit; the button opens GitHub's new-issue page with it — sending is the
+        person's own click there."""
+        from ... import issue
+        page = Page("issue", _("issue_title"), hint=_("issue_check"))
+        d = issue.draft(self.view.paths, self.view.cfg, known=self._mine())
+        page.form = (Field("body", _("issue_title"), d.body, "text"),)
+        page.submit = self._btn(_("issue_open"), "issue", "open", primary=True)
+        return page
+
+    def _mine(self):
+        """Words that say who this is — the @name and the server — for scrub()."""
+        from ...core.merged import full_handle
+        name, _s, host = full_handle(getattr(self.view, "_core", self.view)).lstrip(
+            "@").partition("@")
+        me = getattr(self.view, "me", None)
+        return [host, name, str(getattr(me, "name", "") or "")]
+
+    def _a_issue_open(self, _d, values, _c, _ans):
+        from ... import issue
+        body = issue.scrub(str(values.get("body", "")), self._mine())  # what was typed too
+        return Out(open={"url": issue.issue_url(self.view.cfg, "", body)},
+                   message=_("issue_opened"))
 
     # ---- settings: the lines of config.toml (common/settings.py) ---------------------
     def _p_settings(self, query, tab, _cur):
@@ -442,6 +600,11 @@ class Places:
         page = Page("settings", _("settings_title"), arg=query,
                     hint=_("settings_hint", file=name),
                     tabs=tuple((c.key, f"{c.number}. {c.title}") for c in chapters))
+        # the windows' search box and "Open the file", as buttons
+        page.rows.append(Row("item", f"🔍 {query}" if query else _("settings_search"), name,
+                             key="_tools", buttons=(
+                                 self._btn(_("settings_search"), "settings", "find", query),
+                                 self._btn(_("settings_open_file"), "settings", "file"))))
         if query:
             options = [o for _c, hits in settings.find(chapters, query) for o in hits]
             page.empty = _("settings_none")
@@ -463,6 +626,8 @@ class Places:
     @staticmethod
     def _setting_field(o):
         tip = (o.about + "\n" if o.about else "") + o.name
+        if not o.changed:  # as the windows say it under the name
+            tip += "  ·  " + _("settings_default", value=o.default_shown())
         if o.kind == "bool":
             return Field(o.name, o.title, bool(o.value), "check", tip=tip)
         if o.kind in ("choice", "checks"):
@@ -483,6 +648,18 @@ class Places:
         except (ValueError, settings.SaveError) as e:
             return Out(error=str(e))
 
+    def _a_settings_find(self, query, _v, _c, answer):
+        """Find a setting: by words of its name, title or explanation (common/settings)."""
+        if answer is None:
+            return Out(ask=(_("settings_title"), _("settings_search"), query))
+        return Out(open={"page": "settings", "arg": str(answer).strip()})
+
+    def _a_settings_file(self, _d, _v, _c, _ans):
+        """The config itself: the terminal opens it in $EDITOR; the web page copies its
+        path (the file is on the machine fedtail runs on)."""
+        from . import settings
+        return Out(open={"file": str(settings.config_file(self.view))})
+
     def _a_settings_reset(self, name, _v, _c, _ans):
         from . import settings
         section, _s, key = name.partition(".")
@@ -495,14 +672,29 @@ class Places:
     def _p_taglanes(self, name, _tab, _cur):
         """"＋ to lanes": the tag as a lane of its own, or into a lane of tags kept in
         the sidebar — the windows' menu (common/taglanes.py), as rows."""
+        from ...core import taggroups
         from . import taglanes
         name = name.lstrip("#")
         page = Page("taglanes", "#" + name + " — " + _("tags_lanes_menu").rstrip(" ▾"),
                     arg=name, hint=_("tags_lanes_tip"))
         for key, words, on in taglanes.choices(self.view, name):
             page.rows.append(Row("item", words, "" if on else "✓", key=key, buttons=(
-                self._btn(_("tags_save"), "taglane", "add", f"{key} {name}"),) if on else ()))
+                self._btn(_("tags_save"), "taglane", "add", f"{key} {name}",
+                          tip=_("tags_save_tip")),) if on else ()))
+        # the lanes of tags there are: saved ones go away from here, the config's — there
+        page.rows.append(Row("heading", _("tags_info")))
+        for g in getattr(self.view, "tag_groups", None) or []:
+            lane = taggroups.lane_name(g)
+            title = g.get("name") or taggroups.title(g)
+            page.rows.append(Row("item", title, "" if g.get("saved") else _("tags_in_config"),
+                                 key="lane:" + lane, buttons=(
+                self._btn(_("tags_drop"), "taglane", "drop", lane),) if g.get("saved")
+                else ()))
         return page
+
+    def _a_taglane_drop(self, lane, _v, _c, _ans):
+        _wait(self.view.drop_tag_group(lane))
+        return Out(refresh=True)
 
     def _a_taglane_add(self, data, _v, _c, _ans):
         from . import taglanes
@@ -695,17 +887,36 @@ class Places:
         p = self._post(sid)
         page = Page("report", _("report_title", acct=real(p).author.handle), arg=sid)
         page.rows.append(Row("post", data=p, key=p.id))
-        page.form = (Field("category", _("report_why"), "other", "choice",
-                           tuple((r, _("report_" + r)) for r in self.REASONS)),
-                     Field("comment", _("report_why"), "", "text"),
-                     Field("forward", _("report_forward"), False, "check"))
+        form = [Field("category", _("report_why"), "other", "choice",
+                      tuple((r, _("report_" + r)) for r in self.REASONS))]
+        rules = self._rules()
+        if rules:  # "Breaks the server's rules": which (Mastodon asks for at least one)
+            form.append(Field("rules", _("report_rules"), [], "checks", rules,
+                              tip=_("report_violation")))
+        form += [Field("comment", _("report_why"), "", "text"),
+                 Field("forward", _("report_forward"), False, "check")]
+        page.form = tuple(form)
         page.submit = self._btn(_("report_send"), "report", "send", sid, primary=True)
         return page
 
+    def _rules(self):
+        """((rule id, its words), …) of my server ((): it doesn't say)."""
+        try:
+            info = _wait(self.view.server_info())
+        except Exception as e:  # noqa: BLE001 — a report still goes without them
+            log.info("report: rules: %s", e.__class__.__name__)
+            return ()
+        return tuple((rid, text) for rid, (text, _hint)
+                     in zip(info.rule_ids, info.rules, strict=False) if rid)
+
     def _a_report_send(self, sid, values, _c, _ans):
         cat = values.get("category") if values.get("category") in self.REASONS else "other"
+        rules = [str(r) for r in values.get("rules") or () if r] if cat == "violation" else []
+        if cat == "violation" and not rules and self._rules():
+            return Out(error=_("report_rules_need"))
+        extra = {"rule_ids": rules} if rules else {}
         _wait(self.view.report(self._post(sid), str(values.get("comment") or ""),
-                               bool(values.get("forward")), cat))
+                               bool(values.get("forward")), cat, **extra))
         return Out(message=_("report_sent"), open={"back": True})
 
     # ---- scheduled, trends, suggestions, directory -------------------------------------
@@ -793,6 +1004,20 @@ class Places:
         if info.privacy:
             page.rows.append(Row("heading", _("server_privacy")))
             page.rows.append(Row("html", clean(info.privacy)))
+        if info.terms:
+            page.rows.append(Row("heading", _("server_terms")))
+            page.rows.append(Row("html", clean(info.terms)))
+        page.rows.append(Row("heading", _("server_blocks")))
+        if info.blocks:
+            for domain, severity, why in info.blocks:
+                word = _("server_block_" + severity) if severity in ("suspend", "silence") \
+                    else severity
+                page.rows.append(Row("text", domain, " · ".join(x for x in (word, why) if x)))
+        else:
+            page.rows.append(Row("text", _("server_blocks_none")))
+        langs = "; ".join(f"{src} → {', '.join(into)}" for src, into in info.translates)
+        page.rows.append(Row("text", _("server_translates", langs=langs) if langs
+                             else _("server_translates_none")))
         return page
 
     def _p_filtered(self, _arg, _tab, _cur):
@@ -802,6 +1027,14 @@ class Places:
         if got is None:
             page.hint = _("filtered_unsupported")
             return page
+        policy = got.get("policy") or {}
+        if policy:  # what the server holds back — the windows' "What to hold back"
+            page.form = tuple(
+                Field(key, _("filtered_" + key), policy[key], "choice",
+                      tuple((c, _("policy_" + c)) for c in POLICY_CHOICES))
+                for key in self.view.FILTER_POLICY if key in policy)
+            page.submit = self._btn(_("save") + " · " + _("filtered_policy"), "filtered",
+                                    "policy")
         for r in got.get("requests") or ():
             page.rows.append(Row("account", acc_line(r.who),
                                  _("filtered_count", n=r.count) if r.count else "",
@@ -810,6 +1043,13 @@ class Places:
                 self._btn(_("filtered_dismiss"), "filtered", "no", r.id),
                 self._btn(_("filtered_profile"), "person", "open", r.who.id))))
         return page
+
+    def _a_filtered_policy(self, _d, values, _c, _ans):
+        changes = {k: v for k, v in values.items()
+                   if k in self.view.FILTER_POLICY and v in POLICY_CHOICES}
+        if changes:
+            _wait(self.view.set_filter_policy(**changes))
+        return Out(refresh=True, message=_("profile_saved") if changes else "")
 
     def _a_filtered_yes(self, rid, _v, _c, _ans):
         _wait(self.view.answer_filtered(rid, True))
@@ -831,14 +1071,42 @@ class Places:
         for i, (k, val) in enumerate(fields[:self.FIELDS]):
             form.append(Field(f"field{i}_name", _("field_name"), k))
             form.append(Field(f"field{i}_value", _("field_value"), val))
+        # new pictures: a file's path in the terminal, a file picked on the web page
+        form += [Field("avatar", _("change_avatar"), "", "file"),
+                 Field("header", _("change_header") +
+                       ("" if a and a.header_static else " (" + _("no_header") + ")"),
+                       "", "file")]
         form += [Field("locked", _("profile_locked"), bool(a and a.locked), "check"),
                  Field("bot", _("profile_bot"), bool(a and a.bot), "check"),
                  Field("discoverable", _("profile_discoverable"),
-                       bool(a and a.discoverable), "check")]
+                       bool(a and a.discoverable), "check"),
+                 Field("hide_collections", _("profile_hide_collections"),
+                       bool(mp.hide_collections), "check"),
+                 Field("indexable", _("profile_indexable"), bool(mp.indexable), "check"),
+                 Field("attribution_domains", _("profile_attribution"),
+                       ", ".join(mp.attribution_domains), tip=_("profile_attribution_tip"))]
         page = Page("profile_edit", _("edit_profile"), hint=_("profile_fields"))
         page.form = tuple(form)
         page.submit = self._btn(_("save"), "profile_edit", "save", primary=True)
+        self._tag_suggestions(page)
         return page
+
+    def _tag_suggestions(self, page):
+        """The tags I write about most and don't put forward yet: one click each to put
+        them on my profile ("Often writes about")."""
+        if not self.view.supports("featured_tags"):
+            return
+        try:
+            tags = _wait(self.view.featured_tag_suggestions()) or []
+        except Exception as e:  # noqa: BLE001 — a nicety (Mastodon 4.x)
+            log.info("featured tag suggestions: %s", e.__class__.__name__)
+            return
+        if tags:
+            page.rows.append(Row("heading", _("featured_suggest")))
+        for t in tags:
+            page.rows.append(Row("item", "#" + t.name, key=t.name, buttons=(
+                self._btn(_("tag_feature"), "tag", "feature", f"1 {t.name}",
+                          tip=_("tag_feature_tip")),)))
 
     def _a_profile_edit_save(self, _d, values, _c, _ans):
         fields = []
@@ -847,25 +1115,94 @@ class Places:
             val = str(values.get(f"field{i}_value") or "").strip()
             if k or val:
                 fields.append((k, val))
+        pictures = {}
+        for key in ("avatar", "header"):
+            got = picture_file(values.get(key))
+            if got:
+                pictures[key] = got
+        flags = self._profile_flags(values)
         _wait(self.view.update_profile(
             name=str(values.get("name") or ""), bio=str(values.get("bio") or ""),
-            fields=fields, locked=bool(values.get("locked")), bot=bool(values.get("bot")),
-            discoverable=bool(values.get("discoverable"))))
+            fields=fields, locked=bool(values.get("locked")),
+            bot=bool(values.get("bot")), discoverable=bool(values.get("discoverable")),
+            **pictures, **flags))
         return Out(message=_("profile_saved"), open={"back": True})
+
+    def _profile_flags(self, values):
+        """hide_collections, indexable, attribution_domains — only those changed (a server
+        that doesn't know one is never sent it)."""
+        try:
+            mp = _wait(self.view.my_profile())
+        except Exception as e:  # noqa: BLE001 — the rest is saved anyway
+            log.info("profile flags: %s", e.__class__.__name__)
+            return {}
+        out = {}
+        for key in ("hide_collections", "indexable"):
+            if key in values and bool(values[key]) != bool(getattr(mp, key)):
+                out[key] = bool(values[key])
+        if "attribution_domains" in values:
+            sites = [x.strip() for x in str(values["attribution_domains"] or "")
+                     .replace(" ", ",").split(",") if x.strip()]
+            if tuple(sites) != tuple(mp.attribution_domains):
+                out["attribution_domains"] = sites
+        return out
+
+    # ---- who else shared a link (Mastodon 4.3: trending links only) --------------------
+    def _p_link(self, url, _tab, cursor):
+        from urllib.parse import urlsplit
+        host = urlsplit(url).hostname or url
+        page = Page("link", _("link_posts_title", host=host), arg=url,
+                    empty=_("link_posts_none"))
+        posts = _wait(self.view.link_timeline(url, cursor or None)) or []
+        page.rows += [Row("post", data=p, key=p.id) for p in posts]
+        if posts and len(posts) >= self.view.cfg["feed"]["page_size"]:
+            page.more = self._btn(_("more"), "link", "more", f"{real(posts[-1]).id} {url}")
+        return page
+
+    def _a_link_more(self, data, _v, _c, _ans):
+        cursor, _s, url = data.partition(" ")
+        return Out(open={"page": "link", "arg": url, "cursor": cursor})
 
     # ---- the help, what's new ---------------------------------------------------------
     def _p_help(self, name, _tab, _cur):
         from .. import helpdocs
         from ..mdhtml import markdown_html
         name = name or "index"
+        if name.startswith("?"):  # a search through every page (the windows' field)
+            return self._help_found(name[1:])
         md = helpdocs.page(None, name)
         page = Page("help", _("help_title"), arg=name)
+        page.form = (Field("q", _("help_search")),)
+        page.submit = self._btn(_("help_search").rstrip("…"), "help", "search")
         if md is None:
             page.empty = _("help_missing")
             return page
         page.rows.append(Row("html", markdown_html(md, lambda link: help_href(link, name)),
                              data=help_markdown(md, name)))
         return page
+
+    def _help_found(self, query):
+        from .. import helpdocs
+        hits = helpdocs.search(None, query)
+        page = Page("help", _("help_title"), arg="?" + query,
+                    hint=_("help_found", n=len(hits)) if hits else _("help_none"))
+        page.form = (Field("q", _("help_search"), query),)
+        page.submit = self._btn(_("help_search").rstrip("…"), "help", "search")
+        deep = False
+        for p, _n in hits:
+            if p.deep and not deep:  # the deep dive (ref/) under its own heading
+                deep = True
+                page.rows.append(Row("heading", _("help_deep")))
+            page.rows.append(Row("item", p.title, p.about, key=p.name, buttons=(
+                self._btn(_("open_action"), "help", "open", p.name),)))
+        return page
+
+    def _a_help_search(self, _d, values, _c, _ans):
+        q = str(values.get("q") or "").strip()
+        return Out(open={"page": "help", "arg": "?" + q if q else "index"})
+
+    def _a_help_open(self, name, _v, _c, _ans):
+        return Out(open={"page": "help", "arg": name})
 
     def _p_news(self, _arg, _tab, _cur):
         return self._p_help("news", "", "")
@@ -888,16 +1225,41 @@ class Places:
         page.rows.append(Row("item", version.AUTHOR, version.AUTHOR_URL, key="author",
                              buttons=(self._btn(_("open_browser"), "url", "open",
                                                 version.AUTHOR_URL),)))
-        page.rows.append(Row("pre", a.text()))  # to select and copy, for a bug report
+        page.rows.append(Row("html", _("made_by")))
+        page.rows.append(Row("pre", a.text(), key="facts", buttons=(  # for a bug report
+            self._btn(_("about_copy"), "about", "copy", primary=True),)))
         return page
+
+    def _a_about_copy(self, _d, _v, _c, _ans):
+        from . import about
+        a = about.facts(self.view, getattr(self, "toolkit", ""),
+                        getattr(self, "toolkit_version", ""))
+        return Out(copy=a.text(), message=_("about_copied"))
 
     def _p_federation(self, _arg, _tab, _cur):
         """Debug → Federation status: what failed where in this run (fedstatus.py)."""
         from .. import fedstatus
         data = _wait(self.view.federation_status())
-        page = Page("federation", _("fed_title"))
-        page.rows.append(Row("pre", fedstatus.text(data)))
+        page = Page("federation", _("fed_title"), hint=_("info_head"))
+        page.rows.append(Row("pre", fedstatus.text(data), key="status", buttons=(
+            self._btn(_("fed_refresh"), "federation", "refresh"),
+            self._btn(_("fed_copy"), "federation", "copy"),
+            self._btn(_("fed_reset"), "federation", "reset"))))
         return page
+
+    def _a_federation_refresh(self, _d, _v, _c, _ans):
+        return Out(refresh=True)
+
+    def _a_federation_copy(self, _d, _v, _c, _ans):
+        from .. import fedstatus
+        return Out(copy=fedstatus.text(_wait(self.view.federation_status())),
+                   message=_("fed_copied"))
+
+    def _a_federation_reset(self, _d, _v, _c, _ans):
+        from ...core import health
+        health.REC.clear()  # count anew from now, as the windows' button
+        log.info("federation status: counting anew")
+        return Out(refresh=True)
 
     def help_target(self, link, current="index"):
         """Where a help page's link goes: Out(open={"page": ("help", name)}) or {"url"}."""
@@ -906,6 +1268,22 @@ class Places:
         if t.page:
             return Out(open={"page": "help", "arg": t.page, "anchor": t.anchor})
         return Out(open={"url": t.url})
+
+
+def picture_file(value):
+    """A picture field's value — a file's path (typed in the terminal; the web page
+    uploads the file picked and hands its path on) — checked; None when empty.
+    ValueError when there's no such file."""
+    import os
+    from pathlib import Path
+    if not value or not str(value).strip():
+        return None
+    path = Path(os.path.expanduser(str(value).strip()))
+    if not path.is_file():
+        raise ValueError(_("load_failed", err=str(path)))
+    return str(path)
+
+
 
 
 def help_markdown(md, current):

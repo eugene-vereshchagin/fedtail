@@ -23,7 +23,7 @@ SEPARATOR = "__sep__"
 @dataclass
 class CardSpec:
     """What one card shows: a post of fedtail.model (a Post, or a Share around one),
-    and where and how. Cards read nothing else of the server (docs/PROTOCOLS.md)."""
+    and where and how. Cards read nothing else of the server (docs/en/dev/protocols.md)."""
     key: str                   # unique within a view (item id or status id)
     entry: object = None       # Post | Share; None for the "new below" divider
     depth: int = 0

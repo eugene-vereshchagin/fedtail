@@ -1,7 +1,7 @@
 """The main GTK window: lanes on the left with their unread counts, the lane or thread
 on the right (a tab each, the lanes' own tab first), a status line at the bottom.
 
-Stage 1 of docs/GTK.md. What a card needs from the window goes through `Ctx` (like
+Stage 1 of docs/en/dev/gtk.md. What a card needs from the window goes through `Ctx` (like
 qt/window.py ViewContext), so cards never import the window.
 """
 
@@ -274,6 +274,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_line.set_ellipsize(Pango.EllipsizeMode.END)
         self.profile_label = Gtk.Label(xalign=0)
         self.profile_label.add_css_class("ft-muted")
+        # a narrow window: the bar's words give way ("…") instead of holding it wide
+        # (the sync mark beside them took the window past 600 px)
+        self.profile_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.profile_label.set_width_chars(8)
+        tip(self.profile_label, _("footer_profile_tip"))
         bar = Gtk.Box(spacing=12)
         bar.add_css_class("ft-statusbar")
         for m in ("start", "end"):
@@ -289,6 +294,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if corner:
             lab = Gtk.Label(label=corner)
             lab.add_css_class("ft-muted")
+            lab.set_ellipsize(Pango.EllipsizeMode.START)
             tip(lab, _("debug_corner_tip"))
             bar.append(lab)
             self.corner_label = lab
@@ -906,6 +912,26 @@ class MainWindow(Gtk.ApplicationWindow):
             return
         self.status(_("debug_report_done", path=str(out)), seconds=15)
         self.open_path(out.parent)
+        self.send_report(out)
+
+    def send_report(self, out):
+        """Into debug.report_repo too, if one is set (fedtail/reportsend.py), in the
+        background — as Qt's."""
+        from ... import reportsend
+        repo = self.cfg["debug"].get("report_repo", "")
+        if not repo:
+            return
+        self.status(_("bugreport_sending", repo=repo))
+        self.bridge.call(
+            self.core.submit(reportsend.send_report, out, self.cfg, self.view.paths.data_dir),
+            ok=lambda where: self.status(_("bugreport_sent", where=where), seconds=15),
+            fail=lambda err: self.status(_("bugreport_send_failed", repo=repo, err=err),
+                                         seconds=30))
+
+    def report_issue(self):
+        """"Report a bug on GitHub…" (gtk/issue.py), as Qt's."""
+        from .issue import IssueWindow
+        IssueWindow(self).present()
 
     def set_hints(self, on):
         from . import gi_setup
@@ -1111,6 +1137,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.stack.add_named(self.columns, "__columns__")
             self.stack.set_visible_child(self.columns)
             self.tabs.set_current_page(0)
+            self.tabs.set_tab_label(self.stack, Gtk.Label(label=_("columns")))  # as Qt's
             self.view.set_active_lanes(names)
             log.info("columns: %s", ", ".join(names))
         else:
@@ -1119,6 +1146,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.stack.add_named(lv, name)
             self.stack.remove(self.columns)
             self.columns = None
+            self.tabs.set_tab_label(self.stack, Gtk.Label(label=_("gtk_lanes")))
             self.view.set_active_lanes([])
             log.info("columns off")
             row = self.lane_rows.get(focused or self._current_lane())
@@ -1149,7 +1177,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ---- start -----------------------------------------------------------------------
     def start(self):
-        if getattr(self, "tray", None) is None:
+        if getattr(self, "tray", None) is None and self.cfg["ui"].get("tray", True):
             from . import tray
             self.tray = tray.make(self)  # (None: the desktop shows no tray)
         if not self.core.logged_in:
@@ -1761,6 +1789,12 @@ class MainWindow(Gtk.ApplicationWindow):
         from .dialogs import ask_text
         return ask_text(self, title, question, then, text, allow_empty=allow_empty)
 
+    def choose(self, title, text, options, done, check=None):
+        """One of a few (common/timed.py: how long a mute lasts, posts only)."""
+        from .dialogs import choose
+        self._asking = choose(self, title, text, options, done, check=check)  # (tests)
+        return self._asking
+
     def open_people(self, acc, which):
         """Whom someone follows, or who follows them: a tab of people."""
         from .people import open_people
@@ -1780,6 +1814,10 @@ class MainWindow(Gtk.ApplicationWindow):
     def open_reactions(self, st, kind):
         from . import postinfo
         return postinfo.open_reactions(self, st, kind)
+
+    def open_link_posts(self, url):
+        from . import postinfo
+        return postinfo.open_link_posts(self, url)
 
     def open_quotes(self, post):
         from . import postinfo

@@ -132,6 +132,25 @@ class QuotesWidget(_PagedTab):
                                              self.win.error(e)))
 
 
+class LinkPostsWidget(_PagedTab):
+    """Posts sharing a link (Mastodon 4.3: the server keeps trending links only)."""
+
+    def __init__(self, win, url):
+        from urllib.parse import urlsplit
+        self.url = url
+        super().__init__(win, _("link_posts_title", host=urlsplit(url).hostname or url))
+        self.header.info.setText(url)
+        self.more()
+
+    def fetch(self, max_id):
+        return self.core.link_timeline(self.url, max_id=max_id)
+
+    def _page(self, page):
+        super()._page(page)
+        if not self.items:
+            self.header.info.setText(_("link_posts_none"))
+
+
 class TrendsWidget(_PagedTab):
     """What's talked about on my server: tags, links, posts."""
 
@@ -189,8 +208,8 @@ def _section(text):
 def server_html(win, info):
     """What my server says about itself (a ServerInfo), as a page."""
     css = win.theme.css("link")
-    return server.server_html(info, lambda html: clean(html, css))
-
+    return server.server_html(info, lambda html: clean(html, css)) + \
+        server.server_more_html(info, lambda html: clean(html, css))
 
 class ServerInfoDialog(QDialog):
     """My server about itself (a ServerInfo): description, contact, rules, privacy;

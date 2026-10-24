@@ -1,4 +1,4 @@
-"""What a protocol gives the core (docs/PROTOCOLS.md, stage 3).
+"""What a protocol gives the core (docs/en/dev/protocols.md, stage 3).
 
 A protocol is a package under ``fedtail/protocols/`` that exposes a ``PROTOCOL``:
 
@@ -67,6 +67,9 @@ CLIENT = frozenset("""
     async_refresh authorize_follow authorize_url block block_domain blocks bookmark
     bookmarks cancel_scheduled clear_notifications context conversations create_filter
     create_list custom_emojis delete_filter delete_list delete_status directory
+    filter_status filter_statuses unfilter_status update_filter update_media link_timeline
+    featured_tag_suggestions instance_domain_blocks terms_of_service translation_languages
+    push_subscription push_subscribe push_unsubscribe
     dismiss_announcement dismiss_notification dismiss_notification_group
     dismiss_suggestion domain_blocks
     edit_status endorse endorsements familiar_followers favourite favourited_by
@@ -95,7 +98,7 @@ KNOWN = {
 
 @dataclass
 class Capabilities:
-    """What my server can do — one place for it (docs/PROTOCOLS.md, stage 4).
+    """What my server can do — one place for it (docs/en/dev/protocols.md, stage 4).
 
     What the server says about itself (software, version, the limits) comes with the
     connection; whether it has a feature is learned: a probe's answers (≡ → Server info

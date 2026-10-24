@@ -1,16 +1,133 @@
 # Changelog
 
-## 0.19.0 — in progress
+## 0.20.0 — in progress
 
-- The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
-  filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
-  terminal interface and a full web page.
-- The Android app (the `android` branch, dev builds from CI): the overview of lanes as home —
-  tiles or a list (`phone.overview`), "read in a row", "read — next" at a lane's end; two
-  or three columns on a tablet (`phone.layout`); pictures with a viewer, live links, a
-  card's ⋯ menu; Point's command line off on the phone; the settings page — the
-  desktop's settings window (`common/settings.py`), only what the phone heeds; the tiles
-  picked and ordered in the app ("change"), kept by the core and carried by `sync.tiles`.
+- fedtail for Android (`android/`; Kotlin and Jetpack Compose over the same Python core):
+  the overview of lanes as home — tiles or a list (`phone.overview`), the tiles picked
+  and ordered in the app and carried by sync (`sync.tiles`), "read in a row", "read —
+  next" at a lane's end, "300+" where a lane holds as many unread as it shows,
+  "Earlier"; two or three columns on a tablet (`phone.layout`); threads as trees,
+  replies, likes, a card's ⋯ menu, pictures with a viewer, live links; the settings
+  page — the desktop's settings window (`common/settings.py`), only what the phone
+  heeds; read marks synced; Point's command line off on the phone; a self-check in dev
+  builds. The APK is built with every release (`fedtail-X.Y.Z-android.apk`).
+- "Direct" is a dialogue: your own direct messages are in it too (sent from here, from
+  another client or met in a thread), by the posts' time, read at once — the count is
+  only what came to you. They never show in "Replies to me" or "Mentions".
+- The rest of the 0.19 plan: the full terminal interface and the full web page (the
+  "Four interfaces" table shows what is left).
+- A profile shows "Posts", "Posts and replies" or "Media", switched above the posts;
+  which one first is `feed.profile_show` ("posts" by default, as in other clients).
+- Mute for a while (an hour, a day, a week, a month) and "posts only" — their notifications
+  still come; word filters get a term too.
+- "Hide this post" in the ⋯ menu: one post out of sight everywhere, through a filter of the
+  server's ("fedtail: hidden posts"), in other clients too.
+- A list's replies: to anyone you follow, to its members, or none (the server's setting).
+- The rest of the Mastodon client API, in all four interfaces: filters edited ("Edit…"),
+  a cover for a video or a sound, an edited post's picture descriptions and focus, a report
+  by the server's rules, the profile's newer switches (hide follows, search of my posts,
+  article authorship) and tag suggestions, "Who else shared this link", and the server's
+  terms, blocked servers and translator (Translate is offered only where it can).
+- Web Push in the web page: ≡ → "Push notifications…" subscribes the browser at your
+  server itself, so notifications come with the tab closed and fedtail off (over https or
+  on localhost — the browser's rule; see the help, "Notifications").
+- The web page takes the windows' themes: their colours and font, and ≡ → "Try a theme"
+  for the run (`ui.theme` gives the one it starts with).
+- The help in the web page and the terminal goes back and forward between its pages
+  (← → on the page; Alt+← Alt+→ in the terminal), as in the windows.
+- The web page's ≡ menu: "All accounts in one window" and a test notification; the
+  settings in the web page and the terminal: "Find a setting…", "Open the file" and each
+  option's default in its tip.
+
+## 0.19.0 — 2026-10-24
+
+- An intermediate release of the 0.19 plan (docs/en/dev/roadmap.md): the sound schemes,
+  the Windows tests, the same behaviour checked across Qt, GTK, the web and the terminal
+  are in; the full terminal interface and the full web page go on in 0.20 — what each
+  interface lacks so far, and why, is the "Four interfaces" table of the feature list.
+- Windows: a new avatar or header no longer goes to the server under the picture's whole
+  local path (with the user's folder name in it) — only the file's own name.
+- GTK matches Qt where it didn't: ⏸ in the video player and the gif's own key hint, the
+  menu items' tooltips (where GTK shows them), the profile's tooltip in the status bar, a
+  click on a post's face opens the profile (and a screen reader names it), the columns'
+  tab is called so, `?` in the command line opens the commands' help in a window.
+- The web page and the terminal get what only the windows had, as places of their own:
+  "What the server can do", the server's notification policy, the server's announcements
+  (dismiss, react), the federation's state with Copy / Refresh / Reset, a profile's details
+  (counts, since, people you both follow, featured, pinned, moved) and their older posts
+  from their own server, a tag on my profile, a new avatar and header, the lists moved up
+  and down, About's Copy, the arts mode's note, and a search in the help.
+- The web page matches the windows where it didn't: the sidebar's sections fold (one state
+  for every interface), a thread has its head (first words, answers, #id, Follow, why it
+  comes, every warning at once), Ctrl+F goes "Deeper" and "In every lane", a poll shows how
+  many people voted and refreshes, the editor has Preview, Discard (after a question),
+  "Another language…", a picture's focus point, the alt-text reminder before sending, the
+  chain and #CamelCase line under the text and "an edit keeps the pictures"; the viewer
+  saves the original (S), shows it at its own size (Z, double click), leafs with the wheel;
+  the windows' tooltips, the ● of the new and "→ @account" (which of mine got it).
+- The terminal matches the windows where it didn't: a poll to vote in (`u`: Space, Enter;
+  `r` — the results, refresh; how many people, until when), Ctrl+F's `N` (back), `D`
+  (deeper), `E` (every lane) and Esc, `J` — to the new, older posts past a lane's end, the
+  sidebar's sections fold, a thread's head (answers, `c` — every warning, `s` — follow,
+  why it comes), the editor's count, chain and #CamelCase line, Ctrl+R — preview, "Another
+  language…", "Discard", the alt-text reminder, "an edit keeps the pictures"; the viewer
+  saves the original (`s`); notifications through notify-send or the terminal's own code
+  (kitty, Ghostty, WezTerm, foot, iTerm2); ≡ → Debugging (census, trim, tracing, snapshot,
+  the config and data folders, every account in one window, "⇄ @account" on a card).
+- Qt: a follow request's @name opens the person's profile in fedtail, as GTK's does — no
+  more "profile ↗" link out to the browser.
+- "Four interfaces" in the feature list (docs/{ru,en}/features.md, and so the site): a table
+  of what isn't in all of Qt, GTK, the terminal and the web page, and why — kept honest by a
+  test (tests/test_parity.py): a function added to or lost in one interface doesn't pass
+  without its line in docs/src/parity.toml.
+- Bug reports leave the machine by themselves if you like: `debug.report_repo = "user/repo"`
+  (or any git address) — the report from the Debugging menu, `--bug-report` and the nightly
+  selfcheck's text zip (`--send`, `--send-full` for the whole) are pushed into that private
+  repository over ssh with your own keys, a commit each; the reports already there are never
+  downloaded.
+- "Report a bug on GitHub…" in the ≡ menu of every interface: a draft issue with the
+  version, the system and the latest errors of the log, server addresses, nicknames, IPs,
+  tokens and paths replaced by placeholders — shown to read and edit first; then GitHub opens
+  with it filled in and you send it yourself.
+- "Translate" on every post if you like (`feed.translate_all = true`, as in Fedilab): in your
+  own language too, and on posts that give none.
+- No tray icon if you don't want one (`ui.tray = false`): notifications then go through the
+  desktop only and the cross closes fedtail. Windows: the tray icon no longer stays behind
+  after fedtail quits — every restart used to leave one more until the mouse passed over.
+- The terminal shows pictures for real and plays video. With the `textual-image` package
+  (`pip install textual-image`) pictures go out as sixel (Konsole, WezTerm, foot) or the kitty
+  protocol (kitty) — in the lane and full screen; without it, half blocks as before
+  (`tui.pictures = "auto"`, `"blocks"`, `"key"`, `"off"`; the old `"inline"` is `"auto"`).
+  `v` hands the pictures to `chafa`, `timg` or kitty's `icat` when one is installed, the
+  interface stepping aside until Enter (`tui.viewer`). Video and gifs play in `mpv`: a
+  window of their own on a desktop, right in the terminal over ssh (sixel, kitty or
+  coloured text); no mpv — the browser, and it says so (`tui.video`).
+- The terminal: `#abc` or `@name` typed in the command line no longer closes it on
+  Textual 2 (Debian 13) — the thread or profile it opened wasn't drawn yet when the line
+  gave the focus back; "Reply with a quote" quotes the post's words, not its HTML; a
+  redraw or an answer from the server arriving as the terminal closes is dropped quietly
+  instead of an error on the way out.
+- fedtail-sync gets ready to leave for a repo of its own: its own version (1.0.0) and
+  changelog, `--version`, README in both languages with the install guide (moved there from
+  docs/*/sync.md), the protocol written down (`syncserver/PROTOCOL.md`), and its own tests
+  in `syncserver/tests/` — the standard library only, every line of the server run
+  (`syncserver/tools/coverage.py --fail-under 100`, in CI's security job).
+- The language of a post: Georgian is named «ქართული (ka)» again, not in Mtavruli capitals
+  («Ქართული»): Georgian text has no capital letters.
+- fedtail-sync guards itself — it faces the internet and didn't: a silent or trickling
+  connection is dropped (`timeout_seconds`; it held a thread for ever), at most
+  `max_connections` at once, `requests_per_minute_per_ip`; random tokens can no longer make
+  it hammer a fediverse server with checks (`verifications_per_minute_per_ip`,
+  `verifications_per_minute`); a body is read only with an honest Content-Length (a
+  negative one read to the end of the stream); `total_mb` caps the disk for everyone; the
+  token check follows no redirect (one carried the token on) and with `"*"` talks only to
+  public addresses, checked on the connected socket; an error inside says "internal error"
+  only. Behind cloudflared or nginx, `client_ip_header` (`CF-Connecting-IP`, `X-Real-IP`)
+  gives the limits the real address — believed from a loopback peer only. Tests for each
+  (`syncserver/tests/test_security.py`) and bandit run in a CI job a release waits for.
+- Sync: an action on one device always wins over what it has already seen from the
+  others, however their clocks differ (a draft sent on the phone came back from the
+  desktop when the desktop's clock was a little ahead).
 - A settings window (≡ → Settings, in Qt, GTK, the web page and the terminal): the
   chapters of config.toml on the left, their options as cards on the right — a switch,
   a number, a choice (each choice with what it means), ticks for lists of lanes — with
@@ -168,7 +285,7 @@
   of `tools/selfcheck.py`, a table in its report.
 - Windows: tests that hold Windows' ways on any machine (where the files go, the Start
   menu shortcut's PowerShell, the single-instance pipe's key, the sounds through
-  winsound); `tools/windows_check.py` runs docs/WINDOWS.md on Windows in a profile of
+  winsound); `tools/windows_check.py` runs docs/en/dev/windows.md on Windows in a profile of
   its own (the self-check's `windows` step).
 - Web: a page that left while waiting for news (a reload, a closed tab) no longer
   prints two BrokenPipeError tracebacks on the terminal.
@@ -249,11 +366,11 @@
   GoToSocial isn't asked for grouped notifications or a user's server blocks any more
   (it has neither: a 404 at every start).
 - fedtail from the source says at start where its logs are (`fedtail: logs in …`);
-  docs/WINDOWS.md has every Windows path and the commands to open and follow the log.
+  docs/en/dev/windows.md has every Windows path and the commands to open and follow the log.
 - The debugging corner of the status bar says the same in Qt and GTK, in one order:
   theme · toolkit and version · style · font · display · scale · build (Qt's had an
   empty "· ·" where its style's name was).
-- docs/WINDOWS.md: fedtail on Windows from the source — Python and git by winget, the
+- docs/en/dev/windows.md: fedtail on Windows from the source — Python and git by winget, the
   packages, running, the tests as CI runs them, the selfcheck; tests/test_windows_doc.py
   keeps it the same as CI and the code.
 - GTK: pictures and files go into a post by dragging them onto the editor or pasting
@@ -335,7 +452,7 @@
   six sizes with what each cut or pushed out, its edge and the sidebar's dragged and
   timed, widgets left alive after a window closed, the benches, the parity of the four
   interfaces (tools/parity.py), and then the same on your own account (read-only,
-  screenshots blurred). docs/TESTPLAN.md: what is checked, what is left to the eye.
+  screenshots blurred). docs/en/dev/testplan.md: what is checked, what is left to the eye.
 - From the first night's report: Qt's own buttons (Close, Cancel) in the interface's
   language; nord's and night's outline pictures (a star, an @, refresh) were the
   background's colour — an outline too close to it is drawn light; check boxes and
@@ -431,7 +548,7 @@
   `--bug-report` would add — the versions (fedtail, Python, Qt or GTK, libadwaita), the
   system, the options changed from the defaults and `config.toml` itself — so the log
   alone is enough to send.
-- The GTK window grows up (stage 2–3 of docs/GTK.md): faces, pictures, the poll's
+- The GTK window grows up (stage 2–3 of docs/en/dev/gtk.md): faces, pictures, the poll's
   results, the quoted post, the link's card, "you replied" under a post; the buttons
   and the ⋯ menu of a post — the same as in Qt (copy the link, the #id or the address,
   quote, call into the thread, bookmark, read up to here, mute or follow the thread,
@@ -541,7 +658,7 @@
   the lanes in their groups with unread counts, posts as cards with what they answer,
   the content warning and attachments, seen posts marked read, "All read", "earlier",
   threads in tabs, ★ and ♻, every fedtail theme. The rest comes stage by stage
-  (docs/GTK.md); needs `python3-gi gir1.2-gtk-4.0`. Inside: the theme colours
+  (docs/en/dev/gtk.md); needs `python3-gi gir1.2-gtk-4.0`. Inside: the theme colours
   (`frontends/palette.py`) and post text for GTK labels (`frontends/pango.py`) are
   worked out without a toolkit, ready for Qt to share.
 - The server's rate limit is kept to: fedtail reads its X-RateLimit headers, keeps
@@ -551,7 +668,7 @@
   GoToSocial with a few lists, the live stream waking the poller every few seconds).
 - **The split layout** (`ui.layout = "split"`, for one run `fedtail --layout split`;
   `"qip"`, its first name, is still understood) — fedtail as a messenger of the 2000s,
-  QIP, the Mail.ru Agent or Psi (docs/LAYOUTS.md):
+  QIP, the Mail.ru Agent or Psi (docs/en/dev/layouts.md):
   - The **roster**, a narrow window of its own, and fedtail starts with it alone: who I
     am and what's new in Activity on top, a search line, then folding groups — the
     lanes, followed threads and private talks ("Threads", "Talks", the freshest
@@ -713,7 +830,7 @@
   a line of its own. Lanes slide in on a phone; light and dark follow the system.
 - Inside: the terminal, the TUI and the web interface work on fedtail's own data model
   (`fedtail/model`, `fedtail/core/view.py`) instead of the server's JSON — stage 2 of
-  docs/PROTOCOLS.md; so does the Qt window, all of it. The Mastodon API itself lives in
+  docs/en/dev/protocols.md; so does the Qt window, all of it. The Mastodon API itself lives in
   `fedtail/protocols/mastodon/` behind a protocol interface (stage 3), and what the server
   can do is kept in one place (stage 4): a button the server refuses goes at once, and
   stays gone after a reconnect. Nothing changes in what they

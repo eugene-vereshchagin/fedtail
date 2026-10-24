@@ -52,12 +52,10 @@ def collection_items(get_json, coll, pages=3):
 def reply_uris(get_json, root_uri, limit=40, depth=3):
     """Addresses of replies in the conversation under root_uri, walking the replies
     of replies a few levels down; at most `limit` of them."""
-    found, queue, done = [], [(root_uri, 0)], set()
+    # each address is queued once: only the root and what isn't in `found` yet go in
+    found, queue = [], [(root_uri, 0)]
     while queue and len(found) < limit:
         uri, level = queue.pop(0)
-        if uri in done:
-            continue
-        done.add(uri)
         try:
             obj = get_json(uri)
         except Exception as e:  # someone else's server: anything may happen

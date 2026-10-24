@@ -404,18 +404,29 @@ class SocialMixin:
 
     # ---- the server -----------------------------------------------------------------
     def server_info(self):
-        """About my server: {instance, rules, about (HTML), privacy (HTML)}."""
+        """About my server: {instance, rules, about (HTML), privacy (HTML), terms (HTML),
+        blocks (the servers it cut off, where it shows them), translates ({source:
+        [targets]})}."""
+        lists = ("rules", "blocks")
+
         def job():
             out = {"instance": self.api.instance() or {}}
             for key, fn in (("rules", self.api.instance_rules),
                             ("about", lambda: self.api.instance_page("extended_description")),
-                            ("privacy", lambda: self.api.instance_page("privacy_policy"))):
+                            ("privacy", lambda: self.api.instance_page("privacy_policy")),
+                            ("terms", self.api.terms_of_service),
+                            ("blocks", self.api.instance_domain_blocks)):
                 try:
                     got = fn()
-                    out[key] = got if key == "rules" else (got or {}).get("content") or ""
+                    out[key] = got or [] if key in lists else (got or {}).get("content") or ""
                 except ApiError as e:
                     log.debug("server info %s: %s", key, e)
-                    out[key] = [] if key == "rules" else ""
+                    out[key] = [] if key in lists else ""
+            try:
+                out["translates"] = self.api.translation_languages() or {}
+            except ApiError as e:  # an older server: it doesn't say
+                log.debug("server info translates: %s", e)
+                out["translates"] = {}
             return out
         return self.submit(job)
 
@@ -436,6 +447,21 @@ class SocialMixin:
         """The last round of probe_server, or None (never checked)."""
         from ..protocols.mastodon import probe
         return self.store.kv_get(probe.KV)
+
+    def load_translation_languages(self):
+        """What the server's translator turns into what: {source: [targets]}, kept in
+        self.translation_languages; None — not known (an older server: any is tried)."""
+        if not getattr(self.caps, "translation", False):
+            self.translation_languages = None
+            return None
+        try:
+            got = self._api("translation_languages", self.api.translation_languages)
+            self.translation_languages = {str(k): [str(t) for t in v or ()]
+                                          for k, v in (got or {}).items()} or None
+        except Exception as e:  # noqa: BLE001 — a nicety: "Translate" stays where it was
+            log.debug("translation languages: %s", e)
+            self.translation_languages = None
+        return self.translation_languages
 
     def load_preferences(self):
         """The preferences I set on the server's web side, kept in self.server_prefs

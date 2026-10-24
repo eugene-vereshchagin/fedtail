@@ -66,6 +66,17 @@ L = {
         "chapter": "Раздел", "size": "Размер", "why": "Почему", "more": "Подробнее",
         "contents": "Содержание", "in_progress": "в работе",
         "ap_title": "ActivityPub напрямую",
+        "parity_title": "Четыре интерфейса",
+        "parity_intro": "fedtail — это окно Qt (KDE, Windows), окно GTK (GNOME), терминал и "
+                        "веб-страница; ядро у них одно, и почти всё есть везде. Ниже — только "
+                        "то, что есть не везде, и почему. ✓ — есть, ◐ — частично, — — нет, "
+                        "· — там не нужно. Таблицу держит в честности тест: функция, которая "
+                        "появилась или пропала в одном интерфейсе, без строчки здесь не "
+                        "пройдёт.",
+        "parity_head": ["Что", "Qt", "GTK", "Терминал", "Веб", "Почему"],
+        "parity_areas": {"window": "Окно, аккаунты, вход", "reading": "Чтение",
+                         "media": "Картинки и видео", "writing": "Редактор",
+                         "app": "Сервер, настройки, справка, отладка"},
         "ap_intro": "Всё здесь — запросы к чужим серверам без твоего токена: там видят только "
                     "твой IP. Серверы, требующие подписи запросов (secure mode), просто "
                     "ничего не отдадут, и fedtail тихо обходится тем, что знает твой сервер.",
@@ -97,6 +108,17 @@ L = {
         "chapter": "Chapter", "size": "Size", "why": "Why", "more": "In detail",
         "contents": "Contents", "in_progress": "in progress",
         "ap_title": "ActivityPub directly",
+        "parity_title": "Four interfaces",
+        "parity_intro": "fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a "
+                        "terminal and a web page; they share one core, and nearly everything is "
+                        "in all of them. Below is only what isn't everywhere, and why. ✓ — "
+                        "has it, ◐ — in part, — — no, · — doesn't belong there. A test keeps "
+                        "the table honest: a function that appears or goes in one interface "
+                        "doesn't pass without its line here.",
+        "parity_head": ["What", "Qt", "GTK", "Terminal", "Web", "Why"],
+        "parity_areas": {"window": "The window, accounts, logging in", "reading": "Reading",
+                         "media": "Pictures and video", "writing": "The editor",
+                         "app": "The server, settings, help, debugging"},
         "ap_intro": "Everything here is a request to other servers without your token: they "
                     "see only your IP. Servers that require signed requests (secure mode) "
                     "simply give nothing, and fedtail quietly makes do with what your own "
@@ -267,7 +289,8 @@ def render_features(chapters, lang):
     v = version()
     shown = v.split(".dev")[0] + (f" ({t['in_progress']})" if ".dev" in v else "")
     titles = [_t(ch["title"], lang) for ch in chapters]
-    titles += [t["ap_title"], t["plans_title"], t["wont_title"], t["undecided_title"]]
+    titles += [t["parity_title"], t["ap_title"], t["plans_title"], t["wont_title"],
+               t["undecided_title"]]
     contents = " · ".join(f"[{x}](#{_anchor(x)})" for x in titles)
     out = [head.replace("@VERSION@", shown).replace("@CONTENTS@", contents).rstrip(), ""]
     for ch in chapters:
@@ -288,11 +311,39 @@ def render_features(chapters, lang):
                 out += [f"**{_t(f['name'], lang)}.**{sep}{text}", ""]
             out += ["</details>"]
         out.append("")
+    out += ["---", "", render_parity(lang).rstrip(), ""]
     out += ["---", "", f"## {t['ap_title']}", "", t["ap_intro"], ""]
     out += _table([t["what"], t["status_col"], t["config"]],
                   [[_t(f["name"], lang), _status(f, lang), _t(f.get("config"), lang)]
                    for ch in chapters for f in ch.get("feature", []) if f.get("activitypub")])
     out += ["", "---", "", render_roadmap(chapters, lang)]
+    return "\n".join(out).rstrip() + "\n"
+
+
+PARITY_MARK = {"has": "✓", "partly": "◐", "no": "—", "na": "·"}
+PARITY = ROOT / "docs" / "src" / "parity.toml"
+
+
+def render_parity(lang):
+    """The "Four interfaces" chapter: what isn't in all of them, from docs/src/parity.toml
+    (which tests/test_parity.py holds against the code)."""
+    import tomllib
+    t = L[lang]
+    with open(PARITY, "rb") as f:
+        reg = tomllib.load(f)
+    out = [f"## {t['parity_title']}", "", t["parity_intro"], ""]
+    caps = reg.get("capability", [])
+    for area, title in t["parity_areas"].items():
+        rows = [c for c in caps if c.get("area") == area
+                and any(c.get(fe, "has") != "has" for fe in ("qt", "gtk", "tui", "web"))]
+        if not rows:
+            continue
+        out += [f"### {title}", ""]
+        out += _table(t["parity_head"], [
+            [_t(c["name"], lang)] + [PARITY_MARK[c.get(fe, "has")]
+                                     for fe in ("qt", "gtk", "tui", "web")]
+            + [_t(c.get("note"), lang)] for c in rows])
+        out.append("")
     return "\n".join(out).rstrip() + "\n"
 
 
@@ -440,6 +491,7 @@ def build():
         out[d / "parts" / "only-in-fedtail.md"] = render_only(chapters, lang)
         out[d / "parts" / "whats-new.md"] = render_new(chapters, lang)
         out[d / "parts" / "roadmap.md"] = render_roadmap(chapters, lang)
+        out[d / "parts" / "parity.md"] = render_parity(lang)
         example = config_doc.example_path(lang)
         out[d / "config.md"] = config_doc.build(example.read_text("utf-8"), lang)
     # parts first (they include nothing), then the generated pages, then the rest — so

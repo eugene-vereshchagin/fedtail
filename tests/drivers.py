@@ -288,7 +288,9 @@ class Web(Driver):
                                "visibility": post_vis(post, self.req("/api/me")["visibility"])})
 
     def profile(self, acc_id):
-        return [a["key"] for a in self.req(f"/api/account?id={acc_id}")["actions"]]
+        # "details" opens what the windows show in the profile tab's head itself
+        return [a["key"] for a in self.req(f"/api/account?id={acc_id}")["actions"]
+                if a["key"] != "details"]
 
     def profile_act(self, acc_id, key):
         got = self.req("/api/profile_act", {"id": acc_id, "key": key})
@@ -518,7 +520,7 @@ class Tui(Driver):
 
     def profile(self, acc_id):
         screen = self._profile(acc_id)
-        keys = [a.key for a in screen.buttons()]
+        keys = [a.key for a in screen.buttons() if a.key != "details"]  # as Web's
         self.run(self._pop())
         return keys
 

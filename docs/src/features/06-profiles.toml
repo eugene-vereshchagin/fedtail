@@ -19,6 +19,32 @@ details.ru = "Шапка, о себе, поля, счётчики, посты; �
 details.en = "The header, bio, fields, counts, posts; “followed by people you follow” (`familiar_followers`); follows and followers."
 
 [[feature]]
+id = "profile-show"
+status = "has"
+since = "0.20.0"
+name.ru = "В профиле: посты, посты и ответы, медиа"
+name.en = "In a profile: posts, posts and replies, media"
+config = "`feed.profile_show`"
+api = "`accounts/:id/statuses` `exclude_replies`, `only_media`"
+others = "Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes, Fedilab"
+clients = ["Mastodon web", "Tusky", "Ivory", "Phanpy", "Elk", "Ice Cubes", "Fedilab"]
+details.ru = "Над постами человека — переключатель: «Посты» (без его ответов другим; ответы в своих тредах остаются), «Посты и ответы», «Медиа» (только с картинками и видео). С чего начинать — `feed.profile_show`, по умолчанию «Посты», как в других клиентах. Отбирает сервер."
+details.en = "Above a person's posts, a switch: “Posts” (without their replies to others; replies in their own threads stay), “Posts and replies”, “Media” (only with pictures and video). Which one first — `feed.profile_show`, “Posts” by default, as in other clients. The server does the picking."
+
+[[feature]]
+id = "link-posts"
+status = "has"
+since = "0.20.0"
+name.ru = "Кто ещё делился ссылкой"
+name.en = "Who else shared a link"
+config = "—"
+api = "`/api/v1/timelines/link`"
+others = "Mastodon web"
+clients = ["Mastodon web"]
+details.ru = "В меню ⋯ поста со ссылкой — «Кто ещё делился этой ссылкой»: посты с ней, страницами. Сервер (Mastodon 4.3+) помнит только ссылки, побывавшие в трендах; где не умеет — пункта нет."
+details.en = "In the ⋯ menu of a post with a link — “Who else shared this link”: posts with it, page by page. The server (Mastodon 4.3+) keeps only links that were trending; where it can't, there's no such item."
+
+[[feature]]
 id = "pinned"
 status = "has"
 since = "0.8.0"

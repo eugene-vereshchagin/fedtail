@@ -51,8 +51,18 @@ class Ctx:
     act_as: Callable | None = None          # fn(entry) -> [(tag, label)] other accounts
     long_form: bool = False                 # "the whole text" from the author's server
     translate: bool = False
+    translates: dict | None = None          # {from: [into]} the server's translator; None — ?
     quote_reply: bool = False               # "Reply with a quote" (needs an editor)
     in_thread: bool = False
+
+
+def can_translate(translates, lang, into=None):
+    """Can the server's translator turn lang into mine (into)? Yes when it didn't say
+    what it can (translates None or empty) or the post's language isn't known."""
+    if not translates or not lang:
+        return True
+    into = (into or current_language()).split("-")[0]
+    return any(t.split("-")[0] == into for t in translates.get(lang) or ())
 
 
 @dataclass(frozen=True)
@@ -166,7 +176,9 @@ def menu(entry, ctx, short_id=None, unread=False):
     if ctx.long_form and "@" in author.handle and p.uri:
         out.append(Item("long_form", _("long_form"), data=entry))
     lang = p.lang.split("-")[0]
-    if ctx.translate and lang and lang != current_language() and p.text:
+    every = ctx.cfg.get("feed", {}).get("translate_all", False)  # Fedilab's way: any post at all
+    if ctx.translate and p.text and (every or (lang and lang != current_language())) and \
+            can_translate(ctx.translates, lang):
         out.append(Item("translate", _("translate")))
     if ctx.quote_reply and ctx.me_id:
         out.append(Item("quote_reply", _("reply_quote")))
@@ -182,6 +194,8 @@ def menu(entry, ctx, short_id=None, unread=False):
     for kind, count in (("favourited_by", p.counts.likes), ("reblogged_by", p.counts.shares)):
         if sup(kind) and count:
             out.append(Item("link", _("who_" + kind + "_n", n=count), url=make(kind, sid)))
+    if p.card and p.card.url.startswith("https://") and sup("link_timeline"):
+        out.append(Item("link", _("link_posts"), url=make("linkposts", sid)))
     if author.id == ctx.me_id and sup("quotes") and p.visibility in ("public", "unlisted"):
         out.append(Item("link", _("quotes_of"), url=make("quotes", sid)))
     quoted_post = p.quote.post if p.quote else None
@@ -198,9 +212,11 @@ def menu(entry, ctx, short_id=None, unread=False):
         on = ctx.subscribed(entry)
         out.append(Item("link", _("unsub_thread" if on else "sub_thread"),
                         url=make("unsub" if on else "sub", sid)))
+    if sup("filter_status"):
+        out.append(Item("link", _("hide_post"), url=make("hidepost", sid)))
     if author.id != ctx.me_id:
         out.append(SEP)
-        out.append(Item("link", _("mute_acct", acct=author.handle), url=make("mute", sid)))
+        out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid)))
         out.append(Item("link", _("block_acct", acct=author.handle), url=make("block", sid)))
         domain = author.handle.partition("@")[2]
         if domain:
@@ -221,4 +237,5 @@ def menu(entry, ctx, short_id=None, unread=False):
     return out
 
 
-__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "menu", "vis_word"]
+__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "can_translate", "menu",
+           "vis_word"]

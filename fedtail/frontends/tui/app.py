@@ -4,13 +4,19 @@ f — like, b — boost, m — bookmark, . — the post's ⋯ menu, n — a line
 editor, x — the lane read, g — the ≡ menu (every place: search, lists, silence, help…),
 / — search, Ctrl+F — find in the lane, Esc — back; [ / ] or 1…9 — another lane,
 h / l — to the lanes / the posts, Tab — between them; v — the post's pictures full
-screen (drawn with half blocks, see pictures.py). What a menu item, a profile's button
+screen (sixel or kitty graphics where the terminal can, half blocks elsewhere — see
+pictures.py; with chafa, timg or kitty's icat the picture is shown by them, the app
+suspended) and its video in mpv (termcaps.py). What a menu item, a profile's button
 or a link does is the windows' (common/links.py, common/profile.py) through TuiHost
 (host.py); the places are common/places.py's (screens.py)."""
 
 import asyncio
+import contextlib
 import inspect
 import logging
+import os
+import subprocess
+import tempfile
 import threading
 import webbrowser
 
@@ -18,20 +24,23 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
+from ... import sysenv
 from ...core.view import View
 from ...i18n import _
 from ...model import real
 from ...model.text import html_to_text, snippet
+from ..common import timed
 from ..richtext import openable
-from . import pictures
+from . import pictures, termcaps
 from .model import (
     Commands,
     DeleteGuard,
+    lane_groups,
     lane_label,
-    ordered_lanes,
     show_activity,
     show_post,
     show_request,
@@ -85,11 +94,22 @@ class PostItem(ListItem):
         self.key = key
         self.text = text
         self.has_picture = False
+        self.graphic = None
 
     def set_picture(self, pic):
-        """The post's first picture under its text (tui.pictures = "inline")."""
+        """The post's first picture under its text, in half blocks."""
         self.has_picture = pic is not None
         self.body.update(self.text + Text("\n") + pic if pic is not None else self.text)
+
+    def set_graphic(self, widget):
+        """The post's first picture under its text for real (sixel, kitty): a widget of
+        its own under the text, the one before it gone."""
+        if self.graphic is not None:
+            self.graphic.remove()
+        self.graphic = widget
+        self.has_picture = widget is not None
+        if widget is not None:
+            self.mount(widget)
 
 
 class ActivityItem(ListItem):
@@ -110,6 +130,9 @@ class RequestItem(ListItem):
         self.key = account.id
 
 
+PLAYABLE = ("video", "gifv")
+
+
 def first_picture(entry):
     """The first picture of a post (Post or Share) worth drawing, or None."""
     for m in real(entry).media:
@@ -119,11 +142,15 @@ def first_picture(entry):
 
 
 class PictureScreen(Screen):
-    """A post's pictures over everything: ← / → through them, o — the original in the
-    browser, Esc — back. Drawn with half blocks as big as the terminal allows."""
+    """A post's pictures over everything: ← / → through them, Enter — play a video,
+    o — the original in the browser, Esc — back. As big as the terminal allows: sixel
+    or kitty graphics where it can, half blocks elsewhere."""
 
     BINDINGS = [Binding("escape,q,v", "app.pop_screen", _("tui_back")),
                 Binding("left,h,k", "step(-1)", "←"), Binding("right,l,j", "step(1)", "→"),
+                Binding("enter,p,space", "play", _("tui_play")),
+                Binding("s", "save", _("viewer_save")),
+                Binding("r", "again", show=False),
                 Binding("o", "original", _("open_browser"))]
     CSS = """
     PictureScreen { align: center middle; }
@@ -153,28 +180,39 @@ class PictureScreen(Screen):
     def show(self):
         m = self.media[self.at]
         n = len(self.media)
-        self.query_one("#pic-title", Static).update(
-            _("tui_picture_of", i=self.at + 1, n=n) if n > 1 else _("tui_picture"))
+        title = _("tui_picture_of", i=self.at + 1, n=n) if n > 1 else _("tui_picture")
+        if m.kind in PLAYABLE:  # its still frame below: Enter plays it
+            title += " · ▶ " + _("tui_play_hint")
+        title += " · s — " + (_("save_media") if m.kind in PLAYABLE else _("save_image"))
+        head = self.query_one("#pic-title", Static)
+        head.update(title)
+        head.tooltip = _("viewer_save_tip")
         self.query_one("#pic-alt", Static).update(Text(m.alt or "", style="dim"))
         pic = self.query_one("#pic", Static)
+        self._drop_graphic()
+        pic.display = True
         if not pictures.available():
             pic.update(_("tui_no_pil"))
             return
-        pic.update("…")
+        pic.update("▶ " + _("tui_play_hint") if m.kind in PLAYABLE else _("image_loading"))
         cols = max(10, self.size.width - 2)
         rows = max(4, self.size.height - 4 - (2 if m.alt else 0))
         # a picture whole; a video's still frame (never the video fetched as a picture)
         url = (m.url or m.preview) if m.kind == "image" else m.preview
         if not url:
-            pic.update("▶ " + _("media_" + m.kind))
+            pic.update("▶ " + _("media_" + m.kind) + " — " + _("tui_play_hint"))
             return
         at = self.at
+        real_ones = pictures.graphics() is not None
 
         def done(f):
             try:
                 data = f.result()
-            except Exception as e:  # noqa: BLE001 — said on the screen
-                self.app.in_ui(self._put, at, _("tui_picture_failed", err=e))
+            except Exception as e:  # noqa: BLE001 — said on the screen: r again, o browser
+                self.app.in_ui(self._put, at, _("viewer_unreachable", err=e))
+                return
+            if real_ones:
+                self.app.in_ui(self._put_graphic, at, data, cols, rows)
                 return
             drawn = pictures.blocks(data, cols, rows)
             self.app.in_ui(self._put, at, drawn if drawn is not None else
@@ -185,16 +223,63 @@ class PictureScreen(Screen):
         if at == self.at and self.is_attached:
             self.query_one("#pic", Static).update(what)
 
+    def _put_graphic(self, at, data, cols, rows):
+        if at != self.at or not self.is_attached:
+            return
+        w = pictures.graphic(data, rows, classes="pic-img")
+        if w is None:
+            self._put(at, _("tui_picture_failed", err="?"))
+            return
+        w.styles.max_width = cols
+        self._drop_graphic()
+        self.query_one("#pic", Static).display = False
+        self.mount(w, before=self.query_one("#pic-alt"))
+
+    def _drop_graphic(self):
+        for old in self.query(".pic-img"):
+            old.remove()
+
+    def action_play(self):
+        m = self.media[self.at]
+        if m.kind in PLAYABLE:
+            self.app.play(m)
+
     def action_step(self, d):
         if len(self.media) > 1:
             self.at = (self.at + d) % len(self.media)
             self.show()
+
+    def action_again(self):
+        """r: once more, after the original didn't load (viewer_unreachable)."""
+        self.show()
 
     def action_original(self):
         m = self.media[self.at]
         url = m.remote_url or m.url
         if url and openable(url):
             webbrowser.open(url)
+
+    def action_save(self):
+        """s: the original into ui.save_dir, as the windows' "Save picture"."""
+        self.app.save_media(self.media[self.at])
+
+
+class GroupItem(ListItem):
+    """A section's heading in the lanes (ui.sidebar_groups): Enter folds it away and
+    back (kept in the profile's state, the windows fold the same)."""
+
+    def __init__(self, key, title, folded, n=0):
+        self.label = Label(self._text(title, folded, n))
+        super().__init__(self.label)
+        self.group, self.title, self.folded = key, title, folded
+        self.tooltip = _("group_fold_tip")
+
+    @staticmethod
+    def _text(title, folded, n):
+        t = Text(("▸ " if folded else "▾ ") + title.upper(), style="bold dim")
+        if folded and n:
+            t.append(f" {n}", style="bold green")
+        return t
 
 
 class LaneItem(ListItem):
@@ -229,6 +314,8 @@ class Ui:
         async def guarded(fn, arg):
             if me is not app and not getattr(me, "is_attached", True):
                 return
+            if me is app and (not getattr(app, "is_running", True) or not app.screen_stack):
+                return  # the app is closing (Esc while it connected): nothing to draw on
             got = fn(arg)
             if inspect.isawaitable(got):
                 await got
@@ -260,13 +347,23 @@ class PostsMixin(Ui):
         return self.query_one("#posts", ListView).highlighted_child
 
     def action_pictures(self):
+        """v: the post's pictures — shown by chafa/timg/icat with the app suspended
+        when one is there (tui.viewer = "auto"), else in the app; a post of videos
+        only — the first one plays (tui.video)."""
         st = self.current()
         media = [m for m in real(st).media if m.kind in ("image", "gifv", "video")
                  and (m.preview or m.url)] if st else []
-        if media:
-            self.app.push_screen(PictureScreen(media))
-        elif st:
-            self.app.notify(_("tui_no_pictures"))
+        if not media:
+            if st:
+                self.app.notify(_("tui_no_pictures"))
+            return
+        if all(m.kind in PLAYABLE for m in media):
+            self.app.play(media[0])
+            return
+        images = [m for m in media if m.kind == "image"]
+        if images and self.app.show_outside(images):
+            return
+        self.app.push_screen(PictureScreen(media))
 
     def action_cursor_down(self):
         self.query_one("#posts", ListView).action_cursor_down()
@@ -336,6 +433,13 @@ class PostsMixin(Ui):
         st = self.current()
         self.app.host.compose(reply_to=st)
 
+    def action_poll(self):
+        """u: the post's poll — vote, the results, fresh counts (more.py)."""
+        st = self.current()
+        if st is not None and real(st).poll is not None:
+            from .more import PollScreen
+            self.app.push_screen(PollScreen(st, self))
+
 
 class ThreadScreen(Screen, PostsMixin):
     BINDINGS = [Binding("escape,q", "app.pop_screen", _("tui_back")),
@@ -347,6 +451,9 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("full_stop", "post_menu", "⋯"),
                 Binding("w", "editor", _("tui_editor"), show=False),
+                Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
+                Binding("c", "all_cw", _("cw_all_show"), show=False),
+                Binding("s", "follow_thread", _("sub_tip"), show=False),
                 Binding("colon", "command", ":", show=False)]
     # the screen doesn't scroll as a whole, the list does (see ProfileScreen)
     CSS = """
@@ -357,9 +464,12 @@ class ThreadScreen(Screen, PostsMixin):
     def __init__(self, status_id):
         super().__init__()
         self.status_id = status_id
+        self.cw_open = False
+        self.root = None
+        self.nodes = []
 
     def compose(self) -> ComposeResult:
-        yield Static(_("tui_thread_loading"), id="title")
+        yield Static(_("thread_loading"), id="title")
         yield ListView(id="posts")
         yield _cmd_line()
         yield Footer()
@@ -373,7 +483,9 @@ class ThreadScreen(Screen, PostsMixin):
 
     async def fill(self, items_in):
         core = self.app.core
+        self.nodes = list(items_in)
         lv = self.query_one("#posts", ListView)
+        keep = getattr(lv.highlighted_child, "key", None)
         width = max(30, self.size.width - 6)
         posts = [n.post for n in items_in]
         short = core.short_ids(posts)
@@ -382,7 +494,9 @@ class ThreadScreen(Screen, PostsMixin):
         for i, n in enumerate(items_in):
             pad = "  " * min(n.depth, 8)
             shown = show_post(core, n.post, short.get(n.post.id), n.post.id in unread,
-                              n.number, width - len(pad))
+                              n.number, width - len(pad), open_cw=self.cw_open)
+            if n.post.id == self.status_id and i:  # where the reader came from
+                shown.above.insert(0, ("conv", "↘ " + _("came_from")))
             text = render(shown)
             if pad:
                 text = Text("\n").join(Text(pad) + line for line in text.split())
@@ -392,15 +506,56 @@ class ThreadScreen(Screen, PostsMixin):
             if n.post.id == self.status_id:
                 focus = i
         root = posts[0] if posts else None
-        self.query_one("#title", Static).update(
-            _("tui_thread_title", who="@" + root.author.handle, n=len(posts) - 1)
-            if root else "")
+        self.root = root
+        self.info = ""
+        if root is not None:
+            self.info = "@" + root.author.handle + " · " + _("thread_info", n=len(posts) - 1) \
+                + (f" · #{short[root.id]}" if short.get(root.id) else "") \
+                + (" · ✓ " + _("subscribed") if core.subscribed(root) else "")
+            if any(p.warning for p in posts):
+                self.info += " · c — " + (_("cw_all_hide") if self.cw_open else
+                                          _("cw_all_show"))
+        self.query_one("#title", Static).update(self.info)
+        if root is not None and not core.subscribed(root):
+            self.later(core.followed_among([p.author for p in posts]), ok=self.via_home,
+                       fail=lambda _e: None)
         await lv.clear()
         await lv.extend(items)
-        lv.index = focus
+        keys = [it.key for it in items]
+        lv.index = keys.index(keep) if keep in keys else focus
         self.app.load_pictures(items)
         if core.cfg["read"]["mark_read"] != "manual":
             core.mark_read(posts)
+
+    def via_home(self, followed):
+        """Not followed, yet the replies come: the server puts replies between people I
+        follow into Home — said in the title, as the windows' thread header."""
+        if not followed or self.root is None or self.app.core.subscribed(self.root):
+            return
+        names = ", ".join("@" + a.handle.split("@")[0] for a in followed[:3])
+        if len(followed) > 3:
+            names += " " + _("and_more", n=len(followed) - 3)
+        self.query_one("#title", Static).update(
+            Text(self.info + " · " + _("thread_via_home", names=names)))
+        self.tooltip = _("thread_via_home_tip")
+
+    async def action_all_cw(self):
+        """c: every text behind a warning in the thread, open or closed (cw_all_tip)."""
+        self.cw_open = not self.cw_open
+        await self.fill(self.nodes)
+        self.app.notify(_("cw_all_tip"), timeout=3)
+
+    def action_follow_thread(self):
+        """s: follow the thread (its new comments to the Subscriptions lane) or stop."""
+        if self.root is None:
+            return
+        core = self.app.core
+        if core.subscribed(self.root):
+            self.later(core.unsubscribe(self.root),
+                       ok=lambda _r: (self.app.notify(_("unsubbed")), self.load()))
+        else:
+            self.later(core.subscribe(self.root),
+                       ok=lambda _r: (self.app.notify(_("subscribed")), self.load()))
 
     def action_command(self):
         self.query_one("#cmd", Input).focus()
@@ -415,7 +570,8 @@ class ThreadScreen(Screen, PostsMixin):
 
 class ProfileScreen(Screen, PostsMixin):
     """Someone's profile: who, the bio, follows you or not; F — follow / unfollow;
-    their posts below (Enter — a thread).
+    their posts below (Enter — a thread); s — which of them: posts, posts and replies,
+    media (common/timed.py, feed.profile_show first).
 
     The header is a box of its own and the screen doesn't scroll as a whole: it used
     to, and highlighting the first post scrolled the header away — the profile
@@ -429,6 +585,9 @@ class ProfileScreen(Screen, PostsMixin):
                 Binding("o", "browser", _("open_browser"), show=False),
                 Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("full_stop", "post_menu", "⋯", show=False),
+                Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
+                Binding("s", "show_next", _("profile_show_posts") + " / " +
+                        _("profile_show_media")),
                 *[Binding(str(i), f"button({i})", show=False) for i in range(1, 10)],
                 Binding("colon", "command", ":", show=False)]
     CSS = """
@@ -444,6 +603,7 @@ class ProfileScreen(Screen, PostsMixin):
         super().__init__()
         self.acc_id = acc_id
         self.acc, self.rel = None, None
+        self.show = None  # which of their posts: common/timed.py PROFILE_SHOWS
 
     def compose(self) -> ComposeResult:
         yield Static(_("tui_profile") + " …", id="title")
@@ -464,7 +624,27 @@ class ProfileScreen(Screen, PostsMixin):
         if not me or self.acc_id != me.id:
             self.later(core.relationship(self.acc_id), ok=self.got_relation,
                        fail=lambda _e: None)
-        self.later(core.account_posts(self.acc_id), ok=self.fill)
+        self.show = timed.profile_show(core.cfg)
+        self.load_posts()
+
+    def posts_head(self):
+        """"Posts: Posts · Posts and replies · Media (s)" — the one shown in brackets."""
+        bits = [f"[{label}]" if key == self.show else label
+                for key, label in timed.profile_shows()]
+        return _("tui_profile_posts") + ": " + " · ".join(bits) + "  (s)"
+
+    def load_posts(self):
+        head = self.query_one("#posts-head", Static)
+        head.update(Text(self.posts_head()))
+        head.tooltip = _("profile_show_tip")
+        self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
+
+    def action_show_next(self):
+        """Posts → posts and replies → media → posts, from the top each time."""
+        keys = [k for k, _label in timed.PROFILE_SHOWS]
+        at = keys.index(self.show) if self.show in keys else -1
+        self.show = keys[(at + 1) % len(keys)]
+        self.load_posts()
 
     def got_account(self, acc):
         self.acc = acc
@@ -485,7 +665,7 @@ class ProfileScreen(Screen, PostsMixin):
             return []
         core = self.app.core
         return prof.actions(self.acc, self.rel, self.own(), core.cfg, core.supports,
-                            lists=True)
+                            lists=True, details=True)
 
     def action_button(self, n):
         from ..common import profile as prof
@@ -557,7 +737,7 @@ class ProfileScreen(Screen, PostsMixin):
         self.query_one("#cmd", Input).focus()
 
     def status_changed(self, st):
-        self.later(self.app.core.account_posts(self.acc_id), ok=self.fill)
+        self.later(self.app.core.account_posts(self.acc_id, show=self.show), ok=self.fill)
 
     async def on_input_submitted(self, e: Input.Submitted):
         e.stop()
@@ -587,6 +767,11 @@ class FedtailApp(App, PostsMixin):
                 Binding("slash", "search", _("search_title"), show=False),
                 Binding("w", "editor", _("tui_editor"), show=False),
                 Binding("ctrl+f", "find", _("find_next"), show=False),
+                Binding("N", "find_prev", _("find_prev"), show=False),
+                Binding("D", "find_deeper", _("find_deeper"), show=False),
+                Binding("E", "find_everywhere", _("find_everywhere"), show=False),
+                Binding("J", "to_new", _("to_new"), show=False),
+                Binding("u", "poll", "📊 " + _("poll_vote"), show=False),
                 Binding("s", "lane_choices", _("media_filter"), show=False),
                 Binding("a", "request(True)", show=False),
                 Binding("d", "request(False)", show=False),
@@ -599,7 +784,7 @@ class FedtailApp(App, PostsMixin):
                 # couldn't be reached without the mouse
                 Binding("tab", "switch", _("tui_switch"), show=False, priority=True),
                 Binding("colon", "command", ":", show=False),
-                Binding("escape", "escape", show=False)]
+                Binding("escape", "escape", _("find_close"), show=False)]
 
     def __init__(self, core, instance=None):
         super().__init__()
@@ -695,6 +880,9 @@ class FedtailApp(App, PostsMixin):
         self.sounds = self._make_sounds()
         if self.sounds is not None:
             self.core.on("sound", lambda _n, p: self.in_ui(self.play_sound, p))
+        from .notify import Notifier
+        self.notifier = Notifier(self)  # notify-send, or the terminal's own (notify.py)
+        self.core.on("notify", lambda _n, p: self.in_ui(self.notifier.notify, p))
         if not self.core.logged_in:
             self.push_screen(LoginScreen())
             return
@@ -716,14 +904,34 @@ class FedtailApp(App, PostsMixin):
         self._main("#posts", ListView).focus()
 
     async def fill_lanes(self):
+        """The lanes in the windows' sections (ui.sidebar_groups): a heading each, Enter
+        on it folds the section (its unread stays as a number on the heading)."""
+        from ..common import sidebar
         lv = self._main("#lanes", ListView)
+        at = getattr(lv.highlighted_child, "lane", None) or \
+            getattr(lv.highlighted_child, "group", None)
         await lv.clear()
         items = []
-        for _group, names in ordered_lanes(self.core):
+        folded = sidebar.folded(self.core)
+        for key, title, names in lane_groups(self.core):
+            if title is not None:
+                n = sum(lane_label(self.core, x)[1] for x in names) if key in folded else 0
+                items.append(GroupItem(key, title, key in folded, n))
+                if key in folded:
+                    continue
             for name in names:
-                title, n = lane_label(self.core, name, self.lanes_width - 2)
-                items.append(LaneItem(name, title, n))
+                title_, n = lane_label(self.core, name, self.lanes_width - 2)
+                items.append(LaneItem(name, title_, n))
         await lv.extend(items)
+        for i, it in enumerate(items):
+            if at is not None and at in (getattr(it, "lane", None), getattr(it, "group", None)):
+                lv.index = i
+                break
+
+    async def fold_group(self, item):
+        from ..common import sidebar
+        sidebar.fold(self.core, item.group)
+        await self.fill_lanes()
 
     def update_lane_counts(self):
         for item in self._main("#lanes", ListView).children:
@@ -746,7 +954,10 @@ class FedtailApp(App, PostsMixin):
         core, name = self.core, self.lane
         if name is None:
             return
-        lv = self._main("#posts", ListView)
+        try:
+            lv = self._main("#posts", ListView)
+        except NoMatches:  # a redraw queued (a post sent) while the app was closing
+            return
         if name in ("activity", "requests"):  # not posts: rows of their own
             await self._fill_other(lv, name, first)
             return
@@ -803,8 +1014,10 @@ class FedtailApp(App, PostsMixin):
         """Draw each post's first picture under it, as the bytes come. Small and
         cached by address and size, so redrawing a lane costs nothing."""
         tcfg = self.core.cfg.get("tui", {})
-        if tcfg.get("pictures", "inline") != "inline" or not pictures.available():
+        how = pictures.mode(self.core.cfg)
+        if how not in ("auto", "blocks") or not pictures.available():
             return
+        real_ones = how == "auto" and pictures.graphics() is not None
         rows = max(2, int(tcfg.get("picture_rows", 8)))
         cols = rows * 4  # about a 2:1 box: room for a landscape photo
         cache = self._pictures
@@ -817,14 +1030,18 @@ class FedtailApp(App, PostsMixin):
             url = m.preview or (m.url if m.kind == "image" else "")
             if not url:
                 continue
-            key = (url, cols, rows)
+            key = (url, cols, rows) if not real_ones else ("bytes", url)
             if key in cache:
-                item.set_picture(cache[key])
+                if real_ones:
+                    self._put_graphic(item, cache[key], rows)
+                else:
+                    item.set_picture(cache[key])
                 continue
 
             def done(f, item=item, key=key, url=url):
                 try:
-                    drawn = pictures.blocks(f.result(), cols, rows)
+                    drawn = f.result() if real_ones else pictures.blocks(f.result(), cols,
+                                                                         rows)
                 except Exception as e:  # noqa: BLE001 — no picture, the text stays
                     # the first one said aloud: "no pictures in the terminal" was
                     # silent before (a refused address, a proxy, a timeout)
@@ -837,13 +1054,110 @@ class FedtailApp(App, PostsMixin):
                 if len(cache) > 400:
                     cache.clear()
                 cache[key] = drawn
-                self.in_ui(self._put_picture, item, drawn)
+                if real_ones:
+                    self.in_ui(self._put_graphic, item, drawn, rows)
+                else:
+                    self.in_ui(self._put_picture, item, drawn)
             self.core.media_bytes(url).add_done_callback(done)
 
     @staticmethod
     def _put_picture(item, drawn):
         if item.is_attached:
             item.set_picture(drawn)
+
+    @staticmethod
+    def _put_graphic(item, data, rows):
+        if item.is_attached:
+            w = pictures.graphic(data, rows, classes="inline-pic")
+            if w is not None:
+                item.set_graphic(w)
+
+    # ---- outside the app: a picture viewer, a video player ----------------------------
+    def caps(self):
+        return termcaps.detect()
+
+    def run_outside(self, argv, wait=False):
+        """argv in this terminal, the app suspended until it ends (and, with wait,
+        until Enter). False when the app can't be suspended (a test, Textual Web)."""
+        if self.is_headless:
+            return False
+        try:
+            with self.suspend():
+                subprocess.run(argv, env=sysenv.child_env(), check=False)
+                if wait:
+                    with contextlib.suppress(EOFError, KeyboardInterrupt):
+                        input("\n" + _("tui_enter_back"))
+        except Exception as e:  # noqa: BLE001 — SuspendNotSupported, a failed program
+            log.info("outside the app: %s: %s", argv[0], e)
+            return False
+        return True
+
+    def show_outside(self, media):
+        """The pictures by chafa / timg / kitty's icat, the app suspended: their real
+        size and colours in any terminal those know. True when it went that way."""
+        if self.core.cfg.get("tui", {}).get("viewer", "auto") != "auto" or self.is_headless:
+            return False
+        tool = termcaps.viewer(self.caps())
+        if tool is None:
+            return False
+        futs = [self.core.media_bytes(m.url or m.preview) for m in media[:8]]
+        size = self.size
+
+        def go(results):
+            files = []
+            try:
+                for data in results:
+                    fd, path = tempfile.mkstemp(prefix="fedtail-", suffix=".img")
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(data)
+                    files.append(path)
+                with self.suspend():
+                    for path in files:
+                        subprocess.run(tool.argv(path, size.width, size.height - 2),
+                                       env=sysenv.child_env(), check=False)
+                    with contextlib.suppress(EOFError, KeyboardInterrupt):
+                        input(_("tui_enter_back"))
+            except Exception as e:  # noqa: BLE001 — shown in the app instead
+                log.info("picture viewer %s: %s", tool.name, e)
+                self.push_screen(PictureScreen(media))
+            finally:
+                for path in files:
+                    with contextlib.suppress(OSError):
+                        os.unlink(path)
+
+        def gathered():
+            got = []
+            for f in futs:
+                try:
+                    got.append(f.result(timeout=60))
+                except Exception as e:  # noqa: BLE001 — a picture that didn't come
+                    log.info("picture viewer: %s", e)
+            if got:
+                self.in_ui(go, got)
+            else:
+                self.in_ui(self.notify, _("tui_picture_failed", err="?"))
+        threading.Thread(target=gathered, name="tui-viewer", daemon=True).start()
+        return True
+
+    def play(self, m):
+        """A video or gifv by mpv: in a window of its own on a desktop, drawn into the
+        terminal otherwise (tui.video); no mpv — the browser, and it says so."""
+        url = m.url or m.remote_url
+        if not url or not openable(url):
+            self.notify(_("tui_no_video"))
+            return
+        how, argv = termcaps.video(self.caps(), self.core.cfg.get("tui", {}).get(
+            "video", "auto"), loop=m.kind == "gifv")
+        if how == "window":
+            subprocess.Popen(argv + [url], env=sysenv.child_env(), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+            self.notify(_("tui_playing"))
+            return
+        if how == "terminal" and self.run_outside(argv + [url]):
+            return
+        webbrowser.open(m.remote_url or url)
+        self.notify(_("tui_video_browser") if argv is None else _("open_browser"))
 
     async def _fill_other(self, lv, name, first):
         core = self.core
@@ -903,15 +1217,19 @@ class FedtailApp(App, PostsMixin):
             return
         m = self.lane_model(self.lane)
         words = {"all": "show_all", "posts": "posts_only", "unread": "unread_only"}
+        tips = {"all": "show_all_tip", "posts": "posts_only_tip", "unread": "unread_only_tip"}
         items = []
         if len(m.filters) > 1:
             now = m.current_filter()
-            items += [(("● " if f == now else "○ ") + _(words[f]), ("filter", f))
+            items += [(("● " if f == now else "○ ") + _(words[f]), ("filter", f), _(tips[f]))
                       for f in m.filters] + ["-"]
         if m.conversations_offered():
             on = m.conversations()
-            items += [(("● " if not on else "○ ") + _("view_feed"), ("conv", False)),
-                      (("● " if on else "○ ") + _("conv_mode"), ("conv", True)), "-"]
+            items += [(("● " if not on else "○ ") + _("view_feed"), ("conv", False),
+                       _("view_feed_tip")),
+                      (("● " if on else "○ ") + _("conv_mode"), ("conv", True),
+                       _("conv_mode_tip")), "-"]
+        items.append(("⇣ " + _("to_new"), ("new", None), _("to_new_tip")))
         items += [(("☑ " if k in m.media.wanted else "☐ ") + _("filter_" + k), ("media", k))
                   for k in MEDIA_KINDS]
         items += [(("☑ " if m.media.boosts else "☐ ") + _("filter_boosts"), ("media", "boosts")),
@@ -921,6 +1239,9 @@ class FedtailApp(App, PostsMixin):
             if v is None:
                 return
             what, arg = v
+            if what == "new":
+                self.action_to_new()
+                return
             if what == "filter":
                 m.set_filter(arg)
             elif what == "conv":
@@ -981,7 +1302,9 @@ class FedtailApp(App, PostsMixin):
     # ---- events --------------------------------------------------------------------
     async def on_list_view_selected(self, e: ListView.Selected):
         e.stop()
-        if e.list_view.id == "lanes" and isinstance(e.item, LaneItem):
+        if e.list_view.id == "lanes" and isinstance(e.item, GroupItem):
+            await self.fold_group(e.item)
+        elif e.list_view.id == "lanes" and isinstance(e.item, LaneItem):
             await self.select_lane(e.item.lane)
             self.query_one("#posts", ListView).focus()
         elif e.list_view.id == "posts" and isinstance(e.item, RequestItem):
@@ -998,7 +1321,8 @@ class FedtailApp(App, PostsMixin):
             self.screen.action_open()
 
     def on_list_view_highlighted(self, e: ListView.Highlighted):
-        if e.list_view.id != "posts" or not isinstance(e.item, PostItem):
+        if e.list_view.id != "posts" or not isinstance(e.item, PostItem) or \
+                not self.screen_stack:  # no screens: it came in as the app was closing
             return
         if self.core.cfg["read"]["mark_read"] == "on_scroll":
             entry = e.item.entry
@@ -1027,11 +1351,15 @@ class FedtailApp(App, PostsMixin):
         def ok(result):
             field.disabled = False
             field.value = ""
+            # a screen opened takes the focus itself: its list isn't there yet to be
+            # focused from here (Textual 2 raised NoMatches and closed the terminal)
             if isinstance(result, tuple) and result[0] == "thread":
                 self.push_screen(ThreadScreen(result[1]))
-            elif isinstance(result, tuple) and result[0] == "profile":
+                return
+            if isinstance(result, tuple) and result[0] == "profile":
                 self.push_screen(ProfileScreen(result[1].id))
-            elif isinstance(result, tuple) and result[0] == "delete":
+                return
+            if isinstance(result, tuple) and result[0] == "delete":
                 st = result[1]
                 if self.delete_guard.confirmed(st.id):
                     self.later(self.core.delete(st), ok=lambda _r: self.notify(_("deleted")))
@@ -1071,6 +1399,8 @@ class FedtailApp(App, PostsMixin):
             self.push_screen(ProfileScreen(o["account"]))
         elif o.get("url"):
             self.host.open_url(o["url"])
+        elif o.get("file"):  # the config: in $EDITOR, or its path copied
+            self.open_file(o["file"])
         elif o.get("page"):
             from .screens import PlaceScreen
             self.push_screen(PlaceScreen(o["page"], o.get("arg", ""), o.get("tab", ""),
@@ -1124,6 +1454,7 @@ class FedtailApp(App, PostsMixin):
                            subscribed=core.subscribed, thread_quiet=core.thread_quiet,
                            lists=True, long_form=bool(core.cfg["feed"].get("long_form", True)),
                            translate=bool(getattr(core.caps, "translation", False)),
+                           translates=getattr(core, "translation_languages", None),
                            quote_reply=True, in_thread=in_thread)
 
     def post_menu_items(self, st, in_thread=False):
@@ -1142,16 +1473,28 @@ class FedtailApp(App, PostsMixin):
                                                              "translate") else ""), it))
         while out and out[-1] == "-":
             out.pop()
+        if real(st).poll is not None:  # the windows vote on the card; here: its screen
+            from types import SimpleNamespace
+            out.insert(0, ("📊 " + _("poll_vote") + " …  (u)", SimpleNamespace(kind="poll")))
         return out
 
     def post_menu(self, st, where=None):
         from .screens import MenuScreen
         items = self.post_menu_items(st, isinstance(where, ThreadScreen))
+        via = self.core.via(st) if hasattr(self.core, "via") else ""
+        title = "⋯ " + "@" + real(st).author.handle
+        if via:  # every account in one window: which one acts on it
+            items = [(it[0], it[1], _("via_tip", acct=via)) if it != "-" else it
+                     for it in items]
 
         def chosen(it):
             if it is not None:
+                if getattr(it, "kind", "") == "poll":
+                    from .more import PollScreen
+                    self.push_screen(PollScreen(st, where or self))
+                    return
                 self.do_menu_item(st, it)
-        self.push_screen(MenuScreen("⋯ " + "@" + real(st).author.handle, items), chosen)
+        self.push_screen(MenuScreen(title, items), chosen)
 
     def do_menu_item(self, st, it):
         """One item of a post's ⋯ menu, as the windows do it."""
@@ -1166,16 +1509,30 @@ class FedtailApp(App, PostsMixin):
         elif it.kind in ("long_form", "translate"):
             self.open_thing({"page": it.kind, "arg": real(st).id})
         elif it.kind == "quote_reply":
-            from ...model.text import quote_lines
+            from ...model.text import quote_lines, without_quote_fallback
+            # the words, as the windows quote them: not the post's HTML
             self.host.compose(reply_to=st, text=quote_lines(
-                real(st).text, self.core.cfg["post"].get("quote_prefix", "> "),
-                strip_mentions=True))
+                html_to_text(without_quote_fallback(real(st).text)),
+                self.core.cfg["post"].get("quote_prefix", "> "), strip_mentions=True))
+
+    def send_report(self, out):
+        """Into debug.report_repo too, if one is set (fedtail/reportsend.py)."""
+        from ... import reportsend
+        repo = self.core.cfg["debug"].get("report_repo", "")
+        if not repo:
+            return
+        self.notify(_("bugreport_sending", repo=repo))
+        self.later(self.core.submit(reportsend.send_report, out, self.core.cfg,
+                                    self.core.paths.data_dir),
+                   ok=lambda where: self.notify(_("bugreport_sent", where=where), timeout=20),
+                   fail=lambda err: self.notify(_("bugreport_send_failed", repo=repo, err=err),
+                                                severity="error", timeout=30))
 
     def main_menu_items(self):
         """The ≡ menu: writing, the places (common/places.py), help, debug, quit."""
         from ..common.places import Places
         places = [(t + " …", ("place", n)) for n, t in Places(self.core).menu()
-                  if n not in ("help", "news", "about", "federation")]
+                  if n not in ("help", "news", "about", "issue", "federation")]
         return ([("✎ " + _("write"), ("do", "editor")),
                  (_("my_profile"), ("do", "my_profile")),
                  (_("refresh"), ("do", "refresh")),
@@ -1183,7 +1540,9 @@ class FedtailApp(App, PostsMixin):
                 + places + ["-",
                             (_("help_title") + " …", ("place", "help")),
                             (_("help_news") + " …", ("place", "news")),
-                            (_("about") + " …", ("place", "about")), "-",
+                            (_("about") + " …", ("place", "about")),
+                            (_("issue_menu"), ("place", "issue")), "-",
+                            (_("debug_menu") + " …", ("do", "debug")),
                             (_("debug_federation"), ("place", "federation")),
                             (_("debug_report"), ("do", "bug_report")),
                             (_("debug_logs"), ("do", "logs")),
@@ -1219,6 +1578,7 @@ class FedtailApp(App, PostsMixin):
                 diag.log_stats()
                 out = diag.bug_report(self.core.paths, cfg=self.core.cfg)
                 self.notify(_("debug_report_done", path=str(out)), timeout=20)
+                self.send_report(out)
             except OSError as e:
                 self.show_error(e)
         elif what == "logs":
@@ -1228,15 +1588,118 @@ class FedtailApp(App, PostsMixin):
         elif what == "stacks":
             diag.dump_stacks("menu")
             self.notify(_("debug_stacks_done"))
+        elif what == "debug":
+            self.debug_menu()
         elif what == "quit":
             self.exit()
+
+    # ---- ≡ → Debugging: the windows' debug menu, memory and all ----------------------------
+    def corner_words(self):
+        """How the terminal draws it: the windows' debug corner (common/corner.py)."""
+        from textual import __version__ as textual_version
+
+        from ..common import corner
+        return corner.text(self.theme or "textual", f"Textual {textual_version}", "",
+                           "", termcaps.detect().name, 0)
+
+    def debug_menu(self):
+        from ... import leaks
+        from .screens import MenuScreen
+        tracing = leaks.tracing()
+        items = [(self.corner_words(), ("corner", None), _("debug_corner_tip")), "-",
+                 (_("debug_notify"), ("notify", None)),
+                 (_("debug_census"), ("census", None)),
+                 (_("debug_trim"), ("trim", None)),
+                 (("☑ " if tracing else "☐ ") + _("debug_tracing"), ("tracing", None),
+                  _("debug_tracing_tip")),
+                 (_("debug_snapshot"), ("snapshot", None)), "-",
+                 (_("open_config"), ("config", None)),
+                 (_("open_data"), ("data", None)),
+                 (("☑ " if self.merged() else "☐ ") + _("accounts_merge"), ("merge", None),
+                  _("accounts_merge_tip"))]
+
+        def chosen(v):
+            if v is not None:
+                self.call_next(self.debug_do, v[0])
+        self.push_screen(MenuScreen(_("debug_menu"), items), chosen)
+
+    def merged(self):
+        primary = getattr(self.core, "primary", self.core)
+        return bool(self.core.cfg["ui"].get("merge") or primary.get_state("merge"))
+
+    async def debug_do(self, what):
+        from ... import diag, leaks
+        if what == "notify":
+            self.notify(self.notifier.test())
+        elif what == "census":
+            got = diag.check_now(int(self.core.cfg["debug"].get("rss_warn_mb", 1500)),
+                                 objects=True)
+            self.notify(_("debug_census_done", rss=got["rss_mb"], objects=got["py_objects"]))
+        elif what == "trim":
+            freed = diag.trim_memory()
+            self.notify(_("debug_trim_none") if freed is None else
+                        _("debug_trim_done", mb=freed))
+        elif what == "tracing":
+            (leaks.stop_tracing if leaks.tracing() else leaks.start_tracing)()
+            self.notify(("☑ " if leaks.tracing() else "☐ ") + _("debug_tracing"))
+        elif what == "snapshot":
+            try:
+                out = leaks.snapshot(diag.logs_dir(self.core.paths, self.core.cfg))
+            except (OSError, RuntimeError) as e:
+                self.show_error(e)
+                return
+            self.notify(_("debug_snapshot_done", path=str(out)), timeout=15)
+        elif what == "config":
+            self.open_file(self.core.paths.config_file)
+        elif what == "data":
+            self.copy_text(str(self.core.paths.data_dir))
+        elif what == "merge":
+            primary = getattr(self.core, "primary", self.core)
+            primary.set_state("merge", [] if self.merged() else ["all"])
+            self.notify(("☑ " if self.merged() else "☐ ") + _("accounts_merge") + " — " +
+                        _("settings_restart_tip"), timeout=10)
+        else:  # the corner: copied, for a bug report
+            self.copy_text(self.corner_words())
+
+    def open_file(self, path):
+        """The config in $VISUAL / $EDITOR, the terminal handed over and back; without
+        one — its path, copied."""
+        editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+        if editor and self.run_outside(editor.split() + [str(path)]):
+            return
+        self.copy_text(str(path))
+
+    def save_media(self, m):
+        """A picture's (or a video's) original into ui.save_dir, as the windows' "Save"."""
+        from ...core import saving
+        url = m.url or m.remote_url or m.preview
+        if not url:
+            return
+        self.notify(_("saving"))
+
+        def write(data):
+            folder = saving.save_dir(self.core.cfg)
+            folder.mkdir(parents=True, exist_ok=True)
+            path = saving.free_path(folder, saving.file_name(url, ""))
+            path.write_bytes(data)
+            return path
+
+        def done(f):
+            try:
+                path = write(f.result())
+            except Exception as e:  # noqa: BLE001 — said, nothing left half written
+                self.in_ui(self.show_error, _("save_failed", err=e))
+                return
+            self.in_ui(self.notify, _("saved_to", path=str(path)))
+        self.core.media_bytes(url).add_done_callback(done)
 
     def action_search(self):
         self.open_thing({"page": "search"})
 
     # ---- Ctrl+F: find in the lane (the windows' rule: every word, text, names, #id) -----
     def action_find(self):
-        if getattr(self, "_found", None) and self._found["lane"] == self.lane:
+        f = getattr(self, "_found", None)
+        if f and f["hits"] and f["lane"] == self.lane:
             self._find_step()
             return
         from .screens import AskScreen
@@ -1244,7 +1707,12 @@ class FedtailApp(App, PostsMixin):
         def got(q):
             if q is not None:
                 self.find(q)
-        self.push_screen(AskScreen(_("find_next"), _("find_placeholder")), got)
+        keys = "\n".join([f"Ctrl+F — {_('find_next')}", f"N — {_('find_prev')}",
+                          f"D — {_('find_deeper')}: {_('find_deeper_tip')}",
+                          f"E — {_('find_everywhere')}: {_('find_everywhere_tip')}",
+                          f"Esc — {_('find_close')}"])
+        self.push_screen(AskScreen(_("find_next"), _("find_placeholder") + "\n\n" + keys),
+                         got)
 
     def find(self, query):
         from ...model.text import haystack, matches
@@ -1255,15 +1723,85 @@ class FedtailApp(App, PostsMixin):
         hits = [i for i, it in enumerate(lv.children) if isinstance(it, PostItem) and
                 matches(query, haystack(it.entry, short.get(real(it.entry).id)))]
         self._found = {"lane": self.lane, "hits": hits, "at": -1, "query": query}
-        if not hits:
-            self._found = None
-            self.notify(count_text(query, -1, 0)[0], severity="warning")
+        if not hits:  # the query kept: D looks further back, E everywhere
+            self.notify(count_text(query, -1, 0)[0] + f" · D — {_('find_deeper')}, "
+                        f"E — {_('find_everywhere')}", severity="warning")
             return
         self._find_step()
 
-    def _find_step(self):
+    def action_find_prev(self):
+        """N: the match before (find_prev)."""
+        f = getattr(self, "_found", None)
+        if f and f["hits"] and f["lane"] == self.lane:
+            self._find_step(-1)
+
+    def action_find_deeper(self):
+        """D: past what the lane shows — everything stored for it; the lane grows down to
+        an older match (find_deeper_tip)."""
+        f = getattr(self, "_found", None)
+        if not f or not self.lane:
+            return
+        query = f["query"]
+        self.notify(_("find_searching"))
+
+        def done(res):
+            if not res.get("more"):
+                self.notify(_("find_archive_none") if not res.get("total") else
+                            _("find_count", i=f["at"] + 1, n=len(f["hits"])))
+                return
+            self.call_next(self._refound, query)
+        self.later(self.core.deep_find(self.lane, query), ok=done)
+
+    async def _refound(self, query):
+        await self.refresh_posts()
+        self.find(query)
+
+    def action_find_everywhere(self):
+        """E: everything stored, in every lane at once (find_everywhere_tip): a menu of
+        the matches; the one chosen opens in its lane."""
+        f = getattr(self, "_found", None)
+        query = f["query"] if f else ""
+        if not query:
+            self.action_find()
+            return
+        self.notify(_("find_searching"))
+        self.later(self.core.find_everywhere(query), ok=lambda hits: self._everywhere(
+            query, hits))
+
+    def _everywhere(self, query, hits):
+        from ..common.find import count_text
+        from .screens import MenuScreen
+        names = set(self._lane_names())
+        hits = [h for h in hits or () if h["lane"] in names]
+        if not hits:
+            self.notify(count_text(query, -1, 0, everywhere=True)[0], severity="warning")
+            return
+        items = []
+        for h in hits[:60]:
+            st = self.core.by_id(h["status_id"])
+            words = snippet(st, 50) if st is not None else h["status_id"]
+            items.append((f"{self.core.lane_title(h['lane']) or _('lane_' + h['lane'])}: "
+                          + words, h))
+
+        def chosen(h):
+            if h is not None:
+                self.call_next(self._go_hit, h)
+        self.push_screen(MenuScreen(_("find_everywhere") + f" · {len(hits)}", items), chosen)
+
+    async def _go_hit(self, h):
+        self.core.reveal_in_lane(h["lane"], h["index"])
+        await self.select_lane(h["lane"])
+        lv = self._main("#posts", ListView)
+        for i, it in enumerate(lv.children):
+            e = getattr(it, "entry", None)
+            if e is not None and h["status_id"] in (e.id, real(e).id):
+                lv.index = i
+                break
+        lv.focus()
+
+    def _find_step(self, step=1):
         f = self._found
-        f["at"] = (f["at"] + 1) % len(f["hits"])
+        f["at"] = (f["at"] + step) % len(f["hits"])
         lv = self._main("#posts", ListView)
         lv.index = f["hits"][f["at"]]
         lv.focus()
@@ -1294,14 +1832,25 @@ class FedtailApp(App, PostsMixin):
     def action_cursor_down(self):  # j / k move whichever list has the focus
         if self._lanes_focused():
             self._main("#lanes", ListView).action_cursor_down()
-        else:
-            super().action_cursor_down()
+            return
+        lv = self.query_one("#posts", ListView)
+        oldest_first = self.core.cfg["feed"]["order"] == "oldest_first"
+        if not oldest_first and lv.children and lv.index == len(lv.children) - 1 and \
+                self.screen is self.screen_stack[0]:
+            self.call_next(self.action_older)  # newest first: older ones are below
+            return
+        super().action_cursor_down()
 
     def action_cursor_up(self):
         if self._lanes_focused():
             self._main("#lanes", ListView).action_cursor_up()
-        else:
-            super().action_cursor_up()
+            return
+        lv = self.query_one("#posts", ListView)
+        if self.core.cfg["feed"]["order"] == "oldest_first" and lv.children and \
+                lv.index == 0 and self.screen is self.screen_stack[0]:
+            self.call_next(self.action_older)  # oldest first: older ones are above
+            return
+        super().action_cursor_up()
 
     def action_to_lanes(self):
         self._main("#lanes", ListView).focus()
@@ -1337,6 +1886,34 @@ class FedtailApp(App, PostsMixin):
         cmd = self.query_one("#cmd", Input)
         if cmd.has_focus:
             self.query_one("#posts", ListView).focus()
+        elif getattr(self, "_found", None):  # Esc closes the find (find_close)
+            self._found = None
+            self.notify(_("find_close"), timeout=2)
+
+    def action_to_new(self):
+        """J: to the first unread of the lane (to_new_tip)."""
+        lv = self._main("#posts", ListView)
+        entries = [it.entry for it in lv.children if isinstance(it, PostItem)]
+        unread = self.core.unread(entries) if entries else set()
+        order = list(enumerate(lv.children))
+        if self.core.cfg["feed"]["order"] == "newest_first":
+            order.reverse()  # the first new one is the oldest unread: the lowest
+        for i, it in order:
+            if isinstance(it, PostItem) and it.entry.id in unread:
+                lv.index = i
+                lv.focus()
+                return
+        self.notify(_("to_new_tip") + ": —")
+
+    async def action_older(self):
+        """j past the last post: older ones from the server, or "nothing older"."""
+        if not self.lane or self.lane in ("activity", "requests"):
+            return
+        n = await asyncio.wrap_future(self.core.load_older(self.lane))
+        if not n:
+            self.notify(_("no_older"))
+        else:
+            await self.refresh_posts()
 
     def action_refresh(self):
         self.core.poll_now()

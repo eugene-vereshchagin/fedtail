@@ -3,7 +3,7 @@
 A thin layer over Core (or MergedCore — all accounts in one window): every method
 here takes and returns model objects (Post, Share, Account, ThreadItem…), and the
 server's JSON never leaves the core. Frontends use this and nothing else of the core
-that carries posts or accounts (docs/PROTOCOLS.md, stage 2); a test checks that the
+that carries posts or accounts (docs/en/dev/protocols.md, stage 2); a test checks that the
 frontends moved to it read no protocol fields.
 
 Methods written out below have model-shaped signatures of their own. Any other method
@@ -229,7 +229,7 @@ class View:
 
     def raw(self, x):
         """The core's own status for a model object or an id — for core methods not
-        behind the View yet (docs/PROTOCOLS.md, stage 2). Frontends hand it on and never
+        behind the View yet (docs/en/dev/protocols.md, stage 2). Frontends hand it on and never
         look inside."""
         return self._raw(x)
 
@@ -379,8 +379,10 @@ class View:
     def account(self, acc_id):
         return _then(self._core.account(acc_id), self.acc)
 
-    def account_posts(self, acc_id, max_id=None):
-        return _then(self._core.account_statuses(acc_id, max_id=max_id),
+    def account_posts(self, acc_id, max_id=None, show="all"):
+        """A page of someone's posts as entries; show: "all", "posts" (no replies),
+        "media" (core.PROFILE_SHOWS)."""
+        return _then(self._core.account_statuses(acc_id, max_id=max_id, show=show),
                      lambda page: [self.entry(st) for st in page or ()])
 
     def relationship(self, acc_id):
@@ -441,9 +443,10 @@ class View:
         return _then(self._core.update_profile(**{adapter.PROFILE_KEYS[k]: v
                                                   for k, v in changes.items()}), self.acc)
 
-    def create_list(self, title, exclusive=False, add=None):
+    def create_list(self, title, exclusive=False, add=None, replies_policy=None):
         """Future: the UserList made (add: someone to put in it at once)."""
-        return _then(self._core.create_list(title, exclusive, add=add),
+        return _then(self._core.create_list(title, exclusive, add=add,
+                                             replies_policy=replies_policy),
                      lambda x: adapter.user_list(x, self.profile))
 
     def follow(self, acc_id, on=True):
@@ -579,7 +582,7 @@ class View:
     def roster(self):
         """[RosterGroup] — the lanes, grouped as the sidebar groups them, each with its
         unread count and newest post: what a messenger-style roster shows (docs/
-        LAYOUTS.md). Cheap: lane entries are cached by the core; asked again whenever
+        docs/en/dev/layouts.md). Cheap: lane entries are cached by the core; asked again whenever
         what's new or read changes."""
         from .lanes import grouped
         c = self._core

@@ -1,10 +1,12 @@
 name: Android
 
-# The phone's APK, on the android branch only (ci.yml leaves that branch alone): one
-# build per push — push changes in batches. Also by hand (Actions → Android → Run).
+# The phone's dev build (online.dmesg.fedtail.dev, the dev key), its screenshots and UI
+# tests on an emulator — on a push to main touching the app or the core it carries (a
+# "[skip ci]" push builds nothing: push in batches), and by hand (Actions → Android → Run).
+# A release's APK, signed with the release key, is ci.yml's (the apk job).
 on:
   push:
-    branches: [android]
+    branches: [main]
     paths:
       - "android/**"
       - "fedtail/**"

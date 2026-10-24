@@ -105,8 +105,9 @@ class ChoiceItem(ListItem):
 
 
 class MenuScreen(ModalScreen):
-    """A menu: [(label, value)], "-" a line between. Enter — dismissed with the value,
-    Esc — with None. A post's ⋯ menu and the ≡ menu are these."""
+    """A menu: [(label, value)] or [(label, value, hint)], "-" a line between. Enter —
+    dismissed with the value, Esc — with None. A post's ⋯ menu and the ≡ menu are these.
+    An item's hint (the windows' tooltip) shows under the menu while it is chosen."""
 
     BINDINGS = [Binding("escape,q", "cancel", _("tui_back")),
                 Binding("j", "down", show=False), Binding("k", "up", show=False)]
@@ -117,6 +118,7 @@ class MenuScreen(ModalScreen):
     MenuScreen #menu-title { padding: 0 1; background: $primary-background;
                              text-style: bold; }
     MenuScreen ListView { height: auto; max-height: 40; }
+    MenuScreen #menu-hint { padding: 0 1; color: $text-muted; height: auto; }
     """
 
     def __init__(self, title, items):
@@ -129,6 +131,7 @@ class MenuScreen(ModalScreen):
             yield Static(self.m_title, id="menu-title")
             yield ListView(*[ChoiceItem("─" * 20, None, False) if it == "-" else
                              ChoiceItem(it[0], it[1]) for it in self.items], id="menu")
+            yield Static("", id="menu-hint")
 
     def on_mount(self):
         lv = self.query_one("#menu", ListView)
@@ -142,6 +145,19 @@ class MenuScreen(ModalScreen):
         """What the menu offers, in order (the walks and the scenario read this)."""
         return [it[0] for it in self.items if it != "-"]
 
+    def hint_of(self, index):
+        """The hint of the item at index of the list (lines included), or ""."""
+        it = self.items[index] if 0 <= index < len(self.items) else "-"
+        return it[2] if it != "-" and len(it) > 2 else ""
+
+    def on_list_view_highlighted(self, e: ListView.Highlighted):
+        e.stop()
+        lv = self.query_one("#menu", ListView)
+        hint = self.hint_of(lv.index if lv.index is not None else -1)
+        box = self.query_one("#menu-hint", Static)
+        box.update(Text(hint, style="dim"))
+        box.display = bool(hint)
+
     def on_list_view_selected(self, e: ListView.Selected):
         e.stop()
         if isinstance(e.item, ChoiceItem) and e.item.enabled:
@@ -152,6 +168,73 @@ class MenuScreen(ModalScreen):
 
     def action_up(self):
         self.query_one("#menu", ListView).action_cursor_up()
+
+    def action_cancel(self):
+        self.dismiss(None)
+
+
+class ChooseScreen(ModalScreen):
+    """One of a few answers (how long a mute lasts…), and maybe a box to tick: Enter on
+    an answer — dismissed with (key, ticked), space or t — the box, Esc — None. The
+    host's choose() (common/timed.py) is this."""
+
+    BINDINGS = [Binding("escape,q", "cancel", _("tui_back")),
+                Binding("space,t", "tick", "☑"),
+                Binding("j", "down", show=False), Binding("k", "up", show=False)]
+    CSS = """
+    ChooseScreen { align: center middle; }
+    ChooseScreen > Vertical { width: 64; height: auto; max-height: 90%;
+                              border: thick $primary; background: $surface; }
+    ChooseScreen #choose-title { padding: 0 1; background: $primary-background;
+                                 text-style: bold; }
+    ChooseScreen #choose-text { padding: 0 1; }
+    ChooseScreen ListView { height: auto; max-height: 20; }
+    ChooseScreen #choose-check { padding: 0 1; }
+    """
+
+    def __init__(self, title, text, options, check=None):
+        super().__init__()
+        self.c_title, self.text = str(title or ""), str(text or "")
+        self.options = list(options)
+        self.check = str(check) if check else ""
+        self.ticked = False
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Static(self.c_title, id="choose-title")
+            if self.text:
+                yield Static(self.text, id="choose-text")
+            yield ListView(*[ChoiceItem(label, key) for key, label in self.options],
+                           id="choose")
+            if self.check:
+                yield Static(self.check_line(), id="choose-check")
+
+    def check_line(self):
+        return Text(("☑ " if self.ticked else "☐ ") + self.check + "  (t)")
+
+    def on_mount(self):
+        lv = self.query_one("#choose", ListView)
+        lv.focus()
+        lv.index = 0
+
+    def labels(self):
+        return [label for _k, label in self.options]
+
+    def action_tick(self):
+        if self.check:
+            self.ticked = not self.ticked
+            self.query_one("#choose-check", Static).update(self.check_line())
+
+    def on_list_view_selected(self, e: ListView.Selected):
+        e.stop()
+        if isinstance(e.item, ChoiceItem):
+            self.dismiss((e.item.value, self.ticked))
+
+    def action_down(self):
+        self.query_one("#choose", ListView).action_cursor_down()
+
+    def action_up(self):
+        self.query_one("#choose", ListView).action_cursor_up()
 
     def action_cancel(self):
         self.dismiss(None)
@@ -206,7 +289,10 @@ class PlaceScreen(Screen):
                 Binding("b", "boost", _("boost"), show=False),
                 Binding("m", "bookmark", _("bookmark"), show=False),
                 Binding("p", "profile", _("tui_profile"), show=False),
-                Binding("full_stop", "post_menu", "⋯", show=False)]
+                Binding("full_stop", "post_menu", "⋯", show=False),
+                # the help's pages, as the windows' ← and →
+                Binding("alt+left", "help_back", _("help_back")),
+                Binding("alt+right", "help_forward", _("help_forward"))]
     CSS = """
     PlaceScreen { overflow: hidden hidden; layout: vertical; }
     PlaceScreen #title { height: 1; padding: 0 1; background: $primary-background; }
@@ -386,6 +472,12 @@ class PlaceScreen(Screen):
         if out.error:
             self.app.show_error(out.error)
             return
+        if out.copy:  # the terminal's clipboard (OSC 52), where it has one
+            copy = getattr(self.app, "copy_to_clipboard", None)
+            try:
+                copy(out.copy)
+            except Exception:  # noqa: BLE001 — none: the message says it all the same
+                pass
         if out.message:
             self.app.notify(out.message)
         if out.compose:
@@ -459,6 +551,36 @@ class PlaceScreen(Screen):
     def action_back(self):
         self.app.pop_screen()
 
+    def _help_fwd(self):
+        """Pages left by ← (alt+left), for →; the app keeps them, the screens come and go."""
+        if not hasattr(self.app, "help_forward_pages"):
+            self.app.help_forward_pages = []
+        return self.app.help_forward_pages
+
+    def check_action(self, action, parameters):
+        if action in ("help_back", "help_forward"):
+            if self.name_ != "help":
+                return False
+            if action == "help_back":
+                stack = self.app.screen_stack
+                return len(stack) > 1 and getattr(stack[-2], "name_", "") == "help" or None
+            return bool(self._help_fwd()) or None
+        return True
+
+    def action_help_back(self):
+        """← in the help: the page before this one (the one under it on the stack)."""
+        stack = self.app.screen_stack
+        if self.name_ == "help" and len(stack) > 1 and getattr(stack[-2], "name_", "") == "help":
+            self._help_fwd().append((self.arg, self.anchor))
+            self.app.pop_screen()
+
+    def action_help_forward(self):
+        """→ in the help: the page ← left."""
+        fwd = self._help_fwd()
+        if self.name_ == "help" and fwd:
+            page, anchor = fwd.pop()
+            self.app.push_screen(PlaceScreen("help", page, anchor=anchor))
+
     def action_cursor_down(self):
         self.query_one("#posts", ListView).action_cursor_down()
 
@@ -502,6 +624,7 @@ class PlaceScreen(Screen):
         href = getattr(e, "href", "") or ""
         if href.startswith("fedtail:help/"):
             page, _s, anchor = href[len("fedtail:help/"):].partition("#")
+            self._help_fwd().clear()  # a new way: what ← left is gone, as in a browser
             self.app.push_screen(PlaceScreen("help", page, anchor=anchor))
         else:
             self.app.open_thing(self.places.help_target(href, self.arg or "index").open or {})
@@ -521,6 +644,8 @@ class ComposeScreen(Screen):
 
     BINDINGS = [Binding("ctrl+s", "send", _("tui_send")),
                 Binding("ctrl+o", "extras", "📎 " + _("tui_extras")),
+                # Ctrl+R: Textual keeps Ctrl+P for its command palette, above any screen
+                Binding("ctrl+r", "preview", _("preview")),
                 Binding("escape", "leave", _("web_cancel"))]
     CSS = """
     ComposeScreen { layout: vertical; padding: 0 1; }
@@ -528,6 +653,7 @@ class ComposeScreen(Screen):
     ComposeScreen #c-title { height: 1; background: $primary-background; padding: 0 1; }
     ComposeScreen #c-context { height: auto; max-height: 8; color: $text-muted; }
     ComposeScreen #c-hint { height: auto; color: $text-muted; }
+    ComposeScreen #c-count { height: auto; color: $text-muted; }
     ComposeScreen #c-text { height: 1fr; }
     ComposeScreen #c-row { height: auto; }
     ComposeScreen #c-row Select { width: 30; }
@@ -545,9 +671,12 @@ class ComposeScreen(Screen):
         self.start = None
         self.initial = None
         self.media = []        # [(path, description)]
+        self.covers = {}       # a video's or a sound's path -> its cover picture's path
+        self.edit_alts = {}    # editing my post: its picture's id -> the new description
         self.poll = None       # {"options", "expires_in", "multiple"}
         self.sensitive = False
         self.when = ""         # "2026-10-23 09:30": later, else now
+        self.alt_ok = False    # "send as is" said once: pictures without a description go
 
     def compose(self) -> ComposeResult:
         from ..common import compose as cc
@@ -588,7 +717,7 @@ class ComposeScreen(Screen):
             yield Static(Text(("❝ " if self.quote is not None else "↳ ") + "@" + p.author.handle
                               + ": " + snippet(p, 400)), id="c-context")
         if self.edit is not None:
-            yield Static(_("edit_hint"), id="c-hint")
+            yield Static(_("edit_hint") + " " + _("edit_media_kept"), id="c-hint")
         elif st.hint:
             yield Static(_(st.hint), id="c-hint")
         vis = "followers" if st.visibility == "private" else st.visibility
@@ -598,6 +727,7 @@ class ComposeScreen(Screen):
         pick = getattr(core, "post_accounts", None)
         accounts, first = pick(rid) if pick is not None else ([], "")
         self.accounts = accounts if len(accounts) > 1 and self.edit is None else []
+        self.from_first = first or ""  # the account that got the post replied to
         with Horizontal(id="c-row"):
             if self.accounts:
                 yield Select([(_("post_from", acct=h), k) for k, h in self.accounts],
@@ -609,6 +739,7 @@ class ComposeScreen(Screen):
             yield Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
             yield Input(value=st.language or "", placeholder=_("lang_label"), id="c-lang")
         yield TextArea("", id="c-text")
+        yield Static("", id="c-count")
         yield Static("", id="c-extras")
         yield Footer()
 
@@ -621,9 +752,52 @@ class ComposeScreen(Screen):
         self.sensitive = bool(self.start.sensitive)
         self.poll = self.start.poll or None
         self.show_extras()
+        self.show_count()
         ta.focus()
         ta.move_cursor(ta.document.end)
         self.initial = self._snapshot()
+
+    # ---- the count, a chain, #CamelCase; whom it goes from --------------------------------
+    def show_count(self):
+        """n / limit, "a chain of N posts" when it will be split, and the accessibility
+        hint for #lowercasetags (post.camelcase_hint) — as the windows' counter."""
+        from ..common import compose as cc
+        core = self.app.core
+        text = self.query_one("#c-text", TextArea).text
+        cw = self.query_one("#c-cw", Input).value
+        c = cc.count(text, cw, int(getattr(core.caps, "max_characters", 500) or 500),
+                     core.cfg)
+        line = Text(f"{c.n} / {c.limit}", style="bold red" if c.over else "")
+        if c.parts > 1:
+            line = Text(_("chain_count", n=c.parts) + " · ") + line
+        if c.flat_tags:
+            line.append("\n" + _("camel_hint", tags=", ".join("#" + t for t in
+                                                               c.flat_tags[:3])), style="dim")
+        self.query_one("#c-count", Static).update(line)
+        return c
+
+    def on_text_area_changed(self, _e):
+        self.show_count()
+
+    def on_select_changed(self, e):
+        """All accounts in one window: a reply from another account than the one that
+        got the post is looked up on its server — said under the fields."""
+        if getattr(e.select, "id", "") != "c-from" or self.reply_to is None:
+            return
+        chosen = e.value or ""
+        acct = dict(self.accounts).get(chosen, "")
+        hint = _("post_from_other", acct=acct) if chosen != self.from_first else ""
+        self.query_one("#c-count", Static).update(Text(hint, style="yellow") if hint else
+                                                  "")
+
+    def action_preview(self):
+        """Ctrl+R: the post as it will go (Esc — back to the text)."""
+        from .more import PreviewScreen
+        text, cw, _vis, _lang = self._fields()
+        c = self.show_count()
+        self.app.push_screen(PreviewScreen(text, cw, bool(getattr(self.app.core, "markdown",
+                                                                  False)),
+                                           c.parts, len(self.media)))
 
     def _snapshot(self):
         from ..common import compose as cc
@@ -635,10 +809,15 @@ class ComposeScreen(Screen):
     def show_extras(self):
         from ..common import compose as cc
         bits = []
+        from pathlib import Path
         for path, alt in self.media:
-            from pathlib import Path
             bits.append("📎 " + Path(path).name + (f" — {alt}" if alt else
-                                                    " — " + _("no_alt")))
+                                                    " — " + _("no_alt")) +
+                        (" · " + _("media_cover_set", name=Path(self.covers[path]).name)
+                         if path in self.covers else ""))
+        for m in self._edit_media():
+            alt = self.edit_alts.get(m.ref.id, m.alt)
+            bits.append("📎 " + m.kind + (f" — {alt}" if alt else " — " + _("no_alt")))
         if self.media and self.sensitive:
             bits.append("⚠ " + _("sensitive_mark"))
         if self.poll:
@@ -657,22 +836,45 @@ class ComposeScreen(Screen):
         items = []
         if not self.poll and len(self.media) < getattr(caps, "max_media", 4):
             items.append((_("attach"), "attach"))
+        from pathlib import Path
         for i, (path, _alt) in enumerate(self.media):
-            from pathlib import Path
             items.append(("✕ " + _("detach") + " " + Path(path).name, ("detach", i)))
+            if self._playable(path):  # a cover for a video or a sound
+                items.append(("🖼 " + _("media_cover") + " " + Path(path).name,
+                              ("cover", path)))
+        for m in self._edit_media():  # my post's pictures stay; their words can change
+            items.append(("✎ " + _("alt_title") + ": " + m.kind + " " +
+                          (self.edit_alts.get(m.ref.id, m.alt) or "")[:30], ("alt", m.ref.id)))
         if self.media:
             items.append((("☑ " if self.sensitive else "☐ ") + _("sensitive_mark"),
                           "sensitive"))
         if not self.media:
             items.append(((_("detach") + " " if self.poll else "") + _("poll_add"), "poll"))
         items.append(((_("detach") + " " if self.when else "") + _("schedule"), "when"))
+        if self.edit is None:
+            items.append((_("lang_other"), "lang"))
+        items += ["-", ("🗑 " + _("discard"), "discard")]
 
         def chosen(v):
             if v == "attach":
                 self.app.push_screen(AskScreen(_("attach"), _("tui_attach_path")),
                                      self._attached)
+            elif isinstance(v, tuple) and v[0] == "cover":
+                self.app.push_screen(AskScreen(_("media_cover"), _("media_cover_tip")),
+                                     lambda got, path=v[1]: self._covered(path, got))
+                return
+            elif isinstance(v, tuple) and v[0] == "alt":
+                m = next((x for x in self._edit_media() if x.ref.id == v[1]), None)
+                if m is not None:
+                    self.app.push_screen(
+                        AskScreen(_("alt_title"), _("alt_prompt"),
+                                  self.edit_alts.get(m.ref.id, m.alt), allow_empty=True),
+                        lambda alt, mid=m.ref.id: self._redescribed(mid, alt))
+                return
             elif isinstance(v, tuple):
+                path = self.media[v[1]][0]
                 del self.media[v[1]]
+                self.covers.pop(path, None)
             elif v == "sensitive":
                 self.sensitive = not self.sensitive
             elif v == "poll":
@@ -689,6 +891,14 @@ class ComposeScreen(Screen):
                     self.app.push_screen(AskScreen(_("schedule"), _("tui_when")),
                                          self._scheduled)
                     return
+            elif v == "lang":
+                self.app.push_screen(AskScreen(_("lang_other_title"), _("lang_other_ask")),
+                                     self._language)
+                return
+            elif v == "discard":
+                self.app.push_screen(ConfirmScreen(_("discard_q_title"), _("discard_q")),
+                                     self._discard)
+                return
             self.show_extras()
         self.app.push_screen(MenuScreen("📎 " + _("tui_extras"), items), chosen)
 
@@ -707,6 +917,46 @@ class ComposeScreen(Screen):
         self.app.push_screen(AskScreen(_("alt_title"), _("alt_prompt"), allow_empty=True),
                              described)
 
+    @staticmethod
+    def _playable(path):
+        import mimetypes
+        kind = mimetypes.guess_type(str(path))[0] or ""
+        return kind.startswith(("video/", "audio/"))
+
+    def _edit_media(self):
+        """My post's own attachments, when this edits it ([] otherwise)."""
+        if self.edit is None:
+            return []
+        from ...model import real
+        return list(real(self.edit).media or ())
+
+    def _covered(self, path, got):
+        from pathlib import Path
+        if not got:
+            return
+        p = Path(got.strip().strip("'\"")).expanduser()
+        if not p.is_file():
+            self.app.show_error(_("save_failed", err=str(p)))
+            return
+        self.covers[path] = str(p)
+        self.show_extras()
+
+    def _redescribed(self, media_id, alt):
+        if alt is None:
+            return
+        self.edit_alts[media_id] = alt.strip()
+        self.show_extras()
+
+    def _media_out(self):
+        """The pictures to send: (path, description[, None, cover])."""
+        return [(path, alt, None, self.covers[path]) if path in self.covers else (path, alt)
+                for path, alt in self.media]
+
+    def _media_changes(self):
+        """{id: (description, focus)} of my post's pictures whose words changed."""
+        return {m.ref.id: (self.edit_alts[m.ref.id], m.focus) for m in self._edit_media()
+                if m.ref.id in self.edit_alts and self.edit_alts[m.ref.id] != m.alt}
+
     def _polled(self, text):
         from ..common import compose as cc
         if not text:
@@ -719,6 +969,18 @@ class ComposeScreen(Screen):
             return
         self.poll = poll
         self.show_extras()
+
+    def _language(self, code):
+        """Another language: an ISO 639 code typed (eo, tok…) — into the field."""
+        code = (code or "").strip().lower()
+        if code and code.replace("-", "").isalpha() and len(code) <= 8:
+            self.query_one("#c-lang", Input).value = code
+
+    def _discard(self, yes):
+        """Discard (asked first): the text and its draft gone, the editor closed."""
+        if yes:
+            self.app.core.delete_draft(self.key)
+            self.dismiss(False)
 
     def _scheduled(self, text):
         from ..common import compose as cc
@@ -746,13 +1008,20 @@ class ComposeScreen(Screen):
         if not text:
             return
         core = self.app.core
+        bare = [i for i, (_p, alt) in enumerate(self.media) if not alt]
+        if bare and not self.alt_ok and self.edit is None and \
+                core.cfg["post"].get("alt_reminder", True):
+            self._ask_alt(bare)
+            return
         self.sending = True
         from ..common import compose as cc
         if self.edit is not None:
-            fut = core.edit(self.edit, text, cw)
+            changed = self._media_changes()
+            fut = core.edit(self.edit, text, cw, media=changed) if changed else \
+                core.edit(self.edit, text, cw)
         else:
             fut = core.post(text, vis, self.reply_to, cw, language=lang or None,
-                            quote=self.quote, draft_key=self.key, media=list(self.media),
+                            quote=self.quote, draft_key=self.key, media=self._media_out(),
                             sensitive=self.sensitive and bool(self.media),
                             poll=None if self.media else self.poll,
                             scheduled_at=cc.when_utc(self.when),
@@ -770,6 +1039,26 @@ class ComposeScreen(Screen):
             self.sending = False
             self.app.show_error(_("send_failed_text", err=err))
         self.app.later(fut, ok=ok, fail=fail)
+
+    def _ask_alt(self, bare):
+        """post.alt_reminder: pictures without a description — describe them, or send
+        as they are (as the windows ask)."""
+        title = _("alt_missing_title") + ": " + _("alt_missing", n=len(bare))
+
+        def chosen(v):
+            if v == "send":
+                self.alt_ok = True
+                self.action_send()
+            elif v == "describe":
+                i = bare[0]
+
+                def described(alt):
+                    if alt and alt.strip():
+                        self.media[i] = (self.media[i][0], alt.strip())
+                        self.show_extras()
+                self.app.push_screen(AskScreen(_("alt_title"), _("alt_prompt")), described)
+        self.app.push_screen(MenuScreen(title, [(_("alt_describe"), "describe"),
+                                                (_("alt_send_anyway"), "send")]), chosen)
 
     def action_leave(self):
         from ..common import compose as cc

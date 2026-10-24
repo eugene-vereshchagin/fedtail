@@ -9,8 +9,8 @@
 
 Полный справочник настроек — [config.md](/docs/ru/config.md), таблицами по главам. Всё то же
 одной матрицей «fedtail и другие клиенты» — [comparison.md](/docs/ru/comparison.md).
-Устройство кода — [ARCHITECTURE.md](/docs/ARCHITECTURE.md), ТЗ и очередь —
-[DESIGN.md](/docs/DESIGN.md).
+Устройство кода — [architecture.md](/docs/ru/dev/architecture.md), ТЗ и очередь —
+[design.md](/docs/ru/dev/design.md).
 
 > **Файл собирается сам** из `docs/src/features/*.toml` командой `python3 tools/docs_build.py`
 > — правь там, а не здесь. Тест проверяет, что этот файл не отстал.

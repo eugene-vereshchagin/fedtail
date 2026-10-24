@@ -66,12 +66,12 @@ status = "has"
 since = "0.8.0"
 name.ru = "Окно, трей, клавиши"
 name.en = "Window, tray, keys"
-config = "`ui.close_to_tray`, `ui.post_keys`"
+config = "`ui.tray`, `ui.close_to_tray`, `ui.post_keys`"
 others.ru = "клавиши — Mastodon web, Phanpy, Elk, Ivory, tut"
 others.en = "keys — Mastodon web, Phanpy, Elk, Ivory, tut"
 clients = ["Mastodon web", "Ivory", "Phanpy", "Elk", "tut"]
-details.ru = "Крестик прячет в трей. `j`/`k` — по постам, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `o`/Enter — тред. `post_keys = false` — буквы ничего не делают."
-details.en = "The cross hides to the tray. `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing."
+details.ru = "Крестик прячет в трей; значка в трее можно не держать вовсе (`ui.tray = false`, с 0.19). `j`/`k` — по постам, `r` — ответить, `f` — лайк, `b` — буст, `m` — закладка, `o`/Enter — тред. `post_keys = false` — буквы ничего не делают."
+details.en = "The cross hides to the tray; the tray icon can go altogether (`ui.tray = false`, since 0.19). `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing."
 
 [[feature]]
 id = "links-inside"
@@ -165,9 +165,32 @@ config.en = "`[debug]`, the launch keys `--debug`, `--bug-report`"
 api.ru = "своё"
 api.en = "own"
 others = "—"
-details.ru = "В режиме отладки (`mode = \"auto\"` — включён в версиях для разработки, выключен в релизах): журнал запросов, опросов, действий (без текстов постов), ошибки с трассировкой, статистика памяти и потоков раз в `stats_minutes`, сторож зависаний (`watchdog_seconds`, `stall_ms`), медленные запросы, рост памяти. `crash.log` — стеки при падении, `kill -USR1` — стеки по запросу. Логи прошлой версии новая удаляет сама. `--bug-report` собирает архив за двое суток без токена и базы. Подробно — [DEBUGGING.md](/docs/DEBUGGING.md)."
-details.en = "In the debugging mode (`mode = \"auto\"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself. `--bug-report` packs two days of it, without the token and the database. In detail — [DEBUGGING.md](/docs/DEBUGGING.md)."
+details.ru = "В режиме отладки (`mode = \"auto\"` — включён в версиях для разработки, выключен в релизах): журнал запросов, опросов, действий (без текстов постов), ошибки с трассировкой, статистика памяти и потоков раз в `stats_minutes`, сторож зависаний (`watchdog_seconds`, `stall_ms`), медленные запросы, рост памяти. `crash.log` — стеки при падении, `kill -USR1` — стеки по запросу. Логи прошлой версии новая удаляет сама. `--bug-report` собирает архив за двое суток без токена и базы. Подробно — [debugging.md](/docs/ru/dev/debugging.md)."
+details.en = "In the debugging mode (`mode = \"auto\"` — on in development versions, off in releases): a log of requests, polls, actions (without the posts' texts), errors with tracebacks, memory and thread stats every `stats_minutes`, a freeze watchdog (`watchdog_seconds`, `stall_ms`), slow requests, memory growth. `crash.log` — the stacks on a crash, `kill -USR1` — the stacks on demand. The new version deletes the old version's logs itself. `--bug-report` packs two days of it, without the token and the database. In detail — [debugging.md](/docs/en/dev/debugging.md)."
 
+
+[[feature]]
+id = "report-repo"
+status = "has"
+since = "0.19.0"
+name.ru = "Отчёт сразу в свой закрытый репозиторий"
+name.en = "A bug report straight into your private repository"
+config = "`debug.report_repo`, `tools/selfcheck.py --send`"
+others = "—"
+details.ru = "Задан `debug.report_repo` (`\"user/repo\"` на GitHub или любой git-адрес) — отчёт из меню «Отладка», `--bug-report` и архив ночного selfcheck сами уходят туда по ssh твоими ключами: отдельный коммит в `reports/ГГГГ-ММ/` (`selfcheck/…`). Старые отчёты при этом не скачиваются; ssh ничего не спрашивает — нет ключа или доступа, так и скажет. Репозиторий должен быть закрытым: в отчёте логи и конфиг (токена и базы нет)."
+details.en = "With `debug.report_repo` set (`\"user/repo\"` on GitHub or any git address), the report from the Debugging menu, `--bug-report` and the nightly selfcheck's archive go there by themselves over ssh with your own keys: a commit of its own in `reports/YYYY-MM/` (`selfcheck/…`). The older reports aren't downloaded; ssh asks nothing — no key or no access, it says so. The repository must be private: a report holds the logs and the config (never the token or the database)."
+
+[[feature]]
+id = "report-issue"
+status = "has"
+since = "0.19.0"
+name.ru = "Сообщить об ошибке на GitHub — с проверкой"
+name.en = "Report a bug on GitHub — checked first"
+config = "`debug.issue_repo`"
+others.ru = "Fedilab, Tusky (письмо разработчику)"
+others.en = "Fedilab, Tusky (a mail to the developer)"
+details.ru = "≡ → «Сообщить об ошибке на GitHub…» во всех четырёх интерфейсах: черновик issue — что случилось, как повторить, версия, система, последние ошибки журнала. Адреса серверов, ники, IP, токены и пути в нём уже заменены заглушками, и всё это видно до отправки: текст можно поправить. Дальше открывается GitHub со всем вписанным, отправляешь сам. Трекер — самого fedtail или `debug.issue_repo`."
+details.en = "≡ → “Report a bug on GitHub…” in all four interfaces: a draft issue — what happened, how to repeat it, the version, the system, the latest errors of the log. Server addresses, nicknames, IPs, tokens and paths are already replaced by placeholders, and all of it is shown before anything leaves: the text can be edited. Then GitHub opens with it all filled in, and you send it yourself. The tracker — fedtail's own, or `debug.issue_repo`."
 [[feature]]
 id = "federation-status"
 status = "has"
@@ -193,8 +216,8 @@ config.en = "`debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; �
 api.ru = "своё (gc, tracemalloc)"
 api.en = "own (gc, tracemalloc)"
 others = "—"
-details.ru = "Для запусков на сутки. С каждой строкой статистики — строка `trend`: память, объекты Python, виджеты, карточки, картинки, потоки, файлы — сколько при запуске, сколько сейчас, сколько в час. Что-то росло на каждой из последних `leak_samples` проверок (12 — это час) и не на крохи — предупреждение `possible leak` с цифрами; первые полчаса не считаются. В режиме отладки — перепись: какие объекты Python и виджеты Qt прибавились с прошлой проверки и с запуска (`object_census`). `tracemalloc = true` — трассировка памяти с запуска; снимок — ≡ → «Отладка» → «Снимок памяти»: файл с тем, кто держит больше всего и что выросло, по строкам кода. Там же: «Что растёт: статистика и перепись сейчас», «Отдать свободную память системе», трассировка вкл/выкл. Последняя строка сессии — `session summary`: часы, память, пик, фризы, опросы. Как оставить на ночь — [DEBUGGING.md](/docs/DEBUGGING.md#ночной-прогон-поиск-утечек)."
-details.en = "For days-long runs. With every stats line — a `trend` line: memory, Python objects, widgets, cards, pictures, threads, files — how many at start, how many now, how many an hour. Something that grew on each of the last `leak_samples` checks (12 — an hour) and by more than crumbs — a `possible leak` warning with the numbers; the first half hour doesn't count. In the debugging mode — a census: which Python objects and Qt widgets were added since the last check and since the start (`object_census`). `tracemalloc = true` — memory tracing from the start; a snapshot — ≡ → “Debugging” → “Memory snapshot”: a file with who holds the most and what grew, by line of code. There too: “What grows: stats and census now”, “Give free memory back to the system”, tracing on/off. The session's last line — `session summary`: hours, memory, peak, freezes, polls. How to leave it overnight — [DEBUGGING.md](/docs/DEBUGGING.md)."
+details.ru = "Для запусков на сутки. С каждой строкой статистики — строка `trend`: память, объекты Python, виджеты, карточки, картинки, потоки, файлы — сколько при запуске, сколько сейчас, сколько в час. Что-то росло на каждой из последних `leak_samples` проверок (12 — это час) и не на крохи — предупреждение `possible leak` с цифрами; первые полчаса не считаются. В режиме отладки — перепись: какие объекты Python и виджеты Qt прибавились с прошлой проверки и с запуска (`object_census`). `tracemalloc = true` — трассировка памяти с запуска; снимок — ≡ → «Отладка» → «Снимок памяти»: файл с тем, кто держит больше всего и что выросло, по строкам кода. Там же: «Что растёт: статистика и перепись сейчас», «Отдать свободную память системе», трассировка вкл/выкл. Последняя строка сессии — `session summary`: часы, память, пик, фризы, опросы. Как оставить на ночь — [debugging.md](/docs/ru/dev/debugging.md#ночной-прогон-поиск-утечек)."
+details.en = "For days-long runs. With every stats line — a `trend` line: memory, Python objects, widgets, cards, pictures, threads, files — how many at start, how many now, how many an hour. Something that grew on each of the last `leak_samples` checks (12 — an hour) and by more than crumbs — a `possible leak` warning with the numbers; the first half hour doesn't count. In the debugging mode — a census: which Python objects and Qt widgets were added since the last check and since the start (`object_census`). `tracemalloc = true` — memory tracing from the start; a snapshot — ≡ → “Debugging” → “Memory snapshot”: a file with who holds the most and what grew, by line of code. There too: “What grows: stats and census now”, “Give free memory back to the system”, tracing on/off. The session's last line — `session summary`: hours, memory, peak, freezes, polls. How to leave it overnight — [debugging.md](/docs/en/dev/debugging.md)."
 
 [[feature]]
 id = "db-cleanup"

@@ -101,7 +101,7 @@ class Core(SocialMixin):
     def __init__(self, cfg, paths, api_class=None):
         self.cfg = cfg
         self.paths = paths
-        # what this account's server speaks (docs/PROTOCOLS.md): the client, its errors,
+        # what this account's server speaks (docs/en/dev/protocols.md): the client, its errors,
         # its live stream, its objects → fedtail.model
         self.proto = protocols.get()
         self.api_class = api_class or self.proto.client
@@ -127,6 +127,7 @@ class Core(SocialMixin):
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (its preferences)
+        self.translation_languages = None  # {source: [targets]} its translator can do
         self.browse_empty = set()  # browse sources (local, federated) the server gave nothing
         self.sources = {}
         self.lists = []           # [{"id", "title", "exclusive"}] from the server
@@ -153,6 +154,7 @@ class Core(SocialMixin):
         self._completed = {}  # thread root id -> when its missing replies were looked for
         self._choices = {}  # this run's choices over lanes (see choice())
         self.muted, self.blocked = set(), set()
+        self.hidden_posts = set()  # "Hide this post": out of sight at once, not on the next fetch
         self.blocked_domains = set()
         self._silence_version = 0
         self._silence_checked = None
@@ -336,6 +338,7 @@ class Core(SocialMixin):
             if n:
                 log.info("read: %d posts of mine were unread (written elsewhere)", n)
             self.load_preferences()
+            self.load_translation_languages()
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
@@ -593,6 +596,9 @@ class Core(SocialMixin):
                     self.emit("error", f"{name}: {e}")
 
             self._step("sources")
+            if "direct" in self.lane_by_name and self._carry_my_direct():
+                self.emit("lanes_updated", {"direct": []})  # read already: no news, no sound
+            self._step("my direct")
             new_requests = []
             if "requests" in self.lane_by_name:
                 try:
@@ -750,7 +756,9 @@ class Core(SocialMixin):
             return
         push = {}
         for timeline, source in self.MARKERS.items():
-            items = self.store.items(source, 400)  # oldest -> newest
+            # oldest -> newest; the server's own items only (not mine put in "Direct")
+            items = [x for x in self.store.items(source, 400)
+                     if not str(x[0]).startswith("mine:")]
             if not items:
                 continue
             last = ((remote or {}).get(timeline) or {}).get("last_read_id")
@@ -965,6 +973,9 @@ class Core(SocialMixin):
         filter says "hide"?"""
         quiet = self.muted | self.blocked
         s = real(status)
+        if self.hidden_posts and (s.get("id") in self.hidden_posts
+                                  or status.get("id") in self.hidden_posts):
+            return True
         if s["account"]["id"] in quiet or status["account"]["id"] in quiet:
             return True
         if self.blocked_domains and any(
@@ -976,8 +987,14 @@ class Core(SocialMixin):
         return any((f.get("filter") or {}).get("filter_action") == "hide"
                    for f in s.get("filtered") or [])
 
-    def mute(self, acc_id, on=True):
-        return self._silence(self.api.mute, self.muted, acc_id, on)
+    def mute(self, acc_id, on=True, duration=0, notifications=True):
+        """duration: seconds until the mute ends by itself (0 — for good); notifications:
+        theirs muted too, or still coming (a mute of their posts only)."""
+        if not on or (not duration and notifications):
+            return self._silence(self.api.mute, self.muted, acc_id, on)
+        return self._silence(lambda a, o: self.api.mute(a, o, duration=duration,
+                                                         notifications=notifications),
+                             self.muted, acc_id, on)
 
     def block(self, acc_id, on=True):
         return self._silence(self.api.block, self.blocked, acc_id, on)
@@ -1084,12 +1101,36 @@ class Core(SocialMixin):
                     "domains": sorted(self.blocked_domains)}
         return self.submit(job)
 
-    def add_filter(self, title, keywords, action="warn", contexts=None):
+    def add_filter(self, title, keywords, action="warn", contexts=None, expires_in=None):
+        """expires_in: seconds until the filter ends by itself (None — never)."""
         args = (title, keywords, action) + ((tuple(contexts),) if contexts else ())
+        if expires_in:
+            return self.call_api("create_filter", *args, expires_in=int(expires_in))
         return self.call_api("create_filter", *args)
 
     def delete_filter(self, filter_id):
         return self.call_api("delete_filter", filter_id)
+
+    def edit_filter(self, filter_id, title=None, words=None, action=None, contexts=None,
+                    expires_in=None):
+        """Change a filter of mine: words — the whole list it should have now (those gone
+        are dropped, the new added); expires_in: seconds from now, 0 — for good, None —
+        as it was."""
+        def job():
+            remove, add = (), ()
+            if words is not None:
+                have = next((f for f in self.api.filters() or []
+                             if str(f.get("id")) == str(filter_id)), None)
+                if have is None:
+                    raise LookupError(filter_id)
+                old = {k.get("keyword"): k.get("id") for k in have.get("keywords") or ()}
+                want = [w for w in dict.fromkeys(x.strip() for x in words) if w]
+                remove = tuple(kid for kw, kid in old.items() if kw not in want)
+                add = tuple(w for w in want if w not in old)
+            return self.api.update_filter(filter_id, title=title, action=action,
+                                          contexts=tuple(contexts) if contexts else None,
+                                          expires_in=expires_in, add=add, remove=remove)
+        return self.submit(job)
 
     def _hidden_authors(self):
         """Who the lanes in lists.hide_in leave out: everyone in a list
@@ -1103,7 +1144,8 @@ class Core(SocialMixin):
     def _refresh_lists(self):
         """Lists and who is in them, from the server; lanes follow."""
         self._retry_list_pending()
-        got = [{"id": x["id"], "title": x.get("title", ""), "exclusive": bool(x.get("exclusive"))}
+        got = [{"id": x["id"], "title": x.get("title", ""), "exclusive": bool(x.get("exclusive")),
+                "replies_policy": x.get("replies_policy") or ""}
                for x in self.api.lists()]
         members = {x["id"]: {a["id"] for a in self.api.list_accounts(x["id"])} for x in got}
         for list_id, acc_id, _since in self._list_pending():  # still waiting: in, here
@@ -1251,9 +1293,55 @@ class Core(SocialMixin):
     def lists_of(self, acc_id):
         return {lid for lid, m in self.list_members.items() if acc_id in m}
 
-    def create_list(self, title, exclusive=False, add=None):
+    HIDDEN_POSTS = "fedtail: hidden posts"  # the filter "Hide this post" keeps them in
+
+    def _hidden_filter(self, make=False):
+        mine = next((f for f in self.api.filters() or []
+                     if f.get("title") == self.HIDDEN_POSTS), None)
+        if mine is None and make:
+            mine = self.api.create_filter(self.HIDDEN_POSTS, [], "hide",
+                                          ("home", "public", "thread", "account",
+                                           "notifications"))
+        return mine
+
+    def _hidden_changed(self, sid, on):
+        (self.hidden_posts.add if on else self.hidden_posts.discard)(sid)
+        self._silence_version += 1
+        self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+
+    def hide_post(self, status):
+        """This very post out of sight everywhere (and in every client): put into a
+        filter of the server's, made the first time, that hides posts one by one."""
+        sid = status["id"] if isinstance(status, dict) else status
+
         def job():
-            x = self.api.create_list(title, exclusive)
+            got = self._api("filter_status", self.api.filter_status,
+                            self._hidden_filter(make=True)["id"], sid)
+            self._hidden_changed(sid, True)
+            return got
+        return self.submit(job)
+
+    def unhide_post(self, status):
+        """The post back: out of the hidden posts' filter. True when it was there."""
+        sid = status["id"] if isinstance(status, dict) else status
+
+        def job():
+            self._hidden_changed(sid, False)
+            mine = self._hidden_filter()
+            if mine is None:
+                return False
+            for fs in self.api.filter_statuses(mine["id"]) or []:
+                if str(fs.get("status_id")) == str(sid):
+                    self.api.unfilter_status(fs["id"])
+                    return True
+            return False
+        return self.submit(job)
+
+    def create_list(self, title, exclusive=False, add=None, replies_policy=None):
+        """replies_policy: whose replies the list shows — "followed", "list", "none"."""
+        def job():
+            x = self.api.create_list(title, exclusive, replies_policy=replies_policy) \
+                if replies_policy else self.api.create_list(title, exclusive)
             try:
                 if add:  # refused (not followed yet): waits, as with an existing list
                     self._list_add_or_wait(x["id"], add)
@@ -1262,9 +1350,12 @@ class Core(SocialMixin):
             return x
         return self.submit(job)
 
-    def update_list(self, list_id, title, exclusive):
+    def update_list(self, list_id, title, exclusive, replies_policy=None):
         def job():
-            self.api.update_list(list_id, title, exclusive)
+            if replies_policy:
+                self.api.update_list(list_id, title, exclusive, replies_policy=replies_policy)
+            else:
+                self.api.update_list(list_id, title, exclusive)
             self._refresh_lists()
         return self.submit(job)
 
@@ -1544,6 +1635,24 @@ class Core(SocialMixin):
 
     def set_posts_only(self, name, on):
         self.set_choice(f"posts_only.{name}", bool(on))
+
+    def _carry_my_direct(self, statuses=None):
+        """My direct messages into the mentions stream, where "Direct" reads: the
+        dialogue whole — theirs and mine, by the posts' own time. Mine are read (the store
+        marks every post of mine read), so no count grows. statuses: the ones just sent;
+        None — every one stored that isn't there yet. How many went in."""
+        source = self.lane_by_name["direct"].source if "direct" in self.lane_by_name \
+            else "mentions"
+        if statuses is None:
+            got = self.store.my_direct_outside(source)
+        else:
+            got = [s for s in statuses if s and s.get("visibility") == "direct"
+                   and self.me and s.get("account", {}).get("id") == self.me["id"]]
+        if not got:
+            return 0
+        # an item of its own ("mine:" + id): never one of the server's notification ids
+        return len(self.store.put_items(source, [("mine:" + s["id"], s, s.get("created_at", ""))
+                                                 for s in got]))
 
     def lane_entries(self, name):
         """[(item_id, status)] oldest → newest, at most the lane's render limit.
@@ -2133,10 +2242,16 @@ class Core(SocialMixin):
                 best = got
         return best
 
-    def account_statuses(self, acc_id, max_id=None):
+    PROFILE_SHOWS = {"all": {}, "posts": {"exclude_replies": True},
+                     "media": {"only_media": True}}
+
+    def account_statuses(self, acc_id, max_id=None, show="all"):
+        """Someone's posts, a page; show: "all" (posts and replies), "posts" (without
+        their replies to others — the server filters), "media" (only with pictures)."""
         def job():
             page = self.api.account_statuses(acc_id, limit=self.cfg["feed"]["page_size"],
-                                             max_id=max_id)
+                                             max_id=max_id,
+                                             **self.PROFILE_SHOWS.get(show, {}))
             self.store.put_statuses(page)
             return page
         return self.submit(job)
@@ -2601,7 +2716,8 @@ class Core(SocialMixin):
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
              language=None, sensitive=False, poll=None, quote=None, scheduled_at=None,
              account=None):
-        """media: [(path, description)] or [(path, description, (x, y) focus point)].
+        """media: [(path, description)], [(path, description, (x, y) focus point)] or
+        [(path, description, focus or None, cover picture's path)].
         language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
@@ -2615,7 +2731,9 @@ class Core(SocialMixin):
             rest = []
 
         def job():
-            ids = [self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None)["id"]
+            ids = [(self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None,
+                                          thumbnail=m[3]) if len(m) > 3 and m[3] else
+                    self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None))["id"]
                    for m in media]
             extra = {"language": lang} if lang else {}
             if sensitive and ids:
@@ -2674,6 +2792,8 @@ class Core(SocialMixin):
                     self.delete_draft(draft_key)
                 self.store.put_statuses(chain)
                 self.mark_read([x["id"] for x in chain] + ([reply_to] if reply_to else []))
+                if "direct" in self.lane_by_name and self._carry_my_direct(chain):
+                    self.emit("lanes_updated", {"direct": []})  # the dialogue: mine at once
                 self._auto_subscribe([st])
                 if reply_to:
                     # "you replied" under the post answered: the lanes it is in look again
@@ -2698,13 +2818,20 @@ class Core(SocialMixin):
             return None
         return next((st for st in mine if looks_sent(st, text, reply_to, since)), None)
 
-    def edit(self, status, text, spoiler="", draft_key=None):
-        """Change my post's text and warning; its pictures stay as they are."""
+    def edit(self, status, text, spoiler="", draft_key=None, media=None):
+        """Change my post's text and warning; its pictures stay. media: {media id:
+        (description, (x, y) focus or None)} — their words and focus point anew."""
         s = real(status)
 
         def job():
             ids = [m["id"] for m in s.get("media_attachments") or []]
-            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
+            attrs = [dict({"id": mid, "description": desc or ""},
+                          **({"focus": f"{float(focus[0]):.2f},{float(focus[1]):.2f}"}
+                             if focus else {}))
+                     for mid, (desc, focus) in (media or {}).items() if mid in ids]
+            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown,
+                                      media_attributes=attrs) if attrs else \
+                self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
             self.store.put_statuses([st])
             if draft_key:
                 self.delete_draft(draft_key)
@@ -2758,12 +2885,59 @@ class Core(SocialMixin):
         from ..i18n import current_language
         return self.call_api("translate", real(status)["id"], current_language())
 
-    def report(self, status, comment="", forward=False, category="other"):
+    def report(self, status, comment="", forward=False, category="other", rule_ids=()):
         """Tell my server's moderators about a post (and its author); forward: also the
-        moderators of the author's server, without saying who reported."""
+        moderators of the author's server, without saying who reported; rule_ids: the
+        server's rules it breaks (the category is "violation" then)."""
         s = real(status)
+        if rule_ids:
+            return self.call_api("report", s["account"]["id"], [s["id"]], comment,
+                                 forward, category, rule_ids=tuple(rule_ids))
         return self.call_api("report", s["account"]["id"], [s["id"]], comment,
-                           forward, category)
+                             forward, category)
+
+    def link_timeline(self, url, max_id=None):
+        """Posts sharing this link (a trending one: the server keeps only those)."""
+        def job():
+            page = self._api("link_timeline", self.api.link_timeline, url,
+                             limit=self.cfg["feed"]["page_size"], max_id=max_id) or []
+            self.store.put_statuses(page)
+            return page
+        return self.submit(job)
+
+    def featured_tag_suggestions(self):
+        return self.call_api("featured_tag_suggestions")
+
+    # ---- Web Push: the browser of the web page subscribes at my server itself ----------
+    def vapid_key(self):
+        """The server's public key a browser's push subscription is made with ("" —
+        the server has no Web Push)."""
+        def job():
+            v2 = self.api.instance_v2() or {}
+            key = ((v2.get("configuration") or {}).get("vapid") or {}).get("public_key")
+            return str(key or "")
+        return self.submit(job)
+
+    # what a push subscription is told about: everything the activity shows
+    PUSH_ALERTS = {"mention": True, "status": True, "reblog": True, "follow": True,
+                   "follow_request": True, "favourite": True, "poll": True, "update": True}
+
+    def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
+        return self.call_api("push_subscribe", endpoint, p256dh, auth,
+                             alerts or self.PUSH_ALERTS, policy)
+
+    def push_subscription(self):
+        def job():
+            try:
+                return self.api.push_subscription()
+            except ApiError as e:
+                if e.status == 404:  # none yet
+                    return None
+                raise
+        return self.submit(job)
+
+    def push_unsubscribe(self):
+        return self.call_api("push_unsubscribe")
 
     def featured(self, acc_id):
         """What someone puts forward on their profile: {"tags": [featured tags],

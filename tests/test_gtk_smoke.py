@@ -153,6 +153,19 @@ class GtkSmokeTest(_GtkBase):
         self.assertLessEqual(lane.list.get_width(), lane.get_width())
         self.assertLessEqual(lane.get_width(), self.win.get_width())
 
+    def test_report_a_bug_on_github(self):
+        """As Qt's: the scrubbed draft, then GitHub's new-issue page."""
+        from fedtail.frontends.gtk.issue import IssueWindow
+        self.assertIsNotNone(self.win.lookup_action("issue"))
+        w = IssueWindow(self.win)
+        self.assertIn(i18n._("issue_system"), w.body())
+        w.text.get_buffer().set_text("сломалось на https://example.test/@mira/1")
+        opened = []
+        self.win.open_url = opened.append
+        w.go()
+        self.assertTrue(opened[0].startswith("https://github.com/"))
+        self.assertNotIn("example.test", opened[0])
+
     def test_settings_window_writes_one_line(self):
         """The settings window as Qt's: a switch goes into config.toml at once, that line
         only; the search finds over every chapter."""
@@ -172,10 +185,51 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(sum(a != b for a, b in zip(before.splitlines(), after.splitlines(),
                                                     strict=True)), 1)
         self.assertTrue(w.restart.get_visible())
-        w.search.set_text("шрифт")
-        self.assertTrue(pump(lambda: "ui.font_size" in w.controls))
-        self.assertNotIn("ui.bookmark_button", w.controls)
+        w.search.set_text("шрифт")  # (the entry waits a moment before it searches)
+        self.assertTrue(pump(lambda: "ui.bookmark_button" not in w.controls))
+        self.assertIn("ui.font_size", w.controls)
         w.close()
+
+    def test_what_qt_has_gtk_has(self):
+        """The details docs/src/parity.toml once listed GTK without: menu tooltips,
+        the profile's tooltip, the face that opens a profile and tells a screen reader,
+        the columns' tab named so, the commands' help in a window."""
+        model = self.win.menu.model()
+        hints = {}
+
+        def walk(m):
+            for i in range(m.get_n_items()):
+                label = m.get_item_attribute_value(i, "label", None)
+                tip_v = m.get_item_attribute_value(i, "tooltip", None)
+                if label is not None and tip_v is not None:
+                    hints[label.get_string()] = tip_v.get_string()
+                for link in ("section", "submenu"):
+                    sub = m.get_item_link(i, link)
+                    if sub is not None:
+                        walk(sub)
+        walk(model)
+        for key, tipkey in (("whats_this", "whats_this_tip"), ("try_theme", "try_theme_tip"),
+                            ("accounts_merge", "accounts_merge_tip"),
+                            ("debug_tracing", "debug_tracing_tip")):
+            self.assertEqual(hints.get(i18n._(key)), i18n._(tipkey), key)
+        self.assertEqual(self.win.profile_label._ft_tip, i18n._("footer_profile_tip"))
+        lane = self._lane("home")
+        self.assertTrue(pump(lambda: any(True for _ in lane.cards()), 3)
+                        if hasattr(lane, "cards") else True)
+        self.win.set_columns(True)
+        label = self.win.tabs.get_tab_label(self.win.stack)
+        self.assertEqual(label.get_label(), i18n._("columns"))
+        self.win.set_columns(False)
+        self.assertEqual(self.win.tabs.get_tab_label(self.win.stack).get_label(),
+                         i18n._("gtk_lanes"))
+        from fedtail.frontends.gtk import dialogs
+        w = dialogs.info(self.win, i18n._("cmd_help_title"), i18n._("cmd_help"))
+        self.assertEqual(w.get_title(), i18n._("cmd_help_title"))
+        w.close()
+        if self.win.cmdline is not None:
+            self.win.cmdline.entry.set_text("?")
+            self.win.cmdline.run()
+            pump(timeout=0.2)
 
     def test_the_menu_and_what_it_opens(self):
         """≡ as Qt's: its items made, and each window or tab they open comes up
@@ -448,8 +502,14 @@ class GtkSmokeTest(_GtkBase):
             self.assertIn(i18n._(key), labels())
         mute = next(b for b in _walk(page) if isinstance(b, Gtk.Button)
                     and b.get_label() == i18n._("mute"))
-        mute.emit("clicked")
+        mute.emit("clicked")  # how long first, and posts only or not
+        ask = self.win._asking
+        self.assertEqual([k for k, _r in ask.radios][:2], [0, 3600])
+        ask.radios[2][1].set_active(True)  # a day
+        ask.tick.set_active(True)
+        ask.ok.emit("clicked")
         self.assertTrue(pump(lambda: i18n._("unmute") in labels(), 5))
+        self.assertEqual(self.world.mute_terms["B"], {"duration": 86400, "notifications": False})
         asked = []
         self.win.ask_text = lambda title, q, then, text="", allow_empty=False: \
             asked.append(then)
@@ -568,7 +628,18 @@ class GtkSmokeTest(_GtkBase):
         pump(timeout=0.3)
         new = [w for w in Gtk.Window.list_toplevels() if w not in before]
         self.assertEqual(len(new), 1)
-        self.assertIn(i18n._("made_by_long"), new[0].get_comments())
+        # the cards (gtk/about.py), as Qt's: every label's words, made_by_long among them
+        words = []
+
+        def walk(w):
+            if isinstance(w, Gtk.Label):
+                words.append(w.get_label())
+            child = w.get_first_child()
+            while child is not None:
+                walk(child)
+                child = child.get_next_sibling()
+        walk(new[0])
+        self.assertIn(i18n._("made_by_long"), words)
         new[0].close()
 
     def test_edit_my_profile(self):
@@ -955,6 +1026,179 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(part.more_btn.get_label(),
                          i18n._("older_from_origin", host=part.host))
 
+    def test_choose_answers_only_on_ok(self):
+        from fedtail.frontends.gtk.dialogs import choose
+        got = []
+        w = choose(self.win, "t", "q", [("a", "A"), ("b", "B")], lambda *a: got.append(a))
+        self.assertIsNone(w.tick)
+        w.radios[1][1].set_active(True)
+        w.ok.emit("clicked")
+        self.assertEqual(got, [("b", False)])
+        w = choose(self.win, "t", "q", [("a", "A")], lambda *a: got.append(a), check="x")
+        w.close()  # closed: no answer
+        self.assertEqual(len(got), 1)
+
+    def test_profile_posts_replies_media(self):
+        """Above someone's posts, as in Qt: posts (no replies to others), all, media."""
+        self.world.add(status("014", BOB, "gone", "X", minute=14, text="чужой разговор"))
+        pic = self.world.statuses["013"]
+        pic["media_attachments"] = [{"id": "m", "type": "image", "url": "https://e.test/a.png"}]
+        self.win.open_account("B")
+        self.assertTrue(pump(lambda: getattr(self.win.accounts.get("B"), "posts_part",
+                                             None) is not None, 5))
+        part = self.win.accounts["B"].posts_part
+        self.assertEqual(part.show, "posts")
+        ids = lambda: sorted(real(c.entry).id for c in part.cards)  # noqa: E731
+        self.assertTrue(pump(lambda: ids() == ["011"], 5), ids())
+        part.show_buttons["all"].set_active(True)
+        self.assertTrue(pump(lambda: ids() == ["011", "013", "014"], 5), ids())
+        part.show_buttons["media"].set_active(True)
+        self.assertTrue(pump(lambda: ids() == ["013"], 5), ids())
+        self.assertFalse(part.show_buttons["all"].get_active())
+
+    def test_rest_of_the_api(self):
+        """0.20, as in Qt: a filter edited, a cover for a video, an edited post's
+        descriptions, a report by the server's rules, the profile's newer switches and
+        tag suggestions, the posts sharing a link, the server's terms, blocks and
+        translator."""
+        from fedtail.frontends.common import server, timed
+        from fedtail.frontends.gtk import dialogs, postinfo
+
+        # a filter edited: the window's answer, then saved
+        made = self.core.add_filter("шум", ["крипта", "nft"]).result()
+        dlg = dialogs.silence(self.win)
+        self.assertTrue(pump(lambda: dlg.filters.get_row_at_index(0) is not None, 5))
+        dlg.filters.select_row(dlg.filters.get_row_at_index(0))
+        dlg.change_filter()  # the edit window, filled from the filter
+        ed = dlg.editing
+        self.assertEqual(ed.words.get_text(), "крипта, nft")
+        ed.words.set_text("nft, web3")
+        ed.action.set_selected(1)
+        ed.ok.emit("clicked")
+        self.assertTrue(pump(lambda: self.world.filters[made["id"]]["filter_action"] == "hide",
+                             5))
+        self.assertEqual(sorted(k["keyword"] for k in self.world.filters[made["id"]]["keywords"]),
+                         ["nft", "web3"])
+        self.assertEqual(timed.filter_changes("", "a, b", "warn", [], timed.KEEP),
+                         {"title": None, "words": ["a", "b"], "action": "warn",
+                          "contexts": ["home"], "expires_in": None})
+        dlg.close()
+
+        # a video gets a cover; it goes with it to the server (the 4th part)
+        c = self.win.compose_panel()
+        c.add_paths(["/tmp/clip.mp4"])
+        c.pick_cover("/tmp/clip.mp4", "/tmp/cover.jpg")
+        self.assertEqual(c._media_list(), [["/tmp/clip.mp4", "", None, "/tmp/cover.jpg"]])
+        c.covers.clear()
+        c.media.clear()
+
+        # my post edited: its picture's description changed, the picture stays
+        mine = self.world.add(status("121", ME, text="с картинкой"), home=True)
+        mine["media_attachments"] = [{"id": "m7", "type": "image", "description": "старое",
+                                      "url": "https://example.test/m7.png"}]
+        self.core.store.put_statuses([mine])
+        ed = self.win.compose_panel(edit=self.view.by_id("121"))
+        self.assertTrue(pump(lambda: ed._text() == "с картинкой", 5))
+        self.assertEqual(len(ed.remote), 1)
+        self.assertEqual(ed.media_changes(), {})
+        ed.remote[0][1].set_text("новое")
+        self.assertEqual(ed.media_changes(), {"m7": ("новое", None)})
+        ed.send()
+        self.assertTrue(pump(lambda: self.world.statuses["121"]["media_attachments"][0]
+                             .get("description") == "новое", 5))
+
+        # a report by the server's rules: they come when "breaks the rules" is picked
+        rep = postinfo.report(self.win, self.view.by_id("011"))
+        rep.kind.set_selected(2)  # violation
+        self.assertTrue(pump(lambda: rep.rule_ticks, 5))
+        rep.send(None)  # no rule ticked: not sent
+        self.assertEqual(self.world.reports, [])
+        rep.rule_ticks[0][1].set_active(True)
+        rep.send(None)
+        self.assertTrue(pump(lambda: self.world.reports, 5))
+        self.assertEqual(self.world.reports[-1][4:], ("violation", ["1"]))
+
+        # the profile's newer switches, sent only when changed; tags to put forward
+        prof = self.win.edit_profile()
+        self.assertTrue(pump(lambda: prof.loaded is not None and prof.suggest_buttons, 5))
+        self.assertEqual(prof.changes(), {})
+        prof.hide_collections.set_active(True)
+        prof.attribution.set_text("blog.example, news.example")
+        self.assertEqual(prof.changes(), {"hide_collections": True,
+                                          "attribution_domains": ["blog.example",
+                                                                  "news.example"]})
+        prof.suggest_buttons[0].emit("clicked")
+        self.assertTrue(pump(lambda: "fedi" in self.world.my_tags, 5))
+        prof.save()
+        self.assertTrue(pump(lambda: self.world.profile_updates, 5))
+        self.assertTrue(self.world.profile_updates[-1]["hide_collections"])
+
+        # who else shared a link: a tab of their posts; none — said so
+        self.world.statuses["011"]["card"] = {"url": "https://news.example/a"}
+        page = self.win.open_link_posts("https://news.example/a")
+        self.assertTrue(pump(lambda: page.link_more.get_parent() is not None, 5))
+        empty = self.win.open_link_posts("https://nothing.example/")
+        self.assertTrue(pump(lambda: empty.link_info.get_text() == i18n._("link_posts_none"),
+                             5))
+
+        # the server about itself: terms, whom it cut off, its translator
+        info = self.view.server_info().result()
+        page = server.server_more_html(info, lambda h: h)
+        for words in (i18n._("server_terms"), "bad.example", i18n._("server_block_suspend"),
+                      i18n._("server_translates", langs="en → ru, de; ru → en")):
+            self.assertIn(words, page)
+
+    def test_timed_filters_hidden_posts_and_list_replies(self):
+        from fedtail.frontends.gtk import dialogs, lists
+        from fedtail.protocols.mastodon import adapter
+        dlg = dialogs.silence(self.win)
+        dlg.words.set_text("спойлер")
+        dlg.span.set_selected(2)  # a day
+        dlg.add.emit("clicked")
+        self.assertTrue(pump(lambda: self.world.filters, 5))
+        made = next(iter(self.world.filters.values()))
+        self.assertEqual(made["expires_in"], 86400)
+        when = adapter.word_filter(made).expires.astimezone().strftime("%d.%m.%Y %H:%M")
+
+        def rows():
+            out, r = [], dlg.filters.get_first_child()
+            while r is not None:
+                out.append(r.get_child().get_label())
+                r = r.get_next_sibling()
+            return out
+        self.assertTrue(pump(lambda: any(i18n._("filter_until", until=when) in t
+                                         for t in rows()), 5), rows())
+        # hide this post: in the ⋯ menu (common/actions.py), asked once
+        from fedtail.frontends.common import actions
+        card = self._lane("home").rows["011"]
+        self.assertIn("fedtail:hidepost/011",
+                      [i.url for i in actions.menu(card.entry, card._actx())])
+        self.win.confirm = lambda title, text, then, yes="": then()
+        self.win.on_link("fedtail:hidepost/011")
+        self.assertTrue(pump(lambda: "011" in self.core.hidden_posts, 5))
+        dlg.reload()
+        self.assertTrue(pump(lambda: any(i18n._("posts_n", n=1) in t for t in rows()), 5),
+                        rows())
+        dlg.close()
+        # whose replies a list shows: three radio buttons in the list's menu
+        made = []
+        self.win.call(self.view.create_list("Друзья"), made.append)
+        self.assertTrue(pump(lambda: made and f"list:{made[0].id}" in self.win.lane_rows, 5))
+        pop = lists.lane_menu(self.win, self.win.lane_rows[f"list:{made[0].id}"])
+        radios = [b for b in _walk(pop) if isinstance(b, Gtk.CheckButton)
+                  and b.get_label() in dict(self._policies()).values()]
+        self.assertEqual(len(radios), 3)
+        self.assertTrue(radios[0].get_active())  # "list", the server's default
+        radios[2].set_active(True)
+        self.assertTrue(pump(lambda: self.world.lists[made[0].id]["replies_policy"] == "none",
+                             5))
+        pop.popdown()
+
+    @staticmethod
+    def _policies():
+        from fedtail.frontends.common import timed
+        return timed.replies_policies()
+
     def test_a_group_of_tags(self):
         """Several tags typed into the search: their tab, as Qt's; "＋ to lanes" puts it
         in the sidebar, and its right-click menu takes it out."""
@@ -1044,9 +1288,15 @@ class GtkPanelsTest(_GtkBase):
         p = player.VideoPlayer(self.win, vids, 0)
         self.assertIs(self.win.player, p)
         self.assertTrue(p.next_btn.get_visible())
+        self.assertTrue(p.pause_btn.get_visible())  # as Qt's: ⏸ in the bar
+        self.assertEqual(p.keys.get_text(), i18n._("player_keys_many"))
+        p.toggle_pause()
+        self.assertEqual(p.pause_btn.get_label(), "⏸" if p.stream.get_playing() else "▶")
         p.go(1)  # the gifv: a silent loop
         self.assertTrue(p.stream.get_loop())
         self.assertTrue(p.stream.get_muted())
+        self.assertFalse(p.pause_btn.get_visible())  # a gif: no pause, no sound
+        self.assertEqual(p.keys.get_text(), i18n._("gif_keys_many"))
         p.toggle_mute()
         self.assertFalse(p.stream.get_muted())
         p.open_outside()

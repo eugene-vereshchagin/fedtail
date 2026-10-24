@@ -48,6 +48,8 @@ class PlacesTest(unittest.TestCase):
         self.w.lists["L1"] = {"title": "Friends", "exclusive": False, "members": {"B"}}
         self.core._refresh_lists()
         args["list_people"] = self.view.lists[0].id
+        args["filter"] = self.core.add_filter("noise", ["nft"]).result()["id"]
+        args["link"] = "https://news.example/a"
         for name in PLACES:
             with self.subTest(place=name):
                 try:
@@ -75,6 +77,42 @@ class PlacesTest(unittest.TestCase):
         p = self.page("silence", tab="domains")
         self.press(p, key="undo_domain")
         self.assertNotIn("bad.example", self.w.blocked_domains)
+
+    def test_filter_for_a_while(self):
+        p = self.page("silence")
+        f = {x.name: x for x in p.form}["expires"]
+        self.assertEqual([c[0] for c in f.choices], ["0", "3600", "86400", "604800", "2592000"])
+        self.assertEqual((f.label, f.tip), (i18n._("filter_for"), i18n._("filter_for_q")))
+        self.press(p, key="filter_add", values={"words": "spoilers", "expires": "86400"})
+        made = list(self.w.filters.values())[-1]
+        self.assertEqual(made["expires_in"], 86400)
+        row = self.page("silence").rows[0]
+        self.assertIn(i18n._("filter_until", until="")[:3], row.line)
+        self.press(self.page("silence"), key="filter_delete")
+        self.press(self.page("silence"), key="filter_add",
+                   values={"words": "x", "expires": "never"})  # unreadable: for good
+        self.assertIsNone(list(self.w.filters.values())[-1]["expires_in"])
+        self.view.hide_post("010").result(timeout=10)  # a filter of single posts: counted
+        lines = [r.line for r in self.page("silence").rows]
+        self.assertTrue(any(i18n._("posts_n", n=1) in x for x in lines), lines)
+
+    def test_lists_replies_policy(self):
+        p = self.page("lists")
+        f = {x.name: x for x in p.form}["replies"]
+        self.assertEqual([c[0] for c in f.choices], ["list", "followed", "none"])
+        self.press(p, key="new", values={"title": "Friends", "replies": "followed"})
+        lid = self.view.lists[0].id
+        self.assertEqual(self.w.lists[lid]["replies_policy"], "followed")
+        row = self.page("lists").rows[0]
+        self.assertIn(i18n._("replies_policy_followed"), row.line)
+        out = self.pl.act("lists", "replies", lid)  # followed → none
+        self.assertIn(i18n._("replies_policy_none"), out.message)
+        self.assertEqual(self.w.lists[lid]["replies_policy"], "none")
+        self.pl.act("lists", "replies", lid)  # none → list
+        self.assertEqual(self.w.lists[lid]["replies_policy"], "list")
+        self.press(self.page("lists"), key="new", values={"title": "Other", "replies": "odd"})
+        other = [x for x in self.view.lists if x.title == "Other"][0]
+        self.assertEqual(self.w.lists[other.id]["replies_policy"], "list")  # the default
 
     def test_lists(self):
         p = self.page("lists")

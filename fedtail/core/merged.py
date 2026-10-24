@@ -344,6 +344,11 @@ class MergedCore:
         core, _tag, own = self.own(status)
         return core.delete(own)
 
+    def report(self, status, *a, **kw):
+        """To the moderators of the server of the account that has the post."""
+        core, _tag, own = self.own(status)
+        return core.report(own, *a, **kw)
+
     def source(self, status):
         core, _tag, own = self.own(status)
         return core.source(own)
@@ -423,6 +428,14 @@ class MergedCore:
                 target.store.put_statuses([st])
                 return st
         raise LookupError(_("act_as_none", acct=who))
+
+    def hide_post(self, status):
+        core, _tag, own = self.own(status)
+        return core.hide_post(own)
+
+    def unhide_post(self, status):
+        core, _tag, own = self.own(status)
+        return core.unhide_post(own)
 
     def thread(self, sid):
         core, tag, own = self.split(sid)
@@ -525,16 +538,16 @@ class MergedCore:
     def follow(self, acc_id, on=True):
         return self._acc("follow", acc_id, on)
 
-    def mute(self, acc_id, on=True):
-        return self._acc("mute", acc_id, on)
+    def mute(self, acc_id, on=True, **kw):
+        return self._acc("mute", acc_id, on, **kw)
 
     def block(self, acc_id, on=True):
         return self._acc("block", acc_id, on)
 
-    def account_statuses(self, acc_id, max_id=None):
+    def account_statuses(self, acc_id, max_id=None, show="all"):
         core, tag, own = self.split(acc_id)
         _c, _t, mid = self.split(max_id) if max_id else (None, None, None)
-        return self._then(core.account_statuses(own, mid),
+        return self._then(core.account_statuses(own, mid, show=show),
                           lambda page: [self.wrap(tag, s) for s in page])
 
     def followed_among(self, accounts):

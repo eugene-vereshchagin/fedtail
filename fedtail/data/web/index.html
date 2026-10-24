@@ -7,6 +7,7 @@
 <meta name="color-scheme" content="light dark">
 <title>fedtail</title>
 <link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/theme.css" id="theme-css">
 </head>
 <body>
 <div id="app">
@@ -51,6 +52,7 @@
     <button id="quote-sel" type="button" class="tool" hidden></button>
     <input id="cw" type="text" hidden>
     <textarea id="text" rows="6"></textarea>
+    <div id="compose-hint" class="muted" hidden></div>
     <div id="attached" hidden></div>
     <div id="pollbox" hidden></div>
     <div id="schedbox" hidden><label><span id="sched-label"></span>
@@ -66,7 +68,21 @@
       <select id="vis"></select>
       <select id="lang"></select>
       <span id="chars"></span>
+      <button id="discard" type="button" class="tool"></button>
+      <button id="preview" type="button" class="tool"></button>
       <button id="send" type="submit" class="primary"></button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="preview-dlg">
+  <form method="dialog">
+    <header class="dlg-head"><h2 id="preview-title"></h2></header>
+    <div id="preview-head" class="muted"></div>
+    <div id="preview-body"></div>
+    <div class="dlg-foot">
+      <button id="preview-back" type="button" class="tool"></button>
+      <button id="preview-send" type="button" class="primary"></button>
     </div>
   </form>
 </dialog>
@@ -75,7 +91,9 @@
   <button id="viewer-prev" type="button" class="nav-btn" hidden>‹</button>
   <button id="viewer-next" type="button" class="nav-btn" hidden>›</button>
   <img id="viewer-img" alt="">
-  <div id="viewer-bar"><span id="viewer-alt"></span> <a id="viewer-open" target="_blank" rel="noopener noreferrer"></a></div>
+  <div id="viewer-bar"><span id="viewer-alt"></span> <a id="viewer-open" target="_blank" rel="noopener noreferrer"></a>
+    <button id="viewer-save" type="button" class="tool"></button></div>
+  <div id="viewer-note"></div>
 </div>
 <div id="toast" role="status" hidden></div>
 <div id="pop" class="pop" role="menu" hidden></div>

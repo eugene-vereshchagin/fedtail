@@ -23,7 +23,7 @@ where you came from; a lane remembers where you stopped and never jumps.
 > **Status: public beta.** Used every day by its author on GoToSocial; Mastodon, Akkoma and
 > Friendica work through the same API. Linux (Debian 13 and newer) first, Windows on trial.
 > Found a bug? [Open an issue](https://github.com/eugene-vereshchagin/fedtail/issues) with `latest.log` — see
-> [docs/TESTING.md](docs/TESTING.md).
+> [docs/en/dev/testing.md](docs/en/dev/testing.md).
 
 **Contents**
 
@@ -62,7 +62,7 @@ fedtail aims to feel like Point on top of the fediverse: you read the feed in or
 lose your place; every comment shows the thread it belongs to; threads are trees numbered
 `/1 /2 …`, whole — replies your server never got are fetched from the author's server;
 thread subscriptions (like `S #abc` on Point) and a command line: `#abc text`, `S #abc`,
-`@user`; private by default. Trying it out: [docs/TESTING.md](docs/TESTING.md).
+`@user`; private by default. Trying it out: [docs/en/dev/testing.md](docs/en/dev/testing.md).
 
 ## One file, no installing
 
@@ -444,9 +444,9 @@ python3 -m unittest discover -s tests -t .   # core tests need no display
 ruff check .
 ```
 
-* [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it is built: modules, threads, the store,
+* [docs/en/dev/architecture.md](docs/en/dev/architecture.md) — how it is built: modules, threads, the store,
   lanes, the poll cycle, events, the Qt frontend, themes, config, tests, recipes.
-* [docs/DEBUGGING.md](docs/DEBUGGING.md) — the logs, and what to send when it breaks.
+* [docs/en/dev/debugging.md](docs/en/dev/debugging.md) — the logs, and what to send when it breaks.
 * [docs/en/features.md](docs/en/features.md) — what fedtail does and doesn't, since which
   version, with the config switch for each; [docs/en/comparison.md](docs/en/comparison.md) —
   next to other clients, as a matrix.
@@ -454,7 +454,8 @@ ruff check .
   default.
 * All of these exist in Russian too (`docs/ru/`) and are built by `python3 tools/docs_build.py`
   from `docs/src/` and the example configs — edit there, a test keeps them in step.
-* [docs/DESIGN.md](docs/DESIGN.md) — the spec and the queue of planned work (Russian).
+* [docs/en/dev/design.md](docs/en/dev/design.md) — the spec and the queue of planned work; everything
+  for developers — [docs/en/dev/](docs/en/dev/index.md) (tools, CI, the test plan, protocols, GTK).
 * [AGENTS.md](AGENTS.md) — the rules in one page, for coding agents and humans in a hurry.
 * [CONTRIBUTING.md](CONTRIBUTING.md) — reporting bugs, proposing changes, running the tests.
 
@@ -466,7 +467,7 @@ and per hour, `latest.log` the current one (`debug.log_dir`). Attach `latest.log
 `python3 -m fedtail --bug-report` and send the archive it makes in your home folder — logs,
 crash traces, config and a system summary, without the token and the database. A frozen
 window: `kill -USR1 <pid>` first, it writes where every thread is stuck. Details in
-[docs/DEBUGGING.md](docs/DEBUGGING.md).
+[docs/en/dev/debugging.md](docs/en/dev/debugging.md).
 
 ## Who wrote it
 

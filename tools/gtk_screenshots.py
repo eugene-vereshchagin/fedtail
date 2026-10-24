@@ -10,7 +10,7 @@ the desktop's settings, the fonts' way). --sizes: the first theme also at the si
 real screens, landscape and portrait, and at shares of the screen — sizes.txt says what
 each did (the lane wider than its place, the window refusing to be that small).
 
-The GTK twin of tools/screenshots.py (docs/GTK.md), on the same made-up world
+The GTK twin of tools/screenshots.py (docs/en/dev/gtk.md), on the same made-up world
 (tools/showcase.py): a theme in Qt and in GTK can be put side by side.
 """
 

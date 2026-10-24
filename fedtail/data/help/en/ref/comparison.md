@@ -12,6 +12,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Bots in a lane of their own | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Personal lanes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Lists as lanes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   | ✓ |   |   |   |
+| Whose replies a list shows | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |
 | Who is in a list leaves the general lanes | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who is in a list; your own order of lists | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
 | Into a list — the author or the booster; only people you follow | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -95,6 +96,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Your own and other people's profiles | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| In a profile: posts, posts and replies, media | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
+| Who else shared a link | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Pinned posts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Featured tags and recommended people | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | A little-known person's profile — from their server | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |   |   |
@@ -107,6 +110,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 
 | What | fedtail | Mastodon web | Tusky | Ivory | Phanpy | Elk | Tokodon | Ice Cubes | Fedilab | Sengi | Megalodon | tut | Tuba | Whalebird |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A video's cover; picture descriptions in a post's edit | ✓ | ✓ |   | ✓ |   | ✓ |   |   |   |   |   |   |   |   |
 | The compose panel and drafts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Visibility: private by default, a reply never wider than the post | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Preview before sending | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
@@ -135,6 +139,10 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Follows and follow requests | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Hide a person's boosts; the languages of a follow | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |
 | Mute, block, word filters | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mute for a while; posts only | ✓ | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |
+| Hide a single post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Editing a filter | ✓ | ✓ |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |
+| Report: which rules it breaks | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | Block a whole server | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 | Report to the moderators | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A private note on a person | ✓ | ✓ |   | ✓ |   |   |   | ✓ |   |   |   |   |   |   |
@@ -144,6 +152,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | The server's suggestions, the profile directory | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | About the server | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 | Your profile | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |
+| Profile: hide follows, posts found by search, article authorship, tag suggestions | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| About the server: terms, whom it cut off, its translator | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Post visibility as set on the server | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
 
 ## Notifications and activity
@@ -160,6 +170,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Server announcements | ✓ | ✓ |   |   | ✓ | ✓ |   |   |   |   | ✓ |   |   |   |
 | The unread number on the icon | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |   |   |
 | Direct messages read here are read on the server too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Push notifications (Web Push, UnifiedPush) | ◐ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | The server's grouped notifications (v2) | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
 ## Several accounts
@@ -198,4 +209,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 134 compared.
+Only in fedtail — **33** features of the 145 compared.

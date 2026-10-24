@@ -313,6 +313,16 @@ class SmallShapesTest(unittest.TestCase):
         self.assertEqual((held.id, held.count, held.who.handle, held.last.id),
                          ("R1", 3, "b@x", "9"))
 
+    def test_word_filter_ends_and_single_posts(self):
+        f = adapter.word_filter({"id": "F", "title": "t", "filter_action": "hide",
+                                 "keywords": [{"keyword": "a"}],
+                                 "expires_at": "2030-01-02T03:04:05Z",
+                                 "statuses": [{"id": "1", "status_id": "9"}]})
+        self.assertEqual((f.action, f.words, f.posts), ("hide", ("a",), 1))
+        self.assertEqual(f.expires, datetime(2030, 1, 2, 3, 4, 5, tzinfo=UTC))
+        plain = adapter.word_filter({"id": "G"})
+        self.assertEqual((plain.expires, plain.posts, plain.action), (None, 0, "warn"))
+
 
 class LayeringTest(unittest.TestCase):
     def test_the_model_knows_no_protocol(self):

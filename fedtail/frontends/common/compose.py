@@ -266,7 +266,11 @@ def language_label(code, native=None):
     toolkit's own name for it, or None (then NATIVE, then the code)."""
     name = LANG_NAMES.get(code) or (native(code) if native else None) or NATIVE.get(code) \
         or code
-    return f"{name[:1].upper()}{name[1:]} ({code})"
+    first = name[:1]
+    # Georgian has no capitals in running text: str.upper() makes Mkhedruli Mtavruli
+    if not "\u10d0" <= first <= "\u10ff":
+        first = first.upper()
+    return f"{first}{name[1:]} ({code})"
 
 
 def languages(cfg, added=()):

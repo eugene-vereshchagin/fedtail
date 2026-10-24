@@ -74,6 +74,17 @@ android {
             keyAlias = "dev"
             keyPassword = "fedtail-dev"
         }
+        // the release key never enters the repository: CI writes it from its secrets
+        // (ANDROID_KEYSTORE, base64) and gives the passwords as environment variables —
+        // android/README.md, "Releases"
+        System.getenv("FEDTAIL_KEYSTORE")?.takeIf { File(it).isFile }?.let { path ->
+            create("release") {
+                storeFile = File(path)
+                storePassword = System.getenv("FEDTAIL_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("FEDTAIL_KEY_ALIAS")
+                keyPassword = System.getenv("FEDTAIL_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -84,6 +95,7 @@ android {
         }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

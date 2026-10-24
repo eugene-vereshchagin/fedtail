@@ -1,5 +1,5 @@
 """The split layout in GTK (ui.layout = "split", or --layout split), as the Qt window
-has it (docs/LAYOUTS.md): the roster — a window of its own with the lanes, followed
+has it (docs/en/dev/layouts.md): the roster — a window of its own with the lanes, followed
 threads, private talks and people, as a messenger's contact list — and the main window
 as the messages window: a tab per lane, thread, profile or talk, the author of the post
 under the pointer in a bar over a lane, and an input line at the bottom that answers

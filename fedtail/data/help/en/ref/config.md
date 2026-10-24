@@ -101,6 +101,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 
 | Key | Default | What it does |
 |---|---|---|
+| `ui.tray` | `true` | The tray icon (qt, gtk). false — no icon at all: notifications then go through the desktop only (notify-send), the cross closes the program, Esc with ui.esc = "tray" minimizes. |
 | `ui.close_to_tray` | `true` | The cross hides the window to the tray instead of closing the program. |
 | `ui.esc` | `"curtain"` | Esc closes what's on top (a picture, the search), and the last Esc:<br>"curtain" — draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right; nothing is marked read — open it in the morning and the new has piled up;<br>"tray" — takes the window to the tray at once (without a tray — minimizes it);<br>"off" — does nothing. |
 | `ui.start_lane` | `"none"` | What is open at start:<br>"none" — nothing: every lane behind the curtain, the counts on the left (Enter opens the last one);<br>"last" — the lane open last time;<br>a lane's name — always that one: "home", "replies", "subs"… (as in [lanes]). |
@@ -179,6 +180,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `feed.sensitive_media` | `"hide"` | Pictures and videos the author marked "sensitive" (without a content warning, CW):<br>"hide" — under a cover, a click shows them; "show" — seen at once. Under a CW they are hidden together with the text anyway. |
 | `feed.profile_pinned` | `true` | Pinned posts — at the top of a profile, marked 📌. false — the profile simply in time order. |
 | `feed.translate` | `true` | "Translate" in the ⋯ menu of a post in another language — if your server can translate (Mastodon with DeepL or LibreTranslate). The translation — right in the card, with an "original" button. |
+| `feed.translate_all` | `false` | "Translate" on every post, not only those in another language: in your own language too, and on posts with no language given (the server works it out). As in Fedilab. |
+| `feed.profile_show` | `"posts"` | What a profile shows under its header first: "posts" — posts without replies to others (as other clients do), "all" — posts and replies, "media" — only those with pictures and video. Switched right there, above the posts. |
 | `feed.profile_featured` | `true` | In a profile — the person's featured tags ("Often writes about: #tags") and whom they recommend (Mastodon 4.4+). false — don't ask. |
 
 ## 3. Read marks
@@ -365,6 +368,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `debug.leak_samples` | `12` | Leak hunting. With every stats line the log gets a "trend" line: memory, objects, widgets, cards, pictures, threads, files — how many there were at start, how many now and by how much an hour it grows. If any of these grew on each of the last this many checks (12 × stats_minutes = an hour) and by more than crumbs — a "possible leak" warning with the numbers. The first half hour doesn't count: lanes are filling up. Less than 3 isn't allowed. |
 | `debug.object_census` | `true` | In the debugging mode, with every stats line: which Python objects and which Qt widgets were added since the last time and since the start, the fastest growing first ("census" lines). The answer to "memory grows — of what exactly?". Walking all the objects takes a fraction of a second every stats_minutes. false — don't count. |
 | `debug.tracemalloc` | `false` | Memory tracing from the start (tracemalloc): every memory allocation remembers which line of code it came from. Slower and about twice the memory — only for hunting a leak, say overnight. A snapshot — the ≡ menu → "Debugging" → "Memory snapshot": a memory-<time>.txt file in the log folder, who holds the most and what grew since the first snapshot. It can be turned on without a restart there too. |
+| `debug.report_repo` | `""` | Where bug reports go (≡ → "Debugging" → "Collect a report", `--bug-report`, the nightly tools/selfcheck.py): a private git repository, over ssh, with your own keys. "user/repo" — on GitHub, or a full address: "git@host:user/repo.git", "ssh://…". A report goes into reports/YYYY-MM/ as a commit of its own; the older ones aren't downloaded. Nothing is asked (no key or no access — it says so). "" — a file on disk only. This is for the developer and those he gave access: the repository must be private. |
+| `debug.issue_repo` | `""` | Where "Report a bug on GitHub…" leads: the public tracker. Before it opens you see the text — the version, the system and the latest errors, with addresses, nicknames and paths already replaced by placeholders; you may edit it, and you send it yourself in the browser. "" — fedtail's own tracker; "user/repo" — another (your own build, a fork). |
 
 ## 13. In a terminal
 
@@ -389,8 +394,10 @@ The interface in a terminal — `fedtail --ui tui` (or ui.frontend = "tui"): lan
 | `tui.sound` | `"bell"` | Sounds (sound.*) in the terminal: "bell" — the terminal's beep (reaches you over ssh too); "scheme" — the sounds of the ui.theme theme, played by this computer; "off" — silence. |
 | `tui.lanes_width` | `26` | The width of the lanes column, in characters. |
 | `tui.show_context` | `true` | Over a reply — a line "↳ @who: the start of what it answers". false — without it. |
-| `tui.pictures` | `"inline"` | Pictures in the terminal, drawn with half blocks (needs Pillow, python3-pil; a true colour terminal). "inline" — a post's first picture small right in the lane, v — all of them full screen; "key" — on v only; "off" — none (o — open the post in the browser). |
+| `tui.pictures` | `"auto"` | Pictures in the terminal (need Pillow, python3-pil). "auto" — real pictures where the terminal can show them: sixel (Konsole, WezTerm, foot, xterm in vt340 mode) or the kitty protocol (kitty), with the textual-image package installed (pip install textual-image); elsewhere drawn with half blocks (any true colour terminal). A post's first picture small right in the lane, v — all of them big. "blocks" — half blocks always; "key" — on v only; "off" — none (o — open the post in the browser). |
 | `tui.picture_rows` | `8` | How high a picture in the lane is, in lines. |
+| `tui.viewer` | `"auto"` | v on a post with pictures: "auto" — shown by chafa, timg or kitty's icat when one of them is installed (the interface steps aside, Enter brings it back): real size and colours in Konsole, kitty, WezTerm and the rest; without them — in the interface itself. "app" — always in the interface. |
+| `tui.video` | `"auto"` | Video and gifs (v on a post with a video, Enter on it among the pictures) play in mpv: "auto" — in a window of its own on a desktop, drawn right in the terminal otherwise (over ssh: sixel, kitty, or coloured text); "window" — always a window; "terminal" — always in the terminal; "browser" — open in the browser. No mpv — the browser, and it says so. |
 
 ## 14. In a browser
 

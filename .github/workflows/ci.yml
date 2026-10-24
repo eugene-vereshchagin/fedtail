@@ -2,9 +2,6 @@ name: CI
 
 on:
   push:
-    # the android branch builds only its APK (android.yml): the desktop's whole run goes
-    # when it comes back into main
-    branches-ignore: [android]
   pull_request:
   # by hand (Actions → CI → Run workflow): the gallery is made only this way
   workflow_dispatch:
@@ -19,6 +16,30 @@ jobs:
           python-version: "3.13"
       - run: pip install ruff
       - run: ruff check --output-format=github .
+
+  # fedtail-sync faces the internet: its tests, every line of it covered, and a static
+  # check (bandit, and ruff's bandit rules over the sync code) must pass — on the oldest
+  # Python the server promises too
+  security:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install bandit ruff requests cryptography
+      - run: bandit -r syncserver fedtail/core/sync -ll
+      - run: ruff check --select S --output-format=github syncserver fedtail/core/sync
+      # the server's own tests (the standard library only: they leave with it when it
+      # moves to a repo of its own), then the client against it
+      - run: python -m unittest discover -v -s syncserver/tests -t syncserver
+      - if: matrix.python != '3.11'  # sys.monitoring: 3.12+
+        run: python syncserver/tools/coverage.py --fail-under 100
+      - run: python -m unittest -v tests.test_sync
 
   # known vulnerabilities in what fedtail runs on (requests, urllib3, PySide6, textual):
   # reported as warnings, never holding a release — a new CVE upstream is news, not a
@@ -157,7 +178,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-requests python3-pyside6.qtwidgets python3-pyside6.qtdbus
-      - name: GTK 4 and a display for the GTK tests (docs/GTK.md)
+      - name: GTK 4 and a display for the GTK tests (docs/en/dev/gtk.md)
         run: apt-get install -y --no-install-recommends python3-gi gir1.2-gtk-4.0 xvfb xauth
       - name: Tests
         shell: bash
@@ -236,12 +257,70 @@ jobs:
           git -c user.name=ci -c user.email=ci@localhost commit -qm "screenshots for ${GITHUB_SHA}"
           git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" screenshots
 
+  # the phone's APK for a release: built and signed only when fedtail/__init__.py says a
+  # release version (the dev builds, signed with the dev key, are android.yml's). Without
+  # the release key in the secrets the release goes out without the APK, with a warning
+  apk:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # the build number: commits since the tag (android/app/build.gradle.kts)
+      - name: A release version, a key?
+        id: want
+        env:
+          KEY: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          VER=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('fedtail/__init__.py').read()).group(1))")
+          case "$VER" in *dev*) echo "development version $VER: no release APK"; exit 0;; esac
+          if git rev-parse "v$VER" >/dev/null 2>&1; then echo "v$VER already tagged"; exit 0; fi
+          if [ -z "$KEY" ]; then echo "::warning::no ANDROID_KEYSTORE secret: fedtail $VER goes out without the APK"; exit 0; fi
+          echo "build=true" >> "$GITHUB_OUTPUT"
+      - if: steps.want.outputs.build == 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - if: steps.want.outputs.build == 'true'
+        uses: actions/setup-python@v6
+        id: py
+        with:
+          python-version: "3.12"
+      - if: steps.want.outputs.build == 'true'
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build the release APK
+        if: steps.want.outputs.build == 'true'
+        working-directory: android
+        env:
+          CHAQUOPY_BUILD_PYTHON: ${{ steps.py.outputs.python-path }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
+          FEDTAIL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          FEDTAIL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          FEDTAIL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          export FEDTAIL_KEYSTORE="$RUNNER_TEMP/release.keystore"
+          echo "$KEYSTORE_B64" | base64 -d > "$FEDTAIL_KEYSTORE"
+          ./gradlew --no-daemon assembleRelease 2>&1 | tee ../gradle.log
+          rm -f "$FEDTAIL_KEYSTORE"
+          ls app/build/outputs/apk/release/
+      - name: Why it failed
+        if: failure() && steps.want.outputs.build == 'true'
+        run: python3 .github/android_why.py gradle.log
+      - if: steps.want.outputs.build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedtail-android
+          path: android/app/build/outputs/apk/release/*.apk
+
   # a release version in fedtail/__init__.py (no ".dev") that has no tag yet:
   # once everything is green, tag the commit vX.Y.Z and publish a GitHub release
   # with that version's CHANGELOG section as the notes
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, test, debian, windows-build, linux-build, deb]
+    needs: [lint, security, test, debian, windows-build, linux-build, deb, apk]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -274,8 +353,12 @@ jobs:
           cp built/fedtail-windows/fedtail.exe "fedtail-$VER-windows.exe"
           cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
           cp built/fedtail-deb/fedtail_*_all.deb .
+          files=("fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64" fedtail_*_all.deb)
+          # the phone's, when the release key was there to sign it (the apk job)
+          apk=$(ls built/fedtail-android/*.apk 2>/dev/null | head -1)
+          if [ -n "$apk" ]; then cp "$apk" "fedtail-$VER-android.apk"; files+=("fedtail-$VER-android.apk"); fi
           gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag \
-            "fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64" fedtail_*_all.deb
+            "${files[@]}"
           echo "released=true" >> "$GITHUB_OUTPUT"
       # the site (a repo of its own) takes the docs and the download links from the
       # latest release tag: rebuild it now. The secret is the Cloudflare Workers Builds

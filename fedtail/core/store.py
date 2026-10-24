@@ -227,6 +227,8 @@ class Store:
                 "UPDATE statuses SET reply_to = json_extract(data, '$.in_reply_to_id'), "
                 "author = json_extract(data, '$.account.id')")
         self.db.execute("CREATE INDEX IF NOT EXISTS statuses_reply_to ON statuses (reply_to)")
+        # my own posts, found fast: my direct messages go into "Direct" (app._carry_my_direct)
+        self.db.execute("CREATE INDEX IF NOT EXISTS statuses_author ON statuses (author)")
         if "touched" not in cols:  # v5: when a post was last stored, for gc()'s grace time
             self.db.execute("ALTER TABLE statuses ADD COLUMN touched TEXT NOT NULL DEFAULT ''")
             self.db.execute("UPDATE statuses SET touched=?", (now_iso(),))
@@ -644,16 +646,23 @@ class Store:
     def _bump(self, source):
         self.items_version[source] = self.items_version.get(source, 0) + 1
 
+    # items put in by fedtail itself (my direct messages in the mentions stream: "mine:"
+    # + the post's id) are no place in the server's list to page from
+    LOCAL_ITEM = "mine:%"
+
     def newest_item(self, source):
+        """The server's id to ask for newer ones from (None — nothing of its yet)."""
         with self.lock:
             row = self.db.execute("SELECT item_id FROM items WHERE source=? "
-                                  "ORDER BY sort DESC LIMIT 1", (source,)).fetchone()
+                                  "AND item_id NOT LIKE ? ORDER BY sort DESC LIMIT 1",
+                                  (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
     def oldest_item(self, source):
         with self.lock:
             row = self.db.execute("SELECT item_id FROM items WHERE source=? "
-                                  "ORDER BY sort ASC LIMIT 1", (source,)).fetchone()
+                                  "AND item_id NOT LIKE ? ORDER BY sort ASC LIMIT 1",
+                                  (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
     def count_items(self, source):
@@ -989,6 +998,21 @@ class Store:
             if self._read is not None:
                 self._read.update(ids)
             self.read_version += 1
+
+    def my_direct_outside(self, source, limit=200):
+        """My direct messages stored (however they came: sent from here, a thread, my
+        posts, a conversation) that the source has no item of yet: [status], newest
+        first."""
+        if not self.me_id:
+            return []
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT data FROM statuses s WHERE s.author = ? "
+                "AND json_extract(s.data, '$.visibility') = 'direct' "
+                "AND NOT EXISTS (SELECT 1 FROM items i WHERE i.source = ? "
+                "AND i.status_id = s.id) ORDER BY s.created_at DESC LIMIT ?",
+                (self.me_id, source, limit)).fetchall()
+        return [json.loads(r[0]) for r in rows]
 
     def mark_mine_read(self):
         """Every stored post of mine read (ones stored before this rule). How many."""

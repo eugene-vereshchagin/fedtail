@@ -76,7 +76,13 @@ from .notify import Notifier, icon_path
 from .opener import open_path
 from .profile import ProfileDialog
 from .silence import SilenceDialog
-from .social import AccountsWidget, QuotesWidget, ServerInfoDialog, TrendsWidget
+from .social import (
+    AccountsWidget,
+    LinkPostsWidget,
+    QuotesWidget,
+    ServerInfoDialog,
+    TrendsWidget,
+)
 from .viewer import ImageOverlay
 
 log = logging.getLogger(__name__)
@@ -277,6 +283,11 @@ class _LinkHost:
         got, ok = QInputDialog.getText(self.win, title, question, text=text)
         if ok and (got.strip() or allow_empty):
             then(got)
+
+    def choose(self, title, text, options, done, check=None):
+        """One of a few (common/timed.py: how long a mute lasts, posts only)."""
+        from .dialogs import choose
+        return choose(self.win, title, text, options, done, check=check)
 
     def redrafted(self, d):
         self.win._redrafted(d)
@@ -514,7 +525,7 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
                 lambda r=i: r < len(self.lane_order) and self.select_lane(self.lane_order[r]))
 
-        if QSystemTrayIcon.isSystemTrayAvailable():
+        if self.cfg["ui"].get("tray", True) and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
             menu = QMenu(self)
             menu.addAction(_("show"), self.show_raise)
@@ -1028,6 +1039,7 @@ class MainWindow(QMainWindow):
         whats.setToolTip(_("whats_this_tip"))
         whats.toggled.connect(self.hints.set_on)
         m.setToolTipsVisible(True)
+        m.addAction(_("issue_menu"), self.report_issue)
         m.addAction(_("about"), self.about)
         m.addSeparator()
         m.addAction(_("quit") + "\tCtrl+Q", self.quit)
@@ -1286,6 +1298,7 @@ class MainWindow(QMainWindow):
             ex.setToolTip(_("list_exclusive_tip"))
             ex.toggled.connect(lambda on: self.bridge.call(
                 self.core.update_list(x.id, x.title, on)))
+            self._replies_menu(m, x)
             m.addSeparator()
             m.addAction(_("list_delete"), lambda: self.delete_list(x))
         elif name and name.startswith("tags:"):
@@ -1301,6 +1314,27 @@ class MainWindow(QMainWindow):
         else:
             return
         m.exec(self.lanes.mapToGlobal(pos))
+
+    def _replies_menu(self, m, x):
+        """Whose replies the list's lane shows (the server's replies_policy): a submenu
+        of three, the list's own ticked."""
+        from PySide6.QtGui import QActionGroup
+
+        from ..common import timed
+        sub = m.addMenu(_("replies_policy"))
+        sub.setToolTipsVisible(True)
+        sub.menuAction().setToolTip(_("replies_policy_tip"))
+        group = QActionGroup(sub)
+        now = x.replies or "list"  # the server's default when it doesn't say
+        for key, label in timed.replies_policies():
+            a = sub.addAction(label)
+            a.setCheckable(True)
+            a.setChecked(key == now)
+            a.setToolTip(_("replies_policy_tip"))
+            group.addAction(a)
+            a.triggered.connect(lambda _c=False, k=key: k != now and self.bridge.call(
+                self.core.update_list(x.id, x.title, x.exclusive, replies_policy=k)))
+        return sub
 
     def open_list_people(self, x):
         """Who is in a list, a tab of people; each can be taken out right there."""
@@ -1886,6 +1920,15 @@ class MainWindow(QMainWindow):
         w = QuotesWidget(self, post)
         self._add_tab(w, w.title)
 
+    def open_link_posts(self, url):
+        """Who else shared this link: a tab of their posts (common/links.py asks)."""
+        for w in self.extra_tabs():
+            if isinstance(w, LinkPostsWidget) and w.url == url:
+                self._front(w)
+                return
+        w = LinkPostsWidget(self, url)
+        self._add_tab(w, w.title)
+
     def open_tag(self, tag):
         for w in self.extra_tabs():
             if isinstance(w, TagWidget) and w.tag.lower() == tag.lower():
@@ -2276,6 +2319,30 @@ class MainWindow(QMainWindow):
             kind.addItem(_("report_" + key), key)
         kind.setCurrentIndex(3)
         lay.addWidget(kind)
+        # "Breaks the server's rules": which ones (the server's list, ticked)
+        rules_box = QWidget()
+        rules_lay = QVBoxLayout(rules_box)
+        rules_lay.setContentsMargins(0, 0, 0, 0)
+        rules_lay.addWidget(QLabel(_("report_rules")))
+        rule_ticks = []  # (rule id, QCheckBox)
+        rules_box.setVisible(False)
+        lay.addWidget(rules_box)
+
+        def got_rules(info):
+            for rid, (text, _hint) in zip(info.rule_ids, info.rules, strict=False):
+                box = QCheckBox(text)
+                box.setToolTip(_hint or text)
+                rule_ticks.append((rid, box))
+                rules_lay.addWidget(box)
+
+        def kind_changed(_i=None):
+            on = kind.currentData() == "violation"
+            rules_box.setVisible(on)
+            if on and not rule_ticks and not dlg.rules_asked:
+                dlg.rules_asked = True
+                self.bridge.call(self.ctx.view.server_info(), ok=got_rules, fail=self.error)
+        dlg.rules_asked = False
+        kind.currentIndexChanged.connect(kind_changed)
         why = QPlainTextEdit()
         why.setPlaceholderText(_("report_why"))
         lay.addWidget(why, 1)
@@ -2291,12 +2358,18 @@ class MainWindow(QMainWindow):
         lay.addWidget(buttons)
 
         def go():
+            ids = [rid for rid, box in rule_ticks if box.isChecked()]
+            if kind.currentData() == "violation" and not ids:
+                self.statusBar().showMessage(_("report_rules_need"), 6000)
+                return
             dlg.accept()
             self.bridge.call(self.ctx.view.report(st, why.toPlainText().strip(), fwd.isChecked(),
-                                              kind.currentData()),
+                                                  kind.currentData(),
+                                                  **({"rule_ids": ids} if ids else {})),
                              ok=lambda _r: self.statusBar().showMessage(_("report_sent"), 6000),
                              fail=self.error)
         send.clicked.connect(go)
+        dlg.kind, dlg.rule_ticks, dlg.send = kind, rule_ticks, go  # (tests)
         dlg.show()
         return dlg
 
@@ -2406,6 +2479,26 @@ class MainWindow(QMainWindow):
             return
         self.statusBar().showMessage(_("debug_report_done", path=str(out)), 15000)
         open_path(out.parent)
+        self.send_report(out)
+
+    def send_report(self, out):
+        """Into debug.report_repo too, if one is set (fedtail/reportsend.py): git and
+        ssh take a while — in the background, the result on the status bar."""
+        from ... import reportsend
+        repo = self.cfg["debug"].get("report_repo", "")
+        if not repo:
+            return
+        self.statusBar().showMessage(_("bugreport_sending", repo=repo))
+        self.bridge.call(
+            self.core.submit(reportsend.send_report, out, self.cfg, self.core.paths.data_dir),
+            ok=lambda where: self.statusBar().showMessage(_("bugreport_sent", where=where), 15000),
+            fail=lambda err: self.statusBar().showMessage(
+                _("bugreport_send_failed", repo=repo, err=err), 30000))
+
+    def report_issue(self):
+        """"Report a bug on GitHub…": the scrubbed draft to read first (qt/issue.py)."""
+        from .issue import IssueDialog
+        IssueDialog(self).exec()
 
     def open_settings(self, query=""):
         """The settings window (qt/settings.py): one at a time, brought up again."""
@@ -2562,7 +2655,18 @@ class MainWindow(QMainWindow):
             e.ignore()
             return
         super().closeEvent(e)
+        self.drop_tray()
         QApplication.quit()
+
+    def drop_tray(self):
+        """The tray icon gone from the panel now. Windows keeps a dead process's icon
+        until the mouse passes over it — fedtail leaves through os._exit, past Qt's own
+        clean-up, so every restart left one more there."""
+        if self.tray is not None:
+            self.tray.hide()
+            self.tray.setContextMenu(None)
+            self.tray.deleteLater()
+            self.tray = None
 
     def _debug_corner(self):
         """In the debugging mode, the right end of the status bar says how this
@@ -2596,4 +2700,5 @@ class MainWindow(QMainWindow):
     def quit(self):
         self.quitting = True
         self.close()
+        self.drop_tray()
         QApplication.quit()

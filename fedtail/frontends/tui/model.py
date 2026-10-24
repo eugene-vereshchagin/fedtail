@@ -34,13 +34,29 @@ def when(t):
     return dt.strftime("%H:%M") if dt.date() == today else dt.strftime("%d.%m %H:%M")
 
 
+def poll_line(poll, date=None):
+    """A poll in words, as the windows' card says it: how many (people or votes), closed
+    or until when, several may be picked."""
+    date = date or when
+    n = poll.voters if poll.voters is not None else poll.votes
+    parts = [_("poll_people" if poll.voters is not None else "poll_votes", n=n)]
+    if poll.expired:
+        parts.append(_("poll_closed"))
+    elif poll.expires is not None:
+        parts.append(_("poll_until", when=date(poll.expires)))
+    if poll.multiple and not poll.expired:
+        parts.append(_("poll_multiple"))
+    return " · ".join(parts)
+
+
 def show_post(core, entry, alias=None, unread=False, number=None, width=80, parent=None,
-              spec=None):
+              spec=None, open_cw=False):
     """entry: a Post or a Share (core.view). parent: the Post this one answers (for the
     context line), "missing", or None. spec: its CardSpec (common/lane.py) — the card's
     words then are the windows' (common/cardtext.py): who boosted it and when, edited,
     old, the warning a filter folds, the quote, reactions, "you replied", the
-    conversation."""
+    conversation. open_cw: the text under a warning shown too (a thread's "open every
+    CW")."""
     p = real(entry)
     acc = p.author
     tcfg = core.cfg.get("tui", {})
@@ -85,7 +101,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     elif p.warning:
         out.cw = "⚠ " + p.warning
     folded = words is not None and words.folded
-    if (not p.warning and not folded) or (config.expand_cw(core.cfg) and not folded):
+    if (not p.warning and not folded) or ((config.expand_cw(core.cfg) or open_cw)
+                                          and not folded):
         for para in html_to_text(p.text).split("\n"):
             out.body += textwrap.wrap(para, max(20, width)) or [""]
         while out.body and not out.body[-1]:
@@ -94,13 +111,16 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if p.media:
         foot.append(_("cli_media", n=len(p.media)))
     if p.poll:
-        foot.append("📊 " + _("tui_poll"))
+        foot.append("📊 " + _("tui_poll") + ": " + poll_line(p.poll))
     for n, mark in ((p.counts.replies, "↩"), (p.counts.shares, "♻"),
                     (p.counts.likes, "★" if p.mine.liked else "☆")):
         if n:
             foot.append(f"{mark} {n}")
     if p.mine.bookmarked:
         foot.append("🔖")
+    via = _via(core, entry)
+    if via:  # every account in one window: the one that got it (and acts on it)
+        foot.append("⇄ " + via)
     out.foot = "  ".join(foot)
     if words is not None:
         if words.quote is not None:
@@ -112,6 +132,13 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
         if words.conversation is not None:
             out.below.append(("conv", words.conversation.text))
     return out
+
+
+def _via(core, entry):
+    try:
+        return core.via(entry) or ""
+    except (AttributeError, TypeError):  # a core without accounts merged (a fake)
+        return ""
 
 
 class DeleteGuard:
@@ -207,14 +234,21 @@ def show_request(acc, width=80):
 def ordered_lanes(core):
     """[(group title or None, [lane names])] in the window's sidebar order
     (ui.sidebar_groups: with section titles, or without)."""
+    return [(title, names) for _key, title, names in lane_groups(core)]
+
+
+def lane_groups(core):
+    """[(group key or None, its title or None, [lane names])]: the sections of the
+    windows' sidebar (common/sidebar.py folds them by key)."""
     from ...core import lanes as lanes_module
     groups = lanes_module.grouped(core.lanes)
     if not core.cfg["ui"]["sidebar_groups"]:
-        return [(None, [n for _g, names in groups for n in names])]
+        return [(None, None, [n for _g, names in groups for n in names])]
     out = []
     for group, names in groups:
         if names:
-            out.append((_("lists_header") if group == "lists" else _("grp_" + group), names))
+            out.append((group, _("lists_header") if group == "lists" else
+                        _("grp_" + group), names))
     return out
 
 

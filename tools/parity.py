@@ -1,4 +1,6 @@
-"""Do the four interfaces offer the same things? A map from the code: every word of
+"""Do the four interfaces offer the same things? (The registry of what isn't the same,
+and why, is docs/src/parity.toml; check() holds it against the code, tests/test_parity.py
+runs it.) A map from the code: every word of
 the interface (an i18n key) that one frontend shows, and which of the others show it
 too — a menu item, a button, a dialog, a message. What Qt has and the web lacks is,
 most of the time, a feature the web lacks.
@@ -29,10 +31,13 @@ FRONTENDS = {
 OWN = ("tui_", "web_", "gtk_", "qt_", "dock_", "roster_look_", "agent_", "kde_")
 KEY_PY = re.compile(r"""\b_\(\s*["']([a-z0-9_]+)["']""")
 KEY_JS = re.compile(r"""\bw\(\s*["']([a-z0-9_]+)["']""")
+# a key named as data ((("census", "debug_census"), …) then _(key)): any literal with an
+# underscore that is an i18n key counts too; one-word keys ("close") only through _()
+KEY_LIT = re.compile(r"""["']([a-z][a-z0-9]*_[a-z0-9_]+)["']""")
 # keys built from a prefix (_("lane_" + name)): the prefix is enough to say "uses them"
-PREFIX_PY = re.compile(r"""\b_\(\s*f?["']([a-z0-9_]+_)["']\s*\+""")
-COMMON_IMPORT = re.compile(r"""(?:from\s+\.\.common(?:\.(\w+))?\s+import\s+([\w, ()\n]+))|"""
-                           r"""(?:common\.(\w+))""")
+PREFIX_PY = re.compile(r"""["']([a-z][a-z0-9_]*_)["']\s*\+""")  # key = "quote_" + state
+COMMON_IMPORT = re.compile(r"""(?:from\s+\.\.common(?:\.(\w+))?\s+import\s+"""
+                           r"""(\([^)]*\)|[\w ,]+))|(?:common\.(\w+))""")
 
 
 def files(paths):
@@ -44,8 +49,8 @@ def files(paths):
 
 def keys_in(f):
     text = f.read_text("utf-8", errors="replace")
-    found = set(KEY_PY.findall(text)) | (set(KEY_JS.findall(text)) if f.suffix == ".js"
-                                         else set())
+    found = set(KEY_PY.findall(text)) | set(KEY_LIT.findall(text)) | \
+        (set(KEY_JS.findall(text)) if f.suffix == ".js" else set())
     return found, set(PREFIX_PY.findall(text)), text
 
 
@@ -95,6 +100,84 @@ def collect():
     return out
 
 
+STATUSES = ("has", "partly", "no", "na")
+REGISTRY = ROOT / "docs" / "src" / "parity.toml"
+
+
+def registry(path=REGISTRY):
+    import tomllib
+    with open(path, "rb") as f:
+        return tomllib.load(f)
+
+
+def status(cap, fe):
+    return cap.get(fe, "has")
+
+
+def check(reg=None, have=None):
+    """What the registry (docs/src/parity.toml) and the code disagree on: a word one
+    interface shows and another doesn't, explained nowhere; an interface marked "has"
+    without the words of its capability; one marked "no" that has them all (done:
+    say so); notes missing; unknown words. [] when they agree."""
+    from fedtail import i18n
+    reg = registry() if reg is None else reg
+    have = collect() if have is None else have
+    known = set(i18n._STRINGS["ru"])
+    caps, wordings = reg.get("capability", []), reg.get("wording", [])
+    problems, explained = [], {fe: set() for fe in have}
+    ids = set()
+    for cap in caps:
+        cid = cap.get("id", "?")
+        if cid in ids:
+            problems.append(f"{cid}: the id is used twice")
+        ids.add(cid)
+        for k in cap.get("keys", []):
+            if k not in known:
+                problems.append(f"{cid}: no such word {k!r}")
+        statuses = {fe: status(cap, fe) for fe in have}
+        for fe, st in statuses.items():
+            if st not in STATUSES:
+                problems.append(f"{cid}: {fe} = {st!r}; one of {', '.join(STATUSES)}")
+                continue
+            keys = set(cap.get("keys", []))
+            if st == "has":
+                lost = sorted(keys - have[fe])
+                if lost:
+                    problems.append(f"{cid}: {fe} is marked \"has\" but doesn't show "
+                                    + ", ".join(lost))
+            else:
+                explained[fe] |= keys
+                if st == "no" and keys and keys <= have[fe]:
+                    problems.append(f"{cid}: {fe} is marked \"no\" but shows every word "
+                                    "of it — done? mark it \"has\"")
+        if any(st != "has" for st in statuses.values()):
+            for lang in ("ru", "en"):
+                if not (cap.get("note") or {}).get(lang):
+                    problems.append(f"{cid}: note.{lang} — say why")
+        for lang in ("ru", "en"):
+            if not (cap.get("name") or {}).get(lang):
+                problems.append(f"{cid}: name.{lang} missing")
+    for w in wordings:
+        for k in w.get("keys", []):
+            if k not in known:
+                problems.append(f"wording: no such word {k!r}")
+        for fe in w.get("in", []):
+            if fe not in have:
+                problems.append(f"wording: no interface {fe!r}")
+                continue
+            explained[fe] |= set(w.get("keys", []))
+        for lang in ("ru", "en"):
+            if not (w.get("why") or {}).get(lang):
+                problems.append(f"wording {w.get('keys', ['?'])[:2]}: why.{lang} missing")
+    every = set().union(*have.values())
+    for fe, words in have.items():
+        for k in sorted(every - words - explained[fe]):
+            shown_by = ", ".join(x for x in have if k in have[x])
+            problems.append(f"{k}: {shown_by} show it, {fe} doesn't — add it to {fe} or "
+                            f"explain in docs/src/parity.toml")
+    return problems
+
+
 def menus_side_by_side(folder):
     """The post's ⋯ menu as the Qt walk and the web walk saw it."""
     qt = folder / "qt-tour" / "menus.txt"
@@ -132,6 +215,10 @@ def main():
              "| of all the interfaces' | " +
              " | ".join(f"{100 * len(v) // max(1, len(every))}%" for v in have.values()) +
              " |", ""]
+    problems = check(have=have)
+    lines += ["## docs/src/parity.toml against the code", "",
+              "agree" if not problems else f"{len(problems)} problems:", ""]
+    lines += [f"- {p}" for p in problems] + [""]
     order = list(have)
     for a in order:
         for b in order:

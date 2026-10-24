@@ -98,8 +98,21 @@ class FakeApi:
     def local(self, limit=40, max_id=None, min_id=None):
         return _page(self.w.local, limit, max_id, min_id)
 
-    def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None):
+    def account_statuses(self, acc_id, limit=40, max_id=None, min_id=None,
+                         exclude_replies=False, only_media=False, tagged=None,
+                         exclude_reblogs=False):
         mine = [s for s in self.w.statuses.values() if s["account"]["id"] == acc_id]
+        if exclude_replies:  # like the server: replies to themselves stay
+            mine = [s for s in mine if not s.get("in_reply_to_id")
+                    or s.get("in_reply_to_account_id") == acc_id]
+        if only_media:
+            mine = [s for s in mine if (s.get("reblog") or s).get("media_attachments")]
+        if exclude_reblogs:
+            mine = [s for s in mine if not s.get("reblog")]
+        if tagged:
+            t = tagged.lstrip("#").lower()
+            mine = [s for s in mine if any((g.get("name") or "").lower() == t
+                                           for g in (s.get("tags") or ()))]
         return _page(mine, limit, max_id, min_id)
 
     def notification_policy(self):
@@ -153,8 +166,11 @@ class FakeApi:
         self.w.notes[acc_id] = text
         return {"id": acc_id, "note": text}
 
-    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
-        self.w.reports.append((acc_id, list(status_ids), comment, forward, category))
+    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other",
+               rule_ids=()):
+        self.w.reports.append((acc_id, list(status_ids), comment, forward,
+                               "violation" if rule_ids else category)
+                              + ((list(rule_ids),) if rule_ids else ()))
         return {"id": "r1"}
 
     def custom_emojis(self):
@@ -263,15 +279,20 @@ class FakeApi:
         return {"ancestors": anc, "descendants": desc}
 
     def verify_credentials(self):
-        me = dict(ME, source={"note": "о себе", "fields": [{"name": "сайт", "value": "x.org"}]})
-        me.update(self.w.profile)
+        me = dict(ME, source={"note": "о себе", "fields": [{"name": "сайт", "value": "x.org"}],
+                              "attribution_domains": list(
+                                  self.w.profile.get("source_attribution", ()))})
+        me.update({k: v for k, v in self.w.profile.items() if k != "source_attribution"})
         return me
 
     def update_credentials(self, **changes):
         self.w.profile_updates.append(changes)
-        for k in ("display_name", "locked", "bot", "discoverable"):
+        for k in ("display_name", "locked", "bot", "discoverable", "hide_collections",
+                  "indexable"):
             if changes.get(k) is not None:
                 self.w.profile[k] = changes[k]
+        if changes.get("attribution_domains") is not None:
+            self.w.profile["source_attribution"] = list(changes["attribution_domains"])
         return self.verify_credentials()
 
     def follow_requests(self):
@@ -279,7 +300,8 @@ class FakeApi:
 
     # lists: {id: {"id", "title", "exclusive", "members": set()}}
     def lists(self):
-        return [{"id": i, "title": x["title"], "exclusive": x["exclusive"]}
+        return [{"id": i, "title": x["title"], "exclusive": x["exclusive"],
+                 "replies_policy": x.get("replies_policy", "list")}
                 for i, x in self.w.lists.items()]
 
     def list_timeline(self, list_id, limit=40, max_id=None, min_id=None):
@@ -291,15 +313,21 @@ class FakeApi:
         known = {a["id"]: a for a in self.w.accounts()}
         return [known.get(a) or {"id": a} for a in sorted(self.w.lists[list_id]["members"])]
 
-    def create_list(self, title, exclusive=False):
+    def create_list(self, title, exclusive=False, replies_policy=None):
         self.w.seq += 1
         i = f"L{self.w.seq}"
-        self.w.lists[i] = {"title": title, "exclusive": exclusive, "members": set()}
-        return {"id": i, "title": title, "exclusive": exclusive}
+        policy = replies_policy or "list"
+        self.w.lists[i] = {"title": title, "exclusive": exclusive, "members": set(),
+                           "replies_policy": policy}
+        return {"id": i, "title": title, "exclusive": exclusive, "replies_policy": policy}
 
-    def update_list(self, list_id, title, exclusive):
-        self.w.lists[list_id].update(title=title, exclusive=exclusive)
-        return {"id": list_id, "title": title, "exclusive": exclusive}
+    def update_list(self, list_id, title, exclusive, replies_policy=None):
+        lst = self.w.lists[list_id]
+        lst.update(title=title, exclusive=exclusive)
+        if replies_policy:
+            lst["replies_policy"] = replies_policy
+        return {"id": list_id, "title": title, "exclusive": exclusive,
+                "replies_policy": lst.get("replies_policy", "list")}
 
     def delete_list(self, list_id):
         self.w.lists.pop(list_id)
@@ -312,9 +340,13 @@ class FakeApi:
     def list_remove(self, list_id, acc_id):
         self.w.lists[list_id]["members"].discard(acc_id)
 
-    def upload_media(self, path, description="", focus=None):
-        self.w.uploads.append((path, description, focus))
+    def upload_media(self, path, description="", focus=None, thumbnail=None):
+        self.w.uploads.append((path, description, focus) + ((thumbnail,) if thumbnail else ()))
         return {"id": "m1", "url": "https://example.test/m1.png"}
+
+    def update_media(self, media_id, description=None, focus=None, thumbnail=None):
+        self.w.media_updates.append((media_id, description, focus, thumbnail))
+        return {"id": media_id, "description": description}
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
                     media_ids=(), markdown=False, language="", sensitive=False, poll=None,
@@ -347,12 +379,16 @@ class FakeApi:
         self.w.add(st, home=True)
         return st
 
-    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False):
+    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False,
+                    media_attributes=None):
         old = self.w.statuses[sid]
+        attrs = {m["id"]: m for m in media_attributes or ()}
         self.w.history.setdefault(sid, []).append(old)
         st = dict(old, content=f"<p>{text}</p>", spoiler_text=spoiler_text,
                   edited_at="2099-10-14T12:00:00.000Z",
-                  media_attachments=[m for m in old["media_attachments"]
+                  media_attachments=[dict(m, **({"description": attrs[m["id"]]["description"]}
+                                                if m["id"] in attrs else {}))
+                                     for m in old["media_attachments"]
                                      if m["id"] in media_ids])
         self.w.statuses[sid] = st
         return st
@@ -373,9 +409,13 @@ class FakeApi:
         self.w.statuses[sid] = st
         return st
 
-    def mute(self, acc_id, on=True):
+    def mute(self, acc_id, on=True, duration=0, notifications=True):
         (self.w.muted.add if on else self.w.muted.discard)(acc_id)
-        return {"id": acc_id, "muting": on}
+        if on:
+            self.w.mute_terms[acc_id] = {"duration": duration, "notifications": notifications}
+        else:
+            self.w.mute_terms.pop(acc_id, None)
+        return {"id": acc_id, "muting": on, "muting_notifications": on and notifications}
 
     def block(self, acc_id, on=True):
         (self.w.blocked.add if on else self.w.blocked.discard)(acc_id)
@@ -390,12 +430,30 @@ class FakeApi:
     def filters(self):
         return list(self.w.filters.values())
 
-    def create_filter(self, title, keywords, action="warn", contexts=("home",)):
+    def create_filter(self, title, keywords, action="warn", contexts=("home",),
+                      expires_in=None):
         self.w.seq += 1
         f = {"id": f"F{self.w.seq}", "title": title, "filter_action": action,
-             "context": list(contexts), "keywords": [{"keyword": k} for k in keywords]}
+             "context": list(contexts),
+             "keywords": [{"id": f"K{self.w.seq}.{i}", "keyword": k}
+                          for i, k in enumerate(keywords)],
+             "statuses": [], "expires_in": expires_in,
+             "expires_at": "2099-01-01T00:00:00Z" if expires_in else None}
         self.w.filters[f["id"]] = f
         return f
+
+    def filter_statuses(self, filter_id):
+        return list(self.w.filters[filter_id].get("statuses") or [])
+
+    def filter_status(self, filter_id, status_id):
+        self.w.seq += 1
+        fs = {"id": f"FS{self.w.seq}", "status_id": status_id}
+        self.w.filters[filter_id].setdefault("statuses", []).append(fs)
+        return fs
+
+    def unfilter_status(self, filter_status_id):
+        for f in self.w.filters.values():
+            f["statuses"] = [x for x in f.get("statuses") or [] if x["id"] != filter_status_id]
 
     def delete_filter(self, filter_id):
         self.w.filters.pop(filter_id, None)
@@ -571,6 +629,59 @@ class FakeApi:
     def instance_page(self, which):
         return {"content": f"<p>{which} text</p>"}
 
+    def instance_v2(self):
+        return {"configuration": {"vapid": {"public_key": self.w.vapid}}} if self.w.vapid \
+            else {"configuration": {}}
+
+    def instance_domain_blocks(self):
+        return [{"domain": "bad.example", "severity": "suspend", "comment": "spam"}]
+
+    def terms_of_service(self):
+        return {"effective_date": "2026-01-01", "content": "<p>terms</p>"}
+
+    def translation_languages(self):
+        return {"en": ["ru", "de"], "ru": ["en"]}
+
+    def link_timeline(self, url, limit=20, max_id=None, min_id=None):
+        got = [s for s in self.w.statuses.values()
+               if url in ((s.get("card") or {}).get("url") or "")]
+        return _page(got, limit, max_id, min_id)
+
+    def featured_tag_suggestions(self):
+        return [{"name": "fedi", "url": "https://example.test/tags/fedi"}]
+
+    def update_filter(self, filter_id, title=None, action=None, contexts=None,
+                      expires_in=None, add=(), remove=()):
+        f = self.w.filters[filter_id]
+        if title is not None:
+            f["title"] = title
+        if action is not None:
+            f["filter_action"] = action
+        if contexts is not None:
+            f["context"] = list(contexts)
+        if expires_in is not None:
+            f["expires_in"] = expires_in or None
+            f["expires_at"] = "2099-01-01T00:00:00Z" if expires_in else None
+        f["keywords"] = [k for k in f["keywords"] if k.get("id") not in remove]
+        for w in add:
+            self.w.seq += 1
+            f["keywords"].append({"id": f"K{self.w.seq}", "keyword": w})
+        return f
+
+    def push_subscription(self):
+        if self.w.push is None:
+            raise ApiError(404, "not found")
+        return self.w.push
+
+    def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
+        self.w.push = {"id": 1, "endpoint": endpoint, "alerts": dict(alerts or {}),
+                       "policy": policy, "server_key": self.w.vapid}
+        return self.w.push
+
+    def push_unsubscribe(self):
+        self.w.push = None
+        return {}
+
     def preferences(self):
         self._need("preferences")
         return dict(self.w.prefs)
@@ -587,7 +698,10 @@ class World:
         self.posted = []
         self.send_timeouts, self.send_lands, self.send_keys = 0, True, []
         self.announcements = []
-        self.uploads = []  # (path, description, focus)
+        self.uploads = []  # (path, description, focus[, thumbnail])
+        self.media_updates = []  # (id, description, focus, thumbnail)
+        self.vapid = ""  # the server's Web Push key ("" — none)
+        self.push = None  # the push subscription the server keeps
         self.emoji = []  # the server's custom emoji
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.revoked = []  # tokens revoked through /oauth/revoke
@@ -610,6 +724,7 @@ class World:
         self.following = set()
         self.followed_tags = set()
         self.muted, self.blocked, self.filters = set(), set(), {}
+        self.mute_terms = {}  # acc_id -> {duration, notifications} the mute was made with
         self.history = {}
         self.profile_updates = []
         self.markers = {}  # timeline -> last_read_id, as another client left it

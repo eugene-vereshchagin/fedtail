@@ -1,7 +1,7 @@
 """Windows, held to on any machine: where a profile's files go, the Start menu shortcut
 fedtail asks PowerShell for, the single-instance pipe's key, the sounds through
 winsound. What can only be tried on Windows itself (the pipe, the .lnk) is in
-test_core.py and test_i18n_cli.py, and tools/windows_check.py runs docs/WINDOWS.md."""
+test_core.py and test_i18n_cli.py, and tools/windows_check.py runs docs/en/dev/windows.md."""
 
 import os
 import stat

@@ -9,7 +9,7 @@ import logging
 from ...i18n import _
 from ..common import server
 from .dialogs import _box, _buttons, _window
-from .gi_setup import GLib, Gtk
+from .gi_setup import GLib, Gtk, tip
 
 log = logging.getLogger(__name__)
 
@@ -67,8 +67,22 @@ class ProfileEditor:
         self.locked = Gtk.CheckButton(label=_("profile_locked"))
         self.bot = Gtk.CheckButton(label=_("profile_bot"))
         self.discoverable = Gtk.CheckButton(label=_("profile_discoverable"))
-        for c in (self.locked, self.bot, self.discoverable):
+        self.hide_collections = Gtk.CheckButton(label=_("profile_hide_collections"))
+        self.indexable = Gtk.CheckButton(label=_("profile_indexable"))
+        for c in (self.locked, self.bot, self.discoverable, self.hide_collections,
+                  self.indexable):
             box.append(c)
+        box.append(Gtk.Label(label=_("profile_attribution"), xalign=0))
+        self.attribution = Gtk.Entry(placeholder_text="blog.example, news.example")
+        tip(self.attribution, _("profile_attribution_tip"))
+        box.append(self.attribution)
+        # the tags I write about most, not yet on my profile: one click puts one there
+        self.suggest = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.suggest_label = Gtk.Label(label=_("featured_suggest"), xalign=0)
+        self.suggest_label.set_visible(False)
+        box.append(self.suggest_label)
+        box.append(self.suggest)
+        self.suggest_buttons = []
         self.hint = Gtk.Label(label=_("loading"), xalign=0)
         self.hint.add_css_class("ft-muted")
         outer.append(self.hint)
@@ -100,6 +114,12 @@ class ProfileEditor:
         self.locked.set_active(me.locked)
         self.bot.set_active(me.bot)
         self.discoverable.set_active(bool(me.discoverable))
+        self.hide_collections.set_active(bool(prof.hide_collections))
+        self.indexable.set_active(bool(prof.indexable))
+        self.attribution.set_text(", ".join(prof.attribution_domains))
+        if self.win.view.supports("featured_tags"):
+            self.win.call(self.win.view.featured_tag_suggestions(), self._suggest,
+                          lambda _e: None)
         self.hint.set_text("")
         self.save_btn.set_sensitive(True)
         from .card import Avatar
@@ -112,6 +132,25 @@ class ProfileEditor:
                 pic.set_content_fit(Gtk.ContentFit.COVER)
                 self.header_pic.set_child(pic)
             self.win.images.get(url, show)
+
+    def _suggest(self, tags):
+        """featured_tag_suggestions: a button per tag; a click features it."""
+        for t in tags or ():
+            name = getattr(t, "name", "")
+            if not name:
+                continue
+            b = Gtk.Button(label="#" + name)
+            b.add_css_class("flat")
+            b.connect("clicked", lambda btn, n=name: self._feature(n, btn))
+            self.suggest.append(b)
+            self.suggest_buttons.append(b)
+        self.suggest_label.set_visible(bool(self.suggest_buttons))
+
+    def _feature(self, name, button):
+        button.set_sensitive(False)
+        self.win.call(self.win.view.feature_tag(name, True),
+                      lambda _r: button.set_label("✓ #" + name),
+                      lambda e: (button.set_sensitive(True), self.win.status(str(e))))
 
     def _pick(self, title, then):
         dlg = Gtk.FileDialog(title=title)
@@ -155,13 +194,16 @@ class ProfileEditor:
 
     def changes(self):
         buf = self.bio.get_buffer()
-        return server.profile_changes(
+        out = server.profile_changes(
             self.loaded, self.name.get_text(),
             buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False),
             [(n.get_text(), v.get_text()) for n, v in self.field_edits],
             {"locked": self.locked.get_active(), "bot": self.bot.get_active(),
              "discoverable": self.discoverable.get_active()},
             self.avatar_path, self.header_path)
+        out.update(server.flag_changes(self.loaded, self.hide_collections.get_active(),
+                                self.indexable.get_active(), self.attribution.get_text()))
+        return out
 
     def save(self):
         if self.loaded is None:
