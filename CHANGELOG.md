@@ -5,6 +5,8 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- The language of a post: Georgian is named «ქართული (ka)» again, not in Mtavruli capitals
+  («Ქართული»): Georgian text has no capital letters.
 - A settings window (≡ → Settings, in Qt, GTK, the web page and the terminal): the
   chapters of config.toml on the left, their options as cards on the right — a switch,
   a number, a choice (each choice with what it means), ticks for lists of lanes — with
