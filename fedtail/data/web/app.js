@@ -118,7 +118,13 @@ function renderPost(p, inThread) {
     card.append(s);
   }
   const head = el("div", "head");
-  head.append(avatar(p.account));
+  const face = el("a", "face");  // the windows' avatar: a click opens the profile
+  face.href = "#";
+  face.title = w("a11y_avatar", { acct: p.account.handle });
+  face.setAttribute("aria-label", face.title);
+  face.onclick = (e) => { e.preventDefault(); openAccount(p.account.id); };
+  face.append(avatar(p.account));
+  head.append(face);
   const names = el("div", "names");
   const who = el("a", "who", p.account.name || p.account.handle);
   who.href = "#";

@@ -1354,7 +1354,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          # what the windows have and the page now too (docs/src/parity.toml)
          "help_back", "help_forward", "debug_notify", "debug_notify_sent", "notify_failed",
          "notify_test_body", "accounts_merge", "accounts_merge_tip", "try_theme",
-         "try_theme_tip",
+         "try_theme_tip", "a11y_avatar",
          "group_fold_tip", "thread_loading", "find_deeper", "find_deeper_tip",
          "find_everywhere", "find_everywhere_tip", "find_searching", "find_archive_none",
          "poll_results", "poll_refresh", "poll_sending", "preview", "preview_tip",

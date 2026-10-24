@@ -77,6 +77,7 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
                        width: 3px; background: var(--unread); border-radius: 2px; }
 .post .shared { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
 .post .head { display: flex; gap: 10px; align-items: center; }
+.post .head .face { display: flex; border-radius: 50%; }
 .ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none;
        background: var(--line); display: inline-block; }
 .ava.small { width: 24px; height: 24px; }
