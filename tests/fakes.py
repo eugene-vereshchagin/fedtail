@@ -417,7 +417,8 @@ class FakeApi:
         self.w.seq += 1
         f = {"id": f"F{self.w.seq}", "title": title, "filter_action": action,
              "context": list(contexts), "keywords": [{"keyword": k} for k in keywords],
-             "statuses": [], "expires_in": expires_in}
+             "statuses": [], "expires_in": expires_in,
+             "expires_at": "2099-01-01T00:00:00Z" if expires_in else None}
         self.w.filters[f["id"]] = f
         return f
 

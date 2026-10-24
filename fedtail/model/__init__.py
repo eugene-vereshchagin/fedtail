@@ -460,6 +460,8 @@ class WordFilter:
     title: str = ""
     words: tuple[str, ...] = ()
     action: str = "warn"           # warn | hide
+    expires: datetime | None = None  # when it ends by itself (None — never)
+    posts: int = 0                 # posts it hides one by one ("Hide this post")
 
 
 @dataclass(frozen=True, slots=True)

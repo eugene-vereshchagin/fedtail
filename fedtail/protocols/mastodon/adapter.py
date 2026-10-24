@@ -490,7 +490,9 @@ def word_filter(raw):
     words = tuple(_str(_dict(k).get("keyword")) for k in _list(raw.get("keywords"))
                   if _dict(k).get("keyword"))
     return WordFilter(_str(raw.get("id")), _str(raw.get("title")), words,
-                      "hide" if raw.get("filter_action") == "hide" else "warn")
+                      "hide" if raw.get("filter_action") == "hide" else "warn",
+                      expires=when(raw.get("expires_at")),
+                      posts=len(_list(raw.get("statuses"))))
 
 
 def silenced(raw, profile=""):
