@@ -1150,9 +1150,10 @@ class QtSmokeTest(unittest.TestCase):
         the posts sharing a link, the server's terms, blocks and translator."""
         from PySide6.QtCore import Qt
 
+        from fedtail.frontends.common.timed import KEEP
         from fedtail.frontends.qt.compose import Compose
         from fedtail.frontends.qt.profile import ProfileDialog
-        from fedtail.frontends.qt.silence import KEEP, FilterEditDialog, SilenceDialog
+        from fedtail.frontends.qt.silence import FilterEditDialog, SilenceDialog
         from fedtail.frontends.qt.social import LinkPostsWidget, server_html
         self.win.start()
         self.pump(until=lambda: self.core.me is not None)
