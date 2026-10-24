@@ -1045,6 +1045,7 @@ class Web:
                           subscribed=core.subscribed, thread_quiet=core.thread_quiet,
                           lists=True, long_form=bool(cfg["feed"].get("long_form", True)),
                           translate=bool(getattr(core.caps, "translation", False)),
+                          translates=getattr(core, "translation_languages", None),
                           quote_reply=bool(cfg["post"].get("quote_prefix", "> ")))
         short = core.short_ids([p]).get(real(p).id)
         unread = p.id in core.unread([p])

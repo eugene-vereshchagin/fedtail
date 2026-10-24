@@ -127,6 +127,7 @@ class Core(SocialMixin):
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
         self._conv_of = {}        # last status id -> (conversation id, unread on the server)
         self.server_prefs = {}    # what I set on the server's web side (its preferences)
+        self.translation_languages = None  # {source: [targets]} its translator can do
         self.browse_empty = set()  # browse sources (local, federated) the server gave nothing
         self.sources = {}
         self.lists = []           # [{"id", "title", "exclusive"}] from the server
@@ -333,6 +334,7 @@ class Core(SocialMixin):
             if n:
                 log.info("read: %d posts of mine were unread (written elsewhere)", n)
             self.load_preferences()
+            self.load_translation_languages()
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
@@ -1088,6 +1090,27 @@ class Core(SocialMixin):
 
     def delete_filter(self, filter_id):
         return self.call_api("delete_filter", filter_id)
+
+    def edit_filter(self, filter_id, title=None, words=None, action=None, contexts=None,
+                    expires_in=None):
+        """Change a filter of mine: words — the whole list it should have now (those gone
+        are dropped, the new added); expires_in: seconds from now, 0 — for good, None —
+        as it was."""
+        def job():
+            remove, add = (), ()
+            if words is not None:
+                have = next((f for f in self.api.filters() or []
+                             if str(f.get("id")) == str(filter_id)), None)
+                if have is None:
+                    raise LookupError(filter_id)
+                old = {k.get("keyword"): k.get("id") for k in have.get("keywords") or ()}
+                want = [w for w in dict.fromkeys(x.strip() for x in words) if w]
+                remove = tuple(kid for kw, kid in old.items() if kw not in want)
+                add = tuple(w for w in want if w not in old)
+            return self.api.update_filter(filter_id, title=title, action=action,
+                                          contexts=tuple(contexts) if contexts else None,
+                                          expires_in=expires_in, add=add, remove=remove)
+        return self.submit(job)
 
     def _hidden_authors(self):
         """Who the lanes in lists.hide_in leave out: everyone in a list
@@ -2655,7 +2678,8 @@ class Core(SocialMixin):
     def post(self, text, visibility, reply_to=None, spoiler="", media=(), draft_key=None,
              language=None, sensitive=False, poll=None, quote=None, scheduled_at=None,
              account=None):
-        """media: [(path, description)] or [(path, description, (x, y) focus point)].
+        """media: [(path, description)], [(path, description, (x, y) focus point)] or
+        [(path, description, focus or None, cover picture's path)].
         language: ISO 639 code, None — post.language,
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
@@ -2669,7 +2693,9 @@ class Core(SocialMixin):
             rest = []
 
         def job():
-            ids = [self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None)["id"]
+            ids = [(self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None,
+                                          thumbnail=m[3]) if len(m) > 3 and m[3] else
+                    self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None))["id"]
                    for m in media]
             extra = {"language": lang} if lang else {}
             if sensitive and ids:
@@ -2752,13 +2778,20 @@ class Core(SocialMixin):
             return None
         return next((st for st in mine if looks_sent(st, text, reply_to, since)), None)
 
-    def edit(self, status, text, spoiler="", draft_key=None):
-        """Change my post's text and warning; its pictures stay as they are."""
+    def edit(self, status, text, spoiler="", draft_key=None, media=None):
+        """Change my post's text and warning; its pictures stay. media: {media id:
+        (description, (x, y) focus or None)} — their words and focus point anew."""
         s = real(status)
 
         def job():
             ids = [m["id"] for m in s.get("media_attachments") or []]
-            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
+            attrs = [dict({"id": mid, "description": desc or ""},
+                          **({"focus": f"{float(focus[0]):.2f},{float(focus[1]):.2f}"}
+                             if focus else {}))
+                     for mid, (desc, focus) in (media or {}).items() if mid in ids]
+            st = self.api.edit_status(s["id"], text, spoiler, ids, self.markdown,
+                                      media_attributes=attrs) if attrs else \
+                self.api.edit_status(s["id"], text, spoiler, ids, self.markdown)
             self.store.put_statuses([st])
             if draft_key:
                 self.delete_draft(draft_key)
@@ -2812,12 +2845,54 @@ class Core(SocialMixin):
         from ..i18n import current_language
         return self.call_api("translate", real(status)["id"], current_language())
 
-    def report(self, status, comment="", forward=False, category="other"):
+    def report(self, status, comment="", forward=False, category="other", rule_ids=()):
         """Tell my server's moderators about a post (and its author); forward: also the
-        moderators of the author's server, without saying who reported."""
+        moderators of the author's server, without saying who reported; rule_ids: the
+        server's rules it breaks (the category is "violation" then)."""
         s = real(status)
+        if rule_ids:
+            return self.call_api("report", s["account"]["id"], [s["id"]], comment,
+                                 forward, category, rule_ids=tuple(rule_ids))
         return self.call_api("report", s["account"]["id"], [s["id"]], comment,
-                           forward, category)
+                             forward, category)
+
+    def link_timeline(self, url, max_id=None):
+        """Posts sharing this link (a trending one: the server keeps only those)."""
+        def job():
+            page = self._api("link_timeline", self.api.link_timeline, url,
+                             limit=self.cfg["feed"]["page_size"], max_id=max_id) or []
+            self.store.put_statuses(page)
+            return page
+        return self.submit(job)
+
+    def featured_tag_suggestions(self):
+        return self.call_api("featured_tag_suggestions")
+
+    # ---- Web Push: the browser of the web page subscribes at my server itself ----------
+    def vapid_key(self):
+        """The server's public key a browser's push subscription is made with ("" —
+        the server has no Web Push)."""
+        def job():
+            v2 = self.api.instance_v2() or {}
+            key = ((v2.get("configuration") or {}).get("vapid") or {}).get("public_key")
+            return str(key or "")
+        return self.submit(job)
+
+    def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
+        return self.call_api("push_subscribe", endpoint, p256dh, auth, alerts, policy)
+
+    def push_subscription(self):
+        def job():
+            try:
+                return self.api.push_subscription()
+            except ApiError as e:
+                if e.status == 404:  # none yet
+                    return None
+                raise
+        return self.submit(job)
+
+    def push_unsubscribe(self):
+        return self.call_api("push_unsubscribe")
 
     def featured(self, acc_id):
         """What someone puts forward on their profile: {"tags": [featured tags],

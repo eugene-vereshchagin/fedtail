@@ -51,8 +51,18 @@ class Ctx:
     act_as: Callable | None = None          # fn(entry) -> [(tag, label)] other accounts
     long_form: bool = False                 # "the whole text" from the author's server
     translate: bool = False
+    translates: dict | None = None          # {from: [into]} the server's translator; None — ?
     quote_reply: bool = False               # "Reply with a quote" (needs an editor)
     in_thread: bool = False
+
+
+def can_translate(translates, lang, into=None):
+    """Can the server's translator turn lang into mine (into)? Yes when it didn't say
+    what it can (translates None or empty) or the post's language isn't known."""
+    if not translates or not lang:
+        return True
+    into = (into or current_language()).split("-")[0]
+    return any(t.split("-")[0] == into for t in translates.get(lang) or ())
 
 
 @dataclass(frozen=True)
@@ -167,7 +177,8 @@ def menu(entry, ctx, short_id=None, unread=False):
         out.append(Item("long_form", _("long_form"), data=entry))
     lang = p.lang.split("-")[0]
     every = ctx.cfg.get("feed", {}).get("translate_all", False)  # Fedilab's way: any post at all
-    if ctx.translate and p.text and (every or (lang and lang != current_language())):
+    if ctx.translate and p.text and (every or (lang and lang != current_language())) and \
+            can_translate(ctx.translates, lang):
         out.append(Item("translate", _("translate")))
     if ctx.quote_reply and ctx.me_id:
         out.append(Item("quote_reply", _("reply_quote")))
@@ -224,4 +235,5 @@ def menu(entry, ctx, short_id=None, unread=False):
     return out
 
 
-__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "menu", "vis_word"]
+__all__ = ["Button", "Ctx", "Item", "SEP", "VIS_KEY", "buttons", "can_translate", "menu",
+           "vis_word"]

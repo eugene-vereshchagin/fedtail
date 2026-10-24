@@ -747,6 +747,7 @@ class Card(Gtk.Box):
                            long_form=bool(c.cfg["feed"].get("long_form", True)),
                            lists=True,
                            translate=bool(getattr(c.view.caps, "translation", False)),
+                           translates=getattr(c.view, "translation_languages", None),
                            quote_reply=self._can_quote())
 
     def _fill_actions(self):

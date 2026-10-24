@@ -465,15 +465,23 @@ def my_profile(raw, profile=""):
     """verify_credentials → MyProfile (the source: what I typed)."""
     raw = _dict(raw)
     src = _dict(raw.get("source"))
+    def flag(key):
+        v = raw.get(key, src.get(key))
+        return v if isinstance(v, bool) else None
     return MyProfile(account(raw, profile), _str(src.get("note")),
                      tuple((_str(f.get("name")), _str(f.get("value")))
-                           for f in _list(src.get("fields")) if isinstance(f, dict)))
+                           for f in _list(src.get("fields")) if isinstance(f, dict)),
+                     discoverable=flag("discoverable"),
+                     hide_collections=flag("hide_collections"), indexable=flag("indexable"),
+                     attribution_domains=tuple(_str(d) for d in
+                                               _list(src.get("attribution_domains")) if d))
 
 
 # what MyProfile's editor changes → the names update_credentials takes
 PROFILE_KEYS = {"name": "display_name", "bio": "note", "fields": "fields", "locked": "locked",
                 "bot": "bot", "discoverable": "discoverable", "avatar": "avatar",
-                "header": "header"}
+                "header": "header", "hide_collections": "hide_collections",
+                "indexable": "indexable", "attribution_domains": "attribution_domains"}
 
 
 def user_list(raw, profile=""):
@@ -491,6 +499,7 @@ def word_filter(raw):
                   if _dict(k).get("keyword"))
     return WordFilter(_str(raw.get("id")), _str(raw.get("title")), words,
                       "hide" if raw.get("filter_action") == "hide" else "warn",
+                      contexts=tuple(_str(c) for c in _list(raw.get("context")) if c),
                       expires=when(raw.get("expires_at")),
                       posts=len(_list(raw.get("statuses"))))
 
@@ -528,4 +537,11 @@ def server_info(raw, profile=""):
         email=_str(contact.get("email")) or _str(inst.get("email")),
         rules=tuple((_str(r.get("text")), _str(r.get("hint")))
                     for r in _list(raw.get("rules")) if isinstance(r, dict)),
-        about=_str(raw.get("about")), privacy=_str(raw.get("privacy")))
+        rule_ids=tuple(_str(r.get("id")) for r in _list(raw.get("rules"))
+                       if isinstance(r, dict)),
+        about=_str(raw.get("about")), privacy=_str(raw.get("privacy")),
+        terms=_str(raw.get("terms")),
+        blocks=tuple((_str(b.get("domain")), _str(b.get("severity")), _str(b.get("comment")))
+                     for b in _list(raw.get("blocks")) if isinstance(b, dict)),
+        translates=tuple((_str(k), tuple(_str(t) for t in _list(v)))
+                         for k, v in _dict(raw.get("translates")).items()))

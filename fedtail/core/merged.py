@@ -344,6 +344,11 @@ class MergedCore:
         core, _tag, own = self.own(status)
         return core.delete(own)
 
+    def report(self, status, *a, **kw):
+        """To the moderators of the server of the account that has the post."""
+        core, _tag, own = self.own(status)
+        return core.report(own, *a, **kw)
+
     def source(self, status):
         core, _tag, own = self.own(status)
         return core.source(own)

@@ -342,16 +342,24 @@ class Api:
         return self.get("/api/v1/accounts/verify_credentials")
 
     def update_credentials(self, display_name=None, note=None, fields=None, locked=None,
-                           bot=None, discoverable=None, avatar=None, header=None):
+                           bot=None, discoverable=None, avatar=None, header=None,
+                           hide_collections=None, indexable=None, attribution_domains=None):
         """Change my profile. fields: [(name, value)] up to the server's limit;
-        avatar/header: paths of new pictures. None leaves a thing as it is."""
+        avatar/header: paths of new pictures; hide_collections: whom I follow and who
+        follows me hidden; indexable: my public posts found by a search of words;
+        attribution_domains: sites that may name me the author of their articles
+        (Mastodon 4.4). None leaves a thing as it is."""
         data = {}
         for key, val in (("display_name", display_name), ("note", note)):
             if val is not None:
                 data[key] = val
-        for key, val in (("locked", locked), ("bot", bot), ("discoverable", discoverable)):
+        for key, val in (("locked", locked), ("bot", bot), ("discoverable", discoverable),
+                         ("hide_collections", hide_collections), ("indexable", indexable)):
             if val is not None:
                 data[key] = "true" if val else "false"
+        if attribution_domains is not None:
+            # an empty list clears it: a form sends nothing for an empty array
+            data["attribution_domains[]"] = list(attribution_domains) or [""]
         if fields is not None:
             for i, (name, value) in enumerate(fields):
                 data[f"fields_attributes[{i}][name]"] = name
@@ -449,9 +457,14 @@ class Api:
         return self.post(f"/api/v1/statuses/{seg(sid)}/translate",
                          json={"lang": lang} if lang else None)
 
-    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
+    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other",
+               rule_ids=()):
+        """category "violation" names the server's rules broken (rule_ids)."""
         body = {"account_id": acc_id, "status_ids": list(status_ids), "comment": comment,
                 "forward": bool(forward), "category": category}
+        if rule_ids:
+            body["category"] = "violation"
+            body["rule_ids"] = [str(r) for r in rule_ids]
         return self.post("/api/v1/reports", json=body)
 
     def pinned(self, acc_id):
@@ -629,6 +642,30 @@ class Api:
     def delete_filter(self, filter_id):
         return self.delete(f"/api/v2/filters/{seg(filter_id)}")
 
+    def update_filter(self, filter_id, title=None, action=None, contexts=None,
+                      expires_in=None, add=(), remove=()):
+        """Change a filter: its title, what it does, where, how long (expires_in: seconds,
+        0 — for good); add: words to add; remove: ids of its keywords to drop."""
+        data = {}
+        if title is not None:
+            data["title"] = title
+        if action is not None:
+            data["filter_action"] = action
+        if contexts is not None:
+            data["context[]"] = list(contexts)
+        if expires_in is not None:
+            data["expires_in"] = str(int(expires_in)) if expires_in else ""
+        i = 0
+        for word in add:
+            data[f"keywords_attributes[{i}][keyword]"] = word
+            data[f"keywords_attributes[{i}][whole_word]"] = "true"
+            i += 1
+        for kid in remove:
+            data[f"keywords_attributes[{i}][id]"] = str(kid)
+            data[f"keywords_attributes[{i}][_destroy]"] = "true"
+            i += 1
+        return self.put(f"/api/v2/filters/{seg(filter_id)}", data=data)
+
     def filter_statuses(self, filter_id):
         """The posts a filter hides one by one: [{id, status_id}]."""
         return self.get(f"/api/v2/filters/{seg(filter_id)}/statuses") or []
@@ -691,20 +728,38 @@ class Api:
                          data={"account_ids[]": [acc_id]})
 
     # ---- writing ------------------------------------------------------------
-    def upload_media(self, path, description="", focus=None):
-        """focus: (x, y), each -1…1, y up — the part a cropped preview keeps."""
+    @staticmethod
+    def _focus(focus):
+        return f"{float(focus[0]):.2f},{float(focus[1]):.2f}"
+
+    def upload_media(self, path, description="", focus=None, thumbnail=None):
+        """focus: (x, y), each -1…1, y up — the part a cropped preview keeps;
+        thumbnail: a picture's path, the cover of a video or a sound."""
         mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
         data = {"description": description} if description else {}
         if focus:
-            data["focus"] = f"{float(focus[0]):.2f},{float(focus[1]):.2f}"
+            data["focus"] = self._focus(focus)
+        thumb = open(thumbnail, "rb") if thumbnail else None  # noqa: SIM115 — closed below
+        try:
+            return self._upload(path, mime, data, thumb, thumbnail)
+        finally:
+            if thumb is not None:
+                thumb.close()
+
+    def _upload(self, path, mime, data, thumb, thumbnail):
         with open(path, "rb") as f:
             files = {"file": (os.path.basename(path), f, mime)}
+            if thumb is not None:
+                files["thumbnail"] = (os.path.basename(thumbnail), thumb,
+                                      mimetypes.guess_type(thumbnail)[0] or "image/jpeg")
             try:
                 media = self.post("/api/v2/media", data=data, files=files)
             except ApiError as e:
                 if e.status != 404:
                     raise
                 f.seek(0)
+                if thumb is not None:
+                    thumb.seek(0)
                 media = self.post("/api/v1/media", data=data, files=files)
         # Mastodon processes v2 uploads asynchronously: wait until it's ready
         for _ in range(30):
@@ -749,9 +804,28 @@ class Api:
         headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
         return self.post("/api/v1/statuses", json=body, headers=headers, timeout=timeout)
 
-    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False):
-        """Change my post. Media ids must be passed again, or they go away."""
+    def update_media(self, media_id, description=None, focus=None, thumbnail=None):
+        """A picture not yet in a post (or mine being edited): its description, focus
+        point, cover. None leaves a thing as it is."""
+        data = {}
+        if description is not None:
+            data["description"] = description
+        if focus:
+            data["focus"] = self._focus(focus)
+        if not thumbnail:
+            return self.put(f"/api/v1/media/{seg(media_id)}", data=data)
+        with open(thumbnail, "rb") as t:
+            files = {"thumbnail": (os.path.basename(thumbnail), t,
+                                   mimetypes.guess_type(thumbnail)[0] or "image/jpeg")}
+            return self._req("PUT", f"/api/v1/media/{seg(media_id)}", data=data, files=files)
+
+    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False,
+                    media_attributes=None):
+        """Change my post. Media ids must be passed again, or they go away;
+        media_attributes: [{id, description, focus "x,y"}] — their words and focus anew."""
         body = {"status": text, "spoiler_text": spoiler_text, "media_ids": list(media_ids)}
+        if media_attributes:
+            body["media_attributes"] = [dict(m) for m in media_attributes]
         if markdown:
             body["content_type"] = "text/markdown"
         return self._req("PUT", f"/api/v1/statuses/{seg(sid)}", json=body)
@@ -899,6 +973,42 @@ class Api:
 
     def instance_rules(self):
         return self.get("/api/v1/instance/rules") or []
+
+    def instance_domain_blocks(self):
+        """The servers my server cut off, as it shows them (may be closed to the public:
+        403 then): [{domain, digest, severity, comment}]."""
+        return self.get("/api/v1/instance/domain_blocks") or []
+
+    def terms_of_service(self):
+        """The server's terms (Mastodon 4.4): {effective_date, content (HTML)…}."""
+        return self.get("/api/v1/instance/terms_of_service") or {}
+
+    def translation_languages(self):
+        """{source language: [targets]} — what the server's translator can do."""
+        return self.get("/api/v1/instance/translation_languages") or {}
+
+    def link_timeline(self, url, limit=20, max_id=None, min_id=None):
+        """Posts that share this link (trending links only; Mastodon 4.3)."""
+        return self.get("/api/v1/timelines/link", self._page(limit, max_id, min_id, url=url))
+
+    def featured_tag_suggestions(self):
+        """The tags I use most and haven't put forward on my profile yet."""
+        return self.get("/api/v1/featured_tags/suggestions") or []
+
+    # ---- Web Push: the server sends notifications to a browser itself ----------------
+    def push_subscription(self):
+        return self.get("/api/v1/push/subscription")
+
+    def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
+        """The browser's push subscription, given to my server: it encrypts each
+        notification for that browser and sends it through the browser's push service."""
+        body = {"subscription": {"endpoint": endpoint, "keys": {"p256dh": p256dh,
+                                                                 "auth": auth}},
+                "data": {"alerts": dict(alerts or {}), "policy": policy}}
+        return self.post("/api/v1/push/subscription", json=body)
+
+    def push_unsubscribe(self):
+        return self.delete("/api/v1/push/subscription")
 
     def instance_page(self, which):
         """The server's own text: which = "extended_description" or "privacy_policy";

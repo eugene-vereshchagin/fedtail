@@ -164,8 +164,11 @@ class FakeApi:
         self.w.notes[acc_id] = text
         return {"id": acc_id, "note": text}
 
-    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other"):
-        self.w.reports.append((acc_id, list(status_ids), comment, forward, category))
+    def report(self, acc_id, status_ids=(), comment="", forward=False, category="other",
+               rule_ids=()):
+        self.w.reports.append((acc_id, list(status_ids), comment, forward,
+                               "violation" if rule_ids else category)
+                              + ((list(rule_ids),) if rule_ids else ()))
         return {"id": "r1"}
 
     def custom_emojis(self):
@@ -274,15 +277,20 @@ class FakeApi:
         return {"ancestors": anc, "descendants": desc}
 
     def verify_credentials(self):
-        me = dict(ME, source={"note": "о себе", "fields": [{"name": "сайт", "value": "x.org"}]})
-        me.update(self.w.profile)
+        me = dict(ME, source={"note": "о себе", "fields": [{"name": "сайт", "value": "x.org"}],
+                              "attribution_domains": list(
+                                  self.w.profile.get("source_attribution", ()))})
+        me.update({k: v for k, v in self.w.profile.items() if k != "source_attribution"})
         return me
 
     def update_credentials(self, **changes):
         self.w.profile_updates.append(changes)
-        for k in ("display_name", "locked", "bot", "discoverable"):
+        for k in ("display_name", "locked", "bot", "discoverable", "hide_collections",
+                  "indexable"):
             if changes.get(k) is not None:
                 self.w.profile[k] = changes[k]
+        if changes.get("attribution_domains") is not None:
+            self.w.profile["source_attribution"] = list(changes["attribution_domains"])
         return self.verify_credentials()
 
     def follow_requests(self):
@@ -330,9 +338,13 @@ class FakeApi:
     def list_remove(self, list_id, acc_id):
         self.w.lists[list_id]["members"].discard(acc_id)
 
-    def upload_media(self, path, description="", focus=None):
-        self.w.uploads.append((path, description, focus))
+    def upload_media(self, path, description="", focus=None, thumbnail=None):
+        self.w.uploads.append((path, description, focus) + ((thumbnail,) if thumbnail else ()))
         return {"id": "m1", "url": "https://example.test/m1.png"}
+
+    def update_media(self, media_id, description=None, focus=None, thumbnail=None):
+        self.w.media_updates.append((media_id, description, focus, thumbnail))
+        return {"id": media_id, "description": description}
 
     def post_status(self, text, visibility="private", in_reply_to_id=None, spoiler_text="",
                     media_ids=(), markdown=False, language="", sensitive=False, poll=None,
@@ -365,12 +377,16 @@ class FakeApi:
         self.w.add(st, home=True)
         return st
 
-    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False):
+    def edit_status(self, sid, text, spoiler_text="", media_ids=(), markdown=False,
+                    media_attributes=None):
         old = self.w.statuses[sid]
+        attrs = {m["id"]: m for m in media_attributes or ()}
         self.w.history.setdefault(sid, []).append(old)
         st = dict(old, content=f"<p>{text}</p>", spoiler_text=spoiler_text,
                   edited_at="2099-10-14T12:00:00.000Z",
-                  media_attachments=[m for m in old["media_attachments"]
+                  media_attachments=[dict(m, **({"description": attrs[m["id"]]["description"]}
+                                                if m["id"] in attrs else {}))
+                                     for m in old["media_attachments"]
                                      if m["id"] in media_ids])
         self.w.statuses[sid] = st
         return st
@@ -416,7 +432,9 @@ class FakeApi:
                       expires_in=None):
         self.w.seq += 1
         f = {"id": f"F{self.w.seq}", "title": title, "filter_action": action,
-             "context": list(contexts), "keywords": [{"keyword": k} for k in keywords],
+             "context": list(contexts),
+             "keywords": [{"id": f"K{self.w.seq}.{i}", "keyword": k}
+                          for i, k in enumerate(keywords)],
              "statuses": [], "expires_in": expires_in,
              "expires_at": "2099-01-01T00:00:00Z" if expires_in else None}
         self.w.filters[f["id"]] = f
@@ -609,6 +627,59 @@ class FakeApi:
     def instance_page(self, which):
         return {"content": f"<p>{which} text</p>"}
 
+    def instance_v2(self):
+        return {"configuration": {"vapid": {"public_key": self.w.vapid}}} if self.w.vapid \
+            else {"configuration": {}}
+
+    def instance_domain_blocks(self):
+        return [{"domain": "bad.example", "severity": "suspend", "comment": "spam"}]
+
+    def terms_of_service(self):
+        return {"effective_date": "2026-01-01", "content": "<p>terms</p>"}
+
+    def translation_languages(self):
+        return {"en": ["ru", "de"], "ru": ["en"]}
+
+    def link_timeline(self, url, limit=20, max_id=None, min_id=None):
+        got = [s for s in self.w.statuses.values()
+               if url in ((s.get("card") or {}).get("url") or "")]
+        return _page(got, limit, max_id, min_id)
+
+    def featured_tag_suggestions(self):
+        return [{"name": "fedi", "url": "https://example.test/tags/fedi"}]
+
+    def update_filter(self, filter_id, title=None, action=None, contexts=None,
+                      expires_in=None, add=(), remove=()):
+        f = self.w.filters[filter_id]
+        if title is not None:
+            f["title"] = title
+        if action is not None:
+            f["filter_action"] = action
+        if contexts is not None:
+            f["context"] = list(contexts)
+        if expires_in is not None:
+            f["expires_in"] = expires_in or None
+            f["expires_at"] = "2099-01-01T00:00:00Z" if expires_in else None
+        f["keywords"] = [k for k in f["keywords"] if k.get("id") not in remove]
+        for w in add:
+            self.w.seq += 1
+            f["keywords"].append({"id": f"K{self.w.seq}", "keyword": w})
+        return f
+
+    def push_subscription(self):
+        if self.w.push is None:
+            raise ApiError(404, "not found")
+        return self.w.push
+
+    def push_subscribe(self, endpoint, p256dh, auth, alerts=None, policy="all"):
+        self.w.push = {"id": 1, "endpoint": endpoint, "alerts": dict(alerts or {}),
+                       "policy": policy, "server_key": self.w.vapid}
+        return self.w.push
+
+    def push_unsubscribe(self):
+        self.w.push = None
+        return {}
+
     def preferences(self):
         self._need("preferences")
         return dict(self.w.prefs)
@@ -625,7 +696,10 @@ class World:
         self.posted = []
         self.send_timeouts, self.send_lands, self.send_keys = 0, True, []
         self.announcements = []
-        self.uploads = []  # (path, description, focus)
+        self.uploads = []  # (path, description, focus[, thumbnail])
+        self.media_updates = []  # (id, description, focus, thumbnail)
+        self.vapid = ""  # the server's Web Push key ("" — none)
+        self.push = None  # the push subscription the server keeps
         self.emoji = []  # the server's custom emoji
         self.featured = {}  # account id -> {"tags": [...], "people": [...]}
         self.revoked = []  # tokens revoked through /oauth/revoke

@@ -1454,6 +1454,7 @@ class FedtailApp(App, PostsMixin):
                            subscribed=core.subscribed, thread_quiet=core.thread_quiet,
                            lists=True, long_form=bool(core.cfg["feed"].get("long_form", True)),
                            translate=bool(getattr(core.caps, "translation", False)),
+                           translates=getattr(core, "translation_languages", None),
                            quote_reply=True, in_thread=in_thread)
 
     def post_menu_items(self, st, in_thread=False):
