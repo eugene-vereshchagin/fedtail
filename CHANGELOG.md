@@ -5,6 +5,10 @@
 - The plan for 0.19 (docs/en/dev/roadmap.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- "Four interfaces" in the feature list (docs/{ru,en}/features.md, and so the site): a table
+  of what isn't in all of Qt, GTK, the terminal and the web page, and why — kept honest by a
+  test (tests/test_parity.py): a function added to or lost in one interface doesn't pass
+  without its line in docs/src/parity.toml.
 - Bug reports leave the machine by themselves if you like: `debug.report_repo = "user/repo"`
   (or any git address) — the report from the Debugging menu, `--bug-report` and the nightly
   selfcheck's text zip (`--send`, `--send-full` for the whole) are pushed into that private

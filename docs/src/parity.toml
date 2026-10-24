@@ -1,0 +1,578 @@
+# What is not the same in the four interfaces (Qt, GTK, the terminal, the web page) —
+# and why. tests/test_parity.py holds it against the code: every word of the interface
+# (an i18n key) one interface shows and another doesn't must be explained here, and an
+# interface marked "has" must show every word of its capability. tools/docs_build.py
+# turns it into the "Interfaces" chapter of docs/{ru,en}/features.md (and the site).
+#
+# [[capability]]: a function some interface lacks or has in part.
+#   status per interface: qt, gtk, tui, web = "has" (default) | "partly" | "no" | "na"
+#   ("na": doesn't belong there — a tray in a browser tab); note: what and why.
+#   keys: the words that show it; an interface marked "has" must show all of them.
+# [[wording]]: words an interface doesn't use although it has the function — it says
+#   it otherwise (its own tui_*/web_* words, an icon), or they aren't a function at all.
+
+# ---- the window, accounts, signing in ---------------------------------------------------
+
+[[capability]]
+id = "login"
+area = "window"
+name.ru = "Вход на сервер"
+name.en = "Logging in"
+tui = "no"
+web = "no"
+note.ru = "Входят в окне (Qt или GTK); терминал и веб открывают профиль, который уже вошёл, и подсказывают войти в окне."
+note.en = "You log in in the window (Qt or GTK); the terminal and the web page open a profile already logged in and tell you to log in in the window."
+keys = ["login_browser_opened", "login_hint", "login_other_account", "login_server",
+        "login_step1", "login_step2", "login_title", "auth_failed", "auth_failed_title",
+        "relogin", "relogin_q", "relogin_title"]
+
+[[capability]]
+id = "accounts"
+area = "window"
+name.ru = "Аккаунты: добавить, главный, выйти"
+name.en = "Accounts: add, make main, log out"
+tui = "no"
+web = "no"
+note.ru = "Профили заводят и переключают в окне; терминал и веб работают с тем, с каким запущены (`--profile`)."
+note.en = "Profiles are added and switched in the window; the terminal and the web page work with the one they were started with (`--profile`)."
+keys = ["account_add", "account_add_q", "account_bad_name", "accounts", "accounts_tip",
+        "make_main", "made_main", "logout", "logout_last", "logout_main_moves", "logout_q",
+        "logout_switch", "logout_title", "logout_yes", "not_logged_in"]
+
+[[capability]]
+id = "merge"
+area = "window"
+name.ru = "Все аккаунты в одном окне"
+name.en = "Every account in one window"
+tui = "partly"
+web = "partly"
+note.ru = "Сливаются ленты и в терминале, и в вебе (`ui.merge`), но переключателя в меню и пометки «получено через @…» у поста там нет."
+note.en = "The terminal and the web page merge the lanes too (`ui.merge`), but have no switch in the menu and no “received by @…” mark on a post."
+keys = ["accounts_merge", "post_from_other", "via_tip"]
+
+[[capability]]
+id = "tray"
+area = "window"
+name.ru = "Значок в трее"
+name.en = "The tray icon"
+tui = "na"
+web = "na"
+note.ru = "У терминала и вкладки браузера трея нет."
+note.en = "A terminal and a browser tab have no tray."
+keys = ["tray_new"]
+
+[[capability]]
+id = "curtain"
+area = "window"
+name.ru = "Шторка (Esc закрывает ленты)"
+name.en = "The curtain (Esc closes the lanes)"
+tui = "na"
+web = "na"
+note.ru = "В терминале и вебе Esc — шаг назад, закрывать нечего."
+note.en = "In the terminal and on the web page Esc steps back; there is nothing to close."
+keys = ["curtain_empty", "curtain_hint", "curtain_title", "curtain_waiting"]
+
+[[capability]]
+id = "columns"
+area = "window"
+name.ru = "Ленты колонками"
+name.en = "Lanes in columns"
+tui = "no"
+web = "no"
+note.ru = "Одна лента за раз; колонки — только в окне."
+note.en = "One lane at a time; columns are the window's."
+keys = ["column_close", "column_left", "column_right", "columns_tip"]
+
+[[capability]]
+id = "roster"
+area = "window"
+name.ru = "Ростер и окно сообщений, как в QIP (`ui.layout = \"split\"`)"
+name.en = "The roster and the messages window, as in QIP (`ui.layout = \"split\"`)"
+tui = "no"
+web = "no"
+note.ru = "Раскладка двух окон есть только у Qt и GTK."
+note.en = "The two-window layout is Qt's and GTK's only."
+keys = ["roster_look", "roster_news", "roster_no_news", "roster_offline", "roster_open",
+        "roster_search", "roster_search_tip", "roster_title", "roster_total",
+        "roster_unread", "faces_follows_me", "faces_mutual", "faces_private",
+        "faces_profile", "faces_requested", "talk_empty"]
+
+[[capability]]
+id = "sidebar-groups"
+area = "window"
+name.ru = "Ленты слева по группам"
+name.en = "The lanes on the left in groups"
+web = "partly"
+tui = "partly"
+note.ru = "Веб и терминал показывают ленты одним списком — в том же порядке, но без заголовков групп и без сворачивания."
+note.en = "The web page and the terminal list the lanes in one list — in the same order, but without the groups' headings and folding."
+keys = ["grp_people", "grp_personal", "grp_standard", "grp_tags", "grp_talks",
+        "grp_threads", "group_fold_tip"]
+
+[[capability]]
+id = "lists-order"
+area = "window"
+name.ru = "Порядок списков: выше, ниже"
+name.en = "The order of the lists: up, down"
+tui = "no"
+web = "no"
+note.ru = "Двигать списки можно в окне; порядок общий (синхронизация), терминал и веб его соблюдают."
+note.en = "Lists are moved in the window; the order is shared (sync), and the terminal and the web page keep it."
+keys = ["list_up", "list_down", "list_checking", "list_follow_first", "list_pending"]
+
+[[capability]]
+id = "announcements"
+area = "window"
+name.ru = "Объявления сервера"
+name.en = "The server's announcements"
+tui = "no"
+web = "no"
+note.ru = "Плашка с объявлением есть только в окне."
+note.en = "The announcement banner is the window's only."
+keys = ["announce_more", "announce_ok", "announce_react_tip", "announce_title",
+        "tip_announce_ok"]
+
+# ---- reading -----------------------------------------------------------------------------
+
+[[capability]]
+id = "find-deeper"
+area = "reading"
+name.ru = "Поиск в ленте: глубже, во всех лентах"
+name.en = "Find in a lane: deeper, in every lane"
+tui = "partly"
+web = "partly"
+note.ru = "Терминал и веб ищут в том, что на экране; в архиве и во всех лентах — только окно."
+note.en = "The terminal and the web page find in what's on screen; in the archive and in every lane — the window only."
+keys = ["find_archive_none", "find_deeper", "find_deeper_tip", "find_everywhere",
+        "find_everywhere_tip", "find_searching"]
+
+[[capability]]
+id = "find-prev"
+area = "reading"
+name.ru = "Поиск: к предыдущему, закрыть"
+name.en = "Find: previous, close"
+tui = "partly"
+note.ru = "В терминале Ctrl+F ищет только вперёд."
+note.en = "In the terminal Ctrl+F finds forward only."
+keys = ["find_prev", "find_close"]
+
+[[capability]]
+id = "thread-head"
+area = "reading"
+name.ru = "Шапка треда: сколько постов, все CW разом, подписка кнопкой"
+name.en = "A thread's head: how many posts, every CW at once, Follow as a button"
+tui = "partly"
+web = "partly"
+note.ru = "Подписаться на тред можно из меню ⋯ поста; счётчика и «открыть все CW» нет."
+note.en = "A thread is followed from a post's ⋯ menu; there is no count and no “open every CW”."
+keys = ["chain_count", "thread_info", "thread_loading", "thread_via_home",
+        "thread_via_home_tip", "cw_all_hide", "cw_all_show", "cw_all_tip", "sub_tip",
+        "subscribed", "unsubbed", "came_from"]
+
+[[capability]]
+id = "lane-view"
+area = "reading"
+name.ru = "Вид ленты: беседами, только посты, только новое, «к новому»"
+name.en = "A lane's view: as talks, posts only, unread only, “to the new”"
+tui = "partly"
+note.ru = "Терминал показывает ленту постами по порядку; фильтр по картинкам и «только посты» — по `s`."
+note.en = "The terminal shows a lane post by post; the media filter and “posts only” are on `s`."
+keys = ["conv_mode_tip", "view_feed_tip", "posts_only_tip", "show_all_tip",
+        "unread_only_tip", "to_new", "to_new_tip", "no_older"]
+
+[[capability]]
+id = "polls-vote"
+area = "reading"
+name.ru = "Голосовать в опросе"
+name.en = "Voting in a poll"
+tui = "no"
+note.ru = "Терминал показывает, что в посте опрос, но голосовать — в окне или в вебе."
+note.en = "The terminal shows that a post has a poll, but you vote in the window or on the web page."
+keys = ["poll_vote", "poll_voted", "poll_votes", "poll_closed", "poll_until",
+        "poll_multiple", "poll_option"]
+
+[[capability]]
+id = "polls-results"
+area = "reading"
+name.ru = "Опрос: результаты, обновить, сколько человек"
+name.en = "A poll: results, refresh, how many people"
+tui = "no"
+web = "partly"
+note.ru = "Веб показывает голоса у вариантов, без кнопок «результаты» и «обновить»."
+note.en = "The web page shows the votes at the options, without “results” and “refresh”."
+keys = ["poll_people", "poll_refresh", "poll_results", "poll_sending"]
+
+[[capability]]
+id = "origin-posts"
+area = "reading"
+name.ru = "Старые посты человека с его сервера"
+name.en = "Someone's older posts from their own server"
+tui = "no"
+web = "no"
+note.ru = "«▼ ещё раньше — с …» в профиле есть только в окне."
+note.en = "“▼ older still — from …” on a profile is the window's only."
+keys = ["older_from_origin", "older_from_origin_note", "older_from_origin_tip",
+        "origin_asking", "origin_fetching", "origin_got", "older_down", "older_up"]
+
+[[capability]]
+id = "profile-head"
+area = "reading"
+name.ru = "Профиль: счётчики, «с нами с», общие подписки, избранное, переезд"
+name.en = "A profile: counts, “since”, people you both follow, featured, moved"
+tui = "partly"
+web = "partly"
+note.ru = "Терминал и веб показывают профиль строками, без этих подробностей шапки."
+note.en = "The terminal and the web page show a profile as lines, without these details of the head."
+keys = ["card_counts", "card_since", "familiar", "featured_people", "featured_tags",
+        "following_them", "moved_follow", "moved_open", "moved_to", "pinned",
+        "profile_posts", "profile_title"]
+
+[[capability]]
+id = "my-pictures"
+area = "reading"
+name.ru = "Сменить свои аватар и шапку"
+name.en = "Changing my avatar and header"
+tui = "no"
+web = "no"
+note.ru = "Имя, описание и поля правятся везде; картинки — только в окне."
+note.en = "The name, the bio and the fields are edited everywhere; the pictures — in the window only."
+keys = ["change_avatar", "change_header", "no_header"]
+
+[[capability]]
+id = "tag-profile"
+area = "reading"
+name.ru = "Тег на свой профиль; убрать ленту тега"
+name.en = "A tag on my profile; dropping a tag lane"
+tui = "no"
+web = "no"
+note.ru = "Подписка на тег и «в ленты» есть везде; «на мой профиль» и «убрать из лент» — в окне."
+note.en = "Following a tag and “to lanes” are everywhere; “on my profile” and “drop from the lanes” — in the window."
+keys = ["tag_feature", "tag_feature_tip", "tag_unfeature", "tags_drop", "tags_in_config",
+        "tags_info", "tags_save_tip"]
+
+# ---- pictures, video ---------------------------------------------------------------------
+
+[[capability]]
+id = "viewer"
+area = "media"
+name.ru = "Просмотр картинок: листать, 1:1, оригинал, сохранить"
+name.en = "The picture viewer: leaf through, 1:1, the original, save"
+tui = "partly"
+web = "partly"
+note.ru = "Терминал показывает картинку на весь экран (chafa, kitty) или своим экраном; веб — картинку в просмотрщике страницы и «открыть оригинал». Сохранить — в окне (в вебе — средствами браузера)."
+note.en = "The terminal shows a picture full screen (chafa, kitty) or on a screen of its own; the web page — in its viewer, with “open the original”. Saving — in the window (on the web page — the browser's own)."
+keys = ["viewer_format", "viewer_keys", "viewer_original_coming", "viewer_save",
+        "viewer_save_tip", "viewer_unreachable", "image_failed", "image_loading",
+        "save_image", "save_media", "saved_to", "saving"]
+
+[[capability]]
+id = "player"
+area = "media"
+name.ru = "Видео и звук в самой программе"
+name.en = "Video and sound inside the program"
+tui = "partly"
+web = "partly"
+gtk = "partly"
+note.ru = "Терминал играет в mpv (окном или в самом терминале), веб — плеером браузера; у GTK свой плеер без кнопки паузы."
+note.en = "The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player; GTK has its own player without a pause button."
+keys = ["player_failed", "player_keys", "player_mute_tip", "player_next_tip",
+        "player_prev_tip", "player_pause_tip", "gif_keys"]
+
+# ---- writing -----------------------------------------------------------------------------
+
+[[capability]]
+id = "alt-warning"
+area = "writing"
+name.ru = "Предупреждение о картинке без описания"
+name.en = "A warning about a picture without a description"
+tui = "no"
+web = "no"
+gtk = "partly"
+note.ru = "Перед отправкой спрашивает окно; GTK показывает, есть ли подпись, не так подробно."
+note.en = "The window asks before sending; GTK shows whether a picture has one, in fewer words."
+keys = ["alt_describe", "alt_missing", "alt_missing_title", "alt_send_anyway",
+        "alt_set", "no_alt"]
+
+[[capability]]
+id = "focus-point"
+area = "writing"
+name.ru = "Фокус картинки для превью"
+name.en = "A picture's focus for previews"
+tui = "no"
+web = "no"
+note.ru = "Точку фокуса ставят щелчком по картинке — это окно."
+note.en = "The focus is set by clicking the picture — the window's."
+keys = ["focus_at", "focus_centre", "focus_none", "focus_tip"]
+
+[[capability]]
+id = "preview"
+area = "writing"
+name.ru = "Предпросмотр поста"
+name.en = "Previewing a post"
+tui = "no"
+web = "no"
+note.ru = "Как пост будет выглядеть — только в окне."
+note.en = "How a post will look — in the window only."
+keys = ["preview", "preview_back", "preview_md", "preview_media", "preview_plain",
+        "preview_tip"]
+
+[[capability]]
+id = "editor-extras"
+area = "writing"
+name.ru = "Редактор: «выкинуть», другой язык, подсказка про #CamelCase"
+name.en = "The editor: “discard”, another language, the #CamelCase hint"
+tui = "no"
+web = "no"
+note.ru = "Черновик хранится везде; выкинуть с вопросом, ввести язык не из списка и подсказка доступности — в окне."
+note.en = "A draft is kept everywhere; discarding with a question, typing a language not in the list and the accessibility hint — in the window."
+keys = ["discard", "discard_q", "discard_q_title", "lang_other", "lang_other_ask",
+        "lang_other_title", "camel_hint", "edit_media_kept"]
+
+# ---- the server, settings, help --------------------------------------------------------
+
+[[capability]]
+id = "probe"
+area = "app"
+name.ru = "«Что умеет сервер» — проверка возможностей"
+name.en = "“What the server can do” — the capability check"
+tui = "no"
+web = "no"
+note.ru = "Состояние федерации есть везде; проверка двух десятков возможностей — вкладка окна."
+note.en = "The federation's state is everywhere; the check of a score of capabilities is a tab of the window."
+keys = ["probe_again", "probe_announcements", "probe_answer", "probe_bookmarks",
+        "probe_checked", "probe_closed", "probe_conversations", "probe_copied",
+        "probe_copy", "probe_copy_tip", "probe_directory", "probe_dismiss_one",
+        "probe_domain_blocks", "probe_endorse", "probe_error", "probe_failed",
+        "probe_featured_tags", "probe_federated", "probe_filters", "probe_followed_tags",
+        "probe_grouped", "probe_home", "probe_interactions", "probe_known_tip",
+        "probe_lists", "probe_local", "probe_markdown", "probe_markers",
+        "probe_max_characters", "probe_max_media", "probe_max_poll_options",
+        "probe_mute_thread", "probe_never", "probe_no", "probe_notification_policy",
+        "probe_preferences", "probe_run", "probe_running", "probe_save", "probe_save_tip",
+        "probe_scheduled", "probe_self", "probe_streaming", "probe_suggestions",
+        "probe_tab", "probe_tip", "probe_translation", "probe_trends_links",
+        "probe_trends_statuses", "probe_trends_tags", "probe_what", "probe_yes"]
+
+[[capability]]
+id = "federation-tools"
+area = "app"
+name.ru = "Состояние федерации: скопировать, обновить, сбросить"
+name.en = "The federation's state: copy, refresh, reset"
+tui = "partly"
+web = "partly"
+note.ru = "Терминал и веб показывают состояние, без кнопок."
+note.en = "The terminal and the web page show the state, without the buttons."
+keys = ["fed_copied", "fed_copy", "fed_refresh", "fed_reset", "info_head"]
+
+[[capability]]
+id = "notification-policy"
+area = "app"
+name.ru = "Что придерживать из уведомлений (правило сервера)"
+name.en = "What notifications to hold back (the server's policy)"
+tui = "no"
+web = "no"
+note.ru = "Придержанное видно везде; само правило меняют в окне."
+note.en = "What's held back shows everywhere; the policy itself is changed in the window."
+keys = ["filtered_for_limited_accounts", "filtered_for_new_accounts",
+        "filtered_for_not_followers", "filtered_for_not_following",
+        "filtered_for_private_mentions", "filtered_loading", "filtered_policy",
+        "policy_accept", "policy_drop", "policy_filter"]
+
+[[capability]]
+id = "arts-mode"
+area = "app"
+name.ru = "Режим arts: пометка в меню"
+name.en = "The arts mode: its mark in the menu"
+tui = "no"
+web = "no"
+note.ru = "`ui.arts_mode` действует везде; напоминание о нём — в меню окна."
+note.en = "`ui.arts_mode` works everywhere; the reminder of it is in the window's menu."
+keys = ["tender_arts"]
+
+[[capability]]
+id = "settings-extras"
+area = "app"
+name.ru = "Окно настроек: поиск, перезапуск, «открыть файл»"
+name.en = "The settings window: search, restart, “open the file”"
+tui = "partly"
+web = "partly"
+note.ru = "Терминал и веб правят тот же config.toml формой по главам; поиска, кнопки перезапуска и «открыть файл» там нет."
+note.en = "The terminal and the web page edit the same config.toml with a form by chapters; there's no search, no restart button and no “open the file”."
+keys = ["settings", "settings_changed_outside", "settings_default", "settings_open_file",
+        "settings_restart", "settings_restart_tip", "settings_search"]
+
+[[capability]]
+id = "themes"
+area = "app"
+name.ru = "Темы: попробовать, папка тем"
+name.en = "Themes: try one, the themes folder"
+tui = "partly"
+web = "no"
+note.ru = "У терминала свои темы (`tui.theme`); веб тем пока не знает."
+note.en = "The terminal has themes of its own (`tui.theme`); the web page knows no themes yet."
+keys = ["try_theme", "theme_in_config", "theme_tried", "open_themes"]
+
+[[capability]]
+id = "files"
+area = "app"
+name.ru = "Открыть конфиг и папку данных"
+name.en = "Open the config and the data folder"
+tui = "no"
+web = "na"
+note.ru = "Терминал пишет пути (≡ → «Отладка»); у веба нет доступа к файлам машины."
+note.en = "The terminal prints the paths (≡ → “Debugging”); the web page has no access to the machine's files."
+keys = ["open_config", "open_data"]
+
+[[capability]]
+id = "help-browse"
+area = "app"
+name.ru = "Справка: поиск, назад, вперёд"
+name.en = "Help: search, back, forward"
+tui = "partly"
+web = "partly"
+note.ru = "Справка открывается везде, ссылки между страницами работают; поиска и истории нет."
+note.en = "The help opens everywhere and its links work; there's no search and no history."
+keys = ["help_back", "help_close_tip", "help_deep", "help_forward", "help_found",
+        "help_none", "help_search"]
+
+[[capability]]
+id = "about-copy"
+area = "app"
+name.ru = "«О программе»: скопировать сведения"
+name.en = "About: copy the information"
+tui = "no"
+web = "no"
+note.ru = "Сведения те же; кнопки «скопировать» нет — текст можно выделить."
+note.en = "The same information; no “copy” button — the text can be selected."
+keys = ["about_copy", "about_copied", "made_by"]
+
+[[capability]]
+id = "notify-desktop"
+area = "app"
+name.ru = "Уведомления рабочего стола и их проверка"
+name.en = "Desktop notifications and testing them"
+tui = "no"
+web = "partly"
+note.ru = "Терминал сообщает звуком (`tui.sound`); веб — уведомлениями браузера, если разрешить."
+note.en = "The terminal tells by a sound (`tui.sound`); the web page — by the browser's notifications, if allowed."
+keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_nothing",
+        "notify_test_body"]
+
+[[capability]]
+id = "debug-basic"
+area = "app"
+name.ru = "Отладка: журнал, отчёт, звук, стеки"
+name.en = "Debugging: the log, a report, the sound, the stacks"
+web = "no"
+note.ru = "Веб-страница — гость в браузере: отчёт собирают в окне, терминале или `fedtail --bug-report`."
+note.en = "The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`."
+keys = ["debug_logs", "debug_report", "debug_report_done", "debug_sound",
+        "debug_sound_played", "debug_sound_silent", "debug_stacks", "debug_stacks_done",
+        "bugreport_send_failed", "bugreport_sending", "bugreport_sent"]
+
+[[capability]]
+id = "debug-memory"
+area = "app"
+name.ru = "Отладка памяти: перепись, снимок, трассировка, отдать память"
+name.en = "Memory debugging: census, snapshot, tracing, giving memory back"
+tui = "no"
+web = "no"
+note.ru = "Охота на утечки — в окне, где они и случаются."
+note.en = "Leak hunting is the window's, where leaks happen."
+keys = ["debug_census", "debug_census_done", "debug_corner_tip", "debug_menu",
+        "debug_snapshot", "debug_snapshot_done", "debug_theme", "debug_tracing",
+        "debug_trim", "debug_trim_done", "debug_trim_none"]
+
+[[capability]]
+id = "tooltips"
+area = "app"
+name.ru = "Подсказки при наведении и «Что это?»"
+name.en = "Tooltips and “What's this?”"
+tui = "na"
+web = "partly"
+gtk = "partly"
+note.ru = "В терминале наводить нечем — подсказки там в строке клавиш внизу; в вебе подсказки у части кнопок; у GTK — без нескольких подсказок Qt."
+note.en = "A terminal has no pointer to hover — its hints are in the key line at the bottom; the web page has tooltips on some buttons; GTK lacks a few of Qt's."
+keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bookmarks",
+        "tip_bots", "tip_direct", "tip_federated", "tip_home", "tip_local", "tip_mentions",
+        "tip_my_likes", "tip_my_posts", "tip_replies", "tip_requests", "tip_subs",
+        "to_end_tip", "unread_tip", "full_width_tip", "short_id_tip", "reactions_tip",
+        "cw_add_tip", "compose_bigger_tip", "accounts_merge_tip", "debug_tracing_tip",
+        "footer_profile_tip", "make_main_tip", "tender_arts_tip", "try_theme_tip",
+        "close_tip", "a11y_avatar"]
+
+# ---- the same, in other words ------------------------------------------------------------
+
+[[wording]]
+in = ["tui", "web"]
+why.ru = "Общие слова окна (кнопки диалогов, строки состояния): терминал и веб говорят их своими словами (`tui_*`, `web_*`)."
+why.en = "The window's common words (dialog buttons, status lines): the terminal and the web page say them in their own (`tui_*`, `web_*`)."
+keys = ["close", "close_tab", "copy", "show", "open_action", "open_profile", "error",
+        "and_more", "new_n", "connected", "connecting", "first_poll", "sending",
+        "send_maybe", "rate_limited", "server_down", "searching", "search_found",
+        "search_side", "search_side_tip", "long_form_wait", "menu_people", "new_options",
+        "cmd_placeholder", "cmd_tip", "text_placeholder", "text_placeholder_md",
+        "schedule_ok", "show_original", "sensitive_click", "cw_hide", "cw_show",
+        "a11y_no_alt", "tender_menu", "list_added"]
+
+[[wording]]
+in = ["web"]
+why.ru = "Редактор и меню веба говорят своими словами и значками (📎 📊 🕒 ⚠🖼), а места — заголовками мест."
+why.en = "The web page's editor and menu speak in words and icons of their own (📎 📊 🕒 ⚠🖼), and the places by the places' titles."
+keys = ["alt_title", "cancel", "compose_edit", "compose_invite", "compose_new",
+        "compose_quote", "compose_reply", "draft_saved", "edit_hint", "edited_msg",
+        "handle_copied", "link_refused", "load_failed", "loading", "media_audio",
+        "media_click", "media_files", "media_gifv", "media_image", "media_tip",
+        "media_unknown", "media_video", "menu", "poll_add", "quit", "resolve_browser",
+        "resolving", "save_failed", "schedule", "send_failed_text", "sensitive_mark",
+        "debug_federation", "issue_menu", "all_read"]
+
+[[wording]]
+in = ["tui"]
+why.ru = "Редактор терминала: предупреждение, опрос и «позже» — в меню Ctrl+O, своими словами."
+why.en = "The terminal's editor: the warning, a poll and “later” are in its Ctrl+O menu, in its own words."
+keys = ["cw_add", "lang_default", "lang_tip", "poll_add_tip", "schedule_tip",
+        "scheduled_msg", "sensitive_mark_tip", "sensitive_media"]
+
+[[wording]]
+in = ["gtk", "tui", "web"]
+why.ru = "Слова, которые говорит только окно Qt; остальные — своими (`gtk_*`, `tui_*`, `web_*`) или иначе: команды — в справке, колонки — кнопкой ❯, серверы в «Тишине» — вкладкой «Заблокированные серверы»."
+why.en = "Words only the Qt window says; the others say it in their own (`gtk_*`, `tui_*`, `web_*`) or otherwise: the commands are in the help, columns are a ❯ button, servers in Silence are the “Blocked servers” tab."
+keys = ["cmd_help_title", "columns", "profile", "send_failed", "silence_domains",
+        "months"]
+
+[[wording]]
+in = ["gtk", "tui", "web"]
+why.ru = "Что уведомлениям некуда идти, кроме трея, — забота окна Qt; GTK говорит это своими словами, у терминала и веба трея нет."
+why.en = "That notifications have nowhere to go but the tray is the Qt window's concern; GTK says it in its own words, the terminal and the web page have no tray."
+keys = ["notify_no_send"]
+
+[[wording]]
+in = ["qt", "gtk"]
+why.ru = "«Всё прочитано» терминала; окно говорит «Отметить всё прочитанным» кнопкой."
+why.en = "The terminal's “all read”; the window says “Mark all read” on a button."
+keys = ["all_read"]
+
+[[wording]]
+in = ["qt", "gtk", "tui"]
+why.ru = "Слова терминальных команд (`fedtail lanes`, `show`…) и веба для тех, кто не вошёл."
+why.en = "The words of the terminal commands (`fedtail lanes`, `show`…) and the web page for those not logged in."
+keys = ["cli_login_first"]
+
+[[wording]]
+in = ["qt", "gtk", "web"]
+why.ru = "Слова терминала: «да/нет» в его вопросах, вложения строкой."
+why.en = "The terminal's words: “yes/no” in its questions, attachments as a line."
+keys = ["cli_media", "no_short", "yes_short", "post_maybe_sent"]
+
+[[wording]]
+in = ["qt", "gtk"]
+why.ru = "Подпись поля языка в формах терминала и веба; окно показывает список языков."
+why.en = "The language field's label in the terminal's and the web page's forms; the window shows a list of languages."
+keys = ["lang_label"]
+
+[[wording]]
+in = ["qt", "tui", "web"]
+why.ru = "GTK проверяет время «позже» сам; Qt и веб не дают выбрать раньше чем через пять минут."
+why.en = "GTK checks the “later” time itself; Qt and the web page don't let you pick less than five minutes ahead."
+keys = ["schedule_too_soon"]

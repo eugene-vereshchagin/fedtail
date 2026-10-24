@@ -73,6 +73,10 @@ Debian 13 packages: `python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-re
   CHANGELOG line in the "in progress" section; cut a release when a batch of
   features has landed: set the release version and CHANGELOG date and push — CI's
   `release` job tags the commit and publishes a GitHub release once tests are green.
+* The four interfaces offer the same things. A function added to one interface only (or
+  one taken out) gets a line in `docs/src/parity.toml` — which interface lacks it and
+  why, in ru and en — in the same commit; `tests/test_parity.py` fails otherwise. The
+  docs' "Four interfaces" table is built from it.
 * Add a test with every fix (tests/fakes.py is an in-memory Mastodon), and keep
   `CHANGELOG.md` and the docs in step with the code — a new feature or switch also
   gets its entry in `docs/src/features/<chapter>.toml`, in the same commit: status,
