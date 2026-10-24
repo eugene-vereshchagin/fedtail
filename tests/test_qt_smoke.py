@@ -1622,6 +1622,23 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: "040" not in lane.view.rows)
         self.assertEqual(self.win.lane_items["home"].count, len(lane.view.unread_keys()))
 
+    def test_a_follow_request_opens_the_profile_here(self):
+        """The person asking to follow: their @name opens their profile in fedtail,
+        not in the browser (as GTK's)."""
+        from PySide6.QtWidgets import QLabel
+
+        from fedtail.frontends.qt.feed import RequestsWidget
+        self.world.requests.append(dict(BOB))
+        self.core.poll_once()
+        self.pump(0.2)
+        opened = []
+        self.win.on_link = opened.append  # before the widget takes it
+        w = RequestsWidget(self.win)
+        label = next(x for x in w.findChildren(QLabel) if "fedtail:account/" in x.text())
+        self.assertFalse(label.openExternalLinks())
+        label.linkActivated.emit(f"fedtail:account/{BOB['id']}")
+        self.assertEqual(opened, [f"fedtail:account/{BOB['id']}"])
+
     def test_tray_icon_goes_at_exit_and_can_be_off(self):
         """The tray icon is dropped before fedtail leaves (Windows kept a dead one per
         restart), dropping it twice is harmless, and ui.tray = false makes none."""

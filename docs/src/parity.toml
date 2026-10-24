@@ -538,9 +538,9 @@ keys = ["cmd_help_title", "columns"]
 
 [[wording]]
 in = ["gtk", "tui", "web"]
-why.ru = "То же самое, сделанное иначе: заявку в подписчики GTK открывает профилем здесь же (Qt — ссылкой в браузер), ошибку отправки пишет под полем (Qt — окном), серверы в «Тишине» зовёт «Заблокированные серверы», дату объявления пишет по теме."
-why.en = "The same, done otherwise: GTK opens a follow request's profile right here (Qt — a link to the browser), says a failed send under the field (Qt — a window), calls the servers in Silence “Blocked servers”, writes an announcement's date by the theme."
-keys = ["profile", "send_failed", "silence_domains", "months"]
+why.ru = "То же самое, сделанное иначе: ошибку отправки пишет под полем (Qt — окном), серверы в «Тишине» зовёт «Заблокированные серверы», дату объявления пишет по теме."
+why.en = "The same, done otherwise: GTK says a failed send under the field (Qt — a window), calls the servers in Silence “Blocked servers”, writes an announcement's date by the theme."
+keys = ["send_failed", "silence_domains", "months"]
 
 [[wording]]
 in = ["gtk", "tui", "web"]

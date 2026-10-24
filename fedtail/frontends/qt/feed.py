@@ -2059,9 +2059,11 @@ class RequestsWidget(QScrollArea):
             card.setObjectName("card")
             v = QVBoxLayout(card)
             v.setContentsMargins(18, 14, 18, 14)
-            name = QLabel(f'<b>{display_name(acc)}</b> @{esc(acc.handle)} — '
-                          f'<a href="{esc(acc.url)}">{_("profile")} ↗</a>')
-            name.setOpenExternalLinks(True)
+            # the profile opens here, as GTK's (and the web page's) — not in the browser
+            name = QLabel(f'<b>{display_name(acc)}</b> '
+                          f'<a href="fedtail:account/{esc(acc.id)}">@{esc(acc.handle)}</a>')
+            name.setOpenExternalLinks(False)
+            name.linkActivated.connect(self.win.on_link)
             v.addWidget(name)
             note = QLabel(esc(snippet_html(acc.note, 300)))
             note.setWordWrap(True)

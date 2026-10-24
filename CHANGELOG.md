@@ -9,6 +9,8 @@
   menu items' tooltips (where GTK shows them), the profile's tooltip in the status bar, a
   click on a post's face opens the profile (and a screen reader names it), the columns'
   tab is called so, `?` in the command line opens the commands' help in a window.
+- Qt: a follow request's @name opens the person's profile in fedtail, as GTK's does — no
+  more "profile ↗" link out to the browser.
 - "Four interfaces" in the feature list (docs/{ru,en}/features.md, and so the site): a table
   of what isn't in all of Qt, GTK, the terminal and the web page, and why — kept honest by a
   test (tests/test_parity.py): a function added to or lost in one interface doesn't pass
