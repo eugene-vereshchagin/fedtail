@@ -390,8 +390,10 @@ The interface in a terminal — `fedtail --ui tui` (or ui.frontend = "tui"): lan
 | `tui.sound` | `"bell"` | Sounds (sound.*) in the terminal: "bell" — the terminal's beep (reaches you over ssh too); "scheme" — the sounds of the ui.theme theme, played by this computer; "off" — silence. |
 | `tui.lanes_width` | `26` | The width of the lanes column, in characters. |
 | `tui.show_context` | `true` | Over a reply — a line "↳ @who: the start of what it answers". false — without it. |
-| `tui.pictures` | `"inline"` | Pictures in the terminal, drawn with half blocks (needs Pillow, python3-pil; a true colour terminal). "inline" — a post's first picture small right in the lane, v — all of them full screen; "key" — on v only; "off" — none (o — open the post in the browser). |
+| `tui.pictures` | `"auto"` | Pictures in the terminal (need Pillow, python3-pil). "auto" — real pictures where the terminal can show them: sixel (Konsole, WezTerm, foot, xterm in vt340 mode) or the kitty protocol (kitty), with the textual-image package installed (pip install textual-image); elsewhere drawn with half blocks (any true colour terminal). A post's first picture small right in the lane, v — all of them big. "blocks" — half blocks always; "key" — on v only; "off" — none (o — open the post in the browser). |
 | `tui.picture_rows` | `8` | How high a picture in the lane is, in lines. |
+| `tui.viewer` | `"auto"` | v on a post with pictures: "auto" — shown by chafa, timg or kitty's icat when one of them is installed (the interface steps aside, Enter brings it back): real size and colours in Konsole, kitty, WezTerm and the rest; without them — in the interface itself. "app" — always in the interface. |
+| `tui.video` | `"auto"` | Video and gifs (v on a post with a video, Enter on it among the pictures) play in mpv: "auto" — in a window of its own on a desktop, drawn right in the terminal otherwise (over ssh: sixel, kitty, or coloured text); "window" — always a window; "terminal" — always in the terminal; "browser" — open in the browser. No mpv — the browser, and it says so. |
 
 ## 14. In a browser
 
