@@ -5,6 +5,11 @@
 - The plan for 0.19 (docs/ROADMAP.md): a sound scheme in the themes, the Windows tests
   filled in, the same behaviour checked across Qt, GTK, the web and the terminal, a full
   terminal interface and a full web page.
+- The terminal: `#abc` or `@name` typed in the command line no longer closes it on
+  Textual 2 (Debian 13) — the thread or profile it opened wasn't drawn yet when the line
+  gave the focus back; "Reply with a quote" quotes the post's words, not its HTML; a
+  redraw or an answer from the server arriving as the terminal closes is dropped quietly
+  instead of an error on the way out.
 - The language of a post: Georgian is named «ქართული (ka)» again, not in Mtavruli capitals
   («Ქართული»): Georgian text has no capital letters.
 - fedtail-sync guards itself — it faces the internet and didn't: a silent or trickling

@@ -233,9 +233,10 @@ class NoPillowTest(unittest.TestCase):
 
     def test_a_decompression_bomb_isnt_drawn(self):
         try:
+            import rich  # noqa: F401
             from PIL import Image
         except ImportError:
-            self.skipTest("Pillow is not installed")
+            self.skipTest("rich or Pillow is not installed")
         from fedtail.frontends.tui import pictures
         buf = io.BytesIO()
         Image.new("RGB", (100, 100)).save(buf, "PNG")

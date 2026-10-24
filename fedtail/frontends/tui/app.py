@@ -18,6 +18,7 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
@@ -229,6 +230,8 @@ class Ui:
         async def guarded(fn, arg):
             if me is not app and not getattr(me, "is_attached", True):
                 return
+            if me is app and (not getattr(app, "is_running", True) or not app.screen_stack):
+                return  # the app is closing (Esc while it connected): nothing to draw on
             got = fn(arg)
             if inspect.isawaitable(got):
                 await got
@@ -746,7 +749,10 @@ class FedtailApp(App, PostsMixin):
         core, name = self.core, self.lane
         if name is None:
             return
-        lv = self._main("#posts", ListView)
+        try:
+            lv = self._main("#posts", ListView)
+        except NoMatches:  # a redraw queued (a post sent) while the app was closing
+            return
         if name in ("activity", "requests"):  # not posts: rows of their own
             await self._fill_other(lv, name, first)
             return
@@ -998,7 +1004,8 @@ class FedtailApp(App, PostsMixin):
             self.screen.action_open()
 
     def on_list_view_highlighted(self, e: ListView.Highlighted):
-        if e.list_view.id != "posts" or not isinstance(e.item, PostItem):
+        if e.list_view.id != "posts" or not isinstance(e.item, PostItem) or \
+                not self.screen_stack:  # no screens: it came in as the app was closing
             return
         if self.core.cfg["read"]["mark_read"] == "on_scroll":
             entry = e.item.entry
@@ -1027,11 +1034,15 @@ class FedtailApp(App, PostsMixin):
         def ok(result):
             field.disabled = False
             field.value = ""
+            # a screen opened takes the focus itself: its list isn't there yet to be
+            # focused from here (Textual 2 raised NoMatches and closed the terminal)
             if isinstance(result, tuple) and result[0] == "thread":
                 self.push_screen(ThreadScreen(result[1]))
-            elif isinstance(result, tuple) and result[0] == "profile":
+                return
+            if isinstance(result, tuple) and result[0] == "profile":
                 self.push_screen(ProfileScreen(result[1].id))
-            elif isinstance(result, tuple) and result[0] == "delete":
+                return
+            if isinstance(result, tuple) and result[0] == "delete":
                 st = result[1]
                 if self.delete_guard.confirmed(st.id):
                     self.later(self.core.delete(st), ok=lambda _r: self.notify(_("deleted")))
@@ -1166,10 +1177,11 @@ class FedtailApp(App, PostsMixin):
         elif it.kind in ("long_form", "translate"):
             self.open_thing({"page": it.kind, "arg": real(st).id})
         elif it.kind == "quote_reply":
-            from ...model.text import quote_lines
+            from ...model.text import quote_lines, without_quote_fallback
+            # the words, as the windows quote them: not the post's HTML
             self.host.compose(reply_to=st, text=quote_lines(
-                real(st).text, self.core.cfg["post"].get("quote_prefix", "> "),
-                strip_mentions=True))
+                html_to_text(without_quote_fallback(real(st).text)),
+                self.core.cfg["post"].get("quote_prefix", "> "), strip_mentions=True))
 
     def main_menu_items(self):
         """The ≡ menu: writing, the places (common/places.py), help, debug, quit."""
