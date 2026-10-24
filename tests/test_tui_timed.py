@@ -55,8 +55,8 @@ class TuiTimedTest(Base):
             core.mute("B", False).result()
 
             # Hide this post: in the menu where the server can
-            p = core.by_id("002")
-            ctx = actions.Ctx(cfg=core.cfg, me_id=core.me.id, supports=core.supports)
+            p = app.core.by_id("002")  # the View: the model's Post, as menus take it
+            ctx = actions.Ctx(cfg=core.cfg, me_id=app.core.me.id, supports=core.supports)
             self.assertIn("fedtail:hidepost/002",
                           [i.url for i in actions.menu(p, ctx) if i.kind == "link"])
 
@@ -76,10 +76,6 @@ class TuiTimedTest(Base):
             await self.wait(pilot, lambda: keys() == ["004"], what="media")
             await pilot.press("s")
             self.assertEqual(prof.show, "posts")
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
@@ -106,3 +102,7 @@ class TuiHelpHistoryTest(Base):
             await self.wait(pilot, lambda: getattr(app.screen, "arg", "") == "keys")
             self.assertEqual(app.help_forward_pages, [])
             self.assertFalse(PlaceScreen("lists").check_action("help_back", ()))
+
+
+if __name__ == "__main__":
+    unittest.main()

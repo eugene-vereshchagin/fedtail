@@ -220,7 +220,7 @@ class ParityWebTest(TmpDir):
                         return_value=done(Path("/tmp/x.png"))):
             code, got = self.post("/api/save", {"url": "https://far/x.png"})
         self.assertEqual(code, 200, got)
-        self.assertEqual(got["message"], i18n._("saved_to", path="/tmp/x.png"))
+        self.assertEqual(got["message"], i18n._("saved_to", path=str(Path("/tmp/x.png"))))
         self.assertIsNotNone(webs._saver)
 
 
