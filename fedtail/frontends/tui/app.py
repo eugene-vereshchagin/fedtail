@@ -1399,6 +1399,8 @@ class FedtailApp(App, PostsMixin):
             self.push_screen(ProfileScreen(o["account"]))
         elif o.get("url"):
             self.host.open_url(o["url"])
+        elif o.get("file"):  # the config: in $EDITOR, or its path copied
+            self.open_file(o["file"])
         elif o.get("page"):
             from .screens import PlaceScreen
             self.push_screen(PlaceScreen(o["page"], o.get("arg", ""), o.get("tab", ""),

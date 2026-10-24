@@ -194,6 +194,20 @@ class PlaceTest(unittest.TestCase):
         for key, _words in page.tabs:
             self.assertTrue(self.pl.page("settings", "", key).form, key)
 
+    def test_the_windows_extras(self):
+        """Find…, Open the file, and "default: …" in the tips, as the settings windows."""
+        tools = self.pl.page("settings").rows[0]
+        self.assertEqual(tools.key, "_tools")
+        self.assertEqual([b.act[1] for b in tools.buttons], ["find", "file"])
+        out = self.pl.act("settings", "find", "")
+        self.assertEqual(out.ask[1], i18n._("settings_search"))
+        out = self.pl.act("settings", "find", "", answer=" sound ")
+        self.assertEqual(out.open, {"page": "settings", "arg": "sound"})
+        self.assertIn("🔍 sound", self.pl.page("settings", "sound").rows[0].title)
+        self.assertEqual(self.pl.act("settings", "file").open, {"file": str(self.file)})
+        tips = [f.tip for f in self.pl.page("settings").form]
+        self.assertTrue(any(i18n._("settings_default", value="").rstrip() in t for t in tips))
+
 
 if __name__ == "__main__":
     unittest.main()

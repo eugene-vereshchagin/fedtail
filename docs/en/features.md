@@ -691,7 +691,6 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 |---|---|---|---|---|---|
 | Logging in | ✓ | ✓ | — | — | You log in in the window (Qt or GTK); the terminal and the web page open a profile already logged in and tell you to log in in the window. |
 | Accounts: add, make main, log out | ✓ | ✓ | — | — | Profiles are added and switched in the window; the terminal and the web page work with the one they were started with (`--profile`). |
-| Every account in one window | ✓ | ✓ | ✓ | ◐ | The terminal and the web page merge the lanes (`ui.merge`) and mark another account's posts “received by @…”; the switch in the menu is the windows' and the terminal's, not the web page's yet. |
 | The tray icon | ✓ | ✓ | · | · | A terminal and a browser tab have no tray. |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. |
 | Lanes in columns | ✓ | ✓ | — | — | One lane at a time; columns are the window's. |
@@ -720,10 +719,9 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
-| The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | The terminal and the web page edit the same config.toml with a form by chapters; there's no search, no restart button and no “open the file”. |
+| The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens. |
 | Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. |
 | Open the config and the data folder | ✓ | ✓ | ✓ | · | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. |
-| Desktop notifications and testing them | ✓ | ✓ | ✓ | ◐ | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed, without a test in the menu. |
 | Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | — | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. |
 | Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | ✓ | — | Leak hunting is the windows' and the terminal's; the web page is a guest in a browser. |
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | A terminal has no pointer to hover — its hints are in the key line at the bottom; the web page has tooltips on some buttons. |

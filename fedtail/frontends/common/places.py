@@ -551,6 +551,11 @@ class Places(MorePlaces):
         page = Page("settings", _("settings_title"), arg=query,
                     hint=_("settings_hint", file=name),
                     tabs=tuple((c.key, f"{c.number}. {c.title}") for c in chapters))
+        # the windows' search box and "Open the file", as buttons
+        page.rows.append(Row("item", f"🔍 {query}" if query else _("settings_search"), name,
+                             key="_tools", buttons=(
+                                 self._btn(_("settings_search"), "settings", "find", query),
+                                 self._btn(_("settings_open_file"), "settings", "file"))))
         if query:
             options = [o for _c, hits in settings.find(chapters, query) for o in hits]
             page.empty = _("settings_none")
@@ -572,6 +577,8 @@ class Places(MorePlaces):
     @staticmethod
     def _setting_field(o):
         tip = (o.about + "\n" if o.about else "") + o.name
+        if not o.changed:  # as the windows say it under the name
+            tip += "  ·  " + _("settings_default", value=o.default_shown())
         if o.kind == "bool":
             return Field(o.name, o.title, bool(o.value), "check", tip=tip)
         if o.kind in ("choice", "checks"):
@@ -591,6 +598,18 @@ class Places(MorePlaces):
             return Out(message=settings.save(self.view, changes), refresh=True)
         except (ValueError, settings.SaveError) as e:
             return Out(error=str(e))
+
+    def _a_settings_find(self, query, _v, _c, answer):
+        """Find a setting: by words of its name, title or explanation (common/settings)."""
+        if answer is None:
+            return Out(ask=(_("settings_title"), _("settings_search"), query))
+        return Out(open={"page": "settings", "arg": str(answer).strip()})
+
+    def _a_settings_file(self, _d, _v, _c, _ans):
+        """The config itself: the terminal opens it in $EDITOR; the web page copies its
+        path (the file is on the machine fedtail runs on)."""
+        from . import settings
+        return Out(open={"file": str(settings.config_file(self.view))})
 
     def _a_settings_reset(self, name, _v, _c, _ans):
         from . import settings

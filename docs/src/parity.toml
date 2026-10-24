@@ -44,9 +44,6 @@ id = "merge"
 area = "window"
 name.ru = "Все аккаунты в одном окне"
 name.en = "Every account in one window"
-web = "partly"
-note.ru = "Терминал и веб сливают ленты (`ui.merge`) и помечают чужие посты «получено через @…»; переключатель в меню — у окон и терминала, у веба пока нет."
-note.en = "The terminal and the web page merge the lanes (`ui.merge`) and mark another account's posts “received by @…”; the switch in the menu is the windows' and the terminal's, not the web page's yet."
 keys = ["accounts_merge", "post_from_other", "via_tip"]
 
 [[capability]]
@@ -354,8 +351,8 @@ name.ru = "Окно настроек: поиск, перезапуск, «отк
 name.en = "The settings window: search, restart, “open the file”"
 tui = "partly"
 web = "partly"
-note.ru = "Терминал и веб правят тот же config.toml формой по главам; поиска, кнопки перезапуска и «открыть файл» там нет."
-note.en = "The terminal and the web page edit the same config.toml with a form by chapters; there's no search, no restart button and no “open the file”."
+note.ru = "Терминал и веб правят тот же config.toml формой по главам, с поиском и «Открыть файл» (терминал — в $EDITOR, веб копирует путь). Перезапуска нет: их перезапускают, как запускали; «файл изменили снаружи» не нужно — место перечитывает файл при каждом открытии."
+note.en = "The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens."
 keys = ["settings", "settings_changed_outside", "settings_default", "settings_open_file",
         "settings_restart", "settings_restart_tip", "settings_search"]
 
@@ -402,11 +399,9 @@ id = "notify-desktop"
 area = "app"
 name.ru = "Уведомления рабочего стола и их проверка"
 name.en = "Desktop notifications and testing them"
-web = "partly"
-note.ru = "Терминал — через notify-send или кодом самого терминала (kitty, WezTerm, foot…); веб — уведомлениями браузера, если разрешить, без проверки в меню."
-note.en = "The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed, without a test in the menu."
-keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_nothing",
-        "notify_test_body"]
+note.ru = "Терминал — через notify-send или кодом самого терминала (kitty, WezTerm, foot…); веб — уведомлениями браузера, если разрешить."
+note.en = "The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed."
+keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_test_body"]
 
 [[capability]]
 id = "debug-basic"
@@ -541,3 +536,9 @@ in = ["qt", "tui", "web"]
 why.ru = "GTK проверяет время «позже» сам; Qt и веб не дают выбрать раньше чем через пять минут."
 why.en = "GTK checks the “later” time itself; Qt and the web page don't let you pick less than five minutes ahead."
 keys = ["schedule_too_soon"]
+
+[[wording]]
+in = ["web"]
+why.ru = "Уведомлениям веба некуда деться, только если браузер их не разрешил — это он и говорит своими словами (`web_notify_off`)."
+why.en = "The web page's notifications have nowhere to go only when the browser didn't allow them — and that is what it says, in its own words (`web_notify_off`)."
+keys = ["notify_nothing"]

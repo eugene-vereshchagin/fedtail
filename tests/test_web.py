@@ -297,6 +297,16 @@ class WebTest(TmpDir):
         webs.theme = "no-such-theme"
         self.assertEqual(webs.theme_css(), "")  # won't load: the page's own colours
 
+    def test_merge_switch(self):
+        me = json.loads(self.req("/api/me")[2])
+        self.assertFalse(me["merged"])
+        self.assertIn("accounts_merge_tip", me["words"])
+        r = json.loads(self.req("/api/merge", {})[2])
+        self.assertTrue(r["merged"])
+        self.assertTrue(r["message"].startswith("☑ "))
+        self.assertEqual(self.core.get_state("merge"), ["all"])
+        self.assertFalse(json.loads(self.req("/api/merge", {})[2])["merged"])
+
     def test_lanes_and_posts_cleaned(self):
         _c, _h, body = self.req("/api/lanes")
         lanes = {x["name"]: x for x in json.loads(body)}

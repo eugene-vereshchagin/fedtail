@@ -589,6 +589,7 @@ class Web:
                           "when_focused": c["sound"]["when_focused"]},
                 "notify": {"when_focused": c["notify"]["when_focused"]},
                 "editor": self.editor_facts(),
+                "merged": self.merged(),
                 "words": {k: _(k) for k in WORDS}}
 
     # ---- the theme: the windows' colours and font, as the page's own --------------------
@@ -636,6 +637,19 @@ class Web:
         if family:
             css += f"body {{ font-family: {family}; }}\n"
         return css
+
+    def merged(self):
+        """All accounts in one window: ui.merge, or switched on from a menu (state)."""
+        primary = getattr(self.core, "primary", self.core)
+        return bool(self.core.cfg["ui"].get("merge") or primary.get_state("merge"))
+
+    def toggle_merge(self):
+        """≡ → All accounts in one window: from the next start, as in the windows."""
+        primary = getattr(self.core, "primary", self.core)
+        primary.set_state("merge", [] if self.merged() else ["all"])
+        on = self.merged()
+        return {"merged": on, "message": ("☑ " if on else "☐ ") + _("accounts_merge") +
+                " — " + _("settings_restart_tip")}
 
     def themes(self):
         """≡ → Try a theme: the names, which one is on, which the config says."""
@@ -1338,7 +1352,9 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "detach", "poll_option", "poll_several", "lang_tip", "attach", "poll_add_tip",
          "sensitive_mark_tip", "schedule_tip", "schedule_when",
          # what the windows have and the page now too (docs/src/parity.toml)
-         "help_back", "help_forward",
+         "help_back", "help_forward", "debug_notify", "debug_notify_sent", "notify_failed",
+         "notify_test_body", "accounts_merge", "accounts_merge_tip", "try_theme",
+         "try_theme_tip",
          "group_fold_tip", "thread_loading", "find_deeper", "find_deeper_tip",
          "find_everywhere", "find_everywhere_tip", "find_searching", "find_archive_none",
          "poll_results", "poll_refresh", "poll_sending", "preview", "preview_tip",
@@ -1523,6 +1539,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/place": lambda: web.place_act(body),
             "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/theme": lambda: web.try_theme(body.get("name")),
+            "/api/merge": lambda: web.toggle_merge(),
             "/api/link": lambda: web.link(str(body.get("url", "")),
                                           bool(body.get("confirmed")), _chosen(body)),
             "/api/profile_act": lambda: web.profile_act(

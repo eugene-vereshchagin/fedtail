@@ -15,6 +15,9 @@
   for the run (`ui.theme` gives the one it starts with).
 - The help in the web page and the terminal goes back and forward between its pages
   (← → on the page; Alt+← Alt+→ in the terminal), as in the windows.
+- The web page's ≡ menu: "All accounts in one window" and a test notification; the
+  settings in the web page and the terminal: "Find a setting…", "Open the file" and each
+  option's default in its tip.
 
 ## 0.19.0 — 2026-10-24
 

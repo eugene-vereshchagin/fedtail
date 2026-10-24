@@ -462,6 +462,7 @@ function popup(anchor, items) {
     const b = el("button", "", it[0]);
     b.type = "button";
     b.setAttribute("role", "menuitem");
+    if (it[2]) b.title = it[2];  // a tooltip, as the windows' menus have
     b.onclick = () => { closePopup(); it[1](); };
     pop.append(b);
   }
@@ -629,7 +630,10 @@ function mainMenu() {
     [w("help_title"), () => openPlace("help")],
     [w("help_news"), () => openPlace("news")],
     [w("web_keys"), () => info(w("web_keys_text"))],
-    [w("try_theme") + " …", tryTheme],
+    [w("try_theme") + " …", tryTheme, w("try_theme_tip")],
+    "-",
+    [w("debug_notify"), testNotify],
+    [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge, w("accounts_merge_tip")],
     [w("about"), () => openPlace("about")],
   ]);
 }
@@ -1301,6 +1305,7 @@ function openThing(o) {  // where an action leads
   if (o.thread) openThread(o.thread);
   else if (o.account) openAccount(o.account);
   else if (o.url) window.open(o.url, "_blank", "noopener");
+  else if (o.file) copyText(o.file);  // on the machine fedtail runs on: its path
   else if (o.page) openPlace(o.page, o.arg, o.tab, o.cursor,
                              state.place && state.place.into === "main" && o.page === state.place.name
                                ? "main" : "side", o.anchor);
@@ -1981,6 +1986,29 @@ function playSound(snd) {
 
 // ---- notifications: the windows' words (notify.*), shown by the browser ----------------
 function canNotify() { return "Notification" in window && window.isSecureContext; }
+
+// ≡ → Send a test notification: the browser's, as the windows' test
+async function testNotify() {
+  if (!canNotify()) { toast(w("web_notify_off")); return; }
+  if (Notification.permission !== "granted"
+      && await Notification.requestPermission() !== "granted") {
+    toast(w("web_notify_off"));
+    return;
+  }
+  try {
+    new Notification("fedtail", { body: w("notify_test_body"), tag: "fedtail-test" });
+    toast(w("debug_notify_sent", { backend: "browser" }));
+  } catch (e) { toast(w("notify_failed", { err: e.message })); }
+}
+
+// ≡ → All accounts in one window: from the next start of fedtail, as in the windows
+async function toggleMerge() {
+  try {
+    const r = await api("/api/merge", {});
+    state.me.merged = r.merged;
+    toast(r.message);
+  } catch (e) { toast(e.message); }
+}
 
 async function askNotify() {
   if (!canNotify()) return;
