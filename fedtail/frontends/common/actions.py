@@ -199,9 +199,11 @@ def menu(entry, ctx, short_id=None, unread=False):
         on = ctx.subscribed(entry)
         out.append(Item("link", _("unsub_thread" if on else "sub_thread"),
                         url=make("unsub" if on else "sub", sid)))
+    if sup("filter_status"):
+        out.append(Item("link", _("hide_post"), url=make("hidepost", sid)))
     if author.id != ctx.me_id:
         out.append(SEP)
-        out.append(Item("link", _("mute_acct", acct=author.handle), url=make("mute", sid)))
+        out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid)))
         out.append(Item("link", _("block_acct", acct=author.handle), url=make("block", sid)))
         domain = author.handle.partition("@")[2]
         if domain:

@@ -28,6 +28,7 @@ from urllib.parse import unquote
 
 from ...i18n import _
 from ...model.text import snippet
+from . import timed
 
 log = logging.getLogger(__name__)
 
@@ -108,17 +109,18 @@ class Links:
             h.compose(edit=st)
         elif action == "history":
             self._ask(h, "show_history", st)
-        elif action in ("mute", "block"):
+        elif action == "mute":  # how long, and their notifications too or not
+            timed.mute(v, h, st.author)
+        elif action == "block":
             acc = st.author
-            call = v.mute if action == "mute" else v.block
-
-            def go():
-                h.call(call(acc.id, True), ok=lambda _r: h.status(_(action + "d_msg",
-                                                                    acct=acc.handle)))
-            if action == "block":
-                h.confirm(_("block"), _("block_q", acct=acc.handle), go)
-            else:
-                go()
+            h.confirm(_("block"), _("block_q", acct=acc.handle),
+                      lambda: h.call(v.block(acc.id, True),
+                                     ok=lambda _r: h.status(_("blocked_msg",
+                                                              acct=acc.handle))))
+        elif action == "hidepost":  # this one post, through a filter of the server's
+            h.confirm(_("hide_post"), _("hide_post_tip"),
+                      lambda: h.call(v.hide_post(st), ok=lambda _r: h.status(_("post_hidden")),
+                                     fail=h.error))
         elif action == "bookmark":
             on = not st.mine.bookmarked
             h.call(v.bookmark(st, on),

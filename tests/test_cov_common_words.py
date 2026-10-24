@@ -46,6 +46,11 @@ class Host:
         if ok:
             ok(None)
 
+    def choose(self, title, text, options, done, check=None):
+        """How long and the like: the first choice, the box unticked."""
+        self.done.append(("choose", title))
+        done(options[0][0], False)
+
     def confirm(self, title, text, then):
         self.done.append(("confirm", title, text))
         then()
@@ -103,7 +108,9 @@ class LinksTest(unittest.TestCase):
         self.assertEqual(self.open("fedtail:invite/1", view=View([self.p], me=False)), [])
         self.open("fedtail:readone/1")
         self.assertEqual(self.view.read, ["1"])
-        for action, said in (("mute", "muted_msg"), ("fav", None), ("boost", None),
+        got = self.open("fedtail:mute/1")  # how long first, then the call
+        self.assertEqual([g[0] for g in got[:2]], ["choose", "call"])
+        for action, said in (("fav", None), ("boost", None),
                              ("sub", "subbed"), ("unsub", "unsubbed"),
                              ("mutethread", "thread_muted"), ("unmutethread", "thread_unmuted"),
                              ("pin", "pinned_msg"), ("unpin", "unpinned_msg")):

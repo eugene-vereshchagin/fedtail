@@ -1,0 +1,83 @@
+"""common/timed.py: how long, which posts, whose replies — and muting through the host."""
+
+import time
+import unittest
+
+from fedtail import i18n
+from fedtail.frontends.common import timed
+
+
+class Acc:
+    id, handle = "B", "bob@x.test"
+
+
+class View:
+    def __init__(self):
+        self.calls = []
+
+    def mute(self, acc_id, on, **kw):
+        self.calls.append((acc_id, on, kw))
+        return "fut"
+
+
+class Host:
+    def __init__(self, pick=None):
+        self.pick, self.done = pick, []
+        if pick is not None:
+            self.choose = self._choose
+
+    def _choose(self, title, text, options, done, check=None):
+        self.done.append(("choose", title, text, [k for k, _l in options], check))
+        done(*self.pick)
+
+    def call(self, fut, ok=None, fail=None):
+        self.done.append(("call", fut))
+        ok("rel")
+
+    def status(self, text):
+        self.done.append(("status", text))
+
+
+class TimedTest(unittest.TestCase):
+    def setUp(self):
+        i18n.setup("en")
+
+    def test_choices(self):
+        self.assertEqual([s for s, _l in timed.spans()], [0, 3600, 86400, 604800, 2592000])
+        self.assertEqual(timed.spans()[0][1], i18n._("span_ever"))
+        self.assertEqual([k for k, _l in timed.profile_shows()], ["posts", "all", "media"])
+        self.assertEqual([k for k, _l in timed.replies_policies()], ["list", "followed", "none"])
+        self.assertEqual(timed.profile_show({"feed": {"profile_show": "media"}}), "media")
+        self.assertEqual(timed.profile_show({"feed": {"profile_show": "odd"}}), "posts")
+        self.assertEqual(timed.profile_show(None), "posts")
+
+    def test_until(self):
+        self.assertEqual(timed.until(0), "")
+        now = time.mktime((2030, 5, 6, 7, 8, 0, 0, 0, -1))
+        self.assertEqual(timed.until(3600, now), "06.05 08:08")
+
+    def test_mute_asks_how_long(self):
+        v, h, got = View(), Host(pick=(3600, True)), []
+        timed.mute(v, h, Acc(), got.append)
+        self.assertEqual(v.calls, [("B", True, {"duration": 3600, "notifications": False})])
+        self.assertEqual(h.done[0][3], [0, 3600, 86400, 604800, 2592000])
+        self.assertEqual(h.done[0][4], i18n._("mute_posts_only"))
+        self.assertTrue(h.done[-1][1].startswith("@bob@x.test"))
+        self.assertIn(timed.until(3600)[:5], h.done[-1][1])
+        self.assertEqual(got, ["rel"])
+
+    def test_mute_for_good(self):
+        v, h = View(), Host(pick=("0", False))
+        timed.mute(v, h, Acc())
+        self.assertEqual(v.calls, [("B", True, {"duration": 0, "notifications": True})])
+        self.assertEqual(h.done[-1], ("status", i18n._("muted_msg", acct="bob@x.test")))
+
+    def test_a_host_that_cannot_ask_mutes_for_good(self):
+        v, h = View(), Host()
+        timed.mute(v, h, Acc())
+        self.assertEqual(v.calls, [("B", True, {"duration": 0, "notifications": True})])
+        self.assertEqual(h.done[0], ("call", "fut"))
+
+
+if __name__ == "__main__":
+    unittest.main()

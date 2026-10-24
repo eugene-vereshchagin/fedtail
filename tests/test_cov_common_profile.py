@@ -25,6 +25,11 @@ class Host:
         if ok:
             ok(None)
 
+    def choose(self, title, text, options, done, check=None):
+        """How long and the like: the first choice, the box unticked."""
+        self.done.append(("choose", title))
+        done(options[0][0], False)
+
     def confirm(self, title, text, then):
         self.done.append(("confirm", title))
         then()

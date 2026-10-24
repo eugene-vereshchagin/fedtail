@@ -543,6 +543,11 @@ translate = true
 # too, and on posts with no language given (the server works it out). As in Fedilab.
 translate_all = false
 
+# What a profile shows under its header first: "posts" — posts without replies to others (as
+# other clients do), "all" — posts and replies, "media" — only those with pictures and video.
+# Switched right there, above the posts.
+profile_show = "posts"
+
 # In a profile — the person's featured tags ("Often writes about: #tags") and whom they recommend
 # (Mastodon 4.4+). false — don't ask.
 profile_featured = true

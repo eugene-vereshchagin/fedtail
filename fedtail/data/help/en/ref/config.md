@@ -180,6 +180,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `feed.profile_pinned` | `true` | Pinned posts — at the top of a profile, marked 📌. false — the profile simply in time order. |
 | `feed.translate` | `true` | "Translate" in the ⋯ menu of a post in another language — if your server can translate (Mastodon with DeepL or LibreTranslate). The translation — right in the card, with an "original" button. |
 | `feed.translate_all` | `false` | "Translate" on every post, not only those in another language: in your own language too, and on posts with no language given (the server works it out). As in Fedilab. |
+| `feed.profile_show` | `"posts"` | What a profile shows under its header first: "posts" — posts without replies to others (as other clients do), "all" — posts and replies, "media" — only those with pictures and video. Switched right there, above the posts. |
 | `feed.profile_featured` | `true` | In a profile — the person's featured tags ("Often writes about: #tags") and whom they recommend (Mastodon 4.4+). false — don't ask. |
 
 ## 3. Read marks

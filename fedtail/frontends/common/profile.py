@@ -23,6 +23,7 @@ from dataclasses import dataclass, replace
 from ...i18n import _
 from ...model import Relationship
 from ...model.text import note_text
+from . import timed
 
 
 @dataclass(frozen=True)
@@ -134,8 +135,10 @@ def do(key, acc, rel, view, host, changed):
     elif key == "mention":
         host.compose(text=f"@{acc.handle} ")
     elif key == "mute":
-        on = not rel.muting
-        host.call(view.mute(acc.id, on), after(muting=on))
+        if rel.muting:
+            host.call(view.mute(acc.id, False), after(muting=False))
+        else:  # how long, and their notifications too or not
+            timed.mute(view, host, acc, after(muting=True))
     elif key == "block":
         on = not rel.blocking
 

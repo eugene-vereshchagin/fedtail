@@ -1272,7 +1272,8 @@ class Core(SocialMixin):
         sid = status["id"] if isinstance(status, dict) else status
 
         def job():
-            got = self.api.filter_status(self._hidden_filter(make=True)["id"], sid)
+            got = self._api("filter_status", self.api.filter_status,
+                            self._hidden_filter(make=True)["id"], sid)
             self._hidden_changed(sid, True)
             return got
         return self.submit(job)

@@ -39,6 +39,11 @@ class Host:
     def error(self, text):
         self.did.append(("error", text))
 
+    def choose(self, title, text, options, done, check=None):
+        """How long and the like: the first choice, the box unticked."""
+        self.did.append(("choose", title))
+        done(options[0][0], False)
+
     def confirm(self, title, text, then):
         self.did.append(("asked", title))
         if self.yes:
@@ -92,8 +97,8 @@ class CommonTest(TmpDir):
         ls.open("fedtail:delete/002")
         self.assertEqual(h.did[-1][0], "asked")
         self.assertIsNotNone(self.view.by_id("002"))  # not deleted: the answer was no
-        ls.open("fedtail:mute/001")  # muting doesn't ask
-        self.assertEqual(h.did[-1][0], "status")
+        ls.open("fedtail:mute/001")  # muting asks only how long
+        self.assertEqual([d[0] for d in h.did[-2:]], ["choose", "status"])
 
     def test_a_host_without_a_thing_says_so(self):
         class Small(Host):
@@ -105,9 +110,22 @@ class CommonTest(TmpDir):
         ls.open("fedtail:report/001")
         self.assertEqual(h.did[-1], ("status", i18n._("gtk_not_yet")))
 
+    def test_hide_one_post(self):
+        h = Host()
+        links.Links(self.view, h).open("fedtail:hidepost/001")
+        self.assertEqual([d[0] for d in h.did], ["asked", "status"])
+        self.assertEqual(h.did[-1], ("status", i18n._("post_hidden")))
+        hid = [f for f in self.w.filters.values() if f["title"] == self.core.HIDDEN_POSTS]
+        self.assertEqual([x["status_id"] for x in hid[0]["statuses"]], ["001"])
+        self.assertTrue(self.core.silenced(self.w.statuses["001"]))
+        no = Host(yes=False)  # said no: nothing hidden
+        links.Links(self.view, no).open("fedtail:hidepost/002")
+        self.assertEqual(len(hid[0]["statuses"]), 1)
+
     # ---- what a post offers -----------------------------------------------------------
     def ctx(self, **kw):
-        return actions.Ctx(cfg=self.core.cfg, me_id="ME", supports=lambda _w: True, **kw)
+        kw.setdefault("supports", lambda _w: True)
+        return actions.Ctx(cfg=self.core.cfg, me_id="ME", **kw)
 
     def test_buttons(self):
         p = self.view.by_id("001")
@@ -126,6 +144,11 @@ class CommonTest(TmpDir):
         self.assertIn("fedtail:delete/002", urls(mine))
         self.assertNotIn("fedtail:block/002", urls(mine))
         self.assertIn(("copy", "#a00"), [(i.kind, i.text) for i in theirs])
+        self.assertIn("fedtail:hidepost/001", urls(theirs))
+        self.assertIn("fedtail:hidepost/002", urls(mine))  # my own too
+        cannot = actions.menu(self.view.by_id("001"),
+                              self.ctx(supports=lambda w: w != "filter_status"))
+        self.assertNotIn("fedtail:hidepost/001", urls(cannot))
         arts = dict(self.core.cfg, ui=dict(self.core.cfg["ui"], arts_mode=True))
         no_report = actions.menu(self.view.by_id("001"),
                                  actions.Ctx(cfg=arts, me_id="ME"))

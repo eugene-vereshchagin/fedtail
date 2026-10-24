@@ -111,6 +111,7 @@ DEFAULTS = {
         "translate": True,
         "translate_all": False,
         "profile_featured": True,
+        "profile_show": "posts",
     },
     "read": {
         "mark_read": "on_scroll",
@@ -292,6 +293,7 @@ CHOICES = {
     ("ui", "gifv"): {"play", "click"},
     ("ui", "actions"): {"both", "icons", "text"},
     ("feed", "order"): {"oldest_first", "newest_first"},
+    ("feed", "profile_show"): {"posts", "all", "media"},
     ("feed", "start_at"): {"first_unread", "newest"},
     ("feed", "on_new"): {"keep_position", "jump_to_newest"},
     ("read", "mark_read"): {"on_scroll", "on_open", "manual"},
