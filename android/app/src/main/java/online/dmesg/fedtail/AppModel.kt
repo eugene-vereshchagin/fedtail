@@ -105,7 +105,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val place: Place? get() = places.lastOrNull()
 
     var threadPosts by mutableStateOf(listOf<PostItem>())
-    var threadOpening by mutableStateOf(0)
+    var threadOpening by mutableStateOf(0) // grows when the thread should be aimed anew
+    var threadAimed = 0                    // the opening the thread list last aimed at
+    var threadAimAt: String? = null        // where to stand then: a reply just sent
 
     var composeText by mutableStateOf("")
     var composeVisibility by mutableStateOf<String?>(null) // null: the core decides (a reply)
@@ -453,7 +455,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             Core.failed(got)?.let { message = it; return@launch }
             composeText = ""
             places = places.dropLast(1)
-            (place as? Place.Thread)?.let { reloadThread(it.focus) }
+            (place as? Place.Thread)?.let {
+                reloadThread(it.focus)
+                // back in the thread: on what was just written, not at its top
+                threadAimAt = got.optString("id").ifBlank { null } ?: p.replyTo?.sid
+                threadOpening += 1
+            }
             Core.refresh()
         }
     }

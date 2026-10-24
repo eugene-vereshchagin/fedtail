@@ -97,8 +97,10 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
             model.message = null
         }
     }
-    // the lane's place in the list outlives a thread or a picture opened over it
+    // the lane's and the thread's place in their lists outlive what opens over them
+    // (the editor, a picture): back there, they stand where they stood
     val laneState = rememberLazyListState()
+    val threadState = rememberLazyListState()
     when (val s = model.screen) {
         Screen.Starting -> Centered { Starting() }
         is Screen.Failed -> Problem(s.text)
@@ -123,11 +125,11 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
                 cols == 1 -> when (p) {
                     null -> if (model.current == null) HubScreen(model, snack)
                             else LaneScreen(model, snack, openBrowser, laneState)
-                    is Place.Thread -> ThreadPlace(model, snack, openBrowser)
+                    is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
                     is Place.Compose -> ComposePlace(model, p, snack)
                     else -> {}
                 }
-                else -> Columns(model, snack, openBrowser, laneState, cols, p)
+                else -> Columns(model, snack, openBrowser, laneState, cols, p, threadState)
             }
         }
     }
@@ -159,7 +161,7 @@ fun columnsFor(pref: String, width: Dp): Int {
 @Composable
 private fun Columns(
     model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit,
-    laneState: androidx.compose.foundation.lazy.LazyListState, cols: Int, p: Place?,
+    laneState: LazyListState, cols: Int, p: Place?, threadState: LazyListState,
 ) {
     Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Box(Modifier.width(if (cols >= 3) 300.dp else 320.dp).fillMaxHeight()) {
@@ -169,7 +171,7 @@ private fun Columns(
         val side = p is Place.Thread || p is Place.Compose
         Box(Modifier.weight(1f).fillMaxHeight()) {
             when {
-                cols == 2 && p is Place.Thread -> ThreadPlace(model, snack, openBrowser)
+                cols == 2 && p is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
                 cols == 2 && p is Place.Compose -> ComposePlace(model, p, snack)
                 model.current != null -> LaneScreen(model, snack, openBrowser, laneState, pane = true)
                 else -> Hint(stringResource(R.string.pick_lane))
@@ -179,7 +181,7 @@ private fun Columns(
             VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Box(Modifier.width(420.dp).fillMaxHeight()) {
                 when {
-                    side && p is Place.Thread -> ThreadPlace(model, snack, openBrowser)
+                    side && p is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
                     side && p is Place.Compose -> ComposePlace(model, p, snack)
                     else -> Hint(stringResource(R.string.pick_post))
                 }
@@ -292,17 +294,25 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
 // ---- a thread ----------------------------------------------------------------------------
 
 @Composable
-private fun ThreadPlace(model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit) {
+private fun ThreadPlace(
+    model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit, state: LazyListState,
+) {
     val focus = (model.place as? Place.Thread)?.focus
     val act = model.cardActions(openBrowser)
     val root = model.threadPosts.firstOrNull()
     PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
         ?.let { " #$it" } ?: ""), model, snack) { mod ->
         Box(mod.background(MaterialTheme.colorScheme.surface)) {
-            val state = rememberLazyListState()
+            // aimed when opened (on the post tapped) or after a reply (on the reply); coming
+            // back from the editor or a picture it stays where it was
             LaunchedEffect(model.threadOpening) {
-                val i = model.threadPosts.indexOfFirst { it.sid == focus }
+                if (model.threadOpening == model.threadAimed) return@LaunchedEffect
+                val want = model.threadAimAt ?: focus
+                val i = model.threadPosts.indexOfFirst { it.sid == want || it.id == want }
+                    .takeIf { it >= 0 } ?: model.threadPosts.indexOfFirst { it.sid == focus }
                 if (i >= 0) state.scrollToItem(i)
+                model.threadAimed = model.threadOpening
+                model.threadAimAt = null
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it, inThread = true) }
             if (model.threadPosts.isEmpty()) Centered { CircularProgressIndicator() }

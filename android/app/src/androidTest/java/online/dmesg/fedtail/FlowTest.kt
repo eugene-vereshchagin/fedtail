@@ -125,6 +125,20 @@ class FlowTest {
     }
 
     @Test
+    fun aReplyInAThreadStaysInSight() {
+        launch("thread" to "101")
+        waitText("/1")
+        val words = "reply from the UI test " + System.currentTimeMillis()
+        compose.onAllNodesWithContentDescription("Reply").onFirst().performClick()
+        waitDescription("Send")
+        compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput(words)
+        compose.onAllNodesWithContentDescription("Send").onFirst().performClick()
+        // back in the thread, standing on what was just written — not thrown to the top
+        waitText(words, 30_000)
+        waitText("Thread")
+    }
+
+    @Test
     fun readInARowLeavesTheOverviewForALaneWithNews() {
         launch()
         waitText("Read in a row")
