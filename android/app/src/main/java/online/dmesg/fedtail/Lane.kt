@@ -172,7 +172,18 @@ fun LaneScreen(
                 model.aimed = model.opening
             }
             LaunchedEffect(model.opening) {
-                if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
+                val page = model.placePage
+                if (page != null) {
+                    // activity read "as a forum": the newest rows are at the bottom — open on
+                    // the first unseen one, or on the end when all is seen
+                    if (model.opening != model.aimed) {
+                        if (!model.newestFirst && page.rows.isNotEmpty()) {
+                            val fresh = page.rows.indexOfFirst { it.fresh }
+                            state.scrollToItem(if (fresh >= 0) fresh else page.rows.size - 1)
+                        }
+                        model.aimed = model.opening
+                    }
+                } else if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
                     aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
                         divider = model.divider?.first)
                     model.aimed = model.opening
@@ -195,7 +206,7 @@ fun LaneScreen(
                     }
                 })
         }
-        if (model.newestFirst || model.placePage != null) {
+        if (model.newestFirst) {
             PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
                 modifier = swipe) { body() }
         } else {
