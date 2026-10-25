@@ -522,7 +522,12 @@ class QtSmokeTest(unittest.TestCase):
         # a narrow window: the buttons wrap onto more lines, none is squeezed
         from PySide6.QtWidgets import QPushButton
         self.win.resize(700, 700)
-        self.pump(0.3)
+
+        def fit():
+            shown = [b for b in prof.info.findChildren(QPushButton) if b.isVisible()]
+            return shown and all(b.mapTo(prof.info, b.rect().topRight()).x() <=
+                                 prof.info.width() for b in shown)
+        self.pump(until=fit, timeout=3)  # a slow machine relays them out a moment later
         btns = [b for b in prof.info.findChildren(QPushButton) if b.isVisible()]
         self.assertTrue(btns)
         for b in btns:
