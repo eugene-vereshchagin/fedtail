@@ -18,7 +18,6 @@ worker threads (see events.py):
 """
 
 import logging
-import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -2358,18 +2357,10 @@ class Core(SocialMixin):
             log.info("profile %s: %s api: %s", acc.get("id"), host, e)
             return [], None
 
-    # a server's name as people type it: example.org, https://example.org/about, @x@example.org
-    _HOST = re.compile(r"^(?:[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?$")
-
-    @classmethod
-    def server_host(cls, text):
-        """example.org out of what was typed, or "" (not a server's name)."""
-        from urllib.parse import urlparse
-        t = (text or "").strip().lower()
-        if "://" in t:
-            t = urlparse(t).netloc
-        t = t.rsplit("@", 1)[-1].split("/")[0].strip(".")
-        return t if cls._HOST.match(t) else ""
+    @staticmethod
+    def server_host(text):
+        from .remote import server_host
+        return server_host(text)
 
     def remote_public(self, host, cursor=None):
         """Another server's public lane (its own people), read without an account and

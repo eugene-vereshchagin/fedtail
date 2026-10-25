@@ -116,11 +116,11 @@ PLACES = {
     "quotes": "quotes_title", "history": "history_title", "report": "report_title",
     "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
     "probe": "probe_tab", "announcements": "announce_title", "profile_info": "profile_title",
-    "filter": "filter_edit", "link": "link_posts",
+    "filter": "filter_edit", "link": "link_posts", "remote": "remote_public",
     "accounts": "accounts", "login": "login_step2",
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
-        "activity", "trends", "suggestions", "directory", "server", "probe",
+        "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts",
         "settings", "help", "news", "about", "issue", "federation")
 
@@ -1159,6 +1159,42 @@ class Places(MorePlaces, AccountPlaces):
         if posts and len(posts) >= self.view.cfg["feed"]["page_size"]:
             page.more = self._btn(_("more"), "link", "more", f"{real(posts[-1]).id} {url}")
         return page
+
+    # ---- another server's public lane (core.remote_public) ------------------------------
+    def _p_remote(self, host, _tab, cursor):
+        """The lane of the server named (arg), or the box to name one."""
+        page = Page("remote", _("remote_public").rstrip("…"), arg=host,
+                    hint=_("remote_public_tip"))
+        page.form = (Field("host", _("remote_public_q"), host or ""),)
+        page.submit = self._btn(_("remote_public").rstrip("…"), "remote", "open",
+                                primary=True)
+        if not host:
+            return page
+        page.title = _("remote_public_title", host=host)
+        try:
+            got, nxt = _wait(self.view.remote_public(host, cursor or None))
+        except LookupError:
+            page.empty = _("remote_public_closed", host=host)
+            return page
+        except ValueError:
+            page.empty = _("remote_public_bad", text=host)
+            return page
+        page.rows += [Row("post", data=p, key=p.id) for p in got or ()]
+        if nxt:
+            page.more = self._btn(_("more"), "remote", "more", f"{nxt} {host}")
+        return page
+
+    def _a_remote_open(self, _d, values, _c, _ans):
+        from ...core.remote import server_host
+        text = str(values.get("host") or "").strip()
+        host = server_host(text)
+        if not host:
+            return Out(error=_("remote_public_bad", text=text))
+        return Out(open={"page": "remote", "arg": host})
+
+    def _a_remote_more(self, data, _v, _c, _ans):
+        cursor, _s, host = data.partition(" ")
+        return Out(open={"page": "remote", "arg": host, "cursor": cursor})
 
     def _a_link_more(self, data, _v, _c, _ans):
         cursor, _s, url = data.partition(" ")

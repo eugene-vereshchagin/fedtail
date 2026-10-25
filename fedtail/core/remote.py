@@ -16,6 +16,7 @@ No token is ever attached here: callers pass no Authorization and none is added.
 
 import ipaddress
 import logging
+import re
 import socket
 import time
 from urllib.parse import urljoin, urlsplit
@@ -124,3 +125,16 @@ def get_json(url, *, headers=None, timeout=8, own_hosts=(), session=requests):
         return json.loads(body)
     except ValueError:
         return None
+
+
+# a server's name as people type it: example.org, https://example.org/about, @x@example.org
+_HOST = re.compile(r"^(?:[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?$")
+
+
+def server_host(text):
+    """example.org out of what was typed, or "" (not a server's name)."""
+    t = (text or "").strip().lower()
+    if "://" in t:
+        t = urlsplit(t).netloc
+    t = t.rsplit("@", 1)[-1].split("/")[0].strip(".")
+    return t if _HOST.match(t) else ""

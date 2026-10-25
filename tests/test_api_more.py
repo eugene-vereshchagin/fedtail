@@ -145,3 +145,35 @@ class RemotePublicTest(TmpDir):
         w.local.append(status("777", BOB, vis="public"))
         got, _cur = core.remote_public("example.test").result()
         self.assertEqual([s["id"] for s in got], ["777"])
+
+
+class RemotePlaceTest(TmpDir):
+    """The page for the terminal and the web: name a server, read its lane, more."""
+    make = test_cli.CliTest.make
+
+    def test_the_place(self):
+        from fedtail.frontends.common.places import Places
+        core, w = self.make()
+        core.connect().result()
+        i18n.setup("en")
+        far = [dict(status(f"8{i:02d}", BOB, minute=i, vis="public"),
+                    uri=f"https://far.example/s/{i}", id=f"f{i}") for i in range(20)]
+        for s in far:
+            w.remote[s["uri"]] = dict(s, id="L" + s["id"])
+        core._origin_get = lambda url: far if "far.example" in url and "max_id" not in url \
+            else ([] if "far.example" in url else None)
+        pl = Places(View(core))
+        empty = pl.page("remote")
+        self.assertEqual([f.name for f in empty.form], ["host"])
+        self.assertFalse(empty.rows)
+        out = pl.act("remote", "open", "", {"host": "https://far.example/about"})
+        self.assertEqual(out.open, {"page": "remote", "arg": "far.example"})
+        self.assertTrue(pl.act("remote", "open", "", {"host": "not a server"}).error)
+        page = pl.page("remote", "far.example")
+        self.assertEqual(page.title, i18n._("remote_public_title", host="far.example"))
+        self.assertEqual(len(page.rows), 20)
+        self.assertEqual(page.more.act[:2], ("remote", "more"))
+        more = pl.act("remote", "more", page.more.act[2])
+        self.assertEqual(more.open["cursor"], "f19")
+        closed = pl.page("remote", "closed.example")
+        self.assertEqual(closed.empty, i18n._("remote_public_closed", host="closed.example"))
