@@ -63,7 +63,8 @@ class Budget:
 # every method of the client the core calls (self.api.<name>, api.<name>); and its
 # attribute ``base``, the server's address
 CLIENT = frozenset("""
-    account account_statuses announcements react_status answer_interaction answer_notification_request
+    account account_statuses announcements react_status answer_interaction
+    answer_notification_request
     async_refresh authorize_follow authorize_url block block_domain blocks bookmark
     bookmarks cancel_scheduled clear_notifications context conversations create_filter
     collections_of in_collections collection create_collection update_collection
