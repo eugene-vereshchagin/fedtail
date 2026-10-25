@@ -232,13 +232,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private var laneOnStart: String? = null
 
     private var settingsOnStart = false
+    private var pageOnStart: String? = null    // the screenshots' places (demo only)
+    private var profileOnStart: String? = null
+    private var composeOnStart = false
 
     fun start(
         demo: Boolean, openThread: String? = null, openLane: String? = null,
-        openSettings: Boolean = false,
+        openSettings: Boolean = false, openPage: String? = null, openProfile: String? = null,
+        openCompose: Boolean = false,
     ) {
         if (started) return
         started = true
+        pageOnStart = openPage
+        profileOnStart = openProfile
+        composeOnStart = openCompose
         settingsOnStart = openSettings
         this.demo = demo
         threadOnStart = openThread
@@ -318,6 +325,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         threadOnStart = null
         if (settingsOnStart) openSettings()
         settingsOnStart = false
+        pageOnStart?.let { openPage(it) }
+        profileOnStart?.let { openProfile(it) }
+        if (composeOnStart) compose(null)
+        pageOnStart = null
+        profileOnStart = null
+        composeOnStart = false
     }
 
     private suspend fun loadHub() {

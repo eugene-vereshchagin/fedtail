@@ -53,3 +53,33 @@ def _offline():
 
 
 _offline()
+
+
+def _qt_goes_first():
+    """At the run's end Qt's windows go while Qt is still whole: left to the
+    interpreter's last collection, PySide's objects die in any order — after the
+    application at times, and Python 3.12 then crashed (exit 139) after "OK"."""
+    import atexit
+    import sys
+
+    def close():
+        widgets = sys.modules.get("PySide6.QtWidgets")
+        app = widgets.QApplication.instance() if widgets else None
+        if app is None:
+            return
+        try:
+            for w in widgets.QApplication.topLevelWidgets():
+                w.close()
+                w.deleteLater()
+            from PySide6.QtCore import QCoreApplication, QEvent
+            QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+            app.processEvents()
+            if hasattr(app, "shutdown"):  # PySide6 ≥ 6.5: the application goes now
+                app.shutdown()
+        except Exception:  # noqa: BLE001 — the run is over; nothing to report it to
+            pass
+
+    atexit.register(close)
+
+
+_qt_goes_first()

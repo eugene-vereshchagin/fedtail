@@ -86,9 +86,7 @@ details.en = "The server tells you only of replies that mention you: if two peop
 [[feature]]
 id = "mute-thread"
 status = "has"
-android = "no"
-android_note.ru = "заглушить тред из меню поста нельзя"
-android_note.en = "a thread can't be muted from a post's menu"
+android = "has"
 since = "0.11.0"
 name.ru = "Заглушить тред"
 name.en = "Mute a thread"
@@ -103,9 +101,7 @@ details.en = "Notifications from the thread stop coming and its subscription goe
 [[feature]]
 id = "long-form"
 status = "has"
-android = "no"
-android_note.ru = "«Весь текст» с сервера автора нет"
-android_note.en = "no “the whole text” from the author's server"
+android = "has"
 since = "0.14.0"
 name.ru = "Длинные тексты и события"
 name.en = "Long texts and events"

@@ -86,6 +86,13 @@ class FakeApi:
         return BOB
 
     def account(self, acc_id):
+        """Someone the world's posts know (the demo's profiles), else Bob."""
+        if acc_id == self.w.me.get("id"):
+            return self.w.me
+        for st in self.w.statuses.values():
+            for acc in (st.get("account"), (st.get("reblog") or {}).get("account")):
+                if acc and acc.get("id") == acc_id and acc_id != BOB["id"]:
+                    return acc
         return self.get(f"/api/v1/accounts/{acc_id}")
 
     def home(self, limit=40, max_id=None, min_id=None):

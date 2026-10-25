@@ -222,9 +222,7 @@ details.en = "≡ → “Report a bug on GitHub…” in all four interfaces: a 
 [[feature]]
 id = "federation-status"
 status = "has"
-android = "no"
-android_note.ru = "пока нет"
-android_note.en = "not yet"
+android = "has"
 since = "0.16.0"
 name.ru = "Состояние федерации: как живёт моя нода и что не получается"
 name.en = "Federation status: how my server is doing and what fails"
@@ -324,9 +322,7 @@ note.en = "It's unclear what this would add over a file readable by its owner on
 [[feature]]
 id = "help"
 status = "has"
-android = "no"
-android_note.ru = "справки в приложении нет"
-android_note.en = "no help inside the app"
+android = "has"
 since = "0.17.0"
 name.ru = "Справка внутри, на двух языках"
 name.en = "Help inside, in two languages"

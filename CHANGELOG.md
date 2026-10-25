@@ -2,6 +2,12 @@
 
 ## 0.20.0 — in progress
 
+- Android: every place of the windows' ≡ menu (search, lists, filters, silence, trends,
+  the server, help, editing your profile…), profiles with their buttons (follow, mute for a
+  while, block, lists, a note), the windows' own ⋯ menu on every card (edit, delete,
+  redraft, quote, translate, report, hide…), polls to vote on, quotes in the card; the
+  editor with pictures and their descriptions, a warning, the language and a poll.
+- The test run's end no longer crashes Python 3.12 in Qt's teardown (exit 139 after "OK").
 - Spell checking in the post window: mistakes underlined, suggestions and "Add to
   dictionary" on a right click, any of the post's languages; the system's dictionaries
   through Enchant (`post.spellcheck`, `post.spell_languages`). The terminal: a list on F7;

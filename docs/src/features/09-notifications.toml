@@ -70,9 +70,7 @@ details.en = "Interaction requests waiting for approval under your who-may-do-wh
 [[feature]]
 id = "filtered-notify"
 status = "has"
-android = "no"
-android_note.ru = "«Отфильтрованных уведомлений» нет"
-android_note.en = "no “Filtered notifications”"
+android = "has"
 since = "0.9.0"
 name.ru = "Уведомления от незнакомцев отдельно"
 name.en = "Notifications from strangers apart"
@@ -118,9 +116,7 @@ clients = ["all"]
 [[feature]]
 id = "announcements"
 status = "has"
-android = "no"
-android_note.ru = "объявлений сервера нет"
-android_note.en = "no server announcements"
+android = "has"
 since = "0.9.0"
 name.ru = "Объявления сервера"
 name.en = "Server announcements"

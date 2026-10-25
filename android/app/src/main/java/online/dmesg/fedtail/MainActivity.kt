@@ -23,7 +23,10 @@ class MainActivity : ComponentActivity() {
         val demo = BuildConfig.DEBUG && intent.getBooleanExtra("demo", false)
         model.start(demo, openThread = if (demo) intent.getStringExtra("thread") else null,
             openLane = if (demo) intent.getStringExtra("lane") else null,
-            openSettings = demo && intent.getBooleanExtra("settings", false))
+            openSettings = demo && intent.getBooleanExtra("settings", false),
+            openPage = if (demo) intent.getStringExtra("page") else null,
+            openProfile = if (demo) intent.getStringExtra("profile") else null,
+            openCompose = demo && intent.getBooleanExtra("compose", false))
         handleLogin(intent)
         setContent {
             FedtailTheme {

@@ -5,6 +5,9 @@
 #   3-home.png   — its Home lane
 #   4-thread.png — a thread of that world, as a tree
 #   6-settings.png — the settings page (the config's options, each with its explanation)
+#   7-profile.png — someone's profile (Кот): the header, the buttons, the posts
+#   8-place.png  — a place of the windows' ≡ menu (the lists), as the phone draws it
+#   9-compose.png — the editor: words, a warning, pictures, a poll, the language
 #   5-wide.png   — a tablet's screen (wm size): the overview, the lane and a thread side by side
 #   logcat.txt   — what Python and Android said meanwhile (a crash is there)
 # Run by reactivecircus/android-emulator-runner (android.yml) from the repository's root.
@@ -36,6 +39,15 @@ shot 4-thread 25
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$ACT" --ez demo true --ez settings true
 shot 6-settings 25
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$ACT" --ez demo true --es profile K
+shot 7-profile 25
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$ACT" --ez demo true --es page lists
+shot 8-place 25
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$ACT" --ez demo true --ez compose true
+shot 9-compose 25
 adb shell am force-stop "$APP"
 adb shell wm size 2560x1600
 adb shell wm density 320
