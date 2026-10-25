@@ -1010,6 +1010,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** ⟳ over a thread, a place, a profile: a round at the server, and this asked anew —
+     *  the list keeps its place (by its items' keys), whatever comes. */
+    fun refreshTop() {
+        viewModelScope.launch { Core.refresh() }
+        reloadTop()
+    }
+
     fun reloadTop() {
         when (val p = place) {
             is Place.Page -> viewModelScope.launch { loadPage(p) }

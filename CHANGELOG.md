@@ -11,6 +11,10 @@
   open and, closed, from a round every 15 minutes; a tap opens the thread. Video, gifs and
   sound play in the app. Accounts: add, switch, log in again and out (≡ → Accounts). The
   windows' themes paint the phone (`ui.theme` in Settings).
+- Android: ⟳ over threads, places and profiles too; a refresh no longer moves the lane
+  (the "new below" line is a row of its own, places' rows keep their place by key). Read
+  "as a forum" (oldest first), a lane is refreshed by pulling up past its end — where its
+  newest posts are.
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

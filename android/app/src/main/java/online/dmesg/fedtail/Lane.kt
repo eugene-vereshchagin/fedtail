@@ -140,8 +140,9 @@ fun LaneScreen(
     ) { pad ->
         val density = LocalDensity.current
         var dragged by remember { mutableFloatStateOf(0f) }
-        PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
-            modifier = Modifier.padding(pad).fillMaxSize()
+        // the pull where the newest posts are: at the top, newest first; at the bottom,
+        // read "as a forum" (oldest first) — there one drags up past the end
+        val swipe = Modifier.padding(pad).fillMaxSize()
                 .pointerInput(name) {
                     val far = with(density) { 120.dp.toPx() }
                     detectHorizontalDragGestures(
@@ -151,10 +152,12 @@ fun LaneScreen(
                             dragged = 0f
                         },
                         onHorizontalDrag = { _, dx -> dragged += dx })
-                }) {
+                }
+        val body: @Composable () -> Unit = {
             LaunchedEffect(model.opening) {
                 if (model.opening != model.aimed) { // opened anew — not just come back to
-                    aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1)
+                    aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
+                        divider = model.divider?.first)
                     model.aimed = model.opening
                 }
             }
@@ -173,6 +176,13 @@ fun LaneScreen(
                         LaneEnd(model, name)
                     }
                 })
+        }
+        if (model.newestFirst || model.placePage != null) {
+            PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
+                modifier = swipe) { body() }
+        } else {
+            BottomPullToRefresh(refreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
+                modifier = swipe) { body() }
         }
     }
     if (switcher) Switcher(model) { switcher = false }
@@ -208,7 +218,13 @@ private fun PlaceList(model: AppModel, page: PlacePage, name: String, state: Laz
                 Modifier.fillMaxWidth().padding(vertical = 32.dp), textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        items(page.rows) { r -> PlaceRowCard(model, r) }
+        // keyed: new activity on a refresh comes in without moving what is being read
+        val keys = HashMap<String, Int>()
+        items(page.rows.mapIndexed { i, r ->
+            val base = r.key.ifBlank { "i:$i" }
+            val n = keys.merge(base, 1, Int::plus) ?: 1
+            (if (n == 1) base else "$base#$n") to r
+        }, key = { it.first }) { (_, r) -> PlaceRowCard(model, r) }
         val own = listOfNotNull(page.more, page.submit)
         if (own.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

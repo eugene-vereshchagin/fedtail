@@ -205,7 +205,7 @@ fun PagePlace(model: AppModel, p: Place.Page, snack: SnackbarHostState, openBrow
     val onLink: (String) -> Unit = { url ->
         if (url.startsWith("fedtail:")) model.runLink(url) else model.openLink(url, openBrowser)
     }
-    PlaceScaffold(view?.title ?: "", model, snack) { mod ->
+    PlaceScaffold(view?.title ?: "", model, snack, onRefresh = { model.refreshTop() }) { mod ->
         if (view == null) {
             Box(mod, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@PlaceScaffold
@@ -260,7 +260,10 @@ fun PagePlace(model: AppModel, p: Place.Page, snack: SnackbarHostState, openBrow
                 Text(view.empty, Modifier.fillMaxWidth().padding(vertical = 24.dp),
                     textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            items(view.rows) { r -> PageRowView(model, r, act, press, onLink) }
+            // keyed rows: a refresh keeps the place (by the first row's key), not its index
+            items(rowKeys(view.rows).zip(view.rows), key = { it.first }) { (_, r) ->
+                PageRowView(model, r, act, press, onLink)
+            }
             view.more?.let { b ->
                 item {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -395,6 +398,17 @@ private fun FormField(model: AppModel, f: PageField, values: MutableMap<String, 
     }
 }
 
+/** Each row's own key — its post, person or id; the same twice gets a number. */
+private fun rowKeys(rows: List<PageRow>): List<String> {
+    val seen = HashMap<String, Int>()
+    return rows.mapIndexed { i, r ->
+        val base = r.post?.key?.let { "p:$it" } ?: r.account?.id?.let { "a:$it" }
+            ?: r.key.takeIf { it.isNotBlank() }?.let { "k:$it" } ?: "i:$i:${r.title.hashCode()}"
+        val n = seen.merge(base, 1, Int::plus) ?: 1
+        if (n == 1) base else "$base#$n"
+    }
+}
+
 private fun asList(v: Any?): List<String> = when (v) {
     is JSONArray -> (0 until v.length()).map { v.optString(it) }
     is List<*> -> v.map { it.toString() }
@@ -409,7 +423,7 @@ fun ProfilePlace(model: AppModel, p: Place.Profile, snack: SnackbarHostState, op
     val view = model.profiles[p]
     val act = model.cardActions(openBrowser)
     val onLink: (String) -> Unit = { url -> model.openLink(url, openBrowser) }
-    PlaceScaffold(view?.account?.name ?: "", model, snack) { mod ->
+    PlaceScaffold(view?.account?.name ?: "", model, snack, onRefresh = { model.refreshTop() }) { mod ->
         if (view == null) {
             Box(mod, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@PlaceScaffold

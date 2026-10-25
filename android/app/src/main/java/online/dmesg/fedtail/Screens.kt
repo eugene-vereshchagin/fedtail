@@ -261,7 +261,9 @@ private fun Problem(text: String) {
 @Composable
 fun PlaceScaffold(
     title: String, model: AppModel, snack: SnackbarHostState,
-    actions: @Composable () -> Unit = {}, content: @Composable (Modifier) -> Unit,
+    actions: @Composable () -> Unit = {},
+    onRefresh: (() -> Unit)? = null, // ⟳ in the bar: the place asked anew, the server too
+    content: @Composable (Modifier) -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -272,7 +274,14 @@ fun PlaceScaffold(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
-                actions = { actions() })
+                actions = {
+                    onRefresh?.let { r ->
+                        IconButton(onClick = r) {
+                            Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
+                        }
+                    }
+                    actions()
+                })
         },
         snackbarHost = { SnackbarHost(snack) },
     ) { pad -> content(Modifier.padding(pad).fillMaxSize()) }
@@ -327,7 +336,7 @@ private fun ThreadPlace(
     val act = model.cardActions(openBrowser)
     val root = model.threadPosts.firstOrNull()
     PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
-        ?.let { " #$it" } ?: ""), model, snack) { mod ->
+        ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }) { mod ->
         Box(mod.background(MaterialTheme.colorScheme.surface)) {
             // aimed when opened (on the post tapped) or after a reply (on the reply); coming
             // back from the editor or a picture it stays where it was

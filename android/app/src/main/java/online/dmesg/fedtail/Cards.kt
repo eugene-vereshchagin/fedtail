@@ -173,15 +173,19 @@ fun MarkWhileScrolling(state: LazyListState, on: Boolean, mark: (List<String>) -
 }
 
 /** A lane opened anew stands on its first unread post, like the desktop; never jumps after. */
-suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean, before: Int = 0) {
+suspend fun aim(state: LazyListState, posts: List<PostItem>, newestFirst: Boolean, before: Int = 0,
+                divider: String? = null) {
     if (posts.isEmpty()) return
     val firstUnread = posts.indexOfFirst { it.unread }
-    // before: items the list holds ahead of the posts ("earlier" at the top)
-    state.scrollToItem(before + when {
+    val at = when {
         firstUnread >= 0 -> firstUnread
         newestFirst -> 0
         else -> posts.size - 1
-    })
+    }
+    // before: items the list holds ahead of the posts ("earlier" at the top); "new below"
+    // is an item too: one more ahead of every post from it on — and it is shown itself
+    val line = divider?.let { d -> posts.indexOfFirst { it.key == d } } ?: -1
+    state.scrollToItem(before + at + if (line in 0..at) (if (line == at) 0 else 1) else 0)
 }
 
 @Composable
@@ -205,9 +209,13 @@ fun PostList(
             end = if (thread) 0.dp else 8.dp, top = 8.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(if (thread) 0.dp else 8.dp)) {
         header?.let { h -> item(key = "header") { h() } }
-        items(posts, key = { it.key }) { p ->
-            Column {
-                divider?.takeIf { it.first == p.key }?.let { (_, words) -> NewBelow(words) }
+        // "new below" is an item of its own: it comes and goes without moving the post
+        // it stands over (the list keeps its place by the first item's key on a refresh)
+        posts.forEach { p ->
+            divider?.takeIf { it.first == p.key }?.let { (_, words) ->
+                item(key = "new-below") { NewBelow(words) }
+            }
+            item(key = p.key) {
                 if (thread) ThreadRow(p, focused = p.sid == focus, act, hideSensitive)
                 else PostCard(p, act, hideSensitive)
             }
