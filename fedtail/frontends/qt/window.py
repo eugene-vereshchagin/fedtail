@@ -2035,6 +2035,7 @@ class MainWindow(QMainWindow):
             return
         log.info("tab closed: %s", type(w).__name__)
         self.tabs.removeTab(i)
+        _let_go(w)
         w.deleteLater()
         if self.msg_tabs is not None:
             self.msg_tabs.after_close()
@@ -2769,3 +2770,27 @@ class MainWindow(QMainWindow):
         self.close()
         self.drop_tray()
         QApplication.quit()
+
+
+def _let_go(tab):
+    """A closed tab's Python side made light before it goes: PySide keeps a tab's wrapper
+    alive past its deletion through the connections of its parts (the tabs stress test:
+    a profile's media filter with its menu's actions, a feed's scroll bar, every tab),
+    so what it holds is dropped here — the wrapper alone is left, if anything."""
+    mf = getattr(tab, "media_filter", None)
+    if mf is not None:
+        mf.actions = {}
+        mf.on_change = lambda: None
+    view = getattr(tab, "view", None)
+    if view is not None and hasattr(view, "verticalScrollBar"):
+        try:
+            view.verticalScrollBar().valueChanged.disconnect()
+        except (RuntimeError, TypeError):  # nothing connected, or gone already
+            pass
+        for name in ("rows", "order"):
+            if isinstance(getattr(view, name, None), (dict, list)):
+                setattr(view, name, type(getattr(view, name))())
+    for name in ("items", "_first_page"):
+        if isinstance(getattr(tab, name, None), list):
+            setattr(tab, name, [])
+

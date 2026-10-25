@@ -1590,6 +1590,16 @@ class MainWindow(Gtk.ApplicationWindow):
         forget(page)  # its cards' handlers held them alive
         forget(label)
 
+        def empty():  # after forget's own pass: the title's insides let go of too —
+            child = label.get_first_child()  # something in GTK keeps the box itself
+            while child is not None:
+                nxt = child.get_next_sibling()
+                label.remove(child)
+                child = nxt
+            return GLib.SOURCE_REMOVE
+        if isinstance(label, Gtk.Box):
+            GLib.idle_add(empty)
+
     def _new_tab(self, text, close_fn):
         """A tab after the lanes: a scrolled list of cards; (page, list, title label)."""
         page = Gtk.ScrolledWindow()
