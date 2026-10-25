@@ -56,11 +56,15 @@ _offline()
 
 
 def _qt_goes_first():
-    """At the run's end Qt's windows go while Qt is still whole: left to the
-    interpreter's last collection, PySide's objects die in any order — after the
-    application at times, and Python 3.12 then crashed (exit 139) after "OK"."""
+    """At a test run's end Qt's windows go while Qt is still whole, and the process ends
+    right after the results: left to the interpreter's last collection, PySide's objects
+    die in any order, and Python 3.12 crashed there (exit 139 after "OK", too late in the
+    shutdown for faulthandler to say where). The exit code is unittest's own."""
     import atexit
     import sys
+    main = (sys.argv[0] if sys.argv else "").replace("\\", "/")
+    if "unittest" not in main:
+        return
 
     def close():
         widgets = sys.modules.get("PySide6.QtWidgets")
@@ -74,12 +78,23 @@ def _qt_goes_first():
             from PySide6.QtCore import QCoreApplication, QEvent
             QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
             app.processEvents()
-            if hasattr(app, "shutdown"):  # PySide6 ≥ 6.5: the application goes now
-                app.shutdown()
         except Exception:  # noqa: BLE001 — the run is over; nothing to report it to
             pass
 
-    atexit.register(close)
+    real_exit = sys.exit
+
+    def exit_now(code=0):
+        # only unittest's own last word; a test's argparse error stays a SystemExit
+        caller = sys._getframe(1).f_code.co_filename.replace("\\", "/")
+        if not caller.endswith("unittest/main.py"):
+            real_exit(code)
+        close()
+        atexit._run_exitfuncs()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        _os._exit(code if isinstance(code, int) else (0 if code is None else 1))
+
+    sys.exit = exit_now
 
 
 _qt_goes_first()
