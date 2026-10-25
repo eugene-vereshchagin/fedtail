@@ -678,6 +678,16 @@ language = ""
 # one added there stays on the list from then on.
 languages = ["ru", "en", "ka", "uk"]
 
+# Spell checking in the post window: words with mistakes underlined, a right click — the
+# suggestions and "Add to dictionary" (your own one — spelling.txt in the config folder).
+# The dictionaries are the system's, through Enchant (Hunspell, Aspell…); none — no
+# checking, the rest as it was.
+spellcheck = true
+
+# Which languages to check in: [] — the post's language, the interface's and English (a
+# word is fine if any of the dictionaries knows it). Or your own: ["ru", "en", "uk"].
+spell_languages = []
+
 # Typing @ar — suggest people: first those seen most in the lanes, then those the
 # server finds. false — no suggestions.
 complete_mentions = true

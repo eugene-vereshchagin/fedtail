@@ -871,6 +871,13 @@ _STRINGS = {
         "web_push_insecure": ("Push работает только по https или на localhost — открой "
             "страницу так (по http в сети браузер его не даёт)"),
         "web_push_turn_off": "Выключить push",
+        "spell_add": "Добавить в словарь", "spell_none": "Вариантов нет",
+        "spell_check": "Проверить орфографию",
+        "spell_wrong_n": ["Подозрительное слово: {n}", "Подозрительных слова: {n}",
+                          "Подозрительных слов: {n}"],
+        "spell_all_ok": "Ошибок не видно",
+        "spell_unavailable": ("Проверка орфографии недоступна: нет словарей Enchant "
+            "(Debian: libenchant-2-2 и hunspell-ru / hunspell-en-us)"),
         "mute": "Заглушить", "unmute": "Вернуть звук", "block": "Заблокировать",
         "unblock": "Разблокировать",
         "mute_acct": "Заглушить @{acct}", "block_acct": "Заблокировать @{acct}…",
@@ -1875,6 +1882,12 @@ _STRINGS = {
         "web_push_insecure": ("Push works only over https or on localhost — open the page "
             "that way (over plain http on a network the browser won't allow it)"),
         "web_push_turn_off": "Turn push off",
+        "spell_add": "Add to dictionary", "spell_none": "No suggestions",
+        "spell_check": "Check spelling",
+        "spell_wrong_n": ["{n} suspicious word", "{n} suspicious words"],
+        "spell_all_ok": "No mistakes seen",
+        "spell_unavailable": ("Spell checking is unavailable: no Enchant dictionaries "
+            "(Debian: libenchant-2-2 and hunspell-en-us / hunspell-ru)"),
         "mute": "Mute", "unmute": "Unmute", "block": "Block", "unblock": "Unblock",
         "mute_acct": "Mute @{acct}", "block_acct": "Block @{acct}…",
         "block_q": "Block @{acct}? They won't see your posts or be able to write to you.",

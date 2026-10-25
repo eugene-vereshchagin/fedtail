@@ -137,6 +137,8 @@ DEFAULTS = {
         "plain_posts": True,
         "language": "",
         "languages": ["ru", "en", "ka", "uk"],
+        "spellcheck": True,
+        "spell_languages": [],
         "complete_mentions": True,
         "complete_tags": True,
         "report_forward": True,
