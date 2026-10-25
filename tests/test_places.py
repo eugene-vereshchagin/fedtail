@@ -44,7 +44,7 @@ class PlacesTest(unittest.TestCase):
     def test_every_place_opens(self):
         args = {"tag": "fediverse", "people": "B", "list_of": "B", "reactions": "010",
                 "quotes": "030", "history": "010", "report": "010", "long_form": "010",
-                "translate": "010", "search": "bob"}
+                "translate": "010", "search": "bob", "react": "010"}
         self.w.lists["L1"] = {"title": "Friends", "exclusive": False, "members": {"B"}}
         self.core._refresh_lists()
         args["list_people"] = self.view.lists[0].id

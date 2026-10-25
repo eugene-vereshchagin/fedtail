@@ -63,7 +63,7 @@ class Budget:
 # every method of the client the core calls (self.api.<name>, api.<name>); and its
 # attribute ``base``, the server's address
 CLIENT = frozenset("""
-    account account_statuses announcements answer_interaction answer_notification_request
+    account account_statuses announcements react_status answer_interaction answer_notification_request
     async_refresh authorize_follow authorize_url block block_domain blocks bookmark
     bookmarks cancel_scheduled clear_notifications context conversations create_filter
     collections_of in_collections collection create_collection update_collection
@@ -91,6 +91,14 @@ CLIENT = frozenset("""
 
 
 # what is known of a server without asking it: (software, feature) -> there or not
+# features only some software has: offered there alone (not "yes until it says no")
+OPT_IN = {
+    # emoji reactions to posts: Pleroma's and Akkoma's API, Fedibird's (the Misskey kin
+    # that speak Mastodon's API take that one)
+    "reactions": {"akkoma", "pleroma", "misskey", "sharkey", "firefish", "iceshrimp",
+                  "catodon", "foundkey", "cherrypick", "fedibird"},
+}
+
 KNOWN = {
     ("gotosocial", "dismiss_one"): False,   # it clears all notifications, never one
     ("gotosocial", "grouped"): False,       # no /api/v2/notifications (asking: a 404)
@@ -129,6 +137,8 @@ class Capabilities:
             return False
         if feature in self.present:
             return True
+        if feature in OPT_IN:
+            return (self.software or "").lower() in OPT_IN[feature]
         return KNOWN.get(((self.software or "").lower(), feature), True)
 
     def learn(self, feature, there):

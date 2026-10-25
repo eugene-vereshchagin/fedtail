@@ -355,6 +355,9 @@ class MergedCore:
     def refresh_poll(self, status):
         return self._act("refresh_poll", status)
 
+    def react(self, status, name, on=True):
+        return self._act("react", status, name, on)
+
     def edit(self, status, *a, **kw):
         return self._act("edit", status, *a, **kw)
 

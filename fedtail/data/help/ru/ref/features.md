@@ -255,7 +255,7 @@
 | Результаты опроса без голосования | есть | 0.3.0 | — (кнопка «Результаты» у опроса) | — | Fedilab |
 | История правок | есть | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Перевод поста сервером | есть | 0.8.0 | `feed.translate`, `feed.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Эмодзи-реакции | частично — показ | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
+| Эмодзи-реакции | есть | 0.11.0 | ⋯ → «Реакция…» | `pleroma.emoji_reactions`; `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | Кто лайкнул и бустнул | есть | 0.11.0 | — | `favourited_by`, `reblogged_by` (и с сервера автора) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Честные счётчики | есть | 0.2.0 | `feed.honest_counters` (выключен), `feed.counters_via_accounts` | API сервера автора без токена | только в fedtail |
 | Кто процитировал мой пост | есть | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
@@ -288,7 +288,7 @@
 
 **Перевод поста сервером.** «Перевести» в меню ⋯ у поста на чужом языке — если твой сервер умеет (Mastodon с DeepL или LibreTranslate). Перевод прямо в карточке, с кнопкой «оригинал». С `feed.translate_all = true` (с 0.19) — у каждого поста, как в Fedilab: и на твоём языке, и без указанного.
 
-**Эмодзи-реакции.** Реакции с Akkoma, Pleroma, Misskey и их форков видны под постом. Ставить свои пока нельзя; GoToSocial их не поддерживает.
+**Эмодзи-реакции.** Реакции с Akkoma, Pleroma, Misskey и их форков видны под постом. Свою — ⋯ → «Реакция…» (с 0.20): частые эмодзи и те, что уже стоят, кнопками (нажатое ещё раз снимается), любое другое или своё эмодзи сервера — строкой (`:blobcat:`). Пункт есть там, где сервер реакции умеет (Akkoma, Pleroma — их API; Misskey, Sharkey, Iceshrimp, Fedibird — API Fedibird), и у поста, на котором реакции уже есть; GoToSocial и Mastodon их не поддерживают.
 
 **Кто лайкнул и бустнул.** Списки людей у счётчиков. Если твой сервер знает не всех, — дочитывается с сервера автора.
 

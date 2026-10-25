@@ -108,6 +108,10 @@
 - "Of them new": beside a lane's unread count, how many of them the last update brought —
   under the count on the phone's tiles ("300", "56 of them new"), "300 +56" in the
   sidebar of the windows, the web page and the terminal.
+- Emoji reactions of your own (Akkoma, Pleroma, Misskey and kin): ⋯ → "React…" — the
+  usual emoji and those already on the post as buttons (tapped again, yours comes off),
+  any other or the server's own one typed (`:blobcat:`). Offered only where the server
+  has reactions, in every interface.
 - Debug → "The log" (≡ → "The log" on the web page, in the terminal and on the phone):
   the last lines of this run's log, to read or copy into a bug report.
 - All accounts in one: "→ @account" in that account's colour on the web page and the

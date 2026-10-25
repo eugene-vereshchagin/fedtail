@@ -1075,6 +1075,16 @@ class Api:
         language, expanding media and CWs."""
         return self.get("/api/v1/preferences") or {}
 
+    def react_status(self, sid, name, on=True, style="pleroma"):
+        """An emoji reaction to a post, mine on or off → the post. style: "pleroma"
+        (Pleroma, Akkoma: PUT/DELETE …/pleroma/statuses/:id/reactions/:emoji) or
+        "fedibird" (Fedibird and the Misskey kin: POST …/statuses/:id/react|unreact/:emoji)."""
+        emoji = quote(name, safe="")
+        if style == "pleroma":
+            path = f"/api/v1/pleroma/statuses/{seg(sid)}/reactions/{emoji}"
+            return self.put(path) if on else self.delete(path)
+        return self.post(f"/api/v1/statuses/{seg(sid)}/{'react' if on else 'unreact'}/{emoji}")
+
     def react_announcement(self, aid, name, on=True):
         path = f"/api/v1/announcements/{seg(aid)}/reactions/{quote(name, safe='')}"
         return self.put(path) if on else self.delete(path)

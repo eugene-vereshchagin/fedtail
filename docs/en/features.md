@@ -253,7 +253,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Translation by the server | has | 0.8.0 | `feed.translate`, `feed.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Emoji reactions | partly — shown only | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
+| Emoji reactions | has | 0.11.0 | ⋯ → “React…” | `pleroma.emoji_reactions`; `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `feed.honest_counters` (off), `feed.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
@@ -286,7 +286,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `feed.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given.
 
-**Emoji reactions.** Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Adding your own isn't possible yet; GoToSocial doesn't support them.
+**Emoji reactions.** Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Your own — ⋯ → “React…” (since 0.20): the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them.
 
 **Who liked and boosted.** Lists of people at the counters. If your server doesn't know everyone, the rest is read from the author's server.
 

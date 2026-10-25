@@ -191,6 +191,8 @@ def menu(entry, ctx, short_id=None, unread=False):
         out.append(Item("link", _("mark_read_upto"), url=make("readupto", sid)))
     # who liked, who boosted; quotes of my post; my post out of someone's quote
     sup = ctx.supports
+    if sup("reactions") or p.reactions:  # an emoji of mine on it (Akkoma, Misskey…)
+        out.append(Item("link", _("react_menu") + "…", url=make("react", sid)))
     for kind, count in (("favourited_by", p.counts.likes), ("reblogged_by", p.counts.shares)):
         if sup(kind) and count:
             out.append(Item("link", _("who_" + kind + "_n", n=count), url=make(kind, sid)))

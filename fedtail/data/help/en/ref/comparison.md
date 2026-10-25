@@ -74,7 +74,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Poll results without voting | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Edit history | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Translation by the server | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |
-| Emoji reactions | ◐ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
+| Emoji reactions | ✓ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
 | Who liked and boosted | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |   |   |
 | Honest counters | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who quoted my post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |

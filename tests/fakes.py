@@ -764,6 +764,22 @@ class FakeApi:
         self._need("announcement_reactions")
         self.w.reacted.append((aid, name, on))
 
+    def react_status(self, sid, name, on=True, style="pleroma"):
+        """Akkoma's way: the post comes back with my reaction counted in (or out)."""
+        self._need("reactions")
+        self.w.reacted.append((sid, name, on, style))
+        st = self.w.statuses[sid]
+        got = [dict(r) for r in st.get("emoji_reactions") or []]
+        r = next((x for x in got if x["name"] == name), None)
+        if on and r is None:
+            got.append({"name": name, "count": 1, "me": True})
+        elif on and not r["me"]:
+            r.update(count=r["count"] + 1, me=True)
+        elif not on and r and r["me"]:
+            r.update(count=r["count"] - 1, me=False)
+        st["emoji_reactions"] = [x for x in got if x["count"] > 0]
+        return st
+
 
 class World:
     def __init__(self):

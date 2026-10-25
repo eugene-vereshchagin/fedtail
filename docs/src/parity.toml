@@ -70,6 +70,17 @@ note.en = "A place (common/places.py, “log”): the web page, the terminal and
 keys = ["debug_log_title", "debug_log_hint", "debug_log_none"]
 
 [[capability]]
+id = "react"
+area = "reading"
+android = "has"
+name.ru = "Своя эмодзи-реакция на пост"
+name.en = "An emoji reaction of one's own"
+note.ru = "Место (common/places.py, «react»), открывается из ⋯ поста: окна — в окне места."
+note.en = "A place (common/places.py, “react”), opened from a post's ⋯: the windows in a place window."
+keys = ["react_menu", "react_title", "react_hint", "react_tip", "react_undo_tip", "react_other",
+        "react_other_tip", "react_put", "react_done", "react_none"]
+
+[[capability]]
 id = "collections"
 area = "window"
 android = "has"

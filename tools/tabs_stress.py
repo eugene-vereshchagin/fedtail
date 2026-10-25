@@ -236,7 +236,7 @@ def holders(kind_name, roots=(), depth=6, samples=2):
         except Exception:  # noqa: BLE001 — not a widget
             return True
     found = [o for o in gc.get_objects() if type(o).__name__ == kind_name
-             and loose(o)][:samples]
+             and loose(o)][-samples:]  # the newest: the window's own came first
     out = []
     ignore = {id(found)}
 
@@ -283,8 +283,34 @@ def holders(kind_name, roots=(), depth=6, samples=2):
                          f"{type(obj.get_parent()).__name__}]")
         except Exception:  # noqa: BLE001
             pass
+        chain.append(what_it_is(obj))
         out.append(f"{kind_name} ← " + " ← ".join(chain))
     return out
+
+
+def what_it_is(obj):
+    """A Qt or GTK object said by what shows of it: its words, its parents' kinds (a
+    QAction: its text and menu; a button: its label and the box it is in)."""
+    bits = []
+    for attr in ("text", "get_label", "toolTip", "get_tooltip_text", "objectName"):
+        try:
+            v = getattr(obj, attr)()
+        except Exception:  # noqa: BLE001 — not this kind's
+            continue
+        if v:
+            bits.append(f"{attr} {str(v)[:40]!r}")
+    chain, cur = [], obj
+    for _ in range(4):
+        try:
+            cur = cur.parent() if hasattr(cur, "parent") and callable(cur.parent) \
+                else cur.get_parent()
+        except Exception:  # noqa: BLE001
+            break
+        if cur is None:
+            chain.append("None")
+            break
+        chain.append(type(cur).__name__)
+    return "{" + ", ".join(bits) + (" · parents " + " ← ".join(chain) if chain else "") + "}"
 
 
 def judge(ui):
@@ -301,6 +327,14 @@ def judge(ui):
             ours = [k for k, v in grew.most_common(40) if k.startswith("fedtail.") and v > 50]
             for k in ours[:4]:  # and who holds them
                 NOTES.extend(f"{ui}: {line}" for line in holders(k.split(".", 1)[1]))
+            # the toolkit's own that keep growing a little each round (a QAction, a
+            # button a tab): which ones, by their words and where they hang
+            steady = last[1] - 2
+            kits = [k for k, v in grew.most_common(60)
+                    if k.split(".")[0] in ("PySide6", "gi") and v >= steady > 0]
+            for k in kits[:3]:
+                NOTES.extend(f"{ui}: {line}" for line in holders(k.rsplit(".", 1)[-1],
+                                                                 samples=4))
     if last[5] - base[5] > GROW_WIDGETS:
         ERRORS.append(f"{ui}: widgets left after closing grow round after round: "
                       f"{base[5]} → {last[5]} (rounds 2…{last[1]}) — a leak")

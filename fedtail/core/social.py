@@ -535,6 +535,26 @@ class SocialMixin:
             self.server_prefs = {}
         return self.server_prefs
 
+    def react(self, status, name, on=True):
+        """My emoji reaction to a post on or off (servers with reactions: Akkoma,
+        Pleroma, Misskey's kin) → the post as it is now. name: an emoji, or a custom
+        one's shortcode (":blobcat:" or "blobcat")."""
+        s = real(status)
+        name = str(name or "").strip()
+        if not name:
+            raise ValueError("no emoji")
+        if len(name) > 2 and name.startswith(":") and name.endswith(":"):
+            name = name[1:-1]  # a custom emoji goes by its shortcode alone
+        style = "pleroma" if (self.caps.software or "").lower() in ("pleroma", "akkoma") \
+            else "fedibird"
+
+        def job():
+            got = self._api("reactions", self.api.react_status, s["id"], name, on, style)
+            st = got if isinstance(got, dict) and got.get("id") else self.api.status(s["id"])
+            self._learn("reactions", True)
+            return self._update(st)
+        return self.submit(job)
+
     def react_announcement(self, aid, name, on=True):
         return self.submit(self._api, "announcement_reactions", self.api.react_announcement,
                            aid, name, on)

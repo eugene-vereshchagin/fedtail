@@ -33,6 +33,8 @@ log = logging.getLogger(__name__)
 
 WAIT = 60  # seconds a server call may take before the place says it failed
 POLICY_CHOICES = ("accept", "filter", "drop")  # the server's notification policy
+# a post's reactions offered besides those it has (Akkoma, Misskey…)
+QUICK_REACT = ("👍", "❤️", "😆", "😮", "😢", "🙏", "🔥", "🎉")
 SLOW_CHOICES = (0, 5, 10, 15, 30, 60, 120, 240)  # slow mode: a batch every N minutes
 CALM_CHOICES = (0, 5, 10, 30, 60, 120, 240)  # a lane: notify at most every N minutes
 
@@ -121,7 +123,7 @@ PLACES = {
     "filter": "filter_edit", "link": "link_posts", "remote": "remote_public",
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
-    "slow": "slow_title", "log": "debug_log_title",
+    "slow": "slow_title", "log": "debug_log_title", "react": "react_title",
 }
 MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "slow",
         "requests",
@@ -1104,6 +1106,37 @@ class Places(MorePlaces, AccountPlaces):
         page.rows += [Row("post", data=p, key=p.id) for p in posts or ()]
         return page
 
+    # ---- an emoji reaction of mine to a post (Akkoma, Pleroma, Misskey's kin) ----------
+    def _p_react(self, sid, _tab, _cur):
+        p = real(self._post(sid))
+        page = Page("react", _("react_title"), arg=sid, hint=_("react_hint"))
+        have = {r.name: r for r in p.reactions}
+        buttons = []
+        for name in list(have) + [e for e in QUICK_REACT if e not in have]:
+            r = have.get(name)
+            mine = bool(r and r.me)
+            shown = name if len(name) <= 4 else ":" + name.strip(":") + ":"
+            label = (f"{shown} {r.count}" if r and r.count else shown) + (" ✓" if mine else "")
+            buttons.append(self._btn(label, "react", "toggle", f"{sid} {0 if mine else 1} {name}",
+                                     primary=mine,
+                                     tip=_("react_undo_tip") if mine else _("react_tip")))
+        page.rows.append(Row("post", data=p, key=p.id, buttons=tuple(buttons)))
+        page.form = (Field("emoji", _("react_other"), "", tip=_("react_other_tip")),)
+        page.submit = self._btn(_("react_put"), "react", "put", sid, primary=True)
+        return page
+
+    def _a_react_toggle(self, data, _v, _c, _ans):
+        sid, on, name = data.split(" ", 2)
+        _wait(self.view.react(self._post(sid), name, on == "1"))
+        return Out(refresh=True)
+
+    def _a_react_put(self, sid, values, _c, _ans):
+        name = str(values.get("emoji") or "").strip()
+        if not name or " " in name:
+            return Out(error=_("react_none"))
+        _wait(self.view.react(self._post(sid), name, True))
+        return Out(refresh=True, message=_("react_done", emoji=name))
+
     def _p_history(self, sid, _tab, _cur):
         page = Page("history", _("history_title"), arg=sid, empty=_("history_none"))
         versions = _wait(self.view.history(self._post(sid)))
@@ -1638,4 +1671,5 @@ def for_post(entry):
     p = real(entry) if isinstance(entry, (Post, Share)) else entry
     return {"history": ("history", p.id), "report": ("report", p.id),
             "quotes": ("quotes", p.id), "favourited_by": ("reactions", p.id),
+            "react": ("react", p.id),
             "reblogged_by": ("reactions", p.id)}
