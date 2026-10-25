@@ -1,5 +1,7 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -329,9 +331,10 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
         modifier = Modifier.fillMaxWidth().clickable { act.open(p) }) {
         Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val who = stringResource(R.string.profile_of, p.handle)
             Box(Modifier.clip(CircleShape).clickable(enabled = p.accountId.isNotBlank()) {
                 act.profile(p.accountId)
-            }) { Avatar(p, 36) }
+            }.semantics { contentDescription = who }) { Avatar(p, 36) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Head(p, act, dim = !p.unread)
                 if (p.sharedBy.isNotBlank()) {

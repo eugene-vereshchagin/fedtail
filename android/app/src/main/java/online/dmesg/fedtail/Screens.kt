@@ -1,5 +1,7 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.runtime.SideEffect
 import androidx.compose.material3.VerticalDivider
@@ -348,7 +350,9 @@ private fun ThreadPlace(
         ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }, actions = {
         // every warning of the thread open at once (and closed again)
         if (model.threadPosts.any { it.warning.isNotBlank() }) {
-            IconButton(onClick = { model.threadCwOpen = !model.threadCwOpen }) {
+            val cwWords = stringResource(R.string.open_warnings)
+            IconButton(onClick = { model.threadCwOpen = !model.threadCwOpen },
+                modifier = Modifier.semantics { contentDescription = cwWords }) {
                 Text(if (model.threadCwOpen) "⚠✓" else "⚠", fontSize = 16.sp)
             }
         }
@@ -403,7 +407,9 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
         IconButton(onClick = { model.discard() }) {
             Icon(Icons.Filled.Delete, stringResource(R.string.discard))
         }
-        IconButton(onClick = { model.preview() }, enabled = model.composeText.isNotBlank()) {
+        val previewWords = stringResource(R.string.preview)
+        IconButton(onClick = { model.preview() }, enabled = model.composeText.isNotBlank(),
+            modifier = Modifier.semantics { contentDescription = previewWords }) {
             Text("👁", fontSize = 18.sp)
         }
         IconButton(onClick = { model.send() },

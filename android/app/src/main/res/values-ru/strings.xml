@@ -142,4 +142,7 @@
     <string name="cover">Обложка…</string>
     <string name="cover_set">Обложка ✓</string>
     <string name="focus_tip">Тронь картинку: куда смотрят её превью</string>
+    <string name="save_media">Сохранить</string>
+    <string name="preview">Предпросмотр</string>
+    <string name="open_warnings">Открыть все предупреждения</string>
 </resources>

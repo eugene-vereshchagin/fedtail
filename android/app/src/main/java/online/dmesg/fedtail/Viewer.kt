@@ -1,5 +1,7 @@
 package online.dmesg.fedtail
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -97,12 +99,16 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
                 if (m.url.startsWith("https://")) {
                     val context = LocalContext.current
                     val saved = stringResource(R.string.saving)
-                    IconButton(onClick = { saveMedia(context, m.url); toast(context, saved) }) {
+                    val saveWords = stringResource(R.string.save_media)
+                    IconButton(onClick = { saveMedia(context, m.url); toast(context, saved) },
+                        modifier = Modifier.semantics { contentDescription = saveWords }) {
                         Text("⤓", color = Color.White, fontSize = 20.sp)
                     }
                 }
                 if (m.url.isNotBlank()) {
-                    IconButton(onClick = { openBrowser(m.url) }) {
+                    val browserWords = stringResource(R.string.open_browser)
+                    IconButton(onClick = { openBrowser(m.url) },
+                        modifier = Modifier.semantics { contentDescription = browserWords }) {
                         Text("↗", color = Color.White, fontSize = 20.sp)
                     }
                 }

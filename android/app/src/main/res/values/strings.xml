@@ -143,4 +143,7 @@
     <string name="cover">Cover…</string>
     <string name="cover_set">Cover ✓</string>
     <string name="focus_tip">Tap the picture: where its previews centre</string>
+    <string name="save_media">Save</string>
+    <string name="preview">Preview</string>
+    <string name="open_warnings">Open every warning</string>
 </resources>
