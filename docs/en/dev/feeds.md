@@ -112,7 +112,8 @@ Guarding against false unfollows (the main trouble of such features):
 * Hidden follower lists (`hide_collections` in GoToSocial, "hide followers" in Mastodon) are
   usually given to their owner; if the server refuses, the event is off with a mark in
   ≡ → Server info.
-* An option: `derived.unfollow` (on/off) and how it treats `arts_mode` — the author decides.
+* An option: `derived.unfollow` (on/off) — a flag of its own, not tied to `arts_mode` (the
+  author's call, 25 Oct 2026: `arts_mode` is about what not to show, not about feelings).
 
 ## 3. What can be reached and what can't
 
