@@ -151,6 +151,59 @@ class LinkPostsWidget(_PagedTab):
             self.header.info.setText(_("link_posts_none"))
 
 
+def remote_page(view, host, cursor):
+    """core.remote_public, its two failures made answers: a future of (posts, cursor)
+    or ("closed", None) / ("bad", None) — the bridge hands a fail only the words."""
+    from concurrent.futures import Future
+    out = Future()
+
+    def done(f):
+        exc = f.exception()
+        if isinstance(exc, LookupError):
+            out.set_result(("closed", None))
+        elif isinstance(exc, ValueError):
+            out.set_result(("bad", None))
+        elif exc is not None:
+            out.set_exception(exc)
+        else:
+            out.set_result(f.result())
+    view.remote_public(host, cursor).add_done_callback(done)
+    return out
+
+
+class RemoteLaneWidget(_PagedTab):
+    """Another server's public lane: read without an account, its posts fetched into
+    mine (core.remote_public) — slow; "more" goes by the server's own cursor."""
+
+    def __init__(self, win, host):
+        self.host = host
+        self.cursor = None
+        super().__init__(win, _("remote_public_title", host=host))
+        self.header.info.setText(_("remote_public_tip"))
+        self.more()
+
+    def more(self):
+        self.btn_more.setEnabled(False)
+        self.win.bridge.call(remote_page(self.core, self.host, self.cursor), ok=self._got,
+                             fail=lambda e: (self.btn_more.setEnabled(True), self.win.error(e)))
+
+    def _got(self, res):
+        page, cursor = res
+        if page in ("closed", "bad"):
+            self.header.info.setText(_("remote_public_closed", host=self.host)
+                                     if page == "closed"
+                                     else _("remote_public_bad", text=self.host))
+            self.btn_more.setText(_("no_older"))
+            return
+        self.cursor = cursor
+        self._page(page)
+        self.btn_more.setEnabled(bool(cursor))
+        if not cursor:
+            self.btn_more.setText(_("no_older"))
+        if not self.items:
+            self.header.info.setText(_("remote_public_closed", host=self.host))
+
+
 class TrendsWidget(_PagedTab):
     """What's talked about on my server: tags, links, posts."""
 

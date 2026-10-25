@@ -200,6 +200,74 @@ def open_link_posts(win, url):
     return page
 
 
+def remote_page(view, host, cursor):
+    """core.remote_public, its two failures made answers: a future of (posts, cursor) or
+    ("closed", None) / ("bad", None) — the bridge hands a fail only the words."""
+    from concurrent.futures import Future
+    out = Future()
+
+    def done(f):
+        exc = f.exception()
+        if isinstance(exc, LookupError):
+            out.set_result(("closed", None))
+        elif isinstance(exc, ValueError):
+            out.set_result(("bad", None))
+        elif exc is not None:
+            out.set_exception(exc)
+        else:
+            out.set_result(f.result())
+    view.remote_public(host, cursor).add_done_callback(done)
+    return out
+
+
+def open_remote_lane(win, host):
+    """Another server's public lane (core.remote_public): read without an account, its
+    posts fetched into mine page by page — as the Qt window's tab; one tab a server."""
+    from .card import Card
+    key = f"remote:{host}"
+    page = win.extra_tabs.get(key)
+    if page is not None:
+        win.tabs.set_current_page(win.tabs.page_num(page))
+        return page
+    page, box, _title = win._new_tab(_("remote_public_title", host=host),
+                                     lambda: win.close_extra(key))
+    win.extra_tabs[key] = page
+    info = Gtk.Label(label=_("remote_public_tip"), xalign=0, wrap=True)
+    info.add_css_class("ft-muted")
+    box.append(info)
+    more = Gtk.Button(label=_("older_down"))
+    more.add_css_class("flat")
+    cursor = [None]  # the server's own: its ids, not mine
+    shown = [0]
+
+    def got(res):
+        posts, nxt = res
+        if more.get_parent() is not None:
+            box.remove(more.get_parent())
+        if posts in ("closed", "bad"):
+            info.set_text(_("remote_public_closed", host=host) if posts == "closed"
+                          else _("remote_public_bad", text=host))
+            return
+        short = win.view.short_ids(posts)
+        for p in posts:
+            box.append(Card(win.ctx, p.id, p, short_id=short.get(p.id)))
+        shown[0] += len(posts)
+        if not shown[0]:
+            info.set_text(_("remote_public_closed", host=host))
+        cursor[0] = nxt
+        if nxt:
+            more.set_sensitive(True)
+            box.append(more)
+
+    def load(*_a):
+        more.set_sensitive(False)
+        win.call(remote_page(win.view, host, cursor[0]), got)
+    more.connect("clicked", load)
+    load()
+    page.remote_info, page.remote_more = info, more  # (tests)
+    return page
+
+
 def read_up_to(win, sid):
     """This post and everything older in the lane it's in: read."""
     from ..common.lane import read_up_to as up_to

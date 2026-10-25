@@ -1197,6 +1197,38 @@ class QtSmokeTest(unittest.TestCase):
             c._leave() if hasattr(c, "_leave") else c.reject()
         spell._checkers.clear()
 
+    def test_another_servers_lane(self):
+        """≡ → Another server's lane…: its posts in a tab, fetched into mine; more by
+        the server's own cursor; a closed one says so."""
+        from fedtail.frontends.qt.social import RemoteLaneWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        far = [dict(status(f"8{i:02d}", BOB, minute=i, vis="public", text=f"far {i}"),
+                    uri=f"https://far.example/s/{i}", id=f"f{i}") for i in range(20)]
+        for s in far:  # what my server gets when it looks them up
+            self.world.remote[s["uri"]] = dict(s, id="L" + s["id"])
+        asked = []
+
+        def origin(url):
+            asked.append(url)
+            if "closed.example" in url:
+                return None  # 401 to strangers
+            return far if "max_id" not in url else []
+        self.core._origin_get = origin
+        tab = self.win.open_remote_lane("far.example")
+        self.assertIsInstance(tab, RemoteLaneWidget)
+        self.pump(until=lambda: len(tab.items) == 20)
+        self.assertTrue(all(e.id.startswith("L") for e in tab.items))  # mine to act on
+        self.assertIs(self.win.open_remote_lane("far.example"), tab)  # one tab a server
+        tab.more()
+        self.pump(until=lambda: any("max_id=f19" in u for u in asked))
+        self.pump(until=lambda: tab.btn_more.text() == i18n._("no_older"))
+        closed = self.win.open_remote_lane("closed.example")
+        self.pump(until=lambda: closed.header.info.text()
+                  == i18n._("remote_public_closed", host="closed.example"))
+        self.assertEqual(closed.header.info.text(),
+                         i18n._("remote_public_closed", host="closed.example"))
+
     def test_rest_of_the_api(self):
         """0.20: a filter edited, a cover for a video, an edited post's descriptions, a
         report by the server's rules, the profile's newer switches and tag suggestions,

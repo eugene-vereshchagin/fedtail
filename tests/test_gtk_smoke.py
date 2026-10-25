@@ -1091,6 +1091,31 @@ class GtkSmokeTest(_GtkBase):
             self.assertEqual(sp._timer, 0)
         spell._checkers.clear()
 
+    def test_another_servers_lane(self):
+        """≡ → Another server's lane…: as in Qt — a tab of its posts, fetched into
+        mine; more by the server's own cursor; a closed one says so."""
+        far = [dict(status(f"8{i:02d}", BOB, minute=i, vis="public", text=f"far {i}"),
+                    uri=f"https://far.example/s/{i}", id=f"f{i}") for i in range(20)]
+        for s in far:  # what my server gets when it looks them up
+            self.world.remote[s["uri"]] = dict(s, id="L" + s["id"])
+        asked = []
+
+        def origin(url):
+            asked.append(url)
+            if "closed.example" in url:
+                return None  # 401 to strangers
+            return far if "max_id" not in url else []
+        self.core._origin_get = origin
+        page = self.win.open_remote_lane("far.example")
+        self.assertTrue(pump(lambda: page.remote_more.get_parent() is not None, 5))
+        self.assertIs(self.win.open_remote_lane("far.example"), page)  # one tab a server
+        page.remote_more.emit("clicked")
+        self.assertTrue(pump(lambda: any("max_id=f19" in u for u in asked), 5))
+        self.assertTrue(pump(lambda: page.remote_more.get_parent() is None, 5))  # no more
+        closed = self.win.open_remote_lane("closed.example")
+        self.assertTrue(pump(lambda: closed.remote_info.get_text()
+                             == i18n._("remote_public_closed", host="closed.example"), 5))
+
     def test_rest_of_the_api(self):
         """0.20, as in Qt: a filter edited, a cover for a video, an edited post's
         descriptions, a report by the server's rules, the profile's newer switches and
