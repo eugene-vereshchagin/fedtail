@@ -132,4 +132,8 @@
     <string name="merge_accounts">Все аккаунты в одном окне</string>
     <string name="try_theme">Примерить тему…</string>
     <string name="act_as_wait">Ищу пост на сервере другого аккаунта…</string>
+    <string name="saving">Сохраняю…</string>
+    <string name="discard">Выбросить</string>
+    <string name="discard_q">Выбросить текст и черновик?</string>
+    <string name="send_later">Позже…</string>
 </resources>

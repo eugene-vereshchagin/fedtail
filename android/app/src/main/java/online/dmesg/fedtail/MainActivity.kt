@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
             openProfile = if (demo) intent.getStringExtra("profile") else null,
             openCompose = demo && intent.getBooleanExtra("compose", false))
         handleLogin(intent)
+        handleShared(intent)
         if (!demo) askToNotify()  // the demo (CI's emulator): no system dialog over the screens
         setContent {
             FedtailTheme(model.themeColors, model.themeLight, model.themeFont, model.themeScale,
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleLogin(intent)
+        handleShared(intent)
         val thread = intent.getStringExtra(Notifier.EXTRA_THREAD)
         val lane = intent.getStringExtra(Notifier.EXTRA_LANE)
         if (thread != null || lane != null) model.openFromNote(lane, thread)
@@ -75,6 +77,16 @@ class MainActivity : ComponentActivity() {
         if (prefs.getBoolean("asked_notify", false)) return
         prefs.edit().putBoolean("asked_notify", true).apply()
         notifyAsk.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    /** A link or words another app handed over (Share, or text selected → fedtail). */
+    private fun handleShared(intent: Intent?) {
+        val text = when (intent?.action) {
+            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
+            Intent.ACTION_PROCESS_TEXT -> intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+            else -> null
+        } ?: return
+        model.openShared(text) { url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
 
     /** fedtail://oauth?code=… — the server sends the browser back here after "allow". */

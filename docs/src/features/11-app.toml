@@ -97,9 +97,7 @@ details.en = "@mentions, #tags and links to fediverse posts and profiles open in
 [[feature]]
 id = "open-url"
 status = "has"
-android = "no"
-android_note.ru = "ссылки на посты из других приложений не открываются в fedtail"
-android_note.en = "links to posts from other apps don't open in fedtail"
+android = "has"
 since = "0.14.0"
 name.ru = "Открыть ссылку в запущенном fedtail"
 name.en = "Open a link in the running fedtail"

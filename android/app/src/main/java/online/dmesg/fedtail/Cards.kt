@@ -73,6 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
@@ -112,19 +113,67 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
     actAs = { p, tag, action -> actAs(p, tag, action) })
 
-private val EMOJI = Regex("""<img\b[^>]*\balt="([^"]*)"[^>]*>""")
+// a server's emoji as the core writes it (web/server.py with_emojis): its picture's address
+private val EMOJI = Regex("""<img\b[^>]*\bclass="emoji"[^>]*\bsrc="([^"]*)"[^>]*>""")
+private const val EMOJI_MARK = '\uE000'
+private const val INLINE_TAG = "androidx.compose.foundation.text.inlineContent"
 
-/** A post's HTML as text, its links coloured and marked "URL" (custom emoji as their
- *  :code: for now). Plain marks, not Compose's own link handling: that takes every tap
+/** HTML with each emoji picture as one mark (its address kept, in order). */
+fun emojiMarks(html: String): Pair<String, List<String>> {
+    val urls = mutableListOf<String>()
+    val text = EMOJI.replace(html) { m ->
+        urls += m.groupValues[1].replace("&amp;", "&")
+        EMOJI_MARK.toString()
+    }
+    return text to urls
+}
+
+/** The text up to end, each mark a picture in its place (one character each: every
+ *  style and link keeps its offsets). */
+fun AnnotatedString.Builder.appendWithEmoji(text: String, urls: List<String>) {
+    var k = 0
+    for (ch in text) {
+        if (ch == EMOJI_MARK && k < urls.size) appendInlineContent("emoji:" + urls[k++], "\uFFFD")
+        else append(ch)
+    }
+}
+
+/** The pictures of the emoji in a text, for Text's inlineContent: a line's height each. */
+fun emojiContent(words: AnnotatedString): Map<String, androidx.compose.foundation.text.InlineTextContent> =
+    words.getStringAnnotations(INLINE_TAG, 0, words.length).map { it.item }
+        .filter { it.startsWith("emoji:") }.distinct().associateWith { id ->
+            androidx.compose.foundation.text.InlineTextContent(
+                androidx.compose.ui.text.Placeholder(1.25.em, 1.25.em,
+                    androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter)) {
+                AsyncImage(model = id.removePrefix("emoji:"), contentDescription = null,
+                    modifier = Modifier.fillMaxSize())
+            }
+        }
+
+/** A name that may hold :emoji: (the core's name_html), as text with their pictures. */
+fun nameText(name: String, html: String): AnnotatedString {
+    if (html.isBlank()) return AnnotatedString(name)
+    return try {
+        val (marked, urls) = emojiMarks(html)
+        val a = AnnotatedString.fromHtml(marked)
+        buildAnnotatedString { appendWithEmoji(a.text.trim(), urls) }
+    } catch (e: Exception) {
+        AnnotatedString(name)
+    }
+}
+
+/** A post's HTML as text, its links coloured and marked "URL", the server's emoji as
+ *  their pictures. Plain marks, not Compose's own link handling: that takes every tap
  *  on the text, and a tap beside a link must open the thread (PostWords decides). */
 fun postText(html: String, plain: String, linkColor: Color): AnnotatedString {
     if (html.isBlank()) return AnnotatedString(plain)
     return try {
-        val a = AnnotatedString.fromHtml(EMOJI.replace(html) { it.groupValues[1] })
+        val (marked, urls) = emojiMarks(html)
+        val a = AnnotatedString.fromHtml(marked)
         var end = a.length
         while (end > 0 && a[end - 1].isWhitespace()) end--
         buildAnnotatedString {
-            append(a.text.substring(0, end))
+            appendWithEmoji(a.text.substring(0, end), urls)
             a.spanStyles.forEach { r ->
                 if (r.start < end) addStyle(r.item, r.start, minOf(r.end, end))
             }
@@ -147,7 +196,9 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit, onTap: (
     val link by rememberUpdatedState(onLink)
     val tap by rememberUpdatedState(onTap)
     val scale = LocalPostScale.current  // [font] post_scale: a theme's posts larger
+    val emoji = remember(words) { emojiContent(words) }
     Text(words, fontSize = 15.sp * scale, lineHeight = 21.sp * scale, onTextLayout = { layout = it },
+        inlineContent = emoji,
         modifier = Modifier.pointerInput(words) {
             detectTapGestures { pos ->
                 val at = layout?.getOffsetForPosition(pos)
@@ -318,7 +369,9 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
                     act.profile(p.accountId)
                 }) { Avatar(p, 24) }
                 // no weight here: the spacer's is the only one, so /N stands at the right edge
-                Text(p.name, fontWeight = if (focused) FontWeight.Bold else FontWeight.SemiBold,
+                val name = remember(p.name, p.nameHtml) { nameText(p.name, p.nameHtml) }
+                Text(name, inlineContent = remember(name) { emojiContent(name) },
+                    fontWeight = if (focused) FontWeight.Bold else FontWeight.SemiBold,
                     fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = 220.dp))
                 Text(shownTime(p.created), fontSize = 13.sp,
@@ -344,7 +397,9 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
         }
         // the name comes first: the handle gets what's left, at most a short piece
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-            Text(p.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
+            val name = remember(p.name, p.nameHtml) { nameText(p.name, p.nameHtml) }
+            Text(name, inlineContent = remember(name) { emojiContent(name) },
+                fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
                     .alpha(if (dim) 0.85f else 1f)
                     .clickable(enabled = p.accountId.isNotBlank()) { act.profile(p.accountId) })

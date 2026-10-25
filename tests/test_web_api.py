@@ -4,6 +4,7 @@ place."""
 
 import json
 import threading
+import time
 
 from fedtail import i18n
 from fedtail.frontends.common import places as places_mod
@@ -119,3 +120,19 @@ class WebProfileTest(TmpDir):
             seen |= {p["sid"] for p in nxt["posts"]}
             got, more = nxt, nxt["older"]
         self.assertEqual(seen, set(b_posts))
+
+    def test_completion_of_names_tags_emoji(self):
+        """The editor's #tag, @name, :emoji: — the windows' completion, on the page."""
+        from tests import fakes
+        st = fakes.status("301", fakes.BOB, minute=1, vis="public", text="про #fediverse")
+        st["tags"] = [{"name": "fediverse"}]
+        self.w.add(st, home=True)
+        self.core.poll_once()
+        self.web.complete("")  # the first call warms what completion reads
+        time.sleep(0.3)
+        got = self.web.complete("привет @bo")
+        self.assertEqual(got["word"], "@bo")
+        self.assertTrue(any(i["insert"].startswith("@bob") for i in got["items"]), got)
+        got = self.web.complete("и #fed")
+        self.assertIn("#fediverse", [i["insert"] for i in got["items"]])
+        self.assertEqual(self.web.complete("просто слово")["items"], [])

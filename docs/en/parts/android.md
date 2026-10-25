@@ -27,7 +27,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | Open every CW in a thread at once | — | no opening every CW of a thread at once |
-| Servers' emoji as pictures | ◐ | servers' emoji as their :code: word, not a picture |
 | No emoji at all | ◐ | the setting is there; the phone's own emoji are drawn by its font |
 | Poll results without voting | ◐ | the results show; no refreshing them |
 | Emoji reactions | — | reactions aren't shown |
@@ -38,7 +37,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | Video without a hardware decoder (the default) | · | the phone decodes by itself |
-| Save a picture, video, gif | — | no saving a picture |
 | Pictures and video ahead of time, a disk cache | ◐ | pictures cached by the app's loader (Coil), nothing ahead of time |
 | Memory for pictures | · | the Coil loader looks after pictures' memory |
 
@@ -54,11 +52,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | A video's cover; picture descriptions in a post's edit | ◐ | describing pictures when editing — yes; no video cover, no focus |
-| The compose panel and drafts | ◐ | a post, a reply, an edit, a quote; no drafts |
-| Preview before sending | — | no preview |
-| Completing #tags, @nicks, :emoji: | — | no completing #tags and @nicks |
 | CamelCase hint for hashtags | — | no hint |
-| A scheduled post | — | no scheduled posts |
 | Spell checking in the compose panel | ◐ | the phone's keyboard checks; no checking of fedtail's own |
 
 ### People and order
@@ -86,7 +80,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | Window, tray, keys | · | a phone has no window, tray or keys |
-| Open a link in the running fedtail | — | links to posts from other apps don't open in fedtail |
 | A detailed log for bug reports | ◐ | the log comes in the self-check's report |
 | A bug report straight into your private repository | — | the report is shared, not sent to a repository |
 | Report a bug on GitHub — checked first | ◐ | “Share the report” from the self-check |

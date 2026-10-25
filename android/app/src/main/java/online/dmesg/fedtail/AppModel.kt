@@ -109,6 +109,7 @@ data class PostItem(
     val quoteId: String = "",        // the post it quotes, or a note why it can't be shown
     val quoteWho: String = "",
     val quoteText: String = "",
+    val nameHtml: String = "",       // the name with its :emoji: as pictures (if any)
 )
 
 /** A question the core asked, to answer in a dialog. */
@@ -414,6 +415,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (settingsOnStart) openSettings()
         settingsOnStart = false
         pageOnStart?.let { openPage(it) }
+        sharedOnStart?.let { openShared(it, sharedBrowser) }
+        sharedOnStart = null
         profileOnStart?.let { openProfile(it) }
         if (composeOnStart) compose(null)
         pageOnStart = null
@@ -611,6 +614,35 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var sharedOnStart: String? = null
+
+    /** A link or words from another app: a post or profile my server finds opens here,
+     *  another link goes to the browser, words are searched (the windows' search place). */
+    fun openShared(text: String, browser: (String) -> Unit) {
+        val words = text.trim().take(500)
+        if (words.isBlank()) return
+        if (screen != Screen.Main) {
+            sharedOnStart = words
+            sharedBrowser = browser
+            return
+        }
+        val url = Regex("""https?://\S+""").find(words)?.value?.trimEnd('.', ',', ')', '»', '"')
+        if (url == null) {
+            openPage("search", words)
+            return
+        }
+        viewModelScope.launch {
+            val got = Core.resolve(url)
+            when (got.optString("found")) {
+                "thread" -> openThread(got.optString("id"))
+                "account" -> openProfile(got.optString("id"))
+                else -> browser(url)
+            }
+        }
+    }
+
+    private var sharedBrowser: (String) -> Unit = {}
+
     /** A tap on a note in the shade: its thread, or its lane. */
     fun openFromNote(lane: String?, thread: String?) {
         if (screen != Screen.Main) {
@@ -641,6 +673,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun back(): Boolean {
         if (places.isNotEmpty()) {
             val left = places.last()
+            if (left is Place.Compose) saveDraft()  // whatever happens next, the text is safe
             places = places.dropLast(1)
             if (left is Place.Page && left !in places) pages.remove(left)
             if (left is Place.Profile && left !in places) profiles.remove(left)
@@ -679,6 +712,27 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         replyToId = null
         loadEditorFacts()
         composeText = replyTo?.let { if (it.handle.isNotBlank()) "@${it.handle} " else "" } ?: ""
+        // the draft kept for it (here, or from another device), or the reply's mentions
+        val opened = composeText
+        viewModelScope.launch {
+            val d = Core.draftStart(replyTo?.sid ?: "")
+            if (Core.failed(d) != null || editId != null || quoteId != null) return@launch
+            if (place !is Place.Compose || composeText != opened) return@launch // typed meanwhile
+            composeText = str(d, "text").ifBlank { composeText }
+            if (!d.optBoolean("restored")) return@launch
+            str(d, "cw").takeIf { it.isNotBlank() }?.let { composeCw = it; composeCwOn = true }
+            str(d, "visibility").takeIf { it.isNotBlank() }?.let { composeVisibility = it }
+            if (!d.isNull("language")) composeLang = str(d, "language")
+            composeSensitive = d.optBoolean("sensitive")
+            d.optJSONObject("poll")?.let { pl ->
+                val o = pl.optJSONArray("options") ?: JSONArray()
+                pollOptions = (0 until o.length()).map { o.optString(it) }.ifEmpty { listOf("", "") }
+                pollExpires = pl.optInt("expires_in", 86400)
+                pollMultiple = pl.optBoolean("multiple")
+                pollOn = true
+            }
+            composeHint = str(d, "hint")
+        }
         composeVisibility = if (replyTo == null) defaultVisibility else null
         places = places + Place.Compose(replyTo)
     }
@@ -712,6 +766,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 }
                 if (altOk) body.put("alt_ok", true)
                 composeFrom?.let { body.put("account", it) }
+                if (composeWhen.isNotBlank()) body.put("scheduled_at", composeWhen.replace("T", " "))
             }
             val got = Core.post(body)
             sending = false
@@ -722,6 +777,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             str(got, "message").takeIf { it.isNotBlank() }?.let { message = it }
+            val sentKey = draftKey()
+            launch { Core.draftDrop(sentKey) }  // sent: its draft goes, here and elsewhere
             if (got.optBoolean("edited")) {
                 message = getApplication<Application>().getString(R.string.edited_done)
             }
@@ -780,14 +837,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** A link tapped in a post: a post my server knows opens as a thread; else the browser. */
+    /** A link tapped in a post: a post my server knows opens as a thread, a person as
+     *  their profile; else the browser. */
     fun openLink(url: String, openBrowser: (String) -> Unit) {
         viewModelScope.launch {
             val got = Core.resolve(url)
-            if (got.optString("found") == "thread" && got.optString("id").isNotBlank()) {
-                openThread(got.optString("id"))
-            } else {
-                openBrowser(url)
+            val id = got.optString("id")
+            when {
+                got.optString("found") == "thread" && id.isNotBlank() -> openThread(id)
+                got.optString("found") == "account" && id.isNotBlank() -> openProfile(id)
+                else -> openBrowser(url)
             }
         }
     }
@@ -1241,6 +1300,68 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var pollExpires by mutableStateOf(86400)
     var editorFacts by mutableStateOf<JSONObject?>(null)
     var composeFrom by mutableStateOf<String?>(null) // all accounts in one: whose post
+    var composeWhen by mutableStateOf("")       // "2026-10-26T09:30": send then (local time)
+    var composeHint by mutableStateOf("")       // "draft restored", "draft saved"
+    var previewing by mutableStateOf<JSONObject?>(null)
+    private var discarded = false
+
+    /** The draft's name, as the core's (common/compose.draft_key). */
+    fun draftKey(): String {
+        val p = place as? Place.Compose
+        return when {
+            editId != null -> "edit:$editId"
+            quoteId != null -> "quote:$quoteId"
+            p?.replyTo != null -> "reply:${p.replyTo.sid}"
+            replyToId != null -> "reply:$replyToId"
+            else -> "new"
+        }
+    }
+
+    private fun snapshot() = JSONObject().put("text", composeText)
+        .put("cw", if (composeCwOn) composeCw else "")
+        .put("visibility", composeVisibility ?: defaultVisibility)
+        .put("language", composeLang.ifBlank { JSONObject.NULL })
+        .put("sensitive", composeSensitive)
+        .put("poll", if (pollOn) JSONObject().put("options", JSONArray(pollOptions))
+            .put("expires_in", pollExpires).put("multiple", pollMultiple) else JSONObject.NULL)
+
+    /** Kept as it is now (post.drafts_autosave), or gone when emptied. */
+    fun saveDraft() {
+        if (place !is Place.Compose || discarded) return
+        val key = draftKey()
+        val snap = snapshot()
+        viewModelScope.launch {
+            val got = Core.draftSave(key, snap)
+            if (Core.failed(got) == null) composeHint = str(got, "hint")
+        }
+    }
+
+    /** "Discard": the text and its draft gone, after the question. */
+    fun discard(sure: Boolean = false) {
+        if (!sure) {
+            val app = getApplication<Application>()
+            asking = Asking.Confirm(app.getString(R.string.discard_q), { discard(true) },
+                app.getString(R.string.discard))
+            return
+        }
+        val key = draftKey()
+        discarded = true
+        viewModelScope.launch { Core.draftDrop(key) }
+        places = places.dropLast(1)
+        clearEditor()
+    }
+
+    /** The post as it will read: the core's preview (Qt's), to send from there. */
+    fun preview() {
+        viewModelScope.launch {
+            val body = JSONObject().put("text", composeText)
+                .put("cw", if (composeCwOn) composeCw else "")
+                .put("media", attachments.size)
+            val got = Core.preview(body)
+            Core.failed(got)?.let { message = it; return@launch }
+            previewing = got
+        }
+    }
 
     /** Whom a post may go from (all accounts in one window): (key, "from @x@server"). */
     fun fromAccounts(): List<Pair<String, String>> {
@@ -1263,6 +1384,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         pollMultiple = false
         pollExpires = 86400
         composeFrom = null
+        composeWhen = ""
+        composeHint = ""
+        previewing = null
+        discarded = false
     }
 
     private fun loadEditorFacts() {
@@ -1580,6 +1705,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 !o.optBoolean("own"),
             own = o.optBoolean("own"),
             edited = o.optBoolean("edited"),
+            nameHtml = str(acc, "name_html"),
             quoteId = str(o.optJSONObject("quote"), "id"),
             quoteWho = o.optJSONObject("quote")?.optJSONObject("account")?.let { a ->
                 str(a, "name").ifBlank { str(a, "handle") } } ?: "",

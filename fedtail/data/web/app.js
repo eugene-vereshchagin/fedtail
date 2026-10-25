@@ -2320,6 +2320,9 @@ async function start() {
   $("#compose").addEventListener("cancel", (e) => { e.preventDefault(); closeCompose(); });
   $("#compose-form").addEventListener("submit", send);
   $("#text").addEventListener("input", counter);
+  $("#text").addEventListener("input", completeSoon);
+  $("#text").addEventListener("keydown", completeKeys, true);
+  $("#text").addEventListener("blur", () => setTimeout(completeHide, 200));
   $("#cw").addEventListener("input", counter);
   $("#cw").placeholder = w("cw_placeholder");
   $("#cw-toggle").textContent = "⚠";
@@ -2403,3 +2406,79 @@ async function start() {
 }
 
 start().catch((e) => toast(e.message));
+
+// ---- completion: #tags, @names, :emoji: as they are typed (the windows' own lists) ----
+let completeTimer = null;
+const completeState = { items: [], at: 0, word: "" };
+
+function completeSoon() {
+  clearTimeout(completeTimer);
+  completeTimer = setTimeout(completeAsk, 180);
+}
+
+async function completeAsk() {
+  const t = $("#text");
+  const before = t.value.slice(0, t.selectionStart);
+  const line = before.slice(before.lastIndexOf("\n") + 1);
+  let r;
+  try { r = await api("/api/complete", { before: line }); } catch (e) { return completeHide(); }
+  const now = t.value.slice(0, t.selectionStart);
+  if (now !== before) return;  // typed on meanwhile: the next answer will come
+  completeState.items = r.items || [];
+  completeState.word = r.word || "";
+  completeState.at = 0;
+  completeDraw();
+}
+
+function completeDraw() {
+  let box = $("#complete");
+  if (!completeState.items.length) return completeHide();
+  if (!box) {
+    box = el("div", "complete");
+    box.id = "complete";
+    box.setAttribute("role", "listbox");
+    $("#text").after(box);
+  }
+  box.textContent = "";
+  completeState.items.forEach((it, i) => {
+    const b = el("button", "tool" + (i === completeState.at ? " on" : ""), it.label);
+    b.type = "button";
+    b.setAttribute("role", "option");
+    b.onmousedown = (e) => { e.preventDefault(); completePut(i); };
+    box.append(b);
+  });
+  box.hidden = false;
+}
+
+function completeHide() {
+  const box = $("#complete");
+  if (box) box.hidden = true;
+  completeState.items = [];
+}
+
+function completePut(i) {
+  const it = completeState.items[i];
+  if (!it) return;
+  const t = $("#text");
+  const end = t.selectionStart;
+  const start = end - completeState.word.length;
+  t.setRangeText(it.insert + " ", start, end, "end");
+  completeHide();
+  t.focus();
+  counter();
+}
+
+function completeKeys(e) {
+  if (!completeState.items.length) return;
+  const n = completeState.items.length;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    completeState.at = (completeState.at + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+    completeDraw();
+  } else if (e.key === "Enter" || e.key === "Tab") {
+    completePut(completeState.at);
+  } else if (e.key === "Escape") {
+    completeHide();
+  } else return;
+  e.preventDefault();
+  e.stopPropagation();
+}

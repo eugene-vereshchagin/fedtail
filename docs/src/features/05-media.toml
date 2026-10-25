@@ -79,9 +79,7 @@ clients = []
 [[feature]]
 id = "save-media"
 status = "has"
-android = "no"
-android_note.ru = "сохранить картинку нельзя"
-android_note.en = "no saving a picture"
+android = "has"
 since = "0.2.0"
 name.ru = "Сохранить картинку, видео, гифку"
 name.en = "Save a picture, video, gif"

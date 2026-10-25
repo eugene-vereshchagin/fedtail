@@ -25,6 +25,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- a link or a name from another app: "Share → fedtail", or text selected
+                 → fedtail: a post or a profile opens here, anything else is searched -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
             <!-- OAuth: the server sends the browser to fedtail://oauth?code=… -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

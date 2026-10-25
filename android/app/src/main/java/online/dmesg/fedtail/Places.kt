@@ -151,14 +151,27 @@ fun HtmlText(html: String, onLink: (String) -> Unit, modifier: Modifier = Modifi
     val color = MaterialTheme.colorScheme.primary
     val text = remember(html, color) {
         try {
-            AnnotatedString.fromHtml(html.trim(), TextLinkStyles(SpanStyle(color = color))) { link ->
+            val (marked, urls) = emojiMarks(html.trim())
+            val a = AnnotatedString.fromHtml(marked, TextLinkStyles(SpanStyle(color = color))) { link ->
                 (link as? LinkAnnotation.Url)?.url?.let(onLink)
+            }
+            if (urls.isEmpty()) a else androidx.compose.ui.text.buildAnnotatedString {
+                appendWithEmoji(a.text, urls)  // one character a picture: the offsets hold
+                a.spanStyles.forEach { addStyle(it.item, it.start, it.end) }
+                a.paragraphStyles.forEach { addStyle(it.item, it.start, it.end) }
+                a.getLinkAnnotations(0, a.length).forEach { r ->
+                    when (val l = r.item) {
+                        is LinkAnnotation.Url -> addLink(l, r.start, r.end)
+                        is LinkAnnotation.Clickable -> addLink(l, r.start, r.end)
+                    }
+                }
             }
         } catch (e: Exception) {
             AnnotatedString(html)
         }
     }
-    Text(text, modifier, style = MaterialTheme.typography.bodyMedium)
+    Text(text, modifier, style = MaterialTheme.typography.bodyMedium,
+        inlineContent = remember(text) { emojiContent(text) })
 }
 
 /** A face by its address, or the first letter on the person's colour. */

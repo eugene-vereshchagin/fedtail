@@ -89,9 +89,7 @@ details.en = "The title, description and picture of the page a post links to (th
 [[feature]]
 id = "custom-emoji"
 status = "has"
-android = "partly"
-android_note.ru = "эмодзи серверов — словом :код:, не картинкой"
-android_note.en = "servers' emoji as their :code: word, not a picture"
+android = "has"
 since = "0.8.0"
 name.ru = "Эмодзи серверов картинками"
 name.en = "Servers' emoji as pictures"

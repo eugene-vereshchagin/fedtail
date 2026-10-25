@@ -533,3 +533,29 @@ class BridgeMergeTest(_Base):
         self.assertTrue(core.primary._paused and core.others["two"]._paused)
         self.call("merge", False)
         self.assertFalse(hasattr(self.bridge._s["core"], "others"))
+
+
+class BridgeDraftTest(_Base):
+    """The phone's editor keeps drafts in the core, as the windows do (synced across
+    devices): a reply's draft comes back, an emptied one goes, a sent one is dropped."""
+
+    def test_drafts_and_preview(self):
+        self.demo()
+        start = self.call("draft_start", "103", "", "", False)
+        self.assertEqual(start["key"], "reply:103")
+        self.assertFalse(start["restored"])
+        self.assertTrue(start["text"].startswith("@"))  # the reply's mentions
+        self.call("draft_save", "reply:103", json.dumps({"text": "недописанный ответ",
+                                                          "visibility": "public"}))
+        again = self.call("draft_start", "103", "", "", False)
+        self.assertTrue(again["restored"])
+        self.assertEqual(again["text"], "недописанный ответ")
+        self.assertEqual(again["visibility"], "public")
+        self.call("draft_save", "reply:103", json.dumps({"text": "  "}))  # emptied: gone
+        self.assertFalse(self.call("draft_start", "103", "", "", False)["restored"])
+        self.call("draft_save", "new", json.dumps({"text": "новый"}))
+        self.call("draft_drop", "new")
+        self.assertFalse(self.call("draft_start", "", "", "", False)["restored"])
+        self.assertIn("error", json.loads(self.bridge.draft_save("../x", "{}")))
+        pv = self.call("preview", json.dumps({"text": "раз\n\nдва", "cw": "осторожно"}))
+        self.assertTrue(pv["parts"] and pv["cw"] == "осторожно")

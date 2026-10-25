@@ -431,6 +431,31 @@ def editor():
     return _answer(go)
 
 
+def draft_start(reply_to="", quote="", edit="", invite=False):
+    """The editor's start: the draft kept for it, or the reply's mentions (Web)."""
+    return _answer(lambda: _s["web"].draft_start(reply_to or "", quote or "", edit or "",
+                                                 bool(invite)))
+
+
+def draft_save(key, snap_json):
+    return _answer(lambda: _s["web"].draft_save(key, json.loads(snap_json or "{}")))
+
+
+def draft_drop(key):
+    return _answer(lambda: _s["web"].draft_drop(key))
+
+
+def preview(body_json):
+    """The post as it will read (Qt's preview): {title, head, cw, parts: [html], back,
+    send} — the parts as safe HTML."""
+    return _answer(lambda: _s["web"].preview(json.loads(body_json or "{}")))
+
+
+def complete(before):
+    """#tags, @names, :emoji: for what is being typed (Web.complete)."""
+    return _answer(lambda: _s["web"].complete(before))
+
+
 def compose_check(body_json):
     """As the text is typed: characters of the limit, a chain's parts, hints."""
     return _answer(lambda: _s["web"].compose_check(json.loads(body_json or "{}")))

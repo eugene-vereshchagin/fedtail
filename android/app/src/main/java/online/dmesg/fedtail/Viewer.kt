@@ -94,6 +94,13 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
                     Text("${index + 1} / ${place.items.size}", color = Color.White, fontSize = 14.sp)
                 }
                 Spacer(Modifier.weight(1f))
+                if (m.url.startsWith("https://")) {
+                    val context = LocalContext.current
+                    val saved = stringResource(R.string.saving)
+                    IconButton(onClick = { saveMedia(context, m.url); toast(context, saved) }) {
+                        Text("⤓", color = Color.White, fontSize = 20.sp)
+                    }
+                }
                 if (m.url.isNotBlank()) {
                     IconButton(onClick = { openBrowser(m.url) }) {
                         Text("↗", color = Color.White, fontSize = 20.sp)
@@ -145,3 +152,26 @@ private fun MediaPlayer(url: String, gif: Boolean, key: Int) {
         }
     })
 }
+
+/** The original into Pictures/fedtail (or Movies, Music) by the system's downloader: its
+ *  own notification says when it's there. Public addresses only, never with the token —
+ *  as the windows' "Save" (common/images.py). */
+fun saveMedia(context: android.content.Context, url: String) {
+    val uri = android.net.Uri.parse(url)
+    val name = (uri.lastPathSegment ?: "picture").substringAfterLast('/')
+        .replace(Regex("[^A-Za-z0-9._-]"), "_").take(80).ifBlank { "picture" }
+    val dir = when (name.substringAfterLast('.', "").lowercase()) {
+        "mp4", "webm", "mov", "m4v" -> android.os.Environment.DIRECTORY_MOVIES
+        "mp3", "ogg", "opus", "m4a", "wav", "flac" -> android.os.Environment.DIRECTORY_MUSIC
+        else -> android.os.Environment.DIRECTORY_PICTURES
+    }
+    val request = android.app.DownloadManager.Request(uri)
+        .setTitle(name)
+        .setNotificationVisibility(
+            android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        .setDestinationInExternalPublicDir(dir, "fedtail/$name")
+    context.getSystemService(android.app.DownloadManager::class.java)?.enqueue(request)
+}
+
+private fun toast(context: android.content.Context, text: String) =
+    android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()

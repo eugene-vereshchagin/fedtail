@@ -139,8 +139,11 @@ def _iso(t):
 def account_json(acc):
     if acc is None:
         return {"id": None, "handle": "", "name": "", "avatar": "", "url": "", "bot": False}
-    return {"id": acc.id, "handle": acc.handle, "name": acc.name or acc.username,
-            "avatar": _https(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
+    out = {"id": acc.id, "handle": acc.handle, "name": acc.name or acc.username,
+           "avatar": _https(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
+    if acc.emojis and ":" in out["name"]:  # :blobcat: in a name — its picture, as in a post
+        out["name_html"] = with_emojis(escape(out["name"]), acc.emojis)
+    return out
 
 
 def web_clean(html):
@@ -1348,6 +1351,76 @@ class Web:
             self.core.set_state("languages_added", added + [code])
         return {"code": code, "label": cc.language_label(code)}
 
+    # ---- drafts: the core's, as the windows keep them (synced: sync.drafts) ------------
+    def draft_start(self, reply_to="", quote="", edit="", invite=False):
+        """What the editor starts with (common/compose.start): the draft kept for this
+        post — a new one, a reply, a quote, my post corrected — or the reply's mentions
+        and its warning. → {key, text, cw, visibility, language, sensitive, poll,
+        restored, hint}. Pictures aren't kept in a phone's or a page's draft."""
+        from ..common import compose as cc
+        core = self.core
+        parent = self._post_by_id(reply_to) if reply_to else None
+        quoted = self._post_by_id(quote) if quote else None
+        mine = self._post_by_id(edit) if edit else None
+        key = cc.draft_key(core, parent, quoted, mine, bool(invite))
+        st = cc.start(core, key, parent, invite=bool(invite))
+        return {"key": key, "text": st.text, "cw": st.cw, "visibility": st.visibility,
+                "language": st.language, "sensitive": st.sensitive, "poll": st.poll,
+                "restored": st.restored, "hint": _(st.hint) if st.hint else ""}
+
+    def draft_save(self, key, snap):
+        """The editor as it is now, kept under key (or gone, emptied) — post.drafts_autosave
+        as in the windows. → {saved: bool, hint}."""
+        from ..common import compose as cc
+        key = str(key or "")
+        if not re.fullmatch(r"(new|reply:|quote:|edit:|invite:)[\w.~-]{0,100}", key):
+            raise ValueError("key")
+        snap = cc.snapshot(str(snap.get("text") or ""), str(snap.get("cw") or ""),
+                           str(snap.get("visibility") or cc.DEFAULT_VIS), [],
+                           snap.get("language"), bool(snap.get("sensitive")),
+                           snap.get("poll") if isinstance(snap.get("poll"), dict) else None)
+        what = cc.keep(snap, None, bool(self.core.get_draft(key)))
+        if what == "delete":
+            self.core.delete_draft(key)
+            return {"saved": False, "hint": ""}
+        if what == "save":
+            self.core.save_draft(key, snap)
+        return {"saved": bool(self.core.cfg["post"]["drafts_autosave"]),
+                "hint": _("draft_saved") if self.core.cfg["post"]["drafts_autosave"] else ""}
+
+    def draft_drop(self, key):
+        """Sent, or discarded after the question: the draft goes (here and elsewhere)."""
+        self.core.delete_draft(str(key or ""))
+        return {"ok": True}
+
+    def complete(self, before):
+        """What the editor offers for the #tag, @name or :emoji: being typed (the
+        windows' completion, common/compose): before is the line up to the cursor →
+        {"word", "items": [{insert, label}]}; for a name with few known here, the
+        server is asked too."""
+        from ..common import compose as cc
+        core = self.core
+        if not getattr(self, "_completion_ready", False):
+            self._completion_ready = True
+            core.prepare_tags()
+            core.prepare_people()
+            if core.cfg["post"].get("complete_emoji", True):
+                core.prepare_emoji()
+        sigil, word = cc.token_at_end(str(before or "")[-200:])
+        if not sigil:
+            return {"word": "", "items": []}
+        items = cc.suggestions(core, sigil, word)
+        if sigil == "@" and core.cfg["post"].get("complete_mentions", True) and \
+                len(word) >= 2 and len(items) < 8:
+            try:
+                found = core.search_people(word).result(timeout=8)
+                items = cc.more_people(core.mention_suggestions(word), found)
+            except Exception as e:  # noqa: BLE001 — what's known here still helps
+                log.debug("complete: %s", e)
+        if not cc.worth_offering(items, word):
+            items = []
+        return {"word": sigil + word, "items": [{"insert": i, "label": lb} for i, lb in items]}
+
     def compose_check(self, body):
         """What the editor shows beside the text as it is typed (common/compose.count, the
         windows'): characters of the limit, how many posts a chain makes, the #CamelCase
@@ -1804,6 +1877,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/active": lambda: web.activate(body.get("name")),
             "/api/resolve": lambda: web.resolve(str(body.get("url", ""))),
             "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
+            "/api/complete": lambda: web.complete(body.get("before")),
             "/api/act_as": lambda: web.act_as(str(body.get("id")), body.get("tag"),
                                               str(body.get("action") or "")),
             "/api/place": lambda: web.place_act(body),

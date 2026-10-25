@@ -77,8 +77,11 @@ def _end_with_the_results():
         code = code if isinstance(code, int) else (0 if code is None else 1)
         if sys.platform == "win32":
             # Windows crashed later still, unloading Qt's DLLs (exit 127 after "OK", with
-            # _exit too): TerminateProcess — which os.kill is there — skips that as well
-            _os.kill(_os.getpid(), code)
+            # _exit too): TerminateProcess skips that as well. Not os.kill: its 0 and 1
+            # are Ctrl+C and Ctrl+Break to the whole console (the pipe's tee too)
+            import ctypes
+            k32 = ctypes.windll.kernel32
+            k32.TerminateProcess(k32.GetCurrentProcess(), code)
         _os._exit(code)
 
     sys.exit = exit_now

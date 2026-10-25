@@ -17,6 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Switch
+import androidx.compose.material3.AssistChip
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
@@ -95,6 +99,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -376,7 +381,20 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
         if (uris.isNotEmpty()) model.attach(uris)
     }
     val editing = model.editId != null
+    // kept as it goes (post.drafts_autosave): a moment after the typing stops
+    LaunchedEffect(model.composeText, model.composeCw, model.composeCwOn, model.composeVisibility,
+        model.composeLang, model.pollOn, model.pollOptions, model.composeSensitive) {
+        delay(1500)
+        model.saveDraft()
+    }
+    val context = androidx.compose.ui.platform.LocalContext.current
     PlaceScaffold(title, model, snack, actions = {
+        IconButton(onClick = { model.discard() }) {
+            Icon(Icons.Filled.Delete, stringResource(R.string.discard))
+        }
+        IconButton(onClick = { model.preview() }, enabled = model.composeText.isNotBlank()) {
+            Text("👁", fontSize = 18.sp)
+        }
         IconButton(onClick = { model.send() },
             enabled = !model.sending && model.uploading == 0 && model.composeText.isNotBlank()) {
             ThemedIcon("send", Icons.AutoMirrored.Filled.Send, stringResource(R.string.send))
@@ -422,7 +440,44 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     label = { Text(stringResource(R.string.cw_label)) }, singleLine = true,
                     modifier = Modifier.fillMaxWidth())
             }
-            OutlinedTextField(value = model.composeText, onValueChange = { model.composeText = it },
+            // the text with its cursor: what is typed right before it is completed
+            var field by remember { mutableStateOf(TextFieldValue(model.composeText,
+                TextRange(model.composeText.length))) }
+            if (field.text != model.composeText) {  // set from outside (a quote, a redraft)
+                field = TextFieldValue(model.composeText, TextRange(model.composeText.length))
+            }
+            var offer by remember { mutableStateOf<Pair<String, List<Pair<String, String>>>?>(null) }
+            LaunchedEffect(field.text, field.selection) {
+                offer = null
+                if (!field.selection.collapsed) return@LaunchedEffect
+                val before = field.text.substring(0, field.selection.start)
+                if (before.isEmpty() || before.last().isWhitespace()) return@LaunchedEffect
+                delay(200)
+                val got = Core.complete(before.substringAfterLast('\n'))
+                val items = got.optJSONArray("items") ?: return@LaunchedEffect
+                val list = (0 until items.length()).map {
+                    val o = items.getJSONObject(it)
+                    o.optString("insert") to o.optString("label")
+                }
+                if (list.isNotEmpty()) offer = got.optString("word") to list
+            }
+            offer?.let { (word, items) ->
+                Row(Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items.forEach { (insert, label) ->
+                        AssistChip(onClick = {
+                            val end = field.selection.start
+                            val start = (end - word.length).coerceAtLeast(0)
+                            val text = field.text.substring(0, start) + insert + " " + field.text.substring(end)
+                            val at = start + insert.length + 1
+                            field = TextFieldValue(text, TextRange(at))
+                            model.composeText = text
+                            offer = null
+                        }, label = { Text(label, maxLines = 1) })
+                    }
+                }
+            }
+            OutlinedTextField(value = field, onValueChange = { field = it; model.composeText = it.text },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
                 placeholder = { Text(stringResource(R.string.write_here)) },
                 supportingText = {
@@ -436,6 +491,14 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 FilterChip(selected = model.composeCwOn, onClick = { model.composeCwOn = !model.composeCwOn },
                     label = { Text(stringResource(R.string.cw_add)) })
                 if (!editing) {
+                    // "send later": the server keeps it until then (scheduled_at)
+                    FilterChip(selected = model.composeWhen.isNotBlank(), onClick = {
+                        if (model.composeWhen.isNotBlank()) model.composeWhen = ""
+                        else pickWhen(context) { model.composeWhen = it }
+                    }, label = {
+                        Text(if (model.composeWhen.isBlank()) stringResource(R.string.send_later)
+                             else "⏰ " + model.composeWhen.replace("T", " "))
+                    })
                     FilterChip(selected = false, enabled = !model.pollOn &&
                             model.attachments.size < model.maxMedia(),
                         onClick = { pick.launch(PickVisualMediaRequest(
@@ -463,9 +526,54 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 }
             }
             if (model.pollOn && !editing) PollEditor(model)
+            if (model.composeHint.isNotBlank()) Text(model.composeHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (model.sending) CircularProgressIndicator()
         }
     }
+    model.previewing?.let { pv -> PreviewDialog(model, pv) }
+}
+
+/** The post as it will read (the core's preview, Qt's): who sees it, the parts, then
+ *  back to the text or send. */
+@Composable
+private fun PreviewDialog(model: AppModel, pv: org.json.JSONObject) {
+    val parts = pv.optJSONArray("parts") ?: org.json.JSONArray()
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { model.previewing = null },
+        title = { Text(pv.optString("title")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (pv.optString("head").isNotBlank()) Text(pv.optString("head"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (pv.optString("cw").isNotBlank()) Text("⚠ " + pv.optString("cw"),
+                    fontWeight = FontWeight.Medium)
+                for (i in 0 until parts.length()) {
+                    if (i > 0) HorizontalDivider()
+                    HtmlText(parts.optString(i), onLink = {})
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { model.previewing = null; model.send() }) { Text(pv.optString("send")) }
+        },
+        dismissButton = {
+            TextButton(onClick = { model.previewing = null }) { Text(pv.optString("back")) }
+        })
+}
+
+/** A date, then a time — the phone's own pickers → "2026-10-26T09:30" (local). */
+private fun pickWhen(context: android.content.Context, done: (String) -> Unit) {
+    val now = java.util.Calendar.getInstance().apply { add(java.util.Calendar.HOUR_OF_DAY, 1) }
+    android.app.DatePickerDialog(context, { _, y, m, d ->
+        android.app.TimePickerDialog(context, { _, h, min ->
+            done("%04d-%02d-%02dT%02d:%02d".format(y, m + 1, d, h, min))
+        }, now.get(java.util.Calendar.HOUR_OF_DAY), 0, true).show()
+    }, now.get(java.util.Calendar.YEAR), now.get(java.util.Calendar.MONTH),
+        now.get(java.util.Calendar.DAY_OF_MONTH)).show()
 }
 
 @Composable

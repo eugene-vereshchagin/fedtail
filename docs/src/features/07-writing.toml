@@ -23,9 +23,7 @@ details.en = "A video or a sound among the attachments gets “Cover…”: a pi
 [[feature]]
 id = "compose"
 status = "has"
-android = "partly"
-android_note.ru = "пост, ответ, правка, цитата; черновиков нет"
-android_note.en = "a post, a reply, an edit, a quote; no drafts"
+android = "has"
 since = "0.1.0"
 name.ru = "Панель поста и черновики"
 name.en = "The compose panel and drafts"
@@ -68,9 +66,7 @@ details.en = "`\"auto\"` — ask the server; GoToSocial and Akkoma understand Ma
 [[feature]]
 id = "preview"
 status = "has"
-android = "no"
-android_note.ru = "предпросмотра нет"
-android_note.en = "no preview"
+android = "has"
 since = "0.14.0"
 name.ru = "Предпросмотр перед отправкой"
 name.en = "Preview before sending"
@@ -129,9 +125,7 @@ details.en = "The server says what picture it takes (in pixels and bytes). Bigge
 [[feature]]
 id = "completion"
 status = "has"
-android = "no"
-android_note.ru = "подсказок #тегов и @ников нет"
-android_note.en = "no completing #tags and @nicks"
+android = "has"
 since = "0.7.0"
 name.ru = "Дополнение #тегов, @ников, :эмодзи:"
 name.en = "Completing #tags, @nicks, :emoji:"
@@ -267,9 +261,7 @@ details.en = "`\"everyone\"`, `\"followers\"` (and the mentioned), `\"following\
 [[feature]]
 id = "schedule"
 status = "has"
-android = "no"
-android_note.ru = "отложенных постов нет"
-android_note.en = "no scheduled posts"
+android = "has"
 since = "0.8.0"
 name.ru = "Отложенный пост"
 name.en = "A scheduled post"

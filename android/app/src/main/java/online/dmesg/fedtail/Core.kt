@@ -70,6 +70,11 @@ object Core {
     suspend fun upload(path: String, name: String) = obj("upload", path, name)
     suspend fun vote(id: String, choices: List<Int>) = obj("vote", id, JSONArray(choices).toString())
     suspend fun editor() = obj("editor")
+    suspend fun complete(before: String) = obj("complete", before)
+    suspend fun draftStart(replyTo: String) = obj("draft_start", replyTo, "", "", false)
+    suspend fun draftSave(key: String, snap: JSONObject) = obj("draft_save", key, snap.toString())
+    suspend fun draftDrop(key: String) = obj("draft_drop", key)
+    suspend fun preview(body: JSONObject) = obj("preview", body.toString())
     // the shade: the windows' notes, while open and from a round in the background
     suspend fun theme() = obj("theme")
     suspend fun pictures() = obj("pictures")

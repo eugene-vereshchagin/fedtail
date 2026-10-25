@@ -23,6 +23,11 @@
   another of them (`ui.act_as`), as the windows' menu does; the web page no longer refuses
   the other account's posts and people (their ids, "work~123", were taken for bad ones).
   The phone tries a theme for the run (⋮ → Try a theme…).
+- The phone's editor: #tags, @names and :emoji: offered as they are typed (the web page's
+  too), drafts in the core as the windows keep them (synced, `post.drafts_autosave`),
+  "Discard", the preview, "Later…" (scheduled). Servers' emoji as pictures in posts, names
+  and profiles; "Save" in the viewer (Pictures/fedtail); a link or words shared from
+  another app open here (a post, a profile — or a search).
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.
