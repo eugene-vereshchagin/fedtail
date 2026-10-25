@@ -105,4 +105,25 @@
     <string name="selfcheck_all_ok">Всё в порядке</string>
     <string name="selfcheck_bad">Сломано: %1$d</string>
     <string name="earlier">Раньше</string>
+    <string name="places">Места…</string>
+    <string name="copied">Скопировано</string>
+    <string name="media_full">Не больше %1$d вложений</string>
+    <string name="edited_done">Исправлено</string>
+    <string name="ok">ОК</string>
+    <string name="profile_of">Профиль @%1$s</string>
+    <string name="poll_vote">Голосовать</string>
+    <string name="edit_post">Исправить пост</string>
+    <string name="cw_label">Предупреждение</string>
+    <string name="cw_add">Предупреждение</string>
+    <string name="attach">Картинки</string>
+    <string name="poll">Опрос</string>
+    <string name="language">Язык</string>
+    <string name="uploading">Загружаю…</string>
+    <string name="mark_sensitive">Пометить картинки как деликатные</string>
+    <string name="alt_label">Описание (alt)</string>
+    <string name="detach">Убрать</string>
+    <string name="poll_option">Вариант %1$d</string>
+    <string name="poll_add">Ещё вариант</string>
+    <string name="poll_remove">Убрать последний</string>
+    <string name="poll_multiple">Несколько ответов</string>
 </resources>

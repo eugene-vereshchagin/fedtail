@@ -38,8 +38,36 @@ object Core {
     suspend fun lane(name: String, keep: Boolean) = obj("lane", name, keep)
     suspend fun hub() = obj("hub")
     suspend fun older(name: String) = obj("older", name)
-    suspend fun placeAct(act: List<String>, confirmed: Boolean) =
-        obj("place_act", JSONArray(act).toString(), confirmed)
+    suspend fun placeAct(
+        act: List<String>, confirmed: Boolean, values: JSONObject? = null, answer: String? = null,
+    ) = obj("place_act", JSONArray(act).toString(), confirmed, values?.toString(), answer)
+
+    /** A list from the bridge — or the error it said instead (as {"error"}). */
+    private suspend fun arr(name: String, vararg args: Any?): JSONArray {
+        val text = call(name, *args)
+        return if (text.trimStart().startsWith("[")) JSONArray(text) else JSONArray()
+    }
+
+    // every place of the windows' ≡ menu, as data (common/places.py)
+    suspend fun places(): JSONArray = arr("places")
+    suspend fun page(name: String, arg: String, tab: String, cursor: String) =
+        obj("page", name, arg, tab, cursor)
+
+    // a card's ⋯ as the windows have it; each item done their way (common/links.py)
+    suspend fun postMenu(id: String) = obj("post_menu", id)
+    suspend fun link(url: String, confirmed: Boolean, chosen: JSONObject?) =
+        obj("link", url, confirmed, chosen?.toString())
+
+    // a profile and its buttons (common/profile.py)
+    suspend fun account(id: String, show: String?) = obj("account", id, show)
+    suspend fun profileAct(id: String, key: String, answer: String?, confirmed: Boolean,
+                           chosen: JSONObject?) =
+        obj("profile_act", id, key, answer, confirmed, chosen?.toString())
+
+    // writing: attachments, polls, what the editor knows
+    suspend fun upload(path: String, name: String) = obj("upload", path, name)
+    suspend fun vote(id: String, choices: List<Int>) = obj("vote", id, JSONArray(choices).toString())
+    suspend fun editor() = obj("editor")
     suspend fun pin(names: List<String>) = obj("pin", JSONArray(names).toString())
     suspend fun commandPreview(line: String) = obj("command_preview", line)
     suspend fun command(line: String, confirmed: Boolean) = obj("command", line, confirmed)

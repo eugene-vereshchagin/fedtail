@@ -1,17 +1,25 @@
 package online.dmesg.fedtail
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.net.Uri
+import android.webkit.MimeTypeMap
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.util.Locale
 
 sealed interface Screen {
@@ -24,7 +32,15 @@ sealed interface Screen {
 /** What stands over the lanes: a thread, the editor, pictures, the config, sync. Back closes it. */
 sealed interface Place {
     data class Thread(val focus: String) : Place
-    data class Compose(val replyTo: PostItem?) : Place
+    /** init: what the core put in the editor (an edit of my post, a quote, a text). */
+    data class Compose(val replyTo: PostItem?, val init: JSONObject? = null) : Place
+    /** Any place of the windows' ≡ menu (common/places.py): search, lists, the server… */
+    data class Page(val name: String, val arg: String = "", val tab: String = "",
+                    val cursor: String = "") : Place
+    /** Someone's profile; show: posts | all | media (null — feed.profile_show). */
+    data class Profile(val id: String, val show: String? = null) : Place
+    /** The places, as the windows' ≡ menu lists them. */
+    data object Menu : Place
     data class Media(val items: List<MediaItem>, val index: Int) : Place
     data object Settings : Place
     data object SelfCheck : Place
@@ -84,7 +100,62 @@ data class PostItem(
     val unread: Boolean, val sharedBy: String, val contextHandle: String,
     val contextText: String, val replies: Int, val shares: Int, val likes: Int,
     val liked: Boolean, val number: Int?, val depth: Int,
+    val accountId: String = "",
+    val pollOptions: List<String> = emptyList(), // a poll's options, to vote on
+    val pollMultiple: Boolean = false,
+    val pollOpen: Boolean = false,               // not voted, not over, not mine: votable
+    val own: Boolean = false,
+    val edited: Boolean = false,
+    val quoteId: String = "",        // the post it quotes, or a note why it can't be shown
+    val quoteWho: String = "",
+    val quoteText: String = "",
 )
+
+/** A question the core asked, to answer in a dialog. */
+sealed interface Asking {
+    /** "Sure?" — yes runs again confirmed. */
+    data class Confirm(val text: String, val yes: () -> Unit, val title: String = "",
+                       val yesLabel: String = "", val noLabel: String = "") : Asking
+    /** One of a few answers, maybe a box to tick (how long a mute lasts…). */
+    data class Choose(val title: String, val text: String, val options: List<Pair<String, String>>,
+                      val check: String, val pick: (String, Boolean) -> Unit) : Asking
+    /** A line to type (a list's new name, a note…). */
+    data class Text(val title: String, val question: String, val text: String,
+                    val done: (String) -> Unit) : Asking
+}
+
+data class AccountItem(val id: String, val handle: String, val name: String, val avatar: String)
+
+/** A form's field (common/places.py Field): kind line | text | check | choice | checks | file. */
+data class PageField(val name: String, val label: String, val kind: String, val value: Any?,
+                     val choices: List<Pair<String, String>>, val tip: String)
+
+/** A place's row: kind item | post | account | tag | text | heading | html. */
+data class PageRow(val kind: String, val title: String, val line: String, val key: String,
+                   val buttons: List<PlaceButton>, val post: PostItem?, val account: AccountItem?,
+                   val html: String)
+
+/** A place as the windows draw it: the hint, the tabs, the rows, the form and its button. */
+data class PageView(
+    val name: String, val title: String, val arg: String, val hint: String,
+    val tabs: List<Pair<String, String>>, val tab: String, val rows: List<PageRow>,
+    val form: List<PageField>, val submit: PlaceButton?, val more: PlaceButton?, val empty: String,
+)
+
+data class ProfileButton(val key: String, val label: String, val tip: String, val primary: Boolean)
+
+/** Someone's profile: the web page's (common/profile.py), with their posts. */
+data class ProfileView(
+    val account: AccountItem, val note: String, val header: String, val counts: String,
+    val fields: List<Triple<String, String, Boolean>>, val own: Boolean, val meta: List<String>,
+    val noteLine: String, val actions: List<ProfileButton>,
+    val shows: List<Triple<String, String, Boolean>>, val showTip: String,
+    val posts: List<PostItem>,
+)
+
+/** An attachment in the editor: uploaded (token) or one of my post's (id, when editing). */
+data class Attachment(val token: String, val name: String, val kind: String,
+                      val alt: String = "", val id: String = "", val preview: String = "")
 
 /** What the screens show and what they ask of the core; lives as long as the app's task. */
 class AppModel(app: Application) : AndroidViewModel(app) {
@@ -455,6 +526,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (places.isNotEmpty()) {
             val left = places.last()
             places = places.dropLast(1)
+            if (left is Place.Page && left !in places) pages.remove(left)
+            if (left is Place.Profile && left !in places) profiles.remove(left)
             if (left == Place.Settings) applySettings()
             if (left == Place.Config && place == Place.Settings) {
                 viewModelScope.launch { loadSettings() } // the file was edited by hand
@@ -486,23 +559,56 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun compose(replyTo: PostItem?) {
+        clearEditor()
+        replyToId = null
+        loadEditorFacts()
         composeText = replyTo?.let { if (it.handle.isNotBlank()) "@${it.handle} " else "" } ?: ""
         composeVisibility = if (replyTo == null) defaultVisibility else null
         places = places + Place.Compose(replyTo)
     }
 
-    fun send() {
+    fun send(altOk: Boolean = false) {
         val p = place as? Place.Compose ?: return
-        if (composeText.isBlank() || sending) return
+        if (composeText.isBlank() || sending || uploading > 0) return
         sending = true
         viewModelScope.launch {
             val body = JSONObject().put("text", composeText)
-            p.replyTo?.let { body.put("reply_to", it.sid) }
-            composeVisibility?.let { body.put("visibility", it) }
+            if (composeCwOn && composeCw.isNotBlank()) body.put("cw", composeCw)
+            val edit = editId
+            if (edit != null) {
+                body.put("edit", edit)
+                body.put("media_edit", JSONArray(attachments.filter { it.id.isNotBlank() }.map {
+                    JSONObject().put("id", it.id).put("alt", it.alt) }))
+            } else {
+                (p.replyTo?.sid ?: replyToId)?.let { body.put("reply_to", it) }
+                composeVisibility?.let { body.put("visibility", it) }
+                if (composeLang.isNotBlank()) body.put("lang", composeLang)
+                quoteId?.let { body.put("quote", it) }
+                val media = attachments.filter { it.token.isNotBlank() }
+                if (media.isNotEmpty()) {
+                    body.put("media", JSONArray(media.map {
+                        JSONObject().put("token", it.token).put("alt", it.alt) }))
+                    if (composeSensitive) body.put("sensitive", true)
+                } else if (pollOn) {
+                    val opts = pollOptions.map { it.trim() }.filter { it.isNotBlank() }
+                    if (opts.size >= 2) body.put("poll", JSONObject().put("options", JSONArray(opts))
+                        .put("expires_in", pollExpires).put("multiple", pollMultiple))
+                }
+                if (altOk) body.put("alt_ok", true)
+            }
             val got = Core.post(body)
             sending = false
             Core.failed(got)?.let { message = it; return@launch }
-            composeText = ""
+            got.optJSONObject("ask_alt")?.let { a ->
+                asking = Asking.Confirm(str(a, "text"), { send(altOk = true) }, str(a, "title"),
+                    str(a, "send"), str(a, "describe"))
+                return@launch
+            }
+            str(got, "message").takeIf { it.isNotBlank() }?.let { message = it }
+            if (got.optBoolean("edited")) {
+                message = getApplication<Application>().getString(R.string.edited_done)
+            }
+            clearEditor()
             places = places.dropLast(1)
             (place as? Place.Thread)?.let {
                 reloadThread(it.focus)
@@ -795,6 +901,357 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+
+    // ---- every place of the windows' ≡ menu, profiles, the ⋯ menu: the core's answers ----
+    /** Opens links in the browser (the activity sets it: App()). */
+    var browse: (String) -> Unit = {}
+    var asking by mutableStateOf<Asking?>(null)
+    var placeMenu by mutableStateOf(listOf<Pair<String, String>>())
+    val pages = mutableStateMapOf<Place.Page, PageView>()
+    val profiles = mutableStateMapOf<Place.Profile, ProfileView>()
+
+    private fun push(p: Place) {
+        places = places + p
+    }
+
+    fun openPlacesMenu() {
+        if (place != Place.Menu) push(Place.Menu)
+        viewModelScope.launch {
+            val arr = Core.places()
+            placeMenu = (0 until arr.length()).map {
+                val o = arr.getJSONObject(it)
+                o.optString("name") to o.optString("title")
+            }
+        }
+    }
+
+    /** A place: pushed over what is open (a tab or the next rows of the same place: in its stead). */
+    fun openPage(name: String, arg: String = "", tab: String = "", cursor: String = "") {
+        val top = place
+        if (top is Place.Page && top.name == name && top.arg == arg && cursor.isNotBlank()) {
+            moreRows(top, tab, cursor)
+            return
+        }
+        val p = Place.Page(name, arg, tab)
+        places = if (top is Place.Page && top.name == name && top.arg == arg) places.dropLast(1) + p
+                 else places + p
+        viewModelScope.launch { loadPage(p) }
+    }
+
+    private suspend fun loadPage(p: Place.Page) {
+        val got = Core.page(p.name, p.arg, p.tab, p.cursor)
+        Core.failed(got)?.let { message = it; if (place == p && pages[p] == null) back(); return }
+        pages[p] = parsePageView(got)
+    }
+
+    /** "More": the place's next rows, under those shown. */
+    private fun moreRows(p: Place.Page, tab: String, cursor: String) {
+        viewModelScope.launch {
+            val got = Core.page(p.name, p.arg, tab.ifBlank { p.tab }, cursor)
+            Core.failed(got)?.let { message = it; return@launch }
+            val next = parsePageView(got)
+            val now = pages[p]
+            pages[p] = if (now == null) next else now.copy(rows = now.rows + next.rows, more = next.more)
+        }
+    }
+
+    fun reloadTop() {
+        when (val p = place) {
+            is Place.Page -> viewModelScope.launch { loadPage(p) }
+            is Place.Profile -> viewModelScope.launch { loadProfile(p) }
+            is Place.Thread -> viewModelScope.launch { reloadThread(p.focus) }
+            else -> {}
+        }
+    }
+
+    /** A place's button with its form's values; what it says to do then — done (handle()). */
+    fun pageAct(b: PlaceButton, values: JSONObject?, confirmed: Boolean = false, answer: String? = null) {
+        viewModelScope.launch {
+            val got = Core.placeAct(b.act, confirmed, values, answer)
+            got.optJSONObject("page")?.let { placePage = parsePlace(it) }
+            handle(got) { c, _, a -> pageAct(b, values, c || confirmed, a ?: answer) }
+            loadHub()
+        }
+    }
+
+    fun openProfile(id: String, show: String? = null) {
+        if (id.isBlank()) return
+        val p = Place.Profile(id, show)
+        val top = place
+        places = if (top is Place.Profile && top.id == id) places.dropLast(1) + p else places + p
+        viewModelScope.launch { loadProfile(p) }
+    }
+
+    private suspend fun loadProfile(p: Place.Profile) {
+        val got = Core.account(p.id, p.show)
+        Core.failed(got)?.let { message = it; if (place == p && profiles[p] == null) back(); return }
+        profiles[p] = parseProfile(got)
+    }
+
+    fun profileAct(id: String, key: String, answer: String? = null, confirmed: Boolean = false,
+                   chosen: JSONObject? = null) {
+        viewModelScope.launch {
+            val got = Core.profileAct(id, key, answer, confirmed, chosen)
+            handle(got) { c, ch, a -> profileAct(id, key, a ?: answer, c || confirmed, ch ?: chosen) }
+        }
+    }
+
+    /** A card's ⋯ as the windows have it (common/actions.menu). */
+    suspend fun postMenu(p: PostItem): JSONObject = Core.postMenu(p.sid)
+
+    /** A fedtail: link of the ⋯ menu (edit, delete, mute, report…), done the windows' way. */
+    fun runLink(url: String, confirmed: Boolean = false, chosen: JSONObject? = null) {
+        viewModelScope.launch {
+            val got = Core.link(url, confirmed, chosen)
+            handle(got) { c, ch, _ -> runLink(url, c || confirmed, ch ?: chosen) }
+        }
+    }
+
+    /** What the core said to do: ask first (and run again with the answer), open, write, copy. */
+    private suspend fun handle(got: JSONObject, again: (Boolean, JSONObject?, String?) -> Unit) {
+        Core.failed(got)?.let { message = it; return }
+        got.optString("confirm").takeIf { it.isNotBlank() }?.let {
+            asking = Asking.Confirm(it, { again(true, null, null) })
+            return
+        }
+        got.optJSONObject("choose")?.let { c ->
+            val opts = c.optJSONArray("options") ?: JSONArray()
+            asking = Asking.Choose(str(c, "title"), str(c, "text"),
+                (0 until opts.length()).map { i ->
+                    val o = opts.getJSONObject(i)
+                    jsonText(o.opt("key")) to o.optString("label")
+                }, str(c, "check")) { key, ticked ->
+                again(false, JSONObject().put("key", JSONObject("{\"k\":$key}").opt("k"))
+                    .put("ticked", ticked), null)
+            }
+            return
+        }
+        got.optJSONObject("ask")?.let { a ->
+            asking = Asking.Text(str(a, "title"), str(a, "question"), str(a, "text")) {
+                again(false, null, it)
+            }
+            return
+        }
+        if (got.optBoolean("reload")) {
+            got.optString("message").takeIf { it.isNotBlank() }?.let { message = it }
+            restartScreens()
+            return
+        }
+        str(got, "copy").takeIf { it.isNotBlank() }?.let { copy(it) }
+        str(got, "alias").takeIf { it.isNotBlank() }?.let { putAlias(it) }
+        str(got, "read_up_to").takeIf { it.isNotBlank() }?.let { readUpTo(it) }
+        str(got, "message").takeIf { it.isNotBlank() }?.let { message = it }
+        got.optJSONObject("compose")?.let { composeFrom(it) }
+        got.optJSONObject("open")?.let { openThing(it) }
+        if (got.optBoolean("refresh")) {
+            if (got.optJSONObject("open") == null && got.optJSONObject("compose") == null) reloadTop()
+            current?.let { loadLane(it, keep = true) }
+        }
+    }
+
+    private fun openThing(o: JSONObject) {
+        when {
+            str(o, "thread").isNotBlank() -> openThread(str(o, "thread"))
+            str(o, "account").isNotBlank() -> openProfile(str(o, "account"))
+            o.has("page") -> {
+                val pg = o.opt("page")
+                if (pg is JSONArray) openPage(pg.optString(0), pg.optString(1))
+                else openPage(str(o, "page"), str(o, "arg"), str(o, "tab"), str(o, "cursor"))
+            }
+            str(o, "url").isNotBlank() -> browse(str(o, "url"))
+            str(o, "file").isNotBlank() -> openConfig()
+            o.optBoolean("back") -> back()
+        }
+    }
+
+    private fun copy(text: String) {
+        val cm = getApplication<Application>().getSystemService(ClipboardManager::class.java)
+        cm?.setPrimaryClip(ClipData.newPlainText("fedtail", text))
+        message = getApplication<Application>().getString(R.string.copied)
+    }
+
+    /** "Read up to here": this post and everything older in the lane. */
+    private fun readUpTo(sid: String) {
+        val inOrder = if (newestFirst) posts.reversed() else posts
+        val i = inOrder.indexOfFirst { it.sid == sid || it.id == sid }
+        if (i < 0) return
+        markRead(inOrder.take(i + 1).map { it.key })
+    }
+
+    /** A poll answered: the card as it is now, wherever it shows. */
+    fun vote(p: PostItem, choices: List<Int>) {
+        if (choices.isEmpty()) return
+        viewModelScope.launch {
+            val got = Core.vote(p.sid, choices)
+            Core.failed(got)?.let { message = it; return@launch }
+            val now = parsePost(got)
+            val swap = { x: PostItem ->
+                if (x.sid == p.sid) x.copy(poll = now.poll, pollOpen = now.pollOpen) else x
+            }
+            posts = posts.map(swap)
+            threadPosts = threadPosts.map(swap)
+            pages.keys.toList().forEach { k ->
+                pages[k]?.let { v -> pages[k] = v.copy(rows = v.rows.map { r ->
+                    r.post?.let { r.copy(post = swap(it)) } ?: r }) }
+            }
+            profiles.keys.toList().forEach { k ->
+                profiles[k]?.let { v -> profiles[k] = v.copy(posts = v.posts.map(swap)) }
+            }
+        }
+    }
+
+    // ---- the editor: words, a warning, the language, pictures, a poll; an edit, a quote --
+    var composeCw by mutableStateOf("")
+    var composeCwOn by mutableStateOf(false)
+    var composeLang by mutableStateOf("")
+    var composeSensitive by mutableStateOf(false)
+    var attachments by mutableStateOf(listOf<Attachment>())
+    var uploading by mutableStateOf(0)
+    var editId by mutableStateOf<String?>(null)
+    var quoteId by mutableStateOf<String?>(null)
+    var quoteOf by mutableStateOf("")
+    var pollOn by mutableStateOf(false)
+    var pollOptions by mutableStateOf(listOf("", ""))
+    var pollMultiple by mutableStateOf(false)
+    var pollExpires by mutableStateOf(86400)
+    var editorFacts by mutableStateOf<JSONObject?>(null)
+
+    private fun clearEditor() {
+        composeText = ""
+        composeCw = ""
+        composeCwOn = false
+        composeLang = editorFacts?.optString("language") ?: ""
+        composeSensitive = false
+        attachments = emptyList()
+        editId = null
+        quoteId = null
+        quoteOf = ""
+        pollOn = false
+        pollOptions = listOf("", "")
+        pollMultiple = false
+        pollExpires = 86400
+    }
+
+    private fun loadEditorFacts() {
+        if (editorFacts != null) return
+        viewModelScope.launch {
+            val got = Core.editor()
+            if (Core.failed(got) == null) {
+                editorFacts = got
+                if (composeLang.isBlank()) composeLang = got.optString("language")
+            }
+        }
+    }
+
+    /** The languages to pick from: (code, words), "" — the default. */
+    fun languages(): List<Pair<String, String>> {
+        val arr = editorFacts?.optJSONArray("languages") ?: return emptyList()
+        return (0 until arr.length()).map { arr.getJSONArray(it) }
+            .map { it.optString(0) to it.optString(1) }
+            .filter { !it.first.startsWith("\u0000") } // "another language…": not here yet
+    }
+
+    fun pollLengths(): List<Pair<Int, String>> {
+        val arr = editorFacts?.optJSONArray("poll_lengths") ?: return emptyList()
+        return (0 until arr.length()).map { arr.getJSONArray(it) }.map { it.optInt(0) to it.optString(1) }
+    }
+
+    fun maxMedia(): Int = editorFacts?.optInt("max_media", 4) ?: 4
+    fun maxOptions(): Int = editorFacts?.optInt("max_options", 4) ?: 4
+    fun charLimit(): Int = editorFacts?.optInt("limit", 500) ?: 500
+
+    /** The editor as a link asked: my post to correct, a quote, a reply, a redraft. */
+    private fun composeFrom(c: JSONObject) {
+        val parentId = str(c, "reply_to")
+        val parent = if (parentId.isBlank()) null else (posts + threadPosts)
+            .firstOrNull { it.sid == parentId || it.id == parentId }
+        compose(parent)
+        if (parent == null && parentId.isNotBlank()) replyToId = parentId
+        str(c, "text").takeIf { it.isNotBlank() }?.let { composeText = it }
+        str(c, "cw").takeIf { it.isNotBlank() }?.let { composeCw = it; composeCwOn = true }
+        str(c, "visibility").takeIf { it.isNotBlank() }?.let {
+            composeVisibility = if (it == "private") "followers" else it
+        }
+        str(c, "lang").takeIf { it.isNotBlank() }?.let { composeLang = it }
+        editId = str(c, "edit").ifBlank { null }
+        quoteId = str(c, "quote").ifBlank { null }
+        quoteOf = str(c, "quote_of")
+        val media = c.optJSONArray("media")
+        if (media != null) {
+            attachments = (0 until media.length()).map { media.getJSONObject(it) }.map {
+                Attachment("", "", str(it, "kind"), str(it, "alt"), str(it, "id"), str(it, "url"))
+            }
+        }
+    }
+
+    /** A reply whose parent isn't on screen (a redraft): only its id. */
+    private var replyToId: String? = null
+
+    /** A file the phone picked, copied into the cache and handed to the core:
+     *  → (token, kind: image | video | audio), or null (said why). */
+    private suspend fun handOver(uri: Uri): Pair<String, String>? {
+        val app = getApplication<Application>()
+        return try {
+            val type = app.contentResolver.getType(uri) ?: ""
+            val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "bin"
+            val name = "upload-${System.nanoTime()}.$ext"
+            val file = File(app.cacheDir, name)
+            withContext(Dispatchers.IO) {
+                val inp = app.contentResolver.openInputStream(uri) ?: error("unreadable")
+                inp.use { i -> file.outputStream().use { i.copyTo(it) } }
+            }
+            val got = Core.upload(file.absolutePath, name)
+            Core.failed(got)?.let { message = it; return null }
+            got.optString("token") to when {
+                type.startsWith("video/") -> "video"
+                type.startsWith("audio/") -> "audio"
+                else -> "image"
+            }
+        } catch (e: Exception) {
+            message = e.message ?: e.toString()
+            null
+        }
+    }
+
+    /** Pictures or videos for the post being written. */
+    fun attach(uris: List<Uri>) {
+        val app = getApplication<Application>()
+        val room = maxMedia() - attachments.size
+        if (room <= 0) {
+            message = app.getString(R.string.media_full, maxMedia())
+            return
+        }
+        uris.take(room).forEach { uri ->
+            uploading += 1
+            viewModelScope.launch {
+                handOver(uri)?.let { (token, kind) ->
+                    attachments = attachments + Attachment(token, token, kind, preview = uri.toString())
+                }
+                uploading -= 1
+            }
+        }
+    }
+
+    /** A place's file field (a new avatar, a header): the token for its form. */
+    fun uploadFor(uri: Uri, done: (String) -> Unit) {
+        viewModelScope.launch { handOver(uri)?.let { done(it.first) } }
+    }
+
+    /** ⋯ → reply with a quote: the post's words, each line after "> ". */
+    fun quoteReply(p: PostItem) {
+        compose(p)
+        val quoted = p.text.trim().lines().joinToString("\n") { "> $it" }
+        composeText = composeText + "\n" + quoted + "\n\n"
+    }
+
+    fun detach(a: Attachment) {
+        attachments = attachments - a
+    }
+
+    fun describe(a: Attachment, alt: String) {
+        attachments = attachments.map { if (it.token == a.token && it.id == a.id) it.copy(alt = alt) else it }
+    }
+
     // ---- JSON → items ------------------------------------------------------------------
     private fun jsonText(x: Any?): String = when (x) {
         null, JSONObject.NULL -> "null"
@@ -815,15 +1272,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             openThread(b.act[2])
             return
         }
-        viewModelScope.launch {
-            val got = Core.placeAct(b.act, confirmed)
-            Core.failed(got)?.let { message = it; return@launch }
-            got.optString("confirm").takeIf { it.isNotBlank() }?.let { placeConfirm = it to b; return@launch }
-            got.optString("message").takeIf { it.isNotBlank() }?.let { message = it }
-            got.optJSONObject("open")?.optString("thread")?.takeIf { it.isNotBlank() }?.let { openThread(it) }
-            got.optJSONObject("page")?.let { placePage = parsePlace(it) }
-            loadHub()
-        }
+        pageAct(b, null, confirmed, null)
     }
 
     private fun parseButton(o: JSONObject?): PlaceButton? = o?.let { b ->
@@ -839,13 +1288,64 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val bs = r.optJSONArray("buttons") ?: JSONArray()
             val title = r.optString("title")
             PlaceRow(title.removePrefix("● "), r.optString("line"), r.optString("key"),
-                // no profile screen yet: a person's button waits for it
-                (0 until bs.length()).mapNotNull { parseButton(bs.optJSONObject(it)) }
-                    .filter { it.act.firstOrNull() != "person" },
+                (0 until bs.length()).mapNotNull { parseButton(bs.optJSONObject(it)) },
                 fresh = title.startsWith("● "))
         }
         return PlacePage(rows, o.optString("empty"), parseButton(o.optJSONObject("submit")),
             parseButton(o.optJSONObject("more")))
+    }
+
+
+    private fun parseAccount(o: JSONObject?) = AccountItem(str(o, "id"), str(o, "handle"),
+        str(o, "name").ifBlank { str(o, "handle") }, str(o, "avatar"))
+
+    private fun parsePageView(o: JSONObject): PageView {
+        val rows = o.optJSONArray("rows") ?: JSONArray()
+        val form = o.optJSONArray("form") ?: JSONArray()
+        val tabs = o.optJSONArray("tabs") ?: JSONArray()
+        return PageView(
+            name = str(o, "name"), title = str(o, "title"), arg = str(o, "arg"), hint = str(o, "hint"),
+            tabs = (0 until tabs.length()).map { tabs.getJSONArray(it) }
+                .map { it.optString(0) to it.optString(1) },
+            tab = str(o, "tab"),
+            rows = (0 until rows.length()).map { rows.getJSONObject(it) }.map { r ->
+                val bs = r.optJSONArray("buttons") ?: JSONArray()
+                PageRow(str(r, "kind"), str(r, "title"), str(r, "line"), str(r, "key"),
+                    (0 until bs.length()).mapNotNull { parseButton(bs.optJSONObject(it)) },
+                    r.optJSONObject("post")?.let { parsePost(it) },
+                    r.optJSONObject("account")?.let { parseAccount(it) }, str(r, "html"))
+            },
+            form = (0 until form.length()).map { form.getJSONObject(it) }.map { f ->
+                val ch = f.optJSONArray("choices") ?: JSONArray()
+                PageField(str(f, "name"), str(f, "label"), f.optString("kind", "line"),
+                    if (f.isNull("value")) null else f.opt("value"),
+                    (0 until ch.length()).map { ch.getJSONArray(it) }
+                        .map { it.optString(0) to it.optString(1) }, str(f, "tip"))
+            },
+            submit = parseButton(o.optJSONObject("submit")), more = parseButton(o.optJSONObject("more")),
+            empty = str(o, "empty"))
+    }
+
+    private fun parseProfile(o: JSONObject): ProfileView {
+        val acc = o.optJSONObject("account") ?: JSONObject()
+        val fields = acc.optJSONArray("fields") ?: JSONArray()
+        val meta = o.optJSONArray("meta") ?: JSONArray()
+        val acts = o.optJSONArray("actions") ?: JSONArray()
+        val shows = o.optJSONArray("shows") ?: JSONArray()
+        return ProfileView(
+            account = parseAccount(acc), note = str(acc, "note"), header = str(acc, "header"),
+            counts = str(acc, "counts"),
+            fields = (0 until fields.length()).map { fields.getJSONObject(it) }
+                .map { Triple(str(it, "name"), str(it, "value"), it.optBoolean("verified")) },
+            own = acc.optBoolean("own"),
+            meta = (0 until meta.length()).map { meta.optString(it) },
+            noteLine = str(o, "note_line"),
+            actions = (0 until acts.length()).map { acts.getJSONObject(it) }
+                .map { ProfileButton(str(it, "key"), str(it, "label"), str(it, "tip"), it.optBoolean("primary")) },
+            shows = (0 until shows.length()).map { shows.getJSONObject(it) }
+                .map { Triple(str(it, "key"), str(it, "label"), it.optBoolean("on")) },
+            showTip = str(o, "show_tip"),
+            posts = parsePosts(o.optJSONArray("posts")))
     }
 
     private fun parsePosts(arr: JSONArray?): List<PostItem> =
@@ -896,6 +1396,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             likes = counts.optInt("likes"), liked = mine.optBoolean("liked"),
             number = if (o.has("number") && !o.isNull("number")) o.optInt("number") else null,
             depth = o.optInt("depth"),
+            accountId = str(acc, "id"),
+            pollOptions = poll?.optJSONArray("options")?.let { a ->
+                (0 until a.length()).map { str(a.getJSONObject(it), "title") } } ?: emptyList(),
+            pollMultiple = poll?.optBoolean("multiple") ?: false,
+            pollOpen = poll != null && !poll.optBoolean("voted") && !poll.optBoolean("expired") &&
+                !o.optBoolean("own"),
+            own = o.optBoolean("own"),
+            edited = o.optBoolean("edited"),
+            quoteId = str(o.optJSONObject("quote"), "id"),
+            quoteWho = o.optJSONObject("quote")?.optJSONObject("account")?.let { a ->
+                str(a, "name").ifBlank { str(a, "handle") } } ?: "",
+            quoteText = o.optJSONObject("quote")?.let { q ->
+                str(q, "text").ifBlank { str(q, "note") } } ?: "",
         )
     }
 }

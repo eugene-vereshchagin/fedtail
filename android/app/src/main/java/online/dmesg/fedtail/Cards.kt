@@ -29,7 +29,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
@@ -90,6 +93,12 @@ class CardActions(
     val thread: (PostItem, String) -> Unit,          // sub / unsub the thread
     val browser: (String) -> Unit,
     val expandCw: Boolean = false,                   // ui.expand_cw or ui.arts_mode: CWs open
+    val profile: (String) -> Unit = {},              // an account's id: its profile
+    val menu: (suspend (PostItem) -> JSONObject)? = null, // the windows' ⋯ (common/actions)
+    val runLink: (String) -> Unit = {},              // a fedtail: link of that menu
+    val page: (String, String) -> Unit = { _, _ -> }, // a place of that menu (lists, translate…)
+    val quoteReply: (PostItem) -> Unit = {},
+    val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
@@ -97,7 +106,9 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
     media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
     alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
-    expandCw = expandCw)
+    expandCw = expandCw, profile = { openProfile(it) }, menu = { postMenu(it) },
+    runLink = { runLink(it) }, page = { name, arg -> openPage(name, arg) },
+    quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) })
 
 private val EMOJI = Regex("""<img\b[^>]*\balt="([^"]*)"[^>]*>""")
 
@@ -252,7 +263,9 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
         modifier = Modifier.fillMaxWidth().clickable { act.open(p) }) {
         Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Avatar(p, 36)
+            Box(Modifier.clip(CircleShape).clickable(enabled = p.accountId.isNotBlank()) {
+                act.profile(p.accountId)
+            }) { Avatar(p, 36) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Head(p, act, dim = !p.unread)
                 if (p.sharedBy.isNotBlank()) {
@@ -290,7 +303,9 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Avatar(p, 24)
+                Box(Modifier.clip(CircleShape).clickable(enabled = p.accountId.isNotBlank()) {
+                    act.profile(p.accountId)
+                }) { Avatar(p, 24) }
                 // no weight here: the spacer's is the only one, so /N stands at the right edge
                 Text(p.name, fontWeight = if (focused) FontWeight.Bold else FontWeight.SemiBold,
                     fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -320,7 +335,8 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(p.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
-                    .alpha(if (dim) 0.85f else 1f))
+                    .alpha(if (dim) 0.85f else 1f)
+                    .clickable(enabled = p.accountId.isNotBlank()) { act.profile(p.accountId) })
             Spacer(Modifier.width(6.dp))
             Text("@" + p.handle.substringBefore("@"), fontSize = 13.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 110.dp),
@@ -368,12 +384,49 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     if (p.media.isNotEmpty()) {
         MediaGrid(p.media, blurred = hideSensitive && p.sensitive) { i -> act.media(p.media, i) }
     }
-    if (p.poll.isNotBlank()) {
+    if (p.pollOpen && p.pollOptions.isNotEmpty()) {
+        Vote(p, act)
+    } else if (p.poll.isNotBlank()) {
         Text(p.poll, fontSize = 14.sp, modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(10.dp))
     }
+    if (p.quoteText.isNotBlank()) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+            .clickable(enabled = p.quoteWho.isNotBlank()) { act.open(p.copy(sid = p.quoteId)) }
+            .padding(10.dp)) {
+            if (p.quoteWho.isNotBlank()) Text("❝ " + p.quoteWho, fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold)
+            Text(p.quoteText, fontSize = 14.sp, maxLines = 6, overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
     p.card?.takeIf { it.url.isNotBlank() && it.title.isNotBlank() }?.let { c -> Link(c, act) }
+}
+
+/** A poll still open: its options to tick (one, or several), then "vote". */
+@Composable
+private fun Vote(p: PostItem, act: CardActions) {
+    var picked by remember(p.key) { mutableStateOf(setOf<Int>()) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+        .background(MaterialTheme.colorScheme.surfaceVariant).padding(6.dp)) {
+        p.pollOptions.forEachIndexed { i, title ->
+            Row(Modifier.fillMaxWidth().clickable {
+                picked = if (p.pollMultiple) (if (i in picked) picked - i else picked + i) else setOf(i)
+            }, verticalAlignment = Alignment.CenterVertically) {
+                if (p.pollMultiple) Checkbox(checked = i in picked, onCheckedChange = null)
+                else RadioButton(selected = i in picked, onClick = null)
+                Text(title, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 8.dp))
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { act.vote(p, picked.sorted()) }, enabled = picked.isNotEmpty()) {
+                Text(stringResource(R.string.poll_vote))
+            }
+            p.poll.lines().lastOrNull()?.takeIf { it.isNotBlank() && "%" !in it }?.let { Small(it) }
+        }
+    }
 }
 
 @Composable
@@ -471,36 +524,68 @@ private fun Actions(p: PostItem, act: CardActions) {
     }
 }
 
-/** A card's ⋯: boost, bookmark, follow the thread, the link — copied or in the browser. */
+/** A card's ⋯: boost and bookmark first, then the windows' own items (common/actions:
+ *  edit, delete, pin, mute, report, translate, lists…), then the author's profile. */
 @Composable
 private fun CardMenu(p: PostItem, act: CardActions) {
     var open by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<JSONObject?>(null) }
     val clipboard = LocalClipboardManager.current
-    LaunchedEffect(open) { if (open) info = act.info(p) }
+    LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, stringResource(R.string.more),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            val url = info?.optString("url")?.ifBlank { null } ?: p.url
             DropdownMenuItem(text = { Text(stringResource(if (p.shared) R.string.unboost else R.string.boost)) },
                 onClick = { open = false; act.share(p) })
-            DropdownMenuItem(text = { Text(stringResource(if (p.bookmarked) R.string.unbookmark
-                                                          else R.string.bookmark)) },
-                onClick = { open = false; act.bookmark(p) })
-            info?.let { i ->
-                val subbed = i.optBoolean("subscribed")
-                DropdownMenuItem(text = { Text(stringResource(if (subbed) R.string.unsub_thread
-                                                              else R.string.sub_thread)) },
-                    onClick = { open = false; act.thread(p, if (subbed) "unsub" else "sub") })
+            val items = info?.optJSONArray("items")
+            if (items == null) {  // the windows' menu has its own (and says when it's done)
+                DropdownMenuItem(text = { Text(stringResource(if (p.bookmarked) R.string.unbookmark
+                                                              else R.string.bookmark)) },
+                    onClick = { open = false; act.bookmark(p) })
             }
-            if (url.isNotBlank()) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.copy_link)) },
-                    onClick = { open = false; clipboard.setText(AnnotatedString(url)) })
-                DropdownMenuItem(text = { Text(stringResource(R.string.open_browser)) },
-                    onClick = { open = false; act.browser(url) })
+            if (items != null) {
+                for (i in 0 until items.length()) {
+                    val item = items.getJSONObject(i)
+                    val label = item.optString("label")
+                    when (item.optString("kind")) {
+                        "separator" -> HorizontalDivider()
+                        "link" -> DropdownMenuItem(text = { Text(label) },
+                            onClick = { open = false; act.runLink(item.optString("url")) })
+                        "open" -> DropdownMenuItem(text = { Text(label) },
+                            onClick = { open = false; act.browser(item.optString("url")) })
+                        "copy" -> DropdownMenuItem(text = { Text(label) },
+                            onClick = { open = false; clipboard.setText(AnnotatedString(item.optString("text"))) })
+                        "quote_reply" -> DropdownMenuItem(text = { Text("❝ $label") },
+                            onClick = { open = false; act.quoteReply(p) })
+                        else -> item.optJSONObject("page")?.let { pg ->
+                            DropdownMenuItem(text = { Text("$label …") }, onClick = {
+                                open = false; act.page(pg.optString("page"), pg.optString("arg"))
+                            })
+                        }
+                    }
+                }
+            } else {
+                // the old short menu, while the windows' one is on its way (or failed)
+                info?.let { i ->
+                    val subbed = i.optBoolean("subscribed")
+                    DropdownMenuItem(text = { Text(stringResource(if (subbed) R.string.unsub_thread
+                                                                  else R.string.sub_thread)) },
+                        onClick = { open = false; act.thread(p, if (subbed) "unsub" else "sub") })
+                }
+                if (p.url.isNotBlank()) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.copy_link)) },
+                        onClick = { open = false; clipboard.setText(AnnotatedString(p.url)) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.open_browser)) },
+                        onClick = { open = false; act.browser(p.url) })
+                }
+            }
+            if (p.accountId.isNotBlank()) {
+                HorizontalDivider()
+                DropdownMenuItem(text = { Text(stringResource(R.string.profile_of, p.handle)) },
+                    onClick = { open = false; act.profile(p.accountId) })
             }
         }
     }

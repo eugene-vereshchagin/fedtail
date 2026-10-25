@@ -191,4 +191,28 @@ class FlowTest {
         compose.onAllNodesWithText("done").onFirst().performClick()
         waitText("Read in a row")
     }
+
+    @Test
+    fun theMenuOpensAPlaceOfTheWindows() {
+        launch()
+        waitText("Read in a row")
+        compose.onAllNodesWithContentDescription("More").onFirst().performClick()
+        waitText("Places…", 15_000)
+        compose.onAllNodesWithText("Places…").onFirst().performClick()
+        waitText("Profile directory", 30_000)          // common/places.py's ≡ menu, all of it
+        compose.onAllNodesWithText("Search").onFirst().performClick()
+        waitText("@user@server", 30_000)               // the search place's field
+        back()
+        waitText("Profile directory")
+    }
+
+    @Test
+    fun aCardsMenuIsTheWindowsAndLeadsToTheProfile() {
+        launch("thread" to "101")
+        waitText("/1")
+        compose.onAllNodesWithContentDescription("More").onFirst().performClick()
+        waitText("Reply with quote", 30_000)           // common/actions.menu's items
+        compose.onAllNodesWithText("Profile of @", substring = true).onFirst().performClick()
+        waitText("Posts and replies", 30_000)          // a profile: what of theirs to show
+    }
 }

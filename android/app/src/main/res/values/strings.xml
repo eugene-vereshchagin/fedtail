@@ -106,4 +106,25 @@
     <string name="selfcheck_all_ok">All fine</string>
     <string name="selfcheck_bad">Broken: %1$d</string>
     <string name="earlier">Earlier</string>
+    <string name="places">Places…</string>
+    <string name="copied">Copied</string>
+    <string name="media_full">At most %1$d attachments</string>
+    <string name="edited_done">Edited</string>
+    <string name="ok">OK</string>
+    <string name="profile_of">Profile of @%1$s</string>
+    <string name="poll_vote">Vote</string>
+    <string name="edit_post">Edit post</string>
+    <string name="cw_label">Content warning</string>
+    <string name="cw_add">Warning</string>
+    <string name="attach">Pictures</string>
+    <string name="poll">Poll</string>
+    <string name="language">Language</string>
+    <string name="uploading">Uploading…</string>
+    <string name="mark_sensitive">Mark pictures as sensitive</string>
+    <string name="alt_label">Description (alt text)</string>
+    <string name="detach">Remove</string>
+    <string name="poll_option">Option %1$d</string>
+    <string name="poll_add">Add option</string>
+    <string name="poll_remove">Remove last</string>
+    <string name="poll_multiple">Several answers</string>
 </resources>

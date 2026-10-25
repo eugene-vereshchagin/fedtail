@@ -94,6 +94,11 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                 Icon(Icons.Filled.MoreVert, stringResource(R.string.more))
                             }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                // every place of the windows' ≡ menu: search, lists, the server…
+                                DropdownMenuItem(text = { Text(stringResource(R.string.places)) },
+                                    onClick = { menu = false; model.openPlacesMenu() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.new_post)) },
+                                    onClick = { menu = false; model.compose(null) })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },
                                     onClick = { menu = false; model.openSync() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.settings)) },

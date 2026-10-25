@@ -6,6 +6,20 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Switch
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -101,6 +115,8 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
     // (the editor, a picture): back there, they stand where they stood
     val laneState = rememberLazyListState()
     val threadState = rememberLazyListState()
+    SideEffect { model.browse = openBrowser }
+    AskDialogs(model)
     when (val s = model.screen) {
         Screen.Starting -> Centered { Starting() }
         is Screen.Failed -> Problem(s.text)
@@ -125,9 +141,7 @@ fun App(model: AppModel, openBrowser: (String) -> Unit, share: (String) -> Unit 
                 cols == 1 -> when (p) {
                     null -> if (model.current == null) HubScreen(model, snack)
                             else LaneScreen(model, snack, openBrowser, laneState)
-                    is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
-                    is Place.Compose -> ComposePlace(model, p, snack)
-                    else -> {}
+                    else -> SidePlace(model, p, snack, openBrowser, threadState)
                 }
                 else -> Columns(model, snack, openBrowser, laneState, cols, p, threadState)
             }
@@ -168,11 +182,10 @@ private fun Columns(
             HubScreen(model, snack, pane = true)
         }
         VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        val side = p is Place.Thread || p is Place.Compose
+        val side = p != null
         Box(Modifier.weight(1f).fillMaxHeight()) {
             when {
-                cols == 2 && p is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
-                cols == 2 && p is Place.Compose -> ComposePlace(model, p, snack)
+                cols == 2 && p != null -> SidePlace(model, p, snack, openBrowser, threadState)
                 model.current != null -> LaneScreen(model, snack, openBrowser, laneState, pane = true)
                 else -> Hint(stringResource(R.string.pick_lane))
             }
@@ -180,13 +193,26 @@ private fun Columns(
         if (cols >= 3) {
             VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Box(Modifier.width(420.dp).fillMaxHeight()) {
-                when {
-                    side && p is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
-                    side && p is Place.Compose -> ComposePlace(model, p, snack)
-                    else -> Hint(stringResource(R.string.pick_post))
-                }
+                if (side && p != null) SidePlace(model, p, snack, openBrowser, threadState)
+                else Hint(stringResource(R.string.pick_post))
             }
         }
+    }
+}
+
+/** What opens over the lane — beside it, on a wide screen. */
+@Composable
+private fun SidePlace(
+    model: AppModel, p: Place, snack: SnackbarHostState, openBrowser: (String) -> Unit,
+    threadState: LazyListState,
+) {
+    when (p) {
+        is Place.Thread -> ThreadPlace(model, snack, openBrowser, threadState)
+        is Place.Compose -> ComposePlace(model, p, snack)
+        is Place.Page -> PagePlace(model, p, snack, openBrowser)
+        is Place.Profile -> ProfilePlace(model, p, snack, openBrowser)
+        Place.Menu -> PlacesMenuPlace(model, snack)
+        else -> {}
     }
 }
 
@@ -328,36 +354,171 @@ private val VISIBILITIES = listOf(
     "public" to R.string.vis_public, "unlisted" to R.string.vis_unlisted,
     "followers" to R.string.vis_followers, "direct" to R.string.vis_direct)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarHostState) {
-    val title = stringResource(if (place.replyTo == null) R.string.new_post else R.string.reply)
+    val title = stringResource(when {
+        model.editId != null -> R.string.edit_post
+        place.replyTo == null -> R.string.new_post
+        else -> R.string.reply
+    })
+    val pick = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(maxOf(2, model.maxMedia()))) { uris ->
+        if (uris.isNotEmpty()) model.attach(uris)
+    }
+    val editing = model.editId != null
     PlaceScaffold(title, model, snack, actions = {
-        IconButton(onClick = { model.send() }, enabled = !model.sending && model.composeText.isNotBlank()) {
+        IconButton(onClick = { model.send() },
+            enabled = !model.sending && model.uploading == 0 && model.composeText.isNotBlank()) {
             Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.send))
         }
     }) { mod ->
-        Column(mod.padding(16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(mod.padding(16.dp).imePadding().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
             place.replyTo?.let {
                 Text("↳ @${it.handle}: ${it.text}", maxLines = 3, overflow = TextOverflow.Ellipsis,
                     fontStyle = FontStyle.Italic, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Row(Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                VISIBILITIES.forEach { (word, label) ->
-                    FilterChip(selected = model.composeVisibility == word,
-                        onClick = { model.composeVisibility = word },
-                        label = { Text(stringResource(label)) })
-                }
-            }
-            if (place.replyTo != null && model.composeVisibility == null) {
-                Text(stringResource(R.string.vis_as_parent), style = MaterialTheme.typography.bodySmall,
+            if (model.quoteOf.isNotBlank()) {
+                Text("❝ " + model.quoteOf, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if (!editing) {
+                Row(Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    VISIBILITIES.forEach { (word, label) ->
+                        FilterChip(selected = model.composeVisibility == word,
+                            onClick = { model.composeVisibility = word },
+                            label = { Text(stringResource(label)) })
+                    }
+                }
+                if (place.replyTo != null && model.composeVisibility == null) {
+                    Text(stringResource(R.string.vis_as_parent), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (model.composeCwOn) {
+                OutlinedTextField(value = model.composeCw, onValueChange = { model.composeCw = it },
+                    label = { Text(stringResource(R.string.cw_label)) }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth())
+            }
             OutlinedTextField(value = model.composeText, onValueChange = { model.composeText = it },
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                placeholder = { Text(stringResource(R.string.write_here)) })
+                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
+                placeholder = { Text(stringResource(R.string.write_here)) },
+                supportingText = {
+                    val n = model.composeText.length + (if (model.composeCwOn) model.composeCw.length else 0)
+                    Text("$n / ${model.charLimit()}",
+                        color = if (n > model.charLimit()) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant)
+                })
+            // what goes with the words: a warning, pictures, a poll, the language
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = model.composeCwOn, onClick = { model.composeCwOn = !model.composeCwOn },
+                    label = { Text(stringResource(R.string.cw_add)) })
+                if (!editing) {
+                    FilterChip(selected = false, enabled = !model.pollOn &&
+                            model.attachments.size < model.maxMedia(),
+                        onClick = { pick.launch(PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                        label = { Text(stringResource(R.string.attach)) })
+                    FilterChip(selected = model.pollOn, enabled = model.attachments.isEmpty(),
+                        onClick = { model.pollOn = !model.pollOn },
+                        label = { Text(stringResource(R.string.poll)) })
+                    LanguagePick(model)
+                }
+            }
+            if (model.uploading > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.uploading), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            model.attachments.forEach { a -> AttachmentRow(model, a, editing) }
+            if (model.attachments.isNotEmpty() && !editing) {
+                Row(Modifier.fillMaxWidth().clickable { model.composeSensitive = !model.composeSensitive },
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.mark_sensitive), Modifier.weight(1f))
+                    Switch(checked = model.composeSensitive, onCheckedChange = { model.composeSensitive = it })
+                }
+            }
+            if (model.pollOn && !editing) PollEditor(model)
             if (model.sending) CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+private fun LanguagePick(model: AppModel) {
+    var open by remember { mutableStateOf(false) }
+    val langs = model.languages()
+    if (langs.isEmpty()) return
+    Box {
+        FilterChip(selected = model.composeLang.isNotBlank(), onClick = { open = true },
+            label = { Text(langs.firstOrNull { it.first == model.composeLang }?.second
+                ?: model.composeLang.ifBlank { stringResource(R.string.language) }) })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            langs.forEach { (code, words) ->
+                DropdownMenuItem(text = { Text(words) },
+                    onClick = { open = false; model.composeLang = code })
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentRow(model: AppModel, a: Attachment, editing: Boolean) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+        Box(Modifier.size(72.dp).clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+            if (a.preview.isNotBlank()) {
+                AsyncImage(model = a.preview, contentDescription = a.alt.ifBlank { null },
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+            if (a.kind == "video" || a.kind == "audio") Text("▶", color = MaterialTheme.colorScheme.onSurface)
+        }
+        Column(Modifier.weight(1f)) {
+            OutlinedTextField(value = a.alt, onValueChange = { model.describe(a, it) },
+                label = { Text(stringResource(R.string.alt_label)) }, minLines = 2,
+                modifier = Modifier.fillMaxWidth())
+            if (!editing) TextButton(onClick = { model.detach(a) }) { Text(stringResource(R.string.detach)) }
+        }
+    }
+}
+
+@Composable
+private fun PollEditor(model: AppModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        model.pollOptions.forEachIndexed { i, text ->
+            OutlinedTextField(value = text, singleLine = true,
+                onValueChange = { v -> model.pollOptions = model.pollOptions.toMutableList().also { it[i] = v } },
+                label = { Text(stringResource(R.string.poll_option, i + 1)) },
+                modifier = Modifier.fillMaxWidth())
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (model.pollOptions.size < model.maxOptions()) {
+                TextButton(onClick = { model.pollOptions = model.pollOptions + "" }) {
+                    Text(stringResource(R.string.poll_add))
+                }
+            }
+            if (model.pollOptions.size > 2) {
+                TextButton(onClick = { model.pollOptions = model.pollOptions.dropLast(1) }) {
+                    Text(stringResource(R.string.poll_remove))
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().clickable { model.pollMultiple = !model.pollMultiple },
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.poll_multiple), Modifier.weight(1f))
+            Switch(checked = model.pollMultiple, onCheckedChange = { model.pollMultiple = it })
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            model.pollLengths().forEach { (secs, words) ->
+                FilterChip(selected = model.pollExpires == secs, onClick = { model.pollExpires = secs },
+                    label = { Text(words) })
+            }
         }
     }
 }
