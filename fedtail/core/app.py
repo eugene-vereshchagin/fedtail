@@ -3229,7 +3229,14 @@ class Core(SocialMixin):
         s = real(status)
 
         def job():
-            self.api.delete_status(s["id"])
+            try:
+                self.api.delete_status(s["id"])
+            except ApiError as e:
+                if e.status not in (404, 410):
+                    raise
+                # gone already (deleted from the server's web, another client): the
+                # wish is done all the same — it goes here too, no error
+                log.info("delete %s: already gone on the server (%s)", s["id"], e.status)
             self.store.delete_status(s["id"])
             self.emit("status_deleted", s["id"])
         return self.submit(job)

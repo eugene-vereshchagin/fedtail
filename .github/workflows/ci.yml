@@ -397,6 +397,9 @@ jobs:
           # the phone's, when the release key was there to sign it (the apk job)
           apk=$(ls built/fedtail-android/*.apk 2>/dev/null | head -1)
           if [ -n "$apk" ]; then cp "$apk" "fedtail-$VER-android.apk"; files+=("fedtail-$VER-android.apk"); fi
+          # what was built, to check a download against (sha256sum -c SHA256SUMS)
+          sha256sum "${files[@]}" > SHA256SUMS
+          files+=(SHA256SUMS)
           gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag \
             "${files[@]}"
           echo "released=true" >> "$GITHUB_OUTPUT"

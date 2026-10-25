@@ -155,5 +155,30 @@ class NapTest(unittest.TestCase):
         self.assertEqual(self.nap(90, woken=True), (False, 1))
 
 
+
+class DeletedElsewhereTest(unittest.TestCase):
+    def test_gone_already_is_done(self):
+        from tests.test_slow import Base
+
+        class T(Base):
+            def runTest(self):
+                pass
+        t = T()
+        t.addCleanup = self.addCleanup
+        core, w = t.make()
+        from tests.fakes import ME, status
+        w.add(status("090", ME, minute=1), home=True)
+        core.poll_once()
+        st = core.store.get_status("090")
+        gone = api_mod.ApiError(404, "Record not found")
+        with mock.patch.object(core.api, "delete_status", side_effect=gone):
+            core.delete(st).result()
+        self.assertIsNone(core.store.get_status("090"))
+        with mock.patch.object(core.api, "delete_status",
+                               side_effect=api_mod.ApiError(500, "down")), \
+                self.assertRaises(api_mod.ApiError):
+            core.delete(st).result()
+
+
 if __name__ == "__main__":
     unittest.main()

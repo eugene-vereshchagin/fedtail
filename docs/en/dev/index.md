@@ -16,6 +16,7 @@ the tests and whether it fits.
 | [gtk.md](gtk.md) | the plan and the state of the GTK 4 frontend |
 | [layouts.md](layouts.md) | the messenger-style layouts (QIP, Psi+, Mail.ru Agent) and their themes |
 | [windows.md](windows.md) | running and testing on Windows from the source |
+| [robustness.md](robustness.md) | robustness: the network, the OS, the disk, the interface, security — questions, answers and decisions |
 | [testplan.md](testplan.md) | what checks itself, with what and where; what's left for the eyes |
 | [testing.md](testing.md) | the page for alpha testers: installing, what to try, how to report |
 | [debugging.md](debugging.md) | the logs: what's in them, how to hunt leaks and freezes |

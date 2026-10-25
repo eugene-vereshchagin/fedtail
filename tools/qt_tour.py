@@ -536,6 +536,12 @@ def tour_menus(app, out, core, win):
                      ("tab-trends", win.open_trends),
                      ("tab-search", lambda: win.open_search("o")),
                      ("dlg-profile", win.edit_profile),
+                     # the places in a window of their own (qt/place.py): slow mode, the
+                     # log; the collections where the server has them
+                     ("place-slow", lambda: win.open_place("slow")),
+                     ("place-log", lambda: win.open_place("log")),
+                     *([("place-collections", lambda: win.open_place("collections"))]
+                       if core.supports("collections") else []),
                      ("compose", lambda: win.compose()),
                      ("about", win.about)):
         closing_modals(app, out, name, fn)
