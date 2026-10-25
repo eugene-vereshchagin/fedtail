@@ -243,6 +243,26 @@ class PlacesUnitTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             pl.page("quotes", "nope")
 
+    def test_people_further_from_their_server(self):
+        """Someone of another server: my server's list ends with "more — from x", which
+        reads the rest from theirs (feed.remote_people); none for my server's own."""
+        v = View(people=({"accounts": [acc("B")], "relations": {}}, None), account=acc("B"),
+                 people_from_origin=({"accounts": [acc("C", "cat")], "relations": {},
+                                      "total": 7}, None))
+        pl = Places(v)
+        pg = pl.page("people", "B", "followers")
+        self.assertEqual(pg.more.act, ("people", "more", "B followers origin"))
+        self.assertEqual(pg.more.label, _("people_more_from", host="x"))
+        pg = pl.page("people", "B", "followers", "origin")
+        self.assertEqual([r.data.id for r in pg.rows if r.data], ["C"])
+        self.assertEqual(pg.hint, _("people_origin_total", n=7))
+        self.assertIsNone(pg.more)
+        v.answers["account"] = Account(Ref("mastodon", "", "L"), "local", "local")
+        self.assertIsNone(Places(v).page("people", "L", "followers").more)
+        v.cfg["feed"]["remote_people"] = False
+        v.answers["account"] = acc("B")
+        self.assertIsNone(Places(v).page("people", "B", "followers").more)
+
     def test_long_form(self):
         v = View(long_form={"name": "Meetup", "start": "10:00", "end": "12:00",
                             "location": "Tbilisi", "summary": "<p>s</p>",

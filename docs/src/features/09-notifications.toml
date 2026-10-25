@@ -82,9 +82,7 @@ details.en = "Mastodon holds back mentions from unknown and new accounts until y
 [[feature]]
 id = "server-notices"
 status = "has"
-android = "partly"
-android_note.ru = "приходят в «Активность»; отдельного показа нет"
-android_note.en = "they come into Activity; not shown apart"
+android = "has"
 since = "0.14.0"
 name.ru = "Порванные связи и предупреждения модераторов"
 name.en = "Severed relationships and moderators' warnings"
@@ -99,9 +97,7 @@ details.en = "When your server blocks another one (or the other way round) and y
 [[feature]]
 id = "dismiss"
 status = "has"
-android = "no"
-android_note.ru = "убрать уведомление нельзя"
-android_note.en = "no dismissing a notification"
+android = "has"
 since = "0.11.0"
 name.ru = "Убрать уведомление, очистить все"
 name.en = "Dismiss a notification, clear them all"
@@ -128,9 +124,7 @@ details.en = "`\"banner\"` — a strip over the lane until you press “Got it�
 [[feature]]
 id = "icon-count"
 status = "has"
-android = "no"
-android_note.ru = "числа на значке нет"
-android_note.en = "no number on the icon"
+android = "has"
 since = "0.3.0"
 name.ru = "Число непрочитанного на иконке"
 name.en = "The unread number on the icon"

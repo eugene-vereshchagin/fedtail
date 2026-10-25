@@ -38,6 +38,11 @@ object Core {
     suspend fun lane(name: String, keep: Boolean) = obj("lane", name, keep)
     suspend fun hub() = obj("hub")
     suspend fun older(name: String) = obj("older", name)
+    suspend fun laneSet(body: JSONObject) = obj("lane_set", body.toString())
+    suspend fun find(name: String, q: String) = obj("find", name, q)
+    suspend fun findEverywhere(q: String) = obj("find_everywhere", q)
+    suspend fun findDeeper(name: String, q: String) = obj("find_deeper", name, q)
+    suspend fun pollRefresh(id: String) = obj("poll_refresh", id)
     suspend fun placeAct(
         act: List<String>, confirmed: Boolean, values: JSONObject? = null, answer: String? = null,
     ) = obj("place_act", JSONArray(act).toString(), confirmed, values?.toString(), answer)

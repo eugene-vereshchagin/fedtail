@@ -41,9 +41,7 @@ details.en = "`true` — text and pictures under a CW open at once; `false` — 
 [[feature]]
 id = "uncw-thread"
 status = "has"
-android = "no"
-android_note.ru = "открыть все CW треда разом нельзя"
-android_note.en = "no opening every CW of a thread at once"
+android = "has"
 since = "0.18.0"
 name.ru = "Снять CW во всём треде разом"
 name.en = "Open every CW in a thread at once"
@@ -149,9 +147,7 @@ details.en = "Options, percentages, the deadline; voting for one or several opti
 [[feature]]
 id = "poll-results"
 status = "has"
-android = "partly"
-android_note.ru = "итоги видно; «обновить» нет"
-android_note.en = "the results show; no refreshing them"
+android = "has"
 since = "0.3.0"
 name.ru = "Результаты опроса без голосования"
 name.en = "Poll results without voting"
@@ -193,9 +189,7 @@ details.en = "“Translate” in the ⋯ menu of a post in another language — 
 [[feature]]
 id = "reactions-show"
 status = "partly"
-android = "no"
-android_note.ru = "реакции не показываются"
-android_note.en = "reactions aren't shown"
+android = "has"
 since = "0.11.0"
 name.ru = "Эмодзи-реакции"
 name.en = "Emoji reactions"
@@ -299,9 +293,7 @@ details.en = "Boosts in a row — as one strip scrolled sideways (as in Phanpy).
 [[feature]]
 id = "card-labels"
 status = "has"
-android = "partly"
-android_note.ru = "есть «продвинул» и над ответом — о чём; прочих меток нет"
-android_note.en = "“boosted by” and what a reply answers; the other labels — not yet"
+android = "has"
 since = "0.14.0"
 name.ru = "Метки на карточке"
 name.en = "Labels on the card"

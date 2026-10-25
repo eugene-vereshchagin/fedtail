@@ -1,6 +1,8 @@
 package online.dmesg.fedtail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -116,11 +118,16 @@ fun LaneScreen(
                             }
                         },
                         actions = {
+                            IconButton(onClick = { model.findOpen = !model.findOpen }) {
+                                Icon(Icons.Filled.Search, stringResource(R.string.find))
+                            }
                             IconButton(onClick = { model.refresh() }) {
                                 ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
                             }
                         })
                     if (!pane) NewsStrip(model, name)
+                    if (model.findOpen) FindBar(model)
+                    model.laneSwitches?.let { Switches(model, it) }
                     if (model.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
                     else HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -154,8 +161,18 @@ fun LaneScreen(
                         onHorizontalDrag = { _, dx -> dragged += dx })
                 }
         val body: @Composable () -> Unit = {
+            // a match found (in the lane, or picked from every lane): the list stands on it
+            LaunchedEffect(model.aimKey, model.posts) {
+                val key = model.aimKey ?: return@LaunchedEffect
+                val i = model.posts.indexOfFirst { it.key == key }
+                if (i < 0) return@LaunchedEffect
+                val line = model.divider?.first?.let { d -> model.posts.indexOfFirst { it.key == d } } ?: -1
+                state.scrollToItem((if (model.newestFirst) 0 else 1) + i + if (line in 0 until i) 1 else 0)
+                model.aimKey = null
+                model.aimed = model.opening
+            }
             LaunchedEffect(model.opening) {
-                if (model.opening != model.aimed) { // opened anew — not just come back to
+                if (model.aimKey == null && model.opening != model.aimed) { // opened anew — not just come back to
                     aim(state, model.posts, model.newestFirst, before = if (model.newestFirst) 0 else 1,
                         divider = model.divider?.first)
                     model.aimed = model.opening
@@ -169,6 +186,7 @@ fun LaneScreen(
             val page = model.placePage
             if (page != null) PlaceList(model, page, name, state)
             else PostList(model.posts, state, model.divider, act, model.hideSensitive,
+                emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
                 header = if (model.newestFirst) null else earlier,
                 footer = {
                     Column {
@@ -434,6 +452,77 @@ private fun CommandBar(model: AppModel) {
                 IconButton(onClick = { model.runCommand() },
                     enabled = model.cmdText.isNotBlank() && !model.cmdBusy) {
                     Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.send))
+                }
+            }
+        }
+    }
+}
+
+/** Finding in the lane (common/find.py's rule): ↑ ↓ through the matches, "deeper" —
+ *  further back than it shows, "everywhere" — every lane. */
+@Composable
+private fun FindBar(model: AppModel) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.OutlinedTextField(value = model.findText,
+                onValueChange = { model.findText = it }, singleLine = true,
+                placeholder = { Text(stringResource(R.string.find)) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { model.find() }),
+                modifier = Modifier.weight(1f))
+            TextButton(onClick = { model.find(-1) }, enabled = model.findIds.isNotEmpty()) { Text("↑") }
+            TextButton(onClick = { model.find(1) }, enabled = model.findIds.isNotEmpty()) { Text("↓") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (model.findWords.isNotBlank()) Text(model.findWords, fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            else Spacer(Modifier.weight(1f))
+            TextButton(onClick = { model.findDeeper() }, enabled = model.findText.isNotBlank()) {
+                Text(stringResource(R.string.find_deeper))
+            }
+            TextButton(onClick = { model.findEverywhere() }, enabled = model.findText.isNotBlank()) {
+                Text(stringResource(R.string.find_everywhere))
+            }
+        }
+    }
+}
+
+/** The lane's switches (the windows' header): all / posts only / unread only, a whole
+ *  conversation a card, which kinds of media. */
+@Composable
+private fun Switches(model: AppModel, sw: LaneSwitches) {
+    if (sw.filters.isEmpty() && !sw.convOffered && sw.media.isEmpty()) return
+    var mediaOpen by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        .padding(horizontal = 8.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        sw.filters.forEach { (key, words, _) ->
+            androidx.compose.material3.FilterChip(selected = key == sw.filter,
+                onClick = { model.laneSet(org.json.JSONObject().put("filter", key)) },
+                label = { Text(words, fontSize = 13.sp) })
+        }
+        if (sw.convOffered && sw.convWords.size == 2) {
+            androidx.compose.material3.FilterChip(selected = sw.convOn,
+                onClick = { model.laneSet(org.json.JSONObject().put("conversations", !sw.convOn)) },
+                label = { Text(sw.convWords[1], fontSize = 13.sp) })
+        }
+        if (sw.media.isNotEmpty()) {
+            Box {
+                androidx.compose.material3.FilterChip(selected = sw.mediaActive,
+                    onClick = { mediaOpen = true }, label = { Text(sw.mediaLabel, fontSize = 13.sp) })
+                androidx.compose.material3.DropdownMenu(expanded = mediaOpen,
+                    onDismissRequest = { mediaOpen = false }) {
+                    androidx.compose.material3.DropdownMenuItem(text = { Text(sw.mediaAll) }, onClick = {
+                        mediaOpen = false
+                        model.laneSet(org.json.JSONObject().put("media", "reset"))
+                    })
+                    sw.media.forEach { (kind, words, on) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text((if (on) "☑ " else "☐ ") + words) },
+                            onClick = {
+                                model.laneSet(org.json.JSONObject().put("media", kind).put("on", !on))
+                            })
+                    }
                 }
             }
         }

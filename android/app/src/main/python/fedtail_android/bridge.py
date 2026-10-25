@@ -289,6 +289,35 @@ def lane(name, keep=False):
     return _answer(go)
 
 
+def lane_set(body_json):
+    """A lane's switches from its header (the windows' and the page's): all / posts only /
+    unread only, a conversation a card, the media funnel → {ok}; reload the lane."""
+    return _answer(lambda: _s["web"].lane_set(json.loads(body_json or "{}")))
+
+
+def find(name, query):
+    """The posts of a lane with every word (common/find.py) → {ids, text}."""
+    return _answer(lambda: _s["web"].find(name, query or ""))
+
+
+def find_everywhere(query):
+    """What's stored in every lane → {hits: [{lane, item, id, title}], text}."""
+    return _answer(lambda: _s["web"].find_everywhere(query or ""))
+
+
+def find_deeper(name, query):
+    """Further back than the lane shows: it grows down to an older match → {more, total,
+    text}; reload the lane."""
+    return _answer(lambda: _s["web"].find_deeper(name, query or ""))
+
+
+def poll_refresh(post_id):
+    """Fresh counts for a post's poll → the card."""
+    def go():
+        return _texts([_s["web"].poll_refresh(post_id)])[0]
+    return _answer(go)
+
+
 def _place_page(name):
     """A place in a lane's stead (common/places.py, as the windows and the page have it):
     {title, rows: [{kind, title, line, key, buttons: [{label, act, primary, tip}]}], empty,

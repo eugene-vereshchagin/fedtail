@@ -109,9 +109,7 @@ details.en = "The reason “breaks the server's rules” shows your server's rul
 [[feature]]
 id = "domain-block"
 status = "has"
-android = "no"
-android_note.ru = "пока нет"
-android_note.en = "not yet"
+android = "has"
 since = "0.8.0"
 name.ru = "Заблокировать целый сервер"
 name.en = "Block a whole server"

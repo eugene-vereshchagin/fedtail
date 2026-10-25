@@ -813,12 +813,34 @@ class Places(MorePlaces, AccountPlaces):
         page = Page("people", _("people_" + tab), arg=acc_id, tab=tab, tabs=(
             ("following", _("people_following")), ("followers", _("people_followers"))),
             empty="—")
-        got, nxt = _wait(self.view.people(acc_id, tab, cursor or None))
+        if cursor == "origin":  # the rest, as their own server lists them (feed.remote_people)
+            acc = _wait(self.view.account(acc_id))
+            got, nxt = _wait(self.view.people_from_origin(acc, tab))
+            if got.get("total") is not None:
+                page.hint = _("people_origin_total", n=got["total"])
+        else:
+            got, nxt = _wait(self.view.people(acc_id, tab, cursor or None))
         rel = got.get("relations") or {}
         page.rows += [self._person(a, rel.get(a.id)) for a in got.get("accounts") or ()]
         if nxt:
             page.more = self._btn(_("more"), "people", "more", f"{acc_id} {tab} {nxt}")
+        elif cursor != "origin":
+            host = self._origin_host(acc_id)
+            if host:  # my server knows only part of them: the rest is on theirs
+                page.more = self._btn(_("people_more_from", host=host), "people", "more",
+                                      f"{acc_id} {tab} origin")
         return page
+
+    def _origin_host(self, acc_id):
+        """Someone of another server, whose lists theirs may know better ("" — no)."""
+        if not self.view.cfg["feed"].get("remote_people", True):
+            return ""
+        try:
+            acc = _wait(self.view.account(acc_id))
+        except Exception:  # noqa: BLE001 — no button then
+            return ""
+        handle = acc.handle if acc else ""
+        return handle.split("@", 1)[1] if "@" in handle else ""
 
     def _a_people_more(self, data, _v, _c, _ans):
         acc_id, tab, cursor = data.split(" ", 2)

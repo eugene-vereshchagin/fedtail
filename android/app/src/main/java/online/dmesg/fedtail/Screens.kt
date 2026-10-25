@@ -338,10 +338,17 @@ private fun ThreadPlace(
     model: AppModel, snack: SnackbarHostState, openBrowser: (String) -> Unit, state: LazyListState,
 ) {
     val focus = (model.place as? Place.Thread)?.focus
-    val act = model.cardActions(openBrowser)
+    val act = model.cardActions(openBrowser, cwOpen = model.threadCwOpen)
     val root = model.threadPosts.firstOrNull()
     PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
-        ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }) { mod ->
+        ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }, actions = {
+        // every warning of the thread open at once (and closed again)
+        if (model.threadPosts.any { it.warning.isNotBlank() }) {
+            IconButton(onClick = { model.threadCwOpen = !model.threadCwOpen }) {
+                Text(if (model.threadCwOpen) "⚠✓" else "⚠", fontSize = 16.sp)
+            }
+        }
+    }) { mod ->
         Box(mod.background(MaterialTheme.colorScheme.surface)) {
             // aimed when opened (on the post tapped) or after a reply (on the reply); coming
             // back from the editor or a picture it stays where it was

@@ -559,3 +559,26 @@ class BridgeDraftTest(_Base):
         self.assertIn("error", json.loads(self.bridge.draft_save("../x", "{}")))
         pv = self.call("preview", json.dumps({"text": "раз\n\nдва", "cw": "осторожно"}))
         self.assertTrue(pv["parts"] and pv["cw"] == "осторожно")
+
+
+class BridgeLaneToolsTest(_Base):
+    """A lane's switches, finding in it and everywhere, a poll's fresh counts — the
+    page's own, for the phone."""
+
+    def test_switches_and_finding(self):
+        self.demo()
+        got = self.call("lane", "home", False)
+        for key in ("filters", "conversations", "media", "info"):
+            self.assertIn(key, got)
+        self.call("lane_set", json.dumps({"name": "home", "media": "text", "on": False}))
+        self.assertTrue(self.call("lane", "home", True)["media"]["active"])
+        self.call("lane_set", json.dumps({"name": "home", "media": "reset"}))
+        word = got["posts"][0]["text"].split()[0]
+        found = self.call("find", "home", word)
+        self.assertIn(got["posts"][0]["id"], found["ids"])
+        every = self.call("find_everywhere", word)
+        self.assertTrue(every["hits"] and every["hits"][0]["title"])
+        self.assertIn("more", self.call("find_deeper", "home", word))
+        with_poll = [p for p in got["posts"] if p.get("poll")]
+        if with_poll:
+            self.assertIn("poll", self.call("poll_refresh", with_poll[0]["sid"]))

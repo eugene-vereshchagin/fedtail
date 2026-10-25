@@ -28,6 +28,12 @@
   "Discard", the preview, "Later…" (scheduled). Servers' emoji as pictures in posts, names
   and profiles; "Save" in the viewer (Pictures/fedtail); a link or words shared from
   another app open here (a post, a profile — or a search).
+- The phone's lanes: the windows' switches (all / posts only / unread only, a whole
+  conversation a card, the media funnel) and why a lane is empty; finding in a lane,
+  deeper and in every lane; the cards' marks (old, bot, edited, whose), reactions, a poll's
+  fresh counts; ⚠ opens every warning of a thread; a #tag opens its place.
+- Followers and follows of someone from another server: "more — from their server" at the
+  list's end, on the web page and the phone (the windows had it).
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

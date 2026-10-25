@@ -136,4 +136,7 @@
     <string name="discard">Выбросить</string>
     <string name="discard_q">Выбросить текст и черновик?</string>
     <string name="send_later">Позже…</string>
+    <string name="find">Найти</string>
+    <string name="find_deeper">Глубже</string>
+    <string name="find_everywhere">Везде</string>
 </resources>

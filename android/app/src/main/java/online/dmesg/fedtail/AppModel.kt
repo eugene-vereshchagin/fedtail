@@ -110,6 +110,19 @@ data class PostItem(
     val quoteWho: String = "",
     val quoteText: String = "",
     val nameHtml: String = "",       // the name with its :emoji: as pictures (if any)
+    val labels: String = "",         // the windows' marks: "old, 40 days", "bot", edited…
+    val reactions: String = "",      // "👍 3 :blobcat: 2"
+    val via: String = "",            // all accounts in one: which of mine got it
+)
+
+/** A lane's switches from its header (common/lane.py, the windows' and the page's). */
+data class LaneSwitches(
+    val info: String,                                   // why it is empty / what it holds
+    val filters: List<Triple<String, String, String>>,  // (key, words, tip)
+    val filter: String,
+    val convOffered: Boolean, val convOn: Boolean, val convWords: List<String>,
+    val mediaActive: Boolean, val mediaLabel: String, val mediaAll: String,
+    val media: List<Triple<String, String, Boolean>>,   // (kind, words, on)
 )
 
 /** A question the core asked, to answer in a dialog. */
@@ -546,6 +559,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (!keep) opening += 1
             return
         }
+        laneSwitches = parseSwitches(got)
         var list = parsePosts(got.optJSONArray("posts"))
         if (newestFirst) list = list.reversed()
         posts = list
@@ -555,7 +569,117 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             list.firstOrNull { it.id == d.optString("before") }?.key?.let { it to d.optString("text") }
         }
         if (!keep) opening += 1
+        pendingAim?.let { key -> if (list.any { it.key == key }) { aimKey = key; pendingAim = null } }
     }
+
+    var laneSwitches by mutableStateOf<LaneSwitches?>(null)
+
+    private fun parseSwitches(o: JSONObject): LaneSwitches {
+        val fs = o.optJSONArray("filters") ?: JSONArray()
+        val conv = o.optJSONObject("conversations") ?: JSONObject()
+        val cw = conv.optJSONArray("words") ?: JSONArray()
+        val media = o.optJSONObject("media") ?: JSONObject()
+        val kinds = media.optJSONArray("kinds") ?: JSONArray()
+        return LaneSwitches(str(o, "info"),
+            (0 until fs.length()).map { fs.getJSONArray(it) }
+                .map { Triple(it.optString(0), it.optString(1), it.optString(2)) },
+            str(o, "filter"), conv.optBoolean("offered"), conv.optBoolean("on"),
+            (0 until cw.length()).map { cw.optString(it) },
+            media.optBoolean("active"), str(media, "label"), str(media, "all"),
+            (0 until kinds.length()).map { kinds.getJSONArray(it) }
+                .map { Triple(it.optString(0), it.optString(1), it.optBoolean(2)) })
+    }
+
+    /** A switch of the lane's header: {filter} | {conversations} | {media, on}. */
+    fun laneSet(body: JSONObject) {
+        val name = current ?: return
+        viewModelScope.launch {
+            Core.failed(Core.laneSet(body.put("name", name)))?.let { message = it; return@launch }
+            loadLane(name, keep = true)
+        }
+    }
+
+    // ---- finding: in the lane, deeper, in every lane (common/find.py) -------------------
+    var findOpen by mutableStateOf(false)
+    var findText by mutableStateOf("")
+    var findIds by mutableStateOf(listOf<String>())
+    var findAt by mutableStateOf(0)
+    var findWords by mutableStateOf("")       // "2 of 5", "nothing"
+    var aimKey by mutableStateOf<String?>(null) // the list stands on this post (a match)
+    private var pendingAim: String? = null       // …once the lane opened has it
+
+    fun find(step: Int = 0) {
+        val name = current ?: return
+        val q = findText.trim()
+        if (q.isBlank()) return
+        viewModelScope.launch {
+            if (step == 0) {
+                val got = Core.find(name, q)
+                Core.failed(got)?.let { message = it; return@launch }
+                val ids = got.optJSONArray("ids") ?: JSONArray()
+                findIds = (0 until ids.length()).map { ids.optString(it) }
+                findAt = 0
+                findWords = str(got, "text")
+            } else if (findIds.isNotEmpty()) {
+                findAt = Math.floorMod(findAt + step, findIds.size)
+                findWords = "${findAt + 1} / ${findIds.size}"
+            }
+            findIds.getOrNull(findAt)?.let { id ->
+                posts.firstOrNull { it.id == id || it.sid == id }?.let { aimKey = it.key }
+            }
+        }
+    }
+
+    /** "Deeper": the lane grows down to an older match. */
+    fun findDeeper() {
+        val name = current ?: return
+        viewModelScope.launch {
+            val got = Core.findDeeper(name, findText.trim())
+            Core.failed(got)?.let { message = it; return@launch }
+            str(got, "text").takeIf { it.isNotBlank() }?.let { findWords = it }
+            loadLane(name, keep = true)
+            find()
+        }
+    }
+
+    /** "In every lane": the matches, lane by lane; one picked — its lane, standing on it. */
+    fun findEverywhere() {
+        val q = findText.trim()
+        if (q.isBlank()) return
+        viewModelScope.launch {
+            val got = Core.findEverywhere(q)
+            Core.failed(got)?.let { message = it; return@launch }
+            val hits = got.optJSONArray("hits") ?: JSONArray()
+            if (hits.length() == 0) { message = str(got, "text"); return@launch }
+            asking = Asking.Choose(str(got, "text"), "", (0 until hits.length()).map { i ->
+                val h = hits.getJSONObject(i)
+                i.toString() to str(h, "title")
+            }.distinctBy { it.second }.let { firsts ->
+                // one row a lane: its first match (the list says how many all in all)
+                firsts
+            }, "") { pick, _ ->
+                val h = hits.getJSONObject(pick.toInt())
+                pendingAim = str(h, "item").ifBlank { str(h, "id") }
+                showLane(str(h, "lane"))
+            }
+        }
+    }
+
+    fun pollRefresh(p: PostItem) {
+        viewModelScope.launch {
+            val got = Core.pollRefresh(p.sid)
+            Core.failed(got)?.let { message = it; return@launch }
+            val now = parsePost(got)
+            val swap = { x: PostItem ->
+                if (x.sid == p.sid) x.copy(poll = now.poll, pollOpen = now.pollOpen,
+                    pollOptions = now.pollOptions) else x
+            }
+            posts = posts.map(swap)
+            threadPosts = threadPosts.map(swap)
+        }
+    }
+
+    var threadCwOpen by mutableStateOf(false) // ⚠ over a thread: every warning open
 
     var laneOlder by mutableStateOf(false)   // "earlier" can bring older posts
     var loadingOlder by mutableStateOf(false)
@@ -691,6 +815,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openThread(postId: String) {
+        threadCwOpen = false
         // three columns: the thread pane shows one thread — a new one takes its place
         val keep = if (columns >= 3 && place is Place.Thread) places.dropLast(1) else places
         places = keep + Place.Thread(postId)
@@ -840,6 +965,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** A link tapped in a post: a post my server knows opens as a thread, a person as
      *  their profile; else the browser. */
     fun openLink(url: String, openBrowser: (String) -> Unit) {
+        // a #tag (its server's /tags/name): the tag's place here, as the windows open it
+        Regex("""^https?://[^/]+/tags/([^/?#]+)/?$""").find(url)?.let { m ->
+            openPage("tag", java.net.URLDecoder.decode(m.groupValues[1], "UTF-8"))
+            return
+        }
         viewModelScope.launch {
             val got = Core.resolve(url)
             val id = got.optString("id")
@@ -1706,6 +1836,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             own = o.optBoolean("own"),
             edited = o.optBoolean("edited"),
             nameHtml = str(acc, "name_html"),
+            labels = o.optJSONObject("words")?.optJSONArray("meta")?.let { m ->
+                (0 until m.length()).mapNotNull { m.optJSONObject(it)?.optString("text") }
+                    .filter { it.isNotBlank() }.joinToString(" · ") } ?: "",
+            reactions = o.optJSONObject("words")?.optString("reactions") ?: "",
+            via = o.optJSONObject("via")?.optString("text") ?: "",
             quoteId = str(o.optJSONObject("quote"), "id"),
             quoteWho = o.optJSONObject("quote")?.optJSONObject("account")?.let { a ->
                 str(a, "name").ifBlank { str(a, "handle") } } ?: "",

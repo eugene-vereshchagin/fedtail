@@ -188,9 +188,7 @@ details.en = "In the debugging mode (`mode = \"auto\"` — on in development ver
 [[feature]]
 id = "report-repo"
 status = "has"
-android = "no"
-android_note.ru = "отчёт — «Поделиться», не в репозиторий"
-android_note.en = "the report is shared, not sent to a repository"
+android = "has"
 since = "0.19.0"
 name.ru = "Отчёт сразу в свой закрытый репозиторий"
 name.en = "A bug report straight into your private repository"
@@ -202,9 +200,7 @@ details.en = "With `debug.report_repo` set (`\"user/repo\"` on GitHub or any git
 [[feature]]
 id = "report-issue"
 status = "has"
-android = "partly"
-android_note.ru = "«Поделиться отчётом» из самопроверки"
-android_note.en = "“Share the report” from the self-check"
+android = "has"
 since = "0.19.0"
 name.ru = "Сообщить об ошибке на GitHub — с проверкой"
 name.en = "Report a bug on GitHub — checked first"

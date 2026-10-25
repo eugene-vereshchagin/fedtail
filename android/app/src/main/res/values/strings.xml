@@ -137,4 +137,7 @@
     <string name="discard">Discard</string>
     <string name="discard_q">Discard the text and its draft?</string>
     <string name="send_later">Later…</string>
+    <string name="find">Find</string>
+    <string name="find_deeper">Deeper</string>
+    <string name="find_everywhere">Everywhere</string>
 </resources>

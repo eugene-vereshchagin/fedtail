@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
@@ -66,6 +67,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.fromHtml
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -101,17 +103,18 @@ class CardActions(
     val quoteReply: (PostItem) -> Unit = {},
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
     val actAs: (PostItem, String, String) -> Unit = { _, _, _ -> }, // post, account, fav|boost|reply
+    val pollRefresh: (PostItem) -> Unit = {},
 )
 
-fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
+fun AppModel.cardActions(openBrowser: (String) -> Unit, cwOpen: Boolean = false) = CardActions(
     open = { openThread(it.sid) }, reply = { compose(it) }, like = { act(it, "like") },
     media = { list, i -> openMedia(list, i) }, link = { openLink(it, openBrowser) },
     alias = { putAlias(it) }, share = { act(it, "share") }, bookmark = { act(it, "bookmark") },
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
-    expandCw = expandCw, profile = { openProfile(it) }, menu = { postMenu(it) },
+    expandCw = expandCw || cwOpen, profile = { openProfile(it) }, menu = { postMenu(it) },
     runLink = { runLink(it) }, page = { name, arg -> openPage(name, arg) },
     quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
-    actAs = { p, tag, action -> actAs(p, tag, action) })
+    actAs = { p, tag, action -> actAs(p, tag, action) }, pollRefresh = { pollRefresh(it) })
 
 // a server's emoji as the core writes it (web/server.py with_emojis): its picture's address
 private val EMOJI = Regex("""<img\b[^>]*\bclass="emoji"[^>]*\bsrc="([^"]*)"[^>]*>""")
@@ -248,11 +251,12 @@ fun PostList(
     act: CardActions, hideSensitive: Boolean, thread: Boolean = false, focus: String? = null,
     footer: (@Composable () -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
+    emptyText: String? = null, // why it is empty, as the windows say it (a filter on…)
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.lane_empty),
+            Text(emptyText ?: stringResource(R.string.lane_empty),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             footer?.let { Spacer(Modifier.height(24.dp)); it() }
         }
@@ -333,6 +337,9 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                 if (p.sharedBy.isNotBlank()) {
                     Small(stringResource(R.string.shared_by, p.sharedBy))
                 }
+                // the windows' marks (old, bot, edited…) and, all accounts in one, whose
+                val marks = listOf(p.labels, p.via).filter { it.isNotBlank() }.joinToString(" · ")
+                if (marks.isNotBlank()) Small(marks)
                 if (p.contextText.isNotBlank() && p.number == null) {
                     Text("↳ @${p.contextHandle}: ${p.contextText}", maxLines = 2,
                         overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
@@ -453,10 +460,17 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     if (p.pollOpen && p.pollOptions.isNotEmpty()) {
         Vote(p, act)
     } else if (p.poll.isNotBlank()) {
-        Text(p.poll, fontSize = 14.sp, modifier = Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(10.dp))
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant).padding(start = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(p.poll, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(vertical = 10.dp))
+            IconButton(onClick = { act.pollRefresh(p) }) {   // fresh counts
+                ThemedIcon("refresh", androidx.compose.material.icons.Icons.Filled.Refresh,
+                    stringResource(R.string.refresh), Modifier.size(18.dp))
+            }
+        }
     }
+    if (p.reactions.isNotBlank()) Small(p.reactions)
     if (p.quoteText.isNotBlank()) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
