@@ -112,4 +112,18 @@ fun deviceFacts(context: Context): JSONObject {
         .put("screen", "${(dm.widthPixels / dm.density).toInt()}×${(dm.heightPixels / dm.density).toInt()} dp, " +
             "density ${dm.density}")
         .put("app", "${BuildConfig.APPLICATION_ID} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        // what decides whether notifications come: allowed, a push distributor, whether
+        // the system may put the app to sleep (the 15-minute rounds then come late)
+        .put("notifications", if (androidx.core.app.NotificationManagerCompat.from(context)
+            .areNotificationsEnabled()) "allowed" else "OFF")
+        .put("push", runCatching {
+            org.unifiedpush.android.connector.UnifiedPush.getAckDistributor(context)
+                ?: ("none (" + org.unifiedpush.android.connector.UnifiedPush
+                    .getDistributors(context).size + " installed)")
+        }.getOrElse { "? ${it.javaClass.simpleName}" })
+        .put("battery", runCatching {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            if (pm.isIgnoringBatteryOptimizations(context.packageName)) "unrestricted"
+            else "optimized (background rounds may come late)"
+        }.getOrElse { "?" })
 }

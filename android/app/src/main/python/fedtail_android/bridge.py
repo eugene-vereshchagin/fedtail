@@ -959,6 +959,7 @@ def settings_apply():
 # or what broke, and how long it took. The report is the desktop's bug report (the logs,
 # the config, the system — never the token or the database) with the steps added.
 CHECKS = ("core", "server", "hub", "lanes", "browse", "thread", "pictures", "link",
+          "places", "menus", "profile", "find", "editor", "notes", "theme", "slow",
           "settings", "sync")
 
 
@@ -1081,9 +1082,107 @@ def _check_sync():
            f"last {last.get('at', '—')}"
 
 
+# places that write or wait on a person: not opened by the self-check
+NOT_CHECKED = {"login", "issue", "probe", "profile_edit", "report"}
+
+
+def _check_places():
+    """Every place of ≡ opened (reading only): how many rows each, how long."""
+    out, bad = [], []
+    for x in _s["web"].place_menu():
+        name = x["name"]
+        if not name or name in NOT_CHECKED:
+            continue
+        t = time.monotonic()
+        try:
+            got = _s["web"].page(name)
+            out.append(f"{name} {len(got.get('rows', []))} "
+                       f"{round((time.monotonic() - t) * 1000)} ms")
+        except Exception as e:  # noqa: BLE001 — every place tried, the broken ones said
+            bad.append(f"{name}: {e.__class__.__name__}: {e}")
+    if bad:
+        raise RuntimeError("; ".join(bad))
+    return "; ".join(out)
+
+
+def _check_menus():
+    """A few cards' ⋯ menus: what each offers (nothing in them is done)."""
+    out = []
+    for x in _s["web"].lanes()[:4]:
+        try:
+            posts = _s["web"].lane(x["name"], True).get("posts", [])
+        except Exception:  # noqa: BLE001
+            continue
+        for p in posts[:2]:
+            got = _s["web"].post_menu(p["sid"])
+            out.append(str(len(got.get("items", []))))
+    return ("items: " + ", ".join(out)) if out else "no posts to try"
+
+
+def _check_profile():
+    """The first post's author: the profile, its buttons and the next page of posts."""
+    p = _first_post(lambda x: (x.get("account") or {}).get("id"))
+    if p is None:
+        return "no posts to try"
+    acc_id = p["account"]["id"]
+    got = _s["web"].account(acc_id)
+    more = ""
+    if got.get("older") and not got["older"].get("cursor"):
+        nxt = _s["web"].account_more(acc_id, None, got.get("max_id", ""), "")
+        more = f", next page {len(nxt.get('posts', []))}"
+    return f"@{(got.get('account') or {}).get('handle')}: {len(got.get('posts', []))} posts" \
+        f"{more}"
+
+
+def _check_find():
+    p = _first_post(lambda x: len((x.get("text") or "").split()) > 2)
+    if p is None:
+        return "no words to look for"
+    word = max(p["text"].split(), key=len)[:20]
+    lane = next((x["name"] for x in _s["web"].lanes() if x["name"] == "home"), None)
+    got = _s["web"].find(lane or _s["web"].lanes()[0]["name"], word)
+    every = _s["web"].find_everywhere(word)
+    return f"{word!r}: {len(got.get('ids', []))} here, {len(every.get('hits', []))} lanes"
+
+
+def _check_editor():
+    """What the editor shows (nothing is sent): its facts, the hints, completion."""
+    facts = _s["web"].editor_facts()
+    hint = _s["web"].compose_check({"text": "#selfchecktag " + "x" * 40})
+    tags = _s["web"].complete("#a")
+    return f"{len(facts.get('languages', []))} languages, limit {hint.get('limit')}, " \
+        f"camel hint {'yes' if hint.get('camel') else 'no'}, {len(tags.get('items', []))} tags"
+
+
+def _check_notes():
+    got, n = _s["web"].notes_since(-1)
+    cfg = _core().cfg["notify"]
+    return f"notes {n}, enabled {cfg.get('enabled', True)}, privacy {cfg.get('privacy')}"
+
+
+def _check_theme():
+    got = json.loads(theme())
+    if "error" in got:
+        raise RuntimeError(got["error"])
+    return f"{got.get('name')}, {len(got.get('colors', {}))} colours, " \
+        f"{'light' if got.get('light') else 'dark'}"
+
+
+def _check_slow():
+    from fedtail.frontends.common import sidebar
+    core = _core()
+    fresh = sum(sidebar.fresh(core, x["name"]) for x in _s["web"].lanes())
+    slow = core.slow_minutes()
+    return f"slow mode {slow or 'off'}{(' · ' + sidebar.slow_words(core)) if slow else ''}, " \
+        f"of them new {fresh}"
+
+
 _CHECK = {"core": _check_core, "server": _check_server, "hub": _check_hub,
           "lanes": lambda: _lanes(False), "browse": lambda: _lanes(True),
           "thread": _check_thread, "pictures": _check_pictures, "link": _check_link,
+          "places": _check_places, "menus": _check_menus, "profile": _check_profile,
+          "find": _check_find, "editor": _check_editor, "notes": _check_notes,
+          "theme": _check_theme, "slow": _check_slow,
           "settings": _check_settings, "sync": _check_sync}
 
 
