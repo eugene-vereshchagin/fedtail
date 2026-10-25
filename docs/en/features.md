@@ -709,8 +709,8 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | A deb package | has | 0.10.0 | built in CI on Debian 13; since 0.18 GTK 4 in Recommends, the GTK window an action of the menu entry (“fedtail (GTK)”, right click) |
 | Windows: one .exe | has | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
 | A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`ui.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
-| An apt repository of its own | planned | — | from the releases' deb packages |
-| An installer and a signature for Windows | planned | — | once there are users on Windows |
+| An apt repository of its own | partly — CI builds and signs it after every release — once the repository has the key (APT_GPG_KEY) and GitHub Pages is on for the `apt` branch | 0.20.0 | from the releases' deb packages (`packaging/apt_repo.py`) |
+| An installer for Windows (and a signature) | has | 0.20.0 | `fedtail-X.Y.Z-windows-setup.exe` (Inno Setup): for you alone, no administrator, a Start menu entry, an uninstaller; signed once CI has a certificate |
 
 ---
 
@@ -850,6 +850,8 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | A deb package | · | not a phone thing |
 | Windows: one .exe | · | not a phone thing |
 | A menu entry with the icon | · | not a phone thing |
+| An apt repository of its own | · | not a phone thing |
+| An installer for Windows (and a signature) | · | not a phone thing |
 
 ---
 
@@ -878,8 +880,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Toga (BeeWare) | Interfaces | — | large |
-| An apt repository of its own | Builds and installing | — | — |
-| An installer and a signature for Windows | Builds and installing | — | — |
 
 ## Won't do
 

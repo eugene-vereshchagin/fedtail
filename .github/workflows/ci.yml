@@ -113,6 +113,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [windows]
     runs-on: windows-latest
+    env:  # the code-signing certificate, when there is one (signs the program and the installer)
+      CERT: ${{ secrets.WINDOWS_CERT_PFX }}
+      CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -125,10 +128,39 @@ jobs:
       - name: Starts
         shell: bash
         run: ./dist/fedtail.exe --version
+      # signed when the certificate is there (a .pfx, base64, and its password); without
+      # it the files go unsigned, as before — Windows then asks "run anyway?"
+      - name: Sign the program
+        if: env.CERT != ''
+        shell: pwsh
+        run: |
+          [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String($env:CERT))
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -Last 1
+          & $signtool.FullName sign /f cert.pfx /p $env:CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 dist\fedtail.exe
+      # the installer (Inno Setup, on the runner already): the user's programs folder, the
+      # Start menu, an uninstaller — packaging/windows/fedtail.iss
+      - name: The installer
+        shell: bash
+        run: |
+          ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          [ -f "$ISCC" ] || choco install innosetup -y --no-progress >/dev/null
+          VER=$(python -c "import fedtail; print(fedtail.__version__)")
+          HOME_URL=$(python -c "from fedtail import version; print(version.HOMEPAGE)")
+          "$ISCC" //DVersion="$VER" //DHomepage="$HOME_URL" packaging/windows/fedtail.iss
+          test -f dist/fedtail-setup.exe
+      - name: Sign the installer
+        if: env.CERT != ''
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -Last 1
+          & $signtool.FullName sign /f cert.pfx /p $env:CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 dist\fedtail-setup.exe
+          Remove-Item cert.pfx
       - uses: actions/upload-artifact@v4
         with:
           name: fedtail-windows
-          path: dist/fedtail.exe
+          path: |
+            dist/fedtail.exe
+            dist/fedtail-setup.exe
 
   # …and fedtail for Linux, built on Debian 12 so it runs on older systems too
   linux-build:
@@ -324,6 +356,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -351,15 +386,18 @@ jobs:
           git tag -a "v$VER" -m "fedtail $VER"
           git push origin "v$VER"
           cp built/fedtail-windows/fedtail.exe "fedtail-$VER-windows.exe"
+          cp built/fedtail-windows/fedtail-setup.exe "fedtail-$VER-windows-setup.exe"
           cp built/fedtail-linux/fedtail "fedtail-$VER-linux-x86_64"
           cp built/fedtail-deb/fedtail_*_all.deb .
-          files=("fedtail-$VER-windows.exe" "fedtail-$VER-linux-x86_64" fedtail_*_all.deb)
+          files=("fedtail-$VER-windows.exe" "fedtail-$VER-windows-setup.exe"
+                 "fedtail-$VER-linux-x86_64" fedtail_*_all.deb)
           # the phone's, when the release key was there to sign it (the apk job)
           apk=$(ls built/fedtail-android/*.apk 2>/dev/null | head -1)
           if [ -n "$apk" ]; then cp "$apk" "fedtail-$VER-android.apk"; files+=("fedtail-$VER-android.apk"); fi
           gh release create "v$VER" --title "fedtail $VER" --notes-file notes.md --verify-tag \
             "${files[@]}"
           echo "released=true" >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
       # the site (a repo of its own) takes the docs and the download links from the
       # latest release tag: rebuild it now. The secret is the Cloudflare Workers Builds
       # deploy hook URL; without it nothing happens (the site rebuilds nightly anyway).
@@ -370,3 +408,29 @@ jobs:
         run: |
           if [ -z "$HOOK" ]; then echo "::warning::no SITE_DEPLOY_HOOK secret: the site was not rebuilt"; exit 0; fi
           curl -fsS -X POST "$HOOK" || echo "::warning::the site's deploy hook failed"
+
+  # the apt repository: the release's .deb added to the `apt` branch (GitHub Pages serves
+  # it), the indexes made anew and signed with the repository's key (secret
+  # APT_GPG_KEY: an armored private key without a passphrase, made for this alone).
+  # Without the key nothing is published — said once in the run.
+  apt:
+    needs: [release]
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KEY: ${{ secrets.APT_GPG_KEY }}
+      VER: ${{ needs.release.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: No key — no repository
+        if: env.KEY == ''
+        run: 'echo "::warning::no APT_GPG_KEY secret — the apt repository was not updated"'
+      - uses: actions/checkout@v5
+        if: env.KEY != ''
+        with:
+          fetch-depth: 0
+      - name: The packages and the signed indexes
+        if: env.KEY != ''
+        run: python3 packaging/apt_repo.py "$VER"

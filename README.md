@@ -75,6 +75,8 @@ Every [release](https://github.com/eugene-vereshchagin/fedtail/releases) has fed
   Start menu shortcut. The config lives in `%APPDATA%\fedtail\<profile>\`, the data in
   `%LOCALAPPDATA%\fedtail\<profile>\`; notifications come through the tray icon. Windows
   warns about an unknown app the first time (the file isn't signed): "More info" → "Run anyway".
+  Or `fedtail-X.Y.Z-windows-setup.exe`: it installs fedtail for you alone (no administrator),
+  with a Start menu entry and an uninstaller.
 
 The file unpacks itself on start, so the first window takes a few seconds. Everything else is
 the same as running from the source — the same config, profiles and logs.

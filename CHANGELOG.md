@@ -40,6 +40,10 @@
   the profile or not, deleted; someone into one from their profile (if they allow it); other
   people's from their profile; the ones you're in — leave them. The windows show them, and
   any place without a widget of its own, in a place window (qt/place.py, gtk/place.py).
+- Windows: an installer too, `fedtail-X.Y.Z-windows-setup.exe` — for you alone, no
+  administrator, a Start menu entry and an uninstaller (signed once CI has a certificate).
+- The apt repository: built and signed by CI after every release, once the repository's key
+  is set (`APT_GPG_KEY`, GitHub Pages for the `apt` branch).
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

@@ -22,6 +22,8 @@ What's new in the latest versions, and the plans.
 - Profile: hide follows, posts found by search, article authorship, tag suggestions
 - About the server: terms, whom it cut off, its translator
 - Push notifications (Web Push, UnifiedPush)
+- An apt repository of its own
+- An installer for Windows (and a signature)
 
 **0.19.0:**
 
@@ -46,8 +48,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 | What | Chapter | Config | Size |
 |---|---|---|---|
 | Toga (BeeWare) | Interfaces | — | large |
-| An apt repository of its own | Builds and installing | — | — |
-| An installer and a signature for Windows | Builds and installing | — | — |
 
 ### Won't do
 

@@ -16,12 +16,13 @@
 | `test` | каждый пуш и PR | все тесты на Python 3.11, 3.12 и 3.13 с Qt из pip, без экрана; потом fedtail ставится как пакет и запускается |
 | `debian` | каждый пуш и PR | все тесты на Debian 13 с Qt и GTK 4 из apt, под Xvfb — настоящая цель |
 | `windows` | каждый пуш и PR | все тесты на Windows с Qt из pip (docs/ru/dev/windows.md использует те же пакеты и команду, тест проверяет) |
-| `windows-build` | пуш в `main` | `fedtail.exe` одним файлом (PyInstaller, `packaging/build.py`), один раз запускается |
+| `windows-build` | пуш в `main` | `fedtail.exe` одним файлом (PyInstaller, `packaging/build.py`), один раз запускается; установщик `fedtail-setup.exe` (Inno Setup, `packaging/windows/fedtail.iss`); оба подписываются, если есть сертификат для подписи кода (секреты `WINDOWS_CERT_PFX` — .pfx в base64 — и `WINDOWS_CERT_PASSWORD`), иначе без подписи |
 | `linux-build` | пуш в `main` | `fedtail` для Linux одним файлом, собирается на Debian 12, чтобы работал и на старых системах |
 | `deb` | каждый пуш и PR | `.deb` для Debian 13 (`packaging/deb.py`), ставится через apt и запускается |
 | `apk` | пуш в `main` | только если в `fedtail/__init__.py` версия релиза без тега: APK для Android, собранный и подписанный релизным ключом (секреты `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; android/README.md, «Releases»); без ключа — предупреждение, релиз выходит без него |
 | `screenshots` | вручную (Actions → CI → Run workflow), только `main` | каждая тема рисуется с выдуманными данными, PNG принудительно пушатся в ветку `screenshots` |
-| `release` | пуш в `main`, когда всё выше зелёное | если в `fedtail/__init__.py` версия релиза, у которой ещё нет тега: ставит на коммит тег `vX.Y.Z`, публикует релиз на GitHub с разделом CHANGELOG как заметками и файлами — Windows, Linux, Debian и Android (если подписан) и дёргает deploy hook сайта |
+| `release` | пуш в `main`, когда всё выше зелёное | если в `fedtail/__init__.py` версия релиза, у которой ещё нет тега: ставит на коммит тег `vX.Y.Z`, публикует релиз на GitHub с разделом CHANGELOG как заметками и файлами — Windows (.exe и установщик), Linux, Debian и Android (если подписан) и дёргает deploy hook сайта |
+| `apt` | после того как `release` выпустил релиз | `.deb` релиза — в apt-репозиторий: ветка `apt` (её отдаёт GitHub Pages), индексы заново и подписаны ключом репозитория (секрет `APT_GPG_KEY`, приватный ключ в armor без пароля; `packaging/apt_repo.py`); без ключа — предупреждение, ничего не публикуется |
 
 Когда тест падает, `.github/annotate.py` превращает падения в аннотации прогона (журналы задач
 не всегда можно скачать).

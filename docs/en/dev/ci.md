@@ -16,12 +16,13 @@ A commit with `[skip ci]` in its message runs nothing.
 | `test` | every push and PR | all the tests on Python 3.11, 3.12 and 3.13 with Qt from pip, offscreen; then fedtail installed as a package and started |
 | `debian` | every push and PR | all the tests on Debian 13 with Qt and GTK 4 from apt, under Xvfb — the real target |
 | `windows` | every push and PR | all the tests on Windows with Qt from pip (docs/en/dev/windows.md uses the same packages and command, a test checks) |
-| `windows-build` | a push to `main` | `fedtail.exe` as one file (PyInstaller, `packaging/build.py`), started once |
+| `windows-build` | a push to `main` | `fedtail.exe` as one file (PyInstaller, `packaging/build.py`), started once; the installer `fedtail-setup.exe` (Inno Setup, `packaging/windows/fedtail.iss`); both signed when the code-signing certificate is there (secrets `WINDOWS_CERT_PFX` — the .pfx in base64 — and `WINDOWS_CERT_PASSWORD`), unsigned otherwise |
 | `linux-build` | a push to `main` | `fedtail` for Linux as one file, built on Debian 12 so it runs on older systems too |
 | `deb` | every push and PR | the `.deb` for Debian 13 (`packaging/deb.py`), installed with apt and started |
 | `apk` | a push to `main` | only when `fedtail/__init__.py` holds an untagged release version: the Android APK built and signed with the release key (secrets `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; android/README.md, "Releases"); without the key — a warning, the release goes without it |
 | `screenshots` | by hand (Actions → CI → Run workflow), `main` only | every theme rendered with made-up data, the PNGs force-pushed to the `screenshots` branch |
-| `release` | a push to `main`, once everything above is green | if `fedtail/__init__.py` holds a release version that has no tag yet: tags the commit `vX.Y.Z`, publishes a GitHub release with the CHANGELOG section as notes and the files — Windows, Linux, Debian and Android (when signed) — and pokes the site's deploy hook |
+| `release` | a push to `main`, once everything above is green | if `fedtail/__init__.py` holds a release version that has no tag yet: tags the commit `vX.Y.Z`, publishes a GitHub release with the CHANGELOG section as notes and the files — Windows (the .exe and the installer), Linux, Debian and Android (when signed) — and pokes the site's deploy hook |
+| `apt` | after `release` published one | the release's `.deb` into the apt repository: the `apt` branch (GitHub Pages serves it), its indexes made anew and signed with the repository's key (secret `APT_GPG_KEY`, an armored private key without a passphrase; `packaging/apt_repo.py`); without the key — a warning, nothing published |
 
 `android.yml` builds the phone's dev APK (its own id, `online.dmesg.fedtail.dev`, the dev key) on a push to `main`
 touching `android/` or the core, starts it on an emulator — screenshots and the UI tests (`android/app/src/androidTest`),

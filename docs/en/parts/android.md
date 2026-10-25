@@ -75,3 +75,5 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | A deb package | · | not a phone thing |
 | Windows: one .exe | · | not a phone thing |
 | A menu entry with the icon | · | not a phone thing |
+| An apt repository of its own | · | not a phone thing |
+| An installer for Windows (and a signature) | · | not a phone thing |
