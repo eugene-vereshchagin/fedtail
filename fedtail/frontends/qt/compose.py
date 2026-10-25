@@ -450,6 +450,10 @@ class Compose(QDialog):
         self.set_language(cfg["language"])
         self._lang_before = self.lang.currentIndex()
         self.lang.activated.connect(self._lang_picked)
+        # spelling (core/spell.py): checked in the post's language, picked anew with it
+        from .spellcheck import Spell
+        self.spell = Spell(self, self.text)
+        self.lang.currentIndexChanged.connect(self.spell.repick)
 
     def _language(self):
         code = self.lang.currentData()

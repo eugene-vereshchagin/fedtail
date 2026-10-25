@@ -1056,6 +1056,41 @@ class GtkSmokeTest(_GtkBase):
         self.assertTrue(pump(lambda: ids() == ["013"], 5), ids())
         self.assertFalse(part.show_buttons["all"].get_active())
 
+    def test_spelling_in_the_editor(self):
+        """As in Qt: the error wave under a misspelled word, the fix and "Add to
+        dictionary" in the text's menu (core/spell.py, with a made-up dictionary)."""
+        from unittest import mock
+
+        from fedtail.core import spell
+
+        from .test_spell import FakeBackend
+        spell._checkers.clear()
+        with mock.patch.object(spell, "_backend", FakeBackend()):
+            c = self.win.compose_panel()
+            c._set_language("en")
+            sp = c.spell
+            sp.repick()
+            self.assertIsNotNone(sp.checker)
+            c.buffer.set_text("Helo wrold")
+            self.assertTrue(pump(lambda: sp.marked() == [(0, 4), (5, 10)], 3))
+            menu = sp.menu_for(7)
+            self.assertEqual(menu.get_n_items(), 2)  # the fixes, then "Add"
+            fixes = menu.get_item_link(0, "section")
+            self.assertEqual(fixes.get_item_attribute_value(0, "label", None).get_string(), "world")
+            sp.replace("world")
+            self.assertEqual(sp.text(), "Helo world")
+            self.assertTrue(pump(lambda: sp.marked() == [(0, 4)], 3))
+            menu = sp.menu_for(2)
+            fixes = menu.get_item_link(0, "section")
+            self.assertEqual(fixes.get_item_attribute_value(0, "label", None).get_string(),
+                             i18n._("spell_none"))
+            sp.add("Helo")
+            self.assertEqual(sp.marked(), [])
+            self.assertIsNone(sp.menu_for(2))  # a good word: the menu as it was
+            c.close()
+            self.assertEqual(sp._timer, 0)
+        spell._checkers.clear()
+
     def test_rest_of_the_api(self):
         """0.20, as in Qt: a filter edited, a cover for a video, an edited post's
         descriptions, a report by the server's rules, the profile's newer switches and

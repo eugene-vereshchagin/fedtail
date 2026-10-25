@@ -248,6 +248,10 @@ class ComposeWindow(Gtk.Box):
         self.cw.connect("changed", lambda _e: self._changed())
         self.vis.connect("notify::selected", lambda *_a: self._changed())
         self.lang.connect("notify::selected", lambda *_a: self._lang_picked())
+        # spelling (core/spell.py): checked in the post's language, picked anew with it
+        from .spellcheck import Spell
+        self.spell = Spell(self, self.text)
+        self.lang.connect("notify::selected", self.spell.repick)
         self._count()
         self._placeholder()
         if self.edit:
@@ -894,6 +898,8 @@ class ComposeWindow(Gtk.Box):
                            + _("send_failed_text", err=err))
 
     def _closing(self, *_a):
+        if getattr(self, "spell", None) is not None:
+            self.spell.stop()
         if self._autosave:
             GLib.source_remove(self._autosave)
             self._autosave = 0
