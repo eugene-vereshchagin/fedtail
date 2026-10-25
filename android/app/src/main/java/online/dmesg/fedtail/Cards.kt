@@ -525,7 +525,7 @@ private fun Actions(p: PostItem, act: CardActions) {
 }
 
 /** A card's ⋯: boost and bookmark first, then the windows' own items (common/actions:
- *  edit, delete, pin, mute, report, translate, lists…), then the author's profile. */
+ *  edit, delete, pin, mute, report, translate, lists…), the author's profile on top. */
 @Composable
 private fun CardMenu(p: PostItem, act: CardActions) {
     var open by remember { mutableStateOf(false) }
@@ -538,6 +538,11 @@ private fun CardMenu(p: PostItem, act: CardActions) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            // the author first: on a phone the long menu's end is a scroll away
+            if (p.accountId.isNotBlank()) {
+                DropdownMenuItem(text = { Text(stringResource(R.string.profile_of, p.handle)) },
+                    onClick = { open = false; act.profile(p.accountId) })
+            }
             DropdownMenuItem(text = { Text(stringResource(if (p.shared) R.string.unboost else R.string.boost)) },
                 onClick = { open = false; act.share(p) })
             val items = info?.optJSONArray("items")
@@ -581,11 +586,6 @@ private fun CardMenu(p: PostItem, act: CardActions) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.open_browser)) },
                         onClick = { open = false; act.browser(p.url) })
                 }
-            }
-            if (p.accountId.isNotBlank()) {
-                HorizontalDivider()
-                DropdownMenuItem(text = { Text(stringResource(R.string.profile_of, p.handle)) },
-                    onClick = { open = false; act.profile(p.accountId) })
             }
         }
     }

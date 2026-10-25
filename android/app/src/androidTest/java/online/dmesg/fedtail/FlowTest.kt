@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -212,7 +213,8 @@ class FlowTest {
         waitText("/1")
         compose.onAllNodesWithContentDescription("More").onFirst().performClick()
         waitText("Reply with quote", 30_000)           // common/actions.menu's items
-        compose.onAllNodesWithText("Profile of @", substring = true).onFirst().performClick()
+        compose.onAllNodesWithText("Profile of @", substring = true).onFirst()
+            .performScrollTo().performClick()
         waitText("Posts and replies", 30_000)          // a profile: what of theirs to show
     }
 }
