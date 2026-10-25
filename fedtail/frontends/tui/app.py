@@ -665,7 +665,7 @@ class ProfileScreen(Screen, PostsMixin):
             return []
         core = self.app.core
         return prof.actions(self.acc, self.rel, self.own(), core.cfg, core.supports,
-                            lists=True, details=True)
+                            lists=True, details=True, collections=True)
 
     def action_button(self, n):
         from ..common import profile as prof

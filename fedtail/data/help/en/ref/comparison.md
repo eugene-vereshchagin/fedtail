@@ -31,7 +31,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Finding people, tags and posts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | A lane of several tags | ✓ |   |   |   | ✓ |   |   | ✓ |   |   |   | ✓ |   |   |
 | Columns side by side | ✓ | ✓ |   |   | ✓ |   |   |   |   | ✓ |   | ✓ |   | ✓ |
-| Collections (Mastodon 4.6) | ⏳ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Collections of people (Mastodon 4.6) | ✓ | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Another server's public timeline | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A link's timeline (Mastodon 4.3+) | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 

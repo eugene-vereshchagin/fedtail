@@ -34,6 +34,10 @@ from fedtail.model import real
 
 from .scenario import Cant, menu_keys
 
+# a profile's button of the interfaces that draw the head's details as a place (web,
+# terminal, phone): the windows show them in the profile's tab itself
+PLACES_ONLY = {"details"}
+
 
 def wait_until(cond, timeout=10):
     end = time.monotonic() + timeout
@@ -192,7 +196,7 @@ class Reference(Driver):
         rel = self.view.relationship(acc_id).result(timeout=10)
         own = bool(self.view.me and acc.id == self.view.me.id)
         return [a.key for a in prof.actions(acc, rel, own, self.view.cfg, self.view.supports,
-                                            lists=True)]
+                                            lists=True, collections=True)]
 
     def profile_act(self, acc_id, key):
         acc = self.view.account(acc_id).result(timeout=10)
@@ -290,7 +294,7 @@ class Web(Driver):
     def profile(self, acc_id):
         # "details" opens what the windows show in the profile tab's head itself
         return [a["key"] for a in self.req(f"/api/account?id={acc_id}")["actions"]
-                if a["key"] != "details"]
+                if a["key"] not in PLACES_ONLY]
 
     def profile_act(self, acc_id, key):
         got = self.req("/api/profile_act", {"id": acc_id, "key": key})
@@ -520,7 +524,7 @@ class Tui(Driver):
 
     def profile(self, acc_id):
         screen = self._profile(acc_id)
-        keys = [a.key for a in screen.buttons() if a.key != "details"]  # as Web's
+        keys = [a.key for a in screen.buttons() if a.key not in PLACES_ONLY]  # as Web's
         self.run(self._pop())
         return keys
 
@@ -729,7 +733,8 @@ class Qt(_Window):
         w = self._profile(acc_id)
         keys = [a.key for a in prof.actions(w.acc, w.relation, w.mine, self.core.cfg,
                                             self.core.supports,
-                                            lists=self.win.ctx.fill_list_menu is not None)]
+                                            lists=self.win.ctx.fill_list_menu is not None,
+                                            collections=True)]
         if w.mine:
             keys.insert(0, "edit_profile")
         return keys
@@ -740,7 +745,8 @@ class Qt(_Window):
         from fedtail.frontends.common import profile as prof
         w = self._profile(acc_id)
         acts = {a.key: a.label for a in prof.actions(w.acc, w.relation, w.mine, self.core.cfg,
-                                                     self.core.supports, lists=True)}
+                                                     self.core.supports, lists=True,
+                                                     collections=True)}
         label = acts.get(key)
         btn = next((b for b in w.findChildren(QPushButton) if b.text() == label), None)
         if btn is None:
@@ -858,7 +864,8 @@ class Gtk(_Window):
         rel = self.view.relationship(acc_id).result(10)
         me = self.view.me
         return [a.key for a in prof.actions(acc, rel, bool(me and me.id == acc_id),
-                                            self.core.cfg, self.view.supports, lists=True)]
+                                            self.core.cfg, self.view.supports, lists=True,
+                                            collections=True)]
 
     def profile_act(self, acc_id, key):
         from fedtail.frontends.common import profile as prof

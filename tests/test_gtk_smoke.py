@@ -590,6 +590,24 @@ class GtkSmokeTest(_GtkBase):
             for w in _walk(pop)), 3))
         pop.popdown()
 
+    def test_collections_in_a_place_window(self):
+        """Collections (Mastodon 4.6): the shared place in a window of its own — made
+        from its form, someone put in from "Add to collection", as the web page does."""
+        pw = self.win.open_place("collections")
+        self.assertTrue(pump(lambda: "name" in pw.fields, 3))
+        pw.fields["name"][1].set_text("Друзья")
+        pw.press(pw.places.page("collections").submit)
+        self.assertTrue(pump(lambda: len(self.world.collections) == 1, 3))
+        cid = next(iter(self.world.collections))
+        put = self.win.open_place("collect", "B")
+        self.assertTrue(pump(lambda: put.rows.get_first_child() is not None and
+                             any(isinstance(w, Gtk.Button) for w in _walk(put.rows)), 3))
+        toggle = next(w for w in _walk(put.rows) if isinstance(w, Gtk.Button))
+        toggle.emit("clicked")
+        self.assertTrue(pump(lambda: self.world.collections[cid]["members"], 3))
+        pw.window.close()
+        put.window.close()
+
     def test_a_lists_menu_in_the_sidebar(self):
         """A right click on a list: who's in it, up/down, rename, exclusive, delete —
         as in Qt; on another lane: a new list."""

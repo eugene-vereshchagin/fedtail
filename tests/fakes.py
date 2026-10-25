@@ -188,6 +188,73 @@ class FakeApi:
             raise ApiError(404, "not found")
         return self.w.featured[acc_id].get("tags", [])
 
+    # ---- collections (Mastodon 4.6) ------------------------------------------------
+    def _coll(self, cid):
+        c = self.w.collections.get(str(cid))
+        if c is None:
+            raise ApiError(404, "not found")
+        return c
+
+    def _coll_out(self, c):
+        return {k: v for k, v in c.items() if k != "members"} | {
+            "item_count": len(c["members"]),
+            "items": [{"id": i, "account_id": a, "state": st} for i, (a, st) in
+                      c["members"].items()]}
+
+    def collections_of(self, acc_id, limit=40, offset=0):
+        self._need("collections")
+        mine = acc_id == self.w.me["id"]
+        return [self._coll_out(c) for c in self.w.collections.values()
+                if c["account_id"] == acc_id and (mine or c["discoverable"])]
+
+    def in_collections(self, acc_id, limit=40, offset=0):
+        self._need("collections")
+        return [self._coll_out(c) for c in self.w.collections.values()
+                if any(a == acc_id for a, _s in c["members"].values())]
+
+    def collection(self, cid):
+        self._need("collections")
+        c = self._coll(cid)
+        out = self._coll_out(c)
+        ids = {a for a, _s in c["members"].values()}
+        known = {a["id"]: a for a in (BOB, ME, NEWS)}
+        return {"collection": out, "accounts": [known[i] for i in ids if i in known]}
+
+    def create_collection(self, name, description="", discoverable=True, sensitive=False,
+                          account_ids=()):
+        self._need("collections")
+        self.w.seq += 1
+        cid = f"C{self.w.seq}"
+        self.w.collections[cid] = {"id": cid, "account_id": self.w.me["id"], "name": name,
+                                   "description": description, "discoverable": discoverable,
+                                   "sensitive": sensitive, "members": {}}
+        return self._coll_out(self.w.collections[cid])
+
+    def update_collection(self, cid, name, description="", discoverable=True, sensitive=False):
+        c = self._coll(cid)
+        c.update(name=name, description=description, discoverable=discoverable,
+                 sensitive=sensitive)
+        return self._coll_out(c)
+
+    def delete_collection(self, cid):
+        self.w.collections.pop(str(cid), None)
+        return {}
+
+    def collection_add(self, cid, acc_id):
+        c = self._coll(cid)
+        if acc_id in self.w.no_featuring:
+            raise ApiError(422, "not allowed")
+        self.w.seq += 1
+        c["members"][f"I{self.w.seq}"] = (acc_id, "accepted")
+        return {"id": f"I{self.w.seq}", "account_id": acc_id, "state": "accepted"}
+
+    def collection_remove(self, cid, item_id):
+        self._coll(cid)["members"].pop(item_id, None)
+        return {}
+
+    def collection_revoke(self, cid, item_id):
+        return self.collection_remove(cid, item_id)
+
     def endorsements(self, acc_id):
         return self.w.featured.get(acc_id, {}).get("people", [])
 
@@ -729,6 +796,8 @@ class World:
         self.follow_opts = {}
         self.activity = []
         self.following = set()
+        self.collections = {}  # id -> {name, …, members: {item id: (account id, state)}}
+        self.no_featuring = set()  # accounts that don't allow being put in collections
         self.followed_tags = set()
         self.muted, self.blocked, self.filters = set(), set(), {}
         self.mute_terms = {}  # acc_id -> {duration, notifications} the mute was made with

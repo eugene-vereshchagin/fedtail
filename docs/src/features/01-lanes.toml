@@ -411,17 +411,18 @@ details.en = "fedtail as a messenger of the 2000s — QIP, the Mail.ru Agent, Ps
 
 [[feature]]
 id = "collections"
-status = "planned"
-name.ru = "Коллекции (Mastodon 4.6)"
-name.en = "Collections (Mastodon 4.6)"
-config = "—"
-api = "`/api/v1/collections`"
+status = "has"
+android = "has"
+since = "0.20.0"
+name.ru = "Подборки людей (Mastodon 4.6)"
+name.en = "Collections of people (Mastodon 4.6)"
+config.ru = "≡ → «Мои подборки»; в профиле — «В подборку…», «Подборки»"
+config.en = "≡ → “My collections”; on a profile — “Add to collection…”, “Collections”"
+api = "`/api/v1/collections`, `/api/v1/accounts/:id/collections`, `…/in_collections`"
 others = "Mastodon 4.6, Fedilab"
-clients = ["Fedilab"]
-size.ru = "когда будут в GoToSocial"
-size.en = "once GoToSocial has them"
-details.ru = "Подборки аккаунтов, которыми делятся. Делаем, когда появятся в GoToSocial."
-details.en = "Shared sets of accounts. Coming once GoToSocial has them."
+clients = ["Mastodon web", "Fedilab"]
+details.ru = "Подборки аккаунтов, которыми делятся (Mastodon 4.6): свои — завести, назвать, описать, показывать ли в профиле, удалить; человека — в подборку из его профиля (если он разрешает попадать в подборки) и обратно; чужие подборки — из профиля; те, где есть ты, — выйти из них. Сервер без подборок (GoToSocial) — пункта нет."
+details.en = "Shared sets of accounts (Mastodon 4.6): yours — made, named, described, shown on the profile or not, deleted; someone into one from their profile (if they allow being in collections) and out again; other people's from their profile; the ones you're in — leave them. A server without collections (GoToSocial) — no item."
 
 [[feature]]
 id = "remote-public-timeline"

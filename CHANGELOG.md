@@ -36,6 +36,10 @@
   list's end, on the web page and the phone (the windows had it).
 - The window no longer waits for a poll's write to read a lane: reads have a connection
   of their own (SQLite's WAL lets them go on) — the short freezes on the store's lock.
+- Collections (Mastodon 4.6) in every interface: yours made, named, described, shown on
+  the profile or not, deleted; someone into one from their profile (if they allow it); other
+  people's from their profile; the ones you're in — leave them. The windows show them, and
+  any place without a widget of its own, in a place window (qt/place.py, gtk/place.py).
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

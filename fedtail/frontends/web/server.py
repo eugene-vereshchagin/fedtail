@@ -299,6 +299,7 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
 # a profile's buttons (common/profile.py): every one
 WEB_PROFILE_ACTS = ("details", "edit_profile", "follow", "bell", "boosts", "langs",
                     "mention", "mute", "block", "remove_follower", "endorse", "lists",
+                    "collections", "collect",
                     "following", "followers", "note", "copy_handle", "open_browser")
 
 
@@ -1082,7 +1083,7 @@ class Web:
         from ..common import profile as prof
         acts = [{"key": a.key, "label": a.label, "tip": a.tip, "primary": a.primary}
                 for a in prof.actions(acc, rel, own, core.cfg, core.supports, lists=True,
-                                      details=True)
+                                      collections=True, details=True)
                 if a.key in WEB_PROFILE_ACTS] if acc else []
         since = rel is not None and rel.following and core.followed_since(acc_id, rel)
         return {"account": info,

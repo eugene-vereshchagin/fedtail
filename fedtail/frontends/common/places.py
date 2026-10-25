@@ -118,8 +118,9 @@ PLACES = {
     "probe": "probe_tab", "announcements": "announce_title", "profile_info": "profile_title",
     "filter": "filter_edit", "link": "link_posts", "remote": "remote_public",
     "accounts": "accounts", "login": "login_step2",
+    "collections": "collections_mine", "collection": "collections", "collect": "collect",
 }
-MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
+MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts",
         "settings", "help", "news", "about", "issue", "federation")
@@ -164,6 +165,8 @@ class Places(MorePlaces, AccountPlaces):
             if n == "filtered" and not sup("filtered"):
                 continue
             if n == "trends" and not sup("trends"):
+                continue
+            if n == "collections" and not sup("collections"):
                 continue
             if n in ("suggestions", "directory") and not sup(n):
                 continue
@@ -444,6 +447,162 @@ class Places(MorePlaces, AccountPlaces):
             return Out(error=_("list_name_q"))
         _wait(self.view.create_list(title, False, add=acc_id))
         return Out(refresh=True, message=_("list_created", title=title))
+
+    # ---- collections (Mastodon 4.6): people put forward together ------------------------
+    def _p_collections(self, acc_id, tab, _cur):
+        """Mine (arg "": made here, renamed, deleted; the ones I'm in, to leave) or
+        someone's (their discoverable ones)."""
+        v = self.view
+        me = v.me
+        mine = not acc_id or (me and acc_id == me.id)
+        if mine:
+            tab = tab or "own"
+            page = Page("collections", _("collections_mine"), tab=tab, empty="—", tabs=(
+                ("own", _("collections_own")), ("in", _("collections_in"))))
+            got = _wait(v.collections_of(me.id) if tab == "own" else v.in_collections(me.id))
+        else:
+            acc = _wait(v.account(acc_id))
+            page = Page("collections", _("collections_of", acct="@" + (acc.handle if acc
+                                                                       else acc_id)),
+                        arg=acc_id, empty="—")
+            got = _wait(v.collections_of(acc_id))
+        for c in got or ():
+            cid = str(c.get("id"))
+            n = int(c.get("item_count") or len(c.get("items") or ()))
+            line = " · ".join(b for b in (
+                _("collection_people", n=n), "" if c.get("discoverable", True) else
+                _("collection_hidden"), _("collection_sensitive") if c.get("sensitive")
+                else "", str(c.get("description") or "")) if b)
+            btns = [self._btn(_("open_action"), "collection", "open", cid, primary=True)]
+            if mine and tab == "own":
+                btns.append(self._btn(_("collection_delete"), "collections", "delete", cid))
+            page.rows.append(Row("item", str(c.get("name") or "—"), line, key=cid,
+                                 buttons=tuple(btns)))
+        if mine and tab == "own":
+            page.form = self._collection_form()
+            page.submit = self._btn(_("collection_new"), "collections", "new", primary=True)
+        return page
+
+    @staticmethod
+    def _collection_form(c=None):
+        c = c or {}
+        return (Field("name", _("collection_name"), str(c.get("name") or "")),
+                Field("description", _("collection_about"), str(c.get("description") or ""),
+                      "text"),
+                Field("discoverable", _("collection_discoverable"),
+                      bool(c.get("discoverable", True)), "check",
+                      tip=_("collection_discoverable_tip")),
+                Field("sensitive", _("collection_sensitive"), bool(c.get("sensitive")),
+                      "check"))
+
+    def _collection_values(self, values):
+        name = str(values.get("name") or "").strip()
+        if not name:
+            return None
+        return (name, str(values.get("description") or ""),
+                values.get("discoverable") is not False, values.get("sensitive") is True)
+
+    def _a_collections_new(self, _d, values, _c, _ans):
+        got = self._collection_values(values)
+        if got is None:
+            return Out(error=_("collection_name"))
+        _wait(self.view.save_collection(None, *got))
+        return Out(refresh=True, message=_("collection_made", name=got[0]))
+
+    def _a_collections_delete(self, cid, _v, confirmed, _ans):
+        if not confirmed:
+            return Out(confirm=_("collection_delete_q"))
+        _wait(self.view.delete_collection(cid))
+        return Out(refresh=True)
+
+    def _a_collection_open(self, cid, _v, _c, _ans):
+        return Out(open={"page": "collection", "arg": cid})
+
+    def _p_collection(self, cid, _tab, _cur):
+        """One collection: its people (an owner sees who hasn't said yes yet); mine —
+        renamed, described, someone taken out; someone else's with me in it — I leave."""
+        v = self.view
+        got = _wait(v.collection(cid))
+        c = got.get("collection") or {}
+        me = v.me
+        mine = bool(me and str(c.get("account_id")) == me.id)
+        page = Page("collection", str(c.get("name") or _("collections")), arg=cid,
+                    hint=str(c.get("description") or ""), empty="—")
+        for item_id, state, a in got.get("members") or ():
+            btns = []
+            if mine:
+                btns.append(self._btn(_("collection_remove"), "collection", "remove",
+                                      f"{cid} {item_id}"))
+            elif me and a.id == me.id:
+                btns.append(self._btn(_("collection_leave"), "collection", "leave",
+                                      f"{cid} {item_id}"))
+            row = self._person(a, None, extra=tuple(btns))
+            if state and state != "accepted":
+                row.line = " · ".join(x for x in (row.line, _("collection_pending")) if x)
+            page.rows.append(row)
+        if mine:
+            page.form = self._collection_form(c)
+            page.submit = self._btn(_("save"), "collection", "save", cid, primary=True)
+        return page
+
+    def _a_collection_save(self, cid, values, _c, _ans):
+        got = self._collection_values(values)
+        if got is None:
+            return Out(error=_("collection_name"))
+        _wait(self.view.save_collection(cid, *got))
+        return Out(refresh=True, message=_("collection_saved"))
+
+    def _a_collection_remove(self, data, _v, _c, _ans):
+        cid, item_id = data.split(" ", 1)
+        _wait(self.view.collection_remove(cid, item_id))
+        return Out(refresh=True)
+
+    def _a_collection_leave(self, data, _v, confirmed, _ans):
+        if not confirmed:
+            return Out(confirm=_("collection_leave_q"))
+        cid, item_id = data.split(" ", 1)
+        _wait(self.view.collection_revoke(cid, item_id))
+        return Out(refresh=True, message=_("collection_left"))
+
+    def _p_collect(self, acc_id, _tab, _cur):
+        """"Add to collection" for someone: my collections, ticked where they are."""
+        v = self.view
+        acc = _wait(v.account(acc_id))
+        page = Page("collect", _("collect"), arg=acc_id, hint=acc_line(acc), empty="—")
+        for c in _wait(v.collections_of(v.me.id)) or ():
+            cid = str(c.get("id"))
+            item = next((str(it.get("id")) for it in c.get("items") or ()
+                         if str(it.get("account_id")) == acc_id), None)
+            on = item is not None
+            page.rows.append(Row("item", ("☑ " if on else "☐ ") + str(c.get("name") or "—"),
+                                 key=cid, buttons=(self._btn(
+                                     _("collection_remove") if on else _("collect"), "collect",
+                                     "toggle", f"{cid} {acc_id} {item or ''}"),)))
+        page.form = (Field("name", _("collection_name")),)
+        page.submit = self._btn(_("collection_new"), "collect", "new", acc_id, primary=True)
+        return page
+
+    def _a_collect_toggle(self, data, _v, _c, _ans):
+        cid, acc_id, item = (data.split(" ") + [""])[:3]
+        if item:
+            _wait(self.view.collection_remove(cid, item))
+            return Out(refresh=True, message=_("collection_taken_out"))
+        try:
+            _wait(self.view.collection_add(cid, acc_id))
+        except Exception as e:  # noqa: BLE001 — they don't allow it (feature_approval)
+            return Out(error=_("collection_refused", err=e))
+        return Out(refresh=True, message=_("collection_added"))
+
+    def _a_collect_new(self, acc_id, values, _c, _ans):
+        name = str(values.get("name") or "").strip()
+        if not name:
+            return Out(error=_("collection_name"))
+        made = _wait(self.view.save_collection(None, name))
+        try:
+            _wait(self.view.collection_add(str(made.get("id")), acc_id))
+        except Exception as e:  # noqa: BLE001
+            return Out(refresh=True, error=_("collection_refused", err=e))
+        return Out(refresh=True, message=_("collection_made", name=name))
 
     # ---- search -----------------------------------------------------------------------
     def _p_search(self, q, tab, _cur):

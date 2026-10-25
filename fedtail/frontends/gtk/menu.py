@@ -51,6 +51,7 @@ class MainMenu:
         a("directory", lambda: win.open_directory(False))
         a("directory_local", lambda: win.open_directory(True))
         a("trends", win.open_trends)
+        a("collections", lambda: win.open_place("collections"))
         a("remote_lane", win.ask_remote_lane)
         a("profile", win.my_profile)
         a("server", win.show_server_info)
@@ -151,6 +152,8 @@ class MainMenu:
                 ("trends", _("trends_title"), "trends")):
             if supports(feature) and (feature != "trends" or trends):
                 _item(people, label, action)
+        if supports("collections"):  # Mastodon 4.6: people put forward together
+            _item(people, _("collections_mine") + "…", "collections")
         _item(people, _("remote_public"), "remote_lane", hint=_("remote_public_tip"))
         if people.get_n_items():
             first.append_submenu(_("menu_people"), people)

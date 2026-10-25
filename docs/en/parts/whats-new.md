@@ -1,6 +1,7 @@
 **0.20.0 (in progress):**
 
 - Whose replies a list shows
+- Collections of people (Mastodon 4.6)
 - Another server's public timeline
 - A link's timeline (Mastodon 4.3+)
 - In a profile: posts, posts and replies, media

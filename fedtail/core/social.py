@@ -336,6 +336,68 @@ class SocialMixin:
             return rel
         return self.submit(job)
 
+    # ---- collections (Mastodon 4.6): people put forward together -------------------
+    COLLECTION_NAME_MAX = 40
+    COLLECTION_ABOUT_MAX = 100
+    COLLECTION_PEOPLE_MAX = 25
+
+    def collections_of(self, acc_id):
+        """Someone's collections — mine all, another's the discoverable ones: a future
+        of [collection] (id, name, description, item_count, discoverable, sensitive…)."""
+        return self.submit(lambda: list(self._api("collections", self.api.collections_of,
+                                                  acc_id) or []))
+
+    def in_collections(self, acc_id):
+        """The collections someone is featured in."""
+        return self.submit(lambda: list(self._api("collections", self.api.in_collections,
+                                                  acc_id) or []))
+
+    def collection(self, cid):
+        """One collection: {"collection", "members": [(item id, state, account)]} — its
+        owner sees the pending ones too, the rest only who accepted."""
+        def job():
+            got = self._api("collections", self.api.collection, cid) or {}
+            coll = got.get("collection") or got
+            accounts = {a["id"]: a for a in got.get("accounts") or [] if isinstance(a, dict)}
+            members = [(str(it.get("id")), str(it.get("state") or ""),
+                        accounts.get(str(it.get("account_id"))))
+                       for it in coll.get("items") or [] if isinstance(it, dict)]
+            return {"collection": coll, "members": [m for m in members if m[2]]}
+        return self.submit(job)
+
+    def save_collection(self, cid, name, description="", discoverable=True, sensitive=False):
+        """A collection of mine made (cid None) or renamed and described anew."""
+        name = str(name or "").strip()[:self.COLLECTION_NAME_MAX]
+        description = str(description or "").strip()[:self.COLLECTION_ABOUT_MAX]
+        if not name:
+            raise ValueError("name")
+
+        def job():
+            if cid:
+                return self._api("collections", self.api.update_collection, cid, name,
+                                 description, discoverable, sensitive)
+            return self._api("collections", self.api.create_collection, name, description,
+                             discoverable, sensitive)
+        return self.submit(job)
+
+    def delete_collection(self, cid):
+        return self.submit(lambda: self._api("collections", self.api.delete_collection, cid))
+
+    def collection_add(self, cid, acc_id):
+        """Someone into my collection (they must allow it: their account's
+        feature_approval; the server refuses otherwise)."""
+        return self.submit(lambda: self._api("collections", self.api.collection_add, cid,
+                                             acc_id))
+
+    def collection_remove(self, cid, item_id):
+        return self.submit(lambda: self._api("collections", self.api.collection_remove, cid,
+                                             item_id))
+
+    def collection_revoke(self, cid, item_id):
+        """Me out of someone else's collection."""
+        return self.submit(lambda: self._api("collections", self.api.collection_revoke, cid,
+                                             item_id))
+
     def feature_tag(self, name, on=True):
         """A tag on my profile (featured tags), or off it."""
         name = name.lstrip("#")

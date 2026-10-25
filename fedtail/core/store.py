@@ -4,8 +4,8 @@ One connection shared by all threads, serialised with a lock. Every
 method is a short transaction, so contention is negligible.
 """
 
-import hashlib
 import contextlib
+import hashlib
 import json
 import logging
 import sqlite3

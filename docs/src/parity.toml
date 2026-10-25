@@ -41,6 +41,22 @@ keys = ["account_add", "account_add_q", "account_bad_name", "accounts",
         "logout_switch", "not_logged_in"]
 
 [[capability]]
+id = "collections"
+area = "window"
+android = "has"
+name.ru = "Подборки людей (Mastodon 4.6)"
+name.en = "Collections of people (Mastodon 4.6)"
+note.ru = "Подборки — место (common/places.py): веб, терминал и телефон рисуют его как все места, окна — в окне места (qt/place.py, gtk/place.py)."
+note.en = "Collections are a place (common/places.py): the web page, the terminal and the phone draw it as every place, the windows in a place window (qt/place.py, gtk/place.py)."
+keys = ["collect", "collect_tip", "collections", "collections_mine", "collections_own",
+        "collections_in", "collections_of", "collection_people", "collection_hidden",
+        "collection_sensitive", "collection_delete", "collection_delete_q", "collection_new",
+        "collection_name", "collection_about", "collection_discoverable",
+        "collection_discoverable_tip", "collection_made", "collection_remove",
+        "collection_leave", "collection_leave_q", "collection_left", "collection_pending",
+        "collection_taken_out", "collection_added", "collection_saved", "collection_refused"]
+
+[[capability]]
 id = "merge"
 area = "window"
 android = "has"

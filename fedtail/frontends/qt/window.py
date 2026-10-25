@@ -270,6 +270,10 @@ class _LinkHost:
     def put_alias(self, alias):
         self.win.cmdline.put_alias(alias)
 
+    def _place(self, name, arg="", tab=""):
+        """A place of common/places.py (collections, a profile's details…): its window."""
+        self.win.open_place(name, arg, tab)
+
     def open_lists(self, acc):
         """"Add to list" (common/profile.py): the lists menu at the pointer."""
         from PySide6.QtGui import QCursor
@@ -998,6 +1002,8 @@ class MainWindow(QMainWindow):
                 ("trends", _("trends_title"), self.open_trends)):
             if self.core.supports(feature) and (feature != "trends" or trends):
                 people.addAction(label, slot)
+        if self.core.supports("collections"):  # Mastodon 4.6: people put forward together
+            people.addAction(_("collections_mine") + "…", lambda: self.open_place("collections"))
         remote = people.addAction(_("remote_public"), self.ask_remote_lane)
         remote.setToolTip(_("remote_public_tip"))
         people.setToolTipsVisible(True)
@@ -1824,6 +1830,15 @@ class MainWindow(QMainWindow):
         w = TalkWidget(self, account)
         self._add_tab(w, w.title)
         return w
+
+    def open_place(self, name, arg="", tab=""):
+        """A place of common/places.py in a window of its own (qt/place.py): collections,
+        and any place the windows have no widget of their own for."""
+        from .place import PlaceDialog
+        dlg = PlaceDialog(self, name, arg, tab)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dlg.show()
+        return dlg
 
     def open_account(self, acc_id):
         for w in self.extra_tabs():

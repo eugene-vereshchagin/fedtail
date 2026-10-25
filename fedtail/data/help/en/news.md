@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **0.20.0 (in progress):**
 
 - Whose replies a list shows
+- Collections of people (Mastodon 4.6)
 - Another server's public timeline
 - A link's timeline (Mastodon 4.3+)
 - In a profile: posts, posts and replies, media
@@ -44,7 +45,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Collections (Mastodon 4.6) | Lanes | — | once GoToSocial has them |
 | Toga (BeeWare) | Interfaces | — | large |
 | An apt repository of its own | Builds and installing | — | — |
 | An installer and a signature for Windows | Builds and installing | — | — |

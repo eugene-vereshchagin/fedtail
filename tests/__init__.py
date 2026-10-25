@@ -80,7 +80,10 @@ def _end_with_the_results():
             # _exit too): TerminateProcess skips that as well. Not os.kill: its 0 and 1
             # are Ctrl+C and Ctrl+Break to the whole console (the pipe's tee too)
             import ctypes
+            from ctypes import wintypes
             k32 = ctypes.windll.kernel32
+            k32.GetCurrentProcess.restype = wintypes.HANDLE
+            k32.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
             k32.TerminateProcess(k32.GetCurrentProcess(), code)
         _os._exit(code)
 

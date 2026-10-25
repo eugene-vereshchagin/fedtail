@@ -1353,6 +1353,29 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(tab.view.order[0], "pin:011")
         self.assertNotIn("011", tab.view.rows)  # not twice
 
+    def test_collections_in_a_place_window(self):
+        """Collections (Mastodon 4.6): the shared place in a window of its own (qt/place.py)
+        — made from its form, someone put in from "Add to collection"."""
+        from PySide6.QtWidgets import QPushButton
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        dlg = self.win.open_place("collections")
+        self.pump(until=lambda: "name" in dlg.fields)
+        dlg.fields["name"][1].setText("Друзья")
+        dlg.press(dlg.page.submit)
+        self.pump(until=lambda: len(self.world.collections) == 1)
+        cid = next(iter(self.world.collections))
+        put = self.win.open_place("collect", "B")
+        self.pump(until=lambda: put.page is not None and put.page.rows)
+        self.pump(0.2)
+        toggle = next(b for b in put.findChildren(QPushButton)
+                      if b.text() == i18n._("collect"))
+        toggle.click()
+        self.pump(until=lambda: self.world.collections[cid]["members"])
+        self.assertTrue(self.world.collections[cid]["members"])
+        dlg.close()
+        put.close()
+
     def test_featured_on_profile(self):
         from PySide6.QtWidgets import QLabel
 

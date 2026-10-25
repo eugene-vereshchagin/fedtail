@@ -1839,7 +1839,8 @@ class AccountWidget(_PagedTab):
         # what they do too (prof.do through the window's link host), but for the private
         # note (several lines here) and the lists (a menu on the button)
         for act in prof.actions(acc, rel, self.mine, self.core.cfg, self.core.supports,
-                                lists=self.win.ctx.fill_list_menu is not None):
+                                lists=self.win.ctx.fill_list_menu is not None,
+                                collections=True):
             if act.key == "edit_profile":
                 continue  # in the header already
             name = "primary" if act.primary else "tool"

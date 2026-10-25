@@ -489,6 +489,51 @@ class Api:
     def endorsements(self, acc_id):
         return self.get(f"/api/v1/accounts/{seg(acc_id)}/endorsements", {"limit": 40}) or []
 
+    # ---- collections (Mastodon 4.6, API version 10): people put forward together ----------
+    def collections_of(self, acc_id, limit=40, offset=0):
+        """Someone's collections (theirs alone: the discoverable ones, mine: every one)."""
+        got = self.get(f"/api/v1/accounts/{seg(acc_id)}/collections",
+                       {"limit": limit, "offset": offset}) or {}
+        return got.get("collections", got) if isinstance(got, dict) else got
+
+    def in_collections(self, acc_id, limit=40, offset=0):
+        """The collections someone is featured in."""
+        got = self.get(f"/api/v1/accounts/{seg(acc_id)}/in_collections",
+                       {"limit": limit, "offset": offset}) or {}
+        return got.get("collections", got) if isinstance(got, dict) else got
+
+    def collection(self, cid):
+        """One collection with its people: {collection, accounts}."""
+        return self.get(f"/api/v1/collections/{seg(cid)}")
+
+    def create_collection(self, name, description="", discoverable=True, sensitive=False,
+                          account_ids=()):
+        data = {"name": name, "description": description,
+                "discoverable": "true" if discoverable else "false",
+                "sensitive": "true" if sensitive else "false"}
+        if account_ids:
+            data["account_ids[]"] = list(account_ids)
+        return self.post("/api/v1/collections", data=data)
+
+    def update_collection(self, cid, name, description="", discoverable=True, sensitive=False):
+        return self.patch(f"/api/v1/collections/{seg(cid)}", data={
+            "name": name, "description": description,
+            "discoverable": "true" if discoverable else "false",
+            "sensitive": "true" if sensitive else "false"})
+
+    def delete_collection(self, cid):
+        return self.delete(f"/api/v1/collections/{seg(cid)}")
+
+    def collection_add(self, cid, acc_id):
+        return self.post(f"/api/v1/collections/{seg(cid)}/items", data={"account_id": acc_id})
+
+    def collection_remove(self, cid, item_id):
+        return self.delete(f"/api/v1/collections/{seg(cid)}/items/{seg(item_id)}")
+
+    def collection_revoke(self, cid, item_id):
+        """Out of someone else's collection, by my own wish."""
+        return self.post(f"/api/v1/collections/{seg(cid)}/items/{seg(item_id)}/revoke")
+
     def pin(self, sid, on=True):
         return self.post(f"/api/v1/statuses/{seg(sid)}/{'pin' if on else 'unpin'}")
 

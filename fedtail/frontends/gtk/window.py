@@ -862,6 +862,15 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import lists
         return lists.lane_menu(self, row)
 
+    def open_place(self, name, arg="", tab=""):
+        """A place of common/places.py in a window of its own (gtk/place.py): collections,
+        and any place the windows have no widget of their own for."""
+        from .place import PlaceWindow
+        return PlaceWindow(self, name, arg, tab)
+
+    def _place(self, name, arg="", tab=""):  # common/profile.py's word for it
+        return self.open_place(name, arg, tab)
+
     def open_lists(self, account):
         """"Add to list" from common/profile.py: the popover by what has the focus (the
         profile's own button opens it by itself, at the button)."""
@@ -1691,7 +1700,8 @@ class MainWindow(Gtk.ApplicationWindow):
             meta.set_visible(bool(bits))
             while (c := buttons.get_first_child()) is not None:
                 buttons.remove(c)
-            for act in prof.actions(acc, rel, own, self.cfg, self.view.supports, lists=True):
+            for act in prof.actions(acc, rel, own, self.cfg, self.view.supports, lists=True,
+                                    collections=True):
                 b = Gtk.Button(label=act.label)
                 if act.primary:
                     b.add_css_class("ft-primary")

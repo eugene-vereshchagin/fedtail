@@ -53,9 +53,11 @@ def meta(acc, rel, date, followed_since=None, software=""):
     return bits
 
 
-def actions(acc, rel, mine, cfg, supports, lists=False, details=False):
+def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collections=False):
     """The profile's buttons, in order. details: "Profile…" — the head's details as a
-    place of its own (the web page and the terminal: the windows show them in the tab)."""
+    place of its own (the web page and the terminal: the windows show them in the tab);
+    collections: "Add to collection…" and "Collections" (Mastodon 4.6), places all the
+    interfaces draw — the windows in a place window (qt/place.py, gtk/place.py)."""
     rel = rel or Relationship()
     out = []
     if mine:
@@ -85,6 +87,8 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False):
                            _("endorse_tip")))
         if lists:
             out.append(Act("lists", _("add_to_list")))
+        if collections and supports("collections"):
+            out.append(Act("collect", _("collect"), _("collect_tip")))
     for which, n in (("following", acc.following), ("followers", acc.followers)):
         if n:
             out.append(Act(which, _(f"people_{which}_n", n=n)))
@@ -93,6 +97,8 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False):
     out.append(Act("copy_handle", _("copy_handle"), _("copy_handle_tip")))
     if acc.url:
         out.append(Act("open_browser", _("open_browser")))
+    if collections and supports("collections"):
+        out.append(Act("collections", _("collections_mine") if mine else _("collections")))
     if details:
         out.append(Act("details", "ℹ " + _("profile_title") + "…"))
     return out
@@ -176,3 +182,7 @@ def do(key, acc, rel, view, host, changed):
         host.open_url(acc.url)
     elif key == "details":  # the place of the profile's details (common/placesmore.py)
         host._place("profile_info", acc.id)
+    elif key == "collections":  # theirs, or mine (common/places.py)
+        host._place("collections", "" if view.me and acc.id == view.me.id else acc.id)
+    elif key == "collect":  # "Add to collection": mine, a tick where they are
+        host._place("collect", acc.id)

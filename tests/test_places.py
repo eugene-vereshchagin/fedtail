@@ -50,6 +50,8 @@ class PlacesTest(unittest.TestCase):
         args["list_people"] = self.view.lists[0].id
         args["filter"] = self.core.add_filter("noise", ["nft"]).result()["id"]
         args["link"] = "https://news.example/a"
+        args["collection"] = self.core.save_collection(None, "Друзья").result()["id"]
+        args["collect"] = "B"
         for name in PLACES:
             with self.subTest(place=name):
                 try:
@@ -59,6 +61,41 @@ class PlacesTest(unittest.TestCase):
                 self.assertTrue(p.title)
                 for t, _w in p.tabs:
                     self.page(name, args.get(name, ""), t)
+
+    def test_collections(self):
+        """Mastodon 4.6's collections: made, someone put in from their profile, seen,
+        taken out; someone who doesn't allow it — said why; a server without them — no
+        place in the menu."""
+        p = self.page("collections")
+        self.press(p, key="new", values={"name": "Друзья", "description": "мои люди",
+                                         "discoverable": True})
+        p = self.page("collections")
+        self.assertEqual([r.title for r in p.rows], ["Друзья"])
+        cid = p.rows[0].key
+        p = self.page("collect", "B")
+        self.assertTrue(p.rows[0].title.startswith("☐"))
+        self.press(p, key="toggle")
+        p = self.page("collect", "B")
+        self.assertTrue(p.rows[0].title.startswith("☑"))
+        coll = self.page("collection", cid)
+        self.assertEqual([r.data.id for r in coll.rows], ["B"])
+        self.assertEqual(coll.hint, "мои люди")
+        self.press(coll, key="save", values={"name": "Друзья и коллеги", "discoverable": False})
+        self.assertIn(i18n._("collection_hidden"), self.page("collections").rows[0].line)
+        self.press(self.page("collection", cid), key="remove")
+        self.assertEqual(self.page("collection", cid).rows, [])
+        self.w.no_featuring.add("N")
+        p = self.page("collect", "N")
+        out = self.pl.act(*p.rows[0].buttons[0].act)
+        self.assertTrue(out.error)
+        self.press(self.page("collections"), key="delete", confirmed=True)
+        self.assertEqual(self.page("collections").rows, [])
+        self.assertIn("collections", [n for n, _t in self.pl.menu()])
+        self.w.missing.add("collections")
+        from fedtail.core.social import NotSupported
+        with self.assertRaises(NotSupported):
+            self.page("collections")
+        self.assertNotIn("collections", [n for n, _t in self.pl.menu()])
 
     def test_silence(self):
         self.w.muted.add("B")
