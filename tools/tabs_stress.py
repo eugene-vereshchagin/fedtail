@@ -254,12 +254,18 @@ def holders(kind_name, roots=(), depth=6, samples=2):
             return f"{t}[{len(o)}]"
         return t
     for obj in found:
+        direct = [r for r in gc.get_referrers(obj) if id(r) not in ignore
+                  and not inspect.isframe(r)]
+        out.append(f"{kind_name} is referred to by: " + ", ".join(label(r) for r in direct[:8]))
         chain, cur = [], obj
         seen = {id(obj)}
         for _ in range(depth):
-            refs = [r for r in gc.get_referrers(cur) if id(r) not in ignore
+            got = gc.get_referrers(cur)
+            ignore.add(id(got))
+            refs = [r for r in got if id(r) not in ignore
                     and id(r) not in seen and not inspect.isframe(r)
                     and r is not chain]
+            ignore.add(id(refs))
             if not refs:
                 chain.append("(nothing in Python: held from C)")
                 break
@@ -269,6 +275,11 @@ def holders(kind_name, roots=(), depth=6, samples=2):
             cur = refs[0]
             seen.add(id(cur))
             chain.append(label(cur) + (f" (+{len(refs) - 1} more)" if len(refs) > 1 else ""))
+        try:  # a widget: how many references C has on it, and whom it hangs on
+            chain.append(f"[gref {obj.__grefcount__}, parent "
+                         f"{type(obj.get_parent()).__name__}]")
+        except Exception:  # noqa: BLE001
+            pass
         out.append(f"{kind_name} ← " + " ← ".join(chain))
     return out
 
@@ -285,7 +296,7 @@ def judge(ui):
             NOTES.append(f"{ui}: objects that grew, rounds 2…{last[1]}: "
                          + ", ".join(f"{k} +{v}" for k, v in grew.most_common(15)))
             ours = [k for k, v in grew.most_common(40) if k.startswith("fedtail.") and v > 50]
-            for k in ours[:2]:  # and who holds them
+            for k in ours[:4]:  # and who holds them
                 NOTES.extend(f"{ui}: {line}" for line in holders(k.split(".", 1)[1]))
     if last[5] - base[5] > GROW_WIDGETS:
         ERRORS.append(f"{ui}: widgets left after closing grow round after round: "
