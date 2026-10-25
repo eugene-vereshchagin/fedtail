@@ -251,7 +251,10 @@ def holders(kind_name, roots=(), depth=6, samples=2):
         if t == "cell":
             return "cell"
         if isinstance(o, (list, tuple)):
-            return f"{t}[{len(o)}]"
+            return f"{t}[{len(o)}: " + ", ".join(label(x) if not isinstance(x, (list, tuple, dict))
+                                                 else type(x).__name__ for x in o[:4]) + "]"
+        if inspect.ismethod(o):
+            return f"method {o.__func__.__qualname__}"
         return t
     for obj in found:
         direct = [r for r in gc.get_referrers(obj) if id(r) not in ignore

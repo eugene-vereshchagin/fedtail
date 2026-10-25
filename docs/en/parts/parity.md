@@ -6,8 +6,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
-| Logging in | ✓ | ✓ | — | — | You log in in the window (Qt or GTK); the terminal and the web page open a profile already logged in and tell you to log in in the window. |
-| Accounts: add, make main, log out | ✓ | ✓ | — | — | Profiles are added and switched in the window; the terminal and the web page work with the one they were started with (`--profile`). |
+| Logging in | ✓ | ✓ | ◐ | ◐ | The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. The web page itself won't start for a profile not logged in — you log in from another profile's page. |
 | The tray icon | ✓ | ✓ | · | · | A terminal and a browser tab have no tray. |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. |
 | Lanes in columns | ✓ | ✓ | · | · | One lane at a time; columns are the window's. |
@@ -31,6 +30,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal and a we
 | What | Qt | GTK | Terminal | Web | Why |
 |---|---|---|---|---|---|
 | A picture's focus for previews | ✓ | ✓ | · | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
+| Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. |
 
 ### The server, settings, help, debugging
 

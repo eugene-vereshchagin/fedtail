@@ -18,10 +18,10 @@ id = "login"
 area = "window"
 name.ru = "Вход на сервер"
 name.en = "Logging in"
-tui = "no"
-web = "no"
-note.ru = "Входят в окне (Qt или GTK); терминал и веб открывают профиль, который уже вошёл, и подсказывают войти в окне."
-note.en = "You log in in the window (Qt or GTK); the terminal and the web page open a profile already logged in and tell you to log in in the window."
+tui = "partly"
+web = "partly"
+note.ru = "Терминал и веб входят так же: адрес сервера, страница входа в браузере, код. Сам веб для профиля без входа не запускается — входят со страницы другого профиля."
+note.en = "The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. The web page itself won't start for a profile not logged in — you log in from another profile's page."
 keys = ["login_browser_opened", "login_hint", "login_other_account", "login_server",
         "login_step1", "login_step2", "login_title", "auth_failed", "auth_failed_title",
         "relogin", "relogin_q", "relogin_title"]
@@ -31,13 +31,9 @@ id = "accounts"
 area = "window"
 name.ru = "Аккаунты: добавить, главный, выйти"
 name.en = "Accounts: add, make main, log out"
-tui = "no"
-web = "no"
-note.ru = "Профили заводят и переключают в окне; терминал и веб работают с тем, с каким запущены (`--profile`)."
-note.en = "Profiles are added and switched in the window; the terminal and the web page work with the one they were started with (`--profile`)."
-keys = ["account_add", "account_add_q", "account_bad_name", "accounts", "accounts_tip",
+keys = ["account_add", "account_add_q", "account_bad_name", "accounts",
         "make_main", "made_main", "logout", "logout_last", "logout_main_moves", "logout_q",
-        "logout_switch", "logout_title", "logout_yes", "not_logged_in"]
+        "logout_switch", "not_logged_in"]
 
 [[capability]]
 id = "merge"
@@ -456,7 +452,8 @@ keys = ["close", "close_tab", "copy", "show", "open_action", "open_profile", "er
         "search_side", "search_side_tip", "long_form_wait", "menu_people", "new_options",
         "cmd_placeholder", "cmd_tip", "text_placeholder", "text_placeholder_md",
         "schedule_ok", "show_original", "sensitive_click", "cw_hide", "cw_show",
-        "a11y_no_alt", "tender_menu", "list_added", "help_close_tip"]
+        "a11y_no_alt", "tender_menu", "list_added", "help_close_tip", "logout_title",
+        "logout_yes", "accounts_tip"]
 
 [[wording]]
 in = ["web"]
@@ -542,3 +539,26 @@ in = ["web"]
 why.ru = "Уведомлениям веба некуда деться, только если браузер их не разрешил — это он и говорит своими словами (`web_notify_off`)."
 why.en = "The web page's notifications have nowhere to go only when the browser didn't allow them — and that is what it says, in its own words (`web_notify_off`)."
 keys = ["notify_nothing"]
+
+[[capability]]
+id = "spellcheck"
+area = "writing"
+name.ru = "Проверка орфографии в окне поста"
+name.en = "Spell checking in the post window"
+tui = "partly"
+web = "partly"
+note.ru = "Окна подчёркивают ошибки и правят их правым кликом; терминал — списком по F7 (подчеркнуть в поле ввода нечем); веб — встроенной проверкой браузера на языке поста."
+note.en = "The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language."
+keys = ["spell_add", "spell_none", "spell_unavailable"]
+
+[[wording]]
+in = ["qt", "gtk", "web"]
+why.ru = "Список подозрительных слов — способ терминала; окна и браузер подчёркивают их прямо в тексте."
+why.en = "The list of suspicious words is the terminal's way; the windows and the browser underline them right in the text."
+keys = ["spell_check", "spell_wrong_n", "spell_all_ok"]
+
+[[wording]]
+in = ["qt", "gtk"]
+why.ru = "Окна открывают занятый профиль поднятием его окна — сказать «профиль занят» им не нужно."
+why.en = "The windows open a busy profile by raising its window — they never need to say “the profile is busy”."
+keys = ["profile_busy"]
