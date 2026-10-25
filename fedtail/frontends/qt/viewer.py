@@ -10,13 +10,14 @@ original that won't show says why (format, network), R asks again.
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter
-from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QToolButton, QWidget
 
 from ...i18n import _
 
 FULL_SIDE = 8192
 MARGIN = 24
 CAPTION_H = 44
+ALT_SHARE = 0.3  # a description takes at most this much of the height: the rest scrolls
 BUTTONS_CSS = """
 QToolButton { background: rgba(0, 0, 0, 120); color: rgba(255, 255, 255, 210);
     border: 1px solid rgba(255, 255, 255, 60); border-radius: 8px; padding: 7px 14px; }
@@ -57,6 +58,23 @@ class ImageOverlay(QWidget):
         row.addWidget(self._button("↗", _("open_browser") + " (O)",
                                    lambda: ctx.open_url(self.url())))
         row.addWidget(self._button("✕", _("close") + " (Esc)", self.close_viewer))
+        # the description under the picture: wrapped, and past a third of the height it
+        # scrolls — a long one never covers the picture nor runs off the window
+        self.alt = QLabel()
+        self.alt.setWordWrap(True)
+        self.alt.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self.alt.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.alt.setStyleSheet("color: #ddd; background: transparent;")
+        self.alt_box = QScrollArea(self)
+        self.alt_box.setWidgetResizable(True)
+        self.alt_box.setFrameShape(QFrame.Shape.NoFrame)
+        self.alt_box.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.alt_box.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget "
+                                   "{ background: transparent; }")
+        self.alt_box.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # the keys stay with the viewer
+        self.alt_box.setWidget(self.alt)
+        self.alt_box.hide()
+        self._alt_h = 0
         self.setGeometry(window.rect())
         self.show()
         self.raise_()
@@ -72,7 +90,26 @@ class ImageOverlay(QWidget):
         b.clicked.connect(fn)
         return b
 
+    def _place_alt(self):
+        """The description's box: as tall as the text needs, at most ALT_SHARE of the
+        window (then it scrolls), right above the keys' line."""
+        text = self.media[self.i].alt.strip() if self.media else ""
+        if not text:
+            self.alt_box.hide()
+            self._alt_h = 0
+            return
+        w = max(100, self.width() - 2 * MARGIN)
+        self.alt.setText(text)
+        need = self.alt.heightForWidth(w - 20) + 6
+        h = max(24, min(need, int(self.height() * ALT_SHARE)))
+        self.alt_box.setGeometry(MARGIN, self.height() - MARGIN - CAPTION_H // 2 - h, w, h)
+        self.alt_box.verticalScrollBar().setValue(0)
+        self.alt_box.show()
+        self.alt_box.raise_()
+        self._alt_h = h
+
     def resizeEvent(self, e):
+        self._place_alt()
         self.buttons.adjustSize()
         self.buttons.move(self.width() - self.buttons.width() - MARGIN, MARGIN)
         self.buttons.raise_()
@@ -90,6 +127,7 @@ class ImageOverlay(QWidget):
         self.actual = False
         self.offset = QPointF()
         want = self.i
+        self._place_alt()  # this picture's description
         self.update()
         m = self.media[self.i]
         if m.preview and m.preview != self.url():
@@ -134,7 +172,7 @@ class ImageOverlay(QWidget):
 
     def _area(self):
         return QRectF(MARGIN, MARGIN, self.width() - 2 * MARGIN,
-                      self.height() - 2 * MARGIN - CAPTION_H)
+                      self.height() - 2 * MARGIN - CAPTION_H - self._alt_h)
 
     def image_rect(self):
         area = self._area()
@@ -163,11 +201,11 @@ class ImageOverlay(QWidget):
         n = f"{self.i + 1} / {len(self.media)}    " if len(self.media) > 1 else ""
         if self.pm is not None and (self.preview or self.problem):
             n += (self.problem or _("viewer_original_coming")) + "    "
-        desc = m.alt.replace("\n", " ")
-        cap = QRectF(MARGIN, self.height() - MARGIN - CAPTION_H, self.width() - 2 * MARGIN,
-                     CAPTION_H)
+        del m  # its description is the box's (_place_alt), not painted
+        cap = QRectF(MARGIN, self.height() - MARGIN - CAPTION_H - self._alt_h,
+                     self.width() - 2 * MARGIN, CAPTION_H + self._alt_h)
         p.drawText(cap, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop |
-                   Qt.TextFlag.TextWordWrap, n + desc)
+                   Qt.TextFlag.TextWordWrap, n.strip())
         f = QFont(self.font())
         f.setPointSizeF(f.pointSizeF() * 0.85)
         p.setFont(f)

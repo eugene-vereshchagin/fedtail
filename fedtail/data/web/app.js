@@ -236,6 +236,10 @@ const LATER = [60, 300, 1800];  // s: a picture that didn't come is asked again 
 function renderOne(m, all) {
   const cell = el("figure", "cell");
   const caption = m.alt ? el("figcaption", "alt", m.alt) : null;
+  if (caption) {  // three lines; a click: the whole description (and back)
+    caption.title = m.alt.length > 200 ? m.alt.slice(0, 200) + "…" : "";
+    caption.onclick = (e) => { e.stopPropagation(); caption.classList.toggle("open"); };
+  }
   const fail = (again) => {  // a box that says so (with a link), and a try later
     const box = broken(m);
     cell.replaceChildren(box);

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -129,8 +130,10 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
                 }
             }
             if (m.alt.isNotBlank()) {
+                // a long description: a third of the screen at most, the rest scrolls
                 Text(m.alt, color = Color.White, fontSize = 14.sp,
-                    modifier = Modifier.fillMaxWidth().background(Color(0xAA000000))
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)
+                        .background(Color(0xAA000000))
                         .verticalScroll(rememberScrollState()).padding(16.dp))
             }
         }

@@ -375,3 +375,9 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 #lanes .n .fresh { font-size: 0.75em; opacity: 0.75; margin-left: 0.25em; font-weight: normal; }
 /* all accounts in one: "→ @account" in that account's colour (ui.account_colors) */
 .via.tinted { padding: 0 0.4em; border-radius: 4px; }
+/* a picture's description: under the card three lines, a click shows it whole; in the
+   viewer at most a third of the screen, the rest scrolls */
+.post .media .alt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+                    overflow: hidden; cursor: pointer; white-space: pre-wrap; }
+.post .media .alt.open { display: block; -webkit-line-clamp: unset; }
+#viewer-alt { display: block; max-height: 30vh; overflow-y: auto; white-space: pre-wrap; }

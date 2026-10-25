@@ -129,6 +129,17 @@
 - Android: a screen reader names every button and picture — a picture without a
   description says what it is ("A video without a description"), the viewer's arrows
   say previous and next.
+- A long picture description no longer covers the picture or runs off: in the viewer it
+  takes a third of the height at most and scrolls (Qt, GTK, the web page, Android); under
+  a card on the web page three lines, a click shows it whole; the terminal's picture
+  screen shows it whole with d.
+- What the network may throw: an answer that isn't JSON (a captive portal, a provider's
+  page) is an error that says so; an answer over 32 MB is refused, not read; failing
+  rounds wait longer each time (up to 15 minutes; Refresh still asks at once); waking
+  from sleep brings a round at once; the logs go to the temporary folder when theirs
+  can't be written; a broken config.toml started from a menu is said in a window, with
+  a run on the defaults; logging out (SIGTERM) quits as the menu does; with debugging
+  off nothing wakes the processor every second.
 - Android: the activity lane read "as a forum" opens on its first unseen row (or at the
   end) and is refreshed by a pull from the bottom, as the GTK window does.
 

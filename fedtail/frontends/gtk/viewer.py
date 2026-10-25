@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 FULL_SIDE = 8192
 MARGIN = 24
+ALT_MAX_H = 180  # px a picture's description takes at most: the rest scrolls
 
 
 class ImageViewer(Gtk.Box):
@@ -55,7 +56,13 @@ class ImageViewer(Gtk.Box):
         self.caption = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
         self.caption.add_css_class("ft-viewer-text")
         self.caption.set_selectable(False)
-        self.append(self.caption)
+        # a long description scrolls past ALT_MAX_H instead of pushing the picture away
+        alt = Gtk.ScrolledWindow(propagate_natural_height=True, max_content_height=ALT_MAX_H)
+        alt.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        alt.set_child(self.caption)
+        for m in ("start", "end"):
+            getattr(alt, "set_margin_" + m)(MARGIN)
+        self.append(alt)
         keys = Gtk.Label(label=_("viewer_keys"))
         keys.add_css_class("ft-viewer-keys")
         keys.set_margin_bottom(MARGIN // 2)

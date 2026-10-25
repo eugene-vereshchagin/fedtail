@@ -685,6 +685,10 @@ class PicturesTest(Base):
                 await self.wait(pilot, lambda: app.screen is s)
                 await self.wait(pilot, lambda: "▀" in str(s.query_one("#pic").render()))
                 self.assertIn("1", str(s.query_one("#pic-title").render()))
+                s.action_description()  # d: a long description whole, and back
+                self.assertEqual(s.query_one("#pic-alt").styles.max_height.value, 70)
+                s.action_description()
+                self.assertEqual(s.query_one("#pic-alt").styles.max_height.value, 4)
                 s.action_original()
                 self.browser.assert_called_with("https://example.test/001.png")
                 s.action_step(1)

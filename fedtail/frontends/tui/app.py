@@ -151,6 +151,7 @@ class PictureScreen(Screen):
                 Binding("enter,p,space", "play", _("tui_play")),
                 Binding("s", "save", _("viewer_save")),
                 Binding("r", "again", show=False),
+                Binding("d", "description", _("alt_title")),
                 Binding("o", "original", _("open_browser"))]
     CSS = """
     PictureScreen { align: center middle; }
@@ -173,6 +174,12 @@ class PictureScreen(Screen):
 
     def on_mount(self):
         self.show()
+
+    def action_description(self):
+        """d: a long description whole (most of the screen), and back to four lines."""
+        alt = self.query_one("#pic-alt", Static)
+        alt.styles.max_height = 4 if alt.styles.max_height and \
+            alt.styles.max_height.value != 4 else "70%"
 
     def on_resize(self, _event):
         self.show()
