@@ -1144,6 +1144,59 @@ class QtSmokeTest(unittest.TestCase):
         acts[2].trigger()
         self.pump(until=lambda: self.world.lists["L1"]["replies_policy"] == "none")
 
+    def test_spelling_in_the_editor(self):
+        """A word with a mistake gets the red wave; a right click offers the fix and "Add to
+        dictionary" (core/spell.py, with a made-up dictionary)."""
+        from unittest import mock
+
+        from PySide6.QtGui import QTextCharFormat, QTextCursor
+
+        from fedtail.core import spell
+        from fedtail.frontends.qt.compose import Compose
+
+        from .test_spell import FakeBackend
+        spell._checkers.clear()
+        with mock.patch.object(spell, "_backend", FakeBackend()):
+            self.win.start()
+            self.pump(until=lambda: self.core.me is not None)
+            c = Compose(self.win)
+            c.set_language("en")
+            c.text.setPlainText("Helo wrold")
+            self.pump(0.05)
+            sp = c.spell
+            self.assertIsNotNone(sp.checker)
+            wave = QTextCharFormat.UnderlineStyle.SpellCheckUnderline
+
+            def marked():
+                block = c.text.document().firstBlock()
+                return sorted({(r.start, r.start + r.length) for r in block.layout().formats()
+                               if r.format.underlineStyle() == wave})
+            self.assertEqual(marked(), [(0, 4), (5, 10)])
+
+            def at(offset):
+                cur = QTextCursor(c.text.document())
+                cur.setPosition(offset)
+                return c.text.cursorRect(cur).center()
+            acts = sp.actions_for(at(7))
+            self.assertEqual([label for label, _f in acts],
+                             ["world", i18n._("spell_add")])
+            acts[0][1]()  # the fix
+            self.assertEqual(c.text.toPlainText(), "Helo world")
+            self.pump(0.05)
+            self.assertEqual(marked(), [(0, 4)])
+            acts = sp.actions_for(at(2))
+            self.assertEqual(acts[0][0], i18n._("spell_none"))
+            self.assertIsNone(acts[0][1])
+            acts[-1][1]()  # "Helo": into my own dictionary
+            self.pump(0.05)
+            self.assertEqual(marked(), [])
+            self.assertEqual(sp.actions_for(at(2)), [])
+            from PySide6.QtWidgets import QMenu
+            m = QMenu()
+            self.assertEqual(sp.fill(m, at(2)), [])  # a good word: the menu as it was
+            c._leave() if hasattr(c, "_leave") else c.reject()
+        spell._checkers.clear()
+
     def test_rest_of_the_api(self):
         """0.20: a filter edited, a cover for a video, an edited post's descriptions, a
         report by the server's rules, the profile's newer switches and tag suggestions,
