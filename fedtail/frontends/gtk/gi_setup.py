@@ -54,6 +54,7 @@ def _drop_handlers(obj):
             pass
     own = getattr(obj, "__dict__", None)
     if own:
+        own.pop("_ft_picture_callbacks", None)  # common/images.py: kept for the picture
         for k, v in list(own.items()):
             if callable(v) and not isinstance(v, (GObject.Object, type)):
                 own[k] = None
