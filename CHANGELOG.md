@@ -34,6 +34,8 @@
   fresh counts; ⚠ opens every warning of a thread; a #tag opens its place.
 - Followers and follows of someone from another server: "more — from their server" at the
   list's end, on the web page and the phone (the windows had it).
+- The window no longer waits for a poll's write to read a lane: reads have a connection
+  of their own (SQLite's WAL lets them go on) — the short freezes on the store's lock.
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

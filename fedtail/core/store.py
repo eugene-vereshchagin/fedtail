@@ -5,6 +5,7 @@ method is a short transaction, so contention is negligible.
 """
 
 import hashlib
+import contextlib
 import json
 import logging
 import sqlite3
@@ -196,6 +197,12 @@ class Store:
         self._read = None
         self._tags = None  # {lowercase name: [name as seen, how often]}, built on demand
         self._people = None  # {lowercase acct: [acct, display name, how often]}, the same way
+        # reads have a connection of their own: WAL lets them go on while a poll writes, so
+        # the window asking for a lane's posts never waits for a round's transaction (the
+        # freezes on the store's lock); a read inside a write stays on the writer's own
+        self._rdb = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
+        self._rdb.execute("PRAGMA busy_timeout=5000")
+        self._rlock = threading.RLock()
         self.db.execute("PRAGMA synchronous=NORMAL")
         # a new file frees its pages as it goes (an old one is converted in _migrate)
         self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
@@ -273,12 +280,23 @@ class Store:
     closed = False  # after close(): what still comes (a late event) knows to stop
 
     def close(self):
-        with self.lock:
+        with self.lock, self._rlock:
             self.closed = True
             self.db.close()
+            self._rdb.close()
 
     def _tx(self):
         return _Tx(self)
+
+    @contextlib.contextmanager
+    def _reading(self):
+        """The connection to read from: the writer's own inside its lock (its rows not
+        committed yet), else the readers' — no waiting for a write going on."""
+        if self.lock._is_owned():
+            yield self.db
+            return
+        with self._rlock:
+            yield self._rdb
 
     def diag_counts(self):
         """Row counts and the file size, for the stats line."""
@@ -301,8 +319,8 @@ class Store:
             return pages * q("PRAGMA page_size").fetchone()[0] / 1024 / 1024
 
     def item_sources(self):
-        with self.lock:
-            return [r[0] for r in self.db.execute("SELECT DISTINCT source FROM items")]
+        with self._reading() as db:
+            return [r[0] for r in db.execute("SELECT DISTINCT source FROM items")]
 
     def gc(self, keep_activity=3000, grace_hours=48, drop_read=False):
         """Forget what nothing points at any more, so the file doesn't grow for ever.
@@ -403,8 +421,8 @@ class Store:
 
     # ---- kv -------------------------------------------------------------------
     def kv_get(self, key, default=None):
-        with self.lock:
-            row = self.db.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
+        with self._reading() as db:
+            row = db.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
 
     def kv_set(self, key, value):
@@ -502,19 +520,19 @@ class Store:
             return self._tags
 
     def get_status(self, sid):
-        with self.lock:
-            row = self.db.execute("SELECT data FROM statuses WHERE id=?", (sid,)).fetchone()
+        with self._reading() as db:
+            row = db.execute("SELECT data FROM statuses WHERE id=?", (sid,)).fetchone()
         return json.loads(row[0]) if row else None
 
     def get_statuses(self, ids):
         ids = list(ids)
         out = {}
-        with self.lock:
+        with self._reading() as db:
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
                 marks = ",".join("?" * len(chunk))
                 q = f"SELECT id, data FROM statuses WHERE id IN ({marks})"
-                out.update({r[0]: json.loads(r[1]) for r in self.db.execute(q, chunk)})
+                out.update({r[0]: json.loads(r[1]) for r in db.execute(q, chunk)})
         return out
 
     def delete_status(self, sid):
@@ -531,13 +549,13 @@ class Store:
         """{parent id: [replies by author, oldest first]}"""
         ids = list(parent_ids)
         out = {}
-        with self.lock:
+        with self._reading() as db:
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
                 marks = ",".join("?" * len(chunk))
                 q = (f"SELECT reply_to, data FROM statuses WHERE reply_to IN ({marks}) "
                      f"AND author = ? ORDER BY created_at")
-                for pid, data in self.db.execute(q, chunk + [author_id]):
+                for pid, data in db.execute(q, chunk + [author_id]):
                     out.setdefault(pid, []).append(json.loads(data))
         return out
 
@@ -575,13 +593,13 @@ class Store:
             n = alias_number(text)
             if n is None:
                 return None
-            with self.lock:
-                row = self.db.execute("SELECT status_id FROM aliases WHERE n=?", (n,)).fetchone()
+            with self._reading() as db:
+                row = db.execute("SELECT status_id FROM aliases WHERE n=?", (n,)).fetchone()
             return row[0] if row else None
         if len(text) > CODE_LEN or any(c not in _B36 for c in text):
             return None
-        with self.lock:
-            row = self.db.execute(
+        with self._reading() as db:
+            row = db.execute(
                 "SELECT k.status_id FROM short_ids k LEFT JOIN statuses s ON s.id = k.status_id "
                 "WHERE k.code >= ? AND k.code < ? ORDER BY s.created_at DESC LIMIT 1",
                 (text, text + "~")).fetchone()
@@ -590,17 +608,17 @@ class Store:
     def missing_set(self, ids):
         ids = list(ids)
         out = set()
-        with self.lock:
+        with self._reading() as db:
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
                 marks = ",".join("?" * len(chunk))
                 q = f"SELECT status_id FROM missing WHERE status_id IN ({marks})"
-                out.update(r[0] for r in self.db.execute(q, chunk))
+                out.update(r[0] for r in db.execute(q, chunk))
         return out
 
     def is_missing(self, sid):
-        with self.lock:
-            return self.db.execute("SELECT 1 FROM missing WHERE status_id=?",
+        with self._reading() as db:
+            return db.execute("SELECT 1 FROM missing WHERE status_id=?",
                                    (sid,)).fetchone() is not None
 
     # ---- source items ---------------------------------------------------------
@@ -635,12 +653,12 @@ class Store:
         """{real id: the item it first came as in this source ("" — read already)}."""
         ids = list(dict.fromkeys(real_ids))
         out = {}
-        with self.lock:
+        with self._reading() as db:
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
                 q = (f"SELECT real_id, item_id FROM first_seen WHERE source=? AND real_id IN "
                      f"({','.join('?' * len(chunk))})")
-                out.update(self.db.execute(q, [source, *chunk]).fetchall())
+                out.update(db.execute(q, [source, *chunk]).fetchall())
         return out
 
     def _bump(self, source):
@@ -652,22 +670,22 @@ class Store:
 
     def newest_item(self, source):
         """The server's id to ask for newer ones from (None — nothing of its yet)."""
-        with self.lock:
-            row = self.db.execute("SELECT item_id FROM items WHERE source=? "
+        with self._reading() as db:
+            row = db.execute("SELECT item_id FROM items WHERE source=? "
                                   "AND item_id NOT LIKE ? ORDER BY sort DESC LIMIT 1",
                                   (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
     def oldest_item(self, source):
-        with self.lock:
-            row = self.db.execute("SELECT item_id FROM items WHERE source=? "
+        with self._reading() as db:
+            row = db.execute("SELECT item_id FROM items WHERE source=? "
                                   "AND item_id NOT LIKE ? ORDER BY sort ASC LIMIT 1",
                                   (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
     def count_items(self, source):
-        with self.lock:
-            return self.db.execute("SELECT COUNT(*) FROM items WHERE source=?",
+        with self._reading() as db:
+            return db.execute("SELECT COUNT(*) FROM items WHERE source=?",
                                    (source,)).fetchone()[0]
 
     def iter_items(self, source, chunk=200, max_rows=None):
@@ -679,11 +697,11 @@ class Store:
                 "ON s.id = i.status_id WHERE i.source=? ")
         order = "ORDER BY i.sort DESC, i.item_id DESC LIMIT ?"
         while max_rows is None or done < max_rows:
-            with self.lock:
+            with self._reading() as db:
                 if last is None:
-                    rows = self.db.execute(base + order, (source, chunk)).fetchall()
+                    rows = db.execute(base + order, (source, chunk)).fetchall()
                 else:
-                    rows = self.db.execute(base + "AND (i.sort, i.item_id) < (?, ?) " + order,
+                    rows = db.execute(base + "AND (i.sort, i.item_id) < (?, ?) " + order,
                                            (source, last[0], last[1], chunk)).fetchall()
             for r in rows:
                 yield r[0], json.loads(r[1])
@@ -694,8 +712,8 @@ class Store:
 
     def items(self, source, limit):
         """Newest `limit` items of a source, returned oldest → newest."""
-        with self.lock:
-            rows = self.db.execute(
+        with self._reading() as db:
+            rows = db.execute(
                 "SELECT i.item_id, s.data FROM items i JOIN statuses s ON s.id = i.status_id "
                 "WHERE i.source=? ORDER BY i.sort DESC LIMIT ?", (source, limit)).fetchall()
         return [(r[0], json.loads(r[1])) for r in reversed(rows)]
@@ -747,10 +765,10 @@ class Store:
 
     def sub_root_of(self, status_id):
         """The followed thread a post belongs to, or None."""
-        with self.lock:
-            row = self.db.execute("SELECT root_id FROM subs WHERE root_id=?",
+        with self._reading() as db:
+            row = db.execute("SELECT root_id FROM subs WHERE root_id=?",
                                   (status_id,)).fetchone() or \
-                self.db.execute("SELECT m.root_id FROM sub_members m JOIN subs s "
+                db.execute("SELECT m.root_id FROM sub_members m JOIN subs s "
                                 "ON s.root_id = m.root_id WHERE m.status_id=?",
                                 (status_id,)).fetchone()
         return row[0] if row else None
@@ -768,8 +786,8 @@ class Store:
         q = "SELECT root_id FROM quiet_threads"
         if left_too:
             q += " UNION SELECT root_id FROM unsubs"
-        with self.lock:
-            return {r[0] for r in self.db.execute(q)}
+        with self._reading() as db:
+            return {r[0] for r in db.execute(q)}
 
     def left_root_of(self, status_ids):
         """The left or muted thread one of these posts is known to be in, or None."""
@@ -777,8 +795,8 @@ class Store:
         if not ids:
             return None
         marks = ",".join("?" * len(ids))
-        with self.lock:
-            row = self.db.execute(
+        with self._reading() as db:
+            row = db.execute(
                 f"SELECT root_id FROM left_members WHERE status_id IN ({marks})", ids
             ).fetchone()
         return row[0] if row else None
@@ -799,22 +817,22 @@ class Store:
             return cur.rowcount
 
     def sub_left(self, root_id):
-        with self.lock:
-            return self.db.execute("SELECT 1 FROM unsubs WHERE root_id=?",
+        with self._reading() as db:
+            return db.execute("SELECT 1 FROM unsubs WHERE root_id=?",
                                    (root_id,)).fetchone() is not None
 
     def subs_due(self, active_after, checked_before, limit):
         """Followed threads to look at now: alive lately, longest unchecked first."""
-        with self.lock:
-            rows = self.db.execute(
+        with self._reading() as db:
+            rows = db.execute(
                 "SELECT root_id, since, last_activity, checked FROM subs WHERE last_activity > ? "
                 "AND checked < ? ORDER BY checked ASC LIMIT ?",
                 (active_after, checked_before, limit)).fetchall()
         return rows
 
     def sub_members(self, root_id):
-        with self.lock:
-            return {r[0] for r in self.db.execute(
+        with self._reading() as db:
+            return {r[0] for r in db.execute(
                 "SELECT status_id FROM sub_members WHERE root_id=?", (root_id,))}
 
     def sub_checked(self, root_id, checked, last_activity, members):
@@ -825,8 +843,8 @@ class Store:
                            [(m, root_id) for m in members])
 
     def subs_count(self):
-        with self.lock:
-            return self.db.execute("SELECT COUNT(*) FROM subs").fetchone()[0]
+        with self._reading() as db:
+            return db.execute("SELECT COUNT(*) FROM subs").fetchone()[0]
 
     # ---- activity (favourites, boosts, follows) ------------------------------------
     def activity_put(self, notifications):
@@ -877,8 +895,8 @@ class Store:
 
     def activity_group_of(self, nid):
         """The server's group key of this Activity row, or "" (not a group)."""
-        with self.lock:
-            row = self.db.execute("SELECT account FROM activity WHERE id = ?",
+        with self._reading() as db:
+            row = db.execute("SELECT account FROM activity WHERE id = ?",
                                   (nid,)).fetchone()
         if not row:
             return ""
@@ -901,8 +919,8 @@ class Store:
         """Notifications gone from Activity for good, while the server keeps them (it can't
         dismiss one): remembered, so the next fetch doesn't bring them back.
         → [(id, sort, group key or "")] of the ones that were here (for sync)."""
-        with self.lock:
-            rows = self.db.execute(
+        with self._reading() as db:
+            rows = db.execute(
                 f"SELECT id, sort FROM activity WHERE id IN ({','.join('?' * len(ids))})",
                 list(ids)).fetchall() if ids else []
         hidden = self.kv_get("activity_hidden", {}) or {}
@@ -945,8 +963,8 @@ class Store:
         self.kv_set("activity_hidden", hidden)
         self.kv_set("activity_hidden_groups", hg)
         ids = {nid for nid, _s, _k in items}
-        with self.lock:
-            rows = self.db.execute("SELECT id, account FROM activity").fetchall()
+        with self._reading() as db:
+            rows = db.execute("SELECT id, account FROM activity").fetchall()
         gone = []
         for nid, acc in rows:
             if nid in ids:
@@ -965,8 +983,8 @@ class Store:
     def activity_newest(self):
         """(id, sort) of the newest notification fetched — hidden ones count: the next
         fetch goes on from there."""
-        with self.lock:
-            row = self.db.execute("SELECT id, sort FROM activity ORDER BY sort DESC LIMIT 1"
+        with self._reading() as db:
+            row = db.execute("SELECT id, sort FROM activity ORDER BY sort DESC LIMIT 1"
                                   ).fetchone()
         best = (row[0], row[1]) if row else (None, "")
         for nid, sort in (self.kv_get("activity_hidden", {}) or {}).items():
@@ -976,8 +994,8 @@ class Store:
 
     def activity_recent(self, limit):
         """Newest first: [{id, type, account, status, created_at, sort}]."""
-        with self.lock:
-            rows = self.db.execute(
+        with self._reading() as db:
+            rows = db.execute(
                 "SELECT a.id, a.type, a.account, s.data, a.sort FROM activity a LEFT JOIN "
                 "statuses s ON s.id = a.status_id ORDER BY a.sort DESC LIMIT ?",
                 (limit,)).fetchall()
@@ -986,8 +1004,8 @@ class Store:
                  "created_at": r[4].split("|")[0]} for r in rows]
 
     def activity_count_after(self, sort):
-        with self.lock:
-            return self.db.execute("SELECT COUNT(*) FROM activity WHERE sort > ?",
+        with self._reading() as db:
+            return db.execute("SELECT COUNT(*) FROM activity WHERE sort > ?",
                                    (sort,)).fetchone()[0]
 
     # ---- read marks -----------------------------------------------------------
@@ -1005,8 +1023,8 @@ class Store:
         first."""
         if not self.me_id:
             return []
-        with self.lock:
-            rows = self.db.execute(
+        with self._reading() as db:
+            rows = db.execute(
                 "SELECT data FROM statuses s WHERE s.author = ? "
                 "AND json_extract(s.data, '$.visibility') = 'direct' "
                 "AND NOT EXISTS (SELECT 1 FROM items i WHERE i.source = ? "
@@ -1028,8 +1046,8 @@ class Store:
     def account_of(self, acc_id):
         """Someone's account as one of their stored posts has it (None: no post of
         theirs here)."""
-        with self.lock:
-            row = self.db.execute("SELECT data FROM statuses WHERE author=? LIMIT 1",
+        with self._reading() as db:
+            row = db.execute("SELECT data FROM statuses WHERE author=? LIMIT 1",
                                   (acc_id,)).fetchone()
         return json.loads(row[0]).get("account") if row else None
 
@@ -1048,8 +1066,8 @@ class Store:
                             (key, json.dumps(data), now_iso()))
 
     def get_draft(self, key):
-        with self.lock:
-            row = self.db.execute("SELECT data FROM drafts WHERE key=?", (key,)).fetchone()
+        with self._reading() as db:
+            row = db.execute("SELECT data FROM drafts WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else None
 
     def delete_draft(self, key):
@@ -1057,8 +1075,8 @@ class Store:
             self.db.execute("DELETE FROM drafts WHERE key=?", (key,))
 
     def list_drafts(self):
-        with self.lock:
-            rows = self.db.execute("SELECT key, data, updated FROM drafts "
+        with self._reading() as db:
+            rows = db.execute("SELECT key, data, updated FROM drafts "
                                    "ORDER BY updated DESC").fetchall()
         return [(k, json.loads(d), u) for k, d, u in rows]
 
@@ -1071,8 +1089,8 @@ class Store:
 
     def sync_pending(self, limit=500):
         """[(seq, op)] not sent yet, oldest first."""
-        with self.lock:
-            rows = self.db.execute("SELECT seq, op FROM sync_out ORDER BY seq LIMIT ?",
+        with self._reading() as db:
+            rows = db.execute("SELECT seq, op FROM sync_out ORDER BY seq LIMIT ?",
                                    (limit,)).fetchall()
         return [(seq, json.loads(op)) for seq, op in rows]
 
@@ -1081,8 +1099,8 @@ class Store:
             self.db.execute("DELETE FROM sync_out WHERE seq <= ?", (upto,))
 
     def sync_pending_count(self):
-        with self.lock:
-            return self.db.execute("SELECT COUNT(*) FROM sync_out").fetchone()[0]
+        with self._reading() as db:
+            return db.execute("SELECT COUNT(*) FROM sync_out").fetchone()[0]
 
     def sync_newer(self, key, at, device, value):
         """Last-writer-wins: keep (at, device, value) under `key` if it is newer than

@@ -161,3 +161,37 @@ class NextKeepTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadersDontWaitTest(unittest.TestCase):
+    """The window's reads don't wait for a poll's write (they froze on the store's lock):
+    a reader sees what is committed, the writer its own rows not yet committed."""
+
+    def test_a_read_during_a_write(self):
+        import threading
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            st = Store(Path(d) / "s.db")
+            st.put_statuses([{"id": "1", "content": "old", "created_at": "2099-01-01"}])
+            inside, release = threading.Event(), threading.Event()
+            seen_by_writer = []
+
+            def writer():
+                with st._tx() as db:
+                    db.execute("UPDATE statuses SET data=? WHERE id='1'",
+                               (json.dumps({"id": "1", "content": "new"}),))
+                    seen_by_writer.append(st.get_status("1")["content"])
+                    inside.set()
+                    release.wait(5)
+            t = threading.Thread(target=writer)
+            t.start()
+            self.assertTrue(inside.wait(5))
+            began = time.monotonic()
+            got = st.get_status("1")
+            self.assertLess(time.monotonic() - began, 0.5)  # no waiting for the write
+            self.assertEqual(got["content"], "old")          # what is committed
+            release.set()
+            t.join(5)
+            self.assertEqual(seen_by_writer, ["new"])        # the writer: its own rows
+            self.assertEqual(st.get_status("1")["content"], "new")
+            st.close()
