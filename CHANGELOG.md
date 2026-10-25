@@ -2,6 +2,16 @@
 
 ## 0.20.0 — in progress
 
+- Spell checking in the post window: mistakes underlined, suggestions and "Add to
+  dictionary" on a right click, any of the post's languages; the system's dictionaries
+  through Enchant (`post.spellcheck`, `post.spell_languages`). The terminal: a list on F7;
+  the web page: the browser's own.
+- Another server's public lane (≡ → "Another server's lane…"): read without an account,
+  the posts fetched through your server so they can be liked and answered.
+- The terminal and the web page add accounts, log in, switch and log out, as the windows.
+- GTK: a closed tab no longer stays in memory (every card of it did — 30 MB a round of
+  tabs in the stress test); a picture still on its way no longer keeps its card alive (Qt
+  too).
 - Settings: `config.toml.bak` is the file as it was before this run's first change — the
   window saves at every tick, and the backup used to hold only the step before the last; a
   symlinked config is written through the link instead of being replaced by a file.

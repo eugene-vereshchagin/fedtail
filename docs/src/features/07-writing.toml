@@ -329,10 +329,15 @@ why.en = "Writing is the author's job."
 
 [[feature]]
 id = "spellcheck"
-status = "undecided"
+status = "has"
+since = "0.20.0"
 name.ru = "Проверка орфографии в панели поста"
 name.en = "Spell checking in the compose panel"
-others = "Tuba"
-clients = ["Tuba"]
-note.ru = "Не в приоритете. В Qt своей нет: нужна внешняя библиотека (hunspell или enchant) опциональной зависимостью."
-note.en = "Not a priority. Qt has none of its own: it needs an outside library (hunspell or enchant) as an optional dependency."
+config = "`post.spellcheck`, `post.spell_languages`"
+api.ru = "своё: системные словари через Enchant"
+api.en = "own: the system's dictionaries through Enchant"
+others.ru = "Tuba, Tusky, Mastodon web (браузер)"
+others.en = "Tuba, Tusky, Mastodon web (the browser)"
+clients = ["Tuba", "Tusky", "Mastodon web"]
+details.ru = "Слова с ошибками подчёркнуты; правый клик — варианты и «Добавить в словарь» (свой словарь — `spelling.txt` рядом с конфигом). Проверяет на языке поста, языке интерфейса и английском — слово годится, если его знает любой словарь; ссылки, @имена, #теги, :эмодзи: и `код` не трогает. Словари системные (Debian: `libenchant-2-2`, `hunspell-ru`, `hunspell-en-us`); нет их — проверки нет. В терминале — список по F7, в вебе — проверка браузера."
+details.en = "Words with mistakes are underlined; a right click — suggestions and “Add to dictionary” (your own one — `spelling.txt` next to the config). It checks in the post's language, the interface's and English — a word is fine if any dictionary knows it; links, @names, #tags, :emoji: and `code` are left alone. The dictionaries are the system's (Debian: `libenchant-2-2`, `hunspell-en-us`, `hunspell-ru`); none — no checking. In the terminal — a list on F7, in the web page — the browser's checker."

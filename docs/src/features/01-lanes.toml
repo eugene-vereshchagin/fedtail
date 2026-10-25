@@ -396,20 +396,26 @@ details.en = "Shared sets of accounts. Coming once GoToSocial has them."
 
 [[feature]]
 id = "remote-public-timeline"
-status = "undecided"
+status = "has"
+since = "0.20.0"
 name.ru = "Публичная лента чужого сервера"
 name.en = "Another server's public timeline"
+config = "—"
+api = "`timelines/public?local=true` того сервера без токена, `search?resolve=true` своего"
 others = "Ice Cubes"
 clients = ["Ice Cubes"]
-note.ru = "Читать Локальную другого сервера без входа. Многие серверы закрывают её для анонимов."
-note.en = "Reading another server's Local without logging in. Many servers close it to strangers."
+details.ru = "≡ → «Лента другого сервера…»: имя сервера — и его Локальная, как её видит любой без входа, страницами. Посты подтягиваются через твой сервер, так что лайкать, отвечать и открывать треды можно как обычно. Многие серверы закрывают ленту для анонимов (GoToSocial — всегда) — fedtail так и скажет. Тот сервер видит твой адрес, как при открытии в браузере."
+details.en = "≡ → “Another server's lane…”: a server's name — and its Local, as anyone sees it without logging in, page by page. The posts come through your server, so liking, replying and opening threads work as usual. Many servers close their lane to strangers (GoToSocial always) — fedtail says so. That server sees your address, as a browser opening it would."
 
 [[feature]]
 id = "link-timeline"
-status = "undecided"
+status = "has"
+since = "0.20.0"
 name.ru = "Лента по ссылке (Mastodon 4.3+)"
 name.en = "A link's timeline (Mastodon 4.3+)"
+config = "—"
+api = "`/api/v1/timelines/link`"
 others = "Mastodon web"
 clients = ["Mastodon web"]
-note.ru = "Все посты о популярной ссылке. GoToSocial не умеет."
-note.en = "Every post about a popular link. GoToSocial can't do it."
+details.ru = "«Кто ещё делился этой ссылкой» в меню поста — см. одноимённую строку в «Профилях». GoToSocial не умеет."
+details.en = "“Who else shared this link” in a post's menu — see the line of that name under “Profiles”. GoToSocial can't do it."
