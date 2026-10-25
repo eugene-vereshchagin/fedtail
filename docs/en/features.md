@@ -97,6 +97,8 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Columns side by side | has | 0.14.0 | `ui.layout`, `ui.columns`, `ui.column_width`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
 | A messenger's layout: a roster and a messages window | has | 0.17.0 | `ui.layout = "split"` or for one run `fedtail --layout split`; `ui.roster_on_top`, `ui.roster_threads`, `ui.faces`, `ui.dock_commands`, `ui.split_tabs`, `ui.icons` | own | — |
 | Collections (Mastodon 4.6) | planned | — | — | `/api/v1/collections` | Mastodon 4.6, Fedilab |
+| Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
+| A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
 
 <details><summary>In detail</summary>
 
@@ -156,6 +158,10 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **A messenger's layout: a roster and a messages window.** fedtail as a messenger of the 2000s — QIP, the Mail.ru Agent, Psi. The **roster** is a narrow window, and fedtail starts with it: me and “N new in Activity” on top, a search line, folding groups — the lanes, followed threads and private talks (“Threads”, “Talks”, the freshest `ui.roster_threads`) and “People” — whom I follow who follows me back (asked once a day). A group says “(15)”, or “(2/15)” when two of its items have something new; an item has its count, a line of its newest post and a face. A double click or Enter opens it, hovering a person shows their card, as in QIP. At the bottom the menu, the accounts and ⚙ — how the roster looks: compact, without the header, the search or the buttons, only what's new, without groups, above other windows (`ui.roster_on_top`). Closing the roster closes fedtail (to the tray with `ui.close_to_tray`); the tray icon hides and brings back both windows. The **messages window** is the main window without the sidebar: every lane, thread, profile and talk opened is a tab of its own, in more rows when they don't fit; ×, the middle button or Esc close one, and with the last the window goes (`ui.split_tabs` — whether to keep the tabs for next time). A person opens as a talk with only our private messages. The **input line** is always under the posts, a bar that drags between them: in a thread it answers the thread (a private talk stays private), in a talk it writes to that person privately, in a lane — a new post; Reply on a card leads here too. Who sees it, a content warning, pictures, the language; it also takes the command line's commands (`ui.dock_commands`: “#a3f text”, “! #a3f”, “?” — Enter). **Faces** (`ui.faces`): over a lane, in one line, the author of the post under the pointer (or the cursor, or the newest whole on screen): name, address, whether we follow each other, Follow, Add to list, a private message, the profile; by the input line — whom I write to. The Agent's themes have a column on the right instead: theirs by the posts, mine by the input line. A grey silhouette while there's no face. **Pictures on buttons** — the messengers', from the theme's set (`ui.icons`): on the input line, the author's bar, the roster (only in the split layout, or anywhere with `"additional"`), and on Reply, Favourite, Boost, Thread, Bookmark, who sees a post, the menu and the lanes in any layout; a flower for a person in the QIP themes, an “@” in the Agent's, a star in Psi's; the `psi` theme brings Psi+'s own pictures (the Crystal and Stellar iconsets, GPL). The theme decides how it all looks: the faces — `shape.faces`, the roster's items — `roster_rows`, the tabs — `tab_rows`, the pictures — `shape.icons` and the theme's `icons/` folder (docs/en/dev/layouts.md).
 
 **Collections (Mastodon 4.6).** Shared sets of accounts. Coming once GoToSocial has them.
+
+**Another server's public timeline.** ≡ → “Another server's lane…”: a server's name — and its Local, as anyone sees it without logging in, page by page. The posts come through your server, so liking, replying and opening threads work as usual. Many servers close their lane to strangers (GoToSocial always) — fedtail says so. That server sees your address, as a browser opening it would.
+
+**A link's timeline (Mastodon 4.3+).** “Who else shared this link” in a post's menu — see the line of that name under “Profiles”. GoToSocial can't do it.
 
 </details>
 
@@ -405,6 +411,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A thread as a chain | has | 0.14.0 | `post.chain` | `in_reply_to_id` | Ice Cubes (up to five posts) |
 | A command line as on Point | has | 0.3.0 | `ui.command_line`, `post.plain_posts` | own | only in fedtail (tut — vim-style commands) |
 | Short post names the same on every device | has | 0.18.0 | — | own | only in fedtail (Point had the server's post numbers) |
+| Spell checking in the compose panel | has | 0.20.0 | `post.spellcheck`, `post.spell_languages` | own: the system's dictionaries through Enchant | Tuba, Tusky, Mastodon web (the browser) |
 
 <details><summary>In detail</summary>
 
@@ -449,6 +456,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **A command line as on Point.** At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f text` — reply, `S`/`U #a3f` — subscribe to a thread, `S`/`U @nick` — follow a person, `!` — boost, `~` — bookmark, `D` — delete your own, `@nick` — profile, `?` — help. Plain text without a command — a new post (`post.plain_posts = false` — commands only, no accidental posts).
 
 **Short post names the same on every device.** A name like `#kq3zt` is derived from the post's id, so the same post is called the same on the desktop, the laptop and the phone — read it out on one, open it on another. Five characters; when two known posts begin the same, their names are shown longer. Names fedtail gave earlier (three or four characters, by a counter) stay with their posts and still open them.
+
+**Spell checking in the compose panel.** Words with mistakes are underlined; a right click — suggestions and “Add to dictionary” (your own one — `spelling.txt` next to the config). It checks in the post's language, the interface's and English — a word is fine if any dictionary knows it; links, @names, #tags, :emoji: and `code` are left alone. The dictionaries are the system's (Debian: `libenchant-2-2`, `hunspell-en-us`, `hunspell-ru`); none — no checking. In the terminal — a list on F7, in the web page — the browser's checker.
 
 </details>
 
@@ -797,8 +806,5 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Others | Note |
 |---|---|---|
-| Another server's public timeline | Ice Cubes | Reading another server's Local without logging in. Many servers close it to strangers. |
-| A link's timeline (Mastodon 4.3+) | Mastodon web | Every post about a popular link. GoToSocial can't do it. |
 | Sending emoji reactions | Phanpy, Elk, Fedilab | Akkoma, Pleroma, Misskey; GoToSocial can't do it. |
-| Spell checking in the compose panel | Tuba | Not a priority. Qt has none of its own: it needs an outside library (hunspell or enchant) as an optional dependency. |
 | The token from an external command (`pass`, `gopass`) | tut | It's unclear what this would add over a file readable by its owner only. |

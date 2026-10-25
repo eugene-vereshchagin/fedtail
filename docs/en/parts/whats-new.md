@@ -1,9 +1,12 @@
 **0.20.0 (in progress):**
 
 - Whose replies a list shows
+- Another server's public timeline
+- A link's timeline (Mastodon 4.3+)
 - In a profile: posts, posts and replies, media
 - Who else shared a link
 - A video's cover; picture descriptions in a post's edit
+- Spell checking in the compose panel
 - Mute for a while; posts only
 - Hide a single post
 - Editing a filter

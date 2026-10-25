@@ -32,6 +32,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A lane of several tags | ✓ |   |   |   | ✓ |   |   | ✓ |   |   |   | ✓ |   |   |
 | Columns side by side | ✓ | ✓ |   |   | ✓ |   |   |   |   | ✓ |   | ✓ |   | ✓ |
 | Collections (Mastodon 4.6) | ⏳ |   |   |   |   |   |   |   | ✓ |   |   |   |   |   |
+| Another server's public timeline | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
+| A link's timeline (Mastodon 4.3+) | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Threads
 
@@ -131,6 +133,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A thread as a chain | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A command line as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Short post names the same on every device | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Spell checking in the compose panel | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |
 
 ## People and order
 
@@ -209,4 +212,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 145 compared.
+Only in fedtail — **33** features of the 148 compared.

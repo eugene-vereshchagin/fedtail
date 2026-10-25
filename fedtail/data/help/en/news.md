@@ -8,9 +8,12 @@ What's new in the latest versions, and the plans.
 **0.20.0 (in progress):**
 
 - Whose replies a list shows
+- Another server's public timeline
+- A link's timeline (Mastodon 4.3+)
 - In a profile: posts, posts and replies, media
 - Who else shared a link
 - A video's cover; picture descriptions in a post's edit
+- Spell checking in the compose panel
 - Mute for a while; posts only
 - Hide a single post
 - Editing a filter
@@ -62,9 +65,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Others | Note |
 |---|---|---|
-| Another server's public timeline | Ice Cubes | Reading another server's Local without logging in. Many servers close it to strangers. |
-| A link's timeline (Mastodon 4.3+) | Mastodon web | Every post about a popular link. GoToSocial can't do it. |
 | Sending emoji reactions | Phanpy, Elk, Fedilab | Akkoma, Pleroma, Misskey; GoToSocial can't do it. |
-| Spell checking in the compose panel | Tuba | Not a priority. Qt has none of its own: it needs an outside library (hunspell or enchant) as an optional dependency. |
 | The token from an external command (`pass`, `gopass`) | tut | It's unclear what this would add over a file readable by its owner only. |
 <!-- /include -->
