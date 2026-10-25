@@ -100,3 +100,48 @@ class MoreApiTest(TmpDir):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RemotePublicTest(TmpDir):
+    """Another server's public lane: read without an account, fetched into mine."""
+    make = test_cli.CliTest.make
+
+    def test_a_far_server_page_by_page(self):
+        core, w = self.make()
+        core.connect().result()
+        far = [dict(status(f"9{i:02d}", BOB, minute=i, vis="public", text=f"far {i}"),
+                    uri=f"https://far.example/s/{i}", id=f"far{i}") for i in range(20)]
+        far[3]["visibility"] = "unlisted"  # not in a public lane anyway: skipped
+        for s in far:  # what my server gets when it looks them up
+            w.remote[s["uri"]] = dict(s, id="L" + s["id"])
+        asked = []
+
+        def origin(url):
+            asked.append(url)
+            return far if "max_id" not in url else []
+        core._origin_get = origin
+        got, cur = core.remote_public("https://Far.Example/about").result()
+        self.assertTrue(asked[0].startswith("https://far.example/api/v1/timelines/public"))
+        self.assertIn("local=true", asked[0])
+        self.assertEqual(len(got), 19)
+        self.assertTrue(all(s["id"].startswith("L") for s in got))  # mine to act on
+        self.assertEqual(cur, "far19")
+        got, cur = core.remote_public("far.example", cur).result()
+        self.assertEqual((got, cur), ([], None))
+        self.assertIn("max_id=far19", asked[-1])
+
+    def test_closed_or_not_a_server(self):
+        core, _w = self.make()
+        core.connect().result()
+        core._origin_get = lambda url: None  # 401 to strangers (GoToSocial, many others)
+        with self.assertRaises(LookupError):
+            core.remote_public("closed.example").result()
+        with self.assertRaises(ValueError):
+            core.remote_public("not a server").result()
+
+    def test_my_own_server_is_its_local(self):
+        core, w = self.make()
+        core.connect().result()
+        w.local.append(status("777", BOB, vis="public"))
+        got, _cur = core.remote_public("example.test").result()
+        self.assertEqual([s["id"] for s in got], ["777"])

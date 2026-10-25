@@ -190,6 +190,14 @@ def lookup_url(host, username):
     return f"https://{host}/api/v1/accounts/lookup?acct=" + quote(username or "")
 
 
+def public_url(host, max_id="", local=True, limit=20):
+    """A stranger's server: its public lane (its own people's posts when local), as
+    anyone without an account sees it — if it lets anyone."""
+    from urllib.parse import quote
+    return (f"https://{host}/api/v1/timelines/public?limit={int(limit)}"
+            + ("&local=true" if local else "") + (f"&max_id={quote(max_id)}" if max_id else ""))
+
+
 def statuses_url(host, their_id, max_id=""):
     """A stranger's server: someone's public posts, own ones only, page after max_id."""
     from urllib.parse import quote

@@ -18,6 +18,7 @@ worker threads (see events.py):
 """
 
 import logging
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -2356,6 +2357,46 @@ class Core(SocialMixin):
         except Exception as e:  # noqa: BLE001 — their server, anything goes
             log.info("profile %s: %s api: %s", acc.get("id"), host, e)
             return [], None
+
+    # a server's name as people type it: example.org, https://example.org/about, @x@example.org
+    _HOST = re.compile(r"^(?:[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?$")
+
+    @classmethod
+    def server_host(cls, text):
+        """example.org out of what was typed, or "" (not a server's name)."""
+        from urllib.parse import urlparse
+        t = (text or "").strip().lower()
+        if "://" in t:
+            t = urlparse(t).netloc
+        t = t.rsplit("@", 1)[-1].split("/")[0].strip(".")
+        return t if cls._HOST.match(t) else ""
+
+    def remote_public(self, host, cursor=None):
+        """Another server's public lane (its own people), read without an account and
+        fetched into mine page by page, so each post can be liked, answered, opened as
+        any other. A future of (statuses, cursor of the next page or None); LookupError
+        when that server keeps its lane closed to strangers (many do; GoToSocial
+        always) or isn't a server that has one."""
+        def job():
+            h = self.server_host(host)
+            if not h:
+                raise ValueError(host)
+            mine = {x.lower() for x in self._own_hosts()}
+            if h in mine:  # my own server: its Local, with my token
+                page = self.api.local(limit=20, max_id=cursor) or []
+                self.store.put_statuses(page)
+                return page, (page[-1]["id"] if len(page) >= 20 else None)
+            page = self._origin_get(api_module.public_url(h, cursor or ""))
+            if not isinstance(page, list):
+                raise LookupError(h)
+            uris = [s["uri"] for s in page if isinstance(s, dict) and s.get("uri")
+                    and s.get("visibility") in ("public", None)]
+            nxt = str(page[-1].get("id") or "") if len(page) >= 20 else ""
+            got = self._resolve_statuses(uris)
+            log.info("server %s: public lane: %d listed, %d fetched", h, len(uris),
+                     len(got))
+            return got, (nxt or None)
+        return self.bg.submit(job)
 
     def _outbox_of(self, acc):
         for url in (acc.get("uri"), acc.get("url")):

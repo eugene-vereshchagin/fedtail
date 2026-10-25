@@ -878,6 +878,13 @@ _STRINGS = {
         "spell_all_ok": "Ошибок не видно",
         "spell_unavailable": ("Проверка орфографии недоступна: нет словарей Enchant "
             "(Debian: libenchant-2-2 и hunspell-ru / hunspell-en-us)"),
+        "remote_public": "Лента другого сервера…",
+        "remote_public_tip": ("Публичная лента чужого сервера, как её видит любой без входа; "
+            "посты подтягиваются через твой сервер — лайкай и отвечай как обычно"),
+        "remote_public_q": "Какой сервер? (например, mastodon.social)",
+        "remote_public_title": "Сервер {host}",
+        "remote_public_closed": "{host} не показывает свою ленту без входа",
+        "remote_public_bad": "Это не похоже на адрес сервера: {text}",
         "mute": "Заглушить", "unmute": "Вернуть звук", "block": "Заблокировать",
         "unblock": "Разблокировать",
         "mute_acct": "Заглушить @{acct}", "block_acct": "Заблокировать @{acct}…",
@@ -1888,6 +1895,13 @@ _STRINGS = {
         "spell_all_ok": "No mistakes seen",
         "spell_unavailable": ("Spell checking is unavailable: no Enchant dictionaries "
             "(Debian: libenchant-2-2 and hunspell-en-us / hunspell-ru)"),
+        "remote_public": "Another server's lane…",
+        "remote_public_tip": ("Another server's public lane, as anyone sees it without "
+            "logging in; the posts come through your server — like and reply as usual"),
+        "remote_public_q": "Which server? (mastodon.social, say)",
+        "remote_public_title": "Server {host}",
+        "remote_public_closed": "{host} doesn't show its lane without logging in",
+        "remote_public_bad": "That doesn't look like a server's address: {text}",
         "mute": "Mute", "unmute": "Unmute", "block": "Block", "unblock": "Unblock",
         "mute_acct": "Mute @{acct}", "block_acct": "Block @{acct}…",
         "block_q": "Block @{acct}? They won't see your posts or be able to write to you.",
