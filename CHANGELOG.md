@@ -112,6 +112,10 @@
   usual emoji and those already on the post as buttons (tapped again, yours comes off),
   any other or the server's own one typed (`:blobcat:`). Offered only where the server
   has reactions, in every interface.
+- The web page starts for a profile not logged in yet too: it asks for the server and
+  the code itself (the login place), then goes on as the whole page.
+- Someone's older posts from their own server on the web page as in the windows: the
+  addresses at once, the posts four at a time, "n of N" counting on the button.
 - Debug → "The log" (≡ → "The log" on the web page, in the terminal and on the phone):
   the last lines of this run's log, to read or copy into a bug report.
 - All accounts in one: "→ @account" in that account's colour on the web page and the

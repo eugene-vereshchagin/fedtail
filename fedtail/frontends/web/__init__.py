@@ -18,10 +18,12 @@ log = logging.getLogger(__name__)
 def run(core, instance, argv):
     from .server import load_key, make_server
     wcfg = core.cfg["web"]
-    if not core.logged_in:
-        print("fedtail: " + _("cli_login_first"), file=sys.stderr)
-        return 1
-    core.connect().result()
+    # a profile not logged in yet: the page itself asks for the server and the code (the
+    # "login" place), then goes on as any — polling starts once it is in (Web.me)
+    if core.logged_in:
+        core.connect().result()
+    else:
+        print("fedtail: " + _("web_login_here"), file=sys.stderr)
     key = load_key(core.paths.data_dir)
     srv = make_server(core, wcfg["host"], wcfg["port"], key)
     srv.web.instance = instance  # given over when the page switches accounts
@@ -37,7 +39,8 @@ def run(core, instance, argv):
     log.info("web: listening on %s:%s", host, port)
     if instance is not None:  # started again: a fresh link, opened here
         instance.listen(lambda _m: webbrowser.open(srv.web.login_link(base)))
-    core.start_polling()
+    if core.logged_in:
+        core.start_polling()
     if wcfg["open_browser"]:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     stop = threading.Event()

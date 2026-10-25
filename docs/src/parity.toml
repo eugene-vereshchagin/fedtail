@@ -22,13 +22,11 @@ area = "window"
 android = "has"
 name.ru = "Вход на сервер"
 name.en = "Logging in"
-tui = "partly"
-web = "partly"
-note.ru = "Терминал и веб входят так же: адрес сервера, страница входа в браузере, код. Сам веб для профиля без входа не запускается — входят со страницы другого профиля."
-note.en = "The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. The web page itself won't start for a profile not logged in — you log in from another profile's page."
+note.ru = "Терминал и веб входят так же: адрес сервера, страница входа в браузере, код. Веб для профиля без входа открывает одно место входа, а войдя — страницу целиком."
+note.en = "The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. For a profile not logged in, the web page opens the login place alone, and once in — the whole page."
 keys = ["login_browser_opened", "login_hint", "login_other_account", "login_server",
         "login_step1", "login_step2", "login_title", "auth_failed", "auth_failed_title",
-        "relogin", "relogin_q", "relogin_title"]
+        "relogin", "relogin_q"]
 
 [[capability]]
 id = "accounts"
@@ -265,9 +263,8 @@ android = "has"
 name.ru = "Старые посты человека с его сервера"
 name.en = "Someone's older posts from their own server"
 tui = "partly"
-web = "partly"
-note.ru = "Подтягиваются страницами по кнопке «ещё» внизу, без живого счётчика «n из N»."
-note.en = "They come page by page with a “more” button at the bottom, without a live “n of N” count."
+note.ru = "Веб — как окна: адреса страницы сразу, посты по четыре, на кнопке живой счётчик «n из N». Терминал подтягивает страницу целиком по кнопке «ещё» и потом говорит, сколько пришло, — без живого счётчика."
+note.en = "The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count."
 keys = ["older_from_origin", "older_from_origin_note", "older_from_origin_tip",
         "origin_asking", "origin_fetching", "origin_got", "older_down", "older_up"]
 
@@ -553,6 +550,12 @@ keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bo
         "close_tip", "a11y_avatar"]
 
 # ---- the same, in other words ------------------------------------------------------------
+
+[[wording]]
+in = ["tui", "web"]
+why.ru = "«Войти заново» в терминале и вебе — кнопка места «Аккаунты», и её «точно?» — вопросом без заголовка окна."
+why.en = "“Log in again” in the terminal and the web page is a button of the Accounts place, and its “sure?” a question without a window's title."
+keys = ["relogin_title"]
 
 [[wording]]
 in = ["tui", "web"]

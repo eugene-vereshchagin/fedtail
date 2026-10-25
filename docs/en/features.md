@@ -728,7 +728,6 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
-| Logging in | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. The web page itself won't start for a profile not logged in — you log in from another profile's page. |
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | · | ✓ | One lane at a time; columns are the window's and the tablet's (the overview, a lane, a thread side by side). |
@@ -738,7 +737,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
-| Someone's older posts from their own server | ✓ | ✓ | ◐ | ◐ | ✓ | They come page by page with a “more” button at the bottom, without a live “n of N” count. |
+| Someone's older posts from their own server | ✓ | ✓ | ◐ | ✓ | ✓ | The web page as the windows: the page's addresses at once, the posts four at a time, a live “n of N” on the button. The terminal fetches a whole page with “more” and then says how many came — no live count. |
 
 ### Pictures and video
 

@@ -576,13 +576,40 @@ class HandlerTest(TmpDir):
 
 
 class RunTest(TmpDir):
-    def test_run_needs_a_login(self):
+    def test_run_without_a_login_serves_the_login_page(self):
+        """A profile not logged in: the page itself asks (the login place); nothing is
+        connected or polled until then."""
+        import types
+
         from fedtail.frontends import web as web_frontend
-        core = mock.Mock(logged_in=False, cfg={"web": {}})
-        err = io.StringIO()
-        with mock.patch("sys.stderr", err):
-            self.assertEqual(web_frontend.run(core, None, []), 1)
-        self.assertIn(i18n._("cli_login_first"), err.getvalue())
+        from fedtail.frontends.web.server import Web
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({"ui": {"language": "en"},
+                                  "web": {"port": 0, "open_browser": False}})
+        p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
+        core = Core(cfg, p, api_class=FakeApi)
+        self.addCleanup(core.shutdown)
+        self.assertFalse(core.logged_in)
+        me = Web(core, None).me()
+        self.assertEqual(me["login"], "t")  # the page opens the login place, nothing else
+        self.assertIn("words", me)
+
+        class Stop(threading.Event):
+            def wait(self, timeout=None):
+                return True  # the loop ends at once
+        fake = types.SimpleNamespace(Timer=threading.Timer, Event=Stop,
+                                     Thread=threading.Thread)
+        err, out = io.StringIO(), io.StringIO()
+        with mock.patch.object(web_frontend.signal, "signal", lambda *_a: None), \
+                mock.patch.object(web_frontend, "threading", fake), \
+                mock.patch.object(core, "connect") as connect, \
+                mock.patch.object(core, "start_polling") as polling, \
+                mock.patch("sys.stderr", err), mock.patch("sys.stdout", out):
+            self.assertEqual(web_frontend.run(core, None, []), 0)
+        connect.assert_not_called()
+        polling.assert_not_called()
+        self.assertIn(i18n._("web_login_here"), err.getvalue())
+        self.assertIn("http://127.0.0.1:", out.getvalue())  # the link to log in on
 
     def test_run_serves_until_asked_to_stop(self):
         import types

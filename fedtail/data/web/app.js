@@ -921,7 +921,8 @@ async function selectLane(name, keep) {
 
 function olderButton() {
   if (!state.older) return null;
-  const b = el("button", "older", w("more"));
+  // the windows' words: "▼ earlier" at the end when newest first, "▲ earlier" on top
+  const b = el("button", "older", w(state.me.order === "newest_first" ? "older_down" : "older_up"));
   b.type = "button";
   b.onclick = async () => {
     b.disabled = true;
@@ -1344,6 +1345,7 @@ function profilePosts(body, a, id, show) {
     if (offer.tip) b.title = offer.tip;
     b.onclick = async () => {
       b.disabled = true;
+      if (offer.cursor) return fromOrigin(b, offer);
       try {
         const r = await api("/api/account_more?id=" + encodeURIComponent(id)
           + "&show=" + encodeURIComponent(show) + "&max_id=" + encodeURIComponent(maxId)
@@ -1357,6 +1359,28 @@ function profilePosts(body, a, id, show) {
       } catch (e) { b.disabled = false; toast(e.message); }
     };
     body.append(b);
+  };
+  // their own server: the addresses first, then the posts a few at a time — the button
+  // counts "n of N" meanwhile, as the windows' does (my server takes seconds a post)
+  const fromOrigin = async (b, offer) => {
+    try {
+      b.textContent = offer.label + " …";
+      const list = await api("/api/origin_list", { id, cursor: offer.cursor });
+      const uris = list.uris || [];
+      let done = 0, shown = 0;
+      body.querySelector(".empty")?.remove();
+      while (done < uris.length) {
+        b.textContent = (list.words.fetching || "").replace("{n}", String(done));
+        const batch = uris.slice(done, done + 4);
+        const r = await api("/api/origin_fetch", { id, uris: batch, show });
+        for (const p of r.posts) { b.before(renderPost(p, false)); shown += 1; }
+        done += batch.length;
+      }
+      b.remove();
+      if (shown) toast(list.words.got || "");
+      if (list.older) more(list.older);
+      else body.append(el("div", "muted", w("no_older")));
+    } catch (e) { b.disabled = false; b.textContent = offer.label; toast(e.message); }
   };
   more(a.older);
 }
@@ -1425,6 +1449,18 @@ function helpGo(step) {
   if (!from.length || !state.place || state.place.name !== "help") return;
   to.push(state.place.arg);
   openPlace("help", from.pop(), "", "", state.place.into, "", true);
+}
+
+// a profile not logged in yet: the login place alone (server, the browser, the code);
+// once it is in, the page starts anew as any
+function loginOnly(me) {
+  if (me.lang) document.documentElement.lang = me.lang;
+  state.loginOnly = true;
+  for (const id of ["#write", "#write2", "#allread", "#refresh", "#more", "#menu"]) {
+    const b = $(id);
+    if (b) b.hidden = true;
+  }
+  openPlace("login", me.login);
 }
 
 async function openPlace(name, arg, tab, cursor, into, anchor, byHistory) {
@@ -1619,6 +1655,8 @@ async function placeAct(act, values, confirmed, answer) {
     if (got !== null) await placeAct(act, values, confirmed, got);
     return;
   }
+  // logged in from the login-only page: the page anew, now as this account
+  if (state.loginOnly && act[0] === "login" && act[1] === "finish" && r.message) r.reload = true;
   if (r.reload) {  // another account now: the page anew (the cookie stays good)
     try { if (r.message) sessionStorage.setItem("fedtail-toast", r.message); } catch (e) { /* none */ }
     location.reload();
@@ -2259,6 +2297,11 @@ async function follow() {
       state.noteSeq = r.n;
       for (const snd of r.sounds || []) playSound(snd);
       for (const note of r.notes || []) showNote(note);
+      if (r.auth_failed && !state.authSaid) {  // the token refused: log in again there
+        state.authSaid = true;
+        window.alert(r.auth_failed.title + "\n\n" + r.auth_failed.text);
+        openPlace("accounts");
+      }
       if (r.v !== state.version) {
         const first = state.version < 0;
         state.version = r.v;
@@ -2290,6 +2333,7 @@ async function start() {
   const me = await api("/api/me");
   state.me = me;
   state.words = me.words;
+  if (me.login) return loginOnly(me);
   try { me.places = await api("/api/places"); } catch (e) { me.places = []; }
   // dates and times as fedtail's language writes them, not the browser's (a Russian
   // window said "10:25 PM")

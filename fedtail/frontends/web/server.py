@@ -480,6 +480,7 @@ class Web:
         self.note_seq = 0
         self.note_log = collections.deque(maxlen=20)  # (seq, {title, body, lane, thread})
         self.instance = None  # this profile's single-instance lock (web/__init__.run)
+        self.auth_failed = None  # the server refused the token: what the page says
         self._listen(self.core)
 
     def _listen(self, view):
@@ -489,6 +490,14 @@ class Web:
             view.on(event, lambda _n, _p: self.bump())
         view.on("sound", lambda _n, p: self.chime(p))
         view.on("notify", lambda _n, p: self.notified(p))
+        view.on("auth_failed", lambda _n, _p: self.auth_lost())
+
+    def auth_lost(self):
+        """The server no longer takes the token: the page says so (the windows' words)
+        and opens Accounts, where "log in again" is."""
+        with self.changed:
+            self.auth_failed = {"title": _("auth_failed_title"), "text": _("auth_failed")}
+        self.bump()
 
     def switch_profile(self, name):
         """Another account's profile in this same page (Accounts → Open, or after a
@@ -618,7 +627,10 @@ class Web:
         v = self.wait(since)
         sounds, last = self.sounds_since(sound_since)
         notes, last_note = self.notes_since(note_since)
-        return {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes}
+        out = {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes}
+        if self.auth_failed:
+            out["auth_failed"] = self.auth_failed
+        return out
 
     def bump(self):
         with self.changed:
@@ -643,6 +655,14 @@ class Web:
     # ---- API ---------------------------------------------------------------------
     def me(self):
         c = self.core.cfg
+        if not self.core.logged_in or self.core.me is None and not self.core.auth:
+            # not logged in yet: the page shows the login place and nothing else
+            return {"login": self.core.paths.profile, "version": __version__,
+                    "lang": i18n.current_language(), "homepage": version.HOMEPAGE,
+                    "words": {k: _(k) for k in WORDS}}
+        if self.core.me is None:  # just logged in from the page: connected, then polling
+            self.core.connect().result(timeout=120)
+        self.core.start_polling()
         me = self.core.me
         return {"me": account_json(me), "handle": me.handle if me else "",
                 "version": __version__, "server": (self.core.auth or {}).get("server"),
@@ -1212,6 +1232,35 @@ class Web:
                 "said": _("origin_got", n=len(got), host=host) + " · " +
                 _("older_from_origin_note") if got else ""}
 
+    def origin_list(self, acc_id, cursor=""):
+        """Their own server's posts, step one: the addresses of the next page (fast) →
+        {uris, older, host, words} — the page then fetches them a few at a time
+        (origin_fetch), counting "n of N" on its button, as the windows do."""
+        core = self.core
+        acc = core.account(one_id(acc_id)).result()
+        host = self._remote_host(acc)
+        cursor = str(cursor or "")
+        if not host or cursor == "end":
+            return {"uris": [], "older": None, "host": host, "words": {}}
+        uris, nxt = core.older_from_origin(acc, None if cursor in ("", "origin") else cursor,
+                                           (), resolve=False).result(timeout=180)
+        n = len(uris or ())
+        return {"uris": list(uris or ()), "older": self._older_offer(acc, [], nxt or "end"),
+                "host": host,
+                "words": {"fetching": _("origin_fetching", n="{n}", total=n, host=host),
+                          "got": _("older_from_origin_note")}}
+
+    def origin_fetch(self, acc_id, uris, show=None):
+        """Step two: these addresses' posts fetched into my server → {posts}."""
+        core = self.core
+        acc_id = one_id(acc_id)
+        if show not in dict(timed.PROFILE_SHOWS):
+            show = timed.profile_show(core.cfg)
+        uris = [str(u) for u in (uris or ()) if str(u).startswith("https://")][:8]
+        got = core.resolve_statuses(uris).result(timeout=180) if uris else []
+        got = [e for e in got or () if timed.keeps(e, show, acc_id)]
+        return {"posts": self._posts(got)}
+
     @staticmethod
     def _date(when):
         return when.astimezone().strftime("%d.%m.%Y") if when else ""
@@ -1690,7 +1739,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "web_visibility", "vis_public",
          "vis_unlisted", "vis_private", "vis_direct", "web_media", "web_sensitive",
          "web_parent_gone", "web_mark_read", "tui_profile", "open_browser", "refresh",
-         "more", "no_older", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",
+         "more", "no_older", "older_up", "older_down", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",
          "web_new_post", "web_original", "web_close", "web_lanes", "web_edited",
          "web_requested", "lang_label", "pinned", "act_as_wait",
          "reply_quote", "quote_in_reply", "sub_thread", "unsub_thread", "mute_thread",
@@ -1895,6 +1944,11 @@ class Handler(BaseHTTPRequestHandler):
             "/api/resolve": lambda: web.resolve(str(body.get("url", ""))),
             "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
             "/api/complete": lambda: web.complete(body.get("before")),
+            "/api/origin_list": lambda: web.origin_list(str(body.get("id")),
+                                                        str(body.get("cursor") or "")),
+            "/api/origin_fetch": lambda: web.origin_fetch(str(body.get("id")),
+                                                          body.get("uris") or [],
+                                                          body.get("show") or None),
             "/api/act_as": lambda: web.act_as(str(body.get("id")), body.get("tag"),
                                               str(body.get("action") or "")),
             "/api/place": lambda: web.place_act(body),

@@ -253,6 +253,7 @@ _STRINGS = {
         "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — в командную строку",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
         "fresh_of_them": "из них новых {n}",
+        "web_login_here": "профиль ещё не вошёл на сервер — войди на открывшейся странице",
         "react_menu": "Реакция",
         "react_title": "Реакция на пост",
         "react_hint": "Твоё эмодзи на пост; нажатое ещё раз снимается. Свои эмодзи сервера — "
@@ -1344,6 +1345,7 @@ _STRINGS = {
         "short_id_tip": "Short post number, like #abc on Point. Click — into the command line",
         "unread_tip": "New", "came_from": "you came from here",
         "fresh_of_them": "{n} of them new",
+        "web_login_here": "this profile hasn't logged in yet — log in on the page that opens",
         "react_menu": "React",
         "react_title": "A reaction to the post",
         "react_hint": "An emoji of yours on the post; tapped again, it comes off. The server's "

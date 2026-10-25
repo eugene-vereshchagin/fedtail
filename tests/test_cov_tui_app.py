@@ -782,6 +782,20 @@ class ThreadsTest(Base):
 
 @unittest.skipUnless(HAVE_TEXTUAL, "Textual is not installed")
 class EdgesTest(Base):
+    def test_the_token_refused(self):
+        """Said once, as the windows say it, and Accounts opened (log in again there)."""
+        from fedtail.frontends.tui import app as app_mod
+        fake = mock.Mock()
+        fake._auth_said = False
+        app_mod.FedtailApp.auth_lost(fake)
+        self.assertIn(i18n._("auth_failed"), fake.show_error.call_args[0][0])
+        self.assertEqual(fake.push_screen.call_args[0][0].name_, "accounts")
+        fake.push_screen.side_effect = RuntimeError
+        fake._auth_said = False
+        app_mod.FedtailApp.auth_lost(fake)  # no screen: the words were said all the same
+        app_mod.FedtailApp.auth_lost(fake)  # and only once
+        self.assertEqual(fake.show_error.call_count, 2)
+
     def test_render_and_an_older_textual(self):
         from fedtail.frontends.tui import app as app_mod
         from fedtail.frontends.tui.model import Shown

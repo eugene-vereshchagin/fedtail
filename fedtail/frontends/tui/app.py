@@ -879,6 +879,9 @@ class FedtailApp(App, PostsMixin):
         for event in ("activity_updated", "activity_seen", "requests_updated"):
             self.core.on(event, lambda n, _p: self.in_ui(self.other_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
+        # the server no longer takes the token: said as the windows say it, and Accounts
+        # opened — "log in again" is there
+        self.core.on("auth_failed", lambda _n, _p: self.in_ui(self.auth_lost))
         self.sounds = self._make_sounds()
         if self.sounds is not None:
             self.core.on("sound", lambda _n, p: self.in_ui(self.play_sound, p))
@@ -889,6 +892,17 @@ class FedtailApp(App, PostsMixin):
             self.push_screen(LoginScreen())
             return
         self.begin()
+
+    def auth_lost(self):
+        if getattr(self, "_auth_said", False):
+            return
+        self._auth_said = True
+        self.show_error(f"{_('auth_failed_title')}: {_('auth_failed')}")
+        try:
+            from .screens import PlaceScreen
+            self.push_screen(PlaceScreen("accounts"))
+        except Exception:  # noqa: BLE001 — the words are said in any case
+            log.debug("auth lost: accounts not opened", exc_info=True)
 
     def begin(self):
         self._main("#title", Static).update(_("tui_connecting"))

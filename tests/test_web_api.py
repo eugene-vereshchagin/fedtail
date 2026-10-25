@@ -121,6 +121,42 @@ class WebProfileTest(TmpDir):
             got, more = nxt, nxt["older"]
         self.assertEqual(seen, set(b_posts))
 
+    def test_origin_step_by_step(self):
+        """Their own server: the addresses first, then the posts a few at a time."""
+        from unittest import mock
+
+        from tests import fakes
+        st = fakes.status("401", fakes.BOB, minute=1, vis="public", text="old one")
+        self.w.add(st, home=True)
+        self.core.poll_once()
+        acc = object()  # who they are: only what the patched calls below are given
+        uris = ["https://far.example/s/1", "http://plain.example/s/2"]
+        with mock.patch.object(self.core, "account", return_value=_done(acc)), \
+                mock.patch.object(self.core, "older_from_origin",
+                                  return_value=_done((uris, None))) as older, \
+                mock.patch.object(self.web, "_remote_host", return_value="far.example"):
+            got = self.web.origin_list("B", "origin")
+        self.assertEqual(got["uris"], uris)
+        self.assertIsNone(older.call_args[0][1])  # from their newest
+        self.assertFalse(older.call_args.kwargs["resolve"])  # addresses only, fast
+        self.assertIn("{n}", got["words"]["fetching"])
+        self.assertIsNone(got["older"])  # nothing further back: no button
+        with mock.patch.object(self.core, "resolve_statuses",
+                               return_value=_done([self.core.store.get_status("401")])) as res:
+            got = self.web.origin_fetch("B", uris, "all")
+        self.assertEqual(res.call_args[0][0], uris[:1])  # https only
+        self.assertEqual([p["sid"] for p in got["posts"]], ["401"])
+        with mock.patch.object(self.web, "_remote_host", return_value=""):
+            self.assertEqual(self.web.origin_list("B")["uris"], [])
+        self.assertEqual(self.web.origin_fetch("B", [])["posts"], [])
+
+    def test_the_token_refused(self):
+        """The server no longer takes the token: the page hears it with the news."""
+        self.assertNotIn("auth_failed", self.web.wait_answer(-99, -1))
+        self.core.emit("auth_failed", "HTTP 401")
+        got = self.web.wait_answer(-99, -1)
+        self.assertEqual(got["auth_failed"]["title"], i18n._("auth_failed_title"))
+
     def test_completion_of_names_tags_emoji(self):
         """The editor's #tag, @name, :emoji: — the windows' completion, on the page."""
         from tests import fakes
@@ -136,3 +172,10 @@ class WebProfileTest(TmpDir):
         got = self.web.complete("и #fed")
         self.assertIn("#fediverse", [i["insert"] for i in got["items"]])
         self.assertEqual(self.web.complete("просто слово")["items"], [])
+
+
+def _done(value):
+    from concurrent.futures import Future
+    f = Future()
+    f.set_result(value)
+    return f
