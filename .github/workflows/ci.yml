@@ -142,11 +142,14 @@ jobs:
       - name: The installer
         shell: bash
         run: |
+          set -x
           ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
-          [ -f "$ISCC" ] || choco install innosetup -y --no-progress >/dev/null
+          [ -f "$ISCC" ] || choco install innosetup -y --no-progress
+          [ -f "$ISCC" ] || ISCC=$(ls /c/Program\ Files*/Inno\ Setup*/ISCC.exe | head -1)
+          ls -la dist build/fedtail.ico
           VER=$(python -c "import fedtail; print(fedtail.__version__)")
           HOME_URL=$(python -c "from fedtail import version; print(version.HOMEPAGE)")
-          "$ISCC" //DVersion="$VER" //DHomepage="$HOME_URL" packaging/windows/fedtail.iss
+          MSYS_NO_PATHCONV=1 "$ISCC" /DVersion="$VER" /DHomepage="$HOME_URL" packaging\\windows\\fedtail.iss
           test -f dist/fedtail-setup.exe
       - name: Sign the installer
         if: env.CERT != ''
