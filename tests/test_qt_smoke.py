@@ -527,13 +527,19 @@ class QtSmokeTest(unittest.TestCase):
             shown = [b for b in prof.info.findChildren(QPushButton) if b.isVisible()]
             return shown and all(b.mapTo(prof.info, b.rect().topRight()).x() <=
                                  prof.info.width() for b in shown)
-        self.pump(until=fit, timeout=3)  # a slow machine relays them out a moment later
+        try:
+            self.pump(until=fit, timeout=10)  # a slow machine relays them out a moment later
+        except AssertionError:
+            pass  # what is wrong — said below, button by button
         btns = [b for b in prof.info.findChildren(QPushButton) if b.isVisible()]
-        self.assertTrue(btns)
+        every = prof.info.findChildren(QPushButton)
+        self.assertTrue(btns, f"no button shown of {len(every)}; window {self.win.width()}")
         for b in btns:
-            self.assertGreaterEqual(b.width(), b.sizeHint().width(), b.text())
             right = b.mapTo(prof.info, b.rect().topRight()).x()
-            self.assertLessEqual(right, prof.info.width(), b.text())  # and none sticks out
+            said = (f"{b.text()!r}: w {b.width()} hint {b.sizeHint().width()} right {right}"
+                    f" card {prof.info.width()} window {self.win.width()}")
+            self.assertGreaterEqual(b.width(), b.sizeHint().width(), said)
+            self.assertLessEqual(right, prof.info.width(), said)  # and none sticks out
         self.win.on_link("fedtail:tag/linux")
         self.assertIsInstance(self.win.tabs.currentWidget(), TagWidget)
         self.win.close_tab(self.win.tabs.currentIndex())

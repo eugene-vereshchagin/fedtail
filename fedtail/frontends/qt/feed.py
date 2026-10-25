@@ -1732,12 +1732,7 @@ class AccountWidget(_PagedTab):
         acc, lay, theme = self.acc, self._info_layout, self.win.theme
         rel = self.relation
         in_app = self.core.cfg["ui"]["links_in_app"]
-        while lay.count():
-            item = lay.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-            elif item.layout():
-                _clear(item.layout())
+        _clear(lay)
         header = acc.header_static
         if header and not header.endswith("/missing.png"):
             banner = QLabel()
@@ -2055,9 +2050,13 @@ class TagWidget(_PagedTab):
 
 
 def _clear(layout):
+    """Empty a layout. Its widgets are hidden at once — deleteLater() waits for the event
+    loop, and till then the old ones stood there visible where they were, over the new
+    (a profile rebuilt in a narrower window: last time's buttons sticking out)."""
     while layout.count():
         item = layout.takeAt(0)
         if item.widget():
+            item.widget().hide()
             item.widget().deleteLater()
         elif item.layout():
             _clear(item.layout())
