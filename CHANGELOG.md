@@ -103,9 +103,21 @@
   background round wait their turn too, and the overview says when the next batch comes.
   In the same place, for each lane that notifies or chimes: "notify at most every N
   minutes" — the lane updates as usual, its notifications and sound come in one batch.
+  While slow mode is on, the status line (the title bar on the web page and in the
+  terminal, the overview on the phone) says when the next batch comes.
 - "Of them new": beside a lane's unread count, how many of them the last update brought —
   under the count on the phone's tiles ("300", "56 of them new"), "300 +56" in the
   sidebar of the windows, the web page and the terminal.
+- Debug → "The log" (≡ → "The log" on the web page, in the terminal and on the phone):
+  the last lines of this run's log, to read or copy into a bug report.
+- All accounts in one: "→ @account" in that account's colour on the web page and the
+  phone too (ui.account_colors), as in the windows.
+- Android: a poll's results as bars (✓ by my choice, the leader marked; how many people,
+  until when, ⟳); the thread's head (how many answers, its #id, why it reaches me,
+  Follow); "to the new" in a lane; "Another language…" in the editor, and its hints as
+  you type (a chain's parts, #CamelCase for screen readers); help goes forward again;
+  the pictures of the next posts fetched ahead (feed.prefetch); "arts mode" marked in
+  ≡; older posts from someone's own server say how many came.
 - Android: the activity lane read "as a forum" opens on its first unseen row (or at the
   end) and is refreshed by a pull from the bottom, as the GTK window does.
 

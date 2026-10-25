@@ -117,6 +117,7 @@ data class PostItem(
     val labels: String = "",         // the windows' marks: "old, 40 days", "bot", edited…
     val reactions: String = "",      // "👍 3 :blobcat: 2"
     val via: String = "",            // all accounts in one: which of mine got it
+    val viaColor: String = "",       // …in that account's colour (ui.account_colors)
 )
 
 /** A lane's switches from its header (common/lane.py, the windows' and the page's). */
@@ -202,6 +203,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var markOnScroll by mutableStateOf(true)
     var defaultVisibility by mutableStateOf("followers")
     var hideSensitive by mutableStateOf(true)
+    var prefetch by mutableStateOf("previews") // feed.prefetch: pictures fetched ahead
     var expandCw by mutableStateOf(false) // config.expand_cw: ui.expand_cw, or ui.arts_mode
     var commandLine by mutableStateOf(false)
     var overview by mutableStateOf("tiles") // phone.overview: tiles | list
@@ -416,6 +418,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         defaultVisibility = me.optString("visibility", "followers")
         hideSensitive = me.optString("sensitive_media", "hide") != "show"
         expandCw = me.optBoolean("expand_cw")
+        prefetch = me.optString("prefetch", "previews")
         commandLine = me.optBoolean("command_line")
         overview = me.optString("overview", "tiles")
         layoutPref = me.optString("layout", "auto")
@@ -806,9 +809,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     // ---- places over the lane ----------------------------------------------------------
     /** Back: the place on top closes; with none, a lane goes back to the overview. */
+    // the help's pages gone back from: "forward" brings them again (the windows' →)
+    var helpAhead by mutableStateOf(listOf<Place.Page>())
+
+    /** Help: the page gone back from, again. */
+    fun helpForward() {
+        val next = helpAhead.lastOrNull() ?: return
+        helpAhead = helpAhead.dropLast(1)
+        places = places + next
+        viewModelScope.launch { loadPage(next) }
+    }
+
     fun back(): Boolean {
         if (places.isNotEmpty()) {
             val left = places.last()
+            if (left is Place.Page && left.name == "help" && places.dropLast(1).lastOrNull()
+                    .let { it is Place.Page && it.name == "help" }) {
+                helpAhead = helpAhead + left  // a help page left for the one before it
+            }
             if (left is Place.Compose) saveDraft()  // whatever happens next, the text is safe
             places = places.dropLast(1)
             if (left is Place.Page && left !in places) pages.remove(left)
@@ -1273,6 +1291,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val p = Place.Page(name, arg, tab)
+        if (name == "help") helpAhead = emptyList()  // a new way through the help
         places = if (top is Place.Page && top.name == name && top.arg == arg) places.dropLast(1) + p
                  else places + p
         viewModelScope.launch { loadPage(p) }
@@ -1857,6 +1876,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 posts = now.posts + parsePosts(got.optJSONArray("posts")).filter { it.key !in have },
                 maxId = str(got, "max_id").ifBlank { now.maxId },
                 older = parseOlder(got.optJSONObject("older")), loadingMore = false)
+            // from their own server: how many came ("12 posts from host · old posts…")
+            str(got, "said").takeIf { it.isNotBlank() }?.let { message = it }
         }
     }
 
@@ -1927,6 +1948,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     .filter { it.isNotBlank() }.joinToString(" · ") } ?: "",
             reactions = o.optJSONObject("words")?.optString("reactions") ?: "",
             via = o.optJSONObject("via")?.optString("text") ?: "",
+            viaColor = o.optJSONObject("via")?.optString("color") ?: "",
             quoteId = str(o.optJSONObject("quote"), "id"),
             quoteWho = o.optJSONObject("quote")?.optJSONObject("account")?.let { a ->
                 str(a, "name").ifBlank { str(a, "handle") } } ?: "",

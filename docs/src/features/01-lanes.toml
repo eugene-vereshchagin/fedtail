@@ -359,9 +359,7 @@ details.en = "Search on the server: people, tags, posts (as far as the server in
 [[feature]]
 id = "tag-groups"
 status = "has"
-android = "partly"
-android_note.ru = "читаются; собрать — только на компьютере или в конфиге"
-android_note.en = "read; made only on the desktop or in the config"
+android = "has"
 since = "0.14.0"
 name.ru = "Лента из нескольких тегов"
 name.en = "A lane of several tags"

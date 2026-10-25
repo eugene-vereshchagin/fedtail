@@ -896,8 +896,8 @@ class FedtailApp(App, PostsMixin):
                    fail=lambda e: self.show_error(_("tui_connect_failed", err=e)))
 
     async def connected(self, _me):
-        me = self.core.me
-        self.sub_title = "@" + (me.handle if me else "")
+        self._slow_title()
+        self.set_interval(30, self._slow_title)  # slow mode: when the next batch comes
         await self.fill_lanes()
         self.core.start_polling()
         first = start_lane(self.core, self._lane_names())
@@ -935,8 +935,16 @@ class FedtailApp(App, PostsMixin):
         sidebar.fold(self.core, item.group)
         await self.fill_lanes()
 
+    def _slow_title(self):
+        """The subtitle: "@me", and in slow mode when the next batch comes."""
+        from ..common import sidebar
+        me = self.core.me
+        slow = sidebar.slow_words(self.core)
+        self.sub_title = "@" + (me.handle if me else "") + (f" · {slow}" if slow else "")
+
     def update_lane_counts(self):
         from ..common import sidebar
+        self._slow_title()
         for item in self._main("#lanes", ListView).children:
             if isinstance(item, LaneItem):
                 title, n = lane_label(self.core, item.lane, self.lanes_width - 2)

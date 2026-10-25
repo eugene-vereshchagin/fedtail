@@ -293,6 +293,12 @@ class MainWindow(Gtk.ApplicationWindow):
         bar.append(self.profile_label)
         bar.append(self.status_line)
         # sync with my other devices (or that there is none: off without sync.url)
+        # slow mode on: when the next batch comes ("slow · next at 14:30")
+        self.slow_label = Gtk.Label(xalign=1)
+        self.slow_label.add_css_class("ft-muted")
+        self.slow_label.set_visible(False)
+        bar.append(self.slow_label)
+        GLib.timeout_add_seconds(30, lambda: (self._slow_text(), True)[1])
         self.sync_label = Gtk.Label(xalign=1)
         self.sync_label.add_css_class("ft-muted")
         bar.append(self.sync_label)
@@ -713,6 +719,15 @@ class MainWindow(Gtk.ApplicationWindow):
         info = version.info()
         build = info["version"] + (f" · {info['date']}" if info["date"] else "")
         return f"fedtail {build}\n" + _("made_by").replace("<br>", "\n")
+
+    def _slow_text(self):
+        """Slow mode: "slow · next at 14:30" by the sync line; off — none."""
+        label = getattr(self, "slow_label", None)
+        if label is None:
+            return
+        text = sidebar.slow_words(self.view)
+        label.set_text(text)
+        label.set_visible(bool(text))
 
     def _sync_text(self):
         """"⇅ 21:40" / "⇅ off" / "⇅ !" in the status bar, the details as its tooltip."""
@@ -1368,6 +1383,7 @@ class MainWindow(Gtk.ApplicationWindow):
         numbers = sidebar.counts(self.view, self.lane_rows)
         for name, row in self.lane_rows.items():
             row.set_count(numbers[name], sidebar.fresh(self.view, name) if numbers[name] else 0)
+        self._slow_text()
         if self.curtain_shown():
             self._curtain_text(numbers)
         if getattr(self, "tray", None) is not None:  # how much is new, on the tray too

@@ -49,7 +49,7 @@ name.en = "Slow mode and “notify at most every…” by lane"
 note.ru = "Место (common/places.py, «slow»): веб, терминал и телефон рисуют его как все места, окна — в окне места; ≡ → «Медленный режим…» везде."
 note.en = "A place (common/places.py, “slow”): the web page, the terminal and the phone draw it as every place, the windows in a place window; ≡ → “Slow mode…” everywhere."
 keys = ["slow_title", "slow_hint", "slow_field", "slow_off", "slow_every", "slow_next",
-        "calm_heading", "calm_as_comes", "calm_none", "slow_saved"]
+        "calm_heading", "calm_as_comes", "calm_none", "slow_saved", "slow_on_short"]
 
 [[capability]]
 id = "fresh-counts"
@@ -58,6 +58,16 @@ android = "has"
 name.ru = "«Из них новых» у счётчиков лент"
 name.en = "“Of them new” by the lanes' counts"
 keys = ["fresh_of_them"]
+
+[[capability]]
+id = "debug-log-place"
+area = "window"
+android = "has"
+name.ru = "Отладка → «Журнал»: последние строки, скопировать"
+name.en = "Debug → “The log”: its last lines, to copy"
+note.ru = "Место (common/places.py, «log»): веб, терминал и телефон — в ≡, окна — в меню «Отладка»."
+note.en = "A place (common/places.py, “log”): the web page, the terminal and the phone — in ≡, the windows — in the Debug menu."
+keys = ["debug_log_title", "debug_log_hint", "debug_log_none"]
 
 [[capability]]
 id = "collections"
@@ -154,9 +164,7 @@ keys = ["grp_people", "grp_personal", "grp_standard", "grp_tags", "grp_talks",
 [[capability]]
 id = "lists-order"
 area = "window"
-android = "partly"
-android_note.ru = "порядок лент — плитками"
-android_note.en = "the lanes' order — by tiles"
+android = "has"
 name.ru = "Порядок списков: выше, ниже"
 name.en = "The order of the lists: up, down"
 note.ru = "Двигать списки можно в окне; порядок общий (синхронизация), терминал и веб его соблюдают."
@@ -179,9 +187,7 @@ keys = ["announce_more", "announce_ok", "announce_react_tip", "announce_title",
 [[capability]]
 id = "find-deeper"
 area = "reading"
-android = "no"
-android_note.ru = "поиска в ленте нет"
-android_note.en = "no finding in a lane"
+android = "has"
 name.ru = "Поиск в ленте: глубже, во всех лентах"
 name.en = "Find in a lane: deeper, in every lane"
 note.ru = "Терминал и веб ищут в том, что на экране; в архиве и во всех лентах — только окно."
@@ -192,9 +198,7 @@ keys = ["find_archive_none", "find_deeper", "find_deeper_tip", "find_everywhere"
 [[capability]]
 id = "find-prev"
 area = "reading"
-android = "no"
-android_note.ru = "поиска в ленте нет"
-android_note.en = "no finding in a lane"
+android = "has"
 name.ru = "Поиск: к предыдущему, закрыть"
 name.en = "Find: previous, close"
 note.ru = "В терминале Ctrl+F ищет только вперёд."
@@ -204,9 +208,7 @@ keys = ["find_prev", "find_close"]
 [[capability]]
 id = "thread-head"
 area = "reading"
-android = "partly"
-android_note.ru = "тред есть, подписка — в меню ⋯; шапки нет"
-android_note.en = "the thread is there, following — in the ⋯ menu; no head"
+android = "has"
 name.ru = "Шапка треда: сколько постов, все CW разом, подписка кнопкой"
 name.en = "A thread's head: how many posts, every CW at once, Follow as a button"
 keys = ["chain_count", "thread_info", "thread_loading", "thread_via_home",
@@ -216,9 +218,7 @@ keys = ["chain_count", "thread_info", "thread_loading", "thread_via_home",
 [[capability]]
 id = "lane-view"
 area = "reading"
-android = "no"
-android_note.ru = "переключателей вида ленты нет"
-android_note.en = "no lane view switches"
+android = "has"
 name.ru = "Вид ленты: беседами, только посты, только новое, «к новому»"
 name.en = "A lane's view: as talks, posts only, unread only, “to the new”"
 note.ru = "Терминал показывает ленту постами по порядку; фильтр по картинкам и «только посты» — по `s`."
@@ -240,9 +240,7 @@ keys = ["poll_vote", "poll_voted", "poll_votes", "poll_closed", "poll_until",
 [[capability]]
 id = "polls-results"
 area = "reading"
-android = "partly"
-android_note.ru = "итоги текстом"
-android_note.en = "the results as text"
+android = "has"
 name.ru = "Опрос: результаты, обновить, сколько человек"
 name.en = "A poll: results, refresh, how many people"
 note.ru = "Веб показывает голоса у вариантов, без кнопок «результаты» и «обновить»."
@@ -252,9 +250,7 @@ keys = ["poll_people", "poll_refresh", "poll_results", "poll_sending"]
 [[capability]]
 id = "origin-posts"
 area = "reading"
-android = "partly"
-android_note.ru = "страницами по кнопке «ещё», без счётчика"
-android_note.en = "page by page with “more”, no count"
+android = "has"
 name.ru = "Старые посты человека с его сервера"
 name.en = "Someone's older posts from their own server"
 tui = "partly"
@@ -302,9 +298,7 @@ keys = ["tag_feature", "tag_feature_tip", "tag_unfeature", "tags_drop", "tags_in
 [[capability]]
 id = "viewer"
 area = "media"
-android = "partly"
-android_note.ru = "листать и увеличивать можно; оригинала и «сохранить» нет"
-android_note.en = "leafing and zooming; no original, no saving"
+android = "has"
 name.ru = "Просмотр картинок: листать, 1:1, оригинал, сохранить"
 name.en = "The picture viewer: leaf through, 1:1, the original, save"
 tui = "partly"
@@ -354,9 +348,7 @@ keys = ["focus_at", "focus_centre", "focus_none", "focus_tip"]
 [[capability]]
 id = "preview"
 area = "writing"
-android = "no"
-android_note.ru = "пока нет"
-android_note.en = "not yet"
+android = "has"
 name.ru = "Предпросмотр поста"
 name.en = "Previewing a post"
 note.ru = "Как пост будет выглядеть — только в окне."
@@ -367,9 +359,7 @@ keys = ["preview", "preview_back", "preview_md", "preview_media", "preview_plain
 [[capability]]
 id = "editor-extras"
 area = "writing"
-android = "partly"
-android_note.ru = "отменить — «назад»; «другого языка» и подсказки #CamelCase нет"
-android_note.en = "discard is Back; no “another language”, no #CamelCase hint"
+android = "has"
 name.ru = "Редактор: «выкинуть», другой язык, подсказка про #CamelCase"
 name.en = "The editor: “discard”, another language, the #CamelCase hint"
 note.ru = "Черновик хранится везде; выкинуть с вопросом, ввести язык не из списка и подсказка доступности — в окне."
@@ -382,9 +372,7 @@ keys = ["discard", "discard_q", "discard_q_title", "lang_other", "lang_other_ask
 [[capability]]
 id = "probe"
 area = "app"
-android = "partly"
-android_note.ru = "сервер смотрит самопроверка"
-android_note.en = "the self-check looks at the server"
+android = "has"
 name.ru = "«Что умеет сервер» — проверка возможностей"
 name.en = "“What the server can do” — the capability check"
 note.ru = "Состояние федерации есть везде; проверка двух десятков возможностей — вкладка окна."
@@ -429,9 +417,7 @@ keys = ["filtered_for_limited_accounts", "filtered_for_new_accounts",
 [[capability]]
 id = "arts-mode"
 area = "app"
-android = "partly"
-android_note.ru = "настройкой, без отметки в меню"
-android_note.en = "as a setting, no mark in a menu"
+android = "has"
 name.ru = "Режим arts: пометка в меню"
 name.en = "The arts mode: its mark in the menu"
 note.ru = "`ui.arts_mode` действует везде; напоминание о нём — в меню окна."
@@ -481,9 +467,7 @@ keys = ["open_config", "open_data"]
 [[capability]]
 id = "help-browse"
 area = "app"
-android = "partly"
-android_note.ru = "справка и поиск по ней, назад — кнопкой «назад»; вперёд нет"
-android_note.en = "help and its search, back — with Back; no forward"
+android = "has"
 name.ru = "Справка: поиск, назад, вперёд"
 name.en = "Help: search, back, forward"
 keys = ["help_back", "help_deep", "help_forward", "help_found",
@@ -492,9 +476,7 @@ keys = ["help_back", "help_deep", "help_forward", "help_found",
 [[capability]]
 id = "about-copy"
 area = "app"
-android = "partly"
-android_note.ru = "сведения — в самопроверке, «Поделиться»"
-android_note.en = "the facts — in the self-check, “Share”"
+android = "has"
 name.ru = "«О программе»: скопировать сведения"
 name.en = "About: copy the information"
 note.ru = "Сведения те же; кнопки «скопировать» нет — текст можно выделить."
@@ -514,9 +496,7 @@ keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_test_body"
 [[capability]]
 id = "debug-basic"
 area = "app"
-android = "partly"
-android_note.ru = "самопроверка и её отчёт"
-android_note.en = "the self-check and its report"
+android = "has"
 name.ru = "Отладка: журнал, отчёт, звук, стеки"
 name.en = "Debugging: the log, a report, the sound, the stacks"
 web = "na"

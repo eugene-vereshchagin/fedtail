@@ -253,6 +253,10 @@ _STRINGS = {
         "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — в командную строку",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
         "fresh_of_them": "из них новых {n}",
+        "debug_log_title": "Журнал",
+        "debug_log_hint": "Последние строки журнала этого запуска — прочесть или скопировать в "
+                          "отчёт об ошибке; весь журнал — в папке логов.",
+        "debug_log_none": "Журнала нет: отладка выключена (debug.mode) или он ещё не начат.",
         "slow_title": "Медленный режим",
         "slow_hint": "Новое копится и приходит пачкой раз в несколько минут — со счётчиками, "
                      "уведомлениями и звуком, а между пачками ничего не дёргается. «Обновить» "
@@ -1329,6 +1333,10 @@ _STRINGS = {
         "short_id_tip": "Short post number, like #abc on Point. Click — into the command line",
         "unread_tip": "New", "came_from": "you came from here",
         "fresh_of_them": "{n} of them new",
+        "debug_log_title": "The log",
+        "debug_log_hint": "The last lines of this run's log — to read, or copy into a bug "
+                          "report; the whole log is in the logs folder.",
+        "debug_log_none": "No log: debugging is off (debug.mode), or it hasn't started.",
         "slow_title": "Slow mode",
         "slow_hint": "The news piles up and comes in one batch every few minutes — with its "
                      "counts, notifications and sound; nothing stirs between batches. Refresh "

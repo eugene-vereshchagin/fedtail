@@ -346,6 +346,7 @@ private fun ThreadPlace(
     val focus = (model.place as? Place.Thread)?.focus
     val act = model.cardActions(openBrowser, cwOpen = model.threadCwOpen)
     val root = model.threadPosts.firstOrNull()
+    val head = model.threadHead
     PlaceScaffold(stringResource(R.string.thread) + (root?.alias?.takeIf { it.isNotBlank() }
         ?.let { " #$it" } ?: ""), model, snack, onRefresh = { model.refreshTop() }, actions = {
         // every warning of the thread open at once (and closed again)
@@ -374,7 +375,7 @@ private fun ThreadPlace(
             if (model.threadPosts.isEmpty()) Centered { CircularProgressIndicator() }
             else PostList(model.threadPosts, state, null, act, model.hideSensitive,
                 thread = true, focus = focus,
-                header = model.threadHead?.let { h -> { ThreadHead(h) { model.toggleThreadSub() } } })
+                header = head?.let { h -> @Composable { ThreadHead(h) { model.toggleThreadSub() } } })
         }
     }
 }

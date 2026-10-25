@@ -92,9 +92,7 @@ details.en = "The ⤓ button, the S key in the viewer, a right click on a pictur
 [[feature]]
 id = "prefetch"
 status = "has"
-android = "partly"
-android_note.ru = "кэш картинок свой (Coil), заранее не качает"
-android_note.en = "pictures cached by the app's loader (Coil), nothing ahead of time"
+android = "has"
 since = "0.13.0"
 name.ru = "Картинки и видео заранее, кэш на диске"
 name.en = "Pictures and video ahead of time, a disk cache"

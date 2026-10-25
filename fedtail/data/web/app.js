@@ -141,6 +141,7 @@ function renderPost(p, inThread) {
   if (p.via) {  // all accounts in one window: which of mine got it
     const v = el("span", "via", p.via.text);
     v.title = p.via.tip;
+    if (p.via.color) { v.style.background = p.via.color; v.style.color = "#fff"; v.classList.add("tinted"); }
     meta.append(v);
   }
   if (p.came_from) meta.append(el("span", "came-from", p.came_from));
@@ -738,7 +739,16 @@ function quoteReply(p) {  // ⋯ → reply with quote: the whole post, or into t
 }
 
 // ---- lanes ------------------------------------------------------------------------------
+async function loadSlow() {  // slow mode: when the next batch comes, by the title
+  try {
+    const s = $("#slow"), got = await api("/api/slow");
+    s.textContent = got.text || "";
+    s.hidden = !got.text;
+  } catch (e) { /* an old server: no slow mode */ }
+}
+
 async function loadLanes() {
+  loadSlow();
   const lanes = await api("/api/lanes");
   state.lanes = lanes;
   const nav = $("#lanes");

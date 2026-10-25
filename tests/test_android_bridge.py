@@ -582,3 +582,53 @@ class BridgeLaneToolsTest(_Base):
         with_poll = [p for p in got["posts"] if p.get("poll")]
         if with_poll:
             self.assertIn("poll", self.call("poll_refresh", with_poll[0]["sid"]))
+
+
+class BridgeGapsTest(_Base):
+    """What the phone caught up with: the overview's "of them new" and slow mode, the arts
+    mark in ≡, another language, the editor's hints, the log, the background round in
+    slow mode."""
+
+    def test_overview_fresh_and_slow(self):
+        self.demo()
+        hub = self.call("hub")
+        self.assertIn("fresh", hub)
+        self.assertIn("slow", hub)
+        for sec in hub["sections"]:
+            for lane in sec["lanes"]:
+                self.assertLessEqual(lane["fresh"], lane["unread"])
+        core = self.bridge._s["core"]
+        core.set_slow(30)
+        core._next_round = 2_000_000_000
+        self.assertTrue(self.call("hub")["slow"])
+        core.set_slow(0)
+
+    def test_arts_mark_language_hints_log(self):
+        self.demo()
+        core = self.bridge._s["core"]
+        core.cfg["ui"]["arts_mode"] = True
+        menu = self.call("places")
+        self.assertEqual(menu[0]["name"], "")  # a mark, not a place
+        self.assertIn("log", [x["name"] for x in menu])
+        core.cfg["ui"]["arts_mode"] = False
+        self.assertNotEqual(self.call("places")[0]["name"], "")
+        got = self.call("add_language", "eo")
+        self.assertEqual(got["code"], "eo")
+        self.assertIn("error", json.loads(self.bridge.add_language("not a code")))
+        hints = self.call("compose_check", json.dumps({"text": "#georgianews hello"}))
+        self.assertTrue(hints["camel"])
+        log = self.call("page", "log")
+        self.assertEqual(log["name"], "log")
+
+    def test_background_round_keeps_slow_mode(self):
+        self.demo()
+        core = self.bridge._s["core"]
+        core.set_slow(60)
+        core._last_poll_ok = __import__("time").time()
+        with mock.patch.object(core, "poll_once") as poll:
+            self.call("background_round", 0)
+        poll.assert_not_called()  # its turn hasn't come
+        core.set_slow(0)
+        with mock.patch.object(core, "poll_once") as poll:
+            self.call("background_round", 0)
+        poll.assert_called_once()

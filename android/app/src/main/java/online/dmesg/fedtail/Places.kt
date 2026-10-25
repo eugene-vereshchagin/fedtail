@@ -1,5 +1,6 @@
 package online.dmesg.fedtail
 
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -200,9 +201,15 @@ fun PlacesMenuPlace(model: AppModel, snack: SnackbarHostState) {
         }
         LazyColumn(mod, contentPadding = PaddingValues(vertical = 8.dp)) {
             items(model.placeMenu) { (name, title) ->
-                Text(title, Modifier.fillMaxWidth().clickable { model.openPage(name) }
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                    style = MaterialTheme.typography.bodyLarge)
+                if (name.isBlank()) {  // a mark, not a place: "arts mode: word filters don't apply"
+                    Text(title, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text(title, Modifier.fillMaxWidth().clickable { model.openPage(name) }
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
     }
@@ -218,7 +225,15 @@ fun PagePlace(model: AppModel, p: Place.Page, snack: SnackbarHostState, openBrow
     val onLink: (String) -> Unit = { url ->
         if (url.startsWith("fedtail:")) model.runLink(url) else model.openLink(url, openBrowser)
     }
-    PlaceScaffold(view?.title ?: "", model, snack, onRefresh = { model.refreshTop() }) { mod ->
+    PlaceScaffold(view?.title ?: "", model, snack, onRefresh = { model.refreshTop() }, actions = {
+        // the help: forward to the page gone back from (back is the bar's ←)
+        if (p.name == "help" && model.helpAhead.isNotEmpty()) {
+            androidx.compose.material3.IconButton(onClick = { model.helpForward() }) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
+                    stringResource(R.string.forward))
+            }
+        }
+    }) { mod ->
         if (view == null) {
             Box(mod, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@PlaceScaffold

@@ -373,3 +373,5 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 
 /* "of them new": what the last update brought, after a lane's count */
 #lanes .n .fresh { font-size: 0.75em; opacity: 0.75; margin-left: 0.25em; font-weight: normal; }
+/* all accounts in one: "→ @account" in that account's colour (ui.account_colors) */
+.via.tinted { padding: 0 0.4em; border-radius: 4px; }

@@ -255,6 +255,7 @@ fun PostList(
     footer: (@Composable () -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
     emptyText: String? = null, // why it is empty, as the windows say it (a filter on…)
+    prefetch: String = "off",  // feed.prefetch: "previews" | "all" — pictures ahead of reading
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
@@ -265,6 +266,7 @@ fun PostList(
         }
         return
     }
+    if (prefetch != "off") Ahead(state, posts, prefetch)
     LazyColumn(state = state, modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = if (thread) 0.dp else 8.dp,
             end = if (thread) 0.dp else 8.dp, top = 8.dp, bottom = 96.dp),
@@ -284,6 +286,32 @@ fun PostList(
         footer?.let { f -> item(key = "footer") { f() } }
     }
 }
+
+/** feed.prefetch: the pictures of the next posts fetched while these are read (the
+ *  windows' prefetch) — the previews, or ("all") the pictures themselves too. */
+@Composable
+private fun Ahead(state: LazyListState, posts: List<PostItem>, how: String) {
+    val context = LocalContext.current
+    val asked = remember { HashSet<String>() }
+    LaunchedEffect(state, posts, how) {
+        snapshotFlow { state.firstVisibleItemIndex }.collect { at ->
+            val loader = coil.Coil.imageLoader(context)
+            posts.drop(at).take(AHEAD).forEach { p ->
+                p.media.forEach { m ->
+                    val urls = listOf(m.preview) + if (how == "all" && m.kind == "image") listOf(m.url) else emptyList()
+                    urls.filter { it.startsWith("https://") && asked.add(it) }.forEach { u ->
+                        loader.enqueue(ImageRequest.Builder(context).data(u).build())
+                    }
+                }
+                if (p.avatar.startsWith("https://") && asked.add(p.avatar)) {
+                    loader.enqueue(ImageRequest.Builder(context).data(p.avatar).build())
+                }
+            }
+        }
+    }
+}
+
+private const val AHEAD = 12 // posts past the first on screen whose pictures come ahead
 
 @Composable
 private fun NewBelow(words: String) {
@@ -342,8 +370,15 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                     Small(stringResource(R.string.shared_by, p.sharedBy))
                 }
                 // the windows' marks (old, bot, edited…) and, all accounts in one, whose
-                val marks = listOf(p.labels, p.via).filter { it.isNotBlank() }.joinToString(" · ")
+                val tint = hexColor(p.viaColor)
+                val marks = listOf(p.labels, if (tint == null) p.via else "")
+                    .filter { it.isNotBlank() }.joinToString(" · ")
                 if (marks.isNotBlank()) Small(marks)
+                if (tint != null && p.via.isNotBlank()) {  // whose: in that account's colour
+                    Text(p.via, fontSize = 12.sp, color = Color.White,
+                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(tint)
+                            .padding(horizontal = 6.dp, vertical = 1.dp))
+                }
                 if (p.contextText.isNotBlank() && p.number == null) {
                     Text("↳ @${p.contextHandle}: ${p.contextText}", maxLines = 2,
                         overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,

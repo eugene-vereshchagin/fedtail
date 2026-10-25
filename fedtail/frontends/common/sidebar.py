@@ -52,6 +52,19 @@ def fresh_words(n):
     return _("fresh_of_them", n=n) if n else ""
 
 
+def slow_words(view):
+    """Slow mode on: "slow · next at 14:30" for a status line; "" when off (or unknown)."""
+    import time
+    try:
+        nxt = view.next_round() if view.slow_minutes() else None
+    except Exception:  # noqa: BLE001 — a core without slow mode (an old fake)
+        return ""
+    if not nxt:
+        return ""
+    from ...i18n import _
+    return _("slow_on_short", time=time.strftime("%H:%M", time.localtime(nxt)))
+
+
 def counts(view, names):
     return {name: count(view, name) for name in names}
 

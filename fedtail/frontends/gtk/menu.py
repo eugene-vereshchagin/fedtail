@@ -53,6 +53,7 @@ class MainMenu:
         a("trends", win.open_trends)
         a("collections", lambda: win.open_place("collections"))
         a("slow", lambda: win.open_place("slow"))
+        a("log", lambda: win.open_place("log"))
         a("remote_lane", win.ask_remote_lane)
         a("profile", win.my_profile)
         a("server", win.show_server_info)
@@ -175,6 +176,7 @@ class MainMenu:
         dbg = Gio.Menu()
         one = Gio.Menu()
         for action, key in (("federation", "debug_federation"), ("logs", "debug_logs"),
+                            ("log", "debug_log_title"),
                             ("report", "debug_report"), ("test_notify", "debug_notify"),
                             ("test_sound", "debug_sound"), ("stacks", "debug_stacks")):
             _item(one, _(key), action)

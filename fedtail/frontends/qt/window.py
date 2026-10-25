@@ -511,10 +511,18 @@ class MainWindow(QMainWindow):
         self._profile_text()
         # right in the status bar, always seen: sync with my other devices (or that
         # there is none — it is a service of its own, off without sync.url)
+        # slow mode on: when the next batch comes ("slow · next at 14:30")
+        self.slow_label = QLabel()
+        self.slow_label.setObjectName("muted")
+        self.statusBar().addPermanentWidget(self.slow_label)
         self.sync_label = QLabel()
         self.sync_label.setObjectName("muted")
         self.statusBar().addPermanentWidget(self.sync_label)
         self._sync_text()
+        self._slow_text()
+        self._slow_timer = QTimer(self)
+        self._slow_timer.timeout.connect(self._slow_text)
+        self._slow_timer.start(30_000)
 
         for seq, fn in (("Ctrl+N", lambda: self.compose()), ("F5", self.refresh),
                         ("Ctrl+Q", self.quit),
@@ -719,6 +727,12 @@ class MainWindow(QMainWindow):
         self.core.set_state("sidebar_width", {"cfg": self.cfg["ui"]["sidebar_width"],
                                               "width": width})
         log.info("sidebar width %d", width)
+
+    def _slow_text(self):
+        """Slow mode: "slow · next at 14:30" at the right of the status bar; off — none."""
+        text = sidebar.slow_words(self.ctx.view)
+        self.slow_label.setText(text)
+        self.slow_label.setVisible(bool(text))
 
     def _sync_text(self):
         """"⇅ 21:40" / "⇅ off" / "⇅ !" at the right of the status bar."""
@@ -1026,6 +1040,7 @@ class MainWindow(QMainWindow):
         dbg = m.addMenu(_("debug_menu"))
         dbg.addAction(_("debug_federation"), self.federation_status)
         dbg.addAction(_("debug_logs"), lambda: open_path(diag.logs_dir(self.core.paths)))
+        dbg.addAction(_("debug_log_title") + "…", lambda: self.open_place("log"))
         dbg.addAction(_("debug_report"), self.bug_report)
         dbg.addAction(_("debug_notify"), lambda: self.statusBar().showMessage(
             _("debug_notify_sent", backend=self.notifier.test()), 8000))
@@ -1630,6 +1645,8 @@ class MainWindow(QMainWindow):
         for name, item in items.items():
             item.set_count(numbers[name], sidebar.fresh(self.ctx.view, name)
                            if numbers[name] else 0)
+        if getattr(self, "slow_label", None) is not None:
+            self._slow_text()
         for g in getattr(self, "group_heads", {}):
             self._show_fold(g)
         if getattr(self, "curtain", None) is not None and self.curtain_shown():

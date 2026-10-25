@@ -282,6 +282,9 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     via = view.via(entry) if hasattr(view, "via") else ""
     if via:  # all accounts in one window: which of mine got it (and acts on it)
         out["via"] = {"text": "→ " + via, "tip": _("via_tip", acct=via)}
+        if view.cfg["ui"].get("account_colors", True):  # a colour of its own, as the windows'
+            from ..common.lane import account_color
+            out["via"]["color"] = account_color(via)
     if spec is not None:
         out["words"] = words_json(view, spec, web_date)
         out["item"] = spec.key
@@ -859,6 +862,11 @@ class Web:
             x["start"] = x["name"] == first
         return out
 
+    def slow(self):
+        """Slow mode: {"text": "slow · next at 14:30"} for the bar; "" when off."""
+        from ..common import sidebar
+        return {"text": sidebar.slow_words(self.core)}
+
     def fold(self, group):
         """A section of the sidebar folded or unfolded (kept for every window)."""
         from ..common import sidebar
@@ -1197,8 +1205,12 @@ class Web:
         got, nxt = core.older_from_origin(acc, None if cursor == "origin" else cursor,
                                           (), resolve=True).result(timeout=180)
         got = [e for e in got or () if timed.keeps(e, show, acc_id)]
+        host = self._remote_host(acc)
         return {"posts": self._posts(got), "max_id": max_id,
-                "older": self._older_offer(acc, [], nxt or "end")}
+                "older": self._older_offer(acc, [], nxt or "end"),
+                # how many came from their server, as the windows' status line says it
+                "said": _("origin_got", n=len(got), host=host) + " · " +
+                _("older_from_origin_note") if got else ""}
 
     @staticmethod
     def _date(when):
@@ -1809,6 +1821,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, self.web.theme_css(), "text/css; charset=utf-8")
         routes = {"/api/me": lambda: self.web.me(),
                   "/api/lanes": lambda: self.web.lanes(),
+                  "/api/slow": lambda: self.web.slow(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", ""),

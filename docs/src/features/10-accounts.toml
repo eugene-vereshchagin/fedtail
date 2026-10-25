@@ -68,9 +68,7 @@ details.en = "Lanes of the same name merge, posts of other accounts are marked �
 [[feature]]
 id = "account-colors"
 status = "has"
-android = "partly"
-android_note.ru = "чей пост — подписью «→ @аккаунт», без цвета"
-android_note.en = "whose post — as a “→ @account” label, no colour"
+android = "has"
 since = "0.14.0"
 name.ru = "Цвет аккаунта в общем окне"
 name.en = "An account's colour in the shared window"

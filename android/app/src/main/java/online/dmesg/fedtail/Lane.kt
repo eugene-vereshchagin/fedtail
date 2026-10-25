@@ -64,6 +64,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +73,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * A lane (mockups "2" and "3"): the title opens the switcher; under it, the lanes with news
@@ -93,6 +97,7 @@ fun LaneScreen(
     pane: Boolean = false, // beside the overview (a tablet): no way back to it, no strip
 ) {
     var switcher by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val name = model.current ?: return
     val act = model.cardActions(openBrowser)
     Scaffold(
@@ -118,6 +123,19 @@ fun LaneScreen(
                             }
                         },
                         actions = {
+                            // "to the new": the first unread post, wherever reading stands
+                            if (model.placePage == null && model.posts.any { it.unread }) {
+                                val toNew = stringResource(R.string.to_new)
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        aim(state, model.posts, model.newestFirst,
+                                            before = if (model.newestFirst) 0 else 1,
+                                            divider = model.divider?.first)
+                                    }
+                                }, modifier = Modifier.semantics { contentDescription = toNew }) {
+                                    Text("⤓", fontSize = 20.sp)
+                                }
+                            }
                             IconButton(onClick = { model.findOpen = !model.findOpen }) {
                                 Icon(Icons.Filled.Search, stringResource(R.string.find))
                             }
@@ -197,6 +215,7 @@ fun LaneScreen(
             val page = model.placePage
             if (page != null) PlaceList(model, page, name, state)
             else PostList(model.posts, state, model.divider, act, model.hideSensitive,
+                prefetch = model.prefetch,
                 emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
                 header = if (model.newestFirst) null else earlier,
                 footer = {

@@ -256,6 +256,7 @@ def open():  # noqa: A001 — what Kotlin calls it
                                       "start_at", "mark_read", "visibility", "sensitive_media",
                                       "expand_cw")}
         out["command_line"] = bool(core.cfg["ui"]["command_line"])
+        out["prefetch"] = core.cfg["feed"].get("prefetch", "previews")  # pictures ahead
         out["overview"] = core.cfg["phone"]["overview"]
         out["layout"] = core.cfg["phone"]["layout"]
         out["push"] = core.cfg["phone"]["push"]
@@ -355,8 +356,15 @@ def place_act(act_json, confirmed=False, values_json=None, answer=None):
 # ---- every place: what the windows' ≡ menu opens, as data (common/places.py) -------------
 
 def places():
-    """The ≡ menu's places: [{name, title}] — search, lists, silence, the server…"""
-    return _answer(lambda: _s["web"].place_menu())
+    """The ≡ menu's places: [{name, title}] — search, lists, silence, the server…; with
+    ui.arts_mode on, first a line saying so (name "", as the windows' menu marks it)."""
+    def go():
+        from fedtail.i18n import _
+        out = _s["web"].place_menu()
+        if _core().cfg["ui"].get("arts_mode"):
+            out = [{"name": "", "title": _("tender_arts"), "tip": _("tender_arts_tip")}] + out
+        return out
+    return _answer(go)
 
 
 def page(name, arg="", tab="", cursor=""):
@@ -550,15 +558,8 @@ def hub():
 
 def _slow_words(core):
     """Slow mode on: "slow · next at 14:30" for the overview's top; "" when off."""
-    import time
-    try:
-        nxt = core.next_round() if core.slow_minutes() else None
-    except Exception:  # noqa: BLE001 — an old core
-        return ""
-    if not nxt:
-        return ""
-    from fedtail.i18n import _
-    return _("slow_on_short", time=time.strftime("%H:%M", time.localtime(nxt)))
+    from fedtail.frontends.common import sidebar
+    return sidebar.slow_words(core)
 
 
 def pin(names_json):

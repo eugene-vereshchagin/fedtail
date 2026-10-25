@@ -170,9 +170,7 @@ details.en = "A server behind a proxy is down — instead of Cloudflare's HTML p
 [[feature]]
 id = "debug-log"
 status = "has"
-android = "partly"
-android_note.ru = "лог — в отчёте самопроверки"
-android_note.en = "the log comes in the self-check's report"
+android = "has"
 since = "0.2.0"
 name.ru = "Подробный журнал для отчётов об ошибках"
 name.en = "A detailed log for bug reports"

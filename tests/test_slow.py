@@ -244,5 +244,29 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(bridge._slow_words(core), "")
 
 
+
+class LogPlaceTest(Base):
+    def test_the_log(self):
+        from pathlib import Path
+        core, _w = self.make()
+        places = Places(View(core))
+        folder = Path(self.tmp) / "logs"
+        with mock.patch("fedtail.diag.logs_dir", return_value=folder):
+            page = places.page("log")
+            self.assertEqual(page.rows, [])  # no log: the place says why (empty)
+            self.assertTrue(page.empty)
+            folder.mkdir()
+            (folder / "latest.log").write_text(
+                "\n".join(f"line {i}" for i in range(500)), "utf-8")
+            page = places.page("log")
+            [row] = page.rows
+            self.assertEqual(row.kind, "pre")
+            self.assertTrue(row.title.endswith("line 499"))
+            self.assertNotIn("line 100\n", row.title)  # the last lines only
+            out = places.act("log", "copy")
+            self.assertIn("line 499", out.copy)
+            self.assertTrue(places.act("log", "refresh").refresh)
+
+
 if __name__ == "__main__":
     unittest.main()

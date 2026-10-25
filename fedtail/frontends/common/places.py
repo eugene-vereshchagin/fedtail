@@ -121,13 +121,13 @@ PLACES = {
     "filter": "filter_edit", "link": "link_posts", "remote": "remote_public",
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
-    "slow": "slow_title",
+    "slow": "slow_title", "log": "debug_log_title",
 }
 MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "slow",
         "requests",
         "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts",
-        "settings", "help", "news", "about", "issue", "federation")
+        "settings", "help", "news", "about", "issue", "federation", "log")
 
 
 def _wait(fut):
@@ -1555,6 +1555,40 @@ class Places(MorePlaces, AccountPlaces):
         health.REC.clear()  # count anew from now, as the windows' button
         log.info("federation status: counting anew")
         return Out(refresh=True)
+
+    # ---- Debug → the log: this run's last lines, to read or copy -----------------------
+    LOG_LINES = 300
+
+    def _log_text(self):
+        """The last lines of the log being written (latest.log), "" — none."""
+        from ... import diag
+        v = self.view
+        f = diag.logs_dir(v.paths, v.cfg) / "latest.log"
+        try:
+            with open(f, "rb") as fh:
+                fh.seek(0, 2)
+                size = fh.tell()
+                fh.seek(max(0, size - 96 * 1024))
+                data = fh.read().decode("utf-8", "replace")
+        except OSError:
+            return ""
+        return "\n".join(data.splitlines()[-self.LOG_LINES:])
+
+    def _p_log(self, _arg, _tab, _cur):
+        page = Page("log", _("debug_log_title"), hint=_("debug_log_hint"),
+                    empty=_("debug_log_none"))
+        text = self._log_text()
+        if text:
+            page.rows.append(Row("pre", text, key="log", buttons=(
+                self._btn(_("fed_refresh"), "log", "refresh"),
+                self._btn(_("fed_copy"), "log", "copy"))))
+        return page
+
+    def _a_log_refresh(self, _d, _v, _c, _ans):
+        return Out(refresh=True)
+
+    def _a_log_copy(self, _d, _v, _c, _ans):
+        return Out(copy=self._log_text(), message=_("about_copied"))
 
     def help_target(self, link, current="index"):
         """Where a help page's link goes: Out(open={"page": ("help", name)}) or {"url"}."""

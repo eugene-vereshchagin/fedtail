@@ -138,9 +138,7 @@ details.en = "`#ge` — first the tags you follow, then the frequent ones in the
 [[feature]]
 id = "camelcase"
 status = "has"
-android = "no"
-android_note.ru = "подсказки нет"
-android_note.en = "no hint"
+android = "has"
 since = "0.2.0"
 name.ru = "Подсказка CamelCase для хэштегов"
 name.en = "CamelCase hint for hashtags"
