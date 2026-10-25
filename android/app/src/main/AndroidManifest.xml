@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- the shade: replies, mentions, follow requests (notify.lanes), asked at first start -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- allowBackup off: the token and the read marks never go into anybody's cloud backup -->
     <application

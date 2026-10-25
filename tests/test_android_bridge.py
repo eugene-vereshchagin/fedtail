@@ -379,3 +379,82 @@ class BridgePlacesTest(_Base):
         for key in ("limit", "languages", "visibility", "poll_lengths"):
             self.assertIn(key, ed)
         self.assertIn("n", self.call("compose_check", json.dumps({"text": "hello"})))
+
+
+class BridgeNotesTest(_Base):
+    """The phone's notification shade: what the windows notify about, by a round in the
+    background as well as while the app is open."""
+
+    def test_a_background_round_brings_the_notes(self):
+        self.demo()
+        from tests.fakes import BOB, FakeApi, status
+        first = self.call("notes", -1)
+        self.assertEqual(first["notes"], [])  # a page that just opened: nothing old
+        self.assertIn("when_focused", first)
+        FakeApi.world.add(status("950", BOB, "100", "ME", minute=59, text="ping from the test"),
+                          mention=True)
+        got = self.call("background_round", first["n"])
+        self.assertTrue(any("ping from the test" in n["body"] for n in got["notes"]), got)
+        again = self.call("notes", got["n"])
+        self.assertEqual(again["notes"], [])  # said once
+
+    def test_ready_makes_the_core_once(self):
+        got = self.call("ready", str(self.files), str(self.cache), "en")
+        self.assertFalse(got["logged_in"])  # no account yet: nothing to ask the server
+        core = self.bridge._s["core"]
+        self.call("ready", str(self.files), str(self.cache), "en")
+        self.assertIs(self.bridge._s["core"], core)
+        self.assertEqual(self.call("background_round", 0)["notes"], [])
+
+    def test_a_round_in_a_process_the_system_made(self):
+        """The app closed: the system wakes a process for the round — the core comes up
+        without the screens, connects, asks once; the screens then still get a poller."""
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", True))
+        self.assertNotIn("error", got)
+        core = self.bridge._s["core"]
+        self.assertIsNone(core.me)
+        self.call("background_round", 0)
+        self.assertIsNotNone(core.me)
+        self.assertIsNone(getattr(core, "_poller", None))
+        self.call("open")
+        self.assertIsNotNone(core._poller)
+
+
+class BridgeAccountsTest(_Base):
+    """Another account on the phone: the windows' place "accounts" — switching makes
+    that profile's core the bridge's, the screens start again on it."""
+
+    def test_switching_to_another_account(self):
+        self.demo()
+        from fedtail.core import auth, paths
+        where = paths.resolve("second")
+        where.ensure()
+        auth.save(where.auth_file, {"server": self.bridge.DEMO_SERVER, "token": "demo2"})
+        names = [r["key"] for r in self.call("page", "accounts")["rows"]]
+        self.assertIn("second", names)
+        before = self.bridge._s["core"]
+        got = self.call("place_act", json.dumps(["accounts", "switch", "second"]), False)
+        self.assertTrue(got.get("reload"), got)
+        now = self.bridge._s["core"]
+        self.assertIsNot(now, before)
+        self.assertEqual(now.paths.profile, "second")
+        self.assertTrue(self.call("open")["lanes"])  # the screens come up on it
+
+
+class BridgeThemeTest(_Base):
+    """The phone in the windows' themes: ui.theme's colours, read as the web page reads
+    them; "system" — the phone's own light or dark."""
+
+    def test_a_theme_paints_the_phone(self):
+        self.demo()
+        self.assertEqual(self.call("theme")["colors"], {})  # system: nothing of its own
+        names = [o["key"] for c in self.call("settings")["chapters"] for o in c["options"]]
+        self.assertIn("theme", names)  # chosen on the phone's settings page
+        self.assertIn("when_focused", names)  # and when the shade says what
+        self.call("setting_set", "ui", "theme", json.dumps("night"))
+        self.call("settings_apply")
+        got = self.call("theme")
+        self.assertEqual(got["name"], "night")
+        self.assertFalse(got["light"])
+        for k in ("bg", "text", "accent"):
+            self.assertRegex(got["colors"][k], r"^#[0-9a-fA-F]{6}")

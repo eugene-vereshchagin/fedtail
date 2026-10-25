@@ -11,5 +11,7 @@ class FedtailApp : Application() {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
         }
+        Notifier.channel(this)
+        Notifier.schedule(this)
     }
 }

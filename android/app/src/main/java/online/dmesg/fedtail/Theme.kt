@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * The look of the mockups' variant A ("calm"): a cool grey ground, white cards, one blue
- * accent, and an orange one for what is addressed to you. Fixed colours, not the
- * wallpaper's: fedtail's themes come to the phone later, this is the default one.
+ * accent, and an orange one for what is addressed to you — ui.theme = "system". Any
+ * other of fedtail's themes paints the phone with its own colours (themeScheme).
  */
 private val Light = lightColorScheme(
     primary = Color(0xFF1F5FA8), onPrimary = Color.White,
@@ -49,9 +49,54 @@ private val Dark = darkColorScheme(
     error = Color(0xFFF2B8B5),
 )
 
+/** colors: the theme's (bridge.theme: bg, card, text, muted, line, accent, accent-text,
+ *  danger…); null or empty — the phone's own light or dark in the calm colours. */
 @Composable
-fun FedtailTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) Dark else Light, content = content)
+fun FedtailTheme(colors: Map<String, String>? = null, light: Boolean = true,
+                 content: @Composable () -> Unit) {
+    val scheme = colors?.takeIf { it.isNotEmpty() }?.let { themeScheme(it, light) }
+        ?: if (isSystemInDarkTheme()) Dark else Light
+    MaterialTheme(colorScheme = scheme, content = content)
+}
+
+/** "#rrggbb" or "#rrggbbaa" → a colour; anything else (rgba(…)) — null. */
+fun hexColor(text: String?): Color? {
+    val t = text?.trim() ?: return null
+    if (!Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?").matches(t)) return null
+    val rgb = t.substring(1, 7).toLong(16)
+    val a = if (t.length == 9) t.substring(7, 9).toLong(16) else 0xFF
+    return Color((a shl 24 or rgb).toInt())
+}
+
+private fun mix(a: Color, b: Color, part: Float) = Color(
+    red = a.red + (b.red - a.red) * part, green = a.green + (b.green - a.green) * part,
+    blue = a.blue + (b.blue - a.blue) * part, alpha = 1f)
+
+/** One of fedtail's themes as Material's roles: the page, the cards, the words, the
+ *  accent; containers mixed from them, so every screen follows the theme. */
+fun themeScheme(c: Map<String, String>, light: Boolean): androidx.compose.material3.ColorScheme {
+    val base = if (light) Light else Dark
+    val bg = hexColor(c["bg"]) ?: base.background
+    val text = hexColor(c["text"]) ?: base.onBackground
+    val card = hexColor(c["card"]) ?: bg
+    val muted = hexColor(c["muted"]) ?: mix(text, bg, 0.4f)
+    val line = hexColor(c["line"]) ?: mix(text, bg, 0.8f)
+    val accent = hexColor(c["accent"]) ?: base.primary
+    val onAccent = hexColor(c["accent-text"]) ?: if (light) Color.White else Color.Black
+    val hot = hexColor(c["danger"]) ?: base.secondary
+    val variant = mix(card, text, 0.06f)
+    return base.copy(
+        primary = accent, onPrimary = onAccent,
+        primaryContainer = mix(card, accent, 0.18f), onPrimaryContainer = text,
+        secondary = hot, onSecondary = onAccent,
+        secondaryContainer = mix(card, hot, 0.18f), onSecondaryContainer = text,
+        background = bg, onBackground = text,
+        surface = card, onSurface = text,
+        surfaceVariant = variant, onSurfaceVariant = muted,
+        surfaceContainer = card, surfaceContainerLow = card,
+        surfaceContainerHigh = mix(card, text, 0.04f), surfaceContainerHighest = variant,
+        outline = line, outlineVariant = mix(line, card, 0.5f),
+    )
 }
 
 /** Avatars without a picture (or before it comes): a colour of the person's own. */

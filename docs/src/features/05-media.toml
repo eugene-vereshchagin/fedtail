@@ -50,9 +50,7 @@ details.en = "`\"tooltip\"` — on hover; `\"caption\"` — also as a caption un
 [[feature]]
 id = "video-player"
 status = "has"
-android = "partly"
-android_note.ru = "видео, звук и гифки открываются в браузере"
-android_note.en = "video, sound and gifs open in the browser"
+android = "has"
 since = "0.11.0"
 name.ru = "Видео, аудио, гифки внутри окна"
 name.en = "Video, audio, gifs inside the window"

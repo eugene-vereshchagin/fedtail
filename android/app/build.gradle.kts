@@ -181,6 +181,12 @@ dependencies {
     // pictures: avatars, previews, the viewer — straight from their servers, never with
     // the account's token (as the desktop's images.py); memory + disk cache of its own
     implementation("io.coil-kt:coil-compose:2.7.0")
+    // a round in the background (the notification shade while the app is closed): the
+    // system wakes the process every 15 minutes at most, with a network
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // video, gifs and sound in the viewer itself, not in the browser
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
 
     // UI tests on the emulator (src/androidTest): Compose's test rule over the real app
     androidTestImplementation(compose)

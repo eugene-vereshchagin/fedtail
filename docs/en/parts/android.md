@@ -37,7 +37,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Video, audio, gifs inside the window | ◐ | video, sound and gifs open in the browser |
 | Video without a hardware decoder (the default) | · | the phone decodes by itself |
 | Save a picture, video, gif | — | no saving a picture |
 | Pictures and video ahead of time, a disk cache | ◐ | pictures cached by the app's loader (Coil), nothing ahead of time |
@@ -47,12 +46,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Pinned posts | — | the phone's profile doesn't put pinned posts on top |
-| Featured tags and recommended people | — | no “often writes about” and recommendations in the phone's profile |
-| Posts older than my server knows | — | the profile shows the first page of posts |
 | Followers and follows from the person's server | — | no “more from their server” button |
-| The person has moved | — | no “moved” banner |
-| The author's server software | — | the person's server isn't named in the profile |
 | What my server can do | ◐ | the self-check looks at the server; no table of what it can do |
 
 ### Writing
@@ -77,7 +71,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Desktop notifications with privacy levels | — | no system notifications yet |
+| Desktop notifications with privacy levels | ◐ | into the shade; with the app closed — every 15 minutes |
 | Severed relationships and moderators' warnings | ◐ | they come into Activity; not shown apart |
 | Dismiss a notification, clear them all | — | no dismissing a notification |
 | The unread number on the icon | — | no number on the icon |
@@ -87,9 +81,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Profiles and the switcher | — | one account |
-| The main profile ★ | — | one account |
-| Log in again, log out | — | no logging in again, out |
 | All accounts in one window | — | one account |
 | An account's colour in the shared window | — | one account |
 | Acting as another account | — | one account |
@@ -98,7 +89,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Themes as files | ◐ | one theme (“calm”), light and dark as the phone is |
+| Themes as files | ◐ | the windows' themes' colours (ui.theme in Settings); no themes' fonts and pictures |
 | Trying a theme without a restart | — | other themes — later |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Open a link in the running fedtail | — | links to posts from other apps don't open in fedtail |

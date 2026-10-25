@@ -435,6 +435,21 @@ fun ProfilePlace(model: AppModel, p: Place.Profile, snack: SnackbarHostState, op
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (view.counts.isNotBlank()) Text(view.counts, style = MaterialTheme.typography.bodySmall)
+                        view.moved?.let { (words, who) ->
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer).padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text("📦 $words", Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium)
+                                TextButton(onClick = { model.openProfile(who.id) }) {
+                                    Text(view.movedOpen)
+                                }
+                            }
+                        }
+                        if (view.familiar.isNotBlank()) Text(view.familiar,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        view.featured.forEach { f -> Featured(model, f) }
                         if (view.note.isNotBlank()) HtmlText(view.note, onLink)
                         view.fields.forEach { (name, value, verified) ->
                             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
@@ -473,8 +488,41 @@ fun ProfilePlace(model: AppModel, p: Place.Profile, snack: SnackbarHostState, op
                     textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(view.posts, key = { it.key }) { post ->
-                Box(Modifier.padding(horizontal = 8.dp)) { PostCard(post, act, model.hideSensitive) }
+                Column(Modifier.padding(horizontal = 8.dp)) {
+                    if (post.key in view.pinned) Text("📌 " + stringResource(R.string.pinned),
+                        Modifier.padding(start = 8.dp, bottom = 2.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PostCard(post, act, model.hideSensitive)
+                }
             }
+            view.older?.let { offer ->
+                item(key = "older") {
+                    Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        if (view.loadingMore) CircularProgressIndicator()
+                        else OutlinedButton(onClick = { model.profileMore(p) }) { Text(offer.label) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** "Often writes about: #a, #b" — each tag its place; "Recommends: @x" — each a profile. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Featured(model: AppModel, f: FeaturedLine) {
+    FlowRow(verticalArrangement = Arrangement.Center) {
+        Text(f.title + " ", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        f.tags.forEach { t ->
+            Text("#$t ", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { model.openPage("tag", t) })
+        }
+        f.people.forEach { a ->
+            Text("@${a.handle} ", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { model.openProfile(a.id) })
         }
     }
 }

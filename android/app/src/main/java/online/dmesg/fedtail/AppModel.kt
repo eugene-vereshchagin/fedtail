@@ -142,6 +142,13 @@ data class PageView(
     val form: List<PageField>, val submit: PlaceButton?, val more: PlaceButton?, val empty: String,
 )
 
+/** "Often writes about: #a, #b", "Recommends: @x": tags and people open here. */
+data class FeaturedLine(val title: String, val text: String, val tags: List<String>,
+                        val people: List<AccountItem>)
+
+/** "More" under a profile's posts: my server's next page (cursor ""), then theirs. */
+data class OlderOffer(val label: String, val cursor: String)
+
 data class ProfileButton(val key: String, val label: String, val tip: String, val primary: Boolean)
 
 /** Someone's profile: the web page's (common/profile.py), with their posts. */
@@ -151,6 +158,14 @@ data class ProfileView(
     val noteLine: String, val actions: List<ProfileButton>,
     val shows: List<Triple<String, String, Boolean>>, val showTip: String,
     val posts: List<PostItem>,
+    val pinned: Set<String> = emptySet(),          // keys of the pinned posts on top
+    val featured: List<FeaturedLine> = emptyList(),
+    val familiar: String = "",
+    val moved: Pair<String, AccountItem>? = null,  // "moved to @new", and who
+    val movedOpen: String = "",
+    val older: OlderOffer? = null,
+    val maxId: String = "",
+    val loadingMore: Boolean = false,
 )
 
 /** An attachment in the editor: uploaded (token) or one of my post's (id, when editing). */
@@ -297,7 +312,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- the overview and the lanes ------------------------------------------------------
+    var themeColors by mutableStateOf<Map<String, String>>(emptyMap()) // ui.theme's; {}: system
+    var themeLight by mutableStateOf(true)
+
+    private suspend fun loadTheme() {
+        val got = Core.theme()
+        if (Core.failed(got) != null) return
+        val c = got.optJSONObject("colors") ?: JSONObject()
+        themeColors = c.keys().asSequence().associateWith { c.optString(it) }
+        themeLight = got.optBoolean("light", true)
+    }
+
     private suspend fun openMain() {
+        loadTheme()
         val got = Core.open()
         Core.failed(got)?.let { screen = Screen.Failed(it); return }
         val me = got.optJSONObject("me") ?: JSONObject()
@@ -511,6 +538,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val v = Core.waitChange(version, 25)
                 if (v != version) {
                     version = v
+                    // the windows' notes into the shade (notify.when_focused: even now)
+                    Notifier.take(getApplication(), Core.notes(Notifier.lastSeq))
                     lanes = parseLanes(Core.lanes())
                     loadHub()
                     current?.let { loadLane(it, keep = true) }
@@ -518,6 +547,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     pulling = false
                 }
             }
+        }
+    }
+
+    /** A tap on a note in the shade: its thread, or its lane. */
+    fun openFromNote(lane: String?, thread: String?) {
+        if (screen != Screen.Main) {
+            threadOnStart = thread?.takeIf { it.isNotBlank() } ?: threadOnStart
+            laneOnStart = lane?.takeIf { it.isNotBlank() } ?: laneOnStart
+            return
+        }
+        when {
+            !thread.isNullOrBlank() -> openThread(thread)
+            !lane.isNullOrBlank() -> showLane(lane)
         }
     }
 
@@ -1358,7 +1400,50 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             shows = (0 until shows.length()).map { shows.getJSONObject(it) }
                 .map { Triple(str(it, "key"), str(it, "label"), it.optBoolean("on")) },
             showTip = str(o, "show_tip"),
-            posts = parsePosts(o.optJSONArray("posts")))
+            posts = parsePosts(o.optJSONArray("posts")),
+            pinned = (o.optJSONArray("posts") ?: JSONArray()).let { a ->
+                (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optBoolean("pinned") }
+                    .map { it.optString("item", it.optString("id")) }.toSet()
+            },
+            featured = (o.optJSONArray("featured") ?: JSONArray()).let { a ->
+                (0 until a.length()).map { a.getJSONObject(it) }.map { f ->
+                    val tags = f.optJSONArray("tags") ?: JSONArray()
+                    val people = f.optJSONArray("people") ?: JSONArray()
+                    FeaturedLine(str(f, "title"), str(f, "text"),
+                        (0 until tags.length()).map { tags.optString(it) },
+                        (0 until people.length()).map { parseAccount(people.getJSONObject(it)) })
+                }
+            },
+            familiar = str(o, "familiar"),
+            moved = o.optJSONObject("moved")?.let { m ->
+                str(m, "text") to parseAccount(m.optJSONObject("account")) },
+            movedOpen = o.optJSONObject("moved")?.let { str(it, "open") } ?: "",
+            older = parseOlder(o.optJSONObject("older")),
+            maxId = str(o, "max_id"))
+    }
+
+    private fun parseOlder(o: JSONObject?) = o?.let { OlderOffer(str(it, "label"), str(it, "cursor")) }
+
+    /** "More" under a profile: the next posts, mine first, then from their own server. */
+    fun profileMore(p: Place.Profile) {
+        val v = profiles[p] ?: return
+        val offer = v.older ?: return
+        if (v.loadingMore) return
+        profiles[p] = v.copy(loadingMore = true)
+        viewModelScope.launch {
+            val got = Core.accountMore(p.id, p.show, v.maxId, offer.cursor)
+            val now = profiles[p] ?: return@launch
+            if (Core.failed(got) != null) {
+                message = Core.failed(got)
+                profiles[p] = now.copy(loadingMore = false)
+                return@launch
+            }
+            val have = now.posts.map { it.key }.toSet()
+            profiles[p] = now.copy(
+                posts = now.posts + parsePosts(got.optJSONArray("posts")).filter { it.key !in have },
+                maxId = str(got, "max_id").ifBlank { now.maxId },
+                older = parseOlder(got.optJSONObject("older")), loadingMore = false)
+        }
     }
 
     private fun parsePosts(arr: JSONArray?): List<PostItem> =

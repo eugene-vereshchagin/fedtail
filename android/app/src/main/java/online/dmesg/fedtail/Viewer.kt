@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,14 +43,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.layout.Spacer
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
 /**
  * A post's pictures over everything: black, one at a time (‹ › between them), pinch to
- * zoom, a double tap back to whole; the description (alt) below. A video or sound opens
- * in the browser (or the player the phone offers) — no player of our own yet.
+ * zoom, a double tap back to whole; the description (alt) below. A video or a sound
+ * plays right here (Media3: straight from its server, never with the token); a gif
+ * loops silently, as the windows play it. ↗ hands it to the browser all the same.
  */
 @Composable
 fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> Unit) {
@@ -75,12 +83,7 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
                     translationX = offset.x, translationY = offset.y))
         val moving = m.kind == "video" || m.kind == "gifv" || m.kind == "audio"
         if (moving && m.url.isNotBlank()) {
-            IconButton(onClick = { openBrowser(m.url) },
-                modifier = Modifier.align(Alignment.Center).size(72.dp).clip(CircleShape)
-                    .background(Color(0x99000000))) {
-                Icon(Icons.Filled.PlayArrow, stringResource(R.string.play), tint = Color.White,
-                    modifier = Modifier.size(40.dp))
-            }
+            MediaPlayer(m.url, gif = m.kind == "gifv", key = index)
         }
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -89,6 +92,12 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
                 }
                 if (place.items.size > 1) {
                     Text("${index + 1} / ${place.items.size}", color = Color.White, fontSize = 14.sp)
+                }
+                Spacer(Modifier.weight(1f))
+                if (m.url.isNotBlank()) {
+                    IconButton(onClick = { openBrowser(m.url) }) {
+                        Text("↗", color = Color.White, fontSize = 20.sp)
+                    }
                 }
             }
             Row(Modifier.weight(1f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -111,4 +120,28 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
             }
         }
     }
+}
+
+/** One video, gif or sound: plays when shown, stops and lets go when left. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+private fun MediaPlayer(url: String, gif: Boolean, key: Int) {
+    val context = LocalContext.current
+    val player = remember(url, key) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            repeatMode = if (gif) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+            volume = if (gif) 0f else 1f
+            playWhenReady = true
+            prepare()
+        }
+    }
+    DisposableEffect(player) { onDispose { player.release() } }
+    AndroidView(modifier = Modifier.fillMaxSize(), factory = { ctx ->
+        PlayerView(ctx).apply {
+            this.player = player
+            useController = !gif
+            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+        }
+    })
 }

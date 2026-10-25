@@ -159,6 +159,11 @@ img.emoji { height: 1.3em; width: auto; vertical-align: -0.25em; margin: 0 1px; 
 .profile .names { display: flex; flex-direction: column; min-width: 0; }
 .profile .fields { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px;
                    font-size: 14px; margin: 8px 0; }
+.profile .moved { margin: 8px 0; padding: 8px; border: 1px solid var(--line);
+  border-radius: var(--radius); align-items: center; gap: 8px; }
+.profile .featured { margin-top: 6px; }
+.post .pinned { margin-bottom: 4px; }
+button.more { display: block; margin: 12px auto; }
 .profile .fields dt { font-weight: 600; color: var(--muted); }
 .profile .fields dd { margin: 0; overflow-wrap: anywhere; }
 .profile .fields dd.verified::before { content: "✓ "; color: var(--unread); }

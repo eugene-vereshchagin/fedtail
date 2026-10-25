@@ -97,6 +97,9 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                 // every place of the windows' ≡ menu: search, lists, the server…
                                 DropdownMenuItem(text = { Text(stringResource(R.string.places)) },
                                     onClick = { menu = false; model.openPlacesMenu() })
+                                // the windows' "accounts": add, switch, log in again, out
+                                DropdownMenuItem(text = { Text(stringResource(R.string.accounts)) },
+                                    onClick = { menu = false; model.openPage("accounts") })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.new_post)) },
                                     onClick = { menu = false; model.compose(null) })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },

@@ -7,8 +7,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
 | Logging in | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. The web page itself won't start for a profile not logged in — you log in from another profile's page. |
-| Accounts: add, make main, log out | ✓ | ✓ | ✓ | ✓ | — | Android: one account |
-| Every account in one window | ✓ | ✓ | ✓ | ✓ | — | Android: one account |
+| Every account in one window | ✓ | ✓ | ✓ | ✓ | — | Android: no “all accounts in one window” on the phone |
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | · | ✓ | One lane at a time; columns are the window's and the tablet's (the overview, a lane, a thread side by side). |
@@ -24,15 +23,14 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | A thread's head: how many posts, every CW at once, Follow as a button | ✓ | ✓ | ✓ | ✓ | ◐ | Android: the thread is there, following — in the ⋯ menu; no head |
 | A lane's view: as talks, posts only, unread only, “to the new” | ✓ | ✓ | ✓ | ✓ | — | The terminal shows a lane post by post; the media filter and “posts only” are on `s`. Android: no lane view switches |
 | A poll: results, refresh, how many people | ✓ | ✓ | ✓ | ✓ | ◐ | The web page shows the votes at the options, without “results” and “refresh”. Android: the results as text |
-| Someone's older posts from their own server | ✓ | ✓ | ◐ | ◐ | — | They come page by page with a “more” button at the bottom, without a live “n of N” count. Android: the profile shows the first page of posts |
-| A profile: counts, “since”, people you both follow, featured, moved | ✓ | ✓ | ✓ | ✓ | ◐ | The terminal and the web page show a profile as lines, without these details of the head. Android: counts and “since”; no people you both follow, featured, moved |
+| Someone's older posts from their own server | ✓ | ✓ | ◐ | ◐ | ◐ | They come page by page with a “more” button at the bottom, without a live “n of N” count. Android: page by page with “more”, no count |
 
 ### Pictures and video
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
 | The picture viewer: leaf through, 1:1, the original, save | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal shows a picture full screen (chafa, kitty) and saves the original (`s`); the web page has its viewer with Save and 1:1. The window's words about Qt's formats and “the original is loading” aren't theirs. Android: leafing and zooming; no original, no saving |
-| Video and sound inside the program | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player. Android: video and sound — in the browser |
+| Video and sound inside the program | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal plays in mpv (a window, or in the terminal itself), the web page — in the browser's player. |
 
 ### The editor
 
@@ -50,11 +48,11 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | “What the server can do” — the capability check | ✓ | ✓ | ✓ | ✓ | ◐ | The federation's state is everywhere; the check of a score of capabilities is a tab of the window. Android: the self-check looks at the server |
 | The arts mode: its mark in the menu | ✓ | ✓ | ✓ | ✓ | ◐ | `ui.arts_mode` works everywhere; the reminder of it is in the window's menu. Android: as a setting, no mark in a menu |
 | The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens. |
-| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | — | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: one theme, light and dark as the phone is |
+| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, the theme chosen in Settings; no themes' fonts and pictures |
 | Open the config and the data folder | ✓ | ✓ | ✓ | · | ◐ | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. Android: the config is edited in the app; no data folder |
 | Help: search, back, forward | ✓ | ✓ | ✓ | ✓ | ◐ | Android: help and its search, back — with Back; no forward |
 | About: copy the information | ✓ | ✓ | ✓ | ✓ | ◐ | The same information; no “copy” button — the text can be selected. Android: the facts — in the self-check, “Share” |
-| Desktop notifications and testing them | ✓ | ✓ | ✓ | ✓ | — | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed. Android: no system notifications yet |
+| Desktop notifications and testing them | ✓ | ✓ | ✓ | ✓ | ◐ | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed. Android: into the phone's shade; with the app closed — every 15 minutes (push later) |
 | Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | · | ◐ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. Android: the self-check and its report |
 | Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | ✓ | · | · | Leak hunting is the windows' and the terminal's; the web page is a guest in a browser. Android: a desktop tool |
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (column width, editor size, tracing). Android: nothing to hover with |

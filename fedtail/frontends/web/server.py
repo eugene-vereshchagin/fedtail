@@ -663,35 +663,43 @@ class Web:
     def theme_name(self):
         return self.theme or self.core.cfg["ui"].get("theme") or "system"
 
-    def theme_css(self):
-        """The page's colours from the theme (themes/*.toml, the same files the windows
-        read): "" for system (the browser's light or dark) or a theme that won't load."""
+    def theme_colors(self, name=None):
+        """The theme's colours by the page's names (THEME_VARS without "--"), whether it
+        is a light one, its font family: ({}, True, "") for system (the browser's or the
+        phone's own light or dark) or a theme that won't load. The phone's app paints
+        itself with these too."""
         from .. import themefile
-        name = self.theme_name()
+        name = name or self.theme_name()
         try:
             theme, _warnings = themefile.load(name)
         except (themefile.ThemeError, OSError) as e:
             log.info("web theme %s: %s", name, e)
-            return ""
+            return {}, True, ""
         colors = theme.get("colors") or {}
-        lines = []
+        out = {}
         for var, keys in self.THEME_VARS:
             got = next((colors[k] for k in keys
                         if isinstance(colors.get(k), str) and colors[k] != "auto"), "")
             if got and re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|rgba?\([\d.,\s%]+\)",
                                     got):
-                lines.append(f"  {var}: {got};")
-        if not any(x.startswith("  --bg:") for x in lines) or \
-                not any(x.startswith("  --text:") for x in lines):
-            lines = []  # the page and its text follow the system: the browser's own then
+                out[var[2:]] = got
+        if "bg" not in out or "text" not in out:
+            out = {}  # the page and its text follow the system: the browser's own then
         family = (theme.get("font") or {}).get("family") or ""
         family = family if re.fullmatch(r"[\w\s,\"'-]*", family) else ""
+        return out, _light(colors), family
+
+    def theme_css(self):
+        """The page's colours from the theme (themes/*.toml, the same files the windows
+        read): "" for system (the browser's light or dark) or a theme that won't load."""
+        colors, light, family = self.theme_colors()
+        lines = [f"  --{k}: {v};" for k, v in colors.items()]
         if not lines and not family:
             return ""
         css = ":root, :root:root {\n" + "\n".join(lines) + "\n  --shadow: none;\n}\n" \
             if lines else ""
         if lines:  # the theme's own colours: light or dark is the theme's, not the browser's
-            css += ":root { color-scheme: only light; }\n" if _light(colors) else \
+            css += ":root { color-scheme: only light; }\n" if light else \
                 ":root { color-scheme: only dark; }\n"
         if family:
             css += f"body {{ font-family: {family}; }}\n"
@@ -1052,6 +1060,10 @@ class Web:
         except Exception:  # noqa: BLE001 — the profile shows without it
             rel = None
         page = core.account_posts(acc_id, show=show).result()
+        own = bool(me and acc and acc.id == me.id)
+        extra = self._profile_extras(acc, own, show) if acc else {}
+        pinned = extra.pop("pinned", [])
+        top = {e.id for e in pinned}
         info = account_json(acc)
         info.update(note=with_emojis(web_clean(acc.note), acc.emojis) if acc else "",
                     header=_https(acc.header_static) if acc else "",
@@ -1063,7 +1075,6 @@ class Web:
                             for f in (acc.fields if acc else ())],
                     own=bool(me and acc and acc.id == me.id))
         from ..common import profile as prof
-        own = bool(me and acc and acc.id == me.id)
         acts = [{"key": a.key, "label": a.label, "tip": a.tip, "primary": a.primary}
                 for a in prof.actions(acc, rel, own, core.cfg, core.supports, lists=True,
                                       details=True)
@@ -1073,13 +1084,112 @@ class Web:
                 "relation": {"following": bool(rel and rel.following),
                              "followed_by": bool(rel and rel.followed_by),
                              "requested": bool(rel and rel.requested)},
-                "meta": prof.meta(acc, rel, self._date, since or None)[1:] if acc else [],
+                "meta": prof.meta(acc, rel, self._date, since or None,
+                                  extra.get("software") or "")[1:] if acc else [],
                 "note_line": prof.note_line(rel, own),
                 "actions": acts,
                 "shows": [{"key": k, "label": label, "on": k == show}
                           for k, label in timed.profile_shows()],
                 "show_tip": _("profile_show_tip"),
-                "posts": self._posts(page)}
+                "posts": [dict(p, pinned=True) for p in self._posts(pinned)] +
+                self._posts([e for e in page if e.id not in top]),
+                "featured": extra.get("featured") or [],
+                "familiar": extra.get("familiar") or "",
+                "moved": extra.get("moved"),
+                # the next page: my server's, then (remote_profiles) theirs, further back
+                "older": self._older_offer(acc, page),
+                "max_id": page[-1].id if page else ""}
+
+    def _profile_extras(self, acc, own, show):
+        """What the windows add to a profile, asked at once: the pinned posts on top
+        (feed.profile_pinned), what they put forward (feed.profile_featured), whom of
+        mine they follow, their server's software (feed.server_info), a move."""
+        from urllib.parse import urlparse
+        core, cfg = self.core, self.core.cfg["feed"]
+        futs = {}
+        if cfg.get("profile_pinned", True) and show != "media":
+            futs["pinned"] = core.pinned(acc.id)
+        if cfg.get("profile_featured", True):
+            futs["featured"] = core.featured(acc.id)
+        host = urlparse(acc.url or acc.uri or "").hostname or ""
+        if host and not own:
+            futs["software"] = core.server_software(host)
+        if not own and core.supports("familiar"):
+            futs["familiar"] = core.familiar(acc.id)
+        got = {}
+        for key, fut in futs.items():
+            try:
+                got[key] = fut.result(timeout=20)
+            except Exception as e:  # noqa: BLE001 — the profile shows without it
+                log.debug("profile %s: %s", key, e)
+        out = {"pinned": list(got.get("pinned") or []), "software": got.get("software") or ""}
+        feat = got.get("featured") or {}
+        lines = []
+        tags = ["#" + t.name + (f" ({int(t.posts)})" if t.posts else "")
+                for t in feat.get("tags") or [] if t.name]
+        people = [a for a in feat.get("people") or [] if a.id]
+        if tags:
+            lines.append({"title": _("featured_tags"), "text": ", ".join(tags),
+                          "tags": [t.name for t in feat["tags"] if t.name]})
+        if people:
+            lines.append({"title": _("featured_people"),
+                          "people": [account_json(a) for a in people],
+                          "text": ", ".join("@" + a.handle for a in people)})
+        out["featured"] = lines
+        known = [a for a in got.get("familiar") or [] if a.id]
+        if known:
+            more = len(known) - 5
+            out["familiar"] = _("familiar", who=", ".join("@" + a.handle for a in known[:5]) +
+                                (" " + _("act_more", n=more) if more > 0 else ""))
+        if acc.moved and cfg.get("show_moved", True):
+            from html import unescape
+            words = unescape(re.sub(r"<[^>]+>", "", _("moved_to", acct="@" + acc.moved.handle)))
+            out["moved"] = {"text": words,
+                            "account": account_json(acc.moved), "open": _("moved_open")}
+        return out
+
+    def _remote_host(self, acc):
+        handle = acc.handle if acc else ""
+        if "@" not in handle or not self.core.cfg["feed"].get("remote_profiles", True):
+            return ""
+        return handle.split("@", 1)[1]
+
+    def _older_offer(self, acc, page, cursor=""):
+        """The "more" under a profile's posts: {label, cursor} — my server's next page
+        (cursor ""), their own server's ("origin" to start, then its next page), or None
+        when there is nothing further back."""
+        if page and cursor == "":
+            return {"label": _("more"), "cursor": ""}
+        host = self._remote_host(acc)
+        if not host or cursor == "end":
+            return None
+        return {"label": _("older_from_origin", host=host), "cursor": cursor or "origin",
+                "tip": _("older_from_origin_tip", host=host)}
+
+    def account_more(self, acc_id, show=None, max_id="", cursor=""):
+        """The next page of a profile's posts: my server's after max_id, or (cursor —
+        "origin" or where their outbox goes on) from their own server, each post
+        fetched into mine. → {posts, max_id, older}."""
+        core = self.core
+        acc_id = one_id(acc_id)
+        if show not in dict(timed.PROFILE_SHOWS):
+            show = timed.profile_show(core.cfg)
+        acc = core.account(acc_id).result()
+        cursor = str(cursor or "")
+        if not cursor:
+            page = core.account_posts(acc_id, one_id(max_id) if max_id else None,
+                                      show=show).result()
+            if page:
+                return {"posts": self._posts(page), "max_id": page[-1].id,
+                        "older": self._older_offer(acc, page)}
+            return {"posts": [], "max_id": max_id, "older": self._older_offer(acc, [])}
+        if cursor == "end" or not self._remote_host(acc):
+            return {"posts": [], "max_id": max_id, "older": None}
+        got, nxt = core.older_from_origin(acc, None if cursor == "origin" else cursor,
+                                          (), resolve=True).result(timeout=180)
+        got = [e for e in got or () if timed.keeps(e, show, acc_id)]
+        return {"posts": self._posts(got), "max_id": max_id,
+                "older": self._older_offer(acc, [], nxt or "end")}
 
     @staticmethod
     def _date(when):
@@ -1461,7 +1571,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "web_parent_gone", "web_mark_read", "tui_profile", "open_browser", "refresh",
          "more", "no_older", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",
          "web_new_post", "web_original", "web_close", "web_lanes", "web_edited",
-         "web_requested", "lang_label",
+         "web_requested", "lang_label", "pinned",
          "reply_quote", "quote_in_reply", "sub_thread", "unsub_thread", "mute_thread",
          "unmute_thread", "copy_link", "delete", "delete_q", "help_title", "about",
          "edit", "quote",
@@ -1594,6 +1704,9 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", ""),
                                                            q.get("show") or None),
+                  "/api/account_more": lambda: self.web.account_more(
+                      q.get("id", ""), q.get("show") or None, q.get("max_id", ""),
+                      q.get("cursor", "")),
                   "/api/post_menu": lambda: self.web.post_menu(q.get("id", "")),
                   "/api/places": lambda: self.web.place_menu(),
                   "/api/themes": lambda: self.web.themes(),

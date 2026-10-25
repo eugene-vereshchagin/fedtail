@@ -77,3 +77,45 @@ class WebApiTest(TmpDir):
         page = json.loads(self.req("/api/page?name=link&arg=https%3A%2F%2Fnews.example%2Fa")[2])
         self.assertEqual([x["post"]["id"] for x in page["rows"] if x["kind"] == "post"],
                          ["401"])
+
+
+class WebProfileTest(TmpDir):
+    """A profile as the windows have it: the pinned posts on top (once), what the person
+    puts forward, and page after page further back."""
+    make = test_cli.CliTest.make
+
+    def setUp(self):
+        super().setUp()
+        i18n.setup("en")
+        self.core, self.w = self.make()
+        self.core.connect().result()
+        self.core.poll_once()
+        self.web = web.Web(self.core, None)
+
+    def test_pinned_featured_and_further_back(self):
+        from tests import fakes
+        b_posts = [f"{i:03d}" for i in range(201, 209)]  # more than a page (page_size 3)
+        for m, i in enumerate(b_posts):
+            self.w.add(fakes.status(i, fakes.BOB, minute=m, vis="public", text=f"b{i}"))
+        pin = b_posts[0]  # the oldest, pinned: on top all the same
+        self.w.statuses[pin]["pinned"] = True
+        self.w.featured["B"] = {"tags": [{"name": "fediverse", "statuses_count": "12"}],
+                                "people": [fakes.NEWS]}
+        got = self.web.account("B", "all")
+        ids = [p["sid"] for p in got["posts"]]
+        self.assertEqual(ids[0], pin)
+        self.assertTrue(got["posts"][0]["pinned"])
+        self.assertEqual(ids.count(pin), 1)  # not twice
+        self.assertEqual([f["title"] for f in got["featured"]],
+                         ["Often writes about:", "Recommends:"][:len(got["featured"])])
+        self.assertIn("#fediverse (12)", got["featured"][0]["text"])
+        self.assertEqual(got["featured"][1]["people"][0]["id"], "N")
+        seen = set(ids)
+        more = got["older"]
+        for _round in range(10):  # page by page until my server has nothing older
+            if not more or more["cursor"]:
+                break
+            nxt = self.web.account_more("B", "all", got["max_id"], more["cursor"])
+            seen |= {p["sid"] for p in nxt["posts"]}
+            got, more = nxt, nxt["older"]
+        self.assertEqual(seen, set(b_posts))

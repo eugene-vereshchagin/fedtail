@@ -127,4 +127,7 @@
     <string name="poll_add">Add option</string>
     <string name="poll_remove">Remove last</string>
     <string name="poll_multiple">Several answers</string>
+    <string name="note_channel">News: replies, mentions, requests</string>
+    <string name="accounts">Accounts</string>
+    <string name="pinned">pinned</string>
 </resources>

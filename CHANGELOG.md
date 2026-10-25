@@ -7,6 +7,13 @@
   while, block, lists, a note), the windows' own ⋯ menu on every card (edit, delete,
   redraft, quote, translate, report, hide…), polls to vote on, quotes in the card; the
   editor with pictures and their descriptions, a warning, the language and a poll.
+- Android: notifications in the shade — the windows' notes (`notify.*`), while the app is
+  open and, closed, from a round every 15 minutes; a tap opens the thread. Video, gifs and
+  sound play in the app. Accounts: add, switch, log in again and out (≡ → Accounts). The
+  windows' themes paint the phone (`ui.theme` in Settings).
+- Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
+  recommendations, whom of yours they follow, their server's software, a move — and
+  "more" page after page, further back from their own server.
 - The test run's end no longer crashes Python 3.12 in Qt's teardown (exit 139 after "OK").
 - Spell checking in the post window: mistakes underlined, suggestions and "Add to
   dictionary" on a right click, any of the post's languages; the system's dictionaries

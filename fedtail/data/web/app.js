@@ -1225,6 +1225,7 @@ async function openAccount(id, show) {
       box.append(fields);
     }
     box.append(el("div", "muted", [a.account.counts].concat(a.meta || []).join(" · ")));
+    profileExtras(a, box);
     const row = el("div", "row");
     if (a.actions) {
       // the same buttons as the windows' profile (common/profile.py)
@@ -1239,8 +1240,7 @@ async function openAccount(id, show) {
       if (a.note_line) box.append(el("div", "muted", a.note_line));
       body.append(box);
       body.append(profileShows(a, id));
-      for (const p of a.posts) body.append(renderPost(p, false));
-      if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
+      profilePosts(body, a, id, on ? on.key : "");
       return;
     }
     if (!a.account.own) {
@@ -1264,9 +1264,71 @@ async function openAccount(id, show) {
     box.append(row);
     body.append(box);
     body.append(profileShows(a, id));
-    for (const p of a.posts) body.append(renderPost(p, false));
-    if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
+    profilePosts(body, a, id, on ? on.key : "");
   } catch (e) { $("#side-body").textContent = w("web_load_error", { err: e.message }); }
+}
+
+// what the windows add under the name: a move, whom of mine they follow, what they put
+// forward (featured tags, recommended people) — tags and people open here
+function profileExtras(a, box) {
+  if (a.moved) {
+    const m = el("div", "row moved");
+    m.append(el("span", "", "📦 " + a.moved.text));
+    const b = el("button", "tool", a.moved.open);
+    b.type = "button";
+    b.onclick = () => openAccount(a.moved.account.id);
+    m.append(b);
+    box.append(m);
+  }
+  if (a.familiar) box.append(el("div", "muted", a.familiar));
+  for (const f of a.featured || []) {
+    const line = el("div", "featured");
+    line.append(el("b", "", f.title + " "));
+    const items = (f.tags || []).map((t) => ["#" + t, () => openThing({ page: "tag", arg: t })])
+      .concat((f.people || []).map((p) => ["@" + p.handle, () => openAccount(p.id)]));
+    items.forEach(([label, go], i) => {
+      const x = el("a", "", label);
+      x.href = "#";
+      x.onclick = (ev) => { ev.preventDefault(); go(); };
+      if (i) line.append(", ");
+      line.append(x);
+    });
+    box.append(line);
+  }
+}
+
+// the posts: pinned ones first (📌), then by time; "more" under them — my server's next
+// page, then (remote_profiles) further back from their own server
+function profilePosts(body, a, id, show) {
+  for (const p of a.posts) {
+    const card = renderPost(p, false);
+    if (p.pinned) card.prepend(el("div", "muted pinned", "📌 " + w("pinned")));
+    body.append(card);
+  }
+  if (!a.posts.length) body.append(el("div", "empty", w("web_empty")));
+  let maxId = a.max_id || "";
+  const more = (offer) => {
+    if (!offer) return;
+    const b = el("button", "tool more", offer.label);
+    b.type = "button";
+    if (offer.tip) b.title = offer.tip;
+    b.onclick = async () => {
+      b.disabled = true;
+      try {
+        const r = await api("/api/account_more?id=" + encodeURIComponent(id)
+          + "&show=" + encodeURIComponent(show) + "&max_id=" + encodeURIComponent(maxId)
+          + "&cursor=" + encodeURIComponent(offer.cursor || ""));
+        b.remove();
+        body.querySelector(".empty")?.remove();
+        for (const p of r.posts) body.append(renderPost(p, false));
+        maxId = r.max_id || maxId;
+        if (r.older) more(r.older);
+        else body.append(el("div", "muted", w("no_older")));
+      } catch (e) { b.disabled = false; toast(e.message); }
+    };
+    body.append(b);
+  };
+  more(a.older);
 }
 
 async function profileAct(id, key, answer, confirmed, chosen) {

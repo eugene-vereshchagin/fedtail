@@ -235,12 +235,14 @@ def open():  # noqa: A001 — what Kotlin calls it
         core = _core()
         if core.me is None:
             core.connect().result(120)
+        if getattr(core, "_poller", None) is None:  # a background round made it: no poller
             # the poller's first round before the first screen: it opens filled, not
             # empty (and not racing a round of its own)
             done = threading.Event()
             core.events.on("first_poll_done", lambda _n, _p: done.set())
             core.start_polling()
-            done.wait(60)
+            if getattr(core, "_poll_count", 0) == 0:  # else round 1 was a background one
+                done.wait(60)
         web = _s["web"]
         me = web.me()
         out = {k: me.get(k) for k in ("me", "handle", "server", "version", "order",
@@ -349,6 +351,16 @@ def account(acc_id, show=None):
     primary}], shows, show_tip, posts} — the web page's, cards with their words."""
     def go():
         got = _s["web"].account(acc_id, show or None)
+        _texts(got.get("posts", []))
+        return got
+    return _answer(go)
+
+
+def account_more(acc_id, show=None, max_id="", cursor=""):
+    """A profile's next posts: my server's, then their own server's (Web.account_more)
+    → {posts, max_id, older: {label, cursor} or null}."""
+    def go():
+        got = _s["web"].account_more(acc_id, show or None, max_id or "", cursor or "")
         _texts(got.get("posts", []))
         return got
     return _answer(go)
@@ -511,6 +523,52 @@ def pause(on):
     return _answer(go)
 
 
+def theme():
+    """The phone's colours: the theme of ui.theme (the windows' files, the web page's
+    reading of them) → {"name", "light", "colors": {bg, card, text, muted, line, accent,
+    accent-text, unread, ctx, danger}}; colors {} — the phone's own light or dark."""
+    def go():
+        web = _s["web"]
+        colors, light, _family = web.theme_colors()
+        return {"name": web.theme_name(), "light": light, "colors": colors}
+    return _answer(go)
+
+
+def notes(since):
+    """What to tell the phone's notification shade since the note numbered `since`
+    (notifytext's words, by notify.privacy): {"notes": [{title, body, lane, thread}],
+    "n": the newest note's number, "when_focused", "enabled"}."""
+    def go():
+        got, n = _s["web"].notes_since(int(since))
+        cfg = _core().cfg["notify"]
+        return {"notes": got, "n": n, "enabled": bool(cfg.get("enabled", True)),
+                "when_focused": bool(cfg.get("when_focused", False))}
+    return _answer(go)
+
+
+def ready(files_dir, cache_dir, lang=""):
+    """The core for a background round: made if this process has none yet (the app
+    closed, the system woke it for the round); → {"logged_in"}."""
+    def go():
+        if _s["core"] is None:
+            start(files_dir, cache_dir, lang, False, True)
+        return {"logged_in": bool(_core().auth)}
+    return _answer(go)
+
+
+def background_round(since):
+    """One round now, here (called off the main thread, the poller paused while the
+    app is out of sight) → notes(since): what came meanwhile, for the shade."""
+    def go():
+        core = _core()
+        if core.auth:
+            if core.me is None:  # the system made the process for this round: connect
+                core.connect().result(120)
+            core.poll_once()
+        return json.loads(notes(since))
+    return _answer(go)
+
+
 def wait(since, seconds=25):
     """Blocks (call it off the main thread) until something in the lanes changed, or
     the time is up. → the version now: different from `since` — reload."""
@@ -605,9 +663,12 @@ def resolve(url):
 # line's chapters stay off, and so do sound and notifications (no sound here; notifications
 # come later, with their own settings); of [ui] and [debug] — the few the phone heeds
 # (the rest is the Qt and GTK windows': fonts, docks, columns, the GTK header bar…).
-NOT_ON_PHONE = {"tui", "web", "cli", "sound", "notify"}
+NOT_ON_PHONE = {"tui", "web", "cli", "sound"}
 ONLY_ON_PHONE = {
-    "ui": {"language", "start_lane", "command_line", "expand_cw", "arts_mode", "links_in_app"},
+    "ui": {"language", "start_lane", "command_line", "expand_cw", "arts_mode", "links_in_app",
+           "theme"},
+    # the shade heeds these; how the desktop shows a note (backend) is the desktop's
+    "notify": {"enabled", "lanes", "except", "privacy", "when_focused", "filtered"},
     "debug": {"level", "mode"},
 }
 

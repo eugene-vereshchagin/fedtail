@@ -60,6 +60,8 @@ object Core {
 
     // a profile and its buttons (common/profile.py)
     suspend fun account(id: String, show: String?) = obj("account", id, show)
+    suspend fun accountMore(id: String, show: String?, maxId: String, cursor: String) =
+        obj("account_more", id, show, maxId, cursor)
     suspend fun profileAct(id: String, key: String, answer: String?, confirmed: Boolean,
                            chosen: JSONObject?) =
         obj("profile_act", id, key, answer, confirmed, chosen?.toString())
@@ -68,6 +70,12 @@ object Core {
     suspend fun upload(path: String, name: String) = obj("upload", path, name)
     suspend fun vote(id: String, choices: List<Int>) = obj("vote", id, JSONArray(choices).toString())
     suspend fun editor() = obj("editor")
+    // the shade: the windows' notes, while open and from a round in the background
+    suspend fun theme() = obj("theme")
+    suspend fun notes(since: Int) = obj("notes", since)
+    suspend fun ready(context: Context, lang: String) =
+        obj("ready", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang)
+    suspend fun backgroundRound(since: Int) = obj("background_round", since)
     suspend fun pin(names: List<String>) = obj("pin", JSONArray(names).toString())
     suspend fun commandPreview(line: String) = obj("command_preview", line)
     suspend fun command(line: String, confirmed: Boolean) = obj("command", line, confirmed)
