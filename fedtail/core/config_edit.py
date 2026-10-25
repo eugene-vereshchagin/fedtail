@@ -219,11 +219,19 @@ def check(new_text, changes):
         raise SaveError(str(e)) from None
 
 
+# the files backed up by this run: config.toml.bak keeps the file as it was before the
+# run's first change — the settings window saves at every tick and every step of a
+# number, and a .bak written each time held only the step before (25.10)
+_backed_up = set()
+
+
 def save(path, changes, example_text=None):
     """Put the changes into the file at path. Returns (config, warnings) of the new
-    file; SaveError and the file untouched if the result isn't right."""
+    file; SaveError and the file untouched if the result isn't right. The file as it
+    was before this run's first change stays in <file>.bak; a symlinked config (one
+    kept with the dotfiles) is written through the link, the link stays."""
     from . import config
-    path = os.fspath(path)
+    path = os.path.realpath(os.fspath(path))
     try:
         with open(path, encoding="utf-8") as f:
             old = f.read()
@@ -236,9 +244,10 @@ def save(path, changes, example_text=None):
     if new == old:
         return result
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    if os.path.exists(path):
+    if os.path.exists(path) and path not in _backed_up:
         with open(path + ".bak", "w", encoding="utf-8") as f:
             f.write(old)
+        _backed_up.add(path)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="") as f:
         f.write(new)

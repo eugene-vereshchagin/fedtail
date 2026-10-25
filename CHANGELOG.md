@@ -2,6 +2,9 @@
 
 ## 0.20.0 — in progress
 
+- Settings: `config.toml.bak` is the file as it was before this run's first change — the
+  window saves at every tick, and the backup used to hold only the step before the last; a
+  symlinked config is written through the link instead of being replaced by a file.
 - fedtail for Android (`android/`; Kotlin and Jetpack Compose over the same Python core):
   the overview of lanes as home — tiles or a list (`phone.overview`), the tiles picked
   and ordered in the app and carried by sync (`sync.tiles`), "read in a row", "read —

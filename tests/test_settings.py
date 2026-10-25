@@ -2,6 +2,7 @@
 "settings" place): config.toml stays the one place the settings live, and a change
 touches that one line and nothing else."""
 
+import os
 import tempfile
 import tomllib
 import unittest
@@ -103,6 +104,34 @@ class EditTest(unittest.TestCase):
                 ce.save(f, {("ui", "font_size"): "big"}, self.ex)  # must be a number
             self.assertEqual(f.read_text("utf-8"), before)
             self.assertFalse(Path(str(f) + ".tmp").exists())
+
+    def test_the_backup_is_the_file_before_this_runs_first_change(self):
+        """The window saves at every tick and step: the .bak must stay the file as it
+        was before them all, not the step before the last (25.10)."""
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "config.toml"
+            f.write_text(USER, "utf-8")
+            for size in (13, 14, 15):
+                ce.save(f, {("ui", "font_size"): size}, self.ex)
+            self.assertEqual(Path(str(f) + ".bak").read_text("utf-8"), USER)
+            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["ui"]["font_size"], 15)
+            ce._backed_up.clear()  # the next run: its own starting point
+            ce.save(f, {("ui", "font_size"): 16}, self.ex)
+            self.assertEqual(tomllib.loads(Path(str(f) + ".bak").read_text("utf-8"))
+                             ["ui"]["font_size"], 15)
+
+    @unittest.skipIf(os.name == "nt", "symlinks need rights on Windows")
+    def test_a_symlinked_config_stays_a_link(self):
+        with tempfile.TemporaryDirectory() as d:
+            real = Path(d) / "dotfiles" / "fedtail.toml"
+            real.parent.mkdir()
+            real.write_text(USER, "utf-8")
+            link = Path(d) / "config.toml"
+            link.symlink_to(real)
+            ce.save(link, {("ui", "theme"): "paper"}, self.ex)
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(tomllib.loads(real.read_text("utf-8"))["ui"]["theme"], "paper")
+            self.assertEqual(Path(str(real) + ".bak").read_text("utf-8"), USER)
 
 
 def _view(path):

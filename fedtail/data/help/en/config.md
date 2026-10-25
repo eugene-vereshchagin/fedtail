@@ -1,10 +1,15 @@
 # Settings
 
-There's no settings window — it's all in the config. How it works, and where the full reference is.
+All the settings live in the config, `config.toml`; the settings window (≡ → "Settings…") edits
+the same file. How it works, and where the full reference is.
 
 ## How the config works
 
 - ≡ → "Open config" — `config.toml` in your editor. Changed it — restart fedtail.
+- The settings window writes to the file at once, at each change, only the lines it must — the
+  explanations and your comments stay. The file as it was before this run's first change is
+  kept next to it as `config.toml.bak`. The config is a link (kept with your dotfiles)? The real
+  file is written, the link stays.
 - Every setting is in it, by chapter, each with its default value and an explanation.
 - A value you wrote stays yours even when a new version changes the default. Want the program's
   default — comment the line out.
