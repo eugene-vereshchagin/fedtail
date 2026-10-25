@@ -646,6 +646,7 @@ class ComposeScreen(Screen):
                 Binding("ctrl+o", "extras", "📎 " + _("tui_extras")),
                 # Ctrl+R: Textual keeps Ctrl+P for its command palette, above any screen
                 Binding("ctrl+r", "preview", _("preview")),
+                Binding("f7", "spell", _("spell_check")),
                 Binding("escape", "leave", _("web_cancel"))]
     CSS = """
     ComposeScreen { layout: vertical; padding: 0 1; }
@@ -853,6 +854,8 @@ class ComposeScreen(Screen):
         items.append(((_("detach") + " " if self.when else "") + _("schedule"), "when"))
         if self.edit is None:
             items.append((_("lang_other"), "lang"))
+        if self.app.core.cfg["post"].get("spellcheck", True):
+            items.append(("abc " + _("spell_check") + " (F7)", "spell"))
         items += ["-", ("🗑 " + _("discard"), "discard")]
 
         def chosen(v):
@@ -898,6 +901,9 @@ class ComposeScreen(Screen):
             elif v == "discard":
                 self.app.push_screen(ConfirmScreen(_("discard_q_title"), _("discard_q")),
                                      self._discard)
+                return
+            elif v == "spell":
+                self.action_spell()
                 return
             self.show_extras()
         self.app.push_screen(MenuScreen("📎 " + _("tui_extras"), items), chosen)
@@ -969,6 +975,65 @@ class ComposeScreen(Screen):
             return
         self.poll = poll
         self.show_extras()
+
+    # ---- spell checking (core/spell.py): a list of what looks wrong, F7 ------------------
+    def _speller(self):
+        """The checker for this post's language (or the interface's), or None."""
+        from ...core import spell
+        from ...i18n import current_language
+        lang = self.query_one("#c-lang", Input).value.strip()
+        core = self.app.core
+        return spell.for_post(core.cfg, core.paths.config_file.parent, lang,
+                              current_language())
+
+    def action_spell(self):
+        """F7: the words that look wrong, each to put right — a suggestion in its
+        place, or into my own dictionary."""
+        if not self.app.core.cfg["post"].get("spellcheck", True):
+            return
+        checker = self._speller()
+        if checker is None:
+            self.app.notify(_("spell_unavailable"), timeout=10)
+            return
+        text = self.query_one("#c-text", TextArea).text
+        wrong = checker.wrong(text)
+        if not wrong:
+            self.app.notify(_("spell_all_ok"))
+            return
+        items = [(f"{w}  ({text[max(0, s - 12):s].split(chr(10))[-1]}…)", (s, e, w))
+                 for s, e, w in wrong]
+
+        def chosen(v):
+            if v is not None:
+                self._spell_word(checker, *v)
+        self.app.push_screen(MenuScreen("abc " + _("spell_wrong_n", n=len(wrong)), items),
+                             chosen)
+
+    def _spell_word(self, checker, start, end, word):
+        options = [(s, ("put", s)) for s in checker.suggest(word)] or \
+            [("(" + _("spell_none") + ")", None)]
+        options += ["-", ("＋ " + _("spell_add"), ("add", word))]
+
+        def chosen(v):
+            if not v:
+                return
+            if v[0] == "add":
+                checker.add(v[1])
+            else:
+                self._spell_put(start, end, word, v[1])
+            self.action_spell()  # on to the next one
+        self.app.push_screen(MenuScreen(word, options), chosen)
+
+    def _spell_put(self, start, end, word, instead):
+        """The word at start…end (still there, still that word) becomes instead."""
+        ta = self.query_one("#c-text", TextArea)
+        text = ta.text
+        if text[start:end] != word:  # the text changed meanwhile: its first such word
+            start = text.find(word)
+            if start < 0:
+                return
+            end = start + len(word)
+        ta.load_text(text[:start] + instead + text[end:])
 
     def _language(self, code):
         """Another language: an ISO 639 code typed (eo, tok…) — into the field."""

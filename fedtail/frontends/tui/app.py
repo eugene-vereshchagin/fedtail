@@ -1389,6 +1389,8 @@ class FedtailApp(App, PostsMixin):
     def profile_screen(self, acc_id):
         return ProfileScreen(acc_id)
 
+    relaunch = None  # a profile to start anew with when the app ends (tui/__init__.run)
+
     def open_thing(self, o):
         """Where an action leads: {"thread"}, {"account"}, {"url"}, {"page", "arg", …}."""
         if not o:
@@ -1399,6 +1401,16 @@ class FedtailApp(App, PostsMixin):
             self.push_screen(ProfileScreen(o["account"]))
         elif o.get("url"):
             self.host.open_url(o["url"])
+        elif o.get("profile"):  # another account: fedtail again, in this terminal (run())
+            from ...core import paths
+            from ...core.instance import SingleInstance
+            name = str(o["profile"])
+            # open in its own window already: brought up there, this terminal stays
+            if SingleInstance(paths.resolve(name).socket_file).poke_existing():
+                self.notify(_("profile_busy", profile=name), timeout=10)
+                return
+            self.relaunch = name
+            self.exit()
         elif o.get("file"):  # the config: in $EDITOR, or its path copied
             self.open_file(o["file"])
         elif o.get("page"):

@@ -463,18 +463,66 @@ class Web:
         self.changed = threading.Condition()
         self.links = {}  # one-time login token -> good until (time.monotonic)
         self._links_lock = threading.Lock()
-        for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
-                      "lists_changed"):
-            self.core.on(event, lambda _n, _p: self.bump())
         self.theme = ""  # one tried from the page's menu: until fedtail stops (ui.theme stays)
         # the theme's sounds: the page plays them (frontends/soundpack.py)
         self.sound_seq = 0
         self.sound_log = collections.deque(maxlen=8)  # (seq, event)
-        self.core.on("sound", lambda _n, p: self.chime(p))
         # desktop notifications, shown by the browser (notifytext: the windows' words)
         self.note_seq = 0
         self.note_log = collections.deque(maxlen=20)  # (seq, {title, body, lane, thread})
-        self.core.on("notify", lambda _n, p: self.notified(p))
+        self.instance = None  # this profile's single-instance lock (web/__init__.run)
+        self._listen(self.core)
+
+    def _listen(self, view):
+        """The core's news, to the page."""
+        for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
+                      "lists_changed"):
+            view.on(event, lambda _n, _p: self.bump())
+        view.on("sound", lambda _n, p: self.chime(p))
+        view.on("notify", lambda _n, p: self.notified(p))
+
+    def switch_profile(self, name):
+        """Another account's profile in this same page (Accounts → Open, or after a
+        login): its core made, connected and polling, then put in place of this one,
+        which is shut down. The page keeps its key and cookie — it only reloads. A
+        profile open in its own window stays there (profile_busy): two processes on one
+        profile's database would fight over it."""
+        from ...core import config, paths
+        from ...core.app import Core
+        from ...core.instance import SingleInstance
+        old_view = self.core
+        old = getattr(old_view, "_core", old_view)
+        old = getattr(old, "primary", old)
+        if name == old.paths.profile:
+            return
+        where = paths.resolve(name)
+        where.ensure()
+        lock = SingleInstance(where.socket_file)
+        if lock.poke_existing():
+            raise ValueError(_("profile_busy", profile=name))
+        cfg, _warn = config.load(where.config_file)
+        new = Core(cfg, where, api_class=old.api_class)
+        if not new.logged_in:
+            new.shutdown()
+            raise ValueError(_("cli_login_first"))
+        try:
+            new.connect().result(timeout=60)
+        except Exception:
+            new.shutdown()
+            raise
+        lock.listen(lambda _m: None)
+        view = View(new)
+        self._listen(view)
+        self.core, self.cmds, self.models, self._saver = view, Commands(view), {}, None
+        held, self.instance = self.instance, lock
+        new.start_polling()
+        log.info("web: profile %s -> %s", old.paths.profile, name)
+        try:
+            old_view.shutdown()
+        finally:
+            if held is not None:
+                held.close()
+        self.bump()
 
     def login_link(self, base):
         """A link that logs a browser in once, within LINK_SECONDS: what the history,
@@ -728,7 +776,10 @@ class Web:
                 "accounts": [[k, _("post_from", acct=h)] for k, h in accounts]
                 if len(accounts) > 1 else [],
                 "poll_lengths": [[secs, _(key)] for secs, key in cc.POLL_TIMES],
-                "preview": bool(self.core.cfg["post"].get("preview", True))}
+                "preview": bool(self.core.cfg["post"].get("preview", True)),
+                # spell checking: the browser's own (post.spellcheck), in the post's
+                # language — the windows check with the system's dictionaries
+                "spellcheck": bool(self.core.cfg["post"].get("spellcheck", True))}
 
     # ---- attachments: the page sends the file, the post names it by its token ----------
     def uploads_dir(self):
@@ -1371,6 +1422,10 @@ class Web:
         answer = body.get("answer") if isinstance(body.get("answer"), str) else None
         out = self.places().act(*act, values=values, confirmed=body.get("confirmed") is True,
                                 answer=answer)
+        if out.open and out.open.get("profile") and not out.error:
+            # another account: this page goes over to it (Accounts, a login done)
+            self.switch_profile(str(out.open["profile"]))
+            return {k: v for k, v in (("message", out.message), ("reload", True)) if v}
         got = {k: v for k, v in (("message", out.message), ("confirm", out.confirm),
                                  ("open", out.open), ("compose", out.compose),
                                  ("copy", out.copy)) if v}
