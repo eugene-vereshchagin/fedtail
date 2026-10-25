@@ -63,8 +63,7 @@ def _end_with_the_results():
     run is lost: the results are written and flushed before."""
     import sys
     main = (sys.argv[0] if sys.argv else "").replace("\\", "/")
-    # Windows never crashed there, and ending early cost it its exit code (127)
-    if "unittest" not in main or sys.platform == "win32":
+    if "unittest" not in main:
         return
     real_exit = sys.exit
 
@@ -75,7 +74,12 @@ def _end_with_the_results():
             real_exit(code)
         sys.stdout.flush()
         sys.stderr.flush()
-        _os._exit(code if isinstance(code, int) else (0 if code is None else 1))
+        code = code if isinstance(code, int) else (0 if code is None else 1)
+        if sys.platform == "win32":
+            # Windows crashed later still, unloading Qt's DLLs (exit 127 after "OK", with
+            # _exit too): TerminateProcess — which os.kill is there — skips that as well
+            _os.kill(_os.getpid(), code)
+        _os._exit(code)
 
     sys.exit = exit_now
 
