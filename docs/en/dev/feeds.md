@@ -146,6 +146,7 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | `sort` | `arrival` (when it reached us) or `post_time` (the post's own time; lanes with notifications) |
 | `read` | `through` (unread marks, counts, never jump) or `browse` (newest page, no counts — like Federated) |
 | `group` | the sidebar section: `standard`, `personal`, `lists`, `tags`, or a name of one's own |
+| `switch` (of a condition) | the condition is a switch: a chip over the lane with this word; `shown = false` — hidden by default (like today's "posts only") |
 
 The author's two lanes from the first talk:
 
@@ -157,6 +158,15 @@ any = [
   { author = "local", kind = "post" },        # new posts of my server
   { me = "reply" },                            # replies to me
   { author = "me" },                           # my posts
+]
+
+[[lanes.custom]]
+name = "home_plus"
+title = "Feed"
+any = [
+  { source = "home", kind = "post" },                               # posts
+  { source = "subs" },                                              # followed threads
+  { source = "home", kind = "reply", switch = "Comments", shown = false },  # hidden
 ]
 
 [[lanes.custom]]
@@ -184,6 +194,11 @@ none = [{ kind = "boost", age = ">2d", age_of = "original" }]   # no old posts b
   **before** the rules: no rule brings back a muted person.
 * **Notifications and sounds** go once per post, by the most personal lane it fell into
   (direct > reply > mention > thread > the rest), not once per lane.
+* **Switches** (`switch`) — chips over the lane, like today's "posts only"; the state is
+  remembered per lane and synced. What a switch hides the lane has still *taken*: it doesn't
+  go to Unsorted, counts and notifications leave it out, switched on it stands in its place and
+  the reading place doesn't move. Today's `posts_only`, `mentions_all`, `direct_apart` become
+  the presets' switches.
 
 ## 6. Defaults and the "Unsorted" lane
 
