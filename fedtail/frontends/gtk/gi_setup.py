@@ -39,8 +39,24 @@ __all__ = ["Adw", "Gdk", "Gio", "GLib", "GObject", "Gtk", "Pango", "MIN_GTK", "f
            "gtk_version", "load_adwaita"]
 
 
+def _noop(*_a):
+    return None
+
+
 def _drop_handlers(obj):
-    """Every signal handler of obj and of its event controllers (gestures, keys)."""
+    """Every signal handler of obj and of its event controllers (gestures, keys); a menu
+    button's popup maker; callbacks kept as attributes of our own widgets (TextBlock's
+    on_link, on_select) — each a loop back to the card through C otherwise."""
+    if isinstance(obj, Gtk.MenuButton):
+        try:
+            obj.set_create_popup_func(_noop)  # the old one (a card's method) let go of
+        except Exception:  # noqa: BLE001
+            pass
+    own = getattr(obj, "__dict__", None)
+    if own:
+        for k, v in list(own.items()):
+            if callable(v) and not isinstance(v, (GObject.Object, type)):
+                own[k] = None
     try:
         ctrls = obj.observe_controllers()
         for i in range(ctrls.get_n_items()):
