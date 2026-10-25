@@ -117,12 +117,14 @@ fun MediaViewer(place: Place.Media, close: () -> Unit, openBrowser: (String) -> 
                 horizontalArrangement = Arrangement.SpaceBetween) {
                 if (index > 0) {
                     IconButton(onClick = { index -= 1 }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.prev_media),
+                            tint = Color.White)
                     }
                 } else Box(Modifier.size(48.dp))
                 if (index < place.items.size - 1) {
                     IconButton(onClick = { index += 1 }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.next_media),
+                            tint = Color.White)
                     }
                 }
             }

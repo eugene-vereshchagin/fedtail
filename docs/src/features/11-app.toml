@@ -255,9 +255,7 @@ details.en = "Every `gc_hours` (and at the first poll after start) posts nothing
 [[feature]]
 id = "screen-readers"
 status = "partly"
-android = "partly"
-android_note.ru = "подписи есть у части кнопок и картинок"
-android_note.en = "some buttons and pictures are labelled"
+android = "has"
 since = "0.9.0"
 name.ru = "Экранные дикторы"
 name.en = "Screen readers"

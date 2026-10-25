@@ -62,6 +62,13 @@
     <string name="lang_other_ask">Language code (ISO 639): eo, es, cv, jbo, tok… — it stays on the list</string>
     <string name="forward">Forward</string>
     <string name="to_new">To the new</string>
+    <string name="prev_media">Previous</string>
+    <string name="next_media">Next</string>
+    <string name="media_no_alt">%1$s without a description</string>
+    <string name="kind_image">A picture</string>
+    <string name="kind_video">A video</string>
+    <string name="kind_gifv">An animation</string>
+    <string name="kind_audio">A sound</string>
     <string name="read_in_row_sub">%1$d new in %2$d lanes, yours first</string>
     <string name="all_read">All read</string>
     <string name="sec_you">For you</string>

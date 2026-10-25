@@ -126,6 +126,9 @@
   you type (a chain's parts, #CamelCase for screen readers); help goes forward again;
   the pictures of the next posts fetched ahead (feed.prefetch); "arts mode" marked in
   ≡; older posts from someone's own server say how many came.
+- Android: a screen reader names every button and picture — a picture without a
+  description says what it is ("A video without a description"), the viewer's arrows
+  say previous and next.
 - Android: the activity lane read "as a forum" opens on its first unseen row (or at the
   end) and is refreshed by a pull from the bottom, as the GTK window does.
 

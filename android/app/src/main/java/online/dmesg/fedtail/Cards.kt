@@ -641,9 +641,17 @@ fun MediaGrid(media: List<MediaItem>, blurred: Boolean, open: (Int) -> Unit) {
 private fun Tile(m: MediaItem, modifier: Modifier, shown: Boolean, onClick: () -> Unit) {
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant).clickable(onClick = onClick),
         contentAlignment = Alignment.Center) {
+        // a screen reader says what it is: the description, or the kind "without a description"
+        val kind = stringResource(when (m.kind) {
+            "video" -> R.string.kind_video
+            "gifv" -> R.string.kind_gifv
+            "audio" -> R.string.kind_audio
+            else -> R.string.kind_image
+        })
+        val said = m.alt.ifBlank { stringResource(R.string.media_no_alt, kind) }
         AsyncImage(model = ImageRequest.Builder(LocalContext.current)
             .data(m.preview.ifBlank { m.url }).crossfade(true).build(),
-            contentDescription = m.alt.ifBlank { null }, contentScale = ContentScale.Crop,
+            contentDescription = said, contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().then(if (shown) Modifier else Modifier.blur(28.dp)))
         if (m.kind == "video" || m.kind == "gifv" || m.kind == "audio") {
             Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0x99000000)),

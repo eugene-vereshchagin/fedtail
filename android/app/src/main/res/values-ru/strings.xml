@@ -61,6 +61,13 @@
     <string name="lang_other_ask">Код языка (ISO 639): eo, es, cv, jbo, tok… — останется в списке</string>
     <string name="forward">Вперёд</string>
     <string name="to_new">К новому</string>
+    <string name="prev_media">Предыдущее</string>
+    <string name="next_media">Следующее</string>
+    <string name="media_no_alt">%1$s без описания</string>
+    <string name="kind_image">Картинка</string>
+    <string name="kind_video">Видео</string>
+    <string name="kind_gifv">Анимация</string>
+    <string name="kind_audio">Звук</string>
     <string name="read_in_row_sub">%1$d новых в %2$d лентах, сначала то, что тебе</string>
     <string name="all_read">Всё прочитано</string>
     <string name="sec_you">Тебе</string>

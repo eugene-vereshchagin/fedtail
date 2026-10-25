@@ -39,7 +39,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 |---|---|---|
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Leak hunting: trends, an object census, memory snapshots | · | a desktop tool |
-| Screen readers | ◐ | some buttons and pictures are labelled |
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |
 
