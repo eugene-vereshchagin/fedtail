@@ -212,4 +212,233 @@ class MorePlaces:
         return Out(open={"page": "profile_info", "arg": acc_id, "cursor": cursor or "start"})
 
 
-__all__ = ["MorePlaces", "QUICK"]
+# ---- accounts: switch, add, make main, log in anew, log out --------------------------
+# (the windows' Accounts menu and login window, for the web page and the terminal)
+
+# a login under way, between "open the login page" and "log in": profile name ->
+# (the Core it goes into, the page's address, (server, acct) when it's the same
+# account again or None). Places come and go per request; this outlives them.
+_LOGINS = {}
+
+
+def _plain(html):
+    """The windows' words have <br> and <b> in them: as text."""
+    import html as html_mod
+    import re
+    text = re.sub(r"<br\s*/?>", "\n", html or "")
+    return html_mod.unescape(re.sub(r"<[^>]+>", "", text))
+
+
+class AccountPlaces:
+    """The places "accounts" and "login" (mixed into Places)."""
+
+    def _cores(self):
+        """(the core this place runs on — the primary one of an all-in-one window —,
+        whether other accounts are merged into it)."""
+        core = getattr(self.view, "_core", self.view)
+        return getattr(core, "primary", core), bool(getattr(core, "others", None))
+
+    @staticmethod
+    def _handle(core):
+        """The handle this core's profile logged in as ("" — not known)."""
+        from ...core.view import View
+        return View(core).auth_handle
+
+    def _p_accounts(self, _arg, _tab, _cur):
+        from ...core import profiles
+        from .places import Btn, Page, Row
+        core, merged = self._cores()
+        me = core.paths.profile
+        page = Page("accounts", _("accounts"))
+        for p in profiles.listing():
+            line = "" if p["logged_in"] else _("not_logged_in")
+            title = profiles.label(p) + (" ★" if p["main"] else "")
+            if p["name"] == me:
+                buttons = []
+                if not p["main"]:
+                    buttons.append(self._btn(_("make_main").rstrip(" ★"), "accounts", "main",
+                                             tip=_("make_main_tip")))
+                if not merged and core.auth:  # all-in-one: they'd mix the accounts up
+                    buttons += [self._btn(_("relogin"), "accounts", "relogin"),
+                                self._btn(_("logout"), "accounts", "logout")]
+                page.rows.append(Row("item", "● " + title, line, key=p["name"],
+                                     buttons=tuple(buttons)))
+            else:
+                act = "switch" if p["logged_in"] else "login"
+                page.rows.append(Row("item", title, line, key=p["name"], buttons=(
+                    self._btn(_("open_action"), "accounts", act, p["name"]),)))
+        page.more = Btn(_("account_add"), ("accounts", "add", ""))
+        return page
+
+    def _a_accounts_switch(self, name, _v, _c, _ans):
+        from .places import Out
+        return Out(open={"profile": name})
+
+    def _a_accounts_login(self, name, _v, _c, _ans):
+        from .places import Out
+        return Out(open={"page": "login", "arg": name})
+
+    def _a_accounts_main(self, _d, _v, _c, _ans):
+        from ...core import paths
+        from .places import Out
+        core, _merged = self._cores()
+        paths.set_main(core.paths.profile)
+        log.info("main profile: %s (from the accounts place)", core.paths.profile)
+        return Out(message=_("made_main", profile=core.paths.profile), refresh=True)
+
+    def _a_accounts_add(self, _d, _v, _c, answer):
+        from ...core import paths, profiles
+        from .places import Out
+        if answer is None:
+            return Out(ask=(_("account_add").rstrip("…"), _("account_add_q"), ""))
+        name = str(answer).strip()
+        taken = {p["name"] for p in profiles.listing()}
+        if not name or name in taken or name in profiles.NOT_PROFILES or \
+                not paths._PROFILE_RE.match(name):
+            return Out(error=_("account_bad_name", name=name))
+        return Out(open={"page": "login", "arg": name})
+
+    def _a_accounts_relogin(self, _d, _v, confirmed, _ans):
+        from .places import Out
+        core, _merged = self._cores()
+        acct = "@" + (self._handle(core) or core.paths.profile)
+        if not confirmed:
+            return Out(confirm=_plain(_("relogin_q", acct=acct)))
+        return Out(open={"page": "login", "arg": core.paths.profile})
+
+    def _a_accounts_logout(self, _d, _v, confirmed, _ans):
+        """As the windows: the token gone (here and on the server), ★ handed on; then
+        the next account logged in — or the login, none left."""
+        from ...core import paths, profiles
+        from .places import Out
+        core, _merged = self._cores()
+        me = core.paths.profile
+        acct = "@" + (self._handle(core) or me)
+        others = [p for p in profiles.listing() if p["logged_in"] and p["name"] != me]
+        main = paths.main_profile()
+        target = next((p for p in others if p["name"] == main), others[0]) if others else None
+        if not confirmed:
+            text = [_("logout_q", acct=acct)]
+            if target is not None:
+                if me == main:
+                    text.append(_("logout_main_moves", to=profiles.label(target)))
+                text.append(_("logout_switch", to=profiles.label(target)))
+            else:
+                text.append(_("logout_last"))
+            return Out(confirm=_plain("<br><br>".join(text)))
+        log.info("logout: profile %s", me)
+        core.logout()
+        profiles.hand_over_main(me)
+        if target is not None:
+            return Out(open={"profile": target["name"]})
+        return Out(open={"page": "login", "arg": me})
+
+    # ---- logging in: the server, its page in the browser, the code pasted --------------
+    def _login_core(self, name):
+        """The Core a login goes into: this one (the same account again), or one made
+        for the other profile (its folders and config made as a first start makes them)."""
+        from ...core import config, paths
+        from ...core.app import Core
+        core, _merged = self._cores()
+        if name == core.paths.profile:
+            return core, True
+        where = paths.resolve(name)
+        where.ensure()
+        cfg, _warn = config.load(where.config_file)
+        return Core(cfg, where, api_class=core.api_class), False
+
+    def _p_login(self, name, _tab, _cur):
+        from .places import Btn, Field, Page, Row
+        core, _merged = self._cores()
+        page = Page("login", _("login_title", profile=name), arg=name)
+        got = _LOGINS.get(name)
+        if got is None:
+            server = ""
+            if name == core.paths.profile and core.auth:
+                server = core.auth["server"].split("://")[-1].rstrip("/")
+            page.form = (Field("server", _("login_server").rstrip(":"), server,
+                               tip="example.social"),)
+            page.submit = Btn(_("login_step1"), ("login", "begin", name), primary=True)
+            return page
+        _core, url, _expect = got
+        page.rows.append(Row("text", _plain(_("login_browser_opened", url=url)), key="url",
+                             buttons=(self._btn(_("open_browser"), "login", "open", name),)))
+        page.hint = _("login_hint")
+        page.form = (Field("code", _("login_step2").lstrip("2. "), ""),)
+        page.submit = Btn(_("login_step2"), ("login", "finish", name), primary=True)
+        page.more = Btn(_("login_step1"), ("login", "again", name))
+        return page
+
+    def _a_login_begin(self, name, values, _c, _ans):
+        from .places import Out, _wait
+        server = str(values.get("server") or "").strip()
+        if not server:
+            return Out(error=_("login_server"))
+        core, same = self._login_core(name)
+        expect = None
+        if same and core.auth:
+            expect = (core.auth["server"], self._handle(core))
+        try:
+            url = _wait(core.begin_login(server))
+        except Exception as e:  # noqa: BLE001 — the server's own words
+            if not same:
+                core.shutdown()
+            return Out(error=_("error", err=e))
+        old = _LOGINS.pop(name, None)
+        if old and old[0] is not core:
+            own, _merged = self._cores()
+            if old[0] is not own:
+                old[0].shutdown()
+        _LOGINS[name] = (core, url, expect)
+        return Out(refresh=True, open={"url": url})
+
+    def _a_login_open(self, name, _v, _c, _ans):
+        from .places import Out
+        got = _LOGINS.get(name)
+        return Out(open={"url": got[1]}) if got else Out(refresh=True)
+
+    def _a_login_again(self, name, _v, _c, _ans):
+        from .places import Out
+        got = _LOGINS.pop(name, None)
+        own, _merged = self._cores()
+        if got and got[0] is not own:
+            got[0].shutdown()
+        return Out(refresh=True)
+
+    def _a_login_finish(self, name, values, _c, _ans):
+        from ...core import profiles
+        from ...core.app import OtherAccount
+        from .places import Out, _wait
+        got = _LOGINS.get(name)
+        if got is None:
+            return Out(refresh=True)
+        core, _url, expect = got
+        code = str(values.get("code") or "").strip()
+        if not code:
+            return Out(error=_("login_hint"))
+        try:
+            me = _wait(core.finish_login(code, expect=expect))
+        except OtherAccount as e:
+            got_acct = str(e)[len(OtherAccount.PREFIX):]
+            return Out(error=_plain(_("login_other_account", got=got_acct,
+                                      want="@" + (expect[1] if expect else ""))))
+        except Exception as e:  # noqa: BLE001
+            return Out(error=_("error", err=e))
+        _LOGINS.pop(name, None)
+        profiles.remember(core.paths, me, core.auth["server"])
+        own, _merged = self._cores()
+        from ...core.view import View
+        handle = View(core).acc(me).handle
+        done = _("login_done", acct=handle)
+        if core is own:  # the same account again: on with the new token
+            try:
+                _wait(core.connect())
+            except Exception as e:  # noqa: BLE001
+                return Out(error=_("error", err=e))
+            return Out(message=done, open={"page": "accounts"})
+        core.shutdown()
+        log.info("login: profile %s is @%s", name, handle)
+        return Out(message=done, open={"profile": name})
+
+
+__all__ = ["AccountPlaces", "MorePlaces", "QUICK"]

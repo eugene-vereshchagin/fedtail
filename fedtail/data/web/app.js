@@ -596,7 +596,7 @@ function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invi
   if (c.text !== undefined) $("#text").value = c.text;
   if (c.cw) { $("#cw").value = c.cw; showCw(true); }
   if (c.visibility) $("#vis").value = c.visibility === "private" ? "followers" : c.visibility;
-  if (c.lang) $("#lang").value = c.lang;
+  if (c.lang) { $("#lang").value = c.lang; spellLang(); }
   counter();
 }
 
@@ -1527,10 +1527,15 @@ async function placeAct(act, values, confirmed, answer) {
     if (got !== null) await placeAct(act, values, confirmed, got);
     return;
   }
+  if (r.reload) {  // another account now: the page anew (the cookie stays good)
+    try { if (r.message) sessionStorage.setItem("fedtail-toast", r.message); } catch (e) { /* none */ }
+    location.reload();
+    return;
+  }
   if (r.copy) await copyText(r.copy);
   if (r.message) toast(r.message);
   if (r.compose) composeFrom(r.compose, null);
-  if (r.open) { openThing(r.open); return; }
+  if (r.open) { openThing(r.open); if (!r.refresh) return; }
   if (r.refresh && state.place) {
     const pl = state.place;
     await openPlace(pl.name, pl.arg, pl.tab, "", pl.into);
@@ -1558,6 +1563,7 @@ function compose(replyTo) {
   $("#schedbox").hidden = true;
   $("#sched-at").value = "";
   $("#lang").value = (state.me.editor || {}).language || "";
+  spellLang();
   fillFrom(replyTo);
   const t = $("#text");
   $("#compose-title").textContent = replyTo ? w("reply") : w("web_new_post");
@@ -2173,6 +2179,21 @@ async function follow() {
 }
 
 // ---- start --------------------------------------------------------------------------------
+// spell checking in the editor: the browser's own checker (its red underline and its
+// suggestions on a right click), in the post's language, or the page's when none is
+// picked; off with post.spellcheck = false
+function spellLang() {
+  const on = (state.me.editor || {}).spellcheck !== false;
+  const lang = ($("#lang").value || "").startsWith("\x00") ? "" : $("#lang").value;
+  for (const id of ["#text", "#cw"]) {
+    const box = $(id);
+    if (!box) continue;
+    box.spellcheck = on;
+    box.setAttribute("spellcheck", on ? "true" : "false");
+    if (lang) box.lang = lang; else box.removeAttribute("lang");
+  }
+}
+
 async function start() {
   const me = await api("/api/me");
   state.me = me;
@@ -2185,6 +2206,11 @@ async function start() {
   who.append(avatar(me.me, "ava small"), el("span", "", "@" + me.handle));
   who.title = me.server || "";
   who.onclick = () => openAccount(me.me.id);
+  // what the switch to another account said, shown on the page it led to
+  try {
+    const said = sessionStorage.getItem("fedtail-toast");
+    if (said) { sessionStorage.removeItem("fedtail-toast"); toast(said); }
+  } catch (e) { /* no storage: nothing said */ }
   $("#write").textContent = "✎ " + w("write");
   $("#write").onclick = () => { closeNav(); compose(null); };
   $("#write2").onclick = () => compose(null);
@@ -2215,6 +2241,7 @@ async function start() {
   $("#lang").addEventListener("change", () => {
     if ($("#lang").value === "\x00other") otherLanguage();
     else $("#lang").dataset.was = $("#lang").value;
+    spellLang();
   });
   $("#compose").addEventListener("cancel", (e) => { e.preventDefault(); closeCompose(); });
   $("#compose-form").addEventListener("submit", send);

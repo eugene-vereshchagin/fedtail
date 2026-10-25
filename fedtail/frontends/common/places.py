@@ -27,7 +27,7 @@ from dataclasses import dataclass, field, replace
 from ...i18n import _
 from ...model import Account, Post, Share, real
 from . import timed
-from .placesmore import MorePlaces
+from .placesmore import AccountPlaces, MorePlaces
 
 log = logging.getLogger(__name__)
 
@@ -117,10 +117,11 @@ PLACES = {
     "long_form": "long_form_title", "translate": "translate", "taglanes": "tags_lanes_menu",
     "probe": "probe_tab", "announcements": "announce_title", "profile_info": "profile_title",
     "filter": "filter_edit", "link": "link_posts",
+    "accounts": "accounts", "login": "login_step2",
 }
 MENU = ("search", "lists", "tags", "silence", "filtered", "scheduled", "requests",
         "activity", "trends", "suggestions", "directory", "server", "probe",
-        "announcements", "profile_edit",
+        "announcements", "profile_edit", "accounts",
         "settings", "help", "news", "about", "issue", "federation")
 
 
@@ -136,7 +137,7 @@ def _acc_id(a):
     return a.id if isinstance(a, Account) else str(a)
 
 
-class Places(MorePlaces):
+class Places(MorePlaces, AccountPlaces):
     """The places on one View.
 
     Args:

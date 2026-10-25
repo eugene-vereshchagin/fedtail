@@ -323,6 +323,8 @@ _STRINGS = {
                            "иначе выйдет дубль.",
         "send_maybe": "Может, и ушло",
         # login
+        "login_done": "Вошёл: @{acct}",
+        "profile_busy": "Профиль «{profile}» уже открыт в своём окне — переключись там",
         "login_title": "Вход — профиль {profile}", "login_server": "Адрес сервера:",
         "login_step1": "1. Открыть страницу входа в браузере",
         "login_hint": "Залогинься там, разреши доступ и вставь сюда показанный код:",
@@ -1347,6 +1349,8 @@ _STRINGS = {
                            "the post went out. Look in \"My posts\" before sending again, or it "
                            "may go out twice.",
         "send_maybe": "Maybe sent",
+        "login_done": "Logged in: @{acct}",
+        "profile_busy": "Profile “{profile}” is open in its own window — switch there",
         "login_title": "Log in — profile {profile}", "login_server": "Server address:",
         "login_step1": "1. Open the login page in the browser",
         "login_hint": "Log in there, allow access and paste the code you get here:",

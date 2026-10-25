@@ -24,6 +24,7 @@ def run(core, instance, argv):
     core.connect().result()
     key = load_key(core.paths.data_dir)
     srv = make_server(core, wcfg["host"], wcfg["port"], key)
+    srv.web.instance = instance  # given over when the page switches accounts
     host, port = srv.server_address[:2]
     shown = "127.0.0.1" if host in ("0.0.0.0", "") else host
     base = f"http://{shown}:{port}"
@@ -51,5 +52,7 @@ def run(core, instance, argv):
     finally:
         srv.shutdown()
         srv.server_close()
-        core.shutdown()
+        srv.web.core.shutdown()  # the account the page ended on (it may have switched)
+        if srv.web.instance is not instance and srv.web.instance is not None:
+            srv.web.instance.close()
     return 0
