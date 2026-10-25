@@ -184,7 +184,10 @@ data class ProfileView(
 
 /** An attachment in the editor: uploaded (token) or one of my post's (id, when editing). */
 data class Attachment(val token: String, val name: String, val kind: String,
-                      val alt: String = "", val id: String = "", val preview: String = "")
+                      val alt: String = "", val id: String = "", val preview: String = "",
+                      val focus: Pair<Float, Float>? = null, // -1…1 each, y up (previews' centre)
+                      val cover: String = "",                 // a video's or sound's picture (token)
+                      val coverPreview: String = "")
 
 /** What the screens show and what they ask of the core; lives as long as the app's task. */
 class AppModel(app: Application) : AndroidViewModel(app) {
@@ -872,8 +875,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val edit = editId
             if (edit != null) {
                 body.put("edit", edit)
-                body.put("media_edit", JSONArray(attachments.filter { it.id.isNotBlank() }.map {
-                    JSONObject().put("id", it.id).put("alt", it.alt) }))
+                body.put("media_edit", JSONArray(attachments.filter { it.id.isNotBlank() }.map { a ->
+                    JSONObject().put("id", a.id).put("alt", a.alt).also { o ->
+                        a.focus?.let { o.put("focus", JSONArray(listOf(it.first, it.second))) } } }))
             } else {
                 (p.replyTo?.sid ?: replyToId)?.let { body.put("reply_to", it) }
                 composeVisibility?.let { body.put("visibility", it) }
@@ -881,8 +885,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 quoteId?.let { body.put("quote", it) }
                 val media = attachments.filter { it.token.isNotBlank() }
                 if (media.isNotEmpty()) {
-                    body.put("media", JSONArray(media.map {
-                        JSONObject().put("token", it.token).put("alt", it.alt) }))
+                    body.put("media", JSONArray(media.map { a ->
+                        JSONObject().put("token", a.token).put("alt", a.alt).also { o ->
+                            a.focus?.let { o.put("focus", JSONArray(listOf(it.first, it.second))) }
+                            if (a.cover.isNotBlank()) o.put("cover", a.cover)
+                        } }))
                     if (composeSensitive) body.put("sensitive", true)
                 } else if (pollOn) {
                     val opts = pollOptions.map { it.trim() }.filter { it.isNotBlank() }
@@ -1567,7 +1574,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val media = c.optJSONArray("media")
         if (media != null) {
             attachments = (0 until media.length()).map { media.getJSONObject(it) }.map {
-                Attachment("", "", str(it, "kind"), str(it, "alt"), str(it, "id"), str(it, "url"))
+                Attachment("", "", str(it, "kind"), str(it, "alt"), str(it, "id"), str(it, "url"),
+                    focus = it.optJSONArray("focus")?.let { f ->
+                        f.optDouble(0).toFloat() to f.optDouble(1).toFloat() })
             }
         }
     }
@@ -1634,6 +1643,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun detach(a: Attachment) {
         attachments = attachments - a
+    }
+
+    /** Where a picture's previews centre on (tapped on it): -1…1, y up. */
+    fun setFocus(a: Attachment, x: Float, y: Float) {
+        attachments = attachments.map {
+            if (it.token == a.token && it.id == a.id) it.copy(focus = x to y) else it
+        }
+    }
+
+    /** A video's or sound's cover: a picture uploaded the same way, shown until it plays. */
+    fun setCover(a: Attachment, uri: Uri) {
+        uploadFor(uri) { token ->
+            attachments = attachments.map {
+                if (it.token == a.token && it.id == a.id) it.copy(cover = token,
+                    coverPreview = uri.toString()) else it
+            }
+        }
     }
 
     fun describe(a: Attachment, alt: String) {

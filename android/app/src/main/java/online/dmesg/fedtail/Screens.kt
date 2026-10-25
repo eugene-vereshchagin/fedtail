@@ -24,6 +24,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -603,20 +607,47 @@ private fun LanguagePick(model: AppModel) {
 
 @Composable
 private fun AttachmentRow(model: AppModel, a: Attachment, editing: Boolean) {
+    val pickCover = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) model.setCover(a, uri)
+    }
+    val moving = a.kind == "video" || a.kind == "audio"
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        Box(Modifier.size(72.dp).clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-            if (a.preview.isNotBlank()) {
-                AsyncImage(model = a.preview, contentDescription = a.alt.ifBlank { null },
-                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        // a picture: a tap says where its previews centre on (the focus point)
+        Box(Modifier.size(96.dp).clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(if (moving) Modifier else Modifier.pointerInput(a.token, a.id) {
+                detectTapGestures { pos ->
+                    val x = (pos.x / size.width) * 2f - 1f
+                    val y = 1f - (pos.y / size.height) * 2f
+                    model.setFocus(a, x.coerceIn(-1f, 1f), y.coerceIn(-1f, 1f))
+                }
+            }), contentAlignment = Alignment.Center) {
+            val shown = a.coverPreview.ifBlank { a.preview }
+            if (shown.isNotBlank()) {
+                AsyncImage(model = shown, contentDescription = a.alt.ifBlank { null },
+                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
             }
-            if (a.kind == "video" || a.kind == "audio") Text("▶", color = MaterialTheme.colorScheme.onSurface)
+            if (moving) Text("▶", color = MaterialTheme.colorScheme.onSurface)
+            a.focus?.let { (fx, fy) ->
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    Box(Modifier.offset(x = maxWidth * ((fx + 1f) / 2f) - 6.dp,
+                        y = maxHeight * ((1f - fy) / 2f) - 6.dp).size(12.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary))
+                }
+            }
         }
         Column(Modifier.weight(1f)) {
             OutlinedTextField(value = a.alt, onValueChange = { model.describe(a, it) },
                 label = { Text(stringResource(R.string.alt_label)) }, minLines = 2,
                 modifier = Modifier.fillMaxWidth())
-            if (!editing) TextButton(onClick = { model.detach(a) }) { Text(stringResource(R.string.detach)) }
+            Row {
+                if (moving && !editing) TextButton(onClick = {
+                    pickCover.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) { Text(stringResource(if (a.cover.isBlank()) R.string.cover else R.string.cover_set)) }
+                if (!editing) TextButton(onClick = { model.detach(a) }) { Text(stringResource(R.string.detach)) }
+            }
+            if (!moving) Text(stringResource(R.string.focus_tip), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

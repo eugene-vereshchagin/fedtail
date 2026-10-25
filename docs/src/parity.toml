@@ -324,9 +324,7 @@ keys = ["alt_describe", "alt_missing", "alt_missing_title", "alt_send_anyway"]
 [[capability]]
 id = "focus-point"
 area = "writing"
-android = "no"
-android_note.ru = "фокуса картинки на телефоне нет"
-android_note.en = "no picture focus on the phone"
+android = "has"
 name.ru = "Фокус картинки для превью"
 name.en = "A picture's focus for previews"
 tui = "na"

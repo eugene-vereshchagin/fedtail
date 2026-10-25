@@ -139,4 +139,7 @@
     <string name="find">Найти</string>
     <string name="find_deeper">Глубже</string>
     <string name="find_everywhere">Везде</string>
+    <string name="cover">Обложка…</string>
+    <string name="cover_set">Обложка ✓</string>
+    <string name="focus_tip">Тронь картинку: куда смотрят её превью</string>
 </resources>

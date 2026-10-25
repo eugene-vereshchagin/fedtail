@@ -33,7 +33,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| A video's cover; picture descriptions in a post's edit | ◐ | describing pictures when editing — yes; no video cover, no focus |
 | CamelCase hint for hashtags | — | no hint |
 | Spell checking in the compose panel | ◐ | the phone's keyboard checks; no checking of fedtail's own |
 

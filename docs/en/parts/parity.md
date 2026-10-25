@@ -35,7 +35,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
-| A picture's focus for previews | ✓ | ✓ | · | ✓ | — | A terminal has nothing to click a picture with; the focus stays in the centre. Android: no picture focus on the phone |
+| A picture's focus for previews | ✓ | ✓ | · | ✓ | ✓ | A terminal has nothing to click a picture with; the focus stays in the centre. |
 | Previewing a post | ✓ | ✓ | ✓ | ✓ | — | How a post will look — in the window only. Android: not yet |
 | The editor: “discard”, another language, the #CamelCase hint | ✓ | ✓ | ✓ | ✓ | ◐ | A draft is kept everywhere; discarding with a question, typing a language not in the list and the accessibility hint — in the window. Android: discard is Back; no “another language”, no #CamelCase hint |
 | Spell checking in the post window | ✓ | ✓ | ◐ | ◐ | ◐ | The windows underline mistakes and fix them with a right click; the terminal — as a list on F7 (its input has no underline); the web page — the browser's own checker in the post's language. Android: the phone's keyboard checks |

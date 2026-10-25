@@ -140,4 +140,7 @@
     <string name="find">Find</string>
     <string name="find_deeper">Deeper</string>
     <string name="find_everywhere">Everywhere</string>
+    <string name="cover">Cover…</string>
+    <string name="cover_set">Cover ✓</string>
+    <string name="focus_tip">Tap the picture: where its previews centre</string>
 </resources>
