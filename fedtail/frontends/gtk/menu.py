@@ -52,6 +52,7 @@ class MainMenu:
         a("directory_local", lambda: win.open_directory(True))
         a("trends", win.open_trends)
         a("collections", lambda: win.open_place("collections"))
+        a("slow", lambda: win.open_place("slow"))
         a("remote_lane", win.ask_remote_lane)
         a("profile", win.my_profile)
         a("server", win.show_server_info)
@@ -142,6 +143,7 @@ class MainMenu:
         first.append_submenu(_("tender_menu"), tender)
         if cfg["post"].get("schedule", True):
             _item(first, _("scheduled_title") + "…", "scheduled")
+        _item(first, _("slow_title") + "…", "slow")
         people = Gio.Menu()
         supports = win.ctx.supports
         trends = any(supports("trends_" + k) for k in ("statuses", "tags", "links"))

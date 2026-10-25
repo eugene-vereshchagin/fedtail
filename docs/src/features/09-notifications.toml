@@ -179,3 +179,37 @@ others = "Mastodon web, Ivory, Phanpy"
 clients = ["Mastodon web", "Ivory", "Phanpy"]
 note.ru = "Mastodon 4.3+; где сервер не умеет (GoToSocial) — своя группировка, см. «Группировка уведомлений»."
 note.en = "Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”."
+
+[[feature]]
+id = "slow-mode"
+status = "has"
+android = "has"
+since = "0.20.0"
+name.ru = "Медленный режим и «уведомлять не чаще»"
+name.en = "Slow mode and “notify at most every…”"
+config.ru = "`poll.slow_minutes`; ≡ → «Медленный режим…» — и «уведомлять не чаще» для каждой ленты"
+config.en = "`poll.slow_minutes`; ≡ → “Slow mode…” — with “notify at most every…” for each lane"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail (у других — лишь частота опроса)"
+others.en = "only in fedtail (others have only the poll interval)"
+clients = []
+details.ru = "Новое копится и приходит пачкой раз в 5, 10, 15, 30, 60 минут и реже — со счётчиками, уведомлениями и звуком; между пачками ничего не дёргается и не мешает работать. Живой поток опрос в это время не будит, «Обновить» спрашивает сразу; на телефоне пуш и фоновый опрос тоже ждут своей пачки, а над плитками сказано, когда следующая. Каждой ленте, о которой приходят уведомления или звук, — своё «уведомлять не чаще, чем раз в N минут»: лента обновляется как обычно, а уведомление и звук о ней копятся и приходят одной пачкой (прочитанное за это время в неё не попадает); после долгой тишины первое приходит сразу."
+details.en = "The news piles up and comes in one batch every 5, 10, 15, 30, 60 minutes or more — with its counts, notifications and sound; nothing stirs between batches to get in the way of work. The live stream wakes no poll meanwhile, Refresh asks at once; on the phone a push and the background round wait for their batch too, and the overview says when the next one comes. Each lane that notifies or chimes gets its own “notify at most every N minutes”: the lane updates as usual, its notifications and sound pile up and come in one batch (what was read meanwhile stays out of it); after a long quiet the first comes at once."
+
+[[feature]]
+id = "fresh-counts"
+status = "has"
+android = "has"
+since = "0.20.0"
+name.ru = "«Из них новых»: что принесло последнее обновление"
+name.en = "“Of them new”: what the last update brought"
+config.ru = "на плитках телефона, в боковой панели окон, веба и терминала"
+config.en = "on the phone's tiles, in the sidebar of the windows, the web page and the terminal"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "У счётчика непрочитанного — помельче, сколько из них принесло последнее обновление, которое что-то принесло: «300» и под ним «из них новых 56» на плитке телефона, «300 +56» в боковой панели (слова — в подсказке). Прочитанное из пачки из этого числа уходит. С медленным режимом — ровно то, что пришло последней пачкой."
+details.en = "Beside the unread count, smaller — how many of them the last update that brought anything brought: “300” with “56 of them new” under it on the phone's tile, “300 +56” in the sidebar (the words on hover). What's read of the batch leaves the number. With slow mode — exactly what the last batch brought."

@@ -15,6 +15,8 @@
 - Profile: hide follows, posts found by search, article authorship, tag suggestions
 - About the server: terms, whom it cut off, its translator
 - Push notifications (Web Push, UnifiedPush)
+- Slow mode and “notify at most every…”
+- “Of them new”: what the last update brought
 - An apt repository of its own
 - An installer for Windows (and a signature)
 

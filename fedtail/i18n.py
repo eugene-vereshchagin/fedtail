@@ -252,6 +252,22 @@ _STRINGS = {
         "handle_copied": "Скопировано: {handle}",
         "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — в командную строку",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
+        "fresh_of_them": "из них новых {n}",
+        "slow_title": "Медленный режим",
+        "slow_hint": "Новое копится и приходит пачкой раз в несколько минут — со счётчиками, "
+                     "уведомлениями и звуком, а между пачками ничего не дёргается. «Обновить» "
+                     "спрашивает сразу. Ниже — «уведомлять не чаще» для каждой ленты: лента "
+                     "обновляется как обычно, а уведомление и звук о ней ждут.",
+        "slow_field": "Новое приходит",
+        "slow_off": "сразу, как появилось",
+        "slow_every": "раз в {n} мин",
+        "slow_next": "Следующая пачка — в {time}",
+        "slow_on_short": "медленно · следующее в {time}",
+        "calm_heading": "Уведомлять не чаще",
+        "calm_as_comes": "как приходит",
+        "calm_none": "Ни одна лента не уведомляет и не звенит (notify.lanes, sound.lanes в "
+                     "настройках).",
+        "slow_saved": "Медленный режим: {what}",
         "find_placeholder": "Найти в ленте: текст, имя, @ник, #id…",
         "find_prev": "Предыдущее (Shift+Enter, Shift+F3)",
         "find_next": "Следующее (Enter, F3)", "find_close": "Закрыть (Esc)",
@@ -1312,6 +1328,21 @@ _STRINGS = {
         "handle_copied": "Copied: {handle}",
         "short_id_tip": "Short post number, like #abc on Point. Click — into the command line",
         "unread_tip": "New", "came_from": "you came from here",
+        "fresh_of_them": "{n} of them new",
+        "slow_title": "Slow mode",
+        "slow_hint": "The news piles up and comes in one batch every few minutes — with its "
+                     "counts, notifications and sound; nothing stirs between batches. Refresh "
+                     "asks at once. Below — \"notify at most every\" for each lane: the lane "
+                     "updates as usual, its notifications and sound wait.",
+        "slow_field": "News comes",
+        "slow_off": "at once, as it arrives",
+        "slow_every": "every {n} min",
+        "slow_next": "The next batch — at {time}",
+        "slow_on_short": "slow · next at {time}",
+        "calm_heading": "Notify at most",
+        "calm_as_comes": "as it comes",
+        "calm_none": "No lane notifies or chimes (notify.lanes, sound.lanes in the settings).",
+        "slow_saved": "Slow mode: {what}",
         "find_placeholder": "Find in this lane: text, name, @handle, #id…",
         "find_prev": "Previous (Shift+Enter, Shift+F3)",
         "find_next": "Next (Enter, F3)", "find_close": "Close (Esc)",

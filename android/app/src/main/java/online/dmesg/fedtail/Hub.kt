@@ -277,15 +277,22 @@ fun LaneTile(
         else -> plain
     }
     val fg = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
-    Column(modifier.height(84.dp).clip(RoundedCornerShape(16.dp)).background(bg)
+    Column(modifier.height(92.dp).clip(RoundedCornerShape(16.dp)).background(bg)
         .clickable(onClick = onClick).padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
         if (news) {
             Text(lane.count, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = fg)
         }
-        Text(lane.title, fontSize = 13.sp, lineHeight = 15.sp, color = fg, maxLines = 2,
+        Text(lane.title, fontSize = 13.sp, lineHeight = 15.sp, color = fg,
+            maxLines = if (news && lane.fresh > 0) 1 else 2,
             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
+        // "of them new 56": what the last update brought, smaller, under the title
+        if (news && lane.fresh > 0) {
+            Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 11.sp,
+                lineHeight = 13.sp, color = fg.copy(alpha = 0.75f), maxLines = 1,
+                textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -308,6 +315,10 @@ private fun ReadInRow(model: AppModel) {
                     if (any) {
                         Text(stringResource(R.string.read_in_row_sub, model.hubUnread, model.hubWithNews),
                             color = fg, fontSize = 12.sp)
+                    }
+                    // slow mode: when the next batch comes
+                    if (model.hubSlow.isNotBlank()) {
+                        Text(model.hubSlow, color = fg, fontSize = 12.sp)
                     }
                 }
                 if (any) Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = fg)
@@ -356,7 +367,13 @@ private fun HubRow(lane: HubLane, mine: Boolean, on: Boolean, onClick: () -> Uni
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (lane.unread > 0) Count(lane.count, mine)
+                if (lane.unread > 0) Column(horizontalAlignment = Alignment.End) {
+                    Count(lane.count, mine)
+                    if (lane.fresh > 0) {
+                        Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
             HorizontalDivider(Modifier.padding(start = 16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant)

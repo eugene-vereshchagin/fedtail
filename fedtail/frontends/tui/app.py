@@ -283,22 +283,24 @@ class GroupItem(ListItem):
 
 
 class LaneItem(ListItem):
-    def __init__(self, name, title, n):
+    def __init__(self, name, title, n, fresh=0):
         # kept by reference: a count can come before the item is mounted, when a query
         # for its Label finds nothing yet (and that error took the whole app down)
-        self.label = Label(self._text(title, n))
+        self.label = Label(self._text(title, n, fresh))
         super().__init__(self.label)
         self.lane = name
 
     @staticmethod
-    def _text(title, n):
+    def _text(title, n, fresh=0):
         t = Text(title, style="bold" if n else "")
         if n:
             t.append(f" {n}", style="bold green")
+            if fresh:  # of them, what the last update brought
+                t.append(f" +{fresh}", style="dim green")
         return t
 
-    def update(self, title, n):
-        self.label.update(self._text(title, n))
+    def update(self, title, n, fresh=0):
+        self.label.update(self._text(title, n, fresh))
 
 
 class Ui:
@@ -921,7 +923,7 @@ class FedtailApp(App, PostsMixin):
                     continue
             for name in names:
                 title_, n = lane_label(self.core, name, self.lanes_width - 2)
-                items.append(LaneItem(name, title_, n))
+                items.append(LaneItem(name, title_, n, sidebar.fresh(self.core, name) if n else 0))
         await lv.extend(items)
         for i, it in enumerate(items):
             if at is not None and at in (getattr(it, "lane", None), getattr(it, "group", None)):
@@ -934,9 +936,11 @@ class FedtailApp(App, PostsMixin):
         await self.fill_lanes()
 
     def update_lane_counts(self):
+        from ..common import sidebar
         for item in self._main("#lanes", ListView).children:
             if isinstance(item, LaneItem):
-                item.update(*lane_label(self.core, item.lane, self.lanes_width - 2))
+                title, n = lane_label(self.core, item.lane, self.lanes_width - 2)
+                item.update(title, n, sidebar.fresh(self.core, item.lane) if n else 0)
 
     async def select_lane(self, name):
         self._found = None

@@ -203,6 +203,7 @@ DEFAULTS = {
         "interval_seconds": 90,
         "stream_gap_seconds": 10,
         "stream": 'auto',
+        "slow_minutes": 0,
     },
     "sync": {
         "url": "",
@@ -339,6 +340,7 @@ MINIMUM = {
     ("poll", "interval_seconds"): 30,
     ("sync", "interval_seconds"): 15,
     ("poll", "stream_gap_seconds"): 0,
+    ("poll", "slow_minutes"): 0,
     ("subs", "interval_minutes"): 1,
     ("tui", "picture_rows"): 2,
     ("lists", "refresh_minutes"): 1,

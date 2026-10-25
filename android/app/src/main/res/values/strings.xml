@@ -57,6 +57,9 @@
     <string name="hub_title">Lanes</string>
     <string name="more">More</string>
     <string name="read_in_row">Read in a row</string>
+    <string name="fresh_of_them">%1$d of them new</string>
+    <string name="lang_other_title">Another language</string>
+    <string name="lang_other_ask">Language code (ISO 639): eo, es, cv, jbo, tok… — it stays on the list</string>
     <string name="read_in_row_sub">%1$d new in %2$d lanes, yours first</string>
     <string name="all_read">All read</string>
     <string name="sec_you">For you</string>

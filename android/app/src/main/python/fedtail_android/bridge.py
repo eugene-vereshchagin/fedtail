@@ -490,6 +490,11 @@ def compose_check(body_json):
     return _answer(lambda: _s["web"].compose_check(json.loads(body_json or "{}")))
 
 
+def add_language(code):
+    """The editor's "Another language…": a code it lists from then on → {code, label}."""
+    return _answer(lambda: _s["web"].add_language(code))
+
+
 # the overview's sections, in the order "read in a row" walks them: what is addressed to
 # you first, then what you follow, then the lists; lanes without counts are only browsed
 YOU = ("direct", "replies", "mentions", "requests", "activity")
@@ -522,6 +527,8 @@ def hub():
                 kind = "reading"
             unread = 0 if kind == "browse" else int(x["unread"] or 0)
             sections[kind].append({"name": name, "title": x["title"], "unread": unread,
+                                   # "of them new": what the last update brought
+                                   "fresh": int(x.get("fresh") or 0) if unread else 0,
                                    # a lane holds its newest feed.render_limit posts: as many
                                    # unread means there may be more past them ("300+")
                                    "capped": unread >= core.cfg["feed"]["render_limit"],
@@ -535,8 +542,23 @@ def hub():
                 "pinned": [n for n in core.pinned_tiles() if any(x["name"] == n for x in every)],
                 "order": [x["name"] for x in walk if x["unread"]],
                 "unread": sum(x["unread"] for x in walk),
-                "with_news": sum(1 for x in walk if x["unread"])}
+                "with_news": sum(1 for x in walk if x["unread"]),
+                "fresh": sum(x["fresh"] for x in walk),
+                "slow": _slow_words(core)}
     return _answer(go)
+
+
+def _slow_words(core):
+    """Slow mode on: "slow · next at 14:30" for the overview's top; "" when off."""
+    import time
+    try:
+        nxt = core.next_round() if core.slow_minutes() else None
+    except Exception:  # noqa: BLE001 — an old core
+        return ""
+    if not nxt:
+        return ""
+    from fedtail.i18n import _
+    return _("slow_on_short", time=time.strftime("%H:%M", time.localtime(nxt)))
 
 
 def pin(names_json):
@@ -770,7 +792,8 @@ def background_round(since):
         if core.auth:
             if core.me is None:  # the system made the process for this round: connect
                 core.connect().result(120)
-            core.poll_once()
+            if core.slow_due():  # slow mode: a push or the system's round waits its turn
+                core.poll_once()
         return json.loads(notes(since))
     return _answer(go)
 

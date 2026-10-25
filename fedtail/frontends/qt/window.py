@@ -164,9 +164,15 @@ class LaneItem(QWidget):
             self.current = on
             self._render()
 
-    def set_count(self, n):
+    def set_count(self, n, fresh=0):
+        """The unread count; fresh: of them, what the last update brought — a smaller
+        "+56" in the pill, the words on hover."""
         self.count = n
-        self.badge.setText(str(n) if n < 1000 else "999+")
+        text = str(n) if n < 1000 else "999+"
+        if fresh and n:
+            text = f"{text} <small>+{fresh}</small>"
+        self.badge.setText(text)
+        self.badge.setToolTip(sidebar.fresh_words(fresh) if fresh and n else "")
         self.badge.setVisible(bool(n))
 
 
@@ -993,6 +999,7 @@ class MainWindow(QMainWindow):
         m.addMenu(self._tender_menu(m))
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
+        m.addAction(_("slow_title") + "…", lambda: self.open_place("slow"))
         people = m.addMenu(_("menu_people"))
         trends = any(self.core.supports("trends_" + k) for k in ("statuses", "tags", "links"))
         for feature, label, slot in (
@@ -1621,7 +1628,8 @@ class MainWindow(QMainWindow):
         numbers = sidebar.counts(self.ctx.view, items)
         total = sidebar.icon_total(self.ctx.view, self.cfg, numbers)
         for name, item in items.items():
-            item.set_count(numbers[name])
+            item.set_count(numbers[name], sidebar.fresh(self.ctx.view, name)
+                           if numbers[name] else 0)
         for g in getattr(self, "group_heads", {}):
             self._show_fold(g)
         if getattr(self, "curtain", None) is not None and self.curtain_shown():

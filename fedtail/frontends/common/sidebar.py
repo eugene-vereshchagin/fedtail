@@ -35,6 +35,23 @@ def count(view, name):
         return 0
 
 
+def fresh(view, name):
+    """"Of them new": how many of the lane's unread came with the last update that
+    brought anything (core.fresh_count); 0 when it can't tell."""
+    try:
+        if not view.me or getattr(view.lane_by_name.get(name), "lazy", False):
+            return 0
+        return int(view.fresh_count(name) or 0)
+    except Exception:  # noqa: BLE001 — a lane the core doesn't count
+        return 0
+
+
+def fresh_words(n):
+    """The words under (or after) a count: "of them new 56" — "" for none."""
+    from ...i18n import _
+    return _("fresh_of_them", n=n) if n else ""
+
+
 def counts(view, names):
     return {name: count(view, name) for name in names}
 

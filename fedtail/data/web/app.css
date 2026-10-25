@@ -370,3 +370,6 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
             padding: 4px; margin-top: 4px; }
 .complete button { text-align: left; }
 .complete button.on { background: var(--accent); color: var(--accent-text, #fff); }
+
+/* "of them new": what the last update brought, after a lane's count */
+#lanes .n .fresh { font-size: 0.75em; opacity: 0.75; margin-left: 0.25em; font-weight: normal; }

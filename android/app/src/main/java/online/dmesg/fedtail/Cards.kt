@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -462,6 +463,8 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
     }
     if (p.pollOpen && p.pollOptions.isNotEmpty()) {
         Vote(p, act)
+    } else if (p.pollOptions.isNotEmpty() && p.pollShares.size == p.pollOptions.size) {
+        PollResults(p, act)
     } else if (p.poll.isNotBlank()) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant).padding(start = 10.dp),
@@ -486,6 +489,44 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
         }
     }
     p.card?.takeIf { it.url.isNotBlank() && it.title.isNotBlank() }?.let { c -> Link(c, act) }
+}
+
+/** A poll's results: a bar per option, its share, ✓ by mine; how many people and until
+ *  when under them, and ⟳ for fresh counts (the windows' footer). */
+@Composable
+private fun PollResults(p: PostItem, act: CardActions) {
+    val top = p.pollShares.maxOrNull() ?: 0
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+        .background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        p.pollOptions.forEachIndexed { i, title ->
+            val share = p.pollShares[i]
+            val lead = share == top && top > 0
+            Box(Modifier.fillMaxWidth().heightIn(min = 32.dp).clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surface)) {
+                Box(Modifier.matchParentSize()) {  // the bar: the option's share of the width
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(share.coerceIn(0, 100) / 100f)
+                        .background(if (lead) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.secondaryContainer))
+                }
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text((if (i in p.pollMine) "✓ " else "") + title, fontSize = 14.sp,
+                        fontWeight = if (lead) FontWeight.SemiBold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f))
+                    Text("$share%", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(p.pollSummary, fontSize = 12.sp, modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(onClick = { act.pollRefresh(p) }, modifier = Modifier.size(32.dp)) {
+                ThemedIcon("refresh", androidx.compose.material.icons.Icons.Filled.Refresh,
+                    stringResource(R.string.refresh), Modifier.size(18.dp))
+            }
+        }
+    }
 }
 
 /** A poll still open: its options to tick (one, or several), then "vote". */

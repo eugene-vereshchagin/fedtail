@@ -175,6 +175,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Direct messages read here are read on the server too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Push notifications (Web Push, UnifiedPush) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | The server's grouped notifications (v2) | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
+| Slow mode and “notify at most every…” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| “Of them new”: what the last update brought | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Several accounts
 
@@ -212,4 +214,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **33** features of the 148 compared.
+Only in fedtail — **35** features of the 150 compared.

@@ -535,6 +535,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
 | Push notifications (Web Push, UnifiedPush) | has — Web Push in the web version, UnifiedPush on Android | 0.20.0 | `phone.push` | `/api/v1/push/subscription` | Mastodon web, Elk, Phanpy, Tusky, Ivory | — |
 | The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
+| Slow mode and “notify at most every…” | has | 0.20.0 | `poll.slow_minutes`; ≡ → “Slow mode…” — with “notify at most every…” for each lane | own | only in fedtail (others have only the poll interval) | — |
+| “Of them new”: what the last update brought | has | 0.20.0 | on the phone's tiles, in the sidebar of the windows, the web page and the terminal | own | only in fedtail | — |
 
 <details><summary>In detail</summary>
 
@@ -555,6 +557,10 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **The unread number on the icon.** In the tray and on the task bar button (KDE: needs the entry from `--install-desktop` and `python3-pyside6.qtdbus`). Which lanes to count — a list, as for notifications: `"lists"` — all lists, `"list:Friends"` — one, `"all"` — everything, plus `icon_count_except` — what not to count. The icon itself — an opossum holding its own tail (`app_icon = "possum"`, also in the menu and in About), or the drawn thread bubble (`"bubble"`), which `themed_icon` paints in the theme's colours.
 
 **Push notifications (Web Push, UnifiedPush).** The web page subscribes the browser to push right at your server (≡ → “Push notifications…”): notifications come with the tab closed and fedtail off. Needs https or localhost. The phone — through UnifiedPush (`phone.push = "auto"`): with a distributor installed (ntfy, Sunup, NextPush…) the server pushes to it, the app wakes and does a round — the same notes as the windows' (`notify.lanes`, `notify.privacy`); without one — a round every 15 minutes. The windows and the terminal don't need push — the live stream and polling are enough.
+
+**Slow mode and “notify at most every…”.** The news piles up and comes in one batch every 5, 10, 15, 30, 60 minutes or more — with its counts, notifications and sound; nothing stirs between batches to get in the way of work. The live stream wakes no poll meanwhile, Refresh asks at once; on the phone a push and the background round wait for their batch too, and the overview says when the next one comes. Each lane that notifies or chimes gets its own “notify at most every N minutes”: the lane updates as usual, its notifications and sound pile up and come in one batch (what was read meanwhile stays out of it); after a long quiet the first comes at once.
+
+**“Of them new”: what the last update brought.** Beside the unread count, smaller — how many of them the last update that brought anything brought: “300” with “56 of them new” under it on the phone's tile, “300 +56” in the sidebar (the words on hover). What's read of the batch leaves the number. With slow mode — exactly what the last batch brought.
 
 </details>
 

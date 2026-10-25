@@ -317,6 +317,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `poll.interval_seconds` | `90` | How often to ask the server for what's new, seconds (at least 30). |
 | `poll.stream_gap_seconds` | `10` | The live stream wakes a poll as soon as something comes — but not more often than every this many seconds: on a busy server events come many times a minute, and every poll is a dozen requests and a bit of processor. Whatever comes in these seconds comes with one poll. "Refresh" isn't made to wait. 0 — at once on every event. |
 | `poll.stream` | `"auto"` | The server's live stream: something new came — poll at once, not after interval_seconds. "auto" — if the server offers it (GoToSocial, Mastodon, Akkoma); "off" — polling only. The stream only wakes the poll, so if it drops (a laptop asleep, a proxy) nothing is lost. |
+| `poll.slow_minutes` | `0` | Slow mode: the news piles up and comes once every this many minutes — in one batch, with its counts, notifications and sound; between batches nothing stirs to get in the way of work. The live stream wakes no poll meanwhile; Refresh asks at once. 0 — off (news comes as it arrives). Also on the go: ≡ → "Slow mode…" (with "notify at most every…" for each lane there). |
 
 ## 11. The server
 

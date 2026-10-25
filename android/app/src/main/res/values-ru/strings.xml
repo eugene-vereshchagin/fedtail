@@ -56,6 +56,9 @@
     <string name="hub_title">Ленты</string>
     <string name="more">Ещё</string>
     <string name="read_in_row">Читать подряд</string>
+    <string name="fresh_of_them">из них новых %1$d</string>
+    <string name="lang_other_title">Другой язык</string>
+    <string name="lang_other_ask">Код языка (ISO 639): eo, es, cv, jbo, tok… — останется в списке</string>
     <string name="read_in_row_sub">%1$d новых в %2$d лентах, сначала то, что тебе</string>
     <string name="all_read">Всё прочитано</string>
     <string name="sec_you">Тебе</string>

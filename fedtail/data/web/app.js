@@ -763,7 +763,15 @@ async function loadLanes() {
     a.dataset.lane = l.name;
     if (l.tip) a.title = l.tip;
     a.append(el("span", "lt", l.title));
-    if (l.unread) a.append(el("span", "n", String(l.unread)));
+    if (l.unread) {
+      const n = el("span", "n", String(l.unread));
+      // "of them new": what the last update brought — a smaller "+56", the words on hover
+      if (l.fresh) {
+        n.append(el("small", "fresh", "+" + l.fresh));
+        n.title = l.fresh_words;
+      }
+      a.append(n);
+    }
     a.onclick = (e) => { e.preventDefault(); closeNav(); selectLane(l.name); };
     // a folded section: its lanes hidden, their new posts a number on the heading
     // (the lane on screen stays, as the windows keep it)

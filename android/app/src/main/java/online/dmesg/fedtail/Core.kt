@@ -76,6 +76,8 @@ object Core {
     suspend fun vote(id: String, choices: List<Int>) = obj("vote", id, JSONArray(choices).toString())
     suspend fun editor() = obj("editor")
     suspend fun complete(before: String) = obj("complete", before)
+    suspend fun composeCheck(body: JSONObject) = obj("compose_check", body.toString())
+    suspend fun addLanguage(code: String) = obj("add_language", code)
     suspend fun draftStart(replyTo: String) = obj("draft_start", replyTo, "", "", false)
     suspend fun draftSave(key: String, snap: JSONObject) = obj("draft_save", key, snap.toString())
     suspend fun draftDrop(key: String) = obj("draft_drop", key)

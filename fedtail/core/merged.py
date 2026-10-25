@@ -249,6 +249,24 @@ class MergedCore:
     def unread_count(self, name):
         return len(self.unread_ids(self.lane_entries(name)))
 
+    def fresh_count(self, name):
+        """"Of them new": every account's share of the lane's last update."""
+        return sum(core.fresh_count(own) for core, _t, own in self._own_lane(name)
+                   if own in core.lane_by_name or own in ("activity", "requests"))
+
+    def calm(self, name):
+        parts = self._own_lane(name)
+        return parts[0][0].calm(parts[0][2]) if parts else 0
+
+    def set_calm(self, name, minutes):
+        for core, _t, own in self._own_lane(name):
+            core.set_calm(own, minutes)
+
+    def set_slow(self, minutes):
+        """Slow mode for every account of the window: one pace for all."""
+        for core in [self.primary, *self.others.values()]:
+            core.set_slow(minutes)
+
     def mark_read(self, status_ids):
         groups = {}
         for x in status_ids:

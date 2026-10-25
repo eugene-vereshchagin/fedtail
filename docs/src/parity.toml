@@ -41,6 +41,25 @@ keys = ["account_add", "account_add_q", "account_bad_name", "accounts",
         "logout_switch", "not_logged_in"]
 
 [[capability]]
+id = "slow-mode"
+area = "window"
+android = "has"
+name.ru = "Медленный режим и «уведомлять не чаще» по лентам"
+name.en = "Slow mode and “notify at most every…” by lane"
+note.ru = "Место (common/places.py, «slow»): веб, терминал и телефон рисуют его как все места, окна — в окне места; ≡ → «Медленный режим…» везде."
+note.en = "A place (common/places.py, “slow”): the web page, the terminal and the phone draw it as every place, the windows in a place window; ≡ → “Slow mode…” everywhere."
+keys = ["slow_title", "slow_hint", "slow_field", "slow_off", "slow_every", "slow_next",
+        "calm_heading", "calm_as_comes", "calm_none", "slow_saved"]
+
+[[capability]]
+id = "fresh-counts"
+area = "window"
+android = "has"
+name.ru = "«Из них новых» у счётчиков лент"
+name.en = "“Of them new” by the lanes' counts"
+keys = ["fresh_of_them"]
+
+[[capability]]
 id = "collections"
 area = "window"
 android = "has"

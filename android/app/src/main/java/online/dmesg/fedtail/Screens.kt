@@ -365,15 +365,45 @@ private fun ThreadPlace(
                 val want = model.threadAimAt ?: focus
                 val i = model.threadPosts.indexOfFirst { it.sid == want || it.id == want }
                     .takeIf { it >= 0 } ?: model.threadPosts.indexOfFirst { it.sid == focus }
-                if (i >= 0) state.scrollToItem(i)
+                // the head is the list's first item: every post one further
+                if (i >= 0) state.scrollToItem(i + if (model.threadHead != null) 1 else 0)
                 model.threadAimed = model.threadOpening
                 model.threadAimAt = null
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it, inThread = true) }
             if (model.threadPosts.isEmpty()) Centered { CircularProgressIndicator() }
             else PostList(model.threadPosts, state, null, act, model.hideSensitive,
-                thread = true, focus = focus)
+                thread = true, focus = focus,
+                header = model.threadHead?.let { h -> { ThreadHead(h) { model.toggleThreadSub() } } })
         }
+    }
+}
+
+/** The windows' head over a thread: how many answers and its #id, why it reaches me
+ *  when not followed, and Follow — a button that says what it is now. */
+@Composable
+private fun ThreadHead(head: org.json.JSONObject, onSub: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                head.optString("title").takeIf { it.isNotBlank() }?.let {
+                    Text(it, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2,
+                        overflow = TextOverflow.Ellipsis)
+                }
+                head.optString("info").takeIf { it.isNotBlank() }?.let {
+                    Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            val on = head.optBoolean("subscribed")
+            val words = head.optString("sub")
+            if (on) OutlinedButton(onClick = onSub) { Text(words) }
+            else Button(onClick = onSub) { Text(words) }
+        }
+        head.optString("via").takeIf { it.isNotBlank() }?.let {
+            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp))
+        }
+        HorizontalDivider(Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
@@ -499,10 +529,19 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 placeholder = { Text(stringResource(R.string.write_here)) },
                 supportingText = {
                     val n = model.composeText.length + (if (model.composeCwOn) model.composeCw.length else 0)
-                    Text("$n / ${model.charLimit()}",
-                        color = if (n > model.charLimit()) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column {
+                        Text("$n / ${model.charLimit()}",
+                            color = if (n > model.charLimit()) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurfaceVariant)
+                        // a chain's parts, "#CamelCase for screen readers" — the windows' words
+                        if (model.composeHints.isNotBlank()) Text(model.composeHints,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 })
+            LaunchedEffect(model.composeText, model.composeCw, model.composeCwOn) {
+                delay(400)  // as it is typed: asked once the fingers pause
+                model.checkCompose()
+            }
             // what goes with the words: a warning, pictures, a poll, the language
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = model.composeCwOn, onClick = { model.composeCwOn = !model.composeCwOn },
@@ -598,6 +637,7 @@ private fun LanguagePick(model: AppModel) {
     var open by remember { mutableStateOf(false) }
     val langs = model.languages()
     if (langs.isEmpty()) return
+    var asking by remember { mutableStateOf(false) }
     Box {
         FilterChip(selected = model.composeLang.isNotBlank(), onClick = { open = true },
             label = { Text(langs.firstOrNull { it.first == model.composeLang }?.second
@@ -607,7 +647,27 @@ private fun LanguagePick(model: AppModel) {
                 DropdownMenuItem(text = { Text(words) },
                     onClick = { open = false; model.composeLang = code })
             }
+            // "Another language…": a code typed, kept on the list from then on
+            model.otherLanguageWords()?.let { words ->
+                DropdownMenuItem(text = { Text(words) }, onClick = { open = false; asking = true })
+            }
         }
+    }
+    if (asking) {
+        var code by remember { mutableStateOf("") }
+        androidx.compose.material3.AlertDialog(onDismissRequest = { asking = false },
+            title = { Text(stringResource(R.string.lang_other_title)) },
+            text = {
+                OutlinedTextField(value = code, onValueChange = { code = it.lowercase() },
+                    singleLine = true, label = { Text(stringResource(R.string.lang_other_ask)) })
+            },
+            confirmButton = {
+                TextButton(onClick = { asking = false; model.addLanguage(code) },
+                    enabled = code.isNotBlank()) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { asking = false }) { Text(stringResource(R.string.cancel)) }
+            })
     }
 }
 

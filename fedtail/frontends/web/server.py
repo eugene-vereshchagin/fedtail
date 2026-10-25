@@ -847,7 +847,10 @@ class Web:
             for i, name in enumerate(names):
                 label, n = lane_label(core, name, 60)
                 tip = _("tip_" + name)
+                fresh = sidebar.fresh(core, name) if n else 0
                 out.append({"name": name, "title": label, "unread": n,
+                            "fresh": min(fresh, n), "fresh_words": sidebar.fresh_words(
+                                min(fresh, n)),
                             "tip": "" if tip == "tip_" + name else tip,
                             "group": title if i == 0 else None, "section": group,
                             "folded": bool(group) and group in folded})

@@ -97,6 +97,17 @@
 - The web page's ≡ menu: "All accounts in one window" and a test notification; the
   settings in the web page and the terminal: "Find a setting…", "Open the file" and each
   option's default in its tip.
+- Slow mode (`poll.slow_minutes`, ≡ → "Slow mode…" everywhere): the news piles up and
+  comes in one batch every 5–240 minutes, with its counts, notifications and sound; the
+  live stream wakes nothing meanwhile, Refresh asks at once; on the phone a push and the
+  background round wait their turn too, and the overview says when the next batch comes.
+  In the same place, for each lane that notifies or chimes: "notify at most every N
+  minutes" — the lane updates as usual, its notifications and sound come in one batch.
+- "Of them new": beside a lane's unread count, how many of them the last update brought —
+  under the count on the phone's tiles ("300", "56 of them new"), "300 +56" in the
+  sidebar of the windows, the web page and the terminal.
+- Android: the activity lane read "as a forum" opens on its first unseen row (or at the
+  end) and is refreshed by a pull from the bottom, as the GTK window does.
 
 ## 0.19.0 — 2026-10-24
 

@@ -33,6 +33,8 @@ log = logging.getLogger(__name__)
 
 WAIT = 60  # seconds a server call may take before the place says it failed
 POLICY_CHOICES = ("accept", "filter", "drop")  # the server's notification policy
+SLOW_CHOICES = (0, 5, 10, 15, 30, 60, 120, 240)  # slow mode: a batch every N minutes
+CALM_CHOICES = (0, 5, 10, 30, 60, 120, 240)  # a lane: notify at most every N minutes
 
 
 @dataclass(frozen=True)
@@ -119,8 +121,10 @@ PLACES = {
     "filter": "filter_edit", "link": "link_posts", "remote": "remote_public",
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
+    "slow": "slow_title",
 }
-MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "requests",
+MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "slow",
+        "requests",
         "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts",
         "settings", "help", "news", "about", "issue", "federation")
@@ -128,6 +132,12 @@ MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "schedu
 
 def _wait(fut):
     return fut.result(timeout=WAIT)
+
+
+def _minutes(choices, now, zero_words, key):
+    """Choices of minutes: (value, words) — and the one set now, if it isn't among them."""
+    values = sorted(set(choices) | {int(now or 0)})
+    return tuple((str(m), zero_words if not m else _(key, n=m)) for m in values)
 
 
 def acc_line(a):
@@ -190,6 +200,73 @@ class Places(MorePlaces, AccountPlaces):
     @staticmethod
     def _btn(label, place, key, data="", primary=False, tip=""):
         return Btn(label, (place, key, str(data)), primary, tip)
+
+    # ---- slow mode, and "notify at most every…" for each lane ----------------------
+    def _p_slow(self, _arg, _tab, _cur):
+        import time
+        v = self.view
+        page = Page("slow", _("slow_title"), hint=_("slow_hint"))
+        slow = v.slow_minutes()
+        nxt = v.next_round() if slow else None
+        if nxt:
+            page.rows.append(Row("text", _("slow_next", time=time.strftime(
+                "%H:%M", time.localtime(nxt)))))
+        form = [Field("slow", _("slow_field"), str(slow), "choice", _minutes(
+            SLOW_CHOICES, slow, _("slow_off"), "slow_every"))]
+        for name in self._calm_lanes():
+            n = v.calm(name)
+            title = v.lane_title(name) or _("lane_" + name)
+            form.append(Field("calm." + name, f"{_('calm_heading')}: {title}", str(n),
+                              "choice", _minutes(CALM_CHOICES, n, _("calm_as_comes"),
+                                                 "slow_every")))
+        if len(form) == 1:
+            page.rows.append(Row("text", _("calm_none")))
+        page.form = tuple(form)
+        page.submit = self._btn(_("save"), "slow", "save", primary=True)
+        return page
+
+    def _calm_lanes(self):
+        """The lanes whose news notify or chime: there "at most every" means something."""
+        v = self.view
+        cfg = v.cfg
+        out = []
+        for lane in v.lanes:
+            if lane.lazy or lane.source is None or lane.name in ("activity", "requests"):
+                continue
+            if v.lane_chosen(lane.name, cfg["notify"]["lanes"], cfg["notify"].get("except")
+                             or ()) or v.lane_chosen(lane.name, cfg["sound"]["lanes"],
+                                                     cfg["sound"].get("except") or ()):
+                out.append(lane.name)
+        return out
+
+    def _a_slow_save(self, _d, values, _c, _ans):
+        v = self.view
+        said = []
+        try:
+            slow = max(0, int(values.get("slow", v.slow_minutes()) or 0))
+        except (TypeError, ValueError):
+            slow = v.slow_minutes()
+        if slow != v.slow_minutes():
+            v.set_slow(slow)
+            said.append(_("slow_every", n=slow) if slow else _("slow_off"))
+            try:  # kept for the next start too: the config file says it
+                from . import settings
+                settings.save(v, {("poll", "slow_minutes"): slow})
+            except Exception as e:  # noqa: BLE001 — this run has it anyway
+                log.info("slow mode: not saved in the config: %s", e)
+        for key, raw in values.items():
+            if not key.startswith("calm."):
+                continue
+            try:
+                n = max(0, int(raw or 0))
+            except (TypeError, ValueError):
+                continue
+            name = key[len("calm."):]
+            if n != v.calm(name):
+                v.set_calm(name, n)
+                said.append(f"{v.lane_title(name) or _('lane_' + name)}: "
+                            + (_("slow_every", n=n) if n else _("calm_as_comes")))
+        return Out(refresh=True, message=_("slow_saved", what="; ".join(said)) if said else "")
 
     # ---- silence: filters, muted, blocked, servers ---------------------------------
     def _p_silence(self, arg, tab, cur):

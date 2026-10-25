@@ -65,6 +65,7 @@ data class LaneItem(val name: String, val title: String, val unread: Int, val gr
 data class HubLane(
     val name: String, val title: String, val unread: Int, val peek: String,
     val capped: Boolean = false, // as many unread as the lane holds: maybe more past them
+    val fresh: Int = 0, // of them, what the last update brought ("of them new 56")
 ) {
     /** The count as shown: "300+" when there may be more than the lane holds. */
     val count: String get() = if (capped) "$unread+" else "$unread"
@@ -104,6 +105,9 @@ data class PostItem(
     val pollOptions: List<String> = emptyList(), // a poll's options, to vote on
     val pollMultiple: Boolean = false,
     val pollOpen: Boolean = false,               // not voted, not over, not mine: votable
+    val pollShares: List<Int> = emptyList(),     // each option's share, % (results as bars)
+    val pollMine: Set<Int> = emptySet(),         // the options I voted for
+    val pollSummary: String = "",                // how many people, until when
     val own: Boolean = false,
     val edited: Boolean = false,
     val quoteId: String = "",        // the post it quotes, or a note why it can't be shown
@@ -209,6 +213,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var hub by mutableStateOf(listOf<HubSection>())
     var hubOrder by mutableStateOf(listOf<String>()) // lanes with news, in reading order
     var hubUnread by mutableStateOf(0)
+    var hubSlow by mutableStateOf("") // slow mode on: "slow · next at 14:30"
     var hubWithNews by mutableStateOf(0)
     var hubPinned by mutableStateOf(listOf<String>()) // phone.pinned, as lanes here
 
@@ -228,6 +233,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val place: Place? get() = places.lastOrNull()
 
     var threadPosts by mutableStateOf(listOf<PostItem>())
+    // the windows' head over a thread: {title, info ("12 answers · #k7q"), via, subscribed,
+    // sub, sub_tip} (web/server.py thread_head)
+    var threadHead by mutableStateOf<JSONObject?>(null)
     var threadOpening by mutableStateOf(0) // grows when the thread should be aimed anew
     var threadAimed = 0                    // the opening the thread list last aimed at
     var threadAimAt: String? = null        // where to stand then: a reply just sent
@@ -450,7 +458,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             HubSection(s.optString("key"), (0 until arr.length()).map { j ->
                 val l = arr.getJSONObject(j)
                 HubLane(l.optString("name"), l.optString("title"), l.optInt("unread"),
-                    l.optString("peek"), l.optBoolean("capped"))
+                    l.optString("peek"), l.optBoolean("capped"), l.optInt("fresh"))
             })
         }
         val order = got.optJSONArray("order") ?: JSONArray()
@@ -459,6 +467,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         hubPinned = (0 until pin.length()).map { pin.getString(it) }
         hubUnread = got.optInt("unread")
         hubWithNews = got.optInt("with_news")
+        hubSlow = got.optString("slow")
     }
 
     /** The tiles: phone.pinned in its order, or (none pinned) every lane with a count;
@@ -823,10 +832,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val keep = if (columns >= 3 && place is Place.Thread) places.dropLast(1) else places
         places = keep + Place.Thread(postId)
         threadPosts = emptyList()
+        threadHead = null
         viewModelScope.launch {
             val got = Core.thread(postId)
             Core.failed(got)?.let { message = it; back(); return@launch }
             threadPosts = parsePosts(got.optJSONArray("posts"))
+            threadHead = got.optJSONObject("head")
             threadOpening += 1
         }
     }
@@ -928,7 +939,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun reloadThread(focus: String) {
         val got = Core.thread(focus)
-        if (Core.failed(got) == null) threadPosts = parsePosts(got.optJSONArray("posts"))
+        if (Core.failed(got) == null) {
+            threadPosts = parsePosts(got.optJSONArray("posts"))
+            threadHead = got.optJSONObject("head")
+        }
+    }
+
+    /** The head's "Follow": the thread followed, or left; the head says so at once. */
+    fun toggleThreadSub() {
+        val head = threadHead ?: return
+        val focus = (place as? Place.Thread)?.focus ?: return
+        viewModelScope.launch {
+            val got = Core.threadAct(if (head.optBoolean("subscribed")) "unsub" else "sub",
+                head.optString("sid"))
+            message = Core.failed(got) ?: got.optString("message").ifBlank { null }
+            reloadThread(focus)
+        }
     }
 
     fun like(p: PostItem) {
@@ -1538,6 +1564,35 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // what the editor says under the text as it is typed: a chain's parts, the #CamelCase
+    // hint for screen readers (web compose_check, the windows' counter)
+    var composeHints by mutableStateOf("")
+
+    suspend fun checkCompose() {
+        val got = Core.composeCheck(JSONObject().put("text", composeText)
+            .put("cw", if (composeCwOn) composeCw else ""))
+        if (Core.failed(got) != null) return
+        composeHints = listOf(got.optString("chain"), got.optString("camel"))
+            .filter { it.isNotBlank() }.joinToString("\n")
+    }
+
+    /** "Another language…": a code the editor lists from then on; picked at once. */
+    fun addLanguage(code: String) {
+        viewModelScope.launch {
+            val got = Core.addLanguage(code.trim())
+            Core.failed(got)?.let { message = it; return@launch }
+            composeLang = got.optString("code")
+            loadEditorFacts()
+        }
+    }
+
+    /** The words of "Another language…" (its row in the list, "\u0000other"). */
+    fun otherLanguageWords(): String? {
+        val arr = editorFacts?.optJSONArray("languages") ?: return null
+        return (0 until arr.length()).map { arr.getJSONArray(it) }
+            .firstOrNull { it.optString(0).startsWith("\u0000") }?.optString(1)
+    }
+
     /** The languages to pick from: (code, words), "" — the default. */
     fun languages(): List<Pair<String, String>> {
         val arr = editorFacts?.optJSONArray("languages") ?: return emptyList()
@@ -1857,6 +1912,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             pollOptions = poll?.optJSONArray("options")?.let { a ->
                 (0 until a.length()).map { str(a.getJSONObject(it), "title") } } ?: emptyList(),
             pollMultiple = poll?.optBoolean("multiple") ?: false,
+            pollShares = poll?.optJSONArray("options")?.let { a ->
+                (0 until a.length()).map { a.getJSONObject(it).optInt("share") } } ?: emptyList(),
+            pollMine = poll?.optJSONArray("mine")?.let { a ->
+                (0 until a.length()).map { a.optInt(it) }.toSet() } ?: emptySet(),
+            pollSummary = poll?.let { str(it, "summary") } ?: "",
             pollOpen = poll != null && !poll.optBoolean("voted") && !poll.optBoolean("expired") &&
                 !o.optBoolean("own"),
             own = o.optBoolean("own"),

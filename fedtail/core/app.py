@@ -150,6 +150,13 @@ class Core(SocialMixin):
         self.new_options = []  # options the user's config doesn't mention yet
         self._replies_inflight = set()
         self._known_requests = None  # follow requests seen so far (None: not fetched yet)
+        # what the last update that brought anything brought, per lane: {lane: {item id}}
+        # (activity: notification ids, requests: account ids) — "of them new N" on a tile
+        self._fresh = {}
+        # a lane's news held back by its "notify at most every N minutes": {lane: [st]}
+        self._held = {}
+        self._calm_last = {}  # lane -> time.time() its news last came out
+        self._next_round = None  # slow mode: time.time() of the next round
         self._honest_checked = {}  # status id -> when its origin was asked
         self._completed = {}  # thread root id -> when its missing replies were looked for
         self._choices = {}  # this run's choices over lanes (see choice())
@@ -375,8 +382,62 @@ class Core(SocialMixin):
     def _poll_soon(self):
         """The live stream says something came: a poll, but not more often than
         poll.stream_gap_seconds — a busy server sends events many times a minute, and
-        every poll asks each lane (a dozen requests and some CPU each time)."""
+        every poll asks each lane (a dozen requests and some CPU each time). In slow
+        mode the stream wakes nothing: the news waits for its round."""
+        if self.slow_minutes():
+            return
         self._wake.set()
+
+    # ---- slow mode: the news comes once every N minutes, not as it arrives ------------
+    def slow_minutes(self):
+        """poll.slow_minutes: 0 — news as it comes; N — a round every N minutes only
+        (Refresh still asks at once), so nothing stirs between them."""
+        try:
+            return max(0, int(self.cfg["poll"].get("slow_minutes", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def set_slow(self, minutes):
+        """Slow mode for this run, at once (the place saves it in the file too)."""
+        self.cfg["poll"]["slow_minutes"] = max(0, int(minutes or 0))
+        self._wake.set()  # the poller works out its next round anew
+
+    def next_round(self):
+        """Slow mode: when the next round comes (time.time()), or None."""
+        return self._next_round if self.slow_minutes() else None
+
+    def slow_due(self):
+        """A round now keeps to slow mode: off, or its minutes have passed since the last
+        (a phone's round from the system or a push asks this first)."""
+        slow = self.slow_minutes()
+        last = getattr(self, "_last_poll_ok", None)
+        return not slow or last is None or time.time() - last >= slow * 60 - 5
+
+    # ---- "notify at most every N minutes", a lane's own -------------------------------
+    def calm(self, name):
+        """Minutes a lane's notifications and sound wait after its last (0: as they come)."""
+        try:
+            return max(0, int(self.get_state(f"calm.{name}", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def set_calm(self, name, minutes):
+        self.set_state(f"calm.{name}", max(0, int(minutes or 0)) or None)
+        if not minutes:
+            self._calm_last.pop(name, None)
+
+    # ---- "of them new": what the last update brought, still unread ---------------------
+    def fresh_count(self, name):
+        """How many of a lane's unread came with the last update that brought anything."""
+        got = self._fresh.get(name)
+        if not got:
+            return 0
+        if name == "activity":
+            return min(len(got), int(self.activity_unread() or 0))
+        if name == "requests":
+            return len(got & {a["id"] for a in self.follow_requests or ()})
+        entries = [e for e in self.lane_entries(name) if e[0] in got]
+        return len(self.unread_ids(entries)) if entries else 0
 
     def _start_stream(self):
         """poll.stream: the server's live stream wakes the poller when something
@@ -445,6 +506,10 @@ class Core(SocialMixin):
                 self._stop.wait(quiet)
                 continue
             done = time.monotonic()
+            if self.slow_minutes():
+                self._slow_wait(done)
+                continue
+            self._next_round = None
             self._wake.wait(self.cfg["poll"]["interval_seconds"])
             self._wake.clear()
             gap = float(self.cfg["poll"].get("stream_gap_seconds", 10))
@@ -454,6 +519,24 @@ class Core(SocialMixin):
                 self._wake.wait(left)  # Refresh still cuts it short
                 self._wake.clear()
             self._urgent = False
+
+    def _slow_wait(self, done):
+        """Slow mode: sleep till the round is due — the stream doesn't wake it, Refresh
+        does; slow mode changed meanwhile: the wait worked out anew."""
+        while not self._stop.is_set():
+            slow = self.slow_minutes()
+            if not slow:
+                break
+            end = done + slow * 60
+            self._next_round = time.time() + max(0.0, end - time.monotonic())
+            left = end - time.monotonic()
+            if left <= 0:
+                break
+            self._wake.wait(left)
+            self._wake.clear()
+            if getattr(self, "_urgent", False):
+                break
+        self._urgent = False
 
     RESERVE = 20  # requests kept for what I do by hand (a like, a reply), besides a round
     RESET_MARGIN = 5  # seconds after the server's window ends before asking again
@@ -652,6 +735,8 @@ class Core(SocialMixin):
 
             self._step("read marks")
             per_lane = self._split_by_lane(new_by_source)
+            if not first_run:
+                self._note_fresh(per_lane, new_requests, new_activity)
             if any(per_lane.values()):
                 self.emit("lanes_updated", per_lane)
             if browse_changed:  # an empty answer brings no news, but the lane must say why
@@ -798,6 +883,17 @@ class Core(SocialMixin):
                     if item_id in id_set]
         return out
 
+    def _note_fresh(self, per_lane, new_requests, new_activity):
+        """The last update that brought anything: what it brought, lane by lane."""
+        got = {name: set(ids) for name, ids in per_lane.items() if ids}
+        if new_activity:
+            got["activity"] = {str(n.get("id")) for n in new_activity if isinstance(n, dict)} \
+                or {str(i) for i in range(len(new_activity))}
+        if new_requests:
+            got["requests"] = {a["id"] for a in new_requests}
+        if got:
+            self._fresh = got
+
     def _split_by_lane(self, new_by_source):
         ctx = self._ctx()
         per_lane = {}
@@ -834,9 +930,16 @@ class Core(SocialMixin):
             unread = self.store.read_set(st["id"] for st in sts)
             news = [(name, st) for st in sts
                     if st["id"] not in unread and not self.silenced(st)]
+            if news and self.calm(name):  # the lane's own pace: out with the next batch
+                self._held.setdefault(name, []).extend(st for _n, st in news)
+                continue
             if news:
                 fresh.append(name)
             if notify:
+                out += news
+        for name, news in self._calm_out(wanted, never):
+            fresh.append(name)
+            if self._notify_wanted(name, wanted, never):
                 out += news
         if new_requests:
             fresh.append("requests")
@@ -852,6 +955,28 @@ class Core(SocialMixin):
         if out:
             self.emit("notify", out)
         self.sound_news(fresh)
+
+    def _calm_out(self, wanted, never):
+        """The lanes with news held back whose minutes have passed: [(lane, news still
+        unread)]; the rest stay held. A lane quiet for long says its first news at once."""
+        now = time.time()
+        out = []
+        for name in list(self._held):
+            minutes = self.calm(name)
+            last = self._calm_last.get(name)
+            if minutes and last is not None and now - last < minutes * 60:
+                continue
+            sts = self._held.pop(name)
+            read = self.store.read_set(st["id"] for st in sts)
+            seen, news = set(), []
+            for st in sts:
+                if st["id"] not in read and st["id"] not in seen:
+                    seen.add(st["id"])
+                    news.append((name, st))
+            if news:
+                self._calm_last[name] = now
+                out.append((name, news))
+        return out
 
     def sound_news(self, lanes_with_news):
         """Emit 'sound' for a batch of news in these lanes, if the config wants one."""

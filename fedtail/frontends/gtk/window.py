@@ -109,9 +109,16 @@ class LaneRow(Gtk.ListBoxRow):
         box.append(self.badge)
         self.set_child(box)
 
-    def set_count(self, n):
+    def set_count(self, n, fresh=0):
+        """The unread count; fresh: of them, what the last update brought — a smaller
+        "+56" in the pill, the words on hover."""
         self.badge.set_visible(n > 0)
-        self.badge.set_text(sidebar.badge_text(n))
+        text = sidebar.badge_text(n)
+        if fresh and n:
+            self.badge.set_markup(f"{text} <small>+{fresh}</small>")
+        else:
+            self.badge.set_text(text)
+        self.badge.set_tooltip_text(sidebar.fresh_words(fresh) if fresh and n else None)
 
 
 class SectionRow(Gtk.ListBoxRow):
@@ -1360,7 +1367,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def update_badges(self):
         numbers = sidebar.counts(self.view, self.lane_rows)
         for name, row in self.lane_rows.items():
-            row.set_count(numbers[name])
+            row.set_count(numbers[name], sidebar.fresh(self.view, name) if numbers[name] else 0)
         if self.curtain_shown():
             self._curtain_text(numbers)
         if getattr(self, "tray", None) is not None:  # how much is new, on the tray too
