@@ -63,7 +63,8 @@ def _qt_goes_first():
     import atexit
     import sys
     main = (sys.argv[0] if sys.argv else "").replace("\\", "/")
-    if "unittest" not in main:
+    # Windows never crashed there, and ending early cost it its exit code (127)
+    if "unittest" not in main or sys.platform == "win32":
         return
 
     def close():
