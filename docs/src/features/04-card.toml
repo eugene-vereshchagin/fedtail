@@ -7,6 +7,7 @@ title.en = "The post card"
 [[feature]]
 id = "arts-mode"
 status = "has"
+android = "has"
 since = "0.11.0"
 name.ru = "Режим arts"
 name.en = "Arts mode"
@@ -25,6 +26,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 [[feature]]
 id = "cw"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Предупреждения (CW)"
 name.en = "Content warnings (CW)"
@@ -39,6 +41,9 @@ details.en = "`true` — text and pictures under a CW open at once; `false` — 
 [[feature]]
 id = "uncw-thread"
 status = "has"
+android = "no"
+android_note.ru = "открыть все CW треда разом нельзя"
+android_note.en = "no opening every CW of a thread at once"
 since = "0.18.0"
 name.ru = "Снять CW во всём треде разом"
 name.en = "Open every CW in a thread at once"
@@ -54,6 +59,7 @@ details.en = "Not needed with arts mode on. If people who turned it off ask — 
 [[feature]]
 id = "sensitive-media"
 status = "has"
+android = "has"
 since = "0.8.0"
 name.ru = "Чувствительные картинки"
 name.en = "Sensitive pictures"
@@ -68,6 +74,7 @@ details.en = "Pictures the author marked sensitive (without a CW): `\"hide\"` �
 [[feature]]
 id = "link-cards"
 status = "has"
+android = "has"
 since = "0.8.0"
 name.ru = "Карточки ссылок"
 name.en = "Link cards"
@@ -82,6 +89,9 @@ details.en = "The title, description and picture of the page a post links to (th
 [[feature]]
 id = "custom-emoji"
 status = "has"
+android = "partly"
+android_note.ru = "эмодзи серверов — словом :код:, не картинкой"
+android_note.en = "servers' emoji as their :code: word, not a picture"
 since = "0.8.0"
 name.ru = "Эмодзи серверов картинками"
 name.en = "Servers' emoji as pictures"
@@ -97,6 +107,9 @@ details.en = "`:blobcat:` and the rest — as pictures in posts and names. `fals
 [[feature]]
 id = "no-emoji"
 status = "has"
+android = "partly"
+android_note.ru = "настройка есть; эмодзи телефона рисует его шрифт"
+android_note.en = "the setting is there; the phone's own emoji are drawn by its font"
 since = "0.15.0"
 name.ru = "Без эмодзи вовсе"
 name.en = "No emoji at all"
@@ -109,6 +122,9 @@ clients = ["Tusky", "Fedilab"]
 [[feature]]
 id = "quotes-show"
 status = "has"
+android = "no"
+android_note.ru = "цитаты в карточке не показываются"
+android_note.en = "quotes aren't shown in the card"
 since = "0.8.0"
 name.ru = "Цитаты: показ"
 name.en = "Quotes: showing them"
@@ -122,6 +138,9 @@ details.en = "A post inside a post (Mastodon 4.5+, Akkoma, Misskey and others): 
 [[feature]]
 id = "polls"
 status = "has"
+android = "partly"
+android_note.ru = "итоги видно текстом; голосовать нельзя"
+android_note.en = "the results show as text; no voting"
 since = "0.3.0"
 name.ru = "Опросы: смотреть и голосовать"
 name.en = "Polls: seeing and voting"
@@ -136,6 +155,9 @@ details.en = "Options, percentages, the deadline; voting for one or several opti
 [[feature]]
 id = "poll-results"
 status = "has"
+android = "partly"
+android_note.ru = "итоги видно; «обновить» нет"
+android_note.en = "the results show; no refreshing them"
 since = "0.3.0"
 name.ru = "Результаты опроса без голосования"
 name.en = "Poll results without voting"
@@ -149,6 +171,9 @@ details.en = "The “Results” button next to “Vote” — look without votin
 [[feature]]
 id = "edit-history"
 status = "has"
+android = "no"
+android_note.ru = "истории правок нет"
+android_note.en = "no edit history"
 since = "0.3.0"
 name.ru = "История правок"
 name.en = "Edit history"
@@ -162,6 +187,9 @@ details.en = "An edited post is marked so and has all its earlier versions."
 [[feature]]
 id = "translate"
 status = "has"
+android = "no"
+android_note.ru = "перевода нет"
+android_note.en = "no translation"
 since = "0.8.0"
 name.ru = "Перевод поста сервером"
 name.en = "Translation by the server"
@@ -175,6 +203,9 @@ details.en = "“Translate” in the ⋯ menu of a post in another language — 
 [[feature]]
 id = "reactions-show"
 status = "partly"
+android = "no"
+android_note.ru = "реакции не показываются"
+android_note.en = "reactions aren't shown"
 since = "0.11.0"
 name.ru = "Эмодзи-реакции"
 name.en = "Emoji reactions"
@@ -190,6 +221,9 @@ details.en = "Reactions from Akkoma, Pleroma, Misskey and their forks show under
 [[feature]]
 id = "who-liked"
 status = "has"
+android = "no"
+android_note.ru = "«Кто лайкнул и продвинул» нет"
+android_note.en = "no “who liked and boosted”"
 since = "0.11.0"
 name.ru = "Кто лайкнул и бустнул"
 name.en = "Who liked and boosted"
@@ -204,6 +238,7 @@ details.en = "Lists of people at the counters. If your server doesn't know every
 [[feature]]
 id = "honest-counters"
 status = "has"
+android = "has"
 since = "0.2.0"
 name.ru = "Честные счётчики"
 name.en = "Honest counters"
@@ -221,6 +256,9 @@ details.en = "Your server knows only the likes and boosts that reached it, so th
 [[feature]]
 id = "quoted-by"
 status = "has"
+android = "no"
+android_note.ru = "«Кто процитировал» нет"
+android_note.en = "no “who quoted”"
 since = "0.11.0"
 name.ru = "Кто процитировал мой пост"
 name.en = "Who quoted my post"
@@ -234,6 +272,7 @@ details.en = "The list of quotes of my post and “take my post out of this quot
 [[feature]]
 id = "collapse-tags"
 status = "has"
+android = "has"
 since = "0.14.0"
 name.ru = "Сворачивать набивку хэштегами"
 name.en = "Folding hashtag padding"
@@ -248,6 +287,7 @@ details.en = "A paragraph of nothing but hashtags (more than three) in a lane fo
 [[feature]]
 id = "strike-markup"
 status = "has"
+android = "has"
 since = "0.14.0"
 name.ru = "`~~текст~~` зачёркнутым, когда сервер Markdown не знает"
 name.en = "`~~text~~` struck out when the server knows no Markdown"
@@ -273,6 +313,9 @@ details.en = "Boosts in a row — as one strip scrolled sideways (as in Phanpy).
 [[feature]]
 id = "card-labels"
 status = "has"
+android = "partly"
+android_note.ru = "есть «продвинул» и над ответом — о чём; прочих меток нет"
+android_note.en = "“boosted by” and what a reply answers; the other labels — not yet"
 since = "0.14.0"
 name.ru = "Метки на карточке"
 name.en = "Labels on the card"

@@ -1,4 +1,4 @@
-# What is not the same in the four interfaces (Qt, GTK, the terminal, the web page) —
+# What is not the same in the five interfaces (Qt, GTK, the terminal, the web page, Android) —
 # and why. tests/test_parity.py holds it against the code: every word of the interface
 # (an i18n key) one interface shows and another doesn't must be explained here, and an
 # interface marked "has" must show every word of its capability. tools/docs_build.py
@@ -7,6 +7,9 @@
 # [[capability]]: a function some interface lacks or has in part.
 #   status per interface: qt, gtk, tui, web = "has" (default) | "partly" | "no" | "na"
 #   ("na": doesn't belong there — a tray in a browser tab); note: what and why.
+#   android: the phone (android/), said for every capability — it has its own screens
+#   and words, so the check by i18n keys doesn't reach it; android_note.ru/en: why, when
+#   it isn't "has" (tests/test_parity.py checks both are there).
 #   keys: the words that show it; an interface marked "has" must show all of them.
 # [[wording]]: words an interface doesn't use although it has the function — it says
 #   it otherwise (its own tui_*/web_* words, an icon), or they aren't a function at all.
@@ -16,6 +19,7 @@
 [[capability]]
 id = "login"
 area = "window"
+android = "has"
 name.ru = "Вход на сервер"
 name.en = "Logging in"
 tui = "partly"
@@ -29,6 +33,9 @@ keys = ["login_browser_opened", "login_hint", "login_other_account", "login_serv
 [[capability]]
 id = "accounts"
 area = "window"
+android = "no"
+android_note.ru = "один аккаунт"
+android_note.en = "one account"
 name.ru = "Аккаунты: добавить, главный, выйти"
 name.en = "Accounts: add, make main, log out"
 keys = ["account_add", "account_add_q", "account_bad_name", "accounts",
@@ -38,6 +45,9 @@ keys = ["account_add", "account_add_q", "account_bad_name", "accounts",
 [[capability]]
 id = "merge"
 area = "window"
+android = "no"
+android_note.ru = "один аккаунт"
+android_note.en = "one account"
 name.ru = "Все аккаунты в одном окне"
 name.en = "Every account in one window"
 keys = ["accounts_merge", "post_from_other", "via_tip"]
@@ -45,6 +55,9 @@ keys = ["accounts_merge", "post_from_other", "via_tip"]
 [[capability]]
 id = "tray"
 area = "window"
+android = "na"
+android_note.ru = "трея у телефона нет"
+android_note.en = "a phone has no tray"
 name.ru = "Значок в трее"
 name.en = "The tray icon"
 tui = "na"
@@ -56,6 +69,9 @@ keys = ["tray_new"]
 [[capability]]
 id = "curtain"
 area = "window"
+android = "na"
+android_note.ru = "Esc у телефона нет"
+android_note.en = "a phone has no Esc"
 name.ru = "Шторка (Esc закрывает ленты)"
 name.en = "The curtain (Esc closes the lanes)"
 tui = "na"
@@ -67,17 +83,21 @@ keys = ["curtain_empty", "curtain_hint", "curtain_title", "curtain_waiting"]
 [[capability]]
 id = "columns"
 area = "window"
+android = "has"
 name.ru = "Ленты колонками"
 name.en = "Lanes in columns"
 tui = "na"
 web = "na"
-note.ru = "Одна лента за раз; колонки — только в окне."
-note.en = "One lane at a time; columns are the window's."
+note.ru = "Одна лента за раз; колонки — в окне и на планшете (обзор, лента, тред рядом)."
+note.en = "One lane at a time; columns are the window's and the tablet's (the overview, a lane, a thread side by side)."
 keys = ["column_close", "column_left", "column_right", "columns_tip"]
 
 [[capability]]
 id = "roster"
 area = "window"
+android = "na"
+android_note.ru = "раскладка окон компьютера"
+android_note.en = "a desktop's window layout"
 name.ru = "Ростер и окно сообщений, как в QIP (`ui.layout = \"split\"`)"
 name.en = "The roster and the messages window, as in QIP (`ui.layout = \"split\"`)"
 tui = "na"
@@ -92,6 +112,7 @@ keys = ["roster_look", "roster_news", "roster_no_news", "roster_offline", "roste
 [[capability]]
 id = "sidebar-groups"
 area = "window"
+android = "has"
 name.ru = "Ленты слева по группам"
 name.en = "The lanes on the left in groups"
 note.ru = "Веб и терминал показывают ленты одним списком — в том же порядке, но без заголовков групп и без сворачивания."
@@ -102,6 +123,9 @@ keys = ["grp_people", "grp_personal", "grp_standard", "grp_tags", "grp_talks",
 [[capability]]
 id = "lists-order"
 area = "window"
+android = "partly"
+android_note.ru = "порядок лент — плитками"
+android_note.en = "the lanes' order — by tiles"
 name.ru = "Порядок списков: выше, ниже"
 name.en = "The order of the lists: up, down"
 note.ru = "Двигать списки можно в окне; порядок общий (синхронизация), терминал и веб его соблюдают."
@@ -111,6 +135,9 @@ keys = ["list_up", "list_down", "list_checking", "list_follow_first", "list_pend
 [[capability]]
 id = "announcements"
 area = "window"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 name.ru = "Объявления сервера"
 name.en = "The server's announcements"
 note.ru = "Плашка с объявлением есть только в окне."
@@ -123,6 +150,9 @@ keys = ["announce_more", "announce_ok", "announce_react_tip", "announce_title",
 [[capability]]
 id = "find-deeper"
 area = "reading"
+android = "no"
+android_note.ru = "поиска в ленте нет"
+android_note.en = "no finding in a lane"
 name.ru = "Поиск в ленте: глубже, во всех лентах"
 name.en = "Find in a lane: deeper, in every lane"
 note.ru = "Терминал и веб ищут в том, что на экране; в архиве и во всех лентах — только окно."
@@ -133,6 +163,9 @@ keys = ["find_archive_none", "find_deeper", "find_deeper_tip", "find_everywhere"
 [[capability]]
 id = "find-prev"
 area = "reading"
+android = "no"
+android_note.ru = "поиска в ленте нет"
+android_note.en = "no finding in a lane"
 name.ru = "Поиск: к предыдущему, закрыть"
 name.en = "Find: previous, close"
 note.ru = "В терминале Ctrl+F ищет только вперёд."
@@ -142,6 +175,9 @@ keys = ["find_prev", "find_close"]
 [[capability]]
 id = "thread-head"
 area = "reading"
+android = "partly"
+android_note.ru = "тред есть, подписка — в меню ⋯; шапки нет"
+android_note.en = "the thread is there, following — in the ⋯ menu; no head"
 name.ru = "Шапка треда: сколько постов, все CW разом, подписка кнопкой"
 name.en = "A thread's head: how many posts, every CW at once, Follow as a button"
 keys = ["chain_count", "thread_info", "thread_loading", "thread_via_home",
@@ -151,6 +187,9 @@ keys = ["chain_count", "thread_info", "thread_loading", "thread_via_home",
 [[capability]]
 id = "lane-view"
 area = "reading"
+android = "no"
+android_note.ru = "переключателей вида ленты нет"
+android_note.en = "no lane view switches"
 name.ru = "Вид ленты: беседами, только посты, только новое, «к новому»"
 name.en = "A lane's view: as talks, posts only, unread only, “to the new”"
 note.ru = "Терминал показывает ленту постами по порядку; фильтр по картинкам и «только посты» — по `s`."
@@ -161,6 +200,9 @@ keys = ["conv_mode_tip", "view_feed_tip", "posts_only_tip", "show_all_tip",
 [[capability]]
 id = "polls-vote"
 area = "reading"
+android = "no"
+android_note.ru = "голосовать нельзя"
+android_note.en = "no voting"
 name.ru = "Голосовать в опросе"
 name.en = "Voting in a poll"
 note.ru = "Терминал показывает, что в посте опрос, но голосовать — в окне или в вебе."
@@ -171,6 +213,9 @@ keys = ["poll_vote", "poll_voted", "poll_votes", "poll_closed", "poll_until",
 [[capability]]
 id = "polls-results"
 area = "reading"
+android = "partly"
+android_note.ru = "итоги текстом"
+android_note.en = "the results as text"
 name.ru = "Опрос: результаты, обновить, сколько человек"
 name.en = "A poll: results, refresh, how many people"
 note.ru = "Веб показывает голоса у вариантов, без кнопок «результаты» и «обновить»."
@@ -180,6 +225,9 @@ keys = ["poll_people", "poll_refresh", "poll_results", "poll_sending"]
 [[capability]]
 id = "origin-posts"
 area = "reading"
+android = "no"
+android_note.ru = "профилей пока нет"
+android_note.en = "no profiles yet"
 name.ru = "Старые посты человека с его сервера"
 name.en = "Someone's older posts from their own server"
 tui = "partly"
@@ -192,6 +240,9 @@ keys = ["older_from_origin", "older_from_origin_note", "older_from_origin_tip",
 [[capability]]
 id = "profile-head"
 area = "reading"
+android = "no"
+android_note.ru = "профилей пока нет"
+android_note.en = "no profiles yet"
 name.ru = "Профиль: счётчики, «с нами с», общие подписки, избранное, переезд"
 name.en = "A profile: counts, “since”, people you both follow, featured, moved"
 note.ru = "Терминал и веб показывают профиль строками, без этих подробностей шапки."
@@ -203,6 +254,9 @@ keys = ["card_counts", "card_since", "familiar", "featured_people", "featured_ta
 [[capability]]
 id = "my-pictures"
 area = "reading"
+android = "no"
+android_note.ru = "правки профиля нет"
+android_note.en = "no profile editing"
 name.ru = "Сменить свои аватар и шапку"
 name.en = "Changing my avatar and header"
 note.ru = "Имя, описание и поля правятся везде; картинки — только в окне."
@@ -212,6 +266,9 @@ keys = ["change_avatar", "change_header", "no_header"]
 [[capability]]
 id = "tag-profile"
 area = "reading"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 name.ru = "Тег на свой профиль; убрать ленту тега"
 name.en = "A tag on my profile; dropping a tag lane"
 note.ru = "Подписка на тег и «в ленты» есть везде; «на мой профиль» и «убрать из лент» — в окне."
@@ -224,6 +281,9 @@ keys = ["tag_feature", "tag_feature_tip", "tag_unfeature", "tags_drop", "tags_in
 [[capability]]
 id = "viewer"
 area = "media"
+android = "partly"
+android_note.ru = "листать и увеличивать можно; оригинала и «сохранить» нет"
+android_note.en = "leafing and zooming; no original, no saving"
 name.ru = "Просмотр картинок: листать, 1:1, оригинал, сохранить"
 name.en = "The picture viewer: leaf through, 1:1, the original, save"
 tui = "partly"
@@ -237,6 +297,9 @@ keys = ["viewer_format", "viewer_keys", "viewer_original_coming", "viewer_save",
 [[capability]]
 id = "player"
 area = "media"
+android = "partly"
+android_note.ru = "видео и звук — в браузере"
+android_note.en = "video and sound — in the browser"
 name.ru = "Видео и звук в самой программе"
 name.en = "Video and sound inside the program"
 tui = "partly"
@@ -251,6 +314,9 @@ keys = ["player_failed", "player_keys", "player_mute_tip", "player_next_tip",
 [[capability]]
 id = "alt-warning"
 area = "writing"
+android = "no"
+android_note.ru = "прикрепить картинку нельзя"
+android_note.en = "no attaching pictures"
 name.ru = "Предупреждение о картинке без описания"
 name.en = "A warning about a picture without a description"
 note.ru = "Перед отправкой спрашивает только окно."
@@ -260,6 +326,9 @@ keys = ["alt_describe", "alt_missing", "alt_missing_title", "alt_send_anyway"]
 [[capability]]
 id = "focus-point"
 area = "writing"
+android = "no"
+android_note.ru = "прикрепить картинку нельзя"
+android_note.en = "no attaching pictures"
 name.ru = "Фокус картинки для превью"
 name.en = "A picture's focus for previews"
 tui = "na"
@@ -270,6 +339,9 @@ keys = ["focus_at", "focus_centre", "focus_none", "focus_tip"]
 [[capability]]
 id = "preview"
 area = "writing"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 name.ru = "Предпросмотр поста"
 name.en = "Previewing a post"
 note.ru = "Как пост будет выглядеть — только в окне."
@@ -280,6 +352,9 @@ keys = ["preview", "preview_back", "preview_md", "preview_media", "preview_plain
 [[capability]]
 id = "editor-extras"
 area = "writing"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 name.ru = "Редактор: «выкинуть», другой язык, подсказка про #CamelCase"
 name.en = "The editor: “discard”, another language, the #CamelCase hint"
 note.ru = "Черновик хранится везде; выкинуть с вопросом, ввести язык не из списка и подсказка доступности — в окне."
@@ -292,6 +367,9 @@ keys = ["discard", "discard_q", "discard_q_title", "lang_other", "lang_other_ask
 [[capability]]
 id = "probe"
 area = "app"
+android = "partly"
+android_note.ru = "сервер смотрит самопроверка"
+android_note.en = "the self-check looks at the server"
 name.ru = "«Что умеет сервер» — проверка возможностей"
 name.en = "“What the server can do” — the capability check"
 note.ru = "Состояние федерации есть везде; проверка двух десятков возможностей — вкладка окна."
@@ -313,6 +391,9 @@ keys = ["probe_again", "probe_announcements", "probe_answer", "probe_bookmarks",
 [[capability]]
 id = "federation-tools"
 area = "app"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 name.ru = "Состояние федерации: скопировать, обновить, сбросить"
 name.en = "The federation's state: copy, refresh, reset"
 note.ru = "Терминал и веб показывают состояние, без кнопок."
@@ -322,6 +403,9 @@ keys = ["fed_copied", "fed_copy", "fed_refresh", "fed_reset", "info_head"]
 [[capability]]
 id = "notification-policy"
 area = "app"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 name.ru = "Что придерживать из уведомлений (правило сервера)"
 name.en = "What notifications to hold back (the server's policy)"
 note.ru = "Придержанное видно везде; само правило меняют в окне."
@@ -334,6 +418,9 @@ keys = ["filtered_for_limited_accounts", "filtered_for_new_accounts",
 [[capability]]
 id = "arts-mode"
 area = "app"
+android = "partly"
+android_note.ru = "настройкой, без отметки в меню"
+android_note.en = "as a setting, no mark in a menu"
 name.ru = "Режим arts: пометка в меню"
 name.en = "The arts mode: its mark in the menu"
 note.ru = "`ui.arts_mode` действует везде; напоминание о нём — в меню окна."
@@ -343,6 +430,7 @@ keys = ["tender_arts"]
 [[capability]]
 id = "settings-extras"
 area = "app"
+android = "has"
 name.ru = "Окно настроек: поиск, перезапуск, «открыть файл»"
 name.en = "The settings window: search, restart, “open the file”"
 tui = "partly"
@@ -355,6 +443,9 @@ keys = ["settings", "settings_changed_outside", "settings_default", "settings_op
 [[capability]]
 id = "themes"
 area = "app"
+android = "no"
+android_note.ru = "одна тема, светлая и тёмная по телефону"
+android_note.en = "one theme, light and dark as the phone is"
 name.ru = "Темы: попробовать, папка тем"
 name.en = "Themes: try one, the themes folder"
 tui = "partly"
@@ -366,6 +457,9 @@ keys = ["try_theme", "theme_in_config", "theme_tried", "open_themes"]
 [[capability]]
 id = "files"
 area = "app"
+android = "partly"
+android_note.ru = "конфиг правится в приложении; папки данных нет"
+android_note.en = "the config is edited in the app; no data folder"
 name.ru = "Открыть конфиг и папку данных"
 name.en = "Open the config and the data folder"
 web = "na"
@@ -376,6 +470,9 @@ keys = ["open_config", "open_data"]
 [[capability]]
 id = "help-browse"
 area = "app"
+android = "no"
+android_note.ru = "справки в приложении нет"
+android_note.en = "no help inside the app"
 name.ru = "Справка: поиск, назад, вперёд"
 name.en = "Help: search, back, forward"
 keys = ["help_back", "help_deep", "help_forward", "help_found",
@@ -384,6 +481,9 @@ keys = ["help_back", "help_deep", "help_forward", "help_found",
 [[capability]]
 id = "about-copy"
 area = "app"
+android = "partly"
+android_note.ru = "сведения — в самопроверке, «Поделиться»"
+android_note.en = "the facts — in the self-check, “Share”"
 name.ru = "«О программе»: скопировать сведения"
 name.en = "About: copy the information"
 note.ru = "Сведения те же; кнопки «скопировать» нет — текст можно выделить."
@@ -393,6 +493,9 @@ keys = ["about_copy", "about_copied", "made_by"]
 [[capability]]
 id = "notify-desktop"
 area = "app"
+android = "no"
+android_note.ru = "системных уведомлений пока нет"
+android_note.en = "no system notifications yet"
 name.ru = "Уведомления рабочего стола и их проверка"
 name.en = "Desktop notifications and testing them"
 note.ru = "Терминал — через notify-send или кодом самого терминала (kitty, WezTerm, foot…); веб — уведомлениями браузера, если разрешить."
@@ -402,6 +505,9 @@ keys = ["debug_notify", "debug_notify_sent", "notify_failed", "notify_test_body"
 [[capability]]
 id = "debug-basic"
 area = "app"
+android = "partly"
+android_note.ru = "самопроверка и её отчёт"
+android_note.en = "the self-check and its report"
 name.ru = "Отладка: журнал, отчёт, звук, стеки"
 name.en = "Debugging: the log, a report, the sound, the stacks"
 web = "na"
@@ -414,6 +520,9 @@ keys = ["debug_logs", "debug_report", "debug_report_done", "debug_sound",
 [[capability]]
 id = "debug-memory"
 area = "app"
+android = "na"
+android_note.ru = "инструмент для компьютера"
+android_note.en = "a desktop tool"
 name.ru = "Отладка памяти: перепись, снимок, трассировка, отдать память"
 name.en = "Memory debugging: census, snapshot, tracing, giving memory back"
 web = "na"
@@ -426,6 +535,9 @@ keys = ["debug_census", "debug_census_done", "debug_corner_tip", "debug_menu",
 [[capability]]
 id = "tooltips"
 area = "app"
+android = "na"
+android_note.ru = "наводить мышь нечем"
+android_note.en = "nothing to hover with"
 name.ru = "Подсказки при наведении и «Что это?»"
 name.en = "Tooltips and “What's this?”"
 tui = "na"
@@ -543,6 +655,9 @@ keys = ["notify_nothing"]
 [[capability]]
 id = "spellcheck"
 area = "writing"
+android = "partly"
+android_note.ru = "проверяет клавиатура телефона"
+android_note.en = "the phone's keyboard checks"
 name.ru = "Проверка орфографии в окне поста"
 name.en = "Spell checking in the post window"
 tui = "partly"

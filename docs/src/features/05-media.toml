@@ -7,6 +7,7 @@ title.en = "Pictures and video"
 [[feature]]
 id = "image-viewer"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Просмотрщик картинок"
 name.en = "Picture viewer"
@@ -20,6 +21,7 @@ details.en = "A click on a picture — its own viewer (`\"internal\"`: ← → t
 [[feature]]
 id = "media-grid"
 status = "has"
+android = "has"
 since = "0.9.0"
 name.ru = "Сетка картинок"
 name.en = "Picture grid"
@@ -33,6 +35,7 @@ details.en = "Several pictures in a post: `\"natural\"` — each whole, its own 
 [[feature]]
 id = "alt-text"
 status = "has"
+android = "has"
 since = "0.9.0"
 name.ru = "Подписи к картинкам (alt)"
 name.en = "Picture descriptions (alt)"
@@ -47,6 +50,9 @@ details.en = "`\"tooltip\"` — on hover; `\"caption\"` — also as a caption un
 [[feature]]
 id = "video-player"
 status = "has"
+android = "partly"
+android_note.ru = "видео, звук и гифки открываются в браузере"
+android_note.en = "video, sound and gifs open in the browser"
 since = "0.11.0"
 name.ru = "Видео, аудио, гифки внутри окна"
 name.en = "Video, audio, gifs inside the window"
@@ -61,6 +67,9 @@ details.en = "A video plays over the window (Space — pause, ← → — seek, 
 [[feature]]
 id = "video-software"
 status = "has"
+android = "na"
+android_note.ru = "декодирует сам телефон"
+android_note.en = "the phone decodes by itself"
 since = "0.16.0"
 name.ru = "Видео без аппаратного декодера (по умолчанию)"
 name.en = "Video without a hardware decoder (the default)"
@@ -72,6 +81,9 @@ clients = []
 [[feature]]
 id = "save-media"
 status = "has"
+android = "no"
+android_note.ru = "сохранить картинку нельзя"
+android_note.en = "no saving a picture"
 since = "0.2.0"
 name.ru = "Сохранить картинку, видео, гифку"
 name.en = "Save a picture, video, gif"
@@ -84,6 +96,9 @@ details.en = "The ⤓ button, the S key in the viewer, a right click on a pictur
 [[feature]]
 id = "prefetch"
 status = "has"
+android = "partly"
+android_note.ru = "кэш картинок свой (Coil), заранее не качает"
+android_note.en = "pictures cached by the app's loader (Coil), nothing ahead of time"
 since = "0.13.0"
 name.ru = "Картинки и видео заранее, кэш на диске"
 name.en = "Pictures and video ahead of time, a disk cache"
@@ -99,6 +114,9 @@ details.en = "As soon as a poll brings new posts, their pictures are fetched to 
 [[feature]]
 id = "image-memory"
 status = "has"
+android = "na"
+android_note.ru = "памятью картинок ведает загрузчик Coil"
+android_note.en = "the Coil loader looks after pictures' memory"
 since = "0.2.0"
 name.ru = "Память под картинки"
 name.en = "Memory for pictures"

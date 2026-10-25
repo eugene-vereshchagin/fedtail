@@ -7,6 +7,9 @@ title.en = "Writing"
 [[feature]]
 id = "media-after"
 status = "has"
+android = "no"
+android_note.ru = "вложений при написании нет"
+android_note.en = "no attachments when writing"
 since = "0.20.0"
 name.ru = "Обложка видео; описание картинок в правке поста"
 name.en = "A video's cover; picture descriptions in a post's edit"
@@ -20,6 +23,9 @@ details.en = "A video or a sound among the attachments gets “Cover…”: a pi
 [[feature]]
 id = "compose"
 status = "has"
+android = "partly"
+android_note.ru = "пост и ответ — текст и видимость; черновиков нет"
+android_note.en = "a post and a reply — text and visibility; no drafts"
 since = "0.1.0"
 name.ru = "Панель поста и черновики"
 name.en = "The compose panel and drafts"
@@ -34,6 +40,7 @@ details.en = "`ui.compose = \"inline\"` — a panel inside the main window (the 
 [[feature]]
 id = "visibility"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Видимость: приватно по умолчанию, ответ не шире исходного"
 name.en = "Visibility: private by default, a reply never wider than the post"
@@ -48,6 +55,7 @@ details.en = "A new post goes to followers by default (`\"private\"`); `\"server
 [[feature]]
 id = "markdown"
 status = "has"
+android = "has"
 since = "0.1.0"
 name = "Markdown"
 config = "`account.markdown`, `post.plain_posts`"
@@ -60,6 +68,9 @@ details.en = "`\"auto\"` — ask the server; GoToSocial and Akkoma understand Ma
 [[feature]]
 id = "preview"
 status = "has"
+android = "no"
+android_note.ru = "предпросмотра нет"
+android_note.en = "no preview"
 since = "0.14.0"
 name.ru = "Предпросмотр перед отправкой"
 name.en = "Preview before sending"
@@ -74,6 +85,9 @@ details.en = "The “👁 Preview” button in the panel: the Markdown already r
 [[feature]]
 id = "compose-cw"
 status = "has"
+android = "no"
+android_note.ru = "поля CW при написании нет"
+android_note.en = "no CW field when writing"
 since = "0.2.0"
 name.ru = "Предупреждение (CW)"
 name.en = "Content warning (CW)"
@@ -88,6 +102,9 @@ details.en = "The CW field is open at once or hidden behind the “⚠ Warning�
 [[feature]]
 id = "compose-media"
 status = "has"
+android = "no"
+android_note.ru = "прикрепить картинку нельзя"
+android_note.en = "no attaching pictures"
 since = "0.2.0"
 name.ru = "Картинки: перетащить, вставить, подпись, фокус"
 name.en = "Pictures: drag, paste, description, focus"
@@ -102,6 +119,9 @@ details.en = "Drag a file in or paste from the clipboard. A double click on a pi
 [[feature]]
 id = "resize-images"
 status = "has"
+android = "no"
+android_note.ru = "прикрепить картинку нельзя"
+android_note.en = "no attaching pictures"
 since = "0.14.0"
 name.ru = "Ужимать картинки под лимит сервера"
 name.en = "Shrinking pictures to the server's limit"
@@ -115,6 +135,9 @@ details.en = "The server says what picture it takes (in pixels and bytes). Bigge
 [[feature]]
 id = "completion"
 status = "has"
+android = "no"
+android_note.ru = "подсказок #тегов и @ников нет"
+android_note.en = "no completing #tags and @nicks"
 since = "0.7.0"
 name.ru = "Дополнение #тегов, @ников, :эмодзи:"
 name.en = "Completing #tags, @nicks, :emoji:"
@@ -129,6 +152,9 @@ details.en = "`#ge` — first the tags you follow, then the frequent ones in the
 [[feature]]
 id = "camelcase"
 status = "has"
+android = "no"
+android_note.ru = "подсказки нет"
+android_note.en = "no hint"
 since = "0.2.0"
 name.ru = "Подсказка CamelCase для хэштегов"
 name.en = "CamelCase hint for hashtags"
@@ -144,6 +170,9 @@ details.en = "A hashtag in one case (`#georgianews`) gets a hint: screen readers
 [[feature]]
 id = "post-language"
 status = "has"
+android = "partly"
+android_note.ru = "язык — из конфига; выбрать для поста нельзя"
+android_note.en = "the language from the config; no picking one for a post"
 since = "0.3.0"
 name.ru = "Язык поста"
 name.en = "The post's language"
@@ -158,6 +187,9 @@ details.en = "The default language and a list in the post window (any ISO 639 co
 [[feature]]
 id = "compose-poll"
 status = "has"
+android = "no"
+android_note.ru = "опроса при написании нет"
+android_note.en = "no poll when writing"
 since = "0.8.0"
 name.ru = "Опрос в посте"
 name.en = "A poll in a post"
@@ -170,6 +202,9 @@ clients = ["all"]
 [[feature]]
 id = "invite"
 status = "has"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 since = "0.16.0"
 name.ru = "Позвать в тред"
 name.en = "Call someone into a thread"
@@ -185,6 +220,9 @@ details.en = "A post's ⋯ menu → “Call into the thread…”: a reply to th
 [[feature]]
 id = "quote-reply"
 status = "has"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 since = "0.17.0"
 name.ru = "Ответ с цитатой, по кусочкам"
 name.en = "Reply with quotes, piece by piece"
@@ -200,6 +238,9 @@ details.en = "A post's ⋯ menu → “Reply with quote”: a reply with the pos
 [[feature]]
 id = "copy-handle"
 status = "has"
+android = "no"
+android_note.ru = "профилей пока нет"
+android_note.en = "no profiles yet"
 since = "0.16.0"
 name.ru = "Скопировать ник @user@server"
 name.en = "Copy the handle @user@server"
@@ -214,6 +255,9 @@ details.en = "The “Copy handle” button on a profile, the “Copy handle @…
 [[feature]]
 id = "quote"
 status = "has"
+android = "no"
+android_note.ru = "цитировать нельзя"
+android_note.en = "no quoting"
 since = "0.8.0"
 name.ru = "Цитировать пост; кто может цитировать мои"
 name.en = "Quoting a post; who may quote mine"
@@ -227,6 +271,7 @@ details.en = "“Quote” in the ⋯ menu of a post its author lets quote. Who m
 [[feature]]
 id = "interaction-policy"
 status = "has"
+android = "has"
 since = "0.8.0"
 name.ru = "Кто может отвечать, бустить, лайкать (GoToSocial)"
 name.en = "Who may reply, boost, like (GoToSocial)"
@@ -240,6 +285,9 @@ details.en = "`\"everyone\"`, `\"followers\"` (and the mentioned), `\"following\
 [[feature]]
 id = "schedule"
 status = "has"
+android = "no"
+android_note.ru = "отложенных постов нет"
+android_note.en = "no scheduled posts"
 since = "0.8.0"
 name.ru = "Отложенный пост"
 name.en = "A scheduled post"
@@ -253,6 +301,9 @@ details.en = "The “⏰ Later” button: the post waits on the server, even if 
 [[feature]]
 id = "edit-own"
 status = "has"
+android = "no"
+android_note.ru = "править, удалять, закреплять свои посты нельзя"
+android_note.en = "no editing, deleting, pinning your posts"
 since = "0.3.0"
 name.ru = "Редактировать, удалить, закрепить свой пост"
 name.en = "Edit, delete, pin your own post"
@@ -265,6 +316,9 @@ clients = ["all"]
 [[feature]]
 id = "redraft"
 status = "has"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 since = "0.14.0"
 name.ru = "Удалить и переписать"
 name.en = "Delete and redraft"
@@ -278,6 +332,7 @@ details.en = "An item in the ⋯ menu of your own post: the post is deleted, and
 [[feature]]
 id = "chain"
 status = "has"
+android = "has"
 since = "0.14.0"
 name.ru = "Тред цепочкой"
 name.en = "A thread as a chain"
@@ -292,6 +347,7 @@ details.en = "A line of nothing but `---` splits the text into posts: they go at
 [[feature]]
 id = "command-line"
 status = "has"
+android = "has"
 since = "0.3.0"
 name.ru = "Командная строка как на Point"
 name.en = "A command line as on Point"
@@ -307,6 +363,7 @@ details.en = "At the bottom of the window (`Ctrl+L`): `#a3f` — open, `#a3f tex
 [[feature]]
 id = "short-ids"
 status = "has"
+android = "has"
 since = "0.18.0"
 name.ru = "Короткие имена постов одинаковые на всех устройствах"
 name.en = "Short post names the same on every device"
@@ -330,6 +387,9 @@ why.en = "Writing is the author's job."
 [[feature]]
 id = "spellcheck"
 status = "has"
+android = "partly"
+android_note.ru = "проверяет клавиатура телефона, своей проверки нет"
+android_note.en = "the phone's keyboard checks; no checking of fedtail's own"
 since = "0.20.0"
 name.ru = "Проверка орфографии в панели поста"
 name.en = "Spell checking in the compose panel"
