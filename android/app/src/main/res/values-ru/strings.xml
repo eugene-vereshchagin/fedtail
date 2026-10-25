@@ -129,4 +129,5 @@
     <string name="note_channel">Новое: ответы, упоминания, заявки</string>
     <string name="accounts">Аккаунты</string>
     <string name="pinned">закреплено</string>
+    <string name="merge_accounts">Все аккаунты в одном окне</string>
 </resources>

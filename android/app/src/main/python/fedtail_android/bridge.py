@@ -98,6 +98,9 @@ def _make(demo):
     old = _s["core"]
     if old is not None:
         old.shutdown()
+    for lock in _s.get("held") or ():  # the merged profiles' locks: theirs again
+        lock.close()
+    _s["held"] = []
     profile = "demo" if demo else None
     where = paths.resolve(profile)
     where.ensure()
@@ -122,7 +125,11 @@ def _make(demo):
         diag.session_header(where.profile, {"ui": "android"})
         _s["logging"] = True
     core = Core(cfg, where, **kw)
-    _s.update(core=core, web=Web(core, None), demo=demo, profile=profile)
+    held = []
+    if not demo:  # "all accounts in one window" (ui.merge or the menu): the desktop's way
+        from fedtail.__main__ import merge_accounts
+        core, held = merge_accounts(core, where.profile)
+    _s.update(core=core, web=Web(core, None), demo=demo, profile=profile, held=held)
 
 
 # what the phone does otherwise than the desktop: written into the config file once (the
@@ -251,8 +258,19 @@ def open():  # noqa: A001 — what Kotlin calls it
         out["command_line"] = bool(core.cfg["ui"]["command_line"])
         out["overview"] = core.cfg["phone"]["overview"]
         out["layout"] = core.cfg["phone"]["layout"]
+        out["push"] = core.cfg["phone"]["push"]
+        out["merged"] = bool(_s["web"].merged())
+        out["accounts"] = sum(1 for p in _profiles() if p["logged_in"])
         return {"me": out, "lanes": web.lanes()}
     return _answer(go)
+
+
+def _profiles():
+    from fedtail.core import profiles
+    try:
+        return profiles.listing()
+    except Exception:  # noqa: BLE001 — one account then
+        return []
 
 
 def lanes():
@@ -530,8 +548,88 @@ def theme():
     def go():
         web = _s["web"]
         colors, light, _family = web.theme_colors()
-        return {"name": web.theme_name(), "light": light, "colors": colors}
+        return {"name": web.theme_name(), "light": light, "colors": colors,
+                "font": _theme_fonts(web.theme_name())}
     return _answer(go)
+
+
+# the phone's buttons that have a theme picture: the app's word → iconpack's name
+PICTURES = {"reply": "reply", "boost": "boost", "like": "star", "liked": "star_full",
+            "bookmark": "bookmark", "more": "more", "refresh": "refresh", "send": "send",
+            "write": "edit", "menu": "menu", "attach": "attach", "poll": "poll",
+            "close": "close", "settings": "settings"}
+
+
+def pictures():
+    """The theme's own pictures for the phone's buttons (iconpack: its set, coloured as
+    [pictures] says, the windows' own): {word: {"svg": text} | {"png": path}}; {} — the
+    theme has no set of its own (system, words: the phone's icons)."""
+    def go():
+        from types import SimpleNamespace
+
+        from fedtail.frontends import iconpack, themefile
+        web = _s["web"]
+        try:
+            theme, _w = themefile.load(web.theme_name())
+        except Exception:  # noqa: BLE001 — the phone's icons
+            return {}
+        if not iconpack.uses_set(iconpack.mode(_core().cfg, theme.get("shape"))):
+            return {}
+        pset = iconpack.for_theme(SimpleNamespace(icon_dirs=theme.get("icon_dirs") or (),
+                                                  pictures=theme.get("pictures") or {}))
+        colors, _light, _f = web.theme_colors()
+        accent = colors.get("accent") or "#1f5fa8"
+        out = {}
+        for word, name in PICTURES.items():
+            pic = iconpack.picture(pset, name, accent, True, colors.get("card"))
+            if pic is None:
+                continue
+            out[word] = {"svg": pic.text} if pic.kind == "svg" else {"png": pic.path}
+        return out
+    return _answer(go)
+
+
+def _theme_fonts(name):
+    """The theme's fonts as files the phone can load: the first family of [font] family
+    (and mono) that comes with fedtail (data/themes/fonts: PT Sans, IBM Plex, Nunito…) —
+    the phone has none of Tahoma or DejaVu; → {"text": {regular, bold, italic,
+    bold_italic}, "mono": {…}, "scale": post_scale}, a style with no file of its own
+    left out ({} — the phone's own font)."""
+    import re
+    from pathlib import Path
+
+    from fedtail.frontends import themefile
+    try:
+        theme, _w = themefile.load(name)
+    except Exception:  # noqa: BLE001 — the phone's font then
+        return {}
+    font = theme.get("font") or {}
+    files = [Path(f) for f in themefile.builtin_fonts()]
+
+    def squash(text):
+        return re.sub(r"[^a-z0-9]", "", text.lower())
+
+    def styles(family_list):
+        for fam in str(family_list or "").split(","):
+            want = squash(fam)
+            mine = [f for f in files if squash(f.stem.split("-")[0]) == want]
+            if not mine:
+                continue
+            out = {}
+            for f in mine:
+                rest = f.stem.lower()
+                bold, italic = "bold" in rest, "italic" in rest
+                key = ("bold_italic" if italic else "bold") if bold else \
+                    ("italic" if italic else "regular")
+                out.setdefault(key, str(f))
+            if "regular" in out:
+                return out
+        return {}
+    got = {k: v for k, v in (("text", styles(font.get("family"))),
+                             ("mono", styles(font.get("mono")))) if v}
+    if got and font.get("post_scale"):
+        got["scale"] = float(font["post_scale"])
+    return got
 
 
 def notes(since):
@@ -543,6 +641,39 @@ def notes(since):
         cfg = _core().cfg["notify"]
         return {"notes": got, "n": n, "enabled": bool(cfg.get("enabled", True)),
                 "when_focused": bool(cfg.get("when_focused", False))}
+    return _answer(go)
+
+
+def merge(on):
+    """All accounts in one window, on or off (the windows' menu item; kept in the main
+    profile's state): the core made anew at once — the screens then start again."""
+    def go():
+        web = _s["web"]
+        if bool(on) != web.merged():
+            web.toggle_merge()
+        with _lock:
+            _make(_s["demo"])
+        return {"merged": _s["web"].merged(), "reload": True}
+    return _answer(go)
+
+
+def push_on(endpoint, p256dh, auth):
+    """UnifiedPush gave the app an address (its distributor's, on some server of the
+    user's choice): my server pushes there from now on, encrypted to the phone's key
+    (the connector's own; it decrypts). A push only wakes the app for a round."""
+    def go():
+        if not str(endpoint or "").startswith("https://"):
+            raise ValueError("endpoint")
+        _core().push_subscribe(str(endpoint), str(p256dh), str(auth)).result(60)
+        return {"ok": True}
+    return _answer(go)
+
+
+def push_off():
+    """No more pushes to this phone (phone.push = "off", the distributor gone)."""
+    def go():
+        _core().push_unsubscribe().result(60)
+        return {"ok": True}
     return _answer(go)
 
 

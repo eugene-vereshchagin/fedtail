@@ -53,9 +53,7 @@ details.en = "Both are in the accounts menu, both ask first. “Log in again…�
 [[feature]]
 id = "merge"
 status = "has"
-android = "no"
-android_note.ru = "один аккаунт"
-android_note.en = "one account"
+android = "has"
 since = "0.3.0"
 name.ru = "Все аккаунты в одном окне"
 name.en = "All accounts in one window"

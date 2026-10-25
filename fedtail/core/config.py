@@ -258,6 +258,7 @@ DEFAULTS = {
     "phone": {
         "overview": "tiles",
         "layout": "auto",
+        "push": "auto",
     },
     "cli": {
         "enabled": True,
@@ -311,6 +312,7 @@ CHOICES = {
     ("cli", "color"): {"auto", "always", "never"},
     ("phone", "overview"): {"tiles", "list"},
     ("phone", "layout"): {"auto", "one", "two", "three"},
+    ("phone", "push"): {"auto", "off"},
     ("ui", "esc"): {"curtain", "tray", "off"},
     ("ui", "fonts"): {"theme", "system", "custom"},
     ("ui", "compose"): {"inline", "window"},

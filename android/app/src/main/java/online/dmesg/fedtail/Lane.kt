@@ -117,7 +117,7 @@ fun LaneScreen(
                         },
                         actions = {
                             IconButton(onClick = { model.refresh() }) {
-                                Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
+                                ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
                             }
                         })
                     if (!pane) NewsStrip(model, name)
@@ -132,7 +132,7 @@ fun LaneScreen(
                 FloatingActionButton(onClick = { model.compose(null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary) {
-                    Icon(Icons.Filled.Edit, stringResource(R.string.write))
+                    ThemedIcon("write", Icons.Filled.Edit, stringResource(R.string.write))
                 }
             }
         },

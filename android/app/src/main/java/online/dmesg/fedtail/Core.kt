@@ -72,6 +72,10 @@ object Core {
     suspend fun editor() = obj("editor")
     // the shade: the windows' notes, while open and from a round in the background
     suspend fun theme() = obj("theme")
+    suspend fun pictures() = obj("pictures")
+    suspend fun merge(on: Boolean) = obj("merge", on)
+    suspend fun pushOn(endpoint: String, key: String, auth: String) = obj("push_on", endpoint, key, auth)
+    suspend fun pushOff() = obj("push_off")
     suspend fun notes(since: Int) = obj("notes", since)
     suspend fun ready(context: Context, lang: String) =
         obj("ready", context.filesDir.absolutePath, context.cacheDir.absolutePath, lang)

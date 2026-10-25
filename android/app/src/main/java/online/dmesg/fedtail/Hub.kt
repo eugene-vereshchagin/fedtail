@@ -87,7 +87,7 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                     },
                     actions = {
                         IconButton(onClick = { model.refresh() }) {
-                            Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
+                            ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
                         }
                         Box {
                             IconButton(onClick = { menu = true }) {
@@ -100,6 +100,12 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                 // the windows' "accounts": add, switch, log in again, out
                                 DropdownMenuItem(text = { Text(stringResource(R.string.accounts)) },
                                     onClick = { menu = false; model.openPage("accounts") })
+                                if (model.accountCount > 1 || model.merged) {
+                                    DropdownMenuItem(text = {
+                                        Text((if (model.merged) "☑ " else "☐ ") +
+                                            stringResource(R.string.merge_accounts))
+                                    }, onClick = { menu = false; model.toggleMerge() })
+                                }
                                 DropdownMenuItem(text = { Text(stringResource(R.string.new_post)) },
                                     onClick = { menu = false; model.compose(null) })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },

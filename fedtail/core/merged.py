@@ -587,6 +587,22 @@ class MergedCore:
         for core in [*self.others.values(), self.primary]:
             core.shutdown()
 
+    def pause_polling(self, on=True):
+        """A phone's app out of sight: every account's rounds stop, and come back."""
+        for core in [self.primary, *self.others.values()]:
+            core.pause_polling(on)
+
+    def poll_once(self):
+        """One round of every connected account, here and now (a phone's round in the
+        background, the poller paused); one that fails doesn't stop the rest."""
+        for tag, core in self.others.items():
+            if core.logged_in and core.me is not None:
+                try:
+                    core.poll_once()
+                except Exception as e:  # noqa: BLE001 — the others still get their round
+                    log.warning("merge: %s's round failed: %s", tag, e)
+        return self.primary.poll_once()
+
 
 class _Store:
     """The bits of the store the window reads, routed by id."""

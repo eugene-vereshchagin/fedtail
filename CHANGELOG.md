@@ -15,6 +15,10 @@
   (the "new below" line is a row of its own, places' rows keep their place by key). Read
   "as a forum" (oldest first), a lane is refreshed by pulling up past its end — where its
   newest posts are.
+- Android: push through UnifiedPush (`phone.push`): with a distributor on the phone (ntfy,
+  Sunup…) the server pushes, the app wakes for a round — notes at once with the app
+  closed. All accounts in one window (≡), whose post in the editor. The themes' fonts
+  (the ones that come with fedtail) and their own pictures on the buttons.
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

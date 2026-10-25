@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 
 /**
  * The look of the mockups' variant A ("calm"): a cool grey ground, white cards, one blue
@@ -53,10 +54,16 @@ private val Dark = darkColorScheme(
  *  danger…); null or empty — the phone's own light or dark in the calm colours. */
 @Composable
 fun FedtailTheme(colors: Map<String, String>? = null, light: Boolean = true,
+                 font: androidx.compose.ui.text.font.FontFamily? = null, postScale: Float = 1f,
+                 pictures: Map<String, ThemePic> = emptyMap(),
                  content: @Composable () -> Unit) {
     val scheme = colors?.takeIf { it.isNotEmpty() }?.let { themeScheme(it, light) }
         ?: if (isSystemInDarkTheme()) Dark else Light
-    MaterialTheme(colorScheme = scheme, content = content)
+    val type = androidx.compose.material3.Typography().let { t -> font?.let { t.inFamily(it) } ?: t }
+    androidx.compose.runtime.CompositionLocalProvider(LocalPictures provides pictures,
+        LocalPostScale provides postScale) {
+        MaterialTheme(colorScheme = scheme, typography = type, content = content)
+    }
 }
 
 /** "#rrggbb" or "#rrggbbaa" → a colour; anything else (rgba(…)) — null. */
@@ -138,4 +145,74 @@ object Glyphs {
     val Done: ImageVector = stroke("done") {
         moveTo(5f, 12f); lineTo(10f, 17f); lineTo(19f, 7f)
     }
+}
+
+// ---- a theme's font and pictures ------------------------------------------------------
+
+/** A theme's own picture for a button: SVG text (coloured already) or a PNG file. */
+data class ThemePic(val svg: String = "", val png: String = "")
+
+/** The theme's pictures by the app's word (reply, boost, like, more…); {} — Material's. */
+val LocalPictures = androidx.compose.runtime.staticCompositionLocalOf { emptyMap<String, ThemePic>() }
+
+/** How much larger a post's words are than the rest ([font] post_scale). */
+val LocalPostScale = androidx.compose.runtime.staticCompositionLocalOf { 1f }
+
+/** The theme's font files (bridge.theme "font"): regular, bold, italic, bold_italic. */
+fun fontFamilyOf(files: Map<String, String>?): androidx.compose.ui.text.font.FontFamily? {
+    if (files == null || files["regular"] == null) return null
+    return try {
+        val fonts = files.mapNotNull { (key, path) ->
+            val file = java.io.File(path)
+            if (!file.isFile) return@mapNotNull null
+            val weight = if (key.startsWith("bold")) androidx.compose.ui.text.font.FontWeight.Bold
+                         else androidx.compose.ui.text.font.FontWeight.Normal
+            val style = if (key.endsWith("italic")) androidx.compose.ui.text.font.FontStyle.Italic
+                        else androidx.compose.ui.text.font.FontStyle.Normal
+            androidx.compose.ui.text.font.Font(file, weight, style)
+        }
+        if (fonts.isEmpty()) null else androidx.compose.ui.text.font.FontFamily(fonts)
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/** Every style of Material's typography in the theme's family. */
+fun androidx.compose.material3.Typography.inFamily(f: androidx.compose.ui.text.font.FontFamily) =
+    androidx.compose.material3.Typography(
+        displayLarge = displayLarge.copy(fontFamily = f), displayMedium = displayMedium.copy(fontFamily = f),
+        displaySmall = displaySmall.copy(fontFamily = f), headlineLarge = headlineLarge.copy(fontFamily = f),
+        headlineMedium = headlineMedium.copy(fontFamily = f), headlineSmall = headlineSmall.copy(fontFamily = f),
+        titleLarge = titleLarge.copy(fontFamily = f), titleMedium = titleMedium.copy(fontFamily = f),
+        titleSmall = titleSmall.copy(fontFamily = f), bodyLarge = bodyLarge.copy(fontFamily = f),
+        bodyMedium = bodyMedium.copy(fontFamily = f), bodySmall = bodySmall.copy(fontFamily = f),
+        labelLarge = labelLarge.copy(fontFamily = f), labelMedium = labelMedium.copy(fontFamily = f),
+        labelSmall = labelSmall.copy(fontFamily = f))
+
+/** A button's picture: the theme's own (drawn as it is), else the Material icon, tinted. */
+@Composable
+fun ThemedIcon(
+    word: String, fallback: ImageVector, description: String?,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    tint: Color = androidx.compose.material3.LocalContentColor.current,
+) {
+    val pic = LocalPictures.current[word]
+    if (pic == null) {
+        androidx.compose.material3.Icon(fallback, description, modifier, tint = tint)
+        return
+    }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val request = androidx.compose.runtime.remember(pic) {
+        coil.request.ImageRequest.Builder(context).apply {
+            if (pic.svg.isNotBlank()) {
+                data(java.nio.ByteBuffer.wrap(pic.svg.toByteArray()))
+                decoderFactory(coil.decode.SvgDecoder.Factory())
+                memoryCacheKey("pic:" + pic.svg.hashCode())
+            } else {
+                data(java.io.File(pic.png))
+            }
+        }.build()
+    }
+    coil.compose.AsyncImage(model = request, contentDescription = description,
+        modifier = modifier.then(androidx.compose.ui.Modifier.size(24.dp)))
 }

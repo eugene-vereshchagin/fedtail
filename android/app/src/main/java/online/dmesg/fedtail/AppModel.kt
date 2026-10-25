@@ -312,8 +312,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- the overview and the lanes ------------------------------------------------------
+    var merged by mutableStateOf(false)      // all accounts in one window
+    var accountCount by mutableStateOf(1)
+
+    /** ≡ → All accounts in one window: the core made anew with (or without) the others. */
+    fun toggleMerge() {
+        viewModelScope.launch {
+            val got = Core.merge(!merged)
+            Core.failed(got)?.let { message = it; return@launch }
+            restartScreens()
+        }
+    }
+
     var themeColors by mutableStateOf<Map<String, String>>(emptyMap()) // ui.theme's; {}: system
     var themeLight by mutableStateOf(true)
+
+    var themeFont by mutableStateOf<androidx.compose.ui.text.font.FontFamily?>(null)
+    var themeScale by mutableStateOf(1f)
+    var themePictures by mutableStateOf<Map<String, ThemePic>>(emptyMap())
 
     private suspend fun loadTheme() {
         val got = Core.theme()
@@ -321,6 +337,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val c = got.optJSONObject("colors") ?: JSONObject()
         themeColors = c.keys().asSequence().associateWith { c.optString(it) }
         themeLight = got.optBoolean("light", true)
+        val font = got.optJSONObject("font") ?: JSONObject()
+        val text = font.optJSONObject("text")
+        themeFont = fontFamilyOf(text?.let { t -> t.keys().asSequence().associateWith { t.optString(it) } })
+        themeScale = font.optDouble("scale", 1.0).toFloat().coerceIn(0.8f, 1.6f)
+        val pics = Core.pictures()
+        themePictures = if (Core.failed(pics) != null) emptyMap() else
+            pics.keys().asSequence().associateWith { k ->
+                val o = pics.getJSONObject(k)
+                ThemePic(o.optString("svg"), o.optString("png"))
+            }
     }
 
     private suspend fun openMain() {
@@ -337,6 +363,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         commandLine = me.optBoolean("command_line")
         overview = me.optString("overview", "tiles")
         layoutPref = me.optString("layout", "auto")
+        merged = me.optBoolean("merged")
+        accountCount = me.optInt("accounts", 1)
+        // phone.push: UnifiedPush when a distributor is there (not in the demo: no server)
+        if (!demo) Push.setUp(getApplication(), me.optString("push", "auto"))
         val arr = got.optJSONArray("lanes") ?: JSONArray()
         lanes = parseLanes(arr)
         startLane = (0 until arr.length()).map { arr.getJSONObject(it) }
@@ -650,6 +680,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         .put("expires_in", pollExpires).put("multiple", pollMultiple))
                 }
                 if (altOk) body.put("alt_ok", true)
+                composeFrom?.let { body.put("account", it) }
             }
             val got = Core.post(body)
             sending = false
@@ -876,6 +907,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun restartScreens() {
+        editorFacts = null
         watcher?.cancel()
         version = -1
         places = emptyList()
@@ -1177,6 +1209,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var pollMultiple by mutableStateOf(false)
     var pollExpires by mutableStateOf(86400)
     var editorFacts by mutableStateOf<JSONObject?>(null)
+    var composeFrom by mutableStateOf<String?>(null) // all accounts in one: whose post
+
+    /** Whom a post may go from (all accounts in one window): (key, "from @x@server"). */
+    fun fromAccounts(): List<Pair<String, String>> {
+        val arr = editorFacts?.optJSONArray("accounts") ?: return emptyList()
+        return (0 until arr.length()).map { arr.getJSONArray(it) }.map { it.optString(0) to it.optString(1) }
+    }
 
     private fun clearEditor() {
         composeText = ""
@@ -1192,6 +1231,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         pollOptions = listOf("", "")
         pollMultiple = false
         pollExpires = 86400
+        composeFrom = null
     }
 
     private fun loadEditorFacts() {

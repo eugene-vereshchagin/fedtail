@@ -533,7 +533,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Server announcements | has | 0.9.0 | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
 | The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
-| Push notifications (Web Push, UnifiedPush) | partly — Web Push in the web version | 0.20.0 | — | `/api/v1/push/subscription` | Mastodon web, Elk, Phanpy, Tusky, Ivory | — |
+| Push notifications (Web Push, UnifiedPush) | has — Web Push in the web version, UnifiedPush on Android | 0.20.0 | `phone.push` | `/api/v1/push/subscription` | Mastodon web, Elk, Phanpy, Tusky, Ivory | — |
 | The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
 
 <details><summary>In detail</summary>
@@ -554,7 +554,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **The unread number on the icon.** In the tray and on the task bar button (KDE: needs the entry from `--install-desktop` and `python3-pyside6.qtdbus`). Which lanes to count — a list, as for notifications: `"lists"` — all lists, `"list:Friends"` — one, `"all"` — everything, plus `icon_count_except` — what not to count. The icon itself — an opossum holding its own tail (`app_icon = "possum"`, also in the menu and in About), or the drawn thread bubble (`"bubble"`), which `themed_icon` paints in the theme's colours.
 
-**Push notifications (Web Push, UnifiedPush).** The web page subscribes the browser to push right at your server (≡ → “Push notifications…”): notifications come with the tab closed and fedtail off. Needs https or localhost. The windows and the terminal don't need push — the live stream and polling are enough; UnifiedPush is for the future Android version.
+**Push notifications (Web Push, UnifiedPush).** The web page subscribes the browser to push right at your server (≡ → “Push notifications…”): notifications come with the tab closed and fedtail off. Needs https or localhost. The phone — through UnifiedPush (`phone.push = "auto"`): with a distributor installed (ntfy, Sunup, NextPush…) the server pushes to it, the app wakes and does a round — the same notes as the windows' (`notify.lanes`, `notify.privacy`); without one — a round every 15 minutes. The windows and the terminal don't need push — the live stream and polling are enough.
 
 </details>
 
@@ -723,7 +723,6 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
 | Logging in | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page log in the same way: the server's address, the login page in a browser, the code. The web page itself won't start for a profile not logged in — you log in from another profile's page. |
-| Every account in one window | ✓ | ✓ | ✓ | ✓ | — | Android: no “all accounts in one window” on the phone |
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | · | ✓ | One lane at a time; columns are the window's and the tablet's (the overview, a lane, a thread side by side). |
@@ -764,11 +763,10 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | “What the server can do” — the capability check | ✓ | ✓ | ✓ | ✓ | ◐ | The federation's state is everywhere; the check of a score of capabilities is a tab of the window. Android: the self-check looks at the server |
 | The arts mode: its mark in the menu | ✓ | ✓ | ✓ | ✓ | ◐ | `ui.arts_mode` works everywhere; the reminder of it is in the window's menu. Android: as a setting, no mark in a menu |
 | The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens. |
-| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, the theme chosen in Settings; no themes' fonts and pictures |
+| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, fonts and pictures, chosen in Settings; no “try” and no themes folder |
 | Open the config and the data folder | ✓ | ✓ | ✓ | · | ◐ | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. Android: the config is edited in the app; no data folder |
 | Help: search, back, forward | ✓ | ✓ | ✓ | ✓ | ◐ | Android: help and its search, back — with Back; no forward |
 | About: copy the information | ✓ | ✓ | ✓ | ✓ | ◐ | The same information; no “copy” button — the text can be selected. Android: the facts — in the self-check, “Share” |
-| Desktop notifications and testing them | ✓ | ✓ | ✓ | ✓ | ◐ | The terminal — through notify-send or the terminal's own code (kitty, WezTerm, foot…); the web page — the browser's notifications, if allowed. Android: into the phone's shade; with the app closed — every 15 minutes (push later) |
 | Debugging: the log, a report, the sound, the stacks | ✓ | ✓ | ✓ | · | ◐ | The web page is a guest in a browser: a report is made in the window, the terminal or `fedtail --bug-report`. Android: the self-check and its report |
 | Memory debugging: census, snapshot, tracing, giving memory back | ✓ | ✓ | ✓ | · | · | Leak hunting is the windows' and the terminal's; the web page is a guest in a browser. Android: a desktop tool |
 | Tooltips and “What's this?” | ✓ | ✓ | · | ◐ | · | A terminal has no pointer to hover — its hints are in the key line at the bottom. The web page has tooltips on buttons, lanes and menu items; no “What's this?” mode (the browser shows a tooltip on hover anyway), and none for what the page doesn't have (column width, editor size, tracing). Android: nothing to hover with |
@@ -848,17 +846,14 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Desktop notifications with privacy levels | ◐ | into the shade; with the app closed — every 15 minutes |
 | Severed relationships and moderators' warnings | ◐ | they come into Activity; not shown apart |
 | Dismiss a notification, clear them all | — | no dismissing a notification |
 | The unread number on the icon | — | no number on the icon |
-| Push notifications (Web Push, UnifiedPush) | — | push (UnifiedPush) — later |
 
 ### Several accounts
 
 | What | Android | Why |
 |---|---|---|
-| All accounts in one window | — | one account |
 | An account's colour in the shared window | — | one account |
 | Acting as another account | — | one account |
 
@@ -866,8 +861,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Themes as files | ◐ | the windows' themes' colours (ui.theme in Settings); no themes' fonts and pictures |
-| Trying a theme without a restart | — | other themes — later |
+| Trying a theme without a restart | — | the theme is changed in Settings; no “try for this run” |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Open a link in the running fedtail | — | links to posts from other apps don't open in fedtail |
 | A detailed log for bug reports | ◐ | the log comes in the self-check's report |

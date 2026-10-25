@@ -144,7 +144,8 @@ private fun PostWords(words: AnnotatedString, onLink: (String) -> Unit, onTap: (
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val link by rememberUpdatedState(onLink)
     val tap by rememberUpdatedState(onTap)
-    Text(words, fontSize = 15.sp, lineHeight = 21.sp, onTextLayout = { layout = it },
+    val scale = LocalPostScale.current  // [font] post_scale: a theme's posts larger
+    Text(words, fontSize = 15.sp * scale, lineHeight = 21.sp * scale, onTextLayout = { layout = it },
         modifier = Modifier.pointerInput(words) {
             detectTapGestures { pos ->
                 val at = layout?.getOffsetForPosition(pos)
@@ -514,15 +515,16 @@ private fun Actions(p: PostItem, act: CardActions) {
     val grey = MaterialTheme.colorScheme.onSurfaceVariant
     Row(Modifier.padding(start = 0.dp), verticalAlignment = Alignment.CenterVertically) {
         TextButton(onClick = { act.reply(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-            Icon(Glyphs.Reply, stringResource(R.string.reply), Modifier.size(18.dp), tint = grey)
+            ThemedIcon("reply", Glyphs.Reply, stringResource(R.string.reply), Modifier.size(18.dp), tint = grey)
             if (p.replies > 0) Text(" ${p.replies}", fontSize = 13.sp, color = grey)
         }
         Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Glyphs.Boost, null, Modifier.size(18.dp), tint = grey)
+            ThemedIcon("boost", Glyphs.Boost, null, Modifier.size(18.dp), tint = grey)
             if (p.shares > 0) Text(" ${p.shares}", fontSize = 13.sp, color = grey)
         }
         TextButton(onClick = { act.like(p) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-            Icon(if (p.liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            ThemedIcon(if (p.liked) "liked" else "like",
+                if (p.liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 stringResource(R.string.like), Modifier.size(18.dp),
                 tint = if (p.liked) MaterialTheme.colorScheme.secondary else grey)
             if (p.likes > 0) Text(" ${p.likes}", fontSize = 13.sp, color = grey)
@@ -542,7 +544,7 @@ private fun CardMenu(p: PostItem, act: CardActions) {
     LaunchedEffect(open) { if (open) info = (act.menu ?: act.info)(p) }
     Box {
         IconButton(onClick = { open = true }) {
-            Icon(Icons.Filled.MoreVert, stringResource(R.string.more),
+            ThemedIcon("more", Icons.Filled.MoreVert, stringResource(R.string.more),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

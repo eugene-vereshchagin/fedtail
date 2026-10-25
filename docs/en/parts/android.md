@@ -71,17 +71,14 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Desktop notifications with privacy levels | ◐ | into the shade; with the app closed — every 15 minutes |
 | Severed relationships and moderators' warnings | ◐ | they come into Activity; not shown apart |
 | Dismiss a notification, clear them all | — | no dismissing a notification |
 | The unread number on the icon | — | no number on the icon |
-| Push notifications (Web Push, UnifiedPush) | — | push (UnifiedPush) — later |
 
 ### Several accounts
 
 | What | Android | Why |
 |---|---|---|
-| All accounts in one window | — | one account |
 | An account's colour in the shared window | — | one account |
 | Acting as another account | — | one account |
 
@@ -89,8 +86,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Themes as files | ◐ | the windows' themes' colours (ui.theme in Settings); no themes' fonts and pictures |
-| Trying a theme without a restart | — | other themes — later |
+| Trying a theme without a restart | — | the theme is changed in Settings; no “try for this run” |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Open a link in the running fedtail | — | links to posts from other apps don't open in fedtail |
 | A detailed log for bug reports | ◐ | the log comes in the self-check's report |

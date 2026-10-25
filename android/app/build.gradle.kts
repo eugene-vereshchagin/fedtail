@@ -181,9 +181,14 @@ dependencies {
     // pictures: avatars, previews, the viewer — straight from their servers, never with
     // the account's token (as the desktop's images.py); memory + disk cache of its own
     implementation("io.coil-kt:coil-compose:2.7.0")
+    // a theme's own pictures on the buttons: SVG, as the windows draw them (iconpack)
+    implementation("io.coil-kt:coil-svg:2.7.0")
     // a round in the background (the notification shade while the app is closed): the
     // system wakes the process every 15 minutes at most, with a network
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // push without Google: UnifiedPush (a distributor of the user's choice — ntfy, Sunup…);
+    // the connector keeps the keys and decrypts; built on the same Kotlin as the app
+    implementation("org.unifiedpush.android:connector:3.0.10")
     // video, gifs and sound in the viewer itself, not in the browser
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")

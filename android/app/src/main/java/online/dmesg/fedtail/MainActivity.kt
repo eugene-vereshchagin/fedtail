@@ -36,7 +36,8 @@ class MainActivity : ComponentActivity() {
         handleLogin(intent)
         if (!demo) askToNotify()  // the demo (CI's emulator): no system dialog over the screens
         setContent {
-            FedtailTheme(model.themeColors, model.themeLight) {
+            FedtailTheme(model.themeColors, model.themeLight, model.themeFont, model.themeScale,
+                model.themePictures) {
                 App(model, openBrowser = { url ->
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 }, share = { path -> shareFile(path) })

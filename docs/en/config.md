@@ -423,3 +423,4 @@ The Android app (the android/ folder of the repository). Its config is this same
 |---|---|---|
 | `phone.overview` | `"tiles"` | The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and the name); "list" — a list, a row per lane, with its first unread post. |
 | `phone.layout` | `"auto"` | How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread side by side); "one", "two", "three" — always that many, if they fit. |
+| `phone.push` | `"auto"` | Notifications at once, with the app closed: "auto" — through UnifiedPush when the phone has a distributor for it (ntfy, Sunup, NextPush…): your server pushes to it, the app wakes and asks; without one, or "off" — a round every 15 minutes (Android's least). |

@@ -277,7 +277,7 @@ fun PlaceScaffold(
                 actions = {
                     onRefresh?.let { r ->
                         IconButton(onClick = r) {
-                            Icon(Icons.Filled.Refresh, stringResource(R.string.refresh))
+                            ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
                         }
                     }
                     actions()
@@ -379,7 +379,7 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
     PlaceScaffold(title, model, snack, actions = {
         IconButton(onClick = { model.send() },
             enabled = !model.sending && model.uploading == 0 && model.composeText.isNotBlank()) {
-            Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.send))
+            ThemedIcon("send", Icons.AutoMirrored.Filled.Send, stringResource(R.string.send))
         }
     }) { mod ->
         Column(mod.padding(16.dp).imePadding().verticalScroll(rememberScrollState()),
@@ -405,6 +405,16 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 if (place.replyTo != null && model.composeVisibility == null) {
                     Text(stringResource(R.string.vis_as_parent), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            val from = model.fromAccounts()
+            if (from.isNotEmpty() && !editing && place.replyTo == null) {
+                Row(Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    from.forEachIndexed { i, (key, words) ->
+                        FilterChip(selected = (model.composeFrom ?: from.first().first) == key,
+                            onClick = { model.composeFrom = key }, label = { Text(words) })
+                    }
                 }
             }
             if (model.composeCwOn) {

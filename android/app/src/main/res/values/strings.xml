@@ -130,4 +130,5 @@
     <string name="note_channel">News: replies, mentions, requests</string>
     <string name="accounts">Accounts</string>
     <string name="pinned">pinned</string>
+    <string name="merge_accounts">All accounts in one window</string>
 </resources>

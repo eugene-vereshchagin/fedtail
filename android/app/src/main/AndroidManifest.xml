@@ -34,6 +34,15 @@
             </intent-filter>
         </activity>
 
+        <!-- UnifiedPush: the distributor hands the server's pushes in here (phone.push) -->
+        <service
+            android:name=".PushReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- the self-check's report, handed to a messenger or mail (cache/reports/ only) -->
         <provider
             android:name="androidx.core.content.FileProvider"

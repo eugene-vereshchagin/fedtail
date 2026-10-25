@@ -399,6 +399,9 @@ class BridgeNotesTest(_Base):
         self.assertEqual(again["notes"], [])  # said once
 
     def test_ready_makes_the_core_once(self):
+        # the app's own log (diag) stays off here: its file would outlive the test's
+        # folder in the process's logger (Windows then can't write it: a Traceback)
+        self.bridge._s["logging"] = True
         got = self.call("ready", str(self.files), str(self.cache), "en")
         self.assertFalse(got["logged_in"])  # no account yet: nothing to ask the server
         core = self.bridge._s["core"]
@@ -448,6 +451,7 @@ class BridgeThemeTest(_Base):
     def test_a_theme_paints_the_phone(self):
         self.demo()
         self.assertEqual(self.call("theme")["colors"], {})  # system: nothing of its own
+        self.assertEqual(self.call("pictures"), {})  # the desktop's icons: the phone's then
         names = [o["key"] for c in self.call("settings")["chapters"] for o in c["options"]]
         self.assertIn("theme", names)  # chosen on the phone's settings page
         self.assertIn("when_focused", names)  # and when the shade says what
@@ -458,3 +462,67 @@ class BridgeThemeTest(_Base):
         self.assertFalse(got["light"])
         for k in ("bg", "text", "accent"):
             self.assertRegex(got["colors"][k], r"^#[0-9a-fA-F]{6}")
+        # a theme's own font, as files that come with fedtail (no Tahoma on a phone)
+        self.call("setting_set", "ui", "theme", json.dumps("paper"))
+        self.call("settings_apply")
+        font = self.call("theme")["font"]
+        self.assertTrue(font["text"]["regular"].endswith(".ttf"), font)
+        self.assertTrue(os.path.isfile(font["text"]["regular"]))
+        self.call("setting_set", "ui", "theme", json.dumps("juick"))
+        self.call("settings_apply")
+        pics = self.call("pictures")  # juick draws its own: the phone's buttons get them
+        for word in ("reply", "boost", "like", "liked", "more", "refresh", "send"):
+            self.assertIn("<svg", pics[word].get("svg", "") or open(pics[word]["png"]).read(4))
+
+
+class BridgePushTest(_Base):
+    """UnifiedPush: the server is told the distributor's address and the phone's keys;
+    "off" takes it back. Only https addresses."""
+
+    def test_subscribe_and_back(self):
+        self.demo()
+        from tests.fakes import FakeApi
+        self.assertEqual(self.call("open")["me"]["push"], "auto")
+        self.call("push_on", "https://push.example/up/abc", "BKey", "auth")
+        self.assertEqual(FakeApi.world.push["endpoint"], "https://push.example/up/abc")
+        self.call("push_off")
+        self.assertIsNone(FakeApi.world.push)
+        self.assertIn("error", json.loads(self.bridge.push_on("http://plain/x", "k", "a")))
+
+
+class BridgeMergeTest(_Base):
+    """All accounts in one window on the phone: the desktop's MergedCore, made by the
+    bridge at once; out of sight, every account's rounds stop."""
+
+    def test_two_accounts_in_one(self):
+        from fedtail.core import auth, paths
+        from tests.fakes import FakeApi, World
+        FakeApi.world = World()
+        self.call("start", str(self.files), str(self.cache), "en", False)  # the app's folders
+        for name in ("one", "two"):
+            where = paths.resolve(name)
+            where.ensure()
+            auth.save(where.auth_file, {"server": "https://example.test", "token": name})
+        paths.set_main("one")
+        real = self.bridge._make
+
+        def make(demo):  # the real accounts, over the fake server
+            from fedtail.core import app
+            orig = app.Core.__init__
+
+            def init(core, cfg, where, *a, **kw):
+                kw.setdefault("api_class", FakeApi)
+                orig(core, cfg, where, *a, **kw)
+            with mock.patch.object(app.Core, "__init__", init):
+                real(demo)
+        self.bridge._make = make
+        self.call("start", str(self.files), str(self.cache), "en", False)
+        self.assertFalse(self.call("open")["me"]["merged"])
+        got = self.call("merge", True)
+        self.assertTrue(got["merged"] and got["reload"])
+        core = self.bridge._s["core"]
+        self.assertEqual(list(core.others), ["two"])
+        self.call("pause", True)
+        self.assertTrue(core.primary._paused and core.others["two"]._paused)
+        self.call("merge", False)
+        self.assertFalse(hasattr(self.bridge._s["core"], "others"))
