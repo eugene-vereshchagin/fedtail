@@ -646,7 +646,8 @@ class ComposeScreen(Screen):
                 Binding("ctrl+o", "extras", "📎 " + _("tui_extras")),
                 # Ctrl+R: Textual keeps Ctrl+P for its command palette, above any screen
                 Binding("ctrl+r", "preview", _("preview")),
-                Binding("f7", "spell", _("spell_check")),
+                # priority: Textual's TextArea takes F7 for "select all" otherwise
+                Binding("f7", "spell", _("spell_check"), priority=True),
                 Binding("escape", "leave", _("web_cancel"))]
     CSS = """
     ComposeScreen { layout: vertical; padding: 0 1; }
