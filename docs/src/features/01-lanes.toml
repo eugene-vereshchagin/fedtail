@@ -13,6 +13,7 @@ intro.en = "On the left, the lanes in groups: “Timelines” (from the widest d
 [[feature]]
 id = "timelines"
 status = "has"
+android = "has"
 since = "0.2.0"
 name.ru = "Федерация, Лента, Локальная"
 name.en = "Federated, Home, Local"
@@ -27,6 +28,7 @@ details.en = "“Home” (`home`) — the people you follow, without bots; it op
 [[feature]]
 id = "lane-words"
 status = "has"
+android = "has"
 since = "0.15.0"
 name.ru = "Имена лент в конфиге — как их названия"
 name.en = "Lane names in the config match their titles"
@@ -37,6 +39,7 @@ others = "—"
 [[feature]]
 id = "bots-lane"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Боты отдельной лентой"
 name.en = "Bots in a lane of their own"
@@ -52,6 +55,7 @@ details.en = "Posts of accounts with the “bot” tick leave Home for a lane of
 [[feature]]
 id = "personal-lanes"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Личные ленты"
 name.en = "Personal lanes"
@@ -81,6 +85,9 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 [[feature]]
 id = "lists-as-lanes"
 status = "has"
+android = "partly"
+android_note.ru = "списки читаются лентами; завести, переименовать, удалить — пока нет"
+android_note.en = "lists are read as lanes; creating, renaming, deleting — not yet"
 since = "0.2.0"
 name.ru = "Списки как ленты"
 name.en = "Lists as lanes"
@@ -94,6 +101,9 @@ details.en = "The server's lists are lanes of their own in the “Lists” group
 [[feature]]
 id = "list-replies"
 status = "has"
+android = "no"
+android_note.ru = "правки списков на телефоне нет"
+android_note.en = "no list editing on the phone yet"
 since = "0.20.0"
 name.ru = "Чьи ответы показывать в списке"
 name.en = "Whose replies a list shows"
@@ -107,6 +117,7 @@ details.en = "A list has a choice of which replies go into its lane: replies to 
 [[feature]]
 id = "list-members-leave"
 status = "has"
+android = "has"
 since = "0.3.0"
 name.ru = "Кто в списке — уходит из общих лент"
 name.en = "Who is in a list leaves the general lanes"
@@ -122,6 +133,9 @@ details.en = "Put a person or a bot in a list — their posts, their boosts and 
 [[feature]]
 id = "list-members-order"
 status = "has"
+android = "partly"
+android_note.ru = "порядок лент — плитками; «кто в списке» нет"
+android_note.en = "the lanes' order — by tiles; no “who is in a list”"
 since = "0.13.0"
 name.ru = "Кто в списке; свой порядок списков"
 name.en = "Who is in a list; your own order of lists"
@@ -136,6 +150,9 @@ details.en = "Right click on a list on the left: “Who is in it…” — a tab
 [[feature]]
 id = "list-author-or-booster"
 status = "has"
+android = "no"
+android_note.ru = "«Добавить в список» на телефоне нет"
+android_note.en = "no “Add to list” on the phone yet"
 since = "0.13.0"
 name.ru = "В список — автора или бустнувшего; только тех, на кого подписан"
 name.en = "Into a list — the author or the booster; only people you follow"
@@ -150,6 +167,9 @@ details.en = "A boost's ⋯ menu has two items: “Author to a list (@…)” an
 [[feature]]
 id = "list-after-follow"
 status = "has"
+android = "no"
+android_note.ru = "«Добавить в список» на телефоне нет"
+android_note.en = "no “Add to list” on the phone yet"
 since = "0.11.0"
 name.ru = "Добавить в список сразу после подписки"
 name.en = "Into a list right after a follow"
@@ -164,6 +184,9 @@ details.en = "The server won't take into a list someone you don't follow yet (th
 [[feature]]
 id = "tag-lane"
 status = "has"
+android = "partly"
+android_note.ru = "ленты тегов читаются; подписаться на тег, открыть тег из поста — нет"
+android_note.en = "tag lanes are read; following a tag, opening one from a post — not yet"
 since = "0.2.0"
 name.ru = "Лента хэштега, подписка на теги"
 name.en = "Hashtag lane, following tags"
@@ -178,6 +201,7 @@ details.en = "A click on a #tag opens its lane inside (with `ui.links_in_app`). 
 [[feature]]
 id = "my-likes"
 status = "has"
+android = "has"
 since = "0.8.0"
 name.ru = "Мои лайки"
 name.en = "My likes"
@@ -192,6 +216,7 @@ details.en = "The posts you liked. The lane is off by default."
 [[feature]]
 id = "bookmarks"
 status = "has"
+android = "has"
 since = "0.3.0"
 name.ru = "Закладки"
 name.en = "Bookmarks"
@@ -207,6 +232,9 @@ details.en = "“Bookmark” — with the button under a post (`ui.bookmark_butt
 [[feature]]
 id = "trends"
 status = "has"
+android = "no"
+android_note.ru = "трендов пока нет"
+android_note.en = "no trends yet"
 since = "0.11.0"
 name.ru = "Тренды"
 name.en = "Trends"
@@ -220,6 +248,9 @@ details.en = "Popular tags, links and posts, as your server counts them. GoToSoc
 [[feature]]
 id = "empty-lane-explains"
 status = "has"
+android = "partly"
+android_note.ru = "пустая лента говорит «пока пусто», без причины"
+android_note.en = "an empty lane says “nothing yet”, without why"
 since = "0.11.0"
 name.ru = "Пустая живая лента объясняет, почему пуста"
 name.en = "An empty live lane says why it's empty"
@@ -234,6 +265,9 @@ details.en = "If the server turned the public timelines off (or gives them to it
 [[feature]]
 id = "media-filter"
 status = "has"
+android = "no"
+android_note.ru = "фильтра ленты по медиа нет"
+android_note.en = "no filtering a lane by media"
 since = "0.11.0"
 name.ru = "Фильтр ленты по медиа и бустам"
 name.en = "Filtering a lane by media and boosts"
@@ -250,6 +284,7 @@ details.en = "Over a lane you can leave only text, only pictures, gifs, video or
 [[feature]]
 id = "repeat-boosts"
 status = "has"
+android = "has"
 since = "0.15.0"
 name.ru = "Повторные бусты не поднимают старый пост"
 name.en = "Repeated boosts don't bring an old post up again"
@@ -265,6 +300,9 @@ details.en = "A post comes into a lane once — as itself or with its first boos
 [[feature]]
 id = "all-posts-new"
 status = "has"
+android = "no"
+android_note.ru = "переключателей «Все / Только посты / Разговоры» нет"
+android_note.en = "no “All / Posts only / Conversations” switches"
 since = "0.3.0"
 name.ru = "Всё / Только посты / Новое; Лентой / Беседами"
 name.en = "All / Posts only / New; Feed / Conversations"
@@ -280,6 +318,9 @@ details.en = "Over a lane, two switches. “All / Posts only / New”: with all 
 [[feature]]
 id = "find-in-lane"
 status = "has"
+android = "no"
+android_note.ru = "поиск в переключателе — по лентам, не по постам"
+android_note.en = "the switcher finds lanes, not posts"
 since = "0.2.0"
 name.ru = "Поиск по ленте"
 name.en = "Find in a lane"
@@ -295,6 +336,7 @@ details.en = "`Ctrl+F` finds in the open lane by text, nick, `#id` and picture c
 [[feature]]
 id = "send-no-doubles"
 status = "has"
+android = "has"
 since = "0.16.0"
 name.ru = "Отправка на медленный сервер без дублей"
 name.en = "Sending to a slow server without doubles"
@@ -307,6 +349,9 @@ clients = []
 [[feature]]
 id = "find-everywhere"
 status = "has"
+android = "no"
+android_note.ru = "поиска по всем лентам нет"
+android_note.en = "no finding in every lane"
 since = "0.16.0"
 name.ru = "Поиск во всех лентах сразу"
 name.en = "Find in every lane at once"
@@ -323,6 +368,9 @@ details.en = "The “In every lane” tick in the `Ctrl+F` bar: you remember a p
 [[feature]]
 id = "search"
 status = "has"
+android = "no"
+android_note.ru = "поиска людей, тегов и постов нет"
+android_note.en = "no finding people, tags and posts"
 since = "0.2.0"
 name.ru = "Поиск людей, тегов и постов"
 name.en = "Finding people, tags and posts"
@@ -337,6 +385,9 @@ details.en = "Search on the server: people, tags, posts (as far as the server in
 [[feature]]
 id = "tag-groups"
 status = "has"
+android = "partly"
+android_note.ru = "читаются; собрать — только на компьютере или в конфиге"
+android_note.en = "read; made only on the desktop or in the config"
 since = "0.14.0"
 name.ru = "Лента из нескольких тегов"
 name.en = "A lane of several tags"
@@ -353,6 +404,7 @@ details.en = "Type `#грузия #georgia -#politics` in the search: one lane o
 [[feature]]
 id = "columns"
 status = "has"
+android = "has"
 since = "0.14.0"
 name.ru = "Колонки рядом"
 name.en = "Columns side by side"
@@ -369,6 +421,9 @@ details.en = "Several lanes on screen at once, in columns. By default — one la
 [[feature]]
 id = "roster"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.17.0"
 name.ru = "Раскладка как в аське: ростер и окно сообщений"
 name.en = "A messenger's layout: a roster and a messages window"
@@ -397,6 +452,9 @@ details.en = "Shared sets of accounts. Coming once GoToSocial has them."
 [[feature]]
 id = "remote-public-timeline"
 status = "has"
+android = "no"
+android_note.ru = "ленты чужого сервера пока нет"
+android_note.en = "not yet"
 since = "0.20.0"
 name.ru = "Публичная лента чужого сервера"
 name.en = "Another server's public timeline"
@@ -411,6 +469,9 @@ details.en = "≡ → “Another server's lane…”: a server's name — and it
 [[feature]]
 id = "link-timeline"
 status = "has"
+android = "no"
+android_note.ru = "«Кто ещё делился ссылкой» нет в меню поста"
+android_note.en = "no “Who else shared this link” in a post's menu"
 since = "0.20.0"
 name.ru = "Лента по ссылке (Mastodon 4.3+)"
 name.en = "A link's timeline (Mastodon 4.3+)"

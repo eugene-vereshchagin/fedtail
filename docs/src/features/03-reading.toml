@@ -7,6 +7,7 @@ title.en = "Read marks and place"
 [[feature]]
 id = "oldest-first"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Порядок «старое сверху», ничего не прыгает"
 name.en = "Oldest on top, nothing jumps"
@@ -22,6 +23,7 @@ details.en = "`feed.order = \"oldest_first\"` — oldest on top, you read downwa
 [[feature]]
 id = "catch-up"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Догонять ленту без дыр"
 name.en = "Catching up with no holes"
@@ -36,6 +38,7 @@ details.en = "Lanes meant to be read to the end catch up forward from the last k
 [[feature]]
 id = "mark-read"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Когда пост считается прочитанным"
 name.en = "When a post counts as read"
@@ -51,6 +54,7 @@ details.en = "`\"on_scroll\"` — when you've scrolled past the whole post; `\"o
 [[feature]]
 id = "own-posts-read"
 status = "has"
+android = "has"
 since = "0.13.0"
 name.ru = "Свои посты всегда прочитаны"
 name.en = "Your own posts are always read"
@@ -64,6 +68,7 @@ details.en = "A post you wrote is read, wherever it came from: from Tusky at nig
 [[feature]]
 id = "first-run"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Первый запуск не начинается с завала"
 name.en = "The first run doesn't start with a pile"
@@ -77,6 +82,7 @@ details.en = "At the very first run, everything fetched counts as read."
 [[feature]]
 id = "markers"
 status = "has"
+android = "has"
 since = "0.8.0"
 name.ru = "Позиция чтения общая с другими клиентами"
 name.en = "The reading place is shared with other clients"
@@ -90,6 +96,7 @@ details.en = "Read Home or mentions to the end on the phone — here it's read t
 [[feature]]
 id = "device-sync"
 status = "has"
+android = "has"
 since = "0.18.0"
 name.ru = "Прочитанное, подписки на треды и порядок лент — общие на всех твоих устройствах"
 name.en = "Read marks, thread subscriptions and lane order shared by all your devices"
@@ -105,6 +112,7 @@ details.en = "Read a post on the laptop — it's read on the desktop; follow a t
 [[feature]]
 id = "build-around"
 status = "has"
+android = "has"
 since = "0.11.0"
 name.ru = "Карточки строятся вокруг места чтения"
 name.en = "Cards are built around the reading place"
@@ -120,6 +128,9 @@ details.en = "When a lane opens, `build_at_once` cards are built around where yo
 [[feature]]
 id = "esc-curtain"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне нет Esc"
+android_note.en = "a phone has no Esc"
 since = "0.3.0"
 name.ru = "Esc — шторка, а не закрытие окна"
 name.en = "Esc draws a curtain instead of closing the window"

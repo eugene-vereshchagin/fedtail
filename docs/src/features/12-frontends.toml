@@ -11,6 +11,9 @@ intro.en = "The core knows nothing about a GUI; interfaces are plugins. Which on
 [[feature]]
 id = "qt"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.1.0"
 name.ru = "Окно на Qt"
 name.en = "A Qt window"
@@ -21,6 +24,9 @@ others.en = "the main one"
 [[feature]]
 id = "cli"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.9.0"
 name.ru = "Команды в терминале"
 name.en = "Commands in a terminal"
@@ -33,6 +39,7 @@ details.en = "`fedtail lanes`, `fedtail show replies -n 20`, `fedtail tail` (the
 [[feature]]
 id = "android"
 status = "partly"
+android = "has"
 since = "0.19.0"
 name.ru = "Android: телефон и планшет"
 name.en = "Android: a phone and a tablet"
@@ -46,6 +53,9 @@ details.en = "An APK in every release (`fedtail-X.Y.Z-android.apk`), dev builds 
 [[feature]]
 id = "tui"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.10.0"
 name.ru = "Терминальный интерфейс (Textual)"
 name.en = "A terminal interface (Textual)"
@@ -58,6 +68,9 @@ details.en = "Lanes on the left, posts on the right, the command line at the bot
 [[feature]]
 id = "web"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.10.0"
 name.ru = "Веб на localhost"
 name.en = "Web on localhost"
@@ -71,6 +84,9 @@ details.en = "fedtail in a browser tab: lanes, threads as trees, profiles, a “
 [[feature]]
 id = "tui-full"
 status = "partly"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.19.0"
 name.ru = "Терминал — всё, что в окнах"
 name.en = "The terminal — everything the windows have"
@@ -83,6 +99,9 @@ details.en = "Since 0.19: a post's menu `.` (⋯) — the windows' items, doing 
 [[feature]]
 id = "web-full"
 status = "partly"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.19.0"
 name.ru = "Веб — всё, что в окнах"
 name.en = "The web — everything the windows have"
@@ -95,6 +114,9 @@ details.en = "Since 0.19 the ≡ menu has every place, at the side: search (`/`)
 [[feature]]
 id = "gtk"
 status = "has"
+android = "na"
+android_note.ru = "на телефоне не нужно"
+android_note.en = "not a phone thing"
 since = "0.17.0"
 name = "GTK4 + libadwaita"
 config = "`ui.frontend = \"gtk\"`, `ui.adwaita`"

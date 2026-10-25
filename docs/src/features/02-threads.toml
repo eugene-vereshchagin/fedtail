@@ -7,6 +7,7 @@ title.en = "Threads"
 [[feature]]
 id = "thread-tree"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Тред деревом, комменты с номерами"
 name.en = "A thread as a tree, comments numbered"
@@ -21,6 +22,7 @@ details.en = "A thread opens as a tree: every reply under what it answers, every
 [[feature]]
 id = "reply-context"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Над ответом — на что он отвечает"
 name.en = "Over a reply — what it answers"
@@ -35,6 +37,7 @@ details.en = "Over a reply in a lane, a strip “↪ in reply to…” with the 
 [[feature]]
 id = "complete-threads"
 status = "has"
+android = "has"
 since = "0.3.0"
 name.ru = "Тред целиком: ответы с сервера автора"
 name.en = "A whole thread: replies from the author's server"
@@ -51,6 +54,7 @@ details.en = "Your server knows only the replies that reached it, so other peopl
 [[feature]]
 id = "async-refresh"
 status = "has"
+android = "has"
 since = "0.8.0"
 name.ru = "Тред дорастает, когда Mastodon дособрал ответы"
 name.en = "A thread grows when Mastodon has gathered the replies"
@@ -66,6 +70,7 @@ details.en = "Mastodon 4.5+ gathers missing replies itself and says when it's do
 [[feature]]
 id = "thread-subs"
 status = "has"
+android = "has"
 since = "0.2.0"
 name.ru = "Подписки на треды, как на Point"
 name.en = "Thread subscriptions, as on Point"
@@ -81,6 +86,9 @@ details.en = "The server tells you only of replies that mention you: if two peop
 [[feature]]
 id = "mute-thread"
 status = "has"
+android = "no"
+android_note.ru = "заглушить тред из меню поста нельзя"
+android_note.en = "a thread can't be muted from a post's menu"
 since = "0.11.0"
 name.ru = "Заглушить тред"
 name.en = "Mute a thread"
@@ -95,6 +103,9 @@ details.en = "Notifications from the thread stop coming and its subscription goe
 [[feature]]
 id = "long-form"
 status = "has"
+android = "no"
+android_note.ru = "«Весь текст» с сервера автора нет"
+android_note.en = "no “the whole text” from the author's server"
 since = "0.14.0"
 name.ru = "Длинные тексты и события"
 name.en = "Long texts and events"

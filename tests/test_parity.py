@@ -60,6 +60,24 @@ class CheckLogicTest(unittest.TestCase):
         got = parity.check({"capability": [cap(tui="no", web="no")]}, have)
         self.assertTrue(any("tui is marked \"no\" but shows every word" in p for p in got))
 
+    def test_the_phone_is_said_everywhere(self):
+        """Android has its own screens and words: its column is said by hand, for every
+        capability and every feature the desktop has — and why, when it isn't "has"."""
+        problems = parity.check_android()
+        self.assertEqual(problems, [], "\n" + "\n".join(problems))
+        got = parity.check_android(
+            {"capability": [cap(), cap(id="y", android="maybe"),
+                            cap(id="z", android="no", android_note={"ru": "нет"})]},
+            [("01.toml", {"id": "f1", "status": "has"}),
+             ("01.toml", {"id": "f2", "status": "planned"}),
+             ("01.toml", {"id": "f3", "status": "partly", "android": "na",
+                          "android_note": {"en": "no"}})])
+        text = "\n".join(got)
+        for want in ("x: android — say", "y: android = 'maybe'", "z: android_note.en",
+                     "01.toml: f1: android — say", "01.toml: f3: android_note.ru"):
+            self.assertIn(want, text)
+        self.assertNotIn("f2", text)  # planned: nothing to say yet
+
     def test_the_registry_itself(self):
         bad = cap(tui="maybe", web="na", keys=["about", "no_such_word_at_all"],
                   note={"ru": "только по-русски"}, name={"ru": "x"})

@@ -7,6 +7,9 @@ title.en = "The application"
 [[feature]]
 id = "themes"
 status = "has"
+android = "partly"
+android_note.ru = "одна тема («спокойная»), светлая и тёмная по телефону"
+android_note.en = "one theme (“calm”), light and dark as the phone is"
 since = "0.1.0"
 name.ru = "Темы файлами"
 name.en = "Themes as files"
@@ -22,6 +25,9 @@ details.en = "Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classi
 [[feature]]
 id = "try-theme"
 status = "has"
+android = "no"
+android_note.ru = "другие темы — позже"
+android_note.en = "other themes — later"
 since = "0.15.0"
 name.ru = "Попробовать тему без перезапуска"
 name.en = "Trying a theme without a restart"
@@ -34,6 +40,7 @@ clients = ["Phanpy", "Elk", "Ice Cubes"]
 [[feature]]
 id = "config-chapters"
 status = "has"
+android = "has"
 since = "0.6.1"
 name.ru = "Конфиг файлом по главам"
 name.en = "The config as a file in chapters"
@@ -48,6 +55,7 @@ details.en = "The program only reads the config. A new version brought settings 
 [[feature]]
 id = "config-reference"
 status = "has"
+android = "has"
 since = "0.13.0"
 name.ru = "Справочник настроек"
 name.en = "The settings reference"
@@ -63,6 +71,9 @@ details.en = "The config reference, built from the example configs: every settin
 [[feature]]
 id = "window-tray-keys"
 status = "has"
+android = "na"
+android_note.ru = "окна, трея и клавиш у телефона нет"
+android_note.en = "a phone has no window, tray or keys"
 since = "0.8.0"
 name.ru = "Окно, трей, клавиши"
 name.en = "Window, tray, keys"
@@ -76,6 +87,7 @@ details.en = "The cross hides to the tray; the tray icon can go altogether (`ui.
 [[feature]]
 id = "links-inside"
 status = "has"
+android = "has"
 since = "0.2.0"
 name.ru = "Ссылки на посты и профили — внутри"
 name.en = "Links to posts and profiles — inside"
@@ -89,6 +101,9 @@ details.en = "@mentions, #tags and links to fediverse posts and profiles open in
 [[feature]]
 id = "open-url"
 status = "has"
+android = "no"
+android_note.ru = "ссылки на посты из других приложений не открываются в fedtail"
+android_note.en = "links to posts from other apps don't open in fedtail"
 since = "0.14.0"
 name.ru = "Открыть ссылку в запущенном fedtail"
 name.en = "Open a link in the running fedtail"
@@ -105,6 +120,7 @@ details.en = "`fedtail open URL` from a terminal or a browser opens a post or a 
 [[feature]]
 id = "local-store"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Всё хранится локально, читается без сети"
 name.en = "Everything is stored locally, readable offline"
@@ -118,6 +134,7 @@ clients = ["Tusky", "Ice Cubes"]
 [[feature]]
 id = "days-long"
 status = "has"
+android = "has"
 since = "0.11.0"
 name.ru = "Открыт сутками без раздувания"
 name.en = "Open for days without bloating"
@@ -131,6 +148,7 @@ details.en = "A lane not opened for `unload_hidden_minutes` minutes lets its car
 [[feature]]
 id = "poll-stream"
 status = "has"
+android = "has"
 since = "0.9.0"
 name.ru = "Опрос сервера и живой поток"
 name.en = "Polling the server and the live stream"
@@ -144,6 +162,7 @@ details.en = "A poll every `interval_seconds` (at least 30). The live stream (`\
 [[feature]]
 id = "human-errors"
 status = "has"
+android = "has"
 since = "0.13.0"
 name.ru = "Ошибки по-человечески и без спама"
 name.en = "Errors in plain words and without spam"
@@ -157,6 +176,9 @@ details.en = "A server behind a proxy is down — instead of Cloudflare's HTML p
 [[feature]]
 id = "debug-log"
 status = "has"
+android = "partly"
+android_note.ru = "лог — в отчёте самопроверки"
+android_note.en = "the log comes in the self-check's report"
 since = "0.2.0"
 name.ru = "Подробный журнал для отчётов об ошибках"
 name.en = "A detailed log for bug reports"
@@ -172,6 +194,9 @@ details.en = "In the debugging mode (`mode = \"auto\"` — on in development ver
 [[feature]]
 id = "report-repo"
 status = "has"
+android = "no"
+android_note.ru = "отчёт — «Поделиться», не в репозиторий"
+android_note.en = "the report is shared, not sent to a repository"
 since = "0.19.0"
 name.ru = "Отчёт сразу в свой закрытый репозиторий"
 name.en = "A bug report straight into your private repository"
@@ -183,6 +208,9 @@ details.en = "With `debug.report_repo` set (`\"user/repo\"` on GitHub or any git
 [[feature]]
 id = "report-issue"
 status = "has"
+android = "partly"
+android_note.ru = "«Поделиться отчётом» из самопроверки"
+android_note.en = "“Share the report” from the self-check"
 since = "0.19.0"
 name.ru = "Сообщить об ошибке на GitHub — с проверкой"
 name.en = "Report a bug on GitHub — checked first"
@@ -194,6 +222,9 @@ details.en = "≡ → “Report a bug on GitHub…” in all four interfaces: a 
 [[feature]]
 id = "federation-status"
 status = "has"
+android = "no"
+android_note.ru = "пока нет"
+android_note.en = "not yet"
 since = "0.16.0"
 name.ru = "Состояние федерации: как живёт моя нода и что не получается"
 name.en = "Federation status: how my server is doing and what fails"
@@ -208,6 +239,9 @@ details.en = "≡ → “Debugging” → “Federation status”: problems that
 [[feature]]
 id = "leak-hunt"
 status = "has"
+android = "na"
+android_note.ru = "инструмент для компьютера"
+android_note.en = "a desktop tool"
 since = "0.14.0"
 name.ru = "Поиск утечек: тренды, перепись объектов, снимки памяти"
 name.en = "Leak hunting: trends, an object census, memory snapshots"
@@ -222,6 +256,7 @@ details.en = "For days-long runs. With every stats line — a `trend` line: memo
 [[feature]]
 id = "db-cleanup"
 status = "has"
+android = "has"
 since = "0.17.0"
 name.ru = "База не растёт без конца: чистка и бюджет места"
 name.en = "The database doesn't grow for ever: cleanup and a size budget"
@@ -234,6 +269,9 @@ details.en = "Every `gc_hours` (and at the first poll after start) posts nothing
 [[feature]]
 id = "screen-readers"
 status = "partly"
+android = "partly"
+android_note.ru = "подписи есть у части кнопок и картинок"
+android_note.en = "some buttons and pictures are labelled"
 since = "0.9.0"
 name.ru = "Экранные дикторы"
 name.en = "Screen readers"
@@ -246,6 +284,7 @@ details.en = "Picture descriptions and button names for screen readers are there
 [[feature]]
 id = "ui-language"
 status = "has"
+android = "has"
 since = "0.1.0"
 name.ru = "Язык интерфейса"
 name.en = "Interface language"
@@ -285,6 +324,9 @@ note.en = "It's unclear what this would add over a file readable by its owner on
 [[feature]]
 id = "help"
 status = "has"
+android = "no"
+android_note.ru = "справки в приложении нет"
+android_note.en = "no help inside the app"
 since = "0.17.0"
 name.ru = "Справка внутри, на двух языках"
 name.en = "Help inside, in two languages"
@@ -298,6 +340,9 @@ details.en = "A panel in the main window, like the compose panel: the contents o
 [[feature]]
 id = "whats-this"
 status = "has"
+android = "na"
+android_note.ru = "наводить мышь нечем"
+android_note.en = "nothing to hover with"
 since = "0.17.0"
 name.ru = "«Что это?»: подробная подсказка о любой кнопке"
 name.en = "“What's this?”: a longer hint about any button"
@@ -313,6 +358,9 @@ details.en = "Turn it on, and hovering shows a longer hint instead of the short 
 [[feature]]
 id = "sound-scheme"
 status = "has"
+android = "na"
+android_note.ru = "звука на телефоне нет"
+android_note.en = "no sound on the phone"
 since = "0.19.0"
 name.ru = "Звуковая схема"
 name.en = "A sound scheme"

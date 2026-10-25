@@ -7,6 +7,9 @@ title.en = "Notifications and activity"
 [[feature]]
 id = "desktop-notify"
 status = "has"
+android = "no"
+android_note.ru = "системных уведомлений пока нет"
+android_note.en = "no system notifications yet"
 since = "0.2.0"
 name.ru = "Уведомления рабочего стола с уровнями приватности"
 name.en = "Desktop notifications with privacy levels"
@@ -22,6 +25,7 @@ details.en = "Which lanes to notify about — `notify.lanes` (the same names as 
 [[feature]]
 id = "activity"
 status = "has"
+android = "has"
 since = "0.2.0"
 name.ru = "Активность: лайки, бусты, подписки"
 name.en = "Activity: likes, boosts, follows"
@@ -36,6 +40,7 @@ details.en = "The “Activity” lane: who liked, boosted, followed, a poll ende
 [[feature]]
 id = "grouping"
 status = "has"
+android = "has"
 since = "0.2.0"
 name.ru = "Группировка уведомлений"
 name.en = "Grouping notifications"
@@ -50,6 +55,7 @@ clients = ["Mastodon web", "Ivory", "Phanpy", "Ice Cubes"]
 [[feature]]
 id = "approvals"
 status = "has"
+android = "has"
 since = "0.13.0"
 name.ru = "Одобрить ответ, лайк, буст (GoToSocial)"
 name.en = "Approve a reply, like, boost (GoToSocial)"
@@ -64,6 +70,9 @@ details.en = "Interaction requests waiting for approval under your who-may-do-wh
 [[feature]]
 id = "filtered-notify"
 status = "has"
+android = "no"
+android_note.ru = "«Отфильтрованных уведомлений» нет"
+android_note.en = "no “Filtered notifications”"
 since = "0.9.0"
 name.ru = "Уведомления от незнакомцев отдельно"
 name.en = "Notifications from strangers apart"
@@ -77,6 +86,9 @@ details.en = "Mastodon holds back mentions from unknown and new accounts until y
 [[feature]]
 id = "server-notices"
 status = "has"
+android = "partly"
+android_note.ru = "приходят в «Активность»; отдельного показа нет"
+android_note.en = "they come into Activity; not shown apart"
 since = "0.14.0"
 name.ru = "Порванные связи и предупреждения модераторов"
 name.en = "Severed relationships and moderators' warnings"
@@ -91,6 +103,9 @@ details.en = "When your server blocks another one (or the other way round) and y
 [[feature]]
 id = "dismiss"
 status = "has"
+android = "no"
+android_note.ru = "убрать уведомление нельзя"
+android_note.en = "no dismissing a notification"
 since = "0.11.0"
 name.ru = "Убрать уведомление, очистить все"
 name.en = "Dismiss a notification, clear them all"
@@ -103,6 +118,9 @@ clients = ["all"]
 [[feature]]
 id = "announcements"
 status = "has"
+android = "no"
+android_note.ru = "объявлений сервера нет"
+android_note.en = "no server announcements"
 since = "0.9.0"
 name.ru = "Объявления сервера"
 name.en = "Server announcements"
@@ -116,6 +134,9 @@ details.en = "`\"banner\"` — a strip over the lane until you press “Got it�
 [[feature]]
 id = "icon-count"
 status = "has"
+android = "no"
+android_note.ru = "числа на значке нет"
+android_note.en = "no number on the icon"
 since = "0.3.0"
 name.ru = "Число непрочитанного на иконке"
 name.en = "The unread number on the icon"
@@ -130,6 +151,7 @@ details.en = "In the tray and on the task bar button (KDE: needs the entry from 
 [[feature]]
 id = "dm-read"
 status = "has"
+android = "has"
 since = "0.11.0"
 name.ru = "ЛС, прочитанные здесь, прочитаны и на сервере"
 name.en = "Direct messages read here are read on the server too"
@@ -143,6 +165,9 @@ clients = []
 [[feature]]
 id = "push"
 status = "partly"
+android = "no"
+android_note.ru = "push (UnifiedPush) — позже"
+android_note.en = "push (UnifiedPush) — later"
 since = "0.20.0"
 name.ru = "Push-уведомления (Web Push, UnifiedPush)"
 name.en = "Push notifications (Web Push, UnifiedPush)"
@@ -158,6 +183,7 @@ details.en = "The web page subscribes the browser to push right at your server (
 [[feature]]
 id = "grouped-v2"
 status = "has"
+android = "has"
 since = "0.18.0"
 name.ru = "Сгруппированные уведомления сервера (v2)"
 name.en = "The server's grouped notifications (v2)"

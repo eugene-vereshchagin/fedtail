@@ -66,14 +66,21 @@ L = {
         "chapter": "Раздел", "size": "Размер", "why": "Почему", "more": "Подробнее",
         "contents": "Содержание", "in_progress": "в работе",
         "ap_title": "ActivityPub напрямую",
-        "parity_title": "Четыре интерфейса",
-        "parity_intro": "fedtail — это окно Qt (KDE, Windows), окно GTK (GNOME), терминал и "
-                        "веб-страница; ядро у них одно, и почти всё есть везде. Ниже — только "
+        "parity_title": "Пять интерфейсов",
+        "parity_intro": "fedtail — это окно Qt (KDE, Windows), окно GTK (GNOME), терминал, "
+                        "веб-страница и приложение для Android; ядро у них одно. Ниже — только "
                         "то, что есть не везде, и почему. ✓ — есть, ◐ — частично, — — нет, "
                         "· — там не нужно. Таблицу держит в честности тест: функция, которая "
-                        "появилась или пропала в одном интерфейсе, без строчки здесь не "
-                        "пройдёт.",
-        "parity_head": ["Что", "Qt", "GTK", "Терминал", "Веб", "Почему"],
+                        "появилась или пропала в одном из компьютерных интерфейсов, без "
+                        "строчки здесь не пройдёт; у телефона свои экраны и слова — его "
+                        "столбец сверен по коду руками, а всё, чего на телефоне пока нет, — в "
+                        "следующей главе.",
+        "parity_head": ["Что", "Qt", "GTK", "Терминал", "Веб", "Android", "Почему"],
+        "android_title": "Android: что на телефоне есть и чего пока нет",
+        "android_intro": "Возможности из списка выше, которых в приложении для Android нет или "
+                         "есть не целиком (◐ — частично, — — нет, · — телефону не нужно). "
+                         "Остальное на телефоне есть.",
+        "android_head": ["Что", "Android", "Почему"],
         "parity_areas": {"window": "Окно, аккаунты, вход", "reading": "Чтение",
                          "media": "Картинки и видео", "writing": "Редактор",
                          "app": "Сервер, настройки, справка, отладка"},
@@ -108,14 +115,21 @@ L = {
         "chapter": "Chapter", "size": "Size", "why": "Why", "more": "In detail",
         "contents": "Contents", "in_progress": "in progress",
         "ap_title": "ActivityPub directly",
-        "parity_title": "Four interfaces",
+        "parity_title": "Five interfaces",
         "parity_intro": "fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a "
-                        "terminal and a web page; they share one core, and nearly everything is "
-                        "in all of them. Below is only what isn't everywhere, and why. ✓ — "
-                        "has it, ◐ — in part, — — no, · — doesn't belong there. A test keeps "
-                        "the table honest: a function that appears or goes in one interface "
-                        "doesn't pass without its line here.",
-        "parity_head": ["What", "Qt", "GTK", "Terminal", "Web", "Why"],
+                        "terminal, a web page and an Android app; they share one core. Below is "
+                        "only what isn't everywhere, and why. ✓ — has it, ◐ — in part, — — no, "
+                        "· — doesn't belong there. A test keeps the table honest: a function "
+                        "that appears or goes in one of the desktop interfaces doesn't pass "
+                        "without its line here; the phone has screens and words of its own — "
+                        "its column is checked against its code by hand, and all the phone "
+                        "lacks so far is in the next chapter.",
+        "parity_head": ["What", "Qt", "GTK", "Terminal", "Web", "Android", "Why"],
+        "android_title": "Android: what the phone has and hasn't yet",
+        "android_intro": "The features of the list above that the Android app lacks or has in "
+                         "part (◐ — in part, — — no, · — a phone doesn't need it). All the "
+                         "rest the phone has.",
+        "android_head": ["What", "Android", "Why"],
         "parity_areas": {"window": "The window, accounts, logging in", "reading": "Reading",
                          "media": "Pictures and video", "writing": "The editor",
                          "app": "The server, settings, help, debugging"},
@@ -289,8 +303,8 @@ def render_features(chapters, lang):
     v = version()
     shown = v.split(".dev")[0] + (f" ({t['in_progress']})" if ".dev" in v else "")
     titles = [_t(ch["title"], lang) for ch in chapters]
-    titles += [t["parity_title"], t["ap_title"], t["plans_title"], t["wont_title"],
-               t["undecided_title"]]
+    titles += [t["parity_title"], t["android_title"], t["ap_title"], t["plans_title"],
+               t["wont_title"], t["undecided_title"]]
     contents = " · ".join(f"[{x}](#{_anchor(x)})" for x in titles)
     out = [head.replace("@VERSION@", shown).replace("@CONTENTS@", contents).rstrip(), ""]
     for ch in chapters:
@@ -312,6 +326,7 @@ def render_features(chapters, lang):
             out += ["</details>"]
         out.append("")
     out += ["---", "", render_parity(lang).rstrip(), ""]
+    out += ["---", "", render_android(chapters, lang).rstrip(), ""]
     out += ["---", "", f"## {t['ap_title']}", "", t["ap_intro"], ""]
     out += _table([t["what"], t["status_col"], t["config"]],
                   [[_t(f["name"], lang), _status(f, lang), _t(f.get("config"), lang)]
@@ -324,8 +339,34 @@ PARITY_MARK = {"has": "✓", "partly": "◐", "no": "—", "na": "·"}
 PARITY = ROOT / "docs" / "src" / "parity.toml"
 
 
+FIVE = ("qt", "gtk", "tui", "web", "android")
+
+
+def _with_android(note, android_note, lang):
+    a = _t(android_note, lang)
+    n = _t(note, lang)
+    return " ".join(x for x in (n, f"Android: {a}" if a else "") if x)
+
+
+def render_android(chapters, lang):
+    """The phone's chapter: every feature the desktop has that the Android app lacks or
+    has in part, by chapter, with why (docs/src/features: android, android_note)."""
+    t = L[lang]
+    out = [f"## {t['android_title']}", "", t["android_intro"], ""]
+    for ch in chapters:
+        rows = [f for f in ch.get("feature", []) if f["status"] in ("has", "partly")
+                and f.get("android", "has") != "has"]
+        if not rows:
+            continue
+        out += [f"### {_t(ch['title'], lang)}", ""]
+        out += _table(t["android_head"], [[_t(f["name"], lang), PARITY_MARK[f["android"]],
+                                           _t(f.get("android_note"), lang)] for f in rows])
+        out.append("")
+    return "\n".join(out).rstrip() + "\n"
+
+
 def render_parity(lang):
-    """The "Four interfaces" chapter: what isn't in all of them, from docs/src/parity.toml
+    """The "Five interfaces" chapter: what isn't in all of them, from docs/src/parity.toml
     (which tests/test_parity.py holds against the code)."""
     import tomllib
     t = L[lang]
@@ -335,14 +376,13 @@ def render_parity(lang):
     caps = reg.get("capability", [])
     for area, title in t["parity_areas"].items():
         rows = [c for c in caps if c.get("area") == area
-                and any(c.get(fe, "has") != "has" for fe in ("qt", "gtk", "tui", "web"))]
+                and any(c.get(fe, "has") != "has" for fe in FIVE)]
         if not rows:
             continue
         out += [f"### {title}", ""]
         out += _table(t["parity_head"], [
-            [_t(c["name"], lang)] + [PARITY_MARK[c.get(fe, "has")]
-                                     for fe in ("qt", "gtk", "tui", "web")]
-            + [_t(c.get("note"), lang)] for c in rows])
+            [_t(c["name"], lang)] + [PARITY_MARK[c.get(fe, "has")] for fe in FIVE]
+            + [_with_android(c.get("note"), c.get("android_note"), lang)] for c in rows])
         out.append("")
     return "\n".join(out).rstrip() + "\n"
 
@@ -492,6 +532,7 @@ def build():
         out[d / "parts" / "whats-new.md"] = render_new(chapters, lang)
         out[d / "parts" / "roadmap.md"] = render_roadmap(chapters, lang)
         out[d / "parts" / "parity.md"] = render_parity(lang)
+        out[d / "parts" / "android.md"] = render_android(chapters, lang)
         example = config_doc.example_path(lang)
         out[d / "config.md"] = config_doc.build(example.read_text("utf-8"), lang)
     # parts first (they include nothing), then the generated pages, then the rest — so

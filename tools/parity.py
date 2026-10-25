@@ -114,6 +114,52 @@ def status(cap, fe):
     return cap.get(fe, "has")
 
 
+FEATURES = ROOT / "docs" / "src" / "features"
+
+
+def features():
+    """Every feature of docs/src/features/*.toml: [(file name, feature)]."""
+    import tomllib
+    out = []
+    for f in sorted(FEATURES.glob("*.toml")):
+        with open(f, "rb") as fh:
+            out += [(f.name, x) for x in tomllib.load(fh).get("feature", [])]
+    return out
+
+
+def _android_note(where, item, st, problems):
+    if st not in STATUSES:
+        problems.append(f"{where}: android = {st!r}; one of {', '.join(STATUSES)}")
+    elif st != "has":
+        for lang in ("ru", "en"):
+            if not (item.get("android_note") or {}).get(lang):
+                problems.append(f"{where}: android_note.{lang} — say why")
+
+
+def check_android(reg=None, feats=None):
+    """The phone's column (android/ has its own screens and words, so the check by i18n
+    keys doesn't reach it — it is said by hand): every capability of the registry and
+    every feature the desktop has (or has in part) says the phone's status, and why when
+    it isn't "has", in both languages. [] when all is said."""
+    reg = registry() if reg is None else reg
+    feats = features() if feats is None else feats
+    problems = []
+    for cap in reg.get("capability", []):
+        if "android" not in cap:
+            problems.append(f"{cap.get('id', '?')}: android — say the phone's status")
+            continue
+        _android_note(cap.get("id", "?"), cap, cap["android"], problems)
+    for name, f in feats:
+        if f.get("status") not in ("has", "partly"):
+            continue
+        where = f"{name}: {f.get('id', '?')}"
+        if "android" not in f:
+            problems.append(f"{where}: android — say the phone's status")
+            continue
+        _android_note(where, f, f["android"], problems)
+    return problems
+
+
 def check(reg=None, have=None):
     """What the registry (docs/src/parity.toml) and the code disagree on: a word one
     interface shows and another doesn't, explained nowhere; an interface marked "has"
