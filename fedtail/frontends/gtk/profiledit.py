@@ -131,7 +131,7 @@ class ProfileEditor:
                 pic.set_can_shrink(True)
                 pic.set_content_fit(Gtk.ContentFit.COVER)
                 self.header_pic.set_child(pic)
-            self.win.images.get(url, show)
+            self.win.images.get(url, show, owner=self.header_pic)
 
     def _suggest(self, tags):
         """featured_tag_suggestions: a button per tag; a click features it."""

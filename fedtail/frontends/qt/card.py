@@ -336,7 +336,7 @@ class PostRow(QWidget):
                 return []
             return missing
         for url in set(render()):
-            self.ctx.images.get(url, lambda _pm: render(), 128)
+            self.ctx.images.get(url, lambda _pm: render(), 128, owner=lab)
         return lab
 
     def _build(self):
@@ -531,7 +531,8 @@ class PostRow(QWidget):
             avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
             self.ctx.images.get(acc.avatar_static,
-                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
+                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
+                                owner=avatar)
         line = QHBoxLayout()
         line.setSpacing(6)
         # "stacked" (point.im): the name alone on top, @address · time · … under it
@@ -656,7 +657,8 @@ class PostRow(QWidget):
             avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar)
             self.ctx.images.get(acc.avatar_static,
-                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)))
+                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
+                                owner=avatar)
         user, _sep, host = acc.handle.partition("@")
         h.addWidget(self._label(link("account", acc.id, "@" + esc(user), self.theme.css("text"),
                                      bold=True), "name", wrap=False))
@@ -1129,7 +1131,7 @@ class PostRow(QWidget):
 
             def got(pm, lab=pic):
                 _set(lab, _fit(pm, side, side, 0))
-            self.ctx.images.get(c.image, got)
+            self.ctx.images.get(c.image, got, owner=pic)
             h.addWidget(pic, 0, Qt.AlignmentFlag.AlignTop)
         else:
             h.setContentsMargins(10, 0, 10, 0)
@@ -1194,7 +1196,8 @@ class PostRow(QWidget):
                 return
             if upgrade:
                 self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)),
-                                    big=True, **({"max_side": side} if side else {}))
+                                    big=True, owner=lab,
+                                    **({"max_side": side} if side else {}))
 
         def failed():
             if fallback and fallback != src:
@@ -1207,7 +1210,7 @@ class PostRow(QWidget):
         # the original named: once it comes (opened in the viewer), a preview that gave up
         # is asked again instead of staying broken
         self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big,
-                            **({"max_side": side} if side else {}))
+                            owner=lab, **({"max_side": side} if side else {}))
 
 
 def _set(lab, pm):

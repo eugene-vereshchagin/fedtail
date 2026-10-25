@@ -14,6 +14,7 @@ import logging
 import os
 import threading
 import time
+import weakref
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -46,6 +47,27 @@ def _where(url):
     its cache file — not the address, which may carry a signature."""
     from urllib.parse import urlsplit
     return f"{urlsplit(url).hostname or '?'}/{hashlib.sha1(url.encode()).hexdigest()[:8]}"
+
+
+def _weakly(owner, fn):
+    """fn kept alive by owner, and a stand-in that calls it while it lives."""
+    try:
+        kept = owner.__dict__.setdefault("_ft_picture_callbacks", [])
+    except (AttributeError, TypeError):  # an owner without a __dict__: as it was
+        return fn
+    if len(kept) > 64:  # an owner asked over and over: the oldest go
+        del kept[:32]
+
+    def own(*a):  # (a plain function: a weak reference to any callable, GTK's too)
+        fn(*a)
+    kept.append(own)
+    ref = weakref.ref(own)
+
+    def call(*a):
+        f = ref()
+        if f is not None:
+            f(*a)
+    return call
 
 
 class Cache:
@@ -477,13 +499,20 @@ class Cache:
         return self.big_pool.submit(job)
 
     def get(self, url, callback, max_side=FEED_SIDE, failed=None, retry=False, original=None,
-            big=False):
+            big=False, owner=None):
         """callback(picture on screen) now or later; for a broken or unreachable image
         failed() is called instead (if given). retry: ask again even if it just failed.
         original: the full picture this one is a preview of — if the preview gives up and
         the original comes later (opened in the viewer), the preview is asked again.
         big: a full-size original (also anything bigger than a feed picture) — fetched
-        by its own workers, so it never holds up the previews."""
+        by its own workers, so it never holds up the previews.
+        owner: the widget the picture is for. The cache then keeps its callbacks only
+        weakly (the owner keeps them): a card thrown away isn't held alive by a picture
+        still on its way or one that failed and is waited for — in GTK every card of every
+        closed tab stayed so (25.10)."""
+        if owner is not None:
+            callback = _weakly(owner, callback)
+            failed = _weakly(owner, failed) if failed else None
         if not url:
             if failed:
                 failed()

@@ -62,7 +62,8 @@ class Avatar(Gtk.Image):
         if ctx.images is not None:
             url = account.avatar_static or account.avatar
             # read small: a face twice its size at most (sharp on a HiDPI screen)
-            ctx.images.get(url, self.set_from_paintable, max_side=max(64, size * 2))
+            ctx.images.get(url, self.set_from_paintable, max_side=max(64, size * 2),
+                           owner=self)
 
 
 class Card(Gtk.Box):
@@ -542,7 +543,8 @@ class Card(Gtk.Box):
             state.set_text(_("image_failed") if m.kind == "image" else
                            "▶ " + _("media_" + m.kind) + "\n" + _("media_click"))
         if src:
-            self.ctx.images.get(src, came, max_side=side, failed=failed, original=full)
+            self.ctx.images.get(src, came, max_side=side, failed=failed, original=full,
+                                owner=pic)
         else:
             failed()
         if m.kind != "image":

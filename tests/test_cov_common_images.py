@@ -121,6 +121,35 @@ class ImagesTest(unittest.TestCase):
         return got, failed
 
     # ---- getting a picture ---------------------------------------------------------------
+    def test_an_owner_keeps_the_callbacks_the_cache_doesnt(self):
+        """A card thrown away is not kept alive by a picture that failed and is waited
+        for (gave_up) — the cache holds its callbacks weakly once it names an owner."""
+        import gc
+        import weakref
+
+        class Card:  # a widget: it has a __dict__, as Qt's and GTK's do
+            def __init__(self):
+                self.got = []
+
+            def show(self, pic):
+                self.got.append(pic)
+        alive = Card()
+        self.net["https://a/ok.png"] = Answer(b"PNG")
+        self.c.get("https://a/ok.png", alive.show, owner=alive)
+        self.assertEqual(len(alive.got), 1)  # while it lives: as before
+        gone = Card()
+        url = "https://a/broken.png"  # not on the net: fails, then waited for
+        failed = []
+        self.c.get(url, gone.show, failed=lambda: failed.append(1), owner=gone)
+        self.c.get(url, gone.show, owner=gone)  # just failed: kept to try again later
+        self.assertTrue(self.c.gave_up.get(url) or self.c.waiting or self.c.timers)
+        ref = weakref.ref(gone)
+        del gone
+        gc.collect()
+        self.assertIsNone(ref())  # not held by the cache
+        for _side, cb, _f in self.c.gave_up.get(url, ()):
+            cb(("late",))  # the picture comes after all: nobody to hand it to, no error
+
     def test_downloaded_once_then_from_memory_and_disk(self):
         self.net["https://a/1.png"] = Answer(b"PNG1")
         got, failed = self.get("https://a/1.png")

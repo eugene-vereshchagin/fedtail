@@ -1643,7 +1643,7 @@ class MainWindow(Gtk.ApplicationWindow):
             banner.set_content_fit(Gtk.ContentFit.COVER)
             banner.set_size_request(-1, 140)
             banner.add_css_class("ft-thumb")
-            self.images.get(banner_url, banner.set_paintable)
+            self.images.get(banner_url, banner.set_paintable, owner=banner)
             head.append(banner)
         if acc.moved and self.cfg["feed"].get("show_moved", True):
             head.append(self._moved_banner(acc.moved))
