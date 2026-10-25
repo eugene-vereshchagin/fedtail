@@ -81,6 +81,39 @@ shown as Activity shows them.
 | `warning` — moderation warning to me | 4.3+ | no | Activity |
 | `annual_report` | 4.3+ | no | — |
 
+### 2.4 Derived events (comparing snapshots)
+
+What the server never tells a client (an unfollow, a like taken back, a deleted post) is not in
+the notifications: fedtail derives it itself, comparing its store with what the server gives now.
+Every `derived.interval_minutes` (60 by default) — a snapshot; the difference from the last one —
+an event.
+
+| event | what is compared | cost | how not to lie |
+|---|---|---|---|
+| `unfollow` — someone stopped following me | `accounts/<me>/followers`, the whole list | a page per 40–80; 1000 followers — 15–25 requests | see below |
+| `removed_follower` — I removed / blocked them myself | the same | 0 (my own action) | not an `unfollow`: the core records my own actions and subtracts them |
+| `moved` — a follower moved to a new account | the `moved` field of the one gone | one `accounts/<id>` | not an unfollow: the new account follows by itself |
+| `gone` — the account deleted / suspended by its server | 404/410 on `accounts/<id>` | one request | not an unfollow, an event of its own |
+| `unfollowed_back` — I follow them, they no longer follow me | the overlap with `following` | as many pages again | only together with `unfollow` |
+| `unliked` — a like taken back | `favourited_by` of my recent posts | a request per post — dear | only the last N posts of `derived.like_days` days, off by default |
+| `deleted` — a post I have stored was deleted | 404/410 when fetched again | 0 (noticed on the way) | a mark on the card, not a notification |
+
+Guarding against false unfollows (the main trouble of such features):
+
+* A snapshot counts only if the list came **whole**: every page without an error, and the count
+  matches `followers_count` (± changes already known). Otherwise it is thrown away.
+* The one gone is confirmed: `relationships` must say `followed_by = false`, and they are absent
+  from **two** snapshots in a row (a server sometimes gives a list with a hole).
+* Their server is down or defederated us — a mass "everyone from x.org unfollowed": more than
+  `derived.mass_threshold` from one domain at once — one event "lost x.org", not a hundred.
+* The first snapshot is the baseline and gives no events.
+* Unfollowed and followed back within the hour — not seen, and needn't be.
+* Two machines with sync see one unfollow: the event's key is the account + the day, sync merges.
+* Hidden follower lists (`hide_collections` in GoToSocial, "hide followers" in Mastodon) are
+  usually given to their owner; if the server refuses, the event is off with a mark in
+  ≡ → Server info.
+* An option: `derived.unfollow` (on/off) and how it treats `arts_mode` — the author decides.
+
 ## 3. What can be reached and what can't
 
 A client filters only what it got. A rule is a promise; this table is what stands behind it.
