@@ -226,6 +226,53 @@ def note_round(ui, rnd, opened, t_open, t_close, alive, objs, mb):
           f"widgets {alive}, objects {objs}, {mb:.0f} MB", flush=True)
 
 
+def holders(kind_name, roots=(), depth=6, samples=2):
+    """Why the objects of a kind are still alive: the chains of what refers to a few of
+    them, as far as `depth` steps (what grows from round to round, said where it is)."""
+    import inspect
+    def loose(o):  # a widget no window shows any more (live ones aren't the leak)
+        try:
+            return o.get_root() is None
+        except Exception:  # noqa: BLE001 — not a widget
+            return True
+    found = [o for o in gc.get_objects() if type(o).__name__ == kind_name
+             and loose(o)][:samples]
+    out = []
+    ignore = {id(found)}
+
+    def label(o):
+        t = type(o).__name__
+        if isinstance(o, dict):
+            keys = list(o)[:6]
+            return f"dict{keys}"
+        if inspect.isfunction(o):
+            return f"function {o.__qualname__} ({o.__code__.co_filename.rsplit('/', 1)[-1]}:" \
+                   f"{o.__code__.co_firstlineno})"
+        if t == "cell":
+            return "cell"
+        if isinstance(o, (list, tuple)):
+            return f"{t}[{len(o)}]"
+        return t
+    for obj in found:
+        chain, cur = [], obj
+        seen = {id(obj)}
+        for _ in range(depth):
+            refs = [r for r in gc.get_referrers(cur) if id(r) not in ignore
+                    and id(r) not in seen and not inspect.isframe(r)
+                    and r is not chain]
+            if not refs:
+                chain.append("(nothing in Python: held from C)")
+                break
+            # the most telling one: a dict of an object, a function, a list
+            refs.sort(key=lambda r: (0 if inspect.isfunction(r) else 1 if isinstance(r, dict)
+                                     else 2))
+            cur = refs[0]
+            seen.add(id(cur))
+            chain.append(label(cur) + (f" (+{len(refs) - 1} more)" if len(refs) > 1 else ""))
+        out.append(f"{kind_name} ← " + " ← ".join(chain))
+    return out
+
+
 def judge(ui):
     rows = [r for r in ROWS if r[0] == ui]
     if len(rows) < 3:
@@ -237,6 +284,9 @@ def judge(ui):
         if grew:  # what is left behind, by kind: where a leak is
             NOTES.append(f"{ui}: objects that grew, rounds 2…{last[1]}: "
                          + ", ".join(f"{k} +{v}" for k, v in grew.most_common(15)))
+            ours = [k for k, v in grew.most_common(40) if k.startswith("fedtail.") and v > 50]
+            for k in ours[:2]:  # and who holds them
+                NOTES.extend(f"{ui}: {line}" for line in holders(k.split(".", 1)[1]))
     if last[5] - base[5] > GROW_WIDGETS:
         ERRORS.append(f"{ui}: widgets left after closing grow round after round: "
                       f"{base[5]} → {last[5]} (rounds 2…{last[1]}) — a leak")
