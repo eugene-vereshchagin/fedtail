@@ -62,6 +62,17 @@ data class MediaItem(
     val w: Int, val h: Int,
 )
 
+/** A button of a place (common/places.py Btn): act = [place, key, data]. */
+data class PlaceButton(val label: String, val act: List<String>, val primary: Boolean, val tip: String)
+
+/** A row of a place shown in a lane's stead (activity, follow requests): the windows' rows. */
+data class PlaceRow(val title: String, val line: String, val key: String,
+                    val buttons: List<PlaceButton>, val fresh: Boolean)
+
+/** Activity, follow requests: rows with buttons, "nothing yet", the place's own buttons. */
+data class PlacePage(val rows: List<PlaceRow>, val empty: String,
+                     val submit: PlaceButton?, val more: PlaceButton?)
+
 data class LinkCard(val url: String, val title: String, val provider: String, val image: String)
 
 data class PostItem(
@@ -102,6 +113,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var title by mutableStateOf("")
     var posts by mutableStateOf(listOf<PostItem>())
     var divider by mutableStateOf<Pair<String, String>?>(null) // (post key, "new below · N")
+    var placePage by mutableStateOf<PlacePage?>(null) // activity, requests: rows, not posts
+    var placeConfirm by mutableStateOf<Pair<String, PlaceButton>?>(null) // "sure?" first
     var opening by mutableStateOf(0) // grows each time a lane opens anew: the list re-aims
     var aimed = 0                     // the opening the list last aimed at
     var refreshing by mutableStateOf(false) // asked by ⟳: a thin bar under the title
@@ -333,6 +346,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         title = laneTitle(name)
         posts = emptyList()
         divider = null
+        placePage = null
         places = emptyList()
         viewModelScope.launch { loadLane(name, keep = false) }
     }
@@ -348,6 +362,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         Core.failed(got)?.let { message = it; return }
         if (name != current) return // the reader moved on meanwhile
         title = got.optString("title").ifBlank { laneTitle(name) }
+        placePage = got.optJSONObject("page")?.let { parsePlace(it) }
+        if (placePage != null) {
+            posts = emptyList()
+            laneOlder = false
+            divider = null
+            loadHub() // on screen the activity is seen: its count goes
+            if (!keep) opening += 1
+            return
+        }
         var list = parsePosts(got.optJSONArray("posts"))
         if (newestFirst) list = list.reversed()
         posts = list
@@ -783,6 +806,46 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val o = arr.getJSONObject(it)
         LaneItem(o.optString("name"), o.optString("title"), o.optInt("unread"),
             if (o.isNull("group")) null else o.optString("group"))
+    }
+
+    /** A place's button: a thread opens here; the rest the core does (and may ask first). */
+    fun placeAct(b: PlaceButton, confirmed: Boolean = false) {
+        placeConfirm = null
+        if (b.act.size == 3 && b.act[0] == "post" && b.act[1] == "thread") {
+            openThread(b.act[2])
+            return
+        }
+        viewModelScope.launch {
+            val got = Core.placeAct(b.act, confirmed)
+            Core.failed(got)?.let { message = it; return@launch }
+            got.optString("confirm").takeIf { it.isNotBlank() }?.let { placeConfirm = it to b; return@launch }
+            got.optString("message").takeIf { it.isNotBlank() }?.let { message = it }
+            got.optJSONObject("open")?.optString("thread")?.takeIf { it.isNotBlank() }?.let { openThread(it) }
+            got.optJSONObject("page")?.let { placePage = parsePlace(it) }
+            loadHub()
+        }
+    }
+
+    private fun parseButton(o: JSONObject?): PlaceButton? = o?.let { b ->
+        val act = b.optJSONArray("act") ?: JSONArray()
+        PlaceButton(b.optString("label"), List(act.length()) { act.optString(it) },
+            b.optBoolean("primary"), b.optString("tip"))
+    }
+
+    private fun parsePlace(o: JSONObject): PlacePage {
+        val arr = o.optJSONArray("rows") ?: JSONArray()
+        val rows = List(arr.length()) { i ->
+            val r = arr.getJSONObject(i)
+            val bs = r.optJSONArray("buttons") ?: JSONArray()
+            val title = r.optString("title")
+            PlaceRow(title.removePrefix("● "), r.optString("line"), r.optString("key"),
+                // no profile screen yet: a person's button waits for it
+                (0 until bs.length()).mapNotNull { parseButton(bs.optJSONObject(it)) }
+                    .filter { it.act.firstOrNull() != "person" },
+                fresh = title.startsWith("● "))
+        }
+        return PlacePage(rows, o.optString("empty"), parseButton(o.optJSONObject("submit")),
+            parseButton(o.optJSONObject("more")))
     }
 
     private fun parsePosts(arr: JSONArray?): List<PostItem> =

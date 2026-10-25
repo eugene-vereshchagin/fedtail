@@ -186,6 +186,27 @@ class BridgeTest(TmpDir):
         self.assertLess(hub["order"].index("replies"), hub["order"].index("home"))
         self.assertEqual(hub["unread"], sum(lanes[x]["unread"] for x in hub["order"]))
 
+    def test_activity_is_rows_not_an_empty_lane(self):
+        """Activity (and follow requests) are no posts: the lane brings the windows' rows
+        with their buttons, and on screen the activity is seen — its count goes."""
+        self.demo()
+        self.bridge._core().store.kv_set("activity_seen", "")  # none of it seen yet
+        lanes = {x["name"]: x for s in self.call("hub")["sections"] for x in s["lanes"]}
+        self.assertTrue(lanes["activity"]["unread"])
+        got = self.call("lane", "activity")
+        self.assertEqual(got["place"], "activity")
+        rows = got["page"]["rows"]
+        self.assertTrue(rows)
+        self.assertTrue(any(r["title"].startswith("● ") for r in rows))  # new ones marked
+        self.assertTrue(all(b["act"] for r in rows for b in r["buttons"]))
+        lanes = {x["name"]: x for s in self.call("hub")["sections"] for x in s["lanes"]}
+        self.assertEqual(lanes["activity"]["unread"], 0)
+        # a row's ×: done through the place, which comes back drawn again
+        dismiss = next(b for b in rows[0]["buttons"] if b["act"][1] == "dismiss")
+        after = self.call("place_act", json.dumps(dismiss["act"]))
+        self.assertEqual(len(after["page"]["rows"]), len(rows) - 1)
+        self.assertEqual(self.call("lane", "requests")["place"], "requests")
+
     def test_the_command_line_is_off_on_the_phone_unless_asked(self):
         self.demo()
         self.assertFalse(self.call("open")["me"]["command_line"])

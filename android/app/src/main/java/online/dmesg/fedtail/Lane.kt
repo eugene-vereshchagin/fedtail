@@ -163,7 +163,9 @@ fun LaneScreen(
             val earlier: @Composable () -> Unit = {
                 if (model.laneOlder) Earlier(model.loadingOlder) { model.loadOlder() }
             }
-            PostList(model.posts, state, model.divider, act, model.hideSensitive,
+            val page = model.placePage
+            if (page != null) PlaceList(model, page, name, state)
+            else PostList(model.posts, state, model.divider, act, model.hideSensitive,
                 header = if (model.newestFirst) null else earlier,
                 footer = {
                     Column {
@@ -174,6 +176,14 @@ fun LaneScreen(
         }
     }
     if (switcher) Switcher(model) { switcher = false }
+    model.placeConfirm?.let { (ask, b) ->
+        AlertDialog(onDismissRequest = { model.placeConfirm = null },
+            text = { Text(ask) },
+            confirmButton = { TextButton(onClick = { model.placeAct(b, confirmed = true) }) {
+                Text(stringResource(R.string.yes_do)) } },
+            dismissButton = { TextButton(onClick = { model.placeConfirm = null }) {
+                Text(stringResource(R.string.cancel)) } })
+    }
     model.cmdConfirm?.let { ask ->
         AlertDialog(onDismissRequest = { model.cmdConfirm = null },
             text = { Text(ask) },
@@ -181,6 +191,60 @@ fun LaneScreen(
                 Text(stringResource(R.string.yes_do)) } },
             dismissButton = { TextButton(onClick = { model.cmdConfirm = null }) {
                 Text(stringResource(R.string.cancel)) } })
+    }
+}
+
+/**
+ * Activity, follow requests: no posts but the windows' rows (common/places.py) — who did
+ * what, when, about which post; a tap opens that post's thread; the row's buttons (answer
+ * a request, × to hide it), then the place's own ("mark all read", "clear").
+ */
+@Composable
+private fun PlaceList(model: AppModel, page: PlacePage, name: String, state: LazyListState) {
+    androidx.compose.foundation.lazy.LazyColumn(state = state, modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (page.rows.isEmpty()) item {
+            Text(page.empty.ifBlank { stringResource(R.string.lane_empty) },
+                Modifier.fillMaxWidth().padding(vertical = 32.dp), textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        items(page.rows) { r -> PlaceRowCard(model, r) }
+        val own = listOfNotNull(page.more, page.submit)
+        if (own.isNotEmpty()) item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                own.forEach { b -> TextButton(onClick = { model.placeAct(b) }) { Text(b.label) } }
+            }
+        }
+        item { LaneEnd(model, name) }
+    }
+}
+
+@Composable
+private fun PlaceRowCard(model: AppModel, r: PlaceRow) {
+    val thread = r.buttons.firstOrNull { it.act.getOrNull(0) == "post" && it.act.getOrNull(1) == "thread" }
+    val rest = r.buttons.filter { it !== thread }
+    val ground = if (r.fresh) MaterialTheme.colorScheme.secondaryContainer
+                 else MaterialTheme.colorScheme.surface
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(ground)
+        .then(if (thread != null) Modifier.clickable { model.placeAct(thread) } else Modifier)
+        .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = if (rest.isEmpty()) 10.dp else 2.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                if (r.title.isNotBlank()) Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                    color = if (r.fresh) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onSurface)
+                if (r.line.isNotBlank()) Text(r.line, fontSize = 14.sp, maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (rest.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            rest.forEach { b ->
+                TextButton(onClick = { model.placeAct(b) }) {
+                    Text(b.label, fontWeight = if (b.primary) FontWeight.SemiBold else FontWeight.Normal)
+                }
+            }
+        }
     }
 }
 

@@ -256,6 +256,33 @@ def lane(name, keep=False):
     def go():
         got = _s["web"].lane(name, bool(keep))
         _texts(got.get("posts", []))
+        if got.get("place"):  # activity, requests: rows with buttons, not posts
+            got["page"] = _place_page(got["place"])
+        return got
+    return _answer(go)
+
+
+def _place_page(name):
+    """A place in a lane's stead (common/places.py, as the windows and the page have it):
+    {title, rows: [{kind, title, line, key, buttons: [{label, act, primary, tip}]}], empty,
+    submit, more}. Activity on screen is seen, as in the terminal; the rows keep their ●."""
+    page = _s["web"].page(name)
+    for r in page["rows"]:
+        r.pop("post", None)
+        r.pop("account", None)
+    if name == "activity":
+        _core().mark_activity_seen()
+    return page
+
+
+def place_act(act_json, confirmed=False):
+    """A place's button (act = [place, key, data]): → {message, confirm, open, refresh}
+    and, when the place is to be drawn again, its new "page"."""
+    def go():
+        act = json.loads(act_json)
+        got = _s["web"].place_act({"act": act, "confirmed": bool(confirmed)})
+        if got.get("refresh") and act and act[0] in ("activity", "requests"):
+            got["page"] = _place_page(act[0])
         return got
     return _answer(go)
 
