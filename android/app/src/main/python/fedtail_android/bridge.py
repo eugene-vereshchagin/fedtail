@@ -30,6 +30,13 @@ a copy of their logic.
                                              by chapter, written into the file one at a time
     config_text() / config_save(text)        the config file, edited in the app
     sync_*                                   sync with the other devices (core/sync)
+    places() / page(name, arg, tab, cursor)  every place of the ≡ menu (common/places.py:
+                                             search, lists, silence, the server, help…) as data
+    place_act(act, confirmed, values, answer)   a place's button, a form sent, a line typed
+    post_menu(id) / link(url, confirmed, chosen)  a card's ⋯ as the windows have it, each
+                                             item done the windows' way (common/links.py)
+    account(id, show) / profile_act(…)       a profile and its buttons (common/profile.py)
+    upload(path, name) / vote(id, choices) / editor()   attachments, polls, the editor's facts
 
 demo: a made-up world instead of a server (tools/showcase.py, the one every screenshot
 of fedtail shows), in a profile of its own — for the emulator's screenshots in CI.
@@ -275,16 +282,128 @@ def _place_page(name):
     return page
 
 
-def place_act(act_json, confirmed=False):
-    """A place's button (act = [place, key, data]): → {message, confirm, open, refresh}
-    and, when the place is to be drawn again, its new "page"."""
+def place_act(act_json, confirmed=False, values_json=None, answer=None):
+    """A place's button (act = [place, key, data]), with the place's form (values) and a
+    line typed when it asked for one (answer): → {message, confirm, ask, open, compose,
+    copy, refresh} — and, for activity and requests shown as a lane, their new "page"."""
     def go():
         act = json.loads(act_json)
-        got = _s["web"].place_act({"act": act, "confirmed": bool(confirmed)})
+        body = {"act": act, "confirmed": bool(confirmed)}
+        if values_json:
+            body["values"] = json.loads(values_json)
+        if answer is not None:
+            body["answer"] = str(answer)
+        got = _s["web"].place_act(body)
         if got.get("refresh") and act and act[0] in ("activity", "requests"):
             got["page"] = _place_page(act[0])
+        if got.get("reload"):  # another account: the core was made anew for it
+            _s["core"] = _s["web"].core._core if hasattr(_s["web"].core, "_core") \
+                else _s["web"].core
         return got
     return _answer(go)
+
+
+# ---- every place: what the windows' ≡ menu opens, as data (common/places.py) -------------
+
+def places():
+    """The ≡ menu's places: [{name, title}] — search, lists, silence, the server…"""
+    return _answer(lambda: _s["web"].place_menu())
+
+
+def page(name, arg="", tab="", cursor=""):
+    """A place as the windows and the browser page draw it: {name, title, arg, hint,
+    tabs, tab, rows: [{kind: item|post|account|heading|html, title, line, key, buttons,
+    post?, account?, html?}], form: [{name, label, value, kind, choices, tip}], submit,
+    more, empty}. A post row's card comes with its words, as a lane's."""
+    def go():
+        got = _s["web"].page(name, arg or "", tab or "", cursor or "")
+        _texts([r["post"] for r in got["rows"] if r.get("post")])
+        return got
+    return _answer(go)
+
+
+# ---- a card's ⋯ as the windows have it, a profile ----------------------------------------
+
+def post_menu(post_id):
+    """{subscribed, muted, own, items: [{kind: link|open|copy|separator|quote_reply|lists|
+    long_form|translate, label, url, text, page?}]} — common/actions.menu, in its order."""
+    return _answer(lambda: _s["web"].post_menu(post_id))
+
+
+def link(url, confirmed=False, chosen_json=None):
+    """A fedtail: link of the ⋯ menu (edit, delete, mute, report, translate…), done the
+    windows' way: → {message, confirm, choose, open, compose, copy, alias, read_up_to,
+    refresh}; asked again with confirmed / chosen ({key, ticked}) when it asked."""
+    def go():
+        chosen = json.loads(chosen_json) if chosen_json else None
+        got = _s["web"].link(url, bool(confirmed), chosen)
+        compose = got.get("compose")
+        if compose and compose.get("text"):
+            compose["text"] = str(compose["text"])
+        return got
+    return _answer(go)
+
+
+def account(acc_id, show=None):
+    """A profile: {account, relation, meta, note_line, actions: [{key, label, tip,
+    primary}], shows, show_tip, posts} — the web page's, cards with their words."""
+    def go():
+        got = _s["web"].account(acc_id, show or None)
+        _texts(got.get("posts", []))
+        return got
+    return _answer(go)
+
+
+def profile_act(acc_id, key, answer=None, confirmed=False, chosen_json=None):
+    """A profile's button (follow, mute for a while, a note, lists…) → as link()."""
+    def go():
+        chosen = json.loads(chosen_json) if chosen_json else None
+        return _s["web"].profile_act(acc_id, key, answer, bool(confirmed), chosen)
+    return _answer(go)
+
+
+# ---- writing: attachments, polls, what the editor knows ----------------------------------
+
+def upload(path, name=""):
+    """A picture or a video the phone handed over (copied into the app's cache first):
+    kept for the post to come → {"token", "size"}; the file in the cache goes."""
+    def go():
+        with _builtin_open(path, "rb") as f:
+            data = f.read()
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return _s["web"].upload(data, name or os.path.basename(path))
+    return _answer(go)
+
+
+def _builtin_open(path, mode):
+    import builtins
+    return builtins.open(path, mode)
+
+
+def vote(post_id, choices_json):
+    """A poll answered: choices are the options' numbers → the card as it is now."""
+    def go():
+        got = _s["web"].vote(post_id, json.loads(choices_json or "[]"))
+        return _texts([got])[0]
+    return _answer(go)
+
+
+def editor():
+    """The editor's facts: the server's limits, the languages to pick from, the poll's
+    lengths, spell checking on or off, the default visibility."""
+    def go():
+        facts = _s["web"].editor_facts()
+        facts["visibility"] = _core().default_visibility()
+        return facts
+    return _answer(go)
+
+
+def compose_check(body_json):
+    """As the text is typed: characters of the limit, a chain's parts, hints."""
+    return _answer(lambda: _s["web"].compose_check(json.loads(body_json or "{}")))
 
 
 # the overview's sections, in the order "read in a row" walks them: what is addressed to

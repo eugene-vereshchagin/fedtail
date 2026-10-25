@@ -21,7 +21,7 @@ def load_bridge():
     return mod
 
 
-class BridgeTest(TmpDir):
+class _Base(TmpDir):
     def setUp(self):
         super().setUp()
         self.files, self.cache = self.tmp / "files", self.tmp / "cache"
@@ -41,6 +41,13 @@ class BridgeTest(TmpDir):
             self.assertNotIn("error", got, got.get("trace") or got.get("error"))
         return got
 
+    def demo(self):
+        got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", True))
+        self.assertNotIn("error", got, got.get("trace"))
+        self.call("open")
+
+
+class BridgeTest(_Base):
     def test_the_core_starts_in_the_apps_folders(self):
         got = json.loads(self.bridge.start(str(self.files), str(self.cache), "en", False))
         self.assertNotIn("error", got, got.get("trace"))
@@ -302,3 +309,73 @@ class BridgeTest(TmpDir):
         self.assertIn("system.txt", names)
         self.assertFalse(any(n.endswith(("auth.json", "state.db")) for n in names))
         self.assertFalse(json.loads(self.bridge.selfcheck_step("nowhere"))["ok"])
+
+
+class BridgePlacesTest(_Base):
+    """The doors the phone's generic screens use: every place, a card's whole ⋯ menu,
+    a profile and its buttons, attachments, polls, the editor's facts."""
+
+    def test_every_place_is_data(self):
+        self.demo()
+        menu = self.call("places")
+        names = [x["name"] for x in menu]
+        for n in ("search", "lists", "silence", "server", "help", "accounts", "remote"):
+            self.assertIn(n, names)
+        pg = self.call("page", "lists")
+        for key in ("title", "rows", "form", "submit", "more", "empty", "tabs"):
+            self.assertIn(key, pg)
+        made = self.call("place_act", json.dumps(["lists", "new", ""]), False,
+                         json.dumps({"title": "С телефона"}))
+        self.assertTrue(made.get("refresh") or made.get("message"))
+        titles = [r["title"] for r in self.call("page", "lists")["rows"]]
+        self.assertIn("С телефона", titles)
+        tag = self.call("page", "tag", "fedi")
+        posts = [r["post"] for r in tag["rows"] if r.get("post")]
+        self.assertTrue(all("text" in p for p in posts))
+        self.assertIn("error", json.loads(self.bridge.page("nowhere")))
+
+    def test_a_cards_whole_menu(self):
+        self.demo()
+        m = self.call("post_menu", "103")
+        kinds = {i["kind"] for i in m["items"]}
+        self.assertIn("link", kinds)
+        bm = next(i for i in m["items"] if i["url"].startswith("fedtail:bookmark/"))
+        got = self.call("link", bm["url"])
+        self.assertTrue(got.get("message") or got.get("refresh"))
+        mute = next(i for i in m["items"] if i["url"].startswith("fedtail:mute/"))
+        ask = self.call("link", mute["url"])
+        self.assertIn("choose", ask)  # how long first
+        key = ask["choose"]["options"][1]["key"]
+        done = self.call("link", mute["url"], False, json.dumps({"key": key, "ticked": True}))
+        self.assertTrue(done.get("message"))
+
+    def test_a_profile_and_its_buttons(self):
+        self.demo()
+        p = self.call("post_menu", "103")
+        author = self.call("lane", "home", True)["posts"][0]["account"]["id"]
+        prof = self.call("account", author)
+        for key in ("account", "relation", "actions", "posts", "shows"):
+            self.assertIn(key, prof)
+        self.assertTrue(all("text" in x for x in prof["posts"]))
+        keys = [a["key"] for a in prof["actions"]]
+        self.assertTrue(keys)
+        media = self.call("account", author, "media")
+        self.assertTrue(any(s["on"] and s["key"] == "media" for s in media["shows"]))
+        self.assertTrue(p)
+
+    def test_attachments_polls_and_the_editor(self):
+        self.demo()
+        pic = self.cache / "picked.png"
+        pic.write_bytes(b"\x89PNG fake")
+        up = self.call("upload", str(pic), "cat.png")
+        self.assertTrue(up["token"].endswith(".png"))
+        self.assertFalse(pic.exists())  # the cache's copy goes
+        sent = self.call("post", json.dumps({"text": "with a cat", "media": [
+            {"token": up["token"], "alt": "a cat"}]}))
+        self.assertTrue(sent["id"])
+        from tests import fakes
+        self.assertEqual(fakes.FakeApi.world.uploads[-1][1], "a cat")
+        ed = self.call("editor")
+        for key in ("limit", "languages", "visibility", "poll_lengths"):
+            self.assertIn(key, ed)
+        self.assertIn("n", self.call("compose_check", json.dumps({"text": "hello"})))
