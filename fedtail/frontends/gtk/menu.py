@@ -51,6 +51,7 @@ class MainMenu:
         a("directory", lambda: win.open_directory(False))
         a("directory_local", lambda: win.open_directory(True))
         a("trends", win.open_trends)
+        a("remote_lane", win.ask_remote_lane)
         a("profile", win.my_profile)
         a("server", win.show_server_info)
         a("add_account", win.add_account)
@@ -150,6 +151,7 @@ class MainMenu:
                 ("trends", _("trends_title"), "trends")):
             if supports(feature) and (feature != "trends" or trends):
                 _item(people, label, action)
+        _item(people, _("remote_public"), "remote_lane", hint=_("remote_public_tip"))
         if people.get_n_items():
             first.append_submenu(_("menu_people"), people)
         first.append_submenu(_("accounts"), self.accounts_model())

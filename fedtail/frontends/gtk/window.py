@@ -1822,6 +1822,23 @@ class MainWindow(Gtk.ApplicationWindow):
         from . import postinfo
         return postinfo.open_link_posts(self, url)
 
+    def ask_remote_lane(self):
+        """≡ → Another server's lane…: which server, then its tab."""
+        from ...core.remote import server_host
+        from . import dialogs
+
+        def go(text):
+            host = server_host(text)
+            if not host:
+                self.error(_("remote_public_bad", text=text))
+                return
+            self.open_remote_lane(host)
+        dialogs.ask_text(self, _("remote_public").rstrip("…"), _("remote_public_q"), go)
+
+    def open_remote_lane(self, host):
+        from . import postinfo
+        return postinfo.open_remote_lane(self, host)
+
     def open_quotes(self, post):
         from . import postinfo
         return postinfo.open_quotes(self, post)

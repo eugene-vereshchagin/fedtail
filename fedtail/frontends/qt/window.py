@@ -80,6 +80,7 @@ from .social import (
     AccountsWidget,
     LinkPostsWidget,
     QuotesWidget,
+    RemoteLaneWidget,
     ServerInfoDialog,
     TrendsWidget,
 )
@@ -997,6 +998,9 @@ class MainWindow(QMainWindow):
                 ("trends", _("trends_title"), self.open_trends)):
             if self.core.supports(feature) and (feature != "trends" or trends):
                 people.addAction(label, slot)
+        remote = people.addAction(_("remote_public"), self.ask_remote_lane)
+        remote.setToolTip(_("remote_public_tip"))
+        people.setToolTipsVisible(True)
         people.setEnabled(not people.isEmpty())
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
@@ -1928,6 +1932,29 @@ class MainWindow(QMainWindow):
                 return
         w = LinkPostsWidget(self, url)
         self._add_tab(w, w.title)
+
+    def ask_remote_lane(self):
+        """≡ → Another server's lane…: which server, then its tab."""
+        from ...core.remote import server_host
+        text, ok = QInputDialog.getText(self, _("remote_public").rstrip("…"),
+                                        _("remote_public_q"))
+        if not ok or not text.strip():
+            return
+        host = server_host(text)
+        if not host:
+            self.error(_("remote_public_bad", text=text.strip()))
+            return
+        self.open_remote_lane(host)
+
+    def open_remote_lane(self, host):
+        """Another server's public lane in a tab (one per server)."""
+        for w in self.extra_tabs():
+            if isinstance(w, RemoteLaneWidget) and w.host == host:
+                self._front(w)
+                return w
+        w = RemoteLaneWidget(self, host)
+        self._add_tab(w, w.title)
+        return w
 
     def open_tag(self, tag):
         for w in self.extra_tabs():
