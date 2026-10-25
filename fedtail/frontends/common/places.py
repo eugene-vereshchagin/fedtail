@@ -617,7 +617,8 @@ class Places(MorePlaces, AccountPlaces):
                                       f"{cid} {item_id}"))
             row = self._person(a, None, extra=tuple(btns))
             if state and state != "accepted":
-                row.line = " · ".join(x for x in (row.line, _("collection_pending")) if x)
+                row = replace(row, line=" · ".join(x for x in (row.line,
+                                                               _("collection_pending")) if x))
             page.rows.append(row)
         if mine:
             page.form = self._collection_form(c)

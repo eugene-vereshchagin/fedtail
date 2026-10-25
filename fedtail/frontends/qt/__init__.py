@@ -83,10 +83,13 @@ def run(core, instance, argv):
     if url:
         win.open_when_ready(url)
 
-    # Ctrl+C in the terminal should quit, not be swallowed by the Qt loop
+    # Ctrl+C in the terminal, and the session ending (SIGTERM at logout or shutdown):
+    # quit as from the menu — the window's place, the read marks, the drafts kept
     signal.signal(signal.SIGINT, lambda *_: win.quit())
-    tick = QTimer()
-    tick.start(500)
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, lambda *_: win.quit())
+    tick = QTimer()  # Python's signal handlers run only when Python does: once a second
+    tick.start(1000)
     tick.timeout.connect(lambda: None)
 
     if win.roster is not None:

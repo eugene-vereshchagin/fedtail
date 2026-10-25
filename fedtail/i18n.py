@@ -253,6 +253,10 @@ _STRINGS = {
         "short_id_tip": "Короткий номер поста, как #abc на Point. Клик — в командную строку",
         "unread_tip": "Новое", "came_from": "ты пришёл отсюда",
         "fresh_of_them": "из них новых {n}",
+        "config_broken": "В файле настроек ошибка: {path}",
+        "config_broken_go": "Запустить с настройками по умолчанию",
+        "config_broken_defaults": "файл настроек с ошибкой — этот запуск с настройками по "
+                                  "умолчанию; файл не тронут, его нужно поправить",
         "web_login_here": "профиль ещё не вошёл на сервер — войди на открывшейся странице",
         "react_menu": "Реакция",
         "react_title": "Реакция на пост",
@@ -1345,6 +1349,10 @@ _STRINGS = {
         "short_id_tip": "Short post number, like #abc on Point. Click — into the command line",
         "unread_tip": "New", "came_from": "you came from here",
         "fresh_of_them": "{n} of them new",
+        "config_broken": "The settings file has an error: {path}",
+        "config_broken_go": "Start with the default settings",
+        "config_broken_defaults": "the settings file has an error — this run goes with the "
+                                  "defaults; the file is untouched, it needs fixing",
         "web_login_here": "this profile hasn't logged in yet — log in on the page that opens",
         "react_menu": "React",
         "react_title": "A reaction to the post",

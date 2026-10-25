@@ -80,6 +80,41 @@ def parse_args(argv):
     return p.parse_args(argv)
 
 
+def _write_whole(path, text):
+    """The file replaced in one step (a new one beside it, then renamed over it): power
+    gone halfway leaves the old file, never half of the new one."""
+    tmp = path.with_name(path.name + ".new")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def _config_trouble(path, err):
+    """A broken config.toml, said in a window (Qt, when there is one): True — go on with
+    the defaults for this run, False — quit. No window to show it in: False."""
+    if sys.stdin is not None and sys.stdin.isatty() and not getattr(sys, "frozen", False):
+        return False  # a terminal: it was printed there, and fixing the file is the way
+    try:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+    except ImportError:
+        return False
+    app = QApplication.instance() or QApplication(sys.argv[:1])
+    box = QMessageBox(QMessageBox.Icon.Warning, "fedtail", i18n._("config_broken", path=str(path)))
+    box.setInformativeText(str(err)[:800])
+    go = box.addButton(i18n._("config_broken_go"), QMessageBox.ButtonRole.AcceptRole)
+    box.addButton(i18n._("quit"), QMessageBox.ButtonRole.RejectRole)
+    opened = box.addButton(i18n._("open_config"), QMessageBox.ButtonRole.ActionRole)
+    box.exec()
+    if box.clickedButton() is opened:
+        from .frontends.qt.opener import open_path
+        open_path(path)
+        return False
+    del app
+    return box.clickedButton() is go
+
+
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if args.profiles:
@@ -105,7 +140,12 @@ def main(argv=None):
         return 2
     except config.ConfigError as e:
         print(f"fedtail: config error in {where.config_file}:\n{e}", file=sys.stderr)
-        return 2
+        # started from a menu or a shortcut, nobody reads the terminal: a window says it,
+        # and offers this run with the defaults (the file stays as it is, to be fixed)
+        if args.command or not _config_trouble(where.config_file, e):
+            return 2
+        cfg, warnings = config.validate({})
+        warnings = [i18n._("config_broken_defaults")] + list(warnings)
     for w in warnings:
         print(f"fedtail: {where.config_file}: {w}", file=sys.stderr)
 
@@ -133,7 +173,7 @@ def main(argv=None):
         new_text = config_update.rebuild(user_text, example, report)
         where.config_file.with_name(where.config_file.name + ".bak").write_text(user_text,
                                                                                  "utf-8")
-        where.config_file.write_text(new_text, "utf-8")
+        _write_whole(where.config_file, new_text)
         print(f"fedtail: rebuilt {where.config_file} (the old one is config.toml.bak)")
         if report["kept"]:
             print("  your values:\n    " + "\n    ".join(report["kept"]))
@@ -149,7 +189,7 @@ def main(argv=None):
             return 0
         where.config_file.with_name(where.config_file.name + ".bak").write_text(user_text,
                                                                                  "utf-8")
-        where.config_file.write_text(new_text, "utf-8")
+        _write_whole(where.config_file, new_text)
         print(f"fedtail: updated {where.config_file} (the old one is config.toml.bak)")
         for what, keys in (("renamed", report.get("renamed", [])),
                            ("added", report["added"]),

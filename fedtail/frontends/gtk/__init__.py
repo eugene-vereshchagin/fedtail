@@ -123,8 +123,9 @@ def run(core, instance, argv):
         GLib.idle_add(lambda: (win.start(), GLib.SOURCE_REMOVE)[1])
 
     app.connect("activate", activate)
-    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT,
-                         lambda: (app.quit(), GLib.SOURCE_REMOVE)[1])
+    for sig in (signal.SIGINT, signal.SIGTERM):  # Ctrl+C; logout or shutdown
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, sig,
+                             lambda: (app.quit(), GLib.SOURCE_REMOVE)[1])
     try:
         return app.run(argv[:1])
     finally:

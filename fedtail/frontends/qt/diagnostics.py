@@ -35,9 +35,10 @@ def install(app, win, cfg):
     beat = QTimer(app)
     beat.setInterval(1000)
     beat.timeout.connect(dog.beat)
-    beat.start()
-    dog.start()
-    app.aboutToQuit.connect(dog.stop)
+    if seconds > 0:  # off: no beat — a timer a second wakes the processor for nothing
+        beat.start()
+        dog.start()
+        app.aboutToQuit.connect(dog.stop)
 
     # freezes too short for the watchdog: how long, and what the GUI thread was doing
     stall_ms = int(cfg["debug"].get("stall_ms", 0)) if diag.is_on() else 0
@@ -78,7 +79,8 @@ def install(app, win, cfg):
     every = QTimer(win)  # dies with the window it counts
     every.setInterval(30_000)
     every.timeout.connect(count)
-    every.start()
+    if diag.is_on():  # the counts are for the debug log's stats: off, nothing wakes up
+        every.start()
     minutes = float(cfg["debug"].get("stats_minutes", 5))
     if minutes > 0 and diag.is_on():
         census_timer = QTimer(win)

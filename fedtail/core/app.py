@@ -490,6 +490,7 @@ class Core(SocialMixin):
                 continue
             try:
                 self.poll_once()
+                self._fails_in_row = 0
             except RateLimited as e:  # the server says wait: _pace() waits, said once
                 log.info("poll: the server's limit is spent (%s) — the round cut short", e)
             except Exception as e:  # never let the poller die silently
@@ -497,6 +498,7 @@ class Core(SocialMixin):
                     return
                 log.exception("poll failed")
                 self._poll_failures += 1
+                self._fails_in_row = getattr(self, "_fails_in_row", 0) + 1
                 self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
                 self.emit("error", str(e))
             quiet = self._pace()
@@ -506,11 +508,18 @@ class Core(SocialMixin):
                 self._stop.wait(quiet)
                 continue
             done = time.monotonic()
+            back = self.backoff()
+            if back:  # failing round after round: wait longer each time (Refresh still asks)
+                self._wake.wait(back)
+                self._wake.clear()
+                self._urgent = False
+                continue
             if self.slow_minutes():
                 self._slow_wait(done)
                 continue
             self._next_round = None
-            self._wake.wait(self.cfg["poll"]["interval_seconds"])
+            if self._nap(float(self.cfg["poll"]["interval_seconds"])):
+                self._urgent = True  # back from sleep: what came meanwhile, at once
             self._wake.clear()
             gap = float(self.cfg["poll"].get("stream_gap_seconds", 10))
             left = gap - (time.monotonic() - done)
@@ -537,6 +546,37 @@ class Core(SocialMixin):
             if getattr(self, "_urgent", False):
                 break
         self._urgent = False
+
+    NAP_STEP = 30  # s: how often a wait looks whether the computer slept meanwhile
+
+    def _nap(self, seconds, clock=time.time, mono=time.monotonic):
+        """Wait for the next round (a wake — Refresh, the stream — ends it early). True:
+        the computer slept meanwhile (the wall clock went on far more than the monotonic
+        one, which stands still in a suspend) — the wait ends then too: the news of the
+        night comes on waking, not a round later."""
+        end = mono() + seconds
+        while True:
+            left = end - mono()
+            if left <= 0:
+                return False
+            w0, m0 = clock(), mono()
+            if self._wake.wait(min(left, self.NAP_STEP)):
+                return False
+            if (clock() - w0) - (mono() - m0) > self.NAP_STEP:
+                log.info("poll: the computer slept — a round now")
+                return True
+
+    BACKOFF_MAX = 15 * 60  # s: the longest wait between failing rounds
+
+    def backoff(self):
+        """Seconds to wait before the next round after rounds failed in a row (the server
+        down, no network): the interval doubled each time — 90 s, 3, 6, 12 min — up to
+        BACKOFF_MAX; 0 when the last round went through."""
+        n = getattr(self, "_fails_in_row", 0)
+        if n < 2:
+            return 0
+        base = float(self.cfg["poll"]["interval_seconds"])
+        return min(self.BACKOFF_MAX, base * 2 ** min(n - 1, 10))
 
     RESERVE = 20  # requests kept for what I do by hand (a like, a reply), besides a round
     RESET_MARGIN = 5  # seconds after the server's window ends before asking again

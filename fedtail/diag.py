@@ -248,6 +248,25 @@ class NoQueries(logging.Filter):
         return True
 
 
+def _writable(folder, paths):
+    """The log folder if it can be written to; else one in the temporary folder (a
+    data folder made read-only, a full disk); None — nowhere at all."""
+    import tempfile
+    for where in (folder, Path(tempfile.gettempdir()) / f"fedtail-logs-{paths.profile}"):
+        try:
+            where.mkdir(parents=True, exist_ok=True)
+            probe = where / ".write-test"
+            probe.write_text("", "utf-8")
+            probe.unlink()
+            if where != folder:
+                print(f"fedtail: {folder} can't be written to: the logs go to {where}",
+                      file=sys.stderr)
+            return where
+        except OSError:
+            continue
+    return None
+
+
 def setup(paths, cfg, console_debug=False):
     """Logging to session files (and warnings to the terminal), crash traces,
     stack dumps on SIGUSR1, uncaught exceptions of every thread into the log.
@@ -257,9 +276,9 @@ def setup(paths, cfg, console_debug=False):
     on = enabled(cfg, console_debug)
     _state["on"] = on
     _state["dir"] = None
-    folder = logs_dir(paths, cfg)
-    folder.mkdir(parents=True, exist_ok=True)
-    _forget_old_logs(paths, folder)
+    folder = _writable(logs_dir(paths, cfg), paths)
+    if folder is not None:
+        _forget_old_logs(paths, folder)
     _state["dir"] = folder
 
     root = logging.getLogger()
@@ -267,15 +286,18 @@ def setup(paths, cfg, console_debug=False):
     root.setLevel(logging.DEBUG)
     fmt = logging.Formatter(FORMAT, DATEFMT)
 
-    if on:
+    if folder is None:  # nowhere to write: the terminal alone (said there once)
+        fh = None
+    elif on:
         fh = SessionLog(folder, max_mb=d.get("log_mb", 10), keep_mb=d.get("keep_mb", 500))
         fh.setLevel(LEVELS.get(d.get("level", "debug"), logging.DEBUG))
     else:  # an ordinary user's run: what went wrong, nothing else
         fh = SessionLog(folder, max_mb=1, keep_mb=5)
         fh.setLevel(logging.WARNING)
-    fh.setFormatter(fmt)
-    fh.addFilter(NoQueries())
-    root.addHandler(fh)
+    if fh is not None:
+        fh.setFormatter(fmt)
+        fh.addFilter(NoQueries())
+        root.addHandler(fh)
 
     ch = logging.StreamHandler(sys.stderr)
     ch.setLevel(logging.DEBUG if console_debug else logging.WARNING)
@@ -287,6 +309,12 @@ def setup(paths, cfg, console_debug=False):
     for name in ("urllib3", "requests", "PIL"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
+    if folder is None:
+        print("fedtail: no folder for the logs can be written to: logging to the terminal "
+              "only", file=sys.stderr)
+        sys.excepthook = _excepthook
+        threading.excepthook = _thread_excepthook
+        return None
     # a fatal crash (segfault in Qt, say) still leaves the stacks behind
     _state["crash"] = open(folder / "crash.log", "a", encoding="utf-8")  # noqa: SIM115
     _state["crash"].write(f"\n=== {_stamp()} pid {os.getpid()} started\n")

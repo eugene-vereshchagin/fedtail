@@ -22,9 +22,40 @@ SCOPES = "read write"
 USER_AGENT = version.USER_AGENT
 MARKDOWN_SERVERS = ("gotosocial", "akkoma", "pleroma", "glitch")
 SLOW_SECONDS = 5.0  # set from [debug] slow_request_seconds
+# the most an API answer may be: a timeline page is tens of KB, an instance's emoji a few
+# MB; a server (or something in front of it) sending more is refused, not read to the end
+MAX_ANSWER = 32 * 1024 * 1024
 log = logging.getLogger("fedtail.api")
 # query keys that are fine in a log line (paging, kinds); anything else is left out
 _SAFE_PARAMS = {"limit", "max_id", "min_id", "since_id", "local", "types[]"}
+
+
+class TooBig(requests.RequestException):
+    """The answer is bigger than any API answer should be (MAX_ANSWER)."""
+
+
+def _read_capped(r, cap):
+    """The body read, but no more than cap bytes: past that the connection is dropped
+    and TooBig raised — a server's (or proxy's) gigabyte never fills the memory. A
+    response object that isn't requests' own (a test's) is left as it is."""
+    if not isinstance(r, requests.Response):
+        return
+    try:
+        said = int(r.headers.get("Content-Length") or 0)
+    except ValueError:
+        said = 0
+    if said > cap:
+        r.close()
+        raise TooBig(f"answer of {said // 1048576} MB refused (at most {cap // 1048576} MB)")
+    got, size = [], 0
+    for chunk in r.iter_content(65536):
+        size += len(chunk)
+        if size > cap:
+            r.close()
+            raise TooBig(f"answer over {cap // 1048576} MB refused")
+        got.append(chunk)
+    r._content = b"".join(got)  # what .content, .text and .json() read from now on
+    r._content_consumed = True
 
 
 def error_text(r):
@@ -242,6 +273,11 @@ class Api:
 
     # ---- plumbing ---------------------------------------------------------
     def _req(self, method, path, **kw):
+        return self._json(self._raw(method, path, **kw), method, path)
+
+    def _raw(self, method, path, **kw):
+        """The answer of a request, checked: the rate limit kept, the size capped, an
+        error answer raised (ApiError, RateLimited); the health record noted."""
         kw.setdefault("timeout", 30)
         if self.budget.spent():  # it would only say 429: don't ask until the window ends
             raise RateLimited("rate limit reached (waiting for the server's window)",
@@ -251,7 +287,8 @@ class Api:
         shown = " ".join(f"{k}={v}" for k, v in params.items() if k in _SAFE_PARAMS)
         t = time.monotonic()
         try:
-            r = self.s.request(method, self.base + path, **kw)
+            r = self.s.request(method, self.base + path, stream=True, **kw)
+            _read_capped(r, MAX_ANSWER)
         except requests.RequestException as e:
             log.warning("%s %s %s -> %s after %.2f s", method, path, shown,
                         e.__class__.__name__, time.monotonic() - t)
@@ -272,9 +309,20 @@ class Api:
             raise RateLimited(error_text(r), until)
         if r.status_code >= 400:
             raise ApiError(r.status_code, error_text(r))
+        return r
+
+    @staticmethod
+    def _json(r, method, path):
         if not r.content:
             return None
-        return r.json()
+        try:
+            return r.json()
+        except ValueError:  # not JSON: a captive portal's page, a provider's stub, a proxy
+            kind = (r.headers.get("Content-Type") or "?").split(";")[0]
+            log.warning("%s %s: the answer is not JSON (%s, %d B)", method, path, kind,
+                        len(r.content))
+            raise ApiError(r.status_code, f"not an API answer ({kind}): a login page of "
+                                          "the network or a proxy in the way?") from None
 
     def _note_budget(self, headers):
         """X-RateLimit-Limit / -Remaining / -Reset (Mastodon, GoToSocial, Akkoma)."""
@@ -601,13 +649,10 @@ class Api:
     def get_page(self, path, params=None):
         """GET a list that pages by the Link header (followers, following):
         returns (items, max_id for the next page or None)."""
-        r = self.s.get(self.base + path, params=params, timeout=30)
-        if r.status_code >= 400:
-            raise ApiError(r.status_code, error_text(r))
-        log.debug("GET %s -> %s %d B", path, r.status_code, len(r.content or b""))
+        r = self._raw("GET", path, params=params, timeout=30)
         nxt = (r.links or {}).get("next", {}).get("url", "")
         m = re.search(r"[?&]max_id=([^&]+)", nxt)
-        return r.json() or [], (m.group(1) if m else None)
+        return self._json(r, "GET", path) or [], (m.group(1) if m else None)
 
     def following(self, acc_id, max_id=None):
         return self.get_page(f"/api/v1/accounts/{seg(acc_id)}/following",
