@@ -497,6 +497,8 @@ async function postMenu(p, anchor) {
       else if (it.kind === "copy") items.push([it.label, () => copyText(it.text)]);
       else if (it.kind === "quote_reply") items.push(["❝ " + it.label, () => quoteReply(p)]);
       else if (it.kind === "link") items.push([it.label, () => linkAct(it.url, p)]);
+      // all accounts in one: ★ ♻ ↩ as another of them — one item a choice
+      else if (it.kind === "act_as") for (const c of it.choices || []) items.push([c.label, () => actAs(p, c)]);
       else if (it.page) items.push([it.label + " …", () => openThing(it.page)]);
     }
     items.push("-");
@@ -567,6 +569,16 @@ async function linkAct(url, p, confirmed, chosen) {
   if (r.read_up_to) readUpTo(r.read_up_to);
   if (r.message) toast(r.message);
   if (r.refresh) await refresh();
+}
+
+// ★ / ♻ / ↩ from another account of this page: the post found on its server
+async function actAs(p, c) {
+  toast(w("act_as_wait"));
+  let r;
+  try { r = await api("/api/act_as", { id: p.sid, tag: c.tag, action: c.action }); }
+  catch (e) { toast(e.message); return; }
+  if (r.compose) composeFrom(r.compose, r.post);
+  if (r.message) toast(r.message);
 }
 
 function composeFrom(c, p) {  // the editor as the link asked: edit, quote, invite, redraft

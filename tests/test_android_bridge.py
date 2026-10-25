@@ -470,6 +470,13 @@ class BridgeThemeTest(_Base):
         self.assertTrue(os.path.isfile(font["text"]["regular"]))
         self.call("setting_set", "ui", "theme", json.dumps("juick"))
         self.call("settings_apply")
+        # tried for this run: the config keeps its own
+        names = [t["name"] for t in self.call("themes")["themes"]]
+        self.assertIn("night", names)
+        self.assertTrue(self.call("try_theme", "night")["message"])
+        self.assertEqual(self.call("theme")["name"], "night")
+        self.assertIn("error", json.loads(self.bridge.try_theme("nope")))
+        self.call("try_theme", "juick")
         pics = self.call("pictures")  # juick draws its own: the phone's buttons get them
         for word in ("reply", "boost", "like", "liked", "more", "refresh", "send"):
             self.assertIn("<svg", pics[word].get("svg", "") or open(pics[word]["png"]).read(4))

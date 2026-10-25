@@ -23,9 +23,7 @@ details.en = "Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classi
 [[feature]]
 id = "try-theme"
 status = "has"
-android = "no"
-android_note.ru = "тема меняется в настройках, «примерить на время» нет"
-android_note.en = "the theme is changed in Settings; no “try for this run”"
+android = "has"
 since = "0.15.0"
 name.ru = "Попробовать тему без перезапуска"
 name.en = "Trying a theme without a restart"

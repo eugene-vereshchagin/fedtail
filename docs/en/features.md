@@ -763,7 +763,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | “What the server can do” — the capability check | ✓ | ✓ | ✓ | ✓ | ◐ | The federation's state is everywhere; the check of a score of capabilities is a tab of the window. Android: the self-check looks at the server |
 | The arts mode: its mark in the menu | ✓ | ✓ | ✓ | ✓ | ◐ | `ui.arts_mode` works everywhere; the reminder of it is in the window's menu. Android: as a setting, no mark in a menu |
 | The settings window: search, restart, “open the file” | ✓ | ✓ | ◐ | ◐ | ✓ | The terminal and the web page edit the same config.toml with a form by chapters, with a search and “Open the file” (the terminal: in $EDITOR, the web page copies its path). No restart: they're restarted the way they were started; “the file changed outside” isn't needed — the place reads the file anew each time it opens. |
-| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, fonts and pictures, chosen in Settings; no “try” and no themes folder |
+| Themes: try one, the themes folder | ✓ | ✓ | ◐ | ◐ | ◐ | The terminal has themes of its own (`tui.theme`). The web page takes the windows' themes' colours and font and tries them from the ≡ menu, but doesn't open the themes folder: the page is a guest in the browser. Android: the windows' themes' colours, fonts and pictures, “try” in the menu; no themes folder |
 | Open the config and the data folder | ✓ | ✓ | ✓ | · | ◐ | The terminal opens the config in $EDITOR and copies the paths (≡ → “Debugging”); the web page has no access to the machine's files. Android: the config is edited in the app; no data folder |
 | Help: search, back, forward | ✓ | ✓ | ✓ | ✓ | ◐ | Android: help and its search, back — with Back; no forward |
 | About: copy the information | ✓ | ✓ | ✓ | ✓ | ◐ | The same information; no “copy” button — the text can be selected. Android: the facts — in the self-check, “Share” |
@@ -855,13 +855,11 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | An account's colour in the shared window | — | one account |
-| Acting as another account | — | one account |
 
 ### The application
 
 | What | Android | Why |
 |---|---|---|
-| Trying a theme without a restart | — | the theme is changed in Settings; no “try for this run” |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Open a link in the running fedtail | — | links to posts from other apps don't open in fedtail |
 | A detailed log for bug reports | ◐ | the log comes in the self-check's report |

@@ -19,6 +19,10 @@
   Sunup…) the server pushes, the app wakes for a round — notes at once with the app
   closed. All accounts in one window (≡), whose post in the editor. The themes' fonts
   (the ones that come with fedtail) and their own pictures on the buttons.
+- All accounts in one, on the web page and the phone: a post's ⋯ offers ★ ♻ ↩ from
+  another of them (`ui.act_as`), as the windows' menu does; the web page no longer refuses
+  the other account's posts and people (their ids, "work~123", were taken for bad ones).
+  The phone tries a theme for the run (⋮ → Try a theme…).
 - Profiles, on the web page and the phone: pinned posts on top, "often writes about" and
   recommendations, whom of yours they follow, their server's software, a move — and
   "more" page after page, further back from their own server.

@@ -99,6 +99,7 @@ class CardActions(
     val page: (String, String) -> Unit = { _, _ -> }, // a place of that menu (lists, translate…)
     val quoteReply: (PostItem) -> Unit = {},
     val vote: (PostItem, List<Int>) -> Unit = { _, _ -> },
+    val actAs: (PostItem, String, String) -> Unit = { _, _, _ -> }, // post, account, fav|boost|reply
 )
 
 fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
@@ -108,7 +109,8 @@ fun AppModel.cardActions(openBrowser: (String) -> Unit) = CardActions(
     info = { menuOf(it) }, thread = { p, what -> threadAct(p, what) }, browser = openBrowser,
     expandCw = expandCw, profile = { openProfile(it) }, menu = { postMenu(it) },
     runLink = { runLink(it) }, page = { name, arg -> openPage(name, arg) },
-    quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) })
+    quoteReply = { quoteReply(it) }, vote = { p, choices -> vote(p, choices) },
+    actAs = { p, tag, action -> actAs(p, tag, action) })
 
 private val EMOJI = Regex("""<img\b[^>]*\balt="([^"]*)"[^>]*>""")
 
@@ -575,6 +577,17 @@ private fun CardMenu(p: PostItem, act: CardActions) {
                             onClick = { open = false; clipboard.setText(AnnotatedString(item.optString("text"))) })
                         "quote_reply" -> DropdownMenuItem(text = { Text("❝ $label") },
                             onClick = { open = false; act.quoteReply(p) })
+                        // all accounts in one: ★ ♻ ↩ as another of them, one item a choice
+                        "act_as" -> {
+                            val cs = item.optJSONArray("choices") ?: org.json.JSONArray()
+                            for (k in 0 until cs.length()) {
+                                val c = cs.getJSONObject(k)
+                                DropdownMenuItem(text = { Text(c.optString("label")) }, onClick = {
+                                    open = false
+                                    act.actAs(p, c.optString("tag"), c.optString("action"))
+                                })
+                            }
+                        }
                         else -> item.optJSONObject("page")?.let { pg ->
                             DropdownMenuItem(text = { Text("$label …") }, onClick = {
                                 open = false; act.page(pg.optString("page"), pg.optString("arg"))

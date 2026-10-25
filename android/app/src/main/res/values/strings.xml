@@ -131,4 +131,6 @@
     <string name="accounts">Accounts</string>
     <string name="pinned">pinned</string>
     <string name="merge_accounts">All accounts in one window</string>
+    <string name="try_theme">Try a theme…</string>
+    <string name="act_as_wait">Looking the post up on the other account\'s server…</string>
 </resources>

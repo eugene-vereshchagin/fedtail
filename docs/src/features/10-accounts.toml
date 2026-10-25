@@ -85,9 +85,7 @@ details.en = "A coloured strip or mark on the posts that came to each account �
 [[feature]]
 id = "act-as"
 status = "has"
-android = "no"
-android_note.ru = "один аккаунт"
-android_note.en = "one account"
+android = "has"
 since = "0.14.0"
 name.ru = "Действие от другого аккаунта"
 name.en = "Acting as another account"

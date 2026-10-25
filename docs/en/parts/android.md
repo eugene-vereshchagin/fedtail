@@ -80,13 +80,11 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | What | Android | Why |
 |---|---|---|
 | An account's colour in the shared window | — | one account |
-| Acting as another account | — | one account |
 
 ### The application
 
 | What | Android | Why |
 |---|---|---|
-| Trying a theme without a restart | — | the theme is changed in Settings; no “try for this run” |
 | Window, tray, keys | · | a phone has no window, tray or keys |
 | Open a link in the running fedtail | — | links to posts from other apps don't open in fedtail |
 | A detailed log for bug reports | ◐ | the log comes in the self-check's report |

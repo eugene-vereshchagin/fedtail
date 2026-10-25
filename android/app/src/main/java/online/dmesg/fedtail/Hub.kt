@@ -108,6 +108,8 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                                 }
                                 DropdownMenuItem(text = { Text(stringResource(R.string.new_post)) },
                                     onClick = { menu = false; model.compose(null) })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.try_theme)) },
+                                    onClick = { menu = false; model.tryTheme() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.sync)) },
                                     onClick = { menu = false; model.openSync() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.settings)) },

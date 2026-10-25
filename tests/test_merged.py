@@ -407,6 +407,33 @@ class MergedRoutingTest(TmpDir):
             self.p.connect = lambda: done(None)
             m.connect().result(timeout=T)  # one not logged in isn't connected at all
 
+    # ---- the web page (and the phone, through it) -----------------------------------
+    def test_web_act_as_from_the_menu(self):
+        """A post's ⋯ on the page offers ★ ♻ ↩ from the other account, as the windows'
+        menu does; the other account's ids ("work~500") are ids there too."""
+        from fedtail.core.view import View
+        from fedtail.frontends.web.server import Web
+        web = Web(View(self.m), None)
+        st = self.m.store.get_status("work~500")
+        menu = web.post_menu("work~500")
+        acts = [i for i in menu["items"] if i["kind"] == "act_as"]
+        self.assertEqual(len(acts), 1)
+        choices = acts[0]["choices"]
+        self.assertEqual({c["action"] for c in choices}, {"fav", "boost", "reply"})
+        self.assertEqual({c["tag"] for c in choices}, {""})  # the main account
+        self.home.remote[st["uri"]] = dict(status("701", NEWS, minute=11), uri=st["uri"])
+        got = web.act_as("work~500", "", "fav")
+        self.assertIn("@mira", got["message"])
+        self.assertTrue(self.home.statuses["701"]["favourited"])
+        got = web.act_as("work~500", "", "reply")
+        self.assertEqual(got["compose"]["reply_to"], "701")
+        self.assertEqual(got["post"]["sid"], "701")
+        with self.assertRaises(ValueError):
+            web.act_as("work~500", "", "delete")
+        # one account alone: no such item, no such act
+        alone = Web(View(self.p), None)
+        self.assertFalse([i for i in alone.post_menu("010")["items"] if i["kind"] == "act_as"])
+
 
 if __name__ == "__main__":
     unittest.main()

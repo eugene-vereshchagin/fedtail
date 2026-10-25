@@ -54,7 +54,9 @@ SOCKET_SECONDS = WAIT_SECONDS + 35  # a client that sends nothing this long is d
 GONE = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
 _UPLOAD = re.compile(r"[A-Za-z0-9_-]{16}(\.[a-z0-9]{1,6})?")
 MAX_UPLOAD = 40 * 1024 * 1024  # bytes a file of a post may have (servers take less)
-_ID = re.compile(r"[A-Za-z0-9_.-]{1,100}")
+# "~": all accounts in one window — "work~123", a post or person of another account
+# (core/merged.py); still one path segment, no "/" and no ".." into the API
+_ID = re.compile(r"[A-Za-z0-9_.~-]{1,100}")
 
 
 def one_id(value):
@@ -1243,7 +1245,10 @@ class Web:
                           lists=True, long_form=bool(cfg["feed"].get("long_form", True)),
                           translate=bool(getattr(core.caps, "translation", False)),
                           translates=getattr(core, "translation_languages", None),
-                          quote_reply=bool(cfg["post"].get("quote_prefix", "> ")))
+                          quote_reply=bool(cfg["post"].get("quote_prefix", "> ")),
+                          # all accounts in one: ★ ♻ ↩ from another of them (ui.act_as)
+                          act_as=(lambda e: self.merged_core().act_accounts(core.raw(e)))
+                          if self.merged_core() and cfg["ui"].get("act_as", True) else None)
         short = core.short_ids([p]).get(real(p).id)
         unread = p.id in core.unread([p])
         items = []
@@ -1254,6 +1259,10 @@ class Web:
             elif it.kind == "lists":  # a place: the lists, ticked where they are
                 items.append({"kind": "lists", "label": it.label, "url": "", "text": "",
                               "page": {"page": "list_of", "arg": it.data.id}})
+            elif it.kind == "act_as":  # one item a choice: the page has no submenus
+                items.append({"kind": "act_as", "label": it.label, "url": "", "text": "",
+                              "choices": [{"label": label, "tag": tag or "", "action": action}
+                                          for label, _e, tag, action in it.data]})
             elif it.kind in ("long_form", "translate"):
                 items.append({"kind": it.kind, "label": it.label, "url": "", "text": "",
                               "page": {"page": it.kind, "arg": p.id}})
@@ -1274,6 +1283,29 @@ class Web:
         if host.out.get("error"):
             raise ValueError(host.out["error"])
         return host.out
+
+    def merged_core(self):
+        """The merged core behind this page (all accounts in one), or None."""
+        inner = getattr(self.core, "_core", self.core)
+        return inner if hasattr(inner, "act_as") and getattr(inner, "others", None) else None
+
+    def act_as(self, sid, tag, action):
+        """★ / ♻ / ↩ from another account of the window (the ⋯ menu's "As…"): the post
+        found on that account's server, the action done there; a reply opens the editor
+        on the post as that account sees it (common/actions, Qt's window.act_as)."""
+        if action not in ("fav", "boost", "reply") or self.merged_core() is None:
+            raise ValueError(action)
+        p = self._post_by_id(sid)
+        tag = str(tag or "") or None
+        got = self.core.act_as(p, tag, "find" if action == "reply" else action).result(120)
+        if action == "reply":
+            if got is None:
+                raise ValueError(_("act_as_wait"))
+            post = post_json(self.core, got, None)
+            return {"compose": {"reply_to": got.id}, "post": post}
+        via = self.core.via(got) if got is not None else ""
+        me = self.core.me
+        return {"message": _("act_as_done", acct=via or "@" + (me.handle if me else ""))}
 
     def thread_act(self, action, sid):
         """Subscribe to, leave, mute or unmute the thread a post is in."""
@@ -1571,7 +1603,7 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "web_parent_gone", "web_mark_read", "tui_profile", "open_browser", "refresh",
          "more", "no_older", "poll_vote", "poll_voted", "cw_placeholder", "cw_add",
          "web_new_post", "web_original", "web_close", "web_lanes", "web_edited",
-         "web_requested", "lang_label", "pinned",
+         "web_requested", "lang_label", "pinned", "act_as_wait",
          "reply_quote", "quote_in_reply", "sub_thread", "unsub_thread", "mute_thread",
          "unmute_thread", "copy_link", "delete", "delete_q", "help_title", "about",
          "edit", "quote",
@@ -1772,6 +1804,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/active": lambda: web.activate(body.get("name")),
             "/api/resolve": lambda: web.resolve(str(body.get("url", ""))),
             "/api/thread_act": lambda: web.thread_act(body.get("action"), str(body.get("id"))),
+            "/api/act_as": lambda: web.act_as(str(body.get("id")), body.get("tag"),
+                                              str(body.get("action") or "")),
             "/api/place": lambda: web.place_act(body),
             "/api/delete": lambda: web.delete(str(body.get("id"))),
             "/api/theme": lambda: web.try_theme(body.get("name")),

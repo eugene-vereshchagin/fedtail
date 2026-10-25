@@ -315,6 +315,37 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var merged by mutableStateOf(false)      // all accounts in one window
     var accountCount by mutableStateOf(1)
 
+    /** ★ / ♻ / ↩ from another account of the window (the card's ⋯ → "As…"). */
+    fun actAs(p: PostItem, tag: String, action: String) {
+        message = getApplication<Application>().getString(R.string.act_as_wait)
+        viewModelScope.launch {
+            val got = Core.actAs(p.sid, tag, action)
+            Core.failed(got)?.let { message = it; return@launch }
+            got.optJSONObject("post")?.let { compose(parsePost(it)) }
+            str(got, "message").takeIf { it.isNotBlank() }?.let { message = it }
+        }
+    }
+
+    /** ≡ → Try a theme: one of the windows' themes for this run; the config keeps its own. */
+    fun tryTheme() {
+        viewModelScope.launch {
+            val got = Core.themes()
+            Core.failed(got)?.let { message = it; return@launch }
+            val list = got.optJSONArray("themes") ?: JSONArray()
+            asking = Asking.Choose(str(got, "title"), str(got, "tip"),
+                (0 until list.length()).map { list.getJSONObject(it) }.map { t ->
+                    str(t, "name") to ((if (t.optBoolean("on")) "● " else "") + str(t, "label"))
+                }, "") { name, _ ->
+                viewModelScope.launch {
+                    val r = Core.tryTheme(name)
+                    Core.failed(r)?.let { message = it; return@launch }
+                    loadTheme()
+                    str(r, "message").takeIf { it.isNotBlank() }?.let { message = it }
+                }
+            }
+        }
+    }
+
     /** ≡ → All accounts in one window: the core made anew with (or without) the others. */
     fun toggleMerge() {
         viewModelScope.launch {

@@ -130,4 +130,6 @@
     <string name="accounts">Аккаунты</string>
     <string name="pinned">закреплено</string>
     <string name="merge_accounts">Все аккаунты в одном окне</string>
+    <string name="try_theme">Примерить тему…</string>
+    <string name="act_as_wait">Ищу пост на сервере другого аккаунта…</string>
 </resources>

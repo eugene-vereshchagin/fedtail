@@ -644,6 +644,27 @@ def notes(since):
     return _answer(go)
 
 
+def act_as(post_id, tag, action):
+    """★ / ♻ / ↩ from another account (all accounts in one): → {message} or, for a
+    reply, {compose: {reply_to}, post: the post as that account sees it}."""
+    def go():
+        got = _s["web"].act_as(post_id, tag, action)
+        if got.get("post"):
+            _texts([got["post"]])
+        return got
+    return _answer(go)
+
+
+def themes():
+    """≡ → Try a theme: {current, configured, themes: [{name, label, on}], title}."""
+    return _answer(lambda: _s["web"].themes())
+
+
+def try_theme(name):
+    """A theme for this run (the config stays): the phone repaints from theme()."""
+    return _answer(lambda: _s["web"].try_theme(name))
+
+
 def merge(on):
     """All accounts in one window, on or off (the windows' menu item; kept in the main
     profile's state): the core made anew at once — the screens then start again."""
