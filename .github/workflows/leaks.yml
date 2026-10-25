@@ -1,0 +1,55 @@
+name: Leaks
+
+# By hand (Actions → Leaks → Run workflow, or `gh workflow run leaks.yml`): the Qt and GTK
+# windows through tools/tabs_stress.py — tabs opened and closed, and a long session
+# (posts arriving, lanes switched) — on Debian 13 as people run it. The rounds' numbers
+# and what grew come out as annotations: readable from the run page and the API.
+on:
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: rounds of each kind
+        default: "12"
+      tabs:
+        description: tabs a round
+        default: "30"
+
+jobs:
+  leaks:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    strategy:
+      fail-fast: false
+      matrix:
+        ui: [gtk, qt]
+        mode: [tabs, churn]
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-requests \
+            python3-pyside6.qtwidgets python3-pyside6.qtdbus python3-gi gir1.2-gtk-4.0 \
+            xvfb xauth python3-pil
+      - name: Stress
+        shell: bash
+        run: |
+          set -o pipefail
+          extra=""
+          [ "${{ matrix.mode }}" = churn ] && extra="--churn"
+          timeout -s ABRT 2400 xvfb-run -a python3 -X faulthandler tools/tabs_stress.py out \
+            --ui ${{ matrix.ui }} --rounds ${{ inputs.rounds }} --tabs ${{ inputs.tabs }} \
+            $extra 2>&1 | tee stress.log
+      - name: The numbers as annotations
+        if: always()
+        shell: bash
+        run: |
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}'; }
+          if [ -f out/report.md ]; then
+            echo "::notice title=${{ matrix.ui }} ${{ matrix.mode }}::$(enc < out/report.md)"
+          fi
+          if [ -f out/errors.txt ] && [ "$(cat out/errors.txt)" != "none" ]; then
+            echo "::warning title=${{ matrix.ui }} ${{ matrix.mode }} problems::$(head -c 6000 out/errors.txt | enc)"
+          fi
+          echo "::notice title=${{ matrix.ui }} ${{ matrix.mode }} log tail::$(tail -n 30 stress.log | enc)"

@@ -5,7 +5,11 @@ Each round: time to open them all, time to close, what is left alive afterwards
 a leak; an exception anywhere is an error.
 
     python3 tools/tabs_stress.py OUT_DIR --ui qt|gtk|tui [--rounds 6] [--tabs 30]
-                                 [--layout single|split] [--real[=PROFILE]]
+                                 [--layout single|split] [--real[=PROFILE]] [--churn]
+
+--churn: no tabs — what a window open for a day goes through instead: each round new
+posts arrive (replies, threads, boosts), the poll runs, every lane is opened in turn,
+all is read. What stays behind round after round is the leak of a long session (Qt, GTK).
 
 --real: your own account, read-only (tools/real.py): the posts, people and tags of
 your home lane. Writes OUT_DIR/report.md, errors.txt ("none" when all went well)."""
@@ -154,6 +158,41 @@ def targets(core, n):
     return out
 
 
+CHURN = {"n": 0}
+
+
+def churn_round(core, per_round=40):
+    """New posts on the fake server, as a busy day brings them: posts, replies into
+    threads, boosts; then one poll."""
+    from tests.fakes import FakeApi, acct, status
+    w = FakeApi.world
+    people = [acct(f"P{i}", f"person{i}@example.org") for i in range(25)]
+    have = list(w.statuses.values())
+    for _ in range(per_round):
+        CHURN["n"] += 1
+        i = 1000 + CHURN["n"]
+        who = people[i % len(people)]
+        if i % 5 == 0 and have:  # a boost of something older
+            old = have[i % len(have)]
+            st = dict(status(f"b{i}", who, minute=i % 60, vis="public"), reblog=old)
+        elif i % 3 == 0 and have:
+            par = have[-1 - i % min(len(have), 30)]
+            st = status(f"{i:05d}", who, par["id"], par["account"]["id"], minute=i % 60,
+                        vis="public", text=f"ответ {i}")
+        else:
+            st = status(f"{i:05d}", who, minute=i % 60, vis="public",
+                        text=f"пост {i} #tag{i % 12} https://example.org/{i} " + "слово " * 5)
+            st["tags"] = [{"name": f"tag{i % 12}",
+                           "url": f"https://example.test/tags/tag{i % 12}"}]
+            if i % 4 == 0:
+                st["media_attachments"] = [{"id": f"m{i}", "type": "image",
+                                            "url": f"https://example.test/m{i}.png",
+                                            "preview_url": f"https://example.test/p{i}.png"}]
+        w.add(st, home=True, mention=(i % 7 == 0))
+        have.append(st)
+    core.poll_once()
+
+
 def connected(core, pump):
     """Wait for the connection (your account: the server may be slow): the tabs
     opened before it would all fail with "connecting"."""
@@ -253,6 +292,31 @@ def run_qt(a):
                  + ", ".join(f"{k} {sum(1 for x in todo if x[0] == k)}"
                              for k in ("thread", "account", "tag")))
     wait = 1.5 if REAL else 0.15
+    if a.churn:
+        lanes = [lane.name for lane in core.lanes if not lane.lazy]
+        for rnd in range(1, a.rounds + 1):
+            t0 = time.monotonic()
+            try:
+                churn_round(core)
+                pump(0.3)
+                for name in lanes:
+                    win.select_lane(name)
+                    pump(0.1)
+                for name in lanes:  # all read, as a reader gets through the day
+                    core.mark_read([st["id"] for _i, st in core.lane_entries(name)])
+                pump(0.3)
+            except Exception:  # noqa: BLE001
+                ERRORS.append("qt churn: " + traceback.format_exc(limit=6))
+            QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+            pump(0.3)
+            gc.collect()
+            note_round("qt", rnd, len(lanes), time.monotonic() - t0, 0.0,
+                       len(app.allWidgets()), len(gc.get_objects()), rss_mb())
+        win.quitting = True
+        win.hide()
+        core.shutdown()
+        judge("qt")
+        return
     for rnd in range(1, a.rounds + 1):
         t0 = time.monotonic()
         for kind, what in todo:
@@ -336,6 +400,27 @@ def run_gtk(a):
 
     def extra():
         return len(win.threads) + len(win.accounts) + len(getattr(win, "extra_tabs", {}))
+    if a.churn:
+        lanes = [lane.name for lane in core.lanes if not lane.lazy]
+        for rnd in range(1, a.rounds + 1):
+            t0 = time.monotonic()
+            try:
+                churn_round(core)
+                pump(0.3)
+                for name in lanes:
+                    win.select_lane(name)
+                    pump(0.1)
+                for name in lanes:
+                    core.mark_read([st["id"] for _i, st in core.lane_entries(name)])
+                pump(0.3)
+            except Exception:  # noqa: BLE001
+                ERRORS.append("gtk churn: " + traceback.format_exc(limit=6))
+            gc.collect()
+            note_round("gtk", rnd, len(lanes), time.monotonic() - t0, 0.0, count(win),
+                       len(gc.get_objects()), rss_mb())
+        core.shutdown()
+        judge("gtk")
+        return
     for rnd in range(1, a.rounds + 1):
         t0 = time.monotonic()
         for kind, what in todo:
@@ -456,7 +541,11 @@ def main():
     ap.add_argument("--theme", default="system")
     ap.add_argument("--native", action="store_true", help="Qt: on the screen, not offscreen")
     ap.add_argument("--real", nargs="?", const="", help="your account (tools/real.py)")
+    ap.add_argument("--churn", action="store_true",
+                    help="a long session instead of tabs: posts arrive, lanes switch")
     a = ap.parse_args()
+    if a.churn and REAL:
+        ap.error("--churn makes posts on the fake server: not with --real")
     ARGS["rounds"] = a.rounds
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -472,7 +561,7 @@ def main():
         {"qt": run_qt, "gtk": run_gtk, "tui": run_tui}[a.ui](a)
     except Exception:  # noqa: BLE001
         ERRORS.append(traceback.format_exc())
-    md = [f"# Tabs opened and closed: {a.ui}", "",
+    md = [f"# {'A long session' if a.churn else 'Tabs opened and closed'}: {a.ui}", "",
           f"{'your account' if REAL else 'the fake server'} · {a.rounds} rounds · "
           f"{time.monotonic() - t0:.0f} s in all", ""] + [f"- {n}" for n in NOTES] + [
         "", "| round | tabs | open, s | close, s | widgets left | objects | MB |",
