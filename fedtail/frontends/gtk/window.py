@@ -868,8 +868,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def close_extra(self, key):
         page = self.extra_tabs.pop(key, None)
         if page is not None:
-            self.tabs.remove_page(self.tabs.page_num(page))
-            forget(page)  # its cards' handlers held them alive (gi_setup.forget)
+            self._drop_tab(page)
         self._tab_switched()
 
     def new_list(self, add=None):
@@ -1579,9 +1578,17 @@ class MainWindow(Gtk.ApplicationWindow):
     def close_thread(self, root):
         page = self.threads.pop(root, None)
         if page is not None:
-            self.tabs.remove_page(self.tabs.page_num(page))
-            forget(page)  # its cards' handlers held them alive (gi_setup.forget)
+            self._drop_tab(page)
         self._tab_switched()
+
+    def _drop_tab(self, page):
+        """A tab closed: the page out of the notebook, and its handlers — the page's and
+        its title's (the × button's) — let go of (gi_setup.forget): the title stayed
+        alive, button and all, a tab at a time (the tabs stress test, 26.10)."""
+        label = self.tabs.get_tab_label(page)
+        self.tabs.remove_page(self.tabs.page_num(page))
+        forget(page)  # its cards' handlers held them alive
+        forget(label)
 
     def _new_tab(self, text, close_fn):
         """A tab after the lanes: a scrolled list of cards; (page, list, title label)."""
@@ -1660,8 +1667,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def close_account(self, acc_id):
         page = self.accounts.pop(acc_id, None)
         if page is not None:
-            self.tabs.remove_page(self.tabs.page_num(page))
-            forget(page)  # its cards' handlers held them alive (gi_setup.forget)
+            self._drop_tab(page)
         self._tab_switched()
 
     def _profile_head(self, acc, own):

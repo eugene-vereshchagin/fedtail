@@ -292,13 +292,17 @@ def what_it_is(obj):
     """A Qt or GTK object said by what shows of it: its words, its parents' kinds (a
     QAction: its text and menu; a button: its label and the box it is in)."""
     bits = []
-    for attr in ("text", "get_label", "toolTip", "get_tooltip_text", "objectName"):
+    for attr in ("text", "get_label", "toolTip", "get_tooltip_text", "objectName",
+                 "get_icon_name", "get_css_classes"):
         try:
             v = getattr(obj, attr)()
         except Exception:  # noqa: BLE001 — not this kind's
             continue
         if v:
             bits.append(f"{attr} {str(v)[:40]!r}")
+    tip = getattr(obj, "_ft_tip", "")  # fedtail's own tooltips (gi_setup.tip)
+    if tip:
+        bits.append(f"tip {tip[:40]!r}")
     chain, cur = [], obj
     for _ in range(4):
         try:

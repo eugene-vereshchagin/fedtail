@@ -7,6 +7,7 @@ space before they load.
 
 import logging
 import time
+import weakref
 from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal
@@ -706,21 +707,25 @@ class MediaFilter:
             self.btn.setText("⏷ " + _("media_filter"))
         menu = QMenu(self.btn)
         self.actions = {}
+        # the menu's actions reach back only weakly: a closed tab's filter and its tab
+        # would otherwise hold each other through the connections (the tabs stress
+        # test: four QActions and a tab's Python side left behind with every tab)
+        me = weakref.ref(self)
         for kind in MEDIA_KINDS:
             a = menu.addAction(_("filter_" + kind))
             a.setCheckable(True)
             a.setChecked(True)
-            a.toggled.connect(lambda on, k=kind: self._toggle(k, on))
+            a.toggled.connect(lambda on, k=kind, me=me: me() and me()._toggle(k, on))
             self.actions[kind] = a
         menu.addSeparator()
         # boosts apart from the kinds: someone who boosts a lot hides their own posts
         b = menu.addAction(_("filter_boosts"))
         b.setCheckable(True)
         b.setChecked(True)
-        b.toggled.connect(self._toggle_boosts)
+        b.toggled.connect(lambda on, me=me: me() and me()._toggle_boosts(on))
         self.actions["boosts"] = b
         menu.addSeparator()
-        menu.addAction(_("filter_all"), self.reset)
+        menu.addAction(_("filter_all"), lambda me=me: me() and me().reset())
         self.btn.setMenu(menu)
         from PySide6.QtWidgets import QToolButton
         if isinstance(self.btn, QToolButton):
@@ -1414,7 +1419,8 @@ class _PagedTab(QWidget):
         lay.addWidget(self.view, 1)
         self.btn_more = _button(_("older_down"), self.more, name="older")
         self.view.footer.addWidget(self.btn_more)
-        self.media_filter = MediaFilter(self.header, lambda: self.render())
+        me = weakref.ref(self)  # weakly: the filter must not keep a closed tab alive
+        self.media_filter = MediaFilter(self.header, lambda: me() and me().render())
 
     def shown(self, entries):
         """The posts the funnel lets through."""
