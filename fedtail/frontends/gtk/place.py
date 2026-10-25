@@ -214,9 +214,9 @@ class PlaceWindow:
         values = self.values()
         self.win.call(self.view.bg.submit(lambda: self.places.act(
             *btn.act, values=values, confirmed=confirmed, answer=answer)),
-            lambda out: self.done(btn, out, answer))
+            lambda out: self.answered(btn, out, answer))
 
-    def done(self, btn, out, answer):
+    def answered(self, btn, out, answer):
         if out.error:
             self.win.error(_plain(out.error))
             return

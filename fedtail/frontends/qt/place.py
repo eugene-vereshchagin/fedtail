@@ -253,10 +253,10 @@ class PlaceDialog(QDialog):
         values = self.values()
         fut = self.view.bg.submit(lambda: self.places.act(
             *btn.act, values=values, confirmed=confirmed, answer=answer))
-        self.win.bridge.call(fut, ok=lambda out: self.done(btn, out, answer),
+        self.win.bridge.call(fut, ok=lambda out: self.answered(btn, out, answer),
                              fail=self.win.error)
 
-    def done(self, btn, out, answer):
+    def answered(self, btn, out, answer):
         if out.error:
             self.win.error(out.error)
             return

@@ -200,11 +200,11 @@ class FlowTest {
         compose.onAllNodesWithContentDescription("More").onFirst().performClick()
         waitText("Places…", 15_000)
         compose.onAllNodesWithText("Places…").onFirst().performClick()
-        waitText("Profile directory", 30_000)          // common/places.py's ≡ menu, all of it
+        waitText("Lists", 30_000)                      // common/places.py's ≡ menu
         compose.onAllNodesWithText("Search").onFirst().performClick()
         waitText("@user@server", 30_000)               // the search place's field
         back()
-        waitText("Profile directory")
+        waitText("Lists")
     }
 
     @Test
