@@ -35,8 +35,51 @@ def load_adwaita(mode):
     return Adw
 
 
-__all__ = ["Adw", "Gdk", "Gio", "GLib", "GObject", "Gtk", "Pango", "MIN_GTK", "gtk_version",
-           "load_adwaita"]
+__all__ = ["Adw", "Gdk", "Gio", "GLib", "GObject", "Gtk", "Pango", "MIN_GTK", "forget",
+           "gtk_version", "load_adwaita"]
+
+
+def _drop_handlers(obj):
+    """Every signal handler of obj and of its event controllers (gestures, keys)."""
+    try:
+        ctrls = obj.observe_controllers()
+        for i in range(ctrls.get_n_items()):
+            c = ctrls.get_item(i)
+            if c is not None:
+                GObject.signal_handlers_destroy(c)
+    except Exception:  # noqa: BLE001 — not a widget, or gone already
+        pass
+    try:
+        GObject.signal_handlers_destroy(obj)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def forget(widget):
+    """A widget thrown away (a closed tab, a card scrolled out and dropped): its signal
+    handlers and its children's let go of, a moment later.
+
+    A Python handler that names its own widget (a card's button whose click knows the
+    card) is a loop through C — the widget holds the handler, the handler the widget —
+    that Python's collector can't see, so the whole card stayed alive after its tab was
+    closed: 30 MB more every round of tabs_stress (25.10). Dropping the handlers ends
+    the loop; GTK frees the rest as it should."""
+    if widget is None:
+        return
+
+    def walk(w):
+        child = w.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            walk(child)
+            child = nxt
+        _drop_handlers(w)
+
+    def later():
+        if widget.get_parent() is None:  # put back somewhere meanwhile: still in use
+            walk(widget)
+        return GLib.SOURCE_REMOVE
+    GLib.idle_add(later)
 
 
 

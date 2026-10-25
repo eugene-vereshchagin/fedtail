@@ -26,7 +26,7 @@ from ...i18n import _
 from ...model import Share, real
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator
-from .gi_setup import GLib, Gtk, Pango, clamp, set_clamp, side_by_side, tip, wrap_box
+from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
 
@@ -559,6 +559,7 @@ class LaneView(Gtk.Box):
             row = row.get_parent()
         if row is not None:
             self.list.remove(row)
+            forget(row)
 
     def _trim(self):
         """More rows than MAX_ROWS: the end farther from the view goes."""

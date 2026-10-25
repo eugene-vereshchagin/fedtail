@@ -9,7 +9,7 @@ from ...i18n import _
 from ...model import real
 from ..common import timed
 from .card import Card
-from .gi_setup import Gtk, tip
+from .gi_setup import Gtk, forget, tip
 
 BATCH = 4  # posts my server fetches by address per call (seconds each)
 
@@ -85,7 +85,9 @@ class ProfilePosts:
         """Pinned first (marked), then the rest by time — the cards made anew (a
         profile's few dozen)."""
         for c in self.cards:
-            self.box.remove(c.get_parent() or c)
+            gone = c.get_parent() or c
+            self.box.remove(gone)
+            forget(gone)
         self.cards = []
         top = {real(e).id for e in self.pinned}
         everything = self.pinned + [e for e in self.items if real(e).id not in top]

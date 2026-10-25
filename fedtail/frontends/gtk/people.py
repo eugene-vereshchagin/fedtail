@@ -10,7 +10,7 @@ import logging
 from ...i18n import _
 from ...model import Account, Tag, real
 from .card import Avatar, Card, link_markup, name_of
-from .gi_setup import GLib, Gtk, Pango, side_by_side, tip
+from .gi_setup import GLib, Gtk, Pango, forget, side_by_side, tip
 
 log = logging.getLogger(__name__)
 
@@ -280,6 +280,7 @@ def open_search(win, query):
     old = win.extra_tabs.pop(key, None)
     if old is not None:
         win.tabs.remove_page(win.tabs.page_num(old))
+        forget(old)
     page, box, title = win._new_tab(_("search_title") + (": " + query if query else ""),
                                     lambda: win.close_extra(key))
     win.extra_tabs[key] = page
@@ -300,6 +301,7 @@ def open_search(win, query):
     def got(res):
         while (c := box.get_first_child()) is not None:
             box.remove(c)
+            forget(c)
         accs = [a for a in res.get("accounts") or () if isinstance(a, Account)]
         tags = [t for t in res.get("hashtags") or () if isinstance(t, Tag)]
         sts = list(res.get("statuses") or ())

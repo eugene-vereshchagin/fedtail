@@ -12,7 +12,7 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
-from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, tip
+from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
 
@@ -602,6 +602,7 @@ class Card(Gtk.Box):
         new = self._media(self.post)
         parent.insert_child_after(new, old)
         parent.remove(old)
+        forget(old)
 
     def _poll(self, p):
         """Options to pick and Vote (or a peek at the results), as in Qt; the results
@@ -614,6 +615,7 @@ class Card(Gtk.Box):
     def _fill_poll(self, box, p, peek):
         while (c := box.get_first_child()) is not None:
             box.remove(c)
+            forget(c)
         poll = p.poll
         self.poll_shown, self.poll_peek = poll, peek
         mine = p.author.id == self.ctx.me_id
@@ -868,6 +870,7 @@ class Card(Gtk.Box):
         box = self.text_box
         while (c := box.get_first_child()) is not None:
             box.remove(c)
+            forget(c)
         p = self.post
         if translated:
             from dataclasses import replace as _replace

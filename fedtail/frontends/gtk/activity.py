@@ -8,7 +8,7 @@ from ...i18n import _
 from ...model.text import snippet, snippet_html
 from ..common import activity
 from .card import link_markup, name_of
-from .gi_setup import GLib, Gtk, Pango, side_by_side, tip
+from .gi_setup import GLib, Gtk, Pango, forget, side_by_side, tip
 from .lane import seen, y_in
 
 SEEN_DELAY_MS = 700
@@ -55,6 +55,7 @@ class _Lane(Gtk.Box):
     def _clear(self):
         while (row := self.list.get_first_child()) is not None:
             self.list.remove(row)
+            forget(row)
 
     def shown(self):
         if self.dirty:

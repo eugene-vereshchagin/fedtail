@@ -18,7 +18,7 @@ from ..common import compose as rules
 from ..common import roster as rrules
 from ..common import split
 from ..common.actions import vis_word
-from .gi_setup import GLib, Gtk, Pango, set_markup, tip
+from .gi_setup import GLib, Gtk, Pango, forget, set_markup, tip
 from .icons import nobody
 
 log = logging.getLogger(__name__)
@@ -288,6 +288,7 @@ class RosterWindow(Gtk.Window):
     def _build(self, groups):
         while (c := self.list.get_first_child()) is not None:
             self.list.remove(c)
+            forget(c)
         self.rows, self.heads = {}, {}
         for g in groups:
             if not g.items:

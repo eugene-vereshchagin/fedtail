@@ -19,7 +19,7 @@ from ..common.links import Links
 from . import login
 from .activity import ActivityLane, RequestsLane
 from .card import Card
-from .gi_setup import Gdk, Gio, GLib, Gtk, Pango, gtk_version, tip
+from .gi_setup import Gdk, Gio, GLib, Gtk, Pango, forget, gtk_version, tip
 from .lane import LaneView, y_in
 
 log = logging.getLogger(__name__)
@@ -847,6 +847,7 @@ class MainWindow(Gtk.ApplicationWindow):
         page = self.extra_tabs.pop(key, None)
         if page is not None:
             self.tabs.remove_page(self.tabs.page_num(page))
+            forget(page)  # its cards' handlers held them alive (gi_setup.forget)
         self._tab_switched()
 
     def new_list(self, add=None):
@@ -1547,6 +1548,7 @@ class MainWindow(Gtk.ApplicationWindow):
         page = self.threads.pop(root, None)
         if page is not None:
             self.tabs.remove_page(self.tabs.page_num(page))
+            forget(page)  # its cards' handlers held them alive (gi_setup.forget)
         self._tab_switched()
 
     def _new_tab(self, text, close_fn):
@@ -1627,6 +1629,7 @@ class MainWindow(Gtk.ApplicationWindow):
         page = self.accounts.pop(acc_id, None)
         if page is not None:
             self.tabs.remove_page(self.tabs.page_num(page))
+            forget(page)  # its cards' handlers held them alive (gi_setup.forget)
         self._tab_switched()
 
     def _profile_head(self, acc, own):
