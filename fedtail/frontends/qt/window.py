@@ -2723,6 +2723,7 @@ class MainWindow(QMainWindow):
             e.ignore()
             return
         super().closeEvent(e)
+        log.info("main window closed, leaving")
         if self.roster is not None:  # a window of its own: it goes with this one (the
             self.roster.deleteLater()  # tour found every split window's roster alive)
             self.roster = None
@@ -2734,11 +2735,19 @@ class MainWindow(QMainWindow):
         until the mouse passes over it — fedtail leaves through os._exit, past Qt's own
         clean-up, so every restart left one more there."""
         if self.tray is not None:
-            self.tray.hide()
-            self.tray.setContextMenu(None)
-            self.tray.deleteLater()
-            self.tray = None
+            tray, self.tray = self.tray, None
+            tray.hide()
+            tray.setContextMenu(None)
+            # destroyed now, not at the next turn of the loop that never comes: its
+            # destructor is what unregisters it for good (NIM_DELETE on Windows, the
+            # StatusNotifierItem on KDE) — hide() alone left it there on both (26.10)
+            try:
+                from shiboken6 import delete
+                delete(tray)
+            except (ImportError, RuntimeError):  # no shiboken6, or gone already
+                tray.deleteLater()
             _flush_desktop()
+            log.info("tray icon removed")
 
     def _debug_corner(self):
         """In the debugging mode, the right end of the status bar says how this
@@ -2770,6 +2779,7 @@ class MainWindow(QMainWindow):
         return "geometry.onefile" if getattr(sys, "frozen", False) else "geometry"
 
     def quit(self):
+        log.info("quit (tray icon: %s)", "yes" if self.tray is not None else "none")
         self.quitting = True
         self.close()
         self.drop_tray()

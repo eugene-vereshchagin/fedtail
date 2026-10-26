@@ -2,6 +2,9 @@
 
 ## 0.20.0 — in progress
 
+- The tray icon leaving with fedtail, on Windows and in KDE: destroyed at once on the way
+  out instead of only hidden (it stayed in the panel until the mouse passed over it);
+  the log says "quit" and "tray icon removed".
 - Columns on the web page, as in the windows: ❯ on the lane's bar puts lanes side by side
   (as left last time — the same set as the windows', else `ui.columns`, else Home,
   Replies to me, Activity); a lane picked on the left joins them, ‹ › move one, ✕ takes it
