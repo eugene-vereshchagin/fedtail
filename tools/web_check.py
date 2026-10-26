@@ -61,6 +61,11 @@ def make_core():
                                         "description": "картинка"}]
         w.add(st, home=True)
     w.act("a1", "favourite", BOB, st=mine, minute=5)
+    # what a lived-in account has and an empty one hides: a list (26.10 — columns
+    # broke on the first account with one), a followed tag
+    w.lists["7"] = {"id": "7", "title": "Друзья", "exclusive": False,
+                    "replies_policy": "list", "members": set()}
+    w.followed_tags.add("linux")
     cfg, _ = config.validate({"feed": {"first_run_mark_read": False}})
     p = paths.resolve("web", config=str(Path(_tmp) / "c.toml"), data=str(Path(_tmp) / "d"))
     auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
@@ -130,6 +135,12 @@ def with_playwright(base, key, out):
             # a picture another server didn't give (502, 404, 429) is the network's
             # business, not the page's: noted, not an error
             page.on("pageerror", lambda e, label=label: ERRORS.append(f"{label} page error: {e}"))
+            # fedtail's own answers failing are the page's problem, whatever the page made
+            # of them (26.10: a 502 from /api/columns only hid ❯, and the console note of
+            # it went to the network's notes above)
+            page.on("response", lambda r, label=label: "/api/" in r.url and r.status >= 500
+                    and ERRORS.append(f"{label} {r.request.method} {r.url.split('?')[0]}"
+                                      f" -> {r.status}"))
             page.goto(base + "/?k=" + key)
             page.wait_for_selector(".post, article, #posts > *", timeout=10000)
             page.wait_for_timeout(800)
@@ -163,7 +174,9 @@ def with_playwright(base, key, out):
             page.fill("#find-q", word)
             page.wait_for_timeout(700)
             if word and page.locator("#posts .post.found").count() == 0:
-                ERRORS.append(f"Ctrl+F: nothing marked for a word the lane has ({word!r})")
+                ERRORS.append(f"Ctrl+F: nothing marked for a word the lane has ({word!r}) — "
+                              f"lane {page.evaluate('state.lane')}, "
+                              f"{page.locator('#posts .post').count()} posts on screen")
             page.screenshot(path=str(out / "desktop-09-find.png"))
             # "Deeper" (what's stored, not only shown) and "in every lane", as the windows
             page.click("#find-deeper")
