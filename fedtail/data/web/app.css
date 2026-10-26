@@ -64,6 +64,24 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
              border-bottom: 1px solid var(--line); background: var(--card); }
 .side-head h2 { font-size: 16px; margin: 0; overflow: hidden; text-overflow: ellipsis;
                 white-space: nowrap; }
+/* columns: lanes side by side (❯); the focused one is the page's own lane */
+#cols { flex: 1; display: flex; min-width: 0; overflow-x: auto; overflow-y: hidden; }
+#cols > #main, #cols > .col { flex: none; width: var(--colw, 460px); min-height: 0;
+                              border-right: 1px solid var(--line); }
+#cols > #main #bar { box-shadow: inset 0 3px 0 var(--accent); }
+#cols .post { max-width: none; }
+.col { display: flex; flex-direction: column; background: var(--bg); }
+.colhead { display: flex; align-items: center; gap: 6px; padding: 6px 10px; min-height: 48px;
+           border-bottom: 1px solid var(--line); background: var(--card); cursor: pointer; }
+.colhead h2 { font-size: 16px; margin: 0; overflow: hidden; text-overflow: ellipsis;
+              white-space: nowrap; }
+.colcount { color: var(--unread); font-weight: 600; flex: 1; white-space: nowrap; }
+.colposts { overflow-y: auto; flex: 1; padding: 10px 10px 24px; outline: none;
+            overscroll-behavior: contain; }
+.colbtns { display: inline-flex; white-space: nowrap; }
+.colbtns button.tool { padding: 2px 6px; }
+#coltools[hidden], #cols-btn[hidden] { display: none; }
+#cols-btn.on { background: var(--ctx); }
 #scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 5; }
 #scrim[hidden] { display: none; }
 
@@ -233,6 +251,7 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
 }
 @media (max-width: 760px) {
   button.icon { display: inline-block; }
+  #cols-btn { display: none; }
   #allread, #refresh { padding: 4px 6px; }
   #nav { position: fixed; z-index: 6; top: 0; bottom: 0; left: 0; width: min(300px, 84vw);
          transform: translateX(-105%); transition: transform .15s ease-out;

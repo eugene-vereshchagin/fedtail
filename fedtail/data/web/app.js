@@ -786,7 +786,7 @@ async function loadLanes() {
       }
       a.append(n);
     }
-    a.onclick = (e) => { e.preventDefault(); closeNav(); selectLane(l.name); };
+    a.onclick = (e) => { e.preventDefault(); closeNav(); goLane(l.name); };
     // a folded section: its lanes hidden, their new posts a number on the heading
     // (the lane on screen stays, as the windows keep it)
     if (l.folded && l.name !== state.lane) {
@@ -939,10 +939,281 @@ function olderButton() {
   return b;
 }
 
+// ---- columns: lanes side by side (ui.layout = "columns", ❯ — as the windows') ------------
+// The lane in focus is the page's own (#main: its bar, keys, Ctrl+F, the command line);
+// the others are columns beside it, each with its cards, its count and its read marks.
+// A click in a column brings it into focus; a lane picked on the left that isn't a
+// column yet becomes one, beside the focused. Which lanes, in what order — kept for every
+// window (the core's state "columns"); on or off — this browser's (ui.layout at first).
+const cols = { on: false, names: [], panes: new Map() };
+
+function narrow() { return window.matchMedia("(max-width: 760px)").matches; }
+
+async function columnsStart() {
+  let got;
+  try { got = await api("/api/columns"); } catch (e) { return; }  // an old server
+  cols.names = got.names;
+  document.documentElement.style.setProperty("--colw", got.width + "px");
+  const btn = $("#cols-btn");
+  btn.hidden = false;
+  btn.title = w("columns_tip");
+  btn.setAttribute("aria-label", w("columns"));
+  btn.onclick = () => setColumns(!cols.on);
+  const said = store("columns");
+  if ((said ? said === "1" : got.layout === "columns") && !narrow()) await setColumns(true, true);
+  window.matchMedia("(max-width: 760px)").addEventListener("change", (e) => {
+    if (e.matches && cols.on) setColumns(false, true);  // a phone's width: one lane
+  });
+}
+
+async function setColumns(on, quiet) {
+  if ((on && narrow()) || on === cols.on) return;
+  cols.on = on;
+  if (!quiet) store("columns", on ? "1" : "0");
+  $("#cols-btn").classList.toggle("on", on);
+  $("#coltools").hidden = !on;
+  const app = $("#app"), main = $("#main");
+  if (on) {
+    const box = el("div");
+    box.id = "cols";
+    app.insertBefore(box, main);
+    box.append(main);
+    if (!cols.names.includes(state.lane)) {
+      await arrange(cols.names[0]);
+      await selectLane(cols.names[0]);
+    } else await arrange(state.lane);
+    saveColumns();
+  } else {
+    const box = $("#cols");
+    const top = $("#posts").scrollTop;
+    app.insertBefore(main, box);
+    $("#posts").scrollTop = top;
+    box.remove();
+    for (const p of cols.panes.values()) if (p.obs) p.obs.disconnect();
+    cols.panes.clear();
+    api("/api/columns", { on: false }).catch(() => {});
+  }
+}
+
+function saveColumns() {
+  api("/api/columns", { names: cols.names }).catch((e) => toast(e.message));
+}
+
+// the columns in their order, the focused lane's place taken by the page's own lane
+async function arrange(focus) {
+  const box = $("#cols");
+  if (!box) return;
+  const main = $("#main"), top = $("#posts").scrollTop;
+  const was = state.lane;
+  for (const [n, p] of cols.panes) {
+    if (!cols.names.includes(n) || n === focus) {
+      if (p.obs) p.obs.disconnect();
+      p.el.remove();
+      cols.panes.delete(n);
+    }
+  }
+  const loads = [];
+  cols.names.forEach((n, i) => {
+    let node = main;
+    if (n !== focus) {
+      let p = cols.panes.get(n);
+      if (!p) {
+        p = makePane(n);
+        cols.panes.set(n, p);
+        loads.push(loadPane(p, n === was));  // the lane that was in focus keeps its place
+      }
+      node = p.el;
+    }
+    if (box.children[i] !== node) box.insertBefore(node, box.children[i] || null);
+  });
+  $("#posts").scrollTop = top;
+  colTools(focus);
+  await Promise.all(loads);
+}
+
+// a lane picked (the sidebar, a notification, the address): in columns, its column
+async function goLane(name) {
+  if (cols.on) {
+    if (!cols.names.includes(name)) {
+      cols.names.splice(cols.names.indexOf(state.lane) + 1, 0, name);
+      saveColumns();
+    }
+    await arrange(name);
+    await selectLane(name);
+    const p = $("#main");
+    p.scrollIntoView({ block: "nearest", inline: "nearest" });
+    return;
+  }
+  await selectLane(name);
+}
+
+function colButtons(name) {
+  const box = el("span", "colbtns");
+  for (const [label, key, fn] of [["‹", "column_left", () => moveCol(name, -1)],
+                                  ["›", "column_right", () => moveCol(name, 1)],
+                                  ["✕", "column_close", () => closeCol(name)]]) {
+    const b = el("button", "tool", label);
+    b.type = "button";
+    b.title = w(key);
+    b.setAttribute("aria-label", w(key));
+    b.onclick = (e) => { e.stopPropagation(); fn(); };
+    box.append(b);
+  }
+  return box;
+}
+
+function colTools(focus) {  // ‹ › ✕ on the focused lane's bar
+  const t = $("#coltools");
+  t.textContent = "";
+  if (cols.on && focus) t.append(colButtons(focus));
+}
+
+function moveCol(name, d) {
+  const i = cols.names.indexOf(name), j = i + d;
+  if (i < 0 || j < 0 || j >= cols.names.length) return;
+  [cols.names[i], cols.names[j]] = [cols.names[j], cols.names[i]];
+  saveColumns();
+  arrange(state.lane);
+}
+
+function closeCol(name) {
+  const i = cols.names.indexOf(name);
+  if (i < 0 || cols.names.length <= 1) return;  // the last one stays: ❯ goes to one lane
+  cols.names.splice(i, 1);
+  saveColumns();
+  if (name === state.lane) goLane(cols.names[Math.min(i, cols.names.length - 1)]);
+  else arrange(state.lane);
+}
+
+function laneTitleOf(name) {
+  const l = state.lanes.find((x) => x.name === name);
+  return l ? l.title : name;
+}
+
+function makePane(name) {
+  const sec = el("section", "col");
+  sec.dataset.lane = name;
+  const head = el("header", "colhead");
+  const title = el("h2", "", laneTitleOf(name));
+  const count = el("span", "colcount");
+  head.append(title, count, colButtons(name));
+  head.title = w("columns_tip");
+  const body = el("div", "colposts");
+  body.tabIndex = -1;
+  sec.append(head, body);
+  const p = { name, el: sec, head: title, body, count, posts: [], obs: null, place: false };
+  head.onclick = (e) => { if (!e.target.closest("button")) goLane(name); };
+  // a click on a card: the column comes into focus, the cursor on that card; a place
+  // (Activity, Requests) — its first click only brings it into focus
+  body.addEventListener("click", async (e) => {
+    if (p.place) { e.preventDefault(); e.stopPropagation(); goLane(name); return; }
+    const card = e.target.closest(".post");
+    if (!card || e.target.closest(
+      "a, button, summary, img, video, audio, input, label, .alias, .ctx")) return;
+    const id = card.dataset.id;
+    await goLane(name);
+    const i = state.posts.findIndex((x) => x.id === id);
+    if (i >= 0) setCursor(i, true);
+  }, true);
+  return p;
+}
+
+async function loadPane(p, keep) {
+  let data;
+  try {
+    data = await api("/api/lane?name=" + encodeURIComponent(p.name) + (keep ? "&keep=1" : ""));
+  } catch (e) { p.body.textContent = w("web_load_error", { err: e.message }); return; }
+  if (cols.panes.get(p.name) !== p) return;  // closed or focused meanwhile
+  p.head.textContent = data.title;
+  if (data.place) {  // Activity, Requests: the place, as the page shows it
+    p.place = true;
+    let pg;
+    try {
+      pg = await api("/api/page?" + new URLSearchParams({ name: data.place, arg: "", tab: "",
+                                                         cursor: "" }));
+    } catch (e) { p.body.textContent = w("web_load_error", { err: e.message }); return; }
+    if (cols.panes.get(p.name) !== p) return;
+    const top = p.body.scrollTop;
+    renderPlace(pg, p.body, true);
+    if (keep) p.body.scrollTop = top;
+    const l = state.lanes.find((x) => x.name === p.name);
+    p.count.textContent = l && l.unread ? "· " + l.unread : "";
+    return;
+  }
+  const newestFirst = state.me.order === "newest_first";
+  if (newestFirst) data.posts.reverse();
+  let anchor = null, oldTop = 0;
+  if (keep) {
+    const box = p.body.getBoundingClientRect();
+    for (const c of p.body.querySelectorAll(".post")) {
+      if (c.getBoundingClientRect().bottom > box.top + 4) { anchor = c.dataset.id; break; }
+    }
+    if (anchor) oldTop = p.body.querySelector(`.post[data-id="${CSS.escape(anchor)}"]`)
+      .getBoundingClientRect().top;
+  }
+  p.posts = data.posts;
+  p.body.textContent = "";
+  if (!data.posts.length)
+    p.body.append(el("div", "empty", w(data.empty_browse ? "browse_empty" : "web_empty")));
+  for (const post of data.posts) {
+    const card = renderPost(post, false);
+    if (data.divider && data.divider.before === post.id) {
+      const d = el("div", "divider", data.divider.text);
+      if (newestFirst) p.body.append(card, d); else p.body.append(d, card);
+      continue;
+    }
+    p.body.append(card);
+  }
+  paneCount(p);
+  paneRead(p);
+  const again = anchor && p.body.querySelector(`.post[data-id="${CSS.escape(anchor)}"]`);
+  if (again) {
+    p.body.scrollTop += again.getBoundingClientRect().top - oldTop;
+  } else if (data.posts.length) {  // where the lane starts: the oldest new, else the newest
+    const unread = data.posts.map((x) => x.unread);
+    const oldest = newestFirst ? unread.lastIndexOf(true) : unread.indexOf(true);
+    const newest = newestFirst ? 0 : data.posts.length - 1;
+    const at = state.me.start_at === "newest" || oldest < 0 ? newest : oldest;
+    const card = p.body.querySelector(`.post[data-id="${CSS.escape(data.posts[at].id)}"]`);
+    if (card) p.body.scrollTop = card.offsetTop - p.body.offsetTop - 8;
+  }
+  if (state.me.mark_read === "on_open" && !keep) {
+    const ids = data.posts.filter((x) => x.unread).map((x) => x.id);
+    if (ids.length) api("/api/read", { ids }).catch(() => {});
+  }
+}
+
+function paneCount(p) {
+  const n = p.posts.filter((x) => x.unread).length;
+  p.count.textContent = n ? "· " + n : "";
+  navCount(p.name, n);
+}
+
+function paneRead(p) {  // read.mark_read = on_scroll: a card seen whole in a column is read
+  if (p.obs) p.obs.disconnect();
+  p.obs = null;
+  if (state.me.mark_read !== "on_scroll") return;
+  p.obs = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting || !e.target.classList.contains("unread")) continue;
+      unmark(e.target);
+      const x = p.posts.find((y) => y.id === e.target.dataset.id);
+      if (x) x.unread = false;
+      paneCount(p);
+      p.obs.unobserve(e.target);
+    }
+  }, { root: p.body, threshold: 0.9 });
+  for (const c of p.body.querySelectorAll(".post.unread")) p.obs.observe(c);
+}
+
 function countUnread() {
   const unread = state.posts.filter((p) => p.unread).length;
   $("#count").textContent = unread ? "· " + unread : "";
-  const a = document.querySelector(`#lanes a[data-lane="${CSS.escape(state.lane || "")}"] .n`);
+  navCount(state.lane, unread);
+}
+
+function navCount(name, unread) {  // the lane's number in the sidebar, as read goes on
+  const a = document.querySelector(`#lanes a[data-lane="${CSS.escape(name || "")}"] .n`);
   if (a) { if (unread) a.textContent = String(unread); else a.remove(); }
 }
 
@@ -970,17 +1241,21 @@ function watchRead(box) {
   for (const c of box.querySelectorAll(".post.unread")) observer.observe(c);
 }
 
-function read(card) {
-  if (!card.classList.contains("unread")) return;
+function unmark(card) {  // a card seen: no longer marked new; its id goes to the server
   card.classList.remove("unread");
   const dot = card.querySelector(".head .dot");
   if (dot) dot.remove();
   state.readQueue.add(card.dataset.id);
+  clearTimeout(read.timer);
+  read.timer = setTimeout(flushRead, 600);
+}
+
+function read(card) {
+  if (!card.classList.contains("unread")) return;
+  unmark(card);
   const p = state.posts.find((x) => x.id === card.dataset.id);
   if (p) p.unread = false;
   countUnread();
-  clearTimeout(read.timer);
-  read.timer = setTimeout(flushRead, 600);
 }
 
 async function flushRead() {
@@ -1104,7 +1379,7 @@ async function findStep(d) {
     finder.at = finder.at < 0 ? (d > 0 ? 0 : n - 1) : (finder.at + d + n) % n;
     const h = finder.hits[finder.at];
     await api("/api/reveal", { lane: h.lane, index: h.index }).catch(() => {});
-    await selectLane(h.lane, state.lane === h.lane);
+    if (state.lane === h.lane) await selectLane(h.lane, true); else await goLane(h.lane);
     const i = state.posts.findIndex((x) => x.item === h.item || x.id === h.id || x.sid === h.id);
     if (i >= 0) setCursor(i);
     for (const c of document.querySelectorAll("#posts .post"))
@@ -1496,7 +1771,7 @@ async function openPlace(name, arg, tab, cursor, into, anchor, byHistory) {
   } else box.scrollTop = 0;
 }
 
-function renderPlace(pg, box) {
+function renderPlace(pg, box, pane) {
   box.textContent = "";
   const page = el("section", "place place-" + pg.name);
   if (pg.name === "help") {
@@ -1537,7 +1812,7 @@ function renderPlace(pg, box) {
     if (form) form.box.onsubmit = (e) => { e.preventDefault(); placeAct(pg.submit.act, form.values()); };
   }
   box.append(page);
-  watchRead(box);
+  if (!pane) watchRead(box);
 }
 
 function renderRow(r) {
@@ -2181,6 +2456,7 @@ async function refresh() {
   await flushRead();
   await loadLanes().catch((e) => toast(e.message));
   if (state.lane) await selectLane(state.lane, true);
+  if (cols.on) await Promise.all([...cols.panes.values()].map((p) => loadPane(p, true)));
 }
 
 // ---- sounds: the theme's, sent by the server with the news (fedtail sound.*) -----------
@@ -2286,7 +2562,7 @@ function showNote(note) {
   const n = new Notification(note.title, { body: note.body, tag: "fedtail-" + note.lane });
   n.onclick = () => {
     window.focus();
-    if (note.thread) openThread(note.thread); else selectLane(note.lane);
+    if (note.thread) openThread(note.thread); else goLane(note.lane);
     n.close();
   };
 }
@@ -2463,10 +2739,11 @@ async function start() {
   const first = lanes.find((l) => l.start);
   if (names.includes(want)) await selectLane(want);
   else if (first) await selectLane(first.name);
+  await columnsStart();
   follow();
   window.addEventListener("hashchange", () => {
     const name = decodeURIComponent(location.hash.slice(1));
-    if (name && name !== state.lane && names.includes(name)) selectLane(name);
+    if (name && name !== state.lane && names.includes(name)) goLane(name);
   });
   document.addEventListener("visibilitychange", () => { if (document.hidden) flushRead(); });
 }

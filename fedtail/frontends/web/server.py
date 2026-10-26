@@ -887,6 +887,36 @@ class Web:
         from ..common import sidebar
         return {"text": sidebar.slow_words(self.core)}
 
+    def columns(self):
+        """Lanes side by side, as the windows' ❯: which ones (as left last time, else
+        ui.columns, else Home, Replies, Activity — common/columns.py), how wide, and
+        whether the page starts in columns (ui.layout)."""
+        from ..common import columns, sidebar
+        known = [n for _g, names in sidebar.groups(self.core, self.core.cfg) for n in names]
+        titles = {x.get("title"): "list:" + str(x.get("id")) for x in self.core.lists or ()}
+        ui = self.core.cfg["ui"]
+        return {"names": columns.start_names(self.core.cfg, self.core.get_state("columns"),
+                                             known, titles),
+                "layout": ui.get("layout", "single"),
+                "width": max(280, int(ui.get("column_width") or 460))}
+
+    def set_columns(self, names, on):
+        """The page's columns changed (added, moved, closed) or went (❯ off): kept for
+        every window, and every column's lane is on screen for notifications."""
+        if not on:
+            self.core.set_active_lanes([])
+            return {"ok": True}
+        if not isinstance(names, list) or not names:
+            raise ValueError("names")
+        got = []
+        for n in names[:40]:
+            n = self._lane_name(n)
+            if n not in got:
+                got.append(n)
+        self.core.set_state("columns", got)
+        self.core.set_active_lanes(got)
+        return {"names": got}
+
     def fold(self, group):
         """A section of the sidebar folded or unfolded (kept for every window)."""
         from ..common import sidebar
@@ -1765,7 +1795,9 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "media_cover", "media_cover_tip", "media_cover_set", "alt_title",
          "viewer_save", "viewer_save_tip", "viewer_keys", "viewer_unreachable", "saving",
          "image_failed", "image_loading", "short_id_tip", "reactions_tip", "cw_add_tip",
-         "close_tip", "to_end_tip", "unread_tip")
+         "close_tip", "to_end_tip", "unread_tip",
+         # columns: lanes side by side (ui.layout = "columns", ❯)
+         "columns", "columns_tip", "column_left", "column_right", "column_close")
 
 
 class Server(ThreadingHTTPServer):
@@ -1872,6 +1904,7 @@ class Handler(BaseHTTPRequestHandler):
         routes = {"/api/me": lambda: self.web.me(),
                   "/api/lanes": lambda: self.web.lanes(),
                   "/api/slow": lambda: self.web.slow(),
+                  "/api/columns": lambda: self.web.columns(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", ""),
@@ -1931,6 +1964,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
             "/api/poll_refresh": lambda: web.poll_refresh(str(body.get("id"))),
             "/api/fold": lambda: web.fold(body.get("group")),
+            "/api/columns": lambda: web.set_columns(body.get("names"), body.get("on") is not False),
             "/api/reveal": lambda: web.reveal(body.get("lane"), body.get("index")),
             "/api/compose_check": lambda: web.compose_check(body),
             "/api/add_language": lambda: web.add_language(body.get("code")),

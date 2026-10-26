@@ -262,8 +262,56 @@ def with_playwright(base, key, out):
                 page.screenshot(path=str(out / "desktop-06b-viewer-full.png"))
                 page.keyboard.press("Escape")
                 page.mouse.click(5, 5)
+            columns(page, out)
             page.close()
         browser.close()
+
+
+def columns(page, out):
+    """❯: lanes side by side — Home, Replies, Activity at first; a lane picked on the
+    left joins them; a click in a column brings it into focus; ✕ takes one away; ❯
+    again — one lane."""
+    if page.is_hidden("#cols-btn"):
+        ERRORS.append("columns: no ❯ on the bar")
+        return
+    if page.is_visible("#side"):
+        page.click("#back")  # a profile or a place open at the side: the columns wide
+    page.click("#cols-btn")
+    page.wait_for_timeout(1200)
+    n = page.locator("#cols > .col, #cols > #main").count()
+    if n < 2:
+        ERRORS.append(f"columns: {n} column(s) after ❯")
+        return
+    page.screenshot(path=str(out / "desktop-10-columns.png"))
+    lanes = page.eval_on_selector_all("#lanes a[data-lane]", "els => els.map(e => e.dataset.lane)")
+    shown = page.eval_on_selector_all("#cols > [data-lane], #cols > #main",
+                                      "els => els.map(e => e.dataset.lane || 'MAIN')")
+    extra = next((x for x in lanes if x not in shown), None)
+    if extra:
+        page.click(f'#lanes a[data-lane="{extra}"]')
+        page.wait_for_timeout(900)
+        if page.locator("#cols > .col, #cols > #main").count() != n + 1:
+            ERRORS.append(f"columns: a lane picked on the left ({extra}) didn't join them")
+    pane = page.locator("#cols > .col .colhead h2").first
+    if pane.count():
+        name = page.locator("#cols > .col").first.get_attribute("data-lane")
+        pane.click()
+        page.wait_for_timeout(900)
+        if page.evaluate("state.lane") != name:
+            ERRORS.append(f"columns: a click on {name}'s header didn't bring it into focus")
+    if page.locator("#cols > .col").count() and not page.locator(
+            "#cols > .col .colposts > *").count():
+        ERRORS.append("columns: a column beside the focused one is empty")
+    page.screenshot(path=str(out / "desktop-10b-columns-focus.png"))
+    before = page.locator("#cols > .col, #cols > #main").count()
+    page.locator("#coltools button[aria-label]").last.click()  # ✕ on the focused one
+    page.wait_for_timeout(900)
+    if page.locator("#cols > .col, #cols > #main").count() != before - 1:
+        ERRORS.append("columns: ✕ didn't take the column away")
+    page.click("#cols-btn")
+    page.wait_for_timeout(600)
+    if page.locator("#cols").count():
+        ERRORS.append("columns: ❯ again didn't go back to one lane")
 
 
 def didnt_load(what, body):

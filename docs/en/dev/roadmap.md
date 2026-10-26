@@ -8,7 +8,7 @@ side is in the feature list with the status "planned" (`docs/src/features/*.toml
 ## What 0.20 brought
 
 Android as a full fediverse client (every place, the ⋯ menu, profiles, the editor, push);
-the terminal and the web with everything the windows have; slow mode, "notify at most
+the terminal and the web with everything the windows have, the web's columns too; slow mode, "notify at most
 every…", "of them new"; reactions of one's own; collections, another server's timeline, a
 link's timeline; an apt repository and a Windows installer (waiting for their keys); the
 robustness answers (`robustness.md`) and the self-check with real accounts on Linux,

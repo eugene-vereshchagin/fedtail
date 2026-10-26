@@ -80,6 +80,25 @@ class WebApiTest(TmpDir):
                          ["401"])
 
 
+    def test_columns_start_kept_and_off(self):
+        # ❯ on the web page: the lanes side by side, as the windows' columns
+        got = json.loads(self.req("/api/columns")[2])
+        self.assertEqual(got["names"], ["home", "replies", "activity"])  # the default
+        self.assertEqual((got["layout"], got["width"]), ("single", 460))
+        code, _h, r = self.req("/api/columns", {"names": ["replies", "home", "home"]})
+        self.assertEqual(code, 200, r)
+        self.assertEqual(json.loads(r)["names"], ["replies", "home"])
+        self.assertEqual(self.core.get_state("columns"), ["replies", "home"])
+        self.assertEqual(self.core._active_lanes, {"replies", "home"})
+        self.assertEqual(json.loads(self.req("/api/columns")[2])["names"],
+                         ["replies", "home"])  # as left: for every window
+        self.assertEqual(self.req("/api/columns", {"names": ["nope"]})[0], 400)
+        self.assertEqual(self.req("/api/columns", {"names": []})[0], 400)
+        self.req("/api/columns", {"on": False})
+        self.assertEqual(self.core._active_lanes, set())
+        self.assertEqual(self.core.get_state("columns"), ["replies", "home"])  # kept
+
+
 class WebProfileTest(TmpDir):
     """A profile as the windows have it: the pinned posts on top (once), what the person
     puts forward, and page after page further back."""

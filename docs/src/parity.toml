@@ -137,9 +137,8 @@ android = "has"
 name.ru = "Ленты колонками"
 name.en = "Lanes in columns"
 tui = "na"
-web = "na"
-note.ru = "Одна лента за раз; колонки — в окне и на планшете (обзор, лента, тред рядом)."
-note.en = "One lane at a time; columns are the window's and the tablet's (the overview, a lane, a thread side by side)."
+note.ru = "Терминал — одна лента за раз. Веб — колонки по ❯, как в окнах (на ширине телефона — одна лента); телефон — на планшете (обзор, лента, тред рядом)."
+note.en = "The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side)."
 keys = ["column_close", "column_left", "column_right", "columns_tip"]
 
 [[capability]]
