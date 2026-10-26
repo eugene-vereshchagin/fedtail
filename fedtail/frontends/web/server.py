@@ -893,7 +893,8 @@ class Web:
         whether the page starts in columns (ui.layout)."""
         from ..common import columns, sidebar
         known = [n for _g, names in sidebar.groups(self.core, self.core.cfg) for n in names]
-        titles = {x.get("title"): "list:" + str(x.get("id")) for x in self.core.lists or ()}
+        # the View's lists are the model's (title, id as attributes): Qt's own way
+        titles = {x.title: "list:" + str(x.id) for x in self.core.lists or ()}
         ui = self.core.cfg["ui"]
         return {"names": columns.start_names(self.core.cfg, self.core.get_state("columns"),
                                              known, titles),

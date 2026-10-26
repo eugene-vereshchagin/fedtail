@@ -82,6 +82,13 @@ class WebApiTest(TmpDir):
 
     def test_columns_start_kept_and_off(self):
         # ❯ on the web page: the lanes side by side, as the windows' columns
+        # an account with lists (26.10: a 502 on the first real one — the View's lists
+        # are objects, the test world had none)
+        self.core.lists = [{"id": "7", "title": "Friends", "exclusive": False}]
+        self.core.cfg["ui"]["columns"] = ["list:Friends", "home"]
+        code, _h, r = self.req("/api/columns")
+        self.assertEqual(code, 200, r)
+        self.core.cfg["ui"]["columns"] = []
         got = json.loads(self.req("/api/columns")[2])
         self.assertEqual(got["names"], ["home", "replies", "activity"])  # the default
         self.assertEqual((got["layout"], got["width"]), ("single", 460))
