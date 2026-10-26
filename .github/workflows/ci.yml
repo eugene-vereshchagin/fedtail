@@ -439,4 +439,7 @@ jobs:
           fetch-depth: 0
       - name: The packages and the signed indexes
         if: env.KEY != ''
-        run: python3 packaging/apt_repo.py "$VER"
+        run: |
+          # apt-ftparchive: not on every runner image (0.20.0's apt job failed without it)
+          command -v apt-ftparchive >/dev/null || sudo apt-get install -y --no-install-recommends apt-utils
+          python3 packaging/apt_repo.py "$VER"

@@ -83,4 +83,12 @@ def main(version):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    try:
+        main(sys.argv[1])
+    except subprocess.CalledProcessError as e:  # what the tool said, never the key
+        print(f"apt: {e.cmd[0]} {e.cmd[1] if len(e.cmd) > 1 else ''} failed ({e.returncode}):"
+              f" {(e.stderr or '')[-2000:]}", file=sys.stderr)
+        sys.exit(1)
+    except FileNotFoundError as e:  # a tool missing on the runner (0.20.0: apt-ftparchive)
+        print(f"apt: {e.filename} is missing — apt-utils, gnupg, gh", file=sys.stderr)
+        sys.exit(1)

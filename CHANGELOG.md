@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0 — in progress
+
+- The plan for 0.21 (docs/en/dev/roadmap.md): sync between devices brought to the end,
+  and free lanes — lanes you assemble yourself.
+- The apt repository: its job installs `apt-utils` where the runner lacks it (0.20.0's
+  failed so), says what failed, and runs by hand too for a release already out (`apt.yml`).
+
 ## 0.20.0 — 2026-10-26
 
 **In short.** Every interface catching up with the windows, and a phone of its own:

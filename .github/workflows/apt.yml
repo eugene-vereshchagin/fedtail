@@ -1,0 +1,25 @@
+# The apt repository for a release already out, by hand (Actions → apt → Run workflow):
+# when ci.yml's apt job failed or the key came after the release. The same script.
+name: apt
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "the released version, e.g. 0.20.0"
+        required: true
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      KEY: ${{ secrets.APT_GPG_KEY }}
+      VER: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: The packages and the signed indexes
+        run: |
+          if [ -z "$KEY" ]; then echo "::error::no APT_GPG_KEY secret"; exit 1; fi
+          command -v apt-ftparchive >/dev/null || sudo apt-get install -y --no-install-recommends apt-utils
+          python3 packaging/apt_repo.py "$VER"
