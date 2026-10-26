@@ -24,6 +24,7 @@ the tests and whether it fits.
 | [ci.md](ci.md) | CI jobs and how a release is made |
 | [roadmap.md](roadmap.md) | the plan for the next version |
 | [feeds.md](feeds.md) | free lanes: atoms, rules, what can be reached, the problems (a design) |
+| [feeds-survey.md](feeds-survey.md) | other clients' lanes in our atoms; what we lack; presets |
 
 ## Run, test, lint
 
