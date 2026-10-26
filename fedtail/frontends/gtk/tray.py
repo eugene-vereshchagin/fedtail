@@ -142,6 +142,10 @@ class Tray:
         for i in self.ids:
             self.bus.unregister_object(i)
         Gio.bus_unown_name(self.owner)
+        try:  # sent now: the process may end right after, and the icon must go with it
+            self.bus.flush_sync(None)
+        except Exception:  # noqa: BLE001 — a bus gone already: the icon went with it
+            pass
 
     def _status(self):
         return "NeedsAttention" if self.attention else "Active"

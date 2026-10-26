@@ -2735,6 +2735,7 @@ class MainWindow(QMainWindow):
             self.tray.setContextMenu(None)
             self.tray.deleteLater()
             self.tray = None
+            _flush_desktop()
 
     def _debug_corner(self):
         """In the debugging mode, the right end of the status bar says how this
@@ -2793,4 +2794,20 @@ def _let_go(tab):
     for name in ("items", "_first_page"):
         if isinstance(getattr(tab, name, None), list):
             setattr(tab, name, [])
+
+
+def _flush_desktop(seconds=0.25):
+    """What was just asked of the desktop (the tray icon hidden) sent out before the
+    process ends: fedtail leaves through os._exit, which takes the unsent along. On KDE an
+    icon that came through the X11 tray (xembed-sni-proxy) stayed in the panel until the
+    mouse passed over it (split layout, quit from the roster, 26.10)."""
+    from PySide6.QtGui import QGuiApplication
+    app = QApplication.instance()
+    if app is None:
+        return
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        app.processEvents()
+        getattr(QGuiApplication, "sync", lambda: None)()  # the window system's queue
+        time.sleep(0.02)
 
