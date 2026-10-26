@@ -150,13 +150,7 @@ def with_playwright(base, key, out):
                 page.screenshot(path=str(out / f"desktop-02-lane-{name}.png"))
             page.click('#lanes a[data-lane="home"]' if "home" in lanes else "#refresh")
             page.wait_for_timeout(400)
-            page.click("#more")
-            page.wait_for_timeout(300)
-            NOTES.append("≡ menu: " + " | ".join(page.locator("#pop button, #pop a")
-                                                  .all_inner_texts()))
-            page.screenshot(path=str(out / "desktop-03-main-menu.png"))
-            page.keyboard.press("Escape")
-            page.mouse.click(5, 5)
+            main_menu(page, out)
             walk_places(page, out)
             # Ctrl+F: a word every fake post has, and one none has
             page.click("#posts")
@@ -321,6 +315,49 @@ def didnt_load(what, body):
         NOTES.append(f"{what}: the server's rate limit (429) — not checked")
     else:
         ERRORS.append(f"{what}: didn't load: {body[:200]}")
+
+
+def main_menu(page, out):
+    """≡: a window over the page — the everyday buttons on top, the groups (the windows'
+    submenus) at the left, a group's items beside them; every place of the menu is in
+    some group; Esc closes it."""
+    page.click("#more")
+    page.wait_for_timeout(300)
+    if page.is_hidden("#menuwin"):
+        ERRORS.append("≡: the menu window didn't open")
+        return
+    groups = page.locator("#menu-groups button")
+    seen = []
+    for i in range(groups.count()):
+        groups.nth(i).hover()
+        page.wait_for_timeout(80)
+        items = page.locator("#menu-items button").all_inner_texts()
+        if not items:
+            ERRORS.append(f"≡: the group {groups.nth(i).inner_text()!r} is empty")
+        seen += items
+        NOTES.append(f"≡ {groups.nth(i).inner_text()}: " + " | ".join(items))
+        page.screenshot(path=str(out / f"desktop-03-main-menu-{i}.png"))
+    places = page.evaluate(
+        "(state.me.places || []).filter(p => !['help', 'news', 'about'].includes(p.name))"
+        ".map(p => p.title.endsWith('…') ? p.title : p.title + ' …')")
+    lost = [x for x in places if x not in seen]
+    if lost:
+        ERRORS.append("≡: places in no group: " + ", ".join(lost))
+    if groups.count() < 4:
+        ERRORS.append(f"≡: {groups.count()} group(s) — the menu is one long list again?")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(150)
+    if page.is_visible("#menuwin"):
+        ERRORS.append("≡: Esc didn't close the menu window")
+    # a place from it: a window over the page, not the column at the right
+    page.click("#more")
+    page.locator("#menu-groups button").first.click()
+    page.locator("#menu-items button").first.click()
+    page.wait_for_timeout(700)
+    if "floating" not in (page.get_attribute("#side", "class") or ""):
+        ERRORS.append("≡ → a place: not in a window over the page")
+    page.screenshot(path=str(out / "desktop-03b-place-window.png"))
+    page.evaluate("closeSide()")
 
 
 def walk_places(page, out):

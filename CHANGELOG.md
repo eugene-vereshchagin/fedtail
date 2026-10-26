@@ -2,6 +2,12 @@
 
 ## 0.20.0 — in progress
 
+- The web page's ≡ is a window over the page, as the windows' menu: the everyday buttons
+  on top (write, my profile, refresh, all read, columns), the rest in groups — lanes and
+  lists, for the tender, whom to read, the account and the server, the look, debugging,
+  help — a group's items beside it (↑ ↓ → ← and Esc too). A place opened from it is a
+  window over the page as well, moved by its title, instead of the column at the right;
+  threads and profiles stay docked beside the lanes.
 - The tray icon leaving with fedtail, on Windows and in KDE: destroyed at once on the way
   out instead of only hidden (it stayed in the panel until the mouse passed over it);
   the log says "quit" and "tray icon removed".

@@ -642,29 +642,104 @@ async function copyText(text) {
   catch (e) { window.prompt("", text); }  // no clipboard over plain http (the LAN): by hand
 }
 
+// ≡: a window over the page, as the windows' menu — the everyday things on top, the rest
+// in groups (their submenus: lanes and lists, for the tender, whom to read, the account
+// and the server, the look, debugging, help), a group's items beside it
+const MENU_GROUPS = [
+  ["web_menu_lanes", ["search", "lists", "tags", "scheduled", "slow", "requests", "activity"]],
+  ["tender_menu", ["silence", "filtered"]],
+  ["menu_people", ["trends", "suggestions", "directory", "collections", "remote"]],
+  ["accounts", ["accounts", "profile_edit", "server", "probe", "announcements", "merge"]],
+  ["web_menu_look", ["settings", "theme", "notify", "push"]],
+  ["debug_menu", ["log", "federation", "notify_test", "issue"]],
+  ["help_title", ["help", "news", "keys", "about"]],
+];
+
+function menuItems() {  // every item of the menu by its key: [label, do, tip]
+  const items = {};
+  for (const x of state.me.places || [])
+    items[x.name] = [x.title.endsWith("…") ? x.title : x.title + " …", () => openPlace(x.name)];
+  items.help = [w("help_title"), () => openPlace("help")];
+  items.news = [w("help_news"), () => openPlace("news")];
+  items.about = [w("about"), () => openPlace("about")];
+  items.keys = [w("web_keys"), () => info(w("web_keys_text"))];
+  items.theme = [w("try_theme") + " …", tryTheme, w("try_theme_tip")];
+  if (canNotify() && Notification.permission !== "granted") items.notify = [w("web_notify"), askNotify];
+  items.push = [w("web_push"), pushToggle, w("web_push_tip")];
+  items.notify_test = [w("debug_notify"), testNotify];
+  items.merge = [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge,
+                 w("accounts_merge_tip")];
+  return items;
+}
+
 function mainMenu() {
-  const places = (state.me.places || []).filter((x) => !["help", "news", "about"].includes(x.name))
-    .map((x) => [x.title + " …", () => openPlace(x.name)]);
-  popup($("#more"), [
+  const win = $("#menuwin");
+  if (!win.hidden) { closeMenu(); return; }
+  closePopup();
+  const items = menuItems();
+  const used = new Set();
+  const groups = [];
+  for (const [key, names] of MENU_GROUPS) {
+    const got = names.filter((n) => items[n]).map((n) => { used.add(n); return items[n]; });
+    if (got.length) groups.push([w(key), got]);
+  }
+  // a place the server's menu has and no group names: in the first group, never lost
+  const rest = Object.keys(items).filter((n) => !used.has(n)).map((n) => items[n]);
+  if (rest.length && groups.length) groups[0][1].push(...rest);
+  const quick = $("#menu-quick"), side = $("#menu-groups"), list = $("#menu-items");
+  quick.textContent = side.textContent = list.textContent = "";
+  for (const [label, fn, tip] of [
     ["✎ " + w("write"), () => compose(null)],
     [w("my_profile"), () => state.me.me && openAccount(state.me.me.id)],
-    [w("refresh"), refresh],
-    [w("web_mark_read"), markAllRead],
-    "-",
-    ...places,
-    "-",
-    ...(canNotify() && Notification.permission !== "granted"
-      ? [[w("web_notify"), askNotify]] : []),
-    [w("help_title"), () => openPlace("help")],
-    [w("help_news"), () => openPlace("news")],
-    [w("web_keys"), () => info(w("web_keys_text"))],
-    [w("try_theme") + " …", tryTheme, w("try_theme_tip")],
-    "-",
-    [w("debug_notify"), testNotify],
-    [w("web_push"), pushToggle, w("web_push_tip")],
-    [(state.me.merged ? "☑ " : "☐ ") + w("accounts_merge"), toggleMerge, w("accounts_merge_tip")],
-    [w("about"), () => openPlace("about")],
-  ]);
+    [w("refresh"), refresh], [w("web_mark_read"), markAllRead],
+    ["❯ " + w("columns"), () => setColumns(!cols.on), w("columns_tip")]]) {
+    if (label.startsWith("❯") && (narrow() || $("#cols-btn").hidden)) continue;
+    quick.append(menuButton(label, fn, tip));
+  }
+  const show = (i) => {
+    list.textContent = "";
+    for (const [label, fn, tip] of groups[i][1]) list.append(menuButton(label, fn, tip));
+    for (const [j, b] of [...side.children].entries()) b.classList.toggle("on", j === i);
+  };
+  groups.forEach(([title], i) => {
+    const b = el("button", "group", title + " ›");
+    b.type = "button";
+    b.setAttribute("aria-haspopup", "menu");
+    b.onclick = () => { show(i); const f = list.querySelector("button"); if (f) f.focus(); };
+    b.onmouseenter = () => show(i);
+    b.onfocus = () => show(i);
+    side.append(b);
+  });
+  show(0);
+  $("#menuwin-title").textContent = w("web_menu");
+  win.hidden = false;
+  const first = quick.querySelector("button") || side.querySelector("button");
+  if (first) first.focus();
+}
+
+function menuButton(label, fn, tip) {
+  const b = el("button", "", label);
+  b.type = "button";
+  b.setAttribute("role", "menuitem");
+  if (tip) b.title = tip;
+  b.onclick = () => { closeMenu(); fn(); };
+  return b;
+}
+
+function closeMenu() { $("#menuwin").hidden = true; }
+
+function menuKeys(e) {  // ↑ ↓ within a column of the menu, → into a group, ← back out
+  const at = document.activeElement;
+  const box = at && at.closest("#menu-quick, #menu-groups, #menu-items");
+  if (!box) return;
+  const btns = [...box.querySelectorAll("button")], i = btns.indexOf(at);
+  let to = null;
+  if (e.key === "ArrowDown") to = btns[(i + 1) % btns.length];
+  else if (e.key === "ArrowUp") to = btns[(i - 1 + btns.length) % btns.length];
+  else if (e.key === "ArrowRight" && box.id === "menu-groups") to = $("#menu-items button");
+  else if (e.key === "ArrowLeft" && box.id === "menu-items") to = $("#menu-groups button.on");
+  else if (e.key === "ArrowDown" || e.key === "Tab") return;
+  if (to) { e.preventDefault(); to.focus(); }
 }
 
 // ≡ → Try a theme: the windows' themes (their colours and font), for this run of
@@ -951,7 +1026,10 @@ function narrow() { return window.matchMedia("(max-width: 760px)").matches; }
 
 async function columnsStart() {
   let got;
-  try { got = await api("/api/columns"); } catch (e) { return; }  // an old server
+  try { got = await api("/api/columns"); } catch (e) {  // a fedtail older than this page
+    console.info("fedtail: no columns here (" + e.message + "): restart fedtail --ui web");
+    return;
+  }
   cols.names = got.names;
   document.documentElement.style.setProperty("--colw", got.width + "px");
   const btn = $("#cols-btn");
@@ -1694,13 +1772,44 @@ async function profileAct(id, key, answer, confirmed, chosen) {
 }
 
 let sideN = 0;
-function showSide(title) {
+function showSide(title, floating) {
   state.side = ++sideN;
-  $("#side").hidden = false;
+  const side = $("#side");
+  // a place (≡) is a window over the page, dragged by its title; a thread or a profile
+  // stands docked at the right, beside the lanes
+  side.classList.toggle("floating", !!floating);
+  $("#back").textContent = floating ? "✕" : "← " + w("tui_back");
+  $("#back").title = floating ? w("web_close") : w("tui_back");
+  if (floating) placeFloating(side);
+  side.hidden = false;
   $("#side-title").textContent = title;
   $("#side-body").textContent = "…";
   $("#side-body").scrollTop = 0;
   return state.side;
+}
+
+function placeFloating(win) {  // where it stood last, else the middle of the page
+  if (win.dataset.placed) return;
+  win.dataset.placed = "1";
+  const wd = Math.min(780, innerWidth * 0.94), ht = Math.min(innerHeight * 0.84, 900);
+  win.style.left = Math.max(8, (innerWidth - wd) / 2) + "px";
+  win.style.top = Math.max(8, (innerHeight - ht) / 3) + "px";
+}
+
+function draggable(win, handle) {  // a pseudo-window moved by its title bar
+  handle.addEventListener("pointerdown", (e) => {
+    if (!win.classList.contains("floating") || e.target.closest("button, a, input")) return;
+    const r = win.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+    handle.setPointerCapture(e.pointerId);
+    const move = (m) => {
+      win.style.left = Math.max(0, Math.min(innerWidth - 80, m.clientX - dx)) + "px";
+      win.style.top = Math.max(0, Math.min(innerHeight - 40, m.clientY - dy)) + "px";
+    };
+    const up = () => { handle.removeEventListener("pointermove", move);
+                       handle.removeEventListener("pointerup", up); };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  });
 }
 
 function closeSide() { $("#side").hidden = true; state.side = null; $("#posts").focus(); }
@@ -1754,7 +1863,7 @@ async function openPlace(name, arg, tab, cursor, into, anchor, byHistory) {
     }
   }
   const box = into === "side" ? $("#side-body") : $("#posts");
-  const token = into === "side" ? showSide("…") : (state.side_main = (state.side_main || 0) + 1);
+  const token = into === "side" ? showSide("…", true) : (state.side_main = (state.side_main || 0) + 1);
   const q = new URLSearchParams({ name, arg: arg || "", tab: tab || "", cursor: cursor || "" });
   let pg;
   try { pg = await api("/api/page?" + q); }
@@ -2422,6 +2531,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (!$("#pop").hidden && e.key === "Escape") { e.preventDefault(); closePopup(); return; }
+  if (!$("#menuwin").hidden && e.key === "Escape") { e.preventDefault(); closeMenu(); return; }
+  if (!$("#menuwin").hidden) { menuKeys(e); return; }
   if (e.target.closest("textarea, input, select")) {
     if (e.key === "Escape" && e.target.id === "cmd") { e.target.value = ""; $("#posts").focus(); }
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest("#compose")) send(e);
@@ -2719,8 +2830,13 @@ async function start() {
   $("#viewer-next").onclick = () => stepViewer(1);
   $("#more").title = w("web_menu");
   $("#more").onclick = (e) => { e.stopPropagation(); mainMenu(); };
+  $("#menuwin-close").onclick = closeMenu;
+  $("#menuwin-close").title = w("web_close");
+  draggable($("#menuwin"), $("#menuwin .pwin-head"));
+  draggable($("#side"), $("#side .side-head"));
   document.addEventListener("mousedown", (e) => {
     if (!$("#pop").hidden && !e.target.closest("#pop")) closePopup();
+    if (!$("#menuwin").hidden && !e.target.closest("#menuwin, #more")) closeMenu();
   });
   $("#info-close").textContent = w("web_close");
   const qs = $("#quote-sel");

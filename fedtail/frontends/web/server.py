@@ -1797,7 +1797,10 @@ WORDS = ("reply", "fav", "faved", "boost", "boosted", "bookmark", "unbookmark", 
          "image_failed", "image_loading", "short_id_tip", "reactions_tip", "cw_add_tip",
          "close_tip", "to_end_tip", "unread_tip",
          # columns: lanes side by side (ui.layout = "columns", ❯)
-         "columns", "columns_tip", "column_left", "column_right", "column_close")
+         "columns", "columns_tip", "column_left", "column_right", "column_close",
+         # ≡ as a window: its groups, as the windows' submenus
+         "web_menu_lanes", "web_menu_look", "tender_menu", "menu_people", "accounts",
+         "debug_menu")
 
 
 class Server(ThreadingHTTPServer):

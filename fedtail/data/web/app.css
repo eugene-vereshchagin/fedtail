@@ -64,6 +64,42 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
              border-bottom: 1px solid var(--line); background: var(--card); }
 .side-head h2 { font-size: 16px; margin: 0; overflow: hidden; text-overflow: ellipsis;
                 white-space: nowrap; }
+/* pseudo-windows: ≡ and the places over the page, moved by their title bars */
+.pwin { position: fixed; z-index: 20; background: var(--card); border: 1px solid var(--line);
+        border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, .28); display: flex;
+        flex-direction: column; overflow: hidden; }
+.pwin[hidden] { display: none; }
+.pwin-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px;
+             border-bottom: 1px solid var(--line); cursor: move; user-select: none; }
+.pwin-head h2 { font-size: 15px; margin: 0; flex: 1; }
+#menuwin { right: 12px; top: 52px; width: min(560px, calc(100vw - 24px));
+           max-height: calc(100dvh - 64px); }
+#menu-quick { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px;
+              border-bottom: 1px solid var(--line); }
+#menu-quick button { background: var(--ctx); border: 0; border-radius: 8px; padding: 5px 10px; }
+#menu-quick button:hover, #menu-quick button:focus { outline: 2px solid var(--accent); }
+.menu-body { display: flex; min-height: 0; flex: 1; }
+#menu-groups { width: 42%; border-right: 1px solid var(--line); overflow-y: auto; padding: 4px 0; }
+#menu-items { flex: 1; overflow-y: auto; padding: 4px 0; }
+#menu-groups button, #menu-items button { display: block; width: 100%; text-align: left;
+  background: none; border: 0; padding: 7px 14px; color: var(--text); }
+#menu-groups button.on { background: var(--ctx); font-weight: 600; }
+#menu-groups button:hover, #menu-items button:hover,
+#menu-groups button:focus, #menu-items button:focus { background: var(--ctx); outline: none; }
+@media (min-width: 861px) {
+  #side.floating { position: fixed; z-index: 15; width: min(780px, 94vw);
+                   height: min(84vh, 900px); border: 1px solid var(--line);
+                   border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, .28);
+                   overflow: hidden; }
+  #side.floating .side-head { cursor: move; user-select: none; }
+}
+@media (max-width: 560px) {
+  #menuwin { left: 6px; right: 6px; width: auto; top: 50px; }
+  .menu-body { flex-direction: column; }
+  #menu-groups { width: auto; border-right: 0; border-bottom: 1px solid var(--line);
+                 max-height: 40vh; }
+}
+
 /* columns: lanes side by side (❯); the focused one is the page's own lane */
 #cols { flex: 1; display: flex; min-width: 0; overflow-x: auto; overflow-y: hidden; }
 #cols > #main, #cols > .col { flex: none; width: var(--colw, 460px); min-height: 0;

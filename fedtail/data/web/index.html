@@ -100,6 +100,13 @@
 </div>
 <div id="toast" role="status" hidden></div>
 <div id="pop" class="pop" role="menu" hidden></div>
+<div id="menuwin" class="pwin" role="dialog" aria-labelledby="menuwin-title" hidden>
+  <header class="pwin-head"><h2 id="menuwin-title"></h2>
+    <button id="menuwin-close" type="button" class="tool" aria-label="close">✕</button></header>
+  <div id="menu-quick" role="menu"></div>
+  <div class="menu-body"><div id="menu-groups" role="menu"></div>
+    <div id="menu-items" role="menu"></div></div>
+</div>
 <dialog id="info"><form method="dialog"><pre id="info-text"></pre><div id="info-links"></div>
   <button id="info-close" class="primary"></button></form></dialog>
 <script src="/app.js"></script>
