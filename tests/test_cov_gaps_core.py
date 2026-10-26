@@ -164,7 +164,13 @@ class CommonTurnsTest(unittest.TestCase):
                    ("rev-list", "--count", "HEAD"): "42"}
         version.info.cache_clear()
         self.addCleanup(version.info.cache_clear)
+        import tempfile
+        from pathlib import Path
+        root = tempfile.TemporaryDirectory()  # a checkout with .git, wherever this runs
+        self.addCleanup(root.cleanup)
+        (Path(root.name) / ".git").mkdir()
         with mock.patch.dict("sys.modules", {"fedtail._build": None}), \
+                mock.patch.object(version, "ROOT", Path(root.name)), \
                 mock.patch.object(version, "_git", lambda *a: answers.get(a, "")), \
                 mock.patch.object(version.shutil, "which", return_value="/usr/bin/git"):
             got = version.info()
