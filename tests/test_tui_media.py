@@ -231,6 +231,7 @@ class RunTest(unittest.TestCase):
                 mock.patch("fedtail.frontends.tui.app.FedtailApp") as App:
             App.return_value.run.side_effect = lambda: order.append(("run", None))
             App.return_value.return_code = None
+            App.return_value.relaunch = None  # a Mock's is truthy: a profile switch
             self.assertEqual(tui.run(core, None, []), 0)
         self.assertEqual(order, [("prepare", "auto"), ("run", None)])
         core.shutdown.assert_called_once()

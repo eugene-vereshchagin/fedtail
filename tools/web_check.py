@@ -125,7 +125,10 @@ def with_playwright(base, key, out):
                            lambda route: route.fulfill(status=200, content_type="image/png",
                                                        body=_png(route.request.url)))
             page.on("console", lambda m, label=label: m.type in ("error", "warning") and
-                    ERRORS.append(f"{label} console {m.type}: {m.text}"))
+                    (NOTES if "Failed to load resource" in m.text else ERRORS).append(
+                        f"{label} console {m.type}: {m.text}"))
+            # a picture another server didn't give (502, 404, 429) is the network's
+            # business, not the page's: noted, not an error
             page.on("pageerror", lambda e, label=label: ERRORS.append(f"{label} page error: {e}"))
             page.goto(base + "/?k=" + key)
             page.wait_for_selector(".post, article, #posts > *", timeout=10000)
@@ -158,10 +161,15 @@ def with_playwright(base, key, out):
             # Ctrl+F: a word every fake post has, and one none has
             page.click("#posts")
             page.keyboard.press("Control+f")
-            page.fill("#find-q", "пост номер 1")
+            # your account: the longest word of the first post on screen
+            word = "пост номер 1" if not REAL else page.evaluate(
+                "(() => { const t = (document.querySelector('#posts .post .body') || {})"
+                ".innerText || ''; return t.split(/\\s+/).filter(w => /^[\\p{L}]{4,}$/u"
+                ".test(w)).sort((a, b) => b.length - a.length)[0] || ''; })()")
+            page.fill("#find-q", word)
             page.wait_for_timeout(700)
-            if page.locator("#posts .post.found").count() == 0:
-                ERRORS.append("Ctrl+F: nothing marked for a word the lane has")
+            if word and page.locator("#posts .post.found").count() == 0:
+                ERRORS.append(f"Ctrl+F: nothing marked for a word the lane has ({word!r})")
             page.screenshot(path=str(out / "desktop-09-find.png"))
             # "Deeper" (what's stored, not only shown) and "in every lane", as the windows
             page.click("#find-deeper")

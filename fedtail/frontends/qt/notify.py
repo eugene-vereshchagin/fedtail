@@ -94,6 +94,7 @@ class Notifier(QObject):
                  f" — {self.problem}" if self.problem else "")
         self._tray_note = None
         self._warned = False
+        self._nowhere_said = False
         if win.tray:
             win.tray.messageClicked.connect(
                 lambda: self._tray_note and self.clicked.emit(self._tray_note))
@@ -125,7 +126,10 @@ class Notifier(QObject):
             self._tray_note = note
             self.win.tray.showMessage(note.title, note.body, self.win.windowIcon(), 8000)
         else:
-            log.warning("notify: nowhere to show it (no notify-send, no tray)")
+            # once: the settings already say it (self.problem); each further one — info
+            (log.info if self._nowhere_said else log.warning)(
+                "notify: nowhere to show it (no notify-send, no tray)")
+            self._nowhere_said = True
 
     def _desktop(self, note):
         base = [self.notify_send, "--app-name=fedtail", f"--icon={icon_path()}",

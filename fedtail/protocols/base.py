@@ -101,6 +101,12 @@ OPT_IN = {
 }
 
 KNOWN = {
+    # Mastodon 4.6's collections: the others answer 404 (the menu item went only after
+    # a first try said so — the self-check of 26.10 on GoToSocial)
+    ("gotosocial", "collections"): False, ("akkoma", "collections"): False,
+    ("pleroma", "collections"): False, ("misskey", "collections"): False,
+    ("sharkey", "collections"): False, ("iceshrimp", "collections"): False,
+    ("firefish", "collections"): False,
     ("gotosocial", "dismiss_one"): False,   # it clears all notifications, never one
     ("gotosocial", "grouped"): False,       # no /api/v2/notifications (asking: a 404)
     ("gotosocial", "domain_blocks"): False,  # a user's own server blocks: admins only

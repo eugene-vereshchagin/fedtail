@@ -70,6 +70,18 @@ def _weakly(owner, fn):
     return call
 
 
+
+class HostBusy(requests.RequestException):
+    """A picture not asked for: its server said "too many requests" a moment ago."""
+
+
+def _retry_after(headers):
+    """Seconds a 429 asks to wait (Retry-After, or X-RateLimit-Reset), 60 if unsaid."""
+    try:
+        return min(900.0, max(5.0, float(headers.get("Retry-After") or 60)))
+    except (TypeError, ValueError):
+        return 60.0
+
 class Cache:
     RETRY_AFTER = 60  # s: a picture that just failed isn't asked for again before that
     # a server that fetches remote media on demand may take longer than a feed picture
@@ -116,6 +128,7 @@ class Cache:
         self.waiting = {}
         self.broken = {}  # url -> when it last failed (monotonic)
         self.why = {}     # url -> ("network" | "format", detail) of its last failure
+        self._busy_hosts = {}  # host -> time.monotonic() its 429 asked to wait till
         self.asked = {}   # key -> when it was handed to the workers (monotonic)
         self.patient = set()  # keys on their second try: longer read timeout
         # a preview and its original are the same picture: when one comes, a preview
@@ -268,6 +281,13 @@ class Cache:
     def _fetch(self, url, max_side, p, patient, big):
         """The url from the network into the disk cache (p), decoded at max_side."""
         t = time.monotonic()
+        from urllib.parse import urlsplit
+        host = urlsplit(url).hostname or ""
+        busy = self.__dict__.setdefault("_busy_hosts", {})
+        quiet = busy.get(host, 0)
+        if quiet > time.monotonic():  # it said "too many": nothing asked of it till then
+            self.why[url] = ("network", "HTTP 429")
+            raise HostBusy(f"{host}: waiting {quiet - time.monotonic():.0f} s (HTTP 429)")
         try:
             # a preview that hasn't come in 12 s is asked again soon with a minute of
             # patience: a server stuck on it (fetching it from the author's server)
@@ -284,11 +304,20 @@ class Cache:
                 kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
                 data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
         except requests.RequestException as e:
-            code = getattr(getattr(e, "response", None), "status_code", None)
+            resp = getattr(e, "response", None)
+            code = getattr(resp, "status_code", None)
             what = f"refused ({e})" if isinstance(e, remote.Refused) else \
                 f"HTTP {code}" if code else e.__class__.__name__
-            log.warning("image %s: %s after %.1f s", _where(url), what,
-                        time.monotonic() - t)
+            if code == 429:  # the server's pictures are rationed: its window waited out
+                wait = _retry_after(getattr(resp, "headers", None) or {})
+                first = busy.get(host, 0) <= time.monotonic()
+                busy[host] = time.monotonic() + wait
+                (log.info if first else log.debug)(
+                    "image %s: HTTP 429 — no pictures asked of %s for %.0f s",
+                    _where(url), host, wait)
+            else:  # gone (404, 410) is a picture's ordinary end, not a problem of ours
+                (log.info if code in (404, 410) else log.warning)(
+                    "image %s: %s after %.1f s", _where(url), what, time.monotonic() - t)
             self.why[url] = ("network", what)
             raise
         self._t.got = (len(data), time.monotonic() - t)

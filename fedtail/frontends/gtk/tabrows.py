@@ -7,7 +7,7 @@ says which is in front, and reads each page's title and ✕ from the notebook's 
 
 from __future__ import annotations
 
-from .gi_setup import GLib, Gtk, Pango, tip
+from .gi_setup import GLib, Gtk, Pango, forget, tip
 
 SYNC_MS = 1000  # titles change with the counts: compared once a second
 
@@ -48,6 +48,8 @@ class Chip(Gtk.Box):
         self.title = None
 
     def _clicked(self, g, _n, _x, _y):
+        if self.page is None:  # its tab closed already
+            return
         if g.get_current_button() == 2:  # the middle button closes, as tabs do
             self.bar.close(self.page)
         elif g.get_current_button() == 1:
@@ -107,7 +109,12 @@ class TabRows(Gtk.FlowBox):
         title as the tab says now, the one in front marked."""
         pages = self.pages()
         for page in [p for p in self.chips if p not in pages]:
-            self.remove(self.chips.pop(page))
+            child = self.chips.pop(page)
+            self.remove(child)
+            chip = child.get_child()
+            if chip is not None:
+                chip.page = None  # the closed tab no longer held through its chip
+            forget(child)  # the chip's handlers name it: a loop through C, kept alive
         order = [self.chips.get(p) for p in pages]
         if any(c is None for c in order) or order != self._shown():
             for c in list(self.chips.values()):

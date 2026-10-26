@@ -66,6 +66,8 @@ class PlacesTest(unittest.TestCase):
         """Mastodon 4.6's collections: made, someone put in from their profile, seen,
         taken out; someone who doesn't allow it — said why; a server without them — no
         place in the menu."""
+        self.assertNotIn("collections", [n for n, _t in self.pl.menu()])  # GoToSocial
+        self.core.caps.software = "mastodon"  # 4.6: they are there
         p = self.page("collections")
         self.press(p, key="new", values={"name": "Друзья", "description": "мои люди",
                                          "discoverable": True})

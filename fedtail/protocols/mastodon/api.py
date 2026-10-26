@@ -297,8 +297,12 @@ class Api:
         took = time.monotonic() - t
         health.REC.note(self.host, method, path, r.status_code, took)
         # path, paging and timing only: never the token, a body or a post's text
-        log.log(logging.WARNING if took > SLOW_SECONDS or r.status_code >= 400
-                else logging.DEBUG, "%s %s %s -> %s %.2f s %d B", method, path, shown,
+        # "no such thing here" (404, 405, 410, 501) is how a server says it lacks a
+        # feature — the core learns it (Capabilities): said, not warned of
+        absent = r.status_code in (404, 405, 410, 501)
+        bad = took > SLOW_SECONDS or (r.status_code >= 400 and not absent)
+        level = logging.WARNING if bad else logging.INFO if absent else logging.DEBUG
+        log.log(level, "%s %s %s -> %s %.2f s %d B", method, path, shown,
                 r.status_code, took, len(r.content or b""))
         self._last.headers = r.headers
         self._note_budget(r.headers)

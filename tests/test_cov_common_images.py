@@ -230,6 +230,25 @@ class ImagesTest(unittest.TestCase):
         self.assertEqual(len(self.c.tries), before)  # the oldest went for the new one
         self.assertIn(url + "?x", self.c.tries)
 
+    def test_a_server_that_says_too_many_is_left_alone_a_while(self):
+        """HTTP 429 for a picture: nothing more asked of that server until its window is
+        over (Retry-After); another server's pictures still come."""
+        e = requests.HTTPError("429")
+        e.response = types.SimpleNamespace(status_code=429, headers={"Retry-After": "30"})
+        self.net["https://busy/1.png"] = e
+        self.net["https://busy/2.png"] = Answer(b"PNG")
+        self.net["https://calm/1.png"] = Answer(b"PNG")
+        self.get("https://busy/1.png")
+        self.assertEqual(self.c.why["https://busy/1.png"], ("network", "HTTP 429"))
+        before = len(self.c.opened)
+        self.get("https://busy/2.png")
+        self.assertEqual(len(self.c.opened), before)  # not asked at all
+        self.assertEqual(self.c.why["https://busy/2.png"], ("network", "HTTP 429"))
+        self.get("https://calm/1.png")
+        self.assertEqual(self.c.opened[-1][0], "https://calm/1.png")
+        self.assertEqual(images._retry_after({"Retry-After": "x"}), 60.0)
+        self.assertEqual(images._retry_after({"Retry-After": "99999"}), 900.0)
+
     def test_refused_and_connection_errors(self):
         self.net["https://a/6.png"] = remote.Refused("private address")
         self.net["https://a/7.png"] = requests.ConnectTimeout("slow")

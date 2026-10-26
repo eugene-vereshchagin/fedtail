@@ -2723,6 +2723,9 @@ class MainWindow(QMainWindow):
             e.ignore()
             return
         super().closeEvent(e)
+        if self.roster is not None:  # a window of its own: it goes with this one (the
+            self.roster.deleteLater()  # tour found every split window's roster alive)
+            self.roster = None
         self.drop_tray()
         QApplication.quit()
 

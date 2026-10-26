@@ -2,6 +2,15 @@
 
 ## 0.20.0 — in progress
 
+- From the self-check runs on Linux and Windows: a lane's header in a narrow window (or
+  a big font) puts its switches on a second row instead of cutting the buttons; in the
+  split layout the roster window goes with the window, and GTK's closed tabs let go of
+  their profiles; collections are offered on Mastodon only (others answered 404); a
+  server that says "too many requests" for pictures is left alone for the time it asks;
+  missing pictures and features an absent API says no to are info in the log, not
+  warnings, and "nowhere to show a notification" is warned once; the terminal no longer
+  fails drawing a picture after it closed. The self-check tools: a real lane's word for
+  Ctrl+F, pictures the server failed are notes, a test that relaunched a mock.
 - Android: every place of the windows' ≡ menu (search, lists, filters, silence, trends,
   the server, help, editing your profile…), profiles with their buttons (follow, mute for a
   while, block, lists, a note), the windows' own ⋯ menu on every card (edit, delete,

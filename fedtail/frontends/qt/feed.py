@@ -847,14 +847,26 @@ class _Header(QWidget):
         self.setObjectName("laneHeader")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.theme = theme
-        self.h = QHBoxLayout(self)
+        # two rows: everything in the first; the second takes the choices (all / posts
+        # only / new, feed / conversations) when even a short first row won't fit
+        self.v = QVBoxLayout(self)
+        self.h = QHBoxLayout()
+        self.h2 = QHBoxLayout()
+        self.h.setContentsMargins(0, 0, 0, 0)
+        self.h2.setContentsMargins(0, 0, 0, 0)
+        self.v.addLayout(self.h)
+        self.v.addLayout(self.h2)
         if COMPACT_HEADERS:  # the split layout: a slim strip under the author's bar
             self.setProperty("slim", "true")
-            self.h.setContentsMargins(12, 3, 8, 3)
+            self.v.setContentsMargins(12, 3, 8, 3)
+            self.v.setSpacing(3)
             self.h.setSpacing(6)
+            self.h2.setSpacing(6)
         else:
-            self.h.setContentsMargins(28, 12, 20, 12)
+            self.v.setContentsMargins(28, 12, 20, 12)
+            self.v.setSpacing(8)
             self.h.setSpacing(12)
+            self.h2.setSpacing(12)
         # a long title or a long note must never make the window wider: they give way
         self.title = _ElidedLabel(title, keep=8)
         self.title.setObjectName("laneTitle")
@@ -871,6 +883,7 @@ class _Header(QWidget):
         # their glyph ("↓ To new" → "↓"), then the note goes
         self.setMinimumWidth(160)
         self._words = {}  # button → (its words, its tooltip) as made
+        self._segs = []   # the choices: (widget, its place in the first row)
         self._level = 0
 
     def add(self, w):
@@ -880,6 +893,8 @@ class _Header(QWidget):
                 and w.text() and w.objectName() != "seg":
             w.setToolTip(w.toolTip() or w.text())
             w.setText("")
+        if isinstance(w, _Segmented):
+            self._segs.append((w, self.h.count()))
         self.h.addWidget(w)
         if isinstance(w, QPushButton) and w.text() and w.objectName() != "seg":
             self._words[w] = (w.text(), w.toolTip())
@@ -897,18 +912,33 @@ class _Header(QWidget):
                 b.setText(text)
                 b.setToolTip(tip)
         self.info.setVisible(level < 3)
+        below = level >= 4  # the choices on a row of their own
+        for w, at in self._segs:
+            if below and self.h.indexOf(w) >= 0:
+                self.h.removeWidget(w)
+                self.h2.addWidget(w)
+            elif not below and self.h2.indexOf(w) >= 0:
+                self.h2.removeWidget(w)
+                self.h.insertWidget(min(at, self.h.count()), w)
+        if below and self.h2.count() == len(self._segs):
+            self.h2.addStretch(1)
+        elif not below:
+            while self.h2.count():  # the stretch, if any
+                self.h2.takeAt(0)
         self._level = level
 
     def _need(self):
-        return self.h.sizeHint().width()
+        m = self.v.contentsMargins()
+        return max(self.h.sizeHint().width(), self.h2.sizeHint().width()) + \
+            m.left() + m.right()
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
-        if not self._words:
+        if not self._words and not self._segs:
             return
         width = self.width()
         level = 0
-        for level in range(4):  # the fullest that fits
+        for level in range(5):  # the fullest that fits
             self._apply(level)
             if self._need() <= width:
                 break

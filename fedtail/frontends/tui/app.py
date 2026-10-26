@@ -211,20 +211,21 @@ class PictureScreen(Screen):
             return
         at = self.at
         real_ones = pictures.graphics() is not None
+        app = self.app  # kept now: the answer may come after the app has ended
 
         def done(f):
             try:
                 data = f.result()
             except Exception as e:  # noqa: BLE001 — said on the screen: r again, o browser
-                self.app.in_ui(self._put, at, _("viewer_unreachable", err=e))
+                app.in_ui(self._put, at, _("viewer_unreachable", err=e))
                 return
             if real_ones:
-                self.app.in_ui(self._put_graphic, at, data, cols, rows)
+                app.in_ui(self._put_graphic, at, data, cols, rows)
                 return
             drawn = pictures.blocks(data, cols, rows)
-            self.app.in_ui(self._put, at, drawn if drawn is not None else
-                           _("tui_picture_failed", err="?"))
-        self.app.core.media_bytes(url).add_done_callback(done)
+            app.in_ui(self._put, at, drawn if drawn is not None else
+                      _("tui_picture_failed", err="?"))
+        app.core.media_bytes(url).add_done_callback(done)
 
     def _put(self, at, what):
         if at == self.at and self.is_attached:
