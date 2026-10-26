@@ -1,6 +1,6 @@
 # Free lanes: lanes you assemble yourself
 
-**Status: a design, no code yet** (25 Oct 2026). The idea is the author's; this page is what it
+**Status: a design; step 1 (the atoms, `core/atoms.py`) is in the code** (27 Oct 2026). The idea is the author's; this page is what it
 becomes in fedtail, what it costs and where it bites. The current lanes are described in
 [architecture.md](architecture.md) §8.
 
@@ -44,19 +44,27 @@ own tables), never by a frontend. The words below are the core's words: a protoc
 | `account:<id>` | `accounts/<id>/statuses` | somebody's wall | — (only the profile) |
 | `subs` | — (fedtail itself, `/context`) | new comments in threads I follow, as on Point | local source `subs` |
 | `context` | `statuses/<id>/context` | a thread fetched whole when opened | — (threads only) |
+| `remote:<host>` | another server's `timelines/public` (`/local`, `/federated`), `trends/statuses` (`/trends`) | another server's lanes, read without an account there; no token goes there | — |
+| `trends` | `trends/statuses` | my server's trending posts; browse only | — |
+| `link:<url>` / `quotes:<id>` | `timelines/link?url=` (Mastodon 4.3+) / `statuses/<id>/quotes` | posts sharing one link / quotes of one post | — |
+| `bubble` | Akkoma `timelines/bubble`; elsewhere `federated` + `author = "domain:{…}"` of `lanes.bubble` | servers chosen by the admin or by me | — |
 
 ### 2.2 Atoms of a post
 
 | key | values | from what |
 |---|---|---|
-| `author` | `me`, `followed`, `follower`, `mutual`, `stranger`, `bot`, `local`, `remote`, `"@nick@host"`, `"domain:x.org"` | the account; relationships (`relationships`, cached); `bot` — the flag or `lanes.extra_bots` |
+| `author` | `me`, `followed`, `follower`, `mutual`, `stranger`, `bot`, `local`, `remote`, `new` (account < 30 days), `not_follower`, `new_follower` (< 3 days), `limited` (moderated), `bell`, `boosts_off`, `in_list`, `"@nick@host"`, `"domain:x.org"`, `"domain:{a.org,b.org}"` | the account; relationships (`relationships`, cached); `bot` — the flag or `lanes.extra_bots` |
 | `visibility` | `public`, `unlisted`, `followers`, `direct`, `mutuals` (GoToSocial), `local_only` | the post's `visibility` / `local_only` |
-| `kind` | `post` (not a reply, not a boost), `reply`, `boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
-| `me` | `reply` (to me, any), `reply_to_post` (to my post), `reply_to_comment` (to my reply), `mention` (tagged, not a reply to me), `direct`, `in_my_thread` (a thread where I wrote), `boost_of_mine`, `quote_of_mine` | `in_reply_to_account_id`, mentions, the parent (`parents_for`), `sub_members` |
+| `kind` | `post` (not a reply, not a boost), `reply`, `self_reply` (to oneself: a thread going on), `boost`, `self_boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
+| `me` | `reply` (to me, any), `reply_to_post` (to my post), `reply_to_comment` (to my reply), `mention` (tagged, not a reply to me), `direct`, `in_my_thread` (a thread where I wrote), `boost_of_mine`, `quote_of_mine`, `my_boost` | `in_reply_to_account_id`, mentions, the parent (`parents_for`), `sub_members` |
 | `parent` | `mine`, `followed`, `stranger`, `unknown` | the parent post, when known |
-| `has` | `media`, `image`, `video`, `audio`, `cw`, `sensitive`, `link`, `poll`, `"tag:x"`, `"word:x"` | attachments, `spoiler_text`, `sensitive`, card, tags, text |
+| `has` | `media`, `image`, `video`, `audio`, `cw`, `sensitive`, `link`, `poll`, `alt_missing` (media without a description), `followed_tag`, `"tag:x"`, `"link:domain"`, `"word:x"` (= `text`) | attachments, `spoiler_text`, `sensitive`, card, links in the text, tags |
 | `lang` | `"ru"`, `"en"`, …, `unknown` | `language` (as the author's client set it — often wrong) |
-| `state` | `unread`, `subscribed`, `bookmarked`, `liked`, `boosted`, `in_list`, `muted_thread`, `filtered_warn` | fedtail's tables and the post's own flags |
+| `state` | `unread`, `read`, `subscribed`, `bookmarked`, `liked`, `boosted`, `replied` (I answered it, from any client), `in_list`, `muted_thread`, `filtered_warn` | fedtail's tables and the post's own flags |
+| `target` | `my_post`, `my_comment`, `post`, `comment`, and `seen` (the original was stored before), `read` (…and read) | what a boost, a like, a boost or quote event is about |
+| `via` | `followed`, `tag` (a followed tag brought it), `boost` (a followed one boosted it), `mine`, `list` | why it is in my home |
+| `likes` / `boosts` / `replies` | `">10"`, `"<=3"`, `"5"` (at least) | the counts as last fetched (they get stale) |
+| `text` | `[["a", "b"], ["c"]]` — OR of AND groups; `text_in` (`text`, `cw`, `alt`, `poll`; default text + CW), `text_case`, `text_regex` | the text, the CW, the media descriptions, the poll's options |
 | `age` | `"<1d"`, `">2d"`, … | the post's time (`created_at`); for a boost — of the boost or of the original (`age_of = "original"`) |
 
 ### 2.3 Events that aren't posts (`event`)

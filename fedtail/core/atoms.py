@@ -1,0 +1,697 @@
+"""Atoms: everything fedtail can tell apart about a post or an event, and the rules of free
+lanes made of them (docs/en/dev/feeds.md §2, §4).
+
+A post's atoms are computed once, from the stored status and what the core knows around it
+(`World`: whom I follow, who follows me, followed tags, read marks, threads…) into `Facts`.
+A rule (`Rule.parse` of a `[[lanes.custom]]` table) is conditions over those facts: inside a
+condition every key must match (AND), a list of values means any of them, `any` — any of the
+conditions, `none` — none of them. Unknown keys and values are warnings, never errors: the
+condition that has one never matches, so a typo shows as a marked lane, not a crash.
+
+Nothing here does I/O or knows a toolkit; the lanes don't use it yet (feeds.md §9, step 1).
+"""
+
+import re
+from collections.abc import Container, Mapping
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from urllib.parse import urlsplit
+
+from .model import html_to_text, is_bot, norm_acct, real
+
+NEW_ACCOUNT_DAYS = 30   # Mastodon's notification policy: "new accounts"
+NEW_FOLLOWER_DAYS = 3   # …and "followed you lately"
+
+# ---- the words ---------------------------------------------------------------------------
+
+SOURCES = {"home", "local", "federated", "mentions", "watched", "direct", "bookmarks",
+           "favourites", "mine", "subs", "context", "trends", "bubble"}
+# sources with a parameter: list:<id>, tags:<spec>, account:<id>, remote:<host>[/local|
+# /federated|/trends], link:<url>, quotes:<id>
+SOURCE_PREFIXES = ("list:", "tags:", "account:", "remote:", "link:", "quotes:")
+
+AUTHOR = {"me", "followed", "follower", "mutual", "stranger", "bot", "local", "remote",
+          "new", "not_follower", "new_follower", "limited", "bell", "boosts_off", "in_list"}
+VISIBILITY = {"public", "unlisted", "followers", "direct", "mutuals", "local_only"}
+KIND = {"post", "reply", "self_reply", "boost", "self_boost", "quote", "poll", "edited"}
+ME = {"reply", "reply_to_post", "reply_to_comment", "mention", "direct", "in_my_thread",
+      "boost_of_mine", "quote_of_mine", "my_boost"}
+PARENT = {"mine", "followed", "stranger", "unknown"}
+HAS = {"media", "image", "video", "audio", "cw", "sensitive", "link", "poll", "alt_missing",
+       "followed_tag"}
+HAS_PREFIXES = ("tag:", "link:", "word:")
+STATE = {"unread", "read", "subscribed", "bookmarked", "liked", "boosted", "replied",
+         "in_list", "muted_thread", "filtered_warn"}
+VIA = {"followed", "tag", "boost", "mine", "list"}
+# what a boost (or a like, a boost, a quote event) is about: my post or comment, someone
+# else's post or comment, and whether its original was already known / read before
+TARGET = {"my_post", "my_comment", "post", "comment", "seen", "read"}
+EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "status",
+          "quote", "quoted_update", "pending", "admin", "severed", "warning",
+          "annual_report",
+          # derived by fedtail itself, comparing snapshots (feeds.md §2.4)
+          "unfollow", "removed_follower", "moved", "gone", "unfollowed_back", "unliked",
+          "deleted"}
+TEXT_IN = {"text", "cw", "alt", "poll"}
+
+# the server's notification type → our event word
+EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
+            "follow_request": "follow_request", "poll": "poll", "update": "update",
+            "status": "status", "quote": "quote", "quoted_update": "quoted_update",
+            "pending.reply": "pending", "pending.favourite": "pending",
+            "pending.reblog": "pending", "admin.sign_up": "admin", "admin.report": "admin",
+            "severed_relationships": "severed", "moderation_warning": "warning",
+            "annual_report": "annual_report"}
+
+# the server's visibility → ours (Mastodon "private" is followers-only; GoToSocial's
+# "mutuals_only"; Akkoma's "local" is public that stays home)
+_VISIBILITY_OF = {"public": "public", "unlisted": "unlisted", "private": "followers",
+                  "limited": "followers", "direct": "direct", "mutuals_only": "mutuals",
+                  "local": "local_only"}
+
+_SET_KEYS = {"source": SOURCES, "author": AUTHOR, "visibility": VISIBILITY, "kind": KIND,
+             "me": ME, "parent": PARENT, "has": HAS, "lang": None, "state": STATE,
+             "via": VIA, "target": TARGET, "event": EVENTS, "id": None}
+_COUNT_KEYS = ("likes", "boosts", "replies")
+# keys of a condition that only say how the lane shows it (feeds.md §4: switches)
+_SHOW_KEYS = {"switch", "shown", "priority"}
+_TEXT_KEYS = {"text", "text_in", "text_case", "text_regex"}
+_AGE_KEYS = {"age", "age_of"}
+CONDITION_KEYS = set(_SET_KEYS) | set(_COUNT_KEYS) | _SHOW_KEYS | _TEXT_KEYS | _AGE_KEYS
+
+_ANCHOR_RE = re.compile(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>')
+_AGE_RE = re.compile(r"^\s*([<>]=?)\s*(\d+(?:\.\d+)?)\s*([mhdw])\s*$")
+_COUNT_RE = re.compile(r"^\s*(<=|>=|<|>|=)?\s*(\d+)\s*$")
+_UNIT = {"m": timedelta(minutes=1), "h": timedelta(hours=1), "d": timedelta(days=1),
+         "w": timedelta(weeks=1)}
+
+
+# ---- what the core knows around a post ---------------------------------------------------
+
+@dataclass
+class World:
+    """What the atoms need besides the post. The core fills it; every field may stay
+    empty — an atom that needs it then is simply not there (and `Facts.unsure` says so)."""
+    me_id: str = ""
+    my_host: str = ""                    # my server's domain ("dmesg.example")
+    following: Container = frozenset()   # account ids I follow
+    followers: Container = frozenset()   # account ids that follow me
+    new_followers: Container = frozenset()  # …of them, followed me lately (< 3 days)
+    bell: Container = frozenset()        # accounts I rang the bell on (relationship.notifying)
+    boosts_off: Container = frozenset()  # accounts whose boosts I hid (showing_reblogs false)
+    in_lists: Container = frozenset()    # accounts in any of my lists
+    followed_tags: Container = frozenset()  # lower-case names
+    extra_bots: tuple = ()
+    read: Container = frozenset()        # status ids marked read
+    replied: Container = frozenset()     # status ids I replied to (from any client)
+    subscribed: Container = frozenset()  # status ids of followed threads' posts
+    my_threads: Container = frozenset()  # status ids of posts in threads where I wrote
+    muted_threads: Container = frozenset()
+    filtered_warn: Container = frozenset()  # status ids a server "warn" filter matched
+    seen_before: Container = frozenset()  # originals stored before this boost reached us
+    parents: Mapping = field(default_factory=dict)  # status id → its parent or "missing"
+    now: datetime | None = None          # None: now
+
+
+@dataclass
+class Facts:
+    """A post's atoms (or an event's). Sets of words per axis, plus what is matched by
+    value (time, counts, text). `unsure` — axes not known yet (the parent isn't fetched):
+    a lane may wait for them (feeds.md §8, "atoms known late")."""
+    source: set = field(default_factory=set)
+    author: set = field(default_factory=set)
+    visibility: set = field(default_factory=set)
+    kind: set = field(default_factory=set)
+    me: set = field(default_factory=set)
+    parent: set = field(default_factory=set)
+    has: set = field(default_factory=set)
+    lang: set = field(default_factory=set)
+    state: set = field(default_factory=set)
+    via: set = field(default_factory=set)
+    target: set = field(default_factory=set)
+    event: set = field(default_factory=set)
+    id: set = field(default_factory=set)
+    created: datetime | None = None       # the post's (or the boost's) own time
+    original_created: datetime | None = None  # a boost: the original's time
+    counts: dict = field(default_factory=dict)  # likes / boosts / replies, as last fetched
+    texts: dict = field(default_factory=dict)   # text / cw / alt / poll → plain text
+    unsure: set = field(default_factory=set)
+
+
+def _when(s):
+    if not s:
+        return None
+    try:
+        t = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=UTC)
+
+
+def _host(url):
+    try:
+        h = urlsplit(url or "").hostname or ""
+    except ValueError:
+        return ""
+    return h[4:] if h.startswith("www.") else h
+
+
+def handle(account, my_host=""):
+    """'nick@host' in lower case, my server's people included."""
+    acct = norm_acct(account.get("acct"))
+    if acct and "@" not in acct:
+        host = my_host or _host(account.get("url"))
+        acct = f"{acct}@{host}" if host else acct
+    return acct
+
+
+def _author_atoms(acc, world, now):
+    out = set()
+    aid = acc.get("id")
+    acct = handle(acc, world.my_host)
+    if aid and aid == world.me_id:
+        out.add("me")
+    else:
+        followed, follower = aid in world.following, aid in world.followers
+        out |= {"followed"} if followed else set()
+        out |= {"follower"} if follower else {"not_follower"}
+        out |= {"mutual"} if followed and follower else set()
+        out |= set() if followed else {"stranger"}
+        out |= {"new_follower"} if aid in world.new_followers else set()
+    if is_bot(acc, world.extra_bots):
+        out.add("bot")
+    local = "@" not in norm_acct(acc.get("acct")) or \
+        bool(world.my_host) and acct.endswith("@" + world.my_host.lower())
+    out.add("local" if local else "remote")
+    created = _when(acc.get("created_at"))
+    if created and now - created < timedelta(days=NEW_ACCOUNT_DAYS):
+        out.add("new")
+    if acc.get("limited"):
+        out.add("limited")
+    for flag, ids in (("bell", world.bell), ("boosts_off", world.boosts_off),
+                      ("in_list", world.in_lists)):
+        if aid in ids:
+            out.add(flag)
+    if acct:
+        out.add("@" + acct)
+        if "@" in acct:
+            out.add("domain:" + acct.rsplit("@", 1)[1])
+    return out
+
+
+def _texts(st):
+    out = {"text": html_to_text(st.get("content") or ""), "cw": st.get("spoiler_text") or ""}
+    out["alt"] = "\n".join(m.get("description") or "" for m in st.get("media_attachments")
+                           or [])
+    poll = st.get("poll") or {}
+    out["poll"] = "\n".join(o.get("title") or "" for o in poll.get("options") or [])
+    return out
+
+
+def _target(st, world):
+    """What an action is about: whose, a post or a comment, known or read already."""
+    mine = bool(world.me_id) and (st.get("account") or {}).get("id") == world.me_id
+    comment = bool(st.get("in_reply_to_id"))
+    out = {("my_" if mine else "") + ("comment" if comment else "post")}
+    if st.get("id") in world.seen_before:
+        out.add("seen")
+    if st.get("id") in world.read:
+        out.add("read")
+    return out
+
+
+def post_facts(status, world=None, source=None):
+    """The atoms of a stored status (a boost: of the boost and of what it boosts).
+    source: the stream it came from ("home", "list:7"…), or several of them."""
+    world = world or World()
+    now = world.now or datetime.now(UTC)
+    f = Facts()
+    if source:
+        f.source = {source} if isinstance(source, str) else set(source)
+    st, wrapper = real(status), status
+    boost = st is not wrapper
+    me = world.me_id
+    f.id = {st.get("id", "")} | ({wrapper.get("id", "")} if boost else set())
+    f.author = _author_atoms(st.get("account") or {}, world, now)
+    f.visibility = {_VISIBILITY_OF.get(st.get("visibility") or "public", "public")}
+    if st.get("local_only"):
+        f.visibility.add("local_only")
+
+    # kind
+    reply_to = st.get("in_reply_to_id")
+    author_id = (st.get("account") or {}).get("id")
+    if boost:
+        f.kind.add("boost")
+        if (wrapper.get("account") or {}).get("id") == author_id:
+            f.kind.add("self_boost")
+        if (wrapper.get("account") or {}).get("id") == me and me:
+            f.me.add("my_boost")
+        if author_id == me and me:
+            f.me.add("boost_of_mine")
+    if reply_to:
+        f.kind.add("reply")
+        if st.get("in_reply_to_account_id") == author_id:
+            f.kind.add("self_reply")
+    elif not boost:
+        f.kind.add("post")
+    quoted = st.get("quote")
+    if isinstance(quoted, dict):  # Mastodon 4.5: {"state", "quoted_status"}; others: the post
+        quoted = quoted.get("quoted_status", quoted)
+    if quoted:
+        f.kind.add("quote")
+        if me and (quoted.get("account") or {}).get("id") == me:
+            f.me.add("quote_of_mine")
+    if st.get("poll"):
+        f.kind.add("poll")
+    if st.get("edited_at"):
+        f.kind.add("edited")
+
+    # me
+    mine = bool(me) and author_id == me
+    if me and not mine:
+        if reply_to and st.get("in_reply_to_account_id") == me:
+            f.me.add("reply")
+            parent = world.parents.get(reply_to)
+            if isinstance(parent, dict):
+                f.me.add("reply_to_comment" if parent.get("in_reply_to_id")
+                         else "reply_to_post")
+            else:
+                f.unsure.add("me")
+        elif any(m.get("id") == me for m in st.get("mentions") or []):
+            f.me.add("mention")
+        if st.get("visibility") == "direct" and \
+                any(m.get("id") == me for m in st.get("mentions") or []):
+            f.me.add("direct")
+    elif mine and st.get("visibility") == "direct":
+        f.me.add("direct")  # my own private messages: the dialogue is whole
+    if st.get("id") in world.my_threads and not mine:
+        f.me.add("in_my_thread")
+
+    # parent
+    if reply_to:
+        parent = world.parents.get(reply_to)
+        pid = st.get("in_reply_to_account_id")
+        if me and pid == me:
+            f.parent.add("mine")
+        elif pid and pid in world.following:
+            f.parent.add("followed")
+        elif isinstance(parent, dict) or pid:
+            f.parent.add("stranger")
+        else:
+            f.parent.add("unknown")
+
+    # has
+    media = st.get("media_attachments") or []
+    if media:
+        f.has.add("media")
+        for m in media:
+            kind = {"gifv": "video"}.get(m.get("type"), m.get("type"))
+            if kind in ("image", "video", "audio"):
+                f.has.add(kind)
+            if not (m.get("description") or "").strip():
+                f.has.add("alt_missing")
+    if st.get("spoiler_text"):
+        f.has.add("cw")
+    if st.get("sensitive"):
+        f.has.add("sensitive")
+    if st.get("poll"):
+        f.has.add("poll")
+    tags = {(t.get("name") or "").lower() for t in st.get("tags") or [] if t.get("name")}
+    f.has |= {"tag:" + t for t in tags}
+    if any(t in world.followed_tags for t in tags):
+        f.has.add("followed_tag")
+    links = {_host((st.get("card") or {}).get("url"))}
+    for a in _ANCHOR_RE.finditer(st.get("content") or ""):
+        if not re.search(r'class="[^"]*\b(mention|hashtag)\b', a.group(0)):
+            links.add(_host(a.group(1)))
+    links.discard("")
+    if links:
+        f.has.add("link")
+        f.has |= {"link:" + h for h in links}
+
+    f.lang = {(st.get("language") or "unknown").lower()}
+
+    # state
+    sid = st.get("id")
+    f.state.add("read" if sid in world.read else "unread")
+    for flag, key in (("bookmarked", "bookmarked"), ("liked", "favourited"),
+                      ("boosted", "reblogged")):
+        if st.get(key):
+            f.state.add(flag)
+    if sid in world.replied:
+        f.state.add("replied")
+    if sid in world.subscribed:
+        f.state.add("subscribed")
+    if author_id in world.in_lists:
+        f.state.add("in_list")
+    if st.get("muted") or sid in world.muted_threads:
+        f.state.add("muted_thread")
+    if sid in world.filtered_warn or wrapper.get("id") in world.filtered_warn:
+        f.state.add("filtered_warn")
+
+    if boost:
+        f.target = _target(st, world)
+
+    # via: why it is in my home
+    if mine:
+        f.via.add("mine")
+    elif boost and (wrapper.get("account") or {}).get("id") in world.following:
+        f.via.add("boost")
+    elif author_id in world.following:
+        f.via.add("followed")
+    elif "followed_tag" in f.has:
+        f.via.add("tag")
+    if author_id in world.in_lists:
+        f.via.add("list")
+
+    f.created = _when(wrapper.get("created_at"))
+    f.original_created = _when(st.get("created_at"))
+    f.counts = {"likes": st.get("favourites_count") or 0,
+                "boosts": st.get("reblogs_count") or 0,
+                "replies": st.get("replies_count") or 0}
+    f.texts = _texts(st)
+    return f
+
+
+def event_facts(notification, world=None):
+    """The atoms of an event (a notification, or one fedtail derived: {"type": "unfollow",
+    "account": …}): the event's word, who did it, and the post it is about, if any."""
+    world = world or World()
+    now = world.now or datetime.now(UTC)
+    st = notification.get("status")
+    f = post_facts(st, world) if st else Facts()
+    f.kind = set()  # the event isn't a post: its post's kind stays in target
+    if st:
+        f.target = _target(real(st), world)
+    typ = notification.get("type") or ""
+    f.event = {EVENT_OF.get(typ, typ)} if typ != "mention" else set()
+    f.author = _author_atoms(notification.get("account") or {}, world, now)
+    f.id |= {notification.get("id", "")}
+    f.created = _when(notification.get("created_at")) or f.created
+    return f
+
+
+# ---- conditions and rules ----------------------------------------------------------------
+
+def _check_value(key, v, warn):
+    if not isinstance(v, str) or not v:
+        warn(f"{key}: {v!r} is not a word")
+        return False
+    known = _SET_KEYS[key]
+    if key == "source" and v.startswith(SOURCE_PREFIXES) and v.split(":", 1)[1]:
+        return True
+    if key == "author" and (re.fullmatch(r"@?[^@\s]+@[^@\s]+", v)
+                            or re.fullmatch(r"domain:(\{[^{}]+\}|[^{}\s]+)", v)):
+        return True
+    if key == "has" and v.startswith(HAS_PREFIXES) and v.split(":", 1)[1]:
+        return True
+    if key in ("lang", "id"):
+        return True
+    if known is not None and v in known:
+        return True
+    warn(f"{key}: unknown value {v!r}")
+    return False
+
+
+def _norm(key, v):
+    if key == "author" and "@" in v and not v.startswith("domain:"):
+        return "@" + norm_acct(v)
+    if key in ("lang", "has") or key == "author" and v.startswith("domain:"):
+        return v.lower()
+    return v
+
+
+def _words(v):
+    return [v] if isinstance(v, str) else list(v) if isinstance(v, (list, tuple)) else [v]
+
+
+def _cmp(op, a, b):
+    return {"<": a < b, "<=": a <= b, ">": a > b, ">=": a >= b, "=": a == b}[op]
+
+
+@dataclass
+class Condition:
+    """One table of `any` / `none`: every key must match."""
+    sets: dict = field(default_factory=dict)    # key → set of words (any of them)
+    counts: dict = field(default_factory=dict)  # likes / boosts / replies → (op, n)
+    age: tuple | None = None                    # (op, timedelta)
+    age_of: str = "post"                        # post | original
+    text: list = field(default_factory=list)    # OR of AND groups
+    text_in: tuple = ("text", "cw")
+    text_case: bool = False
+    text_regex: bool = False
+    switch: str = ""                            # a chip over the lane (feeds.md §4)
+    shown: bool = True
+    priority: int = 0
+    broken: bool = False                        # had an unknown key or value: never matches
+    raw: dict = field(default_factory=dict)
+
+    @classmethod
+    def parse(cls, table, warnings=None):
+        warnings = [] if warnings is None else warnings
+        c = cls(raw=dict(table) if isinstance(table, dict) else {})
+
+        def warn(msg):
+            warnings.append(msg)
+            c.broken = True
+
+        if not isinstance(table, dict):
+            warn(f"a condition is a table, not {table!r}")
+            return c
+        for key, value in table.items():
+            if key not in CONDITION_KEYS:
+                warn(f"unknown key {key!r}")
+            elif key in _SET_KEYS:
+                words = _words(value)
+                good = {_norm(key, w) for w in words if _check_value(key, w, warn)}
+                if key == "has":  # "word:x" is text matching
+                    for w in [w for w in good if w.startswith("word:")]:
+                        good.discard(w)
+                        c.text.append([w[5:]])
+                if good:
+                    c.sets[key] = good
+            elif key in _COUNT_KEYS:
+                m = _COUNT_RE.match(str(value))
+                if m:
+                    c.counts[key] = (m.group(1) or ">=", int(m.group(2)))
+                else:
+                    warn(f"{key}: {value!r} — a number with <, >, <=, >= or =")
+            elif key == "age":
+                m = _AGE_RE.match(str(value))
+                if m:
+                    c.age = (m.group(1), float(m.group(2)) * _UNIT[m.group(3)])
+                else:
+                    warn(f"age: {value!r} — like \"<1d\", \">2h\" (m, h, d, w)")
+            elif key == "age_of":
+                if value in ("post", "original"):
+                    c.age_of = value
+                else:
+                    warn(f"age_of: {value!r} — post or original")
+            elif key == "text":
+                groups = [[value]] if isinstance(value, str) else \
+                    [_words(g) for g in value] if isinstance(value, (list, tuple)) else None
+                if not groups or any(not all(isinstance(w, str) and w for w in g)
+                                     for g in groups):
+                    warn(f"text: {value!r} — a list of groups of words")
+                else:
+                    c.text += [g for g in groups if g]
+            elif key == "text_in":
+                where = _words(value)
+                bad = [w for w in where if w not in TEXT_IN]
+                if bad or not where:
+                    warn(f"text_in: {bad or value!r} — of {sorted(TEXT_IN)}")
+                else:
+                    c.text_in = tuple(where)
+            elif key in ("text_case", "text_regex", "shown"):
+                if isinstance(value, bool):
+                    setattr(c, key, value)
+                else:
+                    warn(f"{key}: true or false, not {value!r}")
+            elif key == "switch":
+                if isinstance(value, str) and value:
+                    c.switch = value
+                else:
+                    warn(f"switch: a word for the chip, not {value!r}")
+            elif key == "priority":
+                if isinstance(value, int) and not isinstance(value, bool):
+                    c.priority = value
+                else:
+                    warn(f"priority: a number, not {value!r}")
+        if c.text_regex and not c.broken:
+            flags = 0 if c.text_case else re.I
+            try:
+                c.text = [[re.compile(w, flags) for w in g] for g in c.text]
+            except re.error as e:
+                warn(f"text: not a regular expression ({e})")
+        return c
+
+    def _text_ok(self, facts):
+        hay = "\n".join(facts.texts.get(k, "") for k in self.text_in)
+        if not self.text_case and not self.text_regex:
+            hay = hay.casefold()
+        for group in self.text:
+            if all((w.search(hay) if self.text_regex else
+                    (w if self.text_case else w.casefold()) in hay) for w in group):
+                return True
+        return False
+
+    def matches(self, facts, now=None):
+        if self.broken:
+            return False
+        for key, words in self.sets.items():
+            if key == "author":
+                if not any(_author_word(w, facts.author) for w in words):
+                    return False
+            elif not getattr(facts, key) & words:
+                return False
+        for key, (op, n) in self.counts.items():
+            if not _cmp(op, facts.counts.get(key, 0), n):
+                return False
+        if self.age:
+            when = facts.original_created if self.age_of == "original" else facts.created
+            if when is None:
+                return False
+            now = now or datetime.now(UTC)
+            if not _cmp(self.age[0], now - when, self.age[1]):
+                return False
+        if self.text and not self._text_ok(facts):
+            return False
+        return True
+
+    def why_not(self, facts, now=None):
+        """The first key that kept this post out ("" — it matched), for "Why is it here?"
+        and --explain-lane."""
+        if self.broken:
+            return "the condition has an error"
+        for key in self.sets:
+            if not Condition(sets={key: self.sets[key]}).matches(facts, now):
+                return key
+        for key in self.counts:
+            if not Condition(counts={key: self.counts[key]}).matches(facts, now):
+                return key
+        if self.age and not Condition(age=self.age, age_of=self.age_of).matches(facts, now):
+            return "age"
+        if self.text and not self._text_ok(facts):
+            return "text"
+        return ""
+
+
+def _author_word(word, have):
+    if word.startswith("domain:{") and word.endswith("}"):
+        return any(f"domain:{d.strip().lower()}" in have for d in word[8:-1].split(","))
+    return word in have
+
+
+# what a free lane's table may hold besides its conditions (feeds.md §4)
+RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
+             "window", "filter_context"}
+_RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "density"},
+               "read": {"through", "browse"}, "mode": {"lane", "catch_up"},
+               "filter_context": {"home", "public", "notifications", "thread", "account"}}
+
+
+@dataclass
+class Rule:
+    """A free lane's rule: a post goes in if it matches any of `any` and none of `none`;
+    `source`, when given, narrows every condition to those sources."""
+    name: str
+    title: str = ""
+    any: list = field(default_factory=list)
+    none: list = field(default_factory=list)
+    source: set = field(default_factory=set)
+    sort: str = "arrival"
+    read: str = "through"
+    group: str = ""
+    mode: str = "lane"
+    window: timedelta | None = None
+    filter_context: str = ""
+    warnings: list = field(default_factory=list)
+
+    @classmethod
+    def parse(cls, table):
+        warnings = []
+        if not isinstance(table, dict):
+            return cls(name="", warnings=[f"a lane is a table, not {table!r}"])
+        name = table.get("name")
+        rule = cls(name=name if isinstance(name, str) else "", warnings=warnings)
+        if not rule.name:
+            warnings.append("a lane needs a name")
+        rule.title = str(table.get("title") or rule.name)
+        for key in table:
+            if key not in RULE_KEYS:
+                warnings.append(f"unknown key {key!r}")
+        for key in ("any", "none"):
+            value = table.get(key, [])
+            if isinstance(value, dict):
+                value = [value]
+            if not isinstance(value, list):
+                warnings.append(f"{key}: a list of conditions")
+                continue
+            setattr(rule, key, [Condition.parse(t, warnings) for t in value])
+        if "source" in table:
+            for s in _words(table["source"]):
+                if _check_value("source", s, warnings.append):
+                    rule.source.add(s)
+        for key, words in _RULE_WORDS.items():
+            if key in table:
+                if table[key] in words:
+                    setattr(rule, key, table[key])
+                else:
+                    warnings.append(f"{key}: {table[key]!r} — one of {sorted(words)}")
+        if "group" in table:
+            rule.group = str(table["group"])
+        if "window" in table:
+            m = _AGE_RE.match("<" + str(table["window"]).lstrip("<>="))
+            if m:
+                rule.window = float(m.group(2)) * _UNIT[m.group(3)]
+            else:
+                warnings.append(f"window: {table['window']!r} — like \"12h\", \"2d\"")
+        if rule.mode == "catch_up" and rule.window is None:
+            rule.window = timedelta(hours=12)
+        if not rule.any:
+            warnings.append("the lane takes nothing: `any` is empty")
+        for c in rule.any:
+            reason = never(c)
+            if reason:
+                warnings.append(f"never filled: {reason}")
+        return rule
+
+    def _narrowed(self, facts):
+        return not self.source or bool(facts.source & self.source)
+
+    def taken_by(self, facts, now=None):
+        """The condition that takes this post (the first of `any`, by priority), or None."""
+        if not self._narrowed(facts) or any(c.matches(facts, now) for c in self.none):
+            return None
+        for c in sorted(self.any, key=lambda c: -c.priority):
+            if c.matches(facts, now):
+                return c
+        return None
+
+    def takes(self, facts, now=None):
+        return self.taken_by(facts, now) is not None
+
+    def explain(self, facts, now=None):
+        """[(where, condition index, "" or what kept it out)] — every condition's verdict."""
+        out = []
+        if not self._narrowed(facts):
+            out.append(("source", -1, "source"))
+        out += [("none", i, c.why_not(facts, now)) for i, c in enumerate(self.none)]
+        out += [("any", i, c.why_not(facts, now)) for i, c in enumerate(self.any)]
+        return out
+
+
+# combinations no server ever gives a client (feeds.md §3)
+def never(cond):
+    """Why a condition can't be filled by any source, or ""."""
+    s = cond.sets
+    who = s.get("author", set())
+    if s.get("visibility") == {"followers"} and who and who <= {"stranger", "not_follower"}:
+        return "followers-only posts of people I don't follow never reach me"
+    if s.get("source") == {"home"} and s.get("kind") == {"reply"} and \
+            s.get("parent") == {"stranger"} and who and who <= {"followed"}:
+        return "Mastodon's home drops replies of the followed to people I don't follow"
+    if s.get("source") and s["source"] <= {"local", "federated", "trends"} and \
+            s.get("visibility") and s["visibility"] <= {"unlisted", "followers", "direct"}:
+        return "public lanes hold public posts only"
+    return ""

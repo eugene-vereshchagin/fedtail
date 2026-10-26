@@ -1,6 +1,6 @@
 # Свободные ленты: ленты, которые собираешь сам
 
-**Статус: проект, кода ещё нет** (25 окт 2026). Идея автора; здесь — во что она превращается в
+**Статус: проект; шаг 1 (атомы, `core/atoms.py`) уже в коде** (27 окт 2026). Идея автора; здесь — во что она превращается в
 fedtail, чего стоит и где кусается. Нынешние ленты описаны в [architecture.md](architecture.md) §8.
 
 ## 1. Идея
@@ -42,19 +42,27 @@ fedtail, чего стоит и где кусается. Нынешние лен
 | `account:<id>` | `accounts/<id>/statuses` | чья-то стена | — (только профиль) |
 | `subs` | — (сам fedtail, `/context`) | новые комментарии в тредах, на которые я подписан, как на Point | локальный источник `subs` |
 | `context` | `statuses/<id>/context` | тред целиком, когда его открыли | — (только треды) |
+| `remote:<host>` | `timelines/public` чужого сервера (`/local`, `/federated`), `trends/statuses` (`/trends`) | ленты чужого сервера без учётки там; токен туда не уходит | — |
+| `trends` | `trends/statuses` | тренды моего сервера; только просмотр | — |
+| `link:<url>` / `quotes:<id>` | `timelines/link?url=` (Mastodon 4.3+) / `statuses/<id>/quotes` | посты с одной ссылкой / цитаты одного поста | — |
+| `bubble` | `timelines/bubble` Akkoma; в других местах `federated` + `author = "domain:{…}"` из `lanes.bubble` | серверы, выбранные админом или мной | — |
 
 ### 2.2 Атомы поста
 
 | ключ | значения | из чего |
 |---|---|---|
-| `author` | `me`, `followed`, `follower`, `mutual`, `stranger`, `bot`, `local`, `remote`, `"@nick@host"`, `"domain:x.org"` | аккаунт; отношения (`relationships`, с кэшем); `bot` — флажок или `lanes.extra_bots` |
+| `author` | `me`, `followed`, `follower`, `mutual`, `stranger`, `bot`, `local`, `remote`, `new` (аккаунт < 30 дней), `not_follower`, `new_follower` (< 3 дней), `limited` (под модерацией), `bell`, `boosts_off`, `in_list`, `"@nick@host"`, `"domain:x.org"`, `"domain:{a.org,b.org}"` | аккаунт; отношения (`relationships`, с кэшем); `bot` — флажок или `lanes.extra_bots` |
 | `visibility` | `public`, `unlisted`, `followers`, `direct`, `mutuals` (GoToSocial), `local_only` | `visibility` / `local_only` поста |
-| `kind` | `post` (не ответ, не буст), `reply`, `boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
-| `me` | `reply` (мне, любой), `reply_to_post` (на мой пост), `reply_to_comment` (на мой ответ), `mention` (упомянули, но не ответ мне), `direct`, `in_my_thread` (тред, где я писал), `boost_of_mine`, `quote_of_mine` | `in_reply_to_account_id`, упоминания, родитель (`parents_for`), `sub_members` |
+| `kind` | `post` (не ответ, не буст), `reply`, `self_reply` (себе: продолжение треда), `boost`, `self_boost`, `quote`, `poll`, `edited` | `in_reply_to_id`, `reblog`, `quote`, `poll`, `edited_at` |
+| `me` | `reply` (мне, любой), `reply_to_post` (на мой пост), `reply_to_comment` (на мой ответ), `mention` (упомянули, но не ответ мне), `direct`, `in_my_thread` (тред, где я писал), `boost_of_mine`, `quote_of_mine`, `my_boost` | `in_reply_to_account_id`, упоминания, родитель (`parents_for`), `sub_members` |
 | `parent` | `mine`, `followed`, `stranger`, `unknown` | родительский пост, если известен |
-| `has` | `media`, `image`, `video`, `audio`, `cw`, `sensitive`, `link`, `poll`, `"tag:x"`, `"word:x"` | вложения, `spoiler_text`, `sensitive`, карточка, теги, текст |
+| `has` | `media`, `image`, `video`, `audio`, `cw`, `sensitive`, `link`, `poll`, `alt_missing` (медиа без описания), `followed_tag`, `"tag:x"`, `"link:domain"`, `"word:x"` (= `text`) | вложения, `spoiler_text`, `sensitive`, карточка, ссылки в тексте, теги |
 | `lang` | `"ru"`, `"en"`, …, `unknown` | `language` (как выставил клиент автора — часто врёт) |
-| `state` | `unread`, `subscribed`, `bookmarked`, `liked`, `boosted`, `in_list`, `muted_thread`, `filtered_warn` | таблицы fedtail и флажки самого поста |
+| `state` | `unread`, `read`, `subscribed`, `bookmarked`, `liked`, `boosted`, `replied` (я ответил, из любого клиента), `in_list`, `muted_thread`, `filtered_warn` | таблицы fedtail и флажки самого поста |
+| `target` | `my_post`, `my_comment`, `post`, `comment`, плюс `seen` (оригинал уже был в базе), `read` (…и прочитан) | на что направлены буст, лайк, событие буста или цитаты |
+| `via` | `followed`, `tag` (принёс подписанный тег), `boost` (бустнула подписка), `mine`, `list` | почему оно в моей home |
+| `likes` / `boosts` / `replies` | `">10"`, `"<=3"`, `"5"` (не меньше) | счётчики на момент получения (устаревают) |
+| `text` | `[["a", "b"], ["c"]]` — ИЛИ из И-групп; `text_in` (`text`, `cw`, `alt`, `poll`; по умолчанию текст + CW), `text_case`, `text_regex` | текст, CW, описания медиа, варианты опроса |
 | `age` | `"<1d"`, `">2d"`, … | время поста (`created_at`); у буста — буста или оригинала (`age_of = "original"`) |
 
 ### 2.3 События, которые не посты (`event`)
