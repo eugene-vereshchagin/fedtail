@@ -299,7 +299,8 @@ class Api:
         # path, paging and timing only: never the token, a body or a post's text
         # "no such thing here" (404, 405, 410, 501) is how a server says it lacks a
         # feature — the core learns it (Capabilities): said, not warned of
-        absent = r.status_code in (404, 405, 410, 501)
+        # a feature the server hasn't, or its "wait" (the core says that once itself)
+        absent = r.status_code in (404, 405, 410, 429, 501)
         bad = took > SLOW_SECONDS or (r.status_code >= 400 and not absent)
         level = logging.WARNING if bad else logging.INFO if absent else logging.DEBUG
         log.log(level, "%s %s %s -> %s %.2f s %d B", method, path, shown,

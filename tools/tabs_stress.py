@@ -430,6 +430,9 @@ def run_qt(a):
             pump(wait)
         until(lambda: False, 1.0)
         t_open = time.monotonic() - t0
+        if REAL and rnd == 1:  # a real server's first answers are slow, nothing cached:
+            # the tabs still coming aren't missing (26.10: 23 of 30 a second after)
+            until(lambda: len(win.extra_tabs()) >= len(todo), 30.0)
         opened = len(win.extra_tabs())
         if rnd == 1 and opened < len(todo) * 0.8:
             ERRORS.append(f"qt: {len(todo)} tabs asked, {opened} opened")
@@ -534,6 +537,10 @@ def run_gtk(a):
             pump(wait)
         pump(1.0)
         t_open = time.monotonic() - t0
+        if REAL and rnd == 1:  # the same for GTK: a real server's first answers
+            end = time.monotonic() + 30.0
+            while extra() < len(todo) and time.monotonic() < end:
+                pump(0.2)
         opened = extra()
         if rnd == 1 and opened < len(todo) * 0.8:
             ERRORS.append(f"gtk: {len(todo)} tabs asked, {opened} opened")

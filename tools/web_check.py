@@ -286,19 +286,22 @@ def columns(page, out):
     page.click("#cols-btn")
     page.wait_for_timeout(1200)
     n = page.locator("#cols > .col, #cols > #main").count()
-    if n < 2:
-        ERRORS.append(f"columns: {n} column(s) after ❯")
+    if n < 1:
+        ERRORS.append("columns: none after ❯")
         return
+    if n < 2:  # left so last time (an account's own set may be one lane): add one
+        NOTES.append("columns: one column remembered — another added for the walk")
     page.screenshot(path=str(out / "desktop-10-columns.png"))
-    lanes = page.eval_on_selector_all("#lanes a[data-lane]", "els => els.map(e => e.dataset.lane)")
-    shown = page.eval_on_selector_all("#cols > [data-lane], #cols > #main",
-                                      "els => els.map(e => e.dataset.lane || 'MAIN')")
+    lanes = page.eval_on_selector_all("#lanes a[data-lane]",
+                                      "els => els.map(e => e.dataset.lane)")
+    shown = page.evaluate("cols.names")
     extra = next((x for x in lanes if x not in shown), None)
     if extra:
         page.click(f'#lanes a[data-lane="{extra}"]')
         page.wait_for_timeout(900)
         if page.locator("#cols > .col, #cols > #main").count() != n + 1:
             ERRORS.append(f"columns: a lane picked on the left ({extra}) didn't join them")
+    n = page.locator("#cols > .col, #cols > #main").count()
     pane = page.locator("#cols > .col .colhead h2").first
     if pane.count():
         name = page.locator("#cols > .col").first.get_attribute("data-lane")

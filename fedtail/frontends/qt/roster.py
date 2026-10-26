@@ -208,6 +208,10 @@ class RosterWindow(QWidget):
     def __init__(self, win):
         super().__init__(None, Qt.WindowType.Window)
         self.win = win
+        # a window of its own, no parent: it goes when its main window does, however
+        # that one goes (the tours delete windows without closing them: every split
+        # window's roster stayed, 129 widgets each)
+        win.destroyed.connect(self.deleteLater)
         self.setObjectName("roster")
         # a QWidget of our own: without this its stylesheet background (the theme's
         # gradient) is never painted

@@ -28,6 +28,11 @@ lanes — lanes you assemble yourself.
 
 The whole list:
 
+- From the evening's self-check: the split layout's roster goes with its window however
+  that one goes (a window deleted without being closed left it, 129 widgets each); a
+  server's "wait" (HTTP 429) and "notifications have nowhere to go", said already in the
+  window, are info in the log, not warnings. The self-check tools: a real server's slow
+  first tabs waited for, an account that keeps one column remembered.
 - The web page's ≡ is a window over the page, as the windows' menu: the everyday buttons
   on top (write, my profile, refresh, all read, columns), the rest in groups — lanes and
   lists, for the tender, whom to read, the account and the server, the look, debugging,

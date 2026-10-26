@@ -127,7 +127,8 @@ class Notifier(QObject):
             self.win.tray.showMessage(note.title, note.body, self.win.windowIcon(), 8000)
         else:
             # once: the settings already say it (self.problem); each further one — info
-            (log.info if self._nowhere_said else log.warning)(
+            # the settings and the status bar say it already (self.problem): info then
+            (log.info if self._nowhere_said or self.problem else log.warning)(
                 "notify: nowhere to show it (no notify-send, no tray)")
             self._nowhere_said = True
 
