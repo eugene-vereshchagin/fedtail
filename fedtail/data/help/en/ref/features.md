@@ -99,6 +99,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Collections of people (Mastodon 4.6) | has | 0.20.0 | ≡ → “My collections”; on a profile — “Add to collection…”, “Collections” | `/api/v1/collections`, `/api/v1/accounts/:id/collections`, `…/in_collections` | Mastodon 4.6, Fedilab |
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
+| Free lanes: a lane you assemble yourself | planned | — | `[[lanes.custom]]` | — | — |
 
 <details><summary>In detail</summary>
 
@@ -163,6 +164,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A link's timeline (Mastodon 4.3+).** “Who else shared this link” in a post's menu — see the line of that name under “Profiles”. GoToSocial can't do it.
 
+**Free lanes: a lane you assemble yourself.** A lane made of rules: where a post came from (home, lists, tags, notifications), who, what is in it (pictures, a reply, a boost, the language, words), events instead of posts. The built-in lanes become such rules too, presets; “Unsorted” and “Why is it here?”. The plan — `docs/en/dev/feeds.md`, in 0.21.
+
 </details>
 
 ---
@@ -212,6 +215,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Read marks, thread subscriptions and lane order shared by all your devices | has | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.read`, `sync.threads`, `sync.lanes`, `sync.drafts`, `sync.activity`, `sync.tiles`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | own: a fedtail-sync server (one file, `syncserver/fedtail_sync.py`) or a shared folder; it is entered with a `read:accounts`-only token | only in fedtail (markers are just the place in Home and notifications) |
 | Cards are built around the reading place | has | 0.11.0 | `feed.build_at_once`, `feed.render_limit` | own | only in fedtail |
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `ui.esc`, `ui.start_lane` | own | only in fedtail |
+| Sync: the key by a QR code, drafts' pictures, WebDAV | planned | — | `[sync]` | — | — |
 
 <details><summary>In detail</summary>
 
@@ -233,6 +237,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Esc draws a curtain instead of closing the window.** Esc closes what's on top (a picture, the search), and the last Esc with `ui.esc = "curtain"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `"tray"` — off to the tray, `"off"` — nothing. What to start with — `ui.start_lane`: `"none"` (the curtain, Enter opens the last one), `"last"` or a lane's name.
 
+**Sync: the key by a QR code, drafts' pictures, WebDAV.** The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot. And checked live on Linux, Windows and Android. In 0.21.
+
 </details>
 
 ---
@@ -253,13 +259,14 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
 | Translation by the server | has | 0.8.0 | `feed.translate`, `feed.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
-| Emoji reactions | has | 0.11.0 | ⋯ → “React…” | `pleroma.emoji_reactions`; `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
+| Emoji reactions | has | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
 | Honest counters | has | 0.2.0 | `feed.honest_counters` (off), `feed.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
 | Folding hashtag padding | has | 0.14.0 | `feed.collapse_tags` | own | Phanpy |
 | `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `feed.text_markup` | own | — |
 | Labels on the card | has | 0.14.0 | `feed.old_days`; “bot” — always | own | Sengi |
+| Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 
 <details><summary>In detail</summary>
 
@@ -286,7 +293,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `feed.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given.
 
-**Emoji reactions.** Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Your own — ⋯ → “React…” (since 0.20): the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them.
+**Emoji reactions.** Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Giving your own — see “Sending emoji reactions”.
 
 **Who liked and boosted.** Lists of people at the counters. If your server doesn't know everyone, the rest is read from the author's server.
 
@@ -299,6 +306,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Boost carousel.** Boosts in a row — as one strip scrolled sideways (as in Phanpy). Won't do: sideways is awkward to read, and it fits badly with “nothing jumps” and read marks. The same job is done by the “Boosts” tick in the filter, “without their boosts” on a profile and relays in a list of their own.
 
 **Labels on the card.** Next to the date: “old, N days” — a post older than `feed.old_days` (30) days; such posts come from someone's outbox or an old thread; “[bot]” — on bots. There is no “from another server” label yet.
+
+**Sending emoji reactions.** ⋯ → “React…”: the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them.
 
 </details>
 
@@ -860,6 +869,8 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
+| Free lanes: a lane you assemble yourself | Lanes | `[[lanes.custom]]` | large |
+| Sync: the key by a QR code, drafts' pictures, WebDAV | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 
 ## Won't do
@@ -878,5 +889,4 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Others | Note |
 |---|---|---|
-| Sending emoji reactions | Phanpy, Elk, Fedilab | Akkoma, Pleroma, Misskey; GoToSocial can't do it. |
 | The token from an external command (`pass`, `gopass`) | tut | It's unclear what this would add over a file readable by its owner only. |

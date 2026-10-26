@@ -450,3 +450,15 @@ others = "Mastodon web"
 clients = ["Mastodon web"]
 details.ru = "«Кто ещё делился этой ссылкой» в меню поста — см. одноимённую строку в «Профилях». GoToSocial не умеет."
 details.en = "“Who else shared this link” in a post's menu — see the line of that name under “Profiles”. GoToSocial can't do it."
+
+[[feature]]
+id = "free-lanes"
+status = "planned"
+name.ru = "Свободные ленты: собери ленту сам"
+name.en = "Free lanes: a lane you assemble yourself"
+config = "`[[lanes.custom]]`"
+others = "—"
+size.ru = "крупный"
+size.en = "large"
+details.ru = "Лента из правил: откуда пост (домашняя, списки, теги, уведомления), кто, что в нём (картинки, ответ, буст, язык, слова), события вместо постов. Встроенные ленты станут такими же правилами-пресетами; «Неразобранное» и «Почему это здесь?». План — `docs/ru/dev/feeds.md`, в 0.21."
+details.en = "A lane made of rules: where a post came from (home, lists, tags, notifications), who, what is in it (pictures, a reply, a boost, the language, words), events instead of posts. The built-in lanes become such rules too, presets; “Unsorted” and “Why is it here?”. The plan — `docs/en/dev/feeds.md`, in 0.21."

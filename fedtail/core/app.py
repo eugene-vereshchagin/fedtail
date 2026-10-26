@@ -215,7 +215,31 @@ class Core(SocialMixin):
             log.warning("error shown to the user: %s", payload)
         else:
             log.debug("event %s", name)
+            self._warm_if_changed()
         self.events.emit(name, payload)
+
+    def _warm_if_changed(self):
+        """An event from a background thread after the stored posts changed (a thread
+        loaded, a post favourited, a boost's count): the lanes counted anew here, before
+        the window hears — it recounts every lane on most events, and did it itself
+        between two frames (the freezes of 300–600 ms on activity_seen and read_changed
+        after a thread came in, 26.10)."""
+        if threading.current_thread() is threading.main_thread():
+            return  # the window's own act: counting here is counting there
+        store = getattr(self, "store", None)
+        if store is None or not getattr(self, "lanes", None) or getattr(self, "_warming", 0):
+            return
+        try:
+            key = (store.status_version, tuple(sorted(store.items_version.items())))
+        except Exception:  # noqa: BLE001 — a store without versions (a test's fake)
+            return
+        if key == getattr(self, "_warmed_at", None):
+            return
+        self._warming = 1
+        try:
+            self._warm_lanes()
+        finally:
+            self._warming = 0
 
     @property
     def logged_in(self):
@@ -1995,6 +2019,11 @@ class Core(SocialMixin):
             except Exception as e:  # noqa: BLE001 — the window will try again itself
                 log.debug("warm %s: %s", lane.name, e)
         self._step("warm lanes")
+        try:
+            self._warmed_at = (self.store.status_version,
+                               tuple(sorted(self.store.items_version.items())))
+        except Exception:  # noqa: BLE001 — a store without versions (a test's fake)
+            pass
         log.debug("lanes warmed in %.2f s", time.monotonic() - t)
 
     def mark_read(self, status_ids):

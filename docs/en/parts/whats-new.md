@@ -4,6 +4,7 @@
 - Collections of people (Mastodon 4.6)
 - Another server's public timeline
 - A link's timeline (Mastodon 4.3+)
+- Sending emoji reactions
 - In a profile: posts, posts and replies, media
 - Who else shared a link
 - A video's cover; picture descriptions in a post's edit

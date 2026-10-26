@@ -193,13 +193,11 @@ android = "has"
 since = "0.11.0"
 name.ru = "Эмодзи-реакции"
 name.en = "Emoji reactions"
-config.ru = "⋯ → «Реакция…»"
-config.en = "⋯ → “React…”"
-api = "`pleroma.emoji_reactions`; `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react|unreact/:emoji`"
+api = "`pleroma.emoji_reactions`"
 others = "Phanpy, Elk, Fedilab"
 clients = ["Phanpy", "Elk", "Fedilab"]
-details.ru = "Реакции с Akkoma, Pleroma, Misskey и их форков видны под постом. Свою — ⋯ → «Реакция…» (с 0.20): частые эмодзи и те, что уже стоят, кнопками (нажатое ещё раз снимается), любое другое или своё эмодзи сервера — строкой (`:blobcat:`). Пункт есть там, где сервер реакции умеет (Akkoma, Pleroma — их API; Misskey, Sharkey, Iceshrimp, Fedibird — API Fedibird), и у поста, на котором реакции уже есть; GoToSocial и Mastodon их не поддерживают."
-details.en = "Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Your own — ⋯ → “React…” (since 0.20): the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them."
+details.ru = "Реакции с Akkoma, Pleroma, Misskey и их форков видны под постом. Поставить свою — см. «Ставить эмодзи-реакции»."
+details.en = "Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Giving your own — see “Sending emoji reactions”."
 
 [[feature]]
 id = "who-liked"
@@ -315,10 +313,15 @@ why.en = "A theme already sets the look of the whole app; a second layer of temp
 
 [[feature]]
 id = "reactions-send"
-status = "undecided"
+status = "has"
+android = "has"
+since = "0.20.0"
 name.ru = "Ставить эмодзи-реакции"
 name.en = "Sending emoji reactions"
+config.ru = "⋯ → «Реакция…»"
+config.en = "⋯ → “React…”"
+api = "`PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react|unreact/:emoji`"
 others = "Phanpy, Elk, Fedilab"
 clients = ["Phanpy", "Elk", "Fedilab"]
-note.ru = "Akkoma, Pleroma, Misskey; GoToSocial не умеет."
-note.en = "Akkoma, Pleroma, Misskey; GoToSocial can't do it."
+details.ru = "⋯ → «Реакция…»: частые эмодзи и те, что уже стоят, кнопками (нажатое ещё раз снимается), любое другое или своё эмодзи сервера — строкой (`:blobcat:`). Пункт есть там, где сервер реакции умеет (Akkoma, Pleroma — их API; Misskey, Sharkey, Iceshrimp, Fedibird — API Fedibird), и у поста, на котором реакции уже есть; GoToSocial и Mastodon их не поддерживают."
+details.en = "⋯ → “React…”: the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them."

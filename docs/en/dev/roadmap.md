@@ -1,47 +1,46 @@
-# fedtail: the plan for 0.19
+# fedtail: the plan for 0.21
 
-What we do in 0.19 (decided on 22 Oct 2026, after 0.18.0 came out). The user's side is
-in the feature list with the status "planned" (`docs/src/features/*.toml` → `docs/*/parts/roadmap.md`
-and the site); here — the whole plan, with the development part.
+What we do in 0.21 (decided on 26 Oct 2026, with 0.20.0 ready to come out): **sync between
+devices brought to the end** and **free lanes** — lanes one assembles oneself. The user's
+side is in the feature list with the status "planned" (`docs/src/features/*.toml` →
+`docs/*/parts/roadmap.md` and the site); here — the whole plan, with the development part.
+
+## What 0.20 brought
+
+Android as a full fediverse client (every place, the ⋯ menu, profiles, the editor, push);
+the terminal and the web with everything the windows have; slow mode, "notify at most
+every…", "of them new"; reactions of one's own; collections, another server's timeline, a
+link's timeline; an apt repository and a Windows installer (waiting for their keys); the
+robustness answers (`robustness.md`) and the self-check with real accounts on Linux,
+Windows and Android. Everything — in CHANGELOG.md.
 
 ## Doing
 
 | # | what | how we'll know it's done |
 |---|---|---|
-| 1 | **A sound scheme**: sounds are part of the theme, like icons (the theme's folder, a set of their own for the messenger themes: a new message, a reply, a mention, signing in), can be switched off; Qt, GTK, the terminal if possible (bell) | the feature `sound-scheme` — "has"; a test: an event → the theme's sound; without a sound system — silence |
-| 2 | **Tests on Windows**: fill in what's skipped now or holds on Linux only (paths, the Start menu entry, the tray, notifications, single-instance, debugging logs); `docs/en/dev/windows.md` runs whole | the same set as in CI for Windows, green on your virtual machine; skips — only what Windows doesn't have by nature (GTK, `.desktop`, D-Bus) |
-| 3 | **The same behaviour in every toolkit**: not only the interface's words (`tools/parity.py`), but what the same actions do in Qt, GTK, the web and the terminal — a shared scenario (open a lane, read, reply, like, a thread, a profile, a post's menu, Esc, quit) on a fake server, the same results | `tools/parity.py` + a new scenario test; differences — in the self-check report, 0 at a release |
-| 4 | **A complete terminal (TUI)**: everything the windows have, within a terminal's means — a post's menu, a profile with all its buttons, lists, search, silence, help, "what's new", account settings | the TUI's parity by `parity.md` — like GTK's (≥ 90 % of the words), the scenario of item 3 passes |
-| 5 | **A complete web**: the same for the web — lists, silence, find in a lane, editing the profile, requests, "Activity" with groups, browser notifications | the web's parity ≥ 90 %, the scenario of item 3 passes |
-
-## Where we are (22 Oct 2026, evening)
-
-| # | state |
-|---|---|
-| 1 | the sound scheme — there (Qt, GTK, the terminal, the web); `sound.enabled = "auto"`: sound in dev, silence in releases |
-| 2 | `tests/test_windows.py` (Windows simulated — everywhere), `tools/windows_check.py` (docs/en/dev/windows.md whole, the self-check's `windows` step); a run on the virtual machine — your move |
-| 3 | `tools/behaviour.py`: the web and the terminal match the shared code over the whole scenario; the Qt and GTK drivers are written blind — waiting for a run |
-| 4 | the terminal: ⋯, ≡, all places, the profile, the editor, Ctrl+F, the lane as in the windows; parity by words 51 % |
-| 5 | the web: all places, the lane and the card as in the windows, the editor with attachments/a poll/"later", Ctrl+F, notifications; parity by words 49 % |
-
-## Loose ends we also close in 0.19
-
-- GTK: check Wayland live, the colour match with Qt (`SameAsQtTest` in CI), GNOME and XFCE.
-- Screen readers: go through the interface with Orca (Qt and GTK), fix what isn't read out.
-- Showing reactions — there; giving my own — when the server can (GoToSocial can't).
-- The first start on a new machine: check live on Windows (delete
-  `%LOCALAPPDATA%\fedtail\default` and start) — what's unread from another machine is kept.
-- Mastodon 4.3+ notification groups — check on a live account.
-- Logging in through the browser on the Windows VM (the server got the wrong password) — find out what
-  changes on pasting.
+| 1 | **Sync, checked live**: Linux, Windows and Android on one account through a fedtail-sync server and through a folder; read marks, threads, lanes, drafts, activity, tiles travel; a new device doesn't mark the others' unread read | a self-check step on two profiles with one sync folder (`tools/selfcheck.py`); the same by hand on three devices |
+| 2 | **Sync: what's "not yet" now** (`docs/en/sync.md`): the key carried by a QR code from the window and the phone's camera; a draft's pictures travelling with it; WebDAV spoken directly; old journals packed into a snapshot | each — a feature "has" with its `since`, the "Not yet" list empty or with the reason why not |
+| 3 | **Sync in every interface**: the state, "sync now", the key, the errors in words — Qt, GTK, the terminal, the web, Android the same | `tools/parity.py` without sync lines; the behaviour scenario has a sync step |
+| 4 | **Free lanes, the core** (`feeds.md` §9, steps 1–5): atoms, rules with strict checks and `explain`, the built-in lanes as presets (the same output as today), lanes over several sources, "Unsorted", "Why is it here?", `--explain-lane` | a test over a recorded store: the presets give today's lanes item for item; every key and every error of a rule tested |
+| 5 | **Free lanes, outside** (§9, steps 6–7): `[[lanes.custom]]` in the config and both examples, the features and the help; the sidebar, columns, tiles, notifications by the most personal lane in every interface | a lane from the config shows the same in Qt, GTK, the terminal, the web and Android; parity — 0 differences |
 
 ## Waiting for a decision
 
-A public lane of another server; a lane by link (Mastodon 4.3+); giving emoji reactions;
-the token through `pass`/`gopass`; spell checking (you said it's not needed: move it to "won't
-do"?).
+- `feeds.md` §10: nested groups in `any`; events and posts in one lane; `in_my_thread`
+  without following; the lane editor on the phone.
+- The sync server: one public instance of the project's own, or only "run your own".
+- The author's calls of `robustness.md`: the token's store, encrypting the database,
+  checking for a new version, NTLM proxies, the system's theme on the go, a hung first copy.
 
-## Not in 0.19
+## Loose ends
 
-Collections (waiting for GoToSocial), Toga, an apt repository of our own, an installer and signing for Windows,
-Android (postponed).
+- The secrets: `APT_GPG_KEY` and GitHub Pages for the `apt` branch, `WINDOWS_CERT_PFX`.
+- The tray icon that stays after quitting from the roster in KDE (split layout) — check
+  on 0.20.0.
+- Freezes on a lane's first click with many cards (`card.py` `_hint_width`): measure on
+  a real account.
+
+## Not in 0.21
+
+Toga; the token from an external command; Mastodon's annual report and the other "won't
+do" of the feature list.

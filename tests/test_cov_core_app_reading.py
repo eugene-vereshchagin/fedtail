@@ -65,6 +65,24 @@ class ParentsTest(CoreCase):
         with mock.patch.object(c, "unread_count", boom()):
             c._warm_lanes()
 
+    def test_a_background_event_after_a_change_counts_the_lanes_first(self):
+        # 26.10: a thread loaded in the background changed the stored posts, and the
+        # window recounted every lane itself on the next event (freezes of 300–600 ms)
+        import threading
+        c = self.connect()
+        c.poll_once()
+        warmed = []
+        with mock.patch.object(c, "_warm_lanes", lambda: warmed.append(1)):
+            c.emit("lanes_updated", {})           # nothing changed since the poll
+            self.assertEqual(warmed, [])
+            c.store.status_version += 1           # a thread came in
+            c.emit("nothing_here", None)          # the window's own act: not here
+            self.assertEqual(warmed, [])
+            t = threading.Thread(target=c.emit, args=("thread_loaded", None))
+            t.start()
+            t.join()
+            self.assertEqual(warmed, [1])
+
     def test_target_by_number(self):
         c = self.connect()
         self.w.add(status("020", BOB, minute=20), home=True)

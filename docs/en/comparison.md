@@ -80,6 +80,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Who quoted my post | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Folding hashtag padding | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
 | Labels on the card | ✓ |   |   |   |   |   |   |   |   | ✓ |   |   |   |   |
+| Sending emoji reactions | ✓ |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |   |   |
 
 ## Pictures and video
 
@@ -214,4 +215,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **35** features of the 150 compared.
+Only in fedtail — **35** features of the 151 compared.

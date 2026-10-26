@@ -2,6 +2,14 @@
 
 ## 0.20.0 — in progress
 
+- The release of the 0.20 plan: Android as a whole fediverse client (every place, the ⋯
+  menu, profiles, the editor, push); the terminal and the web page with what the windows
+  have; slow mode, "notify at most every…", "of them new"; reactions of your own;
+  collections, another server's lane, a link's lane; the robustness answers
+  (docs/en/dev/robustness.md) and the self-check over real accounts. Next, 0.21 (the
+  plan in docs/en/dev/roadmap.md): sync brought to the end and free lanes.
+- The window no longer freezes for a third of a second after a thread or a post came in
+  in the background: the lanes' counts are worked out there, before the window is told.
 - From the self-check runs on Linux and Windows: a lane's header in a narrow window (or
   a big font) puts its switches on a second row instead of cutting the buttons; in the
   split layout the roster window goes with the window, and GTK's closed tabs let go of

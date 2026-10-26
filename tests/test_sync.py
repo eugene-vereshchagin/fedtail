@@ -400,6 +400,9 @@ class CliSyncTest(Devices):
         self.assertEqual(crypto.key_text(crypto.key_from_text(shown)), shown)
         self.assertIn("(id ", self.run_cli("phone", "sync", "join", shown))
         self.run_cli("phone", "sync", "now")
+        # the command's own Core wrote the marks; this one has its read set in memory
+        # already (the lanes are counted after every background event): read it anew
+        self.phone.store._read = None
         self.assertEqual(self.phone.store.read_set(["42"]), {"42"})
         status = self.run_cli("phone", "sync", "status")
         self.assertIn("folder", status)
