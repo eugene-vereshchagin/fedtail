@@ -2,6 +2,32 @@
 
 ## 0.20.0 — in progress
 
+**In short.** Every interface catching up with the windows, and a phone of its own:
+
+- **Android, a first whole version to try**: every place of the ≡ menu, a post's ⋯,
+  profiles with their buttons, the editor with pictures, a poll and "later", notifications
+  in the shade and push through UnifiedPush, columns on a tablet, a screen reader.
+- **The terminal and the web page with what the windows have**: every place, the menus,
+  profiles, the editor, Ctrl+F, accounts; the web page also columns, ≡ as a window with
+  groups, push in the browser, the windows' themes, logging in from the page.
+- **Reading at your own pace**: slow mode, "notify at most every…" per lane, "of them new"
+  beside the counts, mute for a while, hide one post, a profile's posts / replies / media.
+- **More of the fediverse**: another server's public lane, a link's lane and who shared
+  it, collections (Mastodon 4.6), reactions of your own (Akkoma, Pleroma, Misskey), a
+  list's replies, filters edited, reports by the server's rules, spell checking, a
+  video's cover.
+- **Installing**: a Windows installer, `SHA256SUMS` with every release, an apt repository
+  (built once its key is set).
+- **Sturdier**: odd networks (a captive portal, a huge answer, a server asking to wait)
+  explained instead of failing, polls backing off and catching up after sleep, a broken
+  config explained, leaks and freezes found by the self-check fixed, the tray icon gone
+  with fedtail.
+
+Next, 0.21 (docs/en/dev/roadmap.md): sync between devices brought to the end, and free
+lanes — lanes you assemble yourself.
+
+The whole list:
+
 - The web page's ≡ is a window over the page, as the windows' menu: the everyday buttons
   on top (write, my profile, refresh, all read, columns), the rest in groups — lanes and
   lists, for the tender, whom to read, the account and the server, the look, debugging,
@@ -16,12 +42,6 @@
   Replies to me, Activity); a lane picked on the left joins them, ‹ › move one, ✕ takes it
   away; the lane in focus has its bar, keys and Ctrl+F, a click on a column beside brings
   it into focus, each column marks what's read in it. At a phone's width — one lane.
-- The release of the 0.20 plan: Android as a whole fediverse client (every place, the ⋯
-  menu, profiles, the editor, push); the terminal and the web page with what the windows
-  have, columns on the web page too; slow mode, "notify at most every…", "of them new";
-  reactions of your own; collections, another server's lane, a link's lane; the robustness
-  answers (docs/en/dev/robustness.md) and the self-check over real accounts. Next, 0.21
-  (the plan in docs/en/dev/roadmap.md): sync brought to the end and free lanes.
 - The window no longer freezes for a third of a second after a thread or a post came in
   in the background: the lanes' counts are worked out there, before the window is told.
 - From the self-check runs on Linux and Windows: a lane's header in a narrow window (or
