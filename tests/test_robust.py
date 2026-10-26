@@ -101,7 +101,11 @@ class BrokenConfigTest(unittest.TestCase):
         with mock.patch("sys.stdin", tty):
             self.assertFalse(main_mod._config_trouble("c.toml", "bad"))
         tty.isatty.return_value = False
+        with mock.patch("sys.stdin", tty):  # the tests say no windows (FEDTAIL_NO_DIALOGS)
+            self.assertFalse(main_mod._config_trouble("c.toml", "bad"))
         with mock.patch("sys.stdin", tty), \
+                mock.patch.dict("os.environ", {"FEDTAIL_NO_DIALOGS": "",
+                                               "QT_QPA_PLATFORM": ""}), \
                 mock.patch.dict("sys.modules", {"PySide6.QtWidgets": None}):
             self.assertFalse(main_mod._config_trouble("c.toml", "bad"))
 

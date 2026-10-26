@@ -96,6 +96,9 @@ def _config_trouble(path, err):
     the defaults for this run, False — quit. No window to show it in: False."""
     if sys.stdin is not None and sys.stdin.isatty() and not getattr(sys, "frozen", False):
         return False  # a terminal: it was printed there, and fixing the file is the way
+    if os.environ.get("FEDTAIL_NO_DIALOGS") or \
+            os.environ.get("QT_QPA_PLATFORM", "").startswith(("offscreen", "minimal")):
+        return False  # tests, CI, a headless run: nobody would see the window
     try:
         from PySide6.QtWidgets import QApplication, QMessageBox
     except ImportError:
