@@ -1,4 +1,4 @@
-**0.20.0 (in progress):**
+**0.20.0:**
 
 - Whose replies a list shows
 - Collections of people (Mastodon 4.6)
@@ -20,12 +20,3 @@
 - “Of them new”: what the last update brought
 - An apt repository of its own
 - An installer for Windows (and a signature)
-
-**0.19.0:**
-
-- A bug report straight into your private repository
-- Report a bug on GitHub — checked first
-- A sound scheme
-- Android: a phone and a tablet
-- The terminal — everything the windows have
-- The web — everything the windows have

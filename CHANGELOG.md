@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.20.0 — in progress
+## 0.20.0 — 2026-10-26
 
 **In short.** Every interface catching up with the windows, and a phone of its own:
 
