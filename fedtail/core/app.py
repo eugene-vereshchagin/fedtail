@@ -896,6 +896,8 @@ class Core(SocialMixin):
 
             if self.derived.due():  # a snapshot of my followers, in the background
                 self.bg.submit(self.derived.run)
+            if self.derived.likes_due():  # who liked my recent posts (activity.unlikes)
+                self.bg.submit(self.derived.run_likes)
             self._step("requests+activity")
             self._warm_lanes()  # before the window hears: it finds them made
             new_statuses = self._new_statuses(new_by_source)
@@ -1176,6 +1178,7 @@ class Core(SocialMixin):
                            followed_tags=getattr(self, "_followed_tag_names", None) or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),
                            parents=_Parents(), new_replies=_News(),
+                           deleted=store.deleted_set(),
                            detect=lc["detect_language"],
                            min_words=lc["detect_min_words"])
 
@@ -2758,11 +2761,29 @@ class Core(SocialMixin):
     def thread(self, sid):
         return self.submit(self._thread_nodes, sid)
 
+    def _status_again(self, sid):
+        """A post fetched again: gone from its server (404/410) — marked deleted here
+        (feeds.md §2.4), then the error goes on."""
+        try:
+            return self.api.status(sid)
+        except ApiError as e:
+            if e.status in (404, 410) and self.store.get_status(sid) is not None:
+                if self.store.mark_deleted(sid):
+                    log.info("post %s: gone from its server, marked deleted", sid)
+                    self._world_version += 1
+                    # not "status_deleted" (that takes the card away): drawn anew, marked
+                    self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+            raise
+
+    def deleted_ids(self):
+        """Posts their server no longer has (marked when fetched again)."""
+        return self.store.deleted_set()
+
     def _thread_nodes(self, sid):
         """The whole conversation, the same from whichever post it is opened: a
         server's context of a post holds its ancestors and *its* descendants only —
         not the sibling branches — so the tree is read from the top post."""
-        focus = real(self.api.status(sid))
+        focus = real(self._status_again(sid))
         ctx = self.api.context(focus["id"])
         ancestors = ctx.get("ancestors", [])
         root = ancestors[0] if ancestors else focus

@@ -505,6 +505,10 @@ class LaneView(Gtk.Box):
                 news = thread_news_bit(sp)
                 if news is not None:
                     card.add_thread_news(news)
+                if sp.extra.get("deleted"):  # gone from its server, kept here
+                    from ..common.cardtext import Bit
+                    card.add_thread_news(Bit("🗑 " + _("deleted_mark"), "",
+                                             _("deleted_mark_tip")))
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
             if self.sep_above and k == self.sep_above[0]:
                 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)

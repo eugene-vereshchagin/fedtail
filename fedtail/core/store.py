@@ -705,6 +705,20 @@ class Store:
                 "ON m.status_id = i.status_id WHERE i.source = 'subs' "
                 "AND i.status_id NOT IN (SELECT status_id FROM read) GROUP BY m.root_id")}
 
+    DELETED_KEEP = 2000
+
+    def mark_deleted(self, status_id):
+        """Its server no longer has this post (404/410 when fetched again): kept here,
+        marked — a card says so, a rule may ask (state = "deleted")."""
+        got = list(self.kv_get("deleted", []) or ())
+        if status_id not in got:
+            self.kv_set("deleted", (got + [status_id])[-self.DELETED_KEEP:])
+            return True
+        return False
+
+    def deleted_set(self):
+        return set(self.kv_get("deleted", []) or ())
+
     def sources_of(self, status_id):
         """The streams that hold this status (as an item, or a boost of it)."""
         with self._reading() as db:

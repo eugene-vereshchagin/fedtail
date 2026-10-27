@@ -323,7 +323,8 @@ class PostRow(QWidget):
                 or old.extra.get("short_id") != spec.extra.get("short_id") \
                 or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")) \
                 or _conv_key(old) != _conv_key(spec) \
-                or old.extra.get("thread_news") != spec.extra.get("thread_news"):
+                or old.extra.get("thread_news") != spec.extra.get("thread_news") \
+                or old.extra.get("deleted") != spec.extra.get("deleted"):
             self._build()
         self._flags()
 
@@ -425,6 +426,10 @@ class PostRow(QWidget):
 
         if not spec.in_thread and p.reply_to and self.ctx.cfg["feed"]["show_reply_context"]:
             v.addWidget(self._label(self._context_html(p), "ctx"))
+        if spec.extra.get("deleted"):  # gone from its server, kept here
+            gone = self._label("🗑 " + esc(_("deleted_mark")), "newcomer")
+            gone.setToolTip(_("deleted_mark_tip"))
+            v.addWidget(gone)
         new = newcomer_bit(p, spec.parent)  # someone new in a private talk
         if new is not None:
             lab = self._label(esc(new.text), "newcomer")

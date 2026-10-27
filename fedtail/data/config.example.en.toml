@@ -988,6 +988,13 @@ unfollows_minutes = 60
 unfollows_max = 5000
 unfollows_mass = 10
 
+# Likes taken back: who liked your posts of the last unlikes_days days (unlikes_posts of them
+# at most) asked again every unfollows_minutes — someone gone from it is a row "took the like
+# back". A request a post each time: off by default.
+unlikes = false
+unlikes_days = 3
+unlikes_posts = 20
+
 # The server's own notices (Mastodon 4.3+): your server (or another) blocked another one —
 # and your follows and followers from there were cut, how many and why; a warning from
 # the moderators. They come here too. false — don't show.

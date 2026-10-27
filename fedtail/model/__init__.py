@@ -44,6 +44,8 @@ ACTIVITY_KINDS = (
     "unfollow",        # somebody stopped following me (fedtail derived it: core/derived.py)
     "gone",            # a follower's account is no more (deleted, suspended)
     "lost",            # many followers of one server gone at once: the server, not them
+    "moved",           # a follower moved to a new account (it follows by itself)
+    "unliked",         # somebody took a like of my post back (activity.unlikes)
     "other",
 )
 

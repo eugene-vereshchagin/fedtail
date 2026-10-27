@@ -91,6 +91,40 @@ class DerivedTest(FreeBase):
         self.assertEqual(event_facts(dict(n, account=dict(n["account"], _back=True))).event,
                          {"unfollow", "unfollowed_back"})
 
+    def test_moved_isnt_an_unfollow(self):
+        old = acc("O")
+        new = acc("N2", "new.example")
+        self.w.followers_list = [BOB, NEWS, old]
+        self.core.derived.run()
+        self.w.add(fakes.status("990", dict(old, moved=new), minute=1))  # its account now
+        self.w.followers_list = [BOB, NEWS]
+        self.core.derived.run()
+        self.core.derived.run()
+        rows = self.rows()
+        self.assertEqual([r["type"] for r in rows], [derived.TYPE_MOVED])
+        self.assertEqual(rows[0]["account"]["_moved_to"], new["acct"])
+
+    def test_likes_taken_back(self):
+        core = self.core
+        core.cfg["activity"]["unlikes"] = True
+        mine = fakes.status("995", fakes.ME, minute=1)
+        mine["created_at"] = __import__("time").strftime("%Y-%m-%dT%H:%M:%S.000Z",
+                                                         __import__("time").gmtime())
+        self.w.add(mine, home=True)
+        self.w.statuses["995"] = mine
+        core.store.put_items("mine", [("995", mine, mine["created_at"])])
+        self.w.reactions["995"] = {"favourited_by": [BOB, NEWS]}
+        self.assertTrue(core.derived.likes_due())
+        self.assertEqual(core.derived.run_likes(), [])  # the start
+        self.w.reactions["995"] = {"favourited_by": [NEWS]}
+        got = core.derived.run_likes()
+        self.assertEqual([(n["type"], n["account"]["id"]) for n in got],
+                         [(derived.TYPE_UNLIKED, BOB["id"])])
+        self.assertFalse(core.derived.likes_due())  # not before unfollows_minutes
+        core.cfg["activity"]["unlikes"] = False
+        core.store.kv_set("derived.likes_at", 0)
+        self.assertFalse(core.derived.likes_due())
+
     def test_due_and_off(self):
         self.assertTrue(self.core.derived.due())
         self.core.derived.run()
@@ -154,3 +188,22 @@ class ActivityFilterTest(FreeBase):
         core.cfg["activity"]["my_follows"] = False
         self.assertNotIn("mine", act.offered(v))
 
+
+    def test_deleted_post_marked_and_kept(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import LaneModel
+        core, w = self.make([])
+        core.connect().result()
+        w.add(fakes.status("996", BOB, minute=1), home=True)
+        core.poll_once()
+        del w.statuses["996"]  # its server lost it
+        from fedtail.protocols.mastodon.api import ApiError
+        with self.assertRaises((ApiError, KeyError)):
+            core.thread("996").result()
+        self.assertIn("996", core.deleted_ids())
+        specs = LaneModel(View(core), "home").build(False).specs
+        spec = next(s for s in specs if s.entry is not None and s.entry.id == "996")
+        self.assertTrue(spec.extra.get("deleted"))
+        from fedtail.core.atoms import post_facts
+        self.assertIn("deleted", post_facts(core.store.get_status("996"),
+                                            core._world()).state)

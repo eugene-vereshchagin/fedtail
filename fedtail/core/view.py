@@ -69,8 +69,8 @@ def _then(fut, fn):
 # the quick filters over Activity: which kinds of rows (fedtail.model) each one shows
 ACTIVITY_FILTERS = ("all", "reactions", "follows", "requests", "mine", "other")
 _ACTIVITY_KINDS = {
-    "reactions": {"like", "share", "quote", "reaction"},
-    "follows": {"follow", "unfollow", "gone", "lost"},
+    "reactions": {"like", "share", "quote", "reaction", "unliked"},
+    "follows": {"follow", "unfollow", "gone", "lost", "moved"},
     "requests": {"request"},
     "mine": {"my_follow"},
 }

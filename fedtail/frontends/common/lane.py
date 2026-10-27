@@ -282,6 +282,12 @@ class LaneModel:
                                           "short_id": short.get(pid)}))
         if self.conversations():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
+        gone = getattr(view, "deleted_ids", None)
+        gone = gone() if callable(gone) else set()
+        if gone:  # its server no longer has it: kept, marked (feeds.md §2.4)
+            for s in specs:
+                if s.entry is not None and (s.entry.id in gone or real(s.entry).id in gone):
+                    s.extra["deleted"] = True
         news = getattr(view, "thread_news", None)
         news = news() if news else {}
         if news:  # a followed thread with new replies: said under its post

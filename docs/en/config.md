@@ -303,6 +303,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `activity.unfollows_minutes` | `60` |  |
 | `activity.unfollows_max` | `5000` |  |
 | `activity.unfollows_mass` | `10` |  |
+| `activity.unlikes` | `false` | Likes taken back: who liked your posts of the last unlikes_days days (unlikes_posts of them at most) asked again every unfollows_minutes — someone gone from it is a row "took the like back". A request a post each time: off by default. |
+| `activity.unlikes_days` | `3` |  |
+| `activity.unlikes_posts` | `20` |  |
 | `activity.server_notices` | `true` | The server's own notices (Mastodon 4.3+): your server (or another) blocked another one — and your follows and followers from there were cut, how many and why; a warning from the moderators. They come here too. false — don't show. |
 | `activity.server_groups` | `true` | The server's own groups of notifications (Mastodon 4.3+): 300 likes of one post come as one group with its count — one request instead of eight pages, one row "and 297 more"; × dismisses the whole group on the server. Where the server can't (GoToSocial, older Mastodon), fedtail groups them itself. false — always itself. |
 

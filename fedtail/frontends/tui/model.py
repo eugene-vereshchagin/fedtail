@@ -80,7 +80,7 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
         if words.newcomer is not None:  # someone new in a private talk
             out.above.append(("newcomer", words.newcomer.text))
         for b in words.meta:
-            if b.kind in ("edited", "old"):
+            if b.kind in ("edited", "old", "deleted"):
                 out.head.append(("muted", b.text))
     elif isinstance(entry, Share):
         out.head.append(("boost", "♻ @" + (entry.by.handle or "?")))

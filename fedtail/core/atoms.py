@@ -44,7 +44,9 @@ HAS_PREFIXES = ("tag:", "link:", "word:")
 STATE = {"unread", "read", "subscribed", "bookmarked", "liked", "boosted", "replied",
          "in_list", "muted_thread", "filtered_warn", "new_replies",
          # taken back — the server says so (a missing flag is no answer)
-         "unbookmarked", "unliked"}
+         "unbookmarked", "unliked",
+         # gone from its server (404/410 when fetched again): kept here, marked
+         "deleted"}
 VIA = {"followed", "tag", "boost", "mine", "list"}
 # what a boost (or a like, a boost, a quote event) is about: my post or comment, someone
 # else's post or comment, and whether its original was already known / read before
@@ -65,7 +67,8 @@ EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
             "pending.reblog": "pending", "admin.sign_up": "admin", "admin.report": "admin",
             "severed_relationships": "severed", "moderation_warning": "warning",
             "annual_report": "annual_report", "fedtail.followed": "i_followed",
-            "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost"}
+            "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
+            "fedtail.moved": "moved", "fedtail.unliked": "unliked"}
 
 # the server's visibility → ours (Mastodon "private" is followers-only; GoToSocial's
 # "mutuals_only"; Akkoma's "local" is public that stays home)
@@ -118,6 +121,7 @@ class World:
     filtered_warn: Container = frozenset()  # status ids a server "warn" filter matched
     seen_before: Container = frozenset()  # originals stored before this boost reached us
     new_replies: Container = frozenset()  # posts whose followed thread has unread replies
+    deleted: Container = frozenset()     # posts their server no longer has (404/410)
     parents: Mapping = field(default_factory=dict)  # status id → its parent or "missing"
     now: datetime | None = None          # None: now
     detect: str = "off"                   # lanes.detect_language (core/langs.py)
@@ -408,6 +412,8 @@ def _state_atoms(f, st, wrapper, world, author_id):
         f.state.add("filtered_warn")
     if sid in world.new_replies:
         f.state.add("new_replies")
+    if sid in world.deleted:
+        f.state.add("deleted")
 
 def event_facts(notification, world=None):
     """The atoms of an event (a notification, or one fedtail derived: {"type": "unfollow",

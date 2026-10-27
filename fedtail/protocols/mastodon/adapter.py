@@ -61,6 +61,7 @@ ACTIVITY_KIND = {
     "fedtail.followed": "my_follow",
     # what fedtail derived itself, comparing snapshots (core/derived.py)
     "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
+    "fedtail.moved": "moved", "fedtail.unliked": "unliked",
 }
 
 QUOTE_DEPTH = 2  # a quote inside a quote inside a post — no deeper

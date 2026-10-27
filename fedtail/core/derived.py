@@ -31,6 +31,9 @@ PAGE = 80
 TYPE_UNFOLLOW = "fedtail.unfollow"
 TYPE_GONE = "fedtail.gone"
 TYPE_LOST = "fedtail.lost_domain"
+TYPE_MOVED = "fedtail.moved"
+TYPE_UNLIKED = "fedtail.unliked"
+MOVED_ASK = 20  # the ones gone asked one by one whether they moved, at most
 KEEP_ACC = ("id", "acct", "username", "display_name", "url", "avatar", "avatar_static", "bot")
 MINE_KEEP_S = 7 * 86400  # my own removals remembered this long
 
@@ -141,6 +144,66 @@ class Derived:
                 self.core.emit("lanes_updated", lanes_in)
         return new
 
+    def _moved(self, ids):
+        """{id: the new account's acct} of the ones gone that moved (their account says
+        `moved`): one request each, a few at most."""
+        out = {}
+        for i in ids[:MOVED_ASK]:
+            try:
+                acc = self.core.api.account(i) or {}
+            except Exception as e:  # noqa: BLE001 — unsure: an unfollow as it looks
+                log.debug("derived: %s moved?: %s", i, e)
+                continue
+            new = acc.get("moved")
+            if isinstance(new, dict) and new.get("acct"):
+                out[i] = new["acct"]
+        return out
+
+    # ---- likes taken back (activity.unlikes, off by default: a request a post) ----------
+    def likes_due(self):
+        if not self.cfg.get("unlikes", False) or self.running or not self.core.me:
+            return False
+        every = max(10, int(self.cfg.get("unfollows_minutes", 60))) * 60
+        return time.time() - float(self.store.kv_get("derived.likes_at", 0) or 0) >= every
+
+    def run_likes(self):
+        """Who liked my recent posts, compared with last time: a like taken back — a row
+        "took the like back" (the first look at a post is the start)."""
+        self.store.kv_set("derived.likes_at", time.time())
+        api, me = self.core.api, self.core.me
+        days = max(1, int(self.cfg.get("unlikes_days", 3)))
+        most = max(1, int(self.cfg.get("unlikes_posts", 20)))
+        since = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time() - days * 86400))
+        posts = [st for _i, st in self.store.items("mine", most * 2)
+                 if not st.get("reblog") and (st.get("created_at") or "") >= since
+                 and (st.get("account") or {}).get("id") == me["id"]][:most]
+        before = self.store.kv_get("derived.likes", {}) or {}
+        now, rows = {}, []
+        day = time.strftime("%Y-%m-%d", time.gmtime())
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+        for st in posts:
+            try:
+                page, _next = api.favourited_by(st["id"])
+            except Exception as e:  # noqa: BLE001 — this post next time
+                log.debug("derived: likes of %s: %s", st["id"], e)
+                if st["id"] in before:
+                    now[st["id"]] = before[st["id"]]
+                continue
+            who = {a["id"]: _small(a) for a in page or () if isinstance(a, dict) and a.get("id")}
+            now[st["id"]] = who
+            was = before.get(st["id"])
+            if not isinstance(was, dict) or len(page or ()) >= 80:
+                continue  # the start for this post, or more than a page: not sure
+            for aid in set(was) - set(who):
+                rows.append({"id": f"{LOCAL_EVENT}unliked:{st['id']}:{aid}:{day}",
+                             "type": TYPE_UNLIKED, "account": was[aid], "status": st,
+                             "created_at": stamp})
+        self.store.kv_set("derived.likes", now)
+        new = self.store.activity_put(rows) if rows else []
+        if new:
+            self.core.emit("activity_updated", len(new))
+        return new
+
     def _check(self, ids, before):
         """The ones missing twice, asked once more: still not following → rows."""
         api = self.core.api
@@ -172,9 +235,14 @@ class Derived:
                          "account": {"id": f"domain:{d}", "acct": d, "username": d,
                                      "display_name": f"{d} ({n})"},
                          "created_at": stamp})
+        moved = self._moved([i for i in left if _domain(before[i].get("acct")) not in lost])
         for i in left:
             acc = before[i]
             if _domain(acc.get("acct")) in lost:
+                continue
+            if i in moved:  # not an unfollow: the new account follows by itself
+                rows.append({"id": f"{LOCAL_EVENT}moved:{i}:{day}", "type": TYPE_MOVED,
+                             "account": dict(acc, _moved_to=moved[i]), "created_at": stamp})
                 continue
             rows.append({"id": f"{LOCAL_EVENT}unfollow:{i}:{day}", "type": TYPE_UNFOLLOW,
                          "account": dict(acc, _back=i in following), "created_at": stamp})

@@ -428,6 +428,9 @@ _STRINGS = {
         "why_silenced": "скрыт до всех правил: автор заглушён или заблокирован, или фильтр сервера",
         "why_before_rules": "правило берёт, но пост убран раньше правил: человек в списке, "
                             "язык, тег «не в Ленте»",
+        "deleted_mark": "удалён на сервере",
+        "deleted_mark_tip": "Сервер автора этого поста больше не отдаёт: он удалён, здесь "
+                            "осталась копия",
         "le_title": "Ленты",
         "le_edit_lane": "Изменить ленту…",
         "le_hint": "Порядок, какие видно, и каждая лента — пишется в config.toml сразу. Набор: "
@@ -554,6 +557,7 @@ _STRINGS = {
         "act_favourite": "★ в избранное", "act_reblog": "⟳ продвижение",
         "act_follow": "подписка на тебя", "act_my_follow": "ты подписался",
         "act_unfollow": "отписался", "act_gone": "пропал (учётки больше нет)",
+        "act_moved": "переехал на новую учётку", "act_unliked": "забрал лайк",
         "act_lost": "подписчики этого сервера пропали разом: сервер недоступен или "
                     "отрезал нас",
         "act_poll": "опрос закончился",
@@ -1674,6 +1678,9 @@ _STRINGS = {
         "why_silenced": "hidden before any rule: the author muted or blocked, or a server filter",
         "why_before_rules": "the rule takes it, but it went before the rules: a list's person, "
                             "a language, a tag “not in Home”",
+        "deleted_mark": "deleted on its server",
+        "deleted_mark_tip": "Its author's server no longer gives this post: it was deleted, a "
+                            "copy stays here",
         "le_title": "Lanes",
         "le_edit_lane": "Edit the lane…",
         "le_hint": "The order, which are shown, and each lane — written into config.toml at "
@@ -1796,6 +1803,7 @@ _STRINGS = {
         "act_favourite": "★ favourited", "act_reblog": "⟳ boosted",
         "act_follow": "followed you", "act_my_follow": "you followed",
         "act_unfollow": "stopped following you", "act_gone": "gone (the account is no more)",
+        "act_moved": "moved to a new account", "act_unliked": "took the like back",
         "act_lost": "this server's followers left at once: it is down or cut us "
                     "off", "act_poll": "poll ended",
         "act_update": "post edited", "act_status": "new post",
