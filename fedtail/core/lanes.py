@@ -39,6 +39,7 @@ class LaneContext:
     detect: str = "untagged"  # lanes.detect_language
     min_words: int = 12  # lanes.detect_min_words
     bots_in_home: bool = False  # lanes.bots_in_home: Home keeps bots too
+    home_hidden_tags: frozenset = frozenset()  # tag lanes "not in Home": their tags leave it
 
 
 def _all(st, ctx):
@@ -46,6 +47,9 @@ def _all(st, ctx):
 
 
 def _people(st, ctx):
+    if ctx.home_hidden_tags and {(t.get("name") or "").lower() for t in
+                                 real(st).get("tags") or ()} & ctx.home_hidden_tags:
+        return False  # in its tag lane, "not in Home"
     return ctx.bots_in_home or not is_bot(st["account"], ctx.extra_bots)
 
 
@@ -108,13 +112,28 @@ def _bookmarked(st, ctx):
     return real(st).get("bookmarked", True)  # un-bookmarked here or elsewhere: gone
 
 
+def _to_me(st, ctx):
+    """Replies to me and mentions of me, in one lane (its quick filters part them)."""
+    return not (ctx.direct_apart and _is_direct(st) or _mine(st, ctx))
+
+
 def _subs(st, ctx):
     # replies to me are already in "replies"; here goes the rest of the talk
     return ctx.subs_replies_to_me or not is_comment_to_me(real(st), ctx.me_id)
 
 
+# quick filters of the built-in lanes: their words are i18n keys ("@…"), their rules in
+# core/custom.py (BUILTIN_CHIPS)
+HOME_CHIPS = (("chip:0", "@chip_tags"), ("chip:1", "@chip_boosts"),
+              ("chip:2", "@chip_threads_new"))
+TO_ME_CHIPS = (("chip:0", "@chip_replies"), ("chip:1", "@chip_mentions"))
+
 LANES = {
-    "home": Lane("home", "home", _people),
+    "home": Lane("home", "home", _people, chips=HOME_CHIPS),
+    "to_me": Lane("to_me", "mentions", _to_me, by_status_time=True, chips=TO_ME_CHIPS),
+    # posts of the people with the bell on (their server tells: a notification "status");
+    # shown once there is any (Core hides it while it's empty)
+    "important": Lane("important", "watched", _all),
     "replies": Lane("replies", "mentions", _comments, by_status_time=True),
     "mentions": Lane("mentions", "mentions", _other_mentions, by_status_time=True),
     "subs": Lane("subs", "subs", _subs, by_status_time=True),
@@ -148,8 +167,8 @@ def canonical(name):
 GROUPS = [
     ("custom", []),  # free lanes (core/custom.py): the person's own, on top
     ("standard", ["federated", "home", "local", "bots"]),        # from the widest down
-    ("personal", ["my_posts", "direct", "mentions", "replies", "subs", "bookmarks", "my_likes",
-                  "activity", "requests"]),
+    ("personal", ["my_posts", "direct", "to_me", "mentions", "replies", "subs", "important",
+                  "bookmarks", "my_likes", "activity", "requests"]),
     ("lists", []),
     ("tags", []),  # lanes of several hashtags (core/taggroups.py)
 ]
@@ -239,8 +258,8 @@ def enabled(cfg, lists=(), tag_groups=()):
 # lanes.preset: sets of lanes "as in other clients" — what each sets in [lanes]. Built of
 # today's lanes and switches; once free lanes come (docs/en/dev/feeds.md), a client's one
 # "Notifications" becomes one lane with quick filters instead of Mentions + Activity.
-_FEDTAIL = ["federated", "home", "local", "bots", "my_posts", "direct", "mentions", "replies",
-            "subs", "bookmarks", "activity", "requests"]
+_FEDTAIL = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs",
+            "important", "bookmarks", "activity", "requests"]
 PRESETS = {
     # fedtail's own: Point-style — replies and mentions apart, followed threads, bots apart
     "fedtail": {"enabled": _FEDTAIL, "posts_only": [], "mentions_all": False,

@@ -70,7 +70,8 @@ def make_core(tmp, **over):
     # read marks by hand only: what a window marks read as it shows posts depends on how
     # big it is (a terminal reads what's under the cursor) — not what's compared here
     user = {"feed": {"first_run_mark_read": False, "complete_threads": False},
-            "read": {"mark_read": "manual"}, "sound": {"enabled": "off"}}
+            "read": {"mark_read": "manual"}, "sound": {"enabled": "off"},
+            "lanes": {"enabled": fakes.CLASSIC_LANES}}
     for k, v in over.items():
         user.setdefault(k, {}).update(v)
     cfg, _w = config.validate(user)

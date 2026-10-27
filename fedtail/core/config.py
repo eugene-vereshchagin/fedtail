@@ -67,7 +67,7 @@ DEFAULTS = {
         "unload_hidden_minutes": 10,
         "app_icon": "possum",
         "themed_icon": True,
-        "icon_count": ["replies", "mentions", "subs", "requests"],
+        "icon_count": ["to_me", "replies", "mentions", "subs", "important", "requests"],
         "icon_count_except": [],
         "actions": "both",
         "post_keys": True,
@@ -121,8 +121,8 @@ DEFAULTS = {
     },
     "lanes": {
         "preset": "own",
-        "enabled": ["federated", "home", "local", "bots", "my_posts", "direct", "mentions",
-                    "replies", "subs", "bookmarks", "activity", "requests"],
+        "enabled": ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs",
+                    "important", "bookmarks", "activity", "requests"],
         "extra_bots": [],
         "bots_in_home": False,
         "posts_only": [],
@@ -169,7 +169,8 @@ DEFAULTS = {
     },
     "notify": {
         "enabled": True,
-        "lanes": ["direct", "replies", "mentions", "subs", "activity", "requests"],
+        "lanes": ["direct", "to_me", "replies", "mentions", "subs", "important", "activity",
+                  "requests"],
         "except": [],
         "privacy": "full",
         "when_focused": False,
@@ -178,7 +179,7 @@ DEFAULTS = {
     },
     "sound": {
         "enabled": "auto",
-        "lanes": ["direct", "replies", "mentions", "subs", "requests"],
+        "lanes": ["direct", "to_me", "replies", "mentions", "subs", "important", "requests"],
         "except": [],
         "online": True,
         "sent": True,
@@ -336,7 +337,8 @@ CHOICES = {
     ("lanes", "preset"): {"own", "fedtail", "mastodon", "tusky", "phanpy"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
-              "local", "federated", "requests", "direct", "my_likes", "unsorted"}
+              "local", "federated", "requests", "direct", "my_likes", "unsorted", "to_me",
+              "important"}
 # options that name lanes: their old names are read as the new ones
 LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),

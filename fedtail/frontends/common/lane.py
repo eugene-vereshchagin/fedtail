@@ -14,7 +14,7 @@ from ...model import Share, real
 from ...model.text import snippet
 
 POSTS_ONLY_LANES = ("home", "bots", "my_posts", "local")  # "posts only" makes sense here
-CONVERSATION_LANES = ("replies", "mentions", "subs")       # …and "as conversations" here
+CONVERSATION_LANES = ("replies", "mentions", "subs", "to_me")       # …and "as conversations" here
 MEDIA_KINDS = ("text", "image", "gifv", "video", "audio")
 VIDEO_EXT = (".mp4", ".webm", ".mov", ".m4v", ".mkv", ".ogv")
 SEPARATOR = "__sep__"
@@ -166,11 +166,11 @@ class LaneModel:
         self.conv_members = {}   # conversation top id -> member ids
         self.media = MediaFilter()
         opts = ["all"]
-        if self.chips:  # "main" (what isn't hidden) before "all", then each switch
-            opts = [k for k, _w in self.chips if k == "main"] + ["all"] + \
-                [k for k, _w in self.chips if k != "main"]
+        if self.chips:  # "main" (what isn't hidden) before "all"
+            opts = [k for k, _w in self.chips if k == "main"] + ["all"]
         if self.has_posts_only:
             opts.append("posts")
+        opts += [k for k, _w in self.chips if k != "main"]  # then each switch
         if not self.lazy:
             opts.append("unread")
         self.filters = opts      # what the filter control offers ("all" alone: none)
@@ -185,12 +185,14 @@ class LaneModel:
         if which in builtin:
             return _(builtin[which][0]), _(builtin[which][1])
         words = dict(self.chips).get(which) or which
+        if words.startswith("@"):  # a built-in lane's: an i18n key
+            return _(words[1:]), _(words[1:] + "_tip")
         return words, _("chip_tip", words=words)
 
     def current_filter(self):
         if self.chips:
             which = self.view.lane_filter(self.name)
-            if which != "all" or not self.view.choice(f"unread_only.{self.name}"):
+            if which != "all":  # a chip, or "main"
                 return which
         if self.has_posts_only and self.view.posts_only(self.name):
             return "posts"
@@ -204,8 +206,9 @@ class LaneModel:
     def set_filter(self, which):
         """"all", "posts" (no replies) or "unread"; a free lane's "main" or "chip:<n>" too;
         the caller places the lane anew."""
-        if self.chips:
-            self.view.set_lane_filter(self.name, which if which != "unread" else "all")
+        if self.chips:  # a chip or "main"; anything else is no chip
+            self.view.set_lane_filter(self.name, which if which == "main"
+                                      or which.startswith("chip:") else "all")
         if self.has_posts_only and self.view.posts_only(self.name) != (which == "posts"):
             self.view.set_posts_only(self.name, which == "posts")
         self.view.set_choice(f"unread_only.{self.name}", which == "unread")
@@ -261,7 +264,7 @@ class LaneModel:
                                           "short_id": short.get(pid)}))
         if self.conversations():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
-        if self.name in ("replies", "mentions"):
+        if self.name in ("replies", "mentions", "to_me"):
             view.check_my_replies(posts)
         if unknown:
             view.ensure_parents(unknown)

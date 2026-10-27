@@ -199,12 +199,13 @@ themed_icon = true
 #   bots      — Боты            my_posts  — Мои записи     direct   — Личные
 #   mentions  — Упоминания      replies   — Ответы мне     subs     — Подписки
 #   bookmarks — Закладки        my_likes  — Мои лайки      activity — Активность
-#   requests  — Заявки
+#   requests  — Заявки          to_me     — Ко мне         important — Важные люди
+#   unsorted  — Неразобранное (со своими лентами)
 #   "lists" — все списки разом; один список — по названию (или id): "list:Друзья".
 #   "all" — все ленты сразу (только в первом из пары; лишнее убирается в except).
 # federated и local не считаются никогда (их листают, непрочитанного там нет).
 # Пример: ["replies", "mentions", "lists"] или ["all"] + except = ["home", "bots"].
-icon_count = ["replies", "mentions", "subs", "requests"]
+icon_count = ["to_me", "replies", "mentions", "subs", "important", "requests"]
 
 # Какие ленты не считать на иконке, даже если они есть в icon_count (например, при
 # icon_count = ["all"]): те же имена — "home", "bots", "lists", "list:Новости"…
@@ -610,6 +611,10 @@ preset = "own"
 #   direct    — «Личные» (Direct): личные сообщения тебе (видимость «только упомянутым»)
 #   mentions  — «Упоминания» (Mentions): где тебя тегнули в чужом разговоре
 #   replies   — «Ответы мне» (Replies to me): ответы на мои посты и комменты
+#   to_me     — «Ко мне» (To me): ответы и упоминания в одной ленте, с быстрыми фильтрами
+#               (по умолчанию — вместо двух выше)
+#   important — «Важные люди» (Important people): посты тех, на ком колокольчик (🔔 в
+#               профиле); видна, когда в ней что-то есть
 #   subs      — «Подписки» (Subscriptions): новое в тредах, на которые подписан (как на Point)
 #   bookmarks — «Закладки» (Bookmarks): посты, отложенные «в закладки» (меню ⋯ у поста)
 #   my_likes  — «Мои лайки» (My likes): посты, которые ты лайкнул (по умолчанию не включена)
@@ -620,7 +625,7 @@ preset = "own"
 # global = federated, mine = my_posts, favourites = my_likes.
 # federated и local подгружаются, только пока открыты, и без счётчиков: их листают, а не
 # дочитывают.
-enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "mentions", "replies", "subs", "bookmarks", "activity", "requests"]
+enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs", "important", "bookmarks", "activity", "requests"]
 
 # Аккаунты, которые считать ботами, даже если у них нет галки «бот».
 # Свой сервер — просто "ник", чужой — "ник@сервер".
@@ -844,11 +849,12 @@ enabled = true
 #   bots      — Боты            my_posts  — Мои записи     direct   — Личные
 #   mentions  — Упоминания      replies   — Ответы мне     subs     — Подписки
 #   bookmarks — Закладки        my_likes  — Мои лайки      activity — Активность
-#   requests  — Заявки
+#   requests  — Заявки          to_me     — Ко мне         important — Важные люди
+#   unsorted  — Неразобранное (со своими лентами)
 #   "lists" — все списки разом; один список — по названию (или id): "list:Друзья".
 #   "all" — все ленты сразу (только в первом из пары; лишнее убирается в except).
 # Пример: ["replies", "mentions", "list:Друзья"] или ["all"] + except = ["home", "bots"].
-lanes = ["direct", "replies", "mentions", "subs", "activity", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "activity", "requests"]
 
 # О чём не уведомлять никогда, даже если оно есть в lanes (например, при lanes = ["all"]):
 # те же имена — "bots", "federated", "lists", "list:Новости"…
@@ -888,7 +894,7 @@ enabled = "auto"
 # отдельном списке звуков ниже, звенят звуком «новое сообщение».
 #   direct → «личное», replies → «ответ», mentions → «упоминание», subs → «в треде»,
 #   requests → «заявка», activity → «активность», всё остальное → «сообщение».
-lanes = ["direct", "replies", "mentions", "subs", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "requests"]
 
 # Не звенеть никогда, даже если лента есть в lanes.
 except = []

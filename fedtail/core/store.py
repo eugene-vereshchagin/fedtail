@@ -683,6 +683,15 @@ class Store:
                                   (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
+    def threads_with_news(self):
+        """Roots of followed threads with an unread reply in them (the Subscriptions
+        stream): for "threads with news"."""
+        with self._reading() as db:
+            return {r[0] for r in db.execute(
+                "SELECT DISTINCT m.root_id FROM items i JOIN sub_members m "
+                "ON m.status_id = i.status_id WHERE i.source = 'subs' "
+                "AND i.status_id NOT IN (SELECT status_id FROM read)")}
+
     def held_by(self, prefix, status_ids):
         """Which of these statuses some stream whose name starts with `prefix` holds."""
         ids = list(dict.fromkeys(status_ids))

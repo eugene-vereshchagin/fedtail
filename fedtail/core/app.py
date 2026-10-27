@@ -138,7 +138,8 @@ class Core(SocialMixin):
         self.customs = custom.load(cfg)[0]  # free lanes, [[lanes.custom]]
         self._following = None    # account ids I follow, for the free lanes' atoms
         self._following_at = 0.0
-        self.lanes = lanes.enabled(cfg)
+        self._important_waiting = False  # "Important people" on, but nothing in it yet
+        self.lanes = self._shown_lanes(lanes.enabled(cfg))
         self.tag_groups = []  # [{"any", "all", "none", "name", "saved"}], see taggroups
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
         self.follow_requests = []
@@ -726,7 +727,8 @@ class Core(SocialMixin):
             if "direct" in self.lane_by_name:
                 self.sync_conversations()  # read here = read on the server (social.py)
                 self._step("conversations")
-            if "subs" in self.lane_by_name:
+            # followed threads: for their lane, and for Home's "threads with news"
+            if "subs" in self.lane_by_name or self.lane_filter("home") == "chip:2":
                 try:
                     sc = self.cfg["subs"]
                     new_by_source["subs"] = subs.check(
@@ -743,7 +745,9 @@ class Core(SocialMixin):
                           if n in self.lane_by_name]
             open_sources = {self.lane_by_name[n].source for n in open_names} | \
                 {f for n in open_names for f in self.lane_by_name[n].feeds}
-            for name in lanes.sources_needed(self.lanes):
+            needed = lanes.sources_needed(self.lanes) + \
+                (["watched"] if self._important_waiting else [])
+            for name in needed:
                 if name not in self.sources:
                     continue
                 if name in lazy:  # browse lanes: only while open, newest page only
@@ -832,6 +836,7 @@ class Core(SocialMixin):
                                       if st["account"]["id"] == self.me["id"]])
 
             self._step("read marks")
+            self._show_important()
             new_by_source.update(self._route_custom(new_by_source))
             per_lane = self._split_by_lane(new_by_source)
             if not first_run:
@@ -993,6 +998,18 @@ class Core(SocialMixin):
         if got:
             self._fresh = got
 
+    def _shown_lanes(self, built):
+        """The lanes as built, without "Important people" while nothing is in it (its
+        source is still polled: once there is, it shows — lists_changed redraws)."""
+        want = any(x.name == "important" for x in built)
+        empty = want and self.store.count_items("watched") == 0
+        self._important_waiting = empty
+        return [x for x in built if not (empty and x.name == "important")]
+
+    def _show_important(self):
+        if self._important_waiting and self.store.count_items("watched"):
+            self._apply_lists(list(self.lists), self.list_members)
+
     # ---- free lanes (core/custom.py) ---------------------------------------------------
     FOLLOWING_EVERY_S = 6 * 3600
     FOLLOWING_PAGES = 25
@@ -1040,13 +1057,22 @@ class Core(SocialMixin):
                     return "missing"
                 return got if got is not None else default
 
+        class _News:  # asked only when a rule needs it: one query, then kept
+            got = None
+
+            def __contains__(self, sid):
+                if self.got is None:
+                    self.got = store.threads_with_news()
+                return sid in self.got
+
         lc = self.cfg["lanes"]
         host = urllib.parse.urlsplit(getattr(self.api, "base", "") or "").hostname or ""
         return atoms.World(me_id=self.me["id"] if self.me else "", my_host=host,
                            following=self._following or set(),
                            followed_tags=getattr(self, "_followed_tag_names", None) or set(),
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),
-                           parents=_Parents(), detect=lc["detect_language"],
+                           parents=_Parents(), new_replies=_News(),
+                           detect=lc["detect_language"],
                            min_words=lc["detect_min_words"])
 
     def _route_custom(self, new_by_source):
@@ -1197,7 +1223,9 @@ class Core(SocialMixin):
                                  frozenset(self.cfg["lanes"]["languages_in"]),
                                  self.cfg["lanes"]["detect_language"],
                                  self.cfg["lanes"]["detect_min_words"],
-                                 self.cfg["lanes"]["bots_in_home"])
+                                 self.cfg["lanes"]["bots_in_home"],
+                                 frozenset(t for g in self.tag_groups if g.get("not_in_home")
+                                           for t in g["any"] + g["all"]))
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def _poll_activity(self):
@@ -1480,7 +1508,7 @@ class Core(SocialMixin):
             name = taggroups.lane_name(g)
             if name not in self.sources:
                 self.sources[name] = sources.tag_group_source(self.api, g)
-        new_lanes = lanes.enabled(self.cfg, got, self.tag_groups)
+        new_lanes = self._shown_lanes(lanes.enabled(self.cfg, got, self.tag_groups))
         self.lane_by_name = {lane.name: lane for lane in new_lanes}
         self.lanes = new_lanes
         self._lists_version += 1
@@ -1534,10 +1562,25 @@ class Core(SocialMixin):
         from a search (kept here). Each {"any", "all", "none", "name", "saved"}."""
         out = []
         for g in self.cfg["lanes"].get("tag_groups") or []:
-            out.append(dict(taggroups.normal(g), name=g.get("name") or "", saved=False))
+            out.append(dict(taggroups.normal(g), name=g.get("name") or "", saved=False,
+                            not_in_home=bool(g.get("not_in_home"))))
         for g in self.store.kv_get("tag_groups", []) or []:
-            out.append(dict(taggroups.normal(g), name=g.get("name") or "", saved=True))
+            out.append(dict(taggroups.normal(g), name=g.get("name") or "", saved=True,
+                            not_in_home=bool(g.get("not_in_home"))))
         return out
+
+    def set_tag_group_in_home(self, lane_name, in_home):
+        """A saved lane of tags: its posts in Home too (True), or only in it (False)."""
+        def job():
+            saved = self.store.kv_get("tag_groups", []) or []
+            for g in saved:
+                if taggroups.lane_name(g) == lane_name:
+                    g["not_in_home"] = not in_home
+            self.store.kv_set("tag_groups", saved)
+            if self.sync:
+                self.sync.record_setting("tag_groups")
+            self._apply_lists(list(self.lists), self.list_members)
+        return self.submit(job)
 
     def tag_group_timeline(self, spec, max_id=None):
         """A page of several tags at once, for a search tab."""
@@ -1548,12 +1591,13 @@ class Core(SocialMixin):
             return page
         return self.submit(job)
 
-    def save_tag_group(self, spec, name=""):
-        """A search of several tags kept as a lane in the sidebar (group "Теги")."""
+    def save_tag_group(self, spec, name="", in_home=True):
+        """A search of several tags kept as a lane in the sidebar (group "Теги"); in_home
+        False: its posts leave Home (like a list's "hide members")."""
         def job():
             saved = [g for g in self.store.kv_get("tag_groups", []) or []
                      if taggroups.key(g) != taggroups.key(spec)]
-            saved.append(dict(taggroups.normal(spec), name=name))
+            saved.append(dict(taggroups.normal(spec), name=name, not_in_home=not in_home))
             self.store.kv_set("tag_groups", saved)
             if self.sync:
                 self.sync.record_setting("tag_groups")
@@ -2011,9 +2055,20 @@ class Core(SocialMixin):
         self._lane_cache[name] = (key, kept)
         return kept
 
-    def lane_filter(self, name):
-        """A free lane's quick filter now: "all", "main", "chip:<n>"."""
+    def _chipper(self, name):
+        """Whose rule parts a lane by its quick filters: a free lane's own, or a built-in
+        lane's (custom.BUILTIN_CHIPS); None — the lane has none."""
         c = next((c for c in self.customs if c.name == name), None)
+        if c is None and getattr(self.lane_by_name.get(name), "chips", ()):
+            cache = self.__dict__.setdefault("_builtin_chips", {})
+            if name not in cache:
+                cache[name] = custom.builtin_chips(name)
+            c = cache[name]
+        return c
+
+    def lane_filter(self, name):
+        """A lane's quick filter now: "all", "main", "chip:<n>"."""
+        c = self._chipper(name)
         if c is None:
             return "all"
         got = self.choice(f"filter.{name}")
@@ -2023,7 +2078,7 @@ class Core(SocialMixin):
         self.set_choice(f"filter.{name}", which)
 
     def _chip_shows(self, name):
-        c = next((c for c in self.customs if c.name == name), None)
+        c = self._chipper(name)
         which = self.lane_filter(name)
         if c is None or which == "all":
             return lambda st: True

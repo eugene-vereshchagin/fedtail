@@ -25,7 +25,8 @@ from .lane import LaneView, y_in
 
 log = logging.getLogger(__name__)
 
-BADGE_KIND = {"replies": "hot", "bots": "quiet", "activity": "quiet"}  # as qt/window.py
+BADGE_KIND = {"replies": "hot", "to_me": "hot",
+              "bots": "quiet", "activity": "quiet"}  # as qt/window.py
 SPECIAL = {"activity": ActivityLane, "requests": RequestsLane}  # lanes that aren't posts
 
 

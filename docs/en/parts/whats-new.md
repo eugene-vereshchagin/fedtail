@@ -3,6 +3,9 @@
 - Free lanes: a lane you assemble yourself
 - Only the languages you read
 - Sets of lanes “as in other clients”
+- “To me”: replies and mentions in one lane
+- Home's quick filters: tags, boosts, threads with news
+- Important people
 - Unfollowed — gone from Home
 
 **0.20.1:**

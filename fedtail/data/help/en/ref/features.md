@@ -103,6 +103,9 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
 | Only the languages you read | has | 0.21.0 | `lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words` | the post's `language` field; our own guess | Mastodon — by the author's tag, in the server's settings |
 | Sets of lanes “as in other clients” | has | 0.21.0 | `lanes.preset` (`"own"`, `"fedtail"`, `"mastodon"`, `"tusky"`, `"phanpy"`), `lanes.bots_in_home` | own | — |
+| “To me”: replies and mentions in one lane | has | 0.21.0 | `lanes.enabled` (`"to_me"`) | `notifications?types=mention` | Notifications everywhere, mixed with likes |
+| Home's quick filters: tags, boosts, threads with news | has | 0.21.0 | — | own; followed threads (`/context`) | — |
+| Important people | has | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (the bell on a profile) | — |
 
 <details><summary>In detail</summary>
 
@@ -174,6 +177,12 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Only the languages you read.** Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more. A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read.
 
 **Sets of lanes “as in other clients”.** No assembling lanes on day one: pick a set in the settings as in Mastodon (web), Tusky or Phanpy — or fedtail's own, Point-style. A set sets `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; your values there wait until `"own"` again. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity.
+
+**“To me”: replies and mentions in one lane.** Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones with `lanes.direct_apart` — in “Direct”.
+
+**Home's quick filters: tags, boosts, threads with news.** Beside “All / Posts only”: “Tags” — what followed tags brought, not people; “Boosts”; “Threads with news” — posts whose threads have unread replies (followed threads; your own are followed by themselves), the replies themselves inside the thread.
+
+**Important people.** Posts of those you rang the bell on, as a lane of their own. Shown once there is anything in it: while no bell is on, it isn't in the sidebar either.
 
 </details>
 

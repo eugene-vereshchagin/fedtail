@@ -27,6 +27,24 @@ DEFAULT_FEED = "home"
 BACKFILL_ROWS = 3000  # per feed, the newest: what a new lane starts with
 
 
+# the quick filters of built-in lanes, as rules: (lanes.HOME_CHIPS, TO_ME_CHIPS) — the
+# chip's words are i18n keys, the rule only parts what the lane already holds
+BUILTIN_CHIPS = {
+    "home": [{"via": "tag", "switch": "@chip_tags"}, {"kind": "boost", "switch": "@chip_boosts"},
+             {"state": "new_replies", "switch": "@chip_threads_new"}],
+    "to_me": [{"me": "reply", "switch": "@chip_replies"},
+              {"me": ["mention", "direct"], "switch": "@chip_mentions"}],
+}
+
+
+def builtin_chips(name):
+    """A Custom whose rule gives a built-in lane its quick filters, or None."""
+    conds = BUILTIN_CHIPS.get(name)
+    if not conds:
+        return None
+    return Custom(atoms.Rule.parse({"name": name, "source": "home", "any": conds}))
+
+
 def is_custom(name):
     return isinstance(name, str) and name.startswith(PREFIX)
 

@@ -198,12 +198,13 @@ themed_icon = true
 #   bots      — Bots            my_posts  — My posts       direct   — Direct
 #   mentions  — Mentions        replies   — Replies to me  subs     — Subscriptions
 #   bookmarks — Bookmarks       my_likes  — My likes       activity — Activity
-#   requests  — Follow requests
+#   requests  — Follow requests  to_me     — To me          important — Important people
+#   unsorted  — Unsorted (with lanes of your own)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
 # federated and local are never counted (they are browsed, there's no unread in them).
 # For example: ["replies", "mentions", "lists"] or ["all"] + except = ["home", "bots"].
-icon_count = ["replies", "mentions", "subs", "requests"]
+icon_count = ["to_me", "replies", "mentions", "subs", "important", "requests"]
 
 # Which lanes not to count on the icon, even if they are in icon_count (say, with
 # icon_count = ["all"]): the same names — "home", "bots", "lists", "list:News"…
@@ -610,6 +611,10 @@ preset = "own"
 #   direct    — "Direct": private messages to you (visible to the mentioned only)
 #   mentions  — "Mentions": where you were tagged in someone else's conversation
 #   replies   — "Replies to me": replies to my posts and comments
+#   to_me     — "To me": replies and mentions in one lane, with quick filters for each
+#               (instead of the two above, by default)
+#   important — "Important people": posts of those you rang the bell on (a profile's 🔔);
+#               shown once there is any
 #   subs      — "Subscriptions": what's new in threads you're subscribed to (as on Point)
 #   bookmarks — "Bookmarks": posts put "in bookmarks" (a post's ⋯ menu)
 #   my_likes  — "My likes": the posts you liked (off by default)
@@ -620,7 +625,7 @@ preset = "own"
 # global = federated, mine = my_posts, favourites = my_likes.
 # federated and local are fetched only while open, and without counts: they are browsed, not
 # read to the end.
-enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "mentions", "replies", "subs", "bookmarks", "activity", "requests"]
+enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs", "important", "bookmarks", "activity", "requests"]
 
 # Accounts to count as bots even if they have no "bot" tick.
 # Your server — just "nick", another one — "nick@server".
@@ -846,11 +851,12 @@ enabled = true
 #   bots      — Bots            my_posts  — My posts       direct   — Direct
 #   mentions  — Mentions        replies   — Replies to me  subs     — Subscriptions
 #   bookmarks — Bookmarks       my_likes  — My likes       activity — Activity
-#   requests  — Follow requests
+#   requests  — Follow requests  to_me     — To me          important — Important people
+#   unsorted  — Unsorted (with lanes of your own)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
 # For example: ["replies", "mentions", "list:Friends"] or ["all"] + except = ["home", "bots"].
-lanes = ["direct", "replies", "mentions", "subs", "activity", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "activity", "requests"]
 
 # What never to notify about, even if it's in lanes (say, with lanes = ["all"]):
 # the same names — "bots", "federated", "lists", "list:News"…
@@ -890,7 +896,7 @@ enabled = "auto"
 # Chime about news in these lanes (names as in notify.lanes). Each lane has its sound:
 #   direct → "private", replies → "reply", mentions → "mention", subs → "in a thread",
 #   requests → "request", activity → "activity", every other lane → "message".
-lanes = ["direct", "replies", "mentions", "subs", "requests"]
+lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "requests"]
 
 # Never chime about these, even if lanes names them.
 except = []

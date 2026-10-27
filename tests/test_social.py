@@ -19,7 +19,8 @@ class SocialTest(TmpDir):
     def make(self, missing=(), **over):
         FakeApi.world = fakes.World()
         FakeApi.world.missing = set(missing)
-        user = {"feed": {"first_run_mark_read": False}}
+        user = {"feed": {"first_run_mark_read": False},
+                "lanes": {"enabled": fakes.CLASSIC_LANES}}
         for k, v in over.items():
             user.setdefault(k, {}).update(v)
         cfg, _ = config.validate(user)

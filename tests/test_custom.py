@@ -425,7 +425,7 @@ class ChipsTest(FreeBase):
         m.set_filter("all")
         self.assertEqual(m.current_filter(), "all")
         plain = LaneModel(View(core), "home")
-        self.assertEqual(plain.filters, ["all", "posts", "unread"])
+        self.assertEqual(plain.filters, ["all", "posts", "chip:0", "chip:1", "chip:2", "unread"])
 
     def test_web_gives_the_words(self):
         from fedtail import i18n
@@ -516,3 +516,120 @@ class UnsortedTest(FreeBase):
         core.poll_once()
         self.assertEqual(core.store.held_by("custom:", ["005", "zzz"]), {"005"})
         self.assertEqual(core.store.held_by("custom:", []), set())
+
+
+class NewDefaultsTest(FreeBase):
+    """The lanes of 27 Oct: To me (replies and mentions, chips part them), Home's chips
+    (tags, boosts, threads with news), Important people, tag lanes "not in Home"."""
+
+    def make_new(self, **lanes_kw):
+        FakeApi.world = fakes.World()
+        user = {"feed": {"first_run_mark_read": False, "page_size": 10}}
+        if lanes_kw:
+            user["lanes"] = lanes_kw
+        cfg, _ = config.validate(user)
+        p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        self.events = []
+        core.events.on("*", lambda n, pl: self.events.append((n, pl)))
+        self.addCleanup(core.shutdown)
+        return core, FakeApi.world
+
+    def test_defaults(self):
+        d = config.DEFAULTS["lanes"]["enabled"]
+        self.assertIn("to_me", d)
+        self.assertNotIn("replies", d)
+        self.assertIn("important", d)
+        self.assertEqual(lanes.PRESETS["fedtail"]["enabled"], d)
+
+    def test_to_me_and_its_chips(self):
+        core, w = self.make_new()
+        w.add(status("001", ME, minute=1), home=True)
+        w.add(status("002", BOB, reply_to="001", reply_acc="ME", minute=2), mention=True)
+        m = status("003", BOB, minute=3)
+        m["mentions"] = [{"id": "ME", "acct": "mira"}]
+        w.add(m, mention=True)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(self.ids(core, "to_me"), ["002", "003"])
+        core.set_lane_filter("to_me", "chip:0")
+        self.assertEqual(self.ids(core, "to_me"), ["002"])
+        core.set_lane_filter("to_me", "chip:1")
+        self.assertEqual(self.ids(core, "to_me"), ["003"])
+        self.assertEqual(core.lane_filter("home"), "all")
+        self.assertIsNone(core._chipper("bots"))
+        self.assertIsNone(custom.builtin_chips("bots"))
+
+    def test_home_chips(self):
+        core, w = self.make_new()
+        w.following = {"B"}
+        w.followed_tags = {"грузия"}
+        w.add(status("001", BOB, minute=1), home=True)
+        stranger = fakes.acct("S", "sam@far.example")
+        tagged = status("002", stranger, minute=2)
+        tagged["tags"] = [{"name": "Грузия"}]
+        w.add(tagged, home=True)
+        w.add(dict(status("003", BOB, minute=3), reblog=status("004", stranger, minute=0)),
+              home=True)
+        core.connect().result()
+        core._following, core._following_at = {"B"}, 1e18
+        core._followed_tag_names = {"грузия"}
+        core.poll_once()
+        self.assertEqual(self.ids(core, "home"), ["001", "002", "003"])
+        core.set_lane_filter("home", "chip:0")
+        self.assertEqual(self.ids(core, "home"), ["002"])
+        core.set_lane_filter("home", "chip:1")
+        self.assertEqual(self.ids(core, "home"), ["003"])
+
+    def test_threads_with_news(self):
+        core, w = self.make_new()
+        root = w.add(status("010", BOB, minute=1), home=True)
+        w.add(status("011", ME, reply_to="010", reply_acc="B", minute=2))
+        core.connect().result()
+        core.poll_once()
+        core.subscribe(root).result()
+        w.add(status("012", fakes.acct("S", "sam@far.example"), reply_to="011",
+                     reply_acc="ME", minute=3))
+        core.set_lane_filter("home", "chip:2")
+        core.store.kv_set("unused", 1)
+        import fedtail.core.subs as subs
+        subs.check(core.store, core.api, "ME", 0, 30, 50)
+        core._lane_cache.clear()
+        self.assertEqual(core.store.threads_with_news(), {"010"})
+        self.assertEqual(self.ids(core, "home"), ["010"])
+        core.store.mark_read(["012"])
+        core._lane_cache.clear()
+        self.assertEqual(self.ids(core, "home"), [])
+
+    def test_important_people_shows_once_there_is(self):
+        core, w = self.make_new()
+        core.connect().result()
+        core.poll_once()
+        self.assertNotIn("important", core.lane_by_name)  # nothing yet: not shown
+        st = w.add(status("020", BOB, minute=5))
+        w.activity.append({"id": "n20", "type": "status", "created_at": st["created_at"],
+                           "account": BOB, "status": st})
+        core.poll_once()
+        self.assertIn("important", core.lane_by_name)
+        self.assertTrue(any(n == "lists_changed" for n, _p in self.events))
+        self.assertEqual(self.ids(core, "important"), ["020"])
+
+    def test_tag_lane_not_in_home(self):
+        core, w = self.make_new()
+        tagged = status("030", BOB, minute=1)
+        tagged["tags"] = [{"name": "politics"}]
+        w.add(tagged, home=True)
+        w.add(status("031", BOB, minute=2), home=True)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(self.ids(core, "home"), ["030", "031"])
+        name = core.save_tag_group({"any": ["politics"]}, "P", in_home=False).result()
+        self.assertTrue(core.tag_groups[0]["not_in_home"])
+        self.assertEqual(self.ids(core, "home"), ["031"])
+        core.set_tag_group_in_home(name, True).result()
+        self.assertEqual(self.ids(core, "home"), ["030", "031"])
+        cfg, _ = config.validate({"lanes": {"tag_groups": [
+            {"name": "x", "any": ["a"], "not_in_home": True}]}})
+        self.assertTrue(cfg["lanes"]["tag_groups"][0]["not_in_home"])

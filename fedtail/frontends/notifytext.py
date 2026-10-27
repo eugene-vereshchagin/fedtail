@@ -14,7 +14,7 @@ from ..i18n import _
 from ..model import Account, Activity, real
 from ..model.text import snippet
 
-ORDER = ["replies", "mentions", "requests"]  # the rest come after, by name
+ORDER = ["to_me", "replies", "mentions", "requests"]  # the rest come after, by name
 ACTIVITY_ORDER = ["follow", "like", "share"]
 # the words for a kind of activity: notify_act_<…>_n
 ACT_WORDS = {"follow": "notify_act_follow_n", "like": "notify_act_favourite_n",

@@ -91,7 +91,7 @@ _AVATAR_CORNERS = {"circle": -1, "square": 0, "rounded": 6}  # shape.avatar_shap
 
 # icons from the desktop theme (Breeze names); emoji are missing from many fonts
 
-BADGE_KIND = {"replies": "hot", "bots": "quiet", "activity": "quiet"}
+BADGE_KIND = {"replies": "hot", "to_me": "hot", "bots": "quiet", "activity": "quiet"}
 
 
 

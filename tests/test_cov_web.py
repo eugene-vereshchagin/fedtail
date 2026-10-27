@@ -33,7 +33,8 @@ from .test_core import TmpDir
 
 def make_core(tmp, **over):
     FakeApi.world = fakes.World()
-    user = {"feed": {"first_run_mark_read": False}, "ui": {"language": "en"}}
+    user = {"feed": {"first_run_mark_read": False}, "ui": {"language": "en"},
+            "lanes": {"enabled": fakes.CLASSIC_LANES}}
     for k, v in over.items():
         user.setdefault(k, {}).update(v)
     cfg, _ = config.validate(user)

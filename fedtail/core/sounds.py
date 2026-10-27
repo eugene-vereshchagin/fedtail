@@ -18,7 +18,7 @@ from . import lanes as lanes_mod
 # the weightiest first: a batch chimes with the first of these it has
 EVENTS = ("direct", "reply", "mention", "thread", "request", "activity", "message",
           "online", "sent")
-LANE_EVENT = {"direct": "direct", "replies": "reply", "mentions": "mention",
+LANE_EVENT = {"direct": "direct", "replies": "reply", "to_me": "reply", "mentions": "mention",
               "subs": "thread", "requests": "request", "activity": "activity"}
 
 

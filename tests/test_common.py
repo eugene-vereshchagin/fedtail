@@ -226,7 +226,7 @@ class CommonTest(TmpDir):
         self.assertEqual(built.specs[-2].extra["separator"], "1 new")
         self.assertEqual(lm.start(built.specs), (lanes.SEPARATOR, "top"))
         self.assertIn("short_id", built.specs[-1].extra)
-        self.assertEqual(lm.filters, ["all", "posts", "unread"])
+        self.assertEqual(lm.filters, ["all", "posts", "chip:0", "chip:1", "chip:2", "unread"])
         lm.set_filter("unread")
         only = lm.build(positioned=False)
         self.assertEqual([s.post.id for s in only.specs], ["003"])

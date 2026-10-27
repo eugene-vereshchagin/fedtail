@@ -3,7 +3,7 @@ which lanes are the columns at start."""
 
 from __future__ import annotations
 
-DEFAULT = ["home", "replies", "activity"]
+DEFAULT = ["home", "to_me", "replies", "activity"]  # what there is of them
 
 
 def start_names(cfg, remembered, known, list_titles=None):

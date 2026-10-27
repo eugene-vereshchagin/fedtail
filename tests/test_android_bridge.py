@@ -181,7 +181,7 @@ class BridgeTest(_Base):
         self.assertFalse(any(x["capped"] for s in hub["sections"] for x in s["lanes"]))
         kinds = {s["key"]: [x["name"] for x in s["lanes"]] for s in hub["sections"]}
         self.assertEqual(list(kinds)[0], "you")  # what is addressed to you comes first
-        self.assertIn("replies", kinds["you"])
+        self.assertIn("to_me", kinds["you"])
         self.assertIn("home", kinds["reading"])
         self.assertIn("federated", kinds["browse"])  # no counts: only browsed
         lanes = {x["name"]: x for s in hub["sections"] for x in s["lanes"]}
@@ -190,7 +190,7 @@ class BridgeTest(_Base):
         self.assertIn(":", lanes["home"]["peek"])  # who: what
         # reading in a row: only lanes with news, yours first
         self.assertEqual(hub["order"], [x for x in hub["order"] if lanes[x]["unread"]])
-        self.assertLess(hub["order"].index("replies"), hub["order"].index("home"))
+        self.assertLess(hub["order"].index("to_me"), hub["order"].index("home"))
         self.assertEqual(hub["unread"], sum(lanes[x]["unread"] for x in hub["order"]))
 
     def test_activity_is_rows_not_an_empty_lane(self):
@@ -247,9 +247,9 @@ class BridgeTest(_Base):
     def test_pinned_lanes_come_as_tiles_in_their_order(self):
         self.demo()
         self.assertEqual(self.call("hub")["pinned"], [])  # none: every counted lane
-        self.assertEqual(self.call("pin", '["home", "list:L1", "nowhere", "replies"]'),
+        self.assertEqual(self.call("pin", '["home", "list:L1", "nowhere", "to_me"]'),
                          {"ok": True})
-        self.assertEqual(self.call("hub")["pinned"], ["home", "list:L1", "replies"])
+        self.assertEqual(self.call("hub")["pinned"], ["home", "list:L1", "to_me"])
         self.assertEqual(self.bridge._s["core"].pinned_tiles()[0], "home")  # the core's
 
     def test_the_settings_page(self):

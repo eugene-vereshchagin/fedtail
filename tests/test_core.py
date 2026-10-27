@@ -757,7 +757,8 @@ class StoreLockTest(TmpDir):
 class CoreTest(TmpDir):
     def make(self, **over):
         FakeApi.world = fakes.World()
-        user = {"feed": {"first_run_mark_read": False, "page_size": 3}}
+        user = {"feed": {"first_run_mark_read": False, "page_size": 3},
+                "lanes": {"enabled": fakes.CLASSIC_LANES}}
         for k, v in over.items():
             user.setdefault(k, {}).update(v)
         cfg, _ = config.validate(user)

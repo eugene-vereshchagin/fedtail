@@ -2,6 +2,13 @@
 
 ## 0.21.0 — in progress
 
+- "To me" (`to_me`): replies to me and mentions of me in one lane, with quick filters for each —
+  by default instead of "Replies to me" and "Mentions" (they stay, for whoever wants them apart).
+- Home's quick filters: tags (what followed tags brought), boosts, threads with news (posts whose
+  followed threads have unread replies; the replies themselves are in the thread).
+- "Important people" (`important`): posts of those you rang the bell on; shown once there is any.
+- A lane of tags can keep its posts out of Home (`not_in_home` in `[[lanes.tag_groups]]`, and for
+  the saved ones `core.set_tag_group_in_home` — the switch in the windows comes next).
 - Free lanes: quick filters — a condition with `switch = "…"` is a choice in the lane's
   header, one with `shown = false` is hidden (from the counts and the news too) until its
   choice is on, and "Main" shows the rest; "Older" fetches a page from each of a free lane's

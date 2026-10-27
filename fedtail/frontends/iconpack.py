@@ -161,7 +161,8 @@ FREEDESKTOP = {
 LANE = {"home": "home", "local": "local", "federated": "federated", "mentions": "mentions",
         "replies": "replies", "subs": "subs", "bots": "bots", "my_posts": "my_posts",
         "requests": "requests", "list": "list", "activity": "activity",
-        "bookmarks": "bookmarks", "direct": "direct", "my_likes": "my_likes", "tags": "tags"}
+        "bookmarks": "bookmarks", "direct": "direct", "my_likes": "my_likes", "tags": "tags",
+        "to_me": "replies", "important": "star_full", "unsorted": "list", "custom": "list"}
 
 
 def lane_picture(name):

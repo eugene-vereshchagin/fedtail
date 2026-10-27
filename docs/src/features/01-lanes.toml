@@ -511,3 +511,50 @@ others = "—"
 clients = []
 details.ru = "Не собирать ленты с порога: выбрать в настройках набор как у Mastodon (веб), Tusky или Phanpy — или свой, в духе Point. Набор ставит `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; твои значения там ждут, пока не вернёшь `\"own\"`. Одни «Уведомления» других клиентов здесь пока — две ленты, Упоминания и Активность."
 details.en = "No assembling lanes on day one: pick a set in the settings as in Mastodon (web), Tusky or Phanpy — or fedtail's own, Point-style. A set sets `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; your values there wait until `\"own\"` again. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity."
+
+[[feature]]
+id = "to-me"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "«Ко мне»: ответы и упоминания в одной ленте"
+name.en = "“To me”: replies and mentions in one lane"
+config = "`lanes.enabled` (`\"to_me\"`)"
+api.ru = "`notifications?types=mention`"
+api.en = "`notifications?types=mention`"
+others.ru = "Уведомления у всех, но вперемешку с лайками"
+others.en = "Notifications everywhere, mixed with likes"
+clients = []
+details.ru = "Ответы мне и упоминания меня — одна лента с быстрыми фильтрами «Ответы» и «Упоминания»; по умолчанию вместо двух лент (те остаются — кто хочет порознь, включает их в `lanes.enabled`). Личное с `lanes.direct_apart` — в «Личных»."
+details.en = "Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones with `lanes.direct_apart` — in “Direct”."
+
+[[feature]]
+id = "home-chips"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Быстрые фильтры Ленты: теги, бусты, треды с новым"
+name.en = "Home's quick filters: tags, boosts, threads with news"
+config.ru = "—"
+config.en = "—"
+api.ru = "своё; подписки на треды (`/context`)"
+api.en = "own; followed threads (`/context`)"
+others = "—"
+clients = []
+details.ru = "Рядом с «Всё / Только посты»: «Теги» — что принесли подписанные теги, а не люди; «Бусты»; «Треды с новым» — посты, в тредах которых есть непрочитанные ответы (подписка на тред, свои треды подписываются сами), а сами ответы — внутри треда."
+details.en = "Beside “All / Posts only”: “Tags” — what followed tags brought, not people; “Boosts”; “Threads with news” — posts whose threads have unread replies (followed threads; your own are followed by themselves), the replies themselves inside the thread."
+
+[[feature]]
+id = "important-people"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Важные люди"
+name.en = "Important people"
+config = "`lanes.enabled` (`\"important\"`)"
+api.ru = "`notifications?types=status` (колокольчик на профиле)"
+api.en = "`notifications?types=status` (the bell on a profile)"
+others = "—"
+clients = []
+details.ru = "Посты тех, на ком колокольчик, — своей лентой. Видна, когда в ней что-то есть: пока колокольчиков нет, её нет и слева."
+details.en = "Posts of those you rang the bell on, as a lane of their own. Shown once there is anything in it: while no bell is on, it isn't in the sidebar either."

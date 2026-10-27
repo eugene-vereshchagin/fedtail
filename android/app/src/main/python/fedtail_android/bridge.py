@@ -505,8 +505,8 @@ def add_language(code):
 
 # the overview's sections, in the order "read in a row" walks them: what is addressed to
 # you first, then what you follow, then the lists; lanes without counts are only browsed
-YOU = ("direct", "replies", "mentions", "requests", "activity")
-READING = ("subs", "home", "bots")  # threads you follow, then people, then bots
+YOU = ("direct", "to_me", "replies", "mentions", "requests", "activity")
+READING = ("subs", "important", "home", "bots")  # threads you follow, then people, bots
 BROWSED = ("my_posts",)  # counted, but your own posts are nothing to catch up on
 PEEK = 90
 

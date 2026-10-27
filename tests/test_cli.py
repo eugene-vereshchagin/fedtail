@@ -18,7 +18,8 @@ from .test_core import TmpDir
 class CliTest(TmpDir):
     def make(self, **over):
         FakeApi.world = fakes.World()
-        user = {"feed": {"first_run_mark_read": False, "page_size": 3}, "ui": {"language": "en"}}
+        user = {"feed": {"first_run_mark_read": False, "page_size": 3}, "ui": {"language": "en"},
+                "lanes": {"enabled": fakes.CLASSIC_LANES}}
         for k, v in over.items():
             user.setdefault(k, {}).update(v)
         cfg, _ = config.validate(user)

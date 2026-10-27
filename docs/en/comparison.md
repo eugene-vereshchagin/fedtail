@@ -37,6 +37,9 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Free lanes: a lane you assemble yourself | ◐ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Only the languages you read | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Sets of lanes “as in other clients” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| “To me”: replies and mentions in one lane | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Home's quick filters: tags, boosts, threads with news | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Important people | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Threads
 
@@ -218,4 +221,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **37** features of the 154 compared.
+Only in fedtail — **40** features of the 157 compared.

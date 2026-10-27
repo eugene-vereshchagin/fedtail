@@ -42,7 +42,7 @@ HAS = {"media", "image", "video", "audio", "cw", "sensitive", "link", "poll", "a
        "followed_tag"}
 HAS_PREFIXES = ("tag:", "link:", "word:")
 STATE = {"unread", "read", "subscribed", "bookmarked", "liked", "boosted", "replied",
-         "in_list", "muted_thread", "filtered_warn"}
+         "in_list", "muted_thread", "filtered_warn", "new_replies"}
 VIA = {"followed", "tag", "boost", "mine", "list"}
 # what a boost (or a like, a boost, a quote event) is about: my post or comment, someone
 # else's post or comment, and whether its original was already known / read before
@@ -110,6 +110,7 @@ class World:
     muted_threads: Container = frozenset()
     filtered_warn: Container = frozenset()  # status ids a server "warn" filter matched
     seen_before: Container = frozenset()  # originals stored before this boost reached us
+    new_replies: Container = frozenset()  # posts whose followed thread has unread replies
     parents: Mapping = field(default_factory=dict)  # status id → its parent or "missing"
     now: datetime | None = None          # None: now
     detect: str = "off"                   # lanes.detect_language (core/langs.py)
@@ -351,6 +352,8 @@ def post_facts(status, world=None, source=None):
         f.state.add("muted_thread")
     if sid in world.filtered_warn or wrapper.get("id") in world.filtered_warn:
         f.state.add("filtered_warn")
+    if sid in world.new_replies:
+        f.state.add("new_replies")
 
     if boost:
         f.target = _target(st, world)

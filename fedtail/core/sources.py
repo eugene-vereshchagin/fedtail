@@ -50,6 +50,9 @@ def make_sources(api, me_id):
                              _status_entry),
         "home": Source("home", api.home, _status_entry),
         "mentions": Source("mentions", api.mentions, notification_entry),
+        # posts of the people with the bell on: the server tells them as notifications
+        "watched": Source("watched", lambda **kw: api.notifications(["status"], **kw),
+                          notification_entry),
         "mine": Source("mine", lambda **kw: api.account_statuses(me_id, **kw), _status_entry),
         "local": Source("local", api.local, _status_entry),
         "federated": Source("federated", api.federated, _status_entry),

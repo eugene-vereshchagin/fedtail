@@ -12,6 +12,10 @@ def acct(i, name, bot=False):
 
 
 BOB = acct("B", "bob@social.example")
+# the lanes before 0.21 (Replies to me and Mentions apart, no To me): what most tests were
+# written against — they name these lanes; the new defaults have tests of their own
+CLASSIC_LANES = ["federated", "home", "local", "bots", "my_posts", "direct", "mentions",
+                 "replies", "subs", "bookmarks", "activity", "requests"]
 NEWS = acct("N", "georgia_news", bot=True)
 
 
