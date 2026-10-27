@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit
 
+from . import langs
 from .model import html_to_text, is_bot, norm_acct, real
 
 NEW_ACCOUNT_DAYS = 30   # Mastodon's notification policy: "new accounts"
@@ -111,6 +112,8 @@ class World:
     seen_before: Container = frozenset()  # originals stored before this boost reached us
     parents: Mapping = field(default_factory=dict)  # status id → its parent or "missing"
     now: datetime | None = None          # None: now
+    detect: str = "off"                   # lanes.detect_language (core/langs.py)
+    min_words: int = 12                  # lanes.detect_min_words
 
 
 @dataclass
@@ -329,7 +332,7 @@ def post_facts(status, world=None, source=None):
         f.has.add("link")
         f.has |= {"link:" + h for h in links}
 
-    f.lang = {(st.get("language") or "unknown").lower()}
+    f.lang = {langs.post_language(st, world.detect, world.min_words) or "unknown"}
 
     # state
     sid = st.get("id")

@@ -89,7 +89,8 @@
    `python3-requests`; Recommends: `python3-pyside6.qtdbus` (число на кнопке в панели
    задач), `qt6-image-formats-plugins` (webp/avif/tiff в просмотрщике — без него такие
    оригиналы не показываются), `libnotify-bin` (notify-send, уведомления),
-   `python3-cryptography` (синхронизация между устройствами, docs/ru/sync.md).
+   `python3-cryptography` (синхронизация между устройствами, docs/ru/sync.md), `python3-langdetect`
+   (язык поста на латинице, `lanes.detect_language`).
 
 11. ~~**Чистка базы.**~~ — сделано (0.17.0): `Store.gc`, `[storage]`, бюджет `max_mb`.
 

@@ -101,6 +101,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
 | Free lanes: a lane you assemble yourself | planned | — | `[[lanes.custom]]` | — | — |
 | How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
+| Only the languages you read | has | 0.21.0 | `lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words` | the post's `language` field; our own guess | Mastodon — by the author's tag, in the server's settings |
 
 <details><summary>In detail</summary>
 
@@ -168,6 +169,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Free lanes: a lane you assemble yourself.** A lane made of rules: where a post came from (home, lists, tags, notifications), who, what is in it (pictures, a reply, a boost, the language, words), events instead of posts. The built-in lanes become such rules too, presets; “Unsorted” and “Why is it here?”. The plan — `docs/en/dev/feeds.md`, in 0.21.
 
 **How fresh the lanes are, in the status line.** “⟳ updating the lanes…” while a round asks the server, “updated at 14:32” once it came through, “⚠ no answer from the server since 14:20” when rounds fail — so a lane with nothing new reads as nothing new, not as a dead network. In the windows — at the right of the status bar, in the terminal — in the header, on the web page — on the lane's bar, on the phone — under the lane's title and on the overview; with slow mode — beside its time.
+
+**Only the languages you read.** Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more. A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read.
 
 </details>
 

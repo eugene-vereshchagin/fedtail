@@ -1099,7 +1099,11 @@ class Core(SocialMixin):
                                  self._hidden_authors(),
                                  frozenset(self.cfg["lists"]["hide_in"]),
                                  self.cfg["lanes"].get("direct_apart", True)
-                                 and "direct" in self.lane_by_name)
+                                 and "direct" in self.lane_by_name,
+                                 frozenset(self.cfg["lanes"]["languages"]),
+                                 frozenset(self.cfg["lanes"]["languages_in"]),
+                                 self.cfg["lanes"]["detect_language"],
+                                 self.cfg["lanes"]["detect_min_words"])
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def _poll_activity(self):

@@ -91,7 +91,8 @@ find. Next, roughly in order:
    `python3-requests`; Recommends: `python3-pyside6.qtdbus` (the number on the taskbar
    button), `qt6-image-formats-plugins` (webp/avif/tiff in the viewer — without it such
    originals aren't shown), `libnotify-bin` (notify-send, notifications),
-   `python3-cryptography` (sync between devices, docs/en/sync.md).
+   `python3-cryptography` (sync between devices, docs/en/sync.md), `python3-langdetect`
+   (telling the language of a Latin-script post, `lanes.detect_language`).
 
 11. ~~**Cleaning the database.**~~ — done (0.17.0): `Store.gc`, `[storage]`, the `max_mb` budget.
 

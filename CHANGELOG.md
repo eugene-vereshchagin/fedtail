@@ -2,6 +2,12 @@
 
 ## 0.21.0 — in progress
 
+- Only the languages you read (`lanes.languages`, e.g. `["ru", "en"]`): posts in others
+  leave Federated, Local and the tag lanes (`lanes.languages_in`). A post with no language
+  tag — or a wrong one, Cyrillic or Chinese characters tagged "en" — gets a guess
+  (`lanes.detect_language`): by its script for free, Latin text by python3-langdetect when it is
+  installed (Recommends of the deb), on posts of `lanes.detect_min_words` words and more.
+  What can't be told stays.
 - The opossum swings while the lanes update: on the curtain (Esc, every lane closed) in
   the Qt and GTK windows, over an empty lane on the web page and the phone — and stands
   still once the round is over. The animated sticker is credited as the icon is.

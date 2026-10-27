@@ -34,6 +34,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Collections of people (Mastodon 4.6) | ✓ | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Another server's public timeline | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A link's timeline (Mastodon 4.3+) | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Only the languages you read | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Threads
 
@@ -215,4 +216,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **35** features of the 151 compared.
+Only in fedtail — **35** features of the 152 compared.

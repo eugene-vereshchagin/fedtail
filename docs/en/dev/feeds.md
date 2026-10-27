@@ -288,3 +288,22 @@ Besides "setting up becomes programming":
   version?
 * `in_my_thread` without following the thread: worth the requests?
 * The lane editor on the phone: a form over the same rules, or the config text with a check?
+
+## 11. Decisions of 27 Oct 2026
+
+| # | what | how |
+|---|---|---|
+| 1 | Federated wider than my server knows | `federated` = my federated ∪ trends ∪ public lanes of chosen servers (`remote:<host>`, no account there) — merged, no duplicates, through the languages filter; the list — `lanes.federated_extra`; a like/reply to such a post — through my server's search (`resolve`), one request on the action |
+| 2 | Languages to read | done (0.21): `lanes.languages`, `languages_in` (federated, local, tags by default), `detect_language` (the script + python3-langdetect from 12 words) |
+| 3 | Stop words | the server's filters (they work already and are shared by every client); none of our own |
+| 4 | Followed tags and Home | tags, like people, go to Home; a tag lane can be taken apart with a tick "not in Home" (like lists' `exclusive`) — when made from the search and in the config; Home's quick filters: all · posts only · tags · boosts |
+| 5 | A stranger in a private talk | a banner "someone new was added to the conversation" when a private thread mentions someone not among its participants: on an incoming post and in the reply box before sending |
+| 6 | Replies and mentions | one lane "To me" with quick filters "replies / mentions" by default; whoever wants two makes them |
+| 7 | Threads with news | a thread with new comments is highlighted; a quick filter "posts with new replies": posts (not comments) with something new from anyone, the replies themselves only inside the thread |
+| 8 | Important people | a default lane: posts of those with the bell on; shown once the bell is on for anyone |
+| 9 | Activity | + quotes of my posts, polls over, edits of what I boosted, derived unfollows; follow requests — a quick filter here, not a lane |
+| 10 | Bookmarks | kept by the server, shared by every client; nothing to sync ourselves |
+
+Open: do Subscriptions (Point-style threads) stay a lane of their own or become a quick filter of
+Home, "threads I took part in"? Which servers go to `lanes.federated_extra` by default — none or a
+few big ones?

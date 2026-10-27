@@ -627,6 +627,27 @@ mentions_all = false
 # in it — they don't double up in "Replies to me" and "Mentions". false — there too.
 direct_apart = true
 
+# Languages you read: posts in others leave the lanes of languages_in. Empty — every language.
+# Two or three small letters (ISO 639), like ["ru", "en"]. A post in a language that can't be
+# told (no tag, too short to guess) always stays.
+languages = []
+
+# Where the languages filter works: lane words, "lists" — every list, "tags" — every tag lane.
+# Home isn't there by default: whom you follow, you read whole.
+languages_in = ["federated", "local", "tags"]
+
+# Telling a post's language when its author didn't — or tagged it wrong:
+#   "untagged" — guess when there is no tag, or when the letters say the tag can't be right
+#                (an "en" post in Cyrillic or in Chinese characters);
+#   "always"   — the guess beats the author's tag whenever there is one;
+#   "off"      — the author's tag only.
+# Scripts that give the language away (Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic…)
+# are told for free; Latin text — by python3-langdetect, if it is installed.
+detect_language = "untagged"
+
+# The shortest post (in words) the guess by words is tried on: shorter ones it gets wrong.
+detect_min_words = 12
+
 # Lanes of several tags — in the sidebar, in the "Tags" group (fetched while
 # open, like "Federated"). Each is a table [[lanes.tag_groups]]: name — what to call it,
 # any — any of the tags, all — all at once, none — without. The same can be typed in the search

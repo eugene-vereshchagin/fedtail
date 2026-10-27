@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from . import taggroups
+from . import langs, taggroups
 from .model import is_bot, is_comment_to_me, real
 
 
@@ -29,6 +29,10 @@ class LaneContext:
     hidden: frozenset = frozenset()  # authors put in lists: their list shows them…
     hide_in: frozenset = frozenset()  # …and these lanes don't (lists.hide_in)
     direct_apart: bool = False  # private messages only in "direct" (lanes.direct_apart)
+    languages: frozenset = frozenset()  # lanes.languages: the ones I read (empty — all)
+    languages_in: frozenset = frozenset()  # …in these lanes ("lists", "tags": all of them)
+    detect: str = "untagged"  # lanes.detect_language
+    min_words: int = 12  # lanes.detect_min_words
 
 
 def _all(st, ctx):
@@ -50,7 +54,16 @@ def keeps(lane, st, ctx):
     if lane.name in ctx.hide_in and (st["account"]["id"] in ctx.hidden
                                      or real(st)["account"]["id"] in ctx.hidden):
         return False
+    if ctx.languages and in_scope(lane.name, ctx.languages_in) and \
+            not langs.wanted(real(st), ctx.languages, ctx.detect, ctx.min_words):
+        return False
     return lane.keep(st, ctx)
+
+
+def in_scope(name, names):
+    """Is a lane among `names`, where "lists" names every list and "tags" every tag lane?"""
+    return name in names or "lists" in names and is_list(name) \
+        or "tags" in names and taggroups.is_tags(name)
 
 
 def _is_direct(st):

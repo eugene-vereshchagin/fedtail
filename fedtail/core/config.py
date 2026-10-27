@@ -126,6 +126,10 @@ DEFAULTS = {
         "posts_only": [],
         "mentions_all": False,
         "direct_apart": True,
+        "languages": [],
+        "languages_in": ["federated", "local", "tags"],
+        "detect_language": "untagged",
+        "detect_min_words": 12,
         "tag_groups": [],
     },
     "post": {
@@ -324,6 +328,7 @@ CHOICES = {
     ("tui", "video"): {"auto", "window", "terminal", "browser"},
     ("tui", "sound"): {"bell", "scheme", "off"},
     ("sound", "enabled"): {"auto", "on", "off"},
+    ("lanes", "detect_language"): {"off", "untagged", "always"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
               "local", "federated", "requests", "direct", "my_likes"}
@@ -332,7 +337,7 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),
               ("ui", "icon_count"), ("ui", "icon_count_except"), ("ui", "columns"),
               ("ui", "start_lane"),
-              ("lists", "hide_in"), ("cli", "tail_lanes")]
+              ("lists", "hide_in"), ("cli", "tail_lanes"), ("lanes", "languages_in")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles")  # sync.<each>
@@ -354,6 +359,7 @@ MINIMUM = {
     ("subs", "active_days"): 1,
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,
+    ("lanes", "detect_min_words"): 1,
     ("feed", "remote_posts"): 1,
     ("feed", "catch_up_limit"): 1,
     ("feed", "render_limit"): 20,
@@ -548,6 +554,16 @@ def validate(user):
     if bad_lang:
         errors.append(f"post.language(s): {bad_lang} — two or three small letters (ISO 639), "
                       f"like \"ru\" or \"en\"")
+    bad_read = [x for x in cfg["lanes"]["languages"]
+                if not (isinstance(x, str) and re.fullmatch(r"[a-z]{2,3}", x))]
+    if bad_read:
+        errors.append(f"lanes.languages: {bad_read} — two or three small letters (ISO 639), "
+                      f"like \"ru\" or \"en\"")
+    bad_in = [x for x in cfg["lanes"]["languages_in"]
+              if x not in LANE_NAMES | {"lists", "tags"}]
+    if bad_in:
+        errors.append(f"lanes.languages_in: unknown lanes {bad_in}; known: "
+                      f"{', '.join(sorted(LANE_NAMES))}, lists, tags")
     if errors:
         raise ConfigError("\n".join(errors))
     return cfg, warnings
