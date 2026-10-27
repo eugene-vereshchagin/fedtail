@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- "Unsorted" is collected with any set of lanes (not only with routed lanes of your own) and
+  shown only while something is in it; `lanes.unsorted = false` hides it for good and stops
+  collecting.
 - Unsorted took the posts of people put in a list: Home leaves them to the list's lane
   (`lists.hide_in`), and Unsorted only asked lanes of the same source. Now a post another lane
   holds, or one of a list's member, isn't unsorted, and what got there by mistake leaves.

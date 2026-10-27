@@ -140,6 +140,8 @@ class Core(SocialMixin):
         self._world_version = 0   # bumped when what the rules know around posts changes
         self._following_at = 0.0
         self._important_waiting = False  # "Important people" on, but nothing in it yet
+        self._waiting = set()            # lanes on but hidden while empty (SHOWN_WHEN_FULL)
+        self._unsorted_on = False        # lanes.unsorted: Unsorted collects
         self.lanes = self._shown_lanes(lanes.enabled(cfg))
         self.tag_groups = []  # [{"any", "all", "none", "name", "saved"}], see taggroups
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
@@ -839,8 +841,8 @@ class Core(SocialMixin):
                                       if st["account"]["id"] == self.me["id"]])
 
             self._step("read marks")
-            self._show_important()
             new_by_source.update(self._route_custom(new_by_source))
+            self._show_important()  # after routing: Unsorted may have got its first
             per_lane = self._split_by_lane(new_by_source)
             if not first_run:
                 self._note_fresh(per_lane, new_requests, new_activity)
@@ -1001,16 +1003,23 @@ class Core(SocialMixin):
         if got:
             self._fresh = got
 
+    # lanes shown only while something is in them: their stream decides (still filled while
+    # hidden — once there is, they show, lists_changed redraws the sidebar)
+    SHOWN_WHEN_FULL = {"important": "watched", lanes.UNSORTED: lanes.UNSORTED}
+
     def _shown_lanes(self, built):
-        """The lanes as built, without "Important people" while nothing is in it (its
-        source is still polled: once there is, it shows — lists_changed redraws)."""
-        want = any(x.name == "important" for x in built)
-        empty = want and self.store.count_items("watched") == 0
-        self._important_waiting = empty
-        return [x for x in built if not (empty and x.name == "important")]
+        """The lanes as built, without "Important people" and "Unsorted" while nothing
+        is in them."""
+        self._waiting = {x.name for x in built if x.name in self.SHOWN_WHEN_FULL
+                         and self.store.count_items(self.SHOWN_WHEN_FULL[x.name]) == 0}
+        self._important_waiting = "important" in self._waiting
+        self._unsorted_on = any(x.name == lanes.UNSORTED for x in built)
+        return [x for x in built if x.name not in self._waiting]
 
     def _show_important(self):
-        if self._important_waiting and self.store.count_items("watched"):
+        """A lane waiting to have something has it now: the lanes anew. (One emptied
+        stays till the next start: a lane must not vanish under the reader.)"""
+        if any(self.store.count_items(self.SHOWN_WHEN_FULL[n]) for n in self._waiting):
             self._apply_lists(list(self.lists), self.list_members)
 
     # ---- free lanes (core/custom.py) ---------------------------------------------------
@@ -1086,8 +1095,6 @@ class Core(SocialMixin):
         if not self.customs or not self.me:
             return {}
         self._refresh_following()  # rules ask whom I follow (Home's "Tags", author = …)
-        if not any(c.routed for c in self.customs):
-            return {}
         world = self._world()
         refilled = {}
         for c in self.customs:
@@ -1097,7 +1104,7 @@ class Core(SocialMixin):
         got = custom.route(self.store, self.customs, new_by_source, world)
         for name in got:
             self.store.prune(name, self.keep_per_lane())
-        if lanes.UNSORTED in self.lane_by_name:
+        if self._unsorted_on:  # lanes.unsorted (shown or waiting to have something)
             # what a lane has taken since (a list's, a tag lane's): out of Unsorted
             self.store.drop_held(lanes.UNSORTED, {x.source for x in self.lanes if x.source})
             taken = {sid for name in got for sid in got[name]}

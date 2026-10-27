@@ -200,7 +200,7 @@ themed_icon = true
 #   mentions  — Mentions        replies   — Replies to me  subs     — Subscriptions
 #   bookmarks — Bookmarks       my_likes  — My likes       activity — Activity
 #   requests  — Follow requests  to_me     — To me          important — Important people
-#   unsorted  — Unsorted (with lanes of your own)
+#   unsorted  — Unsorted (shown while not empty)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
 #   "custom:<name>" — a lane of your own ([[lanes.custom]]).
@@ -688,8 +688,9 @@ tag_groups = []
 #   none = [{ kind = "boost", target = "seen" }]
 custom = []
 
-# With lanes of your own — "Unsorted": what came from the lanes read through (Home, Mentions,
-# lists…) and no lane took, so a rule never loses a post. false — no such lane.
+# "Unsorted": what came from the lanes read through (Home, Mentions, lists…) and no lane took,
+# so a rule never loses a post. Shown only while something is in it. false — hidden for good
+# and not collected.
 unsorted = true
 
 
@@ -840,7 +841,7 @@ enabled = true
 #   mentions  — Mentions        replies   — Replies to me  subs     — Subscriptions
 #   bookmarks — Bookmarks       my_likes  — My likes       activity — Activity
 #   requests  — Follow requests  to_me     — To me          important — Important people
-#   unsorted  — Unsorted (with lanes of your own)
+#   unsorted  — Unsorted (shown while not empty)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
 #   "custom:<name>" — a lane of your own ([[lanes.custom]]).

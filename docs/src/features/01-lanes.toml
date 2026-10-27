@@ -467,6 +467,21 @@ details.ru = "Лента из правил, первая версия: отку�
 details.en = "A lane made of rules, first version: where a post came from (home, local, federated, mentions, mine, bookmarks, likes, followed threads, lists, tags), who (me, the followed, my server, bots, `@nick@server`, a domain), what it is (a post, a reply, a reply to oneself, a boost, a self-boost, a quote), whether it's to me (a reply to my post or comment, a mention, private), what is in it (pictures, video, a CW, links, tags, the language, words), what a boost is of (mine, someone's, seen already), its age, its likes. A lane stands in “Personal” (or `group = \"standard\"` — in “Timelines”), in its place in `lanes.enabled` (`\"custom:name\"`) or at the end, and fills from what is stored already; anew when the rule changes. Quick filters: a condition with `switch` is a choice in the lane's header, one with `shown = false` is hidden (from the counts too) until chosen; “Older” — a page from each source through the rule; “Unsorted” (`lanes.unsorted`) — what came and no lane took. Not yet: events (likes, follows) in a lane. The plan — `docs/en/dev/feeds.md`."
 
 [[feature]]
+id = "unsorted-lane"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "«Неразобранное»: ни один пост не теряется"
+name.en = "“Unsorted”: no post gets lost"
+config = "`lanes.unsorted`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+clients = []
+details.ru = "Страховка для правил: что пришло из источников, читаемых подряд (домашняя, упоминания, мои, списки…), а ни одна лента не взяла, ложится сюда. Не идёт: то, что держит другая лента; посты тех, кто в списке (их читают в ленте списка); источники для просмотра (федерация, локальная, пока ленивая) — утопят. Пост, который потом взяла лента, отсюда уходит. Лента видна, только когда в ней что-то есть; `lanes.unsorted = false` прячет её насовсем и перестаёт собирать — если сознательно не нужна."
+details.en = "A safety net for the rules: whatever came from a read-through source (home, mentions, mine, lists…) and no lane took lands here. Not here: what another lane holds; posts of people put in a list (read in the list's lane); browse sources (federated, local while lazy) — they'd drown it. A post a lane takes later leaves. The lane is shown only while something is in it; `lanes.unsorted = false` hides it for good and stops collecting — when you deliberately don't want it."
+
+[[feature]]
 id = "poll-state"
 status = "has"
 android = "has"

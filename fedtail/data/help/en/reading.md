@@ -8,9 +8,12 @@ On the left, the lanes in groups:
 
 - **Timelines**, from the widest down: "Federated" (everything your server knows), "Home" (the
   people you follow, without bots), "Local" (your whole server), "Bots".
-- **Personal**: "My posts", "Direct" (messages to you alone), "Mentions" (where you were
-  tagged in someone else's conversation), "Replies to me", "Subscriptions" (what's new in
-  threads you follow), "Bookmarks", "Activity", "Follow requests".
+- **Personal**: "My posts", "Direct" (messages to you alone), "To me" (replies and
+  mentions), "Subscriptions" (what's new in threads you follow), "Important people" (those you
+  rang the bell on — shown once there is something), "Bookmarks", "Activity" (follow requests
+  in it too).
+- **Unsorted** — what came and no lane took, so a lane's rule never loses a post. It shows up
+  only when something is in it; `lanes.unsorted = false` in the config hides it for good.
 - **Lists** — your lists from the server, each a lane of its own. Whoever you put in a list
   leaves the general lanes and is read there only.
 

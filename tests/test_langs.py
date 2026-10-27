@@ -265,7 +265,8 @@ class PresetTest(unittest.TestCase):
 
     def test_enabled_orders_and_hides(self):
         cfg, _ = self.check(enabled=["home", "mentions", "replies"])
-        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "mentions", "replies"])
+        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "mentions", "replies",
+                                                                "unsorted"])
 
     def test_bots_in_home_by_the_set(self):
         bot = {"id": "b", "account": {"id": "9", "acct": "news", "bot": True}, "content": ""}

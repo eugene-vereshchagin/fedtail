@@ -100,6 +100,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
 | Free lanes: a lane you assemble yourself | partly | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted` | own | — |
+| “Unsorted”: no post gets lost | has | 0.21.0 | `lanes.unsorted` | own | — |
 | How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
 | Only the languages you read | has | 0.21.0 | `lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words` | the post's `language` field; our own guess | Mastodon — by the author's tag, in the server's settings |
 | Sets of lanes “as in other clients” | has | 0.21.0 | `lanes.preset` (`"fedtail"`, `"mastodon"`, `"tusky"`, `"phanpy"`), `--lanes-to-config` | own | — |
@@ -171,6 +172,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **A link's timeline (Mastodon 4.3+).** “Who else shared this link” in a post's menu — see the line of that name under “Profiles”. GoToSocial can't do it.
 
 **Free lanes: a lane you assemble yourself.** A lane made of rules, first version: where a post came from (home, local, federated, mentions, mine, bookmarks, likes, followed threads, lists, tags), who (me, the followed, my server, bots, `@nick@server`, a domain), what it is (a post, a reply, a reply to oneself, a boost, a self-boost, a quote), whether it's to me (a reply to my post or comment, a mention, private), what is in it (pictures, video, a CW, links, tags, the language, words), what a boost is of (mine, someone's, seen already), its age, its likes. A lane stands in “Personal” (or `group = "standard"` — in “Timelines”), in its place in `lanes.enabled` (`"custom:name"`) or at the end, and fills from what is stored already; anew when the rule changes. Quick filters: a condition with `switch` is a choice in the lane's header, one with `shown = false` is hidden (from the counts too) until chosen; “Older” — a page from each source through the rule; “Unsorted” (`lanes.unsorted`) — what came and no lane took. Not yet: events (likes, follows) in a lane. The plan — `docs/en/dev/feeds.md`.
+
+**“Unsorted”: no post gets lost.** A safety net for the rules: whatever came from a read-through source (home, mentions, mine, lists…) and no lane took lands here. Not here: what another lane holds; posts of people put in a list (read in the list's lane); browse sources (federated, local while lazy) — they'd drown it. A post a lane takes later leaves. The lane is shown only while something is in it; `lanes.unsorted = false` hides it for good and stops collecting — when you deliberately don't want it.
 
 **How fresh the lanes are, in the status line.** “⟳ updating the lanes…” while a round asks the server, “updated at 14:32” once it came through, “⚠ no answer from the server since 14:20” when rounds fail — so a lane with nothing new reads as nothing new, not as a dead network. In the windows — at the right of the status bar, in the terminal — in the header, on the web page — on the lane's bar, on the phone — under the lane's title and on the overview; with slow mode — beside its time.
 

@@ -269,8 +269,7 @@ def build(cfg, lists=(), tag_groups=()):
             out.append(lanes.Lane(n, None, lanes._all, group="personal"))
         elif n in rules:
             out.append(rules[n].lane())
-    if any(c.routed for c in rules.values() if c.name in seen) and \
-            cfg["lanes"].get("unsorted", True):
+    if cfg["lanes"].get("unsorted", True):  # shown only while it holds something (Core)
         out.append(lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all, group="personal"))
     return out
 

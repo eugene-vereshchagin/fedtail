@@ -496,14 +496,14 @@ class UnsortedTest(FreeBase):
                               "any": [{"author": "bot"}]}])
         core.cfg["lanes"]["enabled"] = ["my_posts"]  # no Home: its posts need a lane
         core._apply_lists([], {})
-        self.assertIn("unsorted", core.lane_by_name)
-        self.assertEqual(dict(lanes.grouped(core.lanes))["personal"][-2:],
-                         ["botz", "unsorted"])
+        self.assertNotIn("unsorted", core.lane_by_name)  # nothing in it yet
         w.add(status("001", NEWS, minute=1), home=True)   # the bots lane takes it
         w.add(status("002", BOB, minute=2), home=True)    # nobody does
         w.add(status("003", ME, minute=3), home=True)     # My posts takes it (source mine)
         core.connect().result()
         core.poll_once()
+        self.assertEqual(dict(lanes.grouped(core.lanes))["personal"][-2:],
+                         ["botz", "unsorted"])
         unsorted = self.ids(core, "unsorted")
         self.assertIn("002", unsorted)
         self.assertNotIn("001", unsorted)
@@ -524,7 +524,7 @@ class UnsortedTest(FreeBase):
         cfg, _ = config.validate({"lanes": {"custom": [FEED], "unsorted": False}})
         self.assertNotIn("unsorted", [x.name for x in lanes.enabled(cfg)])
         cfg, _ = config.validate({"lanes": {"enabled": ["home", "unsorted"]}})
-        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home"])
+        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "unsorted"])
         self.assertNotIn("unsorted", lanes.sources_needed(lanes.enabled(config.validate(
             {"lanes": {"custom": [FEED]}})[0])))
 
@@ -835,7 +835,7 @@ class LanesToConfigTest(unittest.TestCase):
         out = u.lanes_to_config(user, report)
         self.assertEqual(report["written"], ["home", "direct", "lists", "tags"])
         cfg, _ = config.validate(tomllib.loads(out))
-        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "direct"])
+        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "direct", "unsorted"])
 
 
 class UnsortedAndListsTest(FreeBase):
@@ -854,6 +854,48 @@ class UnsortedAndListsTest(FreeBase):
         self.assertNotIn("001", self.ids(core, "home"))
         self.assertIn("001", self.ids(core, "list:L1"))
         self.assertEqual(self.ids(core, "unsorted"), [])
+
+    def test_shown_only_when_not_empty(self):
+        """lanes.unsorted = true: collected always, shown once something is in it."""
+        core, w = self.make([FEED])
+        core.cfg["lanes"]["enabled"] = ["feed"]  # no Home: far away posts need a lane
+        core._apply_lists([], {})
+        core.connect().result()
+        core.poll_once()
+        self.assertNotIn("unsorted", core.lane_by_name)
+        w.add(status("010", BOB, minute=1), mention=True)  # a mention, not a reply: no lane
+        core.poll_once()
+        self.assertIn("unsorted", core.lane_by_name)
+        self.assertEqual(self.ids(core, "unsorted"), ["010"])
+
+    def test_view_lanes_only_still_collect(self):
+        """No routed lane (a set of views): Unsorted still catches what none keeps."""
+        rule = {"name": "plain", "any": [{"source": "home", "author": "local"}]}
+        core, w = self.make([rule])
+        core.cfg["lanes"]["enabled"] = ["plain"]
+        core._apply_lists([], {})
+        core.connect().result()
+        core.poll_once()
+        w.add(status("011", BOB, minute=1), home=True)
+        core.poll_once()
+        self.assertIn("011", [st["id"] for _i, st in core.store.items("unsorted", 10)])
+
+    def test_forced_off(self):
+        FakeApi.world = fakes.World()
+        cfg, _ = config.validate({"feed": {"first_run_mark_read": False, "page_size": 10},
+                                  "lanes": {"custom": [FEED], "unsorted": False}})
+        p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        cfg["lanes"]["enabled"] = ["feed"]
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        self.addCleanup(core.shutdown)
+        core.connect().result()
+        FakeApi.world.add(status("012", BOB, minute=1), mention=True)
+        core.poll_once()
+        core.poll_once()
+        self.assertNotIn("unsorted", core.lane_by_name)
+        self.assertEqual(core.store.count_items("unsorted"), 0)
 
     def test_cleared_once_a_lane_has_it(self):
         core, w = self.make([FEED])

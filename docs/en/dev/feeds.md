@@ -227,7 +227,9 @@ The built-in lanes become presets written in rules; their words stay (and the ol
 * **Unsorted** (`unsorted`) — every item of a *read-through* source that no lane took. It
   appears only when something is in it, and says in a tooltip which rule was nearest
   ("Why is it here?"). Browse sources (`federated`, `local` while lazy) don't go there: they
-  would drown it.
+  would drown it. Not there either: what another lane holds, posts of people put in a list
+  (read in the list's lane). Collected with any set — of views or of routed lanes; while empty
+  it isn't in the sidebar; `lanes.unsorted = false` hides it for good and stops collecting.
 * After a change of rules what is already stored is sorted anew; nothing is re-fetched.
 
 ## 7. Protocols and new atoms
