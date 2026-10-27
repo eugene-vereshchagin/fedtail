@@ -1206,7 +1206,10 @@ class FedtailApp(App, PostsMixin):
             rows = core.activity(300)  # newest first
             if core.cfg["feed"]["order"] == "oldest_first":
                 rows = list(reversed(rows))
-            items = [ActivityItem(a, render(show_activity(a, width, a.sort > seen)))
+            # a follow request among them (activity.requests): its row answers to a / d
+            items = [RequestItem(a.who, render(show_request(a.who, width)))
+                     if a.kind == "request" and a.asks == "follow" and a.who is not None
+                     else ActivityItem(a, render(show_activity(a, width, a.sort > seen)))
                      for a in rows]
             empty = _("activity_none")
         else:

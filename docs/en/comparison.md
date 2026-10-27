@@ -184,6 +184,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | The server's grouped notifications (v2) | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 | Slow mode and “notify at most every…” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | “Of them new”: what the last update brought | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Follow requests in Activity | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
 
 ## Several accounts
 
@@ -221,4 +222,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **40** features of the 157 compared.
+Only in fedtail — **40** features of the 158 compared.

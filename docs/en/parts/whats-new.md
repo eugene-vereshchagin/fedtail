@@ -7,6 +7,7 @@
 - Home's quick filters: tags, boosts, threads with news
 - Important people
 - Unfollowed — gone from Home
+- Follow requests in Activity
 
 **0.20.1:**
 

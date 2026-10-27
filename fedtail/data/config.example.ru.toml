@@ -625,7 +625,7 @@ preset = "own"
 # global = federated, mine = my_posts, favourites = my_likes.
 # federated и local подгружаются, только пока открыты, и без счётчиков: их листают, а не
 # дочитывают.
-enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs", "important", "bookmarks", "activity", "requests"]
+enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs", "important", "bookmarks", "activity"]
 
 # Аккаунты, которые считать ботами, даже если у них нет галки «бот».
 # Свой сервер — просто "ник", чужой — "ник@сервер".
@@ -681,7 +681,7 @@ detect_min_words = 12
 tag_groups = []
 
 # Свои ленты («свободные ленты», docs/ru/dev/feeds.md): каждая — таблица [[lanes.custom]] —
-# name (слово, неизменное), title (что видно слева), any (условия: пост входит, если подходит
+# name (слово, неизменное), title (что видно слева; по языкам — { ru = "…", en = "…" }), any (условия: пост входит, если подходит
 # под любое; внутри условия должны совпасть все ключи), none (условия, которые не пускают).
 # Ключи условия: source (home, local, federated, mentions, mine, bookmarks, favourites, subs,
 # "list:<id>"; нет — догадывается по остальным), author (me, followed, local, remote, bot,
@@ -939,6 +939,11 @@ types = ["favourite", "reblog", "follow"]
 # лайкать и бустить, задаётся в настройках поста). Приходят сюда же, с кнопками
 # «Одобрить» и «Отклонить». false — не показывать (одобрять тогда на сайте сервера).
 approvals = true
+
+# Заявки в подписчики — тоже здесь, сверху, с кнопками «Одобрить» / «Отклонить», — так что
+# лента «Заявки» не нужна (кому нужна — она есть, в lanes.enabled: тогда они там, а не здесь).
+# false — только в ней.
+requests = true
 
 # Извещения самого сервера (Mastodon 4.3+): твой сервер (или чужой) заблокировал другой —
 # и твои подписки и подписчики оттуда оборвались, сколько и почему; предупреждение от

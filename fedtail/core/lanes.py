@@ -259,7 +259,7 @@ def enabled(cfg, lists=(), tag_groups=()):
 # today's lanes and switches; once free lanes come (docs/en/dev/feeds.md), a client's one
 # "Notifications" becomes one lane with quick filters instead of Mentions + Activity.
 _FEDTAIL = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs",
-            "important", "bookmarks", "activity", "requests"]
+            "important", "bookmarks", "activity"]
 PRESETS = {
     # fedtail's own: Point-style — replies and mentions apart, followed threads, bots apart
     "fedtail": {"enabled": _FEDTAIL, "posts_only": [], "mentions_all": False,

@@ -122,7 +122,7 @@ DEFAULTS = {
     "lanes": {
         "preset": "own",
         "enabled": ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs",
-                    "important", "bookmarks", "activity", "requests"],
+                    "important", "bookmarks", "activity"],
         "extra_bots": [],
         "bots_in_home": False,
         "posts_only": [],
@@ -192,6 +192,7 @@ DEFAULTS = {
     "activity": {
         "types": ["favourite", "reblog", "follow"],
         "approvals": True,
+        "requests": True,
         "server_notices": True,
         "server_groups": True,
     },

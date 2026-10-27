@@ -622,7 +622,10 @@ class Rule:
         rule = cls(name=name if isinstance(name, str) else "", warnings=warnings)
         if not rule.name:
             warnings.append("a lane needs a name")
-        rule.title = str(table.get("title") or rule.name)
+        title = table.get("title") or rule.name
+        if isinstance(title, dict):  # one per language: { ru = "Посты", en = "Posts" }
+            title = {str(k): str(v) for k, v in title.items() if v} or rule.name
+        rule.title = title if isinstance(title, dict) else str(title)
         for key in table:
             if key not in RULE_KEYS:
                 warnings.append(f"unknown key {key!r}")

@@ -644,3 +644,95 @@ class RebuildNoteLanguageTest(unittest.TestCase):
         en, ru = (x if isinstance(x, str) else x[0] for x in (en, ru))
         self.assertIn("# not of this version — kept as it was:", en)
         self.assertIn("# не из этой версии — оставлено как было:", ru)
+
+
+class RequestsInActivityTest(FreeBase):
+    """activity.requests: without a Requests lane, follow requests stand in Activity, on
+    top, answered by its buttons; counted there; × doesn't touch them."""
+
+    def make_new(self, enabled=None, **activity):
+        FakeApi.world = fakes.World()
+        user = {"feed": {"first_run_mark_read": False}}
+        if enabled is not None:
+            user["lanes"] = {"enabled": enabled}
+        if activity:
+            user["activity"] = activity
+        cfg, _ = config.validate(user)
+        p = paths.resolve("t", config=str(self.tmp / "c.toml"), data=str(self.tmp / "d"))
+        auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
+        core = Core(cfg, p, api_class=FakeApi)
+        core._origin_json = lambda url: None
+        self.events = []
+        core.events.on("*", lambda n, pl: self.events.append((n, pl)))
+        self.addCleanup(core.shutdown)
+        return core, FakeApi.world
+
+    def test_in_activity_and_answered(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common import activity as act
+        core, w = self.make_new()
+        self.assertNotIn("requests", core.lane_by_name)
+        w.requests.append(BOB)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.activity_unread(), 1)
+        self.assertTrue(any(n == "activity_updated" for n, _p in self.events))
+        view = View(core)
+        rows = view.activity()
+        self.assertEqual((rows[0].kind, rows[0].asks, rows[0].who.id), ("request", "follow", "B"))
+        self.assertEqual(act.act_key(rows[0]), "follow_request")
+        (row,) = [r for r in act.rows(rows, view.activity_seen(), str) if r.request]
+        self.assertEqual(row.kind, "follow_request")
+        core.dismiss_activity(rows[0].id).result()  # × leaves it waiting
+        self.assertEqual(len(core.follow_requests), 1)
+        self.assertTrue(view.answer_interaction(rows[0], True).result())
+        self.assertEqual(core.follow_requests, [])
+        self.assertEqual(core.activity_unread(), 0)
+
+    def test_with_its_own_lane_not_twice(self):
+        core, w = self.make_new(enabled=["home", "activity", "requests"])
+        w.requests.append(BOB)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.activity_unread(), 0)
+        self.assertFalse(any(e["type"] == "follow_request" for e in core.activity_entries()))
+
+    def test_off(self):
+        core, w = self.make_new(requests=False)
+        w.requests.append(BOB)
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(core.activity_entries(), [])
+        self.assertEqual(core.follow_requests, [])  # nobody shows them: not even asked
+
+    def test_answer_by_id_alone(self):
+        core, w = self.make_new()
+        w.requests.append(BOB)
+        core.connect().result()
+        core.poll_once()
+        self.assertTrue(core.answer_interaction({"id": "follow_request:B",
+                                                 "type": "follow_request"}, False).result())
+        self.assertEqual(core.follow_requests, [])
+
+
+class TitleLanguagesTest(unittest.TestCase):
+    def test_title_per_language(self):
+        from fedtail import i18n
+        self.addCleanup(i18n.setup, "ru")
+        rule = {"name": "posts", "title": {"ru": "Посты", "en": "Posts"},
+                "any": [{"author": "me"}]}
+        (c,), w = custom.load(config.validate({"lanes": {"custom": [rule]}})[0])
+        self.assertEqual(w, [])
+        i18n.setup("en")
+        self.assertEqual(c.title, "Posts")
+        i18n.setup("ru")
+        self.assertEqual(c.title, "Посты")
+        (only,), _w = custom.load(config.validate({"lanes": {"custom": [
+            dict(rule, title={"ka": "პოსტები"})]}})[0])
+        self.assertEqual(only.title, "პოსტები")
+        (en,), _w = custom.load(config.validate({"lanes": {"custom": [
+            dict(rule, title={"en": "Posts", "ka": "პოსტები"})]}})[0])
+        self.assertEqual(en.title, "Posts")
+        (empty,), _w = custom.load(config.validate({"lanes": {"custom": [
+            dict(rule, title={"en": ""})]}})[0])
+        self.assertEqual(empty.title, "posts")

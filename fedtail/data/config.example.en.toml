@@ -625,7 +625,7 @@ preset = "own"
 # global = federated, mine = my_posts, favourites = my_likes.
 # federated and local are fetched only while open, and without counts: they are browsed, not
 # read to the end.
-enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs", "important", "bookmarks", "activity", "requests"]
+enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs", "important", "bookmarks", "activity"]
 
 # Accounts to count as bots even if they have no "bot" tick.
 # Your server — just "nick", another one — "nick@server".
@@ -681,7 +681,7 @@ detect_min_words = 12
 tag_groups = []
 
 # Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
-# name (a word, stays), title (what the sidebar shows), any (conditions: a post goes in if it
+# name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }), any (conditions: a post goes in if it
 # matches any of them; inside a condition every key must match), none (conditions that keep a
 # post out). Keys of a condition: source (home, local, federated, mentions, mine, bookmarks,
 # favourites, subs, "list:<id>"; none — guessed from the rest), author (me, followed, local,
@@ -941,6 +941,11 @@ types = ["favourite", "reblog", "follow"]
 # like and boost is set in the post settings). They come here too, with the buttons
 # "Approve" and "Reject". false — don't show (approve on the server's site then).
 approvals = true
+
+# Follow requests here too, on top, with "Approve" / "Reject" — so the "Follow requests" lane
+# isn't needed (it stays for whoever wants it, in lanes.enabled: then they're there, not here).
+# false — only in that lane.
+requests = true
 
 # The server's own notices (Mastodon 4.3+): your server (or another) blocked another one —
 # and your follows and followers from there were cut, how many and why; a warning from

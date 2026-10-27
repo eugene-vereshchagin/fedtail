@@ -50,7 +50,7 @@ MEDIA_KIND = {"image": "image", "gifv": "gifv", "video": "video", "audio": "audi
 
 ACTIVITY_KIND = {
     "mention": "mention", "status": "post", "reblog": "share", "favourite": "like",
-    "follow": "follow", "follow_request": "follow_request", "poll": "poll",
+    "follow": "follow", "follow_request": "request", "poll": "poll",
     "update": "update", "quote": "quote", "quoted_update": "update",
     "pleroma:emoji_reaction": "reaction", "reaction": "reaction",
     "admin.sign_up": "notice", "admin.report": "notice",
@@ -366,7 +366,8 @@ def _notice(raw):
     return ""
 
 
-ASKS = {"pending.reply": "reply", "pending.favourite": "like", "pending.reblog": "share"}
+ASKS = {"pending.reply": "reply", "pending.favourite": "like", "pending.reblog": "share",
+        "follow_request": "follow"}
 
 
 def _details(raw):

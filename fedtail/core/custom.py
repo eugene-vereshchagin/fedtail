@@ -79,7 +79,7 @@ class Custom:
     def __init__(self, rule, warnings=()):
         self.rule = rule
         self.name = PREFIX + rule.name
-        self.title = rule.title or rule.name
+        self._title = rule.title or rule.name
         self.warnings = list(warnings)
         feeds = set()
         for cond in rule.any:
@@ -90,6 +90,16 @@ class Custom:
         self.feeds = {f for f in feeds if _feedable(f)}
         self.digest = hashlib.sha1(json.dumps(rule_key(rule), sort_keys=True, default=str)
                                    .encode()).hexdigest()[:12]
+
+    @property
+    def title(self):
+        """The lane's title; written per language ({ ru = …, en = … }) — the interface's,
+        else English, else the first one."""
+        t = self._title
+        if not isinstance(t, dict):
+            return t
+        from ..i18n import current_language
+        return t.get(current_language()) or t.get("en") or next(iter(t.values()))
 
     def lane(self):
         return lanes.Lane(self.name, self.name, lanes._all,

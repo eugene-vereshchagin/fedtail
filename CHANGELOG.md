@@ -2,6 +2,12 @@
 
 ## 0.21.0 — in progress
 
+- A free lane's title can be given per language: `title = { ru = "Посты", en = "Posts" }` —
+  the interface's language is shown, else English.
+- Follow requests in Activity (`activity.requests`, on): on top, with "Approve" / "Reject", in
+  every interface — so the "Follow requests" lane is no longer among the defaults (it stays; with
+  it on, requests are there, not in Activity, and counted once).
+- The Qt sidebar named a free lane by its raw key (`lane_custom:posts`), not its title.
 - `--rebuild-config`: options a version no longer has are kept under a note in the file's own
   language (it was always Russian).
 - "To me" (`to_me`): replies to me and mentions of me in one lane, with quick filters for each —

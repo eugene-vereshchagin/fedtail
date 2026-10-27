@@ -22,6 +22,8 @@ from ..protocols.mastodon import counters
 from ..protocols.mastodon.api import ApiError
 from .model import real
 
+# follow requests stand in Activity as entries of their own (activity.requests)
+FOLLOW_REQUEST = "follow_request:"
 log = logging.getLogger(__name__)
 
 UNSUPPORTED_STATUS = (404, 405, 410, 501)
@@ -248,6 +250,9 @@ class SocialMixin:
 
     def dismiss_activity(self, nid):
         """One notification gone: from Activity always, from the server when it can."""
+        if str(nid).startswith(FOLLOW_REQUEST):  # a request isn't a notification: no
+            return self.submit(lambda: None)    # answer, it waits (the buttons answer)
+
         def job():
             key = self.store.activity_group_of(nid)
             if key and self.supports("grouped"):
@@ -268,7 +273,17 @@ class SocialMixin:
 
     def answer_interaction(self, entry, approve):
         """A reply, like or boost waiting for my approval (GoToSocial's interaction
-        policies): yes or no, on the server; the notification goes either way."""
+        policies): yes or no, on the server; the notification goes either way. A follow
+        request in Activity (activity.requests) is answered the same way."""
+        if entry.get("type") == "follow_request":
+            who = (entry.get("account") or {}).get("id") or \
+                str(entry.get("id", ""))[len(FOLLOW_REQUEST):]
+
+            def answer():
+                self.answer_follow(who, approve).result()
+                self.emit("activity_updated", None)
+                return True
+            return self.submit(answer)
         kind = entry["type"].split(".", 1)[-1]  # pending.reply -> reply
         st = entry.get("status") or {}
         who = (entry.get("account") or {}).get("id")

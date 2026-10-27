@@ -207,12 +207,15 @@ class BridgeTest(_Base):
         self.assertTrue(any(r["title"].startswith("● ") for r in rows))  # new ones marked
         self.assertTrue(all(b["act"] for r in rows for b in r["buttons"]))
         lanes = {x["name"]: x for s in self.call("hub")["sections"] for x in s["lanes"]}
-        self.assertEqual(lanes["activity"]["unread"], 0)
-        # a row's ×: done through the place, which comes back drawn again
-        dismiss = next(b for b in rows[0]["buttons"] if b["act"][1] == "dismiss")
+        # seen on screen: only the follow requests still waiting count (activity.requests)
+        self.assertEqual(lanes["activity"]["unread"], len(self.bridge._core().follow_requests))
+        # a row's ×: done through the place, which comes back drawn again (a request's ×
+        # leaves it waiting: its buttons answer it)
+        dismiss = next(b for r in rows for b in r["buttons"] if b["act"][1] == "dismiss"
+                       and not str(b["act"][-1]).startswith("follow_request:"))
         after = self.call("place_act", json.dumps(dismiss["act"]))
         self.assertEqual(len(after["page"]["rows"]), len(rows) - 1)
-        self.assertEqual(self.call("lane", "requests")["place"], "requests")
+        self.assertNotIn("requests", lanes)  # requests are in Activity now (activity.requests)
 
     def test_the_command_line_is_off_on_the_phone_unless_asked(self):
         self.demo()

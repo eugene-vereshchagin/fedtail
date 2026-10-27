@@ -188,6 +188,8 @@ ACTIVITY_WORD = {"like": "act_favourite", "share": "act_reblog", "follow": "act_
                  "poll": "act_poll", "update": "act_update", "post": "act_status",
                  "mention": "act_mention", "quote": "act_quote", "reaction": "act_reaction",
                  "follow_request": "act_follow_request"}
+REQUEST_WORD = {"follow": "act_follow_request", "reply": "act_pending.reply",
+                "like": "act_pending.favourite", "share": "act_pending.reblog"}
 
 
 def show_activity(a, width=80, unread=False):
@@ -199,7 +201,7 @@ def show_activity(a, width=80, unread=False):
         name = (a.who.name or "").strip()
         if name and name != a.who.username:
             out.head.append(("name", name))
-    word = ACTIVITY_WORD.get(a.kind)
+    word = REQUEST_WORD.get(a.asks) if a.kind == "request" else ACTIVITY_WORD.get(a.kind)
     if a.kind == "reaction" and a.emoji:
         what = f"{a.emoji} " + _("act_reaction")
     elif a.kind == "notice":

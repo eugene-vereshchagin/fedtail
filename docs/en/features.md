@@ -567,6 +567,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
 | Slow mode and “notify at most every…” | has | 0.20.0 | `poll.slow_minutes`; ≡ → “Slow mode…” — with “notify at most every…” for each lane | own | only in fedtail (others have only the poll interval) | — |
 | “Of them new”: what the last update brought | has | 0.20.0 | on the phone's tiles, in the sidebar of the windows, the web page and the terminal | own | only in fedtail | — |
+| Follow requests in Activity | has | 0.21.0 | `activity.requests` | `follow_requests`, `follow_requests/<id>/authorize\|reject` | Mastodon web, Ivory, Phanpy — among notifications | — |
 
 <details><summary>In detail</summary>
 
@@ -591,6 +592,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Slow mode and “notify at most every…”.** The news piles up and comes in one batch every 5, 10, 15, 30, 60 minutes or more — with its counts, notifications and sound; nothing stirs between batches to get in the way of work. The live stream wakes no poll meanwhile, Refresh asks at once; on the phone a push and the background round wait for their batch too, and the overview says when the next one comes. Each lane that notifies or chimes gets its own “notify at most every N minutes”: the lane updates as usual, its notifications and sound pile up and come in one batch (what was read meanwhile stays out of it); after a long quiet the first comes at once.
 
 **“Of them new”: what the last update brought.** Beside the unread count, smaller — how many of them the last update that brought anything brought: “300” with “56 of them new” under it on the phone's tile, “300 +56” in the sidebar (the words on hover). What's read of the batch leaves the number. With slow mode — exactly what the last batch brought.
+
+**Follow requests in Activity.** Requests stand on top of Activity with “Approve” / “Reject” (in the terminal — a / d), counted in its number; × leaves them be. The “Follow requests” lane isn't among the defaults any more; with it on, requests are there, not in Activity.
 
 </details>
 

@@ -785,7 +785,7 @@ class Core(SocialMixin):
                 self.emit("lanes_updated", {"direct": []})  # read already: no news, no sound
             self._step("my direct")
             new_requests = []
-            if "requests" in self.lane_by_name:
+            if "requests" in self.lane_by_name or self._requests_in_activity():
                 try:
                     self.follow_requests = self.api.follow_requests() or []
                     ids = {a["id"] for a in self.follow_requests}
@@ -797,6 +797,8 @@ class Core(SocialMixin):
                     if changed:  # not every poll: the tab would be rebuilt for nothing
                         self._warm_lanes()  # the window counts every lane on this too
                         self.emit("requests_updated", self.follow_requests)
+                        if self._requests_in_activity():
+                            self.emit("activity_updated", len(new_requests))
                 except Exception as e:
                     self.emit("error", f"requests: {e}")
 
@@ -1268,13 +1270,28 @@ class Core(SocialMixin):
         return self.api.notifications(types, **page)
 
     def activity_entries(self, limit=300):
-        return self.store.activity_recent(limit)
+        """Activity newest first; with activity.requests the follow requests on top, as
+        entries waiting for a yes (social.FOLLOW_REQUEST ids, answered by the buttons)."""
+        got = self.store.activity_recent(limit)
+        if self._requests_in_activity():
+            from .social import FOLLOW_REQUEST
+            got = [{"id": FOLLOW_REQUEST + a["id"], "type": "follow_request", "account": a,
+                    "created_at": a.get("created_at") or "", "sort": "~" + a["id"]}
+                   for a in self.follow_requests or ()] + list(got)
+        return got
+
+    def _requests_in_activity(self):
+        """Follow requests stand in Activity — when it's on and there's no lane of their
+        own (then they'd be there twice, and counted twice)."""
+        return bool(self.cfg["activity"].get("requests", True)) and \
+            "activity" in self.lane_by_name and "requests" not in self.lane_by_name
 
     def activity_seen_mark(self):
         return self.store.kv_get("activity_seen", "")
 
     def activity_unread(self):
-        return self.store.activity_count_after(self.activity_seen_mark())
+        waiting = len(self.follow_requests or ()) if self._requests_in_activity() else 0
+        return self.store.activity_count_after(self.activity_seen_mark()) + waiting
 
     def mark_activity_seen(self, upto=None):
         """Seen up to this entry's sort (what came on screen), or everything (None: the
