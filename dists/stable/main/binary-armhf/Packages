@@ -22,3 +22,27 @@ Description: fediverse client for people who miss Point.im and Juick
  in a terminal (with python3-textual), as a GTK 4 window (fedtail --ui gtk)
  and as a page in a browser.
 
+Package: fedtail
+Architecture: all
+Version: 0.20.1
+Priority: optional
+Section: net
+Maintainer: Eugene Vereshchagin <eugene-vereshchagin@users.noreply.github.com>
+Installed-Size: 14764
+Depends: python3 (>= 3.11), python3-requests, python3-pyside6.qtwidgets
+Recommends: python3-pyside6.qtdbus, python3-pyside6.qtsvg, python3-pyside6.qtmultimedia, python3-pyside6.qtmultimediawidgets, python3-cryptography, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1
+Suggests: python3-textual, python3-pil
+Filename: pool/main/fedtail_0.20.1_all.deb
+Size: 5157836
+MD5sum: 1510929efbd2943e8bf4bc962f2dc42c
+SHA1: 4a819451c6c44d824909b854d3e5f55532eb6b7f
+SHA256: 9121baa0049ad4b54628ed8ada996405a18c08ebb1bdd20023a77c6f904376e2
+SHA512: 988505b39f959dde93bfd806b34090645a6887018f185d1173e1939d6f6adffca68329a3f0297719f48fe86710807b799cab0cd85d6ebac1d240ab7576bd6580
+Homepage: https://github.com/eugene-vereshchagin/fedtail
+Description: fediverse client for people who miss Point.im and Juick
+ A desktop client for GoToSocial, Mastodon, Akkoma and anything else that
+ speaks the Mastodon API: whole threads as trees, every reply shows what it
+ answers, lanes that never jump, everything is a config option. Also runs
+ in a terminal (with python3-textual), as a GTK 4 window (fedtail --ui gtk)
+ and as a page in a browser.
+
