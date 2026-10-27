@@ -66,6 +66,8 @@ data class HubLane(
     val name: String, val title: String, val unread: Int, val peek: String,
     val capped: Boolean = false, // as many unread as the lane holds: maybe more past them
     val fresh: Int = 0, // of them, what the last update brought ("of them new 56")
+    val pos: Int = 0, // where the set (lanes.preset) puts it: the sidebar's order
+    val group: String = "", // the set's section it stands under ("Timelines", "Personal"…)
 ) {
     /** The count as shown: "300+" when there may be more than the lane holds. */
     val count: String get() = if (capped) "$unread+" else "$unread"
@@ -462,7 +464,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             HubSection(s.optString("key"), (0 until arr.length()).map { j ->
                 val l = arr.getJSONObject(j)
                 HubLane(l.optString("name"), l.optString("title"), l.optInt("unread"),
-                    l.optString("peek"), l.optBoolean("capped"), l.optInt("fresh"))
+                    l.optString("peek"), l.optBoolean("capped"), l.optInt("fresh"),
+                    l.optInt("pos"), l.optString("group"))
             })
         }
         val order = got.optJSONArray("order") ?: JSONArray()
@@ -479,6 +482,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun tileLanes(): List<Pair<HubLane, Boolean>> {
         val all = hub.flatMap { s -> s.lanes.map { it to (s.kind == "you") } }
         if (hubPinned.isEmpty()) return all.filter { (l, _) -> hub.any { s -> s.kind != "browse" && l in s.lanes } }
+            .sortedBy { it.first.pos }
         return hubPinned.mapNotNull { name -> all.firstOrNull { it.first.name == name } }
     }
 
@@ -487,7 +491,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val tiles = tileLanes().map { it.first.name }.toSet()
         return hub.flatMap { s -> s.lanes.map { it to (s.kind == "browse") } }
             .filter { it.first.name !in tiles }
-            .sortedBy { if (it.second) 1 else 0 }
+            .sortedBy { it.first.pos } // as the set has them, its sections in their order
     }
 
     var editTiles by mutableStateOf(false) // "change" over the tiles: rows to move / remove
@@ -539,10 +543,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Columns side by side: the lane pane never stands empty — the lane of last time. */
     fun openStartLane() {
         if (current == null) (startLane ?: lanes.firstOrNull()?.name)?.let { showLane(it) }
-    }
-
-    fun readInRow() {
-        nextLane(after = null)?.let { showLane(it.name) }
     }
 
     fun showLane(name: String) {

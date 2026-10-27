@@ -192,6 +192,12 @@ class BridgeTest(_Base):
         self.assertEqual(hub["order"], [x for x in hub["order"] if lanes[x]["unread"]])
         self.assertLess(hub["order"].index("to_me"), hub["order"].index("home"))
         self.assertEqual(hub["unread"], sum(lanes[x]["unread"] for x in hub["order"]))
+        # where the set puts each lane, under which of its sections (lanes.preset)
+        every = sorted(lanes.values(), key=lambda x: x["pos"])
+        self.assertEqual([x["pos"] for x in every], list(range(len(every))))
+        self.assertLess(lanes["federated"]["pos"], lanes["home"]["pos"])  # fedtail's order
+        self.assertTrue(lanes["home"]["group"])
+        self.assertNotEqual(lanes["home"]["group"], lanes["to_me"]["group"])
 
     def test_activity_is_rows_not_an_empty_lane(self):
         """Activity (and follow requests) are no posts: the lane brings the windows' rows

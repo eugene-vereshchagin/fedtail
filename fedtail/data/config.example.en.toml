@@ -609,7 +609,9 @@ sync_markers = true
 #   "tusky"    — as Tusky's tabs: Home, Mentions (private ones too) + Activity, Local,
 #                Federated, Direct;
 #   "phanpy"   — as Phanpy: Home, Mentions (private ones too), Direct, Activity, Bookmarks,
-#                Likes, Local.
+#                Likes, Local;
+#   "fedilab"  — as Fedilab's tabs: Home, Local, Federated, Mentions (private ones too) +
+#                Activity, Direct, Bookmarks, Favourites.
 # The rules of each are in fedtail/data/presets.toml; `fedtail --lanes-to-config` writes the
 # chosen set's lanes here, as [[lanes.custom]], to read and change. A [[lanes.custom]] of the
 # same name takes a set's lane's place; a new name adds a lane.

@@ -136,7 +136,8 @@ class PlaceTest(FreeBase):
     def test_list_and_moves(self):
         page = self.places.page("lanes")
         keys = [r.key for r in page.rows if r.key]
-        self.assertEqual(keys[:4], ["set:fedtail", "set:mastodon", "set:tusky", "set:phanpy"])
+        self.assertEqual(keys[:5], ["set:fedtail", "set:mastodon", "set:tusky", "set:phanpy",
+                                    "set:fedilab"])
         i = keys.index("_new")
         self.assertEqual(keys[i:i + 3], ["_new", "federated", "home"])
         out = self.places.act("lanes", "up", "home")

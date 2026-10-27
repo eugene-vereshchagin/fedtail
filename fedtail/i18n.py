@@ -379,6 +379,8 @@ _STRINGS = {
                         "Локальная, Федерация, Личные",
         "le_set_phanpy": "как Phanpy: Лента, Упоминания (и личные), Личные, Активность, "
                          "Закладки, Лайки, Локальная",
+        "le_set_fedilab": "как вкладки Fedilab: Лента, Локальная, Федерация, Упоминания "
+                          "(и личные) и Активность, Личные, Закладки, Избранное",
         "le_set_now": "сейчас",
         "le_set_now_own": "сейчас, с твоими изменениями",
         "le_set_take": "Взять",
@@ -1629,6 +1631,8 @@ _STRINGS = {
                         "Federated, Direct",
         "le_set_phanpy": "as Phanpy: Home, Mentions (private too), Direct, Activity, Bookmarks, "
                          "Likes, Local",
+        "le_set_fedilab": "as Fedilab's tabs: Home, Local, Federated, Mentions (private too) "
+                          "and Activity, Direct, Bookmarks, Favourites",
         "le_set_now": "now",
         "le_set_now_own": "now, with your changes",
         "le_set_take": "Take",

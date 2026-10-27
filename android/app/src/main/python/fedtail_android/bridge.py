@@ -506,7 +506,6 @@ def add_language(code):
 # the overview's sections, in the order "read in a row" walks them: what is addressed to
 # you first, then what you follow, then the lists; lanes without counts are only browsed
 YOU = ("direct", "to_me", "replies", "mentions", "requests", "activity")
-READING = ("subs", "important", "home", "bots")  # threads you follow, then people, bots
 BROWSED = ("my_posts",)  # counted, but your own posts are nothing to catch up on
 PEEK = 90
 
@@ -519,8 +518,10 @@ def hub():
         from fedtail.core.lanes import is_list
         core = _core()
         sections = {k: [] for k in ("you", "reading", "lists", "browse")}
-        for x in _s["web"].lanes():
+        group = ""
+        for pos, x in enumerate(_s["web"].lanes()):
             name = x["name"]
+            group = x.get("group") or group  # the set's section: given on its first lane
             lane = core.lane_by_name.get(name)
             lazy = lane is None or lane.lazy or lane.source is None
             if name in ("activity", "requests"):
@@ -535,15 +536,16 @@ def hub():
                 kind = "reading"
             unread = 0 if kind == "browse" else int(x["unread"] or 0)
             sections[kind].append({"name": name, "title": x["title"], "unread": unread,
+                                   # where the set puts it (lanes.preset, the sidebar's
+                                   # order) and under which of its sections
+                                   "pos": pos, "group": group if x.get("section") else "",
                                    # "of them new": what the last update brought
                                    "fresh": int(x.get("fresh") or 0) if unread else 0,
                                    # a lane holds its newest feed.render_limit posts: as many
                                    # unread means there may be more past them ("300+")
                                    "capped": unread >= core.cfg["feed"]["render_limit"],
                                    "peek": _peek(core, name) if unread and not lazy else ""})
-        for kind, order in (("you", YOU), ("reading", READING)):
-            sections[kind].sort(key=lambda x, o=order: o.index(x["name"])
-                                if x["name"] in o else len(o))
+        # within a section the lanes stand as the set has them (lanes.preset)
         walk = [x for k in ("you", "reading", "lists") for x in sections[k]]
         every = [x for v in sections.values() for x in v]
         return {"sections": [{"key": k, "lanes": v} for k, v in sections.items() if v],

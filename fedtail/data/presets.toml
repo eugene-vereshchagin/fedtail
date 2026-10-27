@@ -306,6 +306,80 @@ kind = "tags"
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
+# As Fedilab's tabs (lanes.preset = "fedilab"): Home, Local, Federated, Notifications (here:
+# Mentions, private ones among them, + Activity), Direct messages; Bookmarks and Favourites
+# from its drawer, lists and tags.
+
+[[fedilab]]
+name = "home"
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+
+[[fedilab]]
+name = "local"
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[fedilab]]
+name = "federated"
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[fedilab]]
+name = "mentions"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }]
+
+[[fedilab]]
+name = "activity"
+group = "personal"
+kind = "activity"
+
+[[fedilab]]
+name = "direct"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[fedilab]]
+name = "bookmarks"
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[fedilab]]
+name = "my_likes"
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[fedilab]]
+name = "lists"
+kind = "lists"
+
+[[fedilab]]
+name = "tags"
+kind = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
 # Lanes no set shows by default but any config may turn on (lanes.enabled) or take as a
 # start for its own: the ones before To me, Follow requests as a lane, My likes.
 

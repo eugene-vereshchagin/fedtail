@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -60,8 +59,8 @@ import androidx.compose.ui.unit.sp
 
 /**
  * The overview of lanes — the app's home (mockup "1"): every lane by kind, its count and
- * its first unread post, like a list of chats; "read in a row" walks the lanes with news,
- * what is addressed to you first. Lanes without counts (Federated, tags…) are only browsed.
+ * its first unread post, like a list of chats; the rest as the set has them (lanes.preset).
+ * Lanes without counts (Federated, tags…) are only browsed.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -81,8 +80,11 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                         Column {
                             Text(stringResource(R.string.hub_title), fontWeight = FontWeight.Bold)
                             Text((if (model.handle.isBlank()) "fedtail" else "@" + model.handle) +
-                                    if (model.demo) " · demo" else "",
-                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    (if (model.demo) " · demo" else "") +
+                                    // how fresh, slow mode: "updated at 14:32 · next at 14:45"
+                                    (if (model.hubSlow.isNotBlank()) " · " + model.hubSlow else ""),
+                                fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                     actions = {
@@ -138,7 +140,6 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
         PullToRefreshBox(isRefreshing = model.pulling, onRefresh = { model.refresh(pulled = true) },
             modifier = Modifier.padding(pad).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-                item(key = "row") { ReadInRow(model) }
                 if (tiles) tileGrid(model, pane) else laneRows(model)
             }
         }
@@ -175,14 +176,22 @@ private fun androidx.compose.foundation.lazy.LazyListScope.tileGrid(model: AppMo
             repeat(per - rows[r].size) { Box(Modifier.weight(1f)) }
         }
     }
+    // the rest as the set has them (lanes.preset), under its sections' titles
     val rest = model.restLanes()
     if (rest.isEmpty()) return
-    item(key = "h-rest") {
-        SmallHead(stringResource(R.string.sec_rest),
-            Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp))
-    }
-    items(rest, key = { "r-" + it.first.name }) { (lane, browsed) ->
-        RestRow(lane, browsed) { model.showLane(lane.name) }
+    var last: String? = null
+    rest.forEachIndexed { i, (lane, browsed) ->
+        val head = lane.group
+        if (head != last) {
+            item(key = "h-rest-$i") {
+                SmallHead(head.ifBlank { stringResource(R.string.sec_rest) },
+                    Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp))
+            }
+            last = head
+        }
+        item(key = "r-" + lane.name) {
+            RestRow(lane, browsed) { model.showLane(lane.name) }
+        }
     }
 }
 
@@ -294,38 +303,6 @@ fun LaneTile(
                 textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
         }
     }
-}
-
-@Composable
-private fun ReadInRow(model: AppModel) {
-    Surface(color = MaterialTheme.colorScheme.surface) {
-        Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 14.dp)) {
-            val any = model.hubUnread > 0
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(14.dp))
-                .background(if (any) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(enabled = any) { model.readInRow() }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                val fg = if (any) MaterialTheme.colorScheme.onPrimary
-                         else MaterialTheme.colorScheme.onSurfaceVariant
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(if (any) R.string.read_in_row else R.string.all_read),
-                        color = fg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    if (any) {
-                        Text(stringResource(R.string.read_in_row_sub, model.hubUnread, model.hubWithNews),
-                            color = fg, fontSize = 12.sp)
-                    }
-                    // slow mode: when the next batch comes
-                    if (model.hubSlow.isNotBlank()) {
-                        Text(model.hubSlow, color = fg, fontSize = 12.sp)
-                    }
-                }
-                if (any) Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = fg)
-            }
-        }
-    }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable

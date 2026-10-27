@@ -2,6 +2,16 @@
 
 ## 0.21.0 — in progress
 
+- Android: the overview of tiles stays the home screen; the lanes under the tiles stand as
+  the chosen set has them (`lanes.preset`), under its sections' titles, instead of a fixed
+  order of fedtail's own. The big "Read in a row" button is gone (swipe left or "what's
+  next" at a lane's end still go on to the next lane with news); how fresh the lanes are
+  moved into the bar under the account.
+- A fifth set of lanes: `lanes.preset = "fedilab"` — as Fedilab's tabs: Home, Local,
+  Federated, Mentions (private ones too) and Activity, Direct, Bookmarks, Favourites.
+- The lane editor: lanes of the set copied into config.toml as they are (Activity, lists,
+  tags…) no longer stop saving ("unknown key 'kind'") nor show as changed.
+
 - **Lanes of rules, the rest of the plan** (docs/en/dev/feeds.md):
   - `sort` by counts — `replies`, `likes`, `boosts`, `density` (all three per hour of age);
     `mode = "catch_up"` with `window` ("12h", "2d") — only what came within it;
