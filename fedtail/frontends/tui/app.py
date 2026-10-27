@@ -53,7 +53,7 @@ log = logging.getLogger(__name__)
 STYLE = {"num": "bold magenta", "alias": "cyan", "who": "bold", "name": "dim",
          "time": "dim", "boost": "green", "direct": "yellow", "muted": "dim",
          "unread": "bold green", "quote": "italic", "myreply": "dim cyan",
-         "conv": "cyan", "divider": "bold green"}
+         "conv": "cyan", "divider": "bold green", "newcomer": "bold red"}
 
 
 def _cmd_line():

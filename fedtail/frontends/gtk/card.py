@@ -12,6 +12,7 @@ from ...model import Post, Share, real
 from ...model.text import snippet
 from .. import pango, richtext
 from ..common import actions
+from ..common.cardtext import newcomer_bit
 from .gi_setup import Gdk, GLib, Gtk, Pango, fit_box, forget, tip
 
 VIS_WORD = {"public": "pub", "unlisted": "unl", "followers": "priv", "direct": "dm"}
@@ -312,6 +313,11 @@ class Card(Gtk.Box):
                              markup=True, wrap=True)
             ctx_lab.connect("activate-link", self._link)
             col.append(ctx_lab)
+        new = newcomer_bit(p, parent)  # someone new in a private talk
+        if new is not None:
+            new_lab = _label(new.text, ("ft-newcomer",), wrap=True)
+            tip(new_lab, new.tip)
+            col.append(new_lab)
 
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         # the text in a box of its own: a translation takes its place and gives it back

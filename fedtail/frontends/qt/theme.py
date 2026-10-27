@@ -372,6 +372,7 @@ QLabel#ctx {{ background: {k('ctx')}; color: {k('muted')}; border-left: 3px soli
 QLabel#myreply {{ background: {k('myreply')}; color: {k('on_myreply')}; border-radius: 6px;
     padding: 5px 10px; }}
 QLabel#cw {{ color: {k('muted')}; font-style: italic; }}
+QLabel#newcomer {{ color: {k('hot')}; font-weight: 700; }}
 QWidget#actions QToolButton {{ color: {k('muted')}; border: 0; border-radius: 6px; padding: 5px 9px; }}
 QWidget#actions QToolButton:hover {{ background: {k('ctx')}; color: {k('text')}; }}
 QWidget#actions QToolButton[active="true"] {{ background: {k('active')}; color: {k('on_active')};

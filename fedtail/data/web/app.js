@@ -176,6 +176,7 @@ function renderPost(p, inThread) {
     if (p.context.id) c.onclick = () => openThread(p.context.id);
     card.append(c);
   }
+  if (wd && wd.newcomer) card.append(bitEl(wd.newcomer, "newcomer"));
   const content = el("div", "content");
   const body = el("div", "body");
   body.innerHTML = p.html;  // cleaned on the server: allowed tags, safe links, https pictures
@@ -2186,8 +2187,10 @@ async function checkText() {
   if (!$("#compose").open) return;
   if (!text.trim()) { hint(""); return; }
   try {
-    const r = await api("/api/compose_check", { text, cw: $("#cw").hidden ? "" : $("#cw").value });
-    hint([r.chain, r.camel].filter(Boolean).join(" · "));
+    const r = await api("/api/compose_check", { text, cw: $("#cw").hidden ? "" : $("#cw").value,
+      reply_to: state.replyTo ? state.replyTo.sid : "", visibility: $("#vis").value });
+    hint([r.newcomers, r.chain, r.camel].filter(Boolean).join(" · "));
+    $("#compose-hint").classList.toggle("newcomer", !!r.newcomers);
   } catch (e) { /* the local counter stands */ }
 }
 
@@ -2804,6 +2807,7 @@ async function start() {
   $("#text").addEventListener("keydown", completeKeys, true);
   $("#text").addEventListener("blur", () => setTimeout(completeHide, 200));
   $("#cw").addEventListener("input", counter);
+  $("#vis").addEventListener("change", counter);  // made private: whom it adds (checkText)
   $("#cw").placeholder = w("cw_placeholder");
   $("#cw-toggle").textContent = "⚠";
   $("#cw-toggle").title = w("cw_add_tip");

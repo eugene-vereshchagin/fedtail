@@ -299,7 +299,7 @@ Besides "setting up becomes programming":
 | 2 | Languages to read | done (0.21): `lanes.languages`, `languages_in` (federated, local, tags by default), `detect_language` (the script + python3-langdetect from 12 words) |
 | 3 | Stop words | the server's filters (they work already and are shared by every client); none of our own |
 | 4 | Followed tags and Home | tags, like people, go to Home; a tag lane can be taken apart with a tick "not in Home" (like lists' `exclusive`) — when made from the search and in the config; Home's quick filters: all · posts only · tags · boosts |
-| 5 | A stranger in a private talk | a banner "someone new was added to the conversation" when a private thread mentions someone not among its participants: on an incoming post and in the reply box before sending |
+| 5 | A stranger in a private talk | done (0.21): a banner "someone new was added to the conversation" when a private thread mentions someone not among its participants: on an incoming post and in the reply box before sending |
 | 6 | Replies and mentions | one lane "To me" with quick filters "replies / mentions" by default; whoever wants two makes them |
 | 7 | Threads with news | a thread with new comments is highlighted; a quick filter "posts with new replies": posts (not comments) with something new from anyone, the replies themselves only inside the thread |
 | 8 | Important people | a default lane: posts of those with the bell on; shown once the bell is on for anyone |

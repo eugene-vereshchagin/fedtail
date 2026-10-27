@@ -384,6 +384,7 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
 #pollbox .row { display: flex; gap: 8px; align-items: center; }
 #schedbox { margin-top: 6px; }
 #chars.over { color: var(--danger); font-weight: 700; }
+.post .newcomer, #compose-hint.newcomer { color: var(--danger); font-weight: 700; }
 #sensitive.on { color: var(--warn); }
 
 /* ---- parity with the windows: sections, marks, a thread's head, the editor's extras ---- */

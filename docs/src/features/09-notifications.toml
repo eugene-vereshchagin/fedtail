@@ -151,6 +151,23 @@ others.en = "only in fedtail"
 clients = []
 
 [[feature]]
+id = "dm-newcomer"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Новый человек в личной беседе — видно сразу"
+name.en = "Someone new in a private talk — shown at once"
+config.ru = "—"
+config.en = "—"
+api.ru = "своё"
+api.en = "own"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Личное сообщение, которое отвечает на личное и приводит в беседу того, кого в нём не было (автор или упомянутый), помечено строкой «👤 Новый в личной беседе: @кто» — он теперь читает и это сообщение, и то, что в нём процитировано. В окне ответа то же до отправки: пишешь личный ответ и добавляешь `@кого-то` не из беседы — под текстом «👤 Добавишь в личную беседу: @кто». Сравнивается с сообщением, на которое ответ: кто его написал и кого оно упоминало."
+details.en = "A private message that answers a private one and brings in someone who wasn't in it (its author or one it mentions) is marked “👤 New in this private talk: @who” — they now read this message and whatever it quotes. The reply box says the same before sending: write a private answer adding `@someone` from outside the talk, and under the text — “👤 You add to the private talk: @who”. Compared with the message answered: who wrote it and whom it mentioned."
+
+[[feature]]
 id = "push"
 status = "has"
 android = "has"

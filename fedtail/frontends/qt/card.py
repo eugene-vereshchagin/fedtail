@@ -34,6 +34,7 @@ from ...model.text import (
     without_quote_fallback,
 )
 from ..common import actions
+from ..common.cardtext import newcomer_bit
 from ..common.lane import (  # noqa: F401  (Qt's names)
     VIDEO_EXT,
     CardSpec,
@@ -382,6 +383,11 @@ class PostRow(QWidget):
 
         if not spec.in_thread and p.reply_to and self.ctx.cfg["feed"]["show_reply_context"]:
             v.addWidget(self._label(self._context_html(p), "ctx"))
+        new = newcomer_bit(p, spec.parent)  # someone new in a private talk
+        if new is not None:
+            lab = self._label(esc(new.text), "newcomer")
+            lab.setToolTip(new.tip)
+            v.addWidget(lab)
 
         # with its parent from the start: a widget without one becomes a window of its own
         # when shown — the CW switch below shows or hides it before it goes into the

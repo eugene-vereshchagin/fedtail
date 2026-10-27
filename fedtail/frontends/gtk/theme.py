@@ -142,6 +142,7 @@ window.fedtail, .fedtail-main {{ background: {c['window']}; color: {c['text']}; 
 .ft-body {{ font-size: {post_scale:.2f}em; }}
 .ft-card label link, .ft-ctx label link {{ color: {c['link']}; }}
 .ft-cw {{ font-weight: bold; }}
+.ft-newcomer {{ color: {c['hot']}; font-weight: bold; }}
 .ft-separator {{ color: {c['separator']}; border-bottom: 1px dashed {c['separator']};
                 padding: 2px 0; font-size: smaller; }}
 .ft-action {{ background: transparent; border: 1px solid transparent; box-shadow: none;

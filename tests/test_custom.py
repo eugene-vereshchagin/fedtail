@@ -868,6 +868,32 @@ class UnsortedAndListsTest(FreeBase):
         self.assertIn("unsorted", core.lane_by_name)
         self.assertEqual(self.ids(core, "unsorted"), ["010"])
 
+    def test_cleaning_is_heard(self):
+        """What leaves Unsorted (another lane holds it now) redraws it and its number."""
+        core, w = self.make([FEED])
+        core.cfg["lanes"]["enabled"] = ["feed"]
+        core._apply_lists([], {})
+        core.connect().result()
+        core.poll_once()
+        w.add(status("013", BOB, minute=1), mention=True)
+        core.poll_once()
+        self.assertIn("unsorted", core.lane_by_name)
+        core.store.put_items("custom:feed", [("013", status("013", BOB), "")])
+        self.events.clear()
+        core.poll_once()
+        self.assertEqual(core.unread_count("unsorted"), 0)
+        self.assertTrue(any(n == "lanes_updated" and "unsorted" in pl
+                            for n, pl in self.events))
+
+    def test_set_lane_written_out_keeps_its_word(self):
+        """The set written into the config (--lanes-to-config) without titles: the
+        built-in words, not "home", "to_me"."""
+        cfg, _ = config.validate({"lanes": {"custom": [
+            {"name": "home", "any": [{}]}, {"name": "mine2", "any": [{}]}]}})
+        got = {c.name: c.title for c in custom.load(cfg)[0]}
+        self.assertIsNone(got["home"])
+        self.assertEqual(got["mine2"], "mine2")
+
     def test_view_lanes_only_still_collect(self):
         """No routed lane (a set of views): Unsorted still catches what none keeps."""
         rule = {"name": "plain", "any": [{"source": "home", "author": "local"}]}

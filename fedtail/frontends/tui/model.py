@@ -77,6 +77,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     if words is not None:
         if words.boosted is not None:
             out.above.append(("boost", words.boosted.text))
+        if words.newcomer is not None:  # someone new in a private talk
+            out.above.append(("newcomer", words.newcomer.text))
         for b in words.meta:
             if b.kind in ("edited", "old"):
                 out.head.append(("muted", b.text))

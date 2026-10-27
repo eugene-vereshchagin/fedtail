@@ -281,6 +281,12 @@ class Compose(QDialog):
         self.camel.setWordWrap(True)
         self.camel.hide()
         lay.addWidget(self.camel)
+        # a private answer that brings someone new into the talk: said before it goes
+        self.newcomer = QLabel()
+        self.newcomer.setObjectName("newcomer")
+        self.newcomer.setWordWrap(True)
+        self.newcomer.hide()
+        lay.addWidget(self.newcomer)
 
         self.media = QListWidget()
         self.media.setObjectName("mediaList")
@@ -923,7 +929,11 @@ class Compose(QDialog):
     # ---- sending --------------------------------------------------------------------
     def _count(self):
         c = rules.count(self.text.toPlainText(), self.cw.text(), self.core.caps.max_characters,
-                        self.core.cfg)
+                        self.core.cfg, reply_to=self.reply_to,
+                        visibility=self.vis.currentData() or "", me=self.core.me)
+        self.newcomer.setVisible(bool(c.newcomers))
+        if c.newcomers:
+            self.newcomer.setText(_("dm_newcomer_typed", who=", ".join(c.newcomers)))
         if c.parts > 1:  # a chain: each part counts on its own
             self.counter.setText(_("chain_count", n=c.parts) + f" · {c.n} / {c.limit}")
         else:

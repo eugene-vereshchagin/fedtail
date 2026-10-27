@@ -217,7 +217,7 @@ class MergedCore:
         if lanes_module.is_list(name):
             lid = name[len(lanes_module.LIST_PREFIX):]
             return next((x["title"] for x in self.lists if x["id"] == lid), "?")
-        return None
+        return self.primary.lane_title(name)  # a lane of rules' own title, a tag lane's
 
     def lane_entries(self, name):
         parts = self._own_lane(name)

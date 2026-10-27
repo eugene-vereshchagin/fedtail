@@ -361,6 +361,11 @@ _STRINGS = {
         "save_failed": "Не сохранилось: {err}",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
+        "dm_newcomer": "Новый в личной беседе: {who}",
+        "dm_newcomer_tip": "Этого человека не было в сообщении, на которое здесь ответ: "
+                           "теперь он читает это сообщение и то, что в нём процитировано",
+        "dm_newcomer_typed": "👤 Добавишь в личную беседу: {who} — этот ответ прочтут "
+                             "и они",
         "camel_hint": "♿ {tags}: напиши с большими буквами внутри слов (#GeorgiaNews) — "
                       "экранные дикторы прочтут по словам, а не одной кашей",
         "cw_add": "Предупреждение", "alt_set": "есть подпись",
@@ -1472,6 +1477,11 @@ _STRINGS = {
         "save_failed": "Couldn't save: {err}",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
+        "dm_newcomer": "New in this private talk: {who}",
+        "dm_newcomer_tip": "This person wasn't in the message answered here: now they "
+                           "read this one and whatever it quotes",
+        "dm_newcomer_typed": "👤 You add to the private talk: {who} — they will read "
+                             "this answer too",
         "camel_hint": "♿ {tags}: capitalise the words inside (#GeorgiaNews) — screen "
                       "readers will read it word by word, not as one mumble",
         "cw_add": "Content warning", "alt_set": "described",

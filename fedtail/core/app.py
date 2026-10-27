@@ -1106,7 +1106,12 @@ class Core(SocialMixin):
             self.store.prune(name, self.keep_per_lane())
         if self._unsorted_on:  # lanes.unsorted (shown or waiting to have something)
             # what a lane has taken since (a list's, a tag lane's): out of Unsorted
-            self.store.drop_held(lanes.UNSORTED, {x.source for x in self.lanes if x.source})
+            if self.store.drop_held(lanes.UNSORTED,
+                                    {x.source for x in self.lanes if x.source}) and \
+                    lanes.UNSORTED in self.lane_by_name:
+                # left it: the lane and its number on the sidebar must hear (27.10: "12",
+                # and nothing in it)
+                refilled[lanes.UNSORTED] = []
             taken = {sid for name in got for sid in got[name]}
             left = custom.unsorted(self.store, self.lanes, new_by_source, self._ctx(), taken)
             if left:

@@ -121,6 +121,11 @@ class ComposeWindow(Gtk.Box):
         self.camel.add_css_class("ft-muted")
         self.camel.set_visible(False)
         box.append(self.camel)
+        # a private answer that brings someone new into the talk: said before it goes
+        self.newcomer = Gtk.Label(xalign=0, wrap=True)
+        self.newcomer.add_css_class("ft-newcomer")
+        self.newcomer.set_visible(False)
+        box.append(self.newcomer)
         self.media_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.append(self.media_box)  # a row per picture: name, description, ✕
         self.media = []             # [[path, description entry, focus [x, y] or None]]
@@ -771,7 +776,12 @@ class ComposeWindow(Gtk.Box):
             limit = self.view.caps.max_characters
         except Exception:  # noqa: BLE001
             limit = 500
-        c = rules.count(self._text(), self.cw.get_text(), limit, self.cfg)
+        c = rules.count(self._text(), self.cw.get_text(), limit, self.cfg,
+                        reply_to=self.reply_to, visibility=self.visibility(),
+                        me=self.view.me)
+        self.newcomer.set_visible(bool(c.newcomers))
+        if c.newcomers:
+            self.newcomer.set_text(_("dm_newcomer_typed", who=", ".join(c.newcomers)))
         text = (_("chain_count", n=c.parts) + " · " if c.parts > 1 else "") + f"{c.n} / {c.limit}"
         self.counter.set_text(text)
         (self.counter.add_css_class if c.over else self.counter.remove_css_class)("error")

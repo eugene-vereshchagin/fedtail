@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from ...core.hashtags import flat_tags
 from ...model import VISIBILITIES
@@ -123,16 +124,57 @@ class Count:
     parts: int       # >1: a chain, each part counted on its own
     over: bool
     flat_tags: tuple  # #lowercasetags worth CamelCase (post.camelcase_hint)
+    newcomers: tuple = ()  # @handles a private answer brings into the talk (newcomers())
 
 
-def count(text, cw, limit, cfg):
+def count(text, cw, limit, cfg, reply_to=None, visibility="", me=None):
+    """The counter's words. With reply_to (the Post answered), visibility and me (my
+    Account): whom a private answer adds to the talk, as the window
+    shows it before it is sent."""
     parts = chain_parts(text) if cfg["post"].get("chain", True) else []
     if len(parts) > 1:
         n = max(len(x) for x in parts) + len(cw)
     else:
         n = len(text) + len(cw)
     flat = tuple(flat_tags(text)) if cfg["post"]["camelcase_hint"] else ()
-    return Count(n, limit, max(1, len(parts)), n > limit, flat)
+    new = tuple(newcomers(text, reply_to, visibility, me))
+    return Count(n, limit, max(1, len(parts)), n > limit, flat, new)
+
+
+TYPED_MENTION = re.compile(r"(?<![\w/@])@(\w[\w.-]*(?:@[\w-]+(?:\.[\w-]+)+)?)")
+
+
+def _me_parts(me):
+    """(my username, my server's host) of my Account."""
+    if me is None:
+        return "", ""
+    username = (me.username or me.handle or "").split("@")[0]
+    return username.casefold(), (urlsplit(me.url or "").hostname or "").casefold()
+
+
+def newcomers(text, reply_to, visibility, me=None):
+    """Who a private answer being written brings into the talk: the @people in the text
+    that the private post answered neither came from nor named (cardtext.newcomers for
+    one received). [@handle as typed], in order; [] when it isn't private, answers nothing
+    or answers a post that isn't private."""
+    if visibility != "direct" or reply_to is None or \
+            getattr(reply_to, "visibility", "") != "direct":
+        return []
+    mine, host = _me_parts(me)
+
+    def norm(handle):
+        h = handle.lstrip("@").casefold()
+        user, _sep, at = h.partition("@")
+        return user if at == host else h
+
+    known = {norm(reply_to.author.handle)} | {norm(m.handle) for m in reply_to.mentions}
+    known.add(mine)
+    out = []
+    for typed in TYPED_MENTION.findall(text):
+        key = norm(typed.rstrip("."))
+        if key not in known and "@" + typed.rstrip(".") not in out:
+            out.append("@" + typed.rstrip("."))
+    return out
 
 
 TOKEN_AT_END = re.compile(r"(?:^|[\s(«\"'])([#@:])(\w[\w.@-]*)$")

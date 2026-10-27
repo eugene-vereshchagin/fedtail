@@ -242,7 +242,7 @@ def words_json(view, spec, date):
             "context": bit_json(w.context), "warning": w.warning, "folded": w.folded,
             "my_replies": [bit_json(b) for b in w.my_replies],
             "conversation": bit_json(w.conversation), "reactions": w.reactions,
-            "quote": bit_json(w.quote)}
+            "quote": bit_json(w.quote), "newcomer": bit_json(w.newcomer)}
 
 
 def web_date(when):
@@ -1539,9 +1539,15 @@ class Web:
         hint for screen readers (post.camelcase_hint)."""
         from ..common import compose as cc
         caps = self.core.caps
+        sid = str(body.get("reply_to") or "")
+        reply_to = self.core.by_id(sid) if sid else None
         c = cc.count(str(body.get("text") or ""), str(body.get("cw") or ""),
-                     int(getattr(caps, "max_characters", 500) or 500), self.core.cfg)
+                     int(getattr(caps, "max_characters", 500) or 500), self.core.cfg,
+                     reply_to=reply_to, visibility=str(body.get("visibility") or ""),
+                     me=self.core.me)
         return {"n": c.n, "limit": c.limit, "over": c.over, "parts": c.parts,
+                "newcomers": _("dm_newcomer_typed", who=", ".join(c.newcomers))
+                if c.newcomers else "",
                 "chain": _("chain_count", n=c.parts) if c.parts > 1 else "",
                 "camel": _("camel_hint", tags=", ".join("#" + t for t in c.flat_tags[:3]))
                 if c.flat_tags else ""}

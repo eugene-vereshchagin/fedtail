@@ -767,9 +767,17 @@ class ComposeScreen(Screen):
         core = self.app.core
         text = self.query_one("#c-text", TextArea).text
         cw = self.query_one("#c-cw", Input).value
+        try:
+            vis = self.query_one("#c-vis", Select).value
+        except Exception:  # noqa: BLE001 — not composed yet
+            vis = ""
         c = cc.count(text, cw, int(getattr(core.caps, "max_characters", 500) or 500),
-                     core.cfg)
+                     core.cfg, reply_to=self.reply_to, visibility=vis if isinstance(vis, str)
+                     else "", me=getattr(core, "me", None))
         line = Text(f"{c.n} / {c.limit}", style="bold red" if c.over else "")
+        if c.newcomers:  # a private answer that brings someone new in
+            line = Text(_("dm_newcomer_typed", who=", ".join(c.newcomers)) + "\n",
+                        style="bold red") + line
         if c.parts > 1:
             line = Text(_("chain_count", n=c.parts) + " · ") + line
         if c.flat_tags:
@@ -784,6 +792,9 @@ class ComposeScreen(Screen):
     def on_select_changed(self, e):
         """All accounts in one window: a reply from another account than the one that
         got the post is looked up on its server — said under the fields."""
+        if getattr(e.select, "id", "") == "c-vis":  # made private: whom it adds
+            self.show_count()
+            return
         if getattr(e.select, "id", "") != "c-from" or self.reply_to is None:
             return
         chosen = e.value or ""

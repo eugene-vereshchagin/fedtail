@@ -2,6 +2,15 @@
 
 ## 0.21.0 — in progress
 
+- **Someone new in a private talk.** A private answer that brings in someone the message it
+  answers neither came from nor mentioned says so on its card ("👤 New in this private talk:
+  @who"); the reply box says it before sending when a private answer adds `@someone` new.
+  Every window: Qt, GTK, the web page, the terminal.
+- Lanes of the set written into the config (`--lanes-to-config`) without a `title` showed
+  their bare names ("home", "to_me"): they take the built-in words again; with every account
+  in one window a lane's own title was lost too.
+- Unsorted kept its number on the sidebar after a lane took its posts (shown empty, "12"):
+  what leaves it redraws the lane and the number.
 - "Unsorted" is collected with any set of lanes (not only with routed lanes of your own) and
   shown only while something is in it; `lanes.unsorted = false` hides it for good and stops
   collecting.

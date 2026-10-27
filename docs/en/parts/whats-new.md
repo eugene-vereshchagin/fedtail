@@ -8,6 +8,7 @@
 - Home's quick filters: tags, boosts, threads with news
 - Important people
 - Unfollowed — gone from Home
+- Someone new in a private talk — shown at once
 - Follow requests in Activity
 
 **0.20.1:**

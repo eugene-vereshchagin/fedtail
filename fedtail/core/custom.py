@@ -231,8 +231,8 @@ def load(cfg):
         title = t.get("title") if own else None
         if isinstance(title, dict):
             title = {k: v for k, v in title.items() if v} or None
-        if own and not title:
-            title = n  # one's own lane without a title: its name
+        if own and not title and n not in presets.known_names():
+            title = n  # one's own lane without a title: its name (a set's: its own word)
         c = Custom(rule, rule.warnings if own else (), title=title)
         if own:
             where = f"lanes.custom[{own_index.get(n, '?')}] {n}"

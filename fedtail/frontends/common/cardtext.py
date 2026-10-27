@@ -1,9 +1,9 @@
 """The words around a post on its card, without a toolkit: who boosted it and when, the
 line of facts under the name (the time, who sees it, "edited", "old"), what it answers,
 the content warning (a server's filter folds it too), "you replied", the conversation's
-line, the emoji reactions, a quote and why one can't be shown. The GTK card has them so
-(gtk/card.py), Qt's alike; the web page and the terminal take them from here, so all
-four say the same.
+line, someone new in a private talk, the emoji reactions, a quote and why one can't be
+shown. The GTK card has them so (gtk/card.py), Qt's alike; the web page and the terminal
+take them from here, so all four say the same.
 
     words = card_words(spec, cfg, date)   # spec: common/lane.py CardSpec
 
@@ -48,6 +48,34 @@ class CardWords:
     conversation: Bit | None = None   # "💬 3 in the conversation…"
     reactions: str = ""               # "👍 3 :blobcat: 2"
     quote: Bit | None = None          # a quote as a line (or why it can't be shown)
+    newcomer: Bit | None = None       # "👤 New in this private talk: @eve" — see newcomers()
+
+
+def newcomers(post, parent):
+    """Who a private post brings into the talk: its author and those it mentions that the
+    private post it answers neither came from nor named — they couldn't read the talk
+    before, now they read this one (and what is quoted in it). [handle], in order; [] when
+    it isn't a private answer to a private post, or the parent isn't known."""
+    if post is None or post.visibility != "direct" or not isinstance(parent, Post) or \
+            parent.visibility != "direct":
+        return []
+    known = {parent.author.id} | {m.id for m in parent.mentions}
+    out = []
+    for ident, handle in [(post.author.id, post.author.handle)] + \
+            [(m.id, m.handle) for m in post.mentions]:
+        if ident and ident not in known and handle not in out:
+            out.append(handle)
+    return out
+
+
+def newcomer_bit(post, parent):
+    who = newcomers(post, parent)
+    if not who:
+        return None
+    ids = {post.author.handle: post.author.id} | {m.handle: m.id for m in post.mentions}
+    return Bit("👤 " + _("dm_newcomer", who=", ".join("@" + h for h in who)),
+               f"fedtail:account/{ids[who[0]]}" if ids.get(who[0]) else "",
+               _("dm_newcomer_tip"), kind="newcomer")
 
 
 def quote_bit(quote, mode="card"):
@@ -120,7 +148,9 @@ def card_words(spec, cfg, date, in_thread=None):
         w.reactions = " ".join((name if len(name) <= 4 else ":" + name.strip(":") + ":")
                                + f" {count}" for name, count in reacted[:12])
     w.quote = quote_bit(p.quote, cfg["feed"].get("quotes", "card"))
+    w.newcomer = newcomer_bit(p, parent)
     return w
 
 
-__all__ = ["Bit", "CardWords", "card_words", "name_of", "quote_bit"]
+__all__ = ["Bit", "CardWords", "card_words", "name_of", "newcomer_bit", "newcomers",
+           "quote_bit"]
