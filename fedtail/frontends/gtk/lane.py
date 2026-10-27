@@ -24,6 +24,7 @@ from dataclasses import replace
 from ... import diag
 from ...i18n import _
 from ...model import Share, real
+from ..common.cardtext import thread_news_bit
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
 from .card import Card, Separator, link_markup
 from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
@@ -501,6 +502,9 @@ class LaneView(Gtk.Box):
                 line = conversation_line(sp)
                 if line:
                     card.add_conversation(*line)
+                news = thread_news_bit(sp)
+                if news is not None:
+                    card.add_thread_news(news)
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
             if self.sep_above and k == self.sep_above[0]:
                 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)

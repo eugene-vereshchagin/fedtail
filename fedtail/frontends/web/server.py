@@ -242,7 +242,8 @@ def words_json(view, spec, date):
             "context": bit_json(w.context), "warning": w.warning, "folded": w.folded,
             "my_replies": [bit_json(b) for b in w.my_replies],
             "conversation": bit_json(w.conversation), "reactions": w.reactions,
-            "quote": bit_json(w.quote), "newcomer": bit_json(w.newcomer)}
+            "quote": bit_json(w.quote), "newcomer": bit_json(w.newcomer),
+            "thread_news": bit_json(w.thread_news)}
 
 
 def web_date(when):

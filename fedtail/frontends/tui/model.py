@@ -133,6 +133,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
             out.below.append(("myreply", b.text))
         if words.conversation is not None:
             out.below.append(("conv", words.conversation.text))
+        if words.thread_news is not None:
+            out.below.append(("newcomer", words.thread_news.text))
     return out
 
 

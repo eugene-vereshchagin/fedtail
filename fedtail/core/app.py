@@ -1310,6 +1310,20 @@ class Core(SocialMixin):
                    for a in self.follow_requests or ()] + list(got)
         return got
 
+    def thread_news(self):
+        """{root post id: unread replies} — the followed threads with something new
+        (feed.thread_news: the line under such a post's card). Cached till the store
+        or a read mark changes."""
+        if not self.cfg["feed"].get("thread_news", True):
+            return {}
+        key = (self.store.items_version.get("subs", 0), self.store.read_version)
+        hit = getattr(self, "_thread_news", None)
+        if hit and hit[0] == key:
+            return hit[1]
+        got = self.store.thread_news_counts()
+        self._thread_news = (key, got)
+        return got
+
     def _event_lanes(self):
         """The lanes shown that take events too (a condition with `event`)."""
         return [c for c in self.customs if c.event_conds and c.name in self.lane_by_name]

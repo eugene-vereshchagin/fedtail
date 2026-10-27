@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- **Activity's quick filters**: all · likes & boosts · followers · requests · mine · other, over
+  the lane (the windows), its tabs (the web page), `s` (the terminal); the choice stays.
+- **Threads with news on the cards** (`feed.thread_news`): a post whose followed thread has new
+  replies says "🔔 3 new in the thread" under it, the line opening the thread.
 - The lane editor starts with the set: fedtail (the default), Mastodon, Tusky, Phanpy —
   "Take" one, and "Take all of yours away" for the set as it is. A lane of tags saved from a
   search gets "In Home too" in its sidebar menu (and the tags place): off, its posts leave

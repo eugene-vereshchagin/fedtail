@@ -34,7 +34,7 @@ from ...model.text import (
     without_quote_fallback,
 )
 from ..common import actions
-from ..common.cardtext import newcomer_bit
+from ..common.cardtext import newcomer_bit, thread_news_bit
 from ..common.lane import (  # noqa: F401  (Qt's names)
     VIDEO_EXT,
     CardSpec,
@@ -322,7 +322,8 @@ class PostRow(QWidget):
                 or old.number != spec.number or old.focus != spec.focus \
                 or old.extra.get("short_id") != spec.extra.get("short_id") \
                 or _ids(old.extra.get("my_replies")) != _ids(spec.extra.get("my_replies")) \
-                or _conv_key(old) != _conv_key(spec):
+                or _conv_key(old) != _conv_key(spec) \
+                or old.extra.get("thread_news") != spec.extra.get("thread_news"):
             self._build()
         self._flags()
 
@@ -529,6 +530,12 @@ class PostRow(QWidget):
             text, last_id = line
             v.addWidget(self._label(link("thread", last_id, "💬 " + esc(text),
                                          self.theme.css("link")), "ctx"))
+        news = thread_news_bit(spec)  # a followed thread with new replies
+        if news is not None:
+            lab = self._label(link("thread", p.id, esc(news.text), self.theme.css("accent"),
+                                   bold=True), "threadNews")
+            lab.setToolTip(news.tip)
+            v.addWidget(lab)
 
     # ---- header -------------------------------------------------------------------
     def _short_id(self, h, replies=None, where="header"):

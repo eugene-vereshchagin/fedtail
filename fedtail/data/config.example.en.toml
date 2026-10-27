@@ -406,6 +406,10 @@ on_new = "keep_position"
 # The "↪ in reply to…" strip over replies.
 show_reply_context = true
 
+# A post whose thread you follow and that has new replies there: "🔔 3 new in the thread"
+# under it, the line opening the thread.
+thread_news = true
+
 # How many posts a request to the server.
 page_size = 40
 

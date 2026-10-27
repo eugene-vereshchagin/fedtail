@@ -264,6 +264,13 @@ class LaneModel:
                                           "short_id": short.get(pid)}))
         if self.conversations():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
+        news = getattr(view, "thread_news", None)
+        news = news() if news else {}
+        if news:  # a followed thread with new replies: said under its post
+            for s in specs:
+                n = news.get(real(s.entry).id) if s.entry is not None else None
+                if n:
+                    s.extra["thread_news"] = n
         specs = self._with_events(specs)
         if self.name in ("replies", "mentions", "to_me"):
             view.check_my_replies(posts)

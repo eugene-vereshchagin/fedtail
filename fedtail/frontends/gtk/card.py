@@ -408,6 +408,13 @@ class Card(Gtk.Box):
             self.mine_box.append(lab)
         self.mine_box.set_visible(bool(replies))
 
+    def add_thread_news(self, bit):
+        """A followed thread with new replies (common/cardtext.py thread_news_bit)."""
+        lab = _label(link_markup(bit.link, bit.text), ("ft-newcomer",), markup=True, wrap=True)
+        tip(lab, bit.tip)
+        lab.connect("activate-link", self._link)
+        self.column.insert_child_after(lab, self.mine_box)
+
     def add_conversation(self, text, last_id):
         """A conversation card (common/lane.py conversation_line): the rest of it."""
         lab = _label(link_markup(f"fedtail:thread/{last_id}", "💬 " + text), ("ft-ctx",),

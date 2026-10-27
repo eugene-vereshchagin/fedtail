@@ -66,6 +66,26 @@ def _then(fut, fn):
     return out
 
 
+# the quick filters over Activity: which kinds of rows (fedtail.model) each one shows
+ACTIVITY_FILTERS = ("all", "reactions", "follows", "requests", "mine", "other")
+_ACTIVITY_KINDS = {
+    "reactions": {"like", "share", "quote", "reaction"},
+    "follows": {"follow", "unfollow", "gone", "lost"},
+    "requests": {"request"},
+    "mine": {"my_follow"},
+}
+ACTIVITY_STATE = "activity_filter"  # kept with the window's state (Core.get_state)
+
+
+def activity_keeps(a, which):
+    """Does the quick filter `which` show this Activity? "other": what no filter has."""
+    if which in (None, "", "all"):
+        return True
+    if which == "other":
+        return not any(a.kind in kinds for kinds in _ACTIVITY_KINDS.values())
+    return a.kind in _ACTIVITY_KINDS.get(which, ())
+
+
 # Core attributes the frontends may use as they are: nothing in them is a server's JSON
 PASS = {
     "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
@@ -509,9 +529,18 @@ class View:
         return _then(self._core.mute_thread(self._raw(real(post)), on), self._post_back)
 
     # ---- activity and follow requests (lanes that are not posts) -------------------
-    def activity(self, limit=300):
-        """[Activity] newest first: who liked, shared, followed, mentioned…"""
-        return [self._activity_of(n) for n in self._core.activity_entries(limit)]
+    def activity(self, limit=300, which=None):
+        """[Activity] newest first: who liked, shared, followed, mentioned… — through the
+        quick filter chosen (common/activity.py FILTERS; which: another one, "all")."""
+        if which is None:
+            state = getattr(self._core, "get_state", None)
+            which = (state(ACTIVITY_STATE) if state else None) or "all"
+        out = [self._activity_of(n) for n in self._core.activity_entries(limit)]
+        return [a for a in out if activity_keeps(a, which)]
+
+    def set_activity_filter(self, which):
+        self._core.set_state(ACTIVITY_STATE, which if which in ACTIVITY_FILTERS else "all")
+        self._core.emit("activity_updated", None)
 
     def lane_events(self, lane, limit=200):
         """[Activity] newest first: the events a lane of rules shows among its posts."""

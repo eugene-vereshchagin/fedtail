@@ -1262,7 +1262,19 @@ class FedtailApp(App, PostsMixin):
         media funnel (as the windows' lane header)."""
         from ..common.lane import MEDIA_KINDS
         from .screens import MenuScreen
-        if not self.lane or self.lane in ("activity", "requests"):
+        if self.lane == "activity":  # its quick filters (as the windows' header)
+            from ..common import activity as act
+            now = act.chosen(self.core)
+
+            def picked(v):
+                if v is not None:
+                    self.core.set_activity_filter(v)
+                    self.call_next(self.refresh_posts, True)
+            self.push_screen(MenuScreen(_("actf_tip"), [
+                (("● " if k == now else "○ ") + act.filter_words(k)[0], k,
+                 act.filter_words(k)[1]) for k in act.FILTERS]), picked)
+            return
+        if not self.lane or self.lane == "requests":
             return
         m = self.lane_model(self.lane)
         items = []

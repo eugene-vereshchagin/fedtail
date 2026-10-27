@@ -98,3 +98,33 @@ class DerivedTest(FreeBase):
         self.core.store.kv_set("derived.at", 0)
         self.core.cfg["activity"]["unfollows"] = False
         self.assertFalse(self.core.derived.due())
+
+
+class ActivityFilterTest(FreeBase):
+    """Activity's quick filters: all · likes & boosts · followers · requests · mine · other."""
+
+    def test_filters(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common.places import Places
+        core, w = self.make([])
+        mine = w.add(fakes.status("900", fakes.ME, minute=1), home=True)
+        w.act("n1", "favourite", BOB, mine, minute=2)
+        w.act("n2", "follow", NEWS, minute=3)
+        core.connect().result()
+        core.poll_once()
+        w.act("n3", "favourite", NEWS, mine, minute=4)
+        w.act("n4", "follow", BOB, minute=5)
+        core.poll_once()
+        core.follow(BOB["id"]).result()
+        v = View(core)
+        kinds = lambda which: sorted(a.kind for a in v.activity(which=which))  # noqa: E731
+        self.assertEqual(kinds("reactions"), ["like", "like"])
+        self.assertEqual(kinds("follows"), ["follow", "follow"])
+        self.assertEqual(kinds("mine"), ["my_follow"])
+        self.assertEqual(len(v.activity()), 5)
+        page = Places(v).page("activity", tab="follows")
+        self.assertEqual(page.tab, "follows")
+        self.assertEqual([k for k, _w in page.tabs][:3], ["all", "reactions", "follows"])
+        self.assertEqual(len(v.activity()), 2)  # the choice stays
+        v.set_activity_filter("all")
+        self.assertEqual(len(v.activity()), 5)

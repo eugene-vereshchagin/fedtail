@@ -53,6 +53,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A thread grows when Mastodon has gathered the replies | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Thread subscriptions, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Mute a thread | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
+| A thread with new replies shows on its card | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Read marks and place
 
@@ -182,6 +183,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Server announcements | ✓ | ✓ |   |   | ✓ | ✓ |   |   |   |   | ✓ |   |   |   |
 | The unread number on the icon | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |   |   |
 | Direct messages read here are read on the server too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Activity's quick filters | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Who stopped following you | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Activity says whom you followed | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Someone new in a private talk — shown at once | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -227,4 +229,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **45** features of the 163 compared.
+Only in fedtail — **47** features of the 165 compared.

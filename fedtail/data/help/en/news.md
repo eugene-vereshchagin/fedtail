@@ -15,7 +15,9 @@ What's new in the latest versions, and the plans.
 - “To me”: replies and mentions in one lane
 - Home's quick filters: tags, boosts, threads with news
 - Important people
+- A thread with new replies shows on its card
 - Unfollowed — gone from Home
+- Activity's quick filters
 - Who stopped following you
 - Activity says whom you followed
 - Someone new in a private talk — shown at once

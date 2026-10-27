@@ -7,6 +7,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ...core.view import ACTIVITY_FILTERS as FILTERS  # the quick filters over Activity
+from ...core.view import ACTIVITY_STATE as STATE
+from ...core.view import activity_keeps as keeps  # noqa: F401 — for the interfaces
 from ...i18n import _
 
 MAX_NAMES = 3
@@ -46,6 +49,16 @@ def notice_text(n):
     if n.kind == "warning":
         return _("act_warning", action=_("warn_" + (n.action or "none")), text=n.text[:300])
     return ""
+
+
+def filter_words(which):
+    """(words, tip) of a quick filter."""
+    return _("actf_" + which), _("actf_" + which + "_tip")
+
+
+def chosen(view):
+    got = view.get_state(STATE) if hasattr(view, "get_state") else None
+    return got if got in FILTERS else "all"
 
 
 def groups(entries):

@@ -82,6 +82,7 @@ DEFAULTS = {
         "start_at": "first_unread",
         "on_new": "keep_position",
         "show_reply_context": True,
+        "thread_news": True,
         "page_size": 40,
         "catch_up_limit": 400,
         "render_limit": 300,

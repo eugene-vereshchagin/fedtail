@@ -205,6 +205,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
 | Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
 | Long texts and events | has | 0.14.0 | `feed.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
+| A thread with new replies shows on its card | has | 0.21.0 | `feed.thread_news` | own (followed threads) | — |
 
 <details><summary>In detail</summary>
 
@@ -221,6 +222,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Mute a thread.** Notifications from the thread stop coming and its subscription goes. A server that can do it remembers it for all clients; where it can't (GoToSocial), fedtail mutes the thread itself: its mentions are dropped as they come — even replies to posts of the thread it never saw. The item in a post's ⋯ menu is always there.
 
 **Long texts and events.** Articles from WriteFreely, Ghost, Plume, Lemmy posts, Mobilizon events. The Mastodon API flattens them into an ordinary post with the text cut. The ⋯ menu of such a post has “📄 Read it whole”: fedtail takes the full text straight from the author's server over ActivityPub, for an event — also the time and the place.
+
+**A thread with new replies shows on its card.** A post whose thread you follow and which has unread replies has a highlighted line “🔔 3 new in the thread” under it, in any lane; the line opens the thread. Read the replies — the line goes.
 
 </details>
 
@@ -569,6 +572,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Server announcements | has | 0.9.0 | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
 | The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
+| Activity's quick filters | has | 0.21.0 | — (the choice is remembered) | own | — | — |
 | Who stopped following you | has | 0.21.0 | `activity.unfollows`, `activity.unfollows_minutes`, `activity.unfollows_max`, `activity.unfollows_mass` | `accounts/:id/followers`, `accounts/relationships` | only in fedtail (no server says it) | — |
 | Activity says whom you followed | has | 0.21.0 | `activity.my_follows` | own (and `accounts/:id/following`) | only in fedtail | — |
 | Someone new in a private talk — shown at once | has | 0.21.0 | — | own | only in fedtail | — |
@@ -595,6 +599,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Server announcements.** `"banner"` — a strip over the lane until you press “Got it” (the server remembers that for other clients too); reactions to announcements. `"off"` — not shown.
 
 **The unread number on the icon.** In the tray and on the task bar button (KDE: needs the entry from `--install-desktop` and `python3-pyside6.qtdbus`). Which lanes to count — a list, as for notifications: `"lists"` — all lists, `"list:Friends"` — one, `"all"` — everything, plus `icon_count_except` — what not to count. The icon itself — an opossum holding its own tail (`app_icon = "possum"`, also in the menu and in About), or the drawn thread bubble (`"bubble"`), which `themed_icon` paints in the theme's colours.
+
+**Activity's quick filters.** Over Activity: All · Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices). On the web page — the place's tabs, in the terminal — `s`.
 
 **Who stopped following you.** Every hour fedtail compares the whole list of your followers with the last one: missing from two lists in a row and not following when asked — a row “stopped following you” in Activity; an account that is no more — “gone”. So as not to lie: a list that didn't come whole (fewer than the server counts) is thrown away; the first snapshot is the start, no events; the ones you removed or blocked yourself aren't news; more than `unfollows_mass` of one server at once — one row about the server. A lane of rules takes them as `event = "unfollow"` (`"unfollowed_back"`: one you follow too), `"gone"`, `"lost"`.
 

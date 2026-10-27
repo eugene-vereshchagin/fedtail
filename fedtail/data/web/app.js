@@ -203,6 +203,7 @@ function renderPost(p, inThread) {
   if (wd) {
     for (const b of wd.my_replies) card.append(bitEl(b, "myreply"));
     if (wd.conversation) card.append(bitEl(wd.conversation, "ctx conv"));
+    if (wd.thread_news) card.append(bitEl(wd.thread_news, "thread-news"));
   }
   card.append(renderActions(p, inThread));
   card._post = p;

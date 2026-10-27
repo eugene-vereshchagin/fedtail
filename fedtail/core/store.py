@@ -697,6 +697,14 @@ class Store:
                 "ON m.status_id = i.status_id WHERE i.source = 'subs' "
                 "AND i.status_id NOT IN (SELECT status_id FROM read)")}
 
+    def thread_news_counts(self):
+        """{root id: how many unread replies} of the followed threads with news."""
+        with self._reading() as db:
+            return {r[0]: r[1] for r in db.execute(
+                "SELECT m.root_id, COUNT(DISTINCT i.status_id) FROM items i JOIN sub_members m "
+                "ON m.status_id = i.status_id WHERE i.source = 'subs' "
+                "AND i.status_id NOT IN (SELECT status_id FROM read) GROUP BY m.root_id")}
+
     def held_in(self, sources, status_ids):
         """Which of these statuses one of these streams holds."""
         ids, sources = list(dict.fromkeys(status_ids)), sorted(set(sources))

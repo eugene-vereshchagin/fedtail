@@ -998,8 +998,12 @@ class Places(MorePlaces, AccountPlaces, LanePlaces):
         from ...model.text import snippet
         from . import activity as act
         v = self.view
-        page = Page("activity", _("lane_activity"), empty=_("activity_none"))
-        entries = v.activity()
+        which = _tab if _tab in act.FILTERS else act.chosen(v)
+        if _tab and _tab != act.chosen(v):  # a quick filter picked: it stays
+            v.set_activity_filter(which)
+        page = Page("activity", _("lane_activity"), empty=_("activity_none"),
+                    tabs=tuple((k, act.filter_words(k)[0]) for k in act.FILTERS), tab=which)
+        entries = v.activity(which=which)
         oldest_first = v.cfg["feed"]["order"] == "oldest_first"
         for r in act.rows(entries, v.activity_seen(), self.date, oldest_first):
             if r.notice:

@@ -49,6 +49,7 @@ class CardWords:
     reactions: str = ""               # "👍 3 :blobcat: 2"
     quote: Bit | None = None          # a quote as a line (or why it can't be shown)
     newcomer: Bit | None = None       # "👤 New in this private talk: @eve" — see newcomers()
+    thread_news: Bit | None = None    # "🔔 3 new in the thread": a followed thread's news
 
 
 def newcomers(post, parent):
@@ -66,6 +67,16 @@ def newcomers(post, parent):
         if ident and ident not in known and handle not in out:
             out.append(handle)
     return out
+
+
+def thread_news_bit(spec):
+    """"🔔 3 new in the thread" under a post whose followed thread has new replies."""
+    n = spec.extra.get("thread_news") if spec is not None else None
+    p = spec.post if spec is not None else None
+    if not n or p is None:
+        return None
+    return Bit("🔔 " + _("thread_news", n=n), f"fedtail:thread/{p.id}", _("thread_news_tip"),
+               kind="thread_news")
 
 
 def newcomer_bit(post, parent):
@@ -149,8 +160,9 @@ def card_words(spec, cfg, date, in_thread=None):
                                + f" {count}" for name, count in reacted[:12])
     w.quote = quote_bit(p.quote, cfg["feed"].get("quotes", "card"))
     w.newcomer = newcomer_bit(p, parent)
+    w.thread_news = thread_news_bit(spec)
     return w
 
 
 __all__ = ["Bit", "CardWords", "card_words", "name_of", "newcomer_bit", "newcomers",
-           "quote_bit"]
+           "quote_bit", "thread_news_bit"]

@@ -384,6 +384,8 @@ dialog#info::backdrop { background: rgba(0, 0, 0, .4); }
 #pollbox .row { display: flex; gap: 8px; align-items: center; }
 #schedbox { margin-top: 6px; }
 #chars.over { color: var(--danger); font-weight: 700; }
+.post .thread-news { display: block; color: var(--accent); font-weight: 600; margin: 4px 0;
+  text-decoration: none; }
 .event-line { display: block; color: var(--muted); padding: 6px 12px; margin: 4px 0;
   border-left: 3px solid var(--line); text-decoration: none; font-size: .92em; }
 .post .newcomer, #compose-hint.newcomer { color: var(--danger); font-weight: 700; }

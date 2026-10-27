@@ -152,6 +152,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `feed.start_at` | `"first_unread"` | Where to stand when a lane opens: "first_unread" or "newest". |
 | `feed.on_new` | `"keep_position"` | What to do when new posts come: "keep_position" — stay where you are; "jump_to_newest" — jump to the new (as everyone does). |
 | `feed.show_reply_context` | `true` | The "↪ in reply to…" strip over replies. |
+| `feed.thread_news` | `true` | A post whose thread you follow and that has new replies there: "🔔 3 new in the thread" under it, the line opening the thread. |
 | `feed.page_size` | `40` | How many posts a request to the server. |
 | `feed.catch_up_limit` | `400` | How many new posts to catch up a poll (the rest — with the next one). |
 | `feed.render_limit` | `300` | How many latest posts to keep on screen in a lane (older ones — with the "older" button). |

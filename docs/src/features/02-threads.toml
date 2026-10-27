@@ -120,3 +120,18 @@ name.ru = "Подписка на старые треды пачкой"
 name.en = "Subscribing to old threads in a batch"
 why.ru = "Убрана из очереди."
 why.en = "Taken off the queue."
+
+[[feature]]
+id = "thread-news-on-cards"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Тред с новыми ответами виден на карточке"
+name.en = "A thread with new replies shows on its card"
+config = "`feed.thread_news`"
+api.ru = "своё (подписки на треды)"
+api.en = "own (followed threads)"
+others = "—"
+clients = []
+details.ru = "Пост, на тред которого ты подписан и где есть непрочитанные ответы, — с подсвеченной строкой «🔔 3 новых в треде» под ним, в любой ленте; строка открывает тред. Прочитал ответы — строка уходит."
+details.en = "A post whose thread you follow and which has unread replies has a highlighted line “🔔 3 new in the thread” under it, in any lane; the line opens the thread. Read the replies — the line goes."

@@ -151,6 +151,22 @@ others.en = "only in fedtail"
 clients = []
 
 [[feature]]
+id = "activity-filters"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Быстрые фильтры Активности"
+name.en = "Activity's quick filters"
+config.ru = "— (выбор запоминается)"
+config.en = "— (the choice is remembered)"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+clients = []
+details.ru = "Над Активностью: Всё · Лайки и бусты · Подписчики (кто подписался и отписался) · Заявки (ждут твоего ответа) · Моё (на кого подписался ты) · Прочее (опросы, правки, посты важных людей, сообщения сервера). В вебе — вкладки места, в терминале — `s`."
+details.en = "Over Activity: All · Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices). On the web page — the place's tabs, in the terminal — `s`."
+
+[[feature]]
 id = "unfollows"
 status = "has"
 android = "has"

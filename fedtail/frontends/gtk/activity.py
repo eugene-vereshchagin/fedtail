@@ -84,6 +84,14 @@ class ActivityLane(_Lane):
         self.clear_btn.connect("clicked", lambda _b: self.clear())
         self.clear_btn.set_visible(self._can_clear())
         self.header.append(self.clear_btn)
+        # the quick filters, as Qt's: all · likes & boosts · follows · requests · mine · other
+        words = [activity.filter_words(k)[0] for k in activity.FILTERS]
+        self.filter_pick = Gtk.DropDown.new_from_strings(words)
+        self.filter_pick.set_selected(activity.FILTERS.index(activity.chosen(self.view)))
+        tip(self.filter_pick, _("actf_tip"))
+        self.filter_pick.connect("notify::selected", lambda d, _p: self.view.set_activity_filter(
+            activity.FILTERS[d.get_selected()]))
+        self.header.append(self.filter_pick)
         self._seen_timer = 0
         self.positioned = False
         self.adj.connect("value-changed", lambda _a: self._schedule_seen())

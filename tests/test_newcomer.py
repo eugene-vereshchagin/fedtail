@@ -93,5 +93,20 @@ class WritingTest(unittest.TestCase):
         self.assertEqual(self.count("@me hi"), ())
 
 
+class ThreadNewsTest(unittest.TestCase):
+    """feed.thread_news: "🔔 N new in the thread" under a post whose followed thread has
+    new replies."""
+
+    def test_bit(self):
+        cfg, _ = config.validate({})
+        root = post("1", ME, vis="public")
+        spec = CardSpec(key="1", entry=root, extra={"thread_news": 3})
+        w = cardtext.card_words(spec, cfg, lambda d: "")
+        self.assertIn("3", w.thread_news.text)
+        self.assertEqual(w.thread_news.link, "fedtail:thread/1")
+        self.assertIsNone(cardtext.card_words(CardSpec(key="1", entry=root), cfg,
+                                              lambda d: "").thread_news)
+
+
 if __name__ == "__main__":
     unittest.main()

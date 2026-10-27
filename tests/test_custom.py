@@ -1124,3 +1124,26 @@ class MyFollowsTest(FreeBase):
 def i18n_word(key):
     from fedtail.i18n import _
     return _(key)
+
+
+class ThreadNewsLaneTest(FreeBase):
+    def test_counted_and_on_the_spec(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import LaneModel
+        core, w = self.make([])
+        root = w.add(status("800", ME, minute=1, vis="public"), home=True)
+        core.connect().result()
+        core.poll_once()
+        core.subscribe(root).result()
+        w.add(status("801", BOB, reply_to="800", reply_acc="ME", minute=2), mention=True)
+        core.poll_once()
+        core.poll_once()
+        news = core.thread_news()
+        self.assertEqual(news.get("800"), 1, news)
+        specs = LaneModel(View(core), "my_posts").build(False).specs
+        mine = next(s for s in specs if s.entry is not None and s.entry.id == "800")
+        self.assertEqual(mine.extra.get("thread_news"), 1)
+        core.mark_read(["801"])
+        self.assertEqual(core.thread_news(), {})
+        core.cfg["feed"]["thread_news"] = False
+        self.assertEqual(core.thread_news(), {})
