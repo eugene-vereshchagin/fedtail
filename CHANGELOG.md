@@ -2,6 +2,24 @@
 
 ## 0.21.0 — in progress
 
+- **Lanes of rules, the rest of the plan** (docs/en/dev/feeds.md):
+  - `sort` by counts — `replies`, `likes`, `boosts`, `density` (all three per hour of age);
+    `mode = "catch_up"` with `window` ("12h", "2d") — only what came within it;
+    `filter_context` — the server's filters of that context over the lane's posts, whatever
+    source they came by.
+  - Nested conditions: a condition may hold an `any` of its own (an AND of ORs); in the
+    editor's line `author: followed; any: [has: image] [kind: reply]`.
+  - More sources for a lane: `trends`, `direct`, `bubble` (`lanes.bubble`), `account:<id>`,
+    `link:<url>`, `quotes:<id>`, `remote:<host>`.
+  - "Why is it here?" in a card's menu and `fedtail --explain-lane NAME`: which condition took
+    the post, or which key kept it out of each. A lane no source can fill is marked ⚠ in the
+    editor.
+  - A post in several lanes rings once, by its most personal lane.
+  - Replies whose rules ask about the parent or about me get their parents fetched before
+    they are sorted: they no longer jump lanes after showing.
+  - Derived: a follower who moved is "moved", not an unfollow; likes taken back
+    (`activity.unlikes`, off by default); a post deleted on its server is marked on its card.
+
 - The web page on a phone: the "in reply to…" line (a link since the cards' words became
   common) didn't wrap or cut and widened the lane past the screen, the cards slid aside.
 - Every quick filter holds until the program closes and is kept between runs only with

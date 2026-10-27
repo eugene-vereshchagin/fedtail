@@ -53,7 +53,9 @@ def cond_line(cond):
     for k, v in cond.items():
         if k in _OWN_FIELDS:
             continue
-        if k == "text":
+        if k == "any" and isinstance(v, (list, tuple)):
+            words = " ".join(f"[{cond_line(t)}]" for t in v if isinstance(t, dict))
+        elif k == "text":
             groups = [[v]] if isinstance(v, str) else [[g] if isinstance(g, str) else g
                                                         for g in v]
             words = ", ".join(" + ".join(map(str, g)) for g in groups)
@@ -72,11 +74,17 @@ def parse_line(line):
     out = {}
     if str(line or "").strip() == EVERYTHING:
         return out
-    for part in [p.strip() for p in str(line or "").split(";") if p.strip()]:
+    for part in [p.strip() for p in _split(str(line or ""), ";") if p.strip()]:
         key, sep, words = part.partition(":")
         key = key.strip()
         if not sep or not key:
             raise ValueError(_("le_bad_part", part=part))
+        if key == "any":  # an inner OR: [a: x; b: y] [c: z]
+            groups = _groups(words)
+            if not groups:
+                raise ValueError(_("le_bad_part", part=part))
+            out[key] = [parse_line(g) for g in groups]
+            continue
         if key not in KEYS and key not in _INTS:
             raise ValueError(_("le_bad_key", word=key, keys=", ".join(sorted(KEYS))))
         words = words.strip()
@@ -97,6 +105,44 @@ def parse_line(line):
                 raise ValueError(_("le_bad_part", part=part))
             out[key] = items[0] if len(items) == 1 else items
     return out
+
+
+def _split(line, sep):
+    """`line` split at `sep` outside […]."""
+    out, depth, cur = [], 0, []
+    for ch in line:
+        depth += (ch == "[") - (ch == "]")
+        if ch == sep and depth == 0:
+            out.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    out.append("".join(cur))
+    return out
+
+
+def _groups(words):
+    """"[a: x; b: y] [c: z]" → ["a: x; b: y", "c: z"]; None when the brackets don't pair."""
+    out, depth, cur = [], 0, []
+    for ch in words.strip():
+        if ch == "[":
+            depth += 1
+            if depth == 1:
+                cur = []
+                continue
+        elif ch == "]":
+            depth -= 1
+            if depth < 0:
+                return None
+            if depth == 0:
+                out.append("".join(cur).strip())
+                continue
+        elif depth == 0:
+            if ch.strip():
+                return None
+            continue
+        cur.append(ch)
+    return out if depth == 0 else None
 
 
 def problems(table):

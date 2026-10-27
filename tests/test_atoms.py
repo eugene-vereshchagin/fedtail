@@ -255,6 +255,23 @@ class ConditionTest(unittest.TestCase):
         self.assertTrue(cond(id="a").matches(f))
         self.assertTrue(cond(lang="UNKNOWN").matches(f))
 
+    def test_nested_any(self):
+        """An inner `any`: the condition's own keys AND one of its tables (feeds.md §4)."""
+        pic = st("a", FRIEND, media_attachments=[{"type": "image", "description": "x"}])
+        plain, theirs = st("b", FRIEND), st("c", STRANGER)
+        c = cond(author="followed", any=[{"has": "image"}, {"kind": "reply"}])
+        self.assertFalse(c.broken)
+        self.assertTrue(c.matches(facts(pic)))
+        self.assertFalse(c.matches(facts(plain)))
+        self.assertEqual(c.why_not(facts(plain)), "any")
+        self.assertFalse(c.matches(facts(dict(theirs, media_attachments=pic[
+            "media_attachments"]))))
+        self.assertEqual(c.needs, {"author", "has", "kind"})
+        warnings = []
+        self.assertTrue(Condition.parse({"any": [{"colour": "red"}]}, warnings).broken)
+        self.assertTrue(warnings)
+        self.assertTrue(cond(any=[]).broken)
+
     def test_authors_by_name_and_domain(self):
         f = facts(st("a", FRIEND))
         self.assertTrue(cond(author="@Friend@far.example").matches(f))

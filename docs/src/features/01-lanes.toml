@@ -453,7 +453,7 @@ details.en = "“Who else shared this link” in a post's menu — see the line 
 
 [[feature]]
 id = "free-lanes"
-status = "partly"
+status = "has"
 android = "has"
 since = "0.21.0"
 name.ru = "Свободные ленты: собери ленту сам"
@@ -604,3 +604,18 @@ others = "—"
 clients = []
 details.ru = "Посты тех, на ком колокольчик, — своей лентой. Видна, когда в ней что-то есть: пока колокольчиков нет, её нет и слева."
 details.en = "Posts of those you rang the bell on, as a lane of their own. Shown once there is anything in it: while no bell is on, it isn't in the sidebar either."
+
+[[feature]]
+id = "lane-rules-more"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Ленты правил: порядок по счётчикам, «что пропустил», «Почему он здесь?»"
+name.en = "Lanes of rules: order by counts, “what did I miss”, “Why is it here?”"
+config = "`[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition"
+api.ru = "своё; серверные фильтры (`filters`), источники `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, чужие публичные ленты"
+api.en = "own; the server's filters (`filters`), sources `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, other servers' public lanes"
+others = "—"
+clients = []
+details.ru = "`sort = \"likes\"` (или `replies`, `boosts`, `density` — всё в час возраста) — лучшее сверху; `mode = \"catch_up\"` и `window = \"12h\"` — только пришедшее за окно; `filter_context` — серверные фильтры этого контекста скрывают или сворачивают посты ленты. В условии может быть свой `any` — И из ИЛИ (`author: followed; any: [has: image] [kind: reply]`). Источники `trends`, `direct`, `bubble`, `account:<id>`, `link:<url>`, `quotes:<id>`, `remote:<host>`. «Почему он здесь?» в меню карточки и `fedtail --explain-lane ИМЯ` — какое условие взяло пост или что его не пустило; ленту, которую не наполнит ни один источник, редактор помечает ⚠. Пост в нескольких лентах звенит один раз, по самой личной; ответам, чьи правила спрашивают о родителе, родитель подтягивается до раскладки."
+details.en = "`sort = \"likes\"` (or `replies`, `boosts`, `density` — all per hour of age) — the best on top; `mode = \"catch_up\"` with `window = \"12h\"` — only what came within the window; `filter_context` — the server's filters of that context hide or fold the lane's posts. A condition may hold an `any` of its own — an AND of ORs (`author: followed; any: [has: image] [kind: reply]`). Sources `trends`, `direct`, `bubble`, `account:<id>`, `link:<url>`, `quotes:<id>`, `remote:<host>`. “Why is it here?” in a card's menu and `fedtail --explain-lane NAME` — which condition took the post or what kept it out; a lane no source can fill is marked ⚠ in the editor. A post in several lanes rings once, by its most personal lane; replies whose rules ask about the parent get it fetched before they are sorted."

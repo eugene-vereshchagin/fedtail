@@ -55,6 +55,9 @@ def infer_sources(cond):
         out.add("bookmarks")
     if s.get("state", set()) & {"liked"}:
         out.add("favourites")
+    if not out and cond.inner:  # an inner `any`: where any of its tables come from
+        for i in cond.inner:
+            out |= infer_sources(i)
     return out or {DEFAULT_FEED}
 
 
@@ -85,7 +88,7 @@ class Custom:
         # (`{}`) takes every post, so then only `none` matters — Home's chips cost nothing
         # until one is chosen
         takes_all = any(not c.sets and not c.counts and not c.text and c.age is None
-                        and not c.switch for c in rule.any)
+                        and not c.switch and not c.inner for c in rule.any)
         self.take_needs = set().union(*(c.needs for c in rule.none)) if takes_all \
             else rule.needs
         self.digest = hashlib.sha1(json.dumps(rule_key(rule), sort_keys=True, default=str)

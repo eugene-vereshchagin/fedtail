@@ -34,7 +34,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Collections of people (Mastodon 4.6) | ✓ | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |
 | Another server's public timeline | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A link's timeline (Mastodon 4.3+) | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
-| Free lanes: a lane you assemble yourself | ◐ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Free lanes: a lane you assemble yourself | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Federated and tags wider than your server | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The lane editor | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | “Unsorted”: no post gets lost | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -43,6 +43,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | “To me”: replies and mentions in one lane | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Home's quick filters: tags, boosts, threads with news | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Important people | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Threads
 
@@ -230,4 +231,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **48** features of the 166 compared.
+Only in fedtail — **49** features of the 167 compared.

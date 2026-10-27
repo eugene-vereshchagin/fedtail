@@ -99,7 +99,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Collections of people (Mastodon 4.6) | has | 0.20.0 | ≡ → “My collections”; on a profile — “Add to collection…”, “Collections” | `/api/v1/collections`, `/api/v1/accounts/:id/collections`, `…/in_collections` | Mastodon 4.6, Fedilab |
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
-| Free lanes: a lane you assemble yourself | partly | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted` | own | — |
+| Free lanes: a lane you assemble yourself | has | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted` | own | — |
 | Federated and tags wider than your server | has | 0.21.0 | `lanes.federated_extra`, `lanes.tags_extra`, `lanes.extra_minutes` | other servers' public lanes without a token; `search?resolve=true` on yours | — |
 | The lane editor | has | 0.21.0 | `lanes.enabled`, `[[lanes.custom]]` (writes them) | own | — |
 | “Unsorted”: no post gets lost | has | 0.21.0 | `lanes.unsorted` | own | — |
@@ -109,6 +109,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | “To me”: replies and mentions in one lane | has | 0.21.0 | `lanes.enabled` (`"to_me"`) | `notifications?types=mention` | Notifications everywhere, mixed with likes |
 | Home's quick filters: tags, boosts, threads with news | has | 0.21.0 | — | own; followed threads (`/context`) | — |
 | Important people | has | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (the bell on a profile) | — |
+| Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | has | 0.21.0 | `[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition | own; the server's filters (`filters`), sources `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, other servers' public lanes | — |
 
 <details><summary>In detail</summary>
 
@@ -192,6 +193,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Home's quick filters: tags, boosts, threads with news.** Beside “All / Posts only”: “Tags” — what followed tags brought, not people; “Boosts”; “Threads with news” — posts whose threads have unread replies (followed threads; your own are followed by themselves), the replies themselves inside the thread.
 
 **Important people.** Posts of those you rang the bell on, as a lane of their own. Shown once there is anything in it: while no bell is on, it isn't in the sidebar either.
+
+**Lanes of rules: order by counts, “what did I miss”, “Why is it here?”.** `sort = "likes"` (or `replies`, `boosts`, `density` — all per hour of age) — the best on top; `mode = "catch_up"` with `window = "12h"` — only what came within the window; `filter_context` — the server's filters of that context hide or fold the lane's posts. A condition may hold an `any` of its own — an AND of ORs (`author: followed; any: [has: image] [kind: reply]`). Sources `trends`, `direct`, `bubble`, `account:<id>`, `link:<url>`, `quotes:<id>`, `remote:<host>`. “Why is it here?” in a card's menu and `fedtail --explain-lane NAME` — which condition took the post or what kept it out; a lane no source can fill is marked ⚠ in the editor. A post in several lanes rings once, by its most personal lane; replies whose rules ask about the parent get it fetched before they are sorted.
 
 </details>
 
@@ -576,7 +579,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
 | Activity's quick filters | has | 0.21.0 | — (the choice holds till the program closes) | own | — | — |
-| Who stopped following you | has | 0.21.0 | `activity.unfollows`, `activity.unfollows_minutes`, `activity.unfollows_max`, `activity.unfollows_mass` | `accounts/:id/followers`, `accounts/relationships` | only in fedtail (no server says it) | — |
+| Who stopped following you | has | 0.21.0 | `activity.unfollows`, `activity.unfollows_minutes`, `activity.unfollows_max`, `activity.unfollows_mass`, `activity.unlikes`, `activity.unlikes_days`, `activity.unlikes_posts` | `accounts/:id/followers`, `accounts/relationships` | only in fedtail (no server says it) | — |
 | Activity says whom you followed | has | 0.21.0 | `activity.my_follows` | own (and `accounts/:id/following`) | only in fedtail | — |
 | Someone new in a private talk — shown at once | has | 0.21.0 | — | own | only in fedtail | — |
 | Push notifications (Web Push, UnifiedPush) | has — Web Push in the web version, UnifiedPush on Android | 0.20.0 | `phone.push` | `/api/v1/push/subscription` | Mastodon web, Elk, Phanpy, Tusky, Ivory | — |
@@ -605,7 +608,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Activity's quick filters.** Over Activity: All · Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices). On the web page — the place's tabs, in the terminal — `s`. Only the filters that can show something: follow requests in a lane of their own (and no approvals waiting) — no “Requests”; without `activity.my_follows` — no “Mine”.
 
-**Who stopped following you.** Every hour fedtail compares the whole list of your followers with the last one: missing from two lists in a row and not following when asked — a row “stopped following you” in Activity; an account that is no more — “gone”. So as not to lie: a list that didn't come whole (fewer than the server counts) is thrown away; the first snapshot is the start, no events; the ones you removed or blocked yourself aren't news; more than `unfollows_mass` of one server at once — one row about the server. A lane of rules takes them as `event = "unfollow"` (`"unfollowed_back"`: one you follow too), `"gone"`, `"lost"`.
+**Who stopped following you.** Every hour fedtail compares the whole list of your followers with the last one: missing from two lists in a row and not following when asked — a row “stopped following you” in Activity; an account that is no more — “gone”. So as not to lie: a list that didn't come whole (fewer than the server counts) is thrown away; the first snapshot is the start, no events; the ones you removed or blocked yourself aren't news; more than `unfollows_mass` of one server at once — one row about the server. A lane of rules takes them as `event = "unfollow"` (`"unfollowed_back"`: one you follow too), `"gone"`, `"lost"`. A follower who moved is “moved”, not an unfollow (`"moved"`). With `activity.unlikes` — likes taken back too (`"unliked"`): your last `unlikes_posts` posts of `unlikes_days` days, a request a post — so it is off. A post deleted on its server is marked on its card.
 
 **Activity says whom you followed.** Followed someone — Activity has a row “@who — you followed”, beside what others did: what you did yourself is there. Followed in another client — fedtail notices it in whom you follow (every 6 hours). No unread number for it; × takes it away here only. A lane of rules takes it as `event = "i_followed"`.
 

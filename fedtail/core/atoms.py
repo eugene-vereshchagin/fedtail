@@ -85,10 +85,11 @@ _SHOW_KEYS = {"switch", "shown", "priority"}
 # a condition of `none` that counts only while that lane is shown: "apart = "direct"" — the
 # private ones are read in Direct, when it's on; without it they stay here
 _LANE_KEYS = {"apart"}
+_GROUP_KEYS = {"any"}  # an inner OR: one of these tables too (an AND of ORs)
 _TEXT_KEYS = {"text", "text_in", "text_case", "text_regex"}
 _AGE_KEYS = {"age", "age_of"}
 CONDITION_KEYS = set(_SET_KEYS) | set(_COUNT_KEYS) | _SHOW_KEYS | _TEXT_KEYS | _AGE_KEYS | \
-    _LANE_KEYS
+    _LANE_KEYS | _GROUP_KEYS
 
 _ANCHOR_RE = re.compile(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>')
 _AGE_RE = re.compile(r"^\s*([<>]=?)\s*(\d+(?:\.\d+)?)\s*([mhdw])\s*$")
@@ -488,6 +489,7 @@ class Condition:
     shown: bool = True
     priority: int = 0
     apart: str = ""                             # counts only while this lane is shown
+    inner: list = field(default_factory=list)   # `any` inside: one of these too
     broken: bool = False                        # had an unknown key or value: never matches
     raw: dict = field(default_factory=dict)
 
@@ -567,6 +569,14 @@ class Condition:
                     c.priority = value
                 else:
                     warn(f"priority: a number, not {value!r}")
+            elif key == "any":
+                if not isinstance(value, (list, tuple)) or not value:
+                    warn(f"any: a list of tables (one of them), not {value!r}")
+                else:
+                    inner = [cls.parse(t, warnings) for t in value]
+                    if any(i.broken for i in inner):
+                        c.broken = True
+                    c.inner = inner
         if c.text_regex and not c.broken:
             flags = 0 if c.text_case else re.I
             try:
@@ -581,6 +591,8 @@ class Condition:
         out = set(self.sets)
         if self.text:
             out.add("text")
+        for i in self.inner:
+            out |= i.needs
         return out
 
     def _text_ok(self, facts):
@@ -614,6 +626,8 @@ class Condition:
                 return False
         if self.text and not self._text_ok(facts):
             return False
+        if self.inner and not any(i.matches(facts, now) for i in self.inner):
+            return False
         return True
 
     def why_not(self, facts, now=None):
@@ -631,6 +645,8 @@ class Condition:
             return "age"
         if self.text and not self._text_ok(facts):
             return "text"
+        if self.inner and not any(i.matches(facts, now) for i in self.inner):
+            return "any"
         return ""
 
 
@@ -771,4 +787,6 @@ def never(cond):
     if s.get("source") and s["source"] <= {"local", "federated", "trends"} and \
             s.get("visibility") and s["visibility"] <= {"unlisted", "followers", "direct"}:
         return "public lanes hold public posts only"
+    if cond.inner and all(never(i) for i in cond.inner):
+        return never(cond.inner[0])
     return ""

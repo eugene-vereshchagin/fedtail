@@ -15,7 +15,10 @@ class LineTest(unittest.TestCase):
     def test_round_trip(self):
         for cond in ({"author": "me"}, {"author": ["me", "followed"], "kind": "post"},
                      {"text": [["грузия", "тбилиси"], ["georgia"]], "text_case": True},
-                     {"likes": ">10", "age": "<1d"}):
+                     {"likes": ">10", "age": "<1d"},
+                     {"author": "followed", "any": [{"has": "image"},
+                                                    {"kind": "reply", "me": "mention"}]},
+                     {"any": [{"text": [["a", "b"], ["c"]]}, {}]}):
             self.assertEqual(laneedit.parse_line(laneedit.cond_line(cond)), cond)
         self.assertEqual(laneedit.cond_line({"author": "me", "switch": "mine", "shown": False}),
                          "author: me")
@@ -29,6 +32,9 @@ class LineTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             laneedit.parse_line("author:")
         self.assertEqual(laneedit.parse_line(""), {})
+        for bad in ("any: has: image", "any: [has: image", "any: []]", "any: [colour: red]"):
+            with self.assertRaises(ValueError, msg=bad):
+                laneedit.parse_line(bad)
 
 
 class EditorTest(unittest.TestCase):

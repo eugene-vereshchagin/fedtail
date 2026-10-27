@@ -35,19 +35,19 @@ own tables), never by a frontend. The words below are the core's words: a protoc
 | `federated` | `timelines/public` | everything **my server** knows of others — not the fediverse | source `federated`, lazy |
 | `mentions` | `notifications?types=mention` | every post that mentions me, replies to me included | source `mentions` |
 | `watched` | `notifications?types=status` | new posts of the accounts I rang the bell on | — (only in Activity) |
-| `direct` | `conversations` | private dialogues as threads | — (direct goes via mentions) |
+| `direct` | `conversations` | private dialogues as threads | source `direct` (the last post of each talk) |
 | `list:<id>` | `timelines/list/<id>` | members of a server list | list lanes |
 | `tags:<spec>` | `timelines/tag/<tag>` | posts with the tags (any / all / none) | tag lanes, lazy |
 | `bookmarks` | `bookmarks` | what I bookmarked | source, lazy |
 | `favourites` | `favourites` | what I liked | source, lazy |
 | `mine` | `accounts/<me>/statuses` | my posts and replies | source `mine` |
-| `account:<id>` | `accounts/<id>/statuses` | somebody's wall | — (only the profile) |
+| `account:<id>` | `accounts/<id>/statuses` | somebody's wall | source `account:<id>` (also the profile) |
 | `subs` | — (fedtail itself, `/context`) | new comments in threads I follow, as on Point | local source `subs` |
 | `context` | `statuses/<id>/context` | a thread fetched whole when opened | — (threads only) |
-| `remote:<host>` | another server's `timelines/public` (`/local`, `/federated`), `trends/statuses` (`/trends`) | another server's lanes, read without an account there; no token goes there | — |
-| `trends` | `trends/statuses` | my server's trending posts; browse only | — |
-| `link:<url>` / `quotes:<id>` | `timelines/link?url=` (Mastodon 4.3+) / `statuses/<id>/quotes` | posts sharing one link / quotes of one post | — |
-| `bubble` | Akkoma `timelines/bubble`; elsewhere `federated` + `author = "domain:{…}"` of `lanes.bubble` | servers chosen by the admin or by me | — |
+| `remote:<host>` | another server's `timelines/public` (`/local`, `/federated`), `trends/statuses` (`/trends`) | another server's lanes, read without an account there; no token goes there | source `remote:<host>` (its public lane, each post fetched into my server; `lanes.extra_minutes`) |
+| `trends` | `trends/statuses` | my server's trending posts; browse only | source `trends` |
+| `link:<url>` / `quotes:<id>` | `timelines/link?url=` (Mastodon 4.3+) / `statuses/<id>/quotes` | posts sharing one link / quotes of one post | sources `link:<url>`, `quotes:<id>` (where the server has them) |
+| `bubble` | Akkoma `timelines/bubble`; elsewhere `federated` + `author = "domain:{…}"` of `lanes.bubble` | servers chosen by the admin or by me | source `bubble` (`lanes.bubble`) |
 
 ### 2.2 Atoms of a post
 
@@ -108,7 +108,7 @@ any = [{ author = "me" },
 
 ### 2.4 Derived events (comparing snapshots)
 
-Done 27 Oct 2026 (`core/derived.py`): `unfollow`, `unfollowed_back`, `gone`, and `lost` (a server's followers gone at once) — settings `activity.unfollows*` in place of `derived.*`; `moved`, `unliked`, `deleted` not yet.
+Done 27 Oct 2026 (`core/derived.py`): `unfollow`, `unfollowed_back`, `gone`, and `lost` (a server's followers gone at once) — settings `activity.unfollows*` in place of `derived.*`; and `moved` (a follower moved: not an unfollow), `unliked` (`activity.unlikes`, off by default: the last `activity.unlikes_posts` posts of `activity.unlikes_days` days), `deleted` (a post answering 404/410 when fetched again gets a mark on its card; `state = "deleted"`).
 
 What the server never tells a client (an unfollow, a like taken back, a deleted post) is not in
 the notifications: fedtail derives it itself, comparing its store with what the server gives now.
@@ -167,10 +167,13 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 |---|---|
 | `name` | the lane's word (stable: the window, sync and the tiles remember lanes by it) |
 | `title` | what the sidebar shows; no title — the word |
-| `any` | a list of conditions: a post goes in if it matches **any**; inside a condition every key must match (AND), a list of values means any of them |
+| `any` | a list of conditions: a post goes in if it matches **any**; inside a condition every key must match (AND), a list of values means any of them; a condition may hold an `any` of its own — a list of tables, one of which must match too (an AND of ORs: `{ author = "followed", any = [{ has = "image" }, { kind = "reply" }] }`; in the editor's line `author: followed; any: [has: image] [kind: reply]`) |
 | `none` | conditions that keep a post out, even if `any` let it in |
 | `source` | narrows every condition to these sources; no `source` — the core picks the sources that can bring the atoms (§3) |
-| `sort` | `arrival` (when it reached us) or `post_time` (the post's own time; lanes with notifications) |
+| `sort` | `arrival` (when it reached us), `post_time` (the post's own time; lanes with notifications), or by counts: `replies`, `likes`, `boosts`, `density` (all three per hour of age) — the best where reading starts |
+| `mode` | `lane` (as always) or `catch_up` — only what came within `window` (12h by default): "what did I miss" |
+| `window` | a lane shows only posts younger than this (`"12h"`, `"2d"`) |
+| `filter_context` | the server's filters of this context (`home`, `public`, `notifications`, `thread`, `account`) hide or fold the lane's posts, whichever source they came by |
 | `read` | `through` (unread marks, counts, never jump) or `browse` (newest page, no counts — like Federated) |
 | `group` | the sidebar section: `standard`, `personal`, `lists`, `tags`, or a name of one's own |
 | `icon` | the lane's picture from the built-in set: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full`; none — the one its name has (a set's lane), a list's for one's own |
@@ -221,9 +224,11 @@ none = [{ kind = "boost", age = ">2d", age_of = "original" }]   # no old posts b
 * **What comes first.** Blocks, mutes, server filters "hide" and hidden list members apply
   **before** the rules: no rule brings back a muted person.
 * **Notifications and sounds** go once per post, by the most personal lane it fell into
-  (direct > reply > mention > thread > the rest), not once per lane.
+  (direct > reply > mention > thread > the rest), not once per lane. Done (`lane_rank`,
+  `_once_per_post`).
 * **Switches** (`switch`) — chips over the lane, like today's "posts only"; the state is
-  remembered per lane and synced. What a switch hides the lane has still *taken*: it doesn't
+  remembered per lane for this run (across restarts only with `feed.remember_choices`) and not
+  synced — decided 27 Oct 2026: a chip is a glance, not a setting. What a switch hides the lane has still *taken*: it doesn't
   go to Unsorted, counts and notifications leave it out, switched on it stands in its place and
   the reading place doesn't move. Today's `posts_only`, `mentions_all`, `direct_apart` become
   the presets' switches.
@@ -251,6 +256,12 @@ The built-in lanes become presets written in rules; their words stay (and the ol
   (read in the list's lane). Collected with any set — of views or of routed lanes; while empty
   it isn't in the sidebar; `lanes.unsorted = false` hides it for good and stops collecting.
 * After a change of rules what is already stored is sorted anew; nothing is re-fetched.
+* **Why is it here?** — a card's menu item (and `fedtail --explain-lane NAME`): which
+  condition took the post, or for each one the first key that kept it out. A lane whose
+  condition no source can fill is marked ⚠ in the lane editor and says why.
+* **Parents first.** A round's replies whose rules ask about the parent or about me
+  (`parent`, `me`) get their parents fetched before the rules sort them (up to 20 a round),
+  so a reply doesn't jump lanes after it is shown.
 
 ## 7. Protocols and new atoms
 
@@ -303,13 +314,15 @@ Besides "setting up becomes programming":
 7. The interfaces: the sidebar, columns, tiles, notifications by the most personal lane;
    parity in `docs/src/parity.toml`.
 
-## 10. Open questions
+## 10. Open questions (closed 27 Oct 2026)
 
-* Should `any` allow nested groups (AND of ORs), or is "conditions + `none`" enough?
-* Events and posts in one lane: allow at once, or keep events for Activity for the first
-  version?
-* `in_my_thread` without following the thread: worth the requests?
-* The lane editor on the phone: a form over the same rules, or the config text with a check?
+* Nested groups in `any`: yes — a condition's own `any` (an AND of ORs), §4.
+* Events and posts in one lane: allowed (`event = …` conditions); a lane counts only its posts
+  as unread, events keep Activity's "seen".
+* `in_my_thread` without following the thread: no — only followed threads, it costs a
+  `/context` per thread.
+* The lane editor on the phone: a form over the same rules (≡ → Lanes), a condition as one
+  line to type, checked on save — the same place in all four interfaces.
 
 ## 11. Decisions of 27 Oct 2026
 
@@ -327,5 +340,4 @@ Besides "setting up becomes programming":
 | 10 | Bookmarks | kept by the server, shared by every client; nothing to sync ourselves |
 
 Decided (27 Oct): Subscriptions (Point-style threads) become a quick filter of Home, "threads I
-took part in" — a preset's setting, not code. Open: which servers go to `lanes.federated_extra` by default — none or a
-few big ones?
+took part in" — a preset's setting, not code. `lanes.federated_extra` is empty by default: which servers to read is the reader's choice.

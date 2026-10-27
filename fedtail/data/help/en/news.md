@@ -16,6 +16,7 @@ What's new in the latest versions, and the plans.
 - “To me”: replies and mentions in one lane
 - Home's quick filters: tags, boosts, threads with news
 - Important people
+- Lanes of rules: order by counts, “what did I miss”, “Why is it here?”
 - A thread with new replies shows on its card
 - Unfollowed — gone from Home
 - Activity's quick filters
