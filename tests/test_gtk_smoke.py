@@ -533,7 +533,9 @@ class GtkSmokeTest(_GtkBase):
             self.win._curtain_swing()
             self.assertTrue(self.win._swing_on)
             self.assertGreater(len(self.win._swing_frames()), 10)
-        self.win._curtain_swing()
+        with mock.patch.object(type(self.core), "poll_state", create=True,
+                               return_value={"busy": False}):  # (the window may poll now)
+            self.win._curtain_swing()
         self.assertFalse(self.win._swing_on)
         self.world.add(status("030", BOB, minute=30, text="пока шторка"), home=True)
         self.core.poll_once()
