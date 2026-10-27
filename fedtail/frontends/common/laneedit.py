@@ -146,7 +146,12 @@ def _groups(words):
 
 
 def problems(table):
-    """What the rule's parser says against a lane (a table): [] — it reads."""
+    """What the rule's parser says against a lane (a table): [] — it reads. A lane that
+    isn't a rule (Activity, requests, lists, tags: `kind`) has nothing to parse."""
+    kind = table.get("kind") if isinstance(table, dict) else None
+    if kind is not None or custom._name(table) in ("lists", "tags"):
+        return [] if kind in custom.KINDS or kind is None else \
+            [f"kind: {kind!r} — one of {', '.join(sorted(custom.KINDS))}"]
     return list(atoms.Rule.parse(table).warnings)
 
 
@@ -193,8 +198,15 @@ class Editor:
         return name in self.base
 
     def changed(self, name):
-        """A set's lane the file has a lane of its own for."""
-        return self.from_set(name) and self.is_own(name)
+        """A set's lane the file has a lane of its own for — other than the set's."""
+        return self.from_set(name) and self.is_own(name) and not self._as_set(name)
+
+    def _as_set(self, name):
+        """Its table is the set's own, word for word (a copy written into the file)."""
+        base = self.base.get(name)
+        t = self.tables.get(name)
+        return base is not None and t is not None and dict(t, name=name) == dict(base,
+                                                                                 name=name)
 
     def title(self, name):
         t = (self.tables.get(name) or {}).get("title")
@@ -280,7 +292,8 @@ class Editor:
     # ---- writing -------------------------------------------------------------------------
     def changes(self):
         """{(section, key): value} for config_edit.save."""
-        own = [self.tables[n] for n in self.own if n in self.tables]
+        # a set's lane copied into the file as it is isn't one's own: left to the set
+        own = [self.tables[n] for n in self.own if n in self.tables and not self._as_set(n)]
         shown = [n for n in self.order if n in self.shown]
         out = {("lanes", "custom"): own}
         probe = copy.deepcopy(self.cfg)

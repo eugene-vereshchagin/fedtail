@@ -89,6 +89,22 @@ class EditorTest(unittest.TestCase):
                 with self.subTest(preset=preset, lane=n):
                     self.assertEqual(lanesplace._table_of(n, t, vals), t)
 
+    def test_set_copies_in_the_file_save(self):
+        """Lanes of the set copied into the file as they are (Activity's `kind` among them):
+        not "changed", saved without a word against them, and left to the set."""
+        text = self.TEXT + "".join(
+            f'[[lanes.custom]]\nname = "{n}"\n{body}\n' for n, body in (
+                ("activity", 'group = "personal"\nkind = "activity"'),
+                ("lists", 'kind = "lists"'), ("tags", 'kind = "tags"'),
+                ("bookmarks", 'group = "personal"\nsource = "bookmarks"\nread = "browse"\n'
+                              'any = [{}]\nnone = [{ state = "unbookmarked" }]')))
+        ed = laneedit.Editor(text)
+        for n in ("activity", "lists", "tags", "bookmarks"):
+            self.assertFalse(ed.changed(n), n)
+            self.assertEqual(laneedit.problems(ed.tables[n]), [], n)
+        self.assertEqual(ed.changes()[("lanes", "custom")], [])
+        self.assertTrue(laneedit.problems({"name": "x", "kind": "weird"}))
+
     def test_new_and_delete(self):
         i18n.setup("en")
         ed = laneedit.Editor(self.TEXT)
