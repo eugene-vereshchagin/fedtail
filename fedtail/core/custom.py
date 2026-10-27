@@ -15,6 +15,7 @@ import json
 import logging
 
 from . import atoms, lanes, presets
+from .model import real
 
 log = logging.getLogger(__name__)
 
@@ -319,9 +320,15 @@ def unsorted(store, lanes_now, new_by_source, ctx, taken):
         idset = set(ids)
         own = [x for x in lanes_now if x.source == source and not x.feeds]
         rows = [st for item_id, st in store.items(source, len(idset) + 50) if item_id in idset]
-        held = store.held_by(PREFIX, [st["id"] for st in rows])  # taken before, from elsewhere
+        # held by another lane already: a lane of several sources, a list, a tag lane…
+        others = {x.source for x in lanes_now if x.source and x.source != source}
+        held = store.held_by(PREFIX, [st["id"] for st in rows]) | \
+            store.held_in(others, [st["id"] for st in rows])
         for st in rows:
             if st["id"] in taken or st["id"] in held:
+                continue
+            # someone put in a list: read in the list's lane (lists.hide_in took them out)
+            if st["account"]["id"] in ctx.hidden or real(st)["account"]["id"] in ctx.hidden:
                 continue
             if any(lanes.keeps(x, st, ctx) for x in own):
                 continue

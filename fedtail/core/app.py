@@ -1098,6 +1098,8 @@ class Core(SocialMixin):
         for name in got:
             self.store.prune(name, self.keep_per_lane())
         if lanes.UNSORTED in self.lane_by_name:
+            # what a lane has taken since (a list's, a tag lane's): out of Unsorted
+            self.store.drop_held(lanes.UNSORTED, {x.source for x in self.lanes if x.source})
             taken = {sid for name in got for sid in got[name]}
             left = custom.unsorted(self.store, self.lanes, new_by_source, self._ctx(), taken)
             if left:

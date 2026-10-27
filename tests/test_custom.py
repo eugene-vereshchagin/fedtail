@@ -836,3 +836,31 @@ class LanesToConfigTest(unittest.TestCase):
         self.assertEqual(report["written"], ["home", "direct", "lists", "tags"])
         cfg, _ = config.validate(tomllib.loads(out))
         self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "direct"])
+
+
+class UnsortedAndListsTest(FreeBase):
+    def test_list_members_are_not_unsorted(self):
+        """Someone in a list leaves Home (lists.hide_in) for the list's lane: not Unsorted
+        (24.10: "tits" went there)."""
+        core, w = self.make([FEED])
+        w.lists = {"L1": {"title": "tits", "exclusive": False, "members": {"B"}}}
+        w.add(status("001", BOB, minute=1), home=True)
+        w.add(dict(status("002", NEWS, minute=2), reblog=status("003", BOB, minute=0)),
+              home=True)
+        core.connect().result()
+        core.poll_once()
+        core.poll_once()  # the lists come with the first round; their lanes catch up next
+        self.assertIn("list:L1", core.lane_by_name)
+        self.assertNotIn("001", self.ids(core, "home"))
+        self.assertIn("001", self.ids(core, "list:L1"))
+        self.assertEqual(self.ids(core, "unsorted"), [])
+
+    def test_cleared_once_a_lane_has_it(self):
+        core, w = self.make([FEED])
+        core.connect().result()
+        core.poll_once()
+        core.store.put_items("unsorted", [("009", status("009", BOB), "")])
+        core.store.put_items("home", [("009", status("009", BOB), "")])
+        self.assertEqual(core.store.drop_held("unsorted", {"home", "unsorted"}), 1)
+        self.assertEqual(core.store.drop_held("unsorted", {"unsorted"}), 0)
+        self.assertEqual(core.store.held_in([], ["009"]), set())

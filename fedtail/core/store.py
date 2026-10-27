@@ -692,6 +692,34 @@ class Store:
                 "ON m.status_id = i.status_id WHERE i.source = 'subs' "
                 "AND i.status_id NOT IN (SELECT status_id FROM read)")}
 
+    def held_in(self, sources, status_ids):
+        """Which of these statuses one of these streams holds."""
+        ids, sources = list(dict.fromkeys(status_ids)), sorted(set(sources))
+        if not ids or not sources:
+            return set()
+        out = set()
+        with self._reading() as db:
+            for i in range(0, len(ids), 400):
+                part = ids[i:i + 400]
+                out |= {r[0] for r in db.execute(
+                    f"SELECT DISTINCT status_id FROM items WHERE source IN "
+                    f"({','.join('?' * len(sources))}) AND status_id IN "
+                    f"({','.join('?' * len(part))})", [*sources, *part])}
+        return out
+
+    def drop_held(self, source, others):
+        """Take out of `source` what one of `others` holds (Unsorted, once a lane has it)."""
+        others = sorted(set(others) - {source})
+        if not others:
+            return 0
+        with self._tx() as db:
+            cur = db.execute(
+                f"DELETE FROM items WHERE source=? AND status_id IN (SELECT status_id FROM "
+                f"items WHERE source IN ({','.join('?' * len(others))}))", [source, *others])
+            if cur.rowcount:
+                self._bump(source)
+            return cur.rowcount
+
     def held_by(self, prefix, status_ids):
         """Which of these statuses some stream whose name starts with `prefix` holds."""
         ids = list(dict.fromkeys(status_ids))

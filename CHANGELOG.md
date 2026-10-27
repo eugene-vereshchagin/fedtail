@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- Unsorted took the posts of people put in a list: Home leaves them to the list's lane
+  (`lists.hide_in`), and Unsorted only asked lanes of the same source. Now a post another lane
+  holds, or one of a list's member, isn't unsorted, and what got there by mistake leaves.
 - **Every lane is a rule.** Home, Bots, To me, Direct, Subscriptions, Bookmarks and the rest are
   written in `fedtail/data/presets.toml` with the same keys as `[[lanes.custom]]`; the sets
   (`lanes.preset`: "fedtail", "mastodon", "tusky", "phanpy") are sets of such rules, and a
