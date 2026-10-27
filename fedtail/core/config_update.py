@@ -255,6 +255,8 @@ def _toml(value):
     if isinstance(value, list):
         return "[" + ", ".join(_toml(x) for x in value) + "]"
     if isinstance(value, dict):
+        if not value:
+            return "{}"
         return "{ " + ", ".join(f"{k} = {_toml(v)}" for k, v in value.items()) + " }"
     return json.dumps(str(value), ensure_ascii=False)
 
@@ -359,7 +361,10 @@ def lanes_to_config(user_text, report=None):
     preset = cfg["lanes"]["preset"]
     mine = {canonical(str(x.get("name"))) for x in cfg["lanes"]["custom"]
             if isinstance(x, dict) and x.get("name")}
-    todo = [x for x in presets.lanes_of(preset) if x.get("name") not in mine]
+    from .custom import shown_names
+    shown = set(shown_names(cfg))  # what lanes.enabled hides stays the set's (and hidden)
+    todo = [x for x in presets.lanes_of(preset) if x.get("name") not in mine
+            and x.get("name") in shown]
     if report is not None:
         report["written"] = [x["name"] for x in todo]
         report["preset"] = preset

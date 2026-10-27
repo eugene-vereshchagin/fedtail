@@ -825,3 +825,14 @@ class LanesToConfigTest(unittest.TestCase):
         self.assertEqual(homes, [{"name": "home", "source": "home", "any": [{}]}])
         cfg, _ = config.validate({"lanes": {"preset": "tusky"}})
         self.assertIn("mentions", [x.name for x in lanes.enabled(cfg)])
+
+    def test_hidden_lanes_stay_out(self):
+        import tomllib
+
+        from fedtail.core import config_update as u
+        user = "[lanes]\nenabled = [\"home\", \"direct\"]\n"
+        report = {}
+        out = u.lanes_to_config(user, report)
+        self.assertEqual(report["written"], ["home", "direct", "lists", "tags"])
+        cfg, _ = config.validate(tomllib.loads(out))
+        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "direct"])
