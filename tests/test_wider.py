@@ -66,3 +66,20 @@ class WiderTest(FreeBase):
     def test_my_own_server_isnt_asked(self):
         self.core.cfg["lanes"]["federated_extra"] = ["example.test"]
         self.assertFalse(self.core.wider.due(True))
+
+    def test_remote_as_a_lanes_source(self):
+        rule = {"name": "far", "source": "remote:far.example", "any": [{}]}
+        core, w = self.make([rule])
+        core.cfg["lanes"]["enabled"] = ["far"]
+        core._apply_lists([], {})
+        core.connect().result()
+        core._origin_get = lambda url: page if "far.example" in url else None
+        page = []
+        for i in ("R31", "R32"):
+            st = dict(status(i, BOB, minute=1, vis="public"),
+                      uri=f"https://far.example/s/{i}")
+            w.remote[st["uri"]] = dict(st, id="L" + i)
+            page.append(st)
+        core.poll_once()
+        self.assertEqual(sorted(st["id"] for _i, st in core.lane_entries("far")),
+                         ["LR31", "LR32"])

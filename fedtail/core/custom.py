@@ -22,8 +22,8 @@ log = logging.getLogger(__name__)
 PREFIX = "custom:"  # the stream of a lane of several sources
 # the streams a lane can be fed from in this version
 FEEDS = {"home", "local", "federated", "mentions", "mine", "bookmarks", "favourites", "subs",
-         "watched"}
-FEED_PREFIXES = ("list:", "tags:")
+         "watched", "trends", "direct", "bubble"}
+FEED_PREFIXES = ("list:", "tags:", "account:", "link:", "quotes:", "remote:")
 DEFAULT_FEED = "home"
 BACKFILL_ROWS = 3000  # per feed, the newest: what a new lane starts with
 KINDS = {"activity", "requests", "lists", "tags"}  # lanes that aren't a rule

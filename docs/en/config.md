@@ -221,6 +221,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `lanes.browse_keep` | `200` | Lanes you browse rather than read through (Federated, Local while lazy): the newest this many of the whole stream, taken while the lane is open — something to scroll through however fast a relay pours in. "Older" goes further back; what's beyond it goes at the next update. |
 | `lanes.federated_extra` | `[]` | Wider than your server knows. Servers whose public lane (their own people's posts) also comes into Federated while it's open, and servers whose tag lanes come into your lanes of tags (a lane of #linux takes #linux from them too): read without an account, each new post fetched into your server by its address — so it is answered and liked as any other, and your server knows it from then on. A server at most every extra_minutes, up to 20 posts a time. Many keep these lanes closed to strangers (GoToSocial always): then it's left for a few hours. Like ["mastodon.social", "fosstodon.org"]. |
 | `lanes.tags_extra` | `[]` |  |
+| `lanes.bubble` | `[]` | The servers of your "bubble": a lane of rules with source = "bubble" reads Federated, only their people's posts (like Akkoma's bubble timeline). Like ["fosstodon.org", "mas.to"]. |
 | `lanes.extra_minutes` | `10` |  |
 
 ## 5. Posts

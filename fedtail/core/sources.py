@@ -59,6 +59,56 @@ def make_sources(api, me_id):
     }
 
 
+def conversation_entry(c):
+    """A private conversation's newest post (conversations): the post, as a timeline's."""
+    st = c.get("last_status") if isinstance(c, dict) else None
+    return (st["id"], st, st.get("created_at", "")) if st else None
+
+
+def _first_page(fetch):
+    """A stream with no paging of its own (trends, conversations): its page once, no
+    "older"; a min_id is no cursor there — the page again, the store drops repeats."""
+    def page(limit=40, max_id=None, min_id=None):
+        return [] if max_id else (fetch(limit) or [])
+    return page
+
+
+def wider_sources(api, bubble=()):
+    """Streams for lanes of rules beyond the built-in ones (feeds.md §2.1): my server's
+    trending posts, private conversations, and the "bubble" — Federated, only the
+    servers chosen (lanes.bubble)."""
+    hosts = {h.lower().lstrip("@") for h in bubble or ()}
+
+    def in_bubble(st):
+        acct = ((st or {}).get("account") or {}).get("acct") or ""
+        return _status_entry(st) if "@" in acct and acct.split("@", 1)[1].lower() in hosts \
+            else None
+    return {
+        "trends": Source("trends", _first_page(lambda n: api.trends("statuses", limit=min(n, 40))),
+                         _status_entry),
+        "direct": Source("direct", _first_page(lambda n: api.conversations(limit=min(n, 40))),
+                         conversation_entry),
+        "bubble": Source("bubble", api.federated, in_bubble),
+    }
+
+
+def prefixed_source(api, name, remote=None):
+    """A stream named with its parameter: account:<id> (someone's posts), link:<url>
+    (posts sharing a link), quotes:<id> (quotes of a post), remote:<host> (another
+    server's public lane, fetched into mine: remote(host) gives its new posts)."""
+    kind, _sep, arg = name.partition(":")
+    if kind == "account":
+        return Source(name, lambda **kw: api.account_statuses(arg, **kw), _status_entry)
+    if kind == "link":
+        return Source(name, lambda **kw: api.link_timeline(arg, **kw), _status_entry)
+    if kind == "quotes":
+        return Source(name, lambda limit=40, max_id=None, min_id=None:
+                      api.quotes(arg, max_id)[0] or [], _status_entry)
+    if kind == "remote" and remote is not None:
+        return Source(name, _first_page(lambda _n: remote(arg)), _status_entry)
+    return None
+
+
 def tag_group_source(api, spec):
     from . import taggroups
     return Source(taggroups.lane_name(spec),

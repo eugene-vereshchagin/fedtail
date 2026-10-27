@@ -118,6 +118,27 @@ class Wider:
             self.core.emit("lanes_updated", got)
         return got
 
+    def remote_lane(self, host):
+        """A lane of rules' source remote:<host>: that server's public lane, its new
+        posts fetched into mine (a few a round) — [statuses], or [] when it's closed."""
+        h = self.core.server_host(host) or ""
+        if not h or not self._due(f"src:{h}"):  # gently: lanes.extra_minutes
+            return []
+        self._done(f"src:{h}")
+        page = self.core._origin_get(public_url(h))
+        if not isinstance(page, list):
+            return []
+        seen = list(self.store.kv_get("wider.seen", []) or ())
+        known = set(seen)
+        uris = [s["uri"] for s in page if isinstance(s, dict) and s.get("uri")
+                and s.get("visibility") in ("public", None) and s["uri"] not in known]
+        uris = uris[:PER_ROUND]
+        if not uris:
+            return []
+        got = self.core._resolve_statuses(uris)
+        self.store.kv_set("wider.seen", (seen + uris)[-SEEN_KEEP:])
+        return got
+
     def _one(self, kind, host, lane, tag):
         url = tag_url(host, tag) if kind == "tag" else public_url(host)
         page = self.core._origin_get(url)

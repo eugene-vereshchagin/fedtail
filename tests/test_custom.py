@@ -57,13 +57,13 @@ class LoadTest(unittest.TestCase):
             {"name": "a", "any": [{"me": "replys"}]},
             {"name": "a", "any": [{"author": "me"}]},
             {"any": [{"author": "me"}]},
-            {"name": "far", "any": [{"source": "remote:x.example"}]},
+            {"name": "far", "any": [{"source": "context"}]},
         ]}})
         text = "\n".join(warnings)
         self.assertIn("lanes.custom[0] a: me: unknown value 'replys'", text)
         self.assertIn("lanes.custom[1] a: the name is taken", text)
         self.assertIn("lanes.custom[2] ?: a lane needs a name", text)
-        self.assertIn("sources not in this version: remote:x.example", text)
+        self.assertIn("sources not in this version: context", text)
         own = {"a", "far"} & {c.name for c in custom.load(cfg)[0]}
         self.assertEqual(own, {"a", "far"})
         with self.assertRaises(config.ConfigError):

@@ -136,6 +136,7 @@ DEFAULTS = {
         "custom": [],
         "unsorted": True,
         "browse_keep": 200,
+        "bubble": [],
         "federated_extra": [],
         "tags_extra": [],
         "extra_minutes": 10,

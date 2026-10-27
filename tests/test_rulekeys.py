@@ -138,3 +138,83 @@ class WhyTest(FreeBase):
         taken = {r["id"]: r["taken"] for r in got["rows"]}
         self.assertEqual(taken, {"700": False, "701": True})
         self.assertIsNone(core.explain_lane("nope"))
+
+
+class ParentsFirstTest(FreeBase):
+    """A routed lane asking about the parent sorts a reply once its parent is known: the
+    parent is fetched before the rules (feeds.md §8, atoms known late)."""
+
+    def test_reply_to_my_post_routed_right(self):
+        from .fakes import ME
+        rule = {"name": "under_mine", "any": [{"source": ["home", "mentions"],
+                                                "me": "reply_to_post"}]}
+        core, w = self.make([rule])
+        core.cfg["lanes"]["enabled"] = ["under_mine"]
+        core._apply_lists([], {})
+        mine = status("600", ME, minute=1, vis="public")
+        w.statuses["600"] = mine  # on the server, not in my store yet
+        core.connect().result()
+        core.poll_once()
+        self.assertIsNone(core.store.get_status("600"))
+        w.add(status("601", BOB, reply_to="600", reply_acc="ME", minute=2), mention=True)
+        core.poll_once()
+        self.assertIn("601", [st["id"] for _i, st in core.lane_entries("under_mine")])
+
+
+class MoreSourcesTest(FreeBase):
+    """Sources of feeds.md §2.1 for lanes of rules: trends, direct, bubble, account:,
+    link:, quotes:, remote:."""
+
+    def lane(self, rule):
+        core, w = self.make([dict({"name": "x"}, **rule)])
+        core.cfg["lanes"]["enabled"] = ["x"]
+        core._apply_lists([], {})
+        return core, w
+
+    def ids(self, core):
+        return sorted(st["id"] for _i, st in core.lane_entries("x"))
+
+    def test_trends_and_direct(self):
+        core, w = self.lane({"source": "trends", "any": [{}]})
+        w.trends["statuses"] = [w.add(status("510", BOB, minute=1, vis="public"))]
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(self.ids(core), ["510"])
+        core, w = self.lane({"source": "direct", "any": [{}]})
+        dm = w.add(status("520", BOB, minute=1, vis="direct"))
+        w.conversations.append({"id": "c1", "unread": True, "accounts": [BOB],
+                                "last_status": dm})
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(self.ids(core), ["520"])
+
+    def test_bubble(self):
+        from .fakes import acct
+        core, w = self.lane({"source": "bubble", "any": [{}]})
+        core.cfg["lanes"]["bubble"] = ["near.example"]
+        near = acct("N", "nina@near.example")
+        w.local.append(w.add(status("530", near, minute=1, vis="public")))
+        w.local.append(w.add(status("531", BOB, minute=2, vis="public")))
+        core.connect().result()
+        core.poll_once()
+        self.assertEqual(self.ids(core), ["530"])
+
+    def test_account_link_quotes(self):
+        from .fakes import NEWS
+        core, w = self.lane({"source": ["account:B", "quotes:900"], "any": [{}]})
+        w.add(status("540", BOB, minute=1, vis="public"), home=True)
+        w.add(status("541", NEWS, minute=2, vis="public"), home=True)
+        w.quotes["900"] = [w.add(status("542", NEWS, minute=3, vis="public"))]
+        core.connect().result()
+        core.poll_once()
+        core.poll_once()
+        self.assertEqual(self.ids(core), ["540", "542"])
+        self.assertIn("account:B", core.sources)
+        core2, w2 = self.lane({"source": "link:https://news.example/a", "any": [{}]})
+        st = status("550", BOB, minute=1, vis="public")
+        st["card"] = {"url": "https://news.example/a"}
+        w2.add(st, home=True)
+        core2.connect().result()
+        core2.poll_once()
+        core2.poll_once()
+        self.assertEqual(self.ids(core2), ["550"])

@@ -721,6 +721,10 @@ browse_keep = 200
 # Like ["mastodon.social", "fosstodon.org"].
 federated_extra = []
 tags_extra = []
+
+# The servers of your "bubble": a lane of rules with source = "bubble" reads Federated, only
+# their people's posts (like Akkoma's bubble timeline). Like ["fosstodon.org", "mas.to"].
+bubble = []
 extra_minutes = 10
 
 

@@ -101,6 +101,7 @@ class OtherAccount(ValueError):
 
 
 COUNT_SORTS = ("replies", "likes", "boosts", "density")  # a lane's sort by counts
+PARENTS_FIRST = 20  # parents fetched before the rules sort a round's replies
 
 
 def _when_of(st):
@@ -442,6 +443,7 @@ class Core(SocialMixin):
             from . import profiles
             profiles.remember(self.paths, me, self.auth["server"])  # for the switcher
             self.sources = sources.make_sources(api, me["id"])
+            self.sources.update(sources.wider_sources(api, self.cfg["lanes"].get("bubble")))
             self._silence_seen = {}
             self.sources["mentions"].entry = self._mention_entry
             done = False
@@ -812,6 +814,11 @@ class Core(SocialMixin):
             needed = lanes.sources_needed(self.lanes) + \
                 (["watched"] if self._important_waiting else [])
             for name in needed:
+                if name not in self.sources and self.api is not None:
+                    # a stream named by a lane's rule (account:, link:, quotes:, remote:)
+                    src = sources.prefixed_source(self.api, name, remote=self.wider.remote_lane)
+                    if src is not None:
+                        self.sources[name] = src
                 if name not in self.sources:
                     continue
                 if name in lazy:  # browse lanes: only while open, newest page only
@@ -915,6 +922,12 @@ class Core(SocialMixin):
                                       if st["account"]["id"] == self.me["id"]])
 
             self._step("read marks")
+            # rules that ask about the parent (a reply to my post or to a comment, whose
+            # reply it is) sort a reply only once its parent is known: fetched first
+            # (feeds.md §8, "atoms known late"), a few at most — the rest come after
+            if any(c.routed and {"parent", "me"} & set(c.needs) for c in self.customs):
+                self._fetch_parents([st for st in new_statuses
+                                     if real(st).get("in_reply_to_id")][:PARENTS_FIRST])
             new_by_source.update(self._route_custom(new_by_source))
             self._show_important()  # after routing: Unsorted may have got its first
             per_lane = self._split_by_lane(new_by_source)

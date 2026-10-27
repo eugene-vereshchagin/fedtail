@@ -720,6 +720,10 @@ browse_keep = 200
 # Например ["mastodon.social", "fosstodon.org"].
 federated_extra = []
 tags_extra = []
+
+# Серверы твоего «пузыря»: лента из правил с source = "bubble" читает Федерацию, только посты
+# их людей (как bubble-лента Akkoma). Например ["fosstodon.org", "mas.to"].
+bubble = []
 extra_minutes = 10
 
 
