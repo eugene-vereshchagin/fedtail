@@ -199,6 +199,39 @@ class BridgeTest(_Base):
         self.assertTrue(lanes["home"]["group"])
         self.assertNotEqual(lanes["home"]["group"], lanes["to_me"]["group"])
 
+    def test_announcements_strip(self):
+        """The windows' announcement strip: the ones not dismissed, with reactions, and
+        "Got it" — none at all with ui.announcements = "off"."""
+        from concurrent.futures import Future
+
+        from fedtail.model import Announcement, Reaction
+        self.demo()
+        done = Future()
+        done.set_result([Announcement("a1", "<p>Maintenance tonight</p>", None,
+                                      (Reaction("👍", 2, True),)),
+                         Announcement("a2", "<p>Second</p>", None, ())])
+        web = self.bridge._s["web"]
+        with mock.patch.object(web.core, "announcements", return_value=done), \
+                mock.patch.object(self.bridge._core(), "supports", return_value=True):
+            got = self.call("announcements")
+        self.assertEqual([x["id"] for x in got["items"]], ["a1", "a2"])
+        first = got["items"][0]
+        self.assertEqual(first["text"], "Maintenance tonight")
+        self.assertIn("📢", first["head"])
+        self.assertEqual(first["reactions"][0], {"name": "👍", "count": 2, "me": True})
+        self.assertIn("❤️", [r["name"] for r in first["reactions"]])
+        self.assertTrue(got["ok"])
+        self.bridge._core().cfg["ui"]["announcements"] = "off"
+        self.assertEqual(self.call("announcements")["items"], [])
+
+    def test_quote_lines_and_reveal(self):
+        self.demo()
+        got = self.call("quote_lines", "@bob hello\nworld")
+        self.assertTrue(got["text"].startswith(">"))
+        self.assertNotIn("@bob", got["text"])
+        self.assertIn("grew", self.call("reveal", "home", 0))
+        self.assertIn("threads", self.call("status"))
+
     def test_activity_is_rows_not_an_empty_lane(self):
         """Activity (and follow requests) are no posts: the lane brings the windows' rows
         with their buttons, and on screen the activity is seen — its count goes."""

@@ -125,6 +125,7 @@ fun HubScreen(model: AppModel, snack: SnackbarHostState, pane: Boolean = false) 
                             }
                         }
                     })
+                AnnounceBar(model)
                 if (model.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         },
@@ -301,6 +302,37 @@ fun LaneTile(
             Text(stringResource(R.string.fresh_of_them, lane.fresh), fontSize = 11.sp,
                 lineHeight = 13.sp, color = fg.copy(alpha = 0.75f), maxLines = 1,
                 textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** The server's announcements (ui.announcements = "banner"): one at a time over the lanes,
+ *  its reactions, and "Got it" — the server remembers it, other clients stop showing it. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AnnounceBar(model: AppModel) {
+    val a = model.announces.firstOrNull() ?: return
+    Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.secondaryContainer)
+        .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(a.head, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f))
+            TextButton(onClick = { model.dismissAnnouncement() }) {
+                Text(model.announceOk.ifBlank { "OK" })
+            }
+        }
+        Text(a.text, fontSize = 14.sp, maxLines = 8, overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSecondaryContainer)
+        if (a.reactions.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                a.reactions.forEach { (name, count, mine) ->
+                    androidx.compose.material3.FilterChip(selected = mine,
+                        onClick = { model.reactAnnouncement(a, name) },
+                        label = { Text(if (count > 0) "$name $count" else name, fontSize = 13.sp) })
+                }
+            }
         }
     }
 }

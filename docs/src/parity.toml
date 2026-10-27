@@ -185,8 +185,8 @@ area = "window"
 android = "has"
 name.ru = "Объявления сервера"
 name.en = "The server's announcements"
-note.ru = "Плашка с объявлением есть только в окне."
-note.en = "The announcement banner is the window's only."
+note.ru = "Плашка с объявлением есть в окне и на телефоне; терминал и веб показывают объявления местом."
+note.en = "The announcement banner is the window's and the phone's; the terminal and the web page show announcements as a place."
 keys = ["announce_more", "announce_ok", "announce_react_tip", "announce_title",
         "tip_announce_ok"]
 

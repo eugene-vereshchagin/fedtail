@@ -2,6 +2,27 @@
 
 ## 0.21.0 — in progress
 
+- **Android caught up with the windows** (a read-through of the whole app against them):
+  - the card's lines: "🔔 N new in the thread", "👤 new in this private talk" (and the
+    warning in the reply box before sending), "↳ you replied…", the conversation line,
+    "♻ boosted by … · time" opening the booster, "the post it answers is gone / fetching";
+  - the marks under a name are links: "edited" opens the post's edits;
+  - #tags and fediverse links inside a post open here (they did nothing);
+  - a post a server filter says "warn" for is folded, with the filter's name; a quoted
+    post's warning is shown instead of its words, a quote hidden for a block or mute has
+    "show anyway", `feed.quotes = "off"` holds;
+  - a lane of rules shows its events (likes, follows…) among its posts;
+  - an open thread grows by itself when replies come from other servers;
+  - "in every lane" finds reach back past what a lane shows;
+  - "Quote in reply" uses `post.quote_prefix` and leaves the leading @mentions out;
+  - the character count is the windows' (a chain part by part);
+  - the server's announcements as a strip with reactions and "Got it";
+  - launchers that show a number on the icon get `ui.icon_count`'s;
+  - a browsed lane its server gives nothing for says so; a lane's info line shows while
+    it has posts too; link cards show their description.
+- Web and phone: a tail of nothing but #tags is folded to "… +N" (`feed.collapse_tags`),
+  as in the windows.
+
 - Android: the overview of tiles stays the home screen; the lanes under the tiles stand as
   the chosen set has them (`lanes.preset`), under its sections' titles, instead of a fixed
   order of fedtail's own. The big "Read in a row" button is gone (swipe left or "what's

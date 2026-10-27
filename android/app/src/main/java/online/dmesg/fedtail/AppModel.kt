@@ -73,6 +73,12 @@ data class HubLane(
     val count: String get() = if (capped) "$unread+" else "$unread"
 }
 
+/** One of the server's announcements for the strip (bridge.announcements). */
+data class Announce(
+    val id: String, val head: String, val text: String,
+    val reactions: List<Triple<String, Int, Boolean>>, // (emoji, count, mine)
+)
+
 /** kind: you | reading | lists | browse (bridge.hub) */
 data class HubSection(val kind: String, val lanes: List<HubLane>)
 
@@ -92,7 +98,10 @@ data class PlaceRow(val title: String, val line: String, val key: String,
 data class PlacePage(val rows: List<PlaceRow>, val empty: String,
                      val submit: PlaceButton?, val more: PlaceButton?)
 
-data class LinkCard(val url: String, val title: String, val provider: String, val image: String)
+data class LinkCard(
+    val url: String, val title: String, val provider: String, val image: String,
+    val description: String = "",
+)
 
 data class PostItem(
     val key: String, val id: String, val sid: String, val alias: String, val name: String,
@@ -125,6 +134,17 @@ data class PostItem(
     val threadNews: Pair<String, String>? = null,   // "🔔 3 new in the thread"
     val myReplies: List<Pair<String, String>> = emptyList(),  // "↳ you replied …"
     val visibility: String = "",     // public | unlisted | private | direct
+    val meta: List<Pair<String, String>> = emptyList(),  // the marks with their links (time, edits)
+    val foldedBy: String = "",       // "Folded by the filter «x»": a server filter's "warn"
+    val quoteLine: Pair<String, String>? = null,  // the quote as one line; null — none shown
+    val conversation: Pair<String, String>? = null,  // "💬 N in the conversation, new: M…"
+    val boosted: Pair<String, String>? = null,  // "♻ boosted by X · 14:02" → their profile
+    val contextLine: Pair<String, String>? = null,  // the parent's line when it isn't here yet
+    val quoteOff: Boolean = false,   // the card's words leave the quote out (feed.quotes = "off")
+    // a lane of rules' events (likes, follows… — `event = …`) next to this post, in the
+    // server's order: the ones that came just before it, and (the last post) after it
+    val eventsBefore: List<Pair<String, String>> = emptyList(),
+    val eventsAfter: List<Pair<String, String>> = emptyList(),
 )
 
 /** A lane's switches from its header (common/lane.py, the windows' and the page's). */
@@ -581,7 +601,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             return
         }
         laneSwitches = parseSwitches(got)
-        var list = parsePosts(got.optJSONArray("posts"))
+        var list = withEvents(parsePosts(got.optJSONArray("posts")), got.optJSONArray("events"))
         if (newestFirst) list = list.reversed()
         posts = list
         laneOlder = got.optBoolean("older")
@@ -681,7 +701,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }, "") { pick, _ ->
                 val h = hits.getJSONObject(pick.toInt())
                 pendingAim = str(h, "item").ifBlank { str(h, "id") }
-                showLane(str(h, "lane"))
+                viewModelScope.launch {
+                    // further back than the lane shows: it grows down to the match first
+                    Core.reveal(str(h, "lane"), h.optInt("index"))
+                    showLane(str(h, "lane"))
+                }
             }
         }
     }
@@ -739,11 +763,61 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { Core.read(ids) }
     }
 
+    private var threadSeq = 0 // the core's "a thread grew" count, as last seen
+
+    // ---- the server's announcements (ui.announcements = "banner"): the windows' strip --------
+    var announces by mutableStateOf(listOf<Announce>())
+    var announceOk by mutableStateOf("")
+    private var announcedAt = 0L
+
+    /** Asked at the start and twice an hour (admins post rarely), as the windows do. */
+    private suspend fun checkAnnouncements(force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - announcedAt < 30 * 60 * 1000L) return
+        announcedAt = now
+        val got = Core.announcements()
+        if (Core.failed(got) != null) return
+        announceOk = got.optString("ok")
+        val arr = got.optJSONArray("items") ?: JSONArray()
+        announces = (0 until arr.length()).map { i ->
+            val a = arr.getJSONObject(i)
+            val rs = a.optJSONArray("reactions") ?: JSONArray()
+            Announce(a.optString("id"), a.optString("head"), a.optString("text"),
+                (0 until rs.length()).map { j ->
+                    val r = rs.getJSONObject(j)
+                    Triple(r.optString("name"), r.optInt("count"), r.optBoolean("me"))
+                })
+        }
+    }
+
+    /** "Got it": the server remembers it, the next one shows. */
+    fun dismissAnnouncement() {
+        val a = announces.firstOrNull() ?: return
+        announces = announces.drop(1)
+        viewModelScope.launch {
+            Core.failed(Core.announcementDismiss(a.id))?.let { message = it }
+        }
+    }
+
+    /** A reaction on or off — counted at once, as the server will count it. */
+    fun reactAnnouncement(a: Announce, name: String) {
+        val mine = a.reactions.firstOrNull { it.first == name }?.third ?: false
+        val on = !mine
+        val rs = a.reactions.map {
+            if (it.first == name) Triple(name, maxOf(0, it.second + if (on) 1 else -1), on) else it
+        }
+        announces = announces.map { if (it.id == a.id) it.copy(reactions = rs) else it }
+        viewModelScope.launch {
+            Core.failed(Core.announcementReact(a.id, name, on))?.let { message = it }
+        }
+    }
+
     /** While on screen: whatever the core learns (a poll, sync) reloads what is shown. */
     private fun watch() {
         if (watcher?.isActive == true) return
         watcher = viewModelScope.launch {
             while (isActive) {
+                checkAnnouncements()
                 val v = Core.waitChange(version, 25)
                 // a poll round began or ended: "updating…" / "updated at" on the overview,
                 // so a lane with nothing new doesn't look like a dead network
@@ -752,6 +826,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     hubSlow = st.optString("text")
                     busy = st.optBoolean("busy")
                 }
+                val grew = st.optInt("threads")
                 if (v != version) {
                     version = v
                     // the windows' notes into the shade (notify.when_focused: even now)
@@ -759,6 +834,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     lanes = parseLanes(Core.lanes())
                     loadHub()
                     current?.let { loadLane(it, keep = true) }
+                    // an open thread grows by itself: replies from other servers, edits
+                    if (grew != threadSeq) {
+                        threadSeq = grew
+                        (place as? Place.Thread)?.let { reloadThread(it.focus) }
+                    }
                     refreshing = false
                     pulling = false
                 }
@@ -1036,6 +1116,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             when (parts[0]) {
                 "thread", "post" -> if (arg.isNotBlank()) openThread(arg)
                 "account", "profile" -> if (arg.isNotBlank()) openProfile(arg)
+                // the rest the windows' way (common/links.py): a #tag's place, a fediverse
+                // address resolved here, a post's edits, its time…
+                else -> runLink(url)
             }
             return
         }
@@ -1610,6 +1693,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // hint for screen readers (web compose_check, the windows' counter)
     var composeHints by mutableStateOf("")
     var composeNewcomers by mutableStateOf("") // "⚠ @eve wasn't in this private talk"
+    var composeCounted by mutableStateOf<Triple<String, String, Int>?>(null) // (text, cw, n)
 
     suspend fun checkCompose() {
         val body = JSONObject().put("text", composeText)
@@ -1623,6 +1707,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val got = Core.composeCheck(body)
         if (Core.failed(got) != null) return
         composeNewcomers = got.optString("newcomers")
+        // the windows' count (a chain: its longest part, each counted on its own)
+        composeCounted = if (got.has("n")) Triple(composeText, composeCw, got.optInt("n")) else null
         composeHints = listOf(got.optString("chain"), got.optString("camel"))
             .filter { it.isNotBlank() }.joinToString("\n")
     }
@@ -1743,8 +1829,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** ⋯ → reply with a quote: the post's words, each line after "> ". */
     fun quoteReply(p: PostItem) {
         compose(p)
-        val quoted = p.text.trim().lines().joinToString("\n") { "> $it" }
-        composeText = composeText + "\n" + quoted + "\n\n"
+        // post.quote_prefix, the leading @mentions left out — the windows' quote
+        viewModelScope.launch {
+            val got = Core.quoteLines(p.text.trim())
+            val quoted = if (Core.failed(got) == null) got.optString("text")
+                         else p.text.trim().lines().joinToString("\n") { "> $it" } + "\n\n"
+            composeText = composeText.trimEnd() + "\n" + quoted
+        }
     }
 
     fun detach(a: Attachment) {
@@ -1919,6 +2010,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun str(o: JSONObject?, key: String): String =
         if (o == null || o.isNull(key)) "" else o.optString(key)
 
+    /** A lane of rules' events (web lane "events": {bit, before}) put next to their posts. */
+    private fun withEvents(list: List<PostItem>, events: JSONArray?): List<PostItem> {
+        if (events == null || events.length() == 0 || list.isEmpty()) return list
+        val before = HashMap<String, MutableList<Pair<String, String>>>()
+        val after = mutableListOf<Pair<String, String>>()
+        for (i in 0 until events.length()) {
+            val e = events.optJSONObject(i) ?: continue
+            val b = bit(e.optJSONObject("bit")) ?: continue
+            val at = str(e, "before")
+            if (at.isBlank()) after += b else before.getOrPut(at) { mutableListOf() } += b
+        }
+        return list.mapIndexed { i, p ->
+            p.copy(eventsBefore = before[p.id] ?: emptyList(),
+                   eventsAfter = if (i == list.size - 1) after else emptyList())
+        }
+    }
+
     /** A line around a card ({text, link}) as (words, link); null — none. */
     private fun bit(o: JSONObject?): Pair<String, String>? =
         str(o, "text").takeIf { it.isNotBlank() }?.let { it to str(o, "link") }
@@ -1947,7 +2055,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     m.optInt("w"), m.optInt("h"))
             }.filter { it.preview.isNotBlank() || it.url.isNotBlank() },
             card = card?.let { LinkCard(str(it, "url"), str(it, "title"), str(it, "provider"),
-                str(it, "image")) },
+                str(it, "image"), str(it, "description")) },
             poll = poll?.let { p ->
                 val opts = p.optJSONArray("options") ?: JSONArray()
                 ((0 until opts.length()).map {
@@ -1984,6 +2092,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 (0 until m.length()).mapNotNull { m.optJSONObject(it)?.optString("text") }
                     .filter { it.isNotBlank() }.joinToString(" · ") } ?: "",
             reactions = o.optJSONObject("words")?.optString("reactions") ?: "",
+            meta = o.optJSONObject("words")?.optJSONArray("meta")?.let { a ->
+                // the time stands in the head already
+                (0 until a.length()).mapNotNull { a.optJSONObject(it) }
+                    .filter { str(it, "kind") != "time" }.mapNotNull { bit(it) } } ?: emptyList(),
+            foldedBy = o.optJSONObject("words")?.takeIf { it.optBoolean("folded") }?.let { w ->
+                str(w, "warning").split(" · ").firstOrNull().orEmpty() } ?: "",
+            quoteLine = bit(o.optJSONObject("words")?.optJSONObject("quote")),
+            quoteOff = o.optJSONObject("words")?.let { it.isNull("quote") } ?: false,
+            conversation = bit(o.optJSONObject("words")?.optJSONObject("conversation")),
+            boosted = bit(o.optJSONObject("words")?.optJSONObject("boosted")),
+            contextLine = bit(o.optJSONObject("words")?.optJSONObject("context")),
             newcomer = bit(o.optJSONObject("words")?.optJSONObject("newcomer")),
             threadNews = bit(o.optJSONObject("words")?.optJSONObject("thread_news")),
             myReplies = o.optJSONObject("words")?.optJSONArray("my_replies")?.let { a ->

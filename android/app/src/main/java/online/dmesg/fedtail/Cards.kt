@@ -257,6 +257,7 @@ fun PostList(
     emptyText: String? = null, // why it is empty, as the windows say it (a filter on…)
     prefetch: String = "off",  // feed.prefetch: "previews" | "all" — pictures ahead of reading
     busy: Boolean = false,     // a poll round on: the opossum swings
+    newestFirst: Boolean = false,  // how the lane is read: where its events stand
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
@@ -282,7 +283,17 @@ fun PostList(
             }
             item(key = p.key) {
                 if (thread) ThreadRow(p, focused = p.sid == focus, act, hideSensitive)
-                else PostCard(p, act, hideSensitive)
+                else {
+                    // a lane's events among its posts (server order: before / after the post;
+                    // read newest first, the other way round)
+                    val above = if (newestFirst) p.eventsAfter else p.eventsBefore
+                    val below = if (newestFirst) p.eventsBefore else p.eventsAfter
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        above.forEach { EventRow(it, act) }
+                        PostCard(p, act, hideSensitive)
+                        below.forEach { EventRow(it, act) }
+                    }
+                }
             }
         }
         footer?.let { f -> item(key = "footer") { f() } }
@@ -368,14 +379,16 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
             }.semantics { contentDescription = who }) { Avatar(p, 36) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Head(p, act, dim = !p.unread)
-                if (p.sharedBy.isNotBlank()) {
+                // "♻ boosted by X · 14:02": a tap — their profile
+                val boosted = p.boosted
+                if (boosted != null) BitLine(boosted, act)
+                else if (p.sharedBy.isNotBlank()) {
                     Small(stringResource(R.string.shared_by, p.sharedBy))
                 }
-                // the windows' marks (old, bot, edited…) and, all accounts in one, whose
+                // the windows' marks (time, edited, old, bot…), each with its link (the
+                // thread, the post's edits), and, all accounts in one, whose
                 val tint = hexColor(p.viaColor)
-                val marks = listOf(p.labels, if (tint == null) p.via else "")
-                    .filter { it.isNotBlank() }.joinToString(" · ")
-                if (marks.isNotBlank()) Small(marks)
+                MetaLine(p, act, if (tint == null) p.via else "")
                 if (tint != null && p.via.isNotBlank()) {  // whose: in that account's colour
                     Text(p.via, fontSize = 12.sp, color = Color.White,
                         modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(tint)
@@ -386,9 +399,15 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                         overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                // the parent not here (yet): "the post it answers is gone" / "fetching…"
+                val ctxLine = p.contextLine
+                if (p.contextText.isBlank() && p.number == null && ctxLine != null) {
+                    BitLine(ctxLine, act)
+                }
                 // someone new in a private talk: before the words, in the warning's colour
                 p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
                 Body(p, act, hideSensitive)
+                p.conversation?.let { BitLine(it, act) }
                 p.myReplies.forEach { BitLine(it, act) }
                 p.threadNews?.let { BitLine(it, act, MaterialTheme.colorScheme.primary) }
                 Actions(p, act)
@@ -434,6 +453,7 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            MetaLine(p, act, p.via)
             p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
             Body(p, act, hideSensitive)
             Actions(p, act)
@@ -473,6 +493,36 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
     }
 }
 
+/** The card's marks (the windows' meta: its time, visibility, edited, old, bot…) in one
+ *  line; one with a link (the time — the thread, "edited" — its edits) is tapped on its own. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun MetaLine(p: PostItem, act: CardActions, via: String) {
+    val bits = p.meta.ifEmpty {
+        if (p.labels.isNotBlank()) listOf(p.labels to "") else emptyList()
+    } + (if (via.isNotBlank()) listOf(via to "") else emptyList())
+    if (bits.isEmpty()) return
+    androidx.compose.foundation.layout.FlowRow {
+        bits.forEachIndexed { i, (words, link) ->
+            Text((if (i > 0) " · " else "") + words, fontSize = 12.sp,
+                color = if (link.isNotBlank()) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = if (link.isNotBlank()) Modifier.clickable { act.link(link) } else Modifier)
+        }
+    }
+}
+
+/** An event among a lane's posts ("★ Bob liked your post…"): one line, a tap — its link. */
+@Composable
+private fun EventRow(bit: Pair<String, String>, act: CardActions) {
+    Text(bit.first, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(enabled = bit.second.isNotBlank()) { act.link(bit.second) }
+            .padding(horizontal = 12.dp, vertical = 8.dp))
+}
+
 /** A line around a card (common/cardtext.py): its words, a tap on it — its link (a thread,
  *  a person). */
 @Composable
@@ -492,14 +542,19 @@ private fun Small(text: String) {
 /** The words (behind a warning, if any), pictures, a poll, a link's card. */
 @Composable
 private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
+    // folded by its own warning, or by a server filter that says "warn" (expanding every
+    // warning doesn't open those: the filter is the reader's own)
+    val folded = p.warning.isNotBlank() || p.foldedBy.isNotBlank()
     var open by rememberSaveable(p.key, act.expandCw) {
-        mutableStateOf(p.warning.isBlank() || act.expandCw)
+        mutableStateOf(!folded || (act.expandCw && p.foldedBy.isBlank()))
     }
-    if (p.warning.isNotBlank()) {
+    if (folded) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { open = !open }.padding(horizontal = 10.dp, vertical = 8.dp)) {
-            Text("⚠ " + p.warning, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+            Text(listOf(p.foldedBy, if (p.warning.isNotBlank()) "⚠ " + p.warning else "")
+                    .filter { it.isNotBlank() }.joinToString(" · "),
+                fontSize = 14.sp, fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f))
             Text(stringResource(if (open) R.string.cw_hide else R.string.cw_show), fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary)
@@ -530,7 +585,17 @@ private fun Body(p: PostItem, act: CardActions, hideSensitive: Boolean) {
         }
     }
     if (p.reactions.isNotBlank()) Small(p.reactions)
-    if (p.quoteText.isNotBlank()) {
+    val quoteLine = p.quoteLine
+    if (!p.quoteOff && p.quoteWho.isBlank() && quoteLine != null) {
+        // not shown (pending, revoked, blocked…): why, and where one may, "show anyway"
+        Text(quoteLine.first, fontSize = 13.sp,
+            color = if (quoteLine.second.isNotBlank()) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                .clickable(enabled = quoteLine.second.isNotBlank()) { act.link(quoteLine.second) }
+                .padding(10.dp))
+    } else if (!p.quoteOff && p.quoteText.isNotBlank()) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
             .clickable(enabled = p.quoteWho.isNotBlank()) { act.open(p.copy(sid = p.quoteId)) }
@@ -618,6 +683,10 @@ private fun Link(c: LinkCard, act: CardActions) {
         Column(Modifier.padding(10.dp).weight(1f)) {
             Text(c.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2,
                 overflow = TextOverflow.Ellipsis)
+            if (c.description.isNotBlank()) {
+                Text(c.description, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (c.provider.isNotBlank()) Small(c.provider)
         }
     }

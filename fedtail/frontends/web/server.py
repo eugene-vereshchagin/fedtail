@@ -221,7 +221,10 @@ def quote_json(view, quote):
         key = "quote_" + quote.state if quote.state in QUOTE_STATES else "quote_unavailable"
         return {"id": quote.id, "note": _(key)}
     q = quote.post
-    return {"id": q.id, "account": account_json(q.author), "text": snippet(q, 300),
+    # behind its warning, as the windows show it (cardtext.quote_bit): the warning, not the words
+    return {"id": q.id, "account": account_json(q.author),
+            "text": "⚠ " + q.warning if q.warning else snippet(q, 300),
+            "warning": q.warning or "",
             "created": _iso(q.created), "media": len(q.media)}
 
 
@@ -262,7 +265,13 @@ def post_json(view, entry, alias=None, unread=False, parent=None, number=None, d
     """A lane entry (Post or Share) as the page draws it; spec (common/lane.py): the
     card's own words come with it."""
     p = real(entry)
-    html = view.in_app(p) if view.cfg["ui"]["links_in_app"] else p.text
+    html = p.text
+    if view.cfg["feed"].get("collapse_tags", True):  # a tail of #tags: "… +N" (the windows')
+        from ...model.text import collapse_tag_stuffing
+        html = collapse_tag_stuffing(html, full=number is not None or depth is not None)
+    if view.cfg["ui"]["links_in_app"]:
+        from dataclasses import replace as _with
+        html = view.in_app(_with(p, text=html))
     me = view.me
     out = {
         "id": entry.id, "item": item_id or entry.id, "sid": p.id, "alias": alias,
@@ -488,13 +497,21 @@ class Web:
 
     def _listen(self, view):
         """The core's news, to the page."""
+        # thread_grew: replies from other servers came into a thread — an open one grows
         for event in ("lanes_updated", "read_changed", "status_updated", "status_deleted",
-                      "lists_changed"):
+                      "lists_changed", "thread_grew"):
             view.on(event, lambda _n, _p: self.bump())
+        view.on("thread_grew", lambda _n, _p: self._thread_news())
+        view.on("status_updated", lambda _n, _p: self._thread_news())
         view.on("sound", lambda _n, p: self.chime(p))
         view.on("notify", lambda _n, p: self.notified(p))
         view.on("auth_failed", lambda _n, _p: self.auth_lost())
         view.on("poll_state", lambda _n, _p: self.poll_changed())
+
+    def _thread_news(self):
+        """A thread grew or a post changed: an open thread is drawn anew (thread_seq —
+        the phone asks it, not to fetch the thread at every change of the lanes)."""
+        self.thread_seq = getattr(self, "thread_seq", 0) + 1
 
     def poll_changed(self):
         """A round began or ended: the page's "⟳ updating the lanes…" / "updated at"

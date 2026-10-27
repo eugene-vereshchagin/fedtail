@@ -529,7 +529,11 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
                 placeholder = { Text(stringResource(R.string.write_here)) },
                 supportingText = {
-                    val n = model.composeText.length + (if (model.composeCwOn) model.composeCw.length else 0)
+                    // the windows' count once asked (a chain: part by part), till then the length
+                    val cw = if (model.composeCwOn) model.composeCw else ""
+                    val n = model.composeCounted?.takeIf { it.first == model.composeText &&
+                            it.second == cw }?.third
+                        ?: (model.composeText.length + cw.length)
                     Column {
                         Text("$n / ${model.charLimit()}",
                             color = if (n > model.charLimit()) MaterialTheme.colorScheme.error

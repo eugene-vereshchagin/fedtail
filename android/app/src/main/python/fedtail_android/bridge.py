@@ -284,6 +284,10 @@ def lane(name, keep=False):
     def go():
         got = _s["web"].lane(name, bool(keep))
         _texts(got.get("posts", []))
+        if got.get("empty_browse") and not got.get("posts"):
+            # a browsed lane its server gives nothing for: said in the lane (the windows')
+            from fedtail.i18n import _
+            got["info"] = _("browse_empty")
         if got.get("place"):  # activity, requests: rows with buttons, not posts
             got["page"] = _place_page(got["place"])
         return got
@@ -310,6 +314,12 @@ def find_deeper(name, query):
     """Further back than the lane shows: it grows down to an older match → {more, total,
     text}; reload the lane."""
     return _answer(lambda: _s["web"].find_deeper(name, query or ""))
+
+
+def reveal(name, index):
+    """The lane loaded down to a match "in every lane" found further back than it shows
+    (the windows' find) → {grew}."""
+    return _answer(lambda: _s["web"].reveal(name, index))
 
 
 def poll_refresh(post_id):
@@ -491,6 +501,67 @@ def preview(body_json):
 def complete(before):
     """#tags, @names, :emoji: for what is being typed (Web.complete)."""
     return _answer(lambda: _s["web"].complete(before))
+
+
+# ---- the server's announcements (ui.announcements = "banner"): the windows' strip --------
+
+ANNOUNCE_QUICK = ("👍", "❤️", "😂", "🎉")  # reactions offered under each (qt/announce.py)
+
+
+def announcements():
+    """The announcements not dismissed yet, oldest first, for the strip over the lanes
+    (the windows' AnnounceBar) → {"items": [{id, text, head, reactions: [{name, count,
+    me}]}], "ok", "tip"}; none when ui.announcements is "off"."""
+    def go():
+        from fedtail.i18n import _
+        from fedtail.model.text import html_to_text
+        core = _core()
+        if core.cfg["ui"]["announcements"] == "off":
+            return {"items": []}
+        got = list(_s["web"].core.announcements().result() or ())  # the View's: Announcement
+        reacting = core.supports("announcement_reactions")
+        out = []
+        for i, a in enumerate(got):
+            more = f" · {_('announce_more', n=len(got) - 1)}" if i == 0 and len(got) > 1 else ""
+            stamp = a.published.astimezone().strftime("%d.%m.%Y") if a.published else ""
+            have = {r.name: r for r in a.reactions}
+            names = list(have) + [e for e in ANNOUNCE_QUICK if e not in have] if reacting \
+                else []
+            out.append({"id": a.id, "text": html_to_text(a.html or "").strip(),
+                        "head": f"📢 {_('announce_title')} {stamp}{more}".strip(),
+                        "reactions": [{"name": n, "count": have[n].count if n in have else 0,
+                                       "me": bool(have[n].me) if n in have else False}
+                                      for n in names
+                                      if n in have or len(n) <= 4]})
+        return {"items": out, "ok": _("announce_ok"), "tip": _("tip_announce_ok")}
+    return _answer(go)
+
+
+def announcement_dismiss(aid):
+    """"Got it": the server remembers it (other clients stop showing it too) → {ok}."""
+    def go():
+        _core().dismiss_announcement(str(aid)).result()
+        return {"ok": True}
+    return _answer(go)
+
+
+def announcement_react(aid, name, on):
+    """A reaction to an announcement put on or taken off → {ok}."""
+    def go():
+        _core().react_announcement(str(aid), str(name), bool(on)).result()
+        return {"ok": True}
+    return _answer(go)
+
+
+def quote_lines(text):
+    """A post's words as a quote for the answer (the ⋯ menu's "Quote in reply"): each line
+    under post.quote_prefix, the leading @mentions left out (the reply has its own) →
+    {text} — the windows' way (model/text.quote_lines)."""
+    def go():
+        from fedtail.model.text import quote_lines as ql
+        prefix = _core().cfg["post"].get("quote_prefix", "> ") or "> "
+        return {"text": ql(str(text or ""), prefix, strip_mentions=True)}
+    return _answer(go)
 
 
 def compose_check(body_json):
@@ -717,10 +788,18 @@ def notes(since):
     (notifytext's words, by notify.privacy): {"notes": [{title, body, lane, thread}],
     "n": the newest note's number, "when_focused", "enabled"}."""
     def go():
+        from fedtail.frontends.common import sidebar
         got, n = _s["web"].notes_since(int(since))
-        cfg = _core().cfg["notify"]
+        core = _core()
+        cfg = core.cfg["notify"]
+        # the number on the launcher's icon (ui.icon_count — the windows' tray number);
+        # launchers that show numbers take it from the notes
+        view = _s["web"].core
+        names = [x["name"] for x in _s["web"].lanes()]
+        count = sidebar.icon_total(view, core.cfg, sidebar.counts(view, names)) \
+            if core.cfg["ui"].get("icon_count") else 0
         return {"notes": got, "n": n, "enabled": bool(cfg.get("enabled", True)),
-                "when_focused": bool(cfg.get("when_focused", False))}
+                "when_focused": bool(cfg.get("when_focused", False)), "count": int(count)}
     return _answer(go)
 
 
@@ -816,7 +895,9 @@ def status():
     def go():
         from fedtail.frontends.common import sidebar
         core = _s["web"].core
-        return {"text": _slow_words(core), "busy": sidebar.polling(core)}
+        return {"text": _slow_words(core), "busy": sidebar.polling(core),
+                # an open thread grew (replies from other servers) or a post in it changed
+                "threads": getattr(_s["web"], "thread_seq", 0)}
     return _answer(go)
 
 

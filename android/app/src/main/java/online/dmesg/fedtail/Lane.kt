@@ -152,9 +152,18 @@ fun LaneScreen(
                                 ThemedIcon("refresh", Icons.Filled.Refresh, stringResource(R.string.refresh))
                             }
                         })
+                    if (!pane) AnnounceBar(model)
                     if (!pane) NewsStrip(model, name)
                     if (model.findOpen) FindBar(model)
                     model.laneSwitches?.let { Switches(model, it) }
+                    // what the lane holds now ("a filter on: 12 of 40"); when empty, the
+                    // empty lane says it itself
+                    model.laneSwitches?.info?.takeIf { it.isNotBlank() && model.posts.isNotEmpty() &&
+                        model.placePage == null }?.let {
+                        Text(it, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
+                    }
                     if (model.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
                     else HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -224,7 +233,7 @@ fun LaneScreen(
             val page = model.placePage
             if (page != null) PlaceList(model, page, name, state)
             else PostList(model.posts, state, model.divider, act, model.hideSensitive,
-                prefetch = model.prefetch,
+                prefetch = model.prefetch, newestFirst = model.newestFirst,
                 emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
                 busy = model.busy,
                 header = if (model.newestFirst) null else earlier,

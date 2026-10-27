@@ -54,10 +54,10 @@ object Notifier {
         lastSeq = got.optInt("n", lastSeq)
         if (!got.optBoolean("enabled", true)) return
         if (visible && !got.optBoolean("when_focused")) return
-        show(context, got.optJSONArray("notes") ?: JSONArray())
+        show(context, got.optJSONArray("notes") ?: JSONArray(), got.optInt("count"))
     }
 
-    private fun show(context: Context, notes: JSONArray) {
+    private fun show(context: Context, notes: JSONArray, count: Int = 0) {
         if (notes.length() == 0 || !allowed(context)) return
         channel(context)
         val nm = NotificationManagerCompat.from(context)
@@ -79,6 +79,8 @@ object Notifier {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setContentIntent(tap)
                 .setAutoCancel(true)
+                // ui.icon_count: the number launchers that show one put on the icon
+                .apply { if (count > 0) setNumber(count) }
                 .build()
             try {
                 nm.notify(id, note)
