@@ -2665,10 +2665,22 @@ class Core(SocialMixin):
             else:
                 since.pop(acc_id, None)
             self.store.kv_set("followed_at", since)
+            if not on:
+                self._forget_in_home(acc_id)
             if self.cfg["feed"].get("follow_date_note", True):
                 rel = self._note_follow(acc_id, rel, since.get(acc_id) if on else None)
             return rel
         return self.submit(job)
+
+    def _forget_in_home(self, acc_id):
+        """Unfollowed: their posts and boosts leave Home as they leave the server's.
+        Kept, they stayed there — and showed up anew when the unfollow also took them
+        out of a list that had kept them out of Home (lists.hide_members, 27.10)."""
+        n = self.store.drop_items_by("home", acc_id)
+        if n:
+            log.info("unfollowed: %d of their posts out of Home", n)
+            self.emit("lanes_updated", {lane.name: [] for lane in self.lanes
+                                        if lane.source == "home"})
 
     def _note_follow(self, acc_id, rel, when):
         """The follow date into (or out of) my private note on them, on the server — so

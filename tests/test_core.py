@@ -1702,6 +1702,28 @@ class CoreTest(TmpDir):
         core.follow("N").result()
         self.assertNotIn("N", w.notes)
 
+    def test_unfollowed_leave_home(self):
+        """27.10: unfollowed — out of their list, and their posts showed up in Home
+        (the list had kept them out of it). Their posts and boosts leave Home, as they
+        leave the server's; someone else's stay."""
+        from .fakes import BOB, acct, status
+        carol = acct("C", "carol@other.example")
+        core, w = self.make()
+        core.connect().result()
+        w.add(status("801", BOB, text="bob's own"), home=True)
+        w.add(status("802", carol, text="carol's"), home=True)
+        core.poll_once()
+        self.assertIn("801", [st["id"] for _i, st in core.lane_entries("home")])
+        updated = []
+        core.events.on("lanes_updated", lambda _n, p: updated.append(p))
+        core.follow(BOB["id"], False).result()
+        ids = [st["id"] for _i, st in core.lane_entries("home")]
+        self.assertNotIn("801", ids)
+        self.assertIn("802", ids)
+        self.assertTrue(any("home" in p for p in updated))
+        core.follow("C", True).result()  # following: nothing taken out
+        self.assertIn("802", [st["id"] for _i, st in core.lane_entries("home")])
+
     def test_follow_date_without_notes_on_the_server(self):
         from fedtail.protocols.mastodon.api import ApiError
         core, w = self.make()

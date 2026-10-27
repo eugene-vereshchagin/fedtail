@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- Unfollowed, someone's posts and boosts leave Home, as they leave the server's Home: kept,
+  they stayed — and showed up there anew when the unfollow also took them out of a list
+  that had kept them out of Home.
 - The plan for 0.21 (docs/en/dev/roadmap.md): sync between devices brought to the end,
   and free lanes — lanes you assemble yourself.
 

@@ -806,6 +806,16 @@ class Store:
             db.executemany("INSERT OR REPLACE INTO left_members VALUES (?, ?)",
                            [(i, root_id) for i in status_ids if i])
 
+    def drop_items_by(self, source, author_id):
+        """Take someone's posts and boosts out of a lane's source (Home, after I stop
+        following them: the server's Home forgets them too). → how many went."""
+        with self._tx() as db:
+            cur = db.execute("DELETE FROM items WHERE source=? AND status_id IN "
+                             "(SELECT id FROM statuses WHERE author=?)", (source, author_id))
+            if cur.rowcount:
+                self._bump(source)
+            return cur.rowcount
+
     def drop_items_of_thread(self, source, root_id):
         """Take a muted thread's posts out of a lane (mentions: they came before)."""
         with self._tx() as db:
