@@ -35,6 +35,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Another server's public timeline | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A link's timeline (Mastodon 4.3+) | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Free lanes: a lane you assemble yourself | ◐ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Federated and tags wider than your server | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | The lane editor | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | “Unsorted”: no post gets lost | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Only the languages you read | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
@@ -229,4 +230,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **47** features of the 165 compared.
+Only in fedtail — **48** features of the 166 compared.

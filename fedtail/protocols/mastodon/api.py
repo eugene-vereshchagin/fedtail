@@ -229,6 +229,12 @@ def public_url(host, max_id="", local=True, limit=20):
             + ("&local=true" if local else "") + (f"&max_id={quote(max_id)}" if max_id else ""))
 
 
+def tag_url(host, tag, limit=40):
+    """A stranger's server: a tag's public lane there (what that server knows of it)."""
+    from urllib.parse import quote
+    return f"https://{host}/api/v1/timelines/tag/{quote(tag, safe='')}?limit={int(limit)}"
+
+
 def statuses_url(host, their_id, max_id=""):
     """A stranger's server: someone's public posts, own ones only, page after max_id."""
     from urllib.parse import quote

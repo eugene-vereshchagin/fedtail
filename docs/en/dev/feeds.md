@@ -315,7 +315,7 @@ Besides "setting up becomes programming":
 
 | # | what | how |
 |---|---|---|
-| 1 | Federated wider than my server knows | `federated` = my federated ∪ trends ∪ public lanes of chosen servers (`remote:<host>`, no account there) — merged, no duplicates, through the languages filter; the list — `lanes.federated_extra`; a like/reply to such a post — through my server's search (`resolve`), one request on the action |
+| 1 | Federated wider than my server knows | done (0.21, `core/wider.py`): `lanes.federated_extra` and `lanes.tags_extra` — other servers' public and tag lanes, each post fetched into my server by address (search with resolve), so ids are mine and actions just work; trends not merged. The plan was: `federated` = my federated ∪ trends ∪ public lanes of chosen servers (`remote:<host>`, no account there) — merged, no duplicates, through the languages filter; the list — `lanes.federated_extra`; a like/reply to such a post — through my server's search (`resolve`), one request on the action |
 | 2 | Languages to read | done (0.21): `lanes.languages`, `languages_in` (federated, local, tags by default), `detect_language` (the script + python3-langdetect from 12 words) |
 | 3 | Stop words | the server's filters (they work already and are shared by every client); none of our own |
 | 4 | Followed tags and Home | tags, like people, go to Home; a tag lane can be taken apart with a tick "not in Home" (like lists' `exclusive`) — when made from the search and in the config; Home's quick filters: all · posts only · tags · boosts |

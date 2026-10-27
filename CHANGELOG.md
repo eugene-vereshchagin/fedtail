@@ -2,6 +2,11 @@
 
 ## 0.21.0 — in progress
 
+- **Wider than your server knows** (core/wider.py): `lanes.federated_extra` — other servers'
+  public lanes into Federated while it's open; `lanes.tags_extra` — their tag lanes into your
+  lanes of tags. Read without an account, each new post fetched into your server by its
+  address (so liking and answering just work); a server at most every `extra_minutes`, lanes
+  closed to strangers left alone for a while.
 - **Activity's quick filters**: all · likes & boosts · followers · requests · mine · other, over
   the lane (the windows), its tabs (the web page), `s` (the terminal); the choice stays.
 - **Threads with news on the cards** (`feed.thread_news`): a post whose followed thread has new

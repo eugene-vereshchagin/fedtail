@@ -217,6 +217,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `lanes.custom` | `[]` | [[lanes.custom]]<br>name = "feed"<br>title = "Feed"<br>any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]<br>none = [{ kind = "boost", target = "seen" }] |
 | `lanes.unsorted` | `true` | "Unsorted": what came from the lanes read through (Home, Mentions, lists…) and no lane took, so a rule never loses a post. Shown only while something is in it. false — hidden for good and not collected. |
 | `lanes.browse_keep` | `200` | Lanes you browse rather than read through (Federated, Local while lazy): the newest this many of the whole stream, taken while the lane is open — something to scroll through however fast a relay pours in. "Older" goes further back; what's beyond it goes at the next update. |
+| `lanes.federated_extra` | `[]` | Wider than your server knows. Servers whose public lane (their own people's posts) also comes into Federated while it's open, and servers whose tag lanes come into your lanes of tags (a lane of #linux takes #linux from them too): read without an account, each new post fetched into your server by its address — so it is answered and liked as any other, and your server knows it from then on. A server at most every extra_minutes, up to 20 posts a time. Many keep these lanes closed to strangers (GoToSocial always): then it's left for a few hours. Like ["mastodon.social", "fosstodon.org"]. |
+| `lanes.tags_extra` | `[]` |  |
+| `lanes.extra_minutes` | `10` |  |
 
 ## 5. Posts
 

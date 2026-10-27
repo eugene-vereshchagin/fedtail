@@ -126,6 +126,8 @@ class Core(SocialMixin):
         self._note_lane_rules()  # the lanes changed in the file since: they go out
         from .derived import Derived
         self.derived = Derived(self)  # who stopped following me (activity.unfollows)
+        from .wider import Wider
+        self.wider = Wider(self)  # other servers' lanes into mine (lanes.*_extra)
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
@@ -791,6 +793,10 @@ class Core(SocialMixin):
                     self.emit("error", f"{name}: {e}")
 
             self._step("sources")
+            # other servers' public lanes and tags (lanes.federated_extra, tags_extra)
+            fed_open = "federated" in open_sources
+            if self.wider.due(fed_open):
+                self.bg.submit(self.wider.run, fed_open)
             if "direct" in self.lane_by_name and self._carry_my_direct():
                 self.emit("lanes_updated", {"direct": []})  # read already: no news, no sound
             self._step("my direct")

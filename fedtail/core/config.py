@@ -135,6 +135,9 @@ DEFAULTS = {
         "custom": [],
         "unsorted": True,
         "browse_keep": 200,
+        "federated_extra": [],
+        "tags_extra": [],
+        "extra_minutes": 10,
     },
     "post": {
         "default_visibility": "private",
@@ -374,6 +377,7 @@ MINIMUM = {
     ("feed", "page_size"): 1,
     ("lanes", "detect_min_words"): 1,
     ("lanes", "browse_keep"): 20,
+    ("lanes", "extra_minutes"): 1,
     ("activity", "unfollows_minutes"): 10,
     ("activity", "unfollows_max"): 0,
     ("activity", "unfollows_mass"): 1,
