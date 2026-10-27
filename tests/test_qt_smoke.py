@@ -584,7 +584,7 @@ class QtSmokeTest(unittest.TestCase):
             n.notify([("replies", reply)])
             self.pump(until=lambda: rec.exists() and "--wait" in rec.read_text("utf-8"))
             args = rec.read_text("utf-8").splitlines()
-            self.assertIn("--app-name=fedtail", args)
+            self.assertIn("--app-name=FedTail", args)
             self.assertTrue(any(a.startswith("--action=open=") for a in args))
             rec.unlink()
             self.win.select_lane("replies")
