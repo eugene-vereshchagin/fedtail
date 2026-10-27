@@ -1713,10 +1713,48 @@ class AccountWidget(_PagedTab):
         self.win.bridge.call(self.core.posts_from_origin(acc, have), ok=got,
                              fail=lambda _e: None)
 
-    def reload_account(self):
-        self.win.bridge.call(self.core.account(self.acc_id), ok=self._account)
+    ACCOUNT_WAIT_MS = 20_000  # who this is, not come by then: said, and asked again
+    ACCOUNT_TRIES = 3
+
+    def reload_account(self, tries=None):
+        """Who this is, from the server. It used to be asked once with nothing said when
+        it failed: the tab stayed "@…" until a restart (27.10). Now a failure, a wrong
+        answer or no answer at all is said in the header, asked again a few times, and
+        the head's button "Retry" asks once more."""
+        self._account_tries = self.ACCOUNT_TRIES if tries is None else tries
+        self._ask_account()
         if not self.mine:
             self.win.bridge.call(self.core.relationship(self.acc_id), ok=self._relation)
+
+    def _ask_account(self):
+        self._account_asked = asked = time.monotonic()
+        self.win.bridge.call(self.core.account(self.acc_id), ok=self._account,
+                             fail=self._account_failed)
+        QTimer.singleShot(self.ACCOUNT_WAIT_MS, lambda: self._account_late(asked))
+
+    def _account_late(self, asked):
+        if self.acc is not None or getattr(self, "_account_asked", None) != asked:
+            return
+        log.warning("profile %s: no answer about who this is after %d s",
+                    self.acc_id, self.ACCOUNT_WAIT_MS // 1000)
+        from ... import diag
+        diag.dump_stacks(f"profile {self.acc_id}: the account doesn't come")
+        self._account_failed(_("profile_slow"))
+
+    def _account_failed(self, err):
+        if self.acc is not None:
+            return
+        log.warning("profile %s: who this is: %s", self.acc_id, err)
+        self._account_tries -= 1
+        if self._account_tries > 0:
+            self.header.info.setText(_("profile_retrying", err=err))
+            QTimer.singleShot(3000, self._ask_account)
+            return
+        self.header.info.setText("⚠ " + _("profile_failed", err=err))
+        if getattr(self, "_retry_btn", None) is None:
+            self._retry_btn = self.header.add(_button(
+                _("profile_retry"), lambda _c=False: (self._retry_btn.hide(), self.reload_account())))
+        self._retry_btn.show()
 
     def show_info(self):
         """Clicking the name of the person whose tab this is: back to their card."""
@@ -1729,7 +1767,12 @@ class AccountWidget(_PagedTab):
             self._fill()
 
     def _account(self, acc):
+        if acc is None or not getattr(acc, "handle", None):  # not an account (an empty
+            self._account_failed(_("profile_bad_answer"))  # or odd answer): said
+            return
         self.acc = acc
+        if getattr(self, "_retry_btn", None) is not None:
+            self._retry_btn.hide()
         self.title = "@" + acc.handle
         counts = " · ".join((_("posts_n", n=acc.posts), _("followers_n", n=acc.followers),
                              _("following_n", n=acc.following)))

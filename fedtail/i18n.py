@@ -361,6 +361,11 @@ _STRINGS = {
         "save_failed": "Не сохранилось: {err}",
         "attach": "Приложить…", "detach": "Убрать", "discard": "Выкинуть",
         "close": "Закрыть", "close_tip": "Закрыть окно, черновик останется",
+        "profile_slow": "сервер не ответил за 20 секунд",
+        "profile_retrying": "Не пришло, кто это ({err}) — спрашиваю ещё раз…",
+        "profile_failed": "не пришло, кто это: {err}",
+        "profile_bad_answer": "сервер ответил не учётной записью",
+        "profile_retry": "Ещё раз",
         "le_title": "Ленты",
         "le_edit_lane": "Изменить ленту…",
         "le_hint": "Порядок, какие видно, и каждая лента — пишется в config.toml сразу. Набор: "
@@ -1535,6 +1540,11 @@ _STRINGS = {
         "save_failed": "Couldn't save: {err}",
         "attach": "Attach…", "detach": "Remove", "discard": "Discard",
         "close": "Close", "close_tip": "Close the window, the draft stays",
+        "profile_slow": "the server didn't answer in 20 seconds",
+        "profile_retrying": "Who this is didn't come ({err}) — asking again…",
+        "profile_failed": "who this is didn't come: {err}",
+        "profile_bad_answer": "the server's answer wasn't an account",
+        "profile_retry": "Again",
         "le_title": "Lanes",
         "le_edit_lane": "Edit the lane…",
         "le_hint": "The order, which are shown, and each lane — written into config.toml at "

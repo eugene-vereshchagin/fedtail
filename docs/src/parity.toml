@@ -552,6 +552,13 @@ keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bo
 # ---- the same, in other words ------------------------------------------------------------
 
 [[wording]]
+in = ["gtk", "tui", "web"]
+why.ru = "Шапка профиля в Qt спрашивает «кто это» заново сама и говорит, что не пришло («спрашиваю ещё раз…», «Ещё раз»); GTK, терминал и веб говорят об ошибке своими словами (`load_failed`, ошибка места)."
+why.en = "Qt's profile head asks “who this is” again by itself and says what didn't come (“asking again…”, “Again”); GTK, the terminal and the web page say the error in their own words (`load_failed`, the place's error)."
+keys = ["profile_slow", "profile_retrying", "profile_failed", "profile_bad_answer",
+        "profile_retry"]
+
+[[wording]]
 in = ["tui", "web"]
 why.ru = "«Изменить ленту…» — пункт меню ленты в боковой панели окон; в терминале и вебе редактор лент — место «Ленты» в меню ≡, там у каждой ленты «Изменить…»."
 why.en = "“Edit the lane…” is an item of a lane's menu in the windows' sidebar; in the terminal and the web page the lane editor is the place “Lanes” in the ≡ menu, with “Edit…” on every lane."

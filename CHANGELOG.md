@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- A profile could stay "@…" for good (who it is never came: the one request failed, or
+  answered with no account, and nothing was said) until a restart. Now Qt's profile asks
+  again by itself, says what didn't come, offers "Again", and after 20 s of silence writes
+  what every thread is doing into the log.
 - **Whom you followed, in Activity** (`activity.my_follows`): a row of your own for each follow
   — through fedtail, or seen in whom you follow when it was another client. Not counted as
   news; a lane of rules takes it as `event = "i_followed"`.
