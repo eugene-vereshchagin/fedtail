@@ -192,6 +192,7 @@ DEFAULTS = {
         "types": ["favourite", "reblog", "follow"],
         "approvals": True,
         "requests": True,
+        "my_follows": True,
         "server_notices": True,
         "server_groups": True,
     },

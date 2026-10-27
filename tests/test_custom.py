@@ -1051,3 +1051,76 @@ class BrowseKeepTest(FreeBase):
         got = [i for i, _st in core.store.items("federated", 100)]
         self.assertEqual(len(got), 25)
         self.assertIn("063", got)
+
+
+class MyFollowsTest(FreeBase):
+    """activity.my_follows: whom I followed, a row of Activity of my own (27.10)."""
+
+    def test_a_follow_here_is_a_row(self):
+        core, w = self.make([])
+        core.connect().result()
+        core.poll_once()
+        seen = core.activity_unread()
+        core.follow("B").result()
+        rows = [n for n in core.store.activity_recent(20) if n["type"] == core.MY_FOLLOW]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["account"]["id"], "B")
+        self.assertEqual(core.activity_unread(), seen)  # not news
+        core.follow("B").result()  # again the same day: still one row
+        self.assertEqual(len([n for n in core.store.activity_recent(20)
+                              if n["type"] == core.MY_FOLLOW]), 1)
+        # the server's cursor isn't fedtail's own row
+        self.assertFalse(str(core.store.activity_newest(server=True)[0] or "")
+                         .startswith("fedtail:"))
+        from fedtail.core.view import View
+        from fedtail.frontends.common.activity import rows as act_rows
+        got = act_rows(View(core).activity(), "", lambda d: "t")
+        self.assertIn(i18n_word("act_my_follow"), [r.what for r in got])
+
+    def test_followed_elsewhere_seen_in_whom_i_follow(self):
+        core, w = self.make([])
+        core.connect().result()
+        w.add(status("700", BOB, minute=1), home=True)
+        w.add(status("701", NEWS, minute=2), home=True)
+        w.following = {NEWS["id"]}
+        core._following_at = 0
+        core._refresh_following()  # the first look: what is, not what came
+        self.assertEqual([n for n in core.store.activity_recent(20)
+                          if n["type"] == core.MY_FOLLOW], [])
+        w.following = {NEWS["id"], BOB["id"]}  # another client followed Bob
+        core._following_at = 0
+        core._refresh_following()
+        rows = [n for n in core.store.activity_recent(20) if n["type"] == core.MY_FOLLOW]
+        self.assertEqual([r["account"]["id"] for r in rows], [BOB["id"]])
+
+    def test_rule_lanes_take_it(self):
+        rule = {"name": "doings", "any": [{"event": "i_followed"}]}
+        core, w = self.make([rule])
+        core.cfg["lanes"]["enabled"] = ["doings"]
+        core._apply_lists([], {})
+        core.connect().result()
+        core.poll_once()
+        core.follow("B").result()
+        self.assertEqual(len(core.lane_events("doings")), 1)
+
+    def test_off(self):
+        core, w = self.make([])
+        core.cfg["activity"]["my_follows"] = False
+        core.connect().result()
+        core.follow("B").result()
+        self.assertEqual([n for n in core.store.activity_recent(20)
+                          if n["type"] == core.MY_FOLLOW], [])
+
+    def test_dismissed_here_only(self):
+        core, w = self.make([])
+        core.connect().result()
+        core.follow("B").result()
+        nid = next(n["id"] for n in core.store.activity_recent(20)
+                   if n["type"] == core.MY_FOLLOW)
+        core.dismiss_activity(nid).result()
+        self.assertNotIn(nid, [n["id"] for n in core.store.activity_recent(20)])
+
+
+def i18n_word(key):
+    from fedtail.i18n import _
+    return _(key)

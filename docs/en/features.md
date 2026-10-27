@@ -569,6 +569,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Server announcements | has | 0.9.0 | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
 | The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
+| Activity says whom you followed | has | 0.21.0 | `activity.my_follows` | own (and `accounts/:id/following`) | only in fedtail | — |
 | Someone new in a private talk — shown at once | has | 0.21.0 | — | own | only in fedtail | — |
 | Push notifications (Web Push, UnifiedPush) | has — Web Push in the web version, UnifiedPush on Android | 0.20.0 | `phone.push` | `/api/v1/push/subscription` | Mastodon web, Elk, Phanpy, Tusky, Ivory | — |
 | The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
@@ -593,6 +594,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Server announcements.** `"banner"` — a strip over the lane until you press “Got it” (the server remembers that for other clients too); reactions to announcements. `"off"` — not shown.
 
 **The unread number on the icon.** In the tray and on the task bar button (KDE: needs the entry from `--install-desktop` and `python3-pyside6.qtdbus`). Which lanes to count — a list, as for notifications: `"lists"` — all lists, `"list:Friends"` — one, `"all"` — everything, plus `icon_count_except` — what not to count. The icon itself — an opossum holding its own tail (`app_icon = "possum"`, also in the menu and in About), or the drawn thread bubble (`"bubble"`), which `themed_icon` paints in the theme's colours.
+
+**Activity says whom you followed.** Followed someone — Activity has a row “@who — you followed”, beside what others did: what you did yourself is there. Followed in another client — fedtail notices it in whom you follow (every 6 hours). No unread number for it; × takes it away here only. A lane of rules takes it as `event = "i_followed"`.
 
 **Someone new in a private talk — shown at once.** A private message that answers a private one and brings in someone who wasn't in it (its author or one it mentions) is marked “👤 New in this private talk: @who” — they now read this message and whatever it quotes. The reply box says the same before sending: write a private answer adding `@someone` from outside the talk, and under the text — “👤 You add to the private talk: @who”. Compared with the message answered: who wrote it and whom it mentioned.
 

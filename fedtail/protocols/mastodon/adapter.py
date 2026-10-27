@@ -57,6 +57,8 @@ ACTIVITY_KIND = {
     # GoToSocial's interaction requests, as fedtail keeps them
     "pending.reply": "request", "pending.favourite": "request", "pending.reblog": "request",
     "severed_relationships": "notice", "moderation_warning": "notice",
+    # what I did myself, written into Activity by fedtail (core: Core.MY_FOLLOW)
+    "fedtail.followed": "my_follow",
 }
 
 QUOTE_DEPTH = 2  # a quote inside a quote inside a post — no deeper

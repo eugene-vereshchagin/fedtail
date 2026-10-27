@@ -104,6 +104,7 @@ any = [{ author = "me" },
 | `severed` — relationships cut by a server block | 4.3+ | no | Activity (`activity.server_notices`) |
 | `warning` — moderation warning to me | 4.3+ | no | Activity |
 | `annual_report` | 4.3+ | no | — |
+| `i_followed` — I followed someone (fedtail's own row: through fedtail, or seen in whom I follow) | — | — | Activity (`activity.my_follows`) |
 
 ### 2.4 Derived events (comparing snapshots)
 

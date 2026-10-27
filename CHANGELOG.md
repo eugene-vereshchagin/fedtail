@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- **Whom you followed, in Activity** (`activity.my_follows`): a row of your own for each follow
+  — through fedtail, or seen in whom you follow when it was another client. Not counted as
+  news; a lane of rules takes it as `event = "i_followed"`.
 - **The lane editor.** ≡ → "Lanes…" (and a lane's right-click menu → "Edit the lane…"):
   the order, shown or hidden, new lanes of one's own, and each lane as a form — title,
   picture, section, sources, how it's read, its conditions one line each with their quick

@@ -151,6 +151,22 @@ others.en = "only in fedtail"
 clients = []
 
 [[feature]]
+id = "my-follows"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "В Активности — на кого подписался ты"
+name.en = "Activity says whom you followed"
+config = "`activity.my_follows`"
+api.ru = "своё (и `accounts/:id/following`)"
+api.en = "own (and `accounts/:id/following`)"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Подписался — в «Активности» строка «@кто — ты подписался», рядом с тем, что делали другие: видно, что делал сам. И если подписался в другом клиенте — fedtail заметит по списку подписок (раз в 6 часов). Числа непрочитанного не даёт; × убирает только здесь. Лента из правил берёт это как `event = \"i_followed\"`."
+details.en = "Followed someone — Activity has a row “@who — you followed”, beside what others did: what you did yourself is there. Followed in another client — fedtail notices it in whom you follow (every 6 hours). No unread number for it; × takes it away here only. A lane of rules takes it as `event = \"i_followed\"`."
+
+[[feature]]
 id = "dm-newcomer"
 status = "has"
 android = "has"

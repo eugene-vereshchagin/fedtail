@@ -14,6 +14,9 @@ import time
 from datetime import UTC, datetime
 
 log = logging.getLogger(__name__)
+# the ids of the events fedtail writes into Activity itself (what I did: "I followed…"),
+# never the server's: no fetch goes on from them, they count as nothing new
+LOCAL_EVENT = "fedtail:"
 
 SCHEMA_VERSION = 5
 GC_CHUNK = 2000  # rows deleted, pages freed per short step of Store.gc
@@ -1050,15 +1053,17 @@ class Store:
             self.activity_delete(gone)
         return bool(gone)
 
-    def activity_newest(self):
+    def activity_newest(self, server=False):
         """(id, sort) of the newest notification fetched — hidden ones count: the next
-        fetch goes on from there."""
+        fetch goes on from there. server: the server's own only — not the events fedtail
+        writes itself (LOCAL_EVENT ids: "I followed…"), no cursor for the server."""
+        where = f"WHERE id NOT LIKE '{LOCAL_EVENT}%' " if server else ""
         with self._reading() as db:
-            row = db.execute("SELECT id, sort FROM activity ORDER BY sort DESC LIMIT 1"
-                                  ).fetchone()
+            row = db.execute(f"SELECT id, sort FROM activity {where}ORDER BY sort DESC "
+                             "LIMIT 1").fetchone()
         best = (row[0], row[1]) if row else (None, "")
         for nid, sort in (self.kv_get("activity_hidden", {}) or {}).items():
-            if sort > best[1]:
+            if sort > best[1] and not (server and str(nid).startswith(LOCAL_EVENT)):
                 best = (nid, sort)
         return best
 
@@ -1074,9 +1079,10 @@ class Store:
                  "created_at": r[4].split("|")[0]} for r in rows]
 
     def activity_count_after(self, sort):
+        """Notifications after this sort — what I did myself (LOCAL_EVENT) isn't news."""
         with self._reading() as db:
-            return db.execute("SELECT COUNT(*) FROM activity WHERE sort > ?",
-                                   (sort,)).fetchone()[0]
+            return db.execute("SELECT COUNT(*) FROM activity WHERE sort > ? AND id NOT LIKE ?",
+                              (sort, LOCAL_EVENT + "%")).fetchone()[0]
 
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):

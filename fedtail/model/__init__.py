@@ -40,6 +40,7 @@ ACTIVITY_KINDS = (
     "reaction",        # an emoji reaction to my post (Akkoma, Misskey)
     "request",         # somebody asks me to let their reply / like / share through (GTS)
     "notice",          # the server tells me something (moderation, severed follows…)
+    "my_follow",       # I followed somebody (fedtail writes it down itself)
     "other",
 )
 

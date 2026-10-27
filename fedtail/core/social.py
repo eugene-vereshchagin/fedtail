@@ -254,8 +254,11 @@ class SocialMixin:
             return self.submit(lambda: None)    # answer, it waits (the buttons answer)
 
         def job():
+            from .store import LOCAL_EVENT
             key = self.store.activity_group_of(nid)
-            if key and self.supports("grouped"):
+            if str(nid).startswith(LOCAL_EVENT):
+                pass  # fedtail's own row (what I did): no server has it
+            elif key and self.supports("grouped"):
                 try:  # the server's group: all of it (Mastodon 4.3+)
                     self.api.dismiss_notification_group(key)
                 except ApiError as e:

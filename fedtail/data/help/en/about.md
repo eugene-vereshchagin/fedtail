@@ -39,7 +39,7 @@ What none of the thirteen clients we compared with has ([the whole matrix](ref/c
 - **Pictures and video:** Video without a hardware decoder (the default) · Pictures and video ahead of time, a disk cache
 - **Profiles:** Posts older than my server knows · “Following since …”
 - **Writing:** Visibility: private by default, a reply never wider than the post · CamelCase hint for hashtags · Call someone into a thread · Reply with quotes, piece by piece · A command line as on Point · Short post names the same on every device
-- **Notifications and activity:** Desktop notifications with privacy levels · Approve a reply, like, boost (GoToSocial) · Direct messages read here are read on the server too · Someone new in a private talk — shown at once · Slow mode and “notify at most every…” · “Of them new”: what the last update brought
+- **Notifications and activity:** Desktop notifications with privacy levels · Approve a reply, like, boost (GoToSocial) · Direct messages read here are read on the server too · Activity says whom you followed · Someone new in a private talk — shown at once · Slow mode and “notify at most every…” · “Of them new”: what the last update brought
 <!-- /include -->
 
 ## Who wrote it

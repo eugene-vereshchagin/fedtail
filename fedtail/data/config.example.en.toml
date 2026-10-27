@@ -945,6 +945,11 @@ approvals = true
 # false — only in that lane.
 requests = true
 
+# Whom you followed — here or in another client (seen in whom you follow) — as a row of its
+# own: what you did, beside what others did. Not news: no number for it. A lane of rules
+# takes it as event = "i_followed".
+my_follows = true
+
 # The server's own notices (Mastodon 4.3+): your server (or another) blocked another one —
 # and your follows and followers from there were cut, how many and why; a warning from
 # the moderators. They come here too. false — don't show.

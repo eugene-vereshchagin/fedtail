@@ -51,7 +51,7 @@ VIA = {"followed", "tag", "boost", "mine", "list"}
 TARGET = {"my_post", "my_comment", "post", "comment", "seen", "read"}
 EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "status",
           "quote", "quoted_update", "pending", "admin", "severed", "warning",
-          "annual_report",
+          "annual_report", "i_followed",
           # derived by fedtail itself, comparing snapshots (feeds.md §2.4)
           "unfollow", "removed_follower", "moved", "gone", "unfollowed_back", "unliked",
           "deleted"}
@@ -64,7 +64,7 @@ EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
             "pending.reply": "pending", "pending.favourite": "pending",
             "pending.reblog": "pending", "admin.sign_up": "admin", "admin.report": "admin",
             "severed_relationships": "severed", "moderation_warning": "warning",
-            "annual_report": "annual_report"}
+            "annual_report": "annual_report", "fedtail.followed": "i_followed"}
 
 # the server's visibility → ours (Mastodon "private" is followers-only; GoToSocial's
 # "mutuals_only"; Akkoma's "local" is public that stays home)

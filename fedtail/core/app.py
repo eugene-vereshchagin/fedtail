@@ -1047,11 +1047,12 @@ class Core(SocialMixin):
         if time.time() - self._following_at < self.FOLLOWING_EVERY_S:
             return
         self._following_at = time.time()
-        ids, max_id = set(), None
+        ids, max_id, accounts = set(), None, {}
         try:
             for _ in range(self.FOLLOWING_PAGES):
                 page, max_id = self.api.following(self.me["id"], max_id)
                 ids |= {a["id"] for a in page or ()}
+                accounts.update({a["id"]: a for a in page or ()})
                 if not max_id or not page:
                     break
             tags = {t["name"] for t in self.api.followed_tags() or () if t.get("name")}
@@ -1060,6 +1061,8 @@ class Core(SocialMixin):
             return
         if (ids, tags) != (self._following, getattr(self, "_followed_tag_names", None)):
             self._world_version += 1  # the lanes' rules see another world: drawn anew
+        if self._following and ids - self._following:  # followed since (here or elsewhere)
+            self._my_follows([accounts[i] for i in sorted(ids - self._following)][:50])
         self._following, self._followed_tag_names = ids, tags
         self.store.kv_set("custom_following", {"ids": sorted(ids), "tags": sorted(tags),
                                                "at": self._following_at})
@@ -1262,7 +1265,7 @@ class Core(SocialMixin):
         if self.cfg["activity"].get("server_notices", True):  # Mastodon 4.3+
             types += ["severed_relationships", "moderation_warning"]
         fc = self.cfg["feed"]
-        newest, _sort = self.store.activity_newest()
+        newest, _sort = self.store.activity_newest(server=True)
         if newest is None:
             self.store.activity_put(self._notifications(types, limit=fc["page_size"]))
             self.store.kv_set("activity_seen", self.store.activity_newest()[1])
@@ -3008,8 +3011,33 @@ class Core(SocialMixin):
                 self._forget_in_home(acc_id)
             if self.cfg["feed"].get("follow_date_note", True):
                 rel = self._note_follow(acc_id, rel, since.get(acc_id) if on else None)
+            if on:
+                try:
+                    self._my_follows([self.api.account(acc_id)])
+                except Exception as e:  # noqa: BLE001 — the follow itself is done
+                    log.debug("my follow event: %s", e)
             return rel
         return self.submit(job)
+
+    MY_FOLLOW = "fedtail.followed"  # Activity's type for "I followed someone"
+
+    def _my_follows(self, accounts):
+        """I followed these (here, or elsewhere — seen in whom I follow): a row each in
+        Activity, mine (activity.my_follows) — not news, no number. One a day for each."""
+        if not self.cfg["activity"].get("my_follows", True):
+            return []
+        from .store import LOCAL_EVENT
+        day = now_iso()[:10]
+        rows = [{"id": f"{LOCAL_EVENT}followed:{a['id']}:{day}", "type": self.MY_FOLLOW,
+                 "account": a, "created_at": now_iso()}
+                for a in accounts if isinstance(a, dict) and a.get("id")]
+        new = self.store.activity_put(rows) if rows else []
+        if new:
+            self.emit("activity_updated", 0)
+            lanes_in = {c.name: [] for c in self._event_lanes()}
+            if lanes_in:
+                self.emit("lanes_updated", lanes_in)
+        return new
 
     def _forget_in_home(self, acc_id):
         """Unfollowed: their posts and boosts leave Home as they leave the server's.
