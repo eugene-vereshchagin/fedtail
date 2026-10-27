@@ -330,7 +330,7 @@ def rebuild(user_text, example_text, report=None):
     return "\n".join(out) + "\n"
 
 
-_LANE_KEYS = ("name", "title", "group", "kind", "source", "sort", "read", "mode", "window",
+_LANE_KEYS = ("name", "title", "icon", "group", "kind", "source", "sort", "read", "mode", "window",
               "filter_context", "any", "none")
 
 

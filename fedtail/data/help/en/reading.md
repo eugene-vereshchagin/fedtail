@@ -17,6 +17,9 @@ On the left, the lanes in groups:
 - **Lists** — your lists from the server, each a lane of its own. Whoever you put in a list
   leaves the general lanes and is read there only.
 
+Which lanes, in what order, and what each one takes: ≡ → "Lanes…" (or a right click on a
+lane → "Edit the lane…") — the lane editor, written into the config at once.
+
 Over a lane, two switches: "All / Posts only / New" and "Feed / Conversations"
 ("Conversations" — each thread as one card). The funnel next to Refresh leaves only pictures,
 videos or boosts — until a restart. The ❯ button at the top left puts lanes side by side, in

@@ -133,6 +133,7 @@ DEFAULTS = {
         "tag_groups": [],
         "custom": [],
         "unsorted": True,
+        "browse_keep": 200,
     },
     "post": {
         "default_visibility": "private",
@@ -222,6 +223,7 @@ DEFAULTS = {
         "drafts": True,
         "activity": True,
         "tiles": True,
+        "lane_rules": False,
         "interval_seconds": 60,
     },
     "storage": {
@@ -344,7 +346,8 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
               ("lists", "hide_in"), ("cli", "tail_lanes"), ("lanes", "languages_in")]
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
-SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles")  # sync.<each>
+SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
+             "lane_rules")  # sync.<each>
 MINIMUM = {
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
@@ -364,6 +367,7 @@ MINIMUM = {
     ("subs", "max_threads"): 1,
     ("feed", "page_size"): 1,
     ("lanes", "detect_min_words"): 1,
+    ("lanes", "browse_keep"): 20,
     ("feed", "remote_posts"): 1,
     ("feed", "catch_up_limit"): 1,
     ("feed", "render_limit"): 20,

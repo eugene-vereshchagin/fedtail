@@ -67,9 +67,12 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
         out.append(Act("follow", _("unfollow") if following else
                        (_("follow_requested") if rel.requested else _("follow")),
                        primary=not following))
-        if following:
+        if following or rel.requested:
+            # a follow waiting for the other server's yes (GoToSocial says "requested" till
+            # then, unlocked accounts too) takes the bell already: it holds with the follow
             out.append(Act("bell", "🔔 " + (_("bell_off") if rel.notifying else _("bell_on")),
                            _("bell_tip")))
+        if following:
             if cfg["feed"].get("per_person_follow", True):
                 out.append(Act("boosts", "♻ " + (_("boosts_hide") if rel.showing_shares
                                                  else _("boosts_show")),

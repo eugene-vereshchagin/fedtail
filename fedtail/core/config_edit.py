@@ -186,11 +186,67 @@ def is_set(text, section, key):
     return found is not None and not found[2]
 
 
+# options that are arrays of tables: written as [[section.key]] blocks, not a line
+TABLES = {("lanes", "custom"), ("lanes", "tag_groups")}
+
+
+def set_tables(text, section, key, tables):
+    """The text with every [[section.key]] block replaced by these tables (a list of
+    dicts; [] — none left): where the first one stood, else at the end. The comments
+    above a block and between blocks stay; `key = […]` in [section], if set, is
+    commented out (TOML won't have both)."""
+    from .config_update import _is_comment, _lane_table, _toml
+    lines = text.rstrip("\n").split("\n") if text.strip() else []
+    name = f"{section}.{key}"
+    out, at, i = [], None, 0
+    while i < len(lines):
+        m = _HEADER.match(lines[i])
+        if m and lines[i].lstrip().startswith("[[") and m.group(1) == name:
+            at = len(out) if at is None else at
+            j = i + 1
+            while j < len(lines) and not _HEADER.match(lines[j]):
+                j += 1
+            # what stands just above the next header (its comments, blank lines) is its
+            k = j
+            while k > i + 1 and (not lines[k - 1].strip() or _is_comment(lines[k - 1])):
+                k -= 1
+            out += lines[k:j]
+            i = j
+            continue
+        out.append(lines[i])
+        i += 1
+    if tables:
+        sect = None
+        for n, line in enumerate(out):
+            m = _HEADER.match(line)
+            if m and not line.lstrip().startswith("#"):
+                sect = m.group(1)
+            elif sect == section and re.match(rf"^\s*{re.escape(key)}\s*=", line):
+                out[n] = "#" + line.lstrip()
+    block = []
+    for t in tables:
+        if key == "custom":
+            block += _lane_table(t) + [""]
+        else:
+            block += [f"[[{name}]]"] + [f"{k} = {_toml(v)}" for k, v in t.items()] + [""]
+    if at is None:
+        while out and not out[-1].strip():
+            out.pop()
+        out += ([""] if out and block else []) + block
+    else:
+        out[at:at] = block
+    while out and not out[-1].strip():
+        out.pop()
+    return "\n".join(out) + "\n"
+
+
 def apply(text, changes, example_text=""):
     """Every change {(section, key): value or UNSET} put in the text."""
     from .config import DEFAULTS
     for (section, key), value in changes.items():
-        if value is UNSET:
+        if (section, key) in TABLES:
+            text = set_tables(text, section, key, [] if value is UNSET else list(value))
+        elif value is UNSET:
             text = unset(text, section, key, DEFAULTS.get(section, {}).get(key))
         else:
             text = set_value(text, section, key, value, example_text)
@@ -213,6 +269,9 @@ def check(new_text, changes):
         got = user.get(section, {}).get(key, UNSET)
         want = UNSET if value is UNSET else (list(value) if isinstance(value, tuple)
                                              else value)
+        if (section, key) in TABLES:
+            got = [] if got is UNSET else got
+            want = [] if want is UNSET else want
         if got != want and not (value is UNSET and got is UNSET):
             raise SaveError(f"{section}.{key}: wrote {want!r}, reads back {got!r}")
     try:

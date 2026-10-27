@@ -80,6 +80,9 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(mine, ["edit_profile", "followers", "copy_handle"])
         req = profile.actions(ACC, Relationship(requested=True), False, cfg, lambda _w: False)
         self.assertEqual(req[0].label, i18n._("follow_requested"))
+        # a follow waiting for the other server's yes takes the bell already (27.10)
+        self.assertIn("bell", [a.key for a in req])
+        self.assertNotIn("boosts", [a.key for a in req])
 
     def test_note_line_and_langs(self):
         note = "met at fosdem\n\n[fedtail followed 2024-01-01]"  # fedtail's line: not shown

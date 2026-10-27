@@ -20,6 +20,10 @@ What travels — a switch for each in `[sync]`:
   them): hidden on every device. Like read marks, they only add up.
 * "tiles" — which lanes the phone pins as tiles (kv "pinned_tiles", set through
   `Core.set_pinned_tiles`): one value, the newest wins.
+* "lane_rules" (off by default: it writes config.toml) — the lanes themselves: which set
+  (`lanes.preset`), which lanes and in what order (`lanes.enabled`), one's own lanes
+  (`[[lanes.custom]]`), `lanes.posts_only`. One value (kv "lane_rules"), the newest wins;
+  a device that gets it writes it into its config.toml and shows the lanes anew.
 
 Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server) or
 `sync.folder`. Nothing set — no sync, and nothing is recorded.
@@ -47,11 +51,13 @@ from . import backends, crypto
 log = logging.getLogger(__name__)
 
 THREAD_STATES = ("sub", "left", "muted")
-WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles")  # = config.SYNC_WHAT
+WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
+        "lane_rules")  # = config.SYNC_WHAT
 # kv values carried whole (the newest wins) → the switch that lets them travel; app.py
 # records them where they change
-SETTINGS = {"list_order": "lanes", "tag_groups": "lanes", "pinned_tiles": "tiles"}
-LANE_KEYS = tuple(k for k, w in SETTINGS.items() if w == "lanes")
+SETTINGS = {"list_order": "lanes", "tag_groups": "lanes", "pinned_tiles": "tiles",
+            "lane_rules": "lane_rules"}
+LANE_KEYS = tuple(k for k, w in SETTINGS.items() if w in ("lanes", "lane_rules"))
 READ_CHUNK = 1000   # ids in one recorded op
 BATCH_OPS = 400     # ops in one sealed blob
 DEBOUNCE = 3        # seconds after a mark before sending: scrolling marks in bursts
@@ -403,7 +409,11 @@ class Sync:
 
     @staticmethod
     def _setting_ok(key, value):
-        """Only the shapes app.py keeps: lists of ids or names; a list of tag groups."""
+        """Only the shapes app.py keeps: lists of ids or names; a list of tag groups;
+        the lanes' settings (Core.LANE_RULES: a table of them)."""
+        if key == "lane_rules":
+            return isinstance(value, dict) and isinstance(value.get("custom", []), list) \
+                and isinstance(value.get("enabled", []), list)
         if not isinstance(value, list):
             return False
         if key == "tag_groups":

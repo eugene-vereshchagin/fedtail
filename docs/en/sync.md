@@ -21,6 +21,7 @@ this device only):
 | `sync.drafts` | drafts: begun on one device, finished on another; sent or emptied — gone everywhere. Text, content warning, poll, who sees it; pictures are files of each computer and stay where they were added | the newest version of each draft wins |
 | `sync.activity` | notifications you dismissed from Activity | they only add up, like read marks |
 | `sync.tiles` | which lanes the phone pins as tiles | the newest set wins |
+| `sync.lane_rules` (off by default) | the lanes themselves: the set, which lanes in what order, your own lanes, `lanes.posts_only` — written into the other device's config.toml. They go when they change (by hand or in the lane editor); a device just started sends nothing of its own | the newest wins |
 
 What stays on each device: the marks fedtail makes by itself (everything read on the
 first run, older history, your own posts), automatic subscriptions to your own posts

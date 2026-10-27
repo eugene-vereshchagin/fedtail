@@ -296,7 +296,7 @@ class SyncOffTest(TmpDir):
         cfg, warns = config.validate({"sync": {"what": ["read"], "drafts": True}})
         self.assertEqual({k: cfg["sync"][k] for k in config.SYNC_WHAT},
                          {"read": True, "threads": False, "lanes": False, "drafts": True,
-                          "activity": False, "tiles": False})
+                          "activity": False, "tiles": False, "lane_rules": False})
         self.assertTrue(any("sync.what is now" in w for w in warns))
 
     def test_config_is_checked(self):
@@ -424,3 +424,42 @@ class LoginTest(Devices):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@need_crypto
+class LaneRulesSyncTest(Devices):
+    """sync.lane_rules: the lanes themselves, written into the other device's config.toml."""
+
+    def setUp(self):
+        TmpDir.setUp(self)
+        from fedtail import i18n
+        was = i18n.current_language()
+        i18n.setup("en")
+        self.addCleanup(i18n.setup, was)
+        (self.tmp / "meet").mkdir()
+        self.world = fakes.World()
+        self.desk = self.device("desk", self.world, lane_rules=True)
+        self.phone = self.device("phone", self.world, lane_rules=True)
+
+    def test_the_lanes_travel(self):
+        import tomllib
+        self.assertEqual(self.desk.sync_now()[0], 0)  # a start sends nothing of its own
+        self.phone.sync_join(self.desk.sync_key())
+        mine = [{"name": "pics", "icon": "list", "any": [{"has": "image"}]}]
+        from fedtail.core import config_edit
+        cfg, _w = config_edit.save(self.desk.paths.config_file,
+                                   {("lanes", "custom"): mine,
+                                    ("lanes", "enabled"): ["home", "pics"]})
+        self.desk.lanes_saved(cfg)
+        self.assertIn("pics", self.desk.lane_by_name)
+        self.assertEqual(self.desk.sync_now()[0], 1)
+        self.phone.sync_now()
+        got = tomllib.loads(self.phone.paths.config_file.read_text("utf-8"))
+        self.assertEqual(got["lanes"]["custom"], mine)
+        self.assertEqual(got["lanes"]["enabled"], ["home", "pics"])
+        self.assertIn("pics", self.phone.lane_by_name)
+        self.assertEqual(self.phone.sync_now(), (0, 0))  # nothing goes back
+
+    def test_off_by_default(self):
+        cfg, _ = config.validate({})
+        self.assertFalse(cfg["sync"]["lane_rules"])

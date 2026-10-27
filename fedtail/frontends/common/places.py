@@ -27,6 +27,7 @@ from dataclasses import dataclass, field, replace
 from ...i18n import _
 from ...model import Account, Post, Share, real
 from . import timed
+from .lanesplace import LanePlaces
 from .placesmore import AccountPlaces, MorePlaces
 
 log = logging.getLogger(__name__)
@@ -114,6 +115,7 @@ PLACES = {
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
     "help": "help_title", "news": "help_news", "about": "about",
     "federation": "fed_title", "settings": "settings_title", "issue": "issue_title",
+    "lanes": "le_title",
     # opened from somewhere: a post, a person, a tag
     "tag": "tag_info", "people": "people_following", "list_of": "add_to_list",
     "list_people": "list_people_title", "reactions": "who_favourited_by",
@@ -124,12 +126,13 @@ PLACES = {
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
     "slow": "slow_title", "log": "debug_log_title", "react": "react_title",
+    "lane": "le_title",
 }
 MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "slow",
         "requests",
         "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts",
-        "settings", "help", "news", "about", "issue", "federation", "log")
+        "settings", "lanes", "help", "news", "about", "issue", "federation", "log")
 
 
 def _wait(fut):
@@ -150,7 +153,7 @@ def _acc_id(a):
     return a.id if isinstance(a, Account) else str(a)
 
 
-class Places(MorePlaces, AccountPlaces):
+class Places(MorePlaces, AccountPlaces, LanePlaces):
     """The places on one View.
 
     Args:

@@ -123,6 +123,7 @@ class Core(SocialMixin):
         if wanted(cfg):
             from .sync import Sync
             self.sync = Sync(self)
+        self._note_lane_rules()  # the lanes changed in the file since: they go out
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
@@ -757,9 +758,13 @@ class Core(SocialMixin):
                     if name not in open_sources:
                         continue
                     try:
+                        keep = int(self.cfg["lanes"].get("browse_keep", 200))
                         new_by_source[name] = sources.refresh_top(
-                            self.store, self.sources[name], fc["page_size"])
-                        self.store.prune(name, self.keep_per_lane() // 3)
+                            self.store, self.sources[name], fc["page_size"], keep)
+                        # the newest `keep`, and what "Older" brought into an open lane
+                        shown = max((self._limits.get(x.name, 0) for x in self.lanes
+                                     if x.source == name), default=0)
+                        self.store.prune(name, max(keep, shown - fc["render_limit"] + keep))
                         # the server answered, and with nothing: its live feeds are off
                         # (mastodon.social and others do that) — the lane says so
                         empty = getattr(self.sources[name], "last_count", 1) == 0
@@ -1964,10 +1969,53 @@ class Core(SocialMixin):
     def sync_status(self):
         return self.sync.status() if self.sync else None
 
+    # the lanes' settings that travel with sync.lane_rules (core/sync)
+    LANE_RULES = ("preset", "enabled", "custom", "posts_only")
+
+    def _lane_rules(self):
+        return {k: self.cfg["lanes"].get(k) for k in self.LANE_RULES}
+
+    def _note_lane_rules(self):
+        """The lanes as config.toml has them now, kept (kv "lane_rules"); changed since
+        last time (edited by hand, in the lane editor) — they go to the other devices."""
+        now = self._lane_rules()
+        before = self.store.kv_get("lane_rules")
+        if before == now:
+            return
+        self.store.kv_set("lane_rules", now)
+        # the first time (a new device, a store started anew) is where it starts, not a
+        # change: sent, it would win over the lanes the other devices have
+        if self.sync and before is not None:
+            self.sync.record_setting("lane_rules")
+
+    def lanes_saved(self, cfg):
+        """The lanes were written into config.toml here (the lane editor): this run takes
+        them at once, and they travel (sync.lane_rules)."""
+        for k in self.LANE_RULES:
+            self.cfg["lanes"][k] = cfg["lanes"][k]
+        self._note_lane_rules()
+        self._apply_lists(list(self.lists), self.list_members)
+
+    def _take_lane_rules(self):
+        """Another device's lanes (sync.lane_rules): into this config.toml, then shown."""
+        from . import config_edit
+        got = self.store.kv_get("lane_rules")
+        if not isinstance(got, dict):
+            return
+        changes = {("lanes", k): got[k] if got.get(k) is not None else config_edit.UNSET
+                   for k in self.LANE_RULES if k in got}
+        cfg, _w = config_edit.save(self.paths.config_file, changes)
+        for k in self.LANE_RULES:
+            self.cfg["lanes"][k] = cfg["lanes"][k]
+        self.store.kv_set("lane_rules", self._lane_rules())  # as this file reads them
+
     def apply_lanes_state(self, keys):
         """Another device rearranged my lanes (core/sync: the order of lists, saved tag
-        lanes) — the new values are in the store already: the sidebar follows."""
+        lanes; with sync.lane_rules the lanes themselves) — the new values are in the
+        store already: the sidebar follows."""
         log.info("sync: %s from another device", ", ".join(keys))
+        if "lane_rules" in keys:
+            self._take_lane_rules()
         self._apply_lists(list(self.lists), self.list_members)
 
     def apply_thread_state(self, root, state):

@@ -1,6 +1,7 @@
 **0.21.0 (in progress):**
 
 - Free lanes: a lane you assemble yourself
+- The lane editor
 - “Unsorted”: no post gets lost
 - Only the languages you read
 - Sets of lanes “as in other clients”

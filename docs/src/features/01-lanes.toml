@@ -17,13 +17,13 @@ android = "has"
 since = "0.2.0"
 name.ru = "Федерация, Лента, Локальная"
 name.en = "Federated, Home, Local"
-config = "`lanes.enabled` (`\"federated\"`, `\"home\"`, `\"local\"`)"
+config = "`lanes.enabled` (`\"federated\"`, `\"home\"`, `\"local\"`), `lanes.browse_keep`"
 api = "`timelines/home`, `timelines/public`"
 others.ru = "у всех"
 others.en = "everyone"
 clients = ["all"]
-details.ru = "«Лента» (`home`) — те, кого ты читаешь, без ботов; открывается по умолчанию. «Локальная» — вся твоя нода. «Федерация» — всё, что нода знает со всех серверов. Федерация и Локальная подгружаются, только пока открыты, и идут без счётчиков непрочитанного: их листают, а не дочитывают. Между свежей страницей и тем, что было раньше, в них допустим разрыв — в отличие от «Ленты», которая догоняется без дыр (см. Догонять без дыр)."
-details.en = "“Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end. A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes)."
+details.ru = "«Лента» (`home`) — те, кого ты читаешь, без ботов; открывается по умолчанию. «Локальная» — вся твоя нода. «Федерация» — всё, что нода знает со всех серверов. Федерация и Локальная подгружаются, только пока открыты, и идут без счётчиков непрочитанного: их листают, а не дочитывают; в них — самые новые `lanes.browse_keep` (200) из всего потока, как бы быстро ни лил релей. Между свежей страницей и тем, что было раньше, в них допустим разрыв — в отличие от «Ленты», которая догоняется без дыр (см. Догонять без дыр)."
+details.en = "“Home” (`home`) — the people you follow, without bots; it opens by default. “Local” — your whole server. “Federated” — everything your server knows from all servers. Federated and Local are fetched only while open and have no unread counts: they are for browsing, not for reading to the end; they hold the newest `lanes.browse_keep` (200) of the whole stream, however fast a relay pours in. A gap between a fresh page and what was there before is allowed in them — unlike Home, which catches up with no holes (see Catching up with no holes)."
 
 [[feature]]
 id = "lane-words"
@@ -465,6 +465,22 @@ others = "—"
 clients = []
 details.ru = "Лента из правил, первая версия: откуда пост (домашняя, локальная, федерация, упоминания, мои, закладки, лайки, подписки на треды, списки, теги), кто (я, подписки, моя нода, боты, `@ник@сервер`, домен), что это (пост, ответ, ответ себе, буст, самобуст, цитата), ко мне ли (ответ на мой пост или коммент, упоминание, личное), что в нём (картинки, видео, CW, ссылки, теги, язык, слова), что бустнули (моё, чужое, уже виденное), возраст, лайки. Лента встаёт в «Личные» (или `group = \"standard\"` — в «Стандартные»), на своё место в `lanes.enabled` (`\"custom:имя\"`) или в конец, и наполняется из того, что уже лежит в базе; при смене правила — заново. Быстрые фильтры: условие с `switch` — выбор в шапке ленты, с `shown = false` — скрыто (и из счётчиков), пока его не выбрали; «Раньше» — по странице из каждого источника через правило; «Неразобранное» (`lanes.unsorted`) — что пришло, а ни одна лента не взяла. События (лайки, бусты, подписки, опросы) — условием с `event`: строкой среди постов, по времени, не непрочитанные; заявки в подписчики остаются в Активности. План — `docs/ru/dev/feeds.md`."
 details.en = "A lane made of rules, first version: where a post came from (home, local, federated, mentions, mine, bookmarks, likes, followed threads, lists, tags), who (me, the followed, my server, bots, `@nick@server`, a domain), what it is (a post, a reply, a reply to oneself, a boost, a self-boost, a quote), whether it's to me (a reply to my post or comment, a mention, private), what is in it (pictures, video, a CW, links, tags, the language, words), what a boost is of (mine, someone's, seen already), its age, its likes. A lane stands in “Personal” (or `group = \"standard\"` — in “Timelines”), in its place in `lanes.enabled` (`\"custom:name\"`) or at the end, and fills from what is stored already; anew when the rule changes. Quick filters: a condition with `switch` is a choice in the lane's header, one with `shown = false` is hidden (from the counts too) until chosen; “Older” — a page from each source through the rule; “Unsorted” (`lanes.unsorted`) — what came and no lane took. Events (likes, boosts, follows, polls) — a condition with `event`: a line among the posts, by time, never unread; follow requests stay in Activity. The plan — `docs/en/dev/feeds.md`."
+
+[[feature]]
+id = "lane-editor"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Редактор лент"
+name.en = "The lane editor"
+config.ru = "`lanes.enabled`, `[[lanes.custom]]` (пишет их)"
+config.en = "`lanes.enabled`, `[[lanes.custom]]` (writes them)"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+clients = []
+details.ru = "Меню ≡ → «Ленты…» (и правый клик по ленте → «Изменить ленту…»): все ленты по порядку — выше, ниже, скрыть, показать, новая лента, удалить свою, «Как в наборе» для изменённой. «Изменить…» — лента формой: название, картинка, раздел, откуда, как читать, порядок и условия — одна строка каждое («author: me, followed; kind: post», «*» — все посты), у каждого «Берёт» свой быстрый фильтр и «скрыто, пока не выбрано»; что не понялось — сказано, и ничего не пишется. Всё сразу ложится в config.toml (лента набора, изменённая здесь, становится своей с тем же именем) и сразу видно; в окнах, терминале и вебе одно и то же."
+details.en = "The ≡ menu → “Lanes…” (and a right click on a lane → “Edit the lane…”): every lane in its order — up, down, hide, show, a new lane, delete one's own, “As in the set” for a changed one. “Edit…” — the lane as a form: title, picture, section, sources, how it's read, the order and the conditions — one line each (“author: me, followed; kind: post”, “*” — every post), every “Takes” with its quick filter and “hidden till chosen”; what doesn't read is said, and nothing is written. Everything goes into config.toml at once (a set's lane changed here becomes one of your own, of its name) and shows at once; the same in the windows, the terminal and the web page."
 
 [[feature]]
 id = "unsorted-lane"

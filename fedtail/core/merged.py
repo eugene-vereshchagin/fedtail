@@ -236,6 +236,10 @@ class MergedCore:
             out.sort(key=lambda e: (real(e[1]) if by_time else e[1]).get("created_at", ""))
         return out
 
+    def lanes_saved(self, cfg):
+        """The lane editor wrote the main profile's lanes: it takes them."""
+        return self.primary.lanes_saved(cfg)
+
     def lane_icon(self, name):
         return None if lanes_module.is_list(name) else self.primary.lane_icon(name)
 

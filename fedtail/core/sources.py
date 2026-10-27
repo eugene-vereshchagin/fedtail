@@ -124,12 +124,26 @@ def _fill_empty(store, source, page_size, limit):
     return new
 
 
-def refresh_top(store, source, page_size):
-    """For lanes you browse rather than read through (local, federated): just the
-    newest page. A hole between it and what we had is fine there."""
+def refresh_top(store, source, page_size, keep=None):
+    """For lanes you browse rather than read through (local, federated): the newest page,
+    and pages back from it till one meets what is stored or `keep` posts came — the newest
+    `keep` of the stream however fast it flows (lanes.browse_keep). A hole between them and
+    what we had is fine there. Returns the new item ids."""
     page = source.fetch(limit=page_size)
     source.last_count = len(page or [])  # 0: the server gave nothing (its live feeds off)
-    return store.put_items(source.name, _entries(source, page))
+    entries = _entries(source, page)
+    new = store.put_items(source.name, entries)
+    seen = len(page or [])
+    while keep and entries and len(page) == page_size and len(new) == seen and seen < keep:
+        oldest = min(entries, key=lambda e: sort_key(e[2], e[0]))
+        page = source.fetch(limit=min(page_size, keep - seen), max_id=oldest[0])
+        entries = _entries(source, page)
+        got = store.put_items(source.name, entries)
+        new += got
+        seen += len(page or [])
+        if len(got) < len(entries):  # met what was stored: the rest is there already
+            break
+    return new
 
 
 def fetch_older(store, source, page_size):

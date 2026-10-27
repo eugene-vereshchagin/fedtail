@@ -1035,6 +1035,7 @@ class MainWindow(QMainWindow):
         m.addMenu(self.accounts_menu(m))
         m.addSeparator()
         m.addAction(_("settings"), self.open_settings)
+        m.addAction(_("le_title") + "…", lambda: self.open_place("lanes"))
         m.addAction(_("open_config"), lambda: open_path(self.core.paths.config_file))
         m.addAction(_("open_themes"), lambda: open_path(themefile.user_dir()))
         m.addMenu(self._try_theme_menu(m))
@@ -1346,7 +1347,12 @@ class MainWindow(QMainWindow):
                 drop.setToolTip(_("tags_in_config"))
         elif self.cfg["lists"]["enabled"]:
             m.addAction(_("list_new"), lambda: self.new_list())
-        else:
+        if name and not name.startswith(("list:", "tags:")) and \
+                name in self.core.lane_by_name and name not in ("activity", "requests"):
+            m.addAction(_("le_edit_lane"), lambda: self.open_place("lane", name))
+        if name:
+            m.addAction(_("le_title") + "…", lambda: self.open_place("lanes"))
+        if m.isEmpty():
             return
         m.exec(self.lanes.mapToGlobal(pos))
 

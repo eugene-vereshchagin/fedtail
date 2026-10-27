@@ -553,6 +553,12 @@ keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bo
 
 [[wording]]
 in = ["tui", "web"]
+why.ru = "«Изменить ленту…» — пункт меню ленты в боковой панели окон; в терминале и вебе редактор лент — место «Ленты» в меню ≡, там у каждой ленты «Изменить…»."
+why.en = "“Edit the lane…” is an item of a lane's menu in the windows' sidebar; in the terminal and the web page the lane editor is the place “Lanes” in the ≡ menu, with “Edit…” on every lane."
+keys = ["le_edit_lane"]
+
+[[wording]]
+in = ["tui", "web"]
 why.ru = "«Войти заново» в терминале и вебе — кнопка места «Аккаунты», и её «точно?» — вопросом без заголовка окна."
 why.en = "“Log in again” in the terminal and the web page is a button of the Accounts place, and its “sure?” a question without a window's title."
 keys = ["relogin_title"]

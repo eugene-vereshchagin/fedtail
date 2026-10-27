@@ -2,6 +2,19 @@
 
 ## 0.21.0 — in progress
 
+- **The lane editor.** ≡ → "Lanes…" (and a lane's right-click menu → "Edit the lane…"):
+  the order, shown or hidden, new lanes of one's own, and each lane as a form — title,
+  picture, section, sources, how it's read, its conditions one line each with their quick
+  filters. Written into config.toml at once (`[[lanes.custom]]`, `lanes.enabled`) and shown
+  at once; every interface (a place of common/places.py).
+- `sync.lane_rules` (off by default): the lanes themselves travel between devices — the set,
+  which lanes in what order, one's own lanes, `lanes.posts_only` — written into the other
+  device's config.toml.
+- Federated and Local keep the newest `lanes.browse_keep` (200) of the whole stream while
+  open: pages back from the newest until they meet what is stored. One page a round lost
+  most of what a relay brought.
+- The bell on a profile shows on a follow still waiting for the other server's yes too
+  (GoToSocial says "requested" until then, even for unlocked accounts): it wasn't there.
 - A lane of rules picks its picture: `icon` (one of the built-in lanes' — `my_posts`, `direct`,
   `star_full`…); one's own lane without one shows a list's, not none. The settings window no
   longer shows `lanes.custom` / `lanes.tag_groups` as a line to type: saving it wrote the

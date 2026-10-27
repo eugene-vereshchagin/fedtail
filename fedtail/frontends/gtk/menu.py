@@ -62,6 +62,7 @@ class MainMenu:
         a("relogin", win.relogin)
         a("logout", win.log_out)
         a("settings", win.open_settings)
+        a("lanes", lambda: win.open_place("lanes"))
         a("config", lambda: win.open_path(win.view.paths.config_file))
         a("themes", lambda: win.open_path(win.themes_dir()))
         a("data", lambda: win.open_path(win.view.paths.data_dir))
@@ -165,6 +166,7 @@ class MainMenu:
 
         files = Gio.Menu()
         _item(files, _("settings"), "settings")
+        _item(files, _("le_title") + "…", "lanes")
         _item(files, _("open_config"), "config")
         _item(files, _("open_themes"), "themes")
         sub = Gio.MenuItem.new_submenu(_("try_theme"), self._themes())

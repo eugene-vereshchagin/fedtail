@@ -696,6 +696,11 @@ custom = []
 # and not collected.
 unsorted = true
 
+# Lanes you browse rather than read through (Federated, Local while lazy): the newest this
+# many of the whole stream, taken while the lane is open — something to scroll through however
+# fast a relay pours in. "Older" goes further back; what's beyond it goes at the next update.
+browse_keep = 200
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  5. Posts
@@ -1079,6 +1084,12 @@ activity = true
 
 # Which lanes the phone pins as tiles.
 tiles = true
+
+# The lanes themselves: the set (lanes.preset), which lanes in what order (lanes.enabled),
+# your own lanes ([[lanes.custom]]), lanes.posts_only. A device that gets them writes them into
+# its config.toml. Off by default: it changes the file. They go out when they change here
+# (by hand or in the lane editor); a device that has just started sends nothing of its own.
+lane_rules = false
 
 # How often to send and fetch, seconds (at least 15). A mark goes out a few seconds after
 # it was made anyway.

@@ -1027,3 +1027,27 @@ class LaneIconTest(FreeBase):
         self.assertEqual(iconpack.lane_picture("posts", "my_posts"), "my_posts")
         self.assertEqual(iconpack.lane_picture("home", None), "home")
         self.assertEqual(iconpack.lane_picture("home", "pizza"), "home")
+
+
+class BrowseKeepTest(FreeBase):
+    """Federated, however fast a relay pours: the newest lanes.browse_keep of it."""
+
+    def test_newest_n_of_the_stream(self):
+        core, w = self.make([])
+        core.cfg["feed"]["page_size"] = 10
+        core.cfg["lanes"]["browse_keep"] = 25
+        for i in range(60):
+            w.local.append(w.add(status(f"{i:03d}", LOCAL, minute=i % 60)))
+        core.connect().result()
+        core.set_active_lane("federated")
+        core.poll_once()
+        got = [i for i, _st in core.store.items("federated", 100)]
+        self.assertEqual(len(got), 25)
+        self.assertIn("059", got)
+        self.assertNotIn("030", got)
+        for i in range(60, 64):  # a few more: one page, it meets what is stored
+            w.local.append(w.add(status(f"{i:03d}", LOCAL, minute=59)))
+        core.poll_once()
+        got = [i for i, _st in core.store.items("federated", 100)]
+        self.assertEqual(len(got), 25)
+        self.assertIn("063", got)

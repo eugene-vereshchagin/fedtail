@@ -52,6 +52,7 @@ class PlacesTest(unittest.TestCase):
         args["link"] = "https://news.example/a"
         args["collection"] = self.core.save_collection(None, "Друзья").result()["id"]
         args["collect"] = "B"
+        args["lane"] = "home"
         for name in PLACES:
             with self.subTest(place=name):
                 try:

@@ -134,8 +134,10 @@ def lane_menu(win, row):
             tip(drop, _("tags_in_config"))
     elif win.cfg["lists"]["enabled"]:
         item(_("list_new"), win.new_list)
-    else:
-        return None
+    if not name.startswith(("list:", "tags:")) and name in view.lane_by_name and \
+            name not in ("activity", "requests"):
+        item(_("le_edit_lane"), lambda: win.open_place("lane", name))
+    item(_("le_title") + "…", lambda: win.open_place("lanes"))
     pop.set_child(box)
     pop.set_parent(row)
     pop.connect("closed", lambda p: p.unparent())
