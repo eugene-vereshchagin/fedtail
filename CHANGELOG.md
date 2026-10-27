@@ -2,6 +2,8 @@
 
 ## 0.21.0 — in progress
 
+- `--rebuild-config`: options a version no longer has are kept under a note in the file's own
+  language (it was always Russian).
 - "To me" (`to_me`): replies to me and mentions of me in one lane, with quick filters for each —
   by default instead of "Replies to me" and "Mentions" (they stay, for whoever wants them apart).
 - Home's quick filters: tags (what followed tags brought), boosts, threads with news (posts whose

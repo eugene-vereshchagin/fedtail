@@ -259,6 +259,11 @@ def _toml(value):
     return json.dumps(str(value), ensure_ascii=False)
 
 
+def _language(example_text):
+    from .config import language_of
+    return language_of(example_text)
+
+
 def _tables(value):
     """An array of tables ([[lanes.custom]]): a non-empty list of dicts."""
     return isinstance(value, list) and bool(value) and all(isinstance(x, dict) for x in value)
@@ -304,7 +309,9 @@ def rebuild(user_text, example_text, report=None):
         rest = [(k, v) for k, v in values.items() if k not in names]
         if not rest:
             continue
-        lines = ["# не из этой версии — оставлено как было:"] + \
+        note = "# не из этой версии — оставлено как было:" \
+            if _language(example_text) == "ru" else "# not of this version — kept as it was:"
+        lines = [note] + \
             [f"{k} = {_toml(v)}" for k, v in rest]
         extra += [f"{sec}.{k}" for k, _ in rest]
         if sec in ends:

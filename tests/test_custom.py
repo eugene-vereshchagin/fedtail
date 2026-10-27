@@ -633,3 +633,14 @@ class NewDefaultsTest(FreeBase):
         cfg, _ = config.validate({"lanes": {"tag_groups": [
             {"name": "x", "any": ["a"], "not_in_home": True}]}})
         self.assertTrue(cfg["lanes"]["tag_groups"][0]["not_in_home"])
+
+
+class RebuildNoteLanguageTest(unittest.TestCase):
+    def test_the_note_speaks_the_files_language(self):
+        from fedtail.core import config_update as u
+        old = "[sync]\nwhat = [\"read\"]\n"
+        en = u.rebuild(old, config.example_text("en"))
+        ru = u.rebuild(old, config.example_text("ru"))
+        en, ru = (x if isinstance(x, str) else x[0] for x in (en, ru))
+        self.assertIn("# not of this version — kept as it was:", en)
+        self.assertIn("# не из этой версии — оставлено как было:", ru)
