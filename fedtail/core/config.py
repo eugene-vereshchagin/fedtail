@@ -526,9 +526,12 @@ def validate(user):
     wanted = cfg["notify"]["lanes"] + cfg["ui"]["icon_count"] + cfg["sound"]["lanes"]
     picking = wanted + cfg["notify"]["except"] + cfg["ui"]["icon_count_except"] + \
         cfg["sound"]["except"]
+    # free lanes ([[lanes.custom]]) are named "custom:<name>" in these lists
+    free = {"custom:" + str(c.get("name")) for c in cfg["lanes"].get("custom") or []
+            if isinstance(c, dict) and c.get("name")}
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            picking + cfg["lists"]["hide_in"]
-           if x not in LANE_NAMES | {"lists"}
+           if x not in LANE_NAMES | {"lists"} and not (x in picking and x in free)
            # notify.lanes = ["all"]: everything, the except list takes away
            and not (x == "all" and x in wanted)
            # one list: "list:Друзья" (its title, or its id)
@@ -569,7 +572,7 @@ def validate(user):
     if bad_merge:
         errors.append(f"ui.merge: {bad_merge} — profile names, or [\"all\"]")
     start = cfg["ui"]["start_lane"]
-    if start not in {"none", "last"} | LANE_NAMES:
+    if start not in {"none", "last"} | LANE_NAMES | free:
         errors.append(f"ui.start_lane = {start!r}; allowed: none, last or a lane: "
                       f"{', '.join(sorted(LANE_NAMES))}")
     bad_lang = [x for x in langs

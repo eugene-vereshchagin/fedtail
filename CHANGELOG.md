@@ -2,6 +2,8 @@
 
 ## 0.21.0 — in progress
 
+- Free lanes can be named in `notify.lanes`, `sound.lanes`, `ui.icon_count` (and their except
+  lists) and `ui.start_lane` as `"custom:<name>"`.
 - A free lane's title can be given per language: `title = { ru = "Посты", en = "Posts" }` —
   the interface's language is shown, else English.
 - Follow requests in Activity (`activity.requests`, on): on top, with "Approve" / "Reject", in

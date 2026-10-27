@@ -736,3 +736,26 @@ class TitleLanguagesTest(unittest.TestCase):
         (empty,), _w = custom.load(config.validate({"lanes": {"custom": [
             dict(rule, title={"en": ""})]}})[0])
         self.assertEqual(empty.title, "posts")
+
+
+class NamedInListsTest(FreeBase):
+    def test_free_lanes_in_notify_icon_sound_start(self):
+        user = {"lanes": {"custom": [FEED]}, "notify": {"lanes": ["custom:feed"]},
+                "ui": {"icon_count": ["custom:feed"], "start_lane": "custom:feed"},
+                "sound": {"lanes": ["custom:feed"]}}
+        cfg, warnings = config.validate(user)
+        self.assertEqual(cfg["notify"]["lanes"], ["custom:feed"])
+        with self.assertRaises(config.ConfigError):
+            config.validate(dict(user, notify={"lanes": ["custom:nope"]}))
+        with self.assertRaises(config.ConfigError):
+            config.validate({"lanes": {"enabled": ["home", "custom:feed"], "custom": [FEED]}})
+
+    def test_notified(self):
+        core, w = self.make([FEED])
+        core.cfg["notify"]["lanes"] = ["custom:feed"]
+        core.connect().result()
+        core.poll_once()
+        w.local.append(w.add(status("009", LOCAL, minute=9)))
+        core.poll_once()
+        got = [(lane, st["id"]) for n, pl in self.events if n == "notify" for lane, st in pl]
+        self.assertIn(("custom:feed", "009"), got)

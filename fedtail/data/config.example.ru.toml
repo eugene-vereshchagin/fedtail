@@ -203,6 +203,7 @@ themed_icon = true
 #   unsorted  — Неразобранное (со своими лентами)
 #   "lists" — все списки разом; один список — по названию (или id): "list:Друзья".
 #   "all" — все ленты сразу (только в первом из пары; лишнее убирается в except).
+#   "custom:<имя>" — своя лента ([[lanes.custom]]).
 # federated и local не считаются никогда (их листают, непрочитанного там нет).
 # Пример: ["replies", "mentions", "lists"] или ["all"] + except = ["home", "bots"].
 icon_count = ["to_me", "replies", "mentions", "subs", "important", "requests"]
@@ -853,6 +854,7 @@ enabled = true
 #   unsorted  — Неразобранное (со своими лентами)
 #   "lists" — все списки разом; один список — по названию (или id): "list:Друзья".
 #   "all" — все ленты сразу (только в первом из пары; лишнее убирается в except).
+#   "custom:<имя>" — своя лента ([[lanes.custom]]).
 # Пример: ["replies", "mentions", "list:Друзья"] или ["all"] + except = ["home", "bots"].
 lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "activity", "requests"]
 

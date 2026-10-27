@@ -202,6 +202,7 @@ themed_icon = true
 #   unsorted  — Unsorted (with lanes of your own)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
+#   "custom:<name>" — a lane of your own ([[lanes.custom]]).
 # federated and local are never counted (they are browsed, there's no unread in them).
 # For example: ["replies", "mentions", "lists"] or ["all"] + except = ["home", "bots"].
 icon_count = ["to_me", "replies", "mentions", "subs", "important", "requests"]
@@ -855,6 +856,7 @@ enabled = true
 #   unsorted  — Unsorted (with lanes of your own)
 #   "lists" — all lists at once; one list — by its title (or id): "list:Friends".
 #   "all" — every lane at once (only in the first of the pair; take the rest away in except).
+#   "custom:<name>" — a lane of your own ([[lanes.custom]]).
 # For example: ["replies", "mentions", "list:Friends"] or ["all"] + except = ["home", "bots"].
 lanes = ["direct", "to_me", "replies", "mentions", "subs", "important", "activity", "requests"]
 
