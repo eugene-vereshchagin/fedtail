@@ -1142,7 +1142,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tip)
         if self.tray:
             self.tray.setToolTip(tip)
-        if self.cfg["ui"].get("layout") == "columns" and self.lane_order:
+        if self.cfg["ui"].get("open_columns") and self.lane_order:
             self.set_columns(True)
         self._open_start_lane()
         self.core.start_polling()

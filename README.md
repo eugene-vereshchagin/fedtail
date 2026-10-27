@@ -229,8 +229,7 @@ describe it in the config, `[[lanes.tag_groups]]`.
 
 **Columns side by side:** ❯ at the top left puts the lanes in columns, TweetDeck-style; a
 lane clicked on the left comes as a column, ✕ takes it away, ‹ › move it, and the set is
-remembered. That's for now: the window starts as `ui.layout` says (`"single"` or
-`"columns"`).
+remembered. That's for now: to open so at once — `ui.open_columns = true`.
 
 **As in a messenger:** `fedtail --layout split` (or `ui.layout = "split"`) puts the lanes,
 followed threads, private talks and mutuals in a roster window of their own, as QIP, Psi or

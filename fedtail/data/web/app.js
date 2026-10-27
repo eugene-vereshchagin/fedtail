@@ -1052,7 +1052,7 @@ async function columnsStart() {
   btn.setAttribute("aria-label", w("columns"));
   btn.onclick = () => setColumns(!cols.on);
   const said = store("columns");
-  if ((said ? said === "1" : got.layout === "columns") && !narrow()) await setColumns(true, true);
+  if ((said ? said === "1" : got.open_columns) && !narrow()) await setColumns(true, true);
   window.matchMedia("(max-width: 760px)").addEventListener("change", (e) => {
     if (e.matches && cols.on) setColumns(false, true);  // a phone's width: one lane
   });

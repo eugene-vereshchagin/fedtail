@@ -130,6 +130,14 @@ class ConfigTest(TmpDir):
         cfg, _ = config.validate({"ui": {"layout": "columns",
                                          "columns": ["home", "list:Друзья"]}})
         self.assertEqual(cfg["ui"]["columns"], ["home", "list:Друзья"])
+        # two layouts: "columns" is the single window opening in columns, "qip" — split
+        self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["open_columns"]), ("single", True))
+        cfg, _ = config.validate({"ui": {"layout": "qip"}})
+        self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["open_columns"]), ("split", False))
+        from fedtail.frontends.common import settings
+        lay = next(o for ch in settings.model(_PathView(), lang="en", text="")
+                   for o in ch.options if o.name == "ui.layout")
+        self.assertEqual(sorted(v for v, _w in lay.choices), ["single", "split"])
 
 
 class ConfigUpdateTest(unittest.TestCase):
@@ -2519,3 +2527,14 @@ class SubsPaceTest(unittest.TestCase):
         api.budget = Budget(300, 3, 2000)
         self.assertEqual(subs.budget_share(api, 30, now=1000), 0)
         self.assertEqual(subs.budget_share(api, 30, now=3000), 30)  # a new window
+
+
+class _PathView:
+    """What settings.model asks of a view: where the config is (nowhere here)."""
+    from pathlib import Path as _P
+    paths = type("P", (), {"config_file": _P("/nowhere/config.toml")})()
+    cfg = None
+
+    def lane_title(self, name):
+        return None
+

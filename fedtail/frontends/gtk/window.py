@@ -1325,7 +1325,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.roster.present()
             self.roster.refresh()
         self._rebuild_sidebar()
-        if self.cfg["ui"].get("layout") == "columns":
+        if self.cfg["ui"].get("open_columns"):
             self.set_columns(True)
         self.view.start_polling()
         self.announce_bar.start()

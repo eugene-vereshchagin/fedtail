@@ -24,7 +24,7 @@ help = "look.md#ширина-шрифт-кнопки-эмодзи"
 
 [columns_tip]
 text = "Несколько лент рядом, колонками. Клик по ленте слева добавит колонку, ✕ уберёт, ‹ › подвинут."
-config = "ui.layout, ui.columns"
+config = "ui.open_columns, ui.columns"
 help = "reading.md#ленты"
 
 [search_side_tip]

@@ -45,6 +45,7 @@ DEFAULTS = {
         "arts_mode": True,
         "max_width": 760,
         "layout": "single",
+        "open_columns": False,
         "themes_by_layout": "auto",
         "roster_on_top": False,
         "roster_threads": 15,
@@ -289,7 +290,7 @@ DEFAULTS = {
 }
 
 CHOICES = {
-    ("ui", "layout"): {'single', 'columns', 'split', 'qip'},
+    ("ui", "layout"): {'single', 'split'},
     ("ui", "themes_by_layout"): {"auto", "on", "off"},
     ("ui", "app_icon"): {'possum', 'bubble'},
     ("ui", "icons"): {'theme', 'desktop', 'own', 'additional', 'words'},
@@ -509,6 +510,14 @@ def validate(user):
                 continue
             if (section, key) == ("lanes", "preset"):  # "own": before every lane was a rule
                 val = presets.OLD_NAMES.get(val, val)
+            if (section, key) == ("ui", "layout") and val in ("qip", "columns"):
+                # "qip" was split's old name; "columns" is no layout of its own: the single
+                # window opening with its lanes side by side (ui.open_columns)
+                if val == "columns":
+                    cfg["ui"]["open_columns"] = True
+                    warnings.append('ui.layout = "columns" is ui.layout = "single" with '
+                                    "ui.open_columns = true now")
+                val = "split" if val == "qip" else "single"
             choices = CHOICES.get((section, key))
             if choices and val not in choices:
                 errors.append(f"{section}.{key} = {val!r}; allowed: {', '.join(sorted(choices))}")

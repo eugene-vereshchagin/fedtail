@@ -27,7 +27,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `-c, --config FILE` | another config instead of the profile's |
 | `-d, --data FOLDER` | another data folder instead of the profile's |
 | `--ui qt\|tui\|web` | a window, a terminal or a browser (for one run; for good — ui.frontend) |
-| `--layout single\|columns\|split` | the window's layout for one run (for good — ui.layout) |
+| `--layout single\|split` | the window's layout for one run (for good — ui.layout); columns — single with its lanes side by side (ui.open_columns) |
 | `--theme NAME` | the theme for one run (for good — ui.theme) |
 | `--profiles` | which profiles there are — and exit |
 | `--update-config` | add this version's new settings to this file with explanations — and exit |
@@ -69,7 +69,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `ui.font` | `""` | With fonts = "custom", the font of the whole window. A list works, the first one there is taken: "Inter, Noto Sans". The system's fonts do, the ones that come with fedtail (by name: "PT Sans", "IBM Plex Sans", "Open Sans"…), and .ttf / .otf files in ~/.config/fedtail/fonts/ — no need to install those. "" — the system's. |
 | `ui.mono_font` | `""` | With fonts = "custom", the fixed-width one, for #ids and /N; "" — the system's. |
 | `ui.max_width` | `760` | The width of the posts column in pixels, 0 = the full width. The ↔ button at the top left switches it for now (remembered until the next start), the config isn't touched. |
-| `ui.layout` | `"single"` | How the window opens: "single" — one lane on the right, "columns" — several lanes side by side, in columns, as in TweetDeck. The ❯ button at the top left switches it too, but the window always starts as set here. "split" — as in QIP, Psi or the Mail.ru Agent: the lanes in a narrow roster window (what's new in each, a line of the newest post and its author's face), and the main window is the messages window, without the sidebar, an input line at its bottom; a double click on a roster item opens it, closing its last tab closes it. Closing the roster closes fedtail (to the tray with close_to_tray). The old name "qip" is understood too. |
+| `ui.layout` | `"single"` | How the window opens:<br>"single" — one window: the lanes on the left, one lane on the right (or several side by side, in columns — open_columns below, and the ❯ button at the top left);<br>"split" — as in QIP, Psi or the Mail.ru Agent: the lanes in a narrow roster window (what's new in each, a line of the newest post and its author's face), and the messages window, without the sidebar, an input line at its bottom; a double click on a roster item opens it, closing its last tab closes it. Closing the roster closes fedtail (to the tray with close_to_tray). |
+| `ui.open_columns` | `false` | With layout = "single": open with the lanes side by side, in columns, as in TweetDeck (the ❯ button at the top left switches it any time). |
 | `ui.themes_by_layout` | `"auto"` | Themes for this window layout: "Try a theme" offers only those made for it (a theme says layouts = ["split"]: the messengers' qip, mra, psi are for split; the rest for both). "auto" — so in releases, every theme in development versions; "on"; "off". |
 | `ui.roster_on_top` | `false` | With layout = "split": the roster stays above other windows. |
 | `ui.roster_threads` | `15` | With layout = "split": how many followed threads and private talks stand in the roster as items of their own ("Threads", "Talks"), the freshest; 0 — none, the lanes only. |

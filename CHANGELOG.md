@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- `ui.layout` is two layouts now: "single" and "split". Columns side by side are the single
+  window's option, `ui.open_columns` (`layout = "columns"` still reads, as single with it on;
+  "qip", split's old name, as split); the settings window offered "columns" and "qip" as
+  layouts of their own.
 - **Wider than your server knows** (core/wider.py): `lanes.federated_extra` — other servers'
   public lanes into Federated while it's open; `lanes.tags_extra` — their tag lanes into your
   lanes of tags. Read without an account, each new post fetched into your server by its

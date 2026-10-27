@@ -27,7 +27,9 @@ def for_this_run(args, cfg):
     if getattr(args, "ui", None):  # an account switched to opens in the same window kind
         profiles.RUN_FLAGS += ["--ui", args.ui]
     if getattr(args, "layout", None):
-        cfg["ui"]["layout"] = args.layout
+        cfg["ui"]["layout"] = "single" if args.layout == "columns" else args.layout
+        if args.layout == "columns":  # the single window with its lanes side by side
+            cfg["ui"]["open_columns"] = True
         profiles.RUN_FLAGS += ["--layout", args.layout]
     if getattr(args, "theme", None):
         from .frontends import themefile
@@ -49,8 +51,9 @@ def parse_args(argv):
     p.add_argument("-d", "--data", help="data directory (overrides the profile's one)")
     p.add_argument("--ui", choices=sorted(frontends.FRONTENDS), help="frontend to use")
     p.add_argument("--layout", choices=("single", "columns", "split"),
-                   help="the window's layout for this run (ui.layout): one lane, columns "
-                        "side by side, or a roster window as in QIP")
+                   help="the window's layout for this run (ui.layout): one window (columns — "
+                        "it with its lanes side by side, ui.open_columns), or a roster "
+                        "window and a messages window (split)")
     p.add_argument("--theme", metavar="NAME",
                    help="the theme for this run (ui.theme), the config untouched")
     p.add_argument("--update-config", action="store_true",

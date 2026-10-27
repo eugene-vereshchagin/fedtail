@@ -24,7 +24,7 @@ help = "look.md#width-font-buttons-emoji"
 
 [columns_tip]
 text = "Several lanes side by side, in columns. A click on a lane on the left adds a column, ✕ takes it away, ‹ › move it."
-config = "ui.layout, ui.columns"
+config = "ui.open_columns, ui.columns"
 help = "reading.md#lanes"
 
 [search_side_tip]

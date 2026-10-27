@@ -918,6 +918,7 @@ class Web:
         return {"names": columns.start_names(self.core.cfg, self.core.get_state("columns"),
                                              known, titles),
                 "layout": ui.get("layout", "single"),
+                "open_columns": bool(ui.get("open_columns")),
                 "width": max(280, int(ui.get("column_width") or 460))}
 
     def set_columns(self, names, on):
