@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.0 — in progress
+
+- The plan for 0.21 (docs/en/dev/roadmap.md): sync between devices brought to the end,
+  and free lanes — lanes you assemble yourself.
+
 ## 0.20.1 — 2026-10-27
 
 Fixes for 0.20.0, and the lanes' freshness in the status line:
