@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**0.21.0 (in progress):**
+
+- How fresh the lanes are, in the status line
+
 **0.20.0:**
 
 - Whose replies a list shows

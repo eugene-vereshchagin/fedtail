@@ -119,6 +119,8 @@ object Core {
     suspend fun syncKey() = obj("sync_key")
     suspend fun syncJoin(text: String) = obj("sync_join", text)
     suspend fun syncNow() = obj("sync_now")
+    /** The overview's line: "⟳ updating the lanes…", "updated at 14:32". */
+    suspend fun status() = obj("status")
 
     /** Blocks up to [seconds] for a change in the lanes; → the version now. */
     suspend fun waitChange(since: Int, seconds: Int): Int =

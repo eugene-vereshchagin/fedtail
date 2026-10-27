@@ -154,6 +154,9 @@ _STRINGS = {
         "schedule_too_soon": "Не раньше чем через пять минут",
         "web_more": "Ещё", "web_menu": "Меню", "web_keys": "Клавиши",
         "web_menu_lanes": "Ленты и списки", "web_menu_look": "Вид и уведомления",
+        "poll_busy": "⟳ обновляю ленты…", "poll_ok": "обновлено в {time}",
+        "poll_failing": "⚠ сервер не отвечает с {time}",
+        "poll_failing_never": "⚠ сервер не отвечает",
         "web_copied": "Ссылка скопирована",
         "web_about": "fedtail {version} — клиент федиверса. Ты — @{handle}.",
         "web_keys_text": "/ — поиск, Ctrl+F — найти в ленте\nj / k — следующий / предыдущий пост\n"
@@ -1253,6 +1256,9 @@ _STRINGS = {
         "schedule_too_soon": "Five minutes from now at the earliest",
         "web_more": "More", "web_menu": "Menu", "web_keys": "Keys",
         "web_menu_lanes": "Lanes and lists", "web_menu_look": "Look and notifications",
+        "poll_busy": "⟳ updating the lanes…", "poll_ok": "updated at {time}",
+        "poll_failing": "⚠ no answer from the server since {time}",
+        "poll_failing_never": "⚠ the server doesn't answer",
         "web_copied": "Link copied",
         "web_about": "fedtail {version}, a fediverse client. You are @{handle}.",
         "web_keys_text": "/ — search, Ctrl+F — find in the lane\nj / k — next / previous post\n"

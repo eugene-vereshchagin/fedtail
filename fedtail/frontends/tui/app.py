@@ -887,6 +887,8 @@ class FedtailApp(App, PostsMixin):
         for event in ("activity_updated", "activity_seen", "requests_updated"):
             self.core.on(event, lambda n, _p: self.in_ui(self.other_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
+        # a round began or ended: "⟳ updating the lanes…" / "updated at 14:32" on top
+        self.core.on("poll_state", lambda _n, _p: self.in_ui(self._slow_title))
         # the server no longer takes the token: said as the windows say it, and Accounts
         # opened — "log in again" is there
         self.core.on("auth_failed", lambda _n, _p: self.in_ui(self.auth_lost))
@@ -958,10 +960,11 @@ class FedtailApp(App, PostsMixin):
         await self.fill_lanes()
 
     def _slow_title(self):
-        """The subtitle: "@me", and in slow mode when the next batch comes."""
+        """The subtitle: "@me", how fresh the lanes are ("⟳ updating the lanes…",
+        "updated at 14:32"), and in slow mode when the next batch comes."""
         from ..common import sidebar
         me = self.core.me
-        slow = sidebar.slow_words(self.core)
+        slow = sidebar.status_words(self.core)
         self.sub_title = "@" + (me.handle if me else "") + (f" · {slow}" if slow else "")
 
     def update_lane_counts(self):

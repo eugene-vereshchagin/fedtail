@@ -557,9 +557,10 @@ def hub():
 
 
 def _slow_words(core):
-    """Slow mode on: "slow · next at 14:30" for the overview's top; "" when off."""
+    """How fresh the lanes are and slow mode, for the overview's top: "⟳ updating the
+    lanes…", "updated at 14:32 · slow · next at 14:45"; "" before the first round."""
     from fedtail.frontends.common import sidebar
-    return sidebar.slow_words(core)
+    return sidebar.status_words(core)
 
 
 def pin(names_json):
@@ -800,9 +801,17 @@ def background_round(since):
 
 
 def wait(since, seconds=25):
-    """Blocks (call it off the main thread) until something in the lanes changed, or
-    the time is up. → the version now: different from `since` — reload."""
-    return int(_s["web"].wait(int(since), float(seconds)))
+    """Blocks (call it off the main thread) until something in the lanes changed, a
+    poll round began or ended, or the time is up. → the version now: different from
+    `since` — reload; the same — status() for the overview's line only."""
+    web = _s["web"]
+    seen = getattr(web, "poll_seq", 0)
+    return int(web.wait(int(since), float(seconds), poll_since=seen))
+
+
+def status():
+    """The overview's line: "⟳ updating the lanes…", "updated at 14:32 · slow · …"."""
+    return _answer(lambda: {"text": _slow_words(_s["web"].core)})
 
 
 def _texts(posts):

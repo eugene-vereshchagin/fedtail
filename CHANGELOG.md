@@ -2,6 +2,17 @@
 
 ## 0.21.0 — in progress
 
+- How fresh the lanes are, in every interface's status line: "⟳ updating the lanes…"
+  while a round asks the server, "updated at 14:32" after, "⚠ no answer from the server
+  since 14:20" when rounds fail — an empty lane no longer leaves you guessing.
+- Android: the notifications' small icon is the possum, not a speech bubble.
+- The settings window opens again after it was closed (a crash: the closed one was
+  deleted, the window still held it).
+- The tray's number is drawn again when the icon under it changed (a theme tried put the
+  plain icon back, and the same number never redrew it).
+- Pictures: at most four asked of one server at a time (a small server answered every one
+  late with all the workers on it at once, the pool full); a preview's first timeout,
+  asked again with patience, is info in the log.
 - The plan for 0.21 (docs/en/dev/roadmap.md): sync between devices brought to the end,
   and free lanes — lanes you assemble yourself.
 - The apt repository: its job installs `apt-utils` where the runner lacks it (0.20.0's

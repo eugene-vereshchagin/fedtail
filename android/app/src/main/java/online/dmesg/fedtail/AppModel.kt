@@ -739,6 +739,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         watcher = viewModelScope.launch {
             while (isActive) {
                 val v = Core.waitChange(version, 25)
+                // a poll round began or ended: "updating…" / "updated at" on the overview,
+                // so a lane with nothing new doesn't look like a dead network
+                val st = Core.status()
+                if (Core.failed(st) == null) hubSlow = st.optString("text")
                 if (v != version) {
                     version = v
                     // the windows' notes into the shade (notify.when_focused: even now)

@@ -2683,9 +2683,17 @@ async function follow() {
   for (;;) {
     try {
       const r = await api("/api/wait?v=" + state.version + "&s=" + state.soundSeq +
-                          "&n=" + state.noteSeq);
+                          "&n=" + state.noteSeq + "&p=" + (state.pollSeq ?? -1));
       state.soundSeq = r.s;
       state.noteSeq = r.n;
+      // "⟳ updating the lanes…" / "updated at 14:32": a lane with nothing new reads
+      // as nothing new, not as a broken network
+      if (r.p !== undefined) {
+        state.pollSeq = r.p;
+        const s = $("#slow");
+        s.textContent = r.status || "";
+        s.hidden = !r.status;
+      }
       for (const snd of r.sounds || []) playSound(snd);
       for (const note of r.notes || []) showNote(note);
       if (r.auth_failed && !state.authSaid) {  // the token refused: log in again there

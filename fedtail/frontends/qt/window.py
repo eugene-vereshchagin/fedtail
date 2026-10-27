@@ -729,8 +729,9 @@ class MainWindow(QMainWindow):
         log.info("sidebar width %d", width)
 
     def _slow_text(self):
-        """Slow mode: "slow · next at 14:30" at the right of the status bar; off — none."""
-        text = sidebar.slow_words(self.ctx.view)
+        """How fresh the lanes are and slow mode, at the right of the status bar:
+        "⟳ updating the lanes…", "updated at 14:32 · slow · next at 14:45"."""
+        text = sidebar.status_words(self.ctx.view)
         self.slow_label.setText(text)
         self.slow_label.setVisible(bool(text))
 
@@ -825,6 +826,7 @@ class MainWindow(QMainWindow):
             app.setWindowIcon(QIcon(icon_path()))
             if self.tray:
                 self.tray.setIcon(self.windowIcon())
+                self._tray_drawn = None  # the count drawn on the new one below
             self.update_badges()
         for w in theme.warnings:
             self.error(w)
@@ -1654,9 +1656,14 @@ class MainWindow(QMainWindow):
         if self.tray:
             base = self.windowTitle()
             self.tray.setToolTip(_("tray_new", title=base, n=total) if total else base)
-            if total != getattr(self, "_tray_count", 0):
+            # drawn anew when the number or the icon under it changed: a theme tried
+            # puts the plain icon back, and the same number never drew it again
+            drawn = (total, self.windowIcon().cacheKey(), self.theme.c["hot"].name())
+            if drawn != getattr(self, "_tray_drawn", None):
+                self._tray_drawn = drawn
                 self.tray.setIcon(badge.icon_with_count(self.windowIcon(), total,
                                                         self.theme.c["hot"].name()))
+                log.debug("tray icon: %d", total)
         self._tray_count = total
         if self.launcher:
             self.launcher.set(total)
@@ -1681,6 +1688,8 @@ class MainWindow(QMainWindow):
     def _on_event(self, name, payload):
         if name == "sync_changed":
             self._sync_text()
+        elif name == "poll_state":  # a round began or ended: "updating…" / "updated at"
+            self._slow_text()
         elif name == "lanes_updated":
             for lane in payload:
                 w = self.lane_widgets.get(lane)
@@ -2572,7 +2581,11 @@ class MainWindow(QMainWindow):
         """The settings window (qt/settings.py): one at a time, brought up again."""
         from .settings import SettingsDialog
         dlg = getattr(self, "_settings", None)
-        if dlg is None or not dlg.isVisible():
+        try:
+            open_now = dlg is not None and dlg.isVisible()
+        except RuntimeError:  # closed earlier and deleted with it (27.10: a crash on
+            open_now = False  # opening the settings a second time)
+        if not open_now:
             dlg = self._settings = SettingsDialog(self)
         if query:
             dlg.search.setText(query)

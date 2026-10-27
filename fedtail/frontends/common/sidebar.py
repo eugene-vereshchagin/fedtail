@@ -65,6 +65,35 @@ def slow_words(view):
     return _("slow_on_short", time=time.strftime("%H:%M", time.localtime(nxt)))
 
 
+def poll_words(view, now=None):
+    """How fresh the lanes are, for a status line: "⟳ updating the lanes…" while a
+    round goes on, "⚠ no answer from the server since 14:20" when rounds fail,
+    "updated 14:32" otherwise; "" before the first round or without a core that says."""
+    import time
+    try:
+        st = view.poll_state() or {}
+    except Exception:  # noqa: BLE001 — a core without it (an old fake)
+        return ""
+    if not isinstance(st, dict):
+        return ""
+    from ...i18n import _
+    ok = st.get("ok_at")
+    if not isinstance(ok, (int, float)):
+        ok = None
+    at = time.strftime("%H:%M", time.localtime(ok)) if ok else ""
+    if st.get("failing"):
+        return _("poll_failing", time=at) if ok else _("poll_failing_never")
+    if st.get("busy"):
+        return _("poll_busy")
+    return _("poll_ok", time=at) if ok else ""
+
+
+def status_words(view):
+    """The status line's freshness and slow mode together: "updated 14:32 · slow ·
+    next at 14:45"."""
+    return " · ".join(x for x in (poll_words(view), slow_words(view)) if x)
+
+
 def counts(view, names):
     return {name: count(view, name) for name in names}
 

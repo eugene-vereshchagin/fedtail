@@ -73,7 +73,7 @@ object Notifier {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val body = n.optString("body")
             val note = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(R.drawable.ic_note)
+                .setSmallIcon(R.drawable.ic_stat_fedtail)
                 .setContentTitle(n.optString("title"))
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))

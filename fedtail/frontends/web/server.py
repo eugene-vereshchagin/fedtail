@@ -491,6 +491,14 @@ class Web:
         view.on("sound", lambda _n, p: self.chime(p))
         view.on("notify", lambda _n, p: self.notified(p))
         view.on("auth_failed", lambda _n, _p: self.auth_lost())
+        view.on("poll_state", lambda _n, _p: self.poll_changed())
+
+    def poll_changed(self):
+        """A round began or ended: the page's "⟳ updating the lanes…" / "updated at"
+        changes — the long wait answers, without reloading anything."""
+        with self.changed:
+            self.poll_seq = getattr(self, "poll_seq", 0) + 1
+            self.changed.notify_all()
 
     def auth_lost(self):
         """The server no longer takes the token: the page says so (the windows' words)
@@ -623,11 +631,13 @@ class Web:
         except OSError:
             return None
 
-    def wait_answer(self, since, sound_since, note_since=-1):
-        v = self.wait(since)
+    def wait_answer(self, since, sound_since, note_since=-1, poll_since=-1):
+        v = self.wait(since, poll_since=poll_since)
         sounds, last = self.sounds_since(sound_since)
         notes, last_note = self.notes_since(note_since)
-        out = {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes}
+        from ..common import sidebar
+        out = {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes,
+               "p": getattr(self, "poll_seq", 0), "status": sidebar.status_words(self.core)}
         if self.auth_failed:
             out["auth_failed"] = self.auth_failed
         return out
@@ -637,9 +647,13 @@ class Web:
             self.version += 1
             self.changed.notify_all()
 
-    def wait(self, since, timeout=WAIT_SECONDS):
+    def wait(self, since, timeout=WAIT_SECONDS, poll_since=None):
+        """Until the lanes changed (or a round began or ended, when poll_since is the
+        page's last one), or the time is up → the version now."""
         with self.changed:
-            self.changed.wait_for(lambda: self.version != since, timeout)
+            self.changed.wait_for(
+                lambda: self.version != since or poll_since is not None and
+                poll_since >= 0 and getattr(self, "poll_seq", 0) != poll_since, timeout)
             return self.version
 
     def _posts(self, entries, parents=True, items=None):
@@ -883,9 +897,10 @@ class Web:
         return out
 
     def slow(self):
-        """Slow mode: {"text": "slow · next at 14:30"} for the bar; "" when off."""
+        """How fresh the lanes are and slow mode, for the bar: {"text": "updated at
+        14:32 · slow · next at 14:45"}; "" before the first round."""
         from ..common import sidebar
-        return {"text": sidebar.slow_words(self.core)}
+        return {"text": sidebar.status_words(self.core)}
 
     def columns(self):
         """Lanes side by side, as the windows' ❯: which ones (as left last time, else
@@ -1927,7 +1942,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/page": lambda: self.web.page(q.get("name", ""), q.get("arg", ""),
                                                      q.get("tab", ""), q.get("cursor", "")),
                   "/api/wait": lambda: self.web.wait_answer(
-                      _int(q.get("v"), -1), _int(q.get("s"), -1), _int(q.get("n"), -1))}
+                      _int(q.get("v"), -1), _int(q.get("s"), -1), _int(q.get("n"), -1),
+                      _int(q.get("p"), -1))}
         if u.path.startswith("/sound/"):
             data = self.web.sound_file(u.path[len("/sound/"):])
             if data is None:

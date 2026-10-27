@@ -74,6 +74,7 @@ PASS = {
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_join", "sync_login_begin", "sync_login_end", "sync_now", "sync_status",
     "pause_polling",  # the phone's app out of sight
+    "poll_state",  # plain {"busy", "ok_at", "failing"}: "updating…", "updated at 14:32"
     # the phone's tiles: plain lane names (sync.tiles carries them)
     "pinned_tiles", "set_pinned_tiles",
     # plain data for a page of its own (fedstatus.py), no server objects in it: someone

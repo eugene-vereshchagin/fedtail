@@ -17,6 +17,7 @@ import time
 import weakref
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlsplit
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -278,10 +279,23 @@ class Cache:
                 ev.set()
         return img
 
+    HOST_MAX = 4  # pictures asked of one server at once
+
+    def _host_slot(self, host):
+        """At most HOST_MAX pictures asked of one server at a time: a small server
+        (one's own, on a little VM) answered every one late with all the workers on it
+        at once — fourteen connections, the pool full, previews timing out (27.10)."""
+        slots = self.__dict__.setdefault("_host_slots", {})
+        lock = self.__dict__.setdefault("_host_slots_lock", threading.Lock())
+        with lock:
+            sem = slots.get(host)
+            if sem is None:
+                sem = slots[host] = threading.BoundedSemaphore(self.HOST_MAX)
+        return sem
+
     def _fetch(self, url, max_side, p, patient, big):
         """The url from the network into the disk cache (p), decoded at max_side."""
         t = time.monotonic()
-        from urllib.parse import urlsplit
         host = urlsplit(url).hostname or ""
         busy = self.__dict__.setdefault("_busy_hosts", {})
         quiet = busy.get(host, 0)
@@ -299,7 +313,7 @@ class Cache:
                 slow = 60
             else:
                 slow = 12
-            with self._open(url, (6, slow)) as r:
+            with self._host_slot(host), self._open(url, (6, slow)) as r:
                 r.raise_for_status()
                 kind = (r.headers.get("Content-Type") or "").split(";")[0].strip()
                 data = remote.read(r, ORIGINAL_MAX if big else PICTURE_MAX)
@@ -315,8 +329,10 @@ class Cache:
                 (log.info if first else log.debug)(
                     "image %s: HTTP 429 — no pictures asked of %s for %.0f s",
                     _where(url), host, wait)
-            else:  # gone (404, 410) is a picture's ordinary end, not a problem of ours
-                (log.info if code in (404, 410) else log.warning)(
+            else:  # gone (404, 410) is a picture's ordinary end, not a problem of ours;
+                # a preview's first 12 s run out is asked again with patience (info)
+                again = isinstance(e, requests.Timeout) and not (patient or big)
+                (log.info if code in (404, 410) or again else log.warning)(
                     "image %s: %s after %.1f s", _where(url), what, time.monotonic() - t)
             self.why[url] = ("network", what)
             raise
@@ -407,7 +423,7 @@ class Cache:
         t = time.monotonic()
         size = 0
         try:
-            with self._open(url, (6, 60)) as r:
+            with self._host_slot(urlsplit(url).hostname or ""), self._open(url, (6, 60)) as r:
                 r.raise_for_status()
                 said = r.headers.get("Content-Length") or ""
                 if said.isdigit() and int(said) > VIDEO_MAX:

@@ -513,8 +513,7 @@ class Core(SocialMixin):
                 self._wake.clear()
                 continue
             try:
-                self.poll_once()
-                self._fails_in_row = 0
+                self.poll_once()  # counts the rounds failing in a row itself
             except RateLimited as e:  # the server says wait: _pace() waits, said once
                 log.info("poll: the server's limit is spent (%s) — the round cut short", e)
             except Exception as e:  # never let the poller die silently
@@ -522,7 +521,6 @@ class Core(SocialMixin):
                     return
                 log.exception("poll failed")
                 self._poll_failures += 1
-                self._fails_in_row = getattr(self, "_fails_in_row", 0) + 1
                 self._last_poll_error = f"{time.strftime('%H:%M')} {e.__class__.__name__}"
                 self.emit("error", str(e))
             quiet = self._pace()
@@ -637,11 +635,21 @@ class Core(SocialMixin):
         t = time.monotonic()
         self._steps = {}
         self._step_at = t
+        self._polling = True
+        self.emit("poll_state", True)  # "updating the lanes…" where the window shows it
         try:
             got = self._poll_once()
             self._last_poll_ok = time.time()
+            self._fails_in_row = 0
             return got
+        except RateLimited:  # the server asks to wait: not a failure of the network
+            raise
+        except Exception:
+            self._fails_in_row = getattr(self, "_fails_in_row", 0) + 1
+            raise
         finally:
+            self._polling = False
+            self.emit("poll_state", False)
             took = time.monotonic() - t
             self._round_requests = getattr(self.api, "requests", 0) - before
             costs = getattr(self, "_round_costs", None)
@@ -663,6 +671,14 @@ class Core(SocialMixin):
                     f" ({steps})" if steps and took > slow else "")
             if self._poll_count == 1:  # the window said "getting the lanes…": done now
                 self.emit("first_poll_done", None)
+
+    def poll_state(self):
+        """Is a round going on, when did the last one come through, how many failed in
+        a row since: what the window says of the lanes' freshness (common/sidebar.py
+        poll_words) — so an empty lane reads as "nothing new", not "is it broken?"."""
+        ok = getattr(self, "_last_poll_ok", None)
+        return {"busy": bool(getattr(self, "_polling", False)), "ok_at": ok,
+                "failing": int(getattr(self, "_fails_in_row", 0) or 0)}
 
     def _step(self, name):
         """Poll timing: the time since the last step goes to name (summed)."""

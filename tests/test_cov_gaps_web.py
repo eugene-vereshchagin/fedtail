@@ -51,7 +51,10 @@ class WebGapsTest(TmpDir):
         self.assertIsNone(self.core.me)
         me = self.web.me()  # logged in, not connected yet: connected now
         self.assertTrue(me["handle"])
-        self.assertEqual(self.web.slow(), {"text": ""})
+        # polling began with the page: its first round under way (or done), no slow mode
+        text = self.web.slow()["text"]
+        self.assertNotIn("slow", text)
+        self.assertTrue(text == "" or "updat" in text, text)
 
     def test_profile_extras(self):
         self.core.connect().result()

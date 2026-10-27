@@ -1943,6 +1943,20 @@ class QtSmokeTest(unittest.TestCase):
         label.linkActivated.emit(f"fedtail:account/{BOB['id']}")
         self.assertEqual(opened, [f"fedtail:account/{BOB['id']}"])
 
+    def test_settings_open_again_after_closing(self):
+        """27.10: the settings window closed (and deleted with it), opened again — a
+        crash on the Python side's handle to the deleted one."""
+        from PySide6.QtCore import QCoreApplication, QEvent
+        self.win.open_settings()
+        first = self.win._settings
+        first.close()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.pump(0.1)
+        self.win.open_settings()
+        self.assertIsNot(self.win._settings, first)
+        self.assertTrue(self.win._settings.isVisible())
+        self.win._settings.close()
+
     def test_tray_icon_goes_at_exit_and_can_be_off(self):
         """The tray icon is dropped before fedtail leaves (Windows kept a dead one per
         restart), dropping it twice is harmless, and ui.tray = false makes none."""

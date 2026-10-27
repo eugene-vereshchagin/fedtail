@@ -218,6 +218,18 @@ class ImagesTest(unittest.TestCase):
         self.assertNotIn(url, self.c.broken)
         self.c._again(url)  # nobody waits any more: nothing
 
+    def test_one_server_is_asked_a_few_pictures_at_a_time(self):
+        # 27.10: every worker on one small server at once — the pool full, timeouts
+        import threading
+        sem = self.c._host_slot("a")
+        self.assertIs(sem, self.c._host_slot("a"))
+        self.assertIsNot(sem, self.c._host_slot("b"))
+        taken = [sem.acquire(blocking=False) for _ in range(self.c.HOST_MAX + 1)]
+        self.assertEqual(taken, [True] * self.c.HOST_MAX + [False])
+        for _ in range(self.c.HOST_MAX):
+            sem.release()
+        self.assertIsInstance(sem, type(threading.BoundedSemaphore()))
+
     def test_later_tries_end(self):
         url = "https://a/5.png"
         self.c.tries[url] = len(self.c.LATER_TRIES) + 3

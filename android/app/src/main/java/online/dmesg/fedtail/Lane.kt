@@ -114,12 +114,21 @@ fun LaneScreen(
                             }
                         },
                         title = {
-                            Row(Modifier.clickable { switcher = true }.padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Text(model.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
-                                Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.switch_lane),
-                                    Modifier.size(20.dp))
+                            Column(Modifier.clickable { switcher = true }.padding(vertical = 4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(model.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f, fill = false))
+                                    Icon(Icons.Filled.KeyboardArrowDown,
+                                        stringResource(R.string.switch_lane), Modifier.size(20.dp))
+                                }
+                                // how fresh: "⟳ updating the lanes…" / "updated at 14:32" — an
+                                // empty lane reads as nothing new, not as a dead network
+                                if (model.hubSlow.isNotBlank()) {
+                                    Text(model.hubSlow, fontSize = 12.sp, maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         },
                         actions = {

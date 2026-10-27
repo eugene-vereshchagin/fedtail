@@ -100,6 +100,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
 | Free lanes: a lane you assemble yourself | planned | — | `[[lanes.custom]]` | — | — |
+| How fresh the lanes are, in the status line | has | 0.21.0 | — | own | — |
 
 <details><summary>In detail</summary>
 
@@ -165,6 +166,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **A link's timeline (Mastodon 4.3+).** “Who else shared this link” in a post's menu — see the line of that name under “Profiles”. GoToSocial can't do it.
 
 **Free lanes: a lane you assemble yourself.** A lane made of rules: where a post came from (home, lists, tags, notifications), who, what is in it (pictures, a reply, a boost, the language, words), events instead of posts. The built-in lanes become such rules too, presets; “Unsorted” and “Why is it here?”. The plan — `docs/en/dev/feeds.md`, in 0.21.
+
+**How fresh the lanes are, in the status line.** “⟳ updating the lanes…” while a round asks the server, “updated at 14:32” once it came through, “⚠ no answer from the server since 14:20” when rounds fail — so a lane with nothing new reads as nothing new, not as a dead network. In the windows — at the right of the status bar, in the terminal — in the header, on the web page — on the lane's bar, on the phone — under the lane's title and on the overview; with slow mode — beside its time.
 
 </details>
 

@@ -16,7 +16,9 @@ _LEVEL = {QtMsgType.QtDebugMsg: logging.DEBUG, QtMsgType.QtInfoMsg: logging.DEBU
           QtMsgType.QtWarningMsg: logging.WARNING, QtMsgType.QtCriticalMsg: logging.ERROR,
           QtMsgType.QtFatalMsg: logging.CRITICAL}
 # known harmless chatter: into the log at debug level, never to the terminal
-_QUIET = ("libpng warning", "propagateSizeHints", "QFont::setPointSizeF")
+_QUIET = ("libpng warning", "propagateSizeHints", "QFont::setPointSizeF",
+          # our own doing: ui.video_decode = "software" names no hardware decoder
+          'Unknown hw device type "none"')
 
 
 def _qt_message(kind, context, message):

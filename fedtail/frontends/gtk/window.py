@@ -721,11 +721,12 @@ class MainWindow(Gtk.ApplicationWindow):
         return f"fedtail {build}\n" + _("made_by").replace("<br>", "\n")
 
     def _slow_text(self):
-        """Slow mode: "slow · next at 14:30" by the sync line; off — none."""
+        """How fresh the lanes are and slow mode, by the sync line: "⟳ updating the
+        lanes…", "updated at 14:32 · slow · next at 14:45"."""
         label = getattr(self, "slow_label", None)
         if label is None:
             return
-        text = sidebar.slow_words(self.view)
+        text = sidebar.status_words(self.view)
         label.set_text(text)
         label.set_visible(bool(text))
 
@@ -1435,6 +1436,8 @@ class MainWindow(Gtk.ApplicationWindow):
             return  # queued before the exit, come after the database closed
         if name == "sync_changed":
             self._sync_text()
+        elif name == "poll_state":  # a round began or ended: "updating…" / "updated at"
+            self._slow_text()
         elif name == "read_changed":  # marks only: no lane is rebuilt for them
             for lname, lv in self.lane_views.items():
                 if lname in SPECIAL:

@@ -2,6 +2,7 @@
 JSON (a captive portal), an answer too big to read, rounds failing again and again."""
 
 import io
+import time
 import unittest
 from unittest import mock
 
@@ -186,3 +187,51 @@ class DeletedElsewhereTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PollStateTest(unittest.TestCase):
+    """27.10: a lane opened, nothing new for half a minute — no word whether the round
+    was still going or the network was gone. The status line now says which."""
+
+    def test_the_words_for_each_state(self):
+        from unittest import mock
+
+        from fedtail import i18n
+        from fedtail.frontends.common import sidebar
+        i18n.setup("en")
+        view = mock.Mock()
+        view.slow_minutes.return_value = 0
+        at = time.mktime((2026, 10, 27, 14, 32, 0, 0, 0, -1))
+        for st, words in (({}, ""),
+                          ({"busy": True, "ok_at": None, "failing": 0}, "updating"),
+                          ({"busy": False, "ok_at": at, "failing": 0}, "updated at 14:32"),
+                          ({"busy": True, "ok_at": at, "failing": 2}, "since 14:32"),
+                          ({"busy": False, "ok_at": None, "failing": 1}, "doesn't answer")):
+            view.poll_state.return_value = st
+            got = sidebar.status_words(view)
+            self.assertIn(words, got) if words else self.assertEqual(got, "")
+        view.poll_state.side_effect = AttributeError
+        self.assertEqual(sidebar.poll_words(view), "")
+
+    def test_a_round_says_it_began_and_ended_and_counts_failures(self):
+        from fedtail.core.app import Core
+        core = Core.__new__(Core)
+        seen = []
+        core.emit = lambda name, payload=None: seen.append((name, payload))
+        core.api = object()
+        core.cfg = {"debug": {}}
+        core._poll_count = 0
+        core._poll_failures = 0
+        core._poll_once = lambda: None
+        Core.poll_once(core)
+        self.assertEqual([p for n, p in seen if n == "poll_state"], [True, False])
+        self.assertEqual(core.poll_state()["failing"], 0)
+        self.assertIsNotNone(core.poll_state()["ok_at"])
+
+        def down():
+            raise OSError("no network")
+        core._poll_once = down
+        with self.assertRaises(OSError):
+            Core.poll_once(core)
+        self.assertEqual(core.poll_state(), {"busy": False, "ok_at": core._last_poll_ok,
+                                             "failing": 1})
