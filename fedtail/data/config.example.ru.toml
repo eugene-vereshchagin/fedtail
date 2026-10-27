@@ -675,6 +675,25 @@ detect_min_words = 12
 #   none = ["политика"]
 tag_groups = []
 
+# Свои ленты («свободные ленты», docs/ru/dev/feeds.md): каждая — таблица [[lanes.custom]] —
+# name (слово, неизменное), title (что видно слева), any (условия: пост входит, если подходит
+# под любое; внутри условия должны совпасть все ключи), none (условия, которые не пускают).
+# Ключи условия: source (home, local, federated, mentions, mine, bookmarks, favourites, subs,
+# "list:<id>"; нет — догадывается по остальным), author (me, followed, local, remote, bot,
+# stranger, "@ник@сервер", "domain:сервер"…), kind (post, reply, self_reply, boost, self_boost,
+# quote, poll), me (reply, reply_to_post, reply_to_comment, mention, direct), visibility, has
+# (media, image, video, cw, link, "tag:x"), lang, state (unread, bookmarked…), target (для
+# бустов: my_post, my_comment, post, comment, seen, read), age ("<1d", ">2d"; age_of =
+# "original" — у бустнутого поста), likes / boosts / replies (">10"), text ([["слово", "и
+# слово"], ["или это"]]). Они встают наверх, в раздел «Свои». Свободные ленты наполняются из
+# того, что уже лежит в базе. Пример (тогда убери строку custom = [] ниже):
+#   [[lanes.custom]]
+#   name = "feed"
+#   title = "Лента"
+#   any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]
+#   none = [{ kind = "boost", target = "seen" }]
+custom = []
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  5. Посты

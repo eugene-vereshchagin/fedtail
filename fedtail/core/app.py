@@ -20,6 +20,7 @@ worker threads (see events.py):
 import logging
 import threading
 import time
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -30,7 +31,7 @@ from ..protocols.mastodon import api as api_module
 from ..protocols.mastodon import counters
 from ..protocols.mastodon.api import ApiError, Capabilities
 from ..version import USER_AGENT
-from . import auth, lanes, search, sources, subs, taggroups, threads
+from . import atoms, auth, custom, lanes, search, sources, subs, taggroups, threads
 from .events import Events
 from .model import id_after, interaction_policy, looks_sent, narrower, real, send_key
 from .social import SocialMixin
@@ -134,6 +135,9 @@ class Core(SocialMixin):
         self.list_members = {}    # list id -> {account ids}
         self._lists_version = 0
         self._lists_checked = None  # monotonic time of the last check; None: never
+        self.customs = custom.load(cfg)[0]  # free lanes, [[lanes.custom]]
+        self._following = None    # account ids I follow, for the free lanes' atoms
+        self._following_at = 0.0
         self.lanes = lanes.enabled(cfg)
         self.tag_groups = []  # [{"any", "all", "none", "name", "saved"}], see taggroups
         self.lane_by_name = {lane.name: lane for lane in self.lanes}
@@ -732,9 +736,13 @@ class Core(SocialMixin):
                     self.emit("error", f"subs: {e}")
                 self._step("subs")
             lazy = {lane.source for lane in self.lanes if lane.lazy}
-            open_sources = {self.lane_by_name[n].source
-                            for n in {self._active_lane, *self._active_lanes}
-                            if n in self.lane_by_name}
+            # a free lane read through needs its feeds caught up, even local's
+            lazy -= {f for lane in self.lanes if lane.feeds and not lane.lazy
+                     for f in lane.feeds}
+            open_names = [n for n in {self._active_lane, *self._active_lanes}
+                          if n in self.lane_by_name]
+            open_sources = {self.lane_by_name[n].source for n in open_names} | \
+                {f for n in open_names for f in self.lane_by_name[n].feeds}
             for name in lanes.sources_needed(self.lanes):
                 if name not in self.sources:
                     continue
@@ -824,6 +832,7 @@ class Core(SocialMixin):
                                       if st["account"]["id"] == self.me["id"]])
 
             self._step("read marks")
+            new_by_source.update(self._route_custom(new_by_source))
             per_lane = self._split_by_lane(new_by_source)
             if not first_run:
                 self._note_fresh(per_lane, new_requests, new_activity)
@@ -983,6 +992,81 @@ class Core(SocialMixin):
             got["requests"] = {a["id"] for a in new_requests}
         if got:
             self._fresh = got
+
+    # ---- free lanes (core/custom.py) ---------------------------------------------------
+    FOLLOWING_EVERY_S = 6 * 3600
+    FOLLOWING_PAGES = 25
+
+    def _refresh_following(self):
+        """Whom I follow and which tags, for atoms like author = "followed" (every 6 hours;
+        kept in the store between runs)."""
+        if self._following is None:
+            kept = self.store.kv_get("custom_following") or {}
+            self._following = set(kept.get("ids") or ())
+            self._following_at = float(kept.get("at") or 0)
+            if kept.get("tags") is not None and \
+                    getattr(self, "_followed_tag_names", None) is None:
+                self._followed_tag_names = set(kept["tags"])
+        if time.time() - self._following_at < self.FOLLOWING_EVERY_S:
+            return
+        self._following_at = time.time()
+        ids, max_id = set(), None
+        try:
+            for _ in range(self.FOLLOWING_PAGES):
+                page, max_id = self.api.following(self.me["id"], max_id)
+                ids |= {a["id"] for a in page or ()}
+                if not max_id or not page:
+                    break
+            tags = {t["name"] for t in self.api.followed_tags() or () if t.get("name")}
+        except Exception as e:  # noqa: BLE001 — the old sets stay; next time
+            log.info("free lanes: whom I follow: %s", e)
+            return
+        self._following, self._followed_tag_names = ids, tags
+        self.store.kv_set("custom_following", {"ids": sorted(ids), "tags": sorted(tags),
+                                               "at": self._following_at})
+
+    def _world(self):
+        """What the free lanes' atoms know around a post (core/atoms.World)."""
+        store = self.store
+
+        class _Read:
+            def __contains__(self, sid):
+                return bool(store.read_set([sid]))
+
+        class _Parents:
+            def get(self, pid, default=None):
+                got = store.get_statuses({pid}).get(pid)
+                if got is None and store.missing_set({pid}):
+                    return "missing"
+                return got if got is not None else default
+
+        lc = self.cfg["lanes"]
+        host = urllib.parse.urlsplit(getattr(self.api, "base", "") or "").hostname or ""
+        return atoms.World(me_id=self.me["id"] if self.me else "", my_host=host,
+                           following=self._following or set(),
+                           followed_tags=getattr(self, "_followed_tag_names", None) or set(),
+                           extra_bots=tuple(lc["extra_bots"]), read=_Read(),
+                           parents=_Parents(), detect=lc["detect_language"],
+                           min_words=lc["detect_min_words"])
+
+    def _route_custom(self, new_by_source):
+        """The new items of the real sources into the free lanes that take them; a new
+        lane, or one whose rule changed, filled from what is stored. {lane: [new ids]}."""
+        if not self.customs or not self.me:
+            return {}
+        self._refresh_following()
+        world = self._world()
+        refilled = {}
+        for c in self.customs:
+            if custom.stale(self.store, c):
+                custom.backfill(self.store, c, world)
+                refilled[c.name] = []
+        got = custom.route(self.store, self.customs, new_by_source, world)
+        for name in got:
+            self.store.prune(name, self.keep_per_lane())
+        if refilled:
+            self.emit("lanes_updated", refilled)  # filled anew: the lanes look again
+        return got
 
     def _split_by_lane(self, new_by_source):
         ctx = self._ctx()
@@ -1502,6 +1586,8 @@ class Core(SocialMixin):
 
     def lane_title(self, name):
         """A list's title; None for the built-in lanes (their names are translated)."""
+        if custom.is_custom(name):
+            return next((c.title for c in self.customs if c.name == name), name[7:])
         if taggroups.is_tags(name):
             g = next((g for g in self.tag_groups if taggroups.lane_name(g) == name), None)
             return (g or {}).get("name") or taggroups.title(taggroups.spec_of(name) or {})

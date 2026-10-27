@@ -133,6 +133,7 @@ DEFAULTS = {
         "detect_language": "untagged",
         "detect_min_words": 12,
         "tag_groups": [],
+        "custom": [],
     },
     "post": {
         "default_visibility": "private",
@@ -549,6 +550,11 @@ def validate(user):
         errors.append(f"sync.url = {url!r}: https:// (http:// only to this computer)")
     if url and cfg["sync"]["folder"]:
         errors.append("sync.url and sync.folder are both set: one place to meet, not two")
+    if not isinstance(cfg["lanes"]["custom"], list):
+        errors.append("lanes.custom: tables [[lanes.custom]], one per lane")
+    else:
+        from .custom import load as load_custom
+        warnings += load_custom(cfg)[1]
     if not cfg["lanes"]["enabled"]:
         errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):

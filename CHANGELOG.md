@@ -2,6 +2,11 @@
 
 ## 0.21.0 — in progress
 
+- Free lanes, first version: `[[lanes.custom]]` — a lane of rules over where a post came from,
+  who wrote it, what it is, whether it's to me, what's in it, what a boost is of (docs/en/dev/
+  feeds.md). They stand on top of the sidebar ("My own"), count and notify like any lane,
+  fill from what is stored and anew when their rule changes. Mistakes in a rule are warnings,
+  the condition with one never matches.
 - Sets of lanes as in other clients (`lanes.preset`, in the settings): "mastodon" (the web
   page), "tusky", "phanpy", fedtail's own "fedtail" — or "own", your `[lanes]` as it is.
   `lanes.bots_in_home`: bots in Home too (the presets switch it on: they have no Bots lane).

@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **0.21.0 (in progress):**
 
+- Free lanes: a lane you assemble yourself
 - Only the languages you read
 - Sets of lanes “as in other clients”
 - Unfollowed — gone from Home
@@ -28,7 +29,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Free lanes: a lane you assemble yourself | Lanes | `[[lanes.custom]]` | large |
 | Sync: the key by a QR code, drafts' pictures, WebDAV | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 

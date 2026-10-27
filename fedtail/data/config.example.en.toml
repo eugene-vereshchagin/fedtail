@@ -675,6 +675,26 @@ detect_min_words = 12
 #   none = ["politics"]
 tag_groups = []
 
+# Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
+# name (a word, stays), title (what the sidebar shows), any (conditions: a post goes in if it
+# matches any of them; inside a condition every key must match), none (conditions that keep a
+# post out). Keys of a condition: source (home, local, federated, mentions, mine, bookmarks,
+# favourites, subs, "list:<id>"; none — guessed from the rest), author (me, followed, local,
+# remote, bot, stranger, "@nick@server", "domain:server"…), kind (post, reply, self_reply,
+# boost, self_boost, quote, poll), me (reply, reply_to_post, reply_to_comment, mention,
+# direct), visibility, has (media, image, video, cw, link, "tag:x"), lang, state (unread,
+# bookmarked…), target (for boosts: my_post, my_comment, post, comment, seen, read), age
+# ("<1d", ">2d"; age_of = "original" — of a boosted post), likes / boosts / replies (">10"),
+# text ([["word", "and word"], ["or this"]]). They go to the top of the sidebar, "My own".
+# The free lanes fill from what is stored already. An example (then take away the
+# custom = [] line below):
+#   [[lanes.custom]]
+#   name = "feed"
+#   title = "Feed"
+#   any = [{ author = "local", kind = "post" }, { me = "reply" }, { author = "me" }]
+#   none = [{ kind = "boost", target = "seen" }]
+custom = []
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  5. Posts

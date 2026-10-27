@@ -18,6 +18,8 @@ class Lane:
     # a lane to browse, not to read through (local, federated): fetched only while
     # it's open, newest page first, no unread marks or badges
     lazy: bool = False
+    # a free lane (core/custom.py): the real sources its own stream is filled from
+    feeds: tuple = ()
 
 
 @dataclass
@@ -141,6 +143,7 @@ def canonical(name):
 # the sidebar's sections, in order; a lane goes to the first section that names it,
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
+    ("custom", []),  # free lanes (core/custom.py): the person's own, on top
     ("standard", ["federated", "home", "local", "bots"]),        # from the widest down
     ("personal", ["my_posts", "direct", "mentions", "replies", "subs", "bookmarks", "my_likes",
                   "activity", "requests"]),
@@ -155,7 +158,11 @@ def grouped(lanes):
     out = []
     placed = set()
     for group, members in GROUPS:
-        if group == "lists":
+        if group == "custom":
+            got = [n for n in names if n.startswith("custom:")]
+            if not got:
+                continue
+        elif group == "lists":
             got = [n for n in names if is_list(n)]
         elif group == "tags":
             got = [n for n in names if taggroups.is_tags(n)]
@@ -166,6 +173,7 @@ def grouped(lanes):
             if group == "standard":
                 got += [n for n in names if n not in placed and n not in got
                         and not is_list(n) and not taggroups.is_tags(n)
+                        and not n.startswith("custom:")
                         and not any(n in m for _g, m in GROUPS)]
         placed.update(got)
         out.append((group, got))
@@ -211,6 +219,8 @@ def enabled(cfg, lists=(), tag_groups=()):
     out = [LANES[n] for n in cfg["lanes"]["enabled"]]
     if cfg["lists"]["enabled"]:
         out += [list_lane(x["id"]) for x in lists]
+    from . import custom  # it builds on lanes
+    out += [c.lane() for c in custom.load(cfg)[0]]
     seen = set()
     for g in tag_groups:
         lane = tag_lane(g)
@@ -263,4 +273,7 @@ LOCAL_SOURCES = {"subs"}  # filled by the client itself, not a server stream
 
 
 def sources_needed(lanes):
-    return sorted({lane.source for lane in lanes if lane.source} - LOCAL_SOURCES)
+    """The server streams the lanes need: their own, and what free lanes are fed from."""
+    need = {lane.source for lane in lanes if lane.source} | \
+        {f for lane in lanes for f in lane.feeds}
+    return sorted(s for s in need - LOCAL_SOURCES if not s.startswith("custom:"))
