@@ -21,6 +21,6 @@ jobs:
             echo "::error::no SITE_DEPLOY_HOOK secret in this repo: the site can't be rebuilt"
             exit 1
           fi
-          curl -fsS -X POST "$HOOK"
-          echo
-          echo "build requested"
+          out=$(curl -fsS -X POST "$HOOK")
+          id=$(printf '%s' "$out" | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['build_uuid'])" 2>/dev/null || true)
+          echo "::notice::site build requested${id:+: $id}"

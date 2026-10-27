@@ -413,7 +413,14 @@ jobs:
           HOOK: ${{ secrets.SITE_DEPLOY_HOOK || secrets.DOCS_UPDATE }}
         run: |
           if [ -z "$HOOK" ]; then echo "::warning::no SITE_DEPLOY_HOOK secret: the site was not rebuilt"; exit 0; fi
-          curl -fsS -X POST "$HOOK" || echo "::warning::the site's deploy hook failed"
+          # Cloudflare answers with the build it queued: put its id where the run's page shows
+          # it, so a site that didn't update can be traced to its build log
+          if out=$(curl -fsS -X POST "$HOOK"); then
+            id=$(printf '%s' "$out" | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['build_uuid'])" 2>/dev/null || true)
+            echo "::notice::site build requested${id:+: $id}"
+          else
+            echo "::warning::the site's deploy hook failed"
+          fi
 
   # the apt repository: the release's .deb added to the `apt` branch (GitHub Pages serves
   # it), the indexes made anew and signed with the repository's key (secret
