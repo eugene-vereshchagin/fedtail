@@ -105,7 +105,8 @@ class Custom:
         return lanes.Lane(self.name, self.name, lanes._all,
                           by_status_time=self.rule.sort == "post_time",
                           lazy=self.rule.read == "browse", feeds=tuple(sorted(self.feeds)),
-                          chips=self.chips())
+                          chips=self.chips(),
+                          group="standard" if self.rule.group == "standard" else "personal")
 
     def takes(self, status, world, source):
         return self.rule.takes(atoms.post_facts(status, world, source), world.now)

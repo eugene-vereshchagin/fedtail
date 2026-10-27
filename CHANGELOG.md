@@ -30,7 +30,8 @@
   `--rebuild-config` writes the tables as tables at the end, not as one long line.
 - Free lanes, first version: `[[lanes.custom]]` — a lane of rules over where a post came from,
   who wrote it, what it is, whether it's to me, what's in it, what a boost is of (docs/en/dev/
-  feeds.md). They stand on top of the sidebar ("My own"), count and notify like any lane,
+  feeds.md). They stand in "Personal" (`group = "standard"`: in "Timelines") — where
+  `lanes.enabled` names them (`"custom:posts"`), else at the end — count and notify like any lane,
   fill from what is stored and anew when their rule changes. Mistakes in a rule are warnings,
   the condition with one never matches.
 - Sets of lanes as in other clients (`lanes.preset`, in the settings): "mastodon" (the web

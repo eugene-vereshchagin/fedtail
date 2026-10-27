@@ -23,6 +23,8 @@ class Lane:
     # …its quick filters: (key, words) — "main" (what isn't hidden), "chip:<n>" (one
     # condition's posts); none — the lane has no switches
     chips: tuple = ()
+    # the sidebar section a lane goes to when GROUPS doesn't name it (free lanes, Unsorted)
+    group: str = ""
 
 
 @dataclass
@@ -165,7 +167,6 @@ def canonical(name):
 # the sidebar's sections, in order; a lane goes to the first section that names it,
 # lists get their own section, anything else ends up in "more"
 GROUPS = [
-    ("custom", []),  # free lanes (core/custom.py): the person's own, on top
     ("standard", ["federated", "home", "local", "bots"]),        # from the widest down
     ("personal", ["my_posts", "direct", "to_me", "mentions", "replies", "subs", "important",
                   "bookmarks", "my_likes", "activity", "requests"]),
@@ -177,25 +178,22 @@ GROUPS = [
 def grouped(lanes):
     """[(group, [lane names])] for the sidebar, keeping the configured order inside."""
     names = [lane.name for lane in lanes]
+    own = {lane.name: lane.group for lane in lanes  # free lanes, Unsorted
+           if getattr(lane, "group", "")}
     out = []
     placed = set()
     for group, members in GROUPS:
-        if group == "custom":
-            got = [n for n in names if n.startswith("custom:") or n == UNSORTED]
-            if not got:
-                continue
-        elif group == "lists":
+        if group == "lists":
             got = [n for n in names if is_list(n)]
         elif group == "tags":
             got = [n for n in names if taggroups.is_tags(n)]
             if not got:
                 continue  # no tag lanes: no "Теги" heading either
         else:
-            got = [n for n in names if n in members]
+            got = [n for n in names if n in members or own.get(n) == group]
             if group == "standard":
                 got += [n for n in names if n not in placed and n not in got
-                        and not is_list(n) and not taggroups.is_tags(n)
-                        and not n.startswith("custom:") and n != UNSORTED
+                        and not is_list(n) and not taggroups.is_tags(n) and n not in own
                         and not any(n in m for _g, m in GROUPS)]
         placed.update(got)
         out.append((group, got))
@@ -238,14 +236,17 @@ def tag_lane(spec):
 
 
 def enabled(cfg, lists=(), tag_groups=()):
-    out = [LANES[n] for n in cfg["lanes"]["enabled"] if n in LANES]  # "unsorted": below
+    from . import custom  # it builds on lanes
+    free = {c.name: c.lane() for c in custom.load(cfg)[0]}
+    # lanes.enabled may name a free lane ("custom:posts") to put it in its place there;
+    # the ones it doesn't name come after the built-in ones ("unsorted": below)
+    out = [LANES[n] if n in LANES else free[n] for n in cfg["lanes"]["enabled"]
+           if n in LANES or n in free]
+    out += [lane for name, lane in free.items() if name not in cfg["lanes"]["enabled"]]
     if cfg["lists"]["enabled"]:
         out += [list_lane(x["id"]) for x in lists]
-    from . import custom  # it builds on lanes
-    free = [c.lane() for c in custom.load(cfg)[0]]
-    out += free
     if free and cfg["lanes"].get("unsorted", True):
-        out.append(Lane(UNSORTED, UNSORTED, _all))
+        out.append(Lane(UNSORTED, UNSORTED, _all, group="personal"))
     seen = set()
     for g in tag_groups:
         lane = tag_lane(g)

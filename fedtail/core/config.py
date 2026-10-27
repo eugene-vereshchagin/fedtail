@@ -531,7 +531,7 @@ def validate(user):
             if isinstance(c, dict) and c.get("name")}
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            picking + cfg["lists"]["hide_in"]
-           if x not in LANE_NAMES | {"lists"} and not (x in picking and x in free)
+           if x not in LANE_NAMES | {"lists"} and x not in free
            # notify.lanes = ["all"]: everything, the except list takes away
            and not (x == "all" and x in wanted)
            # one list: "list:Друзья" (its title, or its id)

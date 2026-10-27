@@ -32,8 +32,9 @@ class LoadTest(unittest.TestCase):
                          ("local", "mentions", "mine"), False))
         names = [x.name for x in lanes.enabled(cfg)]
         self.assertIn("custom:feed", names)
-        self.assertEqual(lanes.grouped(lanes.enabled(cfg))[0],
-                         ("custom", ["custom:feed", "unsorted"]))
+        personal = dict(lanes.grouped(lanes.enabled(cfg)))["personal"]
+        self.assertEqual(personal[-2:], ["custom:feed", "unsorted"])  # at the end of Personal
+        self.assertNotIn("custom", dict(lanes.grouped(lanes.enabled(cfg))))
         self.assertIn("local", lanes.sources_needed(lanes.enabled(cfg)))
         self.assertNotIn("custom:feed", lanes.sources_needed(lanes.enabled(cfg)))
 
@@ -260,9 +261,9 @@ class WebShowsFreeLanesTest(FreeBase):
         core.connect().result()
         core.poll_once()
         rows = web.Web(core, "KEY").lanes()
-        first = rows[0]
-        self.assertEqual((first["name"], first["title"], first["group"], first["tip"]),
-                         ("custom:feed", "Лента", "My own", ""))
+        first = next(x for x in rows if x["name"] == "custom:feed")
+        self.assertEqual((first["title"], first["section"], first["tip"]),
+                         ("Лента", "personal", ""))
         got = web.Web(core, "KEY").lane("custom:feed")
         self.assertIn("005", json.dumps(got, default=str))
 
@@ -479,7 +480,8 @@ class UnsortedTest(FreeBase):
         core.cfg["lanes"]["enabled"] = ["my_posts"]  # no Home: its posts need a lane
         core._apply_lists([], {})
         self.assertIn("unsorted", core.lane_by_name)
-        self.assertEqual(lanes.grouped(core.lanes)[0], ("custom", ["custom:bots", "unsorted"]))
+        self.assertEqual(dict(lanes.grouped(core.lanes))["personal"][-2:],
+                         ["custom:bots", "unsorted"])
         w.add(status("001", NEWS, minute=1), home=True)   # the bots lane takes it
         w.add(status("002", BOB, minute=2), home=True)    # nobody does
         w.add(status("003", ME, minute=3), home=True)     # My posts takes it (source mine)
@@ -747,8 +749,17 @@ class NamedInListsTest(FreeBase):
         self.assertEqual(cfg["notify"]["lanes"], ["custom:feed"])
         with self.assertRaises(config.ConfigError):
             config.validate(dict(user, notify={"lanes": ["custom:nope"]}))
+        # lanes.enabled may name it: it stands there
+        cfg, _ = config.validate({"lanes": {"enabled": ["home", "custom:feed", "direct"],
+                                            "custom": [FEED]}})
+        self.assertEqual([x.name for x in lanes.enabled(cfg)][:3],
+                         ["home", "custom:feed", "direct"])
+        self.assertEqual(dict(lanes.grouped(lanes.enabled(cfg)))["personal"],
+                         ["custom:feed", "direct", "unsorted"])
         with self.assertRaises(config.ConfigError):
-            config.validate({"lanes": {"enabled": ["home", "custom:feed"], "custom": [FEED]}})
+            config.validate({"lanes": {"enabled": ["home", "custom:nope"], "custom": [FEED]}})
+        cfg, _ = config.validate({"lanes": {"custom": [dict(FEED, group="standard")]}})
+        self.assertIn("custom:feed", dict(lanes.grouped(lanes.enabled(cfg)))["standard"])
 
     def test_notified(self):
         core, w = self.make([FEED])
