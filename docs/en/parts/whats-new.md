@@ -1,26 +1,3 @@
-**0.21.0 (in progress):**
+**0.20.1:**
 
 - How fresh the lanes are, in the status line
-
-**0.20.0:**
-
-- Whose replies a list shows
-- Collections of people (Mastodon 4.6)
-- Another server's public timeline
-- A link's timeline (Mastodon 4.3+)
-- Sending emoji reactions
-- In a profile: posts, posts and replies, media
-- Who else shared a link
-- A video's cover; picture descriptions in a post's edit
-- Spell checking in the compose panel
-- Mute for a while; posts only
-- Hide a single post
-- Editing a filter
-- Report: which rules it breaks
-- Profile: hide follows, posts found by search, article authorship, tag suggestions
-- About the server: terms, whom it cut off, its translator
-- Push notifications (Web Push, UnifiedPush)
-- Slow mode and “notify at most every…”
-- “Of them new”: what the last update brought
-- An apt repository of its own
-- An installer for Windows (and a signature)

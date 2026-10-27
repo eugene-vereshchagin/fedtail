@@ -2,7 +2,7 @@
 
 [По-русски](/docs/ru/features.md)
 
-As of version **0.21.0 (in progress)**. This is the full list of fedtail's features: what each one does,
+As of version **0.20.1**. This is the full list of fedtail's features: what each one does,
 what turns it on and off, since which version it's there, which API or protocol it stands on
 and how other clients do the same. The plans are here too, and what was turned down, with the
 reasons.
@@ -100,7 +100,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
 | Free lanes: a lane you assemble yourself | planned | — | `[[lanes.custom]]` | — | — |
-| How fresh the lanes are, in the status line | has | 0.21.0 | — | own | — |
+| How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
 
 <details><summary>In detail</summary>
 

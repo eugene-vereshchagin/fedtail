@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.21.0 — in progress
+## 0.20.1 — 2026-10-27
+
+Fixes for 0.20.0, and the lanes' freshness in the status line:
 
 - Qt: a profile's buttons (Follow, Unfollow, Mute…) work again — they called a method a
   second one of the same name had replaced; a test now finds any method defined twice.
@@ -15,8 +17,6 @@
 - Pictures: at most four asked of one server at a time (a small server answered every one
   late with all the workers on it at once, the pool full); a preview's first timeout,
   asked again with patience, is info in the log.
-- The plan for 0.21 (docs/en/dev/roadmap.md): sync between devices brought to the end,
-  and free lanes — lanes you assemble yourself.
 - The apt repository: its job installs `apt-utils` where the runner lacks it (0.20.0's
   failed so), says what failed, and runs by hand too for a release already out (`apt.yml`).
 
