@@ -264,3 +264,74 @@ class WebShowsFreeLanesTest(FreeBase):
                          ("custom:feed", "Лента", "My own", ""))
         got = web.Web(core, "KEY").lane("custom:feed")
         self.assertIn("005", json.dumps(got, default=str))
+
+
+class ConfigToolsWithTablesTest(unittest.TestCase):
+    """--update-config, --rebuild-config and the settings page with [[lanes.custom]] (and
+    [[lanes.tag_groups]]) in the file: a section's options stay in the section, before its
+    sub-tables — never inside the last one, where TOML would read them as its keys."""
+
+    USER = """[lanes]
+enabled = ["home", "local"]
+
+[[lanes.custom]]
+name = "feed"
+any = [{ author = "me" }]
+
+[[lanes.tag_groups]]
+name = "Georgia"
+any = ["грузия"]
+
+[ui]
+theme = "point"
+"""
+
+    def test_mentioned_and_missing(self):
+        from fedtail.core import config_update as u
+        have = u.mentioned(self.USER)
+        self.assertIn("custom", have["lanes"])
+        self.assertIn("tag_groups", have["lanes"])
+        self.assertEqual(have["lanes.custom"], {"name", "any"})
+        missing = u.missing(self.USER, config.example_text("en"))
+        self.assertNotIn("lanes.custom", missing)
+        self.assertIn("lanes.preset", missing)
+
+    def test_update_keeps_tables_whole(self):
+        import tomllib
+
+        from fedtail.core import config_update as u
+        for lang in ("ru", "en"):
+            out = u.update(self.USER, config.example_text(lang))
+            out = out if isinstance(out, str) else out[0]
+            d = tomllib.loads(out)
+            self.assertEqual(d["lanes"]["custom"], [{"name": "feed", "any": [{"author": "me"}]}])
+            self.assertEqual(d["lanes"]["tag_groups"], [{"name": "Georgia", "any": ["грузия"]}])
+            self.assertEqual(d["lanes"]["preset"], "own")
+            self.assertEqual(d["ui"]["theme"], "point")
+            config.validate(d)
+
+    def test_rebuild_writes_tables_as_tables(self):
+        import tomllib
+
+        from fedtail.core import config_update as u
+        out = u.rebuild(self.USER, config.example_text("en"))
+        out = out if isinstance(out, str) else out[0]
+        self.assertIn("\n[[lanes.custom]]\nname = \"feed\"\n", out)
+        self.assertIn("#custom = []  # → [[lanes.custom]]", out)
+        d = tomllib.loads(out)
+        self.assertEqual(d["lanes"]["custom"][0]["name"], "feed")
+        self.assertEqual(d["lanes"]["enabled"], ["home", "local"])
+        empty = u.rebuild("[lanes]\ncustom = []\n", config.example_text("en"))
+        empty = empty if isinstance(empty, str) else empty[0]
+        self.assertEqual(tomllib.loads(empty)["lanes"]["custom"], [])
+
+    def test_settings_page_writes_into_the_section(self):
+        import tomllib
+
+        from fedtail.core import config_edit as e
+        for key, value in (("mentions_all", True), ("enabled", ["home"])):
+            out = e.set_value(self.USER, "lanes", key, value)
+            d = tomllib.loads(out)
+            self.assertEqual(d["lanes"][key], value)
+            self.assertNotIn(key, d["lanes"]["custom"][0])
+            self.assertNotIn(key, d["lanes"]["tag_groups"][0])

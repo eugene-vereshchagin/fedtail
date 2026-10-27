@@ -23,7 +23,19 @@ import difflib
 import json
 import re
 
-_HEADER = re.compile(r"^\s*#?\s*\[([A-Za-z0-9_]+)\]\s*$")
+
+class _Headers:
+    """A section's header: `[ui]` (or `#[ui]`), and a sub-table of one — `[[lanes.custom]]`,
+    `[lanes.x]`, never commented — as a section of its own, "lanes.custom": the keys under
+    it are that table's, and a section's own options go before it, never after."""
+    _plain = re.compile(r"^\s*#?\s*\[([A-Za-z0-9_]+)\]\s*$")
+    _sub = re.compile(r"^\s*\[\[?([A-Za-z0-9_]+\.[A-Za-z0-9_.]+)\]\]?\s*(?:#.*)?$")
+
+    def match(self, line):
+        return self._plain.match(line) or self._sub.match(line)
+
+
+_HEADER = _Headers()
 _OPTION = re.compile(r"^\s*#?\s*([A-Za-z0-9_]+)\s*=")
 
 
@@ -57,6 +69,9 @@ def mentioned(text):
         if m:
             section = m.group(1)
             out.setdefault(section, set())
+            if "." in section:  # [[lanes.custom]]: [lanes] has its "custom"
+                parent, key = section.split(".", 1)
+                out.setdefault(parent, set()).add(key.split(".")[0])
             continue
         m = _OPTION.match(line)
         if m and section:
@@ -244,6 +259,11 @@ def _toml(value):
     return json.dumps(str(value), ensure_ascii=False)
 
 
+def _tables(value):
+    """An array of tables ([[lanes.custom]]): a non-empty list of dicts."""
+    return isinstance(value, list) and bool(value) and all(isinstance(x, dict) for x in value)
+
+
 def rebuild(user_text, example_text, report=None):
     """The reference file, chapter by chapter, with every value the user set put in
     its place. Options this version doesn't know are kept at the end of their
@@ -251,7 +271,7 @@ def rebuild(user_text, example_text, report=None):
     import tomllib
     user_text = renamed(user_text, report)
     user = tomllib.loads(user_text)
-    out, section, ends, kept = [], None, {}, []
+    out, section, ends, kept, tables = [], None, {}, [], []
     for line in example_text.splitlines():
         m = _HEADER.match(line)
         if m and not line.lstrip().startswith("#"):
@@ -263,7 +283,12 @@ def rebuild(user_text, example_text, report=None):
         if section and m and not line.lstrip().startswith("#"):
             key = m.group(1)
             mine = user.get(section, {})
-            if isinstance(mine, dict) and key in mine:
+            if isinstance(mine, dict) and key in mine and _tables(mine[key]):
+                # [[lanes.custom]] and alike: as tables of their own at the end, readable
+                line = f"#{key} = []  # → [[{section}.{key}]]"
+                tables.append((f"{section}.{key}", mine[key]))
+                kept.append(f"{section}.{key}")
+            elif isinstance(mine, dict) and key in mine:
                 line = f"{key} = {_toml(mine[key])}"
                 kept.append(f"{section}.{key}")
             out.append(line)
@@ -288,6 +313,9 @@ def rebuild(user_text, example_text, report=None):
             out += ["", f"[{sec}]"] + lines
     for at in sorted(inserts, reverse=True):
         out[at:at] = inserts[at]
+    for name, items in tables:
+        for item in items:
+            out += ["", f"[[{name}]]"] + [f"{k} = {_toml(v)}" for k, v in item.items()]
     if report is not None:
         report["kept"], report["extra"] = kept, extra
     return "\n".join(out) + "\n"

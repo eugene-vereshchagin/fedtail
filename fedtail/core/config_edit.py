@@ -26,7 +26,9 @@ import os
 import re
 import tomllib
 
-_HEADER = re.compile(r"^\s*\[([A-Za-z0-9_]+)\]\s*(#.*)?$")
+# `[ui]`, and a sub-table — `[[lanes.custom]]`, `[lanes.x]` — as a section of its own
+# ("lanes.custom"): a section's options end where its sub-tables begin
+_HEADER = re.compile(r"^\s*\[\[?([A-Za-z0-9_]+(?:\.[A-Za-z0-9_.]+)?)\]\]?\s*(#.*)?$")
 
 
 class _Unset:

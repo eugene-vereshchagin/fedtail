@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- `--update-config` and the settings page with `[[lanes.custom]]` or `[[lanes.tag_groups]]`
+  in the file: new `[lanes]` options went after the last such table — TOML read them as that
+  table's keys, and the lane or tag group broke. Now they stay in `[lanes]`, before its tables;
+  `--rebuild-config` writes the tables as tables at the end, not as one long line.
 - Free lanes, first version: `[[lanes.custom]]` — a lane of rules over where a post came from,
   who wrote it, what it is, whether it's to me, what's in it, what a boost is of (docs/en/dev/
   feeds.md). They stand on top of the sidebar ("My own"), count and notify like any lane,
