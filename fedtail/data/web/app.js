@@ -320,7 +320,7 @@ function view(m, all) {  // a picture over the page; ←/→ through the post's;
   $("#viewer").hidden = false;
 }
 
-async function saveViewed() {  // "Save": the original into ui.save_dir on this machine
+async function saveViewed() {  // "Save": the original into media.save_dir on this machine
   const v = state.viewer;
   if (!v || !v.url) return;
   toast(w("saving"));
@@ -745,7 +745,7 @@ function menuKeys(e) {  // ↑ ↓ within a column of the menu, → into a group
 }
 
 // ≡ → Try a theme: the windows' themes (their colours and font), for this run of
-// fedtail; ui.theme in the config is what the next start brings
+// fedtail; appearance.theme in the config is what the next start brings
 async function tryTheme() {
   let t;
   try { t = await api("/api/themes"); } catch (e) { toast(e.message); return; }
@@ -1028,12 +1028,12 @@ function olderButton() {
   return b;
 }
 
-// ---- columns: lanes side by side (ui.layout = "columns", ❯ — as the windows') ------------
+// ---- columns: lanes side by side (window.layout = "columns", ❯ — as the windows') ------------
 // The lane in focus is the page's own (#main: its bar, keys, Ctrl+F, the command line);
 // the others are columns beside it, each with its cards, its count and its read marks.
 // A click in a column brings it into focus; a lane picked on the left that isn't a
 // column yet becomes one, beside the focused. Which lanes, in what order — kept for every
-// window (the core's state "columns"); on or off — this browser's (ui.layout at first).
+// window (the core's state "columns"); on or off — this browser's (window.layout at first).
 const cols = { on: false, names: [], panes: new Map() };
 
 function narrow() { return window.matchMedia("(max-width: 760px)").matches; }
@@ -1281,7 +1281,7 @@ function paneCount(p) {
   navCount(p.name, n);
 }
 
-function paneRead(p) {  // read.mark_read = on_scroll: a card seen whole in a column is read
+function paneRead(p) {  // reading.mark_read = on_scroll: a card seen whole in a column is read
   if (p.obs) p.obs.disconnect();
   p.obs = null;
   if (state.me.mark_read !== "on_scroll") return;
@@ -1336,7 +1336,7 @@ function firstVisible() {
   return null;
 }
 
-// ---- read marks: a post seen whole is read (read.mark_read = on_scroll) ---------------
+// ---- read marks: a post seen whole is read (reading.mark_read = on_scroll) ---------------
 let observer = null;
 function watchRead(box) {
   if (observer) observer.disconnect();

@@ -14,7 +14,7 @@
 7. **The core knows nothing of a GUI.** Interfaces are plugins: a Qt window, a terminal, a
    browser; GTK next.
 8. **One profile, one account.** A second account is a second profile (`--profile`); if you
-   like, all accounts come together in one window (`ui.merge`).
+   like, all accounts come together in one window (`accounts.merge`).
 9. **Grown-ups sort things out themselves.** Arts mode (after @arts, the founder of Point.im):
    everything as the author posted it, no nannying. Anyone can be told where to go, an admin
    too — and the admin can say the same back.

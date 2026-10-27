@@ -242,7 +242,7 @@ _STRINGS = {
                             "что-то кроме латиницы, цифр, _ . -",
         "lang_default": "Язык: как в настройках",
         "lang_tip": "Язык поста — по нему фильтруют и переводят. По умолчанию — post.language",
-        "viewer_save_tip": "Оригинал — в папку для загрузок (ui.save_dir), клавиша S",
+        "viewer_save_tip": "Оригинал — в папку для загрузок (media.save_dir), клавиша S",
         "poll_vote": "Голосовать", "poll_sending": "Отправляю…", "poll_results": "Результаты",
         "poll_votes": ["{n} голос", "{n} голоса", "{n} голосов"],
         "poll_people": ["{n} человек", "{n} человека", "{n} человек"],
@@ -325,7 +325,7 @@ _STRINGS = {
         "new_below": "дальше новое", "menu": "Меню", "open_themes": "Открыть папку тем",
         "lane_codeword": "В конфиге: {name}",
         "try_theme": "Попробовать тему",
-        "try_theme_tip": "Сразу, до перезапуска; насовсем — ui.theme в конфиге",
+        "try_theme_tip": "Сразу, до перезапуска; насовсем — appearance.theme в конфиге",
         "theme_in_config": "в конфиге",
         "theme_tried": "Тема «{name}» — до перезапуска. Насовсем: theme = \"{name}\" в [ui] "
                        "(сейчас там «{configured}»). Кнопки над лентой примут её вид "
@@ -529,7 +529,7 @@ _STRINGS = {
         "help_found": "найдено в разделах: {n}", "help_deep": "Подробно",
         "help_close_tip": "Закрыть справку", "help_missing": "Нет такой страницы: {name}",
         "whats_this": "Что это?",
-        "whats_this_tip": "Наведи мышь на любую кнопку — подробная подсказка (ui.whats_this "
+        "whats_this_tip": "Наведи мышь на любую кнопку — подробная подсказка (window.whats_this "
                           "— с самого запуска)",
         "whats_this_on": "«Что это?»: наведи мышь на кнопку. Выключить — ≡ → «Что это?»",
         "hint_config": "Конфиг: {opt}", "hint_help": "Справка: {page}",
@@ -785,7 +785,7 @@ _STRINGS = {
         "warn_delete_statuses": "посты удалены", "warn_sensitive": "все посты — чувствительные",
         "warn_silence": "аккаунт ограничен", "warn_suspend": "аккаунт заблокирован",
         "old_post": ["старый, {n} день", "старый, {n} дня", "старый, {n} дней"],
-        "old_post_tip": "Старше feed.old_days дней — не новость",
+        "old_post_tip": "Старше card.old_days дней — не новость",
         "redraft": "Удалить и переписать",
         "redraft_q": "Удалить пост и открыть его заново черновиком? Лайки, бусты и ответы "
                      "останутся у удалённого.\n\n«{text}»",
@@ -819,7 +819,7 @@ _STRINGS = {
         "followed_now": "Подписка на {acct}: теперь можно и в список",
         "follow_asked_list": "Запрос на подписку отправлен: в список добавлю, как подтвердят",
         "filter_boosts": "Бусты",
-        "compose_bigger_tip": "Побольше / поменьше (ui.compose_size)",
+        "compose_bigger_tip": "Побольше / поменьше (window.compose_size)",
         "lang_other": "Другой язык…",
         "lang_other_title": "Другой язык",
         "lang_other_ask": "Код языка (ISO 639): eo, es, cv, jbo, tok… — останется в списке",
@@ -875,7 +875,7 @@ _STRINGS = {
         "silence_domains": "Серверы",
         "tender_menu": "Для нежных и ранимых", "tender_domains": "Заблокированные серверы",
         "tender_arts": "Режим arts: фильтры по словам не действуют",
-        "tender_arts_tip": "ui.arts_mode = true: фильтры сервера не прячут и не сворачивают "
+        "tender_arts_tip": "card.arts_mode = true: фильтры сервера не прячут и не сворачивают "
                            "посты. Заглушённые и заблокированные работают как обычно.",
         "silence_domains_hint": "Заблокированные серверы: никого оттуда не видно.",
         "note_edit": "Заметка…", "note_title": "Заметка о @{acct}",
@@ -939,7 +939,7 @@ _STRINGS = {
                        'с кнопкой «Подписаться»',
         "footer_profile_tip": "Профиль — папка с конфигом и данными этого аккаунта; "
                               "★ — главный, он запускается без --profile.",
-        "full_width_tip": "Посты во всю ширину окна (или колонкой ui.max_width); "
+        "full_width_tip": "Посты во всю ширину окна (или колонкой appearance.max_width); "
                           "запоминается до следующего запуска",
         "make_main": "Сделать главным ★",
         "make_main_tip": "Этот профиль будет запускаться без --profile и из пункта меню "
@@ -1133,7 +1133,7 @@ _STRINGS = {
         "fed_polls": "Опрос",
         "fed_polls_v": "{n} раз, каждые {every} с; последний удачный {last}, занял {took} с",
         "fed_polls_failed": "не удался {n} раз (последний: {last})",
-        "fed_stream": "Живой поток", "fed_stream_off": "выключен (poll.stream = {mode})",
+        "fed_stream": "Живой поток", "fed_stream_off": "выключен (server.stream = {mode})",
         "fed_stream_open": "открыт {since}", "fed_stream_down": "разорван, переподключаюсь",
         "fed_stream_event": "последнее событие {when}",
         "fed_stream_drops": "рвался {n} раз ({why})",
@@ -1231,7 +1231,8 @@ _STRINGS = {
         "long_form_none": "Сервер автора не отдал этот пост (или не пускает чужих)",
         "long_form_title": "Пост целиком",
         "act_as": "От другого аккаунта",
-        "columns": "Колонки", "columns_tip": "Ленты рядом, колонками (при запуске — как ui.layout)",
+        "columns": "Колонки",
+        "columns_tip": "Ленты рядом, колонками (при запуске — как window.layout)",
         "column_left": "Левее", "column_right": "Правее",
         "column_close": "Убрать колонку",
         "act_as_fav": "★ Лайк от {acct}", "act_as_boost": "♻ Буст от {acct}",
@@ -1502,7 +1503,7 @@ _STRINGS = {
         "lang_default": "Language: as in settings",
         "lang_tip": "The post's language — used for filters and translation. "
                     "Default: post.language",
-        "viewer_save_tip": "The original into the downloads folder (ui.save_dir), key S",
+        "viewer_save_tip": "The original into the downloads folder (media.save_dir), key S",
         "poll_vote": "Vote", "poll_sending": "Sending…", "poll_results": "Results",
         "poll_votes": ["{n} vote", "{n} votes"],
         "poll_people": ["{n} person", "{n} people"],
@@ -1582,7 +1583,7 @@ _STRINGS = {
         "new_below": "new below", "menu": "Menu", "open_themes": "Open themes folder",
         "lane_codeword": "In the config: {name}",
         "try_theme": "Try a theme",
-        "try_theme_tip": "Right away, until restart; for good — ui.theme in the config",
+        "try_theme_tip": "Right away, until restart; for good — appearance.theme in the config",
         "theme_in_config": "in config",
         "theme_tried": "Theme \"{name}\" until restart. For good: theme = \"{name}\" in [ui] "
                        "(it says \"{configured}\" now). The buttons above a lane take "
@@ -1781,7 +1782,7 @@ _STRINGS = {
         "help_found": "found in sections: {n}", "help_deep": "In detail",
         "help_close_tip": "Close the help", "help_missing": "No such page: {name}",
         "whats_this": "What's this?",
-        "whats_this_tip": "Point the mouse at any button for a longer hint (ui.whats_this — "
+        "whats_this_tip": "Point the mouse at any button for a longer hint (window.whats_this — "
                           "from the start)",
         "whats_this_on": "“What's this?”: point the mouse at a button. To turn it off — ≡ → "
                          "“What's this?”",
@@ -2029,7 +2030,7 @@ _STRINGS = {
         "warn_delete_statuses": "posts deleted", "warn_sensitive": "all posts sensitive",
         "warn_silence": "account limited", "warn_suspend": "account suspended",
         "old_post": ["old, {n} day", "old, {n} days"],
-        "old_post_tip": "Older than feed.old_days days — not news",
+        "old_post_tip": "Older than card.old_days days — not news",
         "redraft": "Delete and redraft",
         "redraft_q": "Delete the post and open it again as a draft? Its likes, boosts and "
                      "replies stay with the deleted one.\n\n“{text}”",
@@ -2062,7 +2063,7 @@ _STRINGS = {
         "followed_now": "Following {acct}: lists can take them now",
         "follow_asked_list": "Follow request sent: into a list once it's accepted",
         "filter_boosts": "Boosts",
-        "compose_bigger_tip": "Bigger / smaller (ui.compose_size)",
+        "compose_bigger_tip": "Bigger / smaller (window.compose_size)",
         "lang_other": "Another language…",
         "lang_other_title": "Another language",
         "lang_other_ask": "Language code (ISO 639): eo, es, cv, jbo, tok… — it stays on the list",
@@ -2116,7 +2117,7 @@ _STRINGS = {
         "silence_domains": "Servers",
         "tender_menu": "For the tender and sensitive", "tender_domains": "Blocked servers",
         "tender_arts": "arts mode: word filters don't apply",
-        "tender_arts_tip": "ui.arts_mode = true: the server's filters neither hide nor fold "
+        "tender_arts_tip": "card.arts_mode = true: the server's filters neither hide nor fold "
                            "posts. Mutes and blocks work as usual.",
         "silence_domains_hint": "Blocked servers: nobody from there shows.",
         "note_edit": "Note…", "note_title": "Note on @{acct}",
@@ -2180,7 +2181,7 @@ _STRINGS = {
                        '<a href="{author_link}">{author}</a> — opens here, with Follow',
         "footer_profile_tip": "A profile is this account's folder of config and data; "
                               "★ — the main one, started without --profile.",
-        "full_width_tip": "Posts across the full width (or a column of ui.max_width); "
+        "full_width_tip": "Posts across the full width (or a column of appearance.max_width); "
                           "remembered till the next start",
         "make_main": "Make it the main one ★",
         "make_main_tip": "This profile will start without --profile and from the "
@@ -2370,7 +2371,7 @@ _STRINGS = {
         "fed_polls": "Polling",
         "fed_polls_v": "{n} times, every {every} s; last good one {last}, took {took} s",
         "fed_polls_failed": "failed {n} times (last: {last})",
-        "fed_stream": "Live stream", "fed_stream_off": "off (poll.stream = {mode})",
+        "fed_stream": "Live stream", "fed_stream_off": "off (server.stream = {mode})",
         "fed_stream_open": "open since {since}", "fed_stream_down": "dropped, reconnecting",
         "fed_stream_event": "last event {when}",
         "fed_stream_drops": "dropped {n} times ({why})",
@@ -2469,7 +2470,7 @@ _STRINGS = {
         "long_form_none": "The author's server didn't give this post (or lets no strangers in)",
         "long_form_title": "The whole post",
         "act_as": "From another account",
-        "columns": "Columns", "columns_tip": "Lanes side by side (at start: as ui.layout says)",
+        "columns": "Columns", "columns_tip": "Lanes side by side (at start: as window.layout says)",
         "column_left": "Move left", "column_right": "Move right",
         "column_close": "Remove the column",
         "act_as_fav": "★ Like as {acct}", "act_as_boost": "♻ Boost as {acct}",

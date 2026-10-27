@@ -31,7 +31,7 @@ hit by mistake.
 | `m` | bookmark |
 | `o`, `Enter` | open the thread |
 
-To turn these letters off — `ui.post_keys = false`.
+To turn these letters off — `window.post_keys = false`.
 
 ## The viewer and the player
 

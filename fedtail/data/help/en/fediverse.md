@@ -26,7 +26,7 @@ Mind: "followers" and "mentioned" aren't encryption. Server admins can technical
 Your server knows only what reached it: the posts of people someone on it follows, and what's
 addressed to you. That's why other people's threads have holes, and the like counts on their
 posts are low. fedtail mends that: it reads the thread from the author's server and (if you like,
-`feed.honest_counters`) asks there for the real numbers.
+`card.honest_counters`) asks there for the real numbers.
 
 ## Hashtags, CW, alt
 

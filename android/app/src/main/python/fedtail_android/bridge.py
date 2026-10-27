@@ -134,7 +134,7 @@ def _make(demo):
 
 # what the phone does otherwise than the desktop: written into the config file once (the
 # example the core writes says the desktop's defaults); after that the file is the truth
-PHONE_DEFAULTS = {("ui", "command_line"): "false"}  # Point's line: off, a word away
+PHONE_DEFAULTS = {("window", "command_line"): "false"}  # Point's line: off, a word away
 PHONE_MARK = "phone_defaults"
 
 
@@ -992,7 +992,7 @@ def resolve(url):
 NOT_ON_PHONE = {"tui", "web", "cli", "sound"}
 ONLY_ON_PHONE = {
     "ui": {"language", "start_lane", "command_line", "expand_cw", "arts_mode", "links_in_app",
-           "theme"},
+           "theme", "announcements"},
     # the shade heeds these; how the desktop shows a note (backend) is the desktop's
     "notify": {"enabled", "lanes", "except", "privacy", "when_focused", "filtered"},
     "debug": {"level", "mode"},
@@ -1000,8 +1000,10 @@ ONLY_ON_PHONE = {
 
 
 def _on_phone(o):
-    return o.section not in NOT_ON_PHONE and \
-        (o.section not in ONLY_ON_PHONE or o.key in ONLY_ON_PHONE[o.section])
+    from fedtail.core.config import internal_place
+    section = internal_place(o.section, o.key)[0]  # the program's section of it
+    return section not in NOT_ON_PHONE and \
+        (section not in ONLY_ON_PHONE or o.key in ONLY_ON_PHONE[section])
 
 
 def settings():

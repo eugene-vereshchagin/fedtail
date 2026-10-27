@@ -52,7 +52,7 @@ The main principles everything else grows from:
 7. **The core knows nothing of a GUI.** Interfaces are plugins: a Qt window, a terminal, a
    browser; GTK next.
 8. **One profile, one account.** A second account is a second profile (`--profile`); if you
-   like, all accounts come together in one window (`ui.merge`).
+   like, all accounts come together in one window (`accounts.merge`).
 9. **Grown-ups sort things out themselves.** Arts mode (after @arts, the founder of Point.im):
    everything as the author posted it, no nannying. Anyone can be told where to go, an admin
    too — and the admin can say the same back.
@@ -67,7 +67,7 @@ This is the list of what there is **now**, not a history: what changed in each v
 
 ## Lanes
 
-On the left, the lanes in groups: “Timelines” (from the widest down to your own), “Personal”, “Lists”. Which lanes to show and in what order — `lanes.enabled`. Group headings go with `ui.sidebar_groups = false`. The column's width — `ui.sidebar_width`; its edge drags with the mouse, and the dragged width is kept until the number in the config changes.
+On the left, the lanes in groups: “Timelines” (from the widest down to your own), “Personal”, “Lists”. Which lanes to show and in what order — `lanes.enabled`. Group headings go with `window.sidebar_groups = false`. The column's width — `window.sidebar_width`; its edge drags with the mouse, and the dragged width is kept until the number in the config changes.
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
@@ -83,19 +83,19 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Into a list right after a follow | has | 0.11.0 | `lists.refresh_minutes` | `lists/:id/accounts` | only in fedtail |
 | Hashtag lane, following tags | has | 0.2.0 | — | `timelines/tag/:name`, `tags/:name/follow`, `followed_tags` | everyone |
 | My likes | has | 0.8.0 | `"my_likes"` in `lanes.enabled` | `/api/v1/favourites` | Mastodon web, Tusky, Ivory, Megalodon, tut |
-| Bookmarks | has | 0.3.0 | `"bookmarks"` in `lanes.enabled`, `ui.bookmark_button` | `/api/v1/bookmarks` | everyone |
+| Bookmarks | has | 0.3.0 | `"bookmarks"` in `lanes.enabled`, `card.bookmark_button` | `/api/v1/bookmarks` | everyone |
 | Trends | has | 0.11.0 | — | `/api/v1/trends` (tags, links, statuses) | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes |
 | An empty live lane says why it's empty | has | 0.11.0 | — | `timelines/public` | only in fedtail |
 | Filtering a lane by media and boosts | has | 0.11.0 | — (kept until restart) | own | only in fedtail |
-| Repeated boosts don't bring an old post up again | has | 0.15.0 | `feed.repeat_boosts` | own | only in fedtail (a Mastodon server drops a repeat only among the freshest posts) |
-| All / Posts only / New; Feed / Conversations | has | 0.3.0 | `lanes.posts_only`, `feed.remember_choices` | own | Phanpy — similar to “Conversations” |
+| Repeated boosts don't bring an old post up again | has | 0.15.0 | `card.repeat_boosts` | own | only in fedtail (a Mastodon server drops a repeat only among the freshest posts) |
+| All / Posts only / New; Feed / Conversations | has | 0.3.0 | `lanes.posts_only`, `reading.remember_choices` | own | Phanpy — similar to “Conversations” |
 | Find in a lane | has | 0.2.0 | — | own, in the local database | only in fedtail |
 | Sending to a slow server without doubles | has | 0.16.0 | `post.send_timeout` | `Idempotency-Key`, `accounts/:id/statuses` | only in fedtail |
 | Find in every lane at once | has | 0.16.0 | a tick in the `Ctrl+F` bar | own, in the local database | only in fedtail |
 | Finding people, tags and posts | has | 0.2.0 | — | `/api/v2/search` | everyone |
 | A lane of several tags | has | 0.14.0 | `[[lanes.tag_groups]]`; from the search — “＋ to lanes” | `timelines/tag/:name` for each tag, put together here | Phanpy, Ice Cubes (“tag groups”), tut (`:tag a b`) |
-| Columns side by side | has | 0.14.0 | `ui.open_columns`, `ui.columns`, `ui.column_width`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
-| A messenger's layout: a roster and a messages window | has | 0.17.0 | `ui.layout = "split"` or for one run `fedtail --layout split`; `ui.roster_on_top`, `ui.roster_threads`, `ui.faces`, `ui.dock_commands`, `ui.split_tabs`, `ui.icons` | own | — |
+| Columns side by side | has | 0.14.0 | `window.open_columns`, `window.columns`, `window.column_width`; the ❯ button at the top left | own | Sengi, Phanpy, tut, Whalebird, Mastodon web (advanced mode) |
+| A messenger's layout: a roster and a messages window | has | 0.17.0 | `window.layout = "split"` or for one run `fedtail --layout split`; `window.roster_on_top`, `window.roster_threads`, `appearance.faces`, `window.dock_commands`, `window.split_tabs`, `appearance.icons` | own | — |
 | Collections of people (Mastodon 4.6) | has | 0.20.0 | ≡ → “My collections”; on a profile — “Add to collection…”, “Collections” | `/api/v1/collections`, `/api/v1/accounts/:id/collections`, `…/in_collections` | Mastodon 4.6, Fedilab |
 | Another server's public timeline | has | 0.20.0 | — | that server's `timelines/public?local=true` without a token, `search?resolve=true` on yours | Ice Cubes |
 | A link's timeline (Mastodon 4.3+) | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
@@ -140,11 +140,11 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Into a list right after a follow.** The server won't take into a list someone you don't follow yet (the request waits with a locked account). fedtail remembers which list you wanted them in and adds them itself as soon as the follow is confirmed.
 
-**Hashtag lane, following tags.** A click on a #tag opens its lane inside (with `ui.links_in_app`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`.
+**Hashtag lane, following tags.** A click on a #tag opens its lane inside (with `card.links_in_app`). Follow a tag — with the button in its lane's header; the server mixes followed tags into Home, and fedtail offers them first when you type `#`.
 
 **My likes.** The posts you liked. The lane is off by default.
 
-**Bookmarks.** “Bookmark” — with the button under a post (`ui.bookmark_button = false` moves it into the ⋯ menu), the `m` key or the command `~ #a3f`. The server keeps bookmarks, so they are shared with other clients.
+**Bookmarks.** “Bookmark” — with the button under a post (`card.bookmark_button = false` moves it into the ⋯ menu), the `m` key or the command `~ #a3f`. The server keeps bookmarks, so they are shared with other clients.
 
 **Trends.** Popular tags, links and posts, as your server counts them. GoToSocial doesn't count trends.
 
@@ -154,7 +154,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Repeated boosts don't bring an old post up again.** A post comes into a lane once — as itself or with its first boost. A boost of a post this lane has had already, or one already read (in a thread, in another lane), is not shown and not counted as unread; the post stays where it first came. `repeat_boosts = true` — every boost again, as everyone does. The server (Mastodon) drops a repeat only if the original was among the last ~40 posts of the feed — that's why old posts kept surfacing again and again.
 
-**All / Posts only / New; Feed / Conversations.** Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `feed.remember_choices = true`.
+**All / Posts only / New; Feed / Conversations.** Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `reading.remember_choices = true`.
 
 **Find in a lane.** `Ctrl+F` finds in the open lane by text, nick, `#id` and picture captions. It searches its own database and doesn't ask the server, so it works offline too. `Enter`, `↓`, `F3` or `Ctrl+F` again — to the next match, `Shift+Enter` — to the previous one.
 
@@ -164,9 +164,9 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A lane of several tags.** Type `#грузия #georgia -#politics` in the search: one lane of all these tags opens — any of them, `+#tag` must be there, `-#tag` — without. The “＋ to lanes” button keeps it on the left, in the “Tags” group; it is fetched while open, like Federated. The same lanes can be described in the config, `[[lanes.tag_groups]]` (name, any, all, none). The server needs a request per tag (GoToSocial reads only one tag at a time), fedtail puts them together itself, without repeats.
 
-**Columns side by side.** Several lanes on screen at once, in columns. By default — one lane at a time; the ❯ button at the top left (next to ≡ and ↔) turns columns on for now, and the window starts as `ui.open_columns` says. A click on a lane on the left adds a column (or scrolls to it), ✕ takes it away, ‹ › move it; the set is remembered. These are the same lanes as in the single view: place, filters and read marks are each their own, and Federated and the other browse lanes keep updating while they stand in a column. On the web page (since 0.20) the same, by ❯ on the lane's bar: the lane in focus has its bar, keys and Ctrl+F, a click on a column beside brings it into focus; whether columns are on the browser remembers, at first as `ui.open_columns` says; at a phone's width, one lane.
+**Columns side by side.** Several lanes on screen at once, in columns. By default — one lane at a time; the ❯ button at the top left (next to ≡ and ↔) turns columns on for now, and the window starts as `window.open_columns` says. A click on a lane on the left adds a column (or scrolls to it), ✕ takes it away, ‹ › move it; the set is remembered. These are the same lanes as in the single view: place, filters and read marks are each their own, and Federated and the other browse lanes keep updating while they stand in a column. On the web page (since 0.20) the same, by ❯ on the lane's bar: the lane in focus has its bar, keys and Ctrl+F, a click on a column beside brings it into focus; whether columns are on the browser remembers, at first as `window.open_columns` says; at a phone's width, one lane.
 
-**A messenger's layout: a roster and a messages window.** fedtail as a messenger of the 2000s — QIP, the Mail.ru Agent, Psi. The **roster** is a narrow window, and fedtail starts with it: me and “N new in Activity” on top, a search line, folding groups — the lanes, followed threads and private talks (“Threads”, “Talks”, the freshest `ui.roster_threads`) and “People” — whom I follow who follows me back (asked once a day). A group says “(15)”, or “(2/15)” when two of its items have something new; an item has its count, a line of its newest post and a face. A double click or Enter opens it, hovering a person shows their card, as in QIP. At the bottom the menu, the accounts and ⚙ — how the roster looks: compact, without the header, the search or the buttons, only what's new, without groups, above other windows (`ui.roster_on_top`). Closing the roster closes fedtail (to the tray with `ui.close_to_tray`); the tray icon hides and brings back both windows. The **messages window** is the main window without the sidebar: every lane, thread, profile and talk opened is a tab of its own, in more rows when they don't fit; ×, the middle button or Esc close one, and with the last the window goes (`ui.split_tabs` — whether to keep the tabs for next time). A person opens as a talk with only our private messages. The **input line** is always under the posts, a bar that drags between them: in a thread it answers the thread (a private talk stays private), in a talk it writes to that person privately, in a lane — a new post; Reply on a card leads here too. Who sees it, a content warning, pictures, the language; it also takes the command line's commands (`ui.dock_commands`: “#a3f text”, “! #a3f”, “?” — Enter). **Faces** (`ui.faces`): over a lane, in one line, the author of the post under the pointer (or the cursor, or the newest whole on screen): name, address, whether we follow each other, Follow, Add to list, a private message, the profile; by the input line — whom I write to. The Agent's themes have a column on the right instead: theirs by the posts, mine by the input line. A grey silhouette while there's no face. **Pictures on buttons** — the messengers', from the theme's set (`ui.icons`): on the input line, the author's bar, the roster (only in the split layout, or anywhere with `"additional"`), and on Reply, Favourite, Boost, Thread, Bookmark, who sees a post, the menu and the lanes in any layout; a flower for a person in the QIP themes, an “@” in the Agent's, a star in Psi's; the `psi` theme brings Psi+'s own pictures (the Crystal and Stellar iconsets, GPL). The theme decides how it all looks: the faces — `shape.faces`, the roster's items — `roster_rows`, the tabs — `tab_rows`, the pictures — `shape.icons` and the theme's `icons/` folder (docs/en/dev/layouts.md).
+**A messenger's layout: a roster and a messages window.** fedtail as a messenger of the 2000s — QIP, the Mail.ru Agent, Psi. The **roster** is a narrow window, and fedtail starts with it: me and “N new in Activity” on top, a search line, folding groups — the lanes, followed threads and private talks (“Threads”, “Talks”, the freshest `window.roster_threads`) and “People” — whom I follow who follows me back (asked once a day). A group says “(15)”, or “(2/15)” when two of its items have something new; an item has its count, a line of its newest post and a face. A double click or Enter opens it, hovering a person shows their card, as in QIP. At the bottom the menu, the accounts and ⚙ — how the roster looks: compact, without the header, the search or the buttons, only what's new, without groups, above other windows (`window.roster_on_top`). Closing the roster closes fedtail (to the tray with `window.close_to_tray`); the tray icon hides and brings back both windows. The **messages window** is the main window without the sidebar: every lane, thread, profile and talk opened is a tab of its own, in more rows when they don't fit; ×, the middle button or Esc close one, and with the last the window goes (`window.split_tabs` — whether to keep the tabs for next time). A person opens as a talk with only our private messages. The **input line** is always under the posts, a bar that drags between them: in a thread it answers the thread (a private talk stays private), in a talk it writes to that person privately, in a lane — a new post; Reply on a card leads here too. Who sees it, a content warning, pictures, the language; it also takes the command line's commands (`window.dock_commands`: “#a3f text”, “! #a3f”, “?” — Enter). **Faces** (`appearance.faces`): over a lane, in one line, the author of the post under the pointer (or the cursor, or the newest whole on screen): name, address, whether we follow each other, Follow, Add to list, a private message, the profile; by the input line — whom I write to. The Agent's themes have a column on the right instead: theirs by the posts, mine by the input line. A grey silhouette while there's no face. **Pictures on buttons** — the messengers', from the theme's set (`appearance.icons`): on the input line, the author's bar, the roster (only in the split layout, or anywhere with `"additional"`), and on Reply, Favourite, Boost, Thread, Bookmark, who sees a post, the menu and the lanes in any layout; a flower for a person in the QIP themes, an “@” in the Agent's, a star in Psi's; the `psi` theme brings Psi+'s own pictures (the Crystal and Stellar iconsets, GPL). The theme decides how it all looks: the faces — `shape.faces`, the roster's items — `roster_rows`, the tabs — `tab_rows`, the pictures — `shape.icons` and the theme's `icons/` folder (docs/en/dev/layouts.md).
 
 **Collections of people (Mastodon 4.6).** Shared sets of accounts (Mastodon 4.6): yours — made, named, described, shown on the profile or not, deleted; someone into one from their profile (if they allow being in collections) and out again; other people's from their profile; the ones you're in — leave them. A server without collections (GoToSocial) — no item.
 
@@ -205,13 +205,13 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | A thread as a tree, comments numbered | has | 0.1.0 | — | `statuses/:id/context` | Phanpy — indented; numbers only in fedtail |
-| Over a reply — what it answers | has | 0.1.0 | `feed.show_reply_context` | `in_reply_to_id` | Sengi and Megalodon — similar |
-| A whole thread: replies from the author's server | has | 0.3.0 | `feed.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
-| A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `feed.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
+| Over a reply — what it answers | has | 0.1.0 | `card.show_reply_context` | `in_reply_to_id` | Sengi and Megalodon — similar |
+| A whole thread: replies from the author's server | has | 0.3.0 | `threads.complete_threads` | the `replies` collection over ActivityPub, `search?resolve=true` | only in fedtail (Mastodon 4.5+ does it on the server) |
+| A thread grows when Mastodon has gathered the replies | has | 0.8.0 | `threads.complete_threads` | the `Mastodon-Async-Refresh` header | Mastodon web |
 | Thread subscriptions, as on Point | has | 0.2.0 | `[subs]`: `auto`, `interval_minutes`, `active_days`, `max_threads`, `replies_to_me`, `leave_mutes` | own | only in fedtail |
 | Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
-| Long texts and events | has | 0.14.0 | `feed.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
-| A thread with new replies shows on its card | has | 0.21.0 | `feed.thread_news` | own (followed threads) | — |
+| Long texts and events | has | 0.14.0 | `card.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
+| A thread with new replies shows on its card | has | 0.21.0 | `card.thread_news` | own (followed threads) | — |
 
 <details><summary>In detail</summary>
 
@@ -223,7 +223,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A thread grows when Mastodon has gathered the replies.** Mastodon 4.5+ gathers missing replies itself and says when it's done; fedtail waits for that signal and rereads the thread.
 
-**Thread subscriptions, as on Point.** The server tells you only of replies that mention you: if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to every `subs.interval_minutes` minutes (a thread quiet for an hour — three times less often, for a day — 12 times, for three days — 36) and puts what's new into the “Subscriptions” lane. Threads take at most a quarter of what the server still allows in its rate-limit window: the lanes come first. Subscribe — in a post's ⋯ menu, with the button in the thread's header or the command `S #a3f` (`U #a3f` — unsubscribe). `subs.auto` — what to subscribe to by itself: `"posts"` — your own posts, `"comments"` — threads you comment in. A thread quiet for `subs.active_days` days is not checked any more; one round checks at most `subs.max_threads` threads. Replies to you come to “Replies to me” anyway; `subs.replies_to_me = true` — show them in “Subscriptions” too. Unsubscribing mutes the thread's mentions as well (replies there tag everyone in it by themselves); `subs.leave_mutes = false` — leave “Subscriptions” only.
+**Thread subscriptions, as on Point.** The server tells you only of replies that mention you: if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to every `threads.interval_minutes` minutes (a thread quiet for an hour — three times less often, for a day — 12 times, for three days — 36) and puts what's new into the “Subscriptions” lane. Threads take at most a quarter of what the server still allows in its rate-limit window: the lanes come first. Subscribe — in a post's ⋯ menu, with the button in the thread's header or the command `S #a3f` (`U #a3f` — unsubscribe). `threads.auto` — what to subscribe to by itself: `"posts"` — your own posts, `"comments"` — threads you comment in. A thread quiet for `threads.active_days` days is not checked any more; one round checks at most `threads.max_threads` threads. Replies to you come to “Replies to me” anyway; `subs.replies_to_me = true` — show them in “Subscriptions” too. Unsubscribing mutes the thread's mentions as well (replies there tag everyone in it by themselves); `threads.leave_mutes = false` — leave “Subscriptions” only.
 
 **Mute a thread.** Notifications from the thread stop coming and its subscription goes. A server that can do it remembers it for all clients; where it can't (GoToSocial), fedtail mutes the thread itself: its mentions are dropped as they come — even replies to posts of the thread it never saw. The item in a post's ⋯ menu is always there.
 
@@ -239,24 +239,24 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| Oldest on top, nothing jumps | has | 0.1.0 | `feed.order`, `feed.start_at`, `feed.on_new` | own | only in fedtail |
-| Catching up with no holes | has | 0.1.0 | `feed.page_size`, `feed.catch_up_limit` | `min_id` | only in fedtail |
-| When a post counts as read | has | 0.1.0 | `read.mark_read`, `read.read_button` | own | only in fedtail (the manual mode) |
+| Oldest on top, nothing jumps | has | 0.1.0 | `reading.order`, `reading.start_at`, `reading.on_new` | own | only in fedtail |
+| Catching up with no holes | has | 0.1.0 | `reading.page_size`, `reading.catch_up_limit` | `min_id` | only in fedtail |
+| When a post counts as read | has | 0.1.0 | `reading.mark_read`, `reading.read_button` | own | only in fedtail (the manual mode) |
 | Your own posts are always read | has | 0.13.0 | — | own | — |
-| The first run doesn't start with a pile | has | 0.1.0 | `feed.first_run_mark_read` | own | — |
-| The reading place is shared with other clients | has | 0.8.0 | `read.sync_markers` | `/api/v1/markers` | Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes |
+| The first run doesn't start with a pile | has | 0.1.0 | `reading.first_run_mark_read` | own | — |
+| The reading place is shared with other clients | has | 0.8.0 | `sync.sync_markers` | `/api/v1/markers` | Mastodon web, Tusky, Ivory, Phanpy, Ice Cubes |
 | Read marks, thread subscriptions and lane order shared by all your devices | has | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.read`, `sync.threads`, `sync.lanes`, `sync.drafts`, `sync.activity`, `sync.tiles`, `sync.lane_rules`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | own: a fedtail-sync server (one file, `syncserver/fedtail_sync.py`) or a shared folder; it is entered with a `read:accounts`-only token | only in fedtail (markers are just the place in Home and notifications) |
-| Cards are built around the reading place | has | 0.11.0 | `feed.build_at_once`, `feed.render_limit` | own | only in fedtail |
-| Esc draws a curtain instead of closing the window | has | 0.3.0 | `ui.esc`, `ui.start_lane` | own | only in fedtail |
+| Cards are built around the reading place | has | 0.11.0 | `reading.build_at_once`, `reading.render_limit` | own | only in fedtail |
+| Esc draws a curtain instead of closing the window | has | 0.3.0 | `window.esc`, `window.start_lane` | own | only in fedtail |
 | Sync: the key by a QR code, drafts' pictures, WebDAV | planned | — | `[sync]` | — | — |
 
 <details><summary>In detail</summary>
 
-**Oldest on top, nothing jumps.** `feed.order = "oldest_first"` — oldest on top, you read downwards, like RSS or Point (`"newest_first"` — as everyone does). `feed.start_at = "first_unread"` — open a lane and you stand at the first unread (`"newest"` — at the freshest). `feed.on_new = "keep_position"` — new posts come and the place doesn't move, only the counter grows (`"jump_to_newest"` — jump to the new).
+**Oldest on top, nothing jumps.** `reading.order = "oldest_first"` — oldest on top, you read downwards, like RSS or Point (`"newest_first"` — as everyone does). `reading.start_at = "first_unread"` — open a lane and you stand at the first unread (`"newest"` — at the freshest). `reading.on_new = "keep_position"` — new posts come and the place doesn't move, only the counter grows (`"jump_to_newest"` — jump to the new).
 
 **Catching up with no holes.** Lanes meant to be read to the end catch up forward from the last known post, page by page (`page_size` posts a request, up to `catch_up_limit` a poll — the rest on the next one). So the local copy has no holes and you can read strictly in order. The “load what's missing” button other clients keep fixing (Fedilab in 2026 — half a dozen fixes about holes and jumps, some on GoToSocial) isn't needed here.
 
-**When a post counts as read.** `"on_scroll"` — when you've scrolled past the whole post; `"on_open"` — the whole lane as soon as you open it; `"manual"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `read.read_button = true` — a ✓ button under each unread post. The menu items work in any mode.
+**When a post counts as read.** `"on_scroll"` — when you've scrolled past the whole post; `"on_open"` — the whole lane as soon as you open it; `"manual"` — by hand only: “All read” over the lane, “Mark read” and “Read up to here” (this one and everything older) in the ⋯ menu. In the manual mode a lane always waits exactly where you stopped, even reading one post at a time. `reading.read_button = true` — a ✓ button under each unread post. The menu items work in any mode.
 
 **Your own posts are always read.** A post you wrote is read, wherever it came from: from Tusky at night, through a thread, fetched after a restart.
 
@@ -268,7 +268,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Cards are built around the reading place.** When a lane opens, `build_at_once` cards are built around where you read; the rest — as you scroll near an edge, and far behind they are let go (more than three `build_at_once` — back to one behind and two ahead). What you read doesn't move; a filter and “unread only” also build only around the reading place. At most `render_limit` latest posts are kept on screen, older ones with the “older” button. `0` in `build_at_once` — build everything at once (on hundreds of posts that takes seconds).
 
-**Esc draws a curtain instead of closing the window.** Esc closes what's on top (a picture, the search), and the last Esc with `ui.esc = "curtain"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `"tray"` — off to the tray, `"off"` — nothing. What to start with — `ui.start_lane`: `"none"` (the curtain, Enter opens the last one), `"last"` or a lane's name.
+**Esc draws a curtain instead of closing the window.** Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = "curtain"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `"tray"` — off to the tray, `"off"` — nothing. What to start with — `window.start_lane`: `"none"` (the curtain, Enter opens the last one), `"last"` or a lane's name.
 
 **Sync: the key by a QR code, drafts' pictures, WebDAV.** The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot. And checked live on Linux, Windows and Android. In 0.21.
 
@@ -280,30 +280,30 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| Arts mode | has | 0.11.0 | `ui.arts_mode` (on by default, recommended) | — | nobody has it as one switch |
-| Content warnings (CW) | has | 0.1.0 | `ui.expand_cw` | `spoiler_text` | everyone can set it |
+| Arts mode | has | 0.11.0 | `card.arts_mode` (on by default, recommended) | — | nobody has it as one switch |
+| Content warnings (CW) | has | 0.1.0 | `card.expand_cw` | `spoiler_text` | everyone can set it |
 | Open every CW in a thread at once | has | 0.18.0 | — | own | Sengi, Megalodon (the same CW across a thread) |
-| Sensitive pictures | has | 0.8.0 | `feed.sensitive_media` | `status.sensitive` | everyone |
-| Link cards | has | 0.8.0 | `feed.link_cards` | `status.card` | everyone |
-| Servers' emoji as pictures | has | 0.8.0 | `feed.custom_emoji` | `emojis` of the post and the account | everyone |
-| No emoji at all | has | 0.15.0 | `feed.emoji = false` — no server pictures, no Unicode ones, no reactions; a name made only of emoji shows the login | — | Tusky (animation only), Fedilab (only servers' own emoji) |
-| Quotes: showing them | has | 0.8.0 | `feed.quotes` | `status.quote` | Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
+| Sensitive pictures | has | 0.8.0 | `card.sensitive_media` | `status.sensitive` | everyone |
+| Link cards | has | 0.8.0 | `card.link_cards` | `status.card` | everyone |
+| Servers' emoji as pictures | has | 0.8.0 | `appearance.custom_emoji` | `emojis` of the post and the account | everyone |
+| No emoji at all | has | 0.15.0 | `appearance.emoji = false` — no server pictures, no Unicode ones, no reactions; a name made only of emoji shows the login | — | Tusky (animation only), Fedilab (only servers' own emoji) |
+| Quotes: showing them | has | 0.8.0 | `card.quotes` | `status.quote` | Mastodon 4.5+, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Polls: seeing and voting | has | 0.3.0 | — | `polls/:id`, `polls/:id/votes` | everyone |
 | Poll results without voting | has | 0.3.0 | — (the “Results” button of a poll) | — | Fedilab |
 | Edit history | has | 0.3.0 | — | `statuses/:id/history` | Mastodon web, Ivory, Phanpy, Elk, tut |
-| Translation by the server | has | 0.8.0 | `feed.translate`, `feed.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
+| Translation by the server | has | 0.8.0 | `card.translate`, `card.translate_all` | `statuses/:id/translate` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Emoji reactions | has | 0.11.0 | — | `pleroma.emoji_reactions` | Phanpy, Elk, Fedilab |
 | Who liked and boosted | has | 0.11.0 | — | `favourited_by`, `reblogged_by` (and from the author's server) | Mastodon web, Tusky, Ivory, Phanpy, Elk, tut |
-| Honest counters | has | 0.2.0 | `feed.honest_counters` (off), `feed.counters_via_accounts` | the author's server's API without a token | only in fedtail |
+| Honest counters | has | 0.2.0 | `card.honest_counters` (off), `card.counters_via_accounts` | the author's server's API without a token | only in fedtail |
 | Who quoted my post | has | 0.11.0 | — | `statuses/:id/quotes`, `…/quotes/:id/revoke` | Mastodon 4.5+ |
-| Folding hashtag padding | has | 0.14.0 | `feed.collapse_tags` | own | Phanpy |
-| `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `feed.text_markup` | own | — |
-| Labels on the card | has | 0.14.0 | `feed.old_days`; “bot” — always | own | Sengi |
+| Folding hashtag padding | has | 0.14.0 | `card.collapse_tags` | own | Phanpy |
+| `~~text~~` struck out when the server knows no Markdown | has | 0.14.0 | `appearance.text_markup` | own | — |
+| Labels on the card | has | 0.14.0 | `card.old_days`; “bot” — always | own | Sengi |
 | Sending emoji reactions | has | 0.20.0 | ⋯ → “React…” | `PUT/DELETE /api/v1/pleroma/statuses/:id/reactions/:emoji`, `POST /api/v1/statuses/:id/react\|unreact/:emoji` | Phanpy, Elk, Fedilab |
 
 <details><summary>In detail</summary>
 
-**Arts mode.** Everything as the author posted it, no nannying. Turns on at once: content warnings (CW) open, “sensitive” pictures without a cover, server filters neither hide nor fold posts, no “Report” item. Your own mutes and blocks work as usual; what the server itself cuts off (domain blocks) never reaches a client — that can't be got round. `false` — everything as everyone has it, and then each of these is set on its own (`ui.expand_cw`, `feed.sensitive_media`).
+**Arts mode.** Everything as the author posted it, no nannying. Turns on at once: content warnings (CW) open, “sensitive” pictures without a cover, server filters neither hide nor fold posts, no “Report” item. Your own mutes and blocks work as usual; what the server itself cuts off (domain blocks) never reaches a client — that can't be got round. `false` — everything as everyone has it, and then each of these is set on its own (`card.expand_cw`, `card.sensitive_media`).
 Named after @arts — the founder of Point.im and the author of its rules. The principle comes from there too: on a grown-up site grown-ups sort things out themselves. Anyone can be told where to go, an admin too — and the admin can say the same back.
 
 **Content warnings (CW).** `true` — text and pictures under a CW open at once; `false` — folded, opened with the “show” button.
@@ -324,7 +324,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Edit history.** An edited post is marked so and has all its earlier versions.
 
-**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `feed.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given.
+**Translation by the server.** “Translate” in the ⋯ menu of a post in another language — if your server can (Mastodon with DeepL or LibreTranslate). The translation is right in the card, with an “original” button. With `card.translate_all = true` (since 0.19) — on every post, as in Fedilab: in your own language too, and with none given.
 
 **Emoji reactions.** Reactions from Akkoma, Pleroma, Misskey and their forks show under the post. Giving your own — see “Sending emoji reactions”.
 
@@ -338,7 +338,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Boost carousel.** Boosts in a row — as one strip scrolled sideways (as in Phanpy). Won't do: sideways is awkward to read, and it fits badly with “nothing jumps” and read marks. The same job is done by the “Boosts” tick in the filter, “without their boosts” on a profile and relays in a list of their own.
 
-**Labels on the card.** Next to the date: “old, N days” — a post older than `feed.old_days` (30) days; such posts come from someone's outbox or an old thread; “[bot]” — on bots. There is no “from another server” label yet.
+**Labels on the card.** Next to the date: “old, N days” — a post older than `card.old_days` (30) days; such posts come from someone's outbox or an old thread; “[bot]” — on bots. There is no “from another server” label yet.
 
 **Sending emoji reactions.** ⋯ → “React…”: the usual emoji and the ones already on it as buttons (tapped again, yours comes off), any other or the server's own emoji typed (`:blobcat:`). The item is there where the server has reactions (Akkoma, Pleroma — their API; Misskey, Sharkey, Iceshrimp, Fedibird — Fedibird's), and on a post that has reactions already; GoToSocial and Mastodon don't support them.
 
@@ -350,14 +350,14 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| Picture viewer | has | 0.1.0 | `ui.image_viewer`, `ui.image_upscale`, `ui.image_height` | — | everyone |
-| Picture grid | has | 0.9.0 | `ui.media_grid` | `meta.focus` | Mastodon web, Tusky, Phanpy, Elk |
-| Picture descriptions (alt) | has | 0.9.0 | `ui.alt_text` | `description` | everyone |
-| Video, audio, gifs inside the window | has | 0.11.0 | `ui.video_player`, `ui.gifv` | `media_attachments` | everyone |
-| Video without a hardware decoder (the default) | has | 0.16.0 | `ui.video_decode` | — | only in fedtail |
-| Save a picture, video, gif | has | 0.2.0 | `ui.save_dir` | — | Tusky, Ivory |
-| Pictures and video ahead of time, a disk cache | has | 0.13.0 | `feed.prefetch`, `ui.image_disk_mb`, `ui.video_disk_mb` | own | only in fedtail |
-| Memory for pictures | has | 0.2.0 | `ui.image_cache_mb`, `ui.image_decode` | own | — |
+| Picture viewer | has | 0.1.0 | `media.image_viewer`, `media.image_upscale`, `media.image_height` | — | everyone |
+| Picture grid | has | 0.9.0 | `media.media_grid` | `meta.focus` | Mastodon web, Tusky, Phanpy, Elk |
+| Picture descriptions (alt) | has | 0.9.0 | `media.alt_text` | `description` | everyone |
+| Video, audio, gifs inside the window | has | 0.11.0 | `media.video_player`, `media.gifv` | `media_attachments` | everyone |
+| Video without a hardware decoder (the default) | has | 0.16.0 | `media.video_decode` | — | only in fedtail |
+| Save a picture, video, gif | has | 0.2.0 | `media.save_dir` | — | Tusky, Ivory |
+| Pictures and video ahead of time, a disk cache | has | 0.13.0 | `media.prefetch`, `media.image_disk_mb`, `media.video_disk_mb` | own | only in fedtail |
+| Memory for pictures | has | 0.2.0 | `media.image_cache_mb`, `media.image_decode` | own | — |
 
 <details><summary>In detail</summary>
 
@@ -384,23 +384,23 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | Your own and other people's profiles | has | 0.2.0 | — | `accounts/:id`, `accounts/:id/statuses` | everyone |
-| In a profile: posts, posts and replies, media | has | 0.20.0 | `feed.profile_show` | `accounts/:id/statuses` `exclude_replies`, `only_media` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
+| In a profile: posts, posts and replies, media | has | 0.20.0 | `people.profile_show` | `accounts/:id/statuses` `exclude_replies`, `only_media` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Ice Cubes, Fedilab |
 | Who else shared a link | has | 0.20.0 | — | `/api/v1/timelines/link` | Mastodon web |
-| Pinned posts | has | 0.8.0 | `feed.profile_pinned` | `statuses?pinned=true` | everyone |
-| Featured tags and recommended people | has | 0.9.0 | `feed.profile_featured` | `featured_tags`, `endorsements` | Mastodon web |
-| A little-known person's profile — from their server | has | 0.8.0 | `feed.remote_profiles`, `feed.remote_posts` | ActivityPub outbox | Megalodon — partly (the lists) |
-| Posts older than my server knows | has | 0.11.0 | `feed.remote_profiles` | ActivityPub outbox | only in fedtail |
-| Followers and follows from the person's server | has | 0.8.0 | `feed.remote_people` | ActivityPub `followers`, `following` | Megalodon |
-| “Following since …” | has | 0.11.0 | `feed.follow_date_note` | `accounts/:id/note` | only in fedtail |
-| The person has moved | has | 0.14.0 | `feed.show_moved` | `account.moved`, ActivityPub `Move` | Mastodon web |
-| The author's server software | has | 0.14.0 | `feed.server_info` | nodeinfo, in the profile “🖥 GoToSocial 0.17” | — |
+| Pinned posts | has | 0.8.0 | `people.profile_pinned` | `statuses?pinned=true` | everyone |
+| Featured tags and recommended people | has | 0.9.0 | `people.profile_featured` | `featured_tags`, `endorsements` | Mastodon web |
+| A little-known person's profile — from their server | has | 0.8.0 | `people.remote_profiles`, `people.remote_posts` | ActivityPub outbox | Megalodon — partly (the lists) |
+| Posts older than my server knows | has | 0.11.0 | `people.remote_profiles` | ActivityPub outbox | only in fedtail |
+| Followers and follows from the person's server | has | 0.8.0 | `people.remote_people` | ActivityPub `followers`, `following` | Megalodon |
+| “Following since …” | has | 0.11.0 | `people.follow_date_note` | `accounts/:id/note` | only in fedtail |
+| The person has moved | has | 0.14.0 | `card.show_moved` | `account.moved`, ActivityPub `Move` | Mastodon web |
+| The author's server software | has | 0.14.0 | `people.server_info` | nodeinfo, in the profile “🖥 GoToSocial 0.17” | — |
 | What my server can do | has | 0.17.0 | ≡ → account → “Server info” → “What it can do” → “Check” | one harmless GET with `limit=1` per feature | — |
 
 <details><summary>In detail</summary>
 
 **Your own and other people's profiles.** The header, bio, fields, counts, posts; “followed by people you follow” (`familiar_followers`); follows and followers.
 
-**In a profile: posts, posts and replies, media.** Above a person's posts, a switch: “Posts” (without their replies to others; replies in their own threads stay), “Posts and replies”, “Media” (only with pictures and video). Which one first — `feed.profile_show`, “Posts” by default, as in other clients. The server does the picking.
+**In a profile: posts, posts and replies, media.** Above a person's posts, a switch: “Posts” (without their replies to others; replies in their own threads stay), “Posts and replies”, “Media” (only with pictures and video). Which one first — `people.profile_show`, “Posts” by default, as in other clients. The server does the picking.
 
 **Who else shared a link.** In the ⋯ menu of a post with a link — “Who else shared this link”: posts with it, page by page. The server (Mastodon 4.3+) keeps only links that were trending; where it can't, there's no such item.
 
@@ -431,9 +431,9 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | A video's cover; picture descriptions in a post's edit | has | 0.20.0 | — | `/api/v2/media` `thumbnail`; `PUT /api/v1/statuses/:id` `media_attributes` | Mastodon web, Ivory, Elk |
-| The compose panel and drafts | has | 0.1.0 | `ui.compose`, `ui.compose_size`, `post.drafts_autosave` | `statuses` | everyone |
+| The compose panel and drafts | has | 0.1.0 | `window.compose`, `window.compose_size`, `post.drafts_autosave` | `statuses` | everyone |
 | Visibility: private by default, a reply never wider than the post | has | 0.1.0 | `post.default_visibility`, `post.reply_never_wider` | `visibility`, `/api/v1/preferences` | only in fedtail (never wider) |
-| Markdown | has | 0.1.0 | `account.markdown`, `post.plain_posts` | `content_type` | GoToSocial and Akkoma clients |
+| Markdown | has | 0.1.0 | `post.markdown`, `post.plain_posts` | `content_type` | GoToSocial and Akkoma clients |
 | Preview before sending | has | 0.14.0 | `post.preview` | own | Fedilab |
 | Content warning (CW) | has | 0.2.0 | `post.cw_field` | `spoiler_text` | everyone |
 | Pictures: drag, paste, description, focus | has | 0.2.0 | `post.alt_reminder`, `post.focus_point` | `/api/v2/media`, `focus` | everyone (focus — Mastodon web, Ivory) |
@@ -451,7 +451,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Edit, delete, pin your own post | has | 0.3.0 | — | `PUT statuses/:id`, `statuses/:id/source`, `statuses/:id/pin` | everyone |
 | Delete and redraft | has | 0.14.0 | `post.redraft` | `statuses/:id/source` + `DELETE statuses/:id` | Mastodon web, Megalodon |
 | A thread as a chain | has | 0.14.0 | `post.chain` | `in_reply_to_id` | Ice Cubes (up to five posts) |
-| A command line as on Point | has | 0.3.0 | `ui.command_line`, `post.plain_posts` | own | only in fedtail (tut — vim-style commands) |
+| A command line as on Point | has | 0.3.0 | `window.command_line`, `post.plain_posts` | own | only in fedtail (tut — vim-style commands) |
 | Short post names the same on every device | has | 0.18.0 | — | own | only in fedtail (Point had the server's post numbers) |
 | Spell checking in the compose panel | has | 0.20.0 | `post.spellcheck`, `post.spell_languages` | own: the system's dictionaries through Enchant | Tuba, Tusky, Mastodon web (the browser) |
 
@@ -459,7 +459,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **A video's cover; picture descriptions in a post's edit.** A video or a sound among the attachments gets “Cover…”: a picture shown until it's played. Editing your post, its pictures can be described anew and their focus set (in the terminal — the description only).
 
-**The compose panel and drafts.** `ui.compose = "inline"` — a panel inside the main window (the keyboard layout isn't reset: KDE keeps it per window); `"window"` — a window of its own. The panel's size — in percent of the window (`compose_size`), the ⤡ button switches normal and big. Drafts are saved as you type and survive closing.
+**The compose panel and drafts.** `window.compose = "inline"` — a panel inside the main window (the keyboard layout isn't reset: KDE keeps it per window); `"window"` — a window of its own. The panel's size — in percent of the window (`compose_size`), the ⤡ button switches normal and big. Drafts are saved as you type and survive closing.
 
 **Visibility: private by default, a reply never wider than the post.** A new post goes to followers by default (`"private"`); `"server"` — as set on the server. A reply is never more public than the original post.
 
@@ -510,7 +510,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
 | Follows and follow requests | has | 0.1.0 | `"requests"` in `lanes.enabled` | `follow`, `follow_requests` | everyone |
-| Hide a person's boosts; the languages of a follow | has | 0.14.0 | `feed.per_person_follow` | `follow` with `reblogs=false`, `languages[]` | Mastodon web, Tusky, tut |
+| Hide a person's boosts; the languages of a follow | has | 0.14.0 | `people.per_person_follow` | `follow` with `reblogs=false`, `languages[]` | Mastodon web, Tusky, tut |
 | Mute, block, word filters | has | 0.3.0 | — | `mutes`, `blocks`, `/api/v2/filters` | everyone |
 | Mute for a while; posts only | has | 0.20.0 | — | `accounts/:id/mute` `duration`, `notifications` | Mastodon web, Ivory, Fedilab |
 | Hide a single post | has | 0.20.0 | — | `/api/v2/filters/:id/statuses` | Mastodon web |
@@ -528,7 +528,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Profile: hide follows, posts found by search, article authorship, tag suggestions | has | 0.20.0 | — | `update_credentials` `hide_collections`, `indexable`, `attribution_domains`; `featured_tags/suggestions` | Mastodon web |
 | About the server: terms, whom it cut off, its translator | has | 0.20.0 | — | `instance/terms_of_service`, `instance/domain_blocks`, `instance/translation_languages` | Mastodon web |
 | Post visibility as set on the server | has | 0.11.0 | `post.default_visibility = "server"` | `/api/v1/preferences` | Mastodon web, Ivory |
-| Unfollowed — gone from Home | has | 0.21.0 | `feed.forget_unfollowed` | `GET /api/v1/accounts/relationships` | — |
+| Unfollowed — gone from Home | has | 0.21.0 | `people.forget_unfollowed` | `GET /api/v1/accounts/relationships` | — |
 
 <details><summary>In detail</summary>
 
@@ -536,7 +536,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Hide a person's boosts; the languages of a follow.** On the profile of someone you follow: “♻ without their boosts” and “🌐 languages” — only their posts in these languages. The server keeps it, so it works in every client.
 
-**Mute, block, word filters.** Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `ui.arts_mode`, a line on top says the server's filters don't apply there.
+**Mute, block, word filters.** Word filters are the server's, v2: where they apply, for how long, hide or fold. All this — in the ≡ menu → “For the tender and sensitive”: word filters, muted, blocked, blocked servers and filtered notifications; with `card.arts_mode`, a line on top says the server's filters don't apply there.
 
 **Mute for a while; posts only.** “Mute” asks for how long: for good, an hour, a day, a week, a month — then the server lifts it by itself. The “Posts only” tick keeps their notifications coming. Word filters get a term too.
 
@@ -575,8 +575,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Notifications from strangers apart | has | 0.9.0 | `notify.filtered` | `/api/v2/notifications/policy`, `notifications/requests` | Mastodon 4.3+ | — |
 | Severed relationships and moderators' warnings | has | 0.14.0 | `activity.server_notices` | notifications `severed_relationships`, `moderation_warning` | Mastodon web | — |
 | Dismiss a notification, clear them all | has | 0.11.0 | — | `notifications/:id/dismiss`, `notifications/clear` | everyone | — |
-| Server announcements | has | 0.9.0 | `ui.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
-| The unread number on the icon | has | 0.3.0 | `ui.icon_count`, `ui.icon_count_except`, `ui.app_icon`, `ui.themed_icon` | own | Tokodon | — |
+| Server announcements | has | 0.9.0 | `notify.announcements` | `/api/v1/announcements` | Mastodon web, Phanpy, Elk, Megalodon | — |
+| The unread number on the icon | has | 0.3.0 | `window.icon_count`, `window.icon_count_except`, `appearance.app_icon`, `appearance.themed_icon` | own | Tokodon | — |
 | Direct messages read here are read on the server too | has | 0.11.0 | `"direct"` in `lanes.enabled` | `/api/v1/conversations/:id/read` | only in fedtail | — |
 | Activity's quick filters | has | 0.21.0 | — (the choice holds till the program closes) | own | — | — |
 | Who stopped following you | has | 0.21.0 | `activity.unfollows`, `activity.unfollows_minutes`, `activity.unfollows_max`, `activity.unfollows_mass`, `activity.unlikes`, `activity.unlikes_days`, `activity.unlikes_posts` | `accounts/:id/followers`, `accounts/relationships` | only in fedtail (no server says it) | — |
@@ -584,7 +584,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Someone new in a private talk — shown at once | has | 0.21.0 | — | own | only in fedtail | — |
 | Push notifications (Web Push, UnifiedPush) | has — Web Push in the web version, UnifiedPush on Android | 0.20.0 | `phone.push` | `/api/v1/push/subscription` | Mastodon web, Elk, Phanpy, Tusky, Ivory | — |
 | The server's grouped notifications (v2) | has | 0.18.0 | `activity.server_groups` | `/api/v2/notifications`, `/api/v2/notifications/:group_key/dismiss` | Mastodon web, Ivory, Phanpy | Mastodon 4.3+; where the server can't (GoToSocial) — fedtail's own grouping, see “Grouping notifications”. |
-| Slow mode and “notify at most every…” | has | 0.20.0 | `poll.slow_minutes`; ≡ → “Slow mode…” — with “notify at most every…” for each lane | own | only in fedtail (others have only the poll interval) | — |
+| Slow mode and “notify at most every…” | has | 0.20.0 | `server.slow_minutes`; ≡ → “Slow mode…” — with “notify at most every…” for each lane | own | only in fedtail (others have only the poll interval) | — |
 | “Of them new”: what the last update brought | has | 0.20.0 | on the phone's tiles, in the sidebar of the windows, the web page and the terminal | own | only in fedtail | — |
 | Follow requests in Activity | has | 0.21.0 | `activity.requests` | `follow_requests`, `follow_requests/<id>/authorize\|reject` | Mastodon web, Ivory, Phanpy — among notifications | — |
 
@@ -630,12 +630,12 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| Profiles and the switcher | has | 0.3.0 | `ui.switch_closes`, the launch key `--profile` | — | every multi-account client |
+| Profiles and the switcher | has | 0.3.0 | `accounts.switch_closes`, the launch key `--profile` | — | every multi-account client |
 | The main profile ★ | has | 0.14.0 | ≡ → “Account and server” → “Make it the main one”; the mark `~/.config/fedtail/main-profile` | own | — |
 | Log in again, log out | has | 0.14.0 | ≡ → “Account and server”, with a question | OAuth | everyone |
-| All accounts in one window | has | 0.3.0 | `ui.merge` | own | Ivory, Phanpy, Elk, Tokodon, Sengi, Whalebird |
-| An account's colour in the shared window | has | 0.14.0 | `ui.account_colors` | own | Fedilab |
-| Acting as another account | has | 0.14.0 | `ui.act_as` | the shared window, ⋯ → “From another account”: the post is looked up on its server | Sengi, Tokodon |
+| All accounts in one window | has | 0.3.0 | `accounts.merge` | own | Ivory, Phanpy, Elk, Tokodon, Sengi, Whalebird |
+| An account's colour in the shared window | has | 0.14.0 | `accounts.account_colors` | own | Fedilab |
+| Acting as another account | has | 0.14.0 | `accounts.act_as` | the shared window, ⋯ → “From another account”: the post is looked up on its server | Sengi, Tokodon |
 
 <details><summary>In detail</summary>
 
@@ -659,15 +659,15 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 | What | Status | Since | Config | API / protocol | Others |
 |---|---|---|---|---|---|
-| Themes as files | has | 0.1.0 | `ui.theme`, `ui.font_size`, `ui.fonts`, `ui.font`, `ui.mono_font`, `ui.max_width`, `ui.sidebar_width`, `ui.actions` | a TOML format of its own | others — light and dark, Ice Cubes and Megalodon — colours of your own |
-| Trying a theme without a restart | has | 0.15.0 | ≡ → “Try a theme”; for good — `ui.theme` | — | Phanpy, Elk, Ice Cubes (they have few) |
+| Themes as files | has | 0.1.0 | `appearance.theme`, `appearance.font_size`, `appearance.fonts`, `appearance.font`, `appearance.mono_font`, `appearance.max_width`, `window.sidebar_width`, `card.actions` | a TOML format of its own | others — light and dark, Ice Cubes and Megalodon — colours of your own |
+| Trying a theme without a restart | has | 0.15.0 | ≡ → “Try a theme”; for good — `appearance.theme` | — | Phanpy, Elk, Ice Cubes (they have few) |
 | The config as a file in chapters | has | 0.6.1 | the launch keys `--update-config`, `--rebuild-config` | — | tut — TOML too, but not built by chapters |
 | The settings reference | has | 0.13.0 | — | `tools/docs_build.py` | tut (a man page and a site), MediaWiki (an article per setting) |
-| Window, tray, keys | has | 0.8.0 | `ui.tray`, `ui.close_to_tray`, `ui.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |
-| Links to posts and profiles — inside | has | 0.2.0 | `ui.links_in_app` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
+| Window, tray, keys | has | 0.8.0 | `window.tray`, `window.close_to_tray`, `window.post_keys` | — | keys — Mastodon web, Phanpy, Elk, Ivory, tut |
+| Links to posts and profiles — inside | has | 0.2.0 | `card.links_in_app` | `search?resolve=true` | Ivory, Phanpy, Elk, Megalodon, Fedilab |
 | Open a link in the running fedtail | has | 0.14.0 | `fedtail open URL`; `--install-desktop` installs a `web+ap://` handler | own | Megalodon (share a link into the app) |
 | Everything is stored locally, readable offline | has | 0.1.0 | — | SQLite in the profile's data folder | Tusky — partly, Ice Cubes — a Home cache |
-| Open for days without bloating | has | 0.11.0 | `ui.unload_hidden_minutes`, `ui.image_cache_mb`, `debug.trim_memory` | own | — |
+| Open for days without bloating | has | 0.11.0 | `media.unload_hidden_minutes`, `media.image_cache_mb`, `debug.trim_memory` | own | — |
 | Polling the server and the live stream | has | 0.9.0 | `[poll]`: `interval_seconds`, `stream`, `stream_gap_seconds` | streaming (WebSocket) | Mastodon web, Phanpy, Elk, Tokodon, Whalebird, Ice Cubes |
 | Errors in plain words and without spam | has | 0.13.0 | — | own | — |
 | A detailed log for bug reports | has | 0.2.0 | `[debug]`, the launch keys `--debug`, `--bug-report` | own | — |
@@ -676,21 +676,21 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Federation status: how my server is doing and what fails | has | 0.16.0 | ≡ → “Debugging” → “Federation status” | own (from what this run saw) | — |
 | Leak hunting: trends, an object census, memory snapshots | has | 0.14.0 | `debug.leak_samples`, `debug.object_census`, `debug.tracemalloc`; ≡ → “Debugging” | own (gc, tracemalloc) | — |
 | The database doesn't grow for ever: cleanup and a size budget | has | 0.17.0 | `[storage]`: `max_mb`, `keep_per_lane`, `keep_activity`, `gc_hours`, `grace_hours` | SQLite, incremental vacuum | — |
-| Screen readers | partly | 0.9.0 | `ui.alt_text`, `ui.accessibility` | — | Mastodon web, Tusky, Ivory |
-| Interface language | has | 0.1.0 | `ui.language` | — | everyone |
+| Screen readers | partly | 0.9.0 | `media.alt_text`, `appearance.accessibility` | — | Mastodon web, Tusky, Ivory |
+| Interface language | has | 0.1.0 | `appearance.language` | — | everyone |
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
-| “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `ui.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
+| “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `window.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
 | A sound scheme | has | 0.19.0 | `sound.*`, `tui.sound`; in the theme — `[sound] source`, `from` | own: the theme's `sounds/` folder | QIP, ICQ, Mail.ru Agent, Psi |
 
 <details><summary>In detail</summary>
 
-**Themes as files.** Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classic`, `bnw`, `point`, `night`, `contrast` (for weak eyes), `pink`, `nord`, `solarized`, `paper`, `qip-retro`, `qip-modern`, `mra`, `mra-blue`, `mra-green`, `mra-violet`, `psi` (in the spirit of messengers: “Name (time)” over a post, `card_header = "chat"`; with `ui.layout = "split"` the theme sets the layout too: the faces — `shape.faces`, the roster's items — `roster_rows`, tabs in more rows — `tab_rows`), `debug` (for debugging: each state of a post — unread, the j/k cursor, found, “not seen whole yet, not read yet”, the keyboard focus — in a loud frame of its own; `shape.debug = true` turns the same on in any theme of your own). Your own — a file in `~/.config/fedtail/themes/`. A theme sets the card's layout too: the avatar's shape (`avatar_shape`), the header in a line or the name over the date (`card_header = "stacked"`), where the #id stands (`short_id`: by the name or under the post with the reply count), which side the buttons are on (`actions_align`), the line between posts (`rule`: solid or dashed), a hatched band under the titles of the lane and the post window (`header_stripes`) and a dark strip over it (`header_bar`), the colour of the main buttons, of the lane's title strip and of names. A theme sets the look of the whole app, not only colours; that's why separate card templates aren't needed (see Won't do). Fonts — `ui.fonts`: the theme’s (the built-in ones bring their own with fedtail: PT Serif, PT Sans, IBM Plex, Source Sans, Open Sans, Arimo, Comfortaa, Nunito, Fira Mono — all with Cyrillic), the system’s, or your own (`ui.font`, `ui.mono_font`); a theme of yours can bring fonts (`[font] files`), and .ttf/.otf files in `~/.config/fedtail/fonts/` are picked up without installing them system-wide. The width of the posts column — `max_width` (`0` — the full width; the ↔ button at the top left switches it for now and remembers the choice until the next start), labels on buttons — `actions`.
+**Themes as files.** Built in: `system` (as in KDE), `terminal`, `juick`, `juick-classic`, `bnw`, `point`, `night`, `contrast` (for weak eyes), `pink`, `nord`, `solarized`, `paper`, `qip-retro`, `qip-modern`, `mra`, `mra-blue`, `mra-green`, `mra-violet`, `psi` (in the spirit of messengers: “Name (time)” over a post, `card_header = "chat"`; with `window.layout = "split"` the theme sets the layout too: the faces — `shape.faces`, the roster's items — `roster_rows`, tabs in more rows — `tab_rows`), `debug` (for debugging: each state of a post — unread, the j/k cursor, found, “not seen whole yet, not read yet”, the keyboard focus — in a loud frame of its own; `shape.debug = true` turns the same on in any theme of your own). Your own — a file in `~/.config/fedtail/themes/`. A theme sets the card's layout too: the avatar's shape (`avatar_shape`), the header in a line or the name over the date (`card_header = "stacked"`), where the #id stands (`short_id`: by the name or under the post with the reply count), which side the buttons are on (`actions_align`), the line between posts (`rule`: solid or dashed), a hatched band under the titles of the lane and the post window (`header_stripes`) and a dark strip over it (`header_bar`), the colour of the main buttons, of the lane's title strip and of names. A theme sets the look of the whole app, not only colours; that's why separate card templates aren't needed (see Won't do). Fonts — `appearance.fonts`: the theme’s (the built-in ones bring their own with fedtail: PT Serif, PT Sans, IBM Plex, Source Sans, Open Sans, Arimo, Comfortaa, Nunito, Fira Mono — all with Cyrillic), the system’s, or your own (`appearance.font`, `appearance.mono_font`); a theme of yours can bring fonts (`[font] files`), and .ttf/.otf files in `~/.config/fedtail/fonts/` are picked up without installing them system-wide. The width of the posts column — `max_width` (`0` — the full width; the ↔ button at the top left switches it for now and remembers the choice until the next start), labels on buttons — `actions`.
 
 **The config as a file in chapters.** The program only reads the config. A new version brought settings — `--update-config` adds them to the right chapters with explanations; `--rebuild-config` rebuilds the file anew, keeping your values. A value written by hand stays yours when the default changes.
 
 **The settings reference.** The config reference, built from the example configs: every setting with its description, choices and default, in tables by chapter, in Russian and in English. A test makes sure it keeps up with the files.
 
-**Window, tray, keys.** The cross hides to the tray; the tray icon can go altogether (`ui.tray = false`, since 0.19). `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing.
+**Window, tray, keys.** The cross hides to the tray; the tray icon can go altogether (`window.tray = false`, since 0.19). `j`/`k` — through posts, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `o`/Enter — the thread. `post_keys = false` — the letters do nothing.
 
 **Links to posts and profiles — inside.** @mentions, #tags and links to fediverse posts and profiles open in fedtail. Not found — the browser. Only web addresses go outside (and mailto:, xmpp:, gemini://, magnet:): fedtail won't open a link to a file or a network share from someone's post.
 
@@ -714,7 +714,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **The database doesn't grow for ever: cleanup and a size budget.** Every `gc_hours` (and at the first poll after start) posts nothing points at are forgotten: no lane, followed thread, “Activity” entry or reply draft. My own posts stay, and so do the boosted post, the quoted one and the parents up the whole thread of every post that stays, so visible replies aren't fetched again. Whatever was stored recently (an open thread, a profile) lives `grace_hours` more. “Activity” keeps the latest `keep_activity` entries. The file really shrinks (incremental vacuum). If the database is still over `max_mb` (1 GB by default), lanes get 30 % shorter until it fits (never below 300) and grow back to `keep_per_lane` once there is room. Short ids (`#a3f`) are never forgotten. What was forgotten and how big the database is — the `storage gc` line in the log.
 
-**Screen readers.** Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca. The GTK window talks to the accessibility bus only while a screen reader is on (`ui.accessibility = "auto"`; `"on"` — always): KDE runs that bus always, and with no reader a menu took two seconds to open.
+**Screen readers.** Picture descriptions and button names for screen readers are there, but the interface hasn't been tried live with Orca. The GTK window talks to the accessibility bus only while a screen reader is on (`appearance.accessibility = "auto"`; `"on"` — always): KDE runs that bus always, and with no reader a menu took two seconds to open.
 
 **Interface language.** `"auto"` (from LANG), `"ru"`, `"en"`.
 
@@ -730,31 +730,31 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 ## Interfaces
 
-The core knows nothing about a GUI; interfaces are plugins. Which one to start — `ui.frontend`, or `--ui` for one run.
+The core knows nothing about a GUI; interfaces are plugins. Which one to start — `window.frontend`, or `--ui` for one run.
 
 | What | Status | Since | Config | Others |
 |---|---|---|---|---|
-| A Qt window | has | 0.1.0 | `ui.frontend = "qt"` | the main one |
+| A Qt window | has | 0.1.0 | `window.frontend = "qt"` | the main one |
 | Commands in a terminal | has | 0.9.0 | `[cli]`: `enabled`, `color`, `max_lines`, `tail_lanes` | tut (TUI), toot (CLI) |
 | Android: a phone and a tablet | partly | 0.19.0 | `[phone]`: `overview`, `layout` | Tusky, Fedilab, Moshidon |
-| A terminal interface (Textual) | has | 0.10.0 | `ui.frontend = "tui"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows`, `viewer`, `video` | tut |
-| Web on localhost | has | 0.10.0 | `ui.frontend = "web"`, `[web]`: `host`, `port`, `open_browser` | Phanpy, Elk — web clients |
-| The terminal — everything the windows have | partly | 0.19.0 | `ui.frontend = "tui"`, `tui.sound` | — |
-| The web — everything the windows have | partly | 0.19.0 | `ui.frontend = "web"` | — |
-| GTK4 + libadwaita | has | 0.17.0 | `ui.frontend = "gtk"`, `ui.adwaita` | Tuba |
+| A terminal interface (Textual) | has | 0.10.0 | `window.frontend = "tui"`, `[tui]`: `theme`, `lanes_width`, `show_context`, `pictures`, `picture_rows`, `viewer`, `video` | tut |
+| Web on localhost | has | 0.10.0 | `window.frontend = "web"`, `[web]`: `host`, `port`, `open_browser` | Phanpy, Elk — web clients |
+| The terminal — everything the windows have | partly | 0.19.0 | `window.frontend = "tui"`, `tui.sound` | — |
+| The web — everything the windows have | partly | 0.19.0 | `window.frontend = "web"` | — |
+| GTK4 + libadwaita | has | 0.17.0 | `window.frontend = "gtk"`, `appearance.adwaita` | Tuba |
 | Toga (BeeWare) | planned | — | — | — |
 
 <details><summary>In detail</summary>
 
 **Commands in a terminal.** `fedtail lanes`, `fedtail show replies -n 20`, `fedtail tail` (the new as it comes), `fedtail post "text"`, `fedtail post --reply a3f "text"`, `fedtail read replies`. The same profile, database and read marks as the window; works without Qt.
 
-**Android: a phone and a tablet.** An APK in every release (`fedtail-X.Y.Z-android.apk`), dev builds from CI. Native screens (Kotlin, Jetpack Compose) over the same Python core the desktop runs. Home is the overview of lanes: tiles four in a row — which and in which order is picked with a long press and travels to the other devices with sync (`sync.tiles`) — or a list with each lane's first unread post (`phone.overview`), “Read in a row” — yours first. In a lane — the lanes with news as a strip, a switcher with a search, “read → next” at the end and a swipe there. Threads as trees, replies, likes, pictures with a viewer, video and sound in a player of its own; every place of the windows' ≡ menu (search, lists, filters, silence, trends, the server, help, editing the profile, accounts), profiles with their buttons, pinned posts and “more” as far back as their own server, the windows' ⋯ menu on every card, voting, quotes; the editor — pictures with descriptions, a warning, the language, a poll, edits and quotes. Refresh — ⟳ on every screen and a pull: from the top, or, read “as a forum” (oldest first), up from the bottom; the place in the lane doesn't jump. Notifications into the shade (the windows' `notify.*`), with the app closed — every 15 minutes. The windows' themes as colours (`ui.theme`); settings as a page (each option of the config with its explanation, written into the same file) or the file itself, read marks synced. On a tablet — two or three columns, as on the desktop (`phone.layout`). Point's command line is off on the phone (`ui.command_line`).
+**Android: a phone and a tablet.** An APK in every release (`fedtail-X.Y.Z-android.apk`), dev builds from CI. Native screens (Kotlin, Jetpack Compose) over the same Python core the desktop runs. Home is the overview of lanes: tiles four in a row — which and in which order is picked with a long press and travels to the other devices with sync (`sync.tiles`) — or a list with each lane's first unread post (`phone.overview`), “Read in a row” — yours first. In a lane — the lanes with news as a strip, a switcher with a search, “read → next” at the end and a swipe there. Threads as trees, replies, likes, pictures with a viewer, video and sound in a player of its own; every place of the windows' ≡ menu (search, lists, filters, silence, trends, the server, help, editing the profile, accounts), profiles with their buttons, pinned posts and “more” as far back as their own server, the windows' ⋯ menu on every card, voting, quotes; the editor — pictures with descriptions, a warning, the language, a poll, edits and quotes. Refresh — ⟳ on every screen and a pull: from the top, or, read “as a forum” (oldest first), up from the bottom; the place in the lane doesn't jump. Notifications into the shade (the windows' `notify.*`), with the app closed — every 15 minutes. The windows' themes as colours (`appearance.theme`); settings as a page (each option of the config with its explanation, written into the same file) or the file itself, read marks synced. On a tablet — two or three columns, as on the desktop (`phone.layout`). Point's command line is off on the phone (`window.command_line`).
 
 **A terminal interface (Textual).** Lanes on the left, posts on the right, the command line at the bottom. The same keys, `x` — the lane is read, `:` — the command line. Lanes — `[` / `]`, digits `1`…`9`, `h` — into the lane list (`j` / `k` there), `l` — back to the posts, Tab — to and fro. “Activity” and “Follow requests” have rows of their own (in requests `a` — accept, `d` — reject). Pictures — the first one small right in the lane (`tui.pictures`, `tui.picture_rows`), `v` — all of them full screen, ← / → between them, `o` — the original in the browser; needs Pillow (`python3-pil`). Since 0.19 real ones (sixel in Konsole, WezTerm, foot; the kitty protocol in kitty) with `textual-image` installed, half blocks in any true colour terminal otherwise; with `chafa`, `timg` or kitty's `icat` there, `v` hands the picture to them, the interface stepping aside until Enter (`tui.viewer`). Video and gifs play in `mpv` (since 0.19): in a window of their own on a desktop, right in the terminal over ssh (sixel, kitty or coloured text); no mpv — the browser (`tui.video`). Works over ssh. Needs `python3-textual`.
 
 **Web on localhost.** fedtail in a browser tab: lanes, threads as trees, profiles, a “Write” button (content warning, who sees it, language, drafts), pictures in a grid with a viewer, video and audio, polls with voting, link cards, quotes, custom emoji, “More” at a lane's end, the Point command line; on a phone the lanes slide in from the side, light and dark follow the system. At start a one-time link (15 minutes) is printed; the browser gets a key from the profile's folder in a cookie (`web.key`; delete it and every browser and every old link with the key is out). `host = "0.0.0.0"` — from the phone on the home network too; no encryption, for your own network only. The ≡ menu (write, my profile, refresh, all read, help, keys, about); a post's ⋯ menu — the same as the Qt and GTK windows', the same items in the same order (since 0.18: open, copy the link, the #id and the handle, reply with quote, call into the thread, bookmark, who quoted, subscribe / mute the thread, mute / block the author and the server, report, edit, pin, delete, delete and redraft — the risky ones ask first); a profile's buttons as in the windows too (follow, the bell, boosts and languages in Home, mention, mute, block, remove from followers, endorse, a note). A reply shows the whole post: select a piece and “❝ Quote in reply” puts it where the cursor is. The viewer goes through a post's pictures with ← / →.
 
-**The terminal — everything the windows have.** Since 0.19: a post's menu `.` (⋯) — the windows' items, doing the same (links through the shared `common/links.py`, “sure?” asked); the `g` menu (≡) — every place: search (`/`), lists, tags, silence, held-back notifications, scheduled, follow requests, activity, trends, suggestions, the directory, the server, editing my profile, the help (Markdown, links between its pages), what's new, about, the federation status, a bug report, testing the sound; a profile — the windows' buttons under `1`…`9`; the post editor `w` (the warning, who sees it, the language, drafts — as in the windows; Ctrl+O — attachments with descriptions, “sensitive”, a poll, later; Ctrl+S — send); a lane as in the windows: the “new below” divider, `s` — all / posts only / new, feed / conversations, what to show; a card in the windows' words (who boosted, edited, old, what it answers, “you replied”, the quote, reactions); find in the lane Ctrl+F (again — the next one, `N` — the one before, `D` — deeper, through everything stored, `E` — in every lane, Esc — closed); `J` — to the new, `j` past the last post — older ones from the server; a poll — `u`: vote (Space, Enter), `r` — the results, refresh; a thread — how many answers, `c` — every warning at once, `s` — follow it, “comes because…”; the lane list's sections fold (Enter on a heading, one state with the windows); the editor — the count, “a chain of N posts”, the #CamelCase hint, Ctrl+R — preview, Ctrl+O — “Another language…”, “Discard” (asked first), the alt-text reminder; the picture viewer — `s` saves the original into `ui.save_dir`; notifications — notify-send, and without a desktop the terminal's own code (kitty, Ghostty, WezTerm, foot, iTerm2); ≡ → “Debugging” — the corner, a test notification, the census, giving memory back, tracing, a snapshot, the config and the data folder, “every account in one window” (and “⇄ @account” on a card). The places are the web's (`common/places.py`). The behaviour is held against the windows by one scenario (`tools/behaviour.py`). What's still missing — `tools/parity.py`.
+**The terminal — everything the windows have.** Since 0.19: a post's menu `.` (⋯) — the windows' items, doing the same (links through the shared `common/links.py`, “sure?” asked); the `g` menu (≡) — every place: search (`/`), lists, tags, silence, held-back notifications, scheduled, follow requests, activity, trends, suggestions, the directory, the server, editing my profile, the help (Markdown, links between its pages), what's new, about, the federation status, a bug report, testing the sound; a profile — the windows' buttons under `1`…`9`; the post editor `w` (the warning, who sees it, the language, drafts — as in the windows; Ctrl+O — attachments with descriptions, “sensitive”, a poll, later; Ctrl+S — send); a lane as in the windows: the “new below” divider, `s` — all / posts only / new, feed / conversations, what to show; a card in the windows' words (who boosted, edited, old, what it answers, “you replied”, the quote, reactions); find in the lane Ctrl+F (again — the next one, `N` — the one before, `D` — deeper, through everything stored, `E` — in every lane, Esc — closed); `J` — to the new, `j` past the last post — older ones from the server; a poll — `u`: vote (Space, Enter), `r` — the results, refresh; a thread — how many answers, `c` — every warning at once, `s` — follow it, “comes because…”; the lane list's sections fold (Enter on a heading, one state with the windows); the editor — the count, “a chain of N posts”, the #CamelCase hint, Ctrl+R — preview, Ctrl+O — “Another language…”, “Discard” (asked first), the alt-text reminder; the picture viewer — `s` saves the original into `media.save_dir`; notifications — notify-send, and without a desktop the terminal's own code (kitty, Ghostty, WezTerm, foot, iTerm2); ≡ → “Debugging” — the corner, a test notification, the census, giving memory back, tracing, a snapshot, the config and the data folder, “every account in one window” (and “⇄ @account” on a card). The places are the web's (`common/places.py`). The behaviour is held against the windows by one scenario (`tools/behaviour.py`). What's still missing — `tools/parity.py`.
 
 **The web — everything the windows have.** Since 0.19 the ≡ menu has every place (since 0.20 the menu is a window over the page, in groups as the windows' submenus, and the places open in a window over the page): search (`/`), lists (new, rename, exclusive, members, delete), tags, silence (word filters, muted, blocked, servers), held-back notifications, scheduled, follow requests, activity, trends, suggestions, the directory, the server, editing my profile, the help right on the page, what's new, about, the federation status; “Activity” and “Follow requests” have the windows' groups and buttons; the ⋯ menu has “Add to list”, “Read it whole”, “Translate”; a profile has all the windows' buttons (lists, whom they follow, followers, editing my own); find in the lane Ctrl+F; over the lane — “all / posts only / new”, “feed / conversations”, “show”, “to new”, the “new below” divider; a card in the windows' words (who boosted and when, edited → versions, old, what it answers, “you replied”, the quote, reactions); the editor — pictures and files with descriptions (pasted too), “sensitive”, a poll, sending later, the languages, the count against the server's limit; the browser's notifications (≡ → “Notifications in the browser” — allow) in the windows' words (`notify.privacy`); the theme's sounds. The places are the terminal's (`common/places.py`). The behaviour is held against the windows by one scenario (`tools/behaviour.py`). What's still missing — `tools/parity.py`.
 
@@ -774,7 +774,7 @@ The core knows nothing about a GUI; interfaces are plugins. Which one to start �
 | Linux: one file | has | 0.5.0 | `fedtail-X.Y.Z-linux-x86_64`, built on Debian 12 |
 | A deb package | has | 0.10.0 | built in CI on Debian 13; since 0.18 GTK 4 in Recommends, the GTK window an action of the menu entry (“FedTail (GTK)”, right click) |
 | Windows: one .exe | has | 0.5.0 | `fedtail-X.Y.Z-windows.exe` |
-| A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`ui.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
+| A menu entry with the icon | has | 0.2.0 | by itself when a window starts (`window.desktop_entry`), or `--install-desktop`; named `online.dmesg.fedtail.desktop` (since 0.18) |
 | An apt repository of its own | partly — CI builds and signs it after every release — once the repository has the key (APT_GPG_KEY) and GitHub Pages is on for the `apt` branch | 0.20.0 | from the releases' deb packages (`packaging/apt_repo.py`) |
 | An installer for Windows (and a signature) | has | 0.20.0 | `fedtail-X.Y.Z-windows-setup.exe` (Inno Setup): for you alone, no administrator, a Start menu entry, an uninstaller; signed once CI has a certificate |
 
@@ -791,7 +791,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
-| The roster and the messages window, as in QIP (`ui.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |
+| The roster and the messages window, as in QIP (`window.layout = "split"`) | ✓ | ✓ | · | · | · | The two-window layout is Qt's and GTK's only. Android: a desktop's window layout |
 
 ### Reading
 
@@ -903,15 +903,15 @@ Everything here is a request to other servers without your token: they see only 
 
 | What | Status | Config |
 |---|---|---|
-| A whole thread: replies from the author's server | has | `feed.complete_threads` |
-| A thread grows when Mastodon has gathered the replies | has | `feed.complete_threads` |
-| Long texts and events | has | `feed.long_form` |
-| Honest counters | has | `feed.honest_counters` (off), `feed.counters_via_accounts` |
-| A little-known person's profile — from their server | has | `feed.remote_profiles`, `feed.remote_posts` |
-| Posts older than my server knows | has | `feed.remote_profiles` |
-| Followers and follows from the person's server | has | `feed.remote_people` |
-| The person has moved | has | `feed.show_moved` |
-| The author's server software | has | `feed.server_info` |
+| A whole thread: replies from the author's server | has | `threads.complete_threads` |
+| A thread grows when Mastodon has gathered the replies | has | `threads.complete_threads` |
+| Long texts and events | has | `card.long_form` |
+| Honest counters | has | `card.honest_counters` (off), `card.counters_via_accounts` |
+| A little-known person's profile — from their server | has | `people.remote_profiles`, `people.remote_posts` |
+| Posts older than my server knows | has | `people.remote_profiles` |
+| Followers and follows from the person's server | has | `people.remote_people` |
+| The person has moved | has | `card.show_moved` |
+| The author's server software | has | `people.server_info` |
 
 ---
 

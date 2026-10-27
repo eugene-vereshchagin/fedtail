@@ -20,7 +20,7 @@ what the server can do, the state of the federation.
 
 ## How it maps onto the fediverse
 
-* **The account** — the roster's header (avatar, name, @address); with `ui.merge` — several, like
+* **The account** — the roster's header (avatar, name, @address); with `accounts.merge` — several, like
   servers with a lock in Psi. "No new mail" — "N new notifications" (Activity).
 * **Roster groups** — what's in the sidebar now: Timelines (Home, Local,
   Federated, Bots…), Lists, Threads (followed, with fresh posts), Conversations (private, by
@@ -37,15 +37,15 @@ what the server can do, the state of the federation.
   …) and "invisible" — don't mark anything read.
 * **Instantly** — news comes into the roster (in bold, with a number), like messages in ICQ.
 
-## Stage 5 — the common part (layout `ui.layout = "split"`, any theme)
+## Stage 5 — the common part (layout `window.layout = "split"`, any theme)
 
 1. ✓ **The roster.** `View.roster()` → `[RosterGroup]`, each with `RosterItem`s (kind, key,
    title, unread, total, the last post — signature and avatar); built from the
    public core (and `MergedCore`), updated by the same events as the sidebar's
    badges. Items are lanes, and also followed threads ("Threads") and private conversations
-   ("Conversations") as "contacts" of their own, the freshest (`ui.roster_threads`).
+   ("Conversations") as "contacts" of their own, the freshest (`window.roster_threads`).
 2. ✓ **The roster window** (Qt, `frontends/qt/roster.py`): a window of its own, narrow, remembers its
-   place, `ui.roster_on_top`; an account header with "N new in activity", search (Enter — the
+   place, `window.roster_on_top`; an account header with "N new in activity", search (Enter — the
    only match or Search on the server), groups "▾ Personal (2/9)" that
    fold, an item — a counter, the last post's line, the author's face; the item's menu.
    The main window is the messages window without a sidebar (for now — the same lanes and tabs).
@@ -74,7 +74,7 @@ what the server can do, the state of the federation.
 Status and kind icons are drawn by us; the ICQ, QIP, Mail.ru logos aren't copied —
 the themes are "in the spirit", not fakes. Theme names are descriptive.
 
-## Pictures on buttons (✓ `shape.icons`, `ui.icons`)
+## Pictures on buttons (✓ `shape.icons`, `appearance.icons`)
 
 What the references had (QIP 2007/2012, Psi+, Mail.ru Agent) and what it is here:
 
@@ -89,14 +89,14 @@ What the references had (QIP 2007/2012, Psi+, Mail.ru Agent) and what it is here
   language, send; there was no poll or warning there — we draw our own;
 * by every message an arrow "mine / to me" (Psi, QIP) → a mark of a reply or a boost;
 * faces: QIP — the other person top left, me at the bottom by the buttons; Agent — both on the right (~90 px),
-  the other person by the conversation, me by the input line (done just so: `ui.faces`); Psi — only
+  the other person by the conversation, me by the input line (done just so: `appearance.faces`); Psi — only
   in the roster.
 
 The drawings are our own SVGs in the spirit of 2007, or free ones (MIT, CC BY — with the author named in
 a LICENSE.txt next to them), recoloured with the theme's colours. The theme decides (`frontends/iconpack.py`):
 `[shape] icons` — `"desktop"` (system, debug: the desktop's icons by their
 freedesktop names), `"own"` (a set of its own: `themes/<theme>/icons/`, a file a picture),
-`"words"` (terminal, bnw); `ui.icons` can override it, `"additional"` — the messenger
+`"words"` (terminal, bnw); `appearance.icons` can override it, `"additional"` — the messenger
 pictures outside split too. Pictures come in two sorts: standard (menu, width, columns, lanes,
 the buttons under a post, visibility, close, refresh…) — always, when the theme has pictures;
 extended (the input line, the roster, the author's strip, the flower, the silhouette) — in split or with

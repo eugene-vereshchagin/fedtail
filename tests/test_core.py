@@ -46,7 +46,7 @@ class ConfigTest(TmpDir):
         for lang in config.EXAMPLE_LANGS:
             ref = config.example_text(lang)
             for key in re.findall(r'add_argument\((?:"-\w", )?"(--[a-z-]+)"', src):
-                self.assertIn(key, ref.split("[ui]")[0], f"{lang}: {key}")
+                self.assertIn(key, ref.split("[appearance]")[0], f"{lang}: {key}")
             # one option, one block: a blank line before the next explanation
             lines = ref.splitlines()
             for i, line in enumerate(lines[:-1]):
@@ -97,7 +97,7 @@ class ConfigTest(TmpDir):
         from fedtail.core import config_update
         for lang, word in (("ru", "# Что показывать в «Активности»"),
                            ("en", "# What to show in \"Activity\"")):
-            head = config.example_text(lang).split("\n[ui]")[0]
+            head = config.example_text(lang).split("\n[appearance]")[0]
             ex = config.example_text(config.language_of(head))
             out = config_update.update(head + "\n[activity]\n", ex)
             self.assertIn(word, out, lang)
@@ -107,9 +107,10 @@ class ConfigTest(TmpDir):
             config.validate({"feed": {"order": "sideways", "page_size": "10"},
                              "poll": {"interval_seconds": 5}})
         msg = str(e.exception)
-        self.assertIn("feed.order", msg)
-        self.assertIn("feed.page_size", msg)
-        self.assertIn("poll.interval_seconds", msg)
+        # named as the file names them now
+        self.assertIn("reading.order", msg)
+        self.assertIn("reading.page_size", msg)
+        self.assertIn("server.interval_seconds", msg)
         _, warns = config.validate({"nope": {}, "ui": {"colour": 1}})
         self.assertEqual(len(warns), 2)
         # the old ui.esc_hides: true gets the curtain (the new default), false stays off
@@ -136,7 +137,7 @@ class ConfigTest(TmpDir):
         self.assertEqual((cfg["ui"]["layout"], cfg["ui"]["open_columns"]), ("split", False))
         from fedtail.frontends.common import settings
         lay = next(o for ch in settings.model(_PathView(), lang="en", text="")
-                   for o in ch.options if o.name == "ui.layout")
+                   for o in ch.options if o.name == "window.layout")
         self.assertEqual(sorted(v for v, _w in lay.choices), ["single", "split"])
 
 
@@ -149,17 +150,19 @@ class ConfigUpdateTest(unittest.TestCase):
         old = ("# my config\n[ui]\ntheme = \"terminal\"\n#language = \"auto\"\n\n"
                "[feed]\norder = \"newest_first\"\n")
         miss = cu.missing(old, example)
-        self.assertIn("ui.actions", miss)
+        self.assertIn("card.actions", miss)
         self.assertIn("post.default_visibility", miss)
-        self.assertNotIn("ui.theme", miss)
-        self.assertNotIn("ui.language", miss)  # commented out still counts
+        self.assertNotIn("appearance.theme", miss)  # in its older place: there
+        self.assertNotIn("appearance.language", miss)  # commented out still counts
         new = cu.update(old, example)
         self.assertEqual(cu.missing(new, example), [])
         parsed = tomllib.loads(new)  # still valid TOML, user values untouched
         self.assertEqual(parsed["ui"]["theme"], "terminal")
         self.assertEqual(parsed["feed"]["order"], "newest_first")
-        self.assertEqual(config.validate(parsed)[1], [])
-        self.assertLess(new.index("\nactions ="), new.index("\n[feed]"))  # inside [ui]
+        warns = config.validate(parsed)[1]
+        self.assertEqual(len(warns), 1)
+        self.assertIn("--rebuild-config", warns[0])  # the older places: said once
+        self.assertGreater(new.index("\nactions ="), new.index("\n[card]"))  # its table
         self.assertEqual(cu.update(new, example), new)  # idempotent
 
     def test_an_option_of_an_older_name_moves(self):
@@ -183,7 +186,7 @@ class ConfigUpdateTest(unittest.TestCase):
             self.assertNotIn(name, parsed["ui"])
             self.assertEqual(parsed["ui"]["icons"], now, line)
             self.assertEqual(report["renamed"], [f"ui.{name} → ui.icons"])
-            self.assertEqual(config.validate(parsed)[1], [])
+            self.assertFalse([w for w in config.validate(parsed)[1] if "unknown" in w])
             self.assertEqual(cu.update(new, example), new)  # idempotent
         both = '[ui]\nicons = "words"\nadditional_icons = "all"\n'
         self.assertEqual(tomllib.loads(cu.update(both, example))["ui"]["icons"],
@@ -198,8 +201,8 @@ class ConfigUpdateTest(unittest.TestCase):
         old = "\n".join(x for x in lines if "follow_date_note" not in x) + "\n"
         new = cu.update(old, example)
         at = new.index("follow_date_note = ")
-        self.assertLess(at, new.index("\n[read]"))
-        self.assertGreater(new.rfind("[feed]", 0, at), new.rfind("Прочитанное", 0, at))
+        self.assertLess(at, new.index("\n[media]"))
+        self.assertGreater(new.rfind("[people]", 0, at), new.rfind("Картинки и видео", 0, at))
         self.assertIn("profile_featured = true\n\n#", new)
         self.assertEqual(cu.update(new, example), new)
 
@@ -211,8 +214,8 @@ class ConfigUpdateTest(unittest.TestCase):
                              "activity": {"approvals": "yes"},
                              "feed": {"follow_date_note": 1}})
         text = str(e.exception)
-        for name in ("ui.image_decode", "poll.stream_gap_seconds", "activity.approvals",
-                     "feed.follow_date_note"):
+        for name in ("media.image_decode", "server.stream_gap_seconds", "activity.approvals",
+                     "people.follow_date_note"):
             self.assertIn(name, text)
         cfg, _w = config.validate({})
         self.assertEqual((cfg["ui"]["image_decode"], cfg["poll"]["stream_gap_seconds"],
@@ -242,15 +245,16 @@ class ConfigUpdateTest(unittest.TestCase):
         report = {}
         new = cu.rebuild(old, example, report)
         parsed = tomllib.loads(new)
-        self.assertEqual(parsed["ui"]["theme"], "bnw")
-        self.assertEqual(parsed["ui"]["font_size"], 0)  # commented out: the default
+        # a file of 0.20 and before: its options go to the tables the file has now
+        self.assertEqual(parsed["appearance"]["theme"], "bnw")
+        self.assertEqual(parsed["appearance"]["font_size"], 0)  # commented out: the default
         self.assertEqual(parsed["notify"]["lanes"], ["comments", "list:Друзья"])  # kept as written
         self.assertEqual(parsed["ui"]["whatever"], 3)
         self.assertEqual(parsed["mystery"], {"x": "y"})
-        self.assertEqual(sorted(report["kept"]), ["notify.lanes", "ui.theme"])
+        self.assertEqual(sorted(report["kept"]), ["appearance.theme", "notify.lanes"])
         self.assertEqual(sorted(report["extra"]), ["mystery.x", "ui.whatever"])
         self.assertIn("Главы:", new)
-        self.assertLess(new.index("whatever ="), new.index("\n[feed]"))
+        self.assertEqual(config.validate(parsed)[0]["ui"]["theme"], "bnw")
         self.assertEqual(cu.missing(new, example), [])
         self.assertEqual(cu.rebuild(new, example), new)  # stable
 
@@ -633,8 +637,8 @@ class LaneRenameTest(TmpDir):
         cfg, warns = config.validate({
             "lanes": {"enabled": ["global", "people", "mine", "comments", "favourites"]},
             "notify": {"lanes": ["people", "list:Друзья"], "except": ["global"]},
-            "ui": {"start_lane": "comments", "icon_count": ["comments"],
-                   "columns": ["people", "home"]}})
+            "window": {"start_lane": "comments", "icon_count": ["comments"],
+                       "columns": ["people", "home"]}})
         self.assertEqual(warns, [])
         self.assertEqual(cfg["lanes"]["enabled"],
                          ["federated", "home", "my_posts", "replies", "my_likes"])
@@ -646,8 +650,9 @@ class LaneRenameTest(TmpDir):
     def test_icon_count_picks_like_notify(self):
         # the icon's count takes "all", "lists" and "list:Друзья", and an except list,
         # the same way as notifications
-        cfg, warns = config.validate({"ui": {"icon_count": ["all"],
-                                             "icon_count_except": ["people", "list:Новости"]}})
+        cfg, warns = config.validate({"window": {"icon_count": ["all"],
+                                                 "icon_count_except": ["people",
+                                                                       "list:Новости"]}})
         self.assertEqual(warns, [])
         self.assertEqual(cfg["ui"]["icon_count_except"], ["home", "list:Новости"])
         with self.assertRaises(config.ConfigError):

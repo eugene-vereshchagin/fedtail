@@ -196,7 +196,7 @@ fedtail/
     help/<lang>/*.md     the in-app help (F1), its includes expanded by tools/docs_build.py
     themes/*.toml        built-in themes (system.toml lists every key)
     icons/fedtail.png    app icon: the opossum holding its tail (window, menu, About)
-    icons/fedtail.svg    the drawn bubble (ui.app_icon = "bubble"; iconart.py themes it)
+    icons/fedtail.svg    the drawn bubble (appearance.app_icon = "bubble"; iconart.py themes it)
 syncserver/fedtail_sync.py  the fedtail-sync server: one stdlib file an admin copies (§12);
                             a project of its own (README, PROTOCOL.md, CHANGELOG, tests/,
                             tools/coverage.py) on its way to a repo of its own
@@ -226,7 +226,7 @@ docs/                ru/dev/, en/dev/ — the developer docs, in both languages
    goes), picks the one in the language of the user's file (`config.language_of`) and reports options the user's file doesn't mention yet;
    `--update-config` inserts them and exits.
 5. `--bug-report` packs the logs (§18) and exits.
-6. `i18n.setup(cfg.ui.language)`.
+6. `i18n.setup(cfg.appearance.language)`.
 7. `SingleInstance`: if another process of this profile answers on its unix
    socket, it is asked to raise its window and we exit.
 8. `diag.setup()` — log file, crash/stack files, exception hooks — then the
@@ -250,8 +250,8 @@ docs/                ru/dev/, en/dev/ — the developer docs, in both languages
 | thread | what runs there |
 |---|---|
 | GUI (main) | all Qt objects; Bridge slots; never blocks on the network |
-| `fedtail-poll` | `Core._poll_loop`: `poll_once()` every `poll.interval_seconds` or when woken (`poll_now()`) |
-| `fedtail-stream` | `protocols/mastodon/stream.py`: the server's WebSocket stream (`poll.stream`); an `update` / `notification` only calls `poll_now()` — the poll still fetches, so a dropped stream loses nothing; reconnects with backoff 5 s…5 min; the token goes in the handshake headers, never the URL or the log |
+| `fedtail-poll` | `Core._poll_loop`: `poll_once()` every `server.interval_seconds` or when woken (`poll_now()`) |
+| `fedtail-stream` | `protocols/mastodon/stream.py`: the server's WebSocket stream (`server.stream`); an `update` / `notification` only calls `poll_now()` — the poll still fetches, so a dropped stream loses nothing; reconnects with backoff 5 s…5 min; the token goes in the handshake headers, never the URL or the log |
 | `fedtail_*` pool (4) | user actions: post, favourite, open thread, profile… (`core.submit`) |
 | `fedtail-bg` pool (2) | background work: parents, "did I reply?", subscriptions on demand, honest counters |
 | `fedtail-img` pool (4) | image downloads and saving (in `Images`) — a backlog of avatars never delays sending a post |
@@ -333,7 +333,7 @@ mention), `mine` (my statuses), `local`, and `list:<id>` for each list. A Source
 has `fetch(limit, max_id, min_id)` and `entry(raw) → (item_id, status, created)`.
 
 * `catch_up()` walks **forward** from the newest stored item with `min_id`, page
-  by page, until a short page or `feed.catch_up_limit`. So the local copy has no
+  by page, until a short page or `reading.catch_up_limit`. So the local copy has no
   holes and reading can be chronological.
 * First time (`_fill_empty`): one page. If the source was watched before but was
   empty (`kv source_since:<name>`), it walks back to that moment so nothing that
@@ -372,7 +372,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   widest down (federated, home, local, bots), Personal (my_posts, mentions, replies,
   subs, bookmarks, activity, requests), Lists at the bottom; the configured order holds inside
   a section
-  (`ui.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
+  (`window.sidebar_groups = false` → one flat list). `MainWindow._rebuild_sidebar()`
   builds it (again on `lists_changed`); Alt+1…9 follow `lane_order`, not rows.
 
 * **Names** — a built-in lane's name is the word its title translates (0.15:
@@ -384,7 +384,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * `lanes.enabled(cfg, lists)` builds the list from `lanes.enabled` plus list lanes.
   `Core._apply_lists()` replaces `Core.lanes`/`lane_by_name` when lists change.
 * `Core.lane_entries(name)` returns `[(item_id, status)]` oldest → newest, at most
-  `feed.render_limit` (raised by "Older" and by Ctrl+F "Deeper" via `_limits`),
+  `reading.render_limit` (raised by "Older" and by Ctrl+F "Deeper" via `_limits`),
   filtered by `keep` and by "posts only". Cached until the store changes.
   `by_status_time` lanes (notifications) are sorted by the post's own time.
 * List members leave the general lanes: `Core._hidden_authors()` collects members of
@@ -402,9 +402,9 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 5. Activity notifications fetched forward (`_poll_activity`); the very first
    fetch is history (marked seen).
 6. Read rules: on the very first run everything is marked read
-   (`feed.first_run_mark_read`); my own posts are always read; a post I replied
+   (`reading.first_run_mark_read`); my own posts are always read; a post I replied
    to (from any client) is read.
-7. My new posts/comments are auto-subscribed (`subs.auto`).
+7. My new posts/comments are auto-subscribed (`threads.auto`).
 8. New items are split per lane → event `lanes_updated {lane: [item ids]}`.
 9. Desktop notifications for the lanes in `notify.lanes` (`"all"`: every lane) and not in
    `notify.except` (`Core._notify_wanted`; unread ones only) →
@@ -418,8 +418,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * Marks live in `read`. The GUI decides what was *seen*: `FeedView._emit_seen`
   (350 ms after scrolling stops) reports cards fully on screen (or tall cards
   scrolled past, or the tail at the end) → `core.mark_read`. Modes:
-  `read.mark_read = on_scroll | on_open | manual`.
-* Opening a lane stands on the first unread (`feed.start_at`); a separator row
+  `reading.mark_read = on_scroll | on_open | manual`.
+* Opening a lane stands on the first unread (`reading.start_at`); a separator row
   "new below · N" is fixed where the reader stood when the lane opened.
 * Keeping position: `FeedView` keeps a **target** (`("anchor", key, offset)`,
   `("row", key, top|bottom)` or `("end", …)`) and re-applies it on every
@@ -461,14 +461,14 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   stored for the lane and raises its render limit down to the next match.
 * **Honest counters** — `protocols/mastodon/counters.py`: for public posts from other servers,
   GET `https://<origin>/api/v1/statuses/<id>` *without the token*, keep the bigger
-  numbers; once per post per 10 minutes; off by default (`feed.honest_counters`).
+  numbers; once per post per 10 minutes; off by default (`card.honest_counters`).
 * **Whole threads** — `Core._thread_nodes()` reads the context of the *top* post (a
   post's context has its own branch only), so a thread looks the same from any post.
   `core/replies.py` + `Core._complete_thread()`: the top post's ActivityPub object is
   fetched from its server (no token), its `replies` collection walked a few levels
   down, and every reply address my server doesn't know is resolved through my server
   (`/api/v2/search?resolve=true`); then `thread_grew` makes the open thread reload.
-  Once per thread per 5 minutes; `feed.complete_threads`.
+  Once per thread per 5 minutes; `threads.complete_threads`.
 * **Saving pictures** — `core/saving.py` (where, file name, no overwrite) +
   `Images.save()` (from the cache when possible).
 * **CamelCase hint** — `core/hashtags.flat_tags()`, shown under the compose text.
@@ -477,7 +477,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `fedtail:tag/<name>`, fediverse-looking profile/post addresses (and unknown
   mentions) → `fedtail:resolve/<quoted url>`. `core.resolve(url)` asks the user's
   server (`/api/v2/search?resolve=true`) and the window opens the thread or the
-  profile; the browser only if nothing is found. Flag `ui.links_in_app`.
+  profile; the browser only if nothing is found. Flag `card.links_in_app`.
 * **Command line** — `core/commands.py` parses a line into a `Command` (pure,
   tested); `qt/cmdline.py: CommandBar` previews what Enter will do and runs it
   through `core.target(alias, n)` (a short id, or comment /N of its thread),
@@ -487,7 +487,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   builds one card per group (`extra["conversation"]`), and a seen card marks all
   its members read. Offered over Replies to me, Mentions and Subscriptions only
   (`feed.CONVERSATION_LANES`); kept for the run by `core.choice()` (or in `kv` with
-  `feed.remember_choices`), like All | Posts | New.
+  `reading.remember_choices`), like All | Posts | New.
 * **Editing** — `core.source()` (`/statuses/:id/source`, the typed text) →
   `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, media ids passed again so
   they stay); `core.history()` feeds `MainWindow.show_history`; cards show "edited"
@@ -502,18 +502,18 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   paging via `Api.get_page`), `core.follow`, `core.follow_tag`/`tag_info`/
   `followed_tags`. Qt: `SearchWidget` (the sidebar box, Ctrl+K), `PeopleWidget`,
   reusable `AccountRow` and `TagRow` with their own Follow buttons.
-* **Post content** (`card.py`) — `_link_card` (status.card; `feed.link_cards`),
+* **Post content** (`card.py`) — `_link_card` (status.card; `card.link_cards`),
   `_emoji_label` (custom emoji: `text.emojify` points `<img>` at the picture already in
   `Images` cache, `Images.local(url)`, and re-renders the label when a missing one
-  arrives; `feed.custom_emoji`), `_quote` (`model.quoted()` understands Mastodon 4.5
+  arrives; `appearance.custom_emoji`), `_quote` (`model.quoted()` understands Mastodon 4.5
   Quote/ShallowQuote, Akkoma/Fedibird whole-status quotes; states other than
   "accepted" are explained; `model.without_quote_fallback` drops the "RE:" paragraph;
-  `feed.quotes`), sensitive media covered until clicked (`feed.sensitive_media`),
-  translation via `ctx.translate` (`feed.translate`; the card keeps it and toggles).
+  `card.quotes`), sensitive media covered until clicked (`card.sensitive_media`),
+  translation via `ctx.translate` (`card.translate`; the card keeps it and toggles).
 * **Completion in the composer** — `#` from `store.tag_counts()` + followed tags, `@` from
   `store.people_counts()` then `core.search_people()` (no resolve), both built lazily in
   one SQL pass (json_each) and kept up to date by `put_statuses`; `Compose._offer`.
-* **Markers** — `Core._sync_markers()` after each poll (`read.sync_markers`): pull —
+* **Markers** — `Core._sync_markers()` after each poll (`sync.sync_markers`): pull —
   everything up to another client's `last_read_id` (home → source home, notifications →
   source mentions) is marked read once per new marker; push — the newest item such that
   everything older is read goes to the server. Ids compare with `model.id_after`
@@ -564,11 +564,11 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `thread_grew` when it's finished.
 * **Remote profiles** — `Core.posts_from_origin(acc)`: the actor (acc.uri or url,
   AP Accept), its outbox's first pages (`replies.outbox_post_uris`: Create, public),
-  each resolved through my server (`feed.remote_profiles`, `remote_posts`);
+  each resolved through my server (`people.remote_profiles`, `remote_posts`);
   `AccountWidget._from_origin` asks when my server has fewer posts than the profile
   counts. `Core.people_from_origin(acc, which)`: the actor's followers/following
   collection, resolved likewise, on the "more — from their server" button
-  (`feed.remote_people`).
+  (`people.remote_people`).
 * **Direct** — lane `direct` = source mentions, visibility direct; with
   `lanes.direct_apart` such posts leave replies/mentions (`LaneContext.direct_apart`).
 * **Posting extras** — `Core.post(..., sensitive, poll, quote, scheduled_at)`: polls
@@ -579,7 +579,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   (`blocked_domains` joins `silenced()`), `core.set_note` (relationship.note), pinned
   posts (`core.pinned`, `core.pin`; `AccountWidget.render` puts them first).
 * **Keys** — `FeedView.keyPressEvent`: j/k move `cursor_key` (card property `keyed`),
-  r/f/b/m/o act through `ctx.on_link` (`ui.post_keys`).
+  r/f/b/m/o act through `ctx.on_link` (`window.post_keys`).
 * **Profiles and tags** — `AccountWidget` (info card: bio, fields, counts, since,
   "follows you", Follow/Mention/Add to list/browser; `core.relationship/follow`)
   and `TagWidget` (`core.tag_timeline`) share `_PagedTab` (a server timeline read
@@ -623,7 +623,7 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
 
 * **Help and "What's this?"** — ≡ → Help (`MainWindow.open_help(page, anchor)`) shows
   `HelpPanel`, one per window, hidden rather than destroyed so it comes back where it
-  was left. ≡ → What's this? toggles `MainWindow.hints` (`HintMode`; `ui.whats_this`
+  was left. ≡ → What's this? toggles `MainWindow.hints` (`HintMode`; `window.whats_this`
   turns it on at start): while on, an event filter on the QApplication answers every
   `QEvent.ToolTip` whose tooltip text is an i18n string with a row in
   `data/help/<lang>/hints.toml` — so a new button gets a hint by adding one row, no code.
@@ -638,20 +638,20 @@ them in the GUI thread; `MainWindow.on_event` dispatches.
   unread, focus, in_thread, extra (my_replies, short_id, separator). `PostRow`
   rebuilds only when the spec really changed (`update_spec`).
 * **`FeedView`** (feed.py) is a QScrollArea with a centred column of rows
-  (`ui.max_width`), the target logic of §10 and the "seen" signal.
+  (`appearance.max_width`), the target logic of §10 and the "seen" signal.
 * **`LaneWidget`** = header (title, "N new", posts-only control, To new, All
   read, refresh) + FeedView + "Older" button. `refresh()` builds specs from
   `lane_entries`, parents, my replies, short ids and the separator.
 * **`MainWindow`**: sidebar (account, Write, `QListWidget#lanes` of `LaneItem`s,
   the lists block, footer), a `QTabWidget` whose first tab is a `QStackedWidget`
   of lane widgets and whose other tabs are threads/profiles, the find bar,
-  the tray, shortcuts. Esc closes what's on top; the last Esc shows the *curtain* (`right_stack` page 1: no lane on screen, so nothing is marked read; `ui.esc`).
+  the tray, shortcuts. Esc closes what's on top; the last Esc shows the *curtain* (`right_stack` page 1: no lane on screen, so nothing is marked read; `window.esc`).
 * **Compose**: drafts are saved while typing (`post.drafts_autosave`); all exits
   go through `reject()` → `_leave()`; never call `close()` inside `reject()`
   (Qt's closeEvent calls reject → infinite loop). The core deletes the draft
   itself after a successful post (`draft_key`), even if the dialog is gone.
 * **Images**: `get(url, callback, max_side, failed)`; memory cache of QPixmaps
-  (an LRU bounded in bytes by `ui.image_cache_mb`) + disk cache (`cache/` by sha1 of the URL; only decodable files are kept); the
+  (an LRU bounded in bytes by `media.image_cache_mb`) + disk cache (`cache/` by sha1 of the URL; only decodable files are kept); the
   feed asks for 1200 px, the viewer for the full size.
 * **Notifications**: `notify.Notifier` → `notify-send --action=open --wait` in a
   thread (so "Open" can bring the window to the thread), tray balloon otherwise;
@@ -670,7 +670,7 @@ that lacks a place yet (GTK: report, quotes…) gets a "not here yet" status. Qt
 
 The GTK frontend (`frontends/gtk/`, docs/en/dev/gtk.md has the plan and the stages):
 
-* `__init__.py` run(): libadwaita if `ui.adwaita` allows, `Gtk.Application`
+* `__init__.py` run(): libadwaita if `appearance.adwaita` allows, `Gtk.Application`
   NON_UNIQUE (fedtail has its own instance socket), app id `version.APP_ID`.
 * `bridge.py` — futures and events into the GLib main loop (`GLib.idle_add`), the event
   payloads already the model (`View.event_payload`).
@@ -683,7 +683,7 @@ The GTK frontend (`frontends/gtk/`, docs/en/dev/gtk.md has the plan and the stag
   and the command line on `common/compose.py` and `common/commands.py`.
 * `theme.py` — CSS from the theme files via `palette.py`; "auto" colours are Adwaita's
   (GTK 4 has no desktop palette), the accent from libadwaita ≥ 1.6.
-* Outside GNOME the window keeps the desktop's frame (`ui.gtk_headerbar`): a frozen
+* Outside GNOME the window keeps the desktop's frame (`appearance.gtk_headerbar`): a frozen
   client-side title bar can hold the pointer, as it did on KDE.
 
 ## 15. Themes

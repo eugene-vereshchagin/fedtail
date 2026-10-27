@@ -182,8 +182,29 @@ def unset(text, section, key, default=None):
 
 
 def is_set(text, section, key):
-    found = _find(text.splitlines(), section, key)
-    return found is not None and not found[2]
+    """Set in the file — where its layout keeps it, or where 0.20 and before did."""
+    from .config import file_place, older_place
+    lines = text.splitlines()
+    for place in (file_place(section, key), older_place(section, key)):
+        if place is None:
+            continue
+        found = _find(lines, *place)
+        if found is not None and not found[2]:
+            return True
+    return False
+
+
+def _drop(text, section, key):
+    """The line (and its value's lines) of section.key gone — an option written in its
+    new place leaves the older one (its explanation above stays, `--rebuild-config`
+    tidies the whole file)."""
+    lines = text.splitlines()
+    found = _find(lines, section, key)
+    if found is None:
+        return text
+    first, last, _c = found
+    del lines[first:last + 1]
+    return "\n".join(lines) + "\n"
 
 
 # options that are arrays of tables: written as [[section.key]] blocks, not a line
@@ -242,12 +263,18 @@ def set_tables(text, section, key, tables):
 
 def apply(text, changes, example_text=""):
     """Every change {(section, key): value or UNSET} put in the text."""
-    from .config import DEFAULTS
-    for (section, key), value in changes.items():
+    from .config import DEFAULTS, file_place, internal_place, older_place
+    for (named, key), value in changes.items():
+        # where the file's layout keeps it; its line in an older place goes
+        section, _k = file_place(named, key)
+        older = older_place(named, key)
+        if older is not None:
+            text = _drop(text, *older)
         if (section, key) in TABLES:
             text = set_tables(text, section, key, [] if value is UNSET else list(value))
         elif value is UNSET:
-            text = unset(text, section, key, DEFAULTS.get(section, {}).get(key))
+            inner = internal_place(section, key)
+            text = unset(text, section, key, DEFAULTS.get(inner[0], {}).get(key))
         else:
             text = set_value(text, section, key, value, example_text)
     return text
@@ -265,7 +292,8 @@ def check(new_text, changes):
         user = tomllib.loads(new_text)
     except tomllib.TOMLDecodeError as e:
         raise SaveError(f"the file wouldn't read: {e}") from None
-    for (section, key), value in changes.items():
+    for (named, key), value in changes.items():
+        section = config.file_place(named, key)[0]
         got = user.get(section, {}).get(key, UNSET)
         want = UNSET if value is UNSET else (list(value) if isinstance(value, tuple)
                                              else value)

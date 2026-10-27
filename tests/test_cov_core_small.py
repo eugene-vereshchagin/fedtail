@@ -184,11 +184,11 @@ class ConfigTest(unittest.TestCase):
         _cfg, w = config.validate({"debug": {"keep": 3}})
         self.assertTrue(any("debug.keep is gone" in x for x in w))
         self.assertIn("activity.types", self.errors({"activity": {"types": ["nope"]}}))
-        self.assertIn("subs.auto", self.errors({"subs": {"auto": ["nope"]}}))
+        self.assertIn("threads.auto", self.errors({"subs": {"auto": ["nope"]}}))
         config.validate({"lanes": {"enabled": []}})  # empty: the set's own order (no error)
         self.assertIn("extra_bots", self.errors({"lanes": {"extra_bots": [1]}}))
-        self.assertIn("ui.merge", self.errors({"ui": {"merge": ["../x"]}}))
-        self.assertIn("ui.start_lane", self.errors({"ui": {"start_lane": "nowhere"}}))
+        self.assertIn("accounts.merge", self.errors({"ui": {"merge": ["../x"]}}))
+        self.assertIn("window.start_lane", self.errors({"ui": {"start_lane": "nowhere"}}))
         self.assertEqual(config.sensitive_media({"ui": {}, "feed": {}}), "hide")
 
 
@@ -202,7 +202,7 @@ class ConfigUpdateTest(unittest.TestCase):
         ex = config.example_text("en")
         user = 'top = 1\n[ui]\ntheme = "paper"\n[ui.extra]\nx = 1\n'
         out = config_update.rebuild(user, ex, {})
-        self.assertEqual(tomllib.loads(out)["ui"]["theme"], "paper")
+        self.assertEqual(tomllib.loads(out)["appearance"]["theme"], "paper")
         self.assertEqual(tomllib.loads(out)["ui"]["extra"], {"x": 1})
 
 
@@ -236,7 +236,8 @@ class ConfigEditTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "sub" / "config.toml"
             config_edit.save(f, {("ui", "theme"): "paper"})  # no file yet: from the example
-            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["ui"]["theme"], "paper")
+            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["appearance"]["theme"],
+                             "paper")
             before = f.stat().st_mtime_ns
             config_edit.save(f, {("ui", "theme"): "paper"})  # the same: not written again
             self.assertEqual(f.stat().st_mtime_ns, before)

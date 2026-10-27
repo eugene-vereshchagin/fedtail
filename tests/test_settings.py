@@ -16,14 +16,26 @@ from fedtail.frontends.common import settings
 from fedtail.frontends.common.places import Places
 
 USER = """# my own notes up here
-[ui]
+[appearance]
 # the theme I like
 theme = "nord"   # nord, really
+#font_size = 0
+
+[window]
 columns = [
     "home",
     "local",  # two of them
 ]
-#font_size = 0
+
+[reading]
+order = "oldest_first"
+"""
+
+# a file of 0.20 and before: the same options in their older places
+OLD = """[ui]
+# the theme I like
+theme = "nord"
+esc = "tray"
 
 [feed]
 order = "oldest_first"
@@ -41,26 +53,26 @@ class EditTest(unittest.TestCase):
         self.ex = config.example_text("en")
 
     def test_a_set_line_changes_and_nothing_else(self):
-        out = ce.set_value(USER, "ui", "theme", "paper")
+        out = ce.set_value(USER, "appearance", "theme", "paper")
         self.assertEqual(changed_lines(USER, out), ['-theme = "nord"   # nord, really',
                                                     '+theme = "paper"'])
 
     def test_a_list_over_several_lines_becomes_one(self):
-        out = ce.set_value(USER, "ui", "columns", ["home"])
-        self.assertEqual(tomllib.loads(out)["ui"]["columns"], ["home"])
+        out = ce.set_value(USER, "window", "columns", ["home"])
+        self.assertEqual(tomllib.loads(out)["window"]["columns"], ["home"])
         self.assertNotIn("two of them", out)
-        self.assertIn("[feed]", out)
-        self.assertEqual(tomllib.loads(out)["feed"]["order"], "oldest_first")
+        self.assertIn("[reading]", out)
+        self.assertEqual(tomllib.loads(out)["reading"]["order"], "oldest_first")
 
     def test_commented_out_is_switched_on_in_place(self):
-        out = ce.set_value(USER, "ui", "font_size", 12)
+        out = ce.set_value(USER, "appearance", "font_size", 12)
         self.assertEqual(changed_lines(USER, out), ["-#font_size = 0", "+font_size = 12"])
 
     def test_not_mentioned_goes_into_its_section_with_the_explanation(self):
-        out = ce.set_value(USER, "ui", "esc", "tray", self.ex)
+        out = ce.set_value(USER, "window", "esc", "tray", self.ex)
         data = tomllib.loads(out)
-        self.assertEqual(data["ui"]["esc"], "tray")
-        ui_part = out.split("[feed]")[0]
+        self.assertEqual(data["window"]["esc"], "tray")
+        ui_part = out.split("[reading]")[0].split("[window]")[1]
         self.assertIn('esc = "tray"', ui_part)
         self.assertIn('"curtain"', ui_part)  # what the choices mean came along
 
@@ -70,25 +82,26 @@ class EditTest(unittest.TestCase):
         self.assertTrue(out.rstrip().endswith('enabled = "off"'))
 
     def test_unset_comments_the_line_out(self):
-        out = ce.unset(USER, "ui", "theme", "system")
-        self.assertNotIn("theme", tomllib.loads(out)["ui"])
+        out = ce.unset(USER, "appearance", "theme", "system")
+        self.assertNotIn("theme", tomllib.loads(out)["appearance"])
         self.assertIn('#theme = "system"', out)
         self.assertIn("# the theme I like", out)
-        self.assertEqual(ce.unset(out, "ui", "theme"), out)  # once is enough
+        self.assertEqual(ce.unset(out, "appearance", "theme"), out)  # once is enough
 
     def test_strings_are_written_so_they_read_back(self):
         for s in ('a "quoted" one', "back\\slash", "кириллица", "tab\there", ""):
-            out = ce.set_value(USER, "ui", "font", s)
-            self.assertEqual(tomllib.loads(out)["ui"]["font"], s)
+            out = ce.set_value(USER, "appearance", "font", s)
+            self.assertEqual(tomllib.loads(out)["appearance"]["font"], s)
 
     def test_the_reference_takes_every_default_back(self):
         """Every option of the reference set to its own default: the file reads the same,
         and the result passes validate."""
         text = self.ex
-        for section, values in config.DEFAULTS.items():
-            for key, value in values.items():
-                if ce.is_set(text, section, key):
-                    text = ce.set_value(text, section, key, value, self.ex)
+        for table, opts in config.FILE_LAYOUT:
+            for section, key in opts:
+                if ce.is_set(text, table, key):
+                    text = ce.set_value(text, table, key, config.DEFAULTS[section][key],
+                                        self.ex)
         self.assertEqual(tomllib.loads(text), tomllib.loads(self.ex))
         config.validate(tomllib.loads(text))
 
@@ -96,12 +109,13 @@ class EditTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "config.toml"
             f.write_text(USER, "utf-8")
-            ce.save(f, {("ui", "theme"): "paper"}, self.ex)
+            ce.save(f, {("appearance", "theme"): "paper"}, self.ex)
             self.assertEqual(Path(str(f) + ".bak").read_text("utf-8"), USER)
-            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["ui"]["theme"], "paper")
+            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["appearance"]["theme"],
+                             "paper")
             before = f.read_text("utf-8")
             with self.assertRaises(ce.SaveError):
-                ce.save(f, {("ui", "font_size"): "big"}, self.ex)  # must be a number
+                ce.save(f, {("appearance", "font_size"): "big"}, self.ex)  # must be a number
             self.assertEqual(f.read_text("utf-8"), before)
             self.assertFalse(Path(str(f) + ".tmp").exists())
 
@@ -112,13 +126,30 @@ class EditTest(unittest.TestCase):
             f = Path(d) / "config.toml"
             f.write_text(USER, "utf-8")
             for size in (13, 14, 15):
-                ce.save(f, {("ui", "font_size"): size}, self.ex)
+                ce.save(f, {("appearance", "font_size"): size}, self.ex)
             self.assertEqual(Path(str(f) + ".bak").read_text("utf-8"), USER)
-            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["ui"]["font_size"], 15)
+            self.assertEqual(tomllib.loads(f.read_text("utf-8"))["appearance"]["font_size"], 15)
             ce._backed_up.clear()  # the next run: its own starting point
-            ce.save(f, {("ui", "font_size"): 16}, self.ex)
+            ce.save(f, {("appearance", "font_size"): 16}, self.ex)
             self.assertEqual(tomllib.loads(Path(str(f) + ".bak").read_text("utf-8"))
-                             ["ui"]["font_size"], 15)
+                             ["appearance"]["font_size"], 15)
+
+    def test_a_save_moves_an_option_out_of_its_older_place(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "config.toml"
+            f.write_text(OLD, "utf-8")
+            ce.save(f, {("appearance", "theme"): "paper"}, self.ex)
+            data = tomllib.loads(f.read_text("utf-8"))
+            self.assertEqual(data["appearance"]["theme"], "paper")
+            self.assertNotIn("theme", data["ui"])
+            self.assertEqual(data["ui"]["esc"], "tray")  # the rest stays where it was
+            cfg, _w = config.validate(data)
+            self.assertEqual((cfg["ui"]["theme"], cfg["ui"]["esc"]), ("paper", "tray"))
+            # named the program's way, it goes to the same place
+            ce.save(f, {("ui", "esc"): "off"}, self.ex)
+            data = tomllib.loads(f.read_text("utf-8"))
+            self.assertEqual(data["window"]["esc"], "off")
+            self.assertNotIn("esc", data["ui"])
 
     @unittest.skipIf(os.name == "nt", "symlinks need rights on Windows")
     def test_a_symlinked_config_stays_a_link(self):
@@ -128,9 +159,10 @@ class EditTest(unittest.TestCase):
             real.write_text(USER, "utf-8")
             link = Path(d) / "config.toml"
             link.symlink_to(real)
-            ce.save(link, {("ui", "theme"): "paper"}, self.ex)
+            ce.save(link, {("appearance", "theme"): "paper"}, self.ex)
             self.assertTrue(link.is_symlink())
-            self.assertEqual(tomllib.loads(real.read_text("utf-8"))["ui"]["theme"], "paper")
+            self.assertEqual(tomllib.loads(real.read_text("utf-8"))["appearance"]["theme"],
+                             "paper")
             self.assertEqual(Path(str(real) + ".bak").read_text("utf-8"), USER)
 
 
@@ -166,18 +198,23 @@ class ModelTest(unittest.TestCase):
 
     def test_values_come_from_the_file(self):
         chapters = settings.model(_view(Path("/nowhere")), lang="en", text=USER)
-        theme = settings.option(chapters, "ui.theme")
+        theme = settings.option(chapters, "appearance.theme")
         self.assertEqual(theme.value, "nord")
         self.assertTrue(theme.changed)
-        size = settings.option(chapters, "ui.font_size")
+        size = settings.option(chapters, "appearance.font_size")
         self.assertFalse(size.in_file)
-        self.assertEqual(settings.option(chapters, "ui.columns").value, ["home", "local"])
+        self.assertEqual(settings.option(chapters, "window.columns").value, ["home", "local"])
+        # a file of the older layout reads the same
+        old = settings.model(_view(Path("/nowhere")), lang="en", text=OLD)
+        self.assertEqual(settings.option(old, "appearance.theme").value, "nord")
+        self.assertTrue(settings.option(old, "appearance.theme").in_file)
+        self.assertEqual(settings.option(old, "window.esc").value, "tray")
         self.assertTrue(settings.find(chapters, "font"))
         self.assertEqual(settings.find(chapters, "no such thing at all"), [])
 
     def test_typed_values(self):
         chapters = settings.model(_view(Path("/nowhere")), lang="en", text="")
-        poll = settings.option(chapters, "poll.interval_seconds")
+        poll = settings.option(chapters, "server.interval_seconds")
         self.assertEqual(poll.parse(" 60 "), 60)
         with self.assertRaises(ValueError):
             poll.parse("10")  # under the minimum
@@ -198,23 +235,23 @@ class PlaceTest(unittest.TestCase):
 
     def test_save_writes_only_what_changed(self):
         page = self.pl.page("settings")
-        self.assertEqual(page.tab, "ui")
+        self.assertEqual(page.tab, "appearance")
         values = {f.name: f.value for f in page.form}
-        values["ui.font_size"] = "13"
+        values["appearance.font_size"] = "13"
         out = self.pl.act("settings", "save", "", values)
         self.assertEqual(out.error, "")
-        self.assertIn("ui.font_size", out.message)
+        self.assertIn("appearance.font_size", out.message)
         text = self.file.read_text("utf-8")
         self.assertEqual(changed_lines(USER, text), ["-#font_size = 0", "+font_size = 13"])
 
     def test_reset_and_a_bad_number(self):
         page = self.pl.page("settings")
-        self.assertIn("ui.theme", [r.key for r in page.rows])  # set to other than default
-        out = self.pl.act("settings", "reset", "ui.theme")
+        self.assertIn("appearance.theme", [r.key for r in page.rows])  # other than default
+        out = self.pl.act("settings", "reset", "appearance.theme")
         self.assertEqual(out.error, "")
-        self.assertNotIn("theme", tomllib.loads(self.file.read_text("utf-8"))["ui"])
+        self.assertNotIn("theme", tomllib.loads(self.file.read_text("utf-8"))["appearance"])
         values = {f.name: f.value for f in self.pl.page("settings").form}
-        values["ui.font_size"] = "-5"
+        values["appearance.font_size"] = "-5"
         out = self.pl.act("settings", "save", "", values)
         self.assertTrue(out.error)
 

@@ -266,7 +266,10 @@ def model(view, lang=None, text=None):
         cfg = config.DEFAULTS  # a broken file: the window still shows the defaults
     lane = _lane_words(view)
     chapters = {}
-    for number, title, section, group, key, lines in reference(lang):
+    for number, title, table, group, key, lines in reference(lang):
+        # named as the file names it (window.layout); the program keeps it in its own
+        # section (ui.layout): the value, the default and what it may be come from there
+        section = config.internal_place(table, key)[0]
         if section not in config.DEFAULTS or key not in config.DEFAULTS[section] or \
                 (section, key) in TABLES:
             continue
@@ -274,8 +277,8 @@ def model(view, lang=None, text=None):
         value = cfg.get(section, {}).get(key, default)
         listed, rest = _choices_in(lines)
         about = _doc(rest)
-        o = Option(section, key, "text", value, default, title=_title(about, key),
-                   about=about, in_file=is_set(text, section, key), group=group,
+        o = Option(table, key, "text", value, default, title=_title(about, key),
+                   about=about, in_file=is_set(text, table, key), group=group,
                    minimum=config.MINIMUM.get((section, key)))
         known = config.CHOICES.get((section, key))
         if isinstance(default, bool):
@@ -314,10 +317,10 @@ def model(view, lang=None, text=None):
         ch = chapters.get(number)
         if ch is None:
             ch = chapters[number] = Chapter(number, title)
-        if section not in ch.sections:
-            ch.sections.append(section)
+        if table not in ch.sections:
+            ch.sections.append(table)
             if len(ch.sections) > 1 and not group:
-                o.group = f"[{section}]"
+                o.group = f"[{table}]"
         ch.options.append(o)
     return [chapters[n] for n in sorted(chapters)]
 

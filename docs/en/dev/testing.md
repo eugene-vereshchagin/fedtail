@@ -39,7 +39,7 @@ an ordinary account, not the admin one.
 - **Notifications**: the ≡ menu → "Debugging" → "Test a notification".
 - **The command line** at the bottom (`Ctrl+L`, `?` — help), as on Point.
 - **Several accounts**: a right click on your own avatar.
-- **Themes**: `ui.theme` in the config (≡ → "Open the config"), the list is in its explanation.
+- **Themes**: `appearance.theme` in the config (≡ → "Open the config"), the list is in its explanation.
 - **A day without a restart.** Leave the window overnight — send the log in the morning: it has
   `trend` lines and, if something leaks, `possible leak`. How to set up a serious leak hunt
   (memory tracing, snapshots) — [debugging.md](debugging.md#an-overnight-run-hunting-leaks).

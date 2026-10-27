@@ -47,7 +47,7 @@ product, not only the code.
 | A config with a syntax error | from a terminal — a message with where it is, and exit; from a menu or a shortcut — a window: "Start with the default settings", "Open the file", "Quit". The file isn't touched | done in 0.20 |
 | The logs' or the cache's folder made read-only | the logs go to the temporary folder (and if not there either — to the terminal only), the start doesn't fail; pictures are shown from memory | done in 0.20 |
 | Locking the database | SQLite's own locks; `busy_timeout` 5 s; no two processes on one database (one copy a profile, the web page refuses a busy profile) | there |
-| Clearing the cache, limits | the database: `storage.max_mb` (1 GB), `keep_per_lane`, cleaned every `gc_hours`; pictures on disk — `ui.image_disk_mb` (1 GB), video — `ui.video_disk_mb`; in memory — `ui.image_cache_mb` (128 MB) | there |
+| Clearing the cache, limits | the database: `storage.max_mb` (1 GB), `keep_per_lane`, cleaned every `gc_hours`; pictures on disk — `media.image_disk_mb` (1 GB), video — `media.video_disk_mb`; in memory — `media.image_cache_mb` (128 MB) | there |
 | A file deleted or changed while uploading | an error for that picture, in words; the editor and the text stay, it can be attached again | there |
 | Log rotation | a new file every hour and by size (`debug.log_mb`), at most `debug.keep_mb` in all (500 MB when debugging; without debugging 1 MB a file and 5 MB in all, warnings only) | there |
 
@@ -62,7 +62,7 @@ product, not only the code.
 | The system's light/dark switched | the `system` theme takes the desktop's colours at start; on the go — after a restart or through ≡ → "Try a theme" | the author's call |
 | Hammering Send | the button goes grey while sending in every interface; the server gets an `Idempotency-Key`, a repeat makes no second post | there |
 | Keyboard navigation | j/k, Enter, ←/→, Tab, shortcuts all over the window; the terminal entirely by keyboard; labels for screen readers | there |
-| 100 000 items | a lane holds at most `feed.render_limit` in the window, cards are built for the visible stretch only; the database keeps `keep_per_lane` a lane | there |
+| 100 000 items | a lane holds at most `reading.render_limit` in the window, cards are built for the visible stretch only; the database keeps `keep_per_lane` a lane | there |
 | An empty string, null, a word without spaces | the adapter brings fields to their types with safe values; long words get invisible break points (Qt, GTK), the web page `overflow-wrap: anywhere`; a long picture description scrolls | there; the description — done in 0.20 |
 
 ## 5. Security

@@ -197,7 +197,7 @@ fedtail/
     help/<lang>/*.md     встроенная справка (F1), вставки раскрывает tools/docs_build.py
     themes/*.toml        встроенные темы (в system.toml перечислены все ключи)
     icons/fedtail.png    иконка приложения: опоссум, обнявший свой хвост (окно, меню, О программе)
-    icons/fedtail.svg    нарисованный пузырь (ui.app_icon = "bubble"; iconart.py красит его темой)
+    icons/fedtail.svg    нарисованный пузырь (appearance.app_icon = "bubble"; iconart.py красит его темой)
 syncserver/fedtail_sync.py  сервер fedtail-sync: один файл на stdlib, админ его копирует (§12)
 tests/               unittest; fakes.py — Mastodon в памяти
 tools/screenshots.py рисует окно с выдуманными данными (CI публикует PNG)
@@ -225,7 +225,7 @@ docs/                ru/dev/, en/dev/ — документы для разраб
    тот, что на языке файла пользователя (`config.language_of`), и сообщает об опциях, которых в файле пользователя ещё нет;
    `--update-config` вставляет их и выходит.
 5. `--bug-report` упаковывает журналы (§18) и выходит.
-6. `i18n.setup(cfg.ui.language)`.
+6. `i18n.setup(cfg.appearance.language)`.
 7. `SingleInstance`: если другой процесс этого профиля отвечает на своём unix-сокете,
    его просят поднять окно, а мы выходим.
 8. `diag.setup()` — файл журнала, файлы падений и стеков, перехватчики исключений — потом
@@ -249,8 +249,8 @@ docs/                ru/dev/, en/dev/ — документы для разраб
 | поток | что в нём работает |
 |---|---|
 | GUI (главный) | все объекты Qt; слоты Bridge; никогда не ждёт сеть |
-| `fedtail-poll` | `Core._poll_loop`: `poll_once()` раз в `poll.interval_seconds` или когда разбудят (`poll_now()`) |
-| `fedtail-stream` | `protocols/mastodon/stream.py`: поток WebSocket сервера (`poll.stream`); `update` / `notification` только зовут `poll_now()` — забирает всё равно опрос, так что оборванный поток ничего не теряет; переподключение с паузой 5 с…5 мин; токен идёт в заголовках рукопожатия, никогда в URL или в журнал |
+| `fedtail-poll` | `Core._poll_loop`: `poll_once()` раз в `server.interval_seconds` или когда разбудят (`poll_now()`) |
+| `fedtail-stream` | `protocols/mastodon/stream.py`: поток WebSocket сервера (`server.stream`); `update` / `notification` только зовут `poll_now()` — забирает всё равно опрос, так что оборванный поток ничего не теряет; переподключение с паузой 5 с…5 мин; токен идёт в заголовках рукопожатия, никогда в URL или в журнал |
 | пул `fedtail_*` (4) | действия пользователя: пост, лайк, открыть тред, профиль… (`core.submit`) |
 | пул `fedtail-bg` (2) | фоновая работа: родители, «ответил ли я?», подписки по запросу, честные счётчики |
 | пул `fedtail-img` (4) | загрузка и сохранение картинок (в `Images`) — очередь аватаров никогда не задерживает отправку поста |
@@ -336,7 +336,7 @@ docs/                ru/dev/, en/dev/ — документы для разраб
 
 * `catch_up()` идёт **вперёд** от самого свежего сохранённого элемента через `min_id`,
   страница за страницей, пока страница не окажется короткой или не упрётся в
-  `feed.catch_up_limit`. Так в локальной копии нет дыр и читать можно по хронологии.
+  `reading.catch_up_limit`. Так в локальной копии нет дыр и читать можно по хронологии.
 * Первый раз (`_fill_empty`): одна страница. Если источник уже смотрели, но он был пуст
   (`kv source_since:<name>`), он идёт назад до того момента, чтобы не пропустить
   пришедшее за это время.
@@ -375,7 +375,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   широкой вниз (federated, home, local, bots), «Личные» (my_posts, mentions, replies,
   subs, bookmarks, activity, requests), «Списки» внизу; порядок из конфига держится внутри
   раздела
-  (`ui.sidebar_groups = false` → один плоский список). Строит её
+  (`window.sidebar_groups = false` → один плоский список). Строит её
   `MainWindow._rebuild_sidebar()` (заново на `lists_changed`); Alt+1…9 идут по `lane_order`,
   а не по строкам.
 
@@ -388,7 +388,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * `lanes.enabled(cfg, lists)` строит список из `lanes.enabled` плюс ленты списков.
   `Core._apply_lists()` подменяет `Core.lanes`/`lane_by_name`, когда меняются списки.
 * `Core.lane_entries(name)` возвращает `[(item_id, status)]` от старых к новым, не больше
-  `feed.render_limit` (его поднимают «Раньше» и «Глубже» в Ctrl+F через `_limits`),
+  `reading.render_limit` (его поднимают «Раньше» и «Глубже» в Ctrl+F через `_limits`),
   отфильтрованные `keep` и «только посты». Кэшируется, пока хранилище не изменится.
   Ленты с `by_status_time` (уведомления) сортируются по времени самого поста.
 * Участники списков уходят из общих лент: `Core._hidden_authors()` собирает участников
@@ -406,9 +406,9 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 5. Уведомления активности забираются вперёд (`_poll_activity`); самый первый раз это
    история (помечается виденной).
 6. Правила прочтения: при самом первом запуске всё помечается прочитанным
-   (`feed.first_run_mark_read`); мои собственные посты прочитаны всегда; пост, на который
+   (`reading.first_run_mark_read`); мои собственные посты прочитаны всегда; пост, на который
    я ответил (из любого клиента), прочитан.
-7. На мои новые посты и комментарии включается автоподписка (`subs.auto`).
+7. На мои новые посты и комментарии включается автоподписка (`threads.auto`).
 8. Новые элементы раскладываются по лентам → событие `lanes_updated {lane: [item ids]}`.
 9. Уведомления рабочего стола для лент из `notify.lanes` (`"all"`: все ленты) и не из
    `notify.except` (`Core._notify_wanted`; только непрочитанные) →
@@ -422,8 +422,8 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
 * Отметки живут в `read`. Что *увидено*, решает GUI: `FeedView._emit_seen`
   (через 350 мс после остановки прокрутки) сообщает карточки, целиком попавшие на экран
   (или высокие, которые прокрутили, или хвост в конце) → `core.mark_read`. Режимы:
-  `read.mark_read = on_scroll | on_open | manual`.
-* Открытая лента встаёт на первое непрочитанное (`feed.start_at`); строка-разделитель
+  `reading.mark_read = on_scroll | on_open | manual`.
+* Открытая лента встаёт на первое непрочитанное (`reading.start_at`); строка-разделитель
   «новое ниже · N» закрепляется там, где читатель стоял при открытии ленты.
 * Удержание позиции: `FeedView` хранит **цель** (`("anchor", key, offset)`,
   `("row", key, top|bottom)` или `("end", …)`) и применяет её заново на каждом
@@ -466,14 +466,14 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   сохранённое для ленты и поднимает её лимит показа до следующего совпадения.
 * **Честные счётчики** — `protocols/mastodon/counters.py`: для публичных постов с других
   серверов GET `https://<origin>/api/v1/statuses/<id>` *без токена*, оставляем большие
-  числа; раз в 10 минут на пост; по умолчанию выключено (`feed.honest_counters`).
+  числа; раз в 10 минут на пост; по умолчанию выключено (`card.honest_counters`).
 * **Треды целиком** — `Core._thread_nodes()` читает контекст *верхнего* поста (контекст
   поста содержит только его ветку), так что тред выглядит одинаково от любого поста.
   `core/replies.py` + `Core._complete_thread()`: объект ActivityPub верхнего поста
   забирается с его сервера (без токена), коллекция `replies` обходится на несколько
   уровней вниз, и каждый адрес ответа, которого не знает мой сервер, разрешается через
   мой сервер (`/api/v2/search?resolve=true`); потом `thread_grew` заставляет открытый тред
-  перезагрузиться. Раз в 5 минут на тред; `feed.complete_threads`.
+  перезагрузиться. Раз в 5 минут на тред; `threads.complete_threads`.
 * **Сохранение картинок** — `core/saving.py` (куда, имя файла, без перезаписи) +
   `Images.save()` (из кэша, когда можно).
 * **Подсказка CamelCase** — `core/hashtags.flat_tags()`, показывается под текстом поста.
@@ -482,7 +482,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   `fedtail:tag/<name>`, похожие на федиверс адреса профилей и постов (и неизвестные
   упоминания) → `fedtail:resolve/<quoted url>`. `core.resolve(url)` спрашивает сервер
   пользователя (`/api/v2/search?resolve=true`), и окно открывает тред или профиль;
-  браузер — только если ничего не нашлось. Флаг `ui.links_in_app`.
+  браузер — только если ничего не нашлось. Флаг `card.links_in_app`.
 * **Командная строка** — `core/commands.py` разбирает строку в `Command` (чистая
   функция, с тестами); `qt/cmdline.py: CommandBar` показывает, что сделает Enter, и
   выполняет через `core.target(alias, n)` (короткий id или комментарий /N его треда),
@@ -492,7 +492,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   карточке на группу (`extra["conversation"]`), и увиденная карточка помечает
   прочитанными всех своих участников. Есть только над «Ответами мне», «Упоминаниями» и
   «Подписками» (`feed.CONVERSATION_LANES`); держится на время запуска через
-  `core.choice()` (или в `kv` с `feed.remember_choices`), как «Всё | Посты | Новое».
+  `core.choice()` (или в `kv` с `reading.remember_choices`), как «Всё | Посты | Новое».
 * **Правка** — `core.source()` (`/statuses/:id/source`, набранный текст) →
   `Compose(edit=st)` → `core.edit()` (`PUT /statuses/:id`, id медиа передаются снова,
   чтобы остались); `core.history()` кормит `MainWindow.show_history`; карточки
@@ -507,19 +507,19 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   заголовку Link через `Api.get_page`), `core.follow`, `core.follow_tag`/`tag_info`/
   `followed_tags`. Qt: `SearchWidget` (поле в боковой панели, Ctrl+K), `PeopleWidget`,
   переиспользуемые `AccountRow` и `TagRow` со своими кнопками «Подписаться».
-* **Содержимое поста** (`card.py`) — `_link_card` (status.card; `feed.link_cards`),
+* **Содержимое поста** (`card.py`) — `_link_card` (status.card; `card.link_cards`),
   `_emoji_label` (свои emoji: `text.emojify` направляет `<img>` на картинку, уже лежащую в
   кэше `Images`, `Images.local(url)`, и перерисовывает подпись, когда приходит
-  недостающая; `feed.custom_emoji`), `_quote` (`model.quoted()` понимает Quote/ShallowQuote
+  недостающая; `appearance.custom_emoji`), `_quote` (`model.quoted()` понимает Quote/ShallowQuote
   Mastodon 4.5, цитаты целым статусом Akkoma/Fedibird; состояния кроме
   "accepted" объясняются; `model.without_quote_fallback` убирает абзац «RE:»;
-  `feed.quotes`), чувствительные медиа закрыты до клика (`feed.sensitive_media`),
-  перевод через `ctx.translate` (`feed.translate`; карточка держит его и переключает).
+  `card.quotes`), чувствительные медиа закрыты до клика (`card.sensitive_media`),
+  перевод через `ctx.translate` (`card.translate`; карточка держит его и переключает).
 * **Дополнение в редакторе** — `#` из `store.tag_counts()` + теги, на которые подписан, `@` из
   `store.people_counts()`, потом `core.search_people()` (без resolve); оба строятся лениво
   за один проход SQL (json_each) и поддерживаются в актуальном виде `put_statuses`;
   `Compose._offer`.
-* **Маркеры** — `Core._sync_markers()` после каждого опроса (`read.sync_markers`): pull —
+* **Маркеры** — `Core._sync_markers()` после каждого опроса (`sync.sync_markers`): pull —
   всё до `last_read_id` другого клиента (home → источник home, notifications → источник
   mentions) помечается прочитанным по разу на новый маркер; push — самый свежий элемент,
   до которого всё старое прочитано, уходит на сервер. Id сравниваются через
@@ -574,11 +574,11 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   излучает `thread_grew`, когда оно закончилось.
 * **Чужие профили** — `Core.posts_from_origin(acc)`: актор (acc.uri или url,
   AP Accept), первые страницы его outbox (`replies.outbox_post_uris`: Create, публичные),
-  каждый пост разрешается через мой сервер (`feed.remote_profiles`, `remote_posts`);
+  каждый пост разрешается через мой сервер (`people.remote_profiles`, `remote_posts`);
   `AccountWidget._from_origin` спрашивает, когда у моего сервера постов меньше, чем
   насчитывает профиль. `Core.people_from_origin(acc, which)`: коллекция
   followers/following актора, разрешается так же, по кнопке «ещё — с их сервера»
-  (`feed.remote_people`).
+  (`people.remote_people`).
 * **Личные** — лента `direct` = источник mentions, видимость direct; с
   `lanes.direct_apart` такие посты уходят из ответов и упоминаний (`LaneContext.direct_apart`).
 * **Дополнения к посту** — `Core.post(..., sensitive, poll, quote, scheduled_at)`: опросы
@@ -589,7 +589,7 @@ extra_bots, mentions_all, subs_replies_to_me, hidden)`.
   (`blocked_domains` входит в `silenced()`), `core.set_note` (relationship.note),
   закреплённые посты (`core.pinned`, `core.pin`; `AccountWidget.render` ставит их первыми).
 * **Клавиши** — `FeedView.keyPressEvent`: j/k двигают `cursor_key` (свойство карточки
-  `keyed`), r/f/b/m/o действуют через `ctx.on_link` (`ui.post_keys`).
+  `keyed`), r/f/b/m/o действуют через `ctx.on_link` (`window.post_keys`).
 * **Профили и теги** — `AccountWidget` (карточка: описание, поля, счётчики, «с какого
   времени», «подписан на тебя», Подписаться/Упомянуть/В список/браузер;
   `core.relationship/follow`) и `TagWidget` (`core.tag_timeline`) делят `_PagedTab`
@@ -633,7 +633,7 @@ GUI-потоке; разбирает `MainWindow.on_event`.
 
 * **Справка и «Что это?»** — ≡ → Справка (`MainWindow.open_help(page, anchor)`) показывает
   `HelpPanel`, одну на окно; её прячут, а не уничтожают, чтобы она возвращалась туда, где
-  её оставили. ≡ → Что это? переключает `MainWindow.hints` (`HintMode`; `ui.whats_this`
+  её оставили. ≡ → Что это? переключает `MainWindow.hints` (`HintMode`; `window.whats_this`
   включает при запуске): пока включено, фильтр событий на QApplication отвечает на каждый
   `QEvent.ToolTip`, чей текст — строка i18n со строкой в `data/help/<lang>/hints.toml`, —
   так что новая кнопка получает подсказку одной строкой, без кода.
@@ -647,7 +647,7 @@ GUI-потоке; разбирает `MainWindow.on_event`.
 * **`CardSpec`** (card.py) описывает одну строку: статус, глубина, номер `/N`, родитель,
   непрочитанность, фокус, in_thread, extra (my_replies, short_id, separator). `PostRow`
   перестраивается, только если спецификация правда изменилась (`update_spec`).
-* **`FeedView`** (feed.py) — QScrollArea с колонкой строк по центру (`ui.max_width`),
+* **`FeedView`** (feed.py) — QScrollArea с колонкой строк по центру (`appearance.max_width`),
   логика цели из §10 и сигнал «увидено».
 * **`LaneWidget`** = шапка (заголовок, «N новых», переключатель «только посты», «К новому»,
   «Всё прочитано», обновить) + FeedView + кнопка «Раньше». `refresh()` строит спецификации
@@ -655,13 +655,13 @@ GUI-потоке; разбирает `MainWindow.on_event`.
 * **`MainWindow`**: боковая панель (аккаунт, «Написать», `QListWidget#lanes` из `LaneItem`,
   блок списков, подвал), `QTabWidget`, чья первая вкладка — `QStackedWidget` из виджетов
   лент, а остальные — треды и профили, строка поиска, трей, сочетания клавиш. Esc
-  закрывает то, что сверху; последний Esc показывает *шторку* (`right_stack` страница 1: ни одной ленты на экране, так что ничего не помечается прочитанным; `ui.esc`).
+  закрывает то, что сверху; последний Esc показывает *шторку* (`right_stack` страница 1: ни одной ленты на экране, так что ничего не помечается прочитанным; `window.esc`).
 * **Написание**: черновики сохраняются по ходу набора (`post.drafts_autosave`); все выходы
   идут через `reject()` → `_leave()`; никогда не зови `close()` внутри `reject()`
   (closeEvent Qt зовёт reject → бесконечный цикл). Ядро само удаляет черновик после
   успешного поста (`draft_key`), даже если окна уже нет.
 * **Картинки**: `get(url, callback, max_side, failed)`; кэш QPixmap в памяти
-  (LRU с ограничением в байтах, `ui.image_cache_mb`) + кэш на диске (`cache/` по sha1 от URL; хранятся только декодируемые файлы);
+  (LRU с ограничением в байтах, `media.image_cache_mb`) + кэш на диске (`cache/` по sha1 от URL; хранятся только декодируемые файлы);
   лента просит 1200 px, просмотрщик — полный размер.
 * **Уведомления**: `notify.Notifier` → `notify-send --action=open --wait` в отдельном
   потоке (чтобы «Открыть» могло вывести окно к треду), иначе всплывашка трея;
@@ -680,7 +680,7 @@ GTK не блокируют) — `compose(reply_to, invite, edit, quote)` и м�
 
 Фронтенд на GTK (`frontends/gtk/`, план и этапы — в docs/ru/dev/gtk.md):
 
-* `__init__.py` run(): libadwaita, если позволяет `ui.adwaita`, `Gtk.Application`
+* `__init__.py` run(): libadwaita, если позволяет `appearance.adwaita`, `Gtk.Application`
   NON_UNIQUE (у fedtail свой сокет экземпляра), app id `version.APP_ID`.
 * `bridge.py` — фьючерсы и события в главный цикл GLib (`GLib.idle_add`), данные событий
   уже модель (`View.event_payload`).
@@ -694,7 +694,7 @@ GTK не блокируют) — `compose(reply_to, invite, edit, quote)` и м�
   и командная строка поверх `common/compose.py` и `common/commands.py`.
 * `theme.py` — CSS из файлов тем через `palette.py`; цвета "auto" — от Adwaita
   (у GTK 4 нет палитры рабочего стола), акцент — из libadwaita ≥ 1.6.
-* Вне GNOME окно сохраняет рамку рабочего стола (`ui.gtk_headerbar`): зависшая
+* Вне GNOME окно сохраняет рамку рабочего стола (`appearance.gtk_headerbar`): зависшая
   клиентская шапка может держать указатель, как было в KDE.
 
 ## 15. Темы

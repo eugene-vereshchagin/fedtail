@@ -141,7 +141,7 @@ How much to keep — config flags, sensible by default, like everything else.
 
 ## Several accounts and mixed protocols
 
-Already there: one profile — one account, `ui.merge` gathers several `Core`s into one window
+Already there: one profile — one account, `accounts.merge` gathers several `Core`s into one window
 (`core/merged.py`). That's exactly the way for different protocols: **one `Core` = one account =
 one protocol**, the window mixes them. A `Ref` carries `profile`, so objects of different
 accounts don't get mixed up. Nothing new to invent.
@@ -150,7 +150,7 @@ accounts don't get mixed up. Nothing new to invent.
 
 `View.roster()` → `[RosterGroup]` of `RosterItem`s: lanes, lists, followed threads, private
 conversations, mutuals ("People", `Core.refresh_mutuals` once a day); later Lemmy
-communities. Layouts (`ui.layout = single | columns | split`) are the frontend's business;
+communities. Layouts (`window.layout = single | columns | split`) are the frontend's business;
 the roster is the model's data, the same for all.
 
 ## The plan of work (in batches, a push at the end of each)
@@ -162,7 +162,7 @@ the roster is the model's data, the same for all.
 | 2 ✓ | the core gives frontends the model (`core/view.py`: View over Core); frontends one by one: cli ✓ → tui ✓ → web ✓ (rewritten) → qt ✓ | `tests/test_layering.py`: no protocol or database fields anywhere in `frontends/` |
 | 3 ✓ | `api.py`, the stream, honest counters and the capability probe moved to `protocols/mastodon/`; the core takes the client, its errors, the stream and `Capabilities` from a `Protocol` (`protocols/base.py`), and the client methods it calls are listed there too (`CLIENT`) | `tests/test_protocols.py`: no `/api/v…` paths in the code outside `protocols/`, the core calls only `CLIENT`, the Mastodon client has all of `CLIENT`, frontends don't reach into `protocols.mastodon` |
 | 4 ✓ | `Capabilities` (`protocols/base.py`) — one place: what the server said about itself, the probe's answers, "no such thing" refusals and what's known of the software (`KNOWN`); `Core.supports` asks it, the answers survive a reconnect, the last probe counts from the start; the `capabilities_changed` event — frontends hide buttons at once | `tests/test_protocols.py`, `test_social.py`, smoke: "Clear" goes as soon as the server refused |
-| 5 ✓ | the roster (`View.roster()` → `RosterGroup` / `RosterItem`) and `ui.layout = "split"` on Qt: a roster window, a messages window with its own tabs, an input line, faces — [layouts.md](layouts.md) | `tests/test_roster.py`, smoke + screenshots by `tools/screenshots.py` |
+| 5 ✓ | the roster (`View.roster()` → `RosterGroup` / `RosterItem`) and `window.layout = "split"` on Qt: a roster window, a messages window with its own tabs, an input line, faces — [layouts.md](layouts.md) | `tests/test_roster.py`, smoke + screenshots by `tools/screenshots.py` |
 | 6 ✓ | themes in the spirit of QIP, Psi+ and Agent; a theme sets the layout's look too (`shape.faces`, `roster_rows`, `tab_rows`, `icons`) | `tests/test_themes.py`, `test_icons.py`, screenshots |
 
 The user shouldn't notice stages 0–4 at all: the behaviour is the same, the CHANGELOG says

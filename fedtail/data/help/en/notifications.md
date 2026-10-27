@@ -34,6 +34,6 @@ and "Reject" buttons.
 ## The number on the icon
 
 How much is unread — in the tray and on the task bar button. Which lanes count —
-`ui.icon_count` and `ui.icon_count_except`.
+`window.icon_count` and `window.icon_count_except`.
 
-In detail → [Notifications and activity](ref/features.md#notifications-and-activity) · [settings](ref/config.md#6-notifications)
+In detail → [Notifications and activity](ref/features.md#notifications-and-activity) · [settings](ref/config.md#10-notifications-and-sounds)

@@ -411,6 +411,169 @@ class ConfigError(Exception):
     pass
 
 
+# ---- the file's layout ------------------------------------------------------------------
+# config.toml is laid out by what one sets up (the settings window's chapters, the same
+# order): its tables are these. Inside the program every option keeps the section it was
+# born in (cfg["ui"]["theme"] — what DEFAULTS has): validate() reads both the file's
+# tables and the older ones ([ui], [feed], [read], [subs], [poll], [account] — files of
+# 0.20 and before), config_edit writes where the file's layout puts an option (and
+# takes the older line out), `--rebuild-config` moves a whole older file.
+# tests/test_config_layout.py holds this, DEFAULTS, both example files and the settings
+# window to one another.
+def _keys(section, names):
+    return [(section, k) for k in names.split()]
+
+
+FILE_LAYOUT = (
+    ("appearance", _keys("ui", "language theme font_size fonts font mono_font max_width "
+                               "faces icons app_icon themed_icon adwaita gtk_headerbar "
+                               "accessibility")
+     + _keys("feed", "emoji custom_emoji text_markup")),
+    ("window", _keys("ui", "frontend layout open_columns columns column_width "
+                           "themes_by_layout roster_on_top roster_threads split_tabs "
+                           "dock_commands sidebar_groups sidebar_width sidebar_footer "
+                           "start_lane tray close_to_tray esc post_keys command_line "
+                           "whats_this compose compose_size icon_count icon_count_except "
+                           "desktop_entry")),
+    ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
+                             "custom tag_groups languages languages_in detect_language "
+                             "detect_min_words federated_extra tags_extra bubble "
+                             "extra_minutes")),
+    ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
+    ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
+                              "build_at_once remember_choices first_run_mark_read")
+     + _keys("read", "mark_read read_button")),
+    ("card", _keys("feed", "show_reply_context thread_news repeat_boosts quotes link_cards "
+                           "old_days collapse_tags long_form sensitive_media")
+     + _keys("ui", "arts_mode expand_cw actions bookmark_button links_in_app")
+     + _keys("feed", "show_moved honest_counters counters_via_accounts translate "
+                     "translate_all")),
+    ("threads", _keys("feed", "complete_threads")
+     + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
+    ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
+                             "profile_show profile_pinned profile_featured per_person_follow "
+                             "follow_date_note forget_unfollowed")),
+    ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
+                          "video_decode gifv image_upscale save_dir")
+     + _keys("feed", "prefetch")
+     + _keys("ui", "image_cache_mb image_decode image_disk_mb video_disk_mb "
+                   "unload_hidden_minutes")),
+    ("post", _keys("post", "default_visibility send_timeout reply_never_wider drafts_autosave "
+                           "cw_field camelcase_hint plain_posts language languages spellcheck "
+                           "spell_languages complete_mentions complete_tags complete_emoji "
+                           "report_forward quote_policy quote_action quote_prefix invite "
+                           "who_can_reply who_can_boost who_can_like schedule alt_reminder "
+                           "redraft resize_images focus_point chain preview")
+     + _keys("account", "markdown")),
+    ("notify", _keys("notify", "enabled lanes except privacy when_focused backend filtered")
+     + _keys("ui", "announcements")),
+    ("sound", _keys("sound", "enabled lanes except online sent when_focused scheme volume "
+                             "player min_gap_seconds")),
+    ("activity", _keys("activity", "types approvals requests my_follows unfollows "
+                                   "unfollows_minutes unfollows_max unfollows_mass unlikes "
+                                   "unlikes_days unlikes_posts server_notices "
+                                   "server_groups")),
+    ("accounts", _keys("ui", "merge switch_closes account_colors act_as")),
+    ("sync", _keys("sync", "url folder interval_seconds read threads lanes drafts activity "
+                           "tiles lane_rules")
+     + _keys("read", "sync_markers")),
+    ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes")),
+    ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
+    ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "
+                             "watchdog_seconds stall_ms slow_request_seconds rss_warn_mb "
+                             "leak_samples object_census tracemalloc report_repo "
+                             "issue_repo")),
+    ("cli", _keys("cli", "enabled color max_lines tail_lanes")),
+    ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
+                         "video")),
+    ("web", _keys("web", "host port open_browser")),
+    ("phone", _keys("phone", "overview layout push")),
+)
+# (internal section, key) → the file's table; (the file's table, key) → internal section
+FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}
+INTERNAL = {(table, key): section for table, opts in FILE_LAYOUT for section, key in opts}
+FILE_TABLES = tuple(t for t, _o in FILE_LAYOUT)
+
+
+def file_place(section, key):
+    """Where the file keeps an option, named either way (the program's section or the
+    file's table) → (table, key); as given when it is neither."""
+    if (section, key) in INTERNAL:
+        return section, key
+    return FILE_TABLE.get((section, key), section), key
+
+
+def internal_place(section, key):
+    """The program's (section, key) of an option named either way."""
+    if (section, key) in INTERNAL:
+        return INTERNAL[(section, key)], key
+    return section, key
+
+
+def older_place(section, key):
+    """Where a file of 0.20 and before had it (the program's section), when that isn't
+    where the file keeps it now; else None."""
+    inner = internal_place(section, key)
+    return inner if file_place(*inner)[0] != inner[0] else None
+
+
+def from_file(user):
+    """The file's tables (either layout) → ({section: {key: value}} as the program keeps
+    them, [options found in their older places], [unknown keys of the file's tables]).
+    An option set in both places: the file's own wins. A table neither layout knows
+    stays as it is (validate says so)."""
+    out, older, unknown, own = {}, [], [], set()
+    for table, values in user.items():
+        if not isinstance(values, dict):
+            out[table] = values
+            continue
+        if table not in FILE_TABLES or table in DEFAULTS:
+            out.setdefault(table, {})  # validate speaks of a table it doesn't know
+        for key, val in values.items():
+            if (table, key) in INTERNAL:
+                section = INTERNAL[(table, key)]
+                own.add((section, key))
+            elif table in DEFAULTS:
+                section = table  # the older layout — or an older name validate knows
+                if key in DEFAULTS[table]:
+                    if (section, key) in own:
+                        continue
+                    older.append(f"{table}.{key}")
+            else:
+                if table in FILE_TABLES:
+                    unknown.append(f"{table}.{key}")
+                    continue
+                section = table
+            out.setdefault(section, {})[key] = val
+    return out, older, unknown
+
+
+_INNER_NAME = re.compile(r"\b(ui|feed|read|subs|poll|account)\.([a-z_]+)\b")
+
+
+def file_names(text):
+    """Words about options with each named as the file names it now (ui.theme →
+    appearance.theme) — what validate says is what the person finds in the file."""
+    def one(m):
+        table = FILE_TABLE.get((m.group(1), m.group(2)))
+        return f"{table}.{m.group(2)}" if table else m.group(0)
+    return _INNER_NAME.sub(one, text)
+
+
+def to_file(cfg_like):
+    """{section: {key: value}} the program's way → the file's tables (for rebuilding a
+    file of the older layout)."""
+    out = {}
+    for section, values in cfg_like.items():
+        if not isinstance(values, dict):
+            out[section] = values
+            continue
+        for key, val in values.items():
+            table = FILE_TABLE.get((section, key), section)
+            out.setdefault(table, {})[key] = val
+    return out
+
+
 EXAMPLE_LANGS = ("ru", "en")
 
 
@@ -460,6 +623,12 @@ def validate(user):
     """Merge user config over defaults. Returns (config, warnings) or raises ConfigError."""
     cfg = copy.deepcopy(DEFAULTS)
     warnings, errors = [], []
+    user, older, unknown = from_file(user)
+    warnings += [f"unknown key {name} — ignored" for name in unknown]
+    if older:
+        warnings.append(f"options in their places of 0.20 and before: {', '.join(older[:6])}"
+                        + (" …" if len(older) > 6 else "")
+                        + " — `--rebuild-config` puts the file in the new chapters")
     for section, values in user.items():
         if section not in DEFAULTS:
             warnings.append(f"unknown section [{section}] — ignored")
@@ -608,6 +777,9 @@ def validate(user):
     if bad_in:
         errors.append(f"lanes.languages_in: unknown lanes {bad_in}; known: "
                       f"{', '.join(sorted(LANE_NAMES))}, lists, tags")
+    errors = [file_names(e) for e in errors]
+    warnings = [w if w.startswith("options in their places") else file_names(w)
+                for w in warnings]
     if errors:
         raise ConfigError("\n".join(errors))
     return cfg, warnings

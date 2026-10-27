@@ -137,7 +137,10 @@ class BridgeTest(_Base):
         self.demo()
         text = self.call("config_text")["text"]
         self.assertIn("[sync]", text)
-        bad = json.loads(self.bridge.config_save(text + "\n[feed]\norder = \"sideways\"\n"))
+        import re
+        bad = json.loads(self.bridge.config_save(re.sub(
+            r"(\[reading\][^\[]*?)^#?order = .*$", r'\1order = "sideways"', text,
+            count=1, flags=re.M | re.S)))
         self.assertIn("error", bad)
         self.assertEqual(self.call("config_text")["text"], text)  # nothing landed
         self.assertIn("error", json.loads(self.bridge.config_save("this = is = not toml")))
@@ -301,20 +304,21 @@ class BridgeTest(_Base):
         self.assertTrue(titles)
         opts = {(o["section"], o["key"]): o for c in got["chapters"] for o in c["options"]}
         self.assertNotIn(("web", "port"), opts)  # the desktop's browser: not here
-        self.assertNotIn(("ui", "gtk_headerbar"), opts)  # the windows' own
-        self.assertNotIn(("ui", "font"), opts)
-        self.assertIn(("ui", "language"), opts)
-        order = opts[("feed", "order")]
+        self.assertNotIn(("appearance", "gtk_headerbar"), opts)  # the windows' own
+        self.assertNotIn(("appearance", "font"), opts)
+        self.assertIn(("appearance", "language"), opts)
+        self.assertIn(("sync", "url"), opts)  # a chapter of its own
+        order = opts[("reading", "order")]
         self.assertEqual(order["kind"], "choice")
         self.assertIn("newest_first", [v for v, _w in order["choices"]])
         self.assertTrue(order["title"] and order["about"])
-        self.assertEqual(opts[("ui", "command_line")]["value"], False)  # the phone's
+        self.assertEqual(opts[("window", "command_line")]["value"], False)  # the phone's
         self.assertEqual(opts[("phone", "overview")]["kind"], "choice")
         before = self.bridge._s["core"]
-        self.assertEqual(self.call("setting_set", "feed", "order", '"newest_first"')["value"],
+        self.assertEqual(self.call("setting_set", "reading", "order", '"newest_first"')["value"],
                          "newest_first")
         self.assertIn('order = "newest_first"', self.call("config_text")["text"])
-        bad = json.loads(self.bridge.setting_set("feed", "order", '"sideways"'))
+        bad = json.loads(self.bridge.setting_set("reading", "order", '"sideways"'))
         self.assertIn("error", bad)
         self.assertIn('order = "newest_first"', self.call("config_text")["text"])  # kept
         self.assertEqual(self.call("setting_set", "phone", "overview", '"list"')["value"],

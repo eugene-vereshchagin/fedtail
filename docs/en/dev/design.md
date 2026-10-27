@@ -26,7 +26,7 @@ logs and diagnostics — [debugging.md](debugging.md).
 7. **The core knows nothing of a GUI.** Interfaces are plugins: a Qt window, a terminal, a
    browser; GTK next.
 8. **One profile, one account.** A second account is a second profile (`--profile`); if you
-   like, all accounts come together in one window (`ui.merge`).
+   like, all accounts come together in one window (`accounts.merge`).
 9. **Grown-ups sort things out themselves.** Arts mode (after @arts, the founder of Point.im):
    everything as the author posted it, no nannying. Anyone can be told where to go, an admin
    too — and the admin can say the same back.
@@ -105,6 +105,6 @@ Taken out of the queue (not needed for now): an XMPP gateway, following old thre
 
 - A server notifies only about replies where you were mentioned. Two people answering each other
   in your thread won't land in "Replies to me" — thread subscriptions catch that: the client rereads
-  threads every `subs.interval_minutes` by itself. You see what your server knows: if neither you
+  threads every `threads.interval_minutes` by itself. You see what your server knows: if neither you
   nor anyone on your server follows the author of a reply, the server may never get it.
-- Vanilla Mastodon doesn't understand Markdown. The client finds that out by itself (`account.markdown = "auto"`).
+- Vanilla Mastodon doesn't understand Markdown. The client finds that out by itself (`post.markdown = "auto"`).

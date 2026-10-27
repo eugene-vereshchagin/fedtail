@@ -115,7 +115,7 @@ class CliTest(unittest.TestCase):
             out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d,
                                   "--update-config"], cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(out.returncode, 0, out.stderr)
-            self.assertIn("ui.actions", out.stdout)
+            self.assertIn("card.actions", out.stdout)
             self.assertTrue((Path(d) / "c.toml.bak").exists())
             self.assertTrue((Path(d) / "config.example.ru.toml").exists())
             self.assertTrue((Path(d) / "config.example.en.toml").exists())
@@ -130,7 +130,7 @@ class CliTest(unittest.TestCase):
             out = subprocess.run([sys.executable, "-m", "fedtail", "-c", str(cfg), "-d", d],
                                  cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(out.returncode, 2)
-            self.assertIn("feed.order", out.stderr)
+            self.assertIn("reading.order", out.stderr)
 
 
 if __name__ == "__main__":

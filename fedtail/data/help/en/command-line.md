@@ -39,4 +39,4 @@ fedtail read replies              # mark a lane read
 
 `fedtail --ui tui` — the whole interface in a terminal, `fedtail --ui web` — in a browser tab.
 
-In detail → [Interfaces](ref/features.md#interfaces) · [terminal settings](ref/config.md#13-in-a-terminal)
+In detail → [Interfaces](ref/features.md#interfaces) · [terminal settings](ref/config.md#16-in-a-terminal)

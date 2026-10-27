@@ -79,10 +79,20 @@ def mentioned(text):
     return out
 
 
+def _has(have, sec, key):
+    """The file mentions sec.key — where the file keeps it, or in its place of 0.20 and
+    before (config.FILE_LAYOUT)."""
+    from .config import older_place
+    if key in have.get(sec, set()):
+        return True
+    old = older_place(sec, key)
+    return old is not None and key in have.get(old[0], set())
+
+
 def missing(user_text, example_text):
     have = mentioned(user_text)
     return [f"{sec}.{key}" for sec, opts in parse_example(example_text).items()
-            for key, _ in opts if key not in have.get(sec, set())]
+            for key, _ in opts if not _has(have, sec, key)]
 
 
 def _is_comment(line):
@@ -164,13 +174,15 @@ def refresh(user_text, example_text, report=None):
             while block_start > 0 and _is_comment(out[block_start - 1]):
                 block_start -= 1
             block = out[block_start:]
-            known = docs.get(section, {})
+            from .config import DEFAULTS, file_place
+            # an option in its place of 0.20 and before: the explanation it has now
+            known = docs.get(file_place(section, key)[0], {})
             if key in known:
                 fresh = known[key]
                 if block != fresh and _ours(block, fresh):
                     out[block_start:] = fresh
                     refreshed.append(f"{section}.{key}")
-            elif section in docs and line.lstrip().startswith("#"):
+            elif (section in docs or section in DEFAULTS) and line.lstrip().startswith("#"):
                 # an option of an older version, never switched on: away with it
                 del out[block_start:]  # with the explanation we wrote for it
                 dropped.append(f"{section}.{key}")
@@ -209,7 +221,7 @@ def update(user_text, example_text, report=None):
 
     inserts, appended = {}, []
     for sec, opts in example.items():
-        add = [block for key, block in opts if key not in have.get(sec, set())]
+        add = [block for key, block in opts if not _has(have, sec, key)]
         if not add:
             continue
         # a blank line between options, as in the reference: one block, one option
@@ -276,8 +288,12 @@ def rebuild(user_text, example_text, report=None):
     its place. Options this version doesn't know are kept at the end of their
     section with a note. The user's own comments are not carried over."""
     import tomllib
+
+    from .config import from_file, to_file
     user_text = renamed(user_text, report)
-    user = tomllib.loads(user_text)
+    # a file of 0.20 and before: its options into the tables the file has now
+    inner, _older, _unknown = from_file(tomllib.loads(user_text))
+    user = to_file(inner)
     out, section, ends, kept, tables = [], None, {}, [], []
     for line in example_text.splitlines():
         m = _HEADER.match(line)

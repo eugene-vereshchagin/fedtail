@@ -145,7 +145,7 @@ class DocsBuildTest(unittest.TestCase):
         for lang in ("ru", "en"):
             for name in ("features.md", "comparison.md", "config.md", "parts/whats-new.md"):
                 self.assertIn(root / "docs" / lang / name, self.files, f"{lang}/{name}")
-            self.assertIn("`feed.prefetch`", self.files[root / "docs" / lang / "config.md"])
+            self.assertIn("`media.prefetch`", self.files[root / "docs" / lang / "config.md"])
         self.assertIn("| Arts mode |", self.files[root / "docs" / "en" / "features.md"])
         self.assertIn("| Режим arts |", self.files[root / "docs" / "ru" / "features.md"])
 
@@ -162,8 +162,10 @@ class DocsBuildTest(unittest.TestCase):
                 for lang in ("ru", "en"):
                     text = self.mod._t(f.get("config"), lang) or ""
                     for sec, key in re.findall(r"`([a-z_]+)\.([a-z_]+)", text):
-                        if sec in config.DEFAULTS:
-                            self.assertIn(key, config.DEFAULTS[sec], f"{f['id']}: {sec}.{key}")
+                        # named as the file names it now (config.FILE_LAYOUT)
+                        if sec in config.FILE_TABLES or sec in config.DEFAULTS:
+                            self.assertIn((sec, key), config.INTERNAL,
+                                          f"{f['id']}: {sec}.{key}")
 
     def test_sources_are_checked(self):
         import tempfile

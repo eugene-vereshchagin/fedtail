@@ -227,7 +227,7 @@ none = [{ kind = "boost", age = ">2d", age_of = "original" }]   # no old posts b
   (direct > reply > mention > thread > the rest), not once per lane. Done (`lane_rank`,
   `_once_per_post`).
 * **Switches** (`switch`) — chips over the lane, like today's "posts only"; the state is
-  remembered per lane for this run (across restarts only with `feed.remember_choices`) and not
+  remembered per lane for this run (across restarts only with `reading.remember_choices`) and not
   synced — decided 27 Oct 2026: a chip is a glance, not a setting. What a switch hides the lane has still *taken*: it doesn't
   go to Unsorted, counts and notifications leave it out, switched on it stands in its place and
   the reading place doesn't move. Today's `posts_only`, `mentions_all`, `direct_apart` become

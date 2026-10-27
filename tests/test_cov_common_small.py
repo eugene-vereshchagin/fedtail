@@ -250,7 +250,7 @@ class SettingsCornersTest(unittest.TestCase):
 
     def test_a_broken_file_shows_the_defaults(self):
         chapters = settings.model(self.view(Path("/nowhere")), lang="en", text="[ui\n")
-        self.assertEqual(settings.option(chapters, "ui.theme").value, "system")
+        self.assertEqual(settings.option(chapters, "appearance.theme").value, "system")
 
     def test_save_nothing_and_warnings(self):
         import tempfile

@@ -46,4 +46,4 @@ name gets a notification and opens the thread at home. The thread's others aren'
 In the ⋯ menu of your own post: "Edit", "Delete", "Pin" and "Delete and redraft" — the post is
 deleted, and its text, CW, visibility and language open as a new draft.
 
-In detail → [Writing](ref/features.md#writing) · [post settings](ref/config.md#5-posts)
+In detail → [Writing](ref/features.md#writing) · [post settings](ref/config.md#9-writing-posts)

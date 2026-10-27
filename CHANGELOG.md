@@ -2,6 +2,20 @@
 
 ## 0.21.0 — in progress
 
+- **config.toml and the settings window by what one sets up.** 18 chapters, the same in
+  the file and in the window: Appearance `[appearance]`, Window and layout `[window]`,
+  Lanes `[lanes]` `[lists]`, Reading `[reading]`, The post card `[card]`, Threads
+  `[threads]`, People and profiles `[people]`, Pictures and video `[media]`, Writing posts
+  `[post]`, Notifications and sounds `[notify]` `[sound]`, Activity `[activity]`, Several
+  accounts `[accounts]`, **Sync `[sync]`** (a chapter of its own now, `sync_markers` with
+  it), The server `[server]`, Database and logs, the terminal, the browser, the phone. The
+  keys keep their names; `[ui]` (63 options), `[feed]`, `[read]`, `[subs]`, `[poll]` and
+  `[account]` are spread over the new tables. A file of 0.20 still reads as it was (the
+  start says once that there are options to move); a change in the settings window
+  writes the option in its new place and takes the old line out; `--rebuild-config`
+  moves the whole file, values kept. Errors name options the new way. A test holds the
+  layout, both reference files and the window to one another.
+
 - **Android caught up with the windows** (a read-through of the whole app against them):
   - the card's lines: "🔔 N new in the thread", "👤 new in this private talk" (and the
     warning in the reply box before sending), "↳ you replied…", the conversation line,

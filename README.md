@@ -130,14 +130,14 @@ python3 -m fedtail -c ~/my.toml -d ~/fd/  # explicit config file and data dir
 ```
 
 In the window, right-click your avatar (or ≡ → Account and server): the other accounts are listed;
-pick one and its window opens with its theme, this one closes (`ui.switch_closes = false`
+pick one and its window opens with its theme, this one closes (`accounts.switch_closes = false`
 keeps both). "Add an account…" asks for a profile name and opens the login window. The same
 menu has "My profile", "Make it the main one ★" (the profile started without `--profile`),
 "Log in again…" (same account only; the old token stays until you're in) and "Log out…"
 (the main profile's ★ moves to another one you're logged in to). Both ask first.
 
 Or all accounts in one window (the same menu, "All accounts in one window", or
-`ui.merge = ["all"]`): lanes of the same name become one (both Homes are one Home), the
+`accounts.merge = ["all"]`): lanes of the same name become one (both Homes are one Home), the
 other accounts' lists come as lanes of their own, and a post another account received
 says so — "→ @work"; a reply, a like or a boost goes from that account. New posts, the
 command line, likes & boosts and follow requests are the main account's.
@@ -202,8 +202,8 @@ wording — `[ write ]`, `== people ==`, `---- new below ----`. Every key is exp
 ## Lanes
 
 New posts arrive at once: the server's live stream wakes fedtail the moment something comes,
-and the regular poll (`poll.interval_seconds`) fetches it — so a dropped stream (a laptop
-asleep, a proxy) loses nothing. `poll.stream = "off"`: polling only.
+and the regular poll (`server.interval_seconds`) fetches it — so a dropped stream (a laptop
+asleep, a proxy) loses nothing. `server.stream = "off"`: polling only.
 
 "Replies to me" holds every reply to your posts and comments; "Mentions" holds the rest, the
 places where you were tagged in someone else's conversation. A reply that also says `@you`
@@ -229,9 +229,9 @@ describe it in the config, `[[lanes.tag_groups]]`.
 
 **Columns side by side:** ❯ at the top left puts the lanes in columns, TweetDeck-style; a
 lane clicked on the left comes as a column, ✕ takes it away, ‹ › move it, and the set is
-remembered. That's for now: to open so at once — `ui.open_columns = true`.
+remembered. That's for now: to open so at once — `window.open_columns = true`.
 
-**As in a messenger:** `fedtail --layout split` (or `ui.layout = "split"`) puts the lanes,
+**As in a messenger:** `fedtail --layout split` (or `window.layout = "split"`) puts the lanes,
 followed threads, private talks and mutuals in a roster window of their own, as QIP, Psi or
 the Mail.ru Agent had it; a double click opens one as a tab of the messages window, which
 has an input line at its bottom, faces, and pictures on its buttons. The messengers' themes
@@ -244,20 +244,20 @@ pictures; a link as the page's card (site, title, a line of description, its pic
 (Mastodon 4.5+, Akkoma, Misskey) as the quoted post framed inside, or a line saying why it
 can't be shown. Each is a switch in `[feed]`: `custom_emoji`, `link_cards`, `quotes`.
 
-Where you stopped reading is shared with your other clients (`read.sync_markers`): Home and
+Where you stopped reading is shared with your other clients (`sync.sync_markers`): Home and
 mentions read on the phone are read here too, and the other way round — as far as the other
 client tells the server (Mastodon web, Ivory, Phanpy do; Tusky keeps Home's place to itself
 and shares only the notifications). Your own posts are read here whatever wrote them.
 
 Someone from another server your server knows little about: their profile fills in with their
 newest public posts read from their own server, and their followers and follows can be read
-from there too (`feed.remote_profiles`, `feed.remote_people`) — ActivityPub requests without
+from there too (`people.remote_profiles`, `people.remote_people`) — ActivityPub requests without
 your token, like completing threads.
 
-Several pictures in a post come each whole, in its own shape; `ui.media_grid = "square"` lays
+Several pictures in a post come each whole, in its own shape; `media.media_grid = "square"` lays
 them out as even squares cut around the focus point their author set.
 
-A picture's description (alt text) shows on hover; `ui.alt_text = "caption"` also puts it
+A picture's description (alt text) shows on hover; `media.alt_text = "caption"` also puts it
 under the pictures. Sending a picture without one asks first — describe it or send as is
 (`post.alt_reminder`).
 
@@ -320,7 +320,7 @@ with the window, so it works with the window open. Colour only on a terminal (`N
 respected); `[cli]` in the config: `color`, `max_lines`, `tail_lanes`, and `enabled = false`
 to turn the commands off.
 
-The whole interface in a terminal: `fedtail --ui tui` (or `ui.frontend = "tui"`) — lanes on the
+The whole interface in a terminal: `fedtail --ui tui` (or `window.frontend = "tui"`) — lanes on the
 left, posts with what they answer, threads as trees, the same command line at the bottom. Keys:
 `j` / `k`, `Enter` — the thread, `r` — reply, `f` — like, `b` — boost, `m` — bookmark, `n` — a
 new post, `p` — the author's profile (`F` there follows), `x` — the lane read, `Tab` — lanes / posts, `Esc` — back, `q` — quit. It needs
@@ -329,16 +329,16 @@ new post, `p` — the author's profile (`F` there follows), `x` — the lane rea
 
 ## In GTK
 
-For GNOME and the other GTK desktops: `fedtail --ui gtk` (or `ui.frontend = "gtk"`) — the same
+For GNOME and the other GTK desktops: `fedtail --ui gtk` (or `window.frontend = "gtk"`) — the same
 lanes, threads, profiles, editor and menus as the Qt window, in GTK 4, with libadwaita where it
-is (`ui.adwaita`); the "system" theme looks like Adwaita. It needs `sudo apt install python3-gi
+is (`appearance.adwaita`); the "system" theme looks like Adwaita. It needs `sudo apt install python3-gi
 gir1.2-gtk-4.0 gir1.2-adw-1` on Debian 13 (the deb package recommends them, and puts
 "fedtail (GTK)" on a right click on fedtail in the menu); the video player wants
 `libgtk-4-media-gstreamer`. Linux only — on Windows there's Qt.
 
 ## In a browser
 
-`fedtail --ui web` (or `ui.frontend = "web"`) runs fedtail as a page in your browser: lanes,
+`fedtail --ui web` (or `window.frontend = "web"`) runs fedtail as a page in your browser: lanes,
 posts with what they answer, threads, profiles, writing and the command line, live updates, the
 same read marks; `j` / `k`, `r`, `f`, `b`, `m`, `p`, `x`, `Enter`, `Esc` as in the window. It
 needs nothing beyond Python. At start it prints a link with a key (and opens it): the key is
@@ -357,12 +357,12 @@ a note, "hide" drops it — and lists who you muted or blocked, with undo.
 @mentions open the person's profile in a tab (bio, fields, "follows you", Follow, Mention,
 Add to list), #hashtags open the tag's timeline, links to posts and profiles on other servers
 are looked up through your server and open as a thread or a profile — the browser only gets
-what fedtail can't find. `ui.links_in_app = false` sends everything to the browser.
+what fedtail can't find. `card.links_in_app = false` sends everything to the browser.
 
 ## Honest counters and readable hashtags
 
 Your server knows only the favourites and boosts that reached it. With
-`feed.honest_counters = true`, opening a thread asks each public post's own server for the real
+`card.honest_counters = true`, opening a thread asks each public post's own server for the real
 numbers (without your token, but it is a request from your IP — hence off by default).
 
 When a hashtag is written in one case (`#georgianews`), the composer suggests `#GeorgiaNews`:
@@ -376,7 +376,7 @@ whether to approve followers by hand, mark the account as a bot, show it in the 
 Only what you changed is sent to the server.
 
 A profile also shows what its owner puts forward: the tags they feature and the people they
-recommend (`feed.profile_featured`).
+recommend (`people.profile_featured`).
 
 ## Notifications
 
@@ -411,11 +411,11 @@ and what to hold back. `notify.filtered`: `"remind"` also says at start that som
 
 Server announcements (what the admins post: updates, rules, maintenance) come as a strip
 above the lanes until "Got it" — the server remembers that for its web interface and other
-apps too. `ui.announcements = "off"` hides them.
+apps too. `notify.announcements = "off"` hides them.
 
 ## Writing
 
-A new post opens as a panel in the middle of the window (`ui.compose = "window"` for a separate
+A new post opens as a panel in the middle of the window (`window.compose = "window"` for a separate
 window). `@na` and `#ta` complete as you type — people and tags seen in the lanes first, then what the
 server finds (`post.complete_mentions`, `post.complete_tags`); `:bl` offers the server's own
 emoji (`post.complete_emoji`). Pictures can be dropped onto it (or onto the main window — that starts a new post) and pasted with `Ctrl+V`, screenshots included. Double-click a picture to describe it and, with a click on it, set its focus point — the part
@@ -427,14 +427,14 @@ it open).
 
 | | |
 |---|---|
-| `S` (in the picture viewer) | save the picture to Downloads (`ui.save_dir`); also a right click on a picture |
+| `S` (in the picture viewer) | save the picture to Downloads (`media.save_dir`); also a right click on a picture |
 | `Ctrl+K` | search people, tags, posts |
 | `Ctrl+N` | new post |
 | `Ctrl+Enter` | send |
 | `F5` | refresh |
 | `Alt+1…9` | switch lane |
 | `Ctrl+W` | close tab |
-| `Esc` | closes what's on top (picture, find bar); the last `Esc` closes every lane behind a curtain — nothing is marked read, new posts pile up for later (`ui.esc = "tray"` hides the window instead) |
+| `Esc` | closes what's on top (picture, find bar); the last `Esc` closes every lane behind a curtain — nothing is marked read, new posts pile up for later (`window.esc = "tray"` hides the window instead) |
 | `Ctrl+F`, `F3`, `Shift+F3` | find in the lane / thread on screen (text, name, `@handle`, `#id`, alt text); "Deeper" searches everything stored for the lane |
 | `Ctrl+Q` | quit (closing the window only hides it to the tray) |
 

@@ -25,7 +25,7 @@ Over a lane, two switches: "All / Posts only / New" and "Feed / Conversations"
 videos or boosts — until a restart. The ❯ button at the top left puts lanes side by side, in
 columns.
 
-In detail → [Lanes](ref/features.md#lanes) · [which lanes to turn on](ref/config.md#4-which-lanes)
+In detail → [Lanes](ref/features.md#lanes) · [which lanes to turn on](ref/config.md#3-lanes)
 
 ## Your place and read marks
 
@@ -33,7 +33,7 @@ In detail → [Lanes](ref/features.md#lanes) · [which lanes to turn on](ref/con
 - Open a lane and you stand at the first unread. New posts come and nothing jumps, only the
   counter grows.
 - A post is read once you've scrolled past the whole of it. It can be otherwise: "the whole
-  lane at once" or by hand only (`read.mark_read`).
+  lane at once" or by hand only (`reading.mark_read`).
 - Your place is shared with other clients (your phone): read there — read here too.
 - The last Esc draws a curtain: the lanes are hidden, nothing is marked read, the new piles up
   for the morning. Enter or a click on a lane — back.
@@ -77,4 +77,4 @@ Make a list and put someone in it — with a right click on their post. The serv
 lists only people you follow; if your follow is still waiting to be accepted, fedtail adds them
 itself once it is. A right click on a list on the left — who is in it, "Move up" / "Move down".
 
-In detail → [Lanes](ref/features.md#lanes) · [list settings](ref/config.md#8-lists)
+In detail → [Lanes](ref/features.md#lanes) · [list settings](ref/config.md#lists)
