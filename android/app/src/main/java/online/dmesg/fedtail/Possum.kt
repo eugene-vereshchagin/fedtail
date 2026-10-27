@@ -27,8 +27,16 @@ fun Possum(swinging: Boolean, modifier: Modifier = Modifier) {
         },
         update = { view ->
             (view.drawable as? AnimatedImageDrawable)?.let {
-                if (swinging && !it.isRunning) it.start()
-                if (!swinging && it.isRunning) it.stop()
+                if (swinging) {
+                    // over and over while the round is on (busy again while running out:
+                    // it simply goes on)
+                    it.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
+                    if (!it.isRunning) it.start()
+                } else if (it.isRunning) {
+                    // the round is over: this swing runs to its end — back where the
+                    // sticker stands still — and stops there, not mid-swing
+                    it.repeatCount = 0
+                }
             }
         })
 }

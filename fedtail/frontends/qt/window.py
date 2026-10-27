@@ -2716,24 +2716,43 @@ class MainWindow(QMainWindow):
         busy = bool(state.get("busy")) and self.curtain_shown() and \
             notify_module.possum_style()
         if busy:
+            self._swing_ending = False  # busy again before the swing ran out: it goes on
             if movie is None:
                 from PySide6.QtCore import QSize
                 from PySide6.QtGui import QMovie
                 movie = self._swing = QMovie(notify_module.swing_path(), parent=self)
                 movie.setScaledSize(QSize(self.CURTAIN_ICON, self.CURTAIN_ICON))
                 movie.setCacheMode(QMovie.CacheMode.CacheAll)
+                movie.frameChanged.connect(self._swing_frame)
             if not getattr(self, "_swinging", False):
                 icon.setMovie(movie)
                 self._swinging = True
-            movie.start()
+            if movie.state() != movie.MovieState.Running:
+                movie.start()
+        elif getattr(self, "_swinging", False) and movie is not None and \
+                movie.state() == movie.MovieState.Running and self.curtain_shown():
+            # the round is over: the swing runs to its end (the sticker comes back to
+            # where it stands still), then stops — no jerk mid-swing
+            self._swing_ending = True
         else:
-            if movie is not None:
-                movie.stop()
-            if getattr(self, "_swinging", False) or icon.pixmap().isNull():
-                icon.clear()  # (setMovie(None) keeps the movie in the label)
-                icon.setPixmap(QIcon(icon_path()).pixmap(self.CURTAIN_ICON,
-                                                         self.CURTAIN_ICON))
-                self._swinging = False
+            self._swing_still(icon)
+
+    def _swing_frame(self, n):
+        """The last frame of a swing, with the round over: it stands still there."""
+        movie = getattr(self, "_swing", None)
+        if getattr(self, "_swing_ending", False) and movie is not None and \
+                n >= movie.frameCount() - 1:
+            self._swing_still(getattr(self, "curtain_icon", None))
+
+    def _swing_still(self, icon):
+        movie = getattr(self, "_swing", None)
+        self._swing_ending = False
+        if movie is not None:
+            movie.stop()
+        if icon is not None and (getattr(self, "_swinging", False) or icon.pixmap().isNull()):
+            icon.clear()  # (setMovie(None) keeps the movie in the label)
+            icon.setPixmap(QIcon(icon_path()).pixmap(self.CURTAIN_ICON, self.CURTAIN_ICON))
+            self._swinging = False
 
     def curtain_shown(self):
         return self.right_stack.currentWidget() is self.curtain

@@ -65,7 +65,9 @@ class QtSmokeTest(unittest.TestCase):
         self.world = w
 
         cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
-                                  "ui": {"start_lane": "last", "arts_mode": False}})
+                                  "ui": {"start_lane": "last", "arts_mode": False},
+                                  # the lanes these tests were written against (0.20)
+                                  "lanes": {"enabled": list(fakes.CLASSIC_LANES)}})
         p = paths.resolve("t", config=str(tmp / "c.toml"), data=str(tmp / "d"))
         auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
         self.core = Core(cfg, p, api_class=FakeApi)
@@ -1696,9 +1698,13 @@ class QtSmokeTest(unittest.TestCase):
             self.assertTrue(self.win._swinging)
             self.assertTrue(self.win._swing.isValid())
             self.assertEqual(self.win._swing.state(), self.win._swing.MovieState.Running)
-        # over (said outright: the window's own polling may be in a round right now)
+        # over (said outright: the window's own polling may be in a round right now): the
+        # swing runs to its last frame first (where the sticker stands still), then stops
         with mock.patch.object(type(self.core), "poll_state", return_value={"busy": False}):
             self.win._curtain_swing()
+            self.assertTrue(self.win._swinging)
+            self.assertTrue(self.win._swing_ending)
+            self.win._swing_frame(self.win._swing.frameCount() - 1)
         self.assertFalse(self.win._swinging)
         self.assertEqual(self.win._swing.state(), self.win._swing.MovieState.NotRunning)
         self.assertFalse(self.win.curtain_icon.pixmap().isNull())
@@ -2015,7 +2021,7 @@ class QtSmokeTest(unittest.TestCase):
         dlg.show()
         self.pump(0.1)
         self.assertEqual(dlg.list.count(), len(dlg.chapters))
-        o = settings.option(dlg.chapters, "ui.bookmark_button")
+        o = settings.option(dlg.chapters, "appearance.emoji")
         before = f.read_text("utf-8")
         dlg.controls[o.name].setChecked(not o.value)
         self.pump(until=lambda: f.read_text("utf-8") != before)
@@ -2028,8 +2034,8 @@ class QtSmokeTest(unittest.TestCase):
         self.assertTrue(settings.option(dlg.chapters, o.name).changed)
         dlg.search.setText("шрифт")
         dlg._searched()
-        self.assertIn("ui.font_size", dlg.controls)
-        self.assertNotIn("ui.bookmark_button", dlg.controls)
+        self.assertIn("appearance.font_size", dlg.controls)
+        self.assertNotIn("appearance.emoji", dlg.controls)
         dlg.close()
 
     def test_menu_keeps_only_what_is_not_on_screen(self):
@@ -2318,6 +2324,7 @@ class QtSmokeTest(unittest.TestCase):
         self.core.mark_read(bots[:-20])  # 20 newest stay unread
 
         self.win.select_lane("local")
+        self.core.poll_once()  # Local is browsed: fetched while it is open
         view = self.win.lane_widgets["local"].view
         self.pump(2.5)
         sb = view.verticalScrollBar()

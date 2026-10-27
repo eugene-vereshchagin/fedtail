@@ -649,6 +649,8 @@ class MainWindow(Gtk.ApplicationWindow):
         except Exception:  # noqa: BLE001 — a core that doesn't say
             busy = False
         busy = busy and self.curtain_shown() and self.cfg["ui"].get("app_icon") != "bubble"
+        if busy:
+            self._swing_ending = False  # busy again before the swing ran out: it goes on
         if busy and not getattr(self, "_swing_on", False):
             frames = self._swing_frames()
             if not frames:
@@ -658,6 +660,13 @@ class MainWindow(Gtk.ApplicationWindow):
             def step():
                 if not getattr(self, "_swing_on", False):
                     return False
+                if getattr(self, "_swing_ending", False) and \
+                        self._swing_at % len(frames) == 0:
+                    # the round is over and the swing ran to its end (where the sticker
+                    # stands still): it stops here, not mid-swing
+                    self._swing_on = self._swing_ending = False
+                    icon.set_from_paintable(self._still)
+                    return False
                 tex, ms = frames[self._swing_at % len(frames)]
                 icon.set_from_paintable(tex)
                 self._swing_at += 1
@@ -665,8 +674,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 return False
             step()
         elif not busy and getattr(self, "_swing_on", False):
-            self._swing_on = False
-            icon.set_from_paintable(self._still)
+            if self.curtain_shown():
+                self._swing_ending = True  # the swing runs out first (step above)
+            else:
+                self._swing_on = self._swing_ending = False
+                icon.set_from_paintable(self._still)
 
     def close_all(self):
         """Esc: no lane, thread or profile on screen; nothing gets marked read, so

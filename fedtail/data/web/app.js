@@ -1304,16 +1304,33 @@ function emptyBox(text) {
   const box = el("div", "empty");
   const img = el("img", "possum");
   img.alt = "";
-  img.src = state.busy ? "/possum.gif" : "/possum.png";
+  img.src = state.swingSrc || "/possum.png";
   box.append(img, el("div", "", text));
   return box;
 }
 
+// one swing of the sticker, ms (the GIF's frames all together): it comes back to where it
+// stands still, so a round that ends lets the swing run out instead of cutting it off
+const SWING_MS = 2610;
+
 function swing(busy) {
   if (state.busy === busy) return;
   state.busy = busy;
-  for (const img of document.querySelectorAll("img.possum"))
-    img.src = busy ? "/possum.gif" : "/possum.png";
+  clearTimeout(state.swingStop);
+  if (busy) {
+    if (!state.swingSrc) {  // a new swing from its first frame (a fresh address restarts it)
+      state.swingFrom = Date.now();
+      state.swingSrc = "/possum.gif?" + state.swingFrom;
+      for (const img of document.querySelectorAll("img.possum")) img.src = state.swingSrc;
+    }
+    return;
+  }
+  if (!state.swingSrc) return;
+  const left = SWING_MS - ((Date.now() - state.swingFrom) % SWING_MS);
+  state.swingStop = setTimeout(() => {
+    state.swingSrc = null;
+    for (const img of document.querySelectorAll("img.possum")) img.src = "/possum.png";
+  }, left);
 }
 
 function countUnread() {

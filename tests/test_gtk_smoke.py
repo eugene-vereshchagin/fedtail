@@ -177,7 +177,7 @@ class GtkSmokeTest(_GtkBase):
         w = SettingsWindow(self.win)
         w.present()
         pump(timeout=0.2)
-        o = settings.option(w.chapters, "ui.bookmark_button")
+        o = settings.option(w.chapters, "appearance.emoji")
         before = f.read_text("utf-8")
         w.controls[o.name].set_active(not o.value)
         self.assertTrue(pump(lambda: f.read_text("utf-8") != before))
@@ -186,8 +186,8 @@ class GtkSmokeTest(_GtkBase):
                                                     strict=True)), 1)
         self.assertTrue(w.restart.get_visible())
         w.search.set_text("шрифт")  # (the entry waits a moment before it searches)
-        self.assertTrue(pump(lambda: "ui.bookmark_button" not in w.controls))
-        self.assertIn("ui.font_size", w.controls)
+        self.assertTrue(pump(lambda: "appearance.emoji" not in w.controls))
+        self.assertIn("appearance.font_size", w.controls)
         w.close()
 
     def test_what_qt_has_gtk_has(self):

@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- The opossum's swing no longer stops dead when a round ends: it runs to the end of its
+  swing (where it stands still) and stops there — the windows, GTK, the web page and the
+  phone.
+
 - **config.toml and the settings window by what one sets up.** 18 chapters, the same in
   the file and in the window: Appearance `[appearance]`, Window and layout `[window]`,
   Lanes `[lanes]` `[lists]`, Reading `[reading]`, The post card `[card]`, Threads
