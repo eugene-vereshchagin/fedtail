@@ -264,6 +264,7 @@ class LaneModel:
                                           "short_id": short.get(pid)}))
         if self.conversations():
             specs = self._conversation_specs(entries, unread, parents, answers, short)
+        specs = self._with_events(specs)
         if self.name in ("replies", "mentions", "to_me"):
             view.check_my_replies(posts)
         if unknown:
@@ -283,6 +284,42 @@ class LaneModel:
         empty = self.lazy and not specs and lane is not None and \
             lane.source in getattr(view, "browse_empty", ())
         return Built(specs, info, sum(1 for s in specs if s.unread), empty)
+
+    def _with_events(self, specs):
+        """A lane of rules that takes events (likes, follows… — feeds.md §2.3): their
+        rows among the posts, by time — each run of one kind about one post as one row
+        (CardSpec "event:<id>", extra["event"]: [Activity]). Not while only the unread
+        or a kind of media are shown: an event is neither. Before the oldest post shown
+        none come (the lane's window), unless there are no posts at all."""
+        if self.unread_only() or self.media.active():
+            return specs
+        events = getattr(self.view, "lane_events", None)
+        events = events(self.name) if events else []
+        if not events:
+            return specs
+        from .activity import groups
+
+        def when_post(s):
+            e = s.entry
+            return (e.created if isinstance(e, Share) and e.created else real(e).created) \
+                if e is not None else None
+        rows = []
+        for g in groups(events):
+            es = g["entries"]
+            times = [a.created for a in es if a.created]
+            rows.append((max(times) if times else None, es))
+        rows.sort(key=lambda r: (r[0] is not None, r[0] or 0))  # oldest first
+        timed = [when_post(s) for s in specs]
+        oldest = min((t for t in timed if t is not None), default=None)
+        out, i = [], 0
+        for when, es in rows:
+            if when is None or (oldest is not None and when < oldest):
+                continue
+            while i < len(specs) and timed[i] is not None and timed[i] <= when:
+                out.append(specs[i])
+                i += 1
+            out.append(CardSpec(key="event:" + es[0].id, extra={"event": es}))
+        return out + specs[i:]
 
     def _conversation_specs(self, entries, unread, parents, answers, short):
         """One card per conversation: its top post, with a line about the rest."""

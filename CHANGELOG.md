@@ -2,6 +2,11 @@
 
 ## 0.21.0 — in progress
 
+- **Events in a lane.** A condition of a lane of rules with `event` (`favourite`, `reblog`,
+  `follow`, `poll`, `update`, `status`…) shows those rows of Activity among the lane's posts, by
+  time: one muted line for each run of one kind about one post, a click opens it. Never unread,
+  not counted; quick filters part them as they part posts; Activity is polled for such a lane
+  even without its own. Follow requests stay in Activity (they are answered there).
 - **Someone new in a private talk.** A private answer that brings in someone the message it
   answers neither came from nor mentioned says so on its card ("👤 New in this private talk:
   @who"); the reply box says it before sending when a private answer adds `@someone` new.

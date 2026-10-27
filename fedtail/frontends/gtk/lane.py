@@ -25,7 +25,7 @@ from ... import diag
 from ...i18n import _
 from ...model import Share, real
 from ..common.lane import MEDIA_KINDS, SEPARATOR, LaneModel, conversation_line, seen
-from .card import Card, Separator
+from .card import Card, Separator, link_markup
 from .gi_setup import GLib, Gtk, Pango, clamp, forget, set_clamp, side_by_side, tip, wrap_box
 
 log = logging.getLogger(__name__)
@@ -491,12 +491,16 @@ class LaneView(Gtk.Box):
     def _make(self, keys):
         for k in keys:
             sp = self.specs[k]
-            card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
-                        short_id=sp.extra.get("short_id"),
-                        my_replies=sp.extra.get("my_replies", ()), via=sp.extra.get("via"))
-            line = conversation_line(sp)
-            if line:
-                card.add_conversation(*line)
+            if sp.extra.get("event"):  # a like, a follow… a lane of rules shows: a line
+                card = EventLine(self.ctx, sp.extra["event"])
+            else:
+                card = Card(self.ctx, k, sp.entry, parent=sp.parent, unread=sp.unread,
+                            short_id=sp.extra.get("short_id"),
+                            my_replies=sp.extra.get("my_replies", ()),
+                            via=sp.extra.get("via"))
+                line = conversation_line(sp)
+                if line:
+                    card.add_conversation(*line)
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
             if self.sep_above and k == self.sep_above[0]:
                 box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
@@ -678,7 +682,7 @@ class LaneView(Gtk.Box):
 
     def update_post(self, post):
         for card in self.rows.values():
-            if real(card.entry).id == post.id:
+            if card.entry is not None and real(card.entry).id == post.id:
                 card.update(replace(card.entry, post=post) if isinstance(card.entry, Share)
                             else post)
 
@@ -876,3 +880,39 @@ def y_in(widget, ancestor):
         return pt.y if ok else None
     res = widget.translate_coordinates(ancestor, 0, 0)
     return res[1] if res else None
+
+
+class EventLine(Gtk.Box):
+    """An event among a lane's posts (common/activity.py event_bit): who — what · when ·
+    about which post, one muted line; a click opens the post (or the person). Not a
+    post: never unread, nothing to mark."""
+
+    entry = None
+    unread = False
+
+    def __init__(self, ctx, entries):
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
+        from ..common.activity import event_bit
+        self.ctx = ctx
+        bit = event_bit(entries, ctx.theme.date)
+        lab = Gtk.Label(xalign=0, wrap=True)
+        lab.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        if bit.link:
+            lab.set_markup(link_markup(bit.link, bit.text))
+            lab.connect("activate-link", lambda _l, uri: (ctx.on_link(uri), True)[1])
+        else:
+            lab.set_text(bit.text)
+        lab.add_css_class("ft-event")
+        if bit.tip:
+            tip(lab, bit.tip)
+        self.append(lab)
+
+    def set_unread(self, _on):
+        pass
+
+    def set_my_replies(self, _replies):
+        pass
+
+    def update(self, _entry):
+        pass
+

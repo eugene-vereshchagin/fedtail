@@ -806,12 +806,15 @@ class Core(SocialMixin):
                     self.emit("error", f"requests: {e}")
 
             new_activity = []
-            if "activity" in self.lane_by_name:
+            if "activity" in self.lane_by_name or self._event_lanes():
                 try:
                     new_activity = self._poll_activity()
                     if new_activity:
                         self._warm_lanes()  # the window counts every lane on this event
                         self.emit("activity_updated", len(new_activity))
+                        events_in = {c.name: [] for c in self._event_lanes()}
+                        if events_in:  # lanes showing likes, follows…: they look again
+                            self.emit("lanes_updated", events_in)
                 except Exception as e:
                     self.emit("error", f"activity: {e}")
 
@@ -1293,6 +1296,30 @@ class Core(SocialMixin):
             got = [{"id": FOLLOW_REQUEST + a["id"], "type": "follow_request", "account": a,
                     "created_at": a.get("created_at") or "", "sort": "~" + a["id"]}
                    for a in self.follow_requests or ()] + list(got)
+        return got
+
+    def _event_lanes(self):
+        """The lanes shown that take events too (a condition with `event`)."""
+        return [c for c in self.customs if c.event_conds and c.name in self.lane_by_name]
+
+    def lane_events(self, name, limit=200):
+        """[notification] newest first: the events (likes, boosts, follows…) a lane of
+        rules shows among its posts (feeds.md §2.3) — from what Activity has stored."""
+        c = next((c for c in self.customs if c.event_conds and c.name == name), None)
+        if c is None or name not in self.lane_by_name:
+            return []
+        which = self.lane_filter(name)
+        key = (self.store.activity_newest(), self.store.activity_count_after(""),
+               self._world_version, self._lists_version, limit, which)
+        cache = self.__dict__.setdefault("_events_cache", {})
+        hit = cache.get(name)
+        if hit and hit[0] == key:
+            return hit[1]
+        world, quiet = self._world(), self.muted | self.blocked
+        got = [n for n in self.store.activity_recent(max(limit * 3, 300))
+               if (n.get("account") or {}).get("id") not in quiet
+               and c.takes_event(n, world, which)][:limit]
+        cache[name] = (key, got)
         return got
 
     def _requests_in_activity(self):

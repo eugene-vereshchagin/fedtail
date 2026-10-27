@@ -932,3 +932,81 @@ class UnsortedAndListsTest(FreeBase):
         self.assertEqual(core.store.drop_held("unsorted", {"home", "unsorted"}), 1)
         self.assertEqual(core.store.drop_held("unsorted", {"unsorted"}), 0)
         self.assertEqual(core.store.held_in([], ["009"]), set())
+
+
+class EventsInLanesTest(FreeBase):
+    """A lane of rules with `event` shows Activity's rows among its posts (feeds.md §2.3)."""
+
+    RULE = {"name": "mine_and_likes", "any": [
+        {"author": "me"},
+        {"event": ["favourite", "reblog"], "switch": "likes"},
+        {"event": "follow", "switch": "follows", "shown": False}]}
+
+    def setup(self):
+        core, w = self.make([self.RULE])
+        core.cfg["lanes"]["enabled"] = ["mine_and_likes"]
+        core._apply_lists([], {})
+        mine = w.add(status("100", ME, minute=1), home=True)
+        w.act("n1", "favourite", BOB, mine, minute=2)
+        w.act("n2", "favourite", NEWS, mine, minute=3)
+        w.act("n3", "follow", BOB, minute=4)
+        w.act("n4", "mention", BOB, status("101", BOB, minute=5))
+        core.connect().result()
+        core.poll_once()
+        core.poll_once()
+        return core, w
+
+    def test_parsed(self):
+        cfg, _ = config.validate({"lanes": {"custom": [self.RULE]}})
+        c = next(c for c in custom.load(cfg)[0] if c.name == "mine_and_likes")
+        self.assertEqual(len(c.event_conds), 2)
+        self.assertEqual(c.feeds, {"mine"})  # events ask no stream of posts
+        self.assertFalse(c.routed)
+        like = {"id": "x", "type": "favourite", "account": BOB, "status": None}
+        self.assertTrue(c.takes_event(like))
+        self.assertFalse(c.takes_event(dict(like, type="mention")))
+        self.assertTrue(c.takes_event(dict(like, type="follow"), which="all"))
+        self.assertFalse(c.takes_event(dict(like, type="follow"), which="main"))
+        self.assertTrue(c.takes_event(dict(like, type="follow"), which="chip:2"))
+        self.assertFalse(c.takes_event(like, which="chip:2"))
+
+    def test_core_and_lane(self):
+        core, _w = self.setup()
+        got = [n["id"] for n in core.lane_events("mine_and_likes")]
+        self.assertEqual(got, ["n2", "n1"])  # "main": the follow is hidden till chosen
+        core.set_lane_filter("mine_and_likes", "chip:2")
+        self.assertEqual([n["id"] for n in core.lane_events("mine_and_likes")], ["n3"])
+        core.set_lane_filter("mine_and_likes", "all")
+        self.assertEqual({n["id"] for n in core.lane_events("mine_and_likes")},
+                         {"n1", "n2", "n3"})
+        self.assertEqual(core.lane_events("feed"), [])
+
+    def test_rows_among_posts(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common.activity import event_bit
+        from fedtail.frontends.common.lane import LaneModel
+        core, _w = self.setup()
+        core.set_lane_filter("mine_and_likes", "all")
+        specs = LaneModel(View(core), "mine_and_likes").build(False).specs
+        keys = [s.key for s in specs]
+        self.assertEqual(keys[0], "100")  # the post, then what came after it
+        events = [s for s in specs if s.extra.get("event")]
+        self.assertEqual(len(events), 2)  # the two likes of one post: one row
+        likes = next(s for s in events if len(s.extra["event"]) == 2)
+        bit = event_bit(likes.extra["event"], lambda d: "t")
+        self.assertEqual(bit.link, "fedtail:thread/100")
+        self.assertTrue(all(not s.unread for s in events))
+
+    def test_activity_polled_without_its_lane(self):
+        core, _w = self.setup()
+        self.assertNotIn("activity", core.lane_by_name)
+        self.assertTrue(core.store.activity_recent(10))
+
+    def test_web_lane(self):
+        from fedtail.frontends.web.server import Web
+        core, _w = self.setup()
+        core.set_lane_filter("mine_and_likes", "all")
+        got = Web(core, "k").lane("mine_and_likes")
+        self.assertEqual([p["id"] for p in got["posts"]], ["100"])
+        self.assertEqual(len(got["events"]), 2)
+        self.assertTrue(all(e["before"] is None for e in got["events"]))

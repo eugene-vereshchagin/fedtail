@@ -1016,6 +1016,15 @@ class FedtailApp(App, PostsMixin):
                 div.disabled = True  # j / k step over it, as over the windows' divider
                 items.append(div)
                 continue
+            if sp.extra.get("event"):  # a like, a follow… a lane of rules shows: one line
+                from ..common.activity import event_bit
+                from .model import when as tui_when
+                ev = ListItem(Static(Text("  " + event_bit(sp.extra["event"], tui_when).text,
+                                          style=STYLE["muted"])))
+                ev.key = sp.key
+                ev.disabled = True  # not a post: j / k step over it
+                items.append(ev)
+                continue
             e = sp.entry
             entries.append((sp.key, e))
             if sp.unread:

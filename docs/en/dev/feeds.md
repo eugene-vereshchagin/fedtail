@@ -1,6 +1,6 @@
 # Free lanes: lanes you assemble yourself
 
-**Status: every lane is a rule** (27 Oct 2026: the sets are rules in `fedtail/data/presets.toml`, `core/presets.py`, `core/custom.py`). Before that — the first version: the atoms (`core/atoms.py`), the rules, free lanes from `[[lanes.custom]]` fed through their own streams (`core/custom.py`). Not yet: events in a lane, switches (chips), Unsorted, "Older" for a free lane, presets written in rules. The idea is the author's; this page is what it
+**Status: every lane is a rule** (27 Oct 2026: the sets are rules in `fedtail/data/presets.toml`, `core/presets.py`, `core/custom.py`). Before that — the first version: the atoms (`core/atoms.py`), the rules, free lanes from `[[lanes.custom]]` fed through their own streams (`core/custom.py`). Since then: switches (chips), Unsorted, "Older" for a free lane, the sets written in rules, events in a lane (27 Oct). Not yet: follow requests in a lane of one's own (they stay in Activity), derived events (§2.4). The idea is the author's; this page is what it
 becomes in fedtail, what it costs and where it bites. The current lanes are described in
 [architecture.md](architecture.md) §8.
 
@@ -69,8 +69,24 @@ own tables), never by a frontend. The words below are the core's words: a protoc
 
 ### 2.3 Events that aren't posts (`event`)
 
-They live in Activity today (`activity` table). A free lane may take them too: such rows are
-shown as Activity shows them.
+They live in Activity (`activity` table). A lane of rules takes them too (done 27 Oct 2026):
+a condition with `event` matches Activity's rows, not posts, and asks no stream of posts; the
+lane shows them among its posts by time, one muted line each run of one kind about one post
+("bob, ann — ★ favourited · 14:20 · «the post»", a click opens the post or the person) —
+`core/custom.py` `Custom.takes_event`, `Core.lane_events`, `common/lane.py` `_with_events`,
+`common/activity.py` `event_bit`. Events are never unread, aren't counted, and don't stop the
+cursor; a quick filter (`switch`, `shown = false`) parts them as it parts posts; while "New"
+or the media funnel is on, none are shown; older than the oldest post shown — none (unless the
+lane has no posts). Activity is polled when its lane is shown or a lane takes events.
+`follow_request` isn't taken this way: it is answered with buttons, in Activity.
+
+```toml
+[[lanes.custom]]
+name = "mine"
+any = [{ author = "me" },
+       { event = ["favourite", "reblog"], switch = "likes" },
+       { event = "follow", switch = "follows", shown = false }]
+```
 
 | event | Mastodon | GoToSocial | today |
 |---|---|---|---|

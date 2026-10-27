@@ -42,7 +42,7 @@ from ..common.lane import (  # noqa: F401  (Qt's names for them)
 )
 from ..common.lane import MediaFilter as MediaChoice
 from ..richtext import plain_tip
-from .card import CardSpec, PostRow, SeparatorRow, make_spec
+from .card import CardSpec, make_spec, row_class
 from .card import _set_prop as _mark
 from .text import display_name, esc
 
@@ -464,7 +464,7 @@ class FeedView(QScrollArea):
         for i, spec in enumerate(specs):
             row = self.rows.get(spec.key)
             if row is None:
-                row = (SeparatorRow if spec.extra.get("separator") else PostRow)(spec, self.ctx)
+                row = row_class(spec)(spec, self.ctx)
                 self.rows[spec.key] = row
                 self.col.insertWidget(base + i, row)
             else:
@@ -492,7 +492,7 @@ class FeedView(QScrollArea):
             for key in self.order:
                 old = self.rows[key]
                 spec = old.spec
-                row = (SeparatorRow if spec.extra.get("separator") else PostRow)(spec, self.ctx)
+                row = row_class(spec)(spec, self.ctx)
                 # an opened warning and a shown translation stay as they were
                 kept = [a for a in ("cw_open", "translation", "show_translation")
                         if hasattr(old, a) and getattr(row, a, None) != getattr(old, a)]
@@ -540,7 +540,7 @@ class FeedView(QScrollArea):
         self.setUpdatesEnabled(False)
         try:
             for i, (key, spec, kept) in enumerate(held):
-                row = (SeparatorRow if spec.extra.get("separator") else PostRow)(spec, self.ctx)
+                row = row_class(spec)(spec, self.ctx)
                 changed = False
                 for a, v in kept.items():
                     if getattr(row, a, None) != v:

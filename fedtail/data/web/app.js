@@ -965,17 +965,29 @@ async function selectLane(name, keep) {
   countUnread();
   box.textContent = "";
   const more = olderButton();
-  if (!data.posts.length) box.append(emptyBox(w("web_empty")));
+  if (!data.posts.length && !(data.events || []).length) box.append(emptyBox(w("web_empty")));
   if (more && !newestFirst) box.append(more);
+  // likes, follows… a lane of rules shows among its posts (not posts: no cursor stop)
+  const eventsBefore = new Map();
+  for (const ev of data.events || []) {
+    const k = ev.before || "";
+    if (!eventsBefore.has(k)) eventsBefore.set(k, []);
+    eventsBefore.get(k).push(bitEl(ev.bit, "event-line"));
+  }
+  const evs = (k) => eventsBefore.get(k) || [];
+  if (newestFirst) box.append(...evs("").reverse());
   for (const p of data.posts) {
     const card = renderPost(p, false);
+    const before = evs(p.id);
     if (data.divider && data.divider.before === p.id) {  // "new below", fixed where reading stood
       const d = el("div", "divider", data.divider.text);
-      if (newestFirst) box.append(card, d); else box.append(d, card);
+      if (newestFirst) box.append(card, ...before.reverse(), d);
+      else box.append(...before, d, card);
       continue;
     }
-    box.append(card);
+    if (newestFirst) box.append(card, ...before.reverse()); else box.append(...before, card);
   }
+  if (!newestFirst) box.append(...evs(""));
   if (more && newestFirst) box.append(more);
   laneBar(data);
   if (data.empty_browse && !data.posts.length) box.textContent = w("browse_empty");

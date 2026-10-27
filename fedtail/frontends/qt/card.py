@@ -162,6 +162,47 @@ class SeparatorRow(QWidget):
         pass
 
 
+class EventRow(QWidget):
+    """An event among a lane's posts (a lane of rules with `event`; common/activity.py
+    event_bit): who — what · when · about which post, one muted line; a click opens the
+    post (or the person). Not a post: never unread, no cursor stop."""
+
+    status_id = None
+    real_id = None
+
+    def __init__(self, spec, ctx):
+        super().__init__()
+        self.ctx = ctx
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 2, 0, 2)
+        self.label = QLabel()
+        self.label.setObjectName("eventLine")
+        self.label.setWordWrap(True)
+        self.label.setTextFormat(Qt.TextFormat.RichText)
+        self.label.linkActivated.connect(ctx.on_link)
+        h.addWidget(self.label, 1)
+        self.update_spec(spec)
+
+    def update_spec(self, spec):
+        from ..common.activity import event_bit
+        self.spec = spec
+        bit = event_bit(spec.extra["event"], self.ctx.theme.date)
+        color = self.ctx.theme.css("muted")
+        self.label.setText(f'<a href="{esc(bit.link)}" style="text-decoration:none;'
+                           f'color:{color};">{esc(bit.text)}</a>' if bit.link else esc(bit.text))
+        self.label.setToolTip(bit.tip)
+
+    def set_unread(self, _unread):
+        pass
+
+
+def row_class(spec):
+    """The row a spec makes in a FeedView: the divider, an event, or a post."""
+    if spec.extra.get("separator"):
+        return SeparatorRow
+    return EventRow if spec.extra.get("event") else PostRow
+
+
 class PostRow(QWidget):
     """Thread rails + the card itself."""
 

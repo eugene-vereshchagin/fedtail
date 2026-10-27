@@ -677,7 +677,8 @@ tag_groups = []
 # (media, image, video, cw, link, "tag:x"), lang, state (unread, bookmarked…), target (для
 # бустов: my_post, my_comment, post, comment, seen, read), age ("<1d", ">2d"; age_of =
 # "original" — у бустнутого поста), likes / boosts / replies (">10"), text ([["слово", "и
-# слово"], ["или это"]]). Лента встаёт в «Личные» (group = "standard" — в «Стандартные»): туда,
+# слово"], ["или это"]]), event (favourite, reblog, follow, poll, update, status: эти строки
+# Активности, каждая строкой среди постов). Лента встаёт в «Личные» (group = "standard" — в «Стандартные»): туда,
 # где её назвал lanes.enabled ("custom:feed"), иначе в конец. Свободные ленты наполняются из
 # того, что уже лежит в базе. Пример (тогда убери строку custom = [] ниже):
 #   [[lanes.custom]]

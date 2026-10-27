@@ -974,22 +974,31 @@ class Web:
         if m.newest_first:  # the page turns newest-first lanes round itself
             specs.reverse()
         posts, divider, pending = [], None, None
-        entries = [sp.entry for sp in specs if sp.key != SEPARATOR]
+        events, waiting = [], []  # likes, follows… among the posts: before which one
+        entries = [sp.entry for sp in specs if sp.entry is not None]
         short = core.short_ids(entries)
         unread = core.unread(entries)
         for sp in specs:
             if sp.key == SEPARATOR:  # "new below": before the card that follows it
                 pending = sp.extra.get("separator", "")
                 continue
+            if sp.extra.get("event"):
+                from ..common.activity import event_bit
+                waiting.append({"key": sp.key,
+                                "bit": bit_json(event_bit(sp.extra["event"], web_date))})
+                continue
             e = sp.entry
+            events += [dict(x, before=e.id) for x in waiting]
+            waiting = []
             if pending is not None:
                 divider, pending = {"before": e.id, "text": pending}, None
             posts.append(post_json(core, e, short.get(real(e).id), e.id in unread,
                                    sp.parent if sp.parent is not None else None,
                                    item_id=sp.key, spec=sp))
+        events += [dict(x, before=None) for x in waiting]  # after the last post
         lane = core.lane_by_name[name]
         return {"name": name, "title": title, "posts": posts, "info": built.info,
-                "divider": divider,
+                "divider": divider, "events": events,
                 "older": bool(lane.source) and not lane.lazy, "empty_browse": built.empty,
                 "filters": [[f, *m.filter_words(f)] for f in m.filters]
                 if len(m.filters) > 1 else [],

@@ -512,6 +512,11 @@ class View:
         """[Activity] newest first: who liked, shared, followed, mentioned…"""
         return [self._activity_of(n) for n in self._core.activity_entries(limit)]
 
+    def lane_events(self, lane, limit=200):
+        """[Activity] newest first: the events a lane of rules shows among its posts."""
+        events = getattr(self._core, "lane_events", None)
+        return [self._activity_of(n) for n in events(lane, limit)] if events else []
+
     def activity_seen(self):
         """The sort key up to which activity is seen (Activity.sort above it: new)."""
         return self._core.activity_seen_mark()

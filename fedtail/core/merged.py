@@ -236,6 +236,10 @@ class MergedCore:
             out.sort(key=lambda e: (real(e[1]) if by_time else e[1]).get("created_at", ""))
         return out
 
+    def lane_events(self, name, limit=200):
+        """The events a lane of rules shows: the main account's (Activity is its)."""
+        return self.primary.lane_events(name, limit)
+
     def unread_ids(self, entries):
         groups = {}
         for item, st in entries:

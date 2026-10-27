@@ -66,9 +66,13 @@ class Custom:
         self.name = rule.name
         self._title = title  # None: the interface's word for the name (a set's lanes)
         self.warnings = list(warnings)
+        # conditions of events (likes, follows… — `event = …`): the lane shows those rows
+        # of Activity too; they ask no stream of posts
+        self.event_conds = [c for c in rule.any if "event" in c.sets]
         feeds = set()
         for cond in rule.any:
-            feeds |= rule.source or infer_sources(cond)
+            if cond not in self.event_conds:
+                feeds |= rule.source or infer_sources(cond)
         bad = sorted(f for f in feeds if not _feedable(f))
         if bad:
             self.warnings.append(f"sources not in this version: {', '.join(bad)}")
@@ -114,6 +118,27 @@ class Custom:
         world = world or atoms.World()
         return self.rule.takes(atoms.post_facts(status, world, source, self.take_needs),
                                world.now)
+
+    def takes_event(self, notification, world=None, which="all"):
+        """Does this lane show this event (a row of Activity: a like, a follow…)? One of
+        its conditions of events matches it and none of `none` does; with a quick filter
+        (`which`: "main", "chip:<n>") — as it shows posts. A mention is a post, not an
+        event: the lane takes it as a post or not at all."""
+        if not self.event_conds:
+            return False
+        world = world or atoms.World()
+        facts = atoms.event_facts(notification, world)
+        if not facts.event or any(c.matches(facts, world.now) for c in self.rule.none):
+            return False
+        hits = [i for i, c in enumerate(self.rule.any)
+                if c in self.event_conds and c.matches(facts, world.now)]
+        if not hits:
+            return False
+        if which == "main":
+            return any(self.rule.any[i].shown for i in hits)
+        if which.startswith("chip:"):
+            return which[5:].isdigit() and int(which[5:]) in hits
+        return True
 
     # ---- quick filters: a condition with `switch` is one, `shown = false` hides it --------
     def chips(self):

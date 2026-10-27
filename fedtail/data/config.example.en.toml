@@ -677,7 +677,8 @@ tag_groups = []
 # direct), visibility, has (media, image, video, cw, link, "tag:x"), lang, state (unread,
 # bookmarked…), target (for boosts: my_post, my_comment, post, comment, seen, read), age
 # ("<1d", ">2d"; age_of = "original" — of a boosted post), likes / boosts / replies (">10"),
-# text ([["word", "and word"], ["or this"]]). A lane stands in "Personal" (group =
+# text ([["word", "and word"], ["or this"]]), event (favourite, reblog, follow, poll, update,
+# status: those rows of Activity, a line each among the posts). A lane stands in "Personal" (group =
 # "standard" — in "Timelines"): where lanes.enabled names it ("custom:feed"), else at the end.
 # The free lanes fill from what is stored already. An example (then take away the
 # custom = [] line below):
