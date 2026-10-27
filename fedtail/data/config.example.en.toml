@@ -695,6 +695,10 @@ tag_groups = []
 #   none = [{ kind = "boost", target = "seen" }]
 custom = []
 
+# With lanes of your own — "Unsorted": what came from the lanes read through (Home, Mentions,
+# lists…) and no lane took, so a rule never loses a post. false — no such lane.
+unsorted = true
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  5. Posts

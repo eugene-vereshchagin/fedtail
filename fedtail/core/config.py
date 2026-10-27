@@ -134,6 +134,7 @@ DEFAULTS = {
         "detect_min_words": 12,
         "tag_groups": [],
         "custom": [],
+        "unsorted": True,
     },
     "post": {
         "default_visibility": "private",
@@ -335,7 +336,7 @@ CHOICES = {
     ("lanes", "preset"): {"own", "fedtail", "mastodon", "tusky", "phanpy"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
-              "local", "federated", "requests", "direct", "my_likes"}
+              "local", "federated", "requests", "direct", "my_likes", "unsorted"}
 # options that name lanes: their old names are read as the new ones
 LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),

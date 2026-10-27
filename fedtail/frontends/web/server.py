@@ -988,12 +988,10 @@ class Web:
                                    sp.parent if sp.parent is not None else None,
                                    item_id=sp.key, spec=sp))
         lane = core.lane_by_name[name]
-        words = {"all": ("show_all", "show_all_tip"), "posts": ("posts_only", "posts_only_tip"),
-                 "unread": ("unread_only", "unread_only_tip")}
         return {"name": name, "title": title, "posts": posts, "info": built.info,
                 "divider": divider,
                 "older": bool(lane.source) and not lane.lazy, "empty_browse": built.empty,
-                "filters": [[f, _(words[f][0]), _(words[f][1])] for f in m.filters]
+                "filters": [[f, *m.filter_words(f)] for f in m.filters]
                 if len(m.filters) > 1 else [],
                 "filter": m.current_filter(),
                 "conversations": {"offered": m.conversations_offered(), "on": m.conversations(),

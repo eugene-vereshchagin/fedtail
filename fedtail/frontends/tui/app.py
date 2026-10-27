@@ -1240,8 +1240,7 @@ class FedtailApp(App, PostsMixin):
         return models[name]
 
     def lane_choice_words(self, m):
-        words = {"all": "show_all", "posts": "posts_only", "unread": "unread_only"}
-        bits = [_(words[m.current_filter()])]
+        bits = [m.filter_words(m.current_filter())[0]]
         if m.conversations():
             bits.append(_("conv_mode"))
         return " · ".join(bits)
@@ -1254,13 +1253,11 @@ class FedtailApp(App, PostsMixin):
         if not self.lane or self.lane in ("activity", "requests"):
             return
         m = self.lane_model(self.lane)
-        words = {"all": "show_all", "posts": "posts_only", "unread": "unread_only"}
-        tips = {"all": "show_all_tip", "posts": "posts_only_tip", "unread": "unread_only_tip"}
         items = []
         if len(m.filters) > 1:
             now = m.current_filter()
-            items += [(("● " if f == now else "○ ") + _(words[f]), ("filter", f), _(tips[f]))
-                      for f in m.filters] + ["-"]
+            items += [(("● " if f == now else "○ ") + m.filter_words(f)[0], ("filter", f),
+                       m.filter_words(f)[1]) for f in m.filters] + ["-"]
         if m.conversations_offered():
             on = m.conversations()
             items += [(("● " if not on else "○ ") + _("view_feed"), ("conv", False),

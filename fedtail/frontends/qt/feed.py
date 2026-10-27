@@ -970,9 +970,7 @@ class LaneWidget(QWidget):
         self.header.h.insertWidget(1, self.pill)
         # what to show: everything / posts only / what's unread — one control, so the
         # three sit together; how: as a feed / as conversations — another
-        words = {"all": ("show_all", "show_all_tip"), "posts": ("posts_only", "posts_only_tip"),
-                 "unread": ("unread_only", "unread_only_tip")}
-        options = [(k, _(words[k][0]), _(words[k][1])) for k in self.lm.filters]
+        options = [(k, *self.lm.filter_words(k)) for k in self.lm.filters]
         self.filter_seg = None
         if len(options) > 1:
             self.filter_seg = _Segmented(options, self.lm.current_filter(), self.set_filter,

@@ -159,12 +159,16 @@ class LaneModel:
         lane = view.lane_by_name.get(name)
         self.lazy = bool(getattr(lane, "lazy", False))
         self.has_posts_only = name in POSTS_ONLY_LANES or name.startswith("list:")
+        self.chips = tuple(getattr(lane, "chips", ()) or ())  # a free lane's quick filters
         self.separator_text = separator_text or (lambda n: _("new_below"))
         self.separator = None    # (key of the first unread when the lane opened, count)
         self.kept = None         # "unread only": the item keys shown while it's open
         self.conv_members = {}   # conversation top id -> member ids
         self.media = MediaFilter()
         opts = ["all"]
+        if self.chips:  # "main" (what isn't hidden) before "all", then each switch
+            opts = [k for k, _w in self.chips if k == "main"] + ["all"] + \
+                [k for k, _w in self.chips if k != "main"]
         if self.has_posts_only:
             opts.append("posts")
         if not self.lazy:
@@ -172,7 +176,22 @@ class LaneModel:
         self.filters = opts      # what the filter control offers ("all" alone: none)
 
     # ---- the choices -------------------------------------------------------------------
+    def filter_words(self, which):
+        """(words, tip) for a filter: the built-in ones from i18n, a free lane's switch as
+        its rule names it."""
+        builtin = {"all": ("show_all", "show_all_tip"), "posts": ("posts_only", "posts_only_tip"),
+                   "unread": ("unread_only", "unread_only_tip"),
+                   "main": ("chips_main", "chips_main_tip")}
+        if which in builtin:
+            return _(builtin[which][0]), _(builtin[which][1])
+        words = dict(self.chips).get(which) or which
+        return words, _("chip_tip", words=words)
+
     def current_filter(self):
+        if self.chips:
+            which = self.view.lane_filter(self.name)
+            if which != "all" or not self.view.choice(f"unread_only.{self.name}"):
+                return which
         if self.has_posts_only and self.view.posts_only(self.name):
             return "posts"
         if "unread" in self.filters and self.view.choice(f"unread_only.{self.name}"):
@@ -183,7 +202,10 @@ class LaneModel:
         return len(self.filters) > 1 and self.current_filter() == "unread"
 
     def set_filter(self, which):
-        """"all", "posts" (no replies) or "unread"; the caller places the lane anew."""
+        """"all", "posts" (no replies) or "unread"; a free lane's "main" or "chip:<n>" too;
+        the caller places the lane anew."""
+        if self.chips:
+            self.view.set_lane_filter(self.name, which if which != "unread" else "all")
         if self.has_posts_only and self.view.posts_only(self.name) != (which == "posts"):
             self.view.set_posts_only(self.name, which == "posts")
         self.view.set_choice(f"unread_only.{self.name}", which == "unread")

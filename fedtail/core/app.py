@@ -1064,6 +1064,12 @@ class Core(SocialMixin):
         got = custom.route(self.store, self.customs, new_by_source, world)
         for name in got:
             self.store.prune(name, self.keep_per_lane())
+        if lanes.UNSORTED in self.lane_by_name:
+            taken = {sid for name in got for sid in got[name]}
+            left = custom.unsorted(self.store, self.lanes, new_by_source, self._ctx(), taken)
+            if left:
+                got[lanes.UNSORTED] = left
+                self.store.prune(lanes.UNSORTED, self.keep_per_lane())
         if refilled:
             self.emit("lanes_updated", refilled)  # filled anew: the lanes look again
         return got
@@ -1101,6 +1107,9 @@ class Core(SocialMixin):
             if not self.cfg["feed"].get("repeat_boosts", False):  # not shown: no news
                 rows = self._without_repeats(lane.source, rows)
             sts = [st for item_id, st in rows if item_id in id_set]
+            if lane.chips:  # what a free lane's quick filter hides makes no news either
+                shows = self._chip_shows(name)
+                sts = [st for st in sts if shows(st)]
             unread = self.store.read_set(st["id"] for st in sts)
             news = [(name, st) for st in sts
                     if st["id"] not in unread and not self.silenced(st)]
@@ -1996,8 +2005,30 @@ class Core(SocialMixin):
         kept.reverse()
         if lane.by_status_time:
             kept.sort(key=lambda e: (real(e[1]).get("created_at", ""), real(e[1])["id"]))
+        if lane.chips:  # a free lane's quick filter
+            shows = self._chip_shows(name)
+            kept = [e for e in kept if shows(e[1])]
         self._lane_cache[name] = (key, kept)
         return kept
+
+    def lane_filter(self, name):
+        """A free lane's quick filter now: "all", "main", "chip:<n>"."""
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is None:
+            return "all"
+        got = self.choice(f"filter.{name}")
+        return got if got in {"all"} | {k for k, _w in c.chips()} else c.default_filter()
+
+    def set_lane_filter(self, name, which):
+        self.set_choice(f"filter.{name}", which)
+
+    def _chip_shows(self, name):
+        c = next((c for c in self.customs if c.name == name), None)
+        which = self.lane_filter(name)
+        if c is None or which == "all":
+            return lambda st: True
+        world = self._world()
+        return lambda st: c.shows(st, world, which)
 
     def _without_repeats(self, source, rows, chunk=200):
         """feed.repeat_boosts = false: a boost shows only if it is how the post first came
@@ -2154,6 +2185,8 @@ class Core(SocialMixin):
 
     def load_older(self, name):
         lane = self.lane_by_name[name]
+        if lane.feeds:
+            return self.submit(lambda: self._older_custom(name))
         if lane.source not in self.sources:  # nothing older on a server for this one
             return self.submit(lambda: 0)
 
@@ -2168,6 +2201,29 @@ class Core(SocialMixin):
             self._fetch_parents(got)
             return len(got)
         return self.submit(job)
+
+    def _older_custom(self, name):
+        """A free lane's "Older": a page older from each of its feeds, through its rule."""
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is None:
+            return 0
+        world, got = self._world(), []
+        for source in sorted(c.feeds):
+            if source not in self.sources:
+                continue
+            try:
+                older = sources.fetch_older(self.store, self.sources[source],
+                                            self.cfg["feed"]["page_size"])
+            except Exception as e:  # noqa: BLE001 — the other feeds still give theirs
+                self.emit("error", f"{source}: {e}")
+                continue
+            self.store.mark_read([st["id"] for st in older])  # history is not news
+            got += custom.take(self.store, c, older, world, source)
+        limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
+        self._limits[name] = limit + len(got)
+        self.emit("lanes_updated", {name: []})
+        self._fetch_parents(got)
+        return len(got)
 
     def parent_of(self, status):
         """Parent status, 'missing', or None when it isn't known (yet)."""

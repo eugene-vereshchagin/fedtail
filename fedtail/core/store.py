@@ -683,6 +683,21 @@ class Store:
                                   (source, self.LOCAL_ITEM)).fetchone()
         return row[0] if row else None
 
+    def held_by(self, prefix, status_ids):
+        """Which of these statuses some stream whose name starts with `prefix` holds."""
+        ids = list(dict.fromkeys(status_ids))
+        if not ids:
+            return set()
+        out = set()
+        with self._reading() as db:
+            for i in range(0, len(ids), 500):
+                part = ids[i:i + 500]
+                marks = ",".join("?" * len(part))
+                out |= {r[0] for r in db.execute(
+                    f"SELECT DISTINCT status_id FROM items WHERE source LIKE ? "
+                    f"AND status_id IN ({marks})", [prefix + "%", *part])}
+        return out
+
     def count_items(self, source):
         with self._reading() as db:
             return db.execute("SELECT COUNT(*) FROM items WHERE source=?",

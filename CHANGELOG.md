@@ -2,6 +2,11 @@
 
 ## 0.21.0 — in progress
 
+- Free lanes: quick filters — a condition with `switch = "…"` is a choice in the lane's
+  header, one with `shown = false` is hidden (from the counts and the news too) until its
+  choice is on, and "Main" shows the rest; "Older" fetches a page from each of a free lane's
+  sources and puts through its rule what fits; "Unsorted" (`lanes.unsorted`) gathers what came
+  to the lanes read through and no lane took.
 - `--update-config` and the settings page with `[[lanes.custom]]` or `[[lanes.tag_groups]]`
   in the file: new `[lanes]` options went after the last such table — TOML read them as that
   table's keys, and the lane or tag group broke. Now they stay in `[lanes]`, before its tables;

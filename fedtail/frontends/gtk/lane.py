@@ -110,15 +110,14 @@ class LaneView(Gtk.Box):
         header.add_css_class("ft-lane-header")
         self._filter_buttons = {}
         if len(self.lm.filters) > 1:
-            group, words = None, {"all": ("show_all", "show_all_tip"),
-                                  "posts": ("posts_only", "posts_only_tip"),
-                                  "unread": ("unread_only", "unread_only_tip")}
+            group = None
             seg = Gtk.Box()
             seg.add_css_class("linked")
             now = self.lm.current_filter()
             for which in self.lm.filters:
-                b = Gtk.ToggleButton(label=_(words[which][0]))
-                tip(b, _(words[which][1]))
+                label, about = self.lm.filter_words(which)
+                b = Gtk.ToggleButton(label=label)
+                tip(b, about)
                 if group is not None:
                     b.set_group(group)
                 group = group or b

@@ -76,10 +76,49 @@ class Custom:
     def lane(self):
         return lanes.Lane(self.name, self.name, lanes._all,
                           by_status_time=self.rule.sort == "post_time",
-                          lazy=self.rule.read == "browse", feeds=tuple(sorted(self.feeds)))
+                          lazy=self.rule.read == "browse", feeds=tuple(sorted(self.feeds)),
+                          chips=self.chips())
 
     def takes(self, status, world, source):
         return self.rule.takes(atoms.post_facts(status, world, source), world.now)
+
+    # ---- quick filters: a condition with `switch` is one, `shown = false` hides it --------
+    def chips(self):
+        """((key, words)…) of the lane's quick filters: "main" first when a condition is
+        hidden by default, then one per condition with a `switch`; () — no switches."""
+        out = [(f"chip:{i}", c.switch) for i, c in enumerate(self.rule.any) if c.switch]
+        if any(not c.shown for c in self.rule.any):
+            out.insert(0, ("main", ""))
+        return tuple(out)
+
+    def default_filter(self):
+        return "main" if any(not c.shown for c in self.rule.any) else "all"
+
+    def shows(self, status, world, which):
+        """Does the quick filter `which` ("all", "main", "chip:<n>") show this post of the
+        lane? The post's own source isn't kept, so a condition's `source` is left out here:
+        the post is in the lane already."""
+        if which == "all" or not which:
+            return True
+        facts = atoms.post_facts(status, world)
+        now = world.now
+        hits = [i for i, c in enumerate(self.rule.any) if _unsourced(c).matches(facts, now)]
+        if which == "main":
+            return not hits or any(self.rule.any[i].shown for i in hits)
+        if which.startswith("chip:"):
+            try:
+                return int(which[5:]) in hits
+            except ValueError:
+                return True
+        return True
+
+
+def _unsourced(cond):
+    if "source" not in cond.sets:
+        return cond
+    c = atoms.Condition(**{**cond.__dict__, "sets": {k: v for k, v in cond.sets.items()
+                                                     if k != "source"}})
+    return c
 
 
 def rule_key(rule):
@@ -128,6 +167,37 @@ def route(store, customs, new_by_source, world):
             if taken:
                 out.setdefault(c.name, []).extend(store.put_items(c.name, taken))
     return {k: v for k, v in out.items() if v}
+
+
+def take(store, custom, statuses, world, source):
+    """Put into a lane what of `statuses` (come from `source`) its rule takes. Returns
+    the statuses taken."""
+    taken = [st for st in statuses if custom.takes(st, world, source)]
+    store.put_items(custom.name, [_entry(st) for st in taken])
+    return taken
+
+
+def unsorted(store, lanes_now, new_by_source, ctx, taken):
+    """What came from the read-through sources and no lane took — into "Unsorted".
+    taken: status ids the free lanes took this round. Browse sources (federated, local
+    while lazy) don't go there: they'd drown it. Returns the new item ids."""
+    browse = {lane.source for lane in lanes_now if lane.lazy} - \
+        {f for lane in lanes_now if lane.feeds and not lane.lazy for f in lane.feeds}
+    put = []
+    for source, ids in new_by_source.items():
+        if not ids or source in browse or is_custom(source) or source == lanes.UNSORTED:
+            continue
+        idset = set(ids)
+        own = [x for x in lanes_now if x.source == source and not x.feeds]
+        rows = [st for item_id, st in store.items(source, len(idset) + 50) if item_id in idset]
+        held = store.held_by(PREFIX, [st["id"] for st in rows])  # taken before, from elsewhere
+        for st in rows:
+            if st["id"] in taken or st["id"] in held:
+                continue
+            if any(lanes.keeps(x, st, ctx) for x in own):
+                continue
+            put.append(_entry(st))
+    return store.put_items(lanes.UNSORTED, put)
 
 
 def backfill(store, custom, world, rows=BACKFILL_ROWS):

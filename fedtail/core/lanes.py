@@ -20,6 +20,9 @@ class Lane:
     lazy: bool = False
     # a free lane (core/custom.py): the real sources its own stream is filled from
     feeds: tuple = ()
+    # …its quick filters: (key, words) — "main" (what isn't hidden), "chip:<n>" (one
+    # condition's posts); none — the lane has no switches
+    chips: tuple = ()
 
 
 @dataclass
@@ -159,7 +162,7 @@ def grouped(lanes):
     placed = set()
     for group, members in GROUPS:
         if group == "custom":
-            got = [n for n in names if n.startswith("custom:")]
+            got = [n for n in names if n.startswith("custom:") or n == UNSORTED]
             if not got:
                 continue
         elif group == "lists":
@@ -173,7 +176,7 @@ def grouped(lanes):
             if group == "standard":
                 got += [n for n in names if n not in placed and n not in got
                         and not is_list(n) and not taggroups.is_tags(n)
-                        and not n.startswith("custom:")
+                        and not n.startswith("custom:") and n != UNSORTED
                         and not any(n in m for _g, m in GROUPS)]
         placed.update(got)
         out.append((group, got))
@@ -216,11 +219,14 @@ def tag_lane(spec):
 
 
 def enabled(cfg, lists=(), tag_groups=()):
-    out = [LANES[n] for n in cfg["lanes"]["enabled"]]
+    out = [LANES[n] for n in cfg["lanes"]["enabled"] if n in LANES]  # "unsorted": below
     if cfg["lists"]["enabled"]:
         out += [list_lane(x["id"]) for x in lists]
     from . import custom  # it builds on lanes
-    out += [c.lane() for c in custom.load(cfg)[0]]
+    free = [c.lane() for c in custom.load(cfg)[0]]
+    out += free
+    if free and cfg["lanes"].get("unsorted", True):
+        out.append(Lane(UNSORTED, UNSORTED, _all))
     seen = set()
     for g in tag_groups:
         lane = tag_lane(g)
@@ -269,7 +275,8 @@ def apply_preset(lanes_cfg):
     return list(preset)
 
 
-LOCAL_SOURCES = {"subs"}  # filled by the client itself, not a server stream
+UNSORTED = "unsorted"  # what came and no lane took (only with free lanes; core/custom.py)
+LOCAL_SOURCES = {"subs", UNSORTED}  # filled by the client itself, not a server stream
 
 
 def sources_needed(lanes):
