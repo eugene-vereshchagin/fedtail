@@ -145,7 +145,6 @@ class Core(SocialMixin):
         self._world_version = 0   # bumped when what the rules know around posts changes
         self._following_at = 0.0
         self._important_waiting = False  # "Important people" on, but nothing in it yet
-        self.activity_filter = "all"     # Activity's quick filter: this run only
         self._waiting = set()            # lanes on but hidden while empty (SHOWN_WHEN_FULL)
         self._unsorted_on = False        # lanes.unsorted: Unsorted collects
         self.lanes = self._shown_lanes(lanes.enabled(cfg))

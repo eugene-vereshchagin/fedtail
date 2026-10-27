@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- Every quick filter holds until the program closes and is kept between runs only with
+  `feed.remember_choices`: Activity's and the media funnel now too (Activity's was kept
+  always, the funnel never).
 - `ui.layout` is two layouts now: "single" and "split". Columns side by side are the single
   window's option, `ui.open_columns` (`layout = "columns"` still reads, as single with it on;
   "qip", split's old name, as split); the settings window offered "columns" and "qip" as

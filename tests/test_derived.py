@@ -139,6 +139,11 @@ class ActivityFilterTest(FreeBase):
         v.set_activity_filter("follows")
         self.assertEqual(act.chosen(v), "follows")
         self.assertIsNone(core.store.kv_get("ui.activity_filter"))  # nothing kept
+        core.cfg["feed"]["remember_choices"] = True  # the tick: kept between runs
+        v.set_activity_filter("reactions")
+        self.assertEqual(core.store.kv_get("ui.activity_filter"), "reactions")
+        core.cfg["feed"]["remember_choices"] = False
+        v.set_activity_filter("all")
         # follow requests in a lane of their own, no approvals: no "Requests" filter
         core.cfg["lanes"]["enabled"] = ["home", "activity", "requests"]
         core.cfg["activity"]["approvals"] = False

@@ -543,12 +543,14 @@ class View:
         return tuple(got()) if got else ACTIVITY_FILTERS
 
     def activity_filter_now(self):
-        """The quick filter chosen — for this run only (a restart: "all" again)."""
-        which = getattr(self._core, "activity_filter", "all")
+        """The quick filter chosen (Core.choice: this run, or kept)."""
+        choice = getattr(self._core, "choice", None)
+        which = choice("activity_filter", "all") if choice else "all"
         return which if which in self.activity_filters_offered() else "all"
 
     def set_activity_filter(self, which):
-        self._core.activity_filter = which if which in ACTIVITY_FILTERS else "all"
+        """This run only — or kept, like every quick filter, with feed.remember_choices."""
+        self._core.set_choice("activity_filter", which if which in ACTIVITY_FILTERS else "all")
         self._core.emit("activity_updated", None)
 
     def lane_events(self, lane, limit=200):

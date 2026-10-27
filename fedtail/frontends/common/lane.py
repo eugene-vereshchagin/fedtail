@@ -115,7 +115,8 @@ def media_kinds(entry):
 
 class MediaFilter:
     """The funnel: only posts with pictures, gifs, video… and boosts or not — for this
-    run only (never saved: posts that vanish after a restart drive one mad)."""
+    run, like every quick filter; kept between runs only with feed.remember_choices
+    (LaneModel keeps it then)."""
 
     def __init__(self):
         self.wanted = set(MEDIA_KINDS)
@@ -165,6 +166,12 @@ class LaneModel:
         self.kept = None         # "unread only": the item keys shown while it's open
         self.conv_members = {}   # conversation top id -> member ids
         self.media = MediaFilter()
+        kept = view.choice(f"media.{name}") if hasattr(view, "choice") else None
+        if isinstance(kept, dict):  # feed.remember_choices: as it was left
+            self.media.wanted = {k for k in kept.get("wanted") or () if k in MEDIA_KINDS} \
+                or set(MEDIA_KINDS)
+            self.media.boosts = bool(kept.get("boosts", True))
+        self._media_kept = self._media_state()
         opts = ["all"]
         if self.chips:  # "main" (what isn't hidden) before "all"
             opts = [k for k, _w in self.chips if k == "main"] + ["all"]
@@ -234,10 +241,21 @@ class LaneModel:
         return False
 
     # ---- the cards ----------------------------------------------------------------------
+    def _media_state(self):
+        return {"wanted": sorted(self.media.wanted), "boosts": self.media.boosts}
+
+    def _keep_media(self):
+        """The funnel changed (any window changes it in place): kept as a choice."""
+        now = self._media_state()
+        if now != self._media_kept and hasattr(self.view, "set_choice"):
+            self.view.set_choice(f"media.{self.name}", now)
+            self._media_kept = now
+
     def build(self, positioned):
         """The cards as they are now. positioned: the reader has been placed in the lane
         already (the divider stays where it was then)."""
         view = self.view
+        self._keep_media()
         entries = view.entries(self.name)  # [(item id, Post | Share)], oldest first
         unread = set() if self.lazy else view.unread(entries)
         info = ""

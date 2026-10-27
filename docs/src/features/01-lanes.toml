@@ -292,8 +292,8 @@ api.en = "own"
 others.ru = "Phanpy — похоже на «Беседы»"
 others.en = "Phanpy — similar to “Conversations”"
 clients = ["Phanpy"]
-details.ru = "Над лентой два переключателя. «Всё / Только посты / Новое»: со всеми комментами, только корневые посты или только непрочитанное. «Лентой / Беседами»: «Беседами» собирает тред в одну карточку, как разговоры на Point. В каких лентах «только посты» включено с запуска — `lanes.posts_only`. Помнить выбор между запусками — `feed.remember_choices = true`; по умолчанию каждый запуск с чистого листа."
-details.en = "Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Remember the choice between runs — `feed.remember_choices = true`; by default every run starts afresh."
+details.ru = "Над лентой два переключателя. «Всё / Только посты / Новое»: со всеми комментами, только корневые посты или только непрочитанное. «Лентой / Беседами»: «Беседами» собирает тред в одну карточку, как разговоры на Point. В каких лентах «только посты» включено с запуска — `lanes.posts_only`. Каждый быстрый фильтр — эти, свои у ленты, воронка медиа, у Активности — держится до закрытия программы; между запусками — с `feed.remember_choices = true`."
+details.en = "Over a lane, two switches. “All / Posts only / New”: with all the comments, only top-level posts, or only what's unread. “Feed / Conversations”: “Conversations” gathers a thread into one card, like conversations on Point. In which lanes “posts only” is on from the start — `lanes.posts_only`. Every quick filter — these, a lane's own, the media funnel, Activity's — holds until the program closes; kept between runs with `feed.remember_choices = true`."
 
 [[feature]]
 id = "find-in-lane"

@@ -178,6 +178,19 @@ class PlaceTest(FreeBase):
         self.assertNotIn("pics", self.core.lane_by_name)
         self.assertNotIn("_own", [r.key for r in self.places.page("lanes").rows])
 
+    def test_media_funnel_kept_only_with_the_tick(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common.lane import LaneModel
+        m = LaneModel(View(self.core), "home")
+        m.media.toggle("text", False)
+        m.build(False)
+        self.assertIsNone(self.core.store.kv_get("ui.media.home"))  # this run only
+        self.assertTrue(LaneModel(View(self.core), "home").media.active())  # …in it
+        self.core.cfg["feed"]["remember_choices"] = True
+        m.media.boosts = False
+        m.build(False)
+        self.assertEqual(self.core.store.kv_get("ui.media.home")["boosts"], False)
+
     def test_in_the_menu(self):
         self.assertIn("lanes", [n for n, _w in self.places.menu()])
 

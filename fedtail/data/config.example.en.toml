@@ -449,9 +449,10 @@ honest_counters = false
 # Works together with honest_counters.
 counters_via_accounts = true
 
-# The choices over a lane — "All / Posts only / New" and "Feed / Conversations" — remembered between
-# runs. false — every run starts afresh: "All" and "Feed" (or what
-# [lanes] posts_only says), the choice holds until the program closes.
+# The quick filters, remembered between runs: over a lane — "All / Posts only / New", a lane's
+# own quick filters, "Feed / Conversations", the media funnel — and Activity's. false — every
+# run starts afresh ("All", "Feed", or what [lanes] posts_only and a lane's rule say); a choice
+# holds until the program closes.
 remember_choices = false
 
 # Whole threads. Your server knows only the replies that reached it (from people
