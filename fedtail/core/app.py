@@ -18,6 +18,7 @@ worker threads (see events.py):
 """
 
 import logging
+import re
 import threading
 import time
 import urllib.parse
@@ -1258,9 +1259,98 @@ class Core(SocialMixin):
         if quiet:  # "why no notification?" — answered by the log
             log.info("notify: not asked for (notify.lanes / notify.except): %s",
                      ", ".join(quiet))
+        out = self._once_per_post(out)
         if out:
             self.emit("notify", out)
         self.sound_news(fresh)
+
+    def explain_post(self, status_id):
+        """Why this post is in each lane of rules shown, or not (feeds.md §8: "Why is it
+        here?"): [{"lane", "title", "in_lane", "taken", "by", "out", "conds",
+        "quiet"}] — in_lane: the lane shows it now; quiet: what took it out before any
+        rule (muted, a list's person, a language, a tag lane "not in Home")."""
+        st = self.store.get_status(status_id)
+        if st is None:
+            return []
+        sources = self.store.sources_of(status_id)
+        world, ctx = self._world(), self._ctx()
+        out = []
+        for lane in self.lanes:
+            c = next((c for c in self.customs if c.name == lane.name), None)
+            if c is None:
+                continue
+            got = custom.explain(c, st, world, sources)
+            quiet = ""
+            if self.silenced(st):
+                quiet = "silenced"
+            elif got["taken"] and not lanes.keeps(lane, st, ctx) and \
+                    (c.routed or c.takes(st, world, c.stream)):
+                quiet = "before_rules"
+            in_lane = lane.source in sources and lanes.keeps(lane, st, ctx) \
+                and not self.silenced(st)
+            out.append(dict(got, lane=lane.name, title=self.lane_title(lane.name) or "",
+                            in_lane=bool(in_lane), quiet=quiet))
+        return out
+
+    def explain_lane(self, name, n=30):
+        """--explain-lane: a lane of rules — its rule's warnings, where it reads from, and
+        for the newest n stored posts of its sources whether it takes each and why."""
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is None:
+            return None
+        world = self._world()
+        rows, seen = [], set()
+        for source in sorted(c.feeds):
+            for _item, st in self.store.items(source, n):
+                sid = real(st)["id"]
+                if sid in seen:
+                    continue
+                seen.add(sid)
+                got = custom.explain(c, st, world, self.store.sources_of(st["id"]))
+                rows.append(dict(got, id=st["id"], source=source,
+                                 who=real(st)["account"].get("acct", ""),
+                                 created=st.get("created_at", ""),
+                                 text=re.sub(r"<[^>]+>", " ", real(st).get("content") or "")))
+        rows.sort(key=lambda r: r["created"], reverse=True)
+        return {"name": name, "warnings": list(c.warnings), "feeds": sorted(c.feeds),
+                "routed": c.routed, "rows": rows[:n]}
+
+    def lane_rank(self, name):
+        """How personal a lane is, for one notification a post (feeds.md §5): 0 private,
+        1 replies to me, 2 mentions, 3 followed threads, 4 the rest."""
+        if name == "direct":
+            return 0
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is None:
+            return 4
+        best = 4
+        for cond in c.rule.any:
+            me = cond.sets.get("me", set())
+            if me == {"direct"} or cond.sets.get("visibility") == {"direct"}:
+                best = min(best, 0)
+            elif me & {"reply", "reply_to_post", "reply_to_comment"}:
+                best = min(best, 1)
+            elif "mention" in me:
+                best = min(best, 2)
+            elif "in_my_thread" in me or "subs" in cond.sets.get("source", ()) \
+                    or "subs" in c.rule.source:
+                best = min(best, 3)
+        return best
+
+    def _once_per_post(self, out):
+        """A post in several lanes is said once — by the most personal of them (private >
+        reply > mention > thread > the rest); requests and activity stay as they are."""
+        best = {}
+        for i, (name, x) in enumerate(out):
+            if name in ("requests", "activity") or not isinstance(x, dict):
+                continue
+            sid = real(x).get("id")
+            rank = self.lane_rank(name)
+            if sid not in best or rank < best[sid][0]:
+                best[sid] = (rank, i)
+        keep = {i for _r, i in best.values()}
+        return [(n, x) for i, (n, x) in enumerate(out)
+                if n in ("requests", "activity") or not isinstance(x, dict) or i in keep]
 
     def _calm_out(self, wanted, never):
         """The lanes with news held back whose minutes have passed: [(lane, news still

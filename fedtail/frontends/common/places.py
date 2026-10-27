@@ -126,7 +126,7 @@ PLACES = {
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
     "slow": "slow_title", "log": "debug_log_title", "react": "react_title",
-    "lane": "le_title",
+    "lane": "le_title", "why": "why_here",
 }
 MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "slow",
         "requests",
@@ -1698,5 +1698,5 @@ def for_post(entry):
     p = real(entry) if isinstance(entry, (Post, Share)) else entry
     return {"history": ("history", p.id), "report": ("report", p.id),
             "quotes": ("quotes", p.id), "favourited_by": ("reactions", p.id),
-            "react": ("react", p.id),
+            "react": ("react", p.id), "why": ("why", p.id),
             "reblogged_by": ("reactions", p.id)}

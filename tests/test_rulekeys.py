@@ -78,3 +78,63 @@ class RuleKeysTest(FreeBase):
         self.assertIn("005", got)             # whole word only
         self.assertEqual(got["006"]["filtered"][0]["filter"]["title"], "sport")  # folded
         self.assertIn("001", got)             # a home filter isn't this lane's
+
+
+class OncePerPostTest(FreeBase):
+    """A post in several lanes notified about is said once, by the most personal lane."""
+
+    def test_most_personal_lane(self):
+        from .fakes import ME
+        core, w = self.make([])
+        core.cfg["notify"]["lanes"] = ["home", "to_me", "direct"]
+        core.cfg["notify"]["except"] = []
+        core.connect().result()
+        core.poll_once()
+        got = []
+        core.events.on("notify", lambda _n, pl: got.extend(pl))
+        reply = status("950", BOB, reply_to="900", reply_acc="ME", minute=5, vis="public")
+        w.add(status("900", ME, minute=1, vis="public"), home=True)
+        w.add(reply, home=True, mention=True)  # in Home and in To me
+        core.poll_once()
+        lanes_of = [n for n, st in got if st.get("id") == "950"]
+        self.assertEqual(lanes_of, ["to_me"])
+        self.assertLess(core.lane_rank("direct"), core.lane_rank("to_me"))
+        self.assertLess(core.lane_rank("to_me"), core.lane_rank("home"))
+
+
+class WhyTest(FreeBase):
+    """"Why is it here?" and --explain-lane: which condition took a post, or what didn't
+    match."""
+
+    def test_explain_post_and_place(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common.places import Places
+
+        from .fakes import NEWS
+        core, w = self.make([])
+        w.add(status("700", BOB, minute=1), home=True)
+        w.add(status("701", NEWS, minute=2), home=True)  # a bot
+        core.connect().result()
+        core.poll_once()
+        got = {g["lane"]: g for g in core.explain_post("701")}
+        self.assertTrue(got["bots"]["taken"])
+        self.assertTrue(got["bots"]["in_lane"])
+        self.assertFalse(got["home"]["in_lane"])
+        self.assertIsNotNone(got["home"]["out"])  # Home's "none" keeps bots out
+        page = Places(View(core)).page("why", "701")
+        rows = {r.key: r for r in page.rows}
+        self.assertTrue(rows["bots"].title.startswith("✓"))
+        self.assertIn("author", rows["home"].line)
+
+    def test_explain_lane(self):
+        from .fakes import NEWS
+        core, w = self.make([])
+        w.add(status("700", BOB, minute=1), home=True)
+        w.add(status("701", NEWS, minute=2), home=True)
+        core.connect().result()
+        core.poll_once()
+        got = core.explain_lane("bots")
+        self.assertEqual(got["feeds"], ["home"])
+        taken = {r["id"]: r["taken"] for r in got["rows"]}
+        self.assertEqual(taken, {"700": False, "701": True})
+        self.assertIsNone(core.explain_lane("nope"))

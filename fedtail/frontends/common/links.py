@@ -162,6 +162,8 @@ class Links:
             self._ask(h, "open_quotes", st)
         elif action == "react":  # an emoji of mine on it: the place of reactions
             self._ask(h, "_place", "react", st.id)
+        elif action == "why":  # which lanes take it, by which condition (feeds.md §8)
+            self._ask(h, "_place", "why", arg or st.id)
         elif action == "linkposts":  # who else shared the post's link (Mastodon 4.3)
             if st.card and st.card.url:
                 self._ask(h, "open_link_posts", st.card.url)

@@ -417,6 +417,17 @@ _STRINGS = {
         "le_f_filters": "Фильтры сервера", "le_fctx_home": "как в Ленте",
         "le_fctx_public": "как в публичных лентах", "le_fctx_notifications": "как в уведомлениях",
         "le_fctx_thread": "как в тредах", "le_fctx_account": "как в профилях",
+        "why_here": "Почему это здесь?",
+        "why_hint": "Каждая лента из правил: показывает ли она этот пост (✓) и почему — каким "
+                    "условием «Берёт» взяла или что не подошло.",
+        "why_none": "Пост не найден в базе",
+        "why_taken": "берёт условие {n}: {line}",
+        "why_kept_out": "не пускает «Не берёт» {n}: {line}",
+        "why_not_cond": "условие {n} ({line}) — не подошло: {key}",
+        "why_source": "не из её источников",
+        "why_silenced": "скрыт до всех правил: автор заглушён или заблокирован, или фильтр сервера",
+        "why_before_rules": "правило берёт, но пост убран раньше правил: человек в списке, "
+                            "язык, тег «не в Ленте»",
         "le_title": "Ленты",
         "le_edit_lane": "Изменить ленту…",
         "le_hint": "Порядок, какие видно, и каждая лента — пишется в config.toml сразу. Набор: "
@@ -1652,6 +1663,17 @@ _STRINGS = {
         "le_f_filters": "The server's filters", "le_fctx_home": "as in Home",
         "le_fctx_public": "as in public lanes", "le_fctx_notifications": "as in notifications",
         "le_fctx_thread": "as in threads", "le_fctx_account": "as in profiles",
+        "why_here": "Why is it here?",
+        "why_hint": "Each lane of rules: whether it shows this post (✓) and why — the “Takes” "
+                    "that took it, or what didn't match.",
+        "why_none": "The post isn't in the store",
+        "why_taken": "taken by condition {n}: {line}",
+        "why_kept_out": "kept out by “Keeps out” {n}: {line}",
+        "why_not_cond": "condition {n} ({line}) didn't match: {key}",
+        "why_source": "not from its sources",
+        "why_silenced": "hidden before any rule: the author muted or blocked, or a server filter",
+        "why_before_rules": "the rule takes it, but it went before the rules: a list's person, "
+                            "a language, a tag “not in Home”",
         "le_title": "Lanes",
         "le_edit_lane": "Edit the lane…",
         "le_hint": "The order, which are shown, and each lane — written into config.toml at "

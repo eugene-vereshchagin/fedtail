@@ -174,6 +174,33 @@ class Custom:
         return True
 
 
+def explain(custom, status, world, sources):
+    """Why a post is in a lane of rules or not ("Why is it here?", --explain-lane):
+    {"taken": bool, "by": index of `any` that took it or None, "out": index of `none`
+    that kept it out or None, "conds": [(part, index, line, reason)]} — reason "" where
+    the condition matched, else the first key that didn't."""
+    world = world or atoms.World()
+    feeds = set(sources) & (custom.feeds | {custom.stream}) or set(sources) or {None}
+    facts = atoms.post_facts(status, world, feeds - {None} or None, None)
+    now = world.now
+    verdicts = custom.rule.explain(facts, now)
+    out = {"taken": False, "by": None, "out": None, "conds": [], "source_ok": True}
+    for where, i, reason in verdicts:
+        if where == "source":
+            out["source_ok"] = False
+            continue
+        cond = (custom.rule.none if where == "none" else custom.rule.any)[i]
+        out["conds"].append((where, i, cond.raw, reason))
+        if where == "none" and not reason and out["out"] is None:
+            out["out"] = i
+    if out["source_ok"] and out["out"] is None:
+        took = custom.rule.taken_by(facts, now)
+        if took is not None:
+            out["taken"] = True
+            out["by"] = custom.rule.any.index(took)
+    return out
+
+
 def _unsourced(cond):
     if "source" not in cond.sets:
         return cond

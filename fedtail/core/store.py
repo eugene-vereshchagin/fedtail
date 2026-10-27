@@ -705,6 +705,13 @@ class Store:
                 "ON m.status_id = i.status_id WHERE i.source = 'subs' "
                 "AND i.status_id NOT IN (SELECT status_id FROM read) GROUP BY m.root_id")}
 
+    def sources_of(self, status_id):
+        """The streams that hold this status (as an item, or a boost of it)."""
+        with self._reading() as db:
+            return {r[0] for r in db.execute(
+                "SELECT DISTINCT source FROM items WHERE status_id = ? OR item_id = ?",
+                (status_id, status_id))}
+
     def held_in(self, sources, status_ids):
         """Which of these statuses one of these streams holds."""
         ids, sources = list(dict.fromkeys(status_ids)), sorted(set(sources))

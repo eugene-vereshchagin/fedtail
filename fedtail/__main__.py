@@ -67,6 +67,10 @@ def parse_args(argv):
                    help="write the chosen set's lanes (lanes.preset) into your config as "
                         "[[lanes.custom]], to read and change there (a .bak copy is kept), "
                         "and exit")
+    p.add_argument("--explain-lane", metavar="NAME",
+                   help="a lane of rules: its warnings, its sources and, for the newest "
+                        "stored posts, whether it takes each and by which condition — "
+                        "and exit")
     p.add_argument("--profiles", action="store_true",
                    help="list the profiles (accounts) there are and exit")
     p.add_argument("--install-desktop", action="store_true",
@@ -191,6 +195,8 @@ def main(argv=None):
             print("  kept, though this version doesn't know them:\n    "
                   + "\n    ".join(report["extra"]))
         return 0
+    if getattr(args, "explain_lane", None):
+        return _explain_lane(cfg, where, args.explain_lane)
     if args.lanes_to_config:
         report = {}
         new_text = config_update.lanes_to_config(user_text, report)
@@ -295,6 +301,44 @@ def main(argv=None):
         for other in held:
             other.close()
     return _leave(code)
+
+
+def _explain_lane(cfg, where, name):
+    """--explain-lane NAME: what the lane's rule does with what is stored."""
+    from .core.app import Core
+    from .frontends.common.laneedit import cond_line
+    core = Core(cfg, where)
+    try:
+        try:
+            core.connect().result(timeout=30)  # who "me" is, and whom I follow
+        except Exception as e:  # noqa: BLE001 — offline: what the store says
+            print(f"fedtail: not connected ({e}): the atoms about me may be off")
+        got = core.explain_lane(name)
+        if got is None:
+            known = ", ".join(c.name for c in core.customs)
+            print(f"fedtail: no lane of rules \"{name}\"; there are: {known}")
+            return 1
+        print(f"lane {name}: reads {', '.join(got['feeds'])}"
+              + (" (a stream of its own)" if got["routed"] else ""))
+        for w in got["warnings"]:
+            print(f"  ⚠ {w}")
+        for r in got["rows"]:
+            mark = "✓" if r["taken"] else "·"
+            text = " ".join(r["text"].split())[:60]
+            print(f"{mark} {r['created'][:16]} @{r['who']}: {text}")
+            if r["taken"]:
+                raw = next(c for w, i, c, _r in r["conds"] if w == "any" and i == r["by"])
+                print(f"      taken by any[{r['by']}]: {cond_line(raw)}")
+            elif r["out"] is not None:
+                raw = next(c for w, i, c, _r in r["conds"] if w == "none" and i == r["out"])
+                print(f"      kept out by none[{r['out']}]: {cond_line(raw)}")
+            else:
+                for w, i, raw, why in r["conds"]:
+                    if w == "any" and why:
+                        print(f"      any[{i}] {cond_line(raw)} — not: {why}")
+        return 0
+    finally:
+        core.shutdown()
 
 
 def _terminal(args, cfg, where):

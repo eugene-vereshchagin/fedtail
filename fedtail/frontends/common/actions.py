@@ -216,6 +216,8 @@ def menu(entry, ctx, short_id=None, unread=False):
                         url=make("unsub" if on else "sub", sid)))
     if sup("filter_status"):
         out.append(Item("link", _("hide_post"), url=make("hidepost", sid)))
+    if ctx.cfg.get("lanes") is not None:  # which lanes take it, and by which rule
+        out.append(Item("link", _("why_here"), url=make("why", sid)))
     if author.id != ctx.me_id:
         out.append(SEP)
         out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid)))

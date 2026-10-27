@@ -191,6 +191,13 @@ class PlaceTest(FreeBase):
         m.build(False)
         self.assertEqual(self.core.store.kv_get("ui.media.home")["boosts"], False)
 
+    def test_a_lane_that_never_fills_is_marked(self):
+        from fedtail.core import config_edit
+        config_edit.save(self.core.paths.config_file, {("lanes", "custom"): [
+            {"name": "never", "any": [{"visibility": "followers", "author": "stranger"}]}]})
+        row = next(r for r in self.places.page("lanes").rows if r.key == "never")
+        self.assertIn("⚠", row.line)
+
     def test_in_the_menu(self):
         self.assertIn("lanes", [n for n, _w in self.places.menu()])
 

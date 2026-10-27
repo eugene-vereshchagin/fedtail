@@ -68,6 +68,10 @@ class LanePlaces:
                 words.append(_("le_own"))
             if not on:
                 words.append(_("le_hidden"))
+            if kind == "rule":  # a typo, a key not known, "never filled": said here too
+                bad = laneedit.problems(ed.tables.get(n) or {})
+                if bad:
+                    words.append("⚠ " + "; ".join(bad))
             buttons = []
             if on:
                 if shown.index(n) > 0:
@@ -172,6 +176,41 @@ class LanePlaces:
         except ValueError as e:
             return Out(error=str(e))
         return self._lane_out(ed, open_={"page": "lane", "arg": name})
+
+    # ---- why a post is (or isn't) in each lane ----------------------------------------------
+    def _p_why(self, sid, _tab, _cur):
+        """"Why is it here?": for each lane of rules shown — whether it shows the post, by
+        which condition, or what kept it out (common to every interface)."""
+        from .places import Page, Row
+        got = self.view.explain_post(sid) if hasattr(self.view, "explain_post") else []
+        page = Page("why", _("why_here"), arg=sid, hint=_("why_hint"),
+                    empty=_("why_none"))
+        for g in got:
+            title = g["title"] or _("lane_" + g["lane"])
+            if title == "lane_" + g["lane"]:
+                title = g["lane"]
+            lines = []
+            if g["quiet"] == "silenced":
+                lines.append(_("why_silenced"))
+            elif g["quiet"] == "before_rules":
+                lines.append(_("why_before_rules"))
+            if g["taken"]:
+                raw = next(c for w, i, c, _r in g["conds"] if w == "any" and i == g["by"])
+                lines.append(_("why_taken", n=g["by"] + 1, line=laneedit.cond_line(raw)))
+            elif g["out"] is not None:
+                raw = next(c for w, i, c, _r in g["conds"] if w == "none" and i == g["out"])
+                lines.append(_("why_kept_out", n=g["out"] + 1, line=laneedit.cond_line(raw)))
+            elif not g.get("source_ok", True):
+                lines.append(_("why_source"))
+            else:
+                for w, i, raw, reason in g["conds"]:
+                    if w == "any" and reason:
+                        lines.append(_("why_not_cond", n=i + 1, key=reason,
+                                       line=laneedit.cond_line(raw)))
+            mark = "✓ " if g["in_lane"] else "· "
+            page.rows.append(Row("item", mark + title, "\n".join(lines), key=g["lane"],
+                                 buttons=(self._btn(_("le_edit"), "lanes", "edit", g["lane"]),)))
+        return page
 
     # ---- one lane ------------------------------------------------------------------------
     def _p_lane(self, name, _tab, _cur):

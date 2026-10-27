@@ -33,6 +33,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `--update-config` | add this version's new settings to this file with explanations — and exit |
 | `--rebuild-config` | rebuild this file by chapters, with your values — and exit |
 | `--lanes-to-config` | write the set's lanes (lanes.preset) here as [[lanes.custom]] — and exit |
+| `--explain-lane NAME` | a lane of rules: what it takes of what is stored, by which condition — and exit |
 | `--install-desktop` | add fedtail (this profile) to the menu with its icon — and exit |
 | `--debug` | a detailed log for this run, into the terminal too |
 | `--bug-report` | pack the logs and system details into an archive for a bug report — and exit |
