@@ -663,9 +663,9 @@ class Api:
         return self.get_page(f"/api/v1/accounts/{seg(acc_id)}/following",
                              self._page(40, max_id))
 
-    def followers(self, acc_id, max_id=None):
+    def followers(self, acc_id, max_id=None, limit=40):
         return self.get_page(f"/api/v1/accounts/{seg(acc_id)}/followers",
-                             self._page(40, max_id))
+                             self._page(limit, max_id))
 
     def relationships(self, ids):
         return self.get("/api/v1/accounts/relationships", {"id[]": list(ids)}) or []

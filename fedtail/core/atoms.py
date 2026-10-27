@@ -54,7 +54,7 @@ EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "
           "annual_report", "i_followed",
           # derived by fedtail itself, comparing snapshots (feeds.md §2.4)
           "unfollow", "removed_follower", "moved", "gone", "unfollowed_back", "unliked",
-          "deleted"}
+          "deleted", "lost"}
 TEXT_IN = {"text", "cw", "alt", "poll"}
 
 # the server's notification type → our event word
@@ -64,7 +64,8 @@ EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
             "pending.reply": "pending", "pending.favourite": "pending",
             "pending.reblog": "pending", "admin.sign_up": "admin", "admin.report": "admin",
             "severed_relationships": "severed", "moderation_warning": "warning",
-            "annual_report": "annual_report", "fedtail.followed": "i_followed"}
+            "annual_report": "annual_report", "fedtail.followed": "i_followed",
+            "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost"}
 
 # the server's visibility → ours (Mastodon "private" is followers-only; GoToSocial's
 # "mutuals_only"; Akkoma's "local" is public that stays home)
@@ -420,6 +421,8 @@ def event_facts(notification, world=None):
         f.target = _target(real(st), world)
     typ = notification.get("type") or ""
     f.event = {EVENT_OF.get(typ, typ)} if typ != "mention" else set()
+    if typ == "fedtail.unfollow" and (notification.get("account") or {}).get("_back"):
+        f.event.add("unfollowed_back")  # one I follow too
     f.author = _author_atoms(notification.get("account") or {}, world, now)
     f.id |= {notification.get("id", "")}
     f.created = _when(notification.get("created_at")) or f.created

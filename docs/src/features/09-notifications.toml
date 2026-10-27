@@ -151,6 +151,21 @@ others.en = "only in fedtail"
 clients = []
 
 [[feature]]
+id = "unfollows"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Кто отписался"
+name.en = "Who stopped following you"
+config = "`activity.unfollows`, `activity.unfollows_minutes`, `activity.unfollows_max`, `activity.unfollows_mass`"
+api = "`accounts/:id/followers`, `accounts/relationships`"
+others.ru = "только в fedtail (сервер этого не сообщает)"
+others.en = "only in fedtail (no server says it)"
+clients = []
+details.ru = "Раз в час fedtail сверяет весь список подписчиков с прошлым: кого нет в двух списках подряд и кто, если спросить, не подписан, — строка «отписался» в «Активности»; учётки, которой больше нет, — «пропал». Чтобы не врать: список, пришедший не целиком (меньше, чем сервер насчитал), выбрасывается; первый снимок — начало, без событий; кого убрал или заблокировал ты сам — не новость; больше `unfollows_mass` с одного сервера разом — одна строка про сервер. Лента из правил берёт это как `event = \"unfollow\"` (`\"unfollowed_back\"` — на кого подписан и ты), `\"gone\"`, `\"lost\"`."
+details.en = "Every hour fedtail compares the whole list of your followers with the last one: missing from two lists in a row and not following when asked — a row “stopped following you” in Activity; an account that is no more — “gone”. So as not to lie: a list that didn't come whole (fewer than the server counts) is thrown away; the first snapshot is the start, no events; the ones you removed or blocked yourself aren't news; more than `unfollows_mass` of one server at once — one row about the server. A lane of rules takes them as `event = \"unfollow\"` (`\"unfollowed_back\"`: one you follow too), `\"gone\"`, `\"lost\"`."
+
+[[feature]]
 id = "my-follows"
 status = "has"
 android = "has"

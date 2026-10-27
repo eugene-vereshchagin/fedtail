@@ -108,6 +108,8 @@ any = [{ author = "me" },
 
 ### 2.4 Derived events (comparing snapshots)
 
+Done 27 Oct 2026 (`core/derived.py`): `unfollow`, `unfollowed_back`, `gone`, and `lost` (a server's followers gone at once) — settings `activity.unfollows*` in place of `derived.*`; `moved`, `unliked`, `deleted` not yet.
+
 What the server never tells a client (an unfollow, a like taken back, a deleted post) is not in
 the notifications: fedtail derives it itself, comparing its store with what the server gives now.
 Every `derived.interval_minutes` (60 by default) — a snapshot; the difference from the last one —

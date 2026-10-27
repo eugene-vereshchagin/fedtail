@@ -59,6 +59,8 @@ ACTIVITY_KIND = {
     "severed_relationships": "notice", "moderation_warning": "notice",
     # what I did myself, written into Activity by fedtail (core: Core.MY_FOLLOW)
     "fedtail.followed": "my_follow",
+    # what fedtail derived itself, comparing snapshots (core/derived.py)
+    "fedtail.unfollow": "unfollow", "fedtail.gone": "gone", "fedtail.lost_domain": "lost",
 }
 
 QUOTE_DEPTH = 2  # a quote inside a quote inside a post — no deeper

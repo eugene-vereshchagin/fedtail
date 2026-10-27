@@ -341,6 +341,7 @@ class SocialMixin:
     def remove_follower(self, acc_id):
         """They stop following me; no block."""
         def job():
+            self.derived.mark_mine(acc_id)  # their leaving is my doing: no event
             rel = self._api("remove_follower", self.api.remove_from_followers, acc_id)
             self.emit("relation_changed", rel)
             return rel

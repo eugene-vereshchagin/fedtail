@@ -17,6 +17,8 @@ log = logging.getLogger(__name__)
 # the ids of the events fedtail writes into Activity itself (what I did: "I followed…"),
 # never the server's: no fetch goes on from them, they count as nothing new
 LOCAL_EVENT = "fedtail:"
+# …and of those among them that are what I did myself: no unread number for them
+MINE_EVENT = LOCAL_EVENT + "mine:"
 
 SCHEMA_VERSION = 5
 GC_CHUNK = 2000  # rows deleted, pages freed per short step of Store.gc
@@ -1079,10 +1081,10 @@ class Store:
                  "created_at": r[4].split("|")[0]} for r in rows]
 
     def activity_count_after(self, sort):
-        """Notifications after this sort — what I did myself (LOCAL_EVENT) isn't news."""
+        """Notifications after this sort — what I did myself (MINE_EVENT) isn't news."""
         with self._reading() as db:
             return db.execute("SELECT COUNT(*) FROM activity WHERE sort > ? AND id NOT LIKE ?",
-                              (sort, LOCAL_EVENT + "%")).fetchone()[0]
+                              (sort, MINE_EVENT + "%")).fetchone()[0]
 
     # ---- read marks -----------------------------------------------------------
     def mark_read(self, status_ids):

@@ -124,6 +124,8 @@ class Core(SocialMixin):
             from .sync import Sync
             self.sync = Sync(self)
         self._note_lane_rules()  # the lanes changed in the file since: they go out
+        from .derived import Derived
+        self.derived = Derived(self)  # who stopped following me (activity.unfollows)
         self._relations = {}  # acc_id -> (when, relationship), see relation_known
         self.caps = Capabilities()
         self._silence_seen = {}  # status id -> muted thread's root or None (_mention_entry)
@@ -823,6 +825,8 @@ class Core(SocialMixin):
                 except Exception as e:
                     self.emit("error", f"activity: {e}")
 
+            if self.derived.due():  # a snapshot of my followers, in the background
+                self.bg.submit(self.derived.run)
             self._step("requests+activity")
             self._warm_lanes()  # before the window hears: it finds them made
             new_statuses = self._new_statuses(new_by_source)
@@ -1405,6 +1409,8 @@ class Core(SocialMixin):
                              self.muted, acc_id, on)
 
     def block(self, acc_id, on=True):
+        if on:
+            self.derived.mark_mine(acc_id)  # a block ends their follow: my doing
         return self._silence(self.api.block, self.blocked, acc_id, on)
 
     def _silence(self, call, bucket, acc_id, on):
@@ -3026,9 +3032,9 @@ class Core(SocialMixin):
         Activity, mine (activity.my_follows) — not news, no number. One a day for each."""
         if not self.cfg["activity"].get("my_follows", True):
             return []
-        from .store import LOCAL_EVENT
+        from .store import MINE_EVENT
         day = now_iso()[:10]
-        rows = [{"id": f"{LOCAL_EVENT}followed:{a['id']}:{day}", "type": self.MY_FOLLOW,
+        rows = [{"id": f"{MINE_EVENT}followed:{a['id']}:{day}", "type": self.MY_FOLLOW,
                  "account": a, "created_at": now_iso()}
                 for a in accounts if isinstance(a, dict) and a.get("id")]
         new = self.store.activity_put(rows) if rows else []

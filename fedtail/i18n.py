@@ -491,6 +491,9 @@ _STRINGS = {
         "lane_activity": "Активность", "activity_none": "Пока никто ничего.",
         "act_favourite": "★ в избранное", "act_reblog": "⟳ продвижение",
         "act_follow": "подписка на тебя", "act_my_follow": "ты подписался",
+        "act_unfollow": "отписался", "act_gone": "пропал (учётки больше нет)",
+        "act_lost": "подписчики этого сервера пропали разом: сервер недоступен или "
+                    "отрезал нас",
         "act_poll": "опрос закончился",
         "act_update": "пост изменён", "act_status": "новый пост",
         "act_mention": "упоминание", "act_quote": "процитировал(а) твой пост",
@@ -1665,7 +1668,10 @@ _STRINGS = {
         "notify_act_other_n": ["{n} event", "{n} events"],
         "lane_activity": "Activity", "activity_none": "Nothing yet.",
         "act_favourite": "★ favourited", "act_reblog": "⟳ boosted",
-        "act_follow": "followed you", "act_my_follow": "you followed", "act_poll": "poll ended",
+        "act_follow": "followed you", "act_my_follow": "you followed",
+        "act_unfollow": "stopped following you", "act_gone": "gone (the account is no more)",
+        "act_lost": "this server's followers left at once: it is down or cut us "
+                    "off", "act_poll": "poll ended",
         "act_update": "post edited", "act_status": "new post",
         "act_mention": "mention", "act_quote": "quoted your post",
         "act_reaction": "reaction", "act_follow_request": "asks to follow you",

@@ -182,6 +182,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Server announcements | ✓ | ✓ |   |   | ✓ | ✓ |   |   |   |   | ✓ |   |   |   |
 | The unread number on the icon | ✓ |   |   |   |   |   | ✓ |   |   |   |   |   |   |   |
 | Direct messages read here are read on the server too | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Who stopped following you | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Activity says whom you followed | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Someone new in a private talk — shown at once | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Push notifications (Web Push, UnifiedPush) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |
@@ -226,4 +227,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **44** features of the 162 compared.
+Only in fedtail — **45** features of the 163 compared.

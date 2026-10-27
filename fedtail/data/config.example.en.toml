@@ -950,6 +950,18 @@ requests = true
 # takes it as event = "i_followed".
 my_follows = true
 
+# Who stopped following you: no server says it, so fedtail compares the whole list of your
+# followers every unfollows_minutes; one gone from two lists in a row, and still not following
+# when asked — a row "stopped following you" (an account its server no longer has — "gone").
+# Not a word unless the list came whole; the ones you removed or blocked yourself aren't news;
+# more than unfollows_mass of one server at once — one row: that server is lost, not them.
+# Over unfollows_max followers it doesn't look (a page is 80 of them). A lane of rules takes
+# them as event = "unfollow" ("unfollowed_back": one you follow too), "gone", "lost".
+unfollows = true
+unfollows_minutes = 60
+unfollows_max = 5000
+unfollows_mass = 10
+
 # The server's own notices (Mastodon 4.3+): your server (or another) blocked another one —
 # and your follows and followers from there were cut, how many and why; a warning from
 # the moderators. They come here too. false — don't show.

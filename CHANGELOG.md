@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- **Who stopped following you** (`activity.unfollows`, core/derived.py): the whole list of
+  followers compared hourly; one missing twice and not following when asked is a row in
+  Activity. A list not whole is thrown away, the first is the start, your own removals and
+  blocks aren't news, a server's followers gone at once are one row about the server.
 - A profile could stay "@…" for good (who it is never came: the one request failed, or
   answered with no account, and nothing was said) until a restart. Now Qt's profile asks
   again by itself, says what didn't come, offers "Again", and after 20 s of silence writes

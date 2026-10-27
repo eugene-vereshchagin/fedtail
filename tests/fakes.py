@@ -92,6 +92,10 @@ class FakeApi:
     def account(self, acc_id):
         """Someone the world's posts know (the demo's profiles), else Bob."""
         if acc_id == self.w.me.get("id"):
+            if self.w.followers_list is not None:
+                return dict(self.w.me, followers_count=self.w.followers_count
+                            if self.w.followers_count is not None
+                            else len(self.w.followers_list))
             return self.w.me
         for st in self.w.statuses.values():
             for acc in (st.get("account"), (st.get("reblog") or {}).get("account")):
@@ -286,7 +290,8 @@ class FakeApi:
     def relationship(self, acc_id):
         return {"id": acc_id, "following": acc_id in self.w.following,
                 # list_refuse: followed a moment ago, the request not accepted yet
-                "followed_by": False, "requested": acc_id in self.w.list_refuse,
+                "followed_by": acc_id in {a["id"] for a in self.w.followers_list or ()},
+                "requested": acc_id in self.w.list_refuse,
                 "muting": acc_id in self.w.muted, "blocking": acc_id in self.w.blocked,
                 "note": self.w.notes.get(acc_id, "")}
 
@@ -317,7 +322,9 @@ class FakeApi:
     def following(self, acc_id, max_id=None):
         return [a for a in self.w.accounts() if a["id"] in self.w.following], None
 
-    def followers(self, acc_id, max_id=None):
+    def followers(self, acc_id, max_id=None, limit=40):
+        if self.w.followers_list is not None:  # a list of its own (core/derived.py tests)
+            return list(self.w.followers_list), None
         return list(self.w.accounts())[:2], None
 
     def relationships(self, ids):
@@ -804,6 +811,8 @@ class World:
         self.policy = None  # notification policy: None — the server has none (404)
         self.held, self.answered = [], []  # notification requests; answers to them
         self.me = ME
+        self.followers_list = None   # [account] my followers, when a test sets them
+        self.followers_count = None  # …and what the server says their count is
         self.remote = {}  # uri -> status my server hasn't got yet (search resolves it)
         self.languages = []  # the language of each post, "" — none given
         self.calls = []

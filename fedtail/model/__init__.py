@@ -41,6 +41,9 @@ ACTIVITY_KINDS = (
     "request",         # somebody asks me to let their reply / like / share through (GTS)
     "notice",          # the server tells me something (moderation, severed follows…)
     "my_follow",       # I followed somebody (fedtail writes it down itself)
+    "unfollow",        # somebody stopped following me (fedtail derived it: core/derived.py)
+    "gone",            # a follower's account is no more (deleted, suspended)
+    "lost",            # many followers of one server gone at once: the server, not them
     "other",
 )
 
