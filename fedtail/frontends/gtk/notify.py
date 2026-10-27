@@ -64,7 +64,7 @@ class Notifier:
             button(_("open_action"), f"app.{ACTION}", GLib.Variant("s", target))
             self.app.send_notification(None, n)
         elif self.backend == "notify-send":
-            argv = notifytext.desktop_argv([shutil.which("notify-send"), "--app-name=fedtail"],
+            argv = notifytext.desktop_argv([shutil.which("notify-send"), "--app-name=FedTail"],
                                            note)
             def run():
                 try:

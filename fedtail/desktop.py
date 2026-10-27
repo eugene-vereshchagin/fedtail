@@ -39,13 +39,14 @@ def entry_text(profile=None, source_dir=None, icon="fedtail"):
     else:
         exec_line = f"fedtail{args}"
         path_line = ""
-    name = "fedtail" if profile == main_profile() else f"fedtail ({profile})"
+    from .version import NAME
+    name = NAME if profile == main_profile() else f"{NAME} ({profile})"
     # the GTK window as an action of the same entry (right click on it in the menu or on
     # the task bar): one app, one icon, one id — a second entry would fight over them.
     # The one-file build has no GTK in it.
     gtk = "" if getattr(sys, "frozen", False) else (
         "\n[Desktop Action gtk]\n"
-        "Name=fedtail (GTK)\n"
+        f"Name={NAME} (GTK)\n"
         f"Exec={exec_line} --ui gtk\n")  # Path= of the entry holds for its actions too
     return (
         "[Desktop Entry]\n"
@@ -114,12 +115,13 @@ def source_dir():
 
 def _windows_install(profile):
     """A Start menu shortcut (a .lnk, made by PowerShell's WScript.Shell). Its name is
-    the one people see in the menu: "fedtail", "fedtail-<profile>" — not the app id."""
+    the one people see in the menu: "FedTail", "FedTail-<profile>" — not the app id."""
     stem = old_ids(profile)[0]
     menu = Path(os.environ.get("APPDATA") or Path.home() / "AppData/Roaming") / \
         "Microsoft/Windows/Start Menu/Programs"
     menu.mkdir(parents=True, exist_ok=True)
-    link = menu / f"{stem}.lnk"
+    from .version import NAME  # "FedTail", "FedTail-work": the same file as the old
+    link = menu / f"{stem.replace('fedtail', NAME, 1)}.lnk"  # lower-case one on NTFS
     args = "" if profile == main_profile() else f"--profile {profile}"
     if getattr(sys, "frozen", False):  # fedtail.exe from the zip
         target, workdir, icon = sys.executable, str(Path(sys.executable).parent), sys.executable

@@ -33,6 +33,7 @@ from ...core.view import View
 from ...i18n import _
 from ...model import real
 from ...model.text import html_to_text, snippet
+from ...version import NAME
 from ..common import timed
 from ..richtext import openable
 from . import pictures, termcaps
@@ -874,7 +875,7 @@ class FedtailApp(App, PostsMixin):
     def on_mount(self):
         self._ui_thread = threading.get_ident()
         self._ui_loop = asyncio.get_running_loop()
-        self.title = "fedtail"
+        self.title = NAME
         self.query_one("#lanes").styles.width = self.lanes_width
         if self._theme_wanted:
             try:

@@ -26,7 +26,8 @@ class About:
 
     def text(self):
         """Everything above as plain lines: for the clipboard, a bug report, a chat."""
-        out = [f"fedtail {self.version}"]
+        from ... import version as _version
+        out = [f"{_version.NAME} {self.version}"]
         out += [f"{k}: {v}" for k, v in self.tiles + self.rows if v]
         return "\n".join(out)
 

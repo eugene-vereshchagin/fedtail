@@ -49,7 +49,7 @@ class Notifier:
         log.info("notify: %s via %s", note.lane, self.backend)
         try:
             if self.backend == "notify-send":
-                argv = notifytext.desktop_argv([self.how, "--app-name=fedtail"], note)
+                argv = notifytext.desktop_argv([self.how, "--app-name=FedTail"], note)
                 subprocess.Popen(argv, env=sysenv.child_env(), stdin=subprocess.DEVNULL,
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:

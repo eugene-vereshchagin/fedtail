@@ -133,7 +133,7 @@ class Notifier(QObject):
             self._nowhere_said = True
 
     def _desktop(self, note):
-        base = [self.notify_send, "--app-name=fedtail", f"--icon={icon_path()}",
+        base = [self.notify_send, "--app-name=FedTail", f"--icon={icon_path()}",
                 "--hint=string:desktop-entry:fedtail", "--category=im.received"]
         try:
             # with --wait, notify-send prints the chosen action when "Open" is pressed

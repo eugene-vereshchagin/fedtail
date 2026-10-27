@@ -947,7 +947,7 @@ async function selectLane(name, keep) {
   if (data.place) {  // Activity, Requests: not posts — the place, in the lane's stead
     $("#lanebar").hidden = true;
     $("#title").textContent = data.title;
-    document.title = data.title + " — fedtail";
+    document.title = data.title + " — FedTail";
     state.posts = [];
     return openPlace(data.place, "", "", "", "main");
   }
@@ -960,7 +960,7 @@ async function selectLane(name, keep) {
   state.posts = data.posts;
   state.older = data.older;
   $("#title").textContent = data.title;
-  document.title = data.title + " — fedtail";
+  document.title = data.title + " — FedTail";
   countUnread();
   box.textContent = "";
   const more = olderButton();

@@ -96,7 +96,7 @@ class ProbeAndFederationTest(PlacesCase):
         page = self.pl.page("about")
         self.assertIn(_("made_by"), [r.title for r in page.rows])
         out = self.act("about", "copy")
-        self.assertTrue(out.copy.startswith("fedtail "))
+        self.assertTrue(out.copy.startswith("FedTail "))
         self.assertEqual(out.message, _("about_copied"))
 
 
@@ -361,7 +361,7 @@ class WebHandlersTest(unittest.TestCase):
 
     def test_copy_and_a_picture(self):
         got = self.web.place_act({"act": ["about", "copy", ""]})
-        self.assertTrue(got["copy"].startswith("fedtail "))
+        self.assertTrue(got["copy"].startswith("FedTail "))
         token = self.web.upload(b"\x89PNG", "me.png")["token"]
         seen = {}
 
@@ -409,7 +409,7 @@ class TuiCopyTest(unittest.IsolatedAsyncioTestCase):
             btn = next(b for r in app.screen.page.rows for b in r.buttons
                        if b.act[:2] == ("about", "copy"))
             await app.screen.act(btn)
-            self.assertTrue(copied and copied[0].startswith("fedtail "))
+            self.assertTrue(copied and copied[0].startswith("FedTail "))
             app.copy_to_clipboard = None  # a terminal without a clipboard: still fine
             await app.screen.act(btn)
             await pilot.pause(0.05)

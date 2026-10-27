@@ -14,14 +14,14 @@
 [Setup]
 ; one id for every version: a new one installs over the old
 AppId={{6F3B2C1A-9E4D-4B7A-8C21-5A0D9F7E3B64}
-AppName=fedtail
+AppName=FedTail
 AppVersion={#Version}
-AppVerName=fedtail {#Version}
-AppPublisher=fedtail
+AppVerName=FedTail {#Version}
+AppPublisher=FedTail
 AppPublisherURL={#Homepage}
 AppSupportURL={#Homepage}
 DefaultDirName={autopf}\fedtail
-DefaultGroupName=fedtail
+DefaultGroupName=FedTail
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
@@ -47,8 +47,8 @@ Source: "..\..\dist\fedtail.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; where `fedtail --install-desktop` puts its own (desktop.py): the same one, not a second
-Name: "{autoprograms}\fedtail"; Filename: "{app}\fedtail.exe"; Comment: "fediverse client"
-Name: "{autodesktop}\fedtail"; Filename: "{app}\fedtail.exe"; Tasks: desktopicon
+Name: "{autoprograms}\FedTail"; Filename: "{app}\fedtail.exe"; Comment: "fediverse client"
+Name: "{autodesktop}\FedTail"; Filename: "{app}\fedtail.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\fedtail.exe"; Description: "{cm:LaunchProgram,fedtail}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\fedtail.exe"; Description: "{cm:LaunchProgram,FedTail}"; Flags: nowait postinstall skipifsilent

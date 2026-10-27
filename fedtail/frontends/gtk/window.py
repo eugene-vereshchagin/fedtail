@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from ...core import lanes as lanes_mod
 from ...i18n import _
 from ...model import real
+from ...version import NAME
 from .. import richtext
 from ..common import results, sidebar
 from ..common.links import Links
@@ -702,7 +703,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if self.theme.shape.get("sidebar_avatar", True):  # terminal: none, as in Qt
             self.me_face.append(self._Avatar(self.ctx, me, 40))
         self._profile_text()
-        self.set_title(f"fedtail — @{me.handle}")
+        self.set_title(f"{NAME} — @{me.handle}")
 
     def _accounts_popup(self, w, x, y):
         pop = Gtk.PopoverMenu.new_from_model(self.menu.accounts_model())

@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- The name people see is "FedTail": under the phone's icon, in the Start menu and the
+  installer, the Linux menu entry, the windows' titles, About, the notifications. The
+  command, the packages, the folders and the release files stay "fedtail".
 - Unfollowed, someone's posts and boosts leave Home, as they leave the server's Home
   (`feed.forget_unfollowed`, on): at once when you unfollow here, within a few hours when
   you do it elsewhere. Kept, they stayed — and showed up anew when the unfollow also took

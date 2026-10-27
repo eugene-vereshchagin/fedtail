@@ -541,7 +541,7 @@ _STRINGS = {
         "info_head": "Сервер и федерация",
         "grp_threads": "Треды",
         "grp_talks": "Беседы",
-        "roster_title": "fedtail",
+        "roster_title": "FedTail",
         "roster_search": "Поиск",
         "roster_search_tip": "Найти ленту по названию или по последнему посту; Enter — открыть "
                              "единственную найденную, иначе — в Поиск по серверу",
@@ -1630,7 +1630,7 @@ _STRINGS = {
         "info_head": "Server and federation",
         "grp_threads": "Threads",
         "grp_talks": "Talks",
-        "roster_title": "fedtail",
+        "roster_title": "FedTail",
         "roster_search": "Search",
         "roster_search_tip": "Find a lane by its name or its newest post; Enter opens the only "
                              "one found, else searches the server",

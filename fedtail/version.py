@@ -21,6 +21,10 @@ from . import __version__
 ROOT = Path(__file__).resolve().parent.parent
 
 HOMEPAGE = "https://github.com/eugene-vereshchagin/fedtail"
+# the name people see: under the icon, in the menus, the windows' titles, About. The
+# command, the packages, the folders and the release files stay "fedtail" (apt, the
+# site's links and every profile's path go by those)
+NAME = "FedTail"
 USER_AGENT = f"fedtail/{__version__}"  # every request fedtail makes says so
 # the author in the fediverse: About links to him, to follow (his own wish — the one
 # place the repository names his server; nothing else depends on it)

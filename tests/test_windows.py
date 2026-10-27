@@ -60,14 +60,14 @@ class StartMenuTest(unittest.TestCase):
 
     def test_from_the_source(self):
         link, script = self.run_install("default")
-        self.assertEqual(link.name, "fedtail.lnk")
+        self.assertEqual(link.name, "FedTail.lnk")
         self.assertIn("$s.Arguments = '-m fedtail'", script)
         self.assertIn("WScript.Shell", script)
         self.assertIn("$s.Save()", script)
 
     def test_another_profile_and_quotes(self):
         link, script = self.run_install("work", exe="/o'neil/python.exe")
-        self.assertEqual(link.name, "fedtail-work.lnk")
+        self.assertEqual(link.name, "FedTail-work.lnk")
         self.assertIn("'-m fedtail --profile work'", script)
         self.assertIn("o''neil", script)  # PowerShell's own quoting: no way out of it
 

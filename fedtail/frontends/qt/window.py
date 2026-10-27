@@ -904,17 +904,18 @@ class MainWindow(QMainWindow):
         m.deleteLater()
 
     def _set_title(self):
-        """"fedtail" for the main profile, "fedtail [work]" for another one."""
+        """"FedTail" for the main profile, "FedTail [work]" for another one."""
         from ...core import paths
         me = self.core.paths.profile
-        self.base_title = "fedtail" if me == paths.main_profile() else f"fedtail [{me}]"
+        name = version.NAME
+        self.base_title = name if me == paths.main_profile() else f"{name} [{me}]"
         self.setWindowTitle(self.base_title)
 
     def _footer_text(self):
         """Version and build, then who made it."""
         info = version.info()
         build = info["version"] + (f" · {info['date']}" if info["date"] else "")
-        self.footer.setText(f"fedtail {build}<br>{_('made_by')}")
+        self.footer.setText(f"{version.NAME} {build}<br>{_('made_by')}")
         self.footer.setToolTip(_("about"))
 
     # ---- accounts: one profile each, switched by starting the other one ------------------
