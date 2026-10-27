@@ -1693,10 +1693,12 @@ class QtSmokeTest(unittest.TestCase):
         from unittest import mock
         with mock.patch.object(type(self.core), "poll_state", return_value={"busy": True}):
             self.win._curtain_swing()
-            self.assertIsNotNone(self.win.curtain_icon.movie())
-            self.assertTrue(self.win.curtain_icon.movie().isValid())
+            self.assertTrue(self.win._swinging)
+            self.assertTrue(self.win._swing.isValid())
+            self.assertEqual(self.win._swing.state(), self.win._swing.MovieState.Running)
         self.win._curtain_swing()
-        self.assertIsNone(self.win.curtain_icon.movie())
+        self.assertFalse(self.win._swinging)
+        self.assertEqual(self.win._swing.state(), self.win._swing.MovieState.NotRunning)
         self.assertFalse(self.win.curtain_icon.pixmap().isNull())
         self.win.open_account(me)  # a click on my name
         self.assertFalse(self.win.curtain_shown())

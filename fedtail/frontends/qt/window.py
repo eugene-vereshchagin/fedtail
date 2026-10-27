@@ -2708,16 +2708,18 @@ class MainWindow(QMainWindow):
                 movie = self._swing = QMovie(notify_module.swing_path(), parent=self)
                 movie.setScaledSize(QSize(self.CURTAIN_ICON, self.CURTAIN_ICON))
                 movie.setCacheMode(QMovie.CacheMode.CacheAll)
-            if icon.movie() is not movie:
+            if not getattr(self, "_swinging", False):
                 icon.setMovie(movie)
+                self._swinging = True
             movie.start()
         else:
             if movie is not None:
                 movie.stop()
-            if icon.movie() is not None or icon.pixmap().isNull():
-                icon.setMovie(None)
+            if getattr(self, "_swinging", False) or icon.pixmap().isNull():
+                icon.clear()  # (setMovie(None) keeps the movie in the label)
                 icon.setPixmap(QIcon(icon_path()).pixmap(self.CURTAIN_ICON,
                                                          self.CURTAIN_ICON))
+                self._swinging = False
 
     def curtain_shown(self):
         return self.right_stack.currentWidget() is self.curtain
