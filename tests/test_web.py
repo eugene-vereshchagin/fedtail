@@ -5,6 +5,7 @@ import os
 import stat
 import threading
 import time
+import unittest
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -630,3 +631,16 @@ class WebTest(TmpDir):
     def test_registered_as_a_frontend(self):
         from fedtail import frontends
         self.assertTrue(hasattr(frontends.load("web"), "run"))
+
+
+class CssTest(unittest.TestCase):
+    def test_card_lines_are_blocks(self):
+        """The card's lines made of links (common/cardtext Bits: "in reply to…", the
+        conversation, new in a thread) are blocks: a link stays inline, its nowrap
+        then widened the lane past a phone's screen (27.10)."""
+        import re
+        from pathlib import Path
+        css = (Path(web.__file__).parents[2] / "data" / "web" / "app.css").read_text()
+        rule = re.search(r"\.post \.ctx \{([^}]*)\}", css).group(1)
+        self.assertIn("display: block", rule)
+

@@ -123,6 +123,7 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
 
 /* ---- a post ---------------------------------------------------------------------- */
 .post { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+        min-width: 0; box-sizing: border-box;
         padding: 10px 12px 6px; margin: 0 auto 10px; max-width: 760px; position: relative;
         box-shadow: var(--shadow); margin-left: max(0px, calc(var(--depth, 0) * 16px)); }
 #posts .post { margin-left: auto; }
@@ -146,7 +147,8 @@ button.wide { width: calc(100% - 24px); margin: 4px 12px 10px; }
 .post .alias { font-family: ui-monospace, monospace; cursor: pointer; }
 .post .alias:hover { color: var(--accent); }
 .post .num { color: var(--accent); font-weight: 700; font-family: ui-monospace, monospace; }
-.post .ctx { background: var(--ctx); border-left: 3px solid var(--line); padding: 4px 8px;
+.post .ctx { display: block; max-width: 100%; box-sizing: border-box; text-decoration: none;
+             background: var(--ctx); border-left: 3px solid var(--line); padding: 4px 8px;
              margin: 8px 0 2px; color: var(--muted); font-size: 14px; cursor: pointer;
              border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post .body { overflow-wrap: anywhere; margin-top: 6px; }

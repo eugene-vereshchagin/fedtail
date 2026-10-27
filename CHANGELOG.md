@@ -2,6 +2,8 @@
 
 ## 0.21.0 — in progress
 
+- The web page on a phone: the "in reply to…" line (a link since the cards' words became
+  common) didn't wrap or cut and widened the lane past the screen, the cards slid aside.
 - Every quick filter holds until the program closes and is kept between runs only with
   `feed.remember_choices`: Activity's and the media funnel now too (Activity's was kept
   always, the funnel never).
