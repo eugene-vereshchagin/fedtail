@@ -43,9 +43,11 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8"),
           # Web Push: shows what the user's server sends to this browser (data/web/sw.js)
           "/sw.js": ("sw.js", "text/javascript; charset=utf-8")}
-CSP = ("default-src 'self'; img-src https: data:; media-src https: 'self'; style-src 'self'; "
-       "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; "
-       "form-action 'self'")
+POSSUM = {"/possum.png": ("fedtail.png", "image/png"),
+          "/possum.gif": ("fedtail-swing.gif", "image/gif")}
+CSP = ("default-src 'self'; img-src 'self' https: data:; media-src https: 'self'; "
+       "style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
+       "base-uri 'none'; form-action 'self'")
 WAIT_SECONDS = 25
 LINK_SECONDS = 15 * 60  # a one-time login link is good this long
 MAX_CLIENTS = 32        # connections at once (a phone and a laptop need a handful)
@@ -637,7 +639,8 @@ class Web:
         notes, last_note = self.notes_since(note_since)
         from ..common import sidebar
         out = {"v": v, "s": last, "sounds": sounds, "n": last_note, "notes": notes,
-               "p": getattr(self, "poll_seq", 0), "status": sidebar.status_words(self.core)}
+               "p": getattr(self, "poll_seq", 0), "status": sidebar.status_words(self.core),
+               "busy": sidebar.polling(self.core)}
         if self.auth_failed:
             out["auth_failed"] = self.auth_failed
         return out
@@ -1918,6 +1921,10 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in STATIC:
             name, ctype = STATIC[u.path]
             return self._send(HTTPStatus.OK, static_text(name), ctype)
+        if u.path in POSSUM:  # the curtain's opossum: still, or swinging while updating
+            data = resources.files("fedtail").joinpath(
+                "data/icons/" + POSSUM[u.path][0]).read_bytes()
+            return self._send(HTTPStatus.OK, data, POSSUM[u.path][1])
         if u.path == "/theme.css":
             return self._send(HTTPStatus.OK, self.web.theme_css(), "text/css; charset=utf-8")
         routes = {"/api/me": lambda: self.web.me(),

@@ -226,6 +226,7 @@ fun LaneScreen(
             else PostList(model.posts, state, model.divider, act, model.hideSensitive,
                 prefetch = model.prefetch,
                 emptyText = model.laneSwitches?.info?.takeIf { it.isNotBlank() },
+                busy = model.busy,
                 header = if (model.newestFirst) null else earlier,
                 footer = {
                     Column {

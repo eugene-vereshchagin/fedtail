@@ -52,6 +52,7 @@ says more (`python3 tools/NAME.py --help` where it has switches). A test checks 
 | `model_check.py` | runs the Mastodon adapter over every post a profile has stored, read-only, and says how the model came out | `python3 tools/model_check.py [PROFILE]` |
 | `push_probe.py` | does your server push? Web Push from it to an ntfy topic, decrypted here | `python3 tools/push_probe.py` |
 | `android_icons.py` | the Android app's launcher icons (adaptive, round, themed) from `fedtail/data/icons/fedtail.png` | `python3 tools/android_icons.py` |
+| `swing_frames.py` | the swinging opossum's frames for GTK (a sheet and their times) from `fedtail/data/icons/fedtail-swing.gif` | `python3 tools/swing_frames.py` |
 
 ## Docs
 

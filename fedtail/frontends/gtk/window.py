@@ -589,9 +589,11 @@ class MainWindow(Gtk.ApplicationWindow):
         from importlib import resources
         try:
             pic = resources.files("fedtail").joinpath("data/icons/fedtail.png")
-            icon = Gtk.Image.new_from_paintable(Gdk.Texture.new_from_filename(str(pic)))
+            self._still = Gdk.Texture.new_from_filename(str(pic))
+            icon = Gtk.Image.new_from_paintable(self._still)
             icon.set_pixel_size(96)
             box.append(icon)
+            self.curtain_icon = icon
         except (GLib.Error, OSError):
             pass
         title = Gtk.Label(label=_("curtain_title"))
@@ -610,6 +612,61 @@ class MainWindow(Gtk.ApplicationWindow):
     def curtain_shown(self):
         return self.stack.get_visible_child() is getattr(self, "curtain", None)
 
+    def _swing_frames(self):
+        """The swinging opossum's frames as textures with their times (ms), read once
+        from the sheet tools/swing_frames.py lays out (GTK 4 draws no GIF itself);
+        [] where it can't be read — the opossum then just stands."""
+        frames = getattr(self, "_swing", None)
+        if frames is not None:
+            return frames
+        frames = self._swing = []
+        try:
+            import json
+            from importlib import resources
+
+            from gi.repository import GdkPixbuf
+            icons = resources.files("fedtail").joinpath("data/icons")
+            facts = json.loads(icons.joinpath("fedtail-swing.json").read_text("utf-8"))
+            sheet = GdkPixbuf.Pixbuf.new_from_file(str(icons.joinpath("fedtail-swing.png")))
+            side, cols = int(facts["side"]), int(facts["cols"])
+            for i, ms in enumerate(facts["ms"]):
+                part = sheet.new_subpixbuf((i % cols) * side, (i // cols) * side, side, side)
+                frames.append((Gdk.Texture.new_for_pixbuf(part), max(20, int(ms))))
+        except Exception as e:  # noqa: BLE001 — no GdkPixbuf, a file missing: it stands
+            log.info("curtain: no swinging opossum (%s)", e)
+            frames.clear()
+        return frames
+
+    def _curtain_swing(self):
+        """The curtain's opossum swings while the lanes are being updated (a poll round
+        on), and stands still otherwise — as Qt's."""
+        icon = getattr(self, "curtain_icon", None)
+        if icon is None:
+            return
+        try:
+            busy = bool((self.view.poll_state() or {}).get("busy"))
+        except Exception:  # noqa: BLE001 — a core that doesn't say
+            busy = False
+        busy = busy and self.curtain_shown() and self.cfg["ui"].get("app_icon") != "bubble"
+        if busy and not getattr(self, "_swing_on", False):
+            frames = self._swing_frames()
+            if not frames:
+                return
+            self._swing_on, self._swing_at = True, 0
+
+            def step():
+                if not getattr(self, "_swing_on", False):
+                    return False
+                tex, ms = frames[self._swing_at % len(frames)]
+                icon.set_from_paintable(tex)
+                self._swing_at += 1
+                GLib.timeout_add(ms, step)
+                return False
+            step()
+        elif not busy and getattr(self, "_swing_on", False):
+            self._swing_on = False
+            icon.set_from_paintable(self._still)
+
     def close_all(self):
         """Esc: no lane, thread or profile on screen; nothing gets marked read, so
         whatever comes meanwhile waits, counted on the left."""
@@ -623,6 +680,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.view.set_active_lane(None)
         self.view.set_active_lanes([])
         self._curtain_text()
+        self._curtain_swing()
         log.info("all lanes closed (Esc)")
 
     def _curtain_text(self, numbers=None):
@@ -1439,6 +1497,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self._sync_text()
         elif name == "poll_state":  # a round began or ended: "updating…" / "updated at"
             self._slow_text()
+            self._curtain_swing()
         elif name == "read_changed":  # marks only: no lane is rebuilt for them
             for lname, lv in self.lane_views.items():
                 if lname in SPECIAL:

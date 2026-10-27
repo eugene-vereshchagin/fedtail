@@ -52,6 +52,7 @@
 | `model_check.py` | прогоняет адаптер Mastodon по всем постам, сохранённым в профиле, только чтение, и говорит, как вышла модель | `python3 tools/model_check.py [ПРОФИЛЬ]` |
 | `push_probe.py` | пушит ли твой сервер? Web Push от него в тему ntfy, расшифровывается здесь | `python3 tools/push_probe.py` |
 | `android_icons.py` | значки Android-приложения (адаптивный, круглый, монохромный для тем) из `fedtail/data/icons/fedtail.png` | `python3 tools/android_icons.py` |
+| `swing_frames.py` | кадры качающегося опоссума для GTK (лист кадров и их времена) из `fedtail/data/icons/fedtail-swing.gif` | `python3 tools/swing_frames.py` |
 
 ## Документация
 

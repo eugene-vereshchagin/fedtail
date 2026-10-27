@@ -436,3 +436,6 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
                     overflow: hidden; cursor: pointer; white-space: pre-wrap; }
 .post .media .alt.open { display: block; -webkit-line-clamp: unset; }
 #viewer-alt { display: block; max-height: 30vh; overflow-y: auto; white-space: pre-wrap; }
+
+/* the empty lane's opossum (the windows' curtain): swinging while the lanes update */
+.empty img.possum { display: block; width: 96px; height: 96px; margin: 24px auto 8px; }

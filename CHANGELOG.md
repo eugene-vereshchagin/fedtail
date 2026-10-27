@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- The opossum swings while the lanes update: on the curtain (Esc, every lane closed) in
+  the Qt and GTK windows, over an empty lane on the web page and the phone — and stands
+  still once the round is over. The animated sticker is credited as the icon is.
 - The name people see is "FedTail": under the phone's icon, in the Start menu and the
   installer, the Linux menu entry, the windows' titles, About, the notifications. The
   command, the packages, the folders and the release files stay "fedtail".

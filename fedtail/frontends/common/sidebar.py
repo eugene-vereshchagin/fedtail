@@ -88,6 +88,15 @@ def poll_words(view, now=None):
     return _("poll_ok", time=at) if ok else ""
 
 
+def polling(view):
+    """A poll round on right now (the curtain's opossum swings)."""
+    try:
+        st = view.poll_state() or {}
+    except Exception:  # noqa: BLE001 — a core that doesn't say
+        return False
+    return bool(isinstance(st, dict) and st.get("busy"))
+
+
 def status_words(view):
     """The status line's freshness and slow mode together: "updated 14:32 · slow ·
     next at 14:45"."""

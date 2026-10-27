@@ -964,7 +964,7 @@ async function selectLane(name, keep) {
   countUnread();
   box.textContent = "";
   const more = olderButton();
-  if (!data.posts.length) box.append(el("div", "empty", w("web_empty")));
+  if (!data.posts.length) box.append(emptyBox(w("web_empty")));
   if (more && !newestFirst) box.append(more);
   for (const p of data.posts) {
     const card = renderPost(p, false);
@@ -1232,7 +1232,7 @@ async function loadPane(p, keep) {
   p.posts = data.posts;
   p.body.textContent = "";
   if (!data.posts.length)
-    p.body.append(el("div", "empty", w(data.empty_browse ? "browse_empty" : "web_empty")));
+    p.body.append(emptyBox(w(data.empty_browse ? "browse_empty" : "web_empty")));
   for (const post of data.posts) {
     const card = renderPost(post, false);
     if (data.divider && data.divider.before === post.id) {
@@ -1282,6 +1282,24 @@ function paneRead(p) {  // read.mark_read = on_scroll: a card seen whole in a co
     }
   }, { root: p.body, threshold: 0.9 });
   for (const c of p.body.querySelectorAll(".post.unread")) p.obs.observe(c);
+}
+
+// the windows' curtain: the opossum over an empty lane — swinging while a poll round is
+// on, standing otherwise, so "nothing here" reads as nothing new, not a dead network
+function emptyBox(text) {
+  const box = el("div", "empty");
+  const img = el("img", "possum");
+  img.alt = "";
+  img.src = state.busy ? "/possum.gif" : "/possum.png";
+  box.append(img, el("div", "", text));
+  return box;
+}
+
+function swing(busy) {
+  if (state.busy === busy) return;
+  state.busy = busy;
+  for (const img of document.querySelectorAll("img.possum"))
+    img.src = busy ? "/possum.gif" : "/possum.png";
 }
 
 function countUnread() {
@@ -2693,6 +2711,7 @@ async function follow() {
         const s = $("#slow");
         s.textContent = r.status || "";
         s.hidden = !r.status;
+        swing(!!r.busy);
       }
       for (const snd of r.sounds || []) playSound(snd);
       for (const note of r.notes || []) showNote(note);

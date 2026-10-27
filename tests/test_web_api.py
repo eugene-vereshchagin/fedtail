@@ -80,6 +80,25 @@ class WebApiTest(TmpDir):
                          ["401"])
 
 
+    def test_the_curtains_opossum(self):
+        # the empty lane's opossum: still, and swinging while a round is on
+        import urllib.request
+        for path, magic, kind in (("/possum.png", b"\x89PNG", "image/png"),
+                                  ("/possum.gif", b"GIF89a", "image/gif")):
+            r = urllib.request.Request(self.base + path,
+                                       headers={"Cookie": f"{web.COOKIE}={self.key}"})
+            with urllib.request.urlopen(r, timeout=30) as resp:
+                self.assertEqual(resp.headers["Content-Type"], kind)
+                self.assertTrue(resp.read().startswith(magic))
+        from fedtail.frontends.common import sidebar
+        self.assertFalse(sidebar.polling(self.srv.web.core))
+        self.core._polling = True
+        self.assertTrue(sidebar.polling(self.srv.web.core))
+        got = self.srv.web.wait_answer(-5, -1, -1, -1)
+        self.assertTrue(got["busy"])
+        self.assertIn("updat", got["status"])
+        self.core._polling = False
+
     def test_columns_start_kept_and_off(self):
         # ❯ on the web page: the lanes side by side, as the windows' columns
         # an account with lists (26.10: a 502 on the first real one — the View's lists

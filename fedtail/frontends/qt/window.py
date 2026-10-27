@@ -1691,6 +1691,7 @@ class MainWindow(QMainWindow):
             self._sync_text()
         elif name == "poll_state":  # a round began or ended: "updating…" / "updated at"
             self._slow_text()
+            self._curtain_swing()
         elif name == "lanes_updated":
             for lane in payload:
                 w = self.lane_widgets.get(lane)
@@ -2684,6 +2685,40 @@ class MainWindow(QMainWindow):
         v.addStretch(3)
         return w
 
+    CURTAIN_ICON = 96
+
+    def _curtain_swing(self):
+        """The curtain's opossum swings while the lanes are being updated (a poll
+        round on), and stands still otherwise — "nothing new" reads as nothing new."""
+        icon = getattr(self, "curtain_icon", None)
+        if icon is None:
+            return
+        from . import notify as notify_module
+        movie = getattr(self, "_swing", None)
+        try:
+            state = self.ctx.view.poll_state() or {}
+        except Exception:  # noqa: BLE001 — a core that doesn't say (all accounts in one)
+            state = {}
+        busy = bool(state.get("busy")) and self.curtain_shown() and \
+            notify_module.possum_style()
+        if busy:
+            if movie is None:
+                from PySide6.QtCore import QSize
+                from PySide6.QtGui import QMovie
+                movie = self._swing = QMovie(notify_module.swing_path(), parent=self)
+                movie.setScaledSize(QSize(self.CURTAIN_ICON, self.CURTAIN_ICON))
+                movie.setCacheMode(QMovie.CacheMode.CacheAll)
+            if icon.movie() is not movie:
+                icon.setMovie(movie)
+            movie.start()
+        else:
+            if movie is not None:
+                movie.stop()
+            if icon.movie() is not None or icon.pixmap().isNull():
+                icon.setMovie(None)
+                icon.setPixmap(QIcon(icon_path()).pixmap(self.CURTAIN_ICON,
+                                                         self.CURTAIN_ICON))
+
     def curtain_shown(self):
         return self.right_stack.currentWidget() is self.curtain
 
@@ -2693,8 +2728,8 @@ class MainWindow(QMainWindow):
         self.find_bar.close_bar()
         for w in self.findChildren(ImageOverlay):
             w.close_viewer()
-        self.curtain_icon.setPixmap(QIcon(icon_path()).pixmap(96, 96))
         self.right_stack.setCurrentWidget(self.curtain)
+        self._curtain_swing()
         self.lanes.blockSignals(True)
         self.lanes.setCurrentItem(None)
         self.lanes.clearSelection()

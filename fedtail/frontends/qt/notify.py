@@ -30,6 +30,17 @@ def mascot_path():
     return str(resources.files("fedtail").joinpath("data/icons/fedtail.png"))
 
 
+def swing_path():
+    """The opossum swinging (a Telegram sticker, as the icon): the curtain while the
+    lanes are being updated."""
+    return str(resources.files("fedtail").joinpath("data/icons/fedtail-swing.gif"))
+
+
+def possum_style():
+    """ui.app_icon = "possum": the picture is the opossum (not the drawn bubble)."""
+    return _style != "bubble"
+
+
 def set_style(style):
     """ui.app_icon: "possum" (the picture) or "bubble" (drawn; in the theme's colours
     with ui.themed_icon)."""

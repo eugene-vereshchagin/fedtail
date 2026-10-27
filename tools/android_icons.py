@@ -110,6 +110,10 @@ def main():
     (RES / "values" / "ic_launcher.xml").write_text(
         '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
         f'    <color name="ic_launcher_background">{GROUND}</color>\n</resources>\n', "utf-8")
+    # the empty lane's swinging opossum (Possum.kt): the desktop's GIF as it is
+    raw = RES / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
+    (raw / "possum_swing.gif").write_bytes((SOURCE.parent / "fedtail-swing.gif").read_bytes())
     print("icons written under", RES)
 
 

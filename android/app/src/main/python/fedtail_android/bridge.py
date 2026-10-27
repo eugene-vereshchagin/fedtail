@@ -811,7 +811,11 @@ def wait(since, seconds=25):
 
 def status():
     """The overview's line: "⟳ updating the lanes…", "updated at 14:32 · slow · …"."""
-    return _answer(lambda: {"text": _slow_words(_s["web"].core)})
+    def go():
+        from fedtail.frontends.common import sidebar
+        core = _s["web"].core
+        return {"text": _slow_words(core), "busy": sidebar.polling(core)}
+    return _answer(go)
 
 
 def _texts(posts):

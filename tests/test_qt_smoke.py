@@ -1689,6 +1689,15 @@ class QtSmokeTest(unittest.TestCase):
         self.assertIsInstance(prof, AccountWidget)
         self.win.close_all()  # Esc: the curtain
         self.assertTrue(self.win.curtain_shown())
+        # a poll round on: the curtain's opossum swings (a QMovie); over: it stands still
+        from unittest import mock
+        with mock.patch.object(type(self.core), "poll_state", return_value={"busy": True}):
+            self.win._curtain_swing()
+            self.assertIsNotNone(self.win.curtain_icon.movie())
+            self.assertTrue(self.win.curtain_icon.movie().isValid())
+        self.win._curtain_swing()
+        self.assertIsNone(self.win.curtain_icon.movie())
+        self.assertFalse(self.win.curtain_icon.pixmap().isNull())
         self.win.open_account(me)  # a click on my name
         self.assertFalse(self.win.curtain_shown())
         self.assertIs(self.win.tabs.currentWidget(), prof)

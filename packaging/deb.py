@@ -65,6 +65,10 @@ def build(out_dir=ROOT / "dist", work=ROOT / "build" / "deb"):
         "Files: */fedtail/data/themes/fonts/*\nCopyright: ParaType, IBM, Adobe, Google, "
         "Mozilla and the font projects' authors\n"
         "License: OFL-1.1\n The full text for each family lies next to it (OFL-*.txt).\n\n"
+        "Files: */fedtail/data/icons/fedtail.png */fedtail/data/icons/fedtail-swing.*\n"
+        "Copyright: the artist of an official Telegram sticker pack\n"
+        "License: other\n A sticker from an official Telegram sticker pack (telegram.org),\n"
+        " used as Telegram's stickers are shared everywhere; not under the GPL.\n\n"
         "Files: */fedtail/data/themes/psi/icons/*.png\n"
         "Copyright: the Psi and Psi+ authors (Jason Kim, "
         "Everaldo Coelho)\nLicense: GPL-2+\n From Psi+'s iconsets: see LICENSE.txt there.\n",

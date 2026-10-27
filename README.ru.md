@@ -487,8 +487,10 @@ ruff check .
 
 GPL-3.0-or-later, см. [LICENSE](LICENSE).
 
-Опоссум (`fedtail/data/icons/fedtail.png`) не под GPL: это стикер из официального
-стикерпака Telegram, используется так же, как стикеры Telegram расходятся везде.
+Опоссум (`fedtail/data/icons/fedtail.png`, и качающийся — `fedtail-swing.*`) не под GPL:
+это стикер из официального стикерпака [Telegram](https://telegram.org), используется так
+же, как стикеры Telegram расходятся везде. Спасибо художнику стикерпака, а Telegram и
+Павлу Дурову — за стикеры, которыми может делиться каждый. Мы на него не претендуем.
 
 Шрифты в `fedtail/data/themes/fonts/` (встроенных тем: PT Serif / Sans / Mono от
 ParaType, IBM Plex Sans / Mono, Source Sans 3 и Source Code Pro от Adobe, Open Sans,

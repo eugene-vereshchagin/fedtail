@@ -256,10 +256,12 @@ fun PostList(
     header: (@Composable () -> Unit)? = null,
     emptyText: String? = null, // why it is empty, as the windows say it (a filter on…)
     prefetch: String = "off",  // feed.prefetch: "previews" | "all" — pictures ahead of reading
+    busy: Boolean = false,     // a poll round on: the opossum swings
 ) {
     if (posts.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally) {
+            if (!thread) Possum(busy)
             Text(emptyText ?: stringResource(R.string.lane_empty),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             footer?.let { Spacer(Modifier.height(24.dp)); it() }
