@@ -668,7 +668,9 @@ detect_min_words = 12
 tag_groups = []
 
 # Свои ленты («свободные ленты», docs/ru/dev/feeds.md): каждая — таблица [[lanes.custom]] —
-# name (слово, неизменное), title (что видно слева; по языкам — { ru = "…", en = "…" }), any (условия: пост входит, если подходит
+# name (слово, неизменное), title (что видно слева; по языкам — { ru = "…", en = "…" }),
+# icon (картинка: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
+# bookmarks, my_likes, activity, requests, list, tags, star_full), any (условия: пост входит, если подходит
 # под любое; внутри условия должны совпасть все ключи), none (условия, которые не пускают).
 # Ключи условия: source (home, local, federated, mentions, mine, bookmarks, favourites, subs,
 # "list:<id>"; нет — догадывается по остальным), author (me, followed, local, remote, bot,

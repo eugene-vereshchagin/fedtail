@@ -68,7 +68,7 @@ def _then(fut, fn):
 
 # Core attributes the frontends may use as they are: nothing in them is a server's JSON
 PASS = {
-    "cfg", "lanes", "lane_by_name", "lane_title", "set_active_lane", "set_state",
+    "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "set_active_lane", "set_state",
     "get_state", "poll_once", "poll_now", "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",

@@ -165,8 +165,11 @@ LANE = {"home": "home", "local": "local", "federated": "federated", "mentions": 
         "to_me": "replies", "important": "star_full", "unsorted": "list", "custom": "list"}
 
 
-def lane_picture(name):
-    """The picture of a lane ("list:12" → "list"), or None."""
+def lane_picture(name, icon=None):
+    """The picture of a lane ("list:12" → "list"), or None. icon: the one the lane asks
+    for itself (a lane of rules' `icon`, core.lane_icon) — over its name's."""
+    if icon and icon in set(LANE.values()):
+        return icon
     return LANE.get((name or "").split(":")[0])
 
 

@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- A lane of rules picks its picture: `icon` (one of the built-in lanes' — `my_posts`, `direct`,
+  `star_full`…); one's own lane without one shows a list's, not none. The settings window no
+  longer shows `lanes.custom` / `lanes.tag_groups` as a line to type: saving it wrote the
+  tables back as text; they live in the file.
 - **Events in a lane.** A condition of a lane of rules with `event` (`favourite`, `reblog`,
   `follow`, `poll`, `update`, `status`…) shows those rows of Activity among the lane's posts, by
   time: one muted line for each run of one kind about one post, a click opens it. Never unread,

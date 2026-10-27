@@ -229,6 +229,14 @@ class SettingsCornersTest(unittest.TestCase):
             chapters = settings.model(self.view(Path("/nowhere")), lang="en", text="")
         self.assertIsNone(settings.option(chapters, "ui.gone_option"))
 
+    def test_arrays_of_tables_stay_in_the_file(self):
+        """[[lanes.custom]] as a line to type would be written back broken."""
+        text = '[[lanes.custom]]\nname = "x"\nany = [{}]\n'
+        chapters = settings.model(self.view(Path("/nowhere")), lang="en", text=text)
+        self.assertIsNone(settings.option(chapters, "lanes.custom"))
+        self.assertIsNone(settings.option(chapters, "lanes.tag_groups"))
+        self.assertIsNotNone(settings.option(chapters, "lanes.unsorted"))
+
     def test_lane_words_and_themes_that_fail(self):
         i18n.setup("en")
 

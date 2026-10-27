@@ -28,6 +28,9 @@ from ...i18n import _
 _LANE_LISTS = set(config.LANE_LISTS)
 _ITEMS = {("activity", "types"): config.ACTIVITY_TYPES, ("subs", "auto"): config.SUBS_AUTO}
 _LANE_CHOICE = {("ui", "start_lane")}
+# arrays of tables ([[lanes.custom]], [[lanes.tag_groups]]): no line to type them in — a
+# list's field would show them as text and write them back broken; the file is their place
+TABLES = {("lanes", "custom"), ("lanes", "tag_groups")}
 
 
 @dataclass
@@ -264,7 +267,8 @@ def model(view, lang=None, text=None):
     lane = _lane_words(view)
     chapters = {}
     for number, title, section, group, key, lines in reference(lang):
-        if section not in config.DEFAULTS or key not in config.DEFAULTS[section]:
+        if section not in config.DEFAULTS or key not in config.DEFAULTS[section] or \
+                (section, key) in TABLES:
             continue
         default = config.DEFAULTS[section][key]
         value = cfg.get(section, {}).get(key, default)

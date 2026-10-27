@@ -80,14 +80,14 @@ class Ctx:
 
 
 class LaneRow(Gtk.ListBoxRow):
-    def __init__(self, name, title, theme=None):
+    def __init__(self, name, title, theme=None, icon=None):
         super().__init__()
         self.name = name
         box = Gtk.Box(spacing=6)
         if theme is not None:  # the lane's picture, as the theme has it
             from .. import iconpack
             from . import icons
-            pic = icons.image(iconpack.lane_picture(name), theme,
+            pic = icons.image(iconpack.lane_picture(name, icon), theme,
                               int(theme.shape.get("icon_size", 18) or 18)) \
                 if icons.pictures(theme) else None
             if pic is not None:
@@ -1352,7 +1352,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sidebar.append(head)
             for name in names:
                 title = self.view.lane_title(name) or _("lane_" + _base(name))
-                row = LaneRow(name, title, self.theme)
+                row = LaneRow(name, title, self.theme, self.view.lane_icon(name))
                 row.set_visible(group not in folded)
                 right = Gtk.GestureClick(button=3)  # a list's menu, as Qt's sidebar
                 right.connect("pressed", lambda *_a, r=row: self.lane_menu(r))

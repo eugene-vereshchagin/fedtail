@@ -170,6 +170,7 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | `sort` | `arrival` (when it reached us) or `post_time` (the post's own time; lanes with notifications) |
 | `read` | `through` (unread marks, counts, never jump) or `browse` (newest page, no counts — like Federated) |
 | `group` | the sidebar section: `standard`, `personal`, `lists`, `tags`, or a name of one's own |
+| `icon` | the lane's picture from the built-in set: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full`; none — the one its name has (a set's lane), a list's for one's own |
 | `switch` (of a condition) | the condition is a switch: a chip over the lane with this word; `shown = false` — hidden by default (like today's "posts only") |
 
 The author's two lanes from the first talk:

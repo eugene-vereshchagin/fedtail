@@ -31,7 +31,7 @@ from ..protocols.mastodon import api as api_module
 from ..protocols.mastodon import counters
 from ..protocols.mastodon.api import ApiError, Capabilities
 from ..version import USER_AGENT
-from . import atoms, auth, custom, lanes, search, sources, subs, taggroups, threads
+from . import atoms, auth, custom, lanes, presets, search, sources, subs, taggroups, threads
 from .events import Events
 from .model import id_after, interaction_policy, looks_sent, narrower, real, send_key
 from .social import SocialMixin
@@ -1708,6 +1708,16 @@ class Core(SocialMixin):
         if lanes.is_list(name):
             lid = name[len(lanes.LIST_PREFIX):]
             return next((x["title"] for x in self.lists if x["id"] == lid), "?")
+        return None
+
+    def lane_icon(self, name):
+        """The picture of a lane: a lane of rules' `icon`; else the one its name has
+        (frontends/iconpack.py LANE); a lane of one's own without one — a list's."""
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is not None and c.rule.icon:
+            return c.rule.icon
+        if c is not None and name not in presets.known_names():
+            return "list"
         return None
 
     def lists_of(self, acc_id):

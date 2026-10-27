@@ -151,6 +151,8 @@ class ModelTest(unittest.TestCase):
                 listed = {f"{s}.{k}" for s, opts in __import__(
                     "fedtail.core.config_update", fromlist=["x"]).parse_example(
                     config.example_text(lang)).items() for k, _b in opts}
+                # arrays of tables stay in the file (settings.TABLES)
+                listed -= {f"{s}.{k}" for s, k in settings.TABLES}
                 self.assertEqual(missing & listed, set())
                 for c in chapters:
                     self.assertTrue(c.title)

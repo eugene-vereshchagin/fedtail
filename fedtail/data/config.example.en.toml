@@ -668,7 +668,9 @@ detect_min_words = 12
 tag_groups = []
 
 # Your own lanes ("free lanes", docs/en/dev/feeds.md): each is a table [[lanes.custom]] —
-# name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }), any (conditions: a post goes in if it
+# name (a word, stays), title (what the sidebar shows; per language — { ru = "…", en = "…" }),
+# icon (its picture: home, local, federated, bots, my_posts, direct, replies, mentions, subs,
+# bookmarks, my_likes, activity, requests, list, tags, star_full), any (conditions: a post goes in if it
 # matches any of them; inside a condition every key must match), none (conditions that keep a
 # post out). Keys of a condition: source (home, local, federated, mentions, mine, bookmarks,
 # favourites, subs, "list:<id>"; none — guessed from the rest), author (me, followed, local,

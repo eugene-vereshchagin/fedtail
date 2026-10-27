@@ -633,7 +633,12 @@ def _author_word(word, have):
 
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
-             "window", "filter_context"}
+             "window", "filter_context", "icon"}
+# the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
+# frontends' icon set has for each (frontends/iconpack.py LANE)
+LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
+              "mentions", "subs", "bookmarks", "my_likes", "activity", "requests", "list",
+              "tags", "star_full")
 _RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "density"},
                "read": {"through", "browse"}, "mode": {"lane", "catch_up"},
                "filter_context": {"home", "public", "notifications", "thread", "account"}}
@@ -654,6 +659,7 @@ class Rule:
     mode: str = "lane"
     window: timedelta | None = None
     filter_context: str = ""
+    icon: str = ""                 # one of LANE_ICONS; "" — the lane's own, or a list's
     warnings: list = field(default_factory=list)
 
     @classmethod
@@ -692,6 +698,11 @@ class Rule:
                     warnings.append(f"{key}: {table[key]!r} — one of {sorted(words)}")
         if "group" in table:
             rule.group = str(table["group"])
+        if "icon" in table:
+            if table["icon"] in LANE_ICONS:
+                rule.icon = table["icon"]
+            else:
+                warnings.append(f"icon: {table['icon']!r} — one of {', '.join(LANE_ICONS)}")
         if "window" in table:
             m = _AGE_RE.match("<" + str(table["window"]).lstrip("<>="))
             if m:

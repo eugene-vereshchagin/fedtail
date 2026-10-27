@@ -1010,3 +1010,20 @@ class EventsInLanesTest(FreeBase):
         self.assertEqual([p["id"] for p in got["posts"]], ["100"])
         self.assertEqual(len(got["events"]), 2)
         self.assertTrue(all(e["before"] is None for e in got["events"]))
+
+
+class LaneIconTest(FreeBase):
+    def test_icon_of_a_lane(self):
+        core, _w = self.make([{"name": "posts", "icon": "my_posts", "any": [{"author": "me"}]},
+                              {"name": "plain", "any": [{"author": "me"}]},
+                              {"name": "odd", "icon": "pizza", "any": [{"author": "me"}]}])
+        self.assertEqual(core.lane_icon("posts"), "my_posts")
+        self.assertEqual(core.lane_icon("plain"), "list")  # one's own: a list's picture
+        self.assertEqual(core.lane_icon("odd"), "list")
+        self.assertIsNone(core.lane_icon("home"))           # the set's: by its name
+        rule = Rule.parse({"name": "odd", "icon": "pizza", "any": [{}]})
+        self.assertTrue(any("icon" in w for w in rule.warnings))
+        from fedtail.frontends import iconpack
+        self.assertEqual(iconpack.lane_picture("posts", "my_posts"), "my_posts")
+        self.assertEqual(iconpack.lane_picture("home", None), "home")
+        self.assertEqual(iconpack.lane_picture("home", "pizza"), "home")

@@ -236,6 +236,9 @@ class MergedCore:
             out.sort(key=lambda e: (real(e[1]) if by_time else e[1]).get("created_at", ""))
         return out
 
+    def lane_icon(self, name):
+        return None if lanes_module.is_list(name) else self.primary.lane_icon(name)
+
     def lane_events(self, name, limit=200):
         """The events a lane of rules shows: the main account's (Activity is its)."""
         return self.primary.lane_events(name, limit)

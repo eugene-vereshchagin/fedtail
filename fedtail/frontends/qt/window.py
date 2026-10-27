@@ -117,7 +117,7 @@ def list_open(rel, inside):
 class LaneItem(QWidget):
     """A lane in the sidebar: icon, name, unread badge."""
 
-    def __init__(self, name, theme, number, title=None):
+    def __init__(self, name, theme, number, title=None, icon=None):
         super().__init__()
         self.name, self.theme = name, theme
         self.title = title or _("lane_" + name)
@@ -135,7 +135,7 @@ class LaneItem(QWidget):
         if pictures.pictures(theme):
             icon = QLabel()
             px = int(theme.shape.get("icon_size", 18) or 18)
-            ic = pictures.icon(iconpack.lane_picture(name), theme, px)
+            ic = pictures.icon(iconpack.lane_picture(name, icon), theme, px)
             if not ic.isNull():
                 icon.setPixmap(ic.pixmap(px, px))
             icon.setFixedWidth(px)
@@ -1275,7 +1275,8 @@ class MainWindow(QMainWindow):
                 lst = titles.get(name[len("list:"):]) if lanes_module.is_list(name) else None
                 # a list's title, a tag lane's or a free lane's own; None — the built-in word
                 title = lst.title if lst else self.core.lane_title(name)
-                w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title)
+                w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title,
+                             icon=self.core.lane_icon(name))
                 if lst and lst.exclusive:
                     w.setToolTip(_("list_exclusive_tip"))
                 it.setSizeHint(w.sizeHint())
