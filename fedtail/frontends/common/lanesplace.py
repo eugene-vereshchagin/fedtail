@@ -203,7 +203,14 @@ class LanePlaces:
             Field("read", _("le_f_read"), str(t.get("read") or "through"), "choice",
                   tuple((r, _("le_read_" + r)) for r in laneedit.READS)),
             Field("sort", _("le_f_sort"), str(t.get("sort") or "arrival"), "choice",
-                  tuple((s, s) for s in laneedit.SORTS)),
+                  tuple((s, _("le_sort_" + s)) for s in laneedit.SORTS)),
+            Field("mode", _("le_f_mode"), str(t.get("mode") or "lane"), "choice",
+                  (("lane", _("le_mode_lane")), ("catch_up", _("le_mode_catch_up")))),
+            Field("window", _("le_f_window"), str(t.get("window") or ""),
+                  tip=_("le_f_window_tip")),
+            Field("filter_context", _("le_f_filters"), str(t.get("filter_context") or ""),
+                  "choice", (("", "—"),) + tuple((c, _("le_fctx_" + c))
+                                                 for c in laneedit.FILTER_CONTEXTS)),
         ]
         for part in ("any", "none"):
             conds = t.get(part) or []
@@ -256,7 +263,8 @@ def _words(v):
 def _table_of(name, old, values):
     """The form's values → the lane's new table (what the form doesn't show stays)."""
     t = {k: v for k, v in old.items() if k not in ("title", "icon", "group", "source", "read",
-                                                    "sort", "any", "none")}
+                                                    "sort", "mode", "window", "filter_context",
+                                                    "any", "none")}
     t["name"] = name
     title = str(values.get("title") or "").strip()
     was = old.get("title")
@@ -269,7 +277,8 @@ def _table_of(name, old, values):
         else:
             t["title"] = title
     for key, default in (("icon", ""), ("group", "personal"), ("read", "through"),
-                         ("sort", "arrival")):
+                         ("sort", "arrival"), ("mode", "lane"), ("window", ""),
+                         ("filter_context", "")):
         v = str(values.get(key) or "")
         if v and (v != default or key in old):
             t[key] = v

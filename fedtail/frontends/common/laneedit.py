@@ -33,6 +33,7 @@ SOURCES = tuple(sorted(custom.FEEDS))
 GROUPS = ("personal", "standard")
 READS = ("through", "browse")
 SORTS = ("arrival", "post_time", "replies", "likes", "boosts", "density")
+FILTER_CONTEXTS = ("home", "public", "notifications", "thread", "account")
 # the keys a condition's line may have, with the words each takes (None: anything)
 KEYS = {k: (sorted(v) if v else None) for k, v in atoms._SET_KEYS.items()} | \
     {k: None for k in atoms._COUNT_KEYS} | \

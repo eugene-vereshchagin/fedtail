@@ -25,6 +25,13 @@ class Lane:
     chips: tuple = ()
     # the sidebar section a lane goes to when GROUPS doesn't name it (free lanes, Unsorted)
     group: str = ""
+    # a lane of rules' way of reading (core/custom.py): the order — "arrival", "post_time",
+    # or by "replies" / "likes" / "boosts" / "density" (the best where reading starts);
+    # window — only posts of the last so many seconds (0: all; mode = "catch_up": 12 h);
+    # filter_context — the server filters of this context hide / fold its posts
+    sort: str = "arrival"
+    window: float = 0.0
+    filter_context: str = ""
 
 
 @dataclass

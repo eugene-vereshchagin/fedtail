@@ -98,6 +98,60 @@ class OtherAccount(ValueError):
     PREFIX = "other account: "
 
 
+
+COUNT_SORTS = ("replies", "likes", "boosts", "density")  # a lane's sort by counts
+
+
+def _when_of(st):
+    """The time a lane's window looks at: the boost's, else the post's."""
+    from .atoms import _when
+    return _when(st.get("created_at")) or _when(real(st).get("created_at"))
+
+
+def _within(entries, seconds):
+    from datetime import UTC, datetime, timedelta
+    cutoff = datetime.now(UTC) - timedelta(seconds=seconds)
+    return [e for e in entries if (_when_of(e[1]) or cutoff) >= cutoff]
+
+
+def _by_counts(entries, how, oldest_first):
+    """By replies / likes / boosts, or "density" — all three per hour of its age; the
+    best where reading starts (the top: oldest_first lists top-down, newest_first is
+    turned round by the window)."""
+    from datetime import UTC, datetime
+
+    def score(e):
+        p = real(e[1])
+        n = {"replies": p.get("replies_count"), "likes": p.get("favourites_count"),
+             "boosts": p.get("reblogs_count")}
+        if how != "density":
+            return int(n[how] or 0)
+        total = sum(int(v or 0) for v in n.values())
+        when = _when_of(e[1])
+        hours = max(1.0, (datetime.now(UTC) - when).total_seconds() / 3600) if when else 1.0
+        return total / hours
+    return sorted(entries, key=score, reverse=oldest_first)
+
+
+def _filter_hits(st, filters):
+    """The server's filters whose words this post has (its text and content warning)."""
+    import re
+    from html import unescape
+    text = unescape(re.sub(r"<[^>]+>", " ", st.get("content") or "")) + " " + \
+        (st.get("spoiler_text") or "")
+    low = text.lower()
+    out = []
+    for f in filters:
+        for k in f.get("keywords") or ():
+            word = str(k.get("keyword") or "").lower()
+            if not word:
+                continue
+            if k.get("whole_word") and re.search(rf"(?<!\w){re.escape(word)}(?!\w)", low) or \
+                    not k.get("whole_word") and word in low:
+                out.append(f)
+                break
+    return out
+
 class Core(SocialMixin):
     def __init__(self, cfg, paths, api_class=None):
         self.cfg = cfg
@@ -146,6 +200,7 @@ class Core(SocialMixin):
         self._following_at = 0.0
         self._important_waiting = False  # "Important people" on, but nothing in it yet
         self._waiting = set()            # lanes on but hidden while empty (SHOWN_WHEN_FULL)
+        self._server_filters = []        # the server's filters (v2), for filter_context
         self._unsorted_on = False        # lanes.unsorted: Unsorted collects
         self.lanes = self._shown_lanes(lanes.enabled(cfg))
         self.tag_groups = []  # [{"any", "all", "none", "name", "saved"}], see taggroups
@@ -1395,6 +1450,14 @@ class Core(SocialMixin):
     # ---- lists ---------------------------------------------------------------------
     # ---- silence: muted and blocked people, server filters ----------------------------
     def _refresh_silence(self):
+        try:  # the server's filters, by their words (a lane's filter_context)
+            got = [f for f in self.api.filters() or () if isinstance(f, dict)]
+        except Exception as e:  # noqa: BLE001 — what we had stays
+            log.debug("filters: %s", e)
+            got = self._server_filters
+        if got != self._server_filters:
+            self._server_filters = got
+            self._silence_version += 1
         muted = {a["id"] for a in self.api.mutes()}
         blocked = {a["id"] for a in self.api.blocks()}
         domains = self._domain_blocks()
@@ -2194,7 +2257,11 @@ class Core(SocialMixin):
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
                self.me["id"] if self.me else None, only_posts, self._lists_version,
                self._silence_version, repeats, self._world_version,
-               self.store.read_version if state else 0, self.lane_filter(name))
+               self.store.read_version if state else 0, self.lane_filter(name),
+               # a window moves with the clock (and density with the posts' age): anew
+               # each minute
+               int(time.time() // 60) if getattr(lane, "window", 0)
+               or getattr(lane, "sort", "") == "density" else 0)
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]
@@ -2218,8 +2285,35 @@ class Core(SocialMixin):
         if lane.chips:  # a free lane's quick filter
             shows = self._chip_shows(name)
             kept = [e for e in kept if shows(e[1])]
+        if getattr(lane, "window", 0):  # only the last so many hours (mode = "catch_up")
+            kept = _within(kept, lane.window)
+        if getattr(lane, "filter_context", ""):
+            kept = self._by_filter_context(kept, lane.filter_context)
+        if getattr(lane, "sort", "arrival") in COUNT_SORTS:
+            kept = _by_counts(kept, lane.sort, self.cfg["feed"]["order"] == "oldest_first")
         self._lane_cache[name] = (key, kept)
         return kept
+
+    def _by_filter_context(self, entries, context):
+        """A lane's filter_context: the server's filters of that context, by their words,
+        hide its posts ("hide") or fold them ("warn") — whatever context they came by."""
+        filters = [f for f in self._server_filters if context in (f.get("context") or ())]
+        if not filters:
+            return entries
+        out = []
+        for item_id, st in entries:
+            hit = _filter_hits(real(st), filters)
+            if any(f.get("filter_action") == "hide" for f in hit):
+                continue
+            if hit:
+                have = {(x.get("filter") or {}).get("id") for x in real(st).get("filtered") or ()}
+                more = [{"filter": f} for f in hit if f.get("id") not in have]
+                if more:
+                    r = real(st)
+                    r = dict(r, filtered=list(r.get("filtered") or ()) + more)
+                    st = dict(st, reblog=r) if st.get("reblog") else r
+            out.append((item_id, st))
+        return out
 
     def _chipper(self, name):
         """The lane of rules whose quick filters part a lane; None — none such."""

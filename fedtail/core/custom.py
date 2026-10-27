@@ -112,7 +112,10 @@ class Custom:
                           lazy=self.rule.read == "browse",
                           feeds=tuple(sorted(self.feeds)) if self.routed else (),
                           chips=self.chips(),
-                          group="standard" if self.rule.group == "standard" else "personal")
+                          group="standard" if self.rule.group == "standard" else "personal",
+                          sort=self.rule.sort,
+                          window=self.rule.window.total_seconds() if self.rule.window else 0.0,
+                          filter_context=self.rule.filter_context)
 
     def takes(self, status, world, source):
         world = world or atoms.World()
