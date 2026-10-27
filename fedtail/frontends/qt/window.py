@@ -1273,9 +1273,8 @@ class MainWindow(QMainWindow):
                 it = QListWidgetItem()
                 it.setData(Qt.ItemDataRole.UserRole, name)
                 lst = titles.get(name[len("list:"):]) if lanes_module.is_list(name) else None
-                title = lst.title if lst else None
-                if name.startswith("tags:"):
-                    title = self.core.lane_title(name)
+                # a list's title, a tag lane's or a free lane's own; None — the built-in word
+                title = lst.title if lst else self.core.lane_title(name)
                 w = LaneItem(name, self.theme, len(self.lane_order) + 1, title=title)
                 if lst and lst.exclusive:
                     w.setToolTip(_("list_exclusive_tip"))
