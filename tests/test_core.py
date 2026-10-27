@@ -1724,6 +1724,35 @@ class CoreTest(TmpDir):
         core.follow("C", True).result()  # following: nothing taken out
         self.assertIn("802", [st["id"] for _i, st in core.lane_entries("home")])
 
+    def test_unfollowed_elsewhere_leave_home_later(self):
+        """Unfollowed on the server's page: asked every few hours; who was followed last
+        time and isn't now leaves Home; a followed tag's author never followed stays;
+        feed.forget_unfollowed = false keeps everyone."""
+        from .fakes import BOB, acct, status
+        carol, tagged = acct("C", "carol@other.example"), acct("T", "tagged@x.example")
+        core, w = self.make()
+        core.connect().result()
+        w.following |= {"B", "C"}
+        for i, who in (("811", BOB), ("812", carol), ("813", tagged)):
+            w.add(status(i, who, text="hi"), home=True)
+        core.poll_once()
+        self.assertEqual(core._forget_unfollowed_elsewhere(), 0)  # the first look: noted
+        w.following.discard("B")  # elsewhere
+        self.assertEqual(core._forget_unfollowed_elsewhere(), 1)
+        ids = [st["id"] for _i, st in core.lane_entries("home")]
+        self.assertNotIn("811", ids)
+        self.assertIn("812", ids)
+        self.assertIn("813", ids)  # never followed: a tag brought it, it stays
+        # in the poll: not in the first rounds, then once every few hours
+        w.following.discard("C")
+        core._poll_count = 5
+        core.store.kv_set("home_followed_at", 0)
+        core.poll_once()
+        self.assertNotIn("812", [st["id"] for _i, st in core.lane_entries("home")])
+        core.cfg["feed"]["forget_unfollowed"] = False
+        core.follow("T", False).result()
+        self.assertIn("813", [st["id"] for _i, st in core.lane_entries("home")])
+
     def test_follow_date_without_notes_on_the_server(self):
         from fedtail.protocols.mastodon.api import ApiError
         core, w = self.make()

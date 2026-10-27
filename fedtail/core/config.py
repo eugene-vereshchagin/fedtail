@@ -104,6 +104,7 @@ DEFAULTS = {
         "long_form": True,
         "text_markup": True,
         "follow_date_note": True,
+        "forget_unfollowed": True,
         "remote_posts": 20,
         "remote_people": True,
         "sensitive_media": 'hide',

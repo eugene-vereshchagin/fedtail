@@ -816,6 +816,14 @@ class Store:
                 self._bump(source)
             return cur.rowcount
 
+    def authors_in(self, source, limit=2000):
+        """Whose posts (or boosts) a source holds, the freshest first."""
+        with self._reading() as db:
+            return [r[0] for r in db.execute(
+                "SELECT s.author FROM items i JOIN statuses s ON s.id = i.status_id "
+                "WHERE i.source = ? AND s.author IS NOT NULL GROUP BY s.author "
+                "ORDER BY MAX(i.sort) DESC LIMIT ?", (source, limit))]
+
     def drop_items_of_thread(self, source, root_id):
         """Take a muted thread's posts out of a lane (mentions: they came before)."""
         with self._tx() as db:

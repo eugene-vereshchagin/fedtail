@@ -520,6 +520,11 @@ text_markup = true
 # fedtail this line is hidden and kept when the note is edited). false — I remember it here only.
 follow_date_note = true
 
+# Someone you stop following: their posts and boosts leave Home, as they leave your
+# server's Home — at once when you unfollow here, and within a few hours when you do it
+# elsewhere (another client, the server's web page). false — what came stays.
+forget_unfollowed = true
+
 # How many latest posts to fetch this way into a profile (at most 40).
 remote_posts = 20
 

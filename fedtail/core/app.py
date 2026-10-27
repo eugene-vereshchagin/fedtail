@@ -708,6 +708,16 @@ class Core(SocialMixin):
                 except Exception as e:  # try again next round, not every poll
                     self._lists_checked = time.monotonic()
                     self.emit("error", f"lists: {e}")
+            # not in the first rounds (a start asks enough); the time kept in the store,
+            # so short sessions still get to it
+            if self.cfg["feed"].get("forget_unfollowed", True) and self._poll_count >= 2 \
+                    and time.time() - float(self.store.kv_get("home_followed_at", 0) or 0) \
+                    > self.UNFOLLOW_CHECK_S:
+                self.store.kv_set("home_followed_at", time.time())
+                try:
+                    self._forget_unfollowed_elsewhere()
+                except Exception as e:  # noqa: BLE001 — next time; never the round
+                    log.info("unfollowed elsewhere: %s", e)
             self._step("silence+lists")
             if "direct" in self.lane_by_name:
                 self.sync_conversations()  # read here = read on the server (social.py)
@@ -2665,7 +2675,7 @@ class Core(SocialMixin):
             else:
                 since.pop(acc_id, None)
             self.store.kv_set("followed_at", since)
-            if not on:
+            if not on and self.cfg["feed"].get("forget_unfollowed", True):
                 self._forget_in_home(acc_id)
             if self.cfg["feed"].get("follow_date_note", True):
                 rel = self._note_follow(acc_id, rel, since.get(acc_id) if on else None)
@@ -2681,6 +2691,31 @@ class Core(SocialMixin):
             log.info("unfollowed: %d of their posts out of Home", n)
             self.emit("lanes_updated", {lane.name: [] for lane in self.lanes
                                         if lane.source == "home"})
+
+    UNFOLLOW_CHECK_S = 6 * 3600
+
+    def _forget_unfollowed_elsewhere(self):
+        """Unfollowed in another client or on the server's page: fedtail hears of it
+        only by asking. Every few hours the people whose posts Home holds are asked
+        about; who was followed last time and isn't now leaves Home. Who was never
+        followed (a followed tag's posts) is never taken out: only a follow that ended."""
+        me = (self.me or {}).get("id")
+        authors = [a for a in self.store.authors_in("home", 400) if a != me]
+        if not authors:
+            return 0
+        now = set()
+        for i in range(0, len(authors), 40):
+            chunk = authors[i:i + 40]
+            rel = self.api.relationships(chunk) or []
+            now |= {r["id"] for r in rel if r.get("following") or r.get("requested")}
+        before = set(self.store.kv_get("home_followed", []) or [])
+        gone = [a for a in authors if a in before and a not in now]
+        for a in gone:
+            self._forget_in_home(a)
+        self.store.kv_set("home_followed", sorted(now))
+        if gone:
+            log.info("unfollowed elsewhere: %d account(s) out of Home", len(gone))
+        return len(gone)
 
     def _note_follow(self, acc_id, rel, when):
         """The follow date into (or out of) my private note on them, on the server — so

@@ -5,6 +5,10 @@ What's new in the latest versions, and the plans.
 ## What's new
 
 <!-- include: parts/whats-new -->
+**0.21.0 (in progress):**
+
+- Unfollowed — gone from Home
+
 **0.20.1:**
 
 - How fresh the lanes are, in the status line

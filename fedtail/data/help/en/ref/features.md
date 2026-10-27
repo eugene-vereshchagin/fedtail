@@ -498,6 +498,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Profile: hide follows, posts found by search, article authorship, tag suggestions | has | 0.20.0 | — | `update_credentials` `hide_collections`, `indexable`, `attribution_domains`; `featured_tags/suggestions` | Mastodon web |
 | About the server: terms, whom it cut off, its translator | has | 0.20.0 | — | `instance/terms_of_service`, `instance/domain_blocks`, `instance/translation_languages` | Mastodon web |
 | Post visibility as set on the server | has | 0.11.0 | `post.default_visibility = "server"` | `/api/v1/preferences` | Mastodon web, Ivory |
+| Unfollowed — gone from Home | has | 0.21.0 | `feed.forget_unfollowed` | `GET /api/v1/accounts/relationships` | — |
 
 <details><summary>In detail</summary>
 
@@ -526,6 +527,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **Profile: hide follows, posts found by search, article authorship, tag suggestions.** In the profile editor: hide whom you follow and who follows you; whether a search of words finds your public posts; which sites may name you the author of their articles (Mastodon 4.4). And the tags you often write about — added to your profile with one click.
 
 **About the server: terms, whom it cut off, its translator.** “About the server” has the terms of service (4.4), the servers it cut off or limited (if it shows them) and what its translator can do. “Translate” isn't offered in a post's menu where your server's translator can't turn that language into yours.
+
+**Unfollowed — gone from Home.** The posts and boosts of someone you stop following leave Home, as they leave your server's Home: at once when you unfollow here; within a few hours when you do it in another client or on the server's web page (fedtail asks the server about the people whose posts Home holds). Someone you never followed (a followed tag's posts) is left alone. `false` — what came stays.
 
 </details>
 

@@ -263,3 +263,16 @@ config = "`post.default_visibility = \"server\"`"
 api = "`/api/v1/preferences`"
 others = "Mastodon web, Ivory"
 clients = ["Mastodon web", "Ivory"]
+
+[[feature]]
+id = "forget-unfollowed"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Отписался — ушёл из Ленты"
+name.en = "Unfollowed — gone from Home"
+config = "`feed.forget_unfollowed`"
+api = "`GET /api/v1/accounts/relationships`"
+others = "—"
+details.ru = "Посты и бусты того, от кого отписался, уходят из Ленты, как уходят из Ленты на сервере: сразу, если отписался здесь; в течение нескольких часов, если в другом клиенте или в вебе сервера (fedtail спрашивает сервер о тех, чьи посты лежат в Ленте). Кого ты никогда не читал (посты по подписанному тегу), не трогает. `false` — что пришло, то остаётся."
+details.en = "The posts and boosts of someone you stop following leave Home, as they leave your server's Home: at once when you unfollow here; within a few hours when you do it in another client or on the server's web page (fedtail asks the server about the people whose posts Home holds). Someone you never followed (a followed tag's posts) is left alone. `false` — what came stays."
