@@ -1888,7 +1888,7 @@ class AccountWidget(_PagedTab):
             else:
                 fn = (lambda _c=False, k=act.key: prof.do(
                     k, self.acc, self.relation, self.win.ctx.view, self.win.links.host,
-                    self._changed))
+                    self._button_done))
             buttons.addWidget(_button(act.label, fn, name=name, tip=act.tip or None))
         lay.addLayout(buttons)
         from ...model.text import note_text
@@ -1900,8 +1900,10 @@ class AccountWidget(_PagedTab):
             label.setToolTip(_("note_tip"))
             lay.addWidget(label)
 
-    def _changed(self, rel):
-        """A profile button done (common/profile.py): the relation as it is now."""
+    def _button_done(self, rel):
+        """A profile button done (common/profile.py): the relation as it is now. (Named
+        _changed once, as the method below: that one won, and Follow, Unfollow and the
+        rest failed with "takes 1 positional argument but 2 were given", 27.10.)"""
         if isinstance(rel, Relationship):
             self._relation(rel)
         else:

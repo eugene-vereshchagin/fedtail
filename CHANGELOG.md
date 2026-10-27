@@ -2,6 +2,8 @@
 
 ## 0.21.0 — in progress
 
+- Qt: a profile's buttons (Follow, Unfollow, Mute…) work again — they called a method a
+  second one of the same name had replaced; a test now finds any method defined twice.
 - How fresh the lanes are, in every interface's status line: "⟳ updating the lanes…"
   while a round asks the server, "updated at 14:32" after, "⚠ no answer from the server
   since 14:20" when rounds fail — an empty lane no longer leaves you guessing.
