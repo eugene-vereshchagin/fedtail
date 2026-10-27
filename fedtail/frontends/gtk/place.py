@@ -42,6 +42,10 @@ class PlaceWindow:
         outer.append(scroll)
         self.form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         outer.append(self.form)
+        # what a button answered — in this window, not the main one's status line behind it
+        self.said = Gtk.Label(wrap=True, xalign=0)
+        self.said.set_visible(False)
+        outer.append(self.said)
         self.window.set_child(outer)
         self.window.present()
         self.load()
@@ -216,9 +220,16 @@ class PlaceWindow:
             *btn.act, values=values, confirmed=confirmed, answer=answer)),
             lambda out: self.answered(btn, out, answer))
 
+    def say(self, text, error=False):
+        self.said.set_text(("⚠ " if error else "✓ ") + _plain(text))
+        for c in ("ft-over", "ft-dot"):
+            self.said.remove_css_class(c)
+        self.said.add_css_class("ft-over" if error else "ft-dot")
+        self.said.set_visible(True)
+
     def answered(self, btn, out, answer):
         if out.error:
-            self.win.error(_plain(out.error))
+            self.say(out.error, error=True)
             return
         if out.confirm:
             self.win.confirm(self.window.get_title() or "", _plain(out.confirm),
@@ -231,6 +242,7 @@ class PlaceWindow:
         if out.copy:
             self.win.get_clipboard().set(out.copy)
         if out.message:
+            self.say(out.message)
             self.win.status(_plain(out.message))
         if out.compose:
             self.win.compose(text=str(out.compose.get("text") or ""))

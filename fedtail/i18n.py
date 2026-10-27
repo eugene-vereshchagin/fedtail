@@ -366,6 +366,34 @@ _STRINGS = {
         "profile_failed": "не пришло, кто это: {err}",
         "profile_bad_answer": "сервер ответил не учётной записью",
         "profile_retry": "Ещё раз",
+        "tags_in_home": "И в Ленте",
+        "tags_not_in_home": "Не в Ленте",
+        "tags_in_home_tip": "Посты с этими тегами и в Ленте тоже (снято — только в ленте "
+                            "тегов, как список «только здесь»)",
+        "le_sets": "Набор лент",
+        "le_set_fedtail": "по умолчанию: «Ко мне» с быстрыми фильтрами, подписки на треды, "
+                          "важные люди, боты отдельно",
+        "le_set_mastodon": "как веб Мастодона: Лента со всем, Упоминания и Активность, Личные, "
+                           "Локальная, Федерация, Закладки, Избранное",
+        "le_set_tusky": "как вкладки Tusky: Лента, Упоминания (и личные) и Активность, "
+                        "Локальная, Федерация, Личные",
+        "le_set_phanpy": "как Phanpy: Лента, Упоминания (и личные), Личные, Активность, "
+                         "Закладки, Лайки, Локальная",
+        "le_set_now": "сейчас",
+        "le_set_now_own": "сейчас, с твоими изменениями",
+        "le_set_take": "Взять",
+        "le_set_take_tip": "Ленты этого набора, в его порядке; твои свои ленты остаются",
+        "le_set_q": "Взять набор «{name}»? Порядок лент станет как в нём; твои свои ленты "
+                    "останутся.",
+        "le_set_done": "Набор «{name}»",
+        "le_own_title": "Твоё поверх набора",
+        "le_own_line": "свой порядок или свои ленты: {n} своих/изменённых",
+        "le_own_drop": "Убрать всё своё",
+        "le_own_drop_tip": "Все свои и изменённые ленты и свой порядок — прочь: набор как есть",
+        "le_own_drop_q": "Убрать все свои ленты, изменения лент набора и свой порядок? "
+                         "Останется набор как есть.",
+        "le_own_dropped": "Набор как есть",
+        "le_lanes_now": "Ленты",
         "le_title": "Ленты",
         "le_edit_lane": "Изменить ленту…",
         "le_hint": "Порядок, какие видно, и каждая лента — пишется в config.toml сразу. Набор: "
@@ -853,6 +881,8 @@ _STRINGS = {
                          "остальное в нём остаются как есть. Большинство настроек "
                          "вступают в силу после перезапуска.",
         "settings_save": "Записать", "settings_saved": "Записано в {file}: {names}",
+        "settings_saved_here": "записано", "settings_after_restart": "в силу — после перезапуска",
+        "settings_enter_saves": "Enter (или уйти из поля) — записать",
         "settings_restart": "Перезапустить", "settings_restart_tip":
             "Большинство настроек читаются при запуске",
         "settings_reset": "По умолчанию", "settings_reset_tip":
@@ -1548,6 +1578,34 @@ _STRINGS = {
         "profile_failed": "who this is didn't come: {err}",
         "profile_bad_answer": "the server's answer wasn't an account",
         "profile_retry": "Again",
+        "tags_in_home": "In Home too",
+        "tags_not_in_home": "Not in Home",
+        "tags_in_home_tip": "Posts with these tags in Home too (off — only in the tag lane, "
+                            "as an exclusive list)",
+        "le_sets": "The set of lanes",
+        "le_set_fedtail": "the default: To me with quick filters, followed threads, important "
+                          "people, bots apart",
+        "le_set_mastodon": "as Mastodon's web page: Home with everything, Mentions and "
+                           "Activity, Direct, Local, Federated, Bookmarks, Favourites",
+        "le_set_tusky": "as Tusky's tabs: Home, Mentions (private too) and Activity, Local, "
+                        "Federated, Direct",
+        "le_set_phanpy": "as Phanpy: Home, Mentions (private too), Direct, Activity, Bookmarks, "
+                         "Likes, Local",
+        "le_set_now": "now",
+        "le_set_now_own": "now, with your changes",
+        "le_set_take": "Take",
+        "le_set_take_tip": "This set's lanes, in its order; your own lanes stay",
+        "le_set_q": "Take the set “{name}”? The lanes go in its order; your own lanes stay.",
+        "le_set_done": "The set “{name}”",
+        "le_own_title": "Yours over the set",
+        "le_own_line": "your order or lanes of your own: {n} own or changed",
+        "le_own_drop": "Take all of yours away",
+        "le_own_drop_tip": "Every lane of your own or changed, and your order — gone: the set "
+                           "as it is",
+        "le_own_drop_q": "Take away all your lanes, changes to the set's lanes and your order? "
+                         "The set stays as it is.",
+        "le_own_dropped": "The set as it is",
+        "le_lanes_now": "Lanes",
         "le_title": "Lanes",
         "le_edit_lane": "Edit the lane…",
         "le_hint": "The order, which are shown, and each lane — written into config.toml at "
@@ -2025,6 +2083,8 @@ _STRINGS = {
                          "comments and the rest stay as they are. Most settings take "
                          "effect after a restart.",
         "settings_save": "Save", "settings_saved": "Saved in {file}: {names}",
+        "settings_saved_here": "saved", "settings_after_restart": "takes effect after a restart",
+        "settings_enter_saves": "Enter (or leaving the field) saves",
         "settings_restart": "Restart", "settings_restart_tip":
             "Most settings are read at start",
         "settings_reset": "Default", "settings_reset_tip":

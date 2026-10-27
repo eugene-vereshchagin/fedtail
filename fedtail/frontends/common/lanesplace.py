@@ -31,9 +31,27 @@ class LanePlaces:
 
     # ---- every lane ----------------------------------------------------------------------
     def _p_lanes(self, _arg, _tab, _cur):
+        from ...core import presets
         from .places import Page, Row
         ed = self._editor()
         page = Page("lanes", _("le_title"), hint=_("le_hint", preset=ed.preset))
+        # the set first: "as in fedtail / Mastodon / Tusky / Phanpy", then one's own on top
+        own = bool(ed.own) or ed.cfg["lanes"].get("enabled")
+        page.rows.append(Row("heading", _("le_sets")))
+        for name in presets.names():
+            on = name == ed.preset
+            words = _("le_set_" + name) if _("le_set_" + name) != "le_set_" + name else name
+            line = (_("le_set_now_own") if own else _("le_set_now")) if on else ""
+            page.rows.append(Row("item", ("● " if on else "○ ") + name, words + (
+                " · " + line if line else ""), key="set:" + name, buttons=() if on else (
+                self._btn(_("le_set_take"), "lanes", "preset", name, primary=True,
+                          tip=_("le_set_take_tip")),)))
+        if own:
+            page.rows.append(Row("item", _("le_own_title"), _("le_own_line", n=len(ed.own)),
+                                 key="_own", buttons=(self._btn(
+                                     _("le_own_drop"), "lanes", "clean", "",
+                                     tip=_("le_own_drop_tip")),)))
+        page.rows.append(Row("heading", _("le_lanes_now")))
         page.rows.append(Row("item", _("le_new"), _("le_new_tip"), key="_new", buttons=(
             self._btn(_("le_new"), "lanes", "new", "", primary=True),)))
         shown = [n for n in ed.order if n in ed.shown]
@@ -69,6 +87,45 @@ class LanePlaces:
             page.rows.append(Row("item", ("" if on else "· ") + ed.title(n), " · ".join(words),
                                  key=n, buttons=tuple(buttons)))
         return page
+
+    def _a_lanes_preset(self, name, _v, confirmed, _ans):
+        """Another set: its lanes, in its order (lanes.enabled back to the set's);
+        one's own lanes stay, after them."""
+        from ...core import config_edit, presets
+        from .places import Out
+        from .settings import SaveError, config_file
+        if name not in presets.names():
+            return Out(error=name)
+        if not confirmed:
+            return Out(confirm=_("le_set_q", name=name))
+        try:
+            cfg, _w = config_edit.save(config_file(self.view),
+                                       {("lanes", "preset"): name,
+                                        ("lanes", "enabled"): config_edit.UNSET})
+        except SaveError as e:
+            return Out(error=str(e))
+        saved = getattr(self.view, "lanes_saved", None)
+        if saved is not None:
+            saved(cfg)
+        return Out(message=_("le_set_done", name=name), refresh=True)
+
+    def _a_lanes_clean(self, _d, _v, confirmed, _ans):
+        """One's own changes all gone: the set as it is."""
+        from ...core import config_edit
+        from .places import Out
+        from .settings import SaveError, config_file
+        if not confirmed:
+            return Out(confirm=_("le_own_drop_q"))
+        try:
+            cfg, _w = config_edit.save(config_file(self.view),
+                                       {("lanes", "custom"): [],
+                                        ("lanes", "enabled"): config_edit.UNSET})
+        except SaveError as e:
+            return Out(error=str(e))
+        saved = getattr(self.view, "lanes_saved", None)
+        if saved is not None:
+            saved(cfg)
+        return Out(message=_("le_own_dropped"), refresh=True)
 
     def _a_lanes_up(self, name, _v, _c, _ans):
         ed = self._editor()

@@ -552,6 +552,12 @@ keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bo
 # ---- the same, in other words ------------------------------------------------------------
 
 [[wording]]
+in = ["tui", "web"]
+why.ru = "Окна записывают настройку сразу, каждую в её карточке («записано», «Enter — записать»); терминал и веб — формой с кнопкой «Записать», и что записано, говорят строкой после неё."
+why.en = "The windows save a setting at once, each in its card (“saved”, “Enter saves”); the terminal and the web page save a form with its “Save” button and say what was saved in a line after it."
+keys = ["settings_saved_here", "settings_enter_saves"]
+
+[[wording]]
 in = ["gtk", "tui", "web"]
 why.ru = "Шапка профиля в Qt спрашивает «кто это» заново сама и говорит, что не пришло («спрашиваю ещё раз…», «Ещё раз»); GTK, терминал и веб говорят об ошибке своими словами (`load_failed`, ошибка места)."
 why.en = "Qt's profile head asks “who this is” again by itself and says what didn't come (“asking again…”, “Again”); GTK, the terminal and the web page say the error in their own words (`load_failed`, the place's error)."

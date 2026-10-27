@@ -70,7 +70,25 @@ class PlaceDialog(QDialog):
         lay.addWidget(scroll, 1)
         self.form = QVBoxLayout()
         lay.addLayout(self.form)
+        # what a button answered — here, in the dialog: the main window's status bar is
+        # behind it ("Save" said nothing, 27.10)
+        self.said = QLabel()
+        self.said.setWordWrap(True)
+        self.said.setObjectName("placeSaid")
+        self.said.setVisible(False)
+        lay.addWidget(self.said)
         self.load()
+
+    def say(self, text, error=False):
+        from PySide6.QtCore import QTimer
+        k = self.win.theme.css
+        self.said.setStyleSheet(f"QLabel#placeSaid {{ color: {k('hot') if error else k('accent')};"
+                                " font-weight: 600; padding: 4px 2px; }")
+        self.said.setText(("⚠ " if error else "✓ ") + _plain(text))
+        self.said.setVisible(True)
+        stamp = self._said_at = object()
+        if not error:  # a "done" goes after a while; an error stays till the next press
+            QTimer.singleShot(8000, lambda: self._said_at is stamp and self.said.hide())
 
     # ---- the page, built off the GUI thread (the place asks the server) ----------------
     def load(self):
@@ -254,11 +272,11 @@ class PlaceDialog(QDialog):
         fut = self.view.bg.submit(lambda: self.places.act(
             *btn.act, values=values, confirmed=confirmed, answer=answer))
         self.win.bridge.call(fut, ok=lambda out: self.answered(btn, out, answer),
-                             fail=self.win.error)
+                             fail=lambda e: self.say(e, error=True))
 
     def answered(self, btn, out, answer):
         if out.error:
-            self.win.error(out.error)
+            self.say(out.error, error=True)
             return
         if out.confirm:
             if QMessageBox.question(self, self.windowTitle(), _plain(out.confirm)) == \
@@ -274,6 +292,7 @@ class PlaceDialog(QDialog):
         if out.copy:
             QApplication.clipboard().setText(out.copy)
         if out.message:
+            self.say(out.message)
             self.win.statusBar().showMessage(_plain(out.message), 8000)
         if out.compose:
             self.win.compose(text=str(out.compose.get("text") or ""))

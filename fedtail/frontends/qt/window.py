@@ -1345,6 +1345,14 @@ class MainWindow(QMainWindow):
             if g is not None and not g.get("saved"):
                 drop.setEnabled(False)
                 drop.setToolTip(_("tags_in_config"))
+            elif g is not None:
+                home = m.addAction(_("tags_in_home"))
+                home.setCheckable(True)
+                home.setChecked(not g.get("not_in_home"))
+                home.setToolTip(_("tags_in_home_tip"))
+                home.toggled.connect(lambda on: self.bridge.call(
+                    self.core.set_tag_group_in_home(name, on)))
+                m.setToolTipsVisible(True)
         elif self.cfg["lists"]["enabled"]:
             m.addAction(_("list_new"), lambda: self.new_list())
         if name and not name.startswith(("list:", "tags:")) and \

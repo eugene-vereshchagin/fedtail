@@ -135,6 +135,11 @@ MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "schedu
         "settings", "lanes", "help", "news", "about", "issue", "federation", "log")
 
 
+def taglanes_name(g):
+    from ...core import taggroups
+    return taggroups.lane_name(g)
+
+
 def _wait(fut):
     return fut.result(timeout=WAIT)
 
@@ -929,11 +934,24 @@ class Places(MorePlaces, AccountPlaces, LanePlaces):
         for g in getattr(self.view, "tag_groups", None) or []:
             lane = taggroups.lane_name(g)
             title = g.get("name") or taggroups.title(g)
-            page.rows.append(Row("item", title, "" if g.get("saved") else _("tags_in_config"),
-                                 key="lane:" + lane, buttons=(
-                self._btn(_("tags_drop"), "taglane", "drop", lane),) if g.get("saved")
+            in_home = not g.get("not_in_home")
+            line = _("tags_in_home") + (" ✓" if in_home else " —") if g.get("saved") \
+                else _("tags_in_config")
+            page.rows.append(Row("item", title, line, key="lane:" + lane, buttons=(
+                self._btn(_("tags_not_in_home") if in_home else _("tags_in_home"), "taglane",
+                          "home", lane, tip=_("tags_in_home_tip")),
+                self._btn(_("tags_drop"), "taglane", "drop", lane)) if g.get("saved")
                 else ()))
         return page
+
+    def _a_taglane_home(self, lane, _v, _c, _ans):
+        """Its posts in Home too, or only in its lane (like a list's "exclusive")."""
+        g = next((g for g in getattr(self.view, "tag_groups", None) or ()
+                  if taglanes_name(g) == lane), None)
+        if g is None:
+            return Out(error=lane)
+        _wait(self.view.set_tag_group_in_home(lane, bool(g.get("not_in_home"))))
+        return Out(refresh=True)
 
     def _a_taglane_drop(self, lane, _v, _c, _ans):
         _wait(self.view.drop_tag_group(lane))

@@ -205,7 +205,7 @@ class TagsAndHelpTest(PlacesCase):
         rows = {r.title: r for r in page.rows}
         self.assertEqual(rows["Cfg"].line, _("tags_in_config"))
         self.assertEqual(rows["Cfg"].buttons, ())
-        drop = rows["Mine"].buttons[0]
+        drop = next(b for b in rows["Mine"].buttons if b.act[1] == "drop")
         self.assertEqual(drop.label, _("tags_drop"))
         self.act(*drop.act)
         self.assertNotIn("Mine", [r.title for r in self.pl.page("taglanes", "x").rows])

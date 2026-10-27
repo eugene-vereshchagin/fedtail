@@ -113,8 +113,10 @@ class PlaceTest(FreeBase):
 
     def test_list_and_moves(self):
         page = self.places.page("lanes")
-        keys = [r.key for r in page.rows]
-        self.assertEqual(keys[:3], ["_new", "federated", "home"])
+        keys = [r.key for r in page.rows if r.key]
+        self.assertEqual(keys[:4], ["set:fedtail", "set:mastodon", "set:tusky", "set:phanpy"])
+        i = keys.index("_new")
+        self.assertEqual(keys[i:i + 3], ["_new", "federated", "home"])
         out = self.places.act("lanes", "up", "home")
         self.assertFalse(out.error, out.error)
         self.assertEqual(self.file()["lanes"]["enabled"][:2], ["home", "federated"])
@@ -159,8 +161,41 @@ class PlaceTest(FreeBase):
         self.assertEqual(out.message, i18n._("le_same"))
         self.assertNotIn("custom", self.file().get("lanes", {}))
 
+    def test_another_set_and_back_to_it_as_is(self):
+        self.places.act("lanes", "up", "home")
+        out = self.places.act("lanes", "preset", "mastodon")
+        self.assertTrue(out.confirm)
+        out = self.places.act("lanes", "preset", "mastodon", confirmed=True)
+        self.assertFalse(out.error, out.error)
+        self.assertEqual(self.file()["lanes"]["preset"], "mastodon")
+        self.assertNotIn("enabled", self.file()["lanes"])  # the set's own order
+        self.assertIn("mentions", self.core.lane_by_name)
+        self.places.act("lanes", "new", answer="pics")
+        page = self.places.page("lanes")
+        self.assertIn("_own", [r.key for r in page.rows])
+        out = self.places.act("lanes", "clean", confirmed=True)
+        self.assertFalse(out.error, out.error)
+        self.assertNotIn("pics", self.core.lane_by_name)
+        self.assertNotIn("_own", [r.key for r in self.places.page("lanes").rows])
+
     def test_in_the_menu(self):
         self.assertIn("lanes", [n for n, _w in self.places.menu()])
+
+    def test_tag_lane_in_home_or_not(self):
+        """A saved lane of tags: its posts in Home too, or not — a button of the place
+        (and the windows' sidebar menu)."""
+        self.core.save_tag_group({"any": ["linux"]}).result()
+        lane = next(n for n in self.core.lane_by_name if n.startswith("tags:"))
+        page = self.places.page("taglanes", "linux")
+        row = next(r for r in page.rows if r.key == "lane:" + lane)
+        self.assertEqual(row.buttons[0].act, ("taglane", "home", lane))
+        self.assertFalse(self.places.act("taglane", "home", lane).error)
+        self.assertTrue(next(g for g in self.core.tag_groups
+                             if g.get("saved"))["not_in_home"])
+        self.assertIn("linux", self.core._ctx().home_hidden_tags)
+        self.places.act("taglane", "home", lane)
+        self.assertFalse(next(g for g in self.core.tag_groups
+                              if g.get("saved"))["not_in_home"])
 
 
 if __name__ == "__main__":

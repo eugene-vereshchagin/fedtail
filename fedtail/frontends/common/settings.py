@@ -346,7 +346,7 @@ def save(view, changes):
     path = config_file(view)
     _cfg, warnings = config_edit.save(path, changes)
     names = ", ".join(f"{s}.{k}" for s, k in changes)
-    words = _("settings_saved", names=names, file=path.name)
+    words = _("settings_saved", names=names, file=path.name) + " · " + _("settings_after_restart")
     if warnings:
         words += " · " + "; ".join(warnings[:2])
     return words

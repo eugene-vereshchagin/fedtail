@@ -128,10 +128,17 @@ def lane_menu(win, row):
         g = next((g for g in view.tag_groups
                   if f"tags:{taggroups.key(g)}" == name), None)
         drop = item(_("tags_drop"), lambda: win.call(core.drop_tag_group(name)))
+        from .gi_setup import tip
         if g is not None and not g.get("saved"):
             drop.set_sensitive(False)  # from the config: taken out there
-            from .gi_setup import tip
             tip(drop, _("tags_in_config"))
+        elif g is not None:  # its posts in Home too, or only here (as Qt's menu)
+            home = Gtk.CheckButton(label=_("tags_in_home"))
+            home.set_active(not g.get("not_in_home"))
+            tip(home, _("tags_in_home_tip"))
+            home.connect("toggled", lambda c: win.call(
+                core.set_tag_group_in_home(name, c.get_active())))
+            box.append(home)
     elif win.cfg["lists"]["enabled"]:
         item(_("list_new"), win.new_list)
     if not name.startswith(("list:", "tags:")) and name in view.lane_by_name and \

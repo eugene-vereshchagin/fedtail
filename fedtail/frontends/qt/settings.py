@@ -52,6 +52,7 @@ class SettingsDialog(QDialog):
         self.path = model_of.config_file(self.view)
         self.stamp = self._stamp()
         self.chapters = model_of.model(self.view)
+        self.saved = set()  # the options saved while the window is open
         k = win.theme.css
         self.setStyleSheet(f"""
 QFrame#setCard {{ background: {k('card')}; border: 1px solid {k('card_border')};
@@ -63,6 +64,7 @@ QLabel#setAbout {{ color: {k('muted')}; }}
 QLabel#setName {{ color: {k('muted')}; font-family: monospace; font-size: 8.5pt; }}
 QLabel#setGroup {{ color: {k('accent')}; font-size: 11pt; padding-top: 6px; }}
 QLabel#setMuted {{ color: {k('muted')}; }}
+QLabel#setSaved {{ color: {k('accent')}; font-weight: 600; }}
 """)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(12, 12, 12, 10)
@@ -164,6 +166,7 @@ QLabel#setMuted {{ color: {k('muted')}; }}
             self._redraw()
             return
         log.info("settings: %s changed", option.name)  # the value may be private: not it
+        self.saved.add(option.name)  # its card says so ("✓ saved"), till the window closes
         self.stamp = self._stamp()
         self.chapters = model_of.model(self.view)
         self.status.setText(words)
@@ -255,6 +258,11 @@ QLabel#setMuted {{ color: {k('muted')}; }}
                                                                   value=o.default_shown())))
         name.setObjectName("setName")
         foot.addWidget(name, 1)
+        if o.name in self.saved:
+            done = QLabel("✓ " + _("settings_saved_here"))
+            done.setObjectName("setSaved")
+            done.setToolTip(_("settings_after_restart"))
+            foot.addWidget(done)
         if o.changed:
             reset = QPushButton(_("settings_reset"))
             reset.setObjectName("tool")
@@ -314,6 +322,7 @@ QLabel#setMuted {{ color: {k('muted')}; }}
             return box
         w = QLineEdit(o.line())
         w.setMinimumWidth(260)
+        w.setToolTip(_("settings_enter_saves"))  # no button: Enter (or leaving it) saves
         if o.kind == "list":
             w.setPlaceholderText("a, b, c")
 

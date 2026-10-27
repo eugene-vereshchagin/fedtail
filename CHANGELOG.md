@@ -2,6 +2,14 @@
 
 ## 0.21.0 — in progress
 
+- The lane editor starts with the set: fedtail (the default), Mastodon, Tusky, Phanpy —
+  "Take" one, and "Take all of yours away" for the set as it is. A lane of tags saved from a
+  search gets "In Home too" in its sidebar menu (and the tags place): off, its posts leave
+  Home.
+- A place's window (the lane editor among them) says what a button did in the window itself:
+  it went to the main window's status line, behind the dialog — "Save" seemed to do nothing.
+  The settings window marks each option saved ("✓ saved"), says it takes effect after a
+  restart, and a field's tip says Enter saves it.
 - **Who stopped following you** (`activity.unfollows`, core/derived.py): the whole list of
   followers compared hourly; one missing twice and not following when asked is a row in
   Activity. A list not whole is thrown away, the first is the start, your own removals and

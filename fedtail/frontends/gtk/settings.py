@@ -86,6 +86,7 @@ class SettingsWindow(Gtk.Window):
 
         outer.append(_label(_("settings_hint", file=str(self.path)), "ft-muted", wrap=True))
         bottom = Gtk.Box(spacing=8)
+        self.saved = set()  # the options saved while the window is open
         self.status = _label("", wrap=True)
         self.status.set_hexpand(True)
         bottom.append(self.status)
@@ -143,6 +144,7 @@ class SettingsWindow(Gtk.Window):
             GLib.idle_add(lambda: (self._redraw(), False)[1])
             return
         log.info("settings: %s changed", option.name)
+        self.saved.add(option.name)  # its card says so ("✓ saved"), as Qt's
         self.stamp = self._stamp()
         self.chapters = model_of.model(self.view)
         self.status.set_text(words)
@@ -214,6 +216,10 @@ class SettingsWindow(Gtk.Window):
             "settings_default", value=o.default_shown())), "ft-set-name")
         name.set_hexpand(True)
         foot.append(name)
+        if o.name in getattr(self, "saved", ()):
+            done = _label("✓ " + _("settings_saved_here"), "ft-dot")
+            done.set_tooltip_text(_("settings_after_restart"))
+            foot.append(done)
         if o.changed:
             reset = Gtk.Button(label=_("settings_reset"),
                                tooltip_text=_("settings_reset_tip", value=o.default_shown()))
@@ -272,6 +278,7 @@ class SettingsWindow(Gtk.Window):
                 c.connect("toggled", ticked)
             return box
         w = Gtk.Entry(text=o.line(), width_chars=28)
+        w.set_tooltip_text(_("settings_enter_saves"))  # no button: Enter (or leaving) saves
         if o.kind == "list":
             w.set_placeholder_text("a, b, c")
 
