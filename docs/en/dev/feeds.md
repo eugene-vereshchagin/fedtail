@@ -304,6 +304,6 @@ Besides "setting up becomes programming":
 | 9 | Activity | + quotes of my posts, polls over, edits of what I boosted, derived unfollows; follow requests — a quick filter here, not a lane |
 | 10 | Bookmarks | kept by the server, shared by every client; nothing to sync ourselves |
 
-Open: do Subscriptions (Point-style threads) stay a lane of their own or become a quick filter of
-Home, "threads I took part in"? Which servers go to `lanes.federated_extra` by default — none or a
+Decided (27 Oct): Subscriptions (Point-style threads) become a quick filter of Home, "threads I
+took part in" — a preset's setting, not code. Open: which servers go to `lanes.federated_extra` by default — none or a
 few big ones?
