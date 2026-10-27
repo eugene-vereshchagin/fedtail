@@ -74,7 +74,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Federated, Home, Local | has | 0.2.0 | `lanes.enabled` (`"federated"`, `"home"`, `"local"`) | `timelines/home`, `timelines/public` | everyone |
 | Lane names in the config match their titles | has | 0.15.0 | `home`, `replies`, `federated`, `my_posts`, `my_likes`; the old `people`, `comments`, `global`, `mine`, `favourites` are understood too; a lane's word is in its tooltip on the left | — | — |
 | Bots in a lane of their own | has | 0.1.0 | `lanes.enabled` (`"bots"`), `lanes.extra_bots` | the `account.bot` field | only in fedtail |
-| Personal lanes | has | 0.1.0 | `lanes.enabled`, `lanes.mentions_all`, `lanes.direct_apart` | notifications, `visibility=direct` | everyone, but laid out differently |
+| Personal lanes | has | 0.1.0 | `lanes.preset`, `lanes.enabled` | notifications, `visibility=direct` | everyone, but laid out differently |
 | Lists as lanes | has | 0.2.0 | `[lists]`: `enabled`, `refresh_minutes` | `lists`, `timelines/list/:id` | Mastodon web, Tusky, Ivory, Phanpy, Elk, Tokodon, Ice Cubes, Megalodon |
 | Whose replies a list shows | has | 0.20.0 | — | `lists` `replies_policy` | Mastodon web, Ivory, Phanpy, Elk, Ice Cubes |
 | Who is in a list leaves the general lanes | has | 0.3.0 | `lists.hide_members`, `lists.hide_in` | own | only in fedtail |
@@ -102,7 +102,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Free lanes: a lane you assemble yourself | partly | 0.21.0 | `[[lanes.custom]]`, `lanes.unsorted` | own | — |
 | How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
 | Only the languages you read | has | 0.21.0 | `lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words` | the post's `language` field; our own guess | Mastodon — by the author's tag, in the server's settings |
-| Sets of lanes “as in other clients” | has | 0.21.0 | `lanes.preset` (`"own"`, `"fedtail"`, `"mastodon"`, `"tusky"`, `"phanpy"`), `lanes.bots_in_home` | own | — |
+| Sets of lanes “as in other clients” | has | 0.21.0 | `lanes.preset` (`"fedtail"`, `"mastodon"`, `"tusky"`, `"phanpy"`), `--lanes-to-config` | own | — |
 | “To me”: replies and mentions in one lane | has | 0.21.0 | `lanes.enabled` (`"to_me"`) | `notifications?types=mention` | Notifications everywhere, mixed with likes |
 | Home's quick filters: tags, boosts, threads with news | has | 0.21.0 | — | own; followed threads (`/context`) | — |
 | Important people | has | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (the bell on a profile) | — |
@@ -116,9 +116,9 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 **Personal lanes.**
 
 - “My posts” (`my_posts`) — my posts and comments.
-- “Direct” (`direct`) — messages visible to the mentioned only, as a dialogue: incoming and your own outgoing ones (sent from here, from another client, met in a thread), by the post's time. Yours are read at once and don't swell the count (since 0.20). With `lanes.direct_apart = true` (the default) the incoming ones live only here and don't double up in “Replies to me” and “Mentions”; yours never go there.
+- “Direct” (`direct`) — messages visible to the mentioned only, as a dialogue: incoming and your own outgoing ones (sent from here, from another client, met in a thread), by the post's time. Yours are read at once and don't swell the count (since 0.20). While the lane is on, the incoming ones live only here and don't double up in the others (in the sets' rules that's `apart = "direct"`); yours never go there.
 - “Replies to me” (`replies`) — replies to my posts and comments, even if they @ me.
-- “Mentions” (`mentions`) — where I was tagged in someone else's conversation. `lanes.mentions_all = true` — show everything that mentions me here, replies too (they'll be in both lanes).
+- “Mentions” (`mentions`) — where I was tagged in someone else's conversation. Both lanes are in no set by default (there it's “To me”); `lanes.enabled` turns them on.
 - “Subscriptions” (`subs`) — what's new in threads I'm subscribed to (see Thread subscriptions).
 - “Bookmarks” (`bookmarks`), “My likes” (`my_likes`, off by default), “Activity” (`activity`), “Follow requests” (`requests`) — below, each in its own section.
 
@@ -176,9 +176,9 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Only the languages you read.** Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more. A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read.
 
-**Sets of lanes “as in other clients”.** No assembling lanes on day one: pick a set in the settings as in Mastodon (web), Tusky or Phanpy — or fedtail's own, Point-style. A set sets `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; your values there wait until `"own"` again. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity.
+**Sets of lanes “as in other clients”.** Every lane is a rule, and the sets are sets of rules ready to use: fedtail's (Point-style), as in Mastodon (web), Tusky, Phanpy; chosen with `lanes.preset`, on the settings page too. The sets' rules are in `fedtail/data/presets.toml`; a `[[lanes.custom]]` of the same name takes a set's lane's place, `fedtail --lanes-to-config` writes the whole set into `config.toml`. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity.
 
-**“To me”: replies and mentions in one lane.** Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones with `lanes.direct_apart` — in “Direct”.
+**“To me”: replies and mentions in one lane.** Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones — in “Direct”, while it's on.
 
 **Home's quick filters: tags, boosts, threads with news.** Beside “All / Posts only”: “Tags” — what followed tags brought, not people; “Boosts”; “Threads with news” — posts whose threads have unread replies (followed threads; your own are followed by themselves), the replies themselves inside the thread.
 

@@ -112,7 +112,8 @@ fedtail/
                      start another one (the account switcher, --profiles); the main one
                      (paths.main_profile: the main-profile mark) handed over on logout
     atoms.py         what can be told apart about a post/event; free lanes' rules (feeds.md)
-    custom.py        free lanes: [[lanes.custom]] as streams custom:<name>, fed after each poll
+    custom.py        lanes of rules: the sets' and [[lanes.custom]]; views, or streams custom:<name>
+    presets.py       the sets of lanes (fedtail/data/presets.toml)
     lanes.py         Lane = source + filter; built-in lanes; list lanes
     model.py         helpers over status/account dicts (real(), snippet(), …)
     paths.py         where a profile's files live (XDG)

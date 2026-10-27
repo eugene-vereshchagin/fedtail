@@ -1,0 +1,339 @@
+# The sets of lanes fedtail comes with (lanes.preset), all in one file. Every lane is a rule —
+# the same keys as [[lanes.custom]] in config.toml (docs/en/dev/feeds.md); a lane of the
+# config with the same name takes the set's one's place, and `fedtail --lanes-to-config`
+# writes the chosen set into config.toml to be read and changed there.
+# No title: the interface's word for the name (lane_<name>). kind = "activity" — events,
+# not posts; "requests" — follow requests; "lists" / "tags" — the server's lists and the
+# saved lanes of tags stand there. [[extra]] — lanes no set shows, any config may turn on.
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# fedtail's own set of lanes (lanes.preset = "fedtail"), in the spirit of Point: replies and
+# mentions to me in one lane, followed threads, bots apart. Every lane is a rule — the same
+# keys as [[lanes.custom]] (docs/en/dev/feeds.md); a lane of the config with the same name
+# takes this one's place. No title: the interface's word for the name (lane_<name>).
+# kind = "activity" — not posts but events; kind = "lists" / "tags" — the server's lists
+# and the saved lanes of tags stand here.
+
+[[fedtail]]
+name = "federated"
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[fedtail]]
+name = "home"
+group = "standard"
+source = "home"
+any = [
+  {},
+  { via = "tag", switch = "@chip_tags" },
+  { kind = "boost", switch = "@chip_boosts" },
+  { state = "new_replies", switch = "@chip_threads_new" },
+]
+none = [{ author = "bot" }]
+
+[[fedtail]]
+name = "local"
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[fedtail]]
+name = "bots"
+group = "standard"
+source = "home"
+any = [{ author = "bot" }]
+
+[[fedtail]]
+name = "my_posts"
+group = "personal"
+source = "mine"
+any = [{}]
+
+[[fedtail]]
+name = "direct"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[fedtail]]
+name = "to_me"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [
+  {},
+  { me = "reply", switch = "@chip_replies" },
+  { me = ["mention", "direct"], switch = "@chip_mentions" },
+]
+none = [{ visibility = "direct", apart = "direct" }, { author = "me" }]
+
+[[fedtail]]
+name = "subs"
+group = "personal"
+source = "subs"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }]
+
+[[fedtail]]
+name = "important"
+group = "personal"
+source = "watched"
+any = [{}]
+
+[[fedtail]]
+name = "bookmarks"
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[fedtail]]
+name = "activity"
+group = "personal"
+kind = "activity"
+
+[[fedtail]]
+name = "lists"
+kind = "lists"
+
+[[fedtail]]
+name = "tags"
+kind = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Mastodon's web page (lanes.preset = "mastodon"): Home with everything, Notifications
+# (here: Mentions + Activity, follow requests among them), Private mentions apart, the live
+# feeds, Bookmarks, Favourites, the lists.
+
+[[mastodon]]
+name = "home"
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+
+[[mastodon]]
+name = "local"
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[mastodon]]
+name = "federated"
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[mastodon]]
+name = "mentions"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[mastodon]]
+name = "direct"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[mastodon]]
+name = "activity"
+group = "personal"
+kind = "activity"
+
+[[mastodon]]
+name = "bookmarks"
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[mastodon]]
+name = "my_likes"
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[mastodon]]
+name = "lists"
+kind = "lists"
+
+[[mastodon]]
+name = "tags"
+kind = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Tusky's tabs (lanes.preset = "tusky"): Home, Notifications (here: Mentions, private ones
+# among them, + Activity), Local, Federated, Direct messages; lists and tags as tabs of their
+# own.
+
+[[tusky]]
+name = "home"
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+  { kind = "reply", switch = "@chip_replies" },
+]
+
+[[tusky]]
+name = "mentions"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ author = "me" }]
+
+[[tusky]]
+name = "activity"
+group = "personal"
+kind = "activity"
+
+[[tusky]]
+name = "local"
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[tusky]]
+name = "federated"
+group = "standard"
+source = "federated"
+read = "browse"
+any = [{}]
+
+[[tusky]]
+name = "direct"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[tusky]]
+name = "lists"
+kind = "lists"
+
+[[tusky]]
+name = "tags"
+kind = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# As Phanpy (lanes.preset = "phanpy"): Home, Mentions (private ones among them), Direct,
+# Notifications with follow requests on top, Bookmarks, Likes; Local as a shortcut.
+
+[[phanpy]]
+name = "home"
+group = "standard"
+source = "home"
+any = [
+  {},
+  { kind = "boost", switch = "@chip_boosts" },
+]
+
+[[phanpy]]
+name = "local"
+group = "standard"
+source = "local"
+read = "browse"
+any = [{}]
+
+[[phanpy]]
+name = "mentions"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}, { author = "followed", switch = "@chip_followed" }]
+none = [{ author = "me" }]
+
+[[phanpy]]
+name = "direct"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ visibility = "direct" }]
+
+[[phanpy]]
+name = "activity"
+group = "personal"
+kind = "activity"
+
+[[phanpy]]
+name = "bookmarks"
+group = "personal"
+source = "bookmarks"
+read = "browse"
+any = [{}]
+none = [{ state = "unbookmarked" }]
+
+[[phanpy]]
+name = "my_likes"
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[phanpy]]
+name = "lists"
+kind = "lists"
+
+[[phanpy]]
+name = "tags"
+kind = "tags"
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Lanes no set shows by default but any config may turn on (lanes.enabled) or take as a
+# start for its own: the ones before To me, Follow requests as a lane, My likes.
+
+[[extra]]
+name = "replies"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{ me = "reply" }]
+none = [{ visibility = "direct", apart = "direct" }]
+
+[[extra]]
+name = "mentions"
+group = "personal"
+source = "mentions"
+sort = "post_time"
+any = [{}]
+none = [{ me = "reply" }, { author = "me" }, { visibility = "direct", apart = "direct" }]
+
+[[extra]]
+name = "my_likes"
+group = "personal"
+source = "favourites"
+read = "browse"
+any = [{}]
+none = [{ state = "unliked" }]
+
+[[extra]]
+name = "requests"
+group = "personal"
+kind = "requests"

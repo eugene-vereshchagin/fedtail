@@ -72,13 +72,13 @@ text = "Your posts and comments — always read."
 help = "reading.md#lanes"
 
 [tip_direct]
-text = "Direct messages: posts only the mentioned can see. They don't double up in “Replies to me” and “Mentions”."
-config = "lanes.direct_apart"
+text = "Direct messages: posts only the mentioned can see. While this lane is on, they don't double up in the others (the sets' rules: apart = \"direct\")."
+config = "lanes.preset"
 help = "reading.md#lanes"
 
 [tip_mentions]
-text = "Where you were tagged in someone else's conversation. Replies to your posts are apart, in “Replies to me”."
-config = "lanes.mentions_all"
+text = "Where you were tagged in someone else's conversation. Replies to your posts are apart, in “Replies to me” (in no set: lanes.enabled names it)."
+config = "lanes.preset"
 help = "reading.md#lanes"
 
 [tip_replies]

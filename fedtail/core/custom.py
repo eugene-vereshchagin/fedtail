@@ -1,51 +1,35 @@
-"""Free lanes: the lanes of `[[lanes.custom]]` (docs/en/dev/feeds.md), first version.
+"""Lanes are rules (docs/en/dev/feeds.md): the sets fedtail comes with (core/presets.py,
+lanes.preset) and the lanes of `[[lanes.custom]]` in config.toml, which take a set's lane of
+the same name or add new ones — one kind of lane either way.
 
-Every free lane is a stream of its own in the store, `custom:<name>`, filled by the core,
-not fetched: after each poll the new items of the real sources (home, mentions, local…) go
-through the lanes' rules (core/atoms.py) and those a rule takes are put into its stream. So
-a free lane is, to the rest of fedtail, a lane like any other: unread marks, counts, never
-jumping, notifications, sounds, columns — all as they are.
-
-A new lane — or one whose rule changed — is filled from what is stored already (`backfill`),
-nothing is fetched for it. What this version doesn't do yet: events (likes, follows) in a
-lane, the quick-filter chips (`switch`), "Unsorted", fetching older pages for a free lane.
+A lane of one source is a view of that source's stream: its rule filters what the stream
+holds (Home, Bots, To me…), and the rest of fedtail treats it as it always did. A lane of
+several sources has a stream of its own, `custom:<name>`, filled by the core after each poll:
+the new items of its sources go through its rule (`route`); a new lane, or one whose rule
+changed, is filled from what is stored already (`backfill`). Activity, follow requests, the
+server's lists and the saved tag lanes are kinds of their own (kind = …).
 """
 
 import hashlib
 import json
 import logging
 
-from . import atoms, lanes
+from . import atoms, lanes, presets
 
 log = logging.getLogger(__name__)
 
-PREFIX = "custom:"
-# the streams a free lane can be fed from in this version
-FEEDS = {"home", "local", "federated", "mentions", "mine", "bookmarks", "favourites", "subs"}
+PREFIX = "custom:"  # the stream of a lane of several sources
+# the streams a lane can be fed from in this version
+FEEDS = {"home", "local", "federated", "mentions", "mine", "bookmarks", "favourites", "subs",
+         "watched"}
 FEED_PREFIXES = ("list:", "tags:")
 DEFAULT_FEED = "home"
 BACKFILL_ROWS = 3000  # per feed, the newest: what a new lane starts with
-
-
-# the quick filters of built-in lanes, as rules: (lanes.HOME_CHIPS, TO_ME_CHIPS) — the
-# chip's words are i18n keys, the rule only parts what the lane already holds
-BUILTIN_CHIPS = {
-    "home": [{"via": "tag", "switch": "@chip_tags"}, {"kind": "boost", "switch": "@chip_boosts"},
-             {"state": "new_replies", "switch": "@chip_threads_new"}],
-    "to_me": [{"me": "reply", "switch": "@chip_replies"},
-              {"me": ["mention", "direct"], "switch": "@chip_mentions"}],
-}
-
-
-def builtin_chips(name):
-    """A Custom whose rule gives a built-in lane its quick filters, or None."""
-    conds = BUILTIN_CHIPS.get(name)
-    if not conds:
-        return None
-    return Custom(atoms.Rule.parse({"name": name, "source": "home", "any": conds}))
+KINDS = {"activity", "requests", "lists", "tags"}  # lanes that aren't a rule
 
 
 def is_custom(name):
+    """Is this the stream of a lane of several sources?"""
     return isinstance(name, str) and name.startswith(PREFIX)
 
 
@@ -74,12 +58,12 @@ def infer_sources(cond):
 
 
 class Custom:
-    """One free lane: its rule, its stream, the sources that feed it."""
+    """One lane of rules: its rule, the sources that feed it, the stream it is read from."""
 
-    def __init__(self, rule, warnings=()):
+    def __init__(self, rule, warnings=(), title=None):
         self.rule = rule
-        self.name = PREFIX + rule.name
-        self._title = rule.title or rule.name
+        self.name = rule.name
+        self._title = title  # None: the interface's word for the name (a set's lanes)
         self.warnings = list(warnings)
         feeds = set()
         for cond in rule.any:
@@ -87,14 +71,25 @@ class Custom:
         bad = sorted(f for f in feeds if not _feedable(f))
         if bad:
             self.warnings.append(f"sources not in this version: {', '.join(bad)}")
-        self.feeds = {f for f in feeds if _feedable(f)}
+        self.feeds = {f for f in feeds if _feedable(f)} or {DEFAULT_FEED}
+        # one source: the lane is a view of its stream; several: a stream of its own
+        self.routed = len(self.feeds) > 1
+        self.stream = PREFIX + self.name if self.routed else next(iter(self.feeds))
+        self.needs = rule.needs  # every axis, chips' too (for the quick filters)
+        # what deciding "in the lane or not" needs: a condition of `any` that asks nothing
+        # (`{}`) takes every post, so then only `none` matters — Home's chips cost nothing
+        # until one is chosen
+        takes_all = any(not c.sets and not c.counts and not c.text and c.age is None
+                        and not c.switch for c in rule.any)
+        self.take_needs = set().union(*(c.needs for c in rule.none)) if takes_all \
+            else rule.needs
         self.digest = hashlib.sha1(json.dumps(rule_key(rule), sort_keys=True, default=str)
                                    .encode()).hexdigest()[:12]
 
     @property
     def title(self):
-        """The lane's title; written per language ({ ru = …, en = … }) — the interface's,
-        else English, else the first one."""
+        """The lane's own title (written per language: { ru = …, en = … } — the
+        interface's, else English, else the first one); None — the built-in word."""
         t = self._title
         if not isinstance(t, dict):
             return t
@@ -102,14 +97,22 @@ class Custom:
         return t.get(current_language()) or t.get("en") or next(iter(t.values()))
 
     def lane(self):
-        return lanes.Lane(self.name, self.name, lanes._all,
+        if self.routed:
+            keep = lanes._all  # its stream holds what the rule took
+        else:
+            def keep(st, ctx, c=self):
+                return c.takes(st, ctx.world, c.stream)
+        return lanes.Lane(self.name, self.stream, keep,
                           by_status_time=self.rule.sort == "post_time",
-                          lazy=self.rule.read == "browse", feeds=tuple(sorted(self.feeds)),
+                          lazy=self.rule.read == "browse",
+                          feeds=tuple(sorted(self.feeds)) if self.routed else (),
                           chips=self.chips(),
                           group="standard" if self.rule.group == "standard" else "personal")
 
     def takes(self, status, world, source):
-        return self.rule.takes(atoms.post_facts(status, world, source), world.now)
+        world = world or atoms.World()
+        return self.rule.takes(atoms.post_facts(status, world, source, self.take_needs),
+                               world.now)
 
     # ---- quick filters: a condition with `switch` is one, `shown = false` hides it --------
     def chips(self):
@@ -129,7 +132,7 @@ class Custom:
         the post is in the lane already."""
         if which == "all" or not which:
             return True
-        facts = atoms.post_facts(status, world)
+        facts = atoms.post_facts(status, world, None, self.needs)
         now = world.now
         hits = [i for i, c in enumerate(self.rule.any) if _unsourced(c).matches(facts, now)]
         if which == "main":
@@ -156,23 +159,119 @@ def rule_key(rule):
             "source": sorted(rule.source)}
 
 
+# ---- the lanes of a config: the set's, with config.toml's own over them ----------------
+def _name(table):
+    n = table.get("name") if isinstance(table, dict) else None
+    return lanes.canonical(n) if isinstance(n, str) else n
+
+
+def definitions(cfg):
+    """[(name, table, own)] every lane a config can show, in the set's order — its own
+    [[lanes.custom]] in the place of a set's lane of that name, new ones after; then the
+    lanes of "extra" (shown only when lanes.enabled names them). own: from config.toml."""
+    out = [(_name(t), t, False) for t in presets.lanes_of(cfg["lanes"].get("preset"))]
+    names = [n for n, _t, _o in out]
+    own = set()
+    for t in cfg["lanes"].get("custom") or []:
+        n = _name(t)
+        if not isinstance(t, dict) or not n or n in own:  # the first of a name wins
+            continue
+        own.add(n)
+        t = dict(t, name=n)
+        if n in names:
+            out[names.index(n)] = (n, t, True)
+        else:
+            out.append((n, t, True))
+            names.append(n)
+    for t in presets.extra():
+        if _name(t) not in names:
+            out.append((_name(t), t, False))
+    return out
+
+
+def shown_names(cfg):
+    """The names lanes.enabled shows (or the set's own order), lists and tags among them."""
+    defs = definitions(cfg)
+    order = [lanes.canonical(n) for n in cfg["lanes"].get("enabled") or []]
+    if not order:  # the set's own lanes and one's own; "extra" only when named
+        theirs = {_name(t) for t in presets.lanes_of(cfg["lanes"].get("preset"))}
+        order = [n for n, _t, own in defs if own or n in theirs]
+    else:
+        order += [n for n, _t, own in defs if own and n not in order]
+    if cfg["lists"]["enabled"] and "lists" not in order:
+        order.append("lists")
+    if "tags" not in order:
+        order.append("tags")
+    return list(dict.fromkeys(order))
+
+
 def load(cfg):
-    """[Custom] from cfg["lanes"]["custom"], and the warnings ("lanes.custom[2]: …")."""
+    """[Custom] of every lane of rules a config has (the set's and its own), and the
+    warnings about its own ("lanes.custom[2] feed: …"). A `none` condition "apart" from a
+    lane that isn't shown is left out: without Direct, the private ones stay where they are."""
+    shown = set(shown_names(cfg))
     out, warnings, seen = [], [], set()
-    for i, table in enumerate(cfg["lanes"].get("custom") or []):
-        rule = atoms.Rule.parse(table)
-        where = f"lanes.custom[{i}] {rule.name or '?'}"
-        if not rule.name:
-            warnings += [f"{where}: {w}" for w in rule.warnings]
+    own_index = {}
+    for i, t in enumerate(cfg["lanes"].get("custom") or []):
+        n = _name(t)
+        if n in own_index:
+            warnings.append(f"lanes.custom[{i}] {n}: the name is taken by another lane")
+        elif n:
+            own_index[n] = i
+        else:
+            rule = atoms.Rule.parse(t)
+            warnings += [f"lanes.custom[{i}] ?: {w}" for w in rule.warnings]
+    for n, t, own in definitions(cfg):
+        if n in seen or (t.get("kind") in KINDS):
             continue
-        if rule.name in seen:
-            warnings.append(f"{where}: the name is taken by another lane")
-            continue
-        seen.add(rule.name)
-        c = Custom(rule, rule.warnings)
-        warnings += [f"{where}: {w}" for w in c.warnings]
+        seen.add(n)
+        rule = atoms.Rule.parse({k: v for k, v in t.items() if k not in ("kind",)})
+        rule.none = [c for c in rule.none if not c.apart or c.apart in shown]
+        title = t.get("title") if own else None
+        if isinstance(title, dict):
+            title = {k: v for k, v in title.items() if v} or None
+        if own and not title:
+            title = n  # one's own lane without a title: its name
+        c = Custom(rule, rule.warnings if own else (), title=title)
+        if own:
+            where = f"lanes.custom[{own_index.get(n, '?')}] {n}"
+            warnings += [f"{where}: {w}" for w in c.warnings]
         out.append(c)
     return out, warnings
+
+
+def build(cfg, lists=(), tag_groups=()):
+    """The lanes to show, in order: lanes.enabled's (a name of the set's, "extra"'s or
+    one's own; "lists" and "tags" — where those stand), or — empty — the set's own order;
+    one's own lanes lanes.enabled doesn't name come after; the lists and the tag lanes
+    where their kind stands (else at the end); Unsorted at the very end."""
+    rules = {c.name: c for c in load(cfg)[0]}
+    kinds = {n: t.get("kind") for n, t, _o in definitions(cfg) if t.get("kind") in KINDS}
+    order = shown_names(cfg)
+    out, seen = [], set()
+    for n in order:
+        if n in seen:
+            continue
+        seen.add(n)
+        kind = kinds.get(n) or (n if n in ("lists", "tags") else None)
+        if kind == "lists":
+            if cfg["lists"]["enabled"]:
+                out += [lanes.list_lane(x["id"]) for x in lists]
+        elif kind == "tags":
+            done = set()
+            for g in tag_groups:
+                lane = lanes.tag_lane(g)
+                if lane.name not in done:
+                    done.add(lane.name)
+                    out.append(lane)
+        elif kind in ("activity", "requests"):
+            out.append(lanes.Lane(n, None, lanes._all, group="personal"))
+        elif n in rules:
+            out.append(rules[n].lane())
+    if any(c.routed for c in rules.values() if c.name in seen) and \
+            cfg["lanes"].get("unsorted", True):
+        out.append(lanes.Lane(lanes.UNSORTED, lanes.UNSORTED, lanes._all, group="personal"))
+    return out
 
 
 def _entry(status):
@@ -181,8 +280,9 @@ def _entry(status):
 
 def route(store, customs, new_by_source, world):
     """Put the new items of the real sources into the free lanes that take them.
-    new_by_source: {source: [item ids]} as the poll got them. Returns {lane: [new ids]}."""
+    new_by_source: {source: [item ids]} as the poll got them. Returns {stream: [new ids]}."""
     out = {}
+    customs = [c for c in customs if c.routed]
     wanted = {f for c in customs for f in c.feeds}
     for source, ids in new_by_source.items():
         if source not in wanted or not ids:
@@ -194,15 +294,15 @@ def route(store, customs, new_by_source, world):
                 continue
             taken = [_entry(st) for st in rows if c.takes(st, world, source)]
             if taken:
-                out.setdefault(c.name, []).extend(store.put_items(c.name, taken))
-    return {k: v for k, v in out.items() if v}
+                out.setdefault(c.stream, []).extend(store.put_items(c.stream, taken))
+    return {k: v for k, v in out.items() if v}  # by stream, as new_by_source is
 
 
 def take(store, custom, statuses, world, source):
     """Put into a lane what of `statuses` (come from `source`) its rule takes. Returns
     the statuses taken."""
     taken = [st for st in statuses if custom.takes(st, world, source)]
-    store.put_items(custom.name, [_entry(st) for st in taken])
+    store.put_items(custom.stream, [_entry(st) for st in taken])
     return taken
 
 
@@ -231,19 +331,19 @@ def unsorted(store, lanes_now, new_by_source, ctx, taken):
 
 def backfill(store, custom, world, rows=BACKFILL_ROWS):
     """Fill a lane anew from what is stored for its feeds. Returns how many it took."""
-    store.prune(custom.name, 0)
+    store.prune(custom.stream, 0)
     taken = []
     for source in sorted(custom.feeds):
         for _item_id, st in store.iter_items(source, max_rows=rows):
             if custom.takes(st, world, source):
                 taken.append(_entry(st))
-    store.put_items(custom.name, taken)
-    store.kv_set(f"custom_rule:{custom.name}", custom.digest)
-    log.info("free lane %s: %d posts from %s", custom.name, len(taken),
+    store.put_items(custom.stream, taken)
+    store.kv_set(f"custom_rule:{custom.stream}", custom.digest)
+    log.info("lane %s: %d posts from %s", custom.name, len(taken),
              ", ".join(sorted(custom.feeds)))
     return len(taken)
 
 
 def stale(store, custom):
     """Is the lane's stream not what its rule would make (new lane, changed rule)?"""
-    return store.kv_get(f"custom_rule:{custom.name}") != custom.digest
+    return store.kv_get(f"custom_rule:{custom.stream}") != custom.digest

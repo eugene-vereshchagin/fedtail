@@ -183,7 +183,8 @@ class LaneFilterTest(LangsBase):
     def test_lanes(self):
         self.without_detector()
         zh, ru = st("1", "这是中文"), st("2", "Привет")
-        fed, home = lanes.LANES["federated"], lanes.LANES["home"]
+        built = {x.name: x for x in lanes.enabled(config.validate({})[0])}
+        fed, home = built["federated"], built["home"]
         self.assertFalse(lanes.keeps(fed, zh, self.ctx()))
         self.assertTrue(lanes.keeps(fed, ru, self.ctx()))
         self.assertTrue(lanes.keeps(home, zh, self.ctx()))          # Home: read whole
@@ -233,49 +234,43 @@ if __name__ == "__main__":
 
 
 class PresetTest(unittest.TestCase):
-    """lanes.preset: sets of lanes as in other clients, over today's lanes and switches."""
+    """lanes.preset: the sets of lanes fedtail comes with, every lane a rule
+    (fedtail/data/presets.toml)."""
 
     def check(self, **lanes_kw):
         return config.validate({"lanes": lanes_kw})
 
-    def test_fedtail_is_the_default(self):
-        self.assertEqual(lanes.PRESETS["fedtail"]["enabled"], config.DEFAULTS["lanes"]["enabled"])
-        for key, value in lanes.PRESETS["fedtail"].items():
-            self.assertEqual(config.DEFAULTS["lanes"][key], value, key)
-
-    def test_presets_are_valid_lanes(self):
-        for name, preset in lanes.PRESETS.items():
+    def test_every_set_builds(self):
+        from fedtail.core import custom, presets
+        for name in presets.names():
             with self.subTest(preset=name):
                 cfg, warnings = self.check(preset=name)
-                self.assertEqual(cfg["lanes"]["enabled"], preset["enabled"])
                 self.assertEqual(warnings, [])
+                built = [x.name for x in lanes.enabled(cfg)]
+                self.assertIn("home", built)
+                self.assertIn("activity", built)
                 self.assertIn(name, config.CHOICES[("lanes", "preset")])
+                rules, w = custom.load(cfg)
+                self.assertEqual(w, [])
+                self.assertTrue(all(not c.warnings for c in rules), name)
+                self.assertTrue(all(not c.rule.warnings for c in rules), name)
 
-    def test_own_keeps_yours(self):
-        cfg, _ = self.check(preset="own", enabled=["home"])
-        self.assertEqual(cfg["lanes"]["enabled"], ["home"])
+    def test_the_default_and_old_names(self):
+        cfg, _ = self.check()
+        self.assertEqual(cfg["lanes"]["preset"], "fedtail")
+        cfg, _ = self.check(preset="own")  # before every lane was a rule
+        self.assertEqual(cfg["lanes"]["preset"], "fedtail")
+        with self.assertRaises(config.ConfigError):
+            self.check(preset="nope")
 
-    def test_preset_overrides_and_says_so(self):
-        cfg, warnings = self.check(preset="tusky", enabled=["home"], mentions_all=False)
-        self.assertEqual(cfg["lanes"]["enabled"], lanes.PRESETS["tusky"]["enabled"])
-        self.assertTrue(cfg["lanes"]["mentions_all"])
-        self.assertEqual(len(warnings), 1)
-        self.assertIn("lanes.enabled", warnings[0])
-        self.assertNotIn("mentions_all", warnings[0])  # the default: not a change of theirs
-        _, quiet = self.check(preset="tusky", enabled=config.DEFAULTS["lanes"]["enabled"])
-        self.assertEqual(quiet, [])
+    def test_enabled_orders_and_hides(self):
+        cfg, _ = self.check(enabled=["home", "mentions", "replies"])
+        self.assertEqual([x.name for x in lanes.enabled(cfg)], ["home", "mentions", "replies"])
 
-    def test_apply_preset(self):
-        d = {"preset": "own", "enabled": ["home"]}
-        self.assertEqual(lanes.apply_preset(d), [])
-        d = {"preset": "mastodon"}
-        self.assertIn("enabled", lanes.apply_preset(d))
-        d["enabled"].append("x")
-        self.assertNotIn("x", lanes.PRESETS["mastodon"]["enabled"])  # a copy
-
-    def test_bots_in_home(self):
+    def test_bots_in_home_by_the_set(self):
         bot = {"id": "b", "account": {"id": "9", "acct": "news", "bot": True}, "content": ""}
-        ctx = lanes.LaneContext(me_id="1", extra_bots=())
-        self.assertFalse(lanes.keeps(lanes.LANES["home"], bot, ctx))
-        ctx = lanes.LaneContext(me_id="1", extra_bots=(), bots_in_home=True)
-        self.assertTrue(lanes.keeps(lanes.LANES["home"], bot, ctx))
+        for preset, kept in (("fedtail", False), ("mastodon", True)):
+            cfg, _ = self.check(preset=preset)
+            home = next(x for x in lanes.enabled(cfg) if x.name == "home")
+            ctx = lanes.LaneContext(me_id="1", extra_bots=())
+            self.assertEqual(lanes.keeps(home, bot, ctx), kept, preset)

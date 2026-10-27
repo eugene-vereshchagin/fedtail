@@ -9,6 +9,8 @@ import re
 import tomllib
 from importlib import resources
 
+from . import presets
+
 DEFAULTS = {
     "account": {"markdown": "auto"},
     "ui": {
@@ -120,14 +122,10 @@ DEFAULTS = {
         "sync_markers": True,
     },
     "lanes": {
-        "preset": "own",
-        "enabled": ["federated", "home", "local", "bots", "my_posts", "direct", "to_me", "subs",
-                    "important", "bookmarks", "activity"],
+        "preset": "fedtail",
+        "enabled": [],
         "extra_bots": [],
-        "bots_in_home": False,
         "posts_only": [],
-        "mentions_all": False,
-        "direct_apart": True,
         "languages": [],
         "languages_in": ["federated", "local", "tags"],
         "detect_language": "untagged",
@@ -207,7 +205,6 @@ DEFAULTS = {
         "interval_minutes": 5,
         "active_days": 14,
         "max_threads": 30,
-        "replies_to_me": False,
         "leave_mutes": True,
     },
     "poll": {
@@ -335,11 +332,10 @@ CHOICES = {
     ("tui", "sound"): {"bell", "scheme", "off"},
     ("sound", "enabled"): {"auto", "on", "off"},
     ("lanes", "detect_language"): {"off", "untagged", "always"},
-    ("lanes", "preset"): {"own", "fedtail", "mastodon", "tusky", "phanpy"},
+    ("lanes", "preset"): set(presets.names()),
 }
-LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
-              "local", "federated", "requests", "direct", "my_likes", "unsorted", "to_me",
-              "important"}
+# the lanes some set has (fedtail/data/presets.toml), and Unsorted
+LANE_NAMES = set(presets.known_names()) | {"unsorted"}
 # options that name lanes: their old names are read as the new ones
 LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes"),
               ("notify", "except"), ("sound", "lanes"), ("sound", "except"),
@@ -494,6 +490,8 @@ def validate(user):
             if type(val) is not type(default):
                 errors.append(f"{section}.{key} must be {_type_name(default)}, got {val!r}")
                 continue
+            if (section, key) == ("lanes", "preset"):  # "own": before every lane was a rule
+                val = presets.OLD_NAMES.get(val, val)
             choices = CHOICES.get((section, key))
             if choices and val not in choices:
                 errors.append(f"{section}.{key} = {val!r}; allowed: {', '.join(sorted(choices))}")
@@ -505,17 +503,7 @@ def validate(user):
             cfg[section][key] = val
 
     # lanes by their names before 0.15 ("people", "comments"…) are the same lanes now
-    from .lanes import PRESETS, apply_preset, canonical
-    if cfg["lanes"]["preset"] in PRESETS:
-        mine = user.get("lanes") if isinstance(user.get("lanes"), dict) else {}
-        took = apply_preset(cfg["lanes"])
-        # only what the person changed themselves: the example config spells every key out
-        over = sorted(k for k in took if k in mine and mine[k] != cfg["lanes"][k]
-                      and mine[k] != DEFAULTS["lanes"][k])
-        if over:
-            warnings.append(f"lanes.preset = {cfg['lanes']['preset']!r} sets "
-                            f"{', '.join('lanes.' + k for k in over)}: your values there "
-                            f"wait until preset = \"own\"")
+    from .lanes import canonical
     for section, key in LANE_LISTS:
         val = cfg[section][key]
         if isinstance(val, list) and all(isinstance(x, str) for x in val):
@@ -527,7 +515,7 @@ def validate(user):
     picking = wanted + cfg["notify"]["except"] + cfg["ui"]["icon_count_except"] + \
         cfg["sound"]["except"]
     # free lanes ([[lanes.custom]]) are named "custom:<name>" in these lists
-    free = {"custom:" + str(c.get("name")) for c in cfg["lanes"].get("custom") or []
+    free = {canonical(str(c.get("name"))) for c in cfg["lanes"].get("custom") or []
             if isinstance(c, dict) and c.get("name")}
     bad = [x for x in cfg["lanes"]["enabled"] + cfg["lanes"]["posts_only"] +
            picking + cfg["lists"]["hide_in"]
@@ -562,8 +550,6 @@ def validate(user):
     else:
         from .custom import load as load_custom
         warnings += load_custom(cfg)[1]
-    if not cfg["lanes"]["enabled"]:
-        errors.append("lanes.enabled is empty — nothing to show")
     if not all(isinstance(x, str) for x in cfg["lanes"]["extra_bots"]):
         errors.append("lanes.extra_bots must be a list of strings")
     langs = [cfg["post"]["language"]] + cfg["post"]["languages"]

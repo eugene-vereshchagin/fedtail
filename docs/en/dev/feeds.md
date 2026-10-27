@@ -1,6 +1,6 @@
 # Free lanes: lanes you assemble yourself
 
-**Status: the first version works** (27 Oct 2026): the atoms (`core/atoms.py`), the rules, free lanes from `[[lanes.custom]]` fed through their own streams (`core/custom.py`). Not yet: events in a lane, switches (chips), Unsorted, "Older" for a free lane, presets written in rules. The idea is the author's; this page is what it
+**Status: every lane is a rule** (27 Oct 2026: the sets are rules in `fedtail/data/presets.toml`, `core/presets.py`, `core/custom.py`). Before that — the first version: the atoms (`core/atoms.py`), the rules, free lanes from `[[lanes.custom]]` fed through their own streams (`core/custom.py`). Not yet: events in a lane, switches (chips), Unsorted, "Older" for a free lane, presets written in rules. The idea is the author's; this page is what it
 becomes in fedtail, what it costs and where it bites. The current lanes are described in
 [architecture.md](architecture.md) §8.
 

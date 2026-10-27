@@ -326,3 +326,64 @@ def rebuild(user_text, example_text, report=None):
     if report is not None:
         report["kept"], report["extra"] = kept, extra
     return "\n".join(out) + "\n"
+
+
+_LANE_KEYS = ("name", "title", "group", "kind", "source", "sort", "read", "mode", "window",
+              "filter_context", "any", "none")
+
+
+def _lane_table(table):
+    """One lane as a [[lanes.custom]] block: its keys in a readable order, a list of
+    conditions one per line."""
+    keys = [k for k in _LANE_KEYS if k in table] + [k for k in table if k not in _LANE_KEYS]
+    out = ["[[lanes.custom]]"]
+    for k in keys:
+        v = table[k]
+        if k in ("any", "none") and isinstance(v, list) and len(v) > 1:
+            out += [f"{k} = ["] + [f"  {_toml(x)}," for x in v] + ["]"]
+        else:
+            out.append(f"{k} = {_toml(v)}")
+    return out
+
+
+def lanes_to_config(user_text, report=None):
+    """The chosen set's lanes (lanes.preset) written into the config as [[lanes.custom]] —
+    every lane there to read and change; the ones the config has its own of are left as
+    they are. `custom = []`, if set, is commented out (TOML won't have both)."""
+    import tomllib
+
+    from . import config, presets
+    from .lanes import canonical
+    user = tomllib.loads(user_text)
+    cfg, _w = config.validate(user)
+    preset = cfg["lanes"]["preset"]
+    mine = {canonical(str(x.get("name"))) for x in cfg["lanes"]["custom"]
+            if isinstance(x, dict) and x.get("name")}
+    todo = [x for x in presets.lanes_of(preset) if x.get("name") not in mine]
+    if report is not None:
+        report["written"] = [x["name"] for x in todo]
+        report["preset"] = preset
+    if not todo:
+        return user_text
+    lines = user_text.rstrip("\n").split("\n")
+    section = None
+    for i, line in enumerate(lines):
+        m = _HEADER.match(line)
+        if m and not line.lstrip().startswith("#"):
+            section = m.group(1)
+        elif section == "lanes" and re.match(r"^custom\s*=\s*\[\s*\]\s*$", line):
+            lines[i] = "#custom = []  # → [[lanes.custom]] below"
+    ru = config.language_of(user_text) == "ru"
+    head = (f"# ── Ленты набора «{preset}», выписанные сюда (fedtail --lanes-to-config) ──"
+            if ru else
+            f"# ── The lanes of the set \"{preset}\", written out here "
+            f"(fedtail --lanes-to-config) ──")
+    note = ("# Каждая встаёт на место ленты набора с тем же именем: меняй что нужно, лишнее —"
+            "\n# удали (тогда снова работает лента набора), порядок — lanes.enabled."
+            if ru else
+            "# Each takes the place of the set's lane of its name: change what you need, delete"
+            "\n# what you don't (the set's lane is back then), the order — lanes.enabled.")
+    out = lines + ["", "", head, note]
+    for x in todo:
+        out += [""] + _lane_table(x)
+    return "\n".join(out) + "\n"

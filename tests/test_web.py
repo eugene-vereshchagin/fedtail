@@ -149,7 +149,7 @@ class WebTest(TmpDir):
         # the lane's choices: posts only hides replies
         lane = json.loads(self.req("/api/lane?name=home")[2])
         self.assertEqual([f[0] for f in lane["filters"]],
-                         ["all", "posts", "chip:0", "chip:1", "chip:2", "unread"])
+                         ["all", "posts", "chip:1", "chip:2", "chip:3", "unread"])
         self.req("/api/lane_set", {"name": "home", "filter": "posts"})
         lane = json.loads(self.req("/api/lane?name=home")[2])
         self.assertEqual(lane["filter"], "posts")

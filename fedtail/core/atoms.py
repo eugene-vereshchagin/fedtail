@@ -42,7 +42,9 @@ HAS = {"media", "image", "video", "audio", "cw", "sensitive", "link", "poll", "a
        "followed_tag"}
 HAS_PREFIXES = ("tag:", "link:", "word:")
 STATE = {"unread", "read", "subscribed", "bookmarked", "liked", "boosted", "replied",
-         "in_list", "muted_thread", "filtered_warn", "new_replies"}
+         "in_list", "muted_thread", "filtered_warn", "new_replies",
+         # taken back — the server says so (a missing flag is no answer)
+         "unbookmarked", "unliked"}
 VIA = {"followed", "tag", "boost", "mine", "list"}
 # what a boost (or a like, a boost, a quote event) is about: my post or comment, someone
 # else's post or comment, and whether its original was already known / read before
@@ -76,9 +78,13 @@ _SET_KEYS = {"source": SOURCES, "author": AUTHOR, "visibility": VISIBILITY, "kin
 _COUNT_KEYS = ("likes", "boosts", "replies")
 # keys of a condition that only say how the lane shows it (feeds.md §4: switches)
 _SHOW_KEYS = {"switch", "shown", "priority"}
+# a condition of `none` that counts only while that lane is shown: "apart = "direct"" — the
+# private ones are read in Direct, when it's on; without it they stay here
+_LANE_KEYS = {"apart"}
 _TEXT_KEYS = {"text", "text_in", "text_case", "text_regex"}
 _AGE_KEYS = {"age", "age_of"}
-CONDITION_KEYS = set(_SET_KEYS) | set(_COUNT_KEYS) | _SHOW_KEYS | _TEXT_KEYS | _AGE_KEYS
+CONDITION_KEYS = set(_SET_KEYS) | set(_COUNT_KEYS) | _SHOW_KEYS | _TEXT_KEYS | _AGE_KEYS | \
+    _LANE_KEYS
 
 _ANCHOR_RE = re.compile(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>')
 _AGE_RE = re.compile(r"^\s*([<>]=?)\s*(\d+(?:\.\d+)?)\s*([mhdw])\s*$")
@@ -224,9 +230,14 @@ def _target(st, world):
     return out
 
 
-def post_facts(status, world=None, source=None):
+def post_facts(status, world=None, source=None, needs=None):
     """The atoms of a stored status (a boost: of the boost and of what it boosts).
-    source: the stream it came from ("home", "list:7"…), or several of them."""
+    source: the stream it came from ("home", "list:7"…), or several of them. needs: the axes
+    a rule asks about (Rule.needs) — the dear ones (a parent looked up, read marks, links,
+    the language, the text) only then; None — all of them."""
+    def want(axis):
+        return needs is None or axis in needs
+
     world = world or World()
     now = world.now or datetime.now(UTC)
     f = Facts()
@@ -272,7 +283,9 @@ def post_facts(status, world=None, source=None):
 
     # me
     mine = bool(me) and author_id == me
-    if me and not mine:
+    if not want("me"):
+        pass
+    elif me and not mine:
         if reply_to and st.get("in_reply_to_account_id") == me:
             f.me.add("reply")
             parent = world.parents.get(reply_to)
@@ -288,11 +301,11 @@ def post_facts(status, world=None, source=None):
             f.me.add("direct")
     elif mine and st.get("visibility") == "direct":
         f.me.add("direct")  # my own private messages: the dialogue is whole
-    if st.get("id") in world.my_threads and not mine:
+    if want("me") and st.get("id") in world.my_threads and not mine:
         f.me.add("in_my_thread")
 
     # parent
-    if reply_to:
+    if reply_to and want("parent"):
         parent = world.parents.get(reply_to)
         pid = st.get("in_reply_to_account_id")
         if me and pid == me:
@@ -305,6 +318,44 @@ def post_facts(status, world=None, source=None):
             f.parent.add("unknown")
 
     # has
+    if want("has") or want("via"):
+        _has_atoms(f, st, world)
+
+    if want("lang"):
+        f.lang = {langs.post_language(st, world.detect, world.min_words) or "unknown"}
+
+    # state
+    if want("state"):
+        _state_atoms(f, st, wrapper, world, author_id)
+
+    if boost and want("target"):
+        f.target = _target(st, world)
+
+    # via: why it is in my home
+    if not want("via"):
+        pass
+    elif mine:
+        f.via.add("mine")
+    elif boost and (wrapper.get("account") or {}).get("id") in world.following:
+        f.via.add("boost")
+    elif author_id in world.following:
+        f.via.add("followed")
+    elif "followed_tag" in f.has:
+        f.via.add("tag")
+    if want("via") and author_id in world.in_lists:
+        f.via.add("list")
+
+    f.created = _when(wrapper.get("created_at"))
+    f.original_created = _when(st.get("created_at"))
+    f.counts = {"likes": st.get("favourites_count") or 0,
+                "boosts": st.get("reblogs_count") or 0,
+                "replies": st.get("replies_count") or 0}
+    if want("text"):
+        f.texts = _texts(st)
+    return f
+
+
+def _has_atoms(f, st, world):
     media = st.get("media_attachments") or []
     if media:
         f.has.add("media")
@@ -333,14 +384,16 @@ def post_facts(status, world=None, source=None):
         f.has.add("link")
         f.has |= {"link:" + h for h in links}
 
-    f.lang = {langs.post_language(st, world.detect, world.min_words) or "unknown"}
 
-    # state
+def _state_atoms(f, st, wrapper, world, author_id):
     sid = st.get("id")
     f.state.add("read" if sid in world.read else "unread")
     for flag, key in (("bookmarked", "bookmarked"), ("liked", "favourited"),
                       ("boosted", "reblogged")):
         if st.get(key):
+            f.state.add(flag)
+    for flag, key in (("unbookmarked", "bookmarked"), ("unliked", "favourited")):
+        if key in st and not st[key]:
             f.state.add(flag)
     if sid in world.replied:
         f.state.add("replied")
@@ -354,30 +407,6 @@ def post_facts(status, world=None, source=None):
         f.state.add("filtered_warn")
     if sid in world.new_replies:
         f.state.add("new_replies")
-
-    if boost:
-        f.target = _target(st, world)
-
-    # via: why it is in my home
-    if mine:
-        f.via.add("mine")
-    elif boost and (wrapper.get("account") or {}).get("id") in world.following:
-        f.via.add("boost")
-    elif author_id in world.following:
-        f.via.add("followed")
-    elif "followed_tag" in f.has:
-        f.via.add("tag")
-    if author_id in world.in_lists:
-        f.via.add("list")
-
-    f.created = _when(wrapper.get("created_at"))
-    f.original_created = _when(st.get("created_at"))
-    f.counts = {"likes": st.get("favourites_count") or 0,
-                "boosts": st.get("reblogs_count") or 0,
-                "replies": st.get("replies_count") or 0}
-    f.texts = _texts(st)
-    return f
-
 
 def event_facts(notification, world=None):
     """The atoms of an event (a notification, or one fedtail derived: {"type": "unfollow",
@@ -449,6 +478,7 @@ class Condition:
     switch: str = ""                            # a chip over the lane (feeds.md §4)
     shown: bool = True
     priority: int = 0
+    apart: str = ""                             # counts only while this lane is shown
     broken: bool = False                        # had an unknown key or value: never matches
     raw: dict = field(default_factory=dict)
 
@@ -518,6 +548,11 @@ class Condition:
                     c.switch = value
                 else:
                     warn(f"switch: a word for the chip, not {value!r}")
+            elif key == "apart":
+                if isinstance(value, str) and value:
+                    c.apart = value
+                else:
+                    warn(f"apart: a lane's name, not {value!r}")
             elif key == "priority":
                 if isinstance(value, int) and not isinstance(value, bool):
                     c.priority = value
@@ -530,6 +565,14 @@ class Condition:
             except re.error as e:
                 warn(f"text: not a regular expression ({e})")
         return c
+
+    @property
+    def needs(self):
+        """The axes this condition asks about (post_facts computes only these)."""
+        out = set(self.sets)
+        if self.text:
+            out.add("text")
+        return out
 
     def _text_ok(self, facts):
         hay = "\n".join(facts.texts.get(k, "") for k in self.text_in)
@@ -664,6 +707,11 @@ class Rule:
             if reason:
                 warnings.append(f"never filled: {reason}")
         return rule
+
+    @property
+    def needs(self):
+        return set().union(*(c.needs for c in self.any + self.none)) if self.any or self.none \
+            else set()
 
     def _narrowed(self, facts):
         return not self.source or bool(facts.source & self.source)

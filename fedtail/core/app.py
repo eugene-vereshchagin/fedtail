@@ -137,6 +137,7 @@ class Core(SocialMixin):
         self._lists_checked = None  # monotonic time of the last check; None: never
         self.customs = custom.load(cfg)[0]  # free lanes, [[lanes.custom]]
         self._following = None    # account ids I follow, for the free lanes' atoms
+        self._world_version = 0   # bumped when what the rules know around posts changes
         self._following_at = 0.0
         self._important_waiting = False  # "Important people" on, but nothing in it yet
         self.lanes = self._shown_lanes(lanes.enabled(cfg))
@@ -728,7 +729,7 @@ class Core(SocialMixin):
                 self.sync_conversations()  # read here = read on the server (social.py)
                 self._step("conversations")
             # followed threads: for their lane, and for Home's "threads with news"
-            if "subs" in self.lane_by_name or self.lane_filter("home") == "chip:2":
+            if "subs" in self.lane_by_name or self._needs_threads():
                 try:
                     sc = self.cfg["subs"]
                     new_by_source["subs"] = subs.check(
@@ -738,9 +739,9 @@ class Core(SocialMixin):
                     self.emit("error", f"subs: {e}")
                 self._step("subs")
             lazy = {lane.source for lane in self.lanes if lane.lazy}
-            # a free lane read through needs its feeds caught up, even local's
-            lazy -= {f for lane in self.lanes if lane.feeds and not lane.lazy
-                     for f in lane.feeds}
+            # a lane read through needs its sources caught up, even Local's
+            lazy -= {lane.source for lane in self.lanes if not lane.lazy} | \
+                {f for lane in self.lanes if lane.feeds and not lane.lazy for f in lane.feeds}
             open_names = [n for n in {self._active_lane, *self._active_lanes}
                           if n in self.lane_by_name]
             open_sources = {self.lane_by_name[n].source for n in open_names} | \
@@ -1040,6 +1041,8 @@ class Core(SocialMixin):
         except Exception as e:  # noqa: BLE001 — the old sets stay; next time
             log.info("free lanes: whom I follow: %s", e)
             return
+        if (ids, tags) != (self._following, getattr(self, "_followed_tag_names", None)):
+            self._world_version += 1  # the lanes' rules see another world: drawn anew
         self._following, self._followed_tag_names = ids, tags
         self.store.kv_set("custom_following", {"ids": sorted(ids), "tags": sorted(tags),
                                                "at": self._following_at})
@@ -1082,11 +1085,13 @@ class Core(SocialMixin):
         lane, or one whose rule changed, filled from what is stored. {lane: [new ids]}."""
         if not self.customs or not self.me:
             return {}
-        self._refresh_following()
+        self._refresh_following()  # rules ask whom I follow (Home's "Tags", author = …)
+        if not any(c.routed for c in self.customs):
+            return {}
         world = self._world()
         refilled = {}
         for c in self.customs:
-            if custom.stale(self.store, c):
+            if c.routed and custom.stale(self.store, c):
                 custom.backfill(self.store, c, world)
                 refilled[c.name] = []
         got = custom.route(self.store, self.customs, new_by_source, world)
@@ -1215,19 +1220,15 @@ class Core(SocialMixin):
     def _ctx(self):
         return lanes.LaneContext(self.me["id"] if self.me else "",
                                  tuple(self.cfg["lanes"]["extra_bots"]),
-                                 self.cfg["lanes"]["mentions_all"],
-                                 self.cfg["subs"]["replies_to_me"],
                                  self._hidden_authors(),
                                  frozenset(self.cfg["lists"]["hide_in"]),
-                                 self.cfg["lanes"].get("direct_apart", True)
-                                 and "direct" in self.lane_by_name,
                                  frozenset(self.cfg["lanes"]["languages"]),
                                  frozenset(self.cfg["lanes"]["languages_in"]),
                                  self.cfg["lanes"]["detect_language"],
                                  self.cfg["lanes"]["detect_min_words"],
-                                 self.cfg["lanes"]["bots_in_home"],
                                  frozenset(t for g in self.tag_groups if g.get("not_in_home")
-                                           for t in g["any"] + g["all"]))
+                                           for t in g["any"] + g["all"]),
+                                 self._world())
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def _poll_activity(self):
@@ -1525,6 +1526,7 @@ class Core(SocialMixin):
             name = taggroups.lane_name(g)
             if name not in self.sources:
                 self.sources[name] = sources.tag_group_source(self.api, g)
+        self.customs = custom.load(self.cfg)[0]  # the rules anew (the config may have changed)
         new_lanes = self._shown_lanes(lanes.enabled(self.cfg, got, self.tag_groups))
         self.lane_by_name = {lane.name: lane for lane in new_lanes}
         self.lanes = new_lanes
@@ -1656,8 +1658,9 @@ class Core(SocialMixin):
 
     def lane_title(self, name):
         """A list's title; None for the built-in lanes (their names are translated)."""
-        if custom.is_custom(name):
-            return next((c.title for c in self.customs if c.name == name), name[7:])
+        c = next((c for c in self.customs if c.name == name), None)
+        if c is not None:
+            return c.title  # its own, or None: the built-in word
         if taggroups.is_tags(name):
             g = next((g for g in self.tag_groups if taggroups.lane_name(g) == name), None)
             return (g or {}).get("name") or taggroups.title(taggroups.spec_of(name) or {})
@@ -2043,9 +2046,12 @@ class Core(SocialMixin):
         limit = self._limits.get(name, self.cfg["feed"]["render_limit"])
         only_posts = self.posts_only(name)
         repeats = self.cfg["feed"].get("repeat_boosts", False)
+        rule = next((c for c in self.customs if c.name == name), None)
+        state = rule is not None and "state" in rule.needs  # unread, new_replies…
         key = (self.store.items_version.get(lane.source, 0), self.store.status_version, limit,
                self.me["id"] if self.me else None, only_posts, self._lists_version,
-               self._silence_version, repeats)
+               self._silence_version, repeats, self._world_version,
+               self.store.read_version if state else 0, self.lane_filter(name))
         hit = self._lane_cache.get(name)
         if hit and hit[0] == key:
             return hit[1]
@@ -2073,15 +2079,20 @@ class Core(SocialMixin):
         return kept
 
     def _chipper(self, name):
-        """Whose rule parts a lane by its quick filters: a free lane's own, or a built-in
-        lane's (custom.BUILTIN_CHIPS); None — the lane has none."""
+        """The lane of rules whose quick filters part a lane; None — none such."""
         c = next((c for c in self.customs if c.name == name), None)
-        if c is None and getattr(self.lane_by_name.get(name), "chips", ()):
-            cache = self.__dict__.setdefault("_builtin_chips", {})
-            if name not in cache:
-                cache[name] = custom.builtin_chips(name)
-            c = cache[name]
-        return c
+        return c if c is not None and c.chips() else None
+
+    def _needs_threads(self):
+        """Is a lane's quick filter on that asks for threads with news (state = new_replies)?
+        Then the followed threads are checked even without their own lane."""
+        for c in self.customs:
+            which = self.lane_filter(c.name) if c.chips() else "all"
+            if which.startswith("chip:"):
+                i = int(which[5:])
+                if i < len(c.rule.any) and "new_replies" in c.rule.any[i].sets.get("state", ()):
+                    return True
+        return False
 
     def lane_filter(self, name):
         """A lane's quick filter now: "all", "main", "chip:<n>"."""

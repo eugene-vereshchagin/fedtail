@@ -1984,10 +1984,10 @@ class CoreTest(TmpDir):
         core.poll_once()
         ids = lambda lane: [st["id"] for _, st in core.lane_entries(lane)]
         self.assertEqual(ids("direct"), ["020"])
-        self.assertEqual(ids("replies"), ["021"])  # the private one lives apart
-        core.cfg["lanes"]["direct_apart"] = False
-        core._lists_version += 1
-        self.assertEqual(ids("replies"), ["020", "021"])
+        self.assertEqual(ids("replies"), ["021"])  # the private one lives apart…
+        core.cfg["lanes"]["enabled"] = [x for x in fakes.CLASSIC_LANES if x != "direct"]
+        core._apply_lists(core.lists, core.list_members)
+        self.assertEqual(ids("replies"), ["020", "021"])  # …while Direct is shown
 
     def test_direct_is_a_dialogue(self):
         """"Direct": their messages and mine, by the posts' own time; mine read at once
@@ -2011,12 +2011,13 @@ class CoreTest(TmpDir):
         self.assertEqual(core.unread_count("direct"), 0)  # answered: Bob's is read too
         core.poll_once()  # met again by the poll: no double
         self.assertEqual(ids("direct"), ["025", "030", sent["id"], answer["id"]])
-        for apart in (True, False):  # mine never go to Replies or Mentions
-            core.cfg["lanes"]["direct_apart"] = apart
-            core._lists_version += 1
+        for direct in (True, False):  # mine never go to Replies or Mentions
+            core.cfg["lanes"]["enabled"] = [x for x in fakes.CLASSIC_LANES
+                                            if direct or x != "direct"]
+            core._apply_lists(core.lists, core.list_members)
             self.assertNotIn(sent["id"], ids("replies") + ids("mentions"))
             self.assertNotIn("025", ids("replies") + ids("mentions"))
-        self.assertIn("030", ids("mentions"))  # Bob's, direct_apart off: as before
+        self.assertIn("030", ids("mentions"))  # Bob's, without Direct: as before
 
     def test_my_direct_from_a_thread_joins_too(self):
         core, w = self.make()
@@ -2242,11 +2243,14 @@ class CoreTest(TmpDir):
         self.assertEqual([st["id"] for _, st in core.lane_entries("bots")], ["011"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("replies")], ["013"])
         self.assertEqual([st["id"] for _, st in core.lane_entries("mentions")], ["014"])
-        core.cfg["lanes"]["mentions_all"] = True  # replies to me show in mentions too
-        core._lane_cache.clear()
+        # a lane of one's own of the same name takes the set's place: replies there too
+        core.cfg["lanes"]["custom"] = [{"name": "mentions", "source": "mentions",
+                                        "any": [{}], "none": [{"author": "me"}]}]
+        core._apply_lists(core.lists, core.list_members)
         self.assertEqual(sorted(st["id"] for _, st in core.lane_entries("mentions")),
                          ["013", "014"])
-        core.cfg["lanes"]["mentions_all"] = False
+        core.cfg["lanes"]["custom"] = []
+        core._apply_lists(core.lists, core.list_members)
         self.assertIn("012", core.store.read_set(["012"]))  # my own post is read
         notes = [e for e in self.events if e[0] == "notify"]
         self.assertEqual(sorted(s["id"] for _, s in notes[0][1]), ["013", "014"])

@@ -14,7 +14,16 @@ from fedtail.core.atoms import Rule, World
 from . import fakes
 from .fakes import BOB, ME, NEWS, FakeApi, status
 
-LOCAL = fakes.acct("L", "lena")  # my server's: no @host
+LOCAL = fakes.acct("L", "lena")
+
+
+def _own(loaded):
+    """custom.load gives every lane of rules (the set's too): the config's own one and the
+    warnings."""
+    from fedtail.core import presets
+    rules, warnings = loaded
+    theirs = {x["name"] for x in presets.lanes_of("fedtail") + presets.extra()}
+    return next(c for c in rules if c.name not in theirs), warnings  # my server's: no @host
 
 FEED = {"name": "feed", "title": "Лента", "any": [
     {"author": "local", "kind": "post"}, {"me": "reply"}, {"author": "me"}]}
@@ -24,16 +33,17 @@ class LoadTest(unittest.TestCase):
     def test_load_and_sources(self):
         cfg, warnings = config.validate({"lanes": {"custom": [FEED]}})
         self.assertEqual(warnings, [])
-        (c,), _ = custom.load(cfg)
-        self.assertEqual((c.name, c.title), ("custom:feed", "Лента"))
+        c = next(c for c in custom.load(cfg)[0] if c.name == "feed")
+        self.assertEqual((c.name, c.title, c.stream, c.routed), ("feed", "Лента", "custom:feed",
+                                                                 True))
         self.assertEqual(c.feeds, {"local", "mentions", "mine"})
         lane = c.lane()
         self.assertEqual((lane.source, lane.feeds, lane.lazy), ("custom:feed",
                          ("local", "mentions", "mine"), False))
         names = [x.name for x in lanes.enabled(cfg)]
-        self.assertIn("custom:feed", names)
+        self.assertIn("feed", names)
         personal = dict(lanes.grouped(lanes.enabled(cfg)))["personal"]
-        self.assertEqual(personal[-2:], ["custom:feed", "unsorted"])  # at the end of Personal
+        self.assertEqual(personal[-2:], ["feed", "unsorted"])  # at the end of Personal
         self.assertNotIn("custom", dict(lanes.grouped(lanes.enabled(cfg))))
         self.assertIn("local", lanes.sources_needed(lanes.enabled(cfg)))
         self.assertNotIn("custom:feed", lanes.sources_needed(lanes.enabled(cfg)))
@@ -54,7 +64,8 @@ class LoadTest(unittest.TestCase):
         self.assertIn("lanes.custom[1] a: the name is taken", text)
         self.assertIn("lanes.custom[2] ?: a lane needs a name", text)
         self.assertIn("sources not in this version: remote:x.example", text)
-        self.assertEqual([c.name for c in custom.load(cfg)[0]], ["custom:a", "custom:far"])
+        own = {"a", "far"} & {c.name for c in custom.load(cfg)[0]}
+        self.assertEqual(own, {"a", "far"})
         with self.assertRaises(config.ConfigError):
             config.validate({"lanes": {"custom": {"name": "x"}}})
 
@@ -104,7 +115,7 @@ class FreeBase(unittest.TestCase):
         self.addCleanup(core.shutdown)
         return core, FakeApi.world
 
-    def ids(self, core, name="custom:feed"):
+    def ids(self, core, name="feed"):
         return [st["id"] for _i, st in core.lane_entries(name)]
 
 
@@ -120,32 +131,33 @@ class CoreFreeLaneTest(FreeBase):
         core.connect().result()
         core.poll_once()
         self.assertEqual(self.ids(core), ["002", "004", "005"])
-        self.assertEqual(core.lane_title("custom:feed"), "Лента")
-        self.assertEqual(core.lane_title("custom:gone"), "gone")
-        self.assertTrue(any(n == "lanes_updated" and "custom:feed" in pl
+        self.assertEqual(core.lane_title("feed"), "Лента")
+        self.assertIsNone(core.lane_title("gone"))
+        self.assertIsNone(core.lane_title("home"))  # a set's lane: the interface's word
+        self.assertTrue(any(n == "lanes_updated" and "feed" in pl
                             for n, pl in self.events))
         # the next round: only what's new goes through the rules
         w.local.append(w.add(status("006", LOCAL, minute=6)))
         w.add(status("007", NEWS, minute=7), home=True)
         core.poll_once()
         self.assertEqual(self.ids(core), ["002", "004", "005", "006"])
-        self.assertTrue(any(n == "lanes_updated" and pl.get("custom:feed") for n, pl
+        self.assertTrue(any(n == "lanes_updated" and pl.get("feed") for n, pl
                             in self.events))
-        self.assertGreaterEqual(core.unread_count("custom:feed"), 3)
+        self.assertGreaterEqual(core.unread_count("feed"), 3)
 
     def test_two_lanes_their_own_feeds(self):
-        core, w = self.make([FEED, {"name": "bots", "source": "home",
+        core, w = self.make([FEED, {"name": "botz", "source": "home",
                                      "any": [{"author": "bot"}]}])
         w.add(status("005", ME, minute=5), home=True)
         w.add(status("007", NEWS, minute=7), home=True)
         core.connect().result()
         core.poll_once()
         self.assertEqual(self.ids(core), ["005"])
-        self.assertEqual(self.ids(core, "custom:bots"), ["007"])
+        self.assertEqual(self.ids(core, "botz"), ["007"])
         w.add(status("008", NEWS, minute=8), home=True)
         w.add(status("009", ME, minute=9), home=True)
         core.poll_once()
-        self.assertEqual(self.ids(core, "custom:bots"), ["007", "008"])
+        self.assertEqual(self.ids(core, "botz"), ["007", "008"])
         self.assertEqual(self.ids(core), ["005", "009"])
 
     def test_filled_anew_when_the_rule_changes(self):
@@ -155,12 +167,14 @@ class CoreFreeLaneTest(FreeBase):
         core.connect().result()
         core.poll_once()
         self.assertEqual(self.ids(core), ["002", "005"])
-        c = core.customs[0]
+        c = next(c for c in core.customs if c.name == "feed")
         self.assertFalse(custom.stale(core.store, c))
         # another rule under the same name: what's stored is sorted again, nothing fetched
-        core.customs = custom.load(config.validate({"lanes": {"custom": [
-            {"name": "feed", "any": [{"author": "me"}]}]}})[0])[0]
-        self.assertTrue(custom.stale(core.store, core.customs[0]))
+        core.cfg["lanes"]["custom"] = [{"name": "feed", "source": ["mine", "mentions"],
+                                        "any": [{"author": "me"}]}]
+        core._apply_lists(core.lists, core.list_members)
+        self.assertTrue(custom.stale(core.store, next(c for c in core.customs
+                                                      if c.name == "feed")))
         core.poll_once()
         self.assertEqual(self.ids(core), ["005"])
 
@@ -172,7 +186,7 @@ class CoreFreeLaneTest(FreeBase):
         w.add(status("002", NEWS, minute=2), home=True)
         core.connect().result()
         core.poll_once()
-        self.assertEqual(self.ids(core, "custom:f"), ["001"])
+        self.assertEqual(self.ids(core, "f"), ["001"])
         self.assertEqual(core._followed_tag_names, {"грузия"})
         kept = core.store.kv_get("custom_following")
         self.assertEqual((kept["ids"], kept["tags"]), (["B"], ["грузия"]))
@@ -226,21 +240,21 @@ class CoreFreeLaneTest(FreeBase):
     def test_browse_lane_fetches_its_feeds_only_while_open(self):
         core, w = self.make([{"name": "b", "read": "browse", "source": "federated",
                               "any": [{"kind": "post"}]}])
-        self.assertTrue(core.lane_by_name["custom:b"].lazy)
+        self.assertTrue(core.lane_by_name["b"].lazy)
         w.local.append(w.add(status("002", LOCAL, minute=2)))
         core.connect().result()
         core.poll_once()
-        self.assertEqual(self.ids(core, "custom:b"), [])  # closed: federated not fetched
-        core.set_active_lane("custom:b")
+        self.assertEqual(self.ids(core, "b"), [])  # closed: federated not fetched
+        core.set_active_lane("b")
         core.poll_once()
-        self.assertEqual(self.ids(core, "custom:b"), ["002"])
+        self.assertEqual(self.ids(core, "b"), ["002"])
 
     def test_read_through_lane_catches_local_up(self):
         core, w = self.make([{"name": "l", "source": "local", "any": [{"kind": "post"}]}])
         w.local.append(w.add(status("002", LOCAL, minute=2)))
         core.connect().result()
         core.poll_once()  # Local is a browse lane, closed; the free lane still needs it
-        self.assertEqual(self.ids(core, "custom:l"), ["002"])
+        self.assertEqual(self.ids(core, "l"), ["002"])
 
 
 if __name__ == "__main__":
@@ -261,10 +275,10 @@ class WebShowsFreeLanesTest(FreeBase):
         core.connect().result()
         core.poll_once()
         rows = web.Web(core, "KEY").lanes()
-        first = next(x for x in rows if x["name"] == "custom:feed")
+        first = next(x for x in rows if x["name"] == "feed")
         self.assertEqual((first["title"], first["section"], first["tip"]),
                          ("Лента", "personal", ""))
-        got = web.Web(core, "KEY").lane("custom:feed")
+        got = web.Web(core, "KEY").lane("feed")
         self.assertIn("005", json.dumps(got, default=str))
 
 
@@ -308,7 +322,7 @@ theme = "point"
             d = tomllib.loads(out)
             self.assertEqual(d["lanes"]["custom"], [{"name": "feed", "any": [{"author": "me"}]}])
             self.assertEqual(d["lanes"]["tag_groups"], [{"name": "Georgia", "any": ["грузия"]}])
-            self.assertEqual(d["lanes"]["preset"], "own")
+            self.assertEqual(d["lanes"]["preset"], "fedtail")
             self.assertEqual(d["ui"]["theme"], "point")
             config.validate(d)
 
@@ -359,16 +373,16 @@ class ChipsTest(FreeBase):
         return core, w
 
     def test_chips_of_the_rule(self):
-        (c,), _w = custom.load(config.validate({"lanes": {"custom": [CHIPPED]}})[0])
+        c, _w = _own(custom.load(config.validate({"lanes": {"custom": [CHIPPED]}})[0]))
         self.assertEqual(c.chips(), (("main", ""), ("chip:1", "Комменты"), ("chip:2", "Моё")))
         self.assertEqual(c.default_filter(), "main")
-        (plain,), _w = custom.load(config.validate({"lanes": {"custom": [FEED]}})[0])
+        plain, _w = _own(custom.load(config.validate({"lanes": {"custom": [FEED]}})[0]))
         self.assertEqual((plain.chips(), plain.default_filter()), ((), "all"))
         self.assertEqual(plain.lane().chips, ())
 
     def test_main_all_and_one_chip(self):
         core, w = self.setup_lane()
-        name = "custom:feed"
+        name = "feed"
         self.assertEqual(core.lane_filter(name), "main")
         self.assertEqual(self.ids(core), ["001", "003"])       # the comment hidden
         core.set_lane_filter(name, "all")
@@ -383,7 +397,7 @@ class ChipsTest(FreeBase):
 
     def test_hidden_not_counted_nor_news(self):
         core, w = self.setup_lane()
-        name = "custom:feed"
+        name = "feed"
         self.assertEqual(core.unread_count(name), 1)  # 001 (003 is mine: read)
         self.events.clear()
         core.cfg["notify"]["lanes"] = ["all"]
@@ -397,7 +411,7 @@ class ChipsTest(FreeBase):
         self.assertEqual(self.ids(core), ["002", "004"])
 
     def test_shows_odd_keys(self):
-        (c,), _w = custom.load(config.validate({"lanes": {"custom": [CHIPPED]}})[0])
+        c, _w = _own(custom.load(config.validate({"lanes": {"custom": [CHIPPED]}})[0]))
         w = World(me_id="ME")
         st = status("1", BOB)
         self.assertTrue(c.shows(st, w, "all"))
@@ -411,7 +425,7 @@ class ChipsTest(FreeBase):
         from fedtail.frontends.common.lane import LaneModel
         i18n.setup("ru")
         core, w = self.setup_lane()
-        m = LaneModel(View(core), "custom:feed")
+        m = LaneModel(View(core), "feed")
         self.assertEqual(m.filters, ["main", "all", "chip:1", "chip:2", "unread"])
         self.assertEqual(m.filter_words("main")[0], "Основное")
         self.assertEqual(m.filter_words("chip:1")[0], "Комменты")
@@ -421,12 +435,12 @@ class ChipsTest(FreeBase):
         m.set_filter("chip:2")
         self.assertEqual(m.current_filter(), "chip:2")
         m.set_filter("unread")
-        self.assertEqual((m.current_filter(), core.lane_filter("custom:feed")),
+        self.assertEqual((m.current_filter(), core.lane_filter("feed")),
                          ("unread", "all"))
         m.set_filter("all")
         self.assertEqual(m.current_filter(), "all")
         plain = LaneModel(View(core), "home")
-        self.assertEqual(plain.filters, ["all", "posts", "chip:0", "chip:1", "chip:2", "unread"])
+        self.assertEqual(plain.filters, ["all", "posts", "chip:1", "chip:2", "chip:3", "unread"])
 
     def test_web_gives_the_words(self):
         from fedtail import i18n
@@ -434,7 +448,7 @@ class ChipsTest(FreeBase):
         i18n.setup("en")
         self.addCleanup(i18n.setup, "ru")
         core, w = self.setup_lane()
-        got = web.Web(core, "KEY").lane("custom:feed")
+        got = web.Web(core, "KEY").lane("feed")
         self.assertEqual([f[:2] for f in got["filters"]],
                          [["main", "Main"], ["all", i18n._("show_all")],
                           ["chip:1", "Комменты"], ["chip:2", "Моё"],
@@ -444,16 +458,18 @@ class ChipsTest(FreeBase):
 
 class OlderTest(FreeBase):
     def test_older_through_the_rule(self):
-        core, w = self.make([{"name": "bots", "source": "home", "any": [{"author": "bot"}]}])
+        # several sources: a stream of its own, filled through the rule
+        core, w = self.make([{"name": "botz", "source": ["home", "subs"],
+                              "any": [{"author": "bot"}]}])
         for i in range(1, 31):
             w.add(status(f"{i:03d}", NEWS if i % 2 else BOB, minute=i), home=True)
         core.connect().result()
         core.poll_once()  # the first page: the newest ten
-        first = self.ids(core, "custom:bots")
+        first = self.ids(core, "botz")
         self.assertEqual(len(first), 5)
-        got = core.load_older("custom:bots").result()
+        got = core.load_older("botz").result()
         self.assertEqual(got, 5)
-        ids = self.ids(core, "custom:bots")
+        ids = self.ids(core, "botz")
         self.assertEqual(len(ids), 10)
         self.assertTrue(set(first) < set(ids))
         self.assertTrue(all(core.store.read_set([i]) for i in set(ids) - set(first)))
@@ -467,21 +483,22 @@ class OlderTest(FreeBase):
         def broken(*a, **kw):
             raise RuntimeError("down")
         core.sources["home"].fetch = broken
-        self.assertEqual(core.load_older("custom:x").result(), 0)
+        self.assertEqual(core.load_older("x").result(), 0)
         self.assertTrue(any(n == "error" and "home" in pl for n, pl in self.events))
-        self.assertEqual(core._older_custom("custom:nope"), 0)
+        self.assertEqual(core._older_custom("nope"), 0)
 
 
 class UnsortedTest(FreeBase):
     """"Unsorted": with free lanes, what came from a read-through source and no lane took."""
 
     def test_what_no_lane_took(self):
-        core, w = self.make([{"name": "bots", "source": "home", "any": [{"author": "bot"}]}])
+        core, w = self.make([{"name": "botz", "source": ["home", "mentions"],
+                              "any": [{"author": "bot"}]}])
         core.cfg["lanes"]["enabled"] = ["my_posts"]  # no Home: its posts need a lane
         core._apply_lists([], {})
         self.assertIn("unsorted", core.lane_by_name)
         self.assertEqual(dict(lanes.grouped(core.lanes))["personal"][-2:],
-                         ["custom:bots", "unsorted"])
+                         ["botz", "unsorted"])
         w.add(status("001", NEWS, minute=1), home=True)   # the bots lane takes it
         w.add(status("002", BOB, minute=2), home=True)    # nobody does
         w.add(status("003", ME, minute=3), home=True)     # My posts takes it (source mine)
@@ -540,11 +557,11 @@ class NewDefaultsTest(FreeBase):
         return core, FakeApi.world
 
     def test_defaults(self):
-        d = config.DEFAULTS["lanes"]["enabled"]
+        self.assertEqual(config.DEFAULTS["lanes"]["enabled"], [])  # the set's own order
+        d = [x.name for x in lanes.enabled(config.validate({})[0])]
         self.assertIn("to_me", d)
         self.assertNotIn("replies", d)
         self.assertIn("important", d)
-        self.assertEqual(lanes.PRESETS["fedtail"]["enabled"], d)
 
     def test_to_me_and_its_chips(self):
         core, w = self.make_new()
@@ -556,13 +573,12 @@ class NewDefaultsTest(FreeBase):
         core.connect().result()
         core.poll_once()
         self.assertEqual(self.ids(core, "to_me"), ["002", "003"])
-        core.set_lane_filter("to_me", "chip:0")
-        self.assertEqual(self.ids(core, "to_me"), ["002"])
         core.set_lane_filter("to_me", "chip:1")
+        self.assertEqual(self.ids(core, "to_me"), ["002"])
+        core.set_lane_filter("to_me", "chip:2")
         self.assertEqual(self.ids(core, "to_me"), ["003"])
         self.assertEqual(core.lane_filter("home"), "all")
         self.assertIsNone(core._chipper("bots"))
-        self.assertIsNone(custom.builtin_chips("bots"))
 
     def test_home_chips(self):
         core, w = self.make_new()
@@ -580,9 +596,9 @@ class NewDefaultsTest(FreeBase):
         core._followed_tag_names = {"грузия"}
         core.poll_once()
         self.assertEqual(self.ids(core, "home"), ["001", "002", "003"])
-        core.set_lane_filter("home", "chip:0")
-        self.assertEqual(self.ids(core, "home"), ["002"])
         core.set_lane_filter("home", "chip:1")
+        self.assertEqual(self.ids(core, "home"), ["002"])
+        core.set_lane_filter("home", "chip:2")
         self.assertEqual(self.ids(core, "home"), ["003"])
 
     def test_threads_with_news(self):
@@ -594,7 +610,7 @@ class NewDefaultsTest(FreeBase):
         core.subscribe(root).result()
         w.add(status("012", fakes.acct("S", "sam@far.example"), reply_to="011",
                      reply_acc="ME", minute=3))
-        core.set_lane_filter("home", "chip:2")
+        core.set_lane_filter("home", "chip:3")
         core.store.kv_set("unused", 1)
         import fedtail.core.subs as subs
         subs.check(core.store, core.api, "ME", 0, 30, 50)
@@ -723,20 +739,20 @@ class TitleLanguagesTest(unittest.TestCase):
         self.addCleanup(i18n.setup, "ru")
         rule = {"name": "posts", "title": {"ru": "Посты", "en": "Posts"},
                 "any": [{"author": "me"}]}
-        (c,), w = custom.load(config.validate({"lanes": {"custom": [rule]}})[0])
+        c, w = _own(custom.load(config.validate({"lanes": {"custom": [rule]}})[0]))
         self.assertEqual(w, [])
         i18n.setup("en")
         self.assertEqual(c.title, "Posts")
         i18n.setup("ru")
         self.assertEqual(c.title, "Посты")
-        (only,), _w = custom.load(config.validate({"lanes": {"custom": [
-            dict(rule, title={"ka": "პოსტები"})]}})[0])
+        only, _w = _own(custom.load(config.validate({"lanes": {"custom": [
+            dict(rule, title={"ka": "პოსტები"})]}})[0]))
         self.assertEqual(only.title, "პოსტები")
-        (en,), _w = custom.load(config.validate({"lanes": {"custom": [
-            dict(rule, title={"en": "Posts", "ka": "პოსტები"})]}})[0])
+        en, _w = _own(custom.load(config.validate({"lanes": {"custom": [
+            dict(rule, title={"en": "Posts", "ka": "პოსტები"})]}})[0]))
         self.assertEqual(en.title, "Posts")
-        (empty,), _w = custom.load(config.validate({"lanes": {"custom": [
-            dict(rule, title={"en": ""})]}})[0])
+        empty, _w = _own(custom.load(config.validate({"lanes": {"custom": [
+            dict(rule, title={"en": ""})]}})[0]))
         self.assertEqual(empty.title, "posts")
 
 
@@ -746,27 +762,66 @@ class NamedInListsTest(FreeBase):
                 "ui": {"icon_count": ["custom:feed"], "start_lane": "custom:feed"},
                 "sound": {"lanes": ["custom:feed"]}}
         cfg, warnings = config.validate(user)
-        self.assertEqual(cfg["notify"]["lanes"], ["custom:feed"])
+        self.assertEqual(cfg["notify"]["lanes"], ["feed"])  # the old way of naming it
         with self.assertRaises(config.ConfigError):
             config.validate(dict(user, notify={"lanes": ["custom:nope"]}))
         # lanes.enabled may name it: it stands there
         cfg, _ = config.validate({"lanes": {"enabled": ["home", "custom:feed", "direct"],
                                             "custom": [FEED]}})
         self.assertEqual([x.name for x in lanes.enabled(cfg)][:3],
-                         ["home", "custom:feed", "direct"])
+                         ["home", "feed", "direct"])
         self.assertEqual(dict(lanes.grouped(lanes.enabled(cfg)))["personal"],
-                         ["custom:feed", "direct", "unsorted"])
+                         ["feed", "direct", "unsorted"])
         with self.assertRaises(config.ConfigError):
             config.validate({"lanes": {"enabled": ["home", "custom:nope"], "custom": [FEED]}})
         cfg, _ = config.validate({"lanes": {"custom": [dict(FEED, group="standard")]}})
-        self.assertIn("custom:feed", dict(lanes.grouped(lanes.enabled(cfg)))["standard"])
+        self.assertIn("feed", dict(lanes.grouped(lanes.enabled(cfg)))["standard"])
 
     def test_notified(self):
         core, w = self.make([FEED])
-        core.cfg["notify"]["lanes"] = ["custom:feed"]
+        core.cfg["notify"]["lanes"] = ["feed"]
         core.connect().result()
         core.poll_once()
         w.local.append(w.add(status("009", LOCAL, minute=9)))
         core.poll_once()
         got = [(lane, st["id"]) for n, pl in self.events if n == "notify" for lane, st in pl]
-        self.assertIn(("custom:feed", "009"), got)
+        self.assertIn(("feed", "009"), got)
+
+
+class LanesToConfigTest(unittest.TestCase):
+    """fedtail --lanes-to-config: the set's lanes into config.toml, the lanes the same."""
+
+    def test_written_out_and_the_same_lanes(self):
+        import tomllib
+
+        from fedtail.core import config_update as u
+        user = config.example_text("en")
+        before = [(x.name, x.source) for x in lanes.enabled(config.validate(
+            tomllib.loads(user))[0])]
+        report = {}
+        out = u.lanes_to_config(user, report)
+        self.assertIn("home", report["written"])
+        self.assertIn("#custom = []  # → [[lanes.custom]] below", out)
+        cfg, warnings = config.validate(tomllib.loads(out))
+        self.assertEqual(warnings, [])
+        self.assertEqual([(x.name, x.source) for x in lanes.enabled(cfg)], before)
+        home = next(x for x in cfg["lanes"]["custom"] if x["name"] == "home")
+        self.assertEqual(home["none"], [{"author": "bot"}])
+        self.assertEqual(u.lanes_to_config(out), out)  # all there: nothing more
+
+    def test_own_lanes_stay_and_russian(self):
+        import tomllib
+
+        from fedtail.core import config_update as u
+        user = config.example_text("ru").replace(
+            "\ncustom = []\n", "\n#custom = []\n") + \
+            '\n[[lanes.custom]]\nname = "home"\nsource = "home"\nany = [{}]\n'
+        report = {}
+        out = u.lanes_to_config(user, report)
+        self.assertNotIn("home", report["written"])
+        self.assertIn("Ленты набора «fedtail»", out)
+        cfg, _ = config.validate(tomllib.loads(out))
+        homes = [x for x in cfg["lanes"]["custom"] if x["name"] == "home"]
+        self.assertEqual(homes, [{"name": "home", "source": "home", "any": [{}]}])
+        cfg, _ = config.validate({"lanes": {"preset": "tusky"}})
+        self.assertIn("mentions", [x.name for x in lanes.enabled(cfg)])

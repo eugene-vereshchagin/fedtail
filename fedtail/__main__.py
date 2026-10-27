@@ -60,6 +60,10 @@ def parse_args(argv):
                    help="write your config anew, in the chapters of this version, with your "
                         "values in place (your own comments are dropped; a .bak copy is "
                         "kept) and exit")
+    p.add_argument("--lanes-to-config", action="store_true",
+                   help="write the chosen set's lanes (lanes.preset) into your config as "
+                        "[[lanes.custom]], to read and change there (a .bak copy is kept), "
+                        "and exit")
     p.add_argument("--profiles", action="store_true",
                    help="list the profiles (accounts) there are and exit")
     p.add_argument("--install-desktop", action="store_true",
@@ -183,6 +187,19 @@ def main(argv=None):
         if report["extra"]:
             print("  kept, though this version doesn't know them:\n    "
                   + "\n    ".join(report["extra"]))
+        return 0
+    if args.lanes_to_config:
+        report = {}
+        new_text = config_update.lanes_to_config(user_text, report)
+        if new_text == user_text:
+            print(f"fedtail: every lane of the set \"{report['preset']}\" is in "
+                  f"{where.config_file} already.")
+            return 0
+        where.config_file.with_name(where.config_file.name + ".bak").write_text(user_text,
+                                                                                 "utf-8")
+        _write_whole(where.config_file, new_text)
+        print(f"fedtail: the lanes of \"{report['preset']}\" written into {where.config_file} "
+              f"(the old one is config.toml.bak):\n    " + ", ".join(report["written"]))
         return 0
     if args.update_config:
         report = {}

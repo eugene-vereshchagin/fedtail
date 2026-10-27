@@ -59,24 +59,24 @@ android = "has"
 since = "0.1.0"
 name.ru = "Личные ленты"
 name.en = "Personal lanes"
-config = "`lanes.enabled`, `lanes.mentions_all`, `lanes.direct_apart`"
+config = "`lanes.preset`, `lanes.enabled`"
 api = "notifications, `visibility=direct`"
 others.ru = "у всех, но разложено иначе"
 others.en = "everyone, but laid out differently"
 clients = ["all"]
 details.ru = """
 - «Мои записи» (`my_posts`) — мои посты и комменты.
-- «Личные» (`direct`) — сообщения с видимостью «только упомянутым», диалогом: и входящие, и твои исходящие (отправленные отсюда, из другого клиента, встреченные в треде), по времени поста. Твои сразу прочитаны и счётчик не раздувают (с 0.20). При `lanes.direct_apart = true` (по умолчанию) входящие живут только здесь и не дублируются в «Ответах мне» и «Упоминаниях»; твои туда не попадают никогда.
+- «Личные» (`direct`) — сообщения с видимостью «только упомянутым», диалогом: и входящие, и твои исходящие (отправленные отсюда, из другого клиента, встреченные в треде), по времени поста. Твои сразу прочитаны и счётчик не раздувают (с 0.20). Пока лента включена, входящие живут только здесь и не дублируются в других (в правилах наборов это `apart = "direct"`); твои туда не попадают никогда.
 - «Ответы мне» (`replies`) — ответы на мои посты и комменты, даже если в них есть @я.
-- «Упоминания» (`mentions`) — где меня тегнули в чужом разговоре. `lanes.mentions_all = true` — показывать здесь вообще всё, где меня упомянули, ответы тоже (они окажутся в обеих лентах).
+- «Упоминания» (`mentions`) — где меня тегнули в чужом разговоре. Обе ленты — не в наборах по умолчанию (там «Ко мне»), их включает `lanes.enabled`.
 - «Подписки» (`subs`) — новое в тредах, на которые я подписан (см. Подписки на треды).
 - «Закладки» (`bookmarks`), «Мои лайки» (`my_likes`, по умолчанию выключена), «Активность» (`activity`), «Заявки» (`requests`) — ниже, каждая в своём разделе.
 Разделение «ответы мне» и «упоминания» — то, чего нет у других: обычно всё валится в одну ленту уведомлений."""
 details.en = """
 - “My posts” (`my_posts`) — my posts and comments.
-- “Direct” (`direct`) — messages visible to the mentioned only, as a dialogue: incoming and your own outgoing ones (sent from here, from another client, met in a thread), by the post's time. Yours are read at once and don't swell the count (since 0.20). With `lanes.direct_apart = true` (the default) the incoming ones live only here and don't double up in “Replies to me” and “Mentions”; yours never go there.
+- “Direct” (`direct`) — messages visible to the mentioned only, as a dialogue: incoming and your own outgoing ones (sent from here, from another client, met in a thread), by the post's time. Yours are read at once and don't swell the count (since 0.20). While the lane is on, the incoming ones live only here and don't double up in the others (in the sets' rules that's `apart = "direct"`); yours never go there.
 - “Replies to me” (`replies`) — replies to my posts and comments, even if they @ me.
-- “Mentions” (`mentions`) — where I was tagged in someone else's conversation. `lanes.mentions_all = true` — show everything that mentions me here, replies too (they'll be in both lanes).
+- “Mentions” (`mentions`) — where I was tagged in someone else's conversation. Both lanes are in no set by default (there it's “To me”); `lanes.enabled` turns them on.
 - “Subscriptions” (`subs`) — what's new in threads I'm subscribed to (see Thread subscriptions).
 - “Bookmarks” (`bookmarks`), “My likes” (`my_likes`, off by default), “Activity” (`activity`), “Follow requests” (`requests`) — below, each in its own section.
 
@@ -504,13 +504,13 @@ android = "has"
 since = "0.21.0"
 name.ru = "Наборы лент «как у других»"
 name.en = "Sets of lanes “as in other clients”"
-config = "`lanes.preset` (`\"own\"`, `\"fedtail\"`, `\"mastodon\"`, `\"tusky\"`, `\"phanpy\"`), `lanes.bots_in_home`"
+config = "`lanes.preset` (`\"fedtail\"`, `\"mastodon\"`, `\"tusky\"`, `\"phanpy\"`), `--lanes-to-config`"
 api.ru = "своё"
 api.en = "own"
 others = "—"
 clients = []
-details.ru = "Не собирать ленты с порога: выбрать в настройках набор как у Mastodon (веб), Tusky или Phanpy — или свой, в духе Point. Набор ставит `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; твои значения там ждут, пока не вернёшь `\"own\"`. Одни «Уведомления» других клиентов здесь пока — две ленты, Упоминания и Активность."
-details.en = "No assembling lanes on day one: pick a set in the settings as in Mastodon (web), Tusky or Phanpy — or fedtail's own, Point-style. A set sets `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; your values there wait until `\"own\"` again. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity."
+details.ru = "Каждая лента — правило, наборы — готовые наборы правил: fedtail (в духе Point), как у Mastodon (веб), Tusky, Phanpy; выбор — `lanes.preset`, на странице настроек. Правила наборов — в `fedtail/data/presets.toml`; своя `[[lanes.custom]]` с тем же именем заменяет ленту набора, `fedtail --lanes-to-config` выписывает набор в `config.toml` целиком. Одни «Уведомления» других клиентов здесь пока — две ленты, Упоминания и Активность."
+details.en = "Every lane is a rule, and the sets are sets of rules ready to use: fedtail's (Point-style), as in Mastodon (web), Tusky, Phanpy; chosen with `lanes.preset`, on the settings page too. The sets' rules are in `fedtail/data/presets.toml`; a `[[lanes.custom]]` of the same name takes a set's lane's place, `fedtail --lanes-to-config` writes the whole set into `config.toml`. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity."
 
 [[feature]]
 id = "to-me"
@@ -525,8 +525,8 @@ api.en = "`notifications?types=mention`"
 others.ru = "Уведомления у всех, но вперемешку с лайками"
 others.en = "Notifications everywhere, mixed with likes"
 clients = []
-details.ru = "Ответы мне и упоминания меня — одна лента с быстрыми фильтрами «Ответы» и «Упоминания»; по умолчанию вместо двух лент (те остаются — кто хочет порознь, включает их в `lanes.enabled`). Личное с `lanes.direct_apart` — в «Личных»."
-details.en = "Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones with `lanes.direct_apart` — in “Direct”."
+details.ru = "Ответы мне и упоминания меня — одна лента с быстрыми фильтрами «Ответы» и «Упоминания»; по умолчанию вместо двух лент (те остаются — кто хочет порознь, включает их в `lanes.enabled`). Личное — в «Личных», пока она включена."
+details.en = "Replies to me and mentions of me — one lane with the quick filters “Replies” and “Mentions”; by default instead of the two lanes (they stay — whoever wants them apart puts them in `lanes.enabled`). Private ones — in “Direct”, while it's on."
 
 [[feature]]
 id = "home-chips"

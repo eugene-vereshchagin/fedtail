@@ -185,7 +185,7 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(any("debug.keep is gone" in x for x in w))
         self.assertIn("activity.types", self.errors({"activity": {"types": ["nope"]}}))
         self.assertIn("subs.auto", self.errors({"subs": {"auto": ["nope"]}}))
-        self.assertIn("lanes.enabled is empty", self.errors({"lanes": {"enabled": []}}))
+        config.validate({"lanes": {"enabled": []}})  # empty: the set's own order (no error)
         self.assertIn("extra_bots", self.errors({"lanes": {"extra_bots": [1]}}))
         self.assertIn("ui.merge", self.errors({"ui": {"merge": ["../x"]}}))
         self.assertIn("ui.start_lane", self.errors({"ui": {"start_lane": "nowhere"}}))

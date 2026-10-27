@@ -2,6 +2,15 @@
 
 ## 0.21.0 — in progress
 
+- **Every lane is a rule.** Home, Bots, To me, Direct, Subscriptions, Bookmarks and the rest are
+  written in `fedtail/data/presets.toml` with the same keys as `[[lanes.custom]]`; the sets
+  (`lanes.preset`: "fedtail", "mastodon", "tusky", "phanpy") are sets of such rules, and a
+  `[[lanes.custom]]` of the same name takes a set's lane's place. `lanes.enabled` only orders and
+  picks (`[]`, the default — the set's own order); a lane of one source is a view of its stream,
+  of several — a stream of its own. `fedtail --lanes-to-config` writes the chosen set into
+  config.toml. Gone (the rules say it now): `lanes.mentions_all`, `lanes.direct_apart`,
+  `lanes.bots_in_home`, `subs.replies_to_me`; `lanes.preset = "own"` reads as "fedtail". A
+  private message stays out of the other lanes only while Direct is shown (`apart = "direct"`).
 - Free lanes can be named in `notify.lanes`, `sound.lanes`, `ui.icon_count` (and their except
   lists) and `ui.start_lane` as `"custom:<name>"`.
 - A free lane's title can be given per language: `title = { ru = "Посты", en = "Posts" }` —
