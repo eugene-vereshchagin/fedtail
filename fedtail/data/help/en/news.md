@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **0.21.0 (in progress):**
 
 - Only the languages you read
+- Sets of lanes “as in other clients”
 - Unfollowed — gone from Home
 
 **0.20.1:**

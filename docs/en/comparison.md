@@ -35,6 +35,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Another server's public timeline | ✓ |   |   |   |   |   |   | ✓ |   |   |   |   |   |   |
 | A link's timeline (Mastodon 4.3+) | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Only the languages you read | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
+| Sets of lanes “as in other clients” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 
 ## Threads
 
@@ -216,4 +217,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **35** features of the 152 compared.
+Only in fedtail — **36** features of the 153 compared.

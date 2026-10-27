@@ -230,3 +230,52 @@ class ConfigTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PresetTest(unittest.TestCase):
+    """lanes.preset: sets of lanes as in other clients, over today's lanes and switches."""
+
+    def check(self, **lanes_kw):
+        return config.validate({"lanes": lanes_kw})
+
+    def test_fedtail_is_the_default(self):
+        self.assertEqual(lanes.PRESETS["fedtail"]["enabled"], config.DEFAULTS["lanes"]["enabled"])
+        for key, value in lanes.PRESETS["fedtail"].items():
+            self.assertEqual(config.DEFAULTS["lanes"][key], value, key)
+
+    def test_presets_are_valid_lanes(self):
+        for name, preset in lanes.PRESETS.items():
+            with self.subTest(preset=name):
+                cfg, warnings = self.check(preset=name)
+                self.assertEqual(cfg["lanes"]["enabled"], preset["enabled"])
+                self.assertEqual(warnings, [])
+                self.assertIn(name, config.CHOICES[("lanes", "preset")])
+
+    def test_own_keeps_yours(self):
+        cfg, _ = self.check(preset="own", enabled=["home"])
+        self.assertEqual(cfg["lanes"]["enabled"], ["home"])
+
+    def test_preset_overrides_and_says_so(self):
+        cfg, warnings = self.check(preset="tusky", enabled=["home"], mentions_all=False)
+        self.assertEqual(cfg["lanes"]["enabled"], lanes.PRESETS["tusky"]["enabled"])
+        self.assertTrue(cfg["lanes"]["mentions_all"])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("lanes.enabled", warnings[0])
+        self.assertNotIn("mentions_all", warnings[0])  # the default: not a change of theirs
+        _, quiet = self.check(preset="tusky", enabled=config.DEFAULTS["lanes"]["enabled"])
+        self.assertEqual(quiet, [])
+
+    def test_apply_preset(self):
+        d = {"preset": "own", "enabled": ["home"]}
+        self.assertEqual(lanes.apply_preset(d), [])
+        d = {"preset": "mastodon"}
+        self.assertIn("enabled", lanes.apply_preset(d))
+        d["enabled"].append("x")
+        self.assertNotIn("x", lanes.PRESETS["mastodon"]["enabled"])  # a copy
+
+    def test_bots_in_home(self):
+        bot = {"id": "b", "account": {"id": "9", "acct": "news", "bot": True}, "content": ""}
+        ctx = lanes.LaneContext(me_id="1", extra_bots=())
+        self.assertFalse(lanes.keeps(lanes.LANES["home"], bot, ctx))
+        ctx = lanes.LaneContext(me_id="1", extra_bots=(), bots_in_home=True)
+        self.assertTrue(lanes.keeps(lanes.LANES["home"], bot, ctx))

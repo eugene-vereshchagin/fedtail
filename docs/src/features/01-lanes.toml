@@ -493,3 +493,18 @@ others.en = "Mastodon — by the author's tag, in the server's settings"
 clients = ["Mastodon web"]
 details.ru = "Посты на языках не из `lanes.languages` уходят из Федерации, Локальной и лент тегов (`lanes.languages_in`; Лента — нет: подписки читаешь целиком). Если автор язык не указал или указал неправильно, fedtail угадывает сам: письменность выдаёт китайский, японский, корейский, арабский, грузинский, кириллицу (украинский и белорусский — по своим буквам) на любой длине; латиницу — python3-langdetect, если он есть, на постах от `lanes.detect_min_words` слов. Пост, язык которого не понять, остаётся. Это не точная раскладка, а защита от потока на чужих языках."
 details.en = "Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more. A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read."
+
+[[feature]]
+id = "lane-presets"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Наборы лент «как у других»"
+name.en = "Sets of lanes “as in other clients”"
+config = "`lanes.preset` (`\"own\"`, `\"fedtail\"`, `\"mastodon\"`, `\"tusky\"`, `\"phanpy\"`), `lanes.bots_in_home`"
+api.ru = "своё"
+api.en = "own"
+others = "—"
+clients = []
+details.ru = "Не собирать ленты с порога: выбрать в настройках набор как у Mastodon (веб), Tusky или Phanpy — или свой, в духе Point. Набор ставит `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; твои значения там ждут, пока не вернёшь `\"own\"`. Одни «Уведомления» других клиентов здесь пока — две ленты, Упоминания и Активность."
+details.en = "No assembling lanes on day one: pick a set in the settings as in Mastodon (web), Tusky or Phanpy — or fedtail's own, Point-style. A set sets `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; your values there wait until `\"own\"` again. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity."

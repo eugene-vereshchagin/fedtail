@@ -120,9 +120,11 @@ DEFAULTS = {
         "sync_markers": True,
     },
     "lanes": {
+        "preset": "own",
         "enabled": ["federated", "home", "local", "bots", "my_posts", "direct", "mentions",
                     "replies", "subs", "bookmarks", "activity", "requests"],
         "extra_bots": [],
+        "bots_in_home": False,
         "posts_only": [],
         "mentions_all": False,
         "direct_apart": True,
@@ -329,6 +331,7 @@ CHOICES = {
     ("tui", "sound"): {"bell", "scheme", "off"},
     ("sound", "enabled"): {"auto", "on", "off"},
     ("lanes", "detect_language"): {"off", "untagged", "always"},
+    ("lanes", "preset"): {"own", "fedtail", "mastodon", "tusky", "phanpy"},
 }
 LANE_NAMES = {"home", "replies", "mentions", "subs", "bookmarks", "activity", "bots", "my_posts",
               "local", "federated", "requests", "direct", "my_likes"}
@@ -497,7 +500,17 @@ def validate(user):
             cfg[section][key] = val
 
     # lanes by their names before 0.15 ("people", "comments"…) are the same lanes now
-    from .lanes import canonical
+    from .lanes import PRESETS, apply_preset, canonical
+    if cfg["lanes"]["preset"] in PRESETS:
+        mine = user.get("lanes") if isinstance(user.get("lanes"), dict) else {}
+        took = apply_preset(cfg["lanes"])
+        # only what the person changed themselves: the example config spells every key out
+        over = sorted(k for k in took if k in mine and mine[k] != cfg["lanes"][k]
+                      and mine[k] != DEFAULTS["lanes"][k])
+        if over:
+            warnings.append(f"lanes.preset = {cfg['lanes']['preset']!r} sets "
+                            f"{', '.join('lanes.' + k for k in over)}: your values there "
+                            f"wait until preset = \"own\"")
     for section, key in LANE_LISTS:
         val = cfg[section][key]
         if isinstance(val, list) and all(isinstance(x, str) for x in val):

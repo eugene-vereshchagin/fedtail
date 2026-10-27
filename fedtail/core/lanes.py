@@ -33,6 +33,7 @@ class LaneContext:
     languages_in: frozenset = frozenset()  # …in these lanes ("lists", "tags": all of them)
     detect: str = "untagged"  # lanes.detect_language
     min_words: int = 12  # lanes.detect_min_words
+    bots_in_home: bool = False  # lanes.bots_in_home: Home keeps bots too
 
 
 def _all(st, ctx):
@@ -40,7 +41,7 @@ def _all(st, ctx):
 
 
 def _people(st, ctx):
-    return not is_bot(st["account"], ctx.extra_bots)
+    return ctx.bots_in_home or not is_bot(st["account"], ctx.extra_bots)
 
 
 def _bots(st, ctx):
@@ -217,6 +218,45 @@ def enabled(cfg, lists=(), tag_groups=()):
             seen.add(lane.name)
             out.append(lane)
     return out
+
+
+# lanes.preset: sets of lanes "as in other clients" — what each sets in [lanes]. Built of
+# today's lanes and switches; once free lanes come (docs/en/dev/feeds.md), a client's one
+# "Notifications" becomes one lane with quick filters instead of Mentions + Activity.
+_FEDTAIL = ["federated", "home", "local", "bots", "my_posts", "direct", "mentions", "replies",
+            "subs", "bookmarks", "activity", "requests"]
+PRESETS = {
+    # fedtail's own: Point-style — replies and mentions apart, followed threads, bots apart
+    "fedtail": {"enabled": _FEDTAIL, "posts_only": [], "mentions_all": False,
+                "direct_apart": True, "bots_in_home": False},
+    # Mastodon's web page: Home with everything, Notifications (mentions + the rest),
+    # Private mentions apart, Live feeds, Bookmarks, Favourites, Follow requests
+    "mastodon": {"enabled": ["home", "local", "federated", "mentions", "direct", "activity",
+                             "requests", "bookmarks", "my_likes"],
+                 "posts_only": [], "mentions_all": True, "direct_apart": True,
+                 "bots_in_home": True},
+    # Tusky's tabs: Home, Notifications (private ones among them), Local, Federated, Direct
+    "tusky": {"enabled": ["home", "local", "federated", "mentions", "activity", "direct"],
+              "posts_only": [], "mentions_all": True, "direct_apart": False,
+              "bots_in_home": True},
+    # Phanpy: Home, Mentions (private ones among them), Notifications with follow requests on
+    # top, Bookmarks, Likes; Local as a shortcut
+    "phanpy": {"enabled": ["home", "local", "mentions", "direct", "activity", "requests",
+                           "bookmarks", "my_likes"],
+               "posts_only": [], "mentions_all": True, "direct_apart": False,
+               "bots_in_home": True},
+}
+
+
+def apply_preset(lanes_cfg):
+    """[lanes] with its preset's values in place (lanes.preset = "own": as it is).
+    Returns the keys the preset took over."""
+    preset = PRESETS.get(lanes_cfg.get("preset"))
+    if not preset:
+        return []
+    for key, value in preset.items():
+        lanes_cfg[key] = list(value) if isinstance(value, list) else value
+    return list(preset)
 
 
 LOCAL_SOURCES = {"subs"}  # filled by the client itself, not a server stream

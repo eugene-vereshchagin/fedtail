@@ -1103,7 +1103,8 @@ class Core(SocialMixin):
                                  frozenset(self.cfg["lanes"]["languages"]),
                                  frozenset(self.cfg["lanes"]["languages_in"]),
                                  self.cfg["lanes"]["detect_language"],
-                                 self.cfg["lanes"]["detect_min_words"])
+                                 self.cfg["lanes"]["detect_min_words"],
+                                 self.cfg["lanes"]["bots_in_home"])
 
     # ---- activity: favourites, boosts, follows --------------------------------------
     def _poll_activity(self):

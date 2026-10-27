@@ -587,6 +587,18 @@ sync_markers = true
 # ══════════════════════════════════════════════════════════════════════════════════════
 
 [lanes]
+# A set of lanes "as in other clients" — it sets enabled, posts_only, mentions_all, direct_apart
+# and bots_in_home below (your values there wait until "own"):
+#   "own"      — the values below, as you set them (to begin with — the same as "fedtail");
+#   "fedtail"  — Point-style: replies and mentions apart, followed threads, bots in a lane;
+#   "mastodon" — as Mastodon's web page: Home with bots, Notifications (all mentions + Activity),
+#                Private mentions, Local, Federated, Bookmarks, Favourites, Follow requests;
+#   "tusky"    — as Tusky's tabs: Home, Notifications (private ones too), Local, Federated, Direct;
+#   "phanpy"   — as Phanpy: Home, Mentions (private ones too), Direct, Notifications, Follow
+#                requests, Bookmarks, Likes, Local.
+# A client's one "Notifications" is two lanes here for now — Mentions and Activity.
+preset = "own"
+
 # Which lanes to show (and in what order within a group on the left). The groups:
 # "Timelines" — from the widest down to your own:
 #   federated — "Federated": everything your server knows from all servers
@@ -613,6 +625,10 @@ enabled = ["federated", "home", "local", "bots", "my_posts", "direct", "mentions
 # Accounts to count as bots even if they have no "bot" tick.
 # Your server — just "nick", another one — "nick@server".
 extra_bots = []
+
+# Bots in Home too (they are in "Bots" as well, if it's on). The presets "as in other clients"
+# switch it on: there is no Bots lane there.
+bots_in_home = false
 
 # In which lanes "posts only" (without comments/replies) is on at start.
 # The tick over a lane switches it too — the choice is remembered.

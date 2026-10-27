@@ -102,6 +102,7 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Free lanes: a lane you assemble yourself | planned | — | `[[lanes.custom]]` | — | — |
 | How fresh the lanes are, in the status line | has | 0.20.1 | — | own | — |
 | Only the languages you read | has | 0.21.0 | `lanes.languages`, `lanes.languages_in`, `lanes.detect_language`, `lanes.detect_min_words` | the post's `language` field; our own guess | Mastodon — by the author's tag, in the server's settings |
+| Sets of lanes “as in other clients” | has | 0.21.0 | `lanes.preset` (`"own"`, `"fedtail"`, `"mastodon"`, `"tusky"`, `"phanpy"`), `lanes.bots_in_home` | own | — |
 
 <details><summary>In detail</summary>
 
@@ -171,6 +172,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **How fresh the lanes are, in the status line.** “⟳ updating the lanes…” while a round asks the server, “updated at 14:32” once it came through, “⚠ no answer from the server since 14:20” when rounds fail — so a lane with nothing new reads as nothing new, not as a dead network. In the windows — at the right of the status bar, in the terminal — in the header, on the web page — on the lane's bar, on the phone — under the lane's title and on the overview; with slow mode — beside its time.
 
 **Only the languages you read.** Posts in languages not in `lanes.languages` leave Federated, Local and the tag lanes (`lanes.languages_in`; not Home: whom you follow, you read whole). When the author didn't tag the language or tagged it wrong, fedtail guesses: the script gives away Chinese, Japanese, Korean, Arabic, Georgian, Cyrillic (Ukrainian and Belarusian by their own letters) at any length; Latin text — python3-langdetect, if installed, on posts of `lanes.detect_min_words` words and more. A post whose language can't be told stays. Not an exact sorting — a guard against floods in languages you don't read.
+
+**Sets of lanes “as in other clients”.** No assembling lanes on day one: pick a set in the settings as in Mastodon (web), Tusky or Phanpy — or fedtail's own, Point-style. A set sets `lanes.enabled`, `posts_only`, `mentions_all`, `direct_apart`, `bots_in_home`; your values there wait until `"own"` again. Other clients' one “Notifications” is two lanes here for now, Mentions and Activity.
 
 </details>
 

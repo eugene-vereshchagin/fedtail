@@ -2,6 +2,9 @@
 
 ## 0.21.0 — in progress
 
+- Sets of lanes as in other clients (`lanes.preset`, in the settings): "mastodon" (the web
+  page), "tusky", "phanpy", fedtail's own "fedtail" — or "own", your `[lanes]` as it is.
+  `lanes.bots_in_home`: bots in Home too (the presets switch it on: they have no Bots lane).
 - Only the languages you read (`lanes.languages`, e.g. `["ru", "en"]`): posts in others
   leave Federated, Local and the tag lanes (`lanes.languages_in`). A post with no language
   tag — or a wrong one, Cyrillic or Chinese characters tagged "en" — gets a guess
