@@ -12,7 +12,10 @@
   address (so liking and answering just work); a server at most every `extra_minutes`, lanes
   closed to strangers left alone for a while.
 - **Activity's quick filters**: all · likes & boosts · followers · requests · mine · other, over
-  the lane (the windows), its tabs (the web page), `s` (the terminal); the choice stays.
+  the lane (the windows), its tabs (the web page), `s` (the terminal); the choice holds till
+  the program closes. Only the filters that can show something: no "Requests" with follow
+  requests in a lane of their own (and no approvals waiting), no "Mine" without
+  `activity.my_follows`.
 - **Threads with news on the cards** (`feed.thread_news`): a post whose followed thread has new
   replies says "🔔 3 new in the thread" under it, the line opening the thread.
 - The lane editor starts with the set: fedtail (the default), Mastodon, Tusky, Phanpy —

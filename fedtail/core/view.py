@@ -74,7 +74,6 @@ _ACTIVITY_KINDS = {
     "requests": {"request"},
     "mine": {"my_follow"},
 }
-ACTIVITY_STATE = "activity_filter"  # kept with the window's state (Core.get_state)
 
 
 def activity_keeps(a, which):
@@ -533,13 +532,23 @@ class View:
         """[Activity] newest first: who liked, shared, followed, mentioned… — through the
         quick filter chosen (common/activity.py FILTERS; which: another one, "all")."""
         if which is None:
-            state = getattr(self._core, "get_state", None)
-            which = (state(ACTIVITY_STATE) if state else None) or "all"
+            which = self.activity_filter_now()
         out = [self._activity_of(n) for n in self._core.activity_entries(limit)]
         return [a for a in out if activity_keeps(a, which)]
 
+    def activity_filters_offered(self):
+        """The quick filters this Activity has: ACTIVITY_FILTERS without the ones that
+        could show nothing here (Core.activity_filters)."""
+        got = getattr(self._core, "activity_filters", None)
+        return tuple(got()) if got else ACTIVITY_FILTERS
+
+    def activity_filter_now(self):
+        """The quick filter chosen — for this run only (a restart: "all" again)."""
+        which = getattr(self._core, "activity_filter", "all")
+        return which if which in self.activity_filters_offered() else "all"
+
     def set_activity_filter(self, which):
-        self._core.set_state(ACTIVITY_STATE, which if which in ACTIVITY_FILTERS else "all")
+        self._core.activity_filter = which if which in ACTIVITY_FILTERS else "all"
         self._core.emit("activity_updated", None)
 
     def lane_events(self, lane, limit=200):

@@ -1272,7 +1272,7 @@ class FedtailApp(App, PostsMixin):
                     self.call_next(self.refresh_posts, True)
             self.push_screen(MenuScreen(_("actf_tip"), [
                 (("● " if k == now else "○ ") + act.filter_words(k)[0], k,
-                 act.filter_words(k)[1]) for k in act.FILTERS]), picked)
+                 act.filter_words(k)[1]) for k in act.offered(self.core)]), picked)
             return
         if not self.lane or self.lane == "requests":
             return

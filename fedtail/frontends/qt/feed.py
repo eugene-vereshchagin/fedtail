@@ -2233,7 +2233,7 @@ class ActivityWidget(QWidget):
         self.clear_btn.setVisible(self.core.supports("dismiss"))
         # the quick filters: all · likes & boosts · follows · requests · mine · other
         self.filter_seg = _Segmented(
-            [(k, *activity.filter_words(k)) for k in activity.FILTERS],
+            [(k, *activity.filter_words(k)) for k in activity.offered(self.core)],
             activity.chosen(self.core), self.core.set_activity_filter,
             win.theme.shape["posts_only"])
         self.header.add(self.filter_seg)

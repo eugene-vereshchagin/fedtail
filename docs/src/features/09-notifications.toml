@@ -157,14 +157,14 @@ android = "has"
 since = "0.21.0"
 name.ru = "Быстрые фильтры Активности"
 name.en = "Activity's quick filters"
-config.ru = "— (выбор запоминается)"
-config.en = "— (the choice is remembered)"
+config.ru = "— (выбор держится до закрытия программы)"
+config.en = "— (the choice holds till the program closes)"
 api.ru = "своё"
 api.en = "own"
 others = "—"
 clients = []
-details.ru = "Над Активностью: Всё · Лайки и бусты · Подписчики (кто подписался и отписался) · Заявки (ждут твоего ответа) · Моё (на кого подписался ты) · Прочее (опросы, правки, посты важных людей, сообщения сервера). В вебе — вкладки места, в терминале — `s`."
-details.en = "Over Activity: All · Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices). On the web page — the place's tabs, in the terminal — `s`."
+details.ru = "Над Активностью: Всё · Лайки и бусты · Подписчики (кто подписался и отписался) · Заявки (ждут твоего ответа) · Моё (на кого подписался ты) · Прочее (опросы, правки, посты важных людей, сообщения сервера). В вебе — вкладки места, в терминале — `s`. Только те фильтры, где может что-то быть: заявки в подписчики своей лентой (и ответов, ждущих одобрения, нет) — без «Заявок»; без `activity.my_follows` — без «Моего»."
+details.en = "Over Activity: All · Likes & boosts · Followers (who followed and who stopped) · Requests (waiting for your answer) · Mine (whom you followed) · Other (polls, edits, important people's posts, the server's notices). On the web page — the place's tabs, in the terminal — `s`. Only the filters that can show something: follow requests in a lane of their own (and no approvals waiting) — no “Requests”; without `activity.my_follows` — no “Mine”."
 
 [[feature]]
 id = "unfollows"

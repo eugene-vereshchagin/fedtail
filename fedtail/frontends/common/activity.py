@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ...core.view import ACTIVITY_FILTERS as FILTERS  # the quick filters over Activity
-from ...core.view import ACTIVITY_STATE as STATE
 from ...core.view import activity_keeps as keeps  # noqa: F401 — for the interfaces
 from ...i18n import _
 
@@ -57,8 +56,18 @@ def filter_words(which):
 
 
 def chosen(view):
-    got = view.get_state(STATE) if hasattr(view, "get_state") else None
-    return got if got in FILTERS else "all"
+    """The quick filter chosen now (this run only)."""
+    now = getattr(view, "activity_filter_now", None)
+    got = now() if callable(now) else None
+    return got if isinstance(got, str) and got in FILTERS else "all"
+
+
+def offered(view):
+    """The quick filters this Activity has (a lane of follow requests of its own takes
+    them out of Activity: no "Requests" filter then, unless approvals wait there too)."""
+    got = getattr(view, "activity_filters_offered", None)
+    got = got() if callable(got) else None
+    return tuple(got) if isinstance(got, (list, tuple)) else FILTERS
 
 
 def groups(entries):

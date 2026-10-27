@@ -236,6 +236,9 @@ class MergedCore:
             out.sort(key=lambda e: (real(e[1]) if by_time else e[1]).get("created_at", ""))
         return out
 
+    def activity_filters(self):
+        return self.primary.activity_filters()  # Activity is the main account's
+
     def lanes_saved(self, cfg):
         """The lane editor wrote the main profile's lanes: it takes them."""
         return self.primary.lanes_saved(cfg)

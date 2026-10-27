@@ -128,3 +128,24 @@ class ActivityFilterTest(FreeBase):
         self.assertEqual(len(v.activity()), 2)  # the choice stays
         v.set_activity_filter("all")
         self.assertEqual(len(v.activity()), 5)
+
+    def test_this_run_only_and_only_what_can_show(self):
+        from fedtail.core.view import View
+        from fedtail.frontends.common import activity as act
+        core, w = self.make([])
+        core.connect().result()
+        v = View(core)
+        self.assertIn("requests", act.offered(v))  # follow requests stand in Activity
+        v.set_activity_filter("follows")
+        self.assertEqual(act.chosen(v), "follows")
+        self.assertIsNone(core.store.kv_get("ui.activity_filter"))  # nothing kept
+        # follow requests in a lane of their own, no approvals: no "Requests" filter
+        core.cfg["lanes"]["enabled"] = ["home", "activity", "requests"]
+        core.cfg["activity"]["approvals"] = False
+        core._apply_lists([], {})
+        self.assertNotIn("requests", act.offered(v))
+        v.set_activity_filter("requests")
+        self.assertEqual(act.chosen(v), "all")  # not offered: everything
+        core.cfg["activity"]["my_follows"] = False
+        self.assertNotIn("mine", act.offered(v))
+

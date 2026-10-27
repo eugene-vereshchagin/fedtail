@@ -145,6 +145,7 @@ class Core(SocialMixin):
         self._world_version = 0   # bumped when what the rules know around posts changes
         self._following_at = 0.0
         self._important_waiting = False  # "Important people" on, but nothing in it yet
+        self.activity_filter = "all"     # Activity's quick filter: this run only
         self._waiting = set()            # lanes on but hidden while empty (SHOWN_WHEN_FULL)
         self._unsorted_on = False        # lanes.unsorted: Unsorted collects
         self.lanes = self._shown_lanes(lanes.enabled(cfg))
@@ -1353,6 +1354,21 @@ class Core(SocialMixin):
                and c.takes_event(n, world, which)][:limit]
         cache[name] = (key, got)
         return got
+
+    def activity_filters(self):
+        """Activity's quick filters that can show something here: "requests" — when follow
+        requests stand in Activity (no lane of their own) or approvals wait there
+        (activity.approvals); "mine" — with activity.my_follows."""
+        from .view import ACTIVITY_FILTERS
+        a = self.cfg["activity"]
+        out = []
+        for k in ACTIVITY_FILTERS:
+            if k == "requests" and not (self._requests_in_activity() or a.get("approvals")):
+                continue
+            if k == "mine" and not a.get("my_follows", True):
+                continue
+            out.append(k)
+        return out
 
     def _requests_in_activity(self):
         """Follow requests stand in Activity — when it's on and there's no lane of their
