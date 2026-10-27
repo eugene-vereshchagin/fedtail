@@ -553,8 +553,12 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: search.box.findChildren(AccountRow))
         row = search.box.findChildren(AccountRow)[0]
         was = row.relation.following
+        # the button only: bob unfollowed would take his posts out of Home
+        # (feed.forget_unfollowed), and the flow below reads them there
+        self.core.cfg["feed"]["forget_unfollowed"] = False
         row._toggle()
         self.pump(until=lambda: row.relation.following != was)
+        self.core.cfg["feed"]["forget_unfollowed"] = True
         search.run("#lin")
         self.pump(until=lambda: search.box.findChildren(TagRow))
         self.win.open_people(adapter.account({"id": "ME", "acct": "mira"}), "followers")
