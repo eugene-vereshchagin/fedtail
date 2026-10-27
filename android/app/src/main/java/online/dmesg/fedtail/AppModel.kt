@@ -3,6 +3,9 @@ package online.dmesg.fedtail
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.compose.runtime.mutableStateMapOf
@@ -125,6 +128,7 @@ data class PostItem(
     val quoteWho: String = "",
     val quoteText: String = "",
     val nameHtml: String = "",       // the name with its :emoji: as pictures (if any)
+    val nameColor: String = "",      // people.nick_colors: my colour for their name
     val labels: String = "",         // the windows' marks: "old, 40 days", "bot", edited…
     val reactions: String = "",      // "👍 3 :blobcat: 2"
     val via: String = "",            // all accounts in one: which of mine got it
@@ -291,6 +295,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var syncBusy by mutableStateOf(false)
 
     var loginServer by mutableStateOf("")
+    var loginProxyField by mutableStateOf(false)  // net.proxy_at_login
+    var loginProxy by mutableStateOf("")
     var loginWaiting by mutableStateOf(false)
     var loginNeedsCode by mutableStateOf(false)
     var loginBusy by mutableStateOf(false)
@@ -336,7 +342,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         when {
             Core.failed(st) != null -> screen = Screen.Failed(Core.failed(st)!!)
             st.optBoolean("logged_in") -> openMain()
-            else -> screen = Screen.Login
+            else -> {
+                loginProxyField = st.optBoolean("proxy_at_login")
+                loginProxy = st.optString("proxy")
+                screen = Screen.Login
+            }
         }
     }
 
@@ -345,7 +355,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (loginBusy || loginServer.isBlank()) return
         loginBusy = true
         viewModelScope.launch {
-            val got = Core.loginBegin(loginServer)
+            val got = Core.loginBegin(loginServer, if (loginProxyField) loginProxy else null)
             loginBusy = false
             Core.failed(got)?.let { message = it; return@launch }
             loginNeedsCode = !got.optBoolean("redirect")
@@ -890,8 +900,50 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun onForeground() {
         if (screen != Screen.Main) return
-        viewModelScope.launch { Core.pause(false) }
+        viewModelScope.launch { Core.pause(false); Core.network(onWifi()) }
+        watchNetwork()
         watch()
+    }
+
+    // phone.stream = "wifi": the live stream only on Wi-Fi — told at every change
+    private var networkWatch: ConnectivityManager.NetworkCallback? = null
+
+    private fun connectivity() =
+        getApplication<Application>().getSystemService(ConnectivityManager::class.java)
+
+    private fun onWifi(): Boolean {
+        val cm = connectivity() ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private fun watchNetwork() {
+        if (networkWatch != null) return
+        val cm = connectivity() ?: return
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                val wifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                viewModelScope.launch { Core.network(wifi) }
+            }
+            override fun onLost(network: Network) {
+                viewModelScope.launch { Core.network(onWifi()) }
+            }
+        }
+        try {
+            cm.registerDefaultNetworkCallback(cb)
+            networkWatch = cb
+        } catch (e: RuntimeException) {  // no permission, too many callbacks: as it was
+            networkWatch = null
+        }
+    }
+
+    override fun onCleared() {
+        networkWatch?.let { cb -> try { connectivity()?.unregisterNetworkCallback(cb) }
+                                 catch (e: RuntimeException) { } }
+        networkWatch = null
+        super.onCleared()
     }
 
     fun onBackground() {
@@ -987,7 +1039,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         places = places + Place.Compose(replyTo)
     }
 
-    fun send(altOk: Boolean = false) {
+    fun send(altOk: Boolean = false, langOk: Boolean = false) {
         val p = place as? Place.Compose ?: return
         if (composeText.isBlank() || sending || uploading > 0) return
         sending = true
@@ -1019,6 +1071,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         .put("expires_in", pollExpires).put("multiple", pollMultiple))
                 }
                 if (altOk) body.put("alt_ok", true)
+                if (langOk) body.put("lang_ok", true)
                 composeFrom?.let { body.put("account", it) }
                 if (composeWhen.isNotBlank()) body.put("scheduled_at", composeWhen.replace("T", " "))
             }
@@ -1028,6 +1081,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             got.optJSONObject("ask_alt")?.let { a ->
                 asking = Asking.Confirm(str(a, "text"), { send(altOk = true) }, str(a, "title"),
                     str(a, "send"), str(a, "describe"))
+                return@launch
+            }
+            got.optJSONObject("ask_lang")?.let { a ->  // post.lang_check: another language?
+                asking = Asking.Choose(str(a, "title"), str(a, "text"),
+                    listOf("switch" to str(a, "switch"), "send" to str(a, "send")), "") { key, _ ->
+                    if (key == "switch") composeLang = str(a, "lang")
+                    send(altOk = true, langOk = true)
+                }
                 return@launch
             }
             str(got, "message").takeIf { it.isNotBlank() }?.let { message = it }
@@ -2088,6 +2149,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             edited = o.optBoolean("edited"),
             visibility = str(o, "visibility"),
             nameHtml = str(acc, "name_html"),
+            nameColor = str(acc, "color"),
             labels = o.optJSONObject("words")?.optJSONArray("meta")?.let { m ->
                 (0 until m.length()).mapNotNull { m.optJSONObject(it)?.optString("text") }
                     .filter { it.isNotBlank() }.joinToString(" · ") } ?: "",

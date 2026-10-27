@@ -1090,8 +1090,13 @@ class ComposeScreen(Screen):
                 core.cfg["post"].get("alt_reminder", True):
             self._ask_alt(bare)
             return
-        self.sending = True
         from ..common import compose as cc
+        said = None if getattr(self, "lang_ok", False) or self.edit is not None else \
+            cc.lang_mismatch(core.cfg, text, lang)
+        if said:  # post.lang_check: the text reads as another language
+            self._ask_lang(said, lang or core.cfg["post"].get("language"))
+            return
+        self.sending = True
         if self.edit is not None:
             changed = self._media_changes()
             fut = core.edit(self.edit, text, cw, media=changed) if changed else \
@@ -1105,17 +1110,43 @@ class ComposeScreen(Screen):
                             **({"account": self.query_one("#c-from", Select).value}
                                if self.accounts else {}))
 
+        away = self.edit is None and core.cfg["post"].get("send_in_background")
+        app = self.app
+
         def ok(_p):
             self.sending = False
             core.delete_draft(self.key)
-            self.app.notify(_("edited_msg") if self.edit is not None else _("sent"))
-            self.dismiss(True)
-            self.app.refresh_lane()
+            app.notify(_("edited_msg") if self.edit is not None else _("sent"))
+            if not away:
+                self.dismiss(True)
+            app.refresh_lane()
 
         def fail(err):
             self.sending = False
-            self.app.show_error(_("send_failed_text", err=err))
-        self.app.later(fut, ok=ok, fail=fail)
+            if away:  # the editor is gone: what was typed waits as a draft
+                app.show_error(_("sent_background_failed", err=err))
+                return
+            app.show_error(_("send_failed_text", err=err))
+        if away:  # post.send_in_background: out of the way at once, the draft kept
+            core.save_draft(self.key, self._snapshot())
+            app.notify(_("sent_background"))
+            self.dismiss(True)
+        app.later(fut, ok=ok, fail=fail)
+
+    def _ask_lang(self, said, chosen):
+        """post.lang_check: the text reads as `said` — mark it so, or send as is."""
+        from ..common import compose as cc
+        title, text, switch_w, anyway_w = cc.lang_question(said, chosen)
+
+        def chosen_(v):
+            if v == "switch":
+                self.query_one("#c-lang", Input).value = said
+            if v in ("switch", "send"):
+                self.lang_ok = True
+                self.action_send()
+                self.lang_ok = False
+        self.app.push_screen(MenuScreen(title + ": " + text, [(switch_w, "switch"),
+                                                              (anyway_w, "send")]), chosen_)
 
     def _ask_alt(self, bare):
         """post.alt_reminder: pictures without a description — describe them, or send

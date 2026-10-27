@@ -159,11 +159,11 @@ class BridgeTest(_Base):
         meet = self.tmp / "meet"
         meet.mkdir()
         text = self.call("config_text")["text"]
-        head, _, sync = text.partition("[sync]\n")
+        head, _, sync = text.rpartition("\n[sync]\n")  # the table, not a mention of it
         sync = sync.replace("enabled = false", "enabled = true", 1)
         sync = sync.replace('backend = "server"', 'backend = "folder"', 1)
         sync = sync.replace('folder = ""', f'folder = "{meet.as_posix()}"', 1)
-        on = head + "[sync]\n" + sync
+        on = head + "\n[sync]\n" + sync
         self.assertEqual(self.call("config_save", on), {"ok": True})
         self.call("open")
         st = self.call("sync_status")

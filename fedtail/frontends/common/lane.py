@@ -147,6 +147,7 @@ class Built:
     info: str = ""
     unread: int = 0
     empty: bool = False
+    held: int = 0  # feed.on_new = "hold": new posts kept out until Refresh
 
 
 class LaneModel:
@@ -164,6 +165,8 @@ class LaneModel:
         self.separator_text = separator_text or (lambda n: _("new_below"))
         self.separator = None    # (key of the first unread when the lane opened, count)
         self.kept = None         # "unread only": the item keys shown while it's open
+        self.shown = None        # on_new = "hold": the item keys let in so far
+        self.refreshes = getattr(view, "hand_refreshes", 0)
         self.conv_members = {}   # conversation top id -> member ids
         self.media = MediaFilter()
         kept = view.choice(f"media.{name}") if hasattr(view, "choice") else None
@@ -251,6 +254,27 @@ class LaneModel:
             self.view.set_choice(f"media.{self.name}", now)
             self._media_kept = now
 
+    def _hold(self, entries, positioned):
+        """feed.on_new = "hold" (Elk's way): what came after the lane was drawn waits
+        out of it — the header says "N new" — till Refresh lets it in. Older posts
+        (paging down, a thread's parents) come in at once. → (entries, how many wait)."""
+        if self.cfg["feed"].get("on_new") != "hold":
+            self.shown = None
+            return entries, 0
+        hand = getattr(self.view, "hand_refreshes", 0)
+        keys = [k for k, _e in entries]
+        if not positioned or self.shown is None or hand != self.refreshes:
+            self.refreshes = hand
+            self.shown = set(keys)
+            return entries, 0
+        last = max((i for i, k in enumerate(keys) if k in self.shown), default=-1)
+        self.shown.update(keys[:last + 1])  # older ones: in
+        held = [k for k in keys[last + 1:] if k not in self.shown]
+        if not held:
+            return entries, 0
+        wait = set(held)
+        return [x for x in entries if x[0] not in wait], len(held)
+
     def build(self, positioned):
         """The cards as they are now. positioned: the reader has been placed in the lane
         already (the divider stays where it was then)."""
@@ -264,9 +288,12 @@ class LaneModel:
             self.kept = fresh if self.kept is None else self.kept | fresh
             entries = [e for e in entries if e[0] in self.kept]
             info = _("unread_only_info", n=len(fresh)) if self.kept else _("unread_only_none")
+        entries, held = self._hold(entries, positioned)
         if self.media.active():
             entries = [x for x in entries if self.media.keeps(x[1])]
             info = _("media_filter_info", n=len(entries))
+        if held:
+            info = _("held_info", n=held) + (" · " + info if info else "")
         posts = [e for _, e in entries]
         parents = view.parents(posts)
         answers = view.my_replies(posts)  # {post id: [my replies to it]}
@@ -295,6 +322,14 @@ class LaneModel:
                 n = news.get(real(s.entry).id) if s.entry is not None else None
                 if n:
                     s.extra["thread_news"] = n
+        tagged = getattr(view, "came_by_tag", None)
+        if tagged is not None and view.cfg["feed"].get("why_home") and \
+                self.name == "home":  # "via #tag": why a stranger's post is in Home
+            for s in specs:
+                if s.entry is not None and not isinstance(s.entry, Share):
+                    tag = tagged(s.entry)
+                    if tag:
+                        s.extra["via_tag"] = tag
         specs = self._with_events(specs)
         if self.name in ("replies", "mentions", "to_me"):
             view.check_my_replies(posts)
@@ -314,7 +349,7 @@ class LaneModel:
         lane = view.lane_by_name.get(self.name)
         empty = self.lazy and not specs and lane is not None and \
             lane.source in getattr(view, "browse_empty", ())
-        return Built(specs, info, sum(1 for s in specs if s.unread), empty)
+        return Built(specs, info, sum(1 for s in specs if s.unread), empty, held)
 
     def _with_events(self, specs):
         """A lane of rules that takes events (likes, follows… — feeds.md §2.3): their

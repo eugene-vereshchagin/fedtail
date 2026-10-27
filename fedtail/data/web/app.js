@@ -127,6 +127,7 @@ function renderPost(p, inThread) {
   head.append(face);
   const names = el("div", "names");
   const who = el("a", "who", p.account.name || p.account.handle);
+  if (p.account.color) who.style.color = p.account.color;  // people.nick_colors
   who.href = "#";
   who.onclick = (e) => { e.preventDefault(); openAccount(p.account.id); };
   names.append(who, el("span", "acct", "@" + p.account.handle));
@@ -648,7 +649,7 @@ async function copyText(text) {
 // in groups (their submenus: lanes and lists, for the tender, whom to read, the account
 // and the server, the look, debugging, help), a group's items beside it
 const MENU_GROUPS = [
-  ["web_menu_lanes", ["search", "lists", "tags", "scheduled", "slow", "requests", "activity"]],
+  ["web_menu_lanes", ["search", "lists", "tags", "scheduled", "drafts", "slow", "stats", "requests", "activity"]],
   ["tender_menu", ["silence", "filtered"]],
   ["menu_people", ["trends", "suggestions", "directory", "collections", "remote"]],
   ["accounts", ["accounts", "profile_edit", "server", "probe", "announcements", "merge"]],
@@ -2274,6 +2275,20 @@ async function send(e, extra) {
       if (bare) bare.focus();
       return;
     }
+    if (r.ask_lang) {  // the text reads as another language (post.lang_check)
+      state.busy = false;
+      const more = Object.assign({}, extra, { alt_ok: true, lang_ok: true });
+      if (window.confirm(r.ask_lang.text + "\n\n" + r.ask_lang.switch + "?")) {
+        const sel = $("#lang");
+        if (![...sel.options].some((o) => o.value === r.ask_lang.lang)) {
+          sel.add(new Option(r.ask_lang.lang, r.ask_lang.lang));
+        }
+        sel.value = r.ask_lang.lang;
+        return await send(null, more);
+      }
+      if (window.confirm(r.ask_lang.send + "?")) return await send(null, more);
+      return;
+    }
     store(state.replyTo ? "draft." + state.replyTo.sid : "draft.new", "");
     $("#text").value = "";
     toast(r.message || w("sent"));
@@ -2616,6 +2631,7 @@ function closeNav() { $("#nav").classList.remove("open"); $("#scrim").hidden = t
 
 async function refresh() {
   await flushRead();
+  await api("/api/refresh", {}).catch(() => null);  // a round now; held new posts come in
   await loadLanes().catch((e) => toast(e.message));
   if (state.lane) await selectLane(state.lane, true);
   if (cols.on) await Promise.all([...cols.panes.values()].map((p) => loadPane(p, true)));

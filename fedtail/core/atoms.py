@@ -29,10 +29,13 @@ SOURCES = {"home", "local", "federated", "mentions", "watched", "direct", "bookm
            "favourites", "mine", "subs", "context", "trends", "bubble"}
 # sources with a parameter: list:<id>, tags:<spec>, account:<id>, remote:<host>[/local|
 # /federated|/trends], link:<url>, quotes:<id>
-SOURCE_PREFIXES = ("list:", "tags:", "account:", "remote:", "link:", "quotes:")
+SOURCE_PREFIXES = ("list:", "tags:", "account:", "remote:", "link:", "quotes:", "search:",
+                   "rss:")
 
 AUTHOR = {"me", "followed", "follower", "mutual", "stranger", "bot", "local", "remote",
-          "new", "not_follower", "new_follower", "limited", "bell", "boosts_off", "in_list"}
+          "new", "not_follower", "new_follower", "limited", "bell", "boosts_off", "in_list",
+          # taken out of Home by hand ("Not in Home" on a profile), still followed
+          "hidden_home"}
 VISIBILITY = {"public", "unlisted", "followers", "direct", "mutuals", "local_only"}
 KIND = {"post", "reply", "self_reply", "boost", "self_boost", "quote", "poll", "edited"}
 ME = {"reply", "reply_to_post", "reply_to_comment", "mention", "direct", "in_my_thread",
@@ -57,7 +60,7 @@ EVENTS = {"favourite", "reblog", "follow", "follow_request", "poll", "update", "
           # derived by fedtail itself, comparing snapshots (feeds.md §2.4)
           "unfollow", "removed_follower", "moved", "gone", "unfollowed_back", "unliked",
           "deleted", "lost"}
-TEXT_IN = {"text", "cw", "alt", "poll"}
+TEXT_IN = {"text", "cw", "alt", "poll", "name"}  # name: the author's name and @nick
 
 # the server's notification type → our event word
 EVENT_OF = {"favourite": "favourite", "reblog": "reblog", "follow": "follow",
@@ -88,8 +91,9 @@ _LANE_KEYS = {"apart"}
 _GROUP_KEYS = {"any"}  # an inner OR: one of these tables too (an AND of ORs)
 _TEXT_KEYS = {"text", "text_in", "text_case", "text_regex"}
 _AGE_KEYS = {"age", "age_of"}
+_TIME_KEYS = {"until"}  # the condition holds till then (a mute for a week, a lane for a trip)
 CONDITION_KEYS = set(_SET_KEYS) | set(_COUNT_KEYS) | _SHOW_KEYS | _TEXT_KEYS | _AGE_KEYS | \
-    _LANE_KEYS | _GROUP_KEYS
+    _LANE_KEYS | _GROUP_KEYS | _TIME_KEYS
 
 _ANCHOR_RE = re.compile(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>')
 _AGE_RE = re.compile(r"^\s*([<>]=?)\s*(\d+(?:\.\d+)?)\s*([mhdw])\s*$")
@@ -111,6 +115,7 @@ class World:
     new_followers: Container = frozenset()  # …of them, followed me lately (< 3 days)
     bell: Container = frozenset()        # accounts I rang the bell on (relationship.notifying)
     boosts_off: Container = frozenset()  # accounts whose boosts I hid (showing_reblogs false)
+    hidden_home: Container = frozenset()  # accounts taken out of Home by hand, still followed
     in_lists: Container = frozenset()    # accounts in any of my lists
     followed_tags: Container = frozenset()  # lower-case names
     extra_bots: tuple = ()
@@ -205,7 +210,7 @@ def _author_atoms(acc, world, now):
     if acc.get("limited"):
         out.add("limited")
     for flag, ids in (("bell", world.bell), ("boosts_off", world.boosts_off),
-                      ("in_list", world.in_lists)):
+                      ("in_list", world.in_lists), ("hidden_home", world.hidden_home)):
         if aid in ids:
             out.add(flag)
     if acct:
@@ -215,12 +220,31 @@ def _author_atoms(acc, world, now):
     return out
 
 
+def _until(value):
+    """A condition's end: a date ("2026-11-01" — its midnight, UTC) or a moment; a TOML
+    date or datetime as is. None — not one."""
+    from datetime import date
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day, tzinfo=UTC)
+    if not isinstance(value, str):
+        return None
+    try:
+        d = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return d if d.tzinfo else d.replace(tzinfo=UTC)
+
+
 def _texts(st):
     out = {"text": html_to_text(st.get("content") or ""), "cw": st.get("spoiler_text") or ""}
     out["alt"] = "\n".join(m.get("description") or "" for m in st.get("media_attachments")
                            or [])
     poll = st.get("poll") or {}
     out["poll"] = "\n".join(o.get("title") or "" for o in poll.get("options") or [])
+    acc = st.get("account") or {}
+    out["name"] = f"{acc.get('display_name') or ''}\n@{acc.get('acct') or ''}"
     return out
 
 
@@ -489,6 +513,7 @@ class Condition:
     shown: bool = True
     priority: int = 0
     apart: str = ""                             # counts only while this lane is shown
+    until: datetime | None = None               # holds till then, never after
     inner: list = field(default_factory=list)   # `any` inside: one of these too
     broken: bool = False                        # had an unknown key or value: never matches
     raw: dict = field(default_factory=dict)
@@ -569,6 +594,13 @@ class Condition:
                     c.priority = value
                 else:
                     warn(f"priority: a number, not {value!r}")
+            elif key == "until":
+                when = _until(value)
+                if when is None:
+                    warn(f"until: {value!r} — a date, like \"2026-11-01\" or "
+                         f"\"2026-11-01T18:00\"")
+                else:
+                    c.until = when
             elif key == "any":
                 if not isinstance(value, (list, tuple)) or not value:
                     warn(f"any: a list of tables (one of them), not {value!r}")
@@ -608,6 +640,8 @@ class Condition:
     def matches(self, facts, now=None):
         if self.broken:
             return False
+        if self.until is not None and (now or datetime.now(UTC)) >= self.until:
+            return False  # its time is over: as if it weren't there
         for key, words in self.sets.items():
             if key == "author":
                 if not any(_author_word(w, facts.author) for w in words):
@@ -658,7 +692,7 @@ def _author_word(word, have):
 
 # what a free lane's table may hold besides its conditions (feeds.md §4)
 RULE_KEYS = {"name", "title", "any", "none", "source", "sort", "read", "group", "mode",
-             "window", "filter_context", "icon"}
+             "window", "filter_context", "icon", "per_author", "bundle"}
 # the pictures a lane may wear (`icon`): the built-in lanes' own, by the word the
 # frontends' icon set has for each (frontends/iconpack.py LANE)
 LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "replies",
@@ -666,7 +700,9 @@ LANE_ICONS = ("home", "local", "federated", "bots", "my_posts", "direct", "repli
               "tags", "star_full")
 _RULE_WORDS = {"sort": {"arrival", "post_time", "replies", "likes", "boosts", "density"},
                "read": {"through", "browse"}, "mode": {"lane", "catch_up"},
-               "filter_context": {"home", "public", "notifications", "thread", "account"}}
+               "filter_context": {"home", "public", "notifications", "thread", "account"},
+               # catch-up: each author's posts together, the busiest author first
+               "bundle": {"", "author"}}
 
 
 @dataclass
@@ -685,6 +721,8 @@ class Rule:
     window: timedelta | None = None
     filter_context: str = ""
     icon: str = ""                 # one of LANE_ICONS; "" — the lane's own, or a list's
+    per_author: int = 0            # at most so many posts of one author (the newest); 0 — any
+    bundle: str = ""               # "author": each author's posts together
     warnings: list = field(default_factory=list)
 
     @classmethod
@@ -728,6 +766,12 @@ class Rule:
                 rule.icon = table["icon"]
             else:
                 warnings.append(f"icon: {table['icon']!r} — one of {', '.join(LANE_ICONS)}")
+        if "per_author" in table:
+            v = table["per_author"]
+            if isinstance(v, int) and not isinstance(v, bool) and v >= 0:
+                rule.per_author = v
+            else:
+                warnings.append(f"per_author: {v!r} — a number of posts, 0 — any")
         if "window" in table:
             m = _AGE_RE.match("<" + str(table["window"]).lstrip("<>="))
             if m:

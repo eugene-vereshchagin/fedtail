@@ -280,11 +280,50 @@ class FeedView(QScrollArea):
                 nxt = posts[max(0, min(len(posts) - 1, i))]
             self.put_cursor(nxt)
             return True
+        if key in (Qt.Key.Key_BracketRight, Qt.Key.Key_BracketLeft):
+            # a thread: the next / previous comment at the top of the tree (depth 1)
+            tops = [k for k in posts if getattr(self.rows[k].spec, "depth", 0) <= 1]
+            if len(tops) < 2:
+                return False
+            at = posts.index(self.cursor_key) if self.cursor_key in posts else -1
+            if key == Qt.Key.Key_BracketRight:
+                nxt = next((k for k in tops if posts.index(k) > at), tops[-1])
+            else:
+                nxt = next((k for k in reversed(tops) if posts.index(k) < at), tops[0])
+            self.put_cursor(nxt)
+            return True
+        if key == Qt.Key.Key_Minus and self.cursor_key in posts:
+            return self._fold_branch(posts)
         action = self.POST_KEYS.get(key)
         if action is None or self.cursor_key not in posts:
             return False
         p = self.rows[self.cursor_key].spec.post
         self.ctx.on_link(f"fedtail:{action}/{p.id}")
+        return True
+
+    def _fold_branch(self, posts):
+        """"-" in a thread: the branch under the post at the cursor folded away, or shown
+        again — from however deep a reply it is pressed, its whole top comment's branch."""
+        at = posts.index(self.cursor_key)
+        depth = getattr(self.rows[self.cursor_key].spec, "depth", 0)
+        if depth > 1:  # from a deep reply: its top comment's branch
+            at = next((i for i in range(at, -1, -1)
+                       if getattr(self.rows[posts[i]].spec, "depth", 0) <= 1), at)
+            depth = getattr(self.rows[posts[at]].spec, "depth", 0)
+            self.put_cursor(posts[at])
+        below = []
+        for k in posts[at + 1:]:
+            if getattr(self.rows[k].spec, "depth", 0) <= depth:
+                break
+            below.append(k)
+        if not below:
+            return False
+        folded = getattr(self, "_folded", set())
+        hide = posts[at] not in folded
+        (folded.add if hide else folded.discard)(posts[at])
+        self._folded = folded
+        for k in below:
+            self.rows[k].setVisible(not hide)
         return True
 
     def put_cursor(self, key):
@@ -1082,7 +1121,7 @@ class LaneWidget(QWidget):
         return self.view_seg is not None and self.view_seg.current == "conversations"
 
     def refresh_now(self):
-        self.core.poll_now()
+        self.core.refresh_by_hand()
 
     def refresh(self, force=False):
         # hidden lanes only remember that they are stale; they catch up when shown
@@ -1098,8 +1137,9 @@ class LaneWidget(QWidget):
         t0 = time.monotonic()
         built = self.lm.build(self.positioned)
         specs = built.specs
-        if self.filter_seg is not None or self.lm.media.active():
-            self.header.info.setText(built.info)
+        held_before, self._held = getattr(self, "_held", 0), built.held
+        if self.filter_seg is not None or self.lm.media.active() or built.held or held_before:
+            self.header.info.setText(built.info)  # "N new — Refresh shows them" (hold)
         if not self.positioned:
             self.view.set_specs(specs, keep_position=False, around=self._start_key(specs))
             if self.isVisible() and self.view.isVisible():

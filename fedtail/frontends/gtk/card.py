@@ -199,8 +199,10 @@ class Card(Gtk.Box):
             return (f'<a href="{GLib.markup_escape_text(url)}"><span foreground="{color}" '
                     f'weight="bold">{GLib.markup_escape_text(text)}</span></a>')
         line = GLib.markup_escape_text(ctx.theme.words.get("chat", "{name} ({when})"))
-        line = line.replace("{name}", part(f"fedtail:account/{p.author.id}",
-                                           name_of(p.author)))
+        name = part(f"fedtail:account/{p.author.id}", name_of(p.author))
+        if p.author.color:  # people.nick_colors
+            name = name.replace(f'foreground="{color}"', f'foreground="{p.author.color}"', 1)
+        line = line.replace("{name}", name)
         line = line.replace("{when}", part(f"fedtail:thread/{p.id}", when))
         lab = _label(line, ("ft-chat-name",), markup=True)
         lab.set_ellipsize(Pango.EllipsizeMode.END)  # one line: cut, never wrapped
@@ -248,7 +250,12 @@ class Card(Gtk.Box):
         if ctx.theme.shape.get("card_header") == "chat":
             self._chat_head(head, p)
         else:
-            name = _label(name_of(p.author), ("ft-name",))
+            if p.author.color:  # people.nick_colors: their name in my colour
+                name = _label(f'<span foreground="{p.author.color}">'
+                              f'{GLib.markup_escape_text(name_of(p.author))}</span>',
+                              ("ft-name",), markup=True)
+            else:
+                name = _label(name_of(p.author), ("ft-name",))
             name.set_ellipsize(Pango.EllipsizeMode.END)
             head.append(name)
             handle = _label(link_markup(f"fedtail:account/{p.author.id}", "@" + p.author.handle),

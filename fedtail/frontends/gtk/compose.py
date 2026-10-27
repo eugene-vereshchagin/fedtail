@@ -343,6 +343,10 @@ class ComposeWindow(Gtk.Box):
             host, self.host = self.host, None
             host.destroy()
 
+    def _away(self, away):
+        """Out of sight while the post goes in the background (or back: it failed)."""
+        (self.host or self).set_visible(not away)
+
     def _markdown(self):
         try:
             return bool(self.view.markdown)
@@ -840,6 +844,11 @@ class ComposeWindow(Gtk.Box):
                 not self.edit and self.cfg["post"].get("alt_reminder", True):
             self._ask_alt(sum(1 for m in media if not m[1]), scheduled_at)
             return
+        said = None if getattr(self, "_lang_ok", False) or self.edit else \
+            rules.lang_mismatch(self.cfg, text, self.language())
+        if said:  # post.lang_check: the text reads as another language
+            self._ask_lang(said, scheduled_at)
+            return
         self.save_draft()  # whatever happens next, the text is safe
         log.info("send: %s, reply to %s, %s, %d chars", "edit" if self.edit else "post",
                  self.reply_to.id if self.reply_to else "-", self.visibility(), len(text))
@@ -859,6 +868,33 @@ class ComposeWindow(Gtk.Box):
                              **({"account": self.from_keys[self.from_drop.get_selected()]}
                                 if self.from_keys else {}))
         self.win.call(fut, self._sent, self._failed)
+        if self.cfg["post"].get("send_in_background"):  # out of the way at once
+            self._away(True)
+            self.win.status(_("sent_background"))
+
+    def _ask_lang(self, said, scheduled_at=None):
+        """post.lang_check: the text reads as `said` — mark it so, send as is, or back."""
+        title, text, switch_w, anyway_w = rules.lang_question(
+            said, self.language() or self.cfg["post"].get("language"))
+        dlg = Gtk.AlertDialog()
+        dlg.set_message(title)
+        dlg.set_detail(text)
+        dlg.set_buttons([_("cancel"), anyway_w, switch_w])
+        dlg.set_cancel_button(0)
+        dlg.set_default_button(2)
+
+        def done(d, res):
+            try:
+                choice = d.choose_finish(res)
+            except GLib.Error:
+                choice = 0
+            if choice == 2:
+                self._set_language(said)
+            if choice in (1, 2):
+                self._lang_ok = True
+                self.send(scheduled_at)
+                self._lang_ok = False
+        dlg.choose(self.get_root(), None, done)
 
     def _ask_alt(self, n, scheduled_at=None):
         """post.alt_reminder: a picture without a description — describe it, or send as is."""
@@ -903,9 +939,12 @@ class ComposeWindow(Gtk.Box):
     def _failed(self, err):
         self.send_btn.set_sensitive(True)
         self.send_btn.set_label(_("send"))
+        away = not (self.host or self).get_visible()
+        self._away(False)  # sent in the background (post.send_in_background): back
         maybe = getattr(err, "maybe_sent", False)  # no answer: the post may be out
         self.hint.set_text((_("send_maybe") + ". " if maybe else "")
-                           + _("send_failed_text", err=err))
+                           + _("sent_background_failed" if away else "send_failed_text",
+                               err=err))
 
     def _closing(self, *_a):
         if getattr(self, "spell", None) is not None:

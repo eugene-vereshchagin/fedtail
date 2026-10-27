@@ -41,7 +41,9 @@ own tables), never by a frontend. The words below are the core's words: a protoc
 | `bookmarks` | `bookmarks` | what I bookmarked | source, lazy |
 | `favourites` | `favourites` | what I liked | source, lazy |
 | `mine` | `accounts/<me>/statuses` | my posts and replies | source `mine` |
-| `account:<id>` | `accounts/<id>/statuses` | somebody's wall | source `account:<id>` (also the profile) |
+| `account:<id>` | `accounts/<id>/statuses` | somebody's wall | source `account:<id>` (also the profile); `/posts` — no replies, `/media`, `/noboosts`, `/pinned`, `/tag:<tag>` — filtered by the server |
+| `search:<words>` | `/api/v2/search?type=statuses` | posts found by words | source `search:<words>` |
+| `rss:<address>` | the feed itself (RSS 2.0, RSS 1.0, Atom) | a site's feed as read-only posts (open, bookmark here; no likes or replies) | source `rss:<address>` (`core/rss.py`; at most every `lanes.extra_minutes`) |
 | `subs` | — (fedtail itself, `/context`) | new comments in threads I follow, as on Point | local source `subs` |
 | `context` | `statuses/<id>/context` | a thread fetched whole when opened | — (threads only) |
 | `remote:<host>` | another server's `timelines/public` (`/local`, `/federated`), `trends/statuses` (`/trends`) | another server's lanes, read without an account there; no token goes there | source `remote:<host>` (its public lane, each post fetched into my server; `lanes.extra_minutes`) |
@@ -174,6 +176,11 @@ A free lane is a table `[[lanes.custom]]`; its keys:
 | `mode` | `lane` (as always) or `catch_up` — only what came within `window` (12h by default): "what did I miss" |
 | `window` | a lane shows only posts younger than this (`"12h"`, `"2d"`) |
 | `filter_context` | the server's filters of this context (`home`, `public`, `notifications`, `thread`, `account`) hide or fold the lane's posts, whichever source they came by |
+| `per_author` | at most so many posts of one author — their newest (a noisy one doesn't drown the lane); 0 — any |
+| `bundle` | `"author"` — each author's posts together, the busiest first (a catch-up read person by person) |
+| `until` (of a condition) | the condition holds till then — a date `"2026-11-01"` or a moment; after it, as if it weren't there (a mute for a week in `none`, a lane for a trip) |
+| `text_in = "name"` (of a condition) | `text` looks in the author's name and @nick too (with `text_regex` — a regular expression) |
+| `author = "hidden_home"` | someone taken out of Home on their profile ("Not in Home", `people.home_hide`), still followed; every set's Home has it in `none` |
 | `read` | `through` (unread marks, counts, never jump) or `browse` (newest page, no counts — like Federated) |
 | `group` | the sidebar section: `standard`, `personal`, `lists`, `tags`, or a name of one's own |
 | `icon` | the lane's picture from the built-in set: `home`, `local`, `federated`, `bots`, `my_posts`, `direct`, `replies`, `mentions`, `subs`, `bookmarks`, `my_likes`, `activity`, `requests`, `list`, `tags`, `star_full`; none — the one its name has (a set's lane), a list's for one's own |

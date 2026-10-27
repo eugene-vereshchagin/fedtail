@@ -39,7 +39,7 @@ class MainMenu:
         self.buttons = []  # (MenuButton, make) of every ≡ made from this menu
         a = self._act
         a("write", win.compose)
-        a("refresh", win.view.poll_now)
+        a("refresh", win.view.refresh_by_hand)
         a("readall", win.read_current_lane)
         a("filters", lambda: win.silence("filters"))
         a("muted", lambda: win.silence("muted"))
@@ -53,6 +53,8 @@ class MainMenu:
         a("trends", win.open_trends)
         a("collections", lambda: win.open_place("collections"))
         a("slow", lambda: win.open_place("slow"))
+        a("drafts", lambda: win.open_place("drafts"))
+        a("stats", lambda: win.open_place("stats"))
         a("log", lambda: win.open_place("log"))
         a("remote_lane", win.ask_remote_lane)
         a("profile", win.my_profile)
@@ -145,7 +147,11 @@ class MainMenu:
         first.append_submenu(_("tender_menu"), tender)
         if cfg["post"].get("schedule", True):
             _item(first, _("scheduled_title") + "…", "scheduled")
+        if cfg["post"].get("drafts_place"):
+            _item(first, _("drafts_title") + "…", "drafts")
         _item(first, _("slow_title") + "…", "slow")
+        if cfg["feed"].get("stats"):
+            _item(first, _("stats_title") + "…", "stats")
         people = Gio.Menu()
         supports = win.ctx.supports
         trends = any(supports("trends_" + k) for k in ("statuses", "tags", "links"))

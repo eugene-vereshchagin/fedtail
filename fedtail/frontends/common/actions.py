@@ -218,6 +218,10 @@ def menu(entry, ctx, short_id=None, unread=False):
         out.append(Item("link", _("hide_post"), url=make("hidepost", sid)))
     if ctx.cfg.get("lanes") is not None:  # which lanes take it, and by which rule
         out.append(Item("link", _("why_here"), url=make("why", sid)))
+    if (ctx.cfg.get("debug") or {}).get("raw_json"):  # the post as the server gave it
+        out.append(Item("link", _("raw_json"), url=make("raw", sid)))
+    if (ctx.cfg.get("feed") or {}).get("around_post"):  # what came just before and after it
+        out.append(Item("link", _("around_post"), url=make("around", sid)))
     if author.id != ctx.me_id:
         out.append(SEP)
         out.append(Item("link", _("mute_acct", acct=author.handle) + "…", url=make("mute", sid)))

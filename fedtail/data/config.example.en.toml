@@ -253,6 +253,14 @@ esc = "curtain"
 # false — these letters do nothing.
 post_keys = true
 
+# A lane by its number in the sidebar: "alt" — Alt+1…9, "ctrl" — Ctrl+1…9, "both" —
+# either (the windows; a browser and a terminal keep these keys for themselves).
+number_keys = "alt"
+
+# Pin tabs (a thread, a profile): right-click a tab — "Pin the tab". A pinned one has no
+# ×, and Ctrl+W / Esc pass it by (the windows).
+pin_tabs = false
+
 # A command line as on Point at the bottom of the window (Ctrl+L shows it even if false).
 command_line = true
 
@@ -433,6 +441,10 @@ tags_extra = []
 bubble = []
 extra_minutes = 10
 
+# Ask a lane of tags (several tags in one) in one request, not one per tag — where the
+# server can (Mastodon: any[], all[], none[]). false — a tag at a time.
+tags_one_request = false
+
 
 [lists]
 # The server's lists (Mastodon, GoToSocial) — as lanes of their own under the main ones.
@@ -467,7 +479,9 @@ order = "oldest_first"
 start_at = "first_unread"
 
 # What to do when new posts come: "keep_position" — stay where you are;
-#                                 "jump_to_newest" — jump to the new (as everyone does).
+#                                 "jump_to_newest" — jump to the new (as everyone does);
+#                                 "hold" — keep the new out of the lane, "N new" in its
+#                                 header, Refresh (⟳, F5) shows them (as Elk does).
 on_new = "keep_position"
 
 # How many posts a request to the server.
@@ -493,6 +507,10 @@ remember_choices = false
 
 # At the very first run, count everything fetched as read (don't start with a pile).
 first_run_mark_read = true
+
+# "Statistics" in the ≡ menu: how many posts came into Home, how many you wrote and how
+# much activity there was — over the week, day by day, and who fills Home the most.
+stats = false
 
 # When a post counts as read:
 #   "on_scroll" — when you've scrolled past the whole of it;
@@ -554,6 +572,14 @@ long_form = true
 # Under a CW they are hidden together with the text anyway.
 sensitive_media = "hide"
 
+# In a post's menu — "Around this post": what came to Home just before and right after it
+# (if Home never had it — on the author's wall).
+around_post = false
+
+# Under a post in Home by someone you don't follow — "via #tag": which of your followed
+# tags brought it.
+why_home = false
+
 # Arts mode (after @arts, the founder of Point.im): everything as the author posted it, no nannying. Turns on at once: CWs open
 # (expand_cw), "sensitive" pictures without a cover (card.sensitive_media = "show"),
 # server filters neither hide nor fold posts, there is no "Report" item.
@@ -600,6 +626,22 @@ translate = true
 # too, and on posts with no language given (the server works it out). As in Fedilab.
 translate_all = false
 
+# Translate posts in languages you neither read nor write (not the interface's, not
+# post.language / post.languages) by themselves: the translation in place of the text,
+# marked "translated from …". The original — in the browser or "Post JSON". Your server
+# translates (if it can) or LibreTranslate below; a few posts at a time, in the background.
+translate_auto = false
+
+# Who translates: "server" — your server (its /translate; not every one has it) or
+# "libretranslate" — your own or a public LibreTranslate at translate_url.
+translate_backend = "server"
+
+# LibreTranslate's address: "https://translate.example" (http:// — on your own network).
+translate_url = ""
+
+# LibreTranslate's API key, if it asks for one.
+translate_key = ""
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  6. Threads and following them
@@ -613,6 +655,20 @@ translate_all = false
 # servers without your token (they see only the IP). false — make do with your own server.
 # Mastodon 4.5+ gathers replies itself too — then the thread grows when the server says it's done.
 complete_threads = true
+
+# Where a thread's replies come from: "local" — only what your server knows; "mixed" —
+# yours at once, and your server fetches the missing ones from the author's, the thread
+# growing by itself; "remote" — ask the author's server first, the thread opens whole
+# (slower).
+thread_from = "mixed"
+
+# An open thread (opened in the last half hour) asks the server about new replies every
+# so many minutes and grows when there are some. 0 — no, only when it opens.
+thread_recheck_minutes = 0
+
+# In a thread — only the replies of people you follow and yours (and what they answer,
+# so the tree holds together). false — every reply.
+thread_followed_only = false
 
 # Thread subscriptions, as on Point. The server tells you only of replies that
 # mention you; if two people answer each other under your post, you won't know.
@@ -687,6 +743,18 @@ follow_date_note = true
 # server's Home — at once when you unfollow here, and within a few hours when you do it
 # elsewhere (another client, the server's web page). false — what came stays.
 forget_unfollowed = true
+
+# On the profile of someone you follow — "Not in Home": their posts stay out of Home while
+# the follow, lists and the bell stay. In this program only.
+home_hide = false
+
+# On a profile — "My name for them…": a name you see instead of theirs (yours only;
+# with sync.people — on your other devices too).
+aliases = false
+
+# On a profile — "Name colour…": their name on cards in your colour (a name from the list
+# or #rrggbb; yours only; with sync.people — on your other devices too).
+nick_colors = false
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -898,6 +966,28 @@ chain = true
 # rendered (if the server understands it), the CW, visibility, each part of a chain; and from there
 # "Send". false — no button.
 preview = true
+
+# Check the post's language: when the text is plainly in another language than the one
+# the post is marked with, ask before sending — mark it that one, send as is, or go back
+# to the text. Readers who filter the post's language out won't see it. langdetect is
+# needed for Latin and Cyrillic; short texts aren't checked.
+lang_check = false
+
+# A post's link at the end of the text becomes a quote of that post (when its author
+# lets it be quoted), and the link leaves the text.
+link_quote = false
+
+# The editor closes as soon as you press Send, and the post (pictures and videos too)
+# goes in the background. If it fails, you're told; the draft stays.
+send_in_background = false
+
+# In "Scheduled", each post gets "To the editor": taken off the schedule and opened in
+# the editor, to fix and send again.
+scheduled_to_draft = false
+
+# "Drafts" in the ≡ menu: every kept draft — the new post, replies, quotes — to open or
+# delete.
+drafts_place = false
 
 # Whether the server understands Markdown: "auto" (ask the server), "on", "off".
 # GoToSocial / Akkoma do, vanilla Mastodon doesn't.
@@ -1138,6 +1228,10 @@ tiles = true
 # (by hand or in the lane editor); a device that has just started sends nothing of its own.
 lane_rules = false
 
+# Your own names and colours for people (people.aliases, people.nick_colors) and those
+# taken out of Home (people.home_hide).
+people = false
+
 # The reading place shared with other clients (Mastodon markers): read Home or
 # mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon,
 # GoToSocial, Akkoma. false — read marks live here only.
@@ -1169,6 +1263,16 @@ stream_gap_seconds = 10
 # 0 — off (news comes as it arrives). Also on the go: ≡ → "Slow mode…" (with "notify at
 # most every…" for each lane there).
 slow_minutes = 0
+
+# A proxy for the whole of fedtail — the API, pictures, the live stream, sync, the login:
+# "http://host:port", "socks5h://host:port" (SOCKS needs the PySocks package; the live
+# stream doesn't go through SOCKS, polling does). A user and password —
+# "http://user:pass@host:port". "" — as the system says (HTTPS_PROXY and the like).
+proxy = ""
+
+# A "Proxy" field in the login window: set it before the first request to the server
+# (when the server can't be reached without it). What you type is written here, in proxy.
+proxy_at_login = false
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -1289,6 +1393,9 @@ report_repo = ""
 # browser. "" — fedtail's own tracker; "user/repo" — another (your own build, a fork).
 issue_repo = ""
 
+# In a post's menu — "Raw JSON": the post as the server gave it (for bug reports).
+raw_json = false
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════
 #  16. In a terminal
@@ -1401,3 +1508,7 @@ layout = "auto"
 # has a distributor for it (ntfy, Sunup, NextPush…): your server pushes to it, the app
 # wakes and asks; without one, or "off" — a round every 15 minutes (Android's least).
 push = "auto"
+
+# The live stream on the phone: "always", "wifi" — on Wi-Fi only (on a mobile network,
+# polling every server.interval_seconds), "off" — polling only.
+stream = "always"

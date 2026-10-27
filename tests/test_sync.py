@@ -296,7 +296,8 @@ class SyncOffTest(TmpDir):
         cfg, warns = config.validate({"sync": {"what": ["read"], "drafts": True}})
         self.assertEqual({k: cfg["sync"][k] for k in config.SYNC_WHAT},
                          {"read": True, "threads": False, "lanes": False, "drafts": True,
-                          "activity": False, "tiles": False, "lane_rules": False})
+                          "activity": False, "tiles": False, "lane_rules": False,
+                          "people": False})
         self.assertTrue(any("sync.what is now" in w for w in warns))
 
     def test_config_is_checked(self):

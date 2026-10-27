@@ -358,6 +358,10 @@ class AccountPlaces:
                 server = core.auth["server"].split("://")[-1].rstrip("/")
             page.form = (Field("server", _("login_server").rstrip(":"), server,
                                tip="example.social"),)
+            if core.cfg["net"].get("proxy_at_login"):  # before the first request
+                page.form += (Field("proxy", _("login_proxy").rstrip(":"),
+                                    str(core.cfg["net"].get("proxy") or ""),
+                                    tip=_("login_proxy_tip")),)
             page.submit = Btn(_("login_step1"), ("login", "begin", name), primary=True)
             return page
         _core, url, _expect = got
@@ -379,7 +383,8 @@ class AccountPlaces:
         if same and core.auth:
             expect = (core.auth["server"], self._handle(core))
         try:
-            url = _wait(core.begin_login(server))
+            more = {"proxy": str(values["proxy"])} if "proxy" in values else {}
+            url = _wait(core.begin_login(server, **more))
         except Exception as e:  # noqa: BLE001 — the server's own words
             if not same:
                 core.shutdown()

@@ -19,6 +19,13 @@ class LoginDialog(Gtk.Window):
             self.server.set_text(expect[0].split("://")[-1].rstrip("/"))
         self.server.connect("activate", lambda _e: self.step1())
         box.append(self.server)
+        self.proxy = None
+        if self.core.cfg["net"].get("proxy_at_login"):  # before the first request
+            box.append(Gtk.Label(label=_("login_proxy"), xalign=0))
+            self.proxy = Gtk.Entry(text=str(self.core.cfg["net"].get("proxy") or ""),
+                                   placeholder_text="socks5h://127.0.0.1:1080",
+                                   tooltip_text=_("login_proxy_tip"))
+            box.append(self.proxy)
         self.b1 = Gtk.Button(label=_("login_step1"))
         self.b1.connect("clicked", lambda _b: self.step1())
         box.append(self.b1)
@@ -42,8 +49,9 @@ class LoginDialog(Gtk.Window):
             return
         self.b1.set_sensitive(False)
         self.msg.set_text(_("loading"))
-        self.win.bridge.call(self.core.begin_login(self.server.get_text()), self._opened,
-                             self._fail)
+        more = {"proxy": self.proxy.get_text()} if self.proxy is not None else {}
+        self.win.bridge.call(self.core.begin_login(self.server.get_text(), **more),
+                             self._opened, self._fail)
 
     def _opened(self, url):
         self.url = url

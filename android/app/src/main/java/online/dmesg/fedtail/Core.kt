@@ -31,7 +31,7 @@ object Core {
         obj("selfcheck_report", results.toString(), device.toString())
 
     suspend fun state() = obj("state")
-    suspend fun loginBegin(server: String) = obj("login_begin", server)
+    suspend fun loginBegin(server: String, proxy: String?) = obj("login_begin", server, proxy)
     suspend fun loginFinish(code: String) = obj("login_finish", code)
     suspend fun open() = obj("open")
     suspend fun lanes() = JSONArray(call("lanes"))
@@ -107,6 +107,7 @@ object Core {
     suspend fun read(ids: List<String>) = obj("read", JSONArray(ids).toString())
     suspend fun refresh() = obj("refresh")
     suspend fun pause(on: Boolean) = obj("pause", on)
+    suspend fun network(wifi: Boolean) = obj("network", wifi)
     suspend fun thread(id: String) = obj("thread", id)
     suspend fun post(body: JSONObject) = obj("post", body.toString())
     suspend fun act(action: String, id: String) = obj("act", action, id)

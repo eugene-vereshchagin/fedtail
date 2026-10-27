@@ -197,22 +197,29 @@ def state():
     def get():
         core = _core()
         a = core.auth or {}
+        net = core.cfg.get("net") or {}
         return {"logged_in": bool(core.logged_in), "demo": _s["demo"],
-                "server": a.get("server", ""), "acct": a.get("acct", "")}
+                "server": a.get("server", ""), "acct": a.get("acct", ""),
+                # net.proxy_at_login: the login screen's proxy field, and what it holds
+                "proxy_at_login": bool(net.get("proxy_at_login")),
+                "proxy": str(net.get("proxy") or "")}
     return _answer(get)
 
 
 # ---- logging in -------------------------------------------------------------------------
 
-def login_begin(server):
+def login_begin(server, proxy=None):
     """→ {"url", "redirect"}: open url in a browser. redirect true — the server sends the
     code straight back to fedtail://oauth; false — it shows the code, to be pasted
-    (a server that wouldn't take the app's address)."""
+    (a server that wouldn't take the app's address). proxy: the login screen's proxy
+    field (net.proxy_at_login), None — no such field."""
     def go():
         core = _core()
         server_ = (server or "").strip()
         if not server_:
             raise ValueError("no server")
+        if proxy is not None:
+            core.set_proxy(proxy)
         try:
             url = core.begin_login(server_, redirect=REDIRECT).result(60)
             return {"url": url, "redirect": True}
@@ -680,7 +687,7 @@ def read(ids_json):
 
 def refresh():
     def go():
-        _core().poll_now()
+        _core().refresh_by_hand()
         return {"ok": True}
     return _answer(go)
 
@@ -689,6 +696,18 @@ def pause(on):
     def go():
         _core().pause_polling(bool(on))
         return {"ok": True}
+    return _answer(go)
+
+
+def network(wifi):
+    """The phone's network changed (or the app came back): phone.stream says whether
+    the live stream runs — "always", "wifi" (only on Wi-Fi), "off"."""
+    def go():
+        core = _core()
+        mode = (core.cfg.get("phone") or {}).get("stream", "always")
+        want = mode == "always" or (mode == "wifi" and bool(wifi))
+        core.stream_allowed(want)
+        return {"ok": True, "stream": want}
     return _answer(go)
 
 

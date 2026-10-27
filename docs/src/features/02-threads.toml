@@ -135,3 +135,21 @@ others = "—"
 clients = []
 details.ru = "Пост, на тред которого ты подписан и где есть непрочитанные ответы, — с подсвеченной строкой «🔔 3 новых в треде» под ним, в любой ленте; строка открывает тред. Прочитал ответы — строка уходит."
 details.en = "A post whose thread you follow and which has unread replies has a highlighted line “🔔 3 new in the thread” under it, in any lane; the line opens the thread. Read the replies — the line goes."
+
+[[feature]]
+id = "thread-report"
+status = "has"
+android = "partly"
+android_note.ru = "клавиш ] [ − на телефоне нет; остальное — как везде"
+android_note.en = "no ] [ − keys on a phone; the rest as everywhere"
+since = "0.21.0"
+name.ru = "Треды: откуда ответы, сам дорастает, только подписки, по веткам, «Вокруг поста»"
+name.en = "Threads: where replies come from, growing by itself, only the followed, by branch, \"Around this post\""
+config = "`threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `card.around_post`"
+api.ru = "`statuses/<id>/context`; ActivityPub-коллекция ответов на сервере автора; `timelines/home` с `max_id`/`min_id`"
+api.en = "`statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id`"
+others.ru = "Fedilab, Ivory, Mona (режимы треда), Tuba (сам проверяет), Pipilo (только подписки), Voyager, Thunder (ветки), Subway Tooter (вокруг поста)"
+others.en = "Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post)"
+clients = ["Fedilab", "Ivory", "Tuba"]
+details.ru = "`thread_from`: \"local\" — только то, что знает твой сервер; \"mixed\" — сразу, недостающее подтягивается с сервера автора и тред дорастает; \"remote\" — сначала сервер автора, тред открывается полным. `thread_recheck_minutes` — открытый тред сам переспрашивает о новых ответах. `thread_followed_only` — только ответы подписок и твои (и то, на что они отвечали). В треде `]` / `[` — по комментариям верхнего уровня, `-` — свернуть ветку (окно). `card.around_post` — пункт меню поста «Вокруг этого поста»: что было в Ленте прямо до и после него."
+details.en = "`thread_from`: \"local\" — only what your server knows; \"mixed\" — at once, the missing ones fetched from the author's server and the thread grows; \"remote\" — the author's server first, the thread opens whole. `thread_recheck_minutes` — an open thread asks about new replies by itself. `thread_followed_only` — only the replies of people you follow and yours (and what they answer). In a thread `]` / `[` — between top-level comments, `-` — fold a branch (the window). `card.around_post` — the post menu's \"Around this post\": what was in Home just before and after it."

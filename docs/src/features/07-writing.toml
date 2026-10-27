@@ -369,3 +369,18 @@ others.en = "Tuba, Tusky, Mastodon web (the browser)"
 clients = ["Tuba", "Tusky", "Mastodon web"]
 details.ru = "Слова с ошибками подчёркнуты; правый клик — варианты и «Добавить в словарь» (свой словарь — `spelling.txt` рядом с конфигом). Проверяет на языке поста, языке интерфейса и английском — слово годится, если его знает любой словарь; ссылки, @имена, #теги, :эмодзи: и `код` не трогает. Словари системные (Debian: `libenchant-2-2`, `hunspell-ru`, `hunspell-en-us`); нет их — проверки нет. В терминале — список по F7, в вебе — проверка браузера."
 details.en = "Words with mistakes are underlined; a right click — suggestions and “Add to dictionary” (your own one — `spelling.txt` next to the config). It checks in the post's language, the interface's and English — a word is fine if any dictionary knows it; links, @names, #tags, :emoji: and `code` are left alone. The dictionaries are the system's (Debian: `libenchant-2-2`, `hunspell-en-us`, `hunspell-ru`); none — no checking. In the terminal — a list on F7, in the web page — the browser's checker."
+
+[[feature]]
+id = "writing-report"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Проверка языка, ссылка → цитата, отправка в фоне, отложенное → в редактор, Черновики"
+name.en = "Language check, link → quote, sending in the background, scheduled → editor, Drafts"
+config = "`post.lang_check`, `post.link_quote`, `post.send_in_background`, `post.scheduled_to_draft`, `post.drafts_place`"
+api = "`/api/v2/search`, `/api/v1/scheduled_statuses`"
+others.ru = "Fedilab (язык), Tuba (цитата по ссылке, черновик ↔ отложенный), Milktea (отправка в фоне), Pachli (вкладка черновиков)"
+others.en = "Fedilab (language), Tuba (a quote from a link, draft ↔ scheduled), Milktea (sending in the background), Pachli (a drafts tab)"
+clients = ["Fedilab", "Tuba"]
+details.ru = "`lang_check` — перед отправкой: текст явно на другом языке, чем стоит у поста (видно по письменности, а с langdetect — и по словам), — «Поставить …», «Отправить как есть» или назад к тексту. `link_quote` — ссылка на пост в конце текста становится цитатой (если автор разрешает), а из текста уходит. `send_in_background` — окно поста закрывается сразу, пост с картинками уходит в фоне; не ушёл — окно возвращается (в вебе и на телефоне — уведомление, черновик остаётся). `scheduled_to_draft` — у отложенного поста кнопка «В редактор»: снять с расписания и открыть текст. `drafts_place` — пункт «Черновики» в меню ≡: все черновики, открыть (ответ — в своём треде) или удалить."
+details.en = "`lang_check` — before sending: the text is plainly in another language than the post's (by its script, and with langdetect by its words too) — \"Mark it …\", \"Send as is\" or back to the text. `link_quote` — a post's link at the end of the text becomes a quote (when its author allows) and leaves the text. `send_in_background` — the editor closes at once, the post with its pictures goes in the background; if it fails the editor comes back (on the web page and the phone, a notification, the draft kept). `scheduled_to_draft` — a scheduled post's \"To the editor\": off the schedule, its text in the editor. `drafts_place` — \"Drafts\" in the ≡ menu: every draft, to open (a reply's in its thread) or delete."

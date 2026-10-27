@@ -110,6 +110,8 @@ On the left, the lanes in groups: “Timelines” (from the widest down to your 
 | Home's quick filters: tags, boosts, threads with news | has | 0.21.0 | — | own; followed threads (`/context`) | — |
 | Important people | has | 0.21.0 | `lanes.enabled` (`"important"`) | `notifications?types=status` (the bell on a profile) | — |
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | has | 0.21.0 | `[[lanes.custom]]`: `sort`, `mode`, `window`, `filter_context`, `any` inside a condition | own; the server's filters (`filters`), sources `trends`, `conversations`, `timelines/link`, `statuses/<id>/quotes`, other servers' public lanes | — |
+| Lanes from someone's wall, a search and RSS | has | 0.21.0 | `[[lanes.custom]]`: `source = "account:<id>/posts"`, `"search:…"`, `"rss:…"`; `lanes.tags_one_request` | `accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token | Fedicat, Subway Tooter, Phanpy, Fread |
+| Rules: for a while, by name, at most N per author, by author, "Not in Home" | has | 0.21.0 | `[[lanes.custom]]`: `until`, `text_in = "name"`, `per_author`, `bundle`; `people.home_hide` | own | feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home) |
 
 <details><summary>In detail</summary>
 
@@ -196,6 +198,10 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Lanes of rules: order by counts, “what did I miss”, “Why is it here?”.** `sort = "likes"` (or `replies`, `boosts`, `density` — all per hour of age) — the best on top; `mode = "catch_up"` with `window = "12h"` — only what came within the window; `filter_context` — the server's filters of that context hide or fold the lane's posts. A condition may hold an `any` of its own — an AND of ORs (`author: followed; any: [has: image] [kind: reply]`). Sources `trends`, `direct`, `bubble`, `account:<id>`, `link:<url>`, `quotes:<id>`, `remote:<host>`. “Why is it here?” in a card's menu and `fedtail --explain-lane NAME` — which condition took the post or what kept it out; a lane no source can fill is marked ⚠ in the editor. A post in several lanes rings once, by its most personal lane; replies whose rules ask about the parent get it fetched before they are sorted.
 
+**Lanes from someone's wall, a search and RSS.** Sources of lanes of rules: `account:<id>` filtered by its server — `/posts` (no replies), `/media`, `/noboosts`, `/pinned`, `/tag:linux`; `search:words` — what a search finds; `rss:https://…` — a site's feed (RSS 2.0, RSS 1.0, Atom), each item a read-only post: open it, bookmark it (here), not like or answer it. The "extra" set has the "Network" lane (Federated without your server) and "Strangers' mentions". `lanes.tags_one_request` — a lane of tags in one request where the server can (Mastodon).
+
+**Rules: for a while, by name, at most N per author, by author, "Not in Home".** A condition's `until = "2026-11-01"`: after that date it's as if it weren't there (a mute for a week, a lane for a trip). `text_in = "name"` — words (and regexes) in the author's name and @nick too. A lane's `per_author = 3`: at most three newest posts of one person; `bundle = "author"`: each one's posts together, the busiest first ("At most from one author" and "Put together" in the editor). `people.home_hide` — on the profile of someone you follow, "Not in Home": their posts leave Home, the follow, lists and the bell stay. The "extra" set has "Strangers' mentions".
+
 </details>
 
 ---
@@ -212,6 +218,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
 | Long texts and events | has | 0.14.0 | `card.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
 | A thread with new replies shows on its card | has | 0.21.0 | `card.thread_news` | own (followed threads) | — |
+| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 
 <details><summary>In detail</summary>
 
@@ -231,6 +238,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A thread with new replies shows on its card.** A post whose thread you follow and which has unread replies has a highlighted line “🔔 3 new in the thread” under it, in any lane; the line opens the thread. Read the replies — the line goes.
 
+**Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post".** `thread_from`: "local" — only what your server knows; "mixed" — at once, the missing ones fetched from the author's server and the thread grows; "remote" — the author's server first, the thread opens whole. `thread_recheck_minutes` — an open thread asks about new replies by itself. `thread_followed_only` — only the replies of people you follow and yours (and what they answer). In a thread `]` / `[` — between top-level comments, `-` — fold a branch (the window). `card.around_post` — the post menu's "Around this post": what was in Home just before and after it.
+
 </details>
 
 ---
@@ -249,6 +258,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Cards are built around the reading place | has | 0.11.0 | `reading.build_at_once`, `reading.render_limit` | own | only in fedtail |
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `window.esc`, `window.start_lane` | own | only in fedtail |
 | Sync: the key by a QR code, drafts' pictures, WebDAV | planned | — | `[sync]` | — | — |
+| New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
 
 <details><summary>In detail</summary>
 
@@ -271,6 +281,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 **Esc draws a curtain instead of closing the window.** Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = "curtain"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `"tray"` — off to the tray, `"off"` — nothing. What to start with — `window.start_lane`: `"none"` (the curtain, Enter opens the last one), `"last"` or a lane's name.
 
 **Sync: the key by a QR code, drafts' pictures, WebDAV.** The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot. And checked live on Linux, Windows and Android. In 0.21.
+
+**New posts wait for Refresh.** What comes after the lane is drawn doesn't go into it: the lane's header says "N new — Refresh shows them", and ⟳ / F5 lets them in. Older posts (paging down) come at once.
 
 </details>
 
@@ -454,6 +466,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | A command line as on Point | has | 0.3.0 | `window.command_line`, `post.plain_posts` | own | only in fedtail (tut — vim-style commands) |
 | Short post names the same on every device | has | 0.18.0 | — | own | only in fedtail (Point had the server's post numbers) |
 | Spell checking in the compose panel | has | 0.20.0 | `post.spellcheck`, `post.spell_languages` | own: the system's dictionaries through Enchant | Tuba, Tusky, Mastodon web (the browser) |
+| Language check, link → quote, sending in the background, scheduled → editor, Drafts | has | 0.21.0 | `post.lang_check`, `post.link_quote`, `post.send_in_background`, `post.scheduled_to_draft`, `post.drafts_place` | `/api/v2/search`, `/api/v1/scheduled_statuses` | Fedilab (language), Tuba (a quote from a link, draft ↔ scheduled), Milktea (sending in the background), Pachli (a drafts tab) |
 
 <details><summary>In detail</summary>
 
@@ -501,6 +514,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Spell checking in the compose panel.** Words with mistakes are underlined; a right click — suggestions and “Add to dictionary” (your own one — `spelling.txt` next to the config). It checks in the post's language, the interface's and English — a word is fine if any dictionary knows it; links, @names, #tags, :emoji: and `code` are left alone. The dictionaries are the system's (Debian: `libenchant-2-2`, `hunspell-en-us`, `hunspell-ru`); none — no checking. In the terminal — a list on F7, in the web page — the browser's checker.
 
+**Language check, link → quote, sending in the background, scheduled → editor, Drafts.** `lang_check` — before sending: the text is plainly in another language than the post's (by its script, and with langdetect by its words too) — "Mark it …", "Send as is" or back to the text. `link_quote` — a post's link at the end of the text becomes a quote (when its author allows) and leaves the text. `send_in_background` — the editor closes at once, the post with its pictures goes in the background; if it fails the editor comes back (on the web page and the phone, a notification, the draft kept). `scheduled_to_draft` — a scheduled post's "To the editor": off the schedule, its text in the editor. `drafts_place` — "Drafts" in the ≡ menu: every draft, to open (a reply's in its thread) or delete.
+
 </details>
 
 ---
@@ -529,6 +544,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | About the server: terms, whom it cut off, its translator | has | 0.20.0 | — | `instance/terms_of_service`, `instance/domain_blocks`, `instance/translation_languages` | Mastodon web |
 | Post visibility as set on the server | has | 0.11.0 | `post.default_visibility = "server"` | `/api/v1/preferences` | Mastodon web, Ivory |
 | Unfollowed — gone from Home | has | 0.21.0 | `people.forget_unfollowed` | `GET /api/v1/accounts/relationships` | — |
+| Your own names and colours for people, why a post is in Home, a post's JSON | has | 0.21.0 | `people.aliases`, `people.nick_colors`, `sync.people`, `card.why_home`, `debug.raw_json` | own | Tokodon and Fedilab (own names), Phanpy (why in the feed), Tuba (a post's JSON) |
 
 <details><summary>In detail</summary>
 
@@ -559,6 +575,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **About the server: terms, whom it cut off, its translator.** “About the server” has the terms of service (4.4), the servers it cut off or limited (if it shows them) and what its translator can do. “Translate” isn't offered in a post's menu where your server's translator can't turn that language into yours.
 
 **Unfollowed — gone from Home.** The posts and boosts of someone you stop following leave Home, as they leave your server's Home: at once when you unfollow here; within a few hours when you do it in another client or on the server's web page (fedtail asks the server about the people whose posts Home holds). Someone you never followed (a followed tag's posts) is left alone. `false` — what came stays.
+
+**Your own names and colours for people, why a post is in Home, a post's JSON.** `people.aliases` — "My name for them…" on a profile: a name you see instead of theirs on cards and the profile (yours only, never sent to the server; empty — their own again). `people.nick_colors` — "Name colour…": their name in your colour (a name or #rrggbb). `sync.people` — those names, colours and the people taken out of Home travel to your other devices. `card.why_home` — a post in Home by someone you don't follow says "# tag": it came by a followed tag. `debug.raw_json` — the post menu's "Post JSON": as the server gave it, with a Copy button — for bug reports.
 
 </details>
 
@@ -681,6 +699,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 | Help inside, in two languages | has | 0.17.0 | ≡ → “Help” | own: `fedtail/data/help/<lang>/` | — |
 | “What's this?”: a longer hint about any button | has | 0.17.0 | ≡ → “What's this?” for now; `window.whats_this` — from the start | own: `hints.toml` | KDE apps (What's This) |
 | A sound scheme | has | 0.19.0 | `sound.*`, `tui.sound`; in the theme — `[sound] source`, `from` | own: the theme's `sounds/` folder | QIP, ICQ, Mail.ru Agent, Psi |
+| A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | has | 0.21.0 | `server.proxy`, `server.proxy_at_login`, `window.number_keys`, `window.pin_tabs`, `phone.stream`, `reading.stats`, `card.translate_auto`, `card.translate_backend`, `card.translate_url`, `card.translate_key` | `/api/v1/statuses/:id/translate` or LibreTranslate's `/translate` | Tokodon (a proxy before login), FastSMRW (Ctrl+digit, pinned lanes), iMast (the stream on Wi-Fi only), Ivory (statistics), Fedilab and Scatto (translating by itself, another translator) |
 
 <details><summary>In detail</summary>
 
@@ -723,6 +742,8 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 **“What's this?”: a longer hint about any button.** Turn it on, and hovering shows a longer hint instead of the short one: what the button does, which config key changes it and which help section says more. The same menu item turns it off.
 
 **A sound scheme.** Sounds are part of a theme, as its pictures are. The messenger themes bring their own sets: `qip-retro` (and `qip-modern`) — bright “pip-pip” and a knock at the door when signing in, `mra` (and its colours) — round “blop”s and a xylophone, `psi` — soft chimes, `point` (and `juick`) — dry wooden ticks; `system` plays the desktop's sounds (the KDE/GNOME sound theme through `canberra-gtk-play`; without it a quiet set of fedtail's own), `terminal` and `bnw` — a beep. Your own sounds — a `sounds/` folder by the theme (`message.wav`, `reply.wav`, `mention.wav`, `direct.wav`, `thread.wav`, `request.wav`, `activity.wav`, `online.wav`, `sent.wav`); a missing one comes from the parent theme, from `[sound] from`, then a lighter sound of the same set. By default (`sound.enabled = "auto"`) development versions sound and releases are silent; `"on"` / `"off"` — always / never. A batch of news chimes once, with the weightiest sound (private → reply → mention → thread → request → activity → message), no more often than `sound.min_gap_seconds`; lanes — `sound.lanes` / `sound.except`, signing in and sending — `sound.online`, `sound.sent`; another theme's scheme whatever the look — `sound.scheme`, volume — `sound.volume`, the player — `sound.player` (by default pw-play, paplay, aplay; afplay on macOS; Windows itself). Qt and GTK alike; the terminal beeps (`tui.sound`), the web plays in the browser. ≡ → Debug → “Test the sound”. Every set is synthesised by `tools/make_sounds.py` — our own, GPL.
+
+**A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself.** `proxy` — a proxy for everything: the API, pictures, the live stream (through an HTTP proxy), sync, the login; `socks5h://…` — with PySocks. `proxy_at_login` — a "Proxy" field in the login window (Qt, GTK, the terminal, the web page, the phone): what you type is written into config.toml and used at once. `number_keys` — "ctrl" or "both": a lane by its number with Ctrl+1…9 too (the windows). `pin_tabs` — right-click a thread's or a profile's tab: a pinned one won't close by ×, Ctrl+W or Esc (the windows). `phone.stream = "wifi"` — the live stream on Wi-Fi only, polling on a mobile network. `stats` — "Statistics" in the ≡ menu: the week day by day (Home, my posts, activity) who fills Home the most and what was shared most. `translate_backend = "libretranslate"` with `translate_url` (and `translate_key`) — "Translate" through LibreTranslate, even when the server can't. `translate_auto` — posts in languages you neither read nor write translate by themselves, marked "translated from …".
 
 </details>
 
@@ -788,6 +809,7 @@ fedtail is a Qt window (KDE, Windows), a GTK window (GNOME), a terminal, a web p
 
 | What | Qt | GTK | Terminal | Web | Android | Why |
 |---|---|---|---|---|---|---|
+| Pinned tabs | ✓ | ✓ | · | · | · | ui.pin_tabs: right-click a thread's or a profile's tab. The terminal, the web page and the phone have no such tabs — a thread and a profile open over the lane and go with "back". Android: No tabs: screens stack, "back" is the one before. |
 | The tray icon | ✓ | ✓ | · | · | · | A terminal and a browser tab have no tray. Android: a phone has no tray |
 | The curtain (Esc closes the lanes) | ✓ | ✓ | · | · | · | In the terminal and on the web page Esc steps back; there is nothing to close. Android: a phone has no Esc |
 | Lanes in columns | ✓ | ✓ | · | ✓ | ✓ | The terminal — one lane at a time. The web page — columns by ❯, as the windows' (at a phone's width, one lane); the phone — on a tablet (the overview, a lane, a thread side by side). |
@@ -836,6 +858,12 @@ The features of the list above that the Android app lacks or has in part (◐ �
 |---|---|---|
 | A messenger's layout: a roster and a messages window | · | not a phone thing |
 
+### Threads
+
+| What | Android | Why |
+|---|---|---|
+| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | ◐ | no ] [ − keys on a phone; the rest as everywhere |
+
 ### Read marks and place
 
 | What | Android | Why |
@@ -870,6 +898,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | Leak hunting: trends, an object census, memory snapshots | · | a desktop tool |
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |
+| A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |
 
 ### Interfaces
 

@@ -250,6 +250,10 @@ class LanePlaces:
             Field("filter_context", _("le_f_filters"), str(t.get("filter_context") or ""),
                   "choice", (("", "—"),) + tuple((c, _("le_fctx_" + c))
                                                  for c in laneedit.FILTER_CONTEXTS)),
+            Field("per_author", _("le_f_per_author"), str(t.get("per_author") or ""),
+                  tip=_("le_f_per_author_tip")),
+            Field("bundle", _("le_f_bundle"), str(t.get("bundle") or ""), "choice",
+                  (("", "—"), ("author", _("le_bundle_author")))),
         ]
         for part in ("any", "none"):
             conds = t.get(part) or []
@@ -303,7 +307,7 @@ def _table_of(name, old, values):
     """The form's values → the lane's new table (what the form doesn't show stays)."""
     t = {k: v for k, v in old.items() if k not in ("title", "icon", "group", "source", "read",
                                                     "sort", "mode", "window", "filter_context",
-                                                    "any", "none")}
+                                                    "per_author", "bundle", "any", "none")}
     t["name"] = name
     title = str(values.get("title") or "").strip()
     was = old.get("title")
@@ -317,10 +321,16 @@ def _table_of(name, old, values):
             t["title"] = title
     for key, default in (("icon", ""), ("group", "personal"), ("read", "through"),
                          ("sort", "arrival"), ("mode", "lane"), ("window", ""),
-                         ("filter_context", "")):
+                         ("filter_context", ""), ("bundle", "")):
         v = str(values.get(key) or "")
         if v and (v != default or key in old):
             t[key] = v
+    n = str(values.get("per_author") or "").strip()
+    if n:
+        if not n.isdigit():
+            raise ValueError(_("le_f_per_author_tip"))
+        if int(n) or "per_author" in old:
+            t["per_author"] = int(n)
     src = [s for s in values.get("source") or () if isinstance(s, str)]
     if src:
         t["source"] = src[0] if len(src) == 1 else src

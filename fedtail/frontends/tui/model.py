@@ -22,6 +22,7 @@ class Shown:
     cw: str = ""
     foot: str = ""
     above: list = field(default_factory=list)  # [(kind, text)] over the head: boosted
+    colors: dict = field(default_factory=dict)  # {kind: "#rrggbb"}: my colour for a name
     below: list = field(default_factory=list)  # [(kind, text)] under the text: a quote,
     #                                            reactions, "you replied", a conversation
 
@@ -73,6 +74,8 @@ def show_post(core, entry, alias=None, unread=False, number=None, width=80, pare
     name = acc.name.strip()
     if name and name != acc.username:
         out.head.append(("name", name))
+    if acc.color:  # people.nick_colors: who in my colour for them
+        out.colors["who"] = out.colors["name"] = acc.color
     out.head.append(("time", when(p.created)))
     if words is not None:
         if words.boosted is not None:

@@ -92,13 +92,49 @@ def wider_sources(api, bubble=()):
     }
 
 
-def prefixed_source(api, name, remote=None):
-    """A stream named with its parameter: account:<id> (someone's posts), link:<url>
-    (posts sharing a link), quotes:<id> (quotes of a post), remote:<host> (another
-    server's public lane, fetched into mine: remote(host) gives its new posts)."""
+ACCOUNT_FLAGS = ("posts", "media", "noboosts", "pinned")  # account:<id>/<flag>…
+
+
+def account_parts(arg):
+    """account:<id>/posts/media/tag:linux → ("<id>", {"posts", "media"}, "linux"); a
+    word it doesn't know → ValueError (the rule says so)."""
+    acc, *rest = arg.split("/")
+    flags, tag = set(), None
+    for part in rest:
+        if part.startswith("tag:") and part[4:]:
+            tag = part[4:].lstrip("#")
+        elif part in ACCOUNT_FLAGS:
+            flags.add(part)
+        else:
+            raise ValueError(f"account:…/{part} — one of {', '.join(ACCOUNT_FLAGS)}, tag:<tag>")
+    if not acc:
+        raise ValueError("account: — an account's id")
+    return acc, flags, tag
+
+
+def prefixed_source(api, name, remote=None, rss=None):
+    """A stream named with its parameter: account:<id> (someone's posts; /posts — no
+    replies, /media — with pictures, /noboosts, /pinned, /tag:<tag> — the server
+    filters), link:<url> (posts sharing a link), quotes:<id> (quotes of a post),
+    search:<words> (posts found), rss:<address> (a feed's items: rss(url) gives them),
+    remote:<host> (another server's public lane, fetched into mine: remote(host) gives
+    its new posts)."""
     kind, _sep, arg = name.partition(":")
     if kind == "account":
-        return Source(name, lambda **kw: api.account_statuses(arg, **kw), _status_entry)
+        try:
+            acc, flags, tag = account_parts(arg)
+        except ValueError:
+            return None
+        if "pinned" in flags:
+            return Source(name, _first_page(lambda _n: api.pinned(acc)), _status_entry)
+        opts = {"exclude_replies": "posts" in flags, "only_media": "media" in flags,
+                "exclude_reblogs": "noboosts" in flags, "tagged": tag}
+        return Source(name, lambda **kw: api.account_statuses(acc, **kw, **opts),
+                      _status_entry)
+    if kind == "search" and arg.strip():
+        return Source(name, lambda **kw: api.search_statuses(arg, **kw), _status_entry)
+    if kind == "rss" and rss is not None and arg.strip():
+        return Source(name, _first_page(lambda _n: rss(arg)), _status_entry)
     if kind == "link":
         return Source(name, lambda **kw: api.link_timeline(arg, **kw), _status_entry)
     if kind == "quotes":
@@ -109,8 +145,14 @@ def prefixed_source(api, name, remote=None):
     return None
 
 
-def tag_group_source(api, spec):
+def tag_group_source(api, spec, one_request=False):
+    """A lane of tags. one_request (lanes.tags_one_request, where the server takes
+    any[]/all[]/none[] — Mastodon): the whole group asked at once, not a tag at a time."""
     from . import taggroups
+    if one_request:
+        return Source(taggroups.lane_name(spec),
+                      lambda **kw: taggroups.fetch_once(api.tag_timeline, spec, **kw),
+                      _status_entry)
     return Source(taggroups.lane_name(spec),
                   lambda **kw: taggroups.fetch(api.tag_timeline, spec, **kw), _status_entry)
 

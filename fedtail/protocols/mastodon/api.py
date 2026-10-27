@@ -653,9 +653,20 @@ class Api:
     def follow(self, acc_id, on=True):
         return self.post(f"/api/v1/accounts/{seg(acc_id)}/{'follow' if on else 'unfollow'}")
 
-    def tag_timeline(self, tag, limit=40, max_id=None, min_id=None):
-        return self.get(f"/api/v1/timelines/tag/{quote(tag, safe='')}",
-                        self._page(limit, max_id, min_id))
+    def tag_timeline(self, tag, limit=40, max_id=None, min_id=None, **more):
+        """A tag's timeline; more: any[] / all[] / none[] — other tags (Mastodon)."""
+        params = self._page(limit, max_id, min_id)
+        params.update({k: v for k, v in more.items() if v})
+        return self.get(f"/api/v1/timelines/tag/{quote(tag, safe='')}", params)
+
+    def search_statuses(self, q, limit=40, max_id=None, min_id=None):
+        """Posts found by words (a lane's source search:<words>), newest first."""
+        p = {"q": q, "type": "statuses", "resolve": "false", "limit": min(limit, 40)}
+        if max_id:
+            p["max_id"] = max_id
+        if min_id:
+            p["min_id"] = min_id
+        return (self.get("/api/v2/search", p) or {}).get("statuses") or []
 
     def get_page(self, path, params=None):
         """GET a list that pages by the Link header (followers, following):

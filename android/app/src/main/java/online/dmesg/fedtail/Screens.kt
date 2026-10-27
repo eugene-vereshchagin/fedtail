@@ -315,6 +315,14 @@ private fun Login(model: AppModel, openBrowser: (String) -> Unit, modifier: Modi
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri,
                 imeAction = ImeAction.Go),
             modifier = Modifier.fillMaxWidth())
+        if (model.loginProxyField) {  // net.proxy_at_login: before the first request
+            OutlinedTextField(
+                value = model.loginProxy, onValueChange = { model.loginProxy = it },
+                label = { Text(stringResource(R.string.login_proxy)) },
+                placeholder = { Text("socks5h://127.0.0.1:1080") }, singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                modifier = Modifier.fillMaxWidth())
+        }
         Button(onClick = { model.beginLogin(openBrowser) }, enabled = !model.loginBusy,
             modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.login_go))

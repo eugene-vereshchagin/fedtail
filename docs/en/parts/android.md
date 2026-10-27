@@ -8,6 +8,12 @@ The features of the list above that the Android app lacks or has in part (◐ �
 |---|---|---|
 | A messenger's layout: a roster and a messages window | · | not a phone thing |
 
+### Threads
+
+| What | Android | Why |
+|---|---|---|
+| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | ◐ | no ] [ − keys on a phone; the rest as everywhere |
+
 ### Read marks and place
 
 | What | Android | Why |
@@ -42,6 +48,7 @@ The features of the list above that the Android app lacks or has in part (◐ �
 | Leak hunting: trends, an object census, memory snapshots | · | a desktop tool |
 | “What's this?”: a longer hint about any button | · | nothing to hover with |
 | A sound scheme | · | no sound on the phone |
+| A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ◐ | The proxy, the proxy field at login, the stream on Wi-Fi only, statistics and translation — yes; the phone has no keys and no tabs. |
 
 ### Interfaces
 

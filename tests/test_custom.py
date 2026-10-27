@@ -806,7 +806,7 @@ class LanesToConfigTest(unittest.TestCase):
         self.assertEqual(warnings, [])
         self.assertEqual([(x.name, x.source) for x in lanes.enabled(cfg)], before)
         home = next(x for x in cfg["lanes"]["custom"] if x["name"] == "home")
-        self.assertEqual(home["none"], [{"author": "bot"}])
+        self.assertEqual(home["none"], [{"author": "hidden_home"}, {"author": "bot"}])
         self.assertEqual(u.lanes_to_config(out), out)  # all there: nothing more
 
     def test_own_lanes_stay_and_russian(self):

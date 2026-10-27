@@ -1187,6 +1187,37 @@ class Store:
                                    "ORDER BY updated DESC").fetchall()
         return [(k, json.loads(d), u) for k, d, u in rows]
 
+    # ---- "Statistics" (feed.stats): what came and what I did, by day ------------------
+    def stats_since(self, since, me_id, source="home", top=5):
+        """{"home": [created_at…], "mine": […], "activity": […], "authors": [(acct, n)]}
+        — the posts that came into the source, my own posts, the notifications, since
+        an ISO time; who filled the source the most."""
+        with self._reading() as db:
+            home = [r[0].split("|", 1)[0] for r in db.execute(
+                "SELECT sort FROM items WHERE source = ? AND sort >= ?", (source, since))]
+            mine = [r[0] for r in db.execute(
+                "SELECT created_at FROM statuses WHERE created_at >= ? AND "
+                "json_extract(data, '$.account.id') = ?", (since, str(me_id or "")))]
+            act = [r[0].split("|", 1)[0] for r in db.execute(
+                "SELECT sort FROM activity WHERE sort >= ?", (since,))]
+            authors = db.execute(
+                "SELECT json_extract(s.data, '$.account.acct') AS who, COUNT(*) AS n "
+                "FROM items i JOIN statuses s ON s.id = i.status_id "
+                "WHERE i.source = ? AND i.sort >= ? GROUP BY who ORDER BY n DESC LIMIT ?",
+                (source, since, top)).fetchall()
+            links = db.execute(
+                "SELECT COALESCE(json_extract(s.data, '$.reblog.card.url'), "
+                "json_extract(s.data, '$.card.url')) AS link, "
+                "COALESCE(json_extract(s.data, '$.reblog.card.title'), "
+                "json_extract(s.data, '$.card.title')) AS title, COUNT(*) AS n "
+                "FROM items i JOIN statuses s ON s.id = i.status_id "
+                "WHERE i.source = ? AND i.sort >= ? AND link IS NOT NULL "
+                "GROUP BY link ORDER BY n DESC, link LIMIT ?",
+                (source, since, top)).fetchall()
+        return {"home": home, "mine": mine, "activity": act,
+                "authors": [(w or "?", n) for w, n in authors],
+                "links": [(u, t or "", n) for u, t, n in links]}
+
     # ---- sync between devices (core/sync) ------------------------------------------
     def sync_record(self, op):
         """One thing this device did, to be sent to the others."""

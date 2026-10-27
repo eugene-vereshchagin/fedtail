@@ -52,11 +52,15 @@ log = logging.getLogger(__name__)
 
 THREAD_STATES = ("sub", "left", "muted")
 WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
-        "lane_rules")  # = config.SYNC_WHAT
+        "lane_rules", "people")  # = config.SYNC_WHAT
 # kv values carried whole (the newest wins) → the switch that lets them travel; app.py
 # records them where they change
 SETTINGS = {"list_order": "lanes", "tag_groups": "lanes", "pinned_tiles": "tiles",
-            "lane_rules": "lane_rules"}
+            "lane_rules": "lane_rules",
+            # my own names for people, those kept out of Home (sync.people)
+            "people_aliases": "people", "people.hidden_home": "people",
+            "people_colors": "people"}
+PEOPLE_KEYS = tuple(k for k, w in SETTINGS.items() if w == "people")
 LANE_KEYS = tuple(k for k, w in SETTINGS.items() if w in ("lanes", "lane_rules"))
 READ_CHUNK = 1000   # ids in one recorded op
 BATCH_OPS = 400     # ops in one sealed blob
@@ -337,6 +341,7 @@ class Sync:
     def apply(self, payload):
         """Another device's batch → this store. → how many ops it carried."""
         reads, threads, lanes, hidden, drafts, tiles = [], [], [], [], [], False
+        people = False
         device = str(payload.get("d") or "")
         seen = 0
         for op in payload.get("ops") or []:
@@ -360,6 +365,8 @@ class Sync:
                     self.store.kv_set(op["k"], op["v"])
                     if op["k"] in LANE_KEYS:
                         lanes.append(op["k"])
+                    elif op["k"] in PEOPLE_KEYS:
+                        people = True
                     else:
                         tiles = True
             elif isinstance(op.get("h"), list):
@@ -393,6 +400,10 @@ class Sync:
                 log.warning("sync: lanes %s: %s", lanes, e)
         if tiles:
             self.core.emit("tiles_changed", self.store.kv_get("pinned_tiles", []))
+        if people:
+            changed = getattr(self.core, "_people_changed", None)
+            if changed is not None:
+                changed()
         if hidden and self.store.activity_hide_known(hidden):
             self.core.emit("activity_updated", None)
         if drafts:
@@ -414,6 +425,9 @@ class Sync:
         if key == "lane_rules":
             return isinstance(value, dict) and isinstance(value.get("custom", []), list) \
                 and isinstance(value.get("enabled", []), list)
+        if key in ("people_aliases", "people_colors"):
+            return isinstance(value, dict) and all(isinstance(k, str) and isinstance(v, str)
+                                                   for k, v in value.items())
         if not isinstance(value, list):
             return False
         if key == "tag_groups":

@@ -39,7 +39,7 @@ KEYS = {k: (sorted(v) if v else None) for k, v in atoms._SET_KEYS.items()} | \
     {k: None for k in atoms._COUNT_KEYS} | \
     {"age": None, "age_of": ["post", "original"], "text": None,
      "text_in": sorted(atoms.TEXT_IN), "text_case": ["true", "false"],
-     "text_regex": ["true", "false"], "apart": None}
+     "text_regex": ["true", "false"], "apart": None, "until": None}
 _BOOLS = {"text_case", "text_regex"}
 _INTS = {"priority"}
 _OWN_FIELDS = ("switch", "shown")  # a condition's fields of their own, not in its line

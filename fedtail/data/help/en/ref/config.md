@@ -109,6 +109,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `window.close_to_tray` | `true` | The cross hides the window to the tray instead of closing the program. |
 | `window.esc` | `"curtain"` | Esc closes what's on top (a picture, the search), and the last Esc:<br>"curtain" — draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right; nothing is marked read — open it in the morning and the new has piled up;<br>"tray" — takes the window to the tray at once (without a tray — minimizes it);<br>"off" — does nothing. |
 | `window.post_keys` | `true` | Keys in a lane and a thread, as in web clients: j / k — the next / previous post, r — reply, f — like, b — boost, m — bookmark, o or Enter — open the thread. false — these letters do nothing. |
+| `window.number_keys` | `"alt"` | A lane by its number in the sidebar: "alt" — Alt+1…9, "ctrl" — Ctrl+1…9, "both" — either (the windows; a browser and a terminal keep these keys for themselves). |
+| `window.pin_tabs` | `false` | Pin tabs (a thread, a profile): right-click a tab — "Pin the tab". A pinned one has no ×, and Ctrl+W / Esc pass it by (the windows). |
 | `window.command_line` | `true` | A command line as on Point at the bottom of the window (Ctrl+L shows it even if false). |
 | `window.whats_this` | `false` | "What's this?" from the start: point the mouse at a button — a longer hint on what it does, which config key changes it and where the help says more. For now it's turned on and off in the ≡ menu → "What's this?". No shortcut on purpose (F1 is next to Esc). |
 | `window.compose` | `"inline"` | Where to write a post: "inline" — a panel inside the main window (the keyboard layout isn't reset: KDE keeps it per window, and a new window may open with another one); "window" — a window of its own, as before. |
@@ -142,6 +144,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `lanes.tags_extra` | `[]` |  |
 | `lanes.bubble` | `[]` | The servers of your "bubble": a lane of rules with source = "bubble" reads Federated, only their people's posts (like Akkoma's bubble timeline). Like ["fosstodon.org", "mas.to"]. |
 | `lanes.extra_minutes` | `10` |  |
+| `lanes.tags_one_request` | `false` | Ask a lane of tags (several tags in one) in one request, not one per tag — where the server can (Mastodon: any[], all[], none[]). false — a tag at a time. |
 
 ### `[lists]`
 
@@ -160,13 +163,14 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 |---|---|---|
 | `reading.order` | `"oldest_first"` | The order: "oldest_first" — oldest on top, you read downwards (as in RSS/Point); "newest_first" — newest on top (as everyone does). |
 | `reading.start_at` | `"first_unread"` | Where to stand when a lane opens: "first_unread" or "newest". |
-| `reading.on_new` | `"keep_position"` | What to do when new posts come: "keep_position" — stay where you are; "jump_to_newest" — jump to the new (as everyone does). |
+| `reading.on_new` | `"keep_position"` | What to do when new posts come: "keep_position" — stay where you are; "jump_to_newest" — jump to the new (as everyone does); "hold" — keep the new out of the lane, "N new" in its header, Refresh (⟳, F5) shows them (as Elk does). |
 | `reading.page_size` | `40` | How many posts a request to the server. |
 | `reading.catch_up_limit` | `400` | How many new posts to catch up a poll (the rest — with the next one). |
 | `reading.render_limit` | `300` | How many latest posts to keep on screen in a lane (older ones — with the "older" button). |
 | `reading.build_at_once` | `40` | How many cards to build at once when a lane opens — around where you read; the rest are built as you scroll near an edge (the screen doesn't wait for fifty cards). What you read doesn't move meanwhile. 0 — build the whole lane at once (as before: on hundreds of posts that takes seconds). |
 | `reading.remember_choices` | `false` | The quick filters, remembered between runs: over a lane — "All / Posts only / New", a lane's own quick filters, "Feed / Conversations", the media funnel — and Activity's. false — every run starts afresh ("All", "Feed", or what [lanes] posts_only and a lane's rule say); a choice holds until the program closes. |
 | `reading.first_run_mark_read` | `true` | At the very first run, count everything fetched as read (don't start with a pile). |
+| `reading.stats` | `false` | "Statistics" in the ≡ menu: how many posts came into Home, how many you wrote and how much activity there was — over the week, day by day, and who fills Home the most. |
 | `reading.mark_read` | `"on_scroll"` | When a post counts as read:<br>"on_scroll" — when you've scrolled past the whole of it;<br>"on_open" — the whole lane, as soon as you open it;<br>"manual" — by hand only: "All read", and in a post's ⋯ menu "Mark read" and "Read up to here" (this one and everything older). So a lane always waits for you exactly where you stopped, even reading one post at a time. The "Mark read" and "Read up to here" items are in a post's menu in any mode. |
 | `reading.read_button` | `false` | A ✓ "Read" button right under each unread post (handy with "manual"). |
 
@@ -185,6 +189,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `card.collapse_tags` | `true` | A paragraph of nothing but hashtags (more than three) — padding for search: in a lane it folds into the first three and "… +N" in small type, in an open thread it's whole, but small too. Hashtags inside the text aren't touched. false — as the server sent it. |
 | `card.long_form` | `true` | "📄 Read it whole" in the ⋯ menu of a post from another server: the post as the author's server keeps it. An article (Article, Page) — whole, not a title with a link; an event (Event) — with its time and place. Without your token. false — no such item. |
 | `card.sensitive_media` | `"hide"` | Pictures and videos the author marked "sensitive" (without a content warning, CW):<br>"hide" — under a cover, a click shows them; "show" — seen at once. Under a CW they are hidden together with the text anyway. |
+| `card.around_post` | `false` | In a post's menu — "Around this post": what came to Home just before and right after it (if Home never had it — on the author's wall). |
+| `card.why_home` | `false` | Under a post in Home by someone you don't follow — "via #tag": which of your followed tags brought it. |
 | `card.arts_mode` | `true` | Arts mode (after @arts, the founder of Point.im): everything as the author posted it, no nannying. Turns on at once: CWs open (expand_cw), "sensitive" pictures without a cover (card.sensitive_media = "show"), server filters neither hide nor fold posts, there is no "Report" item. Your own mutes and blocks work as usual, and what the server itself cuts off (domain blocks on it) never reaches the client at all — that can't be got round. Recommended. false — everything as everyone has it, each setting on its own. |
 | `card.expand_cw` | `true` | Text and pictures under a content warning (CW) open at once. false — folded, opened with the "show" button. |
 | `card.actions` | `"both"` | The buttons under a post: "both" — an icon and a label, "icons" — icons only (the labels pop up on hover), "text" — labels only. |
@@ -195,6 +201,10 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `card.counters_via_accounts` | `true` | If the author's server won't give the numbers without a login: ask them as another account of yours (a fedtail profile) — on the author's server, if you have one there, or on a server that already has the post. Each account's token goes only to its own server. Works together with honest_counters. |
 | `card.translate` | `true` | "Translate" in the ⋯ menu of a post in another language — if your server can translate (Mastodon with DeepL or LibreTranslate). The translation — right in the card, with an "original" button. |
 | `card.translate_all` | `false` | "Translate" on every post, not only those in another language: in your own language too, and on posts with no language given (the server works it out). As in Fedilab. |
+| `card.translate_auto` | `false` | Translate posts in languages you neither read nor write (not the interface's, not post.language / post.languages) by themselves: the translation in place of the text, marked "translated from …". The original — in the browser or "Post JSON". Your server translates (if it can) or LibreTranslate below; a few posts at a time, in the background. |
+| `card.translate_backend` | `"server"` | Who translates: "server" — your server (its /translate; not every one has it) or "libretranslate" — your own or a public LibreTranslate at translate_url. |
+| `card.translate_url` | `""` | LibreTranslate's address: "https://translate.example" (http:// — on your own network). |
+| `card.translate_key` | `""` | LibreTranslate's API key, if it asks for one. |
 
 ## 6. Threads and following them
 
@@ -203,6 +213,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | Key | Default | What it does |
 |---|---|---|
 | `threads.complete_threads` | `true` | Whole threads. Your server knows only the replies that reached it (from people followed on your server, or addressed to you), — that's why other people's threads have holes. Open a thread — fedtail asks the author's server for the list of replies and asks your server to fetch what's missing; the thread grows by itself a couple of seconds later. These are requests to other servers without your token (they see only the IP). false — make do with your own server. Mastodon 4.5+ gathers replies itself too — then the thread grows when the server says it's done. |
+| `threads.thread_from` | `"mixed"` | Where a thread's replies come from: "local" — only what your server knows; "mixed" — yours at once, and your server fetches the missing ones from the author's, the thread growing by itself; "remote" — ask the author's server first, the thread opens whole (slower). |
+| `threads.thread_recheck_minutes` | `0` | An open thread (opened in the last half hour) asks the server about new replies every so many minutes and grows when there are some. 0 — no, only when it opens. |
+| `threads.thread_followed_only` | `false` | In a thread — only the replies of people you follow and yours (and what they answer, so the tree holds together). false — every reply. |
 | `threads.auto` | `["posts", "comments"]` | Thread subscriptions, as on Point. The server tells you only of replies that mention you; if two people answer each other under your post, you won't know. fedtail itself rereads the threads you're subscribed to and puts what's new into "Subscriptions". Subscribe/unsubscribe — in a post's ⋯ menu or with the button in the thread's header. What to subscribe to by itself: "posts" — your own posts, "comments" — threads you comment in. |
 | `threads.interval_minutes` | `5` | How often to reread a live thread, minutes; a quiet one is reread less often (an hour quiet — 3 times, a day — 12, three days — 36), and threads take at most a quarter of what the server still allows. |
 | `threads.active_days` | `14` | A thread where nothing happened for this many days is not checked any more. |
@@ -225,6 +238,9 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `people.per_person_follow` | `true` | On the profile of someone you follow — two buttons: "♻ without their boosts" (their boosts don't come to Home) and "🌐 languages" (only their posts in these languages). The server keeps it, so it works in every client. false — no buttons. |
 | `people.follow_date_note` | `true` | Servers don't keep the day you followed someone. When you follow through fedtail, I write the date as the last line of your private note on the person — "[fedtail followed 2026-10-18]": it's seen from any device and in other clients (in fedtail this line is hidden and kept when the note is edited). false — I remember it here only. |
 | `people.forget_unfollowed` | `true` | Someone you stop following: their posts and boosts leave Home, as they leave your server's Home — at once when you unfollow here, and within a few hours when you do it elsewhere (another client, the server's web page). false — what came stays. |
+| `people.home_hide` | `false` | On the profile of someone you follow — "Not in Home": their posts stay out of Home while the follow, lists and the bell stay. In this program only. |
+| `people.aliases` | `false` | On a profile — "My name for them…": a name you see instead of theirs (yours only; with sync.people — on your other devices too). |
+| `people.nick_colors` | `false` | On a profile — "Name colour…": their name on cards in your colour (a name from the list or #rrggbb; yours only; with sync.people — on your other devices too). |
 
 ## 8. Pictures and video
 
@@ -283,6 +299,11 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `post.focus_point` | `true` | A double click on a picture in a post — its description and the focus point: click the picture where the main thing is, and the preview (where it's cut) shows exactly that. false — the description only. |
 | `post.chain` | `true` | A thread as a chain: a line of nothing but "---" splits the text into posts — they go at once, each a reply to the one before (pictures and the poll go with the first). The character counter counts each part on its own. false — "---" stays plain text (a horizontal rule in Markdown). |
 | `post.preview` | `true` | The "👁 Preview" button in the post panel: how it will look — the Markdown already rendered (if the server understands it), the CW, visibility, each part of a chain; and from there "Send". false — no button. |
+| `post.lang_check` | `false` | Check the post's language: when the text is plainly in another language than the one the post is marked with, ask before sending — mark it that one, send as is, or go back to the text. Readers who filter the post's language out won't see it. langdetect is needed for Latin and Cyrillic; short texts aren't checked. |
+| `post.link_quote` | `false` | A post's link at the end of the text becomes a quote of that post (when its author lets it be quoted), and the link leaves the text. |
+| `post.send_in_background` | `false` | The editor closes as soon as you press Send, and the post (pictures and videos too) goes in the background. If it fails, you're told; the draft stays. |
+| `post.scheduled_to_draft` | `false` | In "Scheduled", each post gets "To the editor": taken off the schedule and opened in the editor, to fix and send again. |
+| `post.drafts_place` | `false` | "Drafts" in the ≡ menu: every kept draft — the new post, replies, quotes — to open or delete. |
 | `post.markdown` | `"auto"` | Whether the server understands Markdown: "auto" (ask the server), "on", "off". GoToSocial / Akkoma do, vanilla Mastodon doesn't. |
 
 ## 10. Notifications and sounds
@@ -362,6 +383,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `sync.activity` | `true` | Notifications you dismissed from Activity: gone on every device. |
 | `sync.tiles` | `true` | Which lanes the phone pins as tiles. |
 | `sync.lane_rules` | `false` | The lanes themselves: the set (lanes.preset), which lanes in what order (lanes.enabled), your own lanes ([[lanes.custom]]), lanes.posts_only. A device that gets them writes them into its config.toml. Off by default: it changes the file. They go out when they change here (by hand or in the lane editor); a device that has just started sends nothing of its own. |
+| `sync.people` | `false` | Your own names and colours for people (people.aliases, people.nick_colors) and those taken out of Home (people.home_hide). |
 | `sync.sync_markers` | `true` | The reading place shared with other clients (Mastodon markers): read Home or mentions to the end on the phone — here it's read too, and the other way round. Works with Mastodon, GoToSocial, Akkoma. false — read marks live here only. |
 
 ## 14. The server
@@ -374,6 +396,8 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `server.stream` | `"auto"` | The server's live stream: something new came — poll at once, not after interval_seconds. "auto" — if the server offers it (GoToSocial, Mastodon, Akkoma); "off" — polling only. The stream only wakes the poll, so if it drops (a laptop asleep, a proxy) nothing is lost. |
 | `server.stream_gap_seconds` | `10` | The live stream wakes a poll as soon as something comes — but not more often than every this many seconds: on a busy server events come many times a minute, and every poll is a dozen requests and a bit of processor. Whatever comes in these seconds comes with one poll. "Refresh" isn't made to wait. 0 — at once on every event. |
 | `server.slow_minutes` | `0` | Slow mode: the news piles up and comes once every this many minutes — in one batch, with its counts, notifications and sound; between batches nothing stirs to get in the way of work. The live stream wakes no poll meanwhile; Refresh asks at once. 0 — off (news comes as it arrives). Also on the go: ≡ → "Slow mode…" (with "notify at most every…" for each lane there). |
+| `server.proxy` | `""` | A proxy for the whole of fedtail — the API, pictures, the live stream, sync, the login: "http://host:port", "socks5h://host:port" (SOCKS needs the PySocks package; the live stream doesn't go through SOCKS, polling does). A user and password — "http://user:pass@host:port". "" — as the system says (HTTPS_PROXY and the like). |
+| `server.proxy_at_login` | `false` | A "Proxy" field in the login window: set it before the first request to the server (when the server can't be reached without it). What you type is written here, in proxy. |
 
 ## 15. Database and logs
 
@@ -407,6 +431,7 @@ Where it lives: ~/.config/fedtail/<profile>/config.toml  (without --profile — 
 | `debug.tracemalloc` | `false` | Memory tracing from the start (tracemalloc): every memory allocation remembers which line of code it came from. Slower and about twice the memory — only for hunting a leak, say overnight. A snapshot — the ≡ menu → "Debugging" → "Memory snapshot": a memory-<time>.txt file in the log folder, who holds the most and what grew since the first snapshot. It can be turned on without a restart there too. |
 | `debug.report_repo` | `""` | Where bug reports go (≡ → "Debugging" → "Collect a report", `--bug-report`, the nightly tools/selfcheck.py): a private git repository, over ssh, with your own keys. "user/repo" — on GitHub, or a full address: "git@host:user/repo.git", "ssh://…". A report goes into reports/YYYY-MM/ as a commit of its own; the older ones aren't downloaded. Nothing is asked (no key or no access — it says so). "" — a file on disk only. This is for the developer and those he gave access: the repository must be private. |
 | `debug.issue_repo` | `""` | Where "Report a bug on GitHub…" leads: the public tracker. Before it opens you see the text — the version, the system and the latest errors, with addresses, nicknames and paths already replaced by placeholders; you may edit it, and you send it yourself in the browser. "" — fedtail's own tracker; "user/repo" — another (your own build, a fork). |
+| `debug.raw_json` | `false` | In a post's menu — "Raw JSON": the post as the server gave it (for bug reports). |
 
 ## 16. In a terminal
 
@@ -459,3 +484,4 @@ The Android app (the android/ folder of the repository). Its config is this same
 | `phone.overview` | `"tiles"` | The overview of lanes — the home screen: "tiles" — tiles, four in a row (the count and the name); "list" — a list, a row per lane, with its first unread post. |
 | `phone.layout` | `"auto"` | How many columns: "auto" — by the screen's width (a phone — one, a phone on its side and a narrow tablet — the lanes and a lane, a wide tablet — the lanes, a lane and a thread side by side); "one", "two", "three" — always that many, if they fit. |
 | `phone.push` | `"auto"` | Notifications at once, with the app closed: "auto" — through UnifiedPush when the phone has a distributor for it (ntfy, Sunup, NextPush…): your server pushes to it, the app wakes and asks; without one, or "off" — a round every 15 minutes (Android's least). |
+| `phone.stream` | `"always"` | The live stream on the phone: "always", "wifi" — on Wi-Fi only (on a mobile network, polling every server.interval_seconds), "off" — polling only. |

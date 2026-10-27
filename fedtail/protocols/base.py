@@ -84,8 +84,8 @@ CLIENT = frozenset("""
     notifications
     notify_posts pin pinned poll post_status preferences quotes react_announcement
     read_conversation reblog reblogged_by register_app reject_follow relationship
-    relationships remove_from_followers report revoke_quote scheduled search set_markers
-    set_note set_notification_policy status status_history status_source suggestions
+    relationships remove_from_followers report revoke_quote scheduled search search_statuses
+    set_markers set_note set_notification_policy status status_history status_source suggestions
     instance_v2 tag tag_timeline translate trends unfeature_tag update_credentials update_list
     upload_media verify_credentials vote base
 """.split())

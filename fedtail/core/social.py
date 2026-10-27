@@ -532,6 +532,10 @@ class SocialMixin:
     def load_translation_languages(self):
         """What the server's translator turns into what: {source: [targets]}, kept in
         self.translation_languages; None — not known (an older server: any is tried)."""
+        if self._own_translator():  # feed.translate_backend: not the server's
+            self.caps.translation = True
+            self.translation_languages = None
+            return None
         if not getattr(self.caps, "translation", False):
             self.translation_languages = None
             return None

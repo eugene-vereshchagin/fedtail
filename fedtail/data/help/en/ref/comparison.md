@@ -44,6 +44,8 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Home's quick filters: tags, boosts, threads with news | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Important people | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Lanes of rules: order by counts, “what did I miss”, “Why is it here?” | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Lanes from someone's wall, a search and RSS | ✓ |   |   |   | ✓ |   |   |   |   |   |   |   |   |   |
+| Rules: for a while, by name, at most N per author, by author, "Not in Home" | ✓ |   |   | ✓ | ✓ |   |   |   | ✓ |   |   |   |   |   |
 
 ## Threads
 
@@ -56,6 +58,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Thread subscriptions, as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Mute a thread | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | A thread with new replies shows on its card | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | ✓ |   |   | ✓ |   |   |   |   | ✓ |   |   |   | ✓ |   |
 
 ## Read marks and place
 
@@ -68,6 +71,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Read marks, thread subscriptions and lane order shared by all your devices | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |
 
 ## The post card
 
@@ -146,6 +150,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | A command line as on Point | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Short post names the same on every device | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Spell checking in the compose panel | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |
+| Language check, link → quote, sending in the background, scheduled → editor, Drafts | ✓ |   |   |   |   |   |   |   | ✓ |   |   |   | ✓ |   |
 
 ## People and order
 
@@ -170,6 +175,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Profile: hide follows, posts found by search, article authorship, tag suggestions | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | About the server: terms, whom it cut off, its translator | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |
 | Post visibility as set on the server | ✓ | ✓ |   | ✓ |   |   |   |   |   |   |   |   |   |   |
+| Your own names and colours for people, why a post is in Home, a post's JSON | ✓ |   |   |   | ✓ |   | ✓ |   | ✓ |   |   |   | ✓ |   |
 
 ## Notifications and activity
 
@@ -220,6 +226,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Polling the server and the live stream | ✓ | ✓ |   |   | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |
 | Screen readers | ◐ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |   |
 | Interface language | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| A proxy, Ctrl+1…9, pinned tabs, the stream on Wi-Fi only, statistics, LibreTranslate and translating by itself | ✓ |   |   | ✓ |   |   | ✓ |   | ✓ |   |   |   |   |   |
 
 ## Interfaces
 
@@ -231,4 +238,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **49** features of the 167 compared.
+Only in fedtail — **49** features of the 174 compared.

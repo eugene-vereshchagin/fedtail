@@ -22,7 +22,9 @@ import re
 import threading
 import time
 import urllib.parse
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
+from html import escape as html_escape
 
 import requests
 
@@ -108,6 +110,37 @@ def _when_of(st):
     """The time a lane's window looks at: the boost's, else the post's."""
     from .atoms import _when
     return _when(st.get("created_at")) or _when(real(st).get("created_at"))
+
+
+def _author_of(st):
+    return ((real(st).get("account") or {}).get("id")) or ""
+
+
+def _per_author(entries, n):
+    """At most n entries of one author — the newest n (entries in the lane's order,
+    oldest first)."""
+    seen, out = {}, []
+    for e in reversed(entries):
+        a = _author_of(e[1])
+        seen[a] = seen.get(a, 0) + 1
+        if seen[a] <= n:
+            out.append(e)
+    out.reverse()
+    return out
+
+
+def _bundled(entries, oldest_first):
+    """Each author's posts together (in their own order), the authors by how many they
+    have — the busiest where reading starts (the top: oldest_first lists top-down,
+    newest_first is turned round by the window)."""
+    groups = {}
+    for e in entries:
+        groups.setdefault(_author_of(e[1]), []).append(e)
+    newest = {a: max(str(x[1].get("created_at") or "") for x in g) for a, g in groups.items()}
+    order = sorted(groups, key=lambda a: (len(groups[a]), newest[a]), reverse=True)
+    if not oldest_first:
+        order.reverse()
+    return [e for a in order for e in groups[a]]
 
 
 def _within(entries, seconds):
@@ -211,6 +244,8 @@ class Core(SocialMixin):
         self._limits = {}
         self.chime = Chime(cfg, chosen=self.lane_chosen)
         self._lane_cache = {}
+        self._opened_threads = {}  # root id -> when it was opened (thread recheck)
+        self._rechecked = {}       # root id -> when it was asked again
         self._pending_login = None
         self._wake = threading.Event()
         self._stop = threading.Event()
@@ -321,11 +356,29 @@ class Core(SocialMixin):
         return self.caps.markdown if mode == "auto" else mode == "on"
 
     # ---- login -----------------------------------------------------------------
-    def begin_login(self, server, redirect=None):
+    def set_proxy(self, proxy):
+        """net.proxy, typed at login (net.proxy_at_login): written into config.toml and
+        used at once — the login itself goes through it. "" — none."""
+        from . import config, config_edit
+        proxy = str(proxy or "").strip()
+        if not config.proxy_ok(proxy):
+            from ..i18n import _
+            raise ValueError(_("proxy_bad", proxy=proxy))
+        if proxy == str(self.cfg["net"].get("proxy") or ""):
+            return
+        config_edit.save(self.paths.config_file, {("net", "proxy"): proxy})
+        self.cfg["net"]["proxy"] = proxy
+        config.apply_proxy(self.cfg)
+        log.info("proxy %s", "set" if proxy else "off")  # not the address: it may hold a password
+
+    def begin_login(self, server, redirect=None, proxy=None):
         """→ the server's page where the user allows fedtail. redirect: where the server
         sends the code — None: it shows it to be pasted (the desktop); an app's address
-        (fedtail://oauth on a phone): it goes straight back to the app."""
+        (fedtail://oauth on a phone): it goes straight back to the app. proxy: what the
+        login window's proxy field holds (net.proxy_at_login), None — no such field."""
         def job():
+            if proxy is not None:
+                self.set_proxy(proxy)
             if not api_module.cleartext_ok(server):
                 # the token would cross the internet in the clear: only a server here,
                 # at home (localhost, a private address, .local/.lan) may be http://
@@ -474,6 +527,14 @@ class Core(SocialMixin):
         self._urgent = True  # asked for (Refresh, a post sent): no waiting
         self._wake.set()
 
+    hand_refreshes = 0  # "Refresh" pressed: the lanes holding new posts let them in
+
+    def refresh_by_hand(self):
+        """The interface's Refresh (⟳, F5): a round at once, and feed.on_new = "hold"
+        lets the new posts it held into the lanes."""
+        self.hand_refreshes += 1
+        self.poll_now()
+
     def _poll_soon(self):
         """The live stream says something came: a poll, but not more often than
         poll.stream_gap_seconds — a busy server sends events many times a minute, and
@@ -552,6 +613,17 @@ class Core(SocialMixin):
         self._stream = stream.Stream(base, self.auth["token"], on_event,
                                      user_agent=USER_AGENT)
         self._stream.start()
+
+    def stream_allowed(self, on):
+        """The phone's phone.stream ("wifi": on Wi-Fi only): the live stream stopped
+        on a metered network, started again on Wi-Fi. Polling goes on either way."""
+        running = getattr(self, "_stream", None)
+        if not on and running is not None:
+            running.stop()
+            self._stream = None
+            log.info("stream: off (phone.stream)")
+        elif on and running is None and self.auth:
+            self._start_stream()
 
     def _stream_url(self):
         """Where the stream is, with the token: my server's own (or the host it names
@@ -803,6 +875,8 @@ class Core(SocialMixin):
                 except Exception as e:
                     self.emit("error", f"subs: {e}")
                 self._step("subs")
+            if self._opened_threads:  # feed.thread_recheck_minutes: open threads grow
+                self.recheck_threads()
             lazy = {lane.source for lane in self.lanes if lane.lazy}
             # a lane read through needs its sources caught up, even Local's
             lazy -= {lane.source for lane in self.lanes if not lane.lazy} | \
@@ -816,7 +890,8 @@ class Core(SocialMixin):
             for name in needed:
                 if name not in self.sources and self.api is not None:
                     # a stream named by a lane's rule (account:, link:, quotes:, remote:)
-                    src = sources.prefixed_source(self.api, name, remote=self.wider.remote_lane)
+                    src = sources.prefixed_source(self.api, name, remote=self.wider.remote_lane,
+                                                  rss=self.wider.rss_feed)
                     if src is not None:
                         self.sources[name] = src
                 if name not in self.sources:
@@ -1179,6 +1254,7 @@ class Core(SocialMixin):
                            extra_bots=tuple(lc["extra_bots"]), read=_Read(),
                            parents=_Parents(), new_replies=_News(),
                            deleted=store.deleted_set(),
+                           hidden_home=set(store.kv_get("people.hidden_home", []) or ()),
                            detect=lc["detect_language"],
                            min_words=lc["detect_min_words"])
 
@@ -1784,7 +1860,11 @@ class Core(SocialMixin):
         for g in self.tag_groups:
             name = taggroups.lane_name(g)
             if name not in self.sources:
-                self.sources[name] = sources.tag_group_source(self.api, g)
+                # lanes.tags_one_request: where the server takes any[]/all[]/none[]
+                # (Mastodon) the group is one request, not one per tag
+                once = bool(self.cfg["lanes"].get("tags_one_request")) and \
+                    getattr(self.caps, "software", "") == "mastodon"
+                self.sources[name] = sources.tag_group_source(self.api, g, once)
         self.customs = custom.load(self.cfg)[0]  # the rules anew (the config may have changed)
         new_lanes = self._shown_lanes(lanes.enabled(self.cfg, got, self.tag_groups))
         self.lane_by_name = {lane.name: lane for lane in new_lanes}
@@ -2397,6 +2477,10 @@ class Core(SocialMixin):
             kept = self._by_filter_context(kept, lane.filter_context)
         if getattr(lane, "sort", "arrival") in COUNT_SORTS:
             kept = _by_counts(kept, lane.sort, self.cfg["feed"]["order"] == "oldest_first")
+        if getattr(lane, "per_author", 0):  # a noisy one: their newest so many
+            kept = _per_author(kept, lane.per_author)
+        if getattr(lane, "bundle", "") == "author":
+            kept = _bundled(kept, self.cfg["feed"]["order"] == "oldest_first")
         self._lane_cache[name] = (key, kept)
         return kept
 
@@ -2802,11 +2886,68 @@ class Core(SocialMixin):
         self.store.put_statuses(everything)
         if self.cfg["feed"]["honest_counters"]:
             self.bg.submit(self._honest_counts, everything)
-        if self.cfg["feed"]["complete_threads"]:
-            self.bg.submit(self._complete_thread, root, {s.get("uri") for s in everything})
+        mode = self.cfg["feed"].get("thread_from", "mixed")
+        if self.cfg["feed"]["complete_threads"] and mode != "local":
+            known = {s.get("uri") for s in everything}
+            if mode == "remote":
+                # the author's server first: its replies are in the tree as it opens
+                seen = {s["id"] for s in everything}
+                rest += [st for st in self._complete_thread(root, known, emit=False)
+                         if st["id"] not in seen]
+            else:
+                self.bg.submit(self._complete_thread, root, known)
             if refresh:
                 self.bg.submit(self._await_refresh, root["id"], *refresh)
+        self._opened_threads[root["id"]] = time.monotonic()
+        if self.cfg["feed"].get("thread_followed_only"):
+            rest = self._followed_only(root, rest)
         return threads.build(root, {"ancestors": [], "descendants": rest})
+
+    def _followed_only(self, root, rest):
+        """feed.thread_followed_only: of the replies, those of people I follow and mine —
+        and the posts they answer, up to the top, so each still hangs where it did."""
+        self._refresh_following()
+        mine = (self.me or {}).get("id")
+        keep_authors = set(self._following or ()) | {mine}
+        by_id = {st["id"]: st for st in rest}
+        keep = set()
+        for st in rest:
+            if st["account"]["id"] in keep_authors:
+                cur = st
+                while cur is not None and cur["id"] not in keep:
+                    keep.add(cur["id"])
+                    cur = by_id.get(cur.get("in_reply_to_id"))
+        return [st for st in rest if st["id"] in keep]
+
+    def recheck_threads(self):
+        """feed.thread_recheck_minutes: threads opened lately (the last half hour) asked
+        again for new replies every so many minutes; what came — the open thread grows
+        (thread_grew), as with replies from other servers."""
+        every = int(self.cfg["feed"].get("thread_recheck_minutes", 0) or 0) * 60
+        if every <= 0 or self.api is None:
+            return []
+        now = time.monotonic()
+        grew = []
+        for root_id, opened in list(self._opened_threads.items()):
+            if now - opened > 1800:
+                self._opened_threads.pop(root_id, None)
+                continue
+            if now - self._rechecked.get(root_id, opened) < every:
+                continue
+            self._rechecked[root_id] = now
+            try:
+                desc = self.api.context(root_id).get("descendants", [])
+            except Exception as e:  # noqa: BLE001 — the next time
+                log.debug("recheck %s: %s", root_id, e)
+                continue
+            have = self.store.get_statuses({st["id"] for st in desc})
+            fresh = [st for st in desc if st["id"] not in have]
+            if fresh:
+                self.store.put_statuses(fresh)
+                log.info("thread %s: %d new replies on recheck", root_id, len(fresh))
+                self.emit("thread_grew", root_id)
+                grew.append(root_id)
+        return grew
 
     def _async_refresh_hint(self):
         hint = getattr(self.api, "last_async_refresh", None)
@@ -2831,14 +2972,15 @@ class Core(SocialMixin):
                 self.emit("thread_grew", root_id)
                 return
 
-    def _complete_thread(self, root, known):
+    def _complete_thread(self, root, known, emit=True):
         """Replies the post's own server lists and mine hasn't got: mine fetches them
-        by address. Then the open thread grows (event thread_grew)."""
+        by address. Then the open thread grows (event thread_grew) — or, emit=False
+        (feed.thread_from = "remote": the thread waits for them), [the posts fetched]."""
         if root.get("visibility") not in ("public", "unlisted") or not root.get("uri"):
-            return
+            return []
         now = time.monotonic()
         if now - self._completed.get(root["id"], -1e9) < 300:
-            return
+            return []
         self._completed[root["id"]] = now
         from . import replies
         t = time.monotonic()
@@ -2866,7 +3008,9 @@ class Core(SocialMixin):
                  time.monotonic() - t)
         if got:
             self.store.put_statuses(got)
-            self.emit("thread_grew", root["id"])
+            if emit:
+                self.emit("thread_grew", root["id"])
+        return got
 
     def _own_hosts(self):
         """My servers' hostnames: exempt from remote's public-address rule (a server
@@ -3375,6 +3519,98 @@ class Core(SocialMixin):
             return rel
         return self.submit(job)
 
+    # ---- my own names for people (feed.aliases), travelling with sync.people -------------
+    def people_aliases(self):
+        """{account id: my name for them}."""
+        cached = getattr(self, "_aliases_cache", None)
+        if cached is None:  # asked for every card drawn: read once, again when changed
+            got = self.store.kv_get("people_aliases", {}) or {}
+            cached = {str(k): str(v) for k, v in got.items() if v} \
+                if isinstance(got, dict) else {}
+            self._aliases_cache = cached
+        return dict(cached)
+
+    def set_alias(self, acc_id, name):
+        """My own name for someone ("" — theirs again): shown wherever theirs was, here
+        (and on my other devices with sync.people)."""
+        def job():
+            now = self.people_aliases()
+            name_ = str(name or "").strip()[:60]
+            if name_:
+                now[str(acc_id)] = name_
+            else:
+                now.pop(str(acc_id), None)
+            self.store.kv_set("people_aliases", now)
+            if self.sync:
+                self.sync.record_setting("people_aliases")
+            self._people_changed()
+            return name_
+        return self.submit(job)
+
+    NICK_COLORS = {"red": "#d32f2f", "orange": "#ef6c00", "yellow": "#c79a00",
+                   "green": "#2e7d32", "teal": "#00897b", "blue": "#1565c0",
+                   "purple": "#7b1fa2", "pink": "#c2185b", "brown": "#6d4c41",
+                   "gray": "#616161"}
+
+    def people_colors(self):
+        """{account id: "#rrggbb"} — my colours for people's names (people.nick_colors)."""
+        cached = getattr(self, "_colors_cache", None)
+        if cached is None:
+            got = self.store.kv_get("people_colors", {}) or {}
+            cached = {str(k): str(v) for k, v in got.items() if v} \
+                if isinstance(got, dict) else {}
+            self._colors_cache = cached
+        return dict(cached)
+
+    def set_nick_color(self, acc_id, color):
+        """A colour for someone's name: "#rrggbb", a name of NICK_COLORS (красный,
+        red…), "" — none. ValueError for what isn't a colour."""
+        import re as re_
+        name = str(color or "").strip().lower()
+        from ..i18n import _
+        words = {_("color_" + k).lower(): v for k, v in self.NICK_COLORS.items()}
+        value = self.NICK_COLORS.get(name) or words.get(name) or name
+        if value and not re_.fullmatch(r"#[0-9a-f]{6}", value):
+            raise ValueError(_("color_bad", color=color))
+
+        def job():
+            now = self.people_colors()
+            if value:
+                now[str(acc_id)] = value
+            else:
+                now.pop(str(acc_id), None)
+            self.store.kv_set("people_colors", now)
+            if self.sync:
+                self.sync.record_setting("people_colors")
+            self._people_changed()
+            return value
+        return self.submit(job)
+
+    def _people_changed(self):
+        """Names or Home's people changed (here or from another device): drawn anew."""
+        self._aliases_cache = None
+        self._colors_cache = None
+        self._lane_cache.clear()
+        self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+
+    # ---- "Not in Home": someone still followed, their posts kept out of Home ------------
+    def hidden_home(self):
+        return set(self.store.kv_get("people.hidden_home", []) or ())
+
+    def hide_from_home(self, acc_id, on=True):
+        """Take someone's posts out of Home (on) or back, still following them: the
+        Home lanes of every set say none = { author = "hidden_home" }. Here only, as the
+        follow stays (a Future, like the server's actions)."""
+        def job():
+            now = self.hidden_home()
+            (now.add if on else now.discard)(str(acc_id))
+            self.store.kv_set("people.hidden_home", sorted(now))
+            if self.sync:
+                self.sync.record_setting("people.hidden_home")
+            self._people_changed()
+            return on
+        return self.submit(job)
+
     def notify_posts(self, acc_id, on=True):
         """The bell on someone I follow: their every new post comes as a notification
         (in Likes & boosts, with activity.types including "status")."""
@@ -3567,6 +3803,28 @@ class Core(SocialMixin):
             return page
         return self.submit(job)
 
+    _LAST_LINK = re.compile(r"\s*(https?://\S+)\s*$")
+
+    def _link_quote(self, text):
+        """post.link_quote: the text ends with a post's address → (the text without it,
+        the post's id here) when its author lets it be quoted; else (text, None)."""
+        m = self._LAST_LINK.search(text or "")
+        if not m:
+            return text, None
+        try:
+            got = self.api.search(m.group(1), kind="statuses", resolve=True, limit=1)
+        except Exception as e:  # noqa: BLE001 — the link stays a link
+            log.debug("link quote: %s", e)
+            return text, None
+        st = (got.get("statuses") or [None])[0] if isinstance(got, dict) else None
+        policy = ((st or {}).get("quote_approval") or {}).get("current_user")
+        if not st or policy not in ("automatic", "manual"):
+            return text, None
+        self.store.put_statuses([st])
+        rest = text[:m.start()].rstrip()
+        log.info("link quote: %s quoted", st["id"])
+        return (rest or text), st["id"]
+
     def resolve(self, url):
         """A web address of a fediverse profile or post → ("account", acc) /
         ("status", st) through my own server, or None if it doesn't know it."""
@@ -3627,6 +3885,10 @@ class Core(SocialMixin):
         "" — none (the server's default). The draft is dropped once the post is out,
         even if the window that sent it is gone by then."""
         lang = self.cfg["post"]["language"] if language is None else language
+        from . import rss
+        if rss.is_rss(str(reply_to or "")) or rss.is_rss(str(quote or "")):
+            from ..i18n import _
+            raise ValueError(_("rss_local_only"))
         from .model import chain_parts
         parts = chain_parts(text) if self.cfg["post"].get("chain", True) and \
             not scheduled_at else [text]
@@ -3636,6 +3898,7 @@ class Core(SocialMixin):
             rest = []
 
         def job():
+            nonlocal text
             ids = [(self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None,
                                           thumbnail=m[3]) if len(m) > 3 and m[3] else
                     self.api.upload_media(m[0], m[1], m[2] if len(m) > 2 else None))["id"]
@@ -3645,6 +3908,10 @@ class Core(SocialMixin):
                 extra["sensitive"] = True
             if poll and not ids:  # a server takes either pictures or a poll
                 extra["poll"] = poll
+            if not quote and self.cfg["post"].get("link_quote"):  # a post's link at the end
+                text, found = self._link_quote(text)
+                if found:
+                    extra["quoted_status_id"] = found
             if quote:
                 extra["quoted_status_id"] = quote
             if self.cfg["post"].get("quote_policy"):
@@ -3765,8 +4032,18 @@ class Core(SocialMixin):
         self.emit("status_updated", st)
         return st
 
+    @staticmethod
+    def _on_server(s):
+        """A post that lives only here (an RSS feed's item, core/rss.py): no server to
+        like, boost or answer it on — said so, not asked."""
+        from . import rss
+        if rss.is_rss(s):
+            from ..i18n import _
+            raise ValueError(_("rss_local_only"))
+
     def favourite(self, status):
         s = real(status)
+        self._on_server(s)
         return self.submit(lambda: self._update(self.api.favourite(s["id"],
                                                                    not s.get("favourited"))))
 
@@ -3786,9 +4063,115 @@ class Core(SocialMixin):
         return self.submit(lambda: self._update(dict(s, poll=self.api.poll(pid))))
 
     def translate(self, status):
-        """The post in the interface's language, by my server (a future)."""
+        """The post in the interface's language, by my server — or by LibreTranslate
+        (feed.translate_backend) — a future of {content, detected_source_language,
+        provider}."""
         from ..i18n import current_language
+        if self._own_translator():
+            st = real(status)
+            return self.submit(lambda: self._libre(st, current_language()))
         return self.call_api("translate", real(status)["id"], current_language())
+
+    def _own_translator(self):
+        feed = self.cfg["feed"]
+        return feed.get("translate_backend") == "libretranslate" and \
+            str(feed.get("translate_url") or "").startswith(("https://", "http://"))
+
+    def _libre(self, st, into):
+        """LibreTranslate's /translate: the post's HTML (and its warning) into `into`."""
+        feed = self.cfg["feed"]
+        url = str(feed["translate_url"]).rstrip("/")
+        if not url.endswith("/translate"):
+            url += "/translate"
+        if url.startswith("http://") and not api_module.cleartext_ok(url):
+            from ..i18n import _
+            raise ValueError(_("translate_insecure"))
+
+        def one(text, fmt):
+            body = {"q": text, "source": "auto", "target": into, "format": fmt}
+            if feed.get("translate_key"):
+                body["api_key"] = feed["translate_key"]
+            r = requests.post(url, json=body, timeout=(10, 60),
+                              headers={"User-Agent": USER_AGENT})
+            if r.status_code >= 400:
+                try:
+                    why = r.json().get("error") or r.reason
+                except ValueError:
+                    why = r.reason
+                raise ApiError(r.status_code, str(why)[:200])
+            got = r.json()
+            return str(got.get("translatedText") or ""), \
+                str((got.get("detectedLanguage") or {}).get("language") or "")
+        content, lang = one(st.get("content") or "", "html")
+        spoiler = one(st["spoiler_text"], "text")[0] if st.get("spoiler_text") else ""
+        return {"content": content, "spoiler_text": spoiler,
+                "detected_source_language": lang or st.get("language") or "",
+                "provider": "LibreTranslate"}
+
+    # ---- feed.translate_auto: posts in languages I neither read nor write ---------------
+    def auto_translation(self, st):
+        """The post with its translation in place of its text, when feed.translate_auto
+        wants it translated and it is done; None otherwise — then it is asked for (in
+        the background, a few at a time) and the card is drawn anew when it comes."""
+        if not self.cfg["feed"].get("translate_auto") or not isinstance(st, dict):
+            return None
+        inner = st.get("reblog") if isinstance(st.get("reblog"), dict) else st
+        if not self._wants_translation(inner):
+            return None
+        cache = self.__dict__.setdefault("_translated", OrderedDict())
+        done = cache.get(inner.get("id"))
+        if done is None:
+            self._ask_translation(inner)
+            return None
+        if not done:  # it failed: the post as it is
+            return None
+        from ..i18n import _
+        mark = _("translated_auto", lang=done.get("detected_source_language") or "?")
+        text = f"<p><small>🌐 {html_escape(mark)}</small></p>" + (done.get("content") or "")
+        out = dict(inner, content=text, _fedtail_translated=True)
+        if done.get("spoiler_text"):
+            out["spoiler_text"] = done["spoiler_text"]
+        return dict(st, reblog=out) if inner is not st else out
+
+    def _wants_translation(self, st):
+        from ..i18n import current_language
+        from . import langs
+        lang = langs.base(st.get("language"))
+        if not lang or not (st.get("content") or "").strip():
+            return False
+        mine = {langs.base(current_language())} | {
+            langs.base(x) for x in (self.cfg["post"].get("languages") or [])} | {
+            langs.base(self.cfg["post"].get("language"))}
+        return lang not in mine and (self._own_translator() or
+                                     getattr(self.caps, "translation", False))
+
+    AUTO_TRANSLATE_AT_ONCE = 4
+
+    def _ask_translation(self, st):
+        sid = st.get("id")
+        asking = self.__dict__.setdefault("_translating", set())
+        if not sid or sid in asking or len(asking) >= self.AUTO_TRANSLATE_AT_ONCE:
+            return
+        asking.add(sid)
+
+        def job():
+            from ..i18n import current_language
+            try:
+                got = self._libre(st, current_language()) if self._own_translator() else \
+                    self.api.translate(sid, current_language())
+            except Exception as e:  # noqa: BLE001 — not translated: the post as it is
+                log.info("auto translation of %s: %s", sid, e)
+                got = {}
+            cache = self.__dict__.setdefault("_translated", OrderedDict())
+            cache[sid] = got if isinstance(got, dict) and got.get("content") else {}
+            while len(cache) > 500:
+                cache.popitem(last=False)
+            asking.discard(sid)
+            if cache[sid]:
+                self._lane_cache.clear()
+                self.emit("status_updated", st)
+                self.emit("lanes_updated", {lane.name: [] for lane in self.lanes})
+        self.bg.submit(job)
 
     def report(self, status, comment="", forward=False, category="other", rule_ids=()):
         """Tell my server's moderators about a post (and its author); forward: also the
@@ -3800,6 +4183,84 @@ class Core(SocialMixin):
                                  forward, category, rule_ids=tuple(rule_ids))
         return self.call_api("report", s["account"]["id"], [s["id"]], comment,
                              forward, category)
+
+    def stats(self, days=7):
+        """feed.stats: the last days, each — how many posts came into Home, how many I
+        wrote, how much activity; and who filled Home the most. Days are local ones,
+        today last: [(date, home, mine, activity)], [(acct, n)]."""
+        import datetime as dt
+        today = dt.date.today()
+        first = today - dt.timedelta(days=days - 1)
+        start = dt.datetime.combine(first, dt.time()).astimezone(dt.UTC)
+        got = self.store.stats_since(start.strftime("%Y-%m-%dT%H:%M:%S"),
+                                     (self.me or {}).get("id"), source=self._home_source())
+
+        def local_day(iso):
+            try:
+                t = dt.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=dt.UTC)
+            return t.astimezone().date()
+
+        counts = {first + dt.timedelta(days=i): [0, 0, 0] for i in range(days)}
+        for k, key in enumerate(("home", "mine", "activity")):
+            for iso in got[key]:
+                d = local_day(iso)
+                if d in counts:
+                    counts[d][k] += 1
+        self._stats_links = got["links"]  # the week's most shared links (stats_links)
+        return [(d, *c) for d, c in sorted(counts.items())], got["authors"]
+
+    def stats_links(self):
+        """[(url, title, how many posts)] — the links Home shared most this week (the
+        last stats())."""
+        return list(getattr(self, "_stats_links", []))
+
+    def _home_source(self):
+        """The source the Home lane is fed by (the server's home timeline)."""
+        return "home"
+
+    def raw_json(self, sid):
+        """The post as the server gave it, JSON (debug.raw_json — for bug reports);
+        "" when it isn't stored."""
+        import json
+        st = self.store.get_status(sid)
+        return json.dumps(st, ensure_ascii=False, indent=2, sort_keys=True) if st else ""
+
+    def came_by_tag(self, status):
+        """Why a post is in Home when its author isn't followed: the followed tag it
+        carries ("" — not that way). card.why_home says it on the card."""
+        st = real(status)
+        who = (st.get("account") or {}).get("id")
+        if not who or who == (self.me or {}).get("id") or who in (self._following or ()):
+            return ""
+        followed = getattr(self, "_followed_tag_names", None) or set()
+        return next(((t.get("name") or "") for t in st.get("tags") or ()
+                     if (t.get("name") or "").lower() in followed), "")
+
+    def around(self, sid):
+        """"Around this post" (feed.around_post): what came just before and just after it
+        in Home — or, when Home never had it, on its author's wall. Newest first."""
+        def job():
+            st = self.store.get_status(sid) or self._status_again(sid)
+            n = max(5, self.cfg["feed"]["page_size"] // 2)
+            older = self.api.home(limit=n, max_id=sid) or []
+            newer = self.api.home(limit=n, min_id=sid) or []
+            if not older and not newer:
+                acc = real(st)["account"]["id"]
+                older = self.api.account_statuses(acc, limit=n, max_id=sid) or []
+                newer = self.api.account_statuses(acc, limit=n, min_id=sid) or []
+            seen, out = set(), []
+            for x in newer + [st] + older:
+                if x["id"] not in seen:
+                    seen.add(x["id"])
+                    out.append(x)
+            out.sort(key=lambda x: (x.get("created_at") or "", x["id"]), reverse=True)
+            self.store.put_statuses(out)
+            return out
+        return self.submit(job)
 
     def link_timeline(self, url, max_id=None):
         """Posts sharing this link (a trending one: the server keeps only those)."""
@@ -3915,8 +4376,12 @@ class Core(SocialMixin):
         s = real(status)
         on = (not s.get("bookmarked")) if on is None else on
 
+        from . import rss
+
         def job():
-            st = self.api.bookmark(s["id"], on) or dict(s, bookmarked=on)
+            # an RSS item lives only here: its bookmark too
+            st = dict(s, bookmarked=on) if rss.is_rss(s) else \
+                self.api.bookmark(s["id"], on) or dict(s, bookmarked=on)
             self.store.put_statuses([st])
             if on:
                 self.store.put_items("bookmarks", [(st["id"], st, now_iso())])
@@ -3927,6 +4392,7 @@ class Core(SocialMixin):
 
     def boost(self, status):
         s = real(status)
+        self._on_server(s)
 
         def job():
             res = self.api.reblog(s["id"], not s.get("reblogged"))
@@ -3998,6 +4464,10 @@ class Core(SocialMixin):
             self.store.save_draft(key, data)
             if self.sync:
                 self.sync.record_draft(key)
+
+    def drafts(self):
+        """[(key, data, updated)] — every kept draft, the newest first (post.drafts_place)."""
+        return self.store.list_drafts()
 
     def delete_draft(self, key):
         """A draft sent or emptied: gone here, and on my other devices (sync.drafts)."""

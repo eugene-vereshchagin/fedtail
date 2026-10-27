@@ -32,6 +32,10 @@ class Lane:
     sort: str = "arrival"
     window: float = 0.0
     filter_context: str = ""
+    # per_author — at most so many posts of one author (the newest), 0: any;
+    # bundle — "author": each author's posts together, the busiest author first
+    per_author: int = 0
+    bundle: str = ""
 
 
 @dataclass

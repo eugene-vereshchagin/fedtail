@@ -442,6 +442,7 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
                 // no weight here: the spacer's is the only one, so /N stands at the right edge
                 val name = remember(p.name, p.nameHtml) { nameText(p.name, p.nameHtml) }
                 Text(name, inlineContent = remember(name) { emojiContent(name) },
+                    color = nickColor(p.nameColor),
                     fontWeight = if (focused) FontWeight.Bold else FontWeight.SemiBold,
                     fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = 220.dp))
@@ -472,6 +473,7 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             val name = remember(p.name, p.nameHtml) { nameText(p.name, p.nameHtml) }
             Text(name, inlineContent = remember(name) { emojiContent(name) },
+                color = nickColor(p.nameColor),
                 fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
                     .alpha(if (dim) 0.85f else 1f)
@@ -856,3 +858,10 @@ private fun CardMenu(p: PostItem, act: CardActions) {
         }
     }
 }
+
+
+/** people.nick_colors: "#rrggbb" → its colour; "" — the text's own. */
+internal fun nickColor(hex: String): Color =
+    if (hex.length == 7 && hex.startsWith("#"))
+        hex.substring(1).toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: Color.Unspecified
+    else Color.Unspecified

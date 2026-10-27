@@ -110,7 +110,8 @@ class Out:
 PLACES = {
     "silence": "silence_title", "lists": "lists_header", "search": "search_title",
     "requests": "lane_requests", "activity": "lane_activity", "tags": "followed_tags",
-    "scheduled": "scheduled_title", "trends": "trends_title",
+    "scheduled": "scheduled_title", "drafts": "drafts_title", "stats": "stats_title",
+    "trends": "trends_title",
     "suggestions": "suggestions_title", "directory": "directory_title",
     "server": "server_info", "filtered": "filtered_title", "profile_edit": "edit_profile",
     "help": "help_title", "news": "help_news", "about": "about",
@@ -126,9 +127,10 @@ PLACES = {
     "accounts": "accounts", "login": "login_step2",
     "collections": "collections_mine", "collection": "collections", "collect": "collect",
     "slow": "slow_title", "log": "debug_log_title", "react": "react_title",
-    "lane": "le_title", "why": "why_here",
+    "lane": "le_title", "why": "why_here", "around": "around_post", "raw": "raw_json",
 }
-MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "slow",
+MENU = ("search", "lists", "collections", "tags", "silence", "filtered", "scheduled", "drafts",
+        "slow", "stats",
         "requests",
         "activity", "trends", "suggestions", "directory", "remote", "server", "probe",
         "announcements", "profile_edit", "accounts",
@@ -189,6 +191,10 @@ class Places(MorePlaces, AccountPlaces, LanePlaces):
             if n == "collections" and not sup("collections"):
                 continue
             if n in ("suggestions", "directory") and not sup(n):
+                continue
+            if n == "drafts" and not (self.view.cfg.get("post") or {}).get("drafts_place"):
+                continue
+            if n == "stats" and not (self.view.cfg.get("feed") or {}).get("stats"):
                 continue
             if n == "announcements" and \
                     (self.view.cfg.get("ui") or {}).get("announcements") == "off":
@@ -1241,13 +1247,84 @@ class Places(MorePlaces, AccountPlaces, LanePlaces):
     # ---- scheduled, trends, suggestions, directory -------------------------------------
     def _p_scheduled(self, _arg, _tab, _cur):
         page = Page("scheduled", _("scheduled_title"), empty=_("scheduled_none"))
+        back = (self.view.cfg.get("post") or {}).get("scheduled_to_draft")
         for s in _wait(self.view.scheduled()):
             page.rows.append(Row("item", self.date(s.at), s.text, key=s.id, buttons=(
+                (self._btn(_("scheduled_to_editor"), "scheduled", "edit", s.id,
+                           tip=_("scheduled_to_editor_tip")),) if back else ()) + (
                 self._btn(_("scheduled_cancel"), "scheduled", "cancel", s.id),)))
         return page
 
     def _a_scheduled_cancel(self, sid, _v, confirmed, _ans):
         _wait(self.view.cancel_scheduled(sid))
+        return Out(refresh=True)
+
+    def _a_scheduled_edit(self, sid, _v, _confirmed, _ans):
+        """post.scheduled_to_draft: off the schedule, its text in the editor."""
+        text = next((s.text for s in _wait(self.view.scheduled()) if s.id == sid), None)
+        if text is None:
+            return Out(refresh=True)
+        _wait(self.view.cancel_scheduled(sid))
+        return Out(compose={"text": text}, refresh=True)
+
+    # ---- "Statistics" (feed.stats): the week, day by day; who filled Home -----------
+    def _p_stats(self, _arg, _tab, _cur):
+        days, authors = self.view.stats(7)
+        page = Page("stats", _("stats_title"), hint=_("stats_hint"))
+        most = max([h for _d, h, _m, _a in days] + [1])
+        page.rows.append(Row("heading", _("stats_week")))
+        for d, home, mine, act in days:
+            bar = "▇" * round(16 * home / most) if home else "·"
+            page.rows.append(Row("text", f"{d:%d.%m}  {bar} {home}",
+                                 _("stats_line", home=home, mine=mine, activity=act),
+                                 key=d.isoformat()))
+        total = sum(h for _d, h, _m, _a in days)
+        page.rows.append(Row("text", _("stats_total", home=total,
+                                       mine=sum(m for _d, _h, m, _a in days),
+                                       activity=sum(a for *_x, a in days))))
+        if authors:
+            page.rows.append(Row("heading", _("stats_top")))
+            for who, n in authors:
+                page.rows.append(Row("text", "@" + who, _("stats_posts", n=n), key=who))
+        links = self.view.stats_links()
+        if links:  # Phanpy's catch-up: what everyone shared
+            page.rows.append(Row("heading", _("stats_links")))
+            for url, title, n in links:
+                page.rows.append(Row("item", title or url, _("stats_posts", n=n), key=url,
+                                     buttons=(self._btn(_("open_browser"), "stats", "open",
+                                                        url),)))
+        return page
+
+    def _a_stats_open(self, url, _v, _c, _ans):
+        return Out(open={"url": url}) if url.startswith(("https://", "http://")) else Out()
+
+    # ---- drafts (post.drafts_place): every kept draft, to open or let go ---------------
+    def _p_drafts(self, _arg, _tab, _cur):
+        page = Page("drafts", _("drafts_title"), empty=_("drafts_none"), hint=_("drafts_hint"))
+        for key, data, _updated in self.view.drafts():
+            what, _s, sid = key.partition(":")
+            kind = {"new": _("draft_new"), "reply": _("draft_reply"),
+                    "quote": _("draft_quote"), "edit": _("draft_edit"),
+                    "invite": _("draft_reply")}.get(what, what)
+            text = str((data or {}).get("text") or "").strip()
+            page.rows.append(Row("item", kind, text[:300] or "…", key=key, buttons=(
+                self._btn(_("draft_open"), "drafts", "open", key, primary=True),
+                self._btn(_("draft_delete"), "drafts", "delete", key))))
+        return page
+
+    def _a_drafts_open(self, key, _v, _confirmed, _ans):
+        """A new post's draft: the editor (it picks the draft up); a reply's, a quote's,
+        a correction's: the thread it belongs to, where it is picked up again."""
+        what, _s, sid = key.partition(":")
+        if what == "new":
+            data = next((d for k, d, _u in self.view.drafts() if k == key), None) or {}
+            return Out(compose={"text": str(data.get("text") or "")})
+        return Out(open={"thread": sid}) if sid else Out()
+
+    def _a_drafts_delete(self, key, _v, confirmed, _ans):
+        if not confirmed:
+            return Out(confirm=_("draft_delete_sure"))
+        self.view.delete_draft(key)
         return Out(refresh=True)
 
     def _p_trends(self, _arg, tab, _cur):
@@ -1465,6 +1542,29 @@ class Places(MorePlaces, AccountPlaces, LanePlaces):
             if tuple(sites) != tuple(mp.attribution_domains):
                 out["attribution_domains"] = sites
         return out
+
+    # ---- a post's JSON as the server gave it (debug.raw_json) ------------------------------
+    def _p_raw(self, sid, _tab, _cursor):
+        page = Page("raw", _("raw_json"), arg=sid, hint=_("raw_json_hint"), empty="—")
+        text = self.view.raw_json(sid) if hasattr(self.view, "raw_json") else ""
+        if text:
+            page.rows.append(Row("pre", text, key="raw",
+                                 buttons=(self._btn(_("copy"), "raw", "copy", sid),)))
+        return page
+
+    def _a_raw_copy(self, sid, _v, _c, _ans):
+        return Out(copy=self.view.raw_json(sid), message=_("about_copied"))
+
+    # ---- around a post: just before and just after it (feed.around_post) -----------------
+    def _p_around(self, sid, _tab, _cursor):
+        page = Page("around", _("around_post"), arg=sid, hint=_("around_hint"), empty="—")
+        try:
+            posts = _wait(self.view.around(sid)) or []
+        except Exception as e:  # noqa: BLE001 — a post gone (404), the server away: empty
+            log.info("around %s: %s", sid, e)
+            posts = []
+        page.rows += [Row("post", data=p, key=p.id) for p in posts]
+        return page
 
     # ---- who else shared a link (Mastodon 4.3: trending links only) --------------------
     def _p_link(self, url, _tab, cursor):

@@ -70,10 +70,14 @@ def render(shown):
     t = Text()
     for kind, line in getattr(shown, "above", ()):
         t.append(line + "\n", style=STYLE.get(kind, ""))
+    colors = getattr(shown, "colors", None) or {}
     for i, (kind, part) in enumerate(shown.head):
         if i:
             t.append(" ")
-        t.append(part, style=STYLE.get(kind, ""))
+        style = STYLE.get(kind, "")
+        if kind in colors:  # people.nick_colors
+            style = ("bold " if kind == "who" else "") + colors[kind]
+        t.append(part, style=style)
     if shown.context:
         t.append("\n" + shown.context, style="italic dim")
     if shown.cw:
@@ -457,7 +461,9 @@ class ThreadScreen(Screen, PostsMixin):
                 Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False),
                 Binding("r", "reply", _("reply")), Binding("f", "fav", _("fav")),
                 Binding("b", "boost", _("boost")), Binding("m", "bookmark", _("bookmark")),
-                Binding("o", "browser", _("open_browser"), show=False),
+Binding("right_square_bracket", "top_comment(1)", show=False),
+                Binding("left_square_bracket", "top_comment(-1)", show=False),
+                                Binding("o", "browser", _("open_browser"), show=False),
                 Binding("p", "profile", _("tui_profile")),
                 Binding("v", "pictures", _("tui_picture"), show=False),
                 Binding("full_stop", "post_menu", "⋯"),
@@ -491,6 +497,18 @@ class ThreadScreen(Screen, PostsMixin):
 
     def load(self):
         self.later(self.app.core.thread(self.status_id), ok=self.fill)
+
+    def action_top_comment(self, step):
+        """] / [: the next / previous comment at the top of the tree (as the windows')."""
+        lv = self.query_one("#posts", ListView)
+        items = list(lv.children)
+        at = lv.index or 0
+        tops = [i for i, it in enumerate(items) if getattr(it, "depth", 0) <= 1 and i]
+        if not tops:
+            return
+        nxt = next((i for i in tops if i > at), tops[-1]) if step > 0 else \
+            next((i for i in reversed(tops) if i < at), tops[0])
+        lv.index = nxt
 
     async def fill(self, items_in):
         core = self.app.core
@@ -888,6 +906,8 @@ class FedtailApp(App, PostsMixin):
         for event in ("activity_updated", "activity_seen", "requests_updated"):
             self.core.on(event, lambda n, _p: self.in_ui(self.other_updated, n))
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
+        # replies from other servers, or an open thread asked again: it grows
+        self.core.on("thread_grew", lambda _n, p: self.in_ui(self.thread_grew, p))
         # a round began or ended: "⟳ updating the lanes…" / "updated at 14:32" on top
         self.core.on("poll_state", lambda _n, _p: self.in_ui(self._slow_title))
         # the server no longer takes the token: said as the windows say it, and Accounts
@@ -1337,6 +1357,13 @@ class FedtailApp(App, PostsMixin):
                 self._redraw_pending = False
         else:
             self.update_lane_counts()
+
+    async def thread_grew(self, root_id):
+        """A thread on screen whose root is root_id is loaded anew (keeping its place)."""
+        for screen in self.screen_stack:
+            if isinstance(screen, ThreadScreen) and screen.root is not None and \
+                    screen.root.id == root_id:
+                screen.load()
 
     async def other_updated(self, event):
         """Activity or follow requests changed: the lane redrawn if it is on screen
@@ -1987,7 +2014,7 @@ class FedtailApp(App, PostsMixin):
             await self.refresh_posts()
 
     def action_refresh(self):
-        self.core.poll_now()
+        self.core.refresh_by_hand()
         self.notify(_("refresh"))
 
     def action_all_read(self):
@@ -2004,6 +2031,10 @@ class LoginScreen(Screen, Ui):
     def compose(self) -> ComposeResult:
         yield Static(_("tui_login_server"), id="ask")
         yield Input(placeholder="example.social", id="answer")
+        if self.app.core.cfg["net"].get("proxy_at_login"):  # before the first request
+            yield Static(_("login_proxy") + " " + _("login_proxy_tip"), id="proxy-ask")
+            yield Input(str(self.app.core.cfg["net"].get("proxy") or ""),
+                        placeholder="socks5h://127.0.0.1:1080", id="proxy")
         yield Static("", id="url")
         yield Footer()
 
@@ -2013,11 +2044,16 @@ class LoginScreen(Screen, Ui):
 
     def on_input_submitted(self, e: Input.Submitted):
         e.stop()
+        if e.input.id == "proxy":  # Enter in the proxy line: on to the server's
+            self.query_one("#answer", Input).focus()
+            return
         value = e.value.strip()
         if not value:
             return
         if self.step == "server":
-            self.later(self.app.core.begin_login(value), ok=self.got_url)
+            proxy = self.query("#proxy")
+            more = {"proxy": proxy.first(Input).value} if proxy else {}
+            self.later(self.app.core.begin_login(value, **more), ok=self.got_url)
         else:
             self.later(self.app.core.finish_login(value), ok=self.done)
 

@@ -158,7 +158,12 @@ def save_image(core, image):
 
 
 
-from ..common.compose import LANG_NAMES, OTHER_LANG  # noqa: E402,F401  (Qt's names)
+from ..common.compose import (  # noqa: E402,F401  (Qt's names)
+    LANG_NAMES,
+    OTHER_LANG,
+    lang_mismatch,
+    lang_question,
+)
 
 BIG_PCT = 90  # the ⤢ button: this share of the main window
 # languages Qt has no name of their own for
@@ -994,7 +999,7 @@ class Compose(QDialog):
         else:
             self.from_box.setToolTip(_("post_from_tip"))
 
-    def send(self, scheduled_at=None, alt_checked=False):
+    def send(self, scheduled_at=None, alt_checked=False, lang_checked=False):
         text = self.text.toPlainText().strip()
         media = [tuple(m) for m in self._media_list()]
         if self.core.cfg["post"].get("resize_images", True):
@@ -1008,6 +1013,11 @@ class Compose(QDialog):
         if bare and not alt_checked and not self.edit and \
                 self.core.cfg["post"].get("alt_reminder", True):
             self._ask_alt(bare, scheduled_at)
+            return
+        said = None if lang_checked or self.edit else \
+            lang_mismatch(self.core.cfg, text, self._language())
+        if said:  # post.lang_check: the text reads as another language
+            self._ask_lang(said, scheduled_at)
             return
         self.save_draft()  # whatever happens next, the text is safe
         log.info("send: %s, reply to %s, %s, language %s, %d chars, %d pictures",
@@ -1029,6 +1039,9 @@ class Compose(QDialog):
                              **({"account": self.from_box.currentData()}
                                 if self.from_box is not None else {}))
         self.win.bridge.call(fut, ok=self._sent, fail=self._failed)
+        if self.core.cfg["post"].get("send_in_background"):  # out of the way at once
+            self.hide()
+            self.win.statusBar().showMessage(_("sent_background"), 4000)
 
     def _ask_alt(self, bare, scheduled_at):
         """post.alt_reminder: a picture without a description — describe it, or send as is."""
@@ -1046,6 +1059,27 @@ class Compose(QDialog):
                 self.send(scheduled_at, alt_checked=True)
         box.buttonClicked.connect(done)
         self.alt_box = box
+        box.open()
+        return box
+
+    def _ask_lang(self, said, scheduled_at):
+        """post.lang_check: the text reads as `said`, the post says otherwise — mark it
+        so and send, send as is, or go back to the text."""
+        title, text, switch_w, anyway_w = lang_question(
+            said, self._language() or self.core.cfg["post"].get("language"))
+        box = QMessageBox(QMessageBox.Icon.Question, title, text, parent=self)
+        switch = box.addButton(switch_w, QMessageBox.ButtonRole.AcceptRole)
+        anyway = box.addButton(anyway_w, QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(switch)
+
+        def done(button):
+            if button is switch:
+                self.set_language(said)
+            if button in (switch, anyway):
+                self.send(scheduled_at, alt_checked=True, lang_checked=True)
+        box.buttonClicked.connect(done)
+        self.lang_box = box
         box.open()
         return box
 
@@ -1070,9 +1104,13 @@ class Compose(QDialog):
     def _failed(self, err):
         self.send_btn.setEnabled(True)
         self.send_btn.setText(_("send"))
+        away = self.isHidden()
+        if away:  # sent in the background (post.send_in_background): back
+            self.show()
         maybe = getattr(err, "maybe_sent", False)  # no answer: the post may be out
         QMessageBox.warning(self, _("send_maybe" if maybe else "send_failed"),
-                            _("send_failed_text", err=err))
+                            _("sent_background_failed" if away else "send_failed_text",
+                              err=err))
 
     # Every way out (Esc, the window's X, Close, after sending) goes through
     # reject(): QDialog.closeEvent itself calls reject(), so reject() must

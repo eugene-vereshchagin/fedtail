@@ -23,7 +23,8 @@ PREFIX = "custom:"  # the stream of a lane of several sources
 # the streams a lane can be fed from in this version
 FEEDS = {"home", "local", "federated", "mentions", "mine", "bookmarks", "favourites", "subs",
          "watched", "trends", "direct", "bubble"}
-FEED_PREFIXES = ("list:", "tags:", "account:", "link:", "quotes:", "remote:")
+FEED_PREFIXES = ("list:", "tags:", "account:", "link:", "quotes:", "remote:", "search:",
+                 "rss:")
 DEFAULT_FEED = "home"
 BACKFILL_ROWS = 3000  # per feed, the newest: what a new lane starts with
 KINDS = {"activity", "requests", "lists", "tags"}  # lanes that aren't a rule
@@ -118,7 +119,8 @@ class Custom:
                           group="standard" if self.rule.group == "standard" else "personal",
                           sort=self.rule.sort,
                           window=self.rule.window.total_seconds() if self.rule.window else 0.0,
-                          filter_context=self.rule.filter_context)
+                          filter_context=self.rule.filter_context,
+                          per_author=self.rule.per_author, bundle=self.rule.bundle)
 
     def takes(self, status, world, source):
         world = world or atoms.World()

@@ -619,3 +619,35 @@ others = "—"
 clients = []
 details.ru = "`sort = \"likes\"` (или `replies`, `boosts`, `density` — всё в час возраста) — лучшее сверху; `mode = \"catch_up\"` и `window = \"12h\"` — только пришедшее за окно; `filter_context` — серверные фильтры этого контекста скрывают или сворачивают посты ленты. В условии может быть свой `any` — И из ИЛИ (`author: followed; any: [has: image] [kind: reply]`). Источники `trends`, `direct`, `bubble`, `account:<id>`, `link:<url>`, `quotes:<id>`, `remote:<host>`. «Почему он здесь?» в меню карточки и `fedtail --explain-lane ИМЯ` — какое условие взяло пост или что его не пустило; ленту, которую не наполнит ни один источник, редактор помечает ⚠. Пост в нескольких лентах звенит один раз, по самой личной; ответам, чьи правила спрашивают о родителе, родитель подтягивается до раскладки."
 details.en = "`sort = \"likes\"` (or `replies`, `boosts`, `density` — all per hour of age) — the best on top; `mode = \"catch_up\"` with `window = \"12h\"` — only what came within the window; `filter_context` — the server's filters of that context hide or fold the lane's posts. A condition may hold an `any` of its own — an AND of ORs (`author: followed; any: [has: image] [kind: reply]`). Sources `trends`, `direct`, `bubble`, `account:<id>`, `link:<url>`, `quotes:<id>`, `remote:<host>`. “Why is it here?” in a card's menu and `fedtail --explain-lane NAME` — which condition took the post or what kept it out; a lane no source can fill is marked ⚠ in the editor. A post in several lanes rings once, by its most personal lane; replies whose rules ask about the parent get it fetched before they are sorted."
+
+[[feature]]
+id = "lane-sources-report"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Ленты из стены человека, поиска и RSS"
+name.en = "Lanes from someone's wall, a search and RSS"
+config = "`[[lanes.custom]]`: `source = \"account:<id>/posts\"`, `\"search:…\"`, `\"rss:…\"`; `lanes.tags_one_request`"
+api.ru = "`accounts/<id>/statuses` с `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS и Atom без токена"
+api.en = "`accounts/<id>/statuses` with `exclude_replies`, `only_media`, `exclude_reblogs`, `tagged`, `pinned`; `/api/v2/search`; RSS and Atom without a token"
+others.ru = "Fedicat, Subway Tooter, Phanpy, Fread"
+others.en = "Fedicat, Subway Tooter, Phanpy, Fread"
+clients = ["Phanpy"]
+details.ru = "Источники лент из правил: `account:<id>` с фильтром на стороне сервера — `/posts` (без ответов), `/media`, `/noboosts`, `/pinned`, `/tag:linux`; `search:слова` — найденное поиском; `rss:https://…` — лента сайта (RSS 2.0, RSS 1.0, Atom), каждая запись — пост только для чтения: открыть, в закладки (здесь), но не лайкнуть и не ответить. В наборе «extra» — лента «Сеть» (Федерация без своего сервера) и «Упоминания чужих». `lanes.tags_one_request` — ленту тегов спрашивать одним запросом, где сервер умеет (Mastodon)."
+details.en = "Sources of lanes of rules: `account:<id>` filtered by its server — `/posts` (no replies), `/media`, `/noboosts`, `/pinned`, `/tag:linux`; `search:words` — what a search finds; `rss:https://…` — a site's feed (RSS 2.0, RSS 1.0, Atom), each item a read-only post: open it, bookmark it (here), not like or answer it. The \"extra\" set has the \"Network\" lane (Federated without your server) and \"Strangers' mentions\". `lanes.tags_one_request` — a lane of tags in one request where the server can (Mastodon)."
+
+[[feature]]
+id = "lane-rules-report"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Правила: на время, по имени, не больше N от автора, по авторам, «Убрать из Ленты»"
+name.en = "Rules: for a while, by name, at most N per author, by author, \"Not in Home\""
+config = "`[[lanes.custom]]`: `until`, `text_in = \"name\"`, `per_author`, `bundle`; `people.home_hide`"
+api.ru = "своё"
+api.en = "own"
+others.ru = "feather, Ivory, Subway Tooter (регэкспы, временные), Raccoon for Friendica (лимит на автора), Phanpy (по авторам), Fedilab (убрать из Home)"
+others.en = "feather, Ivory, Subway Tooter (regexes, temporary), Raccoon for Friendica (a cap per author), Phanpy (by author), Fedilab (out of Home)"
+clients = ["Ivory", "Phanpy", "Fedilab"]
+details.ru = "У условия — `until = \"2026-11-01\"`: после этой даты его как будто нет (заглушка на неделю, лента на поездку). `text_in = \"name\"` — слова (и регулярки) и в имени автора с @ником. У ленты — `per_author = 3`: не больше трёх свежих постов одного человека; `bundle = \"author\"`: посты каждого вместе, самые активные первыми (поля «Не больше от одного автора» и «Собрать вместе» в редакторе). `people.home_hide` — в профиле того, на кого подписан, кнопка «Убрать из Ленты»: его посты уходят из Ленты, подписка, списки и колокольчик остаются. В наборе «extra» — «Упоминания чужих»."
+details.en = "A condition's `until = \"2026-11-01\"`: after that date it's as if it weren't there (a mute for a week, a lane for a trip). `text_in = \"name\"` — words (and regexes) in the author's name and @nick too. A lane's `per_author = 3`: at most three newest posts of one person; `bundle = \"author\"`: each one's posts together, the busiest first (\"At most from one author\" and \"Put together\" in the editor). `people.home_hide` — on the profile of someone you follow, \"Not in Home\": their posts leave Home, the follow, lists and the bell stay. The \"extra\" set has \"Strangers' mentions\"."

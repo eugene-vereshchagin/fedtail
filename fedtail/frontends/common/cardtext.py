@@ -129,6 +129,10 @@ def card_words(spec, cfg, date, in_thread=None):
     if p.edited:
         w.meta.append(Bit(_("edited_mark"), f"fedtail:history/{p.id}",
                           _("edited_tip", when=date(p.edited)), kind="edited"))
+    if spec.extra.get("via_tag"):  # card.why_home: in Home by a followed tag
+        tag = spec.extra["via_tag"]
+        w.meta.append(Bit("# " + _("via_tag", tag=tag), f"fedtail:tag/{tag}",
+                          _("via_tag_tip", tag=tag), kind="via_tag"))
     if spec.extra.get("deleted"):  # gone from its server, kept here
         w.meta.append(Bit("🗑 " + _("deleted_mark"), tip=_("deleted_mark_tip"), kind="deleted"))
     days = age_days(p, cfg)

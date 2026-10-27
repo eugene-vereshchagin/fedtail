@@ -80,6 +80,10 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
                 langs = list(rel.languages or ())
                 out.append(Act("langs", "🌐 " + (", ".join(langs) if langs else _("langs_all")),
                                _("langs_person_tip")))
+        if following and cfg["feed"].get("home_hide"):
+            hidden = rel.hidden_home
+            out.append(Act("home_hide", "🏠 " + (_("home_hide_off") if hidden
+                                                 else _("home_hide_on")), _("home_hide_tip")))
         out.append(Act("mention", _("mention")))
         out.append(Act("mute", _("unmute") if rel.muting else _("mute")))
         out.append(Act("block", _("unblock") if rel.blocking else _("block")))
@@ -97,6 +101,10 @@ def actions(acc, rel, mine, cfg, supports, lists=False, details=False, collectio
             out.append(Act(which, _(f"people_{which}_n", n=n)))
     if not mine:
         out.append(Act("note", _("note_edit"), _("note_tip")))
+        if cfg["feed"].get("aliases"):  # my own name for them, here only
+            out.append(Act("alias", "✎ " + _("alias_edit"), _("alias_tip")))
+        if cfg["feed"].get("nick_colors"):  # their name in my colour, here only
+            out.append(Act("nick_color", "🎨 " + _("color_edit"), _("color_tip")))
     out.append(Act("copy_handle", _("copy_handle"), _("copy_handle_tip")))
     if acc.url:
         out.append(Act("open_browser", _("open_browser")))
@@ -141,6 +149,9 @@ def do(key, acc, rel, view, host, changed):
                       after(languages=tuple(langs) or None), host.error)
         host.ask_text(_("langs_person_title", acct=acc.handle), _("langs_person_ask"),
                       set_langs, ", ".join(rel.languages or ()), allow_empty=True)
+    elif key == "home_hide":  # out of Home, still followed (feed.home_hide)
+        on = not rel.hidden_home
+        host.call(view.hide_from_home(acc.id, on), after(hidden_home=on), host.error)
     elif key == "mention":
         host.compose(text=f"@{acc.handle} ")
     elif key == "mute":
@@ -175,6 +186,18 @@ def do(key, acc, rel, view, host, changed):
                       lambda text: host.call(view.set_note(acc.id, text.strip(), old),
                                              after(note=text.strip()), host.error),
                       note_text(old), allow_empty=True)
+    elif key == "alias":  # my own name for them (feed.aliases): "" — theirs again
+        host.ask_text(_("alias_title", acct=acc.handle), _("alias_tip"),
+                      lambda text: host.call(view.set_alias(acc.id, text.strip()),
+                                             lambda _r: host.status(_("alias_saved")),
+                                             host.error),
+                      acc.name, allow_empty=True)
+    elif key == "nick_color":  # people.nick_colors: a colour's name or #rrggbb; "" — none
+        host.ask_text(_("color_title", acct=acc.handle), _("color_tip"),
+                      lambda text: host.call(view.set_nick_color(acc.id, text.strip()),
+                                             lambda _r: host.status(_("color_saved")),
+                                             host.error),
+                      acc.color, allow_empty=True)
     elif key == "edit_profile":
         host.edit_profile()
     elif key == "lists":  # "Add to list": which lists they're in, a tick each

@@ -21,6 +21,13 @@ class LoginDialog(QDialog):
         if expect:
             self.server.setText(expect[0].split("://")[-1].rstrip("/"))
         lay.addWidget(self.server)
+        self.proxy = None
+        if self.core.cfg["net"].get("proxy_at_login"):  # before the first request
+            lay.addWidget(QLabel(_("login_proxy")))
+            self.proxy = QLineEdit(str(self.core.cfg["net"].get("proxy") or ""))
+            self.proxy.setPlaceholderText("socks5h://127.0.0.1:1080")
+            self.proxy.setToolTip(_("login_proxy_tip"))
+            lay.addWidget(self.proxy)
         self.b1 = QPushButton(_("login_step1"))
         self.b1.clicked.connect(self.step1)
         lay.addWidget(self.b1)
@@ -46,8 +53,9 @@ class LoginDialog(QDialog):
             return
         self.b1.setEnabled(False)
         self.msg.setText(_("loading"))
-        self.win.bridge.call(self.core.begin_login(self.server.text()), ok=self._opened,
-                             fail=self._fail)
+        more = {"proxy": self.proxy.text()} if self.proxy is not None else {}
+        self.win.bridge.call(self.core.begin_login(self.server.text(), **more),
+                             ok=self._opened, fail=self._fail)
 
     def _opened(self, url):
         self.url = url

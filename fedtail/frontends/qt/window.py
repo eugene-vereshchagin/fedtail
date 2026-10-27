@@ -402,6 +402,10 @@ class MainWindow(QMainWindow):
         if not split_layout:
             self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.tabs.tabCloseRequested.connect(self.close_tab)
+        if self.cfg["ui"].get("pin_tabs"):  # a right click on a tab: pinned, or not
+            bar = self.tabs.tabBar()
+            bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            bar.customContextMenuRequested.connect(self._tab_menu)
         right = QWidget()
         rv = QVBoxLayout(right)
         rv.setContentsMargins(0, 0, 0, 0)
@@ -540,9 +544,13 @@ class MainWindow(QMainWindow):
             key = sc.key().toString()
             sc.activatedAmbiguously.connect(
                 lambda f=fn, k=key: (log.warning("ambiguous shortcut %s", k), f()))
-        for i in range(9):  # Alt+N: the N-th lane as the sidebar shows them
-            QShortcut(QKeySequence(f"Alt+{i + 1}"), self).activated.connect(
-                lambda r=i: r < len(self.lane_order) and self.select_lane(self.lane_order[r]))
+        mods = {"alt": ("Alt",), "ctrl": ("Ctrl",), "both": ("Alt", "Ctrl")}.get(
+            self.cfg["ui"].get("number_keys", "alt"), ("Alt",))
+        for mod in mods:  # Alt+N (ui.number_keys): the N-th lane as the sidebar shows them
+            for i in range(9):
+                QShortcut(QKeySequence(f"{mod}+{i + 1}"), self).activated.connect(
+                    lambda r=i: r < len(self.lane_order) and
+                    self.select_lane(self.lane_order[r]))
 
         if self.cfg["ui"].get("tray", True) and QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self.windowIcon(), self)
@@ -1016,7 +1024,11 @@ class MainWindow(QMainWindow):
         m.addMenu(self._tender_menu(m))
         if self.cfg["post"].get("schedule", True):
             m.addAction(_("scheduled_title") + "…", self.show_scheduled)
+        if self.cfg["post"].get("drafts_place"):
+            m.addAction(_("drafts_title") + "…", lambda: self.open_place("drafts"))
         m.addAction(_("slow_title") + "…", lambda: self.open_place("slow"))
+        if self.cfg["feed"].get("stats"):
+            m.addAction(_("stats_title") + "…", lambda: self.open_place("stats"))
         people = m.addMenu(_("menu_people"))
         trends = any(self.core.supports("trends_" + k) for k in ("statuses", "tags", "links"))
         for feature, label, slot in (
@@ -2048,12 +2060,40 @@ class MainWindow(QMainWindow):
     def retitle(self, w):
         i = self.tabs.indexOf(w)
         if i >= 0:
-            self.tabs.setTabText(i, w.title if len(w.title) < 40 else w.title[:39] + "…")
+            self.tabs.setTabText(i, ("📌 " if getattr(w, "_ft_pinned", False) else "") +
+                                 (w.title if len(w.title) < 40 else w.title[:39] + "…"))
             self.tabs.setTabToolTip(i, w.title)
+
+    def _tab_menu(self, pos):
+        i = self.tabs.tabBar().tabAt(pos)
+        w = self.tabs.widget(i) if i >= 0 else None
+        if w is None or w is self.stack:
+            return
+        m = QMenu(self)
+        pinned = getattr(w, "_ft_pinned", False)
+        m.addAction(_("tab_unpin") if pinned else _("tab_pin"), lambda: self.pin_tab(w))
+        m.exec(self.tabs.tabBar().mapToGlobal(pos))
+
+    def pin_tab(self, w, on=None):
+        """ui.pin_tabs: a pinned tab has no ×, and Ctrl+W / Esc pass it by."""
+        w._ft_pinned = (not getattr(w, "_ft_pinned", False)) if on is None else on
+        i = self.tabs.indexOf(w)
+        if i >= 0:
+            text = self.tabs.tabText(i).removeprefix("📌 ")
+            self.tabs.setTabText(i, ("📌 " + text) if w._ft_pinned else text)
+            side = QTabBar.ButtonPosition.RightSide
+            button = self.tabs.tabBar().tabButton(i, side)
+            if button is not None:
+                button.setVisible(not w._ft_pinned)
+        self.statusBar().showMessage(_("tab_pinned") if w._ft_pinned else _("tab_unpinned"),
+                                     4000)
 
     def close_tab(self, i):
         w = self.tabs.widget(i)
         if w is None or (w is self.stack and self.roster is None):
+            return
+        if getattr(w, "_ft_pinned", False):
+            self.statusBar().showMessage(_("tab_pinned_stays"), 4000)
             return
         if w is self.stack:  # the split layout (Ctrl+W): the lane's tab above goes
             self.msg_tabs.close_current()
@@ -2098,7 +2138,7 @@ class MainWindow(QMainWindow):
         w = self.tabs.currentWidget()
         if isinstance(w, ThreadWidget):
             w.reload()
-        self.core.poll_now()
+        self.core.refresh_by_hand()
 
     # ---- links & actions --------------------------------------------------------------
     def copy_handle(self, acct):
@@ -2358,6 +2398,8 @@ class MainWindow(QMainWindow):
 
     def show_scheduled(self):
         """Posts waiting on the server to go out at their time; any can be cancelled."""
+        if self.cfg["post"].get("scheduled_to_draft"):  # the place, with "To the editor"
+            return self.open_place("scheduled")
         from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPushButton
         dlg = QDialog(self)
         dlg.setWindowTitle(_("scheduled_title"))

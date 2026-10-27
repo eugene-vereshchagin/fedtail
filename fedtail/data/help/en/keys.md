@@ -12,7 +12,7 @@ Every shortcut in one table.
 | `Ctrl+F`, `F3`, `Shift+F3` | find in a lane, thread or profile |
 | `Ctrl+L` | the command line |
 | `F5` | refresh |
-| `Alt+1…9` | a lane by its number |
+| `Alt+1…9` | a lane by its number (`window.number_keys`: Ctrl+1…9 too) |
 | `Ctrl+W` | close a tab |
 | `Esc` | close what's on top; the last one — the curtain |
 | `Ctrl+Q` | quit (the cross only hides to the tray) |
@@ -30,6 +30,8 @@ hit by mistake.
 | `b` | boost |
 | `m` | bookmark |
 | `o`, `Enter` | open the thread |
+| `]` / `[` | in a thread: the next / previous top-level comment |
+| `-` | in a thread: fold the branch (from a deep reply — its top comment's whole branch), again — unfold (the window) |
 
 To turn these letters off — `window.post_keys = false`.
 

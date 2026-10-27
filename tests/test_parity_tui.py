@@ -224,6 +224,21 @@ class EditorTest(Base):
             await self.wait(pilot, lambda: app.screen is not scr, what="sent")
             self.assertTrue(scr.alt_ok)
 
+            # post.lang_check: another language than the post's — asked, switched, sent
+            app.core.cfg["post"]["lang_check"] = True
+            scr = ComposeScreen()
+            app.push_screen(scr)
+            await self.wait(pilot, lambda: app.screen is scr)
+            scr.query_one("#c-text", TextArea).text = (
+                "გამარჯობა მეგობრებო, დღეს თბილისში ძალიან ლამაზი ამინდია და ქალაქი სავსეა")
+            scr.query_one("#c-lang", Input).value = "en"
+            scr.action_send()
+            await self.wait(pilot, lambda: isinstance(app.screen, MenuScreen), what="lang?")
+            app.screen.dismiss("switch")
+            await self.wait(pilot, lambda: app.screen is not scr, what="sent")
+            self.assertEqual(scr.query_one("#c-lang", Input).value, "ka")
+            app.core.cfg["post"]["lang_check"] = False
+
             # discard, asked first
             scr = ComposeScreen()
             app.push_screen(scr)

@@ -74,6 +74,8 @@ DEFAULTS = {
         "icon_count_except": [],
         "actions": "both",
         "post_keys": True,
+        "number_keys": "alt",      # a lane by its number: Alt+1…9, Ctrl+1…9 or both
+        "pin_tabs": False,         # a tab's right click: pinned (no ×, Ctrl+W passes it)
         "announcements": 'banner',
         "media_grid": 'natural',
         "alt_text": 'tooltip',
@@ -94,6 +96,12 @@ DEFAULTS = {
         "counters_via_accounts": True,
         "remember_choices": False,
         "complete_threads": True,
+        "thread_from": "mixed",
+        "thread_recheck_minutes": 0,
+        "thread_followed_only": False,
+        "around_post": False,
+        "why_home": False,
+        "stats": False,            # "Statistics" in the ≡ menu: the week, day by day
         "link_cards": 'full',
         "custom_emoji": True,
         "emoji": True,
@@ -109,12 +117,19 @@ DEFAULTS = {
         "text_markup": True,
         "follow_date_note": True,
         "forget_unfollowed": True,
+        "home_hide": False,
+        "aliases": False,
+        "nick_colors": False,      # "Name colour…" on a profile: their name in my colour
         "remote_posts": 20,
         "remote_people": True,
         "sensitive_media": 'hide',
         "profile_pinned": True,
         "translate": True,
         "translate_all": False,
+        "translate_auto": False,   # posts in languages I neither read nor write: translated
+        "translate_backend": "server",  # "server" (its /translate) or "libretranslate"
+        "translate_url": "",       # LibreTranslate's address (https://…)
+        "translate_key": "",       # its API key, if it asks for one
         "profile_featured": True,
         "profile_show": "posts",
     },
@@ -140,6 +155,7 @@ DEFAULTS = {
         "federated_extra": [],
         "tags_extra": [],
         "extra_minutes": 10,
+        "tags_one_request": False,
     },
     "post": {
         "default_visibility": "private",
@@ -164,6 +180,11 @@ DEFAULTS = {
         "who_can_like": '',
         "schedule": True,
         "alt_reminder": True,
+        "lang_check": False,       # the text reads as another language: ask before sending
+        "link_quote": False,       # a post's link at the end of the text: a quote of it
+        "send_in_background": False,  # the editor closes at once; the post goes after
+        "scheduled_to_draft": False,  # "Back to the editor" on a scheduled post
+        "drafts_place": False,     # "Drafts" in the ≡ menu: every kept draft
         "redraft": True,
         "resize_images": True,
         "chain": True,
@@ -238,7 +259,12 @@ DEFAULTS = {
         "activity": True,
         "tiles": True,
         "lane_rules": False,
+        "people": False,
         "interval_seconds": 60,
+    },
+    "net": {
+        "proxy": "",               # http://host:port, socks5h://host:port; "" — none (or env)
+        "proxy_at_login": False,   # a proxy field in the login window
     },
     "storage": {
         "max_mb": 1024,
@@ -264,6 +290,7 @@ DEFAULTS = {
         "tracemalloc": False,
         "report_repo": "",
         "issue_repo": "",
+        "raw_json": False,
     },
     "tui": {
         "theme": "",
@@ -284,6 +311,7 @@ DEFAULTS = {
         "overview": "tiles",
         "layout": "auto",
         "push": "auto",
+        "stream": "always",        # the live stream: "always", "wifi" (Wi-Fi only), "off"
     },
     "cli": {
         "enabled": True,
@@ -294,6 +322,10 @@ DEFAULTS = {
 }
 
 CHOICES = {
+    ("feed", "thread_from"): {"local", "mixed", "remote"},
+    ("ui", "number_keys"): {"alt", "ctrl", "both"},
+    ("feed", "translate_backend"): {"server", "libretranslate"},
+    ("phone", "stream"): {"always", "wifi", "off"},
     ("ui", "layout"): {'single', 'split'},
     ("ui", "themes_by_layout"): {"auto", "on", "off"},
     ("ui", "app_icon"): {'possum', 'bubble'},
@@ -327,7 +359,7 @@ CHOICES = {
     ("feed", "order"): {"oldest_first", "newest_first"},
     ("feed", "profile_show"): {"posts", "all", "media"},
     ("feed", "start_at"): {"first_unread", "newest"},
-    ("feed", "on_new"): {"keep_position", "jump_to_newest"},
+    ("feed", "on_new"): {"keep_position", "jump_to_newest", "hold"},
     ("read", "mark_read"): {"on_scroll", "on_open", "manual"},
     ("notify", "privacy"): {"full", "sender", "count"},
     ("notify", "backend"): {"auto", "desktop", "tray"},
@@ -361,8 +393,9 @@ LANE_LISTS = [("lanes", "enabled"), ("lanes", "posts_only"), ("notify", "lanes")
 ACTIVITY_TYPES = {"favourite", "reblog", "follow", "poll", "update", "status"}
 SUBS_AUTO = {"posts", "comments"}
 SYNC_WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
-             "lane_rules")  # sync.<each>
+             "lane_rules", "people")  # sync.<each>
 MINIMUM = {
+    ("feed", "thread_recheck_minutes"): 0,
     ("sound", "min_gap_seconds"): 0,
     ("poll", "interval_seconds"): 30,
     ("sync", "interval_seconds"): 15,
@@ -432,27 +465,32 @@ FILE_LAYOUT = (
     ("window", _keys("ui", "frontend layout open_columns columns column_width "
                            "themes_by_layout roster_on_top roster_threads split_tabs "
                            "dock_commands sidebar_groups sidebar_width sidebar_footer "
-                           "start_lane tray close_to_tray esc post_keys command_line "
+                           "start_lane tray close_to_tray esc post_keys number_keys pin_tabs "
+                           "command_line "
                            "whats_this compose compose_size icon_count icon_count_except "
                            "desktop_entry")),
     ("lanes", _keys("lanes", "preset enabled extra_bots posts_only unsorted browse_keep "
                              "custom tag_groups languages languages_in detect_language "
                              "detect_min_words federated_extra tags_extra bubble "
-                             "extra_minutes")),
+                             "extra_minutes tags_one_request")),
     ("lists", _keys("lists", "enabled hide_members hide_in refresh_minutes")),
     ("reading", _keys("feed", "order start_at on_new page_size catch_up_limit render_limit "
-                              "build_at_once remember_choices first_run_mark_read")
+                              "build_at_once remember_choices first_run_mark_read stats")
      + _keys("read", "mark_read read_button")),
     ("card", _keys("feed", "show_reply_context thread_news repeat_boosts quotes link_cards "
-                           "old_days collapse_tags long_form sensitive_media")
+                           "old_days collapse_tags long_form sensitive_media around_post "
+                           "why_home")
      + _keys("ui", "arts_mode expand_cw actions bookmark_button links_in_app")
      + _keys("feed", "show_moved honest_counters counters_via_accounts translate "
-                     "translate_all")),
-    ("threads", _keys("feed", "complete_threads")
+                     "translate_all translate_auto translate_backend translate_url "
+                     "translate_key")),
+    ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
+                              "thread_followed_only")
      + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
                              "profile_show profile_pinned profile_featured per_person_follow "
-                             "follow_date_note forget_unfollowed")),
+                             "follow_date_note forget_unfollowed home_hide aliases "
+                             "nick_colors")),
     ("media", _keys("ui", "image_height media_grid alt_text image_viewer video_player "
                           "video_decode gifv image_upscale save_dir")
      + _keys("feed", "prefetch")
@@ -463,7 +501,8 @@ FILE_LAYOUT = (
                            "spell_languages complete_mentions complete_tags complete_emoji "
                            "report_forward quote_policy quote_action quote_prefix invite "
                            "who_can_reply who_can_boost who_can_like schedule alt_reminder "
-                           "redraft resize_images focus_point chain preview")
+                           "redraft resize_images focus_point chain preview lang_check "
+                           "link_quote send_in_background scheduled_to_draft drafts_place")
      + _keys("account", "markdown")),
     ("notify", _keys("notify", "enabled lanes except privacy when_focused backend filtered")
      + _keys("ui", "announcements")),
@@ -475,19 +514,20 @@ FILE_LAYOUT = (
                                    "server_groups")),
     ("accounts", _keys("ui", "merge switch_closes account_colors act_as")),
     ("sync", _keys("sync", "url folder interval_seconds read threads lanes drafts activity "
-                           "tiles lane_rules")
+                           "tiles lane_rules people")
      + _keys("read", "sync_markers")),
-    ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes")),
+    ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes")
+     + _keys("net", "proxy proxy_at_login")),
     ("storage", _keys("storage", "max_mb keep_per_lane keep_activity gc_hours grace_hours")),
     ("debug", _keys("debug", "level mode log_dir log_mb keep_mb stats_minutes trim_memory "
                              "watchdog_seconds stall_ms slow_request_seconds rss_warn_mb "
                              "leak_samples object_census tracemalloc report_repo "
-                             "issue_repo")),
+                             "issue_repo raw_json")),
     ("cli", _keys("cli", "enabled color max_lines tail_lanes")),
     ("tui", _keys("tui", "theme sound lanes_width show_context pictures picture_rows viewer "
                          "video")),
     ("web", _keys("web", "host port open_browser")),
-    ("phone", _keys("phone", "overview layout push")),
+    ("phone", _keys("phone", "overview layout push stream")),
 )
 # (internal section, key) → the file's table; (the file's table, key) → internal section
 FILE_TABLE = {opt: table for table, opts in FILE_LAYOUT for opt in opts}
@@ -800,6 +840,45 @@ def sensitive_media(cfg):
     return cfg["feed"].get("sensitive_media", "hide")
 
 
+PROXY_SCHEMES = ("http", "https", "socks5", "socks5h", "socks4")
+_PROXY_VARS = ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy", "http_proxy",
+               "all_proxy")
+_proxy_set = None  # the proxy this run put into the environment (net.proxy), or None
+
+
+def proxy_ok(proxy):
+    """"" or scheme://host:port with a scheme requests can speak (socks: PySocks)."""
+    from urllib.parse import urlsplit
+    proxy = (proxy or "").strip()
+    if not proxy:
+        return True
+    try:
+        p = urlsplit(proxy)
+        return p.scheme in PROXY_SCHEMES and bool(p.hostname) and p.port is not None
+    except ValueError:
+        return False
+
+
+def apply_proxy(cfg):
+    """net.proxy: the whole of fedtail (the API, pictures, the stream, sync, login) goes
+    through it — requests and urllib take it from the environment, so it is put there.
+    "" leaves the environment as the system set it (and takes back one put there
+    before, when the settings change it on the go)."""
+    global _proxy_set
+    import os
+    proxy = str((cfg.get("net") or {}).get("proxy") or "").strip()
+    if proxy and not proxy_ok(proxy):
+        proxy = ""
+    if proxy == (_proxy_set or ""):
+        return
+    for name in _PROXY_VARS:
+        if proxy:
+            os.environ[name] = proxy
+        elif _proxy_set is not None and os.environ.get(name) == _proxy_set:
+            del os.environ[name]
+    _proxy_set = proxy or None
+
+
 def load(path):
     """Read config file (creating the commented example if absent)."""
     if not path.exists():
@@ -810,4 +889,6 @@ def load(path):
             user = tomllib.load(f)
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{path}: {e}") from None
-    return validate(user)
+    cfg, warnings = validate(user)
+    apply_proxy(cfg)
+    return cfg, warnings

@@ -530,7 +530,7 @@ class MainWindow(Gtk.ApplicationWindow):
         add("<Control>n", self.compose)
         add("<Control>f", self.find_bar.open)
         add("<Control>k", self.search.grab_focus)  # the sidebar's search, as in Qt
-        add("F5", self.view.poll_now)
+        add("F5", self.view.refresh_by_hand)
         add("<Control>q", self.close)
         add("<Control>w", self._close_current_tab)
         self.add_controller(ctl)
@@ -554,6 +554,12 @@ class MainWindow(Gtk.ApplicationWindow):
         curtain opens the last lane."""
         mods = state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK |
                         Gdk.ModifierType.SHIFT_MASK)
+        if Gdk.KEY_1 <= keyval <= Gdk.KEY_9 and mods in self._number_mods():
+            names = list(self.lane_rows)  # Alt+N (ui.number_keys): the N-th lane
+            n = keyval - Gdk.KEY_1
+            if n < len(names):
+                self.select_lane(names[n])
+            return True
         if mods:
             return False
         mode = self.cfg["ui"].get("esc", "curtain")
@@ -581,6 +587,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.sidebar.select_row(self.lane_rows[name])
                 return True
         return False
+
+    def _number_mods(self):
+        alt, ctrl = Gdk.ModifierType.ALT_MASK, Gdk.ModifierType.CONTROL_MASK
+        return {"alt": (alt,), "ctrl": (ctrl,), "both": (alt, ctrl)}.get(
+            self.cfg["ui"].get("number_keys", "alt"), (alt,))
 
     # ---- the curtain: every lane closed ------------------------------------------------
     def _build_curtain(self):
@@ -894,6 +905,8 @@ class MainWindow(Gtk.ApplicationWindow):
         return dialogs.filtered(self)
 
     def show_scheduled(self):
+        if self.cfg["post"].get("scheduled_to_draft"):  # the place, with "To the editor"
+            return self.open_place("scheduled")
         from . import dialogs
         return dialogs.scheduled(self)
 
@@ -1270,8 +1283,21 @@ class MainWindow(Gtk.ApplicationWindow):
             self.stack.add_named(lv, name)
         self.columns_changed()
 
+    def _toggle_pin(self, page, title, close):
+        """ui.pin_tabs: a pinned tab has no ✕, and Esc / Ctrl+W pass it by."""
+        page._ft_pinned = not getattr(page, "_ft_pinned", False)
+        text = title.get_label().removeprefix("📌 ")
+        title.set_label(("📌 " + text) if page._ft_pinned else text)
+        close.set_visible(not page._ft_pinned)
+        title.set_tooltip_text(_("tab_unpin" if page._ft_pinned else "tab_pin") + " — " +
+                               _("right_click"))
+        self.status(_("tab_pinned") if page._ft_pinned else _("tab_unpinned"))
+
     def _close_current_tab(self):
         page = self.tabs.get_nth_page(self.tabs.get_current_page())
+        if getattr(page, "_ft_pinned", False):
+            self.status(_("tab_pinned_stays"))
+            return
         root = next((r for r, p in self.threads.items() if p is page), None)
         if root is not None:
             self.close_thread(root)
@@ -1535,6 +1561,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 if hasattr(page, "add_sent"):
                     page.refresh()
             self.update_badges()
+        elif name == "thread_grew":  # replies from other servers, or asked again
+            for key, page in list(self.threads.items()):
+                posts = getattr(page, "posts", None) or []
+                if key == payload or (posts and posts[0].id == payload):
+                    self.reload_thread(key)
         elif name == "status_updated" and payload is not None:
             self._post_changed(payload)
         elif name == "status_deleted":
@@ -1698,6 +1729,11 @@ class MainWindow(Gtk.ApplicationWindow):
         tip(close, _("close_tab"))
         close.connect("clicked", lambda _b: close_fn())
         tab.append(close)
+        if self.cfg["ui"].get("pin_tabs"):  # a right click on the tab: pinned, or not
+            pin = Gtk.GestureClick(button=3)
+            pin.connect("pressed", lambda *_a: self._toggle_pin(page, title, close))
+            tab.add_controller(pin)
+            title.set_tooltip_text(_("tab_pin") + " — " + _("right_click"))
         n = self.tabs.append_page(page, tab)
         self.tabs.set_tab_reorderable(page, True)
         self.tabs.set_current_page(n)

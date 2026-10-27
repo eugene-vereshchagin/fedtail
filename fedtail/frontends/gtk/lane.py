@@ -152,7 +152,7 @@ class LaneView(Gtk.Box):
         refresh = Gtk.Button()  # as Qt's: the theme's picture alone, or the words
         self._dress(refresh, "refresh", _("refresh") + " (F5)")
         tip(refresh, _("refresh") + " (F5)")
-        refresh.connect("clicked", lambda _b: ctx.view.poll_now())
+        refresh.connect("clicked", lambda _b: ctx.view.refresh_by_hand())
         tools.append(refresh)
         self.append(header)
 

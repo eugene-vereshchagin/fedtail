@@ -2,6 +2,38 @@
 
 ## 0.21.0 — in progress
 
+- **From the competitors' report** (every one behind a key, off by default):
+  - lanes of rules from someone's wall filtered by its server
+    (`account:<id>/posts|media|noboosts|pinned|tag:<tag>`), from a search (`search:…`)
+    and from RSS / Atom feeds (`rss:…` — read-only posts); a lane of tags in one request
+    (`lanes.tags_one_request`, Mastodon); "Network" and "Strangers' mentions" in the extra
+    set;
+  - rules: a condition `until` a date, words in the author's name (`text_in = "name"`),
+    at most N posts per author (`per_author`), each author's posts together (`bundle`);
+    "Not in Home" on a profile (`people.home_hide`) — out of Home, still followed;
+  - threads: where replies come from (`threads.thread_from` local / mixed / remote), an
+    open thread asking again by itself (`threads.thread_recheck_minutes`), only the
+    followed (`threads.thread_followed_only`), `]` / `[` between top comments and `-`
+    folding a branch, "Around this post" in the post menu (`card.around_post`); GTK and
+    the terminal take a thread that grew, as the window and the web page do.
+  - people: my own name for someone (`people.aliases`, "My name for them…" on a
+    profile) and a colour for their name (`people.nick_colors`, "Name colour…"); `sync.people` carries those names and the people out of Home to the other
+    devices; why a post is in Home — "# tag" when it came by a followed tag
+    (`card.why_home`); the post's JSON in its menu (`debug.raw_json`).
+  - writing: a question when the text reads as another language than the post's
+    (`post.lang_check`), a post's link at the end becoming a quote (`post.link_quote`),
+    the editor closing at once with the post going in the background
+    (`post.send_in_background`), a scheduled post back to the editor
+    (`post.scheduled_to_draft`), "Drafts" in the ≡ menu (`post.drafts_place`).
+  - the application: a proxy for everything (`server.proxy`), also typed at login
+    (`server.proxy_at_login`, every interface and the phone); a lane by Ctrl+1…9
+    (`window.number_keys`), pinned tabs (`window.pin_tabs`); the phone's live stream on
+    Wi-Fi only (`phone.stream`); "Statistics" in the ≡ menu (`reading.stats`);
+    LibreTranslate for "Translate" (`card.translate_backend`, `translate_url`,
+    `translate_key`) and posts in languages you don't read translated by themselves
+    (`card.translate_auto`); new posts waiting for Refresh (`reading.on_new = "hold"`);
+    the week's most shared links in Statistics.
+
 - The opossum's swing no longer stops dead when a round ends: it runs to the end of its
   swing (where it stands still) and stops there — the windows, GTK, the web page and the
   phone.

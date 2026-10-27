@@ -154,3 +154,18 @@ size.ru = "средний"
 size.en = "medium"
 details.ru = "Ключ переносится QR-кодом из окна на камеру телефона; картинки черновика едут вместе с ним; WebDAV без монтирования; старые журналы упаковываются в снимок. И проверка вживую на Linux, Windows и Android. В 0.21."
 details.en = "The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot. And checked live on Linux, Windows and Android. In 0.21."
+
+[[feature]]
+id = "hold-new"
+status = "has"
+android = "has"
+since = "0.21.0"
+name.ru = "Новое ждёт «Обновить»"
+name.en = "New posts wait for Refresh"
+config = "`reading.on_new = \"hold\"`"
+api.ru = "своё"
+api.en = "own"
+others = "Elk"
+clients = ["Elk"]
+details.ru = "Пришедшее после того, как лента нарисована, в неё не вставляется: в заголовке ленты «новых: N — «Обновить» покажет», а ⟳ / F5 впускает их. Более старое (листание вниз) приходит сразу."
+details.en = "What comes after the lane is drawn doesn't go into it: the lane's header says \"N new — Refresh shows them\", and ⟳ / F5 lets them in. Older posts (paging down) come at once."

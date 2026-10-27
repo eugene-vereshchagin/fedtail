@@ -76,6 +76,22 @@ def matches(st, spec):
     return not tags & set(s["none"])
 
 
+def fetch_once(tag_timeline, spec, limit=40, max_id=None, min_id=None):
+    """One page of the lane in one request: the first tag's timeline with the rest as
+    any[] / all[] / none[] (Mastodon's tag timeline takes them), still checked here."""
+    s = normal(spec)
+    first = (s["any"] or s["all"])[:1]
+    if not first:
+        return []
+    tag = first[0]
+    extra = {"any[]": [t for t in s["any"] if t != tag] or None,
+             "all[]": [t for t in s["all"] if t != tag] or None,
+             "none[]": list(s["none"]) or None}
+    got = tag_timeline(tag, limit=limit, max_id=max_id, min_id=min_id,
+                       **{k: v for k, v in extra.items() if v}) or []
+    return [st for st in got if matches(st, s)]
+
+
 def fetch(tag_timeline, spec, limit=40, max_id=None, min_id=None):
     """One page of the lane: each "any" tag's timeline (or the first "all" one, when
     there are no "any"), put together newest first, each post once, then checked."""

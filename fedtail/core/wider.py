@@ -139,6 +139,15 @@ class Wider:
         self.store.kv_set("wider.seen", (seen + uris)[-SEEN_KEEP:])
         return got
 
+    def rss_feed(self, url):
+        """A lane of rules' source rss:<address>: the feed's items as posts (core/rss.py),
+        asked gently — at most every lanes.extra_minutes; [] in between."""
+        if not self._due(f"rss:{url}"):
+            return []
+        self._done(f"rss:{url}")
+        from . import rss
+        return rss.fetch(url, own_hosts=self.core._own_hosts())
+
     def _one(self, kind, host, lane, tag):
         url = tag_url(host, tag) if kind == "tag" else public_url(host)
         page = self.core._origin_get(url)

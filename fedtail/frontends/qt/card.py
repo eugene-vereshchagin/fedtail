@@ -604,12 +604,13 @@ class PostRow(QWidget):
             num = QLabel(f"/{self.spec.number}")
             num.setObjectName("num")
             top.addWidget(num)
+        named = acc.color or self.theme.css("name")  # people.nick_colors: mine for them
         top.addWidget(self._emoji_label(link("account", acc.id, display_name(acc),
-                                             self.theme.css("name"), bold=True),
+                                             named, bold=True),
                                         acc.emojis, "name", wrap=False,
                                         fallback=link("account", acc.id,
                                                       esc(acc.username or acc.handle),
-                                                      self.theme.css("name"), bold=True)))
+                                                      named, bold=True)))
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         line.addWidget(self._label(
             f'@{esc(acc.handle)}{esc(bot)} · '
@@ -678,7 +679,7 @@ class PostRow(QWidget):
         color = self.theme.css("chat_me" if mine else "chat_them")
         when = self.theme.date(p.created, self.theme.words.get("chat_date")) \
             if p.created else ""
-        name = link("account", acc.id, display_name(acc), color, bold=True)
+        name = link("account", acc.id, display_name(acc), acc.color or color, bold=True)
         stamp = link("thread", p.id, esc(when), color, bold=True)
         line = _fill_html(self.theme.words.get("chat", "{name} ({when})"),
                           name=name, when=stamp)
@@ -719,8 +720,9 @@ class PostRow(QWidget):
                                 lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
                                 owner=avatar)
         user, _sep, host = acc.handle.partition("@")
-        h.addWidget(self._label(link("account", acc.id, "@" + esc(user), self.theme.css("text"),
-                                     bold=True), "name", wrap=False))
+        h.addWidget(self._label(link("account", acc.id, "@" + esc(user),
+                                     acc.color or self.theme.css("text"), bold=True),
+                                "name", wrap=False))
         vis = p.visibility
         bot = f" [{_('bot')}]" if is_bot(acc, self.ctx.cfg["lanes"]["extra_bots"]) else ""
         days = _age_days(p, self.ctx.cfg)

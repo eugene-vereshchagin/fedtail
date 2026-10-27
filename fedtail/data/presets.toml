@@ -32,7 +32,7 @@ any = [
   { kind = "boost", switch = "@chip_boosts" },
   { state = "new_replies", switch = "@chip_threads_new" },
 ]
-none = [{ author = "bot" }]
+none = [{ author = "hidden_home" }, { author = "bot" }]
 
 [[fedtail]]
 name = "local"
@@ -122,6 +122,7 @@ any = [
   { kind = "boost", switch = "@chip_boosts" },
   { kind = "reply", switch = "@chip_replies" },
 ]
+none = [{ author = "hidden_home" }]  # "Not in Home" on a profile
 
 [[mastodon]]
 name = "local"
@@ -196,6 +197,7 @@ any = [
   { kind = "boost", switch = "@chip_boosts" },
   { kind = "reply", switch = "@chip_replies" },
 ]
+none = [{ author = "hidden_home" }]  # "Not in Home" on a profile
 
 [[tusky]]
 name = "mentions"
@@ -252,6 +254,7 @@ any = [
   {},
   { kind = "boost", switch = "@chip_boosts" },
 ]
+none = [{ author = "hidden_home" }]  # "Not in Home" on a profile
 
 [[phanpy]]
 name = "local"
@@ -319,6 +322,7 @@ any = [
   { kind = "boost", switch = "@chip_boosts" },
   { kind = "reply", switch = "@chip_replies" },
 ]
+none = [{ author = "hidden_home" }]  # "Not in Home" on a profile
 
 [[fedilab]]
 name = "local"
@@ -411,3 +415,23 @@ none = [{ state = "unliked" }]
 name = "requests"
 group = "personal"
 kind = "requests"
+
+# "The network": Federated without my own server's people — what other servers bring
+[[extra]]
+name = "network"
+group = "standard"
+icon = "federated"
+source = "federated"
+read = "browse"
+any = [{ author = "remote" }]
+
+# Mentions from strangers (people who neither follow me nor I them): where spam comes
+# from — a lane to look at it apart, or (in none of To me) to keep it away
+[[extra]]
+name = "stranger_mentions"
+group = "personal"
+icon = "mentions"
+source = "mentions"
+sort = "post_time"
+any = [{ me = "mention", author = ["stranger", "not_follower"] }]
+none = [{ author = ["followed", "follower", "me"] }]

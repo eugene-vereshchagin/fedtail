@@ -106,6 +106,7 @@ class Account:
     followers: int = 0
     following: int = 0
     moved: Account | None = None   # the account moved there
+    color: str = ""                # my colour for their name (people.nick_colors), "#rrggbb"
 
     @property
     def id(self):
@@ -511,6 +512,7 @@ class Relationship:
     endorsed: bool = False         # shown on my profile
     note: str = ""                 # my private note on them
     languages: tuple[str, ...] | None = None  # only these of theirs come to Home (None: all)
+    hidden_home: bool = False      # kept out of Home here, still followed (feed.home_hide)
 
 
 @dataclass(frozen=True, slots=True)

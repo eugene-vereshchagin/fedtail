@@ -29,6 +29,26 @@ keys = ["login_browser_opened", "login_hint", "login_other_account", "login_serv
         "relogin", "relogin_q"]
 
 [[capability]]
+id = "pin-tabs"
+area = "window"
+tui = "na"
+web = "na"
+android = "na"
+name.ru = "Закреплённые вкладки"
+name.en = "Pinned tabs"
+note.ru = "ui.pin_tabs: правый щелчок по вкладке треда или профиля. В терминале, вебе и на телефоне таких вкладок нет — тред и профиль открываются поверх ленты и уходят «назад»."
+note.en = "ui.pin_tabs: right-click a thread's or a profile's tab. The terminal, the web page and the phone have no such tabs — a thread and a profile open over the lane and go with \"back\"."
+android_note.ru = "Вкладок нет: экраны идут стопкой, «назад» — предыдущий."
+android_note.en = "No tabs: screens stack, \"back\" is the one before."
+keys = ["tab_pin", "tab_unpin", "tab_pinned", "tab_unpinned", "tab_pinned_stays"]
+
+[[wording]]
+in = ["qt", "tui", "web"]
+why.ru = "GTK закрепляет вкладку правым щелчком сразу, без меню, и говорит об этом подсказкой."
+why.en = "GTK pins a tab on a right click at once, with no menu, and says so in a tooltip."
+keys = ["right_click"]
+
+[[capability]]
 id = "accounts"
 area = "window"
 android = "has"
@@ -543,7 +563,7 @@ note.en = "A terminal has no pointer to hover — its hints are in the key line 
 keys = ["whats_this", "whats_this_on", "whats_this_tip", "tip_activity", "tip_bookmarks",
         "tip_bots", "tip_direct", "tip_federated", "tip_home", "tip_local", "tip_mentions",
         "tip_my_likes", "tip_my_posts", "tip_replies", "tip_requests", "tip_subs", "tip_unsorted",
-        "tip_to_me", "tip_important",
+        "tip_to_me", "tip_important", "tip_network", "tip_stranger_mentions",
         "to_end_tip", "unread_tip", "full_width_tip", "short_id_tip", "reactions_tip",
         "cw_add_tip", "compose_bigger_tip", "accounts_merge_tip", "debug_tracing_tip",
         "footer_profile_tip", "make_main_tip", "tender_arts_tip", "try_theme_tip",

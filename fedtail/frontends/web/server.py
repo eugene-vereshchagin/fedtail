@@ -143,6 +143,8 @@ def account_json(acc):
         return {"id": None, "handle": "", "name": "", "avatar": "", "url": "", "bot": False}
     out = {"id": acc.id, "handle": acc.handle, "name": acc.name or acc.username,
            "avatar": _https(acc.avatar_static), "url": _https(acc.url), "bot": acc.bot}
+    if acc.color:  # people.nick_colors: my colour for their name
+        out["color"] = acc.color
     if acc.emojis and ":" in out["name"]:  # :blobcat: in a name — its picture, as in a post
         out["name_html"] = with_emojis(escape(out["name"]), acc.emojis)
     return out
@@ -1616,6 +1618,11 @@ class Web:
         path = self._saver.save(url, saving.save_dir(self.core.cfg)).result()
         return {"message": _("saved_to", path=str(path))}
 
+    def refresh(self):
+        """The page's ⟳: a round now, and the lanes holding new posts let them in."""
+        self.core.refresh_by_hand()
+        return {"ok": True}
+
     def poll_refresh(self, sid):
         """Fresh counts for a post's poll (the "refresh" in its footer)."""
         core = self.core
@@ -1664,6 +1671,13 @@ class Web:
             # as the windows do; nothing is sent until it answers
             return {"ask_alt": {"title": _("alt_missing_title"), "text": _("alt_missing", n=bare),
                                 "describe": _("alt_describe"), "send": _("alt_send_anyway")}}
+        from ..common import compose as cc
+        said = None if body.get("lang_ok") else cc.lang_mismatch(core.cfg, text, lang)
+        if said:  # post.lang_check: the text reads as another language — asked first
+            title, words, switch, anyway = cc.lang_question(
+                said, lang or core.cfg["post"].get("language"))
+            return {"ask_lang": {"title": title, "text": words, "lang": said,
+                                 "switch": switch, "send": anyway}}
         poll = None
         if isinstance(body.get("poll"), dict) and not media:
             from ..common import compose as cc
@@ -1678,14 +1692,36 @@ class Web:
             if str(body["account"]) not in keys:
                 raise ValueError("account")
             extra["account"] = str(body["account"])
-        p = core.post(text, vis, parent, cw, language=lang,
-                      quote=str(body["quote"]) if body.get("quote") else None,
-                      media=media, sensitive=bool(body.get("sensitive")), poll=poll,
-                      scheduled_at=when, **extra).result()
-        for m in media:  # sent: the copies go (a focus may ride along as the third)
-            Path(m[0]).unlink(missing_ok=True)
-            if len(m) > 3 and m[3]:  # and the cover's
-                Path(m[3]).unlink(missing_ok=True)
+        quote = str(body["quote"]) if body.get("quote") else None
+        away = core.cfg["post"].get("send_in_background") and not when
+        key = core.draft_key(parent.id if parent else None, quote) if away else None
+        if away:  # kept here till it's out: a failure loses nothing typed
+            core.save_draft(key, {"text": text, "cw": cw, "visibility": vis,
+                                  **({"language": lang} if lang else {})})
+        fut = core.post(text, vis, parent, cw, language=lang, quote=quote,
+                        media=media, sensitive=bool(body.get("sensitive")), poll=poll,
+                        scheduled_at=when, draft_key=key, **extra)
+
+        def tidy(f):  # sent or not: the copies go (a focus may ride along as the third)
+            for m in media:
+                Path(m[0]).unlink(missing_ok=True)
+                if len(m) > 3 and m[3]:  # and the cover's
+                    Path(m[3]).unlink(missing_ok=True)
+            if away and f.exception() is not None:  # the page hears it as a notification
+                log.warning("send in the background: %s", f.exception())
+                with self.changed:
+                    self.note_seq += 1
+                    self.note_log.append((self.note_seq, {
+                        "title": _("send_failed"),
+                        "body": _("sent_background_failed", err=f.exception()),
+                        "lane": "", "thread": parent.id if parent else ""}))
+                self.bump()
+        if away:  # post.send_in_background: the page's editor closes at once
+            fut.add_done_callback(tidy)
+            return {"id": None, "url": "", "background": True,
+                    "message": _("sent_background")}
+        p = fut.result()
+        tidy(fut)
         if when:
             return {"id": None, "url": "", "scheduled": True,
                     "message": _("scheduled_msg", when=when.replace("T", " ")[:16])}
@@ -2022,6 +2058,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/act": lambda: web.act(body.get("action"), str(body.get("id"))),
             "/api/vote": lambda: web.vote(str(body.get("id")), body.get("choices")),
             "/api/poll_refresh": lambda: web.poll_refresh(str(body.get("id"))),
+            "/api/refresh": web.refresh,
             "/api/fold": lambda: web.fold(body.get("group")),
             "/api/columns": lambda: web.set_columns(body.get("names"), body.get("on") is not False),
             "/api/reveal": lambda: web.reveal(body.get("lane"), body.get("index")),

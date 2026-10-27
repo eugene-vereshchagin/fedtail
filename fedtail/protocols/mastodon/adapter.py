@@ -152,6 +152,7 @@ def account(raw, profile=""):
         following=_int(raw.get("following_count")),
         moved=account(moved, profile) if isinstance(moved, dict) and moved.get("id")
         else None,
+        color=_str(raw.get("_fedtail_color")),
     )
 
 

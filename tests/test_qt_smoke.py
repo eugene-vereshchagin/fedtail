@@ -1500,6 +1500,57 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(until=lambda: self.world.uploads and
                   self.world.uploads[-1][1:] == ("синий квадрат", [0.5, 0.0]))
 
+    def test_number_keys_and_pinned_tabs(self):
+        from PySide6.QtGui import QShortcut
+
+        from fedtail.frontends.qt.window import MainWindow
+        keys = lambda win: {sc.key().toString() for sc in win.findChildren(QShortcut)}  # noqa: E731
+        self.assertIn("Alt+1", keys(self.win))
+        self.assertNotIn("Ctrl+1", keys(self.win))  # ui.number_keys = "alt": as before
+        self.core.cfg["ui"].update(number_keys="both", pin_tabs=True)
+        other = MainWindow(self.core, self.bridge, self.theme)
+        other.images.get = lambda url, cb, *a, **k: None
+        self.addCleanup(other.deleteLater)
+        self.assertTrue({"Alt+1", "Ctrl+9"} <= keys(other))
+        other.quitting = True
+        other.tray = None
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.win.open_thread("010")
+        self.pump(until=lambda: self.win.tabs.count() > 1)
+        i = self.win.tabs.count() - 1
+        page = self.win.tabs.widget(i)
+        self.win.pin_tab(page, True)
+        self.assertTrue(self.win.tabs.tabText(i).startswith("📌"))
+        self.win.close_tab(i)
+        self.assertIs(self.win.tabs.widget(i), page)  # pinned: it stays
+        self.win.pin_tab(page, False)
+        self.win.close_tab(i)
+        self.pump(0.05)
+        self.assertNotEqual(self.win.tabs.widget(i), page)
+
+    def test_language_checked_and_sent_in_the_background(self):
+        from fedtail.frontends.qt.compose import Compose
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.cfg["post"].update(lang_check=True, send_in_background=True)
+        dlg = Compose(self.win)
+        dlg.show()
+        dlg.set_language("en")
+        dlg.text.setPlainText("გამარჯობა მეგობრებო, დღეს თბილისში ძალიან ლამაზი ამინდია "
+                              "და ქალაქი სავსეა")
+        before = len(self.world.posted)
+        dlg.send()
+        self.assertTrue(dlg.lang_box.isVisible())
+        self.assertEqual(len(self.world.posted), before)  # asked first
+        switch = next(b for b in dlg.lang_box.buttons() if "(ka)" in b.text())
+        switch.click()
+        self.assertEqual(dlg._language(), "ka")
+        self.assertTrue(dlg.isHidden())  # out of the way at once
+        self.pump(until=lambda: dlg.sent)
+        self.assertEqual(len(self.world.posted), before + 1)
+        self.assertEqual(self.world.languages[-1], "ka")
+
     def test_sensitive_media_covered(self):
         from PySide6.QtWidgets import QLabel
 

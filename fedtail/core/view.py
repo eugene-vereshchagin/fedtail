@@ -89,7 +89,8 @@ def activity_keeps(a, which):
 PASS = {
     "cfg", "lanes", "lane_by_name", "lane_title", "lane_icon", "lanes_saved",
     "set_active_lane", "set_state",
-    "get_state", "poll_once", "poll_now", "start_polling", "shutdown", "connect",
+    "get_state", "poll_once", "poll_now", "refresh_by_hand", "hand_refreshes",
+    "start_polling", "shutdown", "connect",
     "logged_in", "begin_login", "finish_login", "bg", "paths", "posts_only",
     "load_older", "auth", "activity_unread", "mark_activity_seen", "answer_follow",
     "sync_key", "sync_join", "sync_login_begin", "sync_login_end", "sync_now", "sync_status",
@@ -238,15 +239,63 @@ class View:
     def _prof(self, raw):
         return (raw.get("_profile") if isinstance(raw, dict) else None) or self.profile
 
+    def _aliases(self):
+        """My names for people — only while feed.aliases is on (switched off: their own
+        names again, mine kept for when it's back)."""
+        cfg = getattr(self._core, "cfg", None) or {}
+        if not (cfg.get("feed") or {}).get("aliases"):
+            return {}
+        get = getattr(self._core, "people_aliases", None)
+        return get() if get is not None else {}
+
+    def _colors(self):
+        """My colours for people's names — only while people.nick_colors is on."""
+        cfg = getattr(self._core, "cfg", None) or {}
+        if not (cfg.get("feed") or {}).get("nick_colors"):
+            return {}
+        get = getattr(self._core, "people_colors", None)
+        return get() if get is not None else {}
+
+    def _people(self):
+        """(my names, my colours) for people — {} each when off."""
+        return self._aliases(), self._colors()
+
+    @staticmethod
+    def _named(acc, people):
+        """An account dict with my own name for them (people.aliases) in place of theirs,
+        and my colour for it (people.nick_colors)."""
+        aliases, colors = people if isinstance(people, tuple) else (people, {})
+        if not isinstance(acc, dict):
+            return acc
+        key = str(acc.get("id"))
+        if key in aliases:
+            acc = dict(acc, display_name=aliases[key])
+        if key in colors:
+            acc = dict(acc, _fedtail_color=colors[key])
+        return acc
+
     def entry(self, raw):
-        """A stored status → Post or Share."""
+        """A stored status → Post or Share (the names I gave people put in; a post in a
+        language I don't read translated, with feed.translate_auto)."""
+        auto = getattr(self._core, "auto_translation", None)
+        if auto is not None and isinstance(raw, dict):
+            raw = auto(raw) or raw
+        people = self._people()
+        if (people[0] or people[1]) and isinstance(raw, dict):
+            raw = dict(raw, account=self._named(raw.get("account"), people))
+            if isinstance(raw.get("reblog"), dict):
+                raw["reblog"] = dict(raw["reblog"],
+                                     account=self._named(raw["reblog"].get("account"),
+                                                         people))
         return adapter.post(raw, self._prof(raw))
 
     def acc(self, raw):
         if not isinstance(raw, dict):
             return None
         self._remember(raw)
-        return adapter.account(raw, self._prof(raw))
+        people = self._people()
+        return adapter.account(self._named(raw, people) if people[0] or people[1] else raw,
+                               self._prof(raw))
 
     def raw(self, x):
         """The core's own status for a model object or an id — for core methods not
@@ -406,13 +455,24 @@ class View:
         return _then(self._core.account_statuses(acc_id, max_id=max_id, show=show),
                      lambda page: [self.entry(st) for st in page or ()])
 
+    def _with_home(self, acc_id, rel):
+        """The server's Relationship, plus what only this program knows: taken out of
+        Home by hand (feed.home_hide)."""
+        hidden = getattr(self._core, "hidden_home", None)
+        if rel is None or hidden is None:
+            return rel
+        from dataclasses import replace
+        return replace(rel, hidden_home=str(acc_id) in hidden())
+
     def relationship(self, acc_id):
-        return _then(self._core.relationship(acc_id), adapter.relationship)
+        return _then(self._core.relationship(acc_id),
+                     lambda r: self._with_home(acc_id, adapter.relationship(r)))
 
     def relation_known(self, acc_id):
         """The Relationship asked for lately, or None — for menus that open at once."""
         rel = self._core.relation_known(acc_id)
-        return adapter.relationship(rel) if rel is not None else None
+        return self._with_home(acc_id, adapter.relationship(rel)) if rel is not None \
+            else None
 
     def scheduled(self):
         """Future: [Scheduled] — my posts waiting on the server for their time."""

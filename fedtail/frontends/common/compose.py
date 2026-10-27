@@ -322,3 +322,28 @@ def languages(cfg, added=()):
     return list(dict.fromkeys(list(post.get("languages") or []) +
                               ([post["language"]] if post.get("language") else []) +
                               list(added or [])))
+
+
+_NOT_WORDS = re.compile(r"(https?://\S+|[@#:][\w.@-]+:?|`[^`]*`)")
+
+
+def lang_mismatch(cfg, text, language):
+    """post.lang_check: the language the text reads as, when it isn't the one the post
+    is marked with (the editor asks "send as is?"); None — they agree, or it's unsure,
+    or the check is off. Links, @names, #tags and :emoji: aren't the text's words."""
+    language = language or cfg["post"].get("language")  # "as in settings"
+    if not cfg["post"].get("lang_check") or not language:
+        return None
+    from ...core import langs
+    said = langs.guess(_NOT_WORDS.sub(" ", text or ""), min_words=8)
+    if not said or said in ("cyrillic", "latin") or said == langs.base(language):
+        return None
+    return said
+
+
+def lang_question(said, language):
+    """The words of that question: (title, text, "mark it <said>", "send as is")."""
+    from ...i18n import _
+    return (_("lang_check_title"),
+            _("lang_check_text", said=language_label(said), chosen=language_label(language)),
+            _("lang_check_switch", said=language_label(said)), _("lang_check_anyway"))
