@@ -537,9 +537,12 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                         // a chain's parts, "#CamelCase for screen readers" — the windows' words
                         if (model.composeHints.isNotBlank()) Text(model.composeHints,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (model.composeNewcomers.isNotBlank()) Text(model.composeNewcomers,
+                            color = MaterialTheme.colorScheme.error)
                     }
                 })
-            LaunchedEffect(model.composeText, model.composeCw, model.composeCwOn) {
+            LaunchedEffect(model.composeText, model.composeCw, model.composeCwOn,
+                model.composeVisibility) {
                 delay(400)  // as it is typed: asked once the fingers pause
                 model.checkCompose()
             }

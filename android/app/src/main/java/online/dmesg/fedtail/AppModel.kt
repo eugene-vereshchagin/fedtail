@@ -120,6 +120,11 @@ data class PostItem(
     val reactions: String = "",      // "👍 3 :blobcat: 2"
     val via: String = "",            // all accounts in one: which of mine got it
     val viaColor: String = "",       // …in that account's colour (ui.account_colors)
+    // the windows' lines around a card (common/cardtext.py), each (words, fedtail: link):
+    val newcomer: Pair<String, String>? = null,     // "👤 New in this private talk: @eve"
+    val threadNews: Pair<String, String>? = null,   // "🔔 3 new in the thread"
+    val myReplies: List<Pair<String, String>> = emptyList(),  // "↳ you replied …"
+    val visibility: String = "",     // public | unlisted | private | direct
 )
 
 /** A lane's switches from its header (common/lane.py, the windows' and the page's). */
@@ -1024,6 +1029,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** A link tapped in a post: a post my server knows opens as a thread, a person as
      *  their profile; else the browser. */
     fun openLink(url: String, openBrowser: (String) -> Unit) {
+        // the program's own links (common/links.py): a thread, a person
+        if (url.startsWith("fedtail:")) {
+            val parts = url.removePrefix("fedtail:").split("/", limit = 2)
+            val arg = parts.getOrNull(1).orEmpty()
+            when (parts[0]) {
+                "thread", "post" -> if (arg.isNotBlank()) openThread(arg)
+                "account", "profile" -> if (arg.isNotBlank()) openProfile(arg)
+            }
+            return
+        }
         // a #tag (its server's /tags/name): the tag's place here, as the windows open it
         Regex("""^https?://[^/]+/tags/([^/?#]+)/?$""").find(url)?.let { m ->
             openPage("tag", java.net.URLDecoder.decode(m.groupValues[1], "UTF-8"))
@@ -1594,11 +1609,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // what the editor says under the text as it is typed: a chain's parts, the #CamelCase
     // hint for screen readers (web compose_check, the windows' counter)
     var composeHints by mutableStateOf("")
+    var composeNewcomers by mutableStateOf("") // "⚠ @eve wasn't in this private talk"
 
     suspend fun checkCompose() {
-        val got = Core.composeCheck(JSONObject().put("text", composeText)
-            .put("cw", if (composeCwOn) composeCw else ""))
+        val body = JSONObject().put("text", composeText)
+            .put("cw", if (composeCwOn) composeCw else "")
+        // a reply in a private talk: someone typed in who wasn't in it (feeds.md §11, 5)
+        val answered = (places.lastOrNull { it is Place.Compose } as? Place.Compose)?.replyTo
+        (answered?.sid ?: replyToId)?.let { body.put("reply_to", it) }
+        // a reply's own visibility is the core's call at sending: a private one stays so
+        (composeVisibility ?: answered?.visibility?.takeIf { it.isNotBlank() })
+            ?.let { body.put("visibility", it) }
+        val got = Core.composeCheck(body)
         if (Core.failed(got) != null) return
+        composeNewcomers = got.optString("newcomers")
         composeHints = listOf(got.optString("chain"), got.optString("camel"))
             .filter { it.isNotBlank() }.joinToString("\n")
     }
@@ -1895,6 +1919,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun str(o: JSONObject?, key: String): String =
         if (o == null || o.isNull(key)) "" else o.optString(key)
 
+    /** A line around a card ({text, link}) as (words, link); null — none. */
+    private fun bit(o: JSONObject?): Pair<String, String>? =
+        str(o, "text").takeIf { it.isNotBlank() }?.let { it to str(o, "link") }
+
     private fun parsePost(o: JSONObject): PostItem {
         val acc = o.optJSONObject("account") ?: JSONObject()
         val ctx = o.optJSONObject("context")
@@ -1950,11 +1978,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 !o.optBoolean("own"),
             own = o.optBoolean("own"),
             edited = o.optBoolean("edited"),
+            visibility = str(o, "visibility"),
             nameHtml = str(acc, "name_html"),
             labels = o.optJSONObject("words")?.optJSONArray("meta")?.let { m ->
                 (0 until m.length()).mapNotNull { m.optJSONObject(it)?.optString("text") }
                     .filter { it.isNotBlank() }.joinToString(" · ") } ?: "",
             reactions = o.optJSONObject("words")?.optString("reactions") ?: "",
+            newcomer = bit(o.optJSONObject("words")?.optJSONObject("newcomer")),
+            threadNews = bit(o.optJSONObject("words")?.optJSONObject("thread_news")),
+            myReplies = o.optJSONObject("words")?.optJSONArray("my_replies")?.let { a ->
+                (0 until a.length()).mapNotNull { bit(a.optJSONObject(it)) } } ?: emptyList(),
             via = o.optJSONObject("via")?.optString("text") ?: "",
             viaColor = o.optJSONObject("via")?.optString("color") ?: "",
             quoteId = str(o.optJSONObject("quote"), "id"),

@@ -386,7 +386,11 @@ fun PostCard(p: PostItem, act: CardActions, hideSensitive: Boolean) {
                         overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                // someone new in a private talk: before the words, in the warning's colour
+                p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
                 Body(p, act, hideSensitive)
+                p.myReplies.forEach { BitLine(it, act) }
+                p.threadNews?.let { BitLine(it, act, MaterialTheme.colorScheme.primary) }
                 Actions(p, act)
             }
         }
@@ -430,6 +434,7 @@ fun ThreadRow(p: PostItem, focused: Boolean, act: CardActions, hideSensitive: Bo
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            p.newcomer?.let { BitLine(it, act, MaterialTheme.colorScheme.error) }
             Body(p, act, hideSensitive)
             Actions(p, act)
         }
@@ -466,6 +471,17 @@ private fun Head(p: PostItem, act: CardActions, dim: Boolean) {
                     .clickable { act.alias(p.alias) })
         }
     }
+}
+
+/** A line around a card (common/cardtext.py): its words, a tap on it — its link (a thread,
+ *  a person). */
+@Composable
+private fun BitLine(bit: Pair<String, String>, act: CardActions, color: Color? = null) {
+    Text(bit.first, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+            .clickable(enabled = bit.second.isNotBlank()) { act.link(bit.second) }
+            .padding(vertical = 2.dp))
 }
 
 @Composable
