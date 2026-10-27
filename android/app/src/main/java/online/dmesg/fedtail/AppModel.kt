@@ -270,6 +270,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // the windows' head over a thread: {title, info ("12 answers · #k7q"), via, subscribed,
     // sub, sub_tip} (web/server.py thread_head)
     var threadHead by mutableStateOf<JSONObject?>(null)
+    // threads.thread_progress: "⇣ fetching replies: 3 of 12" — "" when nothing goes on
+    var threadProgress by mutableStateOf("")
+    private var progressWatch: Job? = null
     var threadOpening by mutableStateOf(0) // grows when the thread should be aimed anew
     var threadAimed = 0                    // the opening the thread list last aimed at
     var threadAimAt: String? = null        // where to stand then: a reply just sent
@@ -996,12 +999,35 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         places = keep + Place.Thread(postId)
         threadPosts = emptyList()
         threadHead = null
+        watchThreadProgress(postId)
         viewModelScope.launch {
             val got = Core.thread(postId)
             Core.failed(got)?.let { message = it; back(); return@launch }
             threadPosts = parsePosts(got.optJSONArray("posts"))
             threadHead = got.optJSONObject("head")
             threadOpening += 1
+        }
+    }
+
+    private fun watchThreadProgress(postId: String) {
+        progressWatch?.cancel()
+        threadProgress = ""
+        progressWatch = viewModelScope.launch {
+            var rounds = 0
+            var saidDone = 0
+            while (isActive && rounds++ < 120 && (place as? Place.Thread)?.focus == postId) {
+                val got = Core.threadProgress(postId)
+                if (Core.failed(got) != null) break
+                val stage = got.optString("stage")
+                val text = got.optString("text")
+                val bar = got.optString("bar")
+                threadProgress = if (text.isBlank()) "" else listOf(bar, text)
+                    .filter { it.isNotBlank() }.joinToString(" ")
+                if (stage == "done" || stage == "failed") { if (++saidDone > 8) break }
+                else if (stage.isBlank() && rounds > 5) break  // nothing going on
+                delay(1000)
+            }
+            threadProgress = ""
         }
     }
 

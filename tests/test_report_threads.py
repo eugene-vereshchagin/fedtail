@@ -3,6 +3,7 @@ thread asked again by itself, the author's server first ("remote"), and "Around 
 post"."""
 
 import time
+from unittest import mock
 
 from tests import fakes
 from tests.fakes import BOB, ME, status
@@ -98,3 +99,38 @@ class AroundTest(FreeBase):
 if __name__ == "__main__":
     import unittest
     unittest.main()
+
+
+class ProgressTest(FreeBase):
+    def test_fetching_replies_says_how_it_goes(self):
+        from fedtail import i18n
+        from fedtail.frontends.common.progress import bar, thread_words
+        i18n.setup("en")
+        core, w = self.make([])
+        core.connect().result()
+        root = w.add(status("100", ME, minute=1, vis="public"), home=True)
+        root["uri"] = "https://example.test/s/100"
+        far = [f"https://far.example/s/{i}" for i in range(3)]
+        from fedtail.core import replies
+        steps = []
+        core.events.on("thread_progress", lambda _n, p: steps.append(
+            (core.thread_progress(p) or {}).get("stage")))
+        with mock.patch.object(replies, "context_uris", return_value=far):
+            core._complete_thread(dict(root), set())
+        self.assertEqual(steps, [])  # threads.thread_progress off: nothing said
+        core.cfg["feed"]["thread_progress"] = True
+        core._completed.clear()
+        with mock.patch.object(replies, "context_uris", return_value=far):
+            core._complete_thread(dict(root), set())
+        self.assertEqual(steps[0], "asking")
+        self.assertEqual(steps.count("fetching"), 4)  # 0 of 3, then each one
+        self.assertEqual(steps[-1], "done")
+        step = core.thread_progress("100")
+        self.assertEqual(step["total"], 3)
+        self.assertEqual(thread_words(step),  # the fake server resolves none of them
+                         "⇣ 3 replies there, but my server couldn't fetch them")
+        self.assertEqual(thread_words({"stage": "fetching", "done": 1, "total": 4}),
+                         "⇣ fetching replies: 1 of 4")
+        self.assertEqual(bar({"stage": "fetching", "done": 1, "total": 4}, 4), "▰▱▱▱")
+        core._thread_steps["100"]["at"] -= 60
+        self.assertIsNone(core.thread_progress("100"))  # said long enough ago

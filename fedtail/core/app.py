@@ -2871,6 +2871,10 @@ class Core(SocialMixin):
         ctx = self.api.context(focus["id"])
         ancestors = ctx.get("ancestors", [])
         root = ancestors[0] if ancestors else focus
+        roots = self.__dict__.setdefault("_thread_root_of", {})
+        roots[str(sid)] = roots[str(focus["id"])] = str(root["id"])  # thread_progress(any)
+        if len(roots) > 2000:
+            roots.clear()
         below = list(ctx.get("descendants", []))
         refresh = self._async_refresh_hint()
         if ancestors:
@@ -2984,13 +2988,21 @@ class Core(SocialMixin):
         self._completed[root["id"]] = now
         from . import replies
         t = time.monotonic()
+        rid = root["id"]
+        self._thread_step(rid, "asking")
         # the whole conversation in one list where the server keeps one; else walk
         # the replies of replies
-        uris = replies.context_uris(self._origin_json, root["uri"])
-        how = "context"
-        if not uris:
-            uris, how = replies.reply_uris(self._origin_json, root["uri"]), "replies"
+        try:
+            uris = replies.context_uris(self._origin_json, root["uri"])
+            how = "context"
+            if not uris:
+                uris, how = replies.reply_uris(self._origin_json, root["uri"]), "replies"
+        except Exception:
+            self._thread_step(rid, "failed")
+            raise
         missing = [u for u in uris if u not in known]
+        wanted = missing[:30]
+        self._thread_step(rid, "fetching", 0, len(wanted))
 
         def resolve(uri):
             try:
@@ -3000,9 +3012,13 @@ class Core(SocialMixin):
                 return []
             return (found or {}).get("statuses") or []
         # my server fetches each from its home: a few at once, not one after another
-        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        got = []
         with ThreadPoolExecutor(max_workers=4, thread_name_prefix="fedtail-resolve") as ex:
-            got = [st for page in ex.map(resolve, missing[:30]) for st in page]
+            for i, fut in enumerate(as_completed([ex.submit(resolve, u) for u in wanted])):
+                got += fut.result()
+                self._thread_step(rid, "fetching", i + 1, len(wanted))
+        self._thread_step(rid, "done", len(got), len(wanted))
         log.info("thread %s: origin lists %d posts (%s), %d missing here, %d fetched "
                  "(%.1f s)", root["id"], len(uris), how, len(missing), len(got),
                  time.monotonic() - t)
@@ -3011,6 +3027,32 @@ class Core(SocialMixin):
             if emit:
                 self.emit("thread_grew", root["id"])
         return got
+
+    THREAD_DONE_SHOWN = 8  # seconds "fetched N" stays said
+
+    def _thread_step(self, root_id, stage, done=0, total=0):
+        """threads.thread_progress: where fetching a thread's replies from its author's
+        server stands — "asking" the server, "fetching" done of total, "done", "failed".
+        The open thread says so (event thread_progress); thread_progress() reads it."""
+        if not self.cfg["feed"].get("thread_progress"):
+            return
+        steps = self.__dict__.setdefault("_thread_steps", {})
+        steps[str(root_id)] = {"stage": stage, "done": done, "total": total,
+                               "at": time.monotonic()}
+        self.emit("thread_progress", str(root_id))
+
+    def thread_progress(self, root_id):
+        """{"stage", "done", "total"} of the thread's fetching now, or None (none going,
+        or its "done" said long enough ago)."""
+        steps = self.__dict__.get("_thread_steps", {})
+        got = steps.get(str(root_id)) or \
+            steps.get(self.__dict__.get("_thread_root_of", {}).get(str(root_id), ""))
+        if got is None:
+            return None
+        if got["stage"] in ("done", "failed") and \
+                time.monotonic() - got["at"] > self.THREAD_DONE_SHOWN:
+            return None
+        return {k: got[k] for k in ("stage", "done", "total")}
 
     def _own_hosts(self):
         """My servers' hostnames: exempt from remote's public-address rule (a server

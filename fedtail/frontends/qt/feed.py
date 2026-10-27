@@ -1372,6 +1372,17 @@ class ThreadWidget(QWidget):
         self.win.bridge.call(self.core.thread(self.focus_id), ok=self._loaded,
                              fail=lambda e: self.header.info.setText(_("load_failed", err=e)))
 
+    def show_progress(self, step):
+        """threads.thread_progress: the header says how fetching replies goes; once done
+        (a few seconds later) it says the thread's own line again."""
+        from ..common.progress import thread_words
+        words = thread_words(step)
+        base = self.info_text if self.loaded else _("loading")
+        self.header.info.setText(base + (" · " + words if words and base else words))
+        if step and step.get("stage") in ("done", "failed"):
+            QTimer.singleShot(8500, lambda: self.header.info.setText(self.info_text)
+                              if self.loaded else None)
+
     def _all_cw(self):
         """Every content warning in the thread opened (or closed) at once."""
         self.cw_open = not self.cw_open

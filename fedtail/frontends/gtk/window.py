@@ -1561,6 +1561,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 if hasattr(page, "add_sent"):
                     page.refresh()
             self.update_badges()
+        elif name == "thread_progress":  # threads.thread_progress: "fetching 3 of 12"
+            for key, page in list(self.threads.items()):
+                posts = getattr(page, "posts", None) or []
+                if key == payload or (posts[0].id == payload if posts else True):
+                    page.head.show_progress(self.view.thread_progress(payload))
         elif name == "thread_grew":  # replies from other servers, or asked again
             for key, page in list(self.threads.items()):
                 posts = getattr(page, "posts", None) or []

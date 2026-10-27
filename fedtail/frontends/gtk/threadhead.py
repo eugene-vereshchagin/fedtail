@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from ...i18n import _
 from ...model.text import snippet
-from .gi_setup import Gtk, Pango, tip
+from .gi_setup import GLib, Gtk, Pango, tip
 
 
 class ThreadHead(Gtk.Box):
@@ -39,6 +39,17 @@ class ThreadHead(Gtk.Box):
         again = Gtk.Button(label=_("refresh"), valign=Gtk.Align.CENTER)
         again.connect("clicked", lambda _b: self.win.reload_thread(self.root_id))
         self.append(again)
+
+    def show_progress(self, step):
+        """threads.thread_progress: how fetching replies goes, after the thread's line;
+        the line alone again a few seconds after it's done."""
+        from ..common.progress import thread_words
+        words = thread_words(step)
+        base = self.info_text or _("loading")
+        self.info.set_text(base + (" · " + words if words else ""))
+        if step and step.get("stage") in ("done", "failed"):
+            GLib.timeout_add(8500, lambda: (self.info.set_text(self.info_text or ""),
+                                            GLib.SOURCE_REMOVE)[1])
 
     def show(self, posts, short):
         """The thread as it came: posts in order, the root first; short: id → #abc."""

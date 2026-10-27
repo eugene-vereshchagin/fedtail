@@ -1158,7 +1158,8 @@ class Web:
                 "sub_tip": _("sub_tip"),
                 "cw": any(p.warning for p in posts),
                 "cw_show": _("cw_all_show"), "cw_hide": _("cw_all_hide"),
-                "cw_tip": _("cw_all_tip")}
+                "cw_tip": _("cw_all_tip"),
+                "progress": bool(core.cfg["feed"].get("thread_progress"))}
 
     def account(self, acc_id, show=None):
         """A profile; show: which of their posts (common/timed.py: posts, all, media),
@@ -1618,6 +1619,15 @@ class Web:
         path = self._saver.save(url, saving.save_dir(self.core.cfg)).result()
         return {"message": _("saved_to", path=str(path))}
 
+    def thread_progress(self, sid):
+        """threads.thread_progress: how fetching the open thread's replies goes →
+        {"text", "bar", "stage"} ("" — nothing going on)."""
+        from ..common.progress import bar, thread_words
+        step = self.core.thread_progress(one_id(sid)) \
+            if self.core.cfg["feed"].get("thread_progress") else None
+        return {"text": thread_words(step), "bar": bar(step),
+                "stage": (step or {}).get("stage", "")}
+
     def refresh(self):
         """The page's ⟳: a round now, and the lanes holding new posts let them in."""
         self.core.refresh_by_hand()
@@ -2000,6 +2010,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/slow": lambda: self.web.slow(),
                   "/api/columns": lambda: self.web.columns(),
                   "/api/lane": lambda: self.web.lane(q.get("name", ""), q.get("keep") == "1"),
+                  "/api/thread_progress": lambda: self.web.thread_progress(q.get("id", "")),
                   "/api/thread": lambda: self.web.thread(q.get("id", "")),
                   "/api/account": lambda: self.web.account(q.get("id", ""),
                                                            q.get("show") or None),

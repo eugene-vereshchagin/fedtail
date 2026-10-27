@@ -1544,15 +1544,42 @@ function setCursor(i, quiet, how) {
 function current() { return state.posts[state.cursor]; }
 
 // ---- the side panel: a thread or a profile --------------------------------------------
+// threads.thread_progress: "fetching replies: 3 of 12" while the author's server is
+// asked — under "loading…" while the thread waits for it, in its head after
+function watchThreadProgress(id, token, show) {
+  let rounds = 0, saidDone = 0;
+  const tick = async () => {
+    if (state.side !== token || rounds++ > 120) return;
+    let p = null;
+    try { p = await api("/api/thread_progress?id=" + encodeURIComponent(id)); } catch (e) { return; }
+    if (state.side !== token) return;
+    show(p.text ? (p.bar ? p.bar + " " : "") + p.text : "");
+    if (p.stage === "done" || p.stage === "failed") { if (++saidDone > 8) { show(""); return; } }
+    else if (!p.stage && rounds > 5) return;  // nothing going on: stop asking
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 300);
+}
+
 async function openThread(id) {
   const token = showSide(w("web_thread"));
   $("#side-body").textContent = w("thread_loading");
+  let loading = true;
+  watchThreadProgress(id, token, (text) => {
+    if (loading) $("#side-body").textContent = w("thread_loading") + (text ? " " + text : "");
+  });
   try {
     const t = await api("/api/thread?id=" + encodeURIComponent(id));
+    loading = false;
     if (state.side !== token) return;  // something else was opened meanwhile
     const body = $("#side-body");
     body.textContent = "";
     if (t.head) body.append(threadHead(t.head, id));
+    if (t.head && t.head.progress) {
+      const line = el("div", "muted th-progress", "");
+      body.querySelector(".thread-head").append(line);
+      watchThreadProgress(id, token, (text) => { line.textContent = text; });
+    }
     let focus = null;
     for (const p of t.posts) {
       const card = renderPost(p, true);

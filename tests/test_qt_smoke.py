@@ -1529,6 +1529,19 @@ class QtSmokeTest(unittest.TestCase):
         self.pump(0.05)
         self.assertNotEqual(self.win.tabs.widget(i), page)
 
+    def test_thread_says_how_fetching_goes(self):
+        from fedtail.frontends.qt.feed import ThreadWidget
+        self.win.start()
+        self.pump(until=lambda: self.core.me is not None)
+        self.core.cfg["feed"]["thread_progress"] = True
+        self.win.open_thread("010")
+        self.pump(until=lambda: any(isinstance(w, ThreadWidget) and w.loaded
+                                    for w in self.win.extra_tabs()))
+        tw = next(w for w in self.win.extra_tabs() if isinstance(w, ThreadWidget))
+        self.core._thread_step(tw.root.id, "fetching", 2, 5)
+        self.pump(until=lambda: "2" in tw.header.info.text() and "5" in tw.header.info.text())
+        self.assertIn(tw.info_text, tw.header.info.text())
+
     def test_language_checked_and_sent_in_the_background(self):
         from fedtail.frontends.qt.compose import Compose
         self.win.start()

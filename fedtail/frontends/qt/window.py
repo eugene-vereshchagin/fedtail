@@ -1731,6 +1731,11 @@ class MainWindow(QMainWindow):
                         sid not in w.statuses and parent in w.statuses
                         for sid, parent in payload):
                     w.reload(quiet=True)
+        elif name == "thread_progress":  # threads.thread_progress: "fetching 3 of 12"
+            for w in self.extra_tabs():
+                if isinstance(w, ThreadWidget) and (
+                        w.root.id == payload if w.root is not None else not w.loaded):
+                    w.show_progress(self.core.thread_progress(payload))
         elif name == "thread_grew":  # replies fetched from other servers
             for w in self.extra_tabs():
                 if isinstance(w, ThreadWidget) and w.root is not None and \

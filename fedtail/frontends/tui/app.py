@@ -556,6 +556,15 @@ Binding("right_square_bracket", "top_comment(1)", show=False),
         if core.cfg["read"]["mark_read"] != "manual":
             core.mark_read(posts)
 
+    def show_progress(self, words, done=False):
+        """threads.thread_progress: how fetching replies goes, after the title line;
+        once done, gone again a few seconds later."""
+        title = self.query_one("#title", Static)
+        base = getattr(self, "info", "") or _("loading")
+        title.update(base + (" · " + words if words else ""))
+        if done:
+            self.set_timer(8.5, lambda: title.update(getattr(self, "info", "") or ""))
+
     def via_home(self, followed):
         """Not followed, yet the replies come: the server puts replies between people I
         follow into Home — said in the title, as the windows' thread header."""
@@ -908,6 +917,8 @@ class FedtailApp(App, PostsMixin):
         self.core.on("error", lambda _n, p: self.in_ui(self.show_error, p))
         # replies from other servers, or an open thread asked again: it grows
         self.core.on("thread_grew", lambda _n, p: self.in_ui(self.thread_grew, p))
+        # threads.thread_progress: "fetching replies: 3 of 12" in the thread's title line
+        self.core.on("thread_progress", lambda _n, p: self.in_ui(self.thread_progress, p))
         # a round began or ended: "⟳ updating the lanes…" / "updated at 14:32" on top
         self.core.on("poll_state", lambda _n, _p: self.in_ui(self._slow_title))
         # the server no longer takes the token: said as the windows say it, and Accounts
@@ -1357,6 +1368,16 @@ class FedtailApp(App, PostsMixin):
                 self._redraw_pending = False
         else:
             self.update_lane_counts()
+
+    async def thread_progress(self, root_id):
+        from ..common.progress import bar, thread_words
+        step = self.core.thread_progress(root_id)
+        words = (bar(step) + " " + thread_words(step)).strip()
+        for screen in self.screen_stack:
+            if isinstance(screen, ThreadScreen) and (
+                    screen.root.id == root_id if screen.root is not None else True):
+                screen.show_progress(words, done=(step or {}).get("stage") in
+                                     ("done", "failed"))
 
     async def thread_grew(self, root_id):
         """A thread on screen whose root is root_id is loaded anew (keeping its place)."""

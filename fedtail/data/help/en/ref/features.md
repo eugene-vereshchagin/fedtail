@@ -218,7 +218,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Mute a thread | has | 0.11.0 | — | `statuses/:id/mute` and own | Mastodon web, Tusky, Ivory |
 | Long texts and events | has | 0.14.0 | `card.long_form` | ⋯ → “📄 Read it whole”: `Article`, `Page`, `Event` from the author's server | — |
 | A thread with new replies shows on its card | has | 0.21.0 | `card.thread_news` | own (followed threads) | — |
-| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
+| Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post" | has | 0.21.0 | `threads.thread_from`, `threads.thread_recheck_minutes`, `threads.thread_followed_only`, `threads.thread_progress`, `card.around_post` | `statuses/<id>/context`; the replies collection on the author's server; `timelines/home` with `max_id`/`min_id` | Fedilab, Ivory, Mona (thread modes), Tuba (checks by itself), Pipilo (only the followed), Voyager, Thunder (branches), Subway Tooter (around a post) |
 
 <details><summary>In detail</summary>
 
@@ -238,7 +238,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A thread with new replies shows on its card.** A post whose thread you follow and which has unread replies has a highlighted line “🔔 3 new in the thread” under it, in any lane; the line opens the thread. Read the replies — the line goes.
 
-**Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post".** `thread_from`: "local" — only what your server knows; "mixed" — at once, the missing ones fetched from the author's server and the thread grows; "remote" — the author's server first, the thread opens whole. `thread_recheck_minutes` — an open thread asks about new replies by itself. `thread_followed_only` — only the replies of people you follow and yours (and what they answer). In a thread `]` / `[` — between top-level comments, `-` — fold a branch (the window). `card.around_post` — the post menu's "Around this post": what was in Home just before and after it.
+**Threads: where replies come from, growing by itself, only the followed, by branch, "Around this post".** `thread_from`: "local" — only what your server knows; "mixed" — at once, the missing ones fetched from the author's server and the thread grows; "remote" — the author's server first, the thread opens whole. `thread_recheck_minutes` — an open thread asks about new replies by itself. `thread_followed_only` — only the replies of people you follow and yours (and what they answer). In a thread `]` / `[` — between top-level comments, `-` — fold a branch (the window). `thread_progress` — "⇣ fetching replies: 3 of 12" in the thread's head, then how many came. `card.around_post` — the post menu's "Around this post": what was in Home just before and after it.
 
 </details>
 

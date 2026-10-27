@@ -932,6 +932,12 @@ def _texts(posts):
 
 # ---- a thread, writing ------------------------------------------------------------------
 
+def thread_progress(post_id):
+    """threads.thread_progress: {"text", "bar", "stage"} of fetching the open thread's
+    replies from its author's server ("" — nothing going on)."""
+    return _answer(lambda: _s["web"].thread_progress(post_id))
+
+
 def thread(post_id):
     """The whole thread around a post: depth-first, each card with its /N and depth."""
     def go():

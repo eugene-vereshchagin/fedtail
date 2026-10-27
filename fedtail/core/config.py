@@ -99,6 +99,7 @@ DEFAULTS = {
         "thread_from": "mixed",
         "thread_recheck_minutes": 0,
         "thread_followed_only": False,
+        "thread_progress": False,  # "fetching replies: 3 of 12" over an open thread
         "around_post": False,
         "why_home": False,
         "stats": False,            # "Statistics" in the ≡ menu: the week, day by day
@@ -485,7 +486,7 @@ FILE_LAYOUT = (
                      "translate_all translate_auto translate_backend translate_url "
                      "translate_key")),
     ("threads", _keys("feed", "complete_threads thread_from thread_recheck_minutes "
-                              "thread_followed_only")
+                              "thread_followed_only thread_progress")
      + _keys("subs", "auto interval_minutes active_days max_threads leave_mutes")),
     ("people", _keys("feed", "remote_profiles remote_people remote_posts server_info "
                              "profile_show profile_pinned profile_featured per_person_follow "

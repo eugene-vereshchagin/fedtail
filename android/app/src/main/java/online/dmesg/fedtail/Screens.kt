@@ -380,10 +380,18 @@ private fun ThreadPlace(
                 model.threadAimAt = null
             }
             MarkWhileScrolling(state, model.markOnScroll) { model.markRead(it, inThread = true) }
-            if (model.threadPosts.isEmpty()) Centered { CircularProgressIndicator() }
+            if (model.threadPosts.isEmpty()) Centered {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    if (model.threadProgress.isNotBlank()) Text(model.threadProgress,
+                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp))
+                }
+            }
             else PostList(model.threadPosts, state, null, act, model.hideSensitive,
                 thread = true, focus = focus,
-                header = head?.let { h -> @Composable { ThreadHead(h) { model.toggleThreadSub() } } })
+                header = head?.let { h -> @Composable {
+                    ThreadHead(h, model.threadProgress) { model.toggleThreadSub() } } })
         }
     }
 }
@@ -391,7 +399,7 @@ private fun ThreadPlace(
 /** The windows' head over a thread: how many answers and its #id, why it reaches me
  *  when not followed, and Follow — a button that says what it is now. */
 @Composable
-private fun ThreadHead(head: org.json.JSONObject, onSub: () -> Unit) {
+private fun ThreadHead(head: org.json.JSONObject, progress: String, onSub: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -412,6 +420,8 @@ private fun ThreadHead(head: org.json.JSONObject, onSub: () -> Unit) {
             Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp))
         }
+        if (progress.isNotBlank()) Text(progress, fontSize = 12.sp,  // threads.thread_progress
+            color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
         HorizontalDivider(Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
     }
 }

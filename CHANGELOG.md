@@ -14,7 +14,8 @@
   - threads: where replies come from (`threads.thread_from` local / mixed / remote), an
     open thread asking again by itself (`threads.thread_recheck_minutes`), only the
     followed (`threads.thread_followed_only`), `]` / `[` between top comments and `-`
-    folding a branch, "Around this post" in the post menu (`card.around_post`); GTK and
+    folding a branch, "Around this post" in the post menu (`card.around_post`), how
+    fetching replies from the author's server goes (`threads.thread_progress`); GTK and
     the terminal take a thread that grew, as the window and the web page do.
   - people: my own name for someone (`people.aliases`, "My name for them…" on a
     profile) and a colour for their name (`people.nick_colors`, "Name colour…"); `sync.people` carries those names and the people out of Home to the other
