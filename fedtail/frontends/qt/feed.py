@@ -1752,8 +1752,10 @@ class AccountWidget(_PagedTab):
             return
         self.header.info.setText("⚠ " + _("profile_failed", err=err))
         if getattr(self, "_retry_btn", None) is None:
-            self._retry_btn = self.header.add(_button(
-                _("profile_retry"), lambda _c=False: (self._retry_btn.hide(), self.reload_account())))
+            def again(_c=False):
+                self._retry_btn.hide()
+                self.reload_account()
+            self._retry_btn = self.header.add(_button(_("profile_retry"), again))
         self._retry_btn.show()
 
     def show_info(self):
