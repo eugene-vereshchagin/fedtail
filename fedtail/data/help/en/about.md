@@ -51,5 +51,5 @@ the links — ≡ → "About".
 ## Licence
 
 GPL-3.0-or-later. The opossum on the icon (and the swinging one, while the lanes update) isn't
-under the GPL: it is a sticker from an official [Telegram](https://telegram.org) sticker pack.
-Thanks to the pack's artist, and to Telegram and Pavel Durov for stickers anyone may share.
+under the GPL: it is a sticker from an official [Telegram](https://telegram.org) sticker pack
+([fluffyloafer](https://t.me/addstickers/fluffyloafer)). Drawn by [Boggart Owl](https://www.instagram.com/boggartowl/) — thank you; thanks also to Telegram and Pavel Durov for stickers anyone may share.

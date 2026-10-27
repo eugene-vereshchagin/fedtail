@@ -52,5 +52,6 @@
 ## Лицензия
 
 GPL-3.0-or-later. Опоссум на иконке (и качающийся, пока обновляются ленты) — не под GPL:
-это стикер из официального стикерпака [Telegram](https://telegram.org). Спасибо художнику
-стикерпака, а Telegram и Павлу Дурову — за стикеры, которыми может делиться каждый.
+это стикер из официального стикерпака [Telegram](https://telegram.org)
+([fluffyloafer](https://t.me/addstickers/fluffyloafer)). Нарисовал
+[Boggart Owl](https://www.instagram.com/boggartowl/) — спасибо! И спасибо Telegram и Павлу Дурову — за стикеры, которыми может делиться каждый.
