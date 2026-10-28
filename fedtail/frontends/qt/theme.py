@@ -388,7 +388,7 @@ QFrame#sepLine {{ background: {k('separator')}; max-height: 1px; min-height: 1px
 QPushButton#older {{ background: transparent; color: {k('muted')}; border: 1px dashed {k('button_border')};
     border-radius: {br}px; padding: 8px; }}
 
-QStatusBar {{ background: {self._bg('window')}; color: {k('muted')}; }}
+QStatusBar {{ background: {self._bg('window')}; color: {k('text')}; }}
 QStatusBar::item {{ border: 0; }}
 """
 

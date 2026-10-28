@@ -159,7 +159,7 @@ menubutton.ft-action > button {{ background: transparent; border-color: transpar
 .ft-action.ft-active {{ background: {c['active']}; color: {c['on_active']}; }}
 .ft-primary {{ background: {c['primary']}; color: {c['on_primary']}; border-radius: {br}px; }}
 .ft-sidebar button.ft-primary {{ color: {c['on_primary']}; }}
-.ft-status {{ color: {c['muted']}; padding: 2px 8px; font-size: smaller; }}
+.ft-status {{ color: {c['text']}; padding: 2px 8px; font-size: smaller; }}
 .ft-rail {{ border-left: 2px solid {c['rail']}; }}
 .ft-avatar-circle {{ border-radius: 9999px; }}
 .ft-avatar-rounded {{ border-radius: 6px; }}
