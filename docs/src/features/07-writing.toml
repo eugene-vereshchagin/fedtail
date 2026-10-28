@@ -88,8 +88,8 @@ api.ru = "своё (Markdown)"
 api.en = "own (Markdown)"
 others = "Fedilab, Phanpy"
 clients = ["Fedilab", "Phanpy"]
-details.ru = "Ряд кнопок над текстом: жирный, курсив, зачёркнутый, код (несколько строк — блоком), ссылка, цитата, список. Ставят метки Markdown вокруг выделенного, нажатые ещё раз — снимают; Ctrl+B, Ctrl+I, Ctrl+K. По умолчанию — когда сервер понимает Markdown."
-details.en = "A row of buttons over the text: bold, italic, strikethrough, code (several lines — a block), a link, a quote, a list. They put the Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I, Ctrl+K. By default — when the server understands Markdown."
+details.ru = "Кнопки у текста: жирный, курсив, зачёркнутый, код (несколько строк — блоком), ссылка, цитата, список. Ставят метки Markdown вокруг выделенного, нажатые ещё раз — снимают; Ctrl+B, Ctrl+I, Ctrl+K. Где стоят: слева (по умолчанию) или справа — столбиком, сверху или снизу — строкой, или их нет; только когда сервер понимает Markdown."
+details.en = "Buttons by the text: bold, italic, strikethrough, code (several lines — a block), a link, a quote, a list. They put the Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I, Ctrl+K. Where they stand: left (the default) or right — a column, top or bottom — a row, or none; only when the server understands Markdown."
 
 [[feature]]
 id = "compose-cw"

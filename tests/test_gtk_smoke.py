@@ -797,10 +797,15 @@ class GtkSmokeTest(_GtkBase):
 
     def test_the_formatting_buttons(self):
         """post.format_bar: as Qt's — Markdown around the selection, off again, one undo."""
-        self.core.cfg["post"]["format_bar"] = "on"
-        self.addCleanup(self.core.cfg["post"].__setitem__, "format_bar", "auto")
+        self.core.cfg["account"]["markdown"] = "on"
+        self.addCleanup(self.core.cfg["account"].__setitem__, "markdown", "auto")
+        self.core.cfg["post"]["format_bar"] = "left"
+        self.addCleanup(self.core.cfg["post"].__setitem__, "format_bar", "left")
         dlg = self.win.compose()
         self.assertIsNotNone(dlg.format_bar)
+        from gi.repository import Gtk as G
+        self.assertEqual(dlg.format_bar.get_orientation(), G.Orientation.VERTICAL)
+        self.assertIsNotNone(dlg.format_bar.get_next_sibling())  # the first: the text after
         dlg.buffer.set_text("say hi 😀 now")
         b = dlg.buffer
         b.select_range(b.get_iter_at_offset(4), b.get_iter_at_offset(8))
@@ -812,6 +817,11 @@ class GtkSmokeTest(_GtkBase):
         self.assertEqual(dlg._text(), "say hi 😀 now")
         dlg.format_bar.buttons["list"].emit("clicked")
         self.assertTrue(dlg._text().startswith("- say"))
+        dlg.close()
+        self.core.cfg["post"]["format_bar"] = "bottom"  # a row under the text
+        dlg = self.win.compose()
+        self.assertEqual(dlg.format_bar.get_orientation(), G.Orientation.HORIZONTAL)
+        self.assertIsNone(dlg.format_bar.get_next_sibling())  # the last one: below
         dlg.close()
         self.core.cfg["post"]["format_bar"] = "off"
         dlg = self.win.compose()

@@ -1688,6 +1688,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var pollExpires by mutableStateOf(86400)
     var editorFacts by mutableStateOf<JSONObject?>(null)
 
+    /** Where the formatting buttons stand: "left", "right", "top", "bottom" ("" — none). */
+    fun formatPlace(): String = editorFacts?.optString("format_place") ?: ""
+
     /** The editor's formatting buttons (post.format_bar): (name, face, tooltip); none — []. */
     fun formatBar(): List<Triple<String, String, String>> {
         val arr = editorFacts?.optJSONArray("format_bar") ?: return emptyList()

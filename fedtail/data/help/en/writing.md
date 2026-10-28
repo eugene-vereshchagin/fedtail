@@ -16,9 +16,9 @@ answers. Change it for one post — the list in the panel; for all — `post.def
 ## Markdown, CW, language
 
 - **Markdown** — if the server understands it (GoToSocial, Akkoma). "👁 Preview" shows how it
-  comes out. The buttons over the text — **B** *I* ~~S~~, code, link, quote, list — put
+  comes out. The buttons by the text — **B** *I* ~~S~~, code, link, quote, list — put
   the marks around the selection for you, pressed again take them off (Ctrl+B, Ctrl+I,
-  Ctrl+K; `post.format_bar`).
+  Ctrl+K). At the left by default; right, top, bottom or none — `post.format_bar`.
 - **CW** — "⚠ Content warning": the text hides behind a "show" button. In a reply the original
   post's CW is filled in by itself.
 - **Language** — servers filter and translate by it. "Another language…" adds any ISO 639 code.

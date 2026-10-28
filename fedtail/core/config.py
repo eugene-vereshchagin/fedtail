@@ -193,7 +193,7 @@ DEFAULTS = {
         "resize_images": True,
         "chain": True,
         "preview": True,
-        "format_bar": "auto",
+        "format_bar": "left",
         "complete_emoji": True,
         "focus_point": True,
         "quote_prefix": "> ",
@@ -349,7 +349,7 @@ CHOICES = {
     ("post", "who_can_boost"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "who_can_reply"): {'', 'followers', 'mentioned', 'everyone', 'me', 'following'},
     ("post", "quote_policy"): {'', 'public', 'followers', 'nobody'},
-    ("post", "format_bar"): {"auto", "on", "off"},
+    ("post", "format_bar"): {"left", "right", "top", "bottom", "off"},
     ("feed", "sensitive_media"): {'show', 'hide'},
     ("feed", "quotes"): {'card', 'link', 'off'},
     ("feed", "link_cards"): {'text', 'off', 'full'},
@@ -734,6 +734,8 @@ def validate(user):
                 continue
             if (section, key) == ("lanes", "preset"):  # "own": before every lane was a rule
                 val = presets.OLD_NAMES.get(val, val)
+            if (section, key) == ("post", "format_bar") and val in ("auto", "on"):
+                val = "left"  # 0.22 dev: on/off first, where they stand came after
             if (section, key) == ("ui", "layout") and val in ("qip", "columns"):
                 # "qip" was split's old name; "columns" is no layout of its own: the single
                 # window opening with its lanes side by side (ui.open_columns)

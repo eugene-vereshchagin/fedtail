@@ -28,12 +28,17 @@ def apply(view, name):
 
 
 def bar(view, cfg, markdown):
-    """The row of buttons for the TextView `view` — or None when post.format_bar says
-    there are none here."""
-    if not markup.shown(cfg, markdown):
+    """The buttons for the TextView `view` — a column for a place at the side, a row
+    above or below — or None when post.format_bar says there are none here. Its `place`
+    says where it stands (common/markup.place)."""
+    where = markup.place(cfg, markdown)
+    if not where:
         return None
-    row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+    vertical = where in markup.VERTICAL
+    row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL if vertical
+                  else Gtk.Orientation.HORIZONTAL, spacing=2)
     row.add_css_class("ft-format-bar")
+    row.place = where
     row.buttons = {}
     styles = {"bold": "<b>{}</b>", "italic": "<i>{}</i>", "strike": "<s>{}</s>"}
     for f in markup.FORMATS:
@@ -50,3 +55,21 @@ def bar(view, cfg, markdown):
         row.append(b)
         row.buttons[f.name] = b
     return row
+
+
+def around(text_area, bar_widget):
+    """The text area (the TextView's scrolled frame) with its buttons where they stand:
+    a box holding both, or the area itself when there are none."""
+    if bar_widget is None:
+        return text_area
+    where = bar_widget.place
+    vertical = where in markup.VERTICAL
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL if vertical
+                  else Gtk.Orientation.VERTICAL, spacing=4)
+    box.set_vexpand(True)
+    first = where in ("left", "top")
+    for x in ((bar_widget, text_area) if first else (text_area, bar_widget)):
+        box.append(x)
+    text_area.set_hexpand(True)
+    text_area.set_vexpand(True)
+    return box

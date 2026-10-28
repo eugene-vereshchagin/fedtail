@@ -659,7 +659,9 @@ class ComposeScreen(Screen):
     ComposeScreen #c-hint { height: auto; color: $text-muted; }
     ComposeScreen #c-count { height: auto; color: $text-muted; }
     ComposeScreen #c-text { height: 1fr; }
-    ComposeScreen #c-format { height: 1; }
+    ComposeScreen #c-side { height: 1fr; }
+    ComposeScreen #c-format.row { height: 1; }
+    ComposeScreen #c-format.column { width: 7; height: auto; }
     ComposeScreen #c-format Button { height: 1; min-width: 5; border: none; margin: 0 1 0 0; }
     ComposeScreen #c-row { height: auto; }
     ComposeScreen #c-row Select { width: 30; }
@@ -745,18 +747,32 @@ class ComposeScreen(Screen):
             yield Input(value=st.cw or "", placeholder=_("cw_placeholder"), id="c-cw")
             yield Input(value=st.language or "", placeholder=_("lang_label"), id="c-lang")
         from ..common import markup
-        if markup.shown(core.cfg, getattr(core, "markdown", False)):
-            # the formatting buttons (post.format_bar), clicked with the mouse: the
-            # terminal's Ctrl+B/I/K belong to the text field (Ctrl+I is Tab there)
-            with Horizontal(id="c-format"):
-                for f in markup.FORMATS:
-                    b = Button(f.face, id="fmt-" + f.name, tooltip=_(f.tip))
-                    b.can_focus = False  # the selection stays in the text
-                    yield b
-        yield TextArea("", id="c-text")
+        where = markup.place(core.cfg, getattr(core, "markdown", False))
+        # the formatting buttons (post.format_bar), clicked with the mouse (the terminal's
+        # Ctrl+B/I/K belong to the text field): a column beside the text or a row
+        if where in markup.VERTICAL:
+            with Horizontal(id="c-side"):
+                if where == "left":
+                    yield from self._format_buttons(Vertical, markup)
+                yield TextArea("", id="c-text")
+                if where == "right":
+                    yield from self._format_buttons(Vertical, markup)
+        else:
+            if where == "top":
+                yield from self._format_buttons(Horizontal, markup)
+            yield TextArea("", id="c-text")
+            if where == "bottom":
+                yield from self._format_buttons(Horizontal, markup)
         yield Static("", id="c-count")
         yield Static("", id="c-extras")
         yield Footer()
+
+    def _format_buttons(self, box, markup):
+        with box(id="c-format", classes="column" if box is Vertical else "row"):
+            for f in markup.FORMATS:
+                b = Button(f.face, id="fmt-" + f.name, tooltip=_(f.tip))
+                b.can_focus = False  # the selection stays in the text
+                yield b
 
     def on_button_pressed(self, e: Button.Pressed):
         """A formatting button (common/markup.py): Markdown around the selection."""

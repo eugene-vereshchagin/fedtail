@@ -545,38 +545,47 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                     }
                 }
             }
-            // the formatting buttons (post.format_bar): what each does is the desktop's
+            // the formatting buttons (post.format_bar): what each does is the desktop's;
+            // where they stand — beside the text (a column), above or below it (a row)
             val formats = model.formatBar()
-            if (formats.isNotEmpty()) {
-                val scope = rememberCoroutineScope()
-                Row(Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    formats.forEach { (name, face, tip) ->
-                        TextButton(onClick = {
-                            scope.launch {
-                                val got = Core.formatText(name, field.text,
-                                    field.selection.min, field.selection.max)
-                                if (Core.failed(got) != null) return@launch
-                                val text = got.optString("text")
-                                field = TextFieldValue(text,
-                                    TextRange(got.optInt("start"), got.optInt("end")))
-                                model.composeText = text
-                            }
-                        }, modifier = Modifier.semantics { contentDescription = tip }) {
-                            Text(face, style = when (name) {
-                                "bold" -> LocalTextStyle.current.copy(fontWeight = FontWeight.Bold)
-                                "italic" -> LocalTextStyle.current.copy(fontStyle = FontStyle.Italic)
-                                "strike" -> LocalTextStyle.current.copy(
-                                    textDecoration = TextDecoration.LineThrough)
-                                "code" -> LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace)
-                                else -> LocalTextStyle.current
-                            })
-                        }
+            val formatPlace = model.formatPlace()
+            val scope = rememberCoroutineScope()
+            val formatButton: @Composable (Triple<String, String, String>) -> Unit = { (name, face, tip) ->
+                TextButton(onClick = {
+                    scope.launch {
+                        val got = Core.formatText(name, field.text,
+                            field.selection.min, field.selection.max)
+                        if (Core.failed(got) != null) return@launch
+                        val text = got.optString("text")
+                        field = TextFieldValue(text,
+                            TextRange(got.optInt("start"), got.optInt("end")))
+                        model.composeText = text
                     }
+                }, modifier = Modifier.semantics { contentDescription = tip }) {
+                    Text(face, style = when (name) {
+                        "bold" -> LocalTextStyle.current.copy(fontWeight = FontWeight.Bold)
+                        "italic" -> LocalTextStyle.current.copy(fontStyle = FontStyle.Italic)
+                        "strike" -> LocalTextStyle.current.copy(
+                            textDecoration = TextDecoration.LineThrough)
+                        "code" -> LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace)
+                        else -> LocalTextStyle.current
+                    })
                 }
             }
+            val formatRow: @Composable () -> Unit = {
+                if (formats.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    formats.forEach { formatButton(it) }
+                }
+            }
+            val formatColumn: @Composable () -> Unit = {
+                if (formats.isNotEmpty()) Column(Modifier.verticalScroll(rememberScrollState())) {
+                    formats.forEach { formatButton(it) }
+                }
+            }
+            val textField: @Composable (Modifier) -> Unit = { mod ->
             OutlinedTextField(value = field, onValueChange = { field = it; model.composeText = it.text },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
+                modifier = mod.heightIn(min = 160.dp),
                 placeholder = { Text(stringResource(R.string.write_here)) },
                 supportingText = {
                     // the windows' count once asked (a chain: part by part), till then the length
@@ -595,6 +604,16 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                             color = MaterialTheme.colorScheme.error)
                     }
                 })
+            }
+            when (formatPlace) {
+                "left", "right" -> Row(Modifier.fillMaxWidth()) {
+                    if (formatPlace == "left") formatColumn()
+                    textField(Modifier.weight(1f))
+                    if (formatPlace == "right") formatColumn()
+                }
+                "bottom" -> { textField(Modifier.fillMaxWidth()); formatRow() }
+                else -> { formatRow(); textField(Modifier.fillMaxWidth()) }
+            }
             LaunchedEffect(model.composeText, model.composeCw, model.composeCwOn,
                 model.composeVisibility) {
                 delay(400)  // as it is typed: asked once the fingers pause

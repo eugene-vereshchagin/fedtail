@@ -449,7 +449,14 @@ dialog#preview-dlg::backdrop { background: rgba(0, 0, 0, .4); }
 .empty img.possum { display: block; width: 96px; height: 96px; margin: 24px auto 8px; }
 
 /* the formatting buttons over the text (post.format_bar) */
+#text-wrap { display: flex; gap: 4px; flex-direction: column; }
+#text-wrap > textarea { flex: 1; min-width: 0; }
+#text-wrap.fmt-bottom { flex-direction: column-reverse; }
+#text-wrap.fmt-left { flex-direction: row; }
+#text-wrap.fmt-right { flex-direction: row-reverse; }
 #format-bar { display: flex; gap: 2px; flex-wrap: wrap; margin: 4px 0 2px; }
+#text-wrap.fmt-left > #format-bar, #text-wrap.fmt-right > #format-bar {
+  flex-direction: column; flex-wrap: nowrap; margin: 0; }
 #format-bar[hidden] { display: none; }
 #format-bar .fmt { min-width: 2em; padding: 2px 6px; }
 #format-bar .fmt-bold { font-weight: bold; }

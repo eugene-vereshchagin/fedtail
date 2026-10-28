@@ -2858,8 +2858,9 @@ async function formatText(name) {
   counter();
 }
 
-function formatBar(items) {
+function formatBar(items, place) {
   const bar = $("#format-bar");
+  $("#text-wrap").className = "fmt-" + (place || "top");  // beside, above or below
   bar.replaceChildren();
   bar.hidden = !items || !items.length;
   const keys = {};
@@ -2941,7 +2942,7 @@ async function start() {
   $("#preview").title = w("preview") + ": " + w("preview_tip");
   $("#preview").hidden = (me.editor || {}).preview === false;
   $("#preview").onclick = preview;
-  formatBar((me.editor || {}).format_bar);
+  formatBar((me.editor || {}).format_bar, (me.editor || {}).format_place);
   $("#preview-back").onclick = () => $("#preview-dlg").close();
   $("#preview-send").onclick = () => { $("#preview-dlg").close(); send(null); };
   $("#lang").addEventListener("change", () => {

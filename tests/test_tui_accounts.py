@@ -81,7 +81,8 @@ class TuiSpellAccountsTest(Base):
 
         from fedtail.frontends.tui.screens import ComposeScreen
         core, _w = self.make()
-        core.cfg["post"]["format_bar"] = "on"
+        core.cfg["account"]["markdown"] = "on"
+        core.cfg["post"]["format_bar"] = "left"
         app = self.app_of(core)
         async with app.run_test(size=(120, 40)) as pilot:
             await self.started(pilot, app)
@@ -98,6 +99,7 @@ class TuiSpellAccountsTest(Base):
             editor.query_one("#fmt-quote", Button).press()
             await pilot.pause(0.1)
             self.assertEqual(ta.text, "one\n> say **hi**")
+            self.assertTrue(editor.query("#c-side"))  # a column beside the text
         core.cfg["post"]["format_bar"] = "off"
         app = self.app_of(core)
         async with app.run_test(size=(120, 40)) as pilot:

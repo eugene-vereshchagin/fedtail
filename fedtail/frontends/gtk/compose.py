@@ -111,11 +111,11 @@ class ComposeWindow(Gtk.Box):
         self.placeholder.set_margin_top(8)
         over.add_overlay(self.placeholder)
         over.set_vexpand(True)
+        from .markup import around
         from .markup import bar as format_bar
+        # B I S code link quote list (post.format_bar): at the side, above or below
         self.format_bar = format_bar(self.text, self.cfg, self._markdown())
-        if self.format_bar is not None:  # B I S code link quote list (post.format_bar)
-            box.append(self.format_bar)
-        box.append(over)
+        box.append(around(over, self.format_bar))
         self.suggest = Gtk.Label(xalign=0, wrap=True)  # what #tag or @name fits
         self.suggest.add_css_class("ft-muted")
         self.suggest.set_visible(False)

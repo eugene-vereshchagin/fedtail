@@ -49,11 +49,23 @@ class Edit:
     end: int
 
 
+PLACES = ("left", "right", "top", "bottom")  # where the buttons stand by the text
+VERTICAL = ("left", "right")                 # …a column beside it, else a row
+
+
+def place(cfg, markdown):
+    """Where the buttons stand — "left", "right", "top", "bottom" — or "" when there are
+    none: post.format_bar = "off", or the server doesn't understand Markdown (the marks
+    would come out as they are)."""
+    mode = ((cfg or {}).get("post") or {}).get("format_bar", "left")
+    if mode not in PLACES or not markdown:
+        return ""
+    return mode
+
+
 def shown(cfg, markdown):
-    """Are the buttons drawn? post.format_bar: "auto" — when the server understands
-    Markdown (else the marks would come out as they are), "on", "off"."""
-    mode = ((cfg or {}).get("post") or {}).get("format_bar", "auto")
-    return mode == "on" or (mode == "auto" and bool(markdown))
+    """Are the buttons drawn at all?"""
+    return bool(place(cfg, markdown))
 
 
 def tip(fmt, words):

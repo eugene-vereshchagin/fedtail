@@ -496,7 +496,7 @@ Named after @arts — the founder of Point.im and the author of its rules. The p
 
 **Preview before sending.** The “👁 Preview” button in the panel: the Markdown already rendered (if the server understands it), the CW, visibility, language, each part of a chain, how many pictures; “Send” or “Edit” from there.
 
-**Formatting buttons.** A row of buttons over the text: bold, italic, strikethrough, code (several lines — a block), a link, a quote, a list. They put the Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I, Ctrl+K. By default — when the server understands Markdown.
+**Formatting buttons.** Buttons by the text: bold, italic, strikethrough, code (several lines — a block), a link, a quote, a list. They put the Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I, Ctrl+K. Where they stand: left (the default) or right — a column, top or bottom — a row, or none; only when the server understands Markdown.
 
 **Content warning (CW).** The CW field is open at once or hidden behind the “⚠ Warning” button. In a reply, the original post's CW is filled in by itself.
 

@@ -70,9 +70,11 @@ class WebApiTest(TmpDir):
     def test_the_formatting_buttons(self):
         """post.format_bar: the page is told the buttons, and a button's work is asked of
         the server with the browser's UTF-16 positions."""
-        self.core.cfg["post"]["format_bar"] = "on"
+        self.core.cfg["account"]["markdown"] = "on"
+        self.core.cfg["post"]["format_bar"] = "right"
         me = json.loads(self.req("/api/me")[2])
         bar = me["editor"]["format_bar"]
+        self.assertEqual(me["editor"]["format_place"], "right")
         self.assertEqual([b["name"] for b in bar][:2], ["bold", "italic"])
         self.assertEqual(bar[0]["tip"], "Bold (Ctrl+B)")
         # "say hi 😀 now": 😀 is two UTF-16 units, so "hi 😀" is [4, 9) in the browser

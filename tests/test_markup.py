@@ -115,13 +115,22 @@ class LinkTest(unittest.TestCase):
 
 
 class RestTest(unittest.TestCase):
-    def test_shown_by_the_flag(self):
-        self.assertTrue(markup.shown({"post": {"format_bar": "auto"}}, True))
-        self.assertFalse(markup.shown({"post": {"format_bar": "auto"}}, False))
-        self.assertTrue(markup.shown({"post": {"format_bar": "on"}}, False))
-        self.assertFalse(markup.shown({"post": {"format_bar": "off"}}, True))
-        self.assertTrue(markup.shown({}, True))
+    def test_where_by_the_flag(self):
+        md = {"post": {"format_bar": "left"}}
+        self.assertEqual(markup.place(md, True), "left")
+        self.assertEqual(markup.place(md, False), "")  # no Markdown on the server: none
+        for where in ("right", "top", "bottom"):
+            self.assertEqual(markup.place({"post": {"format_bar": where}}, True), where)
+        self.assertEqual(markup.place({"post": {"format_bar": "off"}}, True), "")
+        self.assertEqual(markup.place({}, True), "left")  # the default
         self.assertFalse(markup.shown(None, False))
+        self.assertTrue(markup.shown({}, True))
+
+    def test_the_old_values_read_as_the_default(self):
+        from fedtail.core import config
+        for old in ("auto", "on"):
+            cfg, _w = config.validate({"post": {"format_bar": old}})
+            self.assertEqual(cfg["post"]["format_bar"], "left")
 
     def test_tips_and_names(self):
         b = markup.BY_NAME["bold"]

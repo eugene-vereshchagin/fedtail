@@ -194,10 +194,16 @@ class QtSmokeTest(unittest.TestCase):
         self.assertEqual(self.world.languages[-1], "ka")
 
         # the formatting buttons (post.format_bar): Markdown around the selection, off again
-        self.core.cfg["post"]["format_bar"] = "on"
+        self.core.cfg["account"]["markdown"] = "on"  # the server understands it
+        self.core.cfg["post"]["format_bar"] = "left"
         dlg = Compose(self.win)
         dlg.show()
         self.assertIsNotNone(dlg.format_bar)
+        self.pump(0.1)
+        # a column at the left of the text (the default)
+        self.assertLess(dlg.format_bar.geometry().right(), dlg.text.geometry().left())
+        self.assertGreater(dlg.format_bar.buttons["list"].y(),
+                           dlg.format_bar.buttons["bold"].y())
         dlg.text.setPlainText("say hi 😀 now")
         c = dlg.text.textCursor()
         c.setPosition(4)
@@ -213,11 +219,24 @@ class QtSmokeTest(unittest.TestCase):
         dlg.format_bar.buttons["quote"].click()
         self.assertTrue(dlg.text.toPlainText().startswith("> say"))
         dlg.reject()
+        self.core.cfg["post"]["format_bar"] = "bottom"  # a row under the text
+        dlg = Compose(self.win)
+        dlg.show()
+        self.pump(0.1)
+        self.assertGreater(dlg.format_bar.geometry().top(), dlg.text.geometry().bottom())
+        self.assertEqual(dlg.format_bar.buttons["list"].y(),
+                         dlg.format_bar.buttons["bold"].y())
+        dlg.reject()
         self.core.cfg["post"]["format_bar"] = "off"
         dlg = Compose(self.win)
         self.assertIsNone(dlg.format_bar)
         dlg.reject()
-        self.core.cfg["post"]["format_bar"] = "auto"
+        self.core.cfg["post"]["format_bar"] = "left"
+        self.core.cfg["account"]["markdown"] = "off"  # a server without Markdown: none
+        dlg = Compose(self.win)
+        self.assertIsNone(dlg.format_bar)
+        dlg.reject()
+        self.core.cfg["account"]["markdown"] = "auto"
 
         # a poll: choices, how long, one or several
         dlg = Compose(self.win)

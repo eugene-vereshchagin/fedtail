@@ -859,7 +859,13 @@ class Web:
                 # language — the windows check with the system's dictionaries
                 "spellcheck": bool(self.core.cfg["post"].get("spellcheck", True)),
                 # the formatting buttons (post.format_bar): [] — none
-                "format_bar": self.format_bar()}
+                "format_bar": self.format_bar(),
+                # where they stand: "left", "right", "top", "bottom" ("" — none)
+                "format_place": self._format_place()}
+
+    def _format_place(self):
+        from ..common import markup
+        return markup.place(self.core.cfg, self.core.markdown)
 
     def format_bar(self):
         """The editor's formatting buttons (common/markup.py) — [{name, face, tip, keys}],

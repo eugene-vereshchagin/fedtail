@@ -30,11 +30,12 @@
   time, a wrong certificate — instead of a bare "sync server: ConnectionError"
   (`core/neterr.py`, for whatever else reaches a server that isn't the account's own).
 
-- **Formatting buttons over the text** (`post.format_bar`): B, I, S, code (several lines —
+- **Formatting buttons by the text** (`post.format_bar`): B, I, S, code (several lines —
   a block), a link, a quote, a list — the Markdown marks put around the selection, pressed
-  again taken off; Ctrl+B, Ctrl+I, Ctrl+K. "auto" (the default) — when the server
-  understands Markdown. The windows, GTK, the web page, the phone; the terminal by the
-  buttons (its Ctrl keys belong to the text field).
+  again taken off; Ctrl+B, Ctrl+I, Ctrl+K. Where they stand: "left" (the default) or
+  "right" — a column beside the text, "top" or "bottom" — a row, "off" — none; only when
+  the server understands Markdown. The windows, GTK, the web page, the phone; the terminal
+  by the buttons (its Ctrl keys belong to the text field).
 - Fixed: "Report a bug on GitHub…" said the interface the config wished, not the one
   running (`fedtail --ui web` — "qt"), and from the phone "Linux <kernel>" with no model
   and no Android; now the phone's model, Android and screen, and the interface that runs —

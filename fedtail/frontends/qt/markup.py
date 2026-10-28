@@ -3,7 +3,7 @@ their shortcuts; what each one does to the text is frontends/common/markup.py's.
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QKeySequence, QShortcut, QTextCursor
-from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QToolButton, QVBoxLayout, QWidget
 
 from ...i18n import _
 from ..common import markup
@@ -27,13 +27,16 @@ def apply(edit, name):
 
 
 def bar(edit, cfg, markdown):
-    """The row of buttons for `edit` (its shortcuts work while it has the focus) — or None
-    when post.format_bar says there are none here."""
-    if not markup.shown(cfg, markdown):
+    """The buttons for `edit` (its shortcuts work while it has the focus) — a column for
+    a place at the side, a row above or below — or None when post.format_bar says there
+    are none here. The widget's `place` says where it stands (common/markup.place)."""
+    where = markup.place(cfg, markdown)
+    if not where:
         return None
     w = QWidget()
     w.setObjectName("formatBar")
-    row = QHBoxLayout(w)
+    w.place = where
+    row = (QVBoxLayout if where in markup.VERTICAL else QHBoxLayout)(w)
     row.setContentsMargins(0, 0, 0, 0)
     row.setSpacing(2)
     w.buttons = {}
@@ -58,3 +61,24 @@ def bar(edit, cfg, markdown):
             sc.activated.connect(lambda n=f.name: apply(edit, n))
     row.addStretch(1)
     return w
+
+
+def put(lay, edit, bar_widget, stretch=1):
+    """The text and its buttons into `lay` (a vertical layout), where the buttons
+    stand: beside it (left / right) or above / below it."""
+    if bar_widget is None:
+        lay.addWidget(edit, stretch)
+        return
+    where = bar_widget.place
+    if where in markup.VERTICAL:
+        side = QHBoxLayout()
+        side.setSpacing(4)
+        for x in ((bar_widget, edit) if where == "left" else (edit, bar_widget)):
+            side.addWidget(x, 1 if x is edit else 0)
+        lay.addLayout(side, stretch)
+    elif where == "bottom":
+        lay.addWidget(edit, stretch)
+        lay.addWidget(bar_widget)
+    else:
+        lay.addWidget(bar_widget)
+        lay.addWidget(edit, stretch)

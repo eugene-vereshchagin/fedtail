@@ -984,11 +984,12 @@ chain = true
 # "Send". false — no button.
 preview = true
 
-# The formatting buttons above the text (B, I, S, code, link, quote, list): they put the
+# The formatting buttons by the text (B, I, S, code, link, quote, list): they put the
 # Markdown marks around the selection, pressed again — take them off; Ctrl+B, Ctrl+I,
-# Ctrl+K. "auto" — when the server understands Markdown (post.markdown), "on" —
-# always, "off" — none.
-format_bar = "auto"
+# Ctrl+K. Where they stand: "left", "right" (a column beside the text), "top", "bottom"
+# (a row), or "off" — none. Shown only when the server understands Markdown
+# (post.markdown): elsewhere the marks would come out as they are.
+format_bar = "left"
 
 # Check the post's language: when the text is plainly in another language than the one
 # the post is marked with, ask before sending — mark it that one, send as is, or go back
