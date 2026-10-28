@@ -244,12 +244,14 @@ private fun Centered(content: @Composable () -> Unit) {
     }
 }
 
+/** The start, as the windows' curtain: the opossum swinging from the first frame, the
+ *  words under it — before Python, the core and the lanes are up. */
 @Composable
 private fun Starting() {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        CircularProgressIndicator()
-        Text(stringResource(R.string.starting))
+    Column(horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Possum(swinging = true)
+        Text(stringResource(R.string.starting), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

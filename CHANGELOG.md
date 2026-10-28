@@ -2,6 +2,9 @@
 
 ## 0.22.0 — in progress
 
+- The phone too: its start shows the swinging opossum, not a spinner, while Python, the
+  core and the lanes come up.
+
 - fedtail-sync, the sync server, lives in a repository of its own now:
   https://github.com/eugene-vereshchagin/fedtail-syncserver (with its history). Its version
   is fedtail's — one number, released together (both CIs check it).
