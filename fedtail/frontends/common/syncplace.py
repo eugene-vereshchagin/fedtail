@@ -4,9 +4,10 @@ web page, the phone).
 
 The place shows where the setup stands and the one next step:
 
-  1. where   — the sync server's address, or a shared folder (config.toml, used at once);
-  2. login   — the sync server's narrow token (a folder needs none): the browser's page,
-               then its code;
+  1. where   — the sync server's address, a shared folder or a WebDAV folder
+               (config.toml, used at once);
+  2. login   — the sync server's narrow token: the browser's page, then its code; a WebDAV
+               folder's user and password; a folder needs none;
   3. key     — the fork: "this is my first device" (the key is made here) or "I'm adding
                this device to those already syncing" (the key pasted from another
                device, or taken out of the journal with its password);
@@ -41,7 +42,7 @@ class SyncPlaces:
         st = v.sync_status()
         if st is None:
             return None, "where"
-        if st.get("backend") == "server" and not st.get("login"):
+        if st.get("backend") in ("server", "webdav") and not st.get("login"):
             return st, "login"
         if not st.get("key") and not v.sync_key():
             return st, "key"
@@ -53,7 +54,7 @@ class SyncPlaces:
         order = list(STEPS)
         now = order.index(at) if at in order else len(order)
         s = self.view.cfg["sync"]
-        said = {"where": s.get("url") or s.get("folder") or "",
+        said = {"where": s.get("folder") or s.get("webdav") or s.get("url") or "",
                 "login": (st or {}).get("login") or (
                     _("sync_login_folder_short") if (st or {}).get("backend") == "folder"
                     else ""),
@@ -82,10 +83,21 @@ class SyncPlaces:
             page.form = (Field("url", _("sync_f_url"), str(s.get("url") or ""),
                                tip=_("sync_f_url_tip")),
                          Field("folder", _("sync_f_folder"), str(s.get("folder") or ""),
-                               tip=_("sync_f_folder_tip")))
+                               tip=_("sync_f_folder_tip")),
+                         Field("webdav", _("sync_f_webdav"), str(s.get("webdav") or ""),
+                               tip=_("sync_f_webdav_tip")))
             page.submit = Btn(_("sync_next"), ("sync", "where", ""), True)
             if st is not None:
                 page.more = Btn(_("sync_turn_off"), ("sync", "off", ""))
+            return page
+
+        if step == "login" and (st or {}).get("backend") == "webdav":
+            page.hint = _("sync_webdav_hint", where=s.get("webdav") or "")
+            page.form = (Field("user", _("sync_webdav_user"), str(s.get("webdav_user") or "")),
+                         Field("password", _("sync_webdav_password"), "", "secret",
+                               tip=_("sync_webdav_password_tip")))
+            page.submit = Btn(_("sync_next"), ("sync", "dav", ""), True)
+            page.more = Btn(_("sync_back_where"), ("sync", "goto", "where"))
             return page
 
         if step == "login":
@@ -179,18 +191,28 @@ class SyncPlaces:
         v = self.view
         url = str(values.get("url") or "").strip()
         folder = str(values.get("folder") or "").strip()
-        if not url and not folder:
+        dav = str(values.get("webdav") or "").strip()
+        if not url and not folder and not dav:
             return Out(error=_("sync_where_none"))
         if url and not url.startswith(("https://", "http://")):
             url = "https://" + url
-        v.sync_setup(url=url, folder=folder)
+        if dav and not dav.startswith(("https://", "http://")):
+            dav = "https://" + dav
+        v.sync_setup(url=url, folder=folder, webdav=dav)
         return Out(message=_("sync_saved_on"), open={"page": "sync"})
+
+    def _a_sync_dav(self, _d, values, _c, _ans):
+        from .places import Out
+        why = self.view.sync_webdav_login(values.get("user"), str(values.get("password") or ""))
+        if why:
+            return Out(error=why)
+        return Out(message=_("sync_webdav_ok"), open={"page": "sync"})
 
     def _a_sync_off(self, _d, _v, confirmed, _ans):
         from .places import Out
         if not confirmed:
             return Out(confirm=_("sync_off_sure"))
-        self.view.sync_setup(url="", folder="")
+        self.view.sync_setup(url="", folder="", webdav="")
         return Out(message=_("sync_saved_off"), open={"page": "sync"})
 
     def _a_sync_what(self, _d, _v, _c, _ans):

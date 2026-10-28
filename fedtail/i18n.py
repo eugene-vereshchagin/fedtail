@@ -167,7 +167,7 @@ _STRINGS = {
         "sync_turn_off": "Выключить синхронизацию",
         "sync_off_sure": "Выключить синхронизацию на этом устройстве? Ключ и вход остаются — "
                          "включишь снова, укажи то же место.",
-        "sync_where_none": "Укажи сервер синхронизации или папку",
+        "sync_where_none": "Укажи сервер синхронизации, папку или WebDAV",
         "sync_login_opened": "Страница входа открыта в браузере — разреши там «fedtail sync» и "
                              "скопируй код",
         "sync_fork_hint": "Ключ шифрует всё, что уходит в журнал, и он один на все твои "
@@ -211,9 +211,9 @@ _STRINGS = {
         "sync_tab_login": "Вход",
         "sync_tab_key": "Ключ",
         "sync_where_hint": "Устройства одного аккаунта обмениваются прочитанным, тредами, лентами "
-                           "и прочим через сервер синхронизации (fedtail-sync) или общую папку "
-                           "(Syncthing, сетевой диск). Укажи одно из двух — заработает сразу, без "
-                           "перезапуска.",
+                           "и прочим через сервер синхронизации (fedtail-sync), общую папку "
+                           "(Syncthing, сетевой диск) или папку WebDAV (Nextcloud, NAS). Укажи "
+                           "одно — заработает сразу, без перезапуска.",
         "sync_off_title": "Выключена",
         "sync_off_line": "Ни сервер, ни папка не указаны.",
         "sync_f_where": "Хранилище",
@@ -224,6 +224,23 @@ _STRINGS = {
         "sync_now_btn": "Синхронизировать сейчас",
         "sync_f_url": "Адрес сервера синхронизации",
         "sync_f_url_tip": "https://sync.example — fedtail-sync; пусто — без сервера",
+        "sync_f_webdav": "…или папка WebDAV",
+        "sync_f_webdav_tip": "Адрес папки на WebDAV (Nextcloud, ownCloud, NAS): fedtail говорит с "
+                             "ним сам, монтировать не нужно; пользователь и пароль — на "
+                             "следующем шаге",
+        "sync_webdav_hint": "Пользователь и пароль папки WebDAV {where}. Пароль хранится в папке "
+                            "данных профиля, видной только тебе (sync_webdav.json), не в "
+                            "конфиге; уходит только на этот адрес. У Nextcloud лучше завести "
+                            "пароль приложения.",
+        "sync_webdav_user": "Пользователь WebDAV",
+        "sync_webdav_password": "Пароль WebDAV",
+        "sync_webdav_password_tip": "Nextcloud и ownCloud: Настройки → Безопасность → пароль "
+                                    "приложения",
+        "sync_webdav_need": "Нужны пользователь и пароль",
+        "sync_webdav_refused": "WebDAV не пускает: проверь пользователя и пароль",
+        "sync_webdav_ok": "Папка WebDAV на месте, вход сохранён",
+        "sync_webdav_login_first": "Синхронизация: нет пароля к папке WebDAV — ≡ → Синхронизация "
+                                   "→ Вход (или «fedtail sync login»)",
         "sync_f_folder": "…или общая папка",
         "sync_f_folder_tip": "Папка, которую видят все твои устройства; если указана, сервер не "
                              "нужен",
@@ -1961,7 +1978,7 @@ _STRINGS = {
         "sync_turn_off": "Turn sync off",
         "sync_off_sure": "Turn sync off on this device? The key and the login stay — to turn it on "
                          "again, name the same place.",
-        "sync_where_none": "Name a sync server or a folder",
+        "sync_where_none": "Name a sync server, a folder or a WebDAV folder",
         "sync_login_opened": "The login page is open in the browser — allow “fedtail sync” there "
                              "and copy the code",
         "sync_fork_hint": "The key seals everything that goes into the journal, and it's one for "
@@ -2003,9 +2020,9 @@ _STRINGS = {
         "sync_tab_login": "Login",
         "sync_tab_key": "Key",
         "sync_where_hint": "The devices of one account trade what was read, threads, lanes and the "
-                           "rest through a sync server (fedtail-sync) or a shared folder "
-                           "(Syncthing, a network drive). Name one of the two — it works at once, "
-                           "no restart.",
+                           "rest through a sync server (fedtail-sync), a shared folder "
+                           "(Syncthing, a network drive) or a WebDAV folder (Nextcloud, a NAS). "
+                           "Name one — it works at once, no restart.",
         "sync_off_title": "Off",
         "sync_off_line": "Neither a server nor a folder is set.",
         "sync_f_where": "Store",
@@ -2016,6 +2033,23 @@ _STRINGS = {
         "sync_now_btn": "Sync now",
         "sync_f_url": "The sync server's address",
         "sync_f_url_tip": "https://sync.example — fedtail-sync; empty — no server",
+        "sync_f_webdav": "…or a WebDAV folder",
+        "sync_f_webdav_tip": "A WebDAV folder's address (Nextcloud, ownCloud, a NAS): fedtail "
+                             "speaks to it itself, nothing to mount; the user and password come "
+                             "next",
+        "sync_webdav_hint": "The user and password of the WebDAV folder {where}. The password is "
+                            "kept in the profile's data folder, readable by you only "
+                            "(sync_webdav.json), not in the config; it goes to this address "
+                            "only. With Nextcloud, better make an app password.",
+        "sync_webdav_user": "WebDAV user",
+        "sync_webdav_password": "WebDAV password",
+        "sync_webdav_password_tip": "Nextcloud and ownCloud: Settings → Security → an app "
+                                    "password",
+        "sync_webdav_need": "A user and a password are needed",
+        "sync_webdav_refused": "WebDAV won't let in: check the user and the password",
+        "sync_webdav_ok": "The WebDAV folder is there, the login kept",
+        "sync_webdav_login_first": "Sync: no password for the WebDAV folder — ≡ → Sync → Login "
+                                   "(or “fedtail sync login”)",
         "sync_f_folder": "…or a shared folder",
         "sync_f_folder_tip": "A folder all your devices see; with one, no server is needed",
         "sync_save_where": "Save and turn on",

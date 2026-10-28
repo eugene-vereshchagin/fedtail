@@ -1,6 +1,7 @@
 **0.22.0 (in progress):**
 
 - A draft's pictures travel with it
+- Sync: WebDAV spoken directly, the journal packed
 - Formatting buttons
 - Mute a hashtag in one click
 

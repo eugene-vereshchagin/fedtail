@@ -258,6 +258,8 @@ DEFAULTS = {
     "sync": {
         "url": "",
         "folder": "",
+        "webdav": "",        # a WebDAV folder spoken directly (the password: data dir)
+        "webdav_user": "",
         "read": True,
         "threads": True,
         "lanes": True,
@@ -522,8 +524,8 @@ FILE_LAYOUT = (
                                    "unlikes_days unlikes_posts server_notices "
                                    "server_groups")),
     ("accounts", _keys("ui", "merge switch_closes account_colors act_as")),
-    ("sync", _keys("sync", "url folder interval_seconds read threads lanes drafts activity "
-                           "tiles lane_rules people")
+    ("sync", _keys("sync", "url folder webdav webdav_user interval_seconds read threads "
+                           "lanes drafts activity tiles lane_rules people")
      + _keys("read", "sync_markers")),
     ("server", _keys("poll", "interval_seconds stream stream_gap_seconds slow_minutes")
      + _keys("net", "proxy proxy_at_login")),

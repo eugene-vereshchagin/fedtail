@@ -38,7 +38,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Reply with quotes, piece by piece | ◐ | the phone quotes the whole post, not a selected piece |
 | Spell checking in the compose panel | ◐ | the phone's keyboard checks; no checking of fedtail's own |
 
 ### The application

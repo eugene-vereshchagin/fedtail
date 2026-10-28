@@ -371,6 +371,48 @@ class FolderSyncTest(Devices):
         core.sync._flush_drafts()
         self.assertEqual(core.store.sync_pending_count(), 0)
 
+    def test_a_journal_is_packed_and_a_late_device_gets_the_same(self):
+        """Each device packs its own journal once it outgrows a snapshot of it: the old
+        files go, a device that comes later reads the snapshot — the same state, and a
+        value another device set keeps its time and its device."""
+        from unittest import mock
+        root = self.world.add(status("500", fakes.ME, minute=1))
+        self.desk.subscribe(root).result()
+        self.desk.sync_now()
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        self.phone.unsubscribe(root).result()  # the phone's, later: newer than the desk's
+        self.phone.sync_now()
+        self.desk.store.put_items("home", [(f"{i}", status(f"{i}", BOB), "")
+                                           for i in range(30)])
+        for i in range(30):  # a long life of reading on the desk: many small rounds
+            self.desk.mark_read([f"{i}"])
+            self.desk.sync_now()
+        self.desk.store.kv_set("list_order", ["L2", "L1"])
+        self.desk.sync.record_setting("list_order")
+        self.desk.sync_now()
+        mine = self.tmp / "meet" / self.desk.sync.device
+        self.assertGreater(len(list(mine.iterdir())), 30)
+        with mock.patch.object(engine, "COMPACT_BYTES", 1):
+            self.desk.sync_now()
+        files = sorted(mine.iterdir())
+        self.assertEqual(len(files), 1)  # 30-odd files → one snapshot
+        self.assertLess(int(self.desk.store.kv_get("sync.mine_bytes")), 4096)
+        with mock.patch.object(engine, "COMPACT_BYTES", 1):
+            self.desk.sync_now()  # nothing new to pack: the snapshot stays as it is
+        self.assertEqual(sorted(mine.iterdir()), files)
+        late = self.device("late", self.world)
+        late.sync_join(self.desk.sync_key())
+        late.sync_now()
+        self.assertEqual(late.store.read_set([str(i) for i in range(30)]),
+                         {str(i) for i in range(30)})
+        self.assertEqual(late.store.kv_get("list_order"), ["L2", "L1"])
+        self.assertFalse(late.subscribed(root))  # the phone's leaving, not the desk's sub
+        self.assertEqual(late.store.sync_lww_rows()[-1][2], self.phone.sync.device)
+        # the phone, which read the old files already, takes the snapshot as nothing new
+        self.phone.sync_now()
+        self.assertFalse(self.phone.subscribed(root))
+
     def test_folder_backend_pages_and_skips_its_own(self):
         b = backends.FolderBackend(self.tmp / "meet")
         for i in range(backends.PAGE + 5):
@@ -501,6 +543,22 @@ class ClientServerTest(TmpDir):
         with self.assertRaises(backends.BackendError) as e:
             backends.HttpBackend(self.url, "https://me.example", "bad").pull(None, "c" * 16)
         self.assertEqual(e.exception.kind, "auth")
+
+    @need_crypto
+    def test_a_device_packs_its_journal_on_the_server(self):
+        b1 = backends.HttpBackend(self.url, "https://me.example", "t-me")
+        b2 = backends.HttpBackend(self.url, "https://me.example", "t-me2")
+        self.assertTrue(b1.can_compact())
+        a, b = "a" * 16, "b" * 16
+        self.assertEqual([b1.push(f"old{i}".encode(), a) for i in range(3)], [1, 2, 3])
+        b2.push(b"theirs", b)
+        snap = b1.push(b"snapshot", a)
+        self.assertEqual(b1.compact(a, snap), 3)
+        self.assertEqual(b2.pull(None, b)[0], [b"snapshot"])  # theirs stay, mine packed
+        self.assertEqual(b1.compact("../x", snap), 0)  # never a path of another kind
+        old = backends.HttpBackend(self.url, "https://me.example", "t-me")
+        old._said = {"fedtail-sync": 1}  # a server before 0.22: never asked to
+        self.assertEqual(old.compact(a, snap), 0)
 
     @need_crypto
     def test_pictures_through_the_server(self):

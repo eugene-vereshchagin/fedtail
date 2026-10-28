@@ -1121,7 +1121,8 @@ class Store:
         hg = self.kv_get("activity_hidden_groups", {}) or {}
         keys = set()
         for nid, sort, key in items:
-            hidden[nid] = max(hidden.get(nid, ""), sort)
+            if nid:  # a snapshot's row may carry a group alone
+                hidden[nid] = max(hidden.get(nid, ""), sort)
             if key:
                 hg[key] = max(hg.get(key, ""), sort)
                 keys.add(key)
@@ -1315,6 +1316,22 @@ class Store:
             db.execute("INSERT OR REPLACE INTO sync_lww VALUES (?, ?, ?, ?)",
                        (key, at, device, value))
             return True
+
+
+    def sync_lww_rows(self):
+        """[(key, at, device, value)] — every newest-wins value known here (a thread's
+        state, a setting, a draft), as the journal's snapshot carries them."""
+        with self._reading() as db:
+            return db.execute("SELECT key, at, device, value FROM sync_lww "
+                              "ORDER BY key").fetchall()
+
+    def activity_hidden_rows(self):
+        """[(id, sort, group key)] of what was dismissed from Activity by hand: the
+        notifications ("", for a group key) and the groups ("" for the id)."""
+        rows = [(i, s, "") for i, s in (self.kv_get("activity_hidden", {}) or {}).items()]
+        rows += [("", s, k) for k, s in
+                 (self.kv_get("activity_hidden_groups", {}) or {}).items()]
+        return rows
 
 
 class _Tx:

@@ -7,7 +7,7 @@ marks. Read a post on one, it is read on the others; follow a thread, leave it o
 it, move a list up the sidebar — and so it is everywhere.
 
 Sync is a **service of its own**, apart from your fediverse server: fedtail syncs only
-when you tell it where (`sync.url` or `sync.folder`). Without that there is no sync —
+when you tell it where (`sync.url`, `sync.folder` or `sync.webdav`). Without that there is no sync —
 the status bar says "⇅ off", About says why.
 
 What travels — a switch for each in `[sync]` (all on by default; off keeps that thing on
@@ -41,8 +41,18 @@ added later gets the state, not only what changed after it came (a real change a
 beats that first picture). The place is either
 
 * a **fedtail-sync server** — one small program on a name of its own (`sync.url`); or
-* a **folder** every device sees — a NAS share, a WebDAV folder mounted (davfs2, rclone),
-  a Syncthing folder.
+* a **folder** every device sees — a NAS share, a Syncthing folder; or
+* a **WebDAV folder** — Nextcloud, ownCloud, a NAS — spoken to directly, nothing mounted
+  (`sync.webdav`, `sync.webdav_user`; the password is asked once and kept in the profile's
+  data folder, readable by you only, never in the config). The same files as in a folder.
+
+A journal only grows, so every device packs its own now and then: once what it has sent
+is past a megabyte and several times what a snapshot of it would be, it sends the
+snapshot — every setting with the time and the device it came from, the read marks of
+the newest 5000 posts kept, how far events are seen, what was dismissed — and drops its
+older files (a folder, WebDAV) or blobs (a fedtail-sync server of 0.22 and later). A
+device away for a while reads the snapshot instead: the same state, but for read marks of
+posts older than those.
 
 The journals are encrypted (AES-256-GCM) with a key only your devices have. The server
 or the folder sees opaque blobs: who sent them, how big, when — not what you read, not
@@ -61,11 +71,14 @@ three steps marked ✓ (done), ▶ (now) and · (later); below — only what the
 needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
 
 1. **Where the devices meet** — the sync server's address your admin gave you
-   (`https://sync.example.org`), or a folder all your devices see (`~/Sync/fedtail`).
-   "Next" writes it into config.toml (`sync.url` / `sync.folder`) and turns sync on at
-   once, no restart.
-2. **Login to the sync server** (with a server only) — "Open the login page": your
-   fediverse server's page opens, allow "fedtail sync", paste the code, "Next".
+   (`https://sync.example.org`), a folder all your devices see (`~/Sync/fedtail`), or a
+   WebDAV folder (`https://cloud.example.org/remote.php/dav/files/me/fedtail` — made if
+   it isn't there). "Next" writes it into config.toml (`sync.url` / `sync.folder` /
+   `sync.webdav`) and turns sync on at once, no restart.
+2. **Login** — to the sync server: "Open the login page", your fediverse server's page
+   opens, allow "fedtail sync", paste the code, "Next". To a WebDAV folder: its user and
+   password (with Nextcloud, better an app password: Settings → Security), checked there
+   at once. A folder needs none.
 3. **The key** — a fork, what this device is:
    * **"This is my first device"** — sync isn't set up anywhere yet: the key is made
      here, and this device starts the journal. If the store holds someone's journal
@@ -98,11 +111,13 @@ after you read something.
 
 ```toml
 [sync]
-url = "https://sync.example.org"   # or folder = "~/Sync/fedtail"
+url = "https://sync.example.org"   # or folder = "~/Sync/fedtail",
+                                   # or webdav = "https://…" with webdav_user = "me"
 ```
 
 ```sh
-fedtail sync login              # log in to the sync server (the code from the page)
+fedtail sync login              # log in to the sync server (the code from the page);
+                                # WebDAV: the user (or webdav_user), the password asked
 fedtail sync now                # a round now; on the first device it makes the key too
 fedtail sync key                # show the key: XXXX-XXXX-…
 fedtail sync join XXXX-XXXX-…   # take the key on another device
@@ -120,5 +135,5 @@ other servers. What it speaks is in [`PROTOCOL.md`](https://github.com/eugene-ve
 
 ## Not yet
 
-* WebDAV spoken directly (now: mounted as a folder).
-* Packing old journals into a snapshot (now: they just add up, within the quota).
+Nothing of what was planned: WebDAV is spoken directly and the journals are packed since
+0.22.

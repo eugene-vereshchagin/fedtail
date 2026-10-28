@@ -4,7 +4,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Sync: WebDAV, a snapshot of the journal | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 
 ## Won't do

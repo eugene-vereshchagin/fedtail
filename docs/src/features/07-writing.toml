@@ -213,9 +213,7 @@ details.en = "A post's ⋯ menu → “Call into the thread…”: a reply to th
 [[feature]]
 id = "quote-reply"
 status = "has"
-android = "partly"
-android_note.ru = "на телефоне цитируется пост целиком, не выделенный кусок"
-android_note.en = "the phone quotes the whole post, not a selected piece"
+android = "has"
 since = "0.17.0"
 name.ru = "Ответ с цитатой, по кусочкам"
 name.en = "Reply with quotes, piece by piece"

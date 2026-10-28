@@ -8,6 +8,7 @@ What's new in the latest versions, and the plans.
 **0.22.0 (in progress):**
 
 - A draft's pictures travel with it
+- Sync: WebDAV spoken directly, the journal packed
 - Formatting buttons
 - Mute a hashtag in one click
 
@@ -57,7 +58,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Sync: WebDAV, a snapshot of the journal | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 
 ### Won't do

@@ -2495,14 +2495,14 @@ class Core(SocialMixin):
             log.info("sync: looking for the key in the journal: %s", e)
             return False
 
-    def sync_setup(self, url=None, folder=None):
+    def sync_setup(self, url=None, folder=None, webdav=None):
         """Where the devices meet, from the window: written into config.toml (sync.url,
-        sync.folder) and used at once — sync started, moved or stopped without a
-        restart. None — that one unchanged."""
+        sync.folder, sync.webdav) and used at once — sync started, moved or stopped
+        without a restart. None — that one unchanged."""
         from . import config_edit
         from .sync.engine import wanted
         changes = {}
-        for key, value in (("url", url), ("folder", folder)):
+        for key, value in (("url", url), ("folder", folder), ("webdav", webdav)):
             if value is not None and str(value).strip() != str(self.cfg["sync"].get(key) or ""):
                 changes[("sync", key)] = str(value).strip()
         if changes:
@@ -2527,6 +2527,27 @@ class Core(SocialMixin):
     def sync_login_end(self, pending, code):
         from .sync import engine
         engine.login_finish(self.api_class, self.paths, pending, code)
+
+    def sync_webdav_login(self, user, password):
+        """The WebDAV folder's user (config.toml) and password (the data folder, never the
+        config), checked there at once: → None, or what's wrong in words (nothing kept)."""
+        from ..i18n import _
+        from .sync import backends, engine
+        user = str(user or "").strip()
+        if not user or not password:
+            return _("sync_webdav_need")
+        tree = backends.DavTree(self.cfg["sync"]["webdav"], user, password)
+        try:
+            tree.ready()
+        except backends.BackendError as e:
+            return _("sync_webdav_refused") if e.kind == "auth" else str(e)
+        engine.save_webdav(self.paths, password)
+        if user != self.cfg["sync"].get("webdav_user"):
+            from . import config_edit
+            config_edit.save(self.paths.config_file, {("sync", "webdav_user"): user})
+            self.cfg["sync"]["webdav_user"] = user
+        self.sync_setup()  # the engine anew, with it
+        return None
 
     def sync_now(self):
         """One round at once: (sent, got), or None (sync.last says why)."""

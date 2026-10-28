@@ -2,6 +2,19 @@
 
 ## 0.22.0 — in progress
 
+- The phone quotes piece by piece, as the windows and the web page: a tap on the post
+  answered shows it whole, select a piece, "❝ Quote in reply" puts it where the cursor is.
+
+- Sync through a WebDAV folder spoken directly — Nextcloud, ownCloud, a NAS, nothing to
+  mount: `sync.webdav` and `sync.webdav_user`, the password asked once (≡ → Sync → Login,
+  `fedtail sync login`), checked there and kept in the profile's data folder (0600), never
+  in the config. The same files as a shared folder; the folder is made if it isn't there.
+- Sync packs the journal: once a device has sent more than a megabyte and several times
+  what a snapshot of its state would be, it sends the snapshot (every setting with its own
+  time and device, the newest read marks, how far events are seen, what was dismissed)
+  and drops its older files — a folder, WebDAV — or blobs, on a fedtail-sync server that
+  says `compact` (0.22). Before, journals only added up to the quota.
+
 - Lighter: `media.image_cache_mb` is 64 MB by default (was 128). Measured: with pictures on
   its disk the bench window holds 378 MB at 128, 319 MB at 64 and no less at 32 (the pictures
   on screen are held by their cards anyway); a picture scrolled back to is reread from the

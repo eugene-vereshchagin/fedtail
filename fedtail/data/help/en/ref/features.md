@@ -267,7 +267,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Cards are built around the reading place | has | 0.11.0 | `reading.build_at_once`, `reading.render_limit` | own | only in fedtail |
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `window.esc`, `window.start_lane` | own | only in fedtail |
 | A draft's pictures travel with it | has | 0.22.0 | `sync.drafts`; the server: `max_media_kb`, `media_quota_mb`, `media_keep_days`, `media_per_minute` | own: `PUT/GET/DELETE /v1/media/<name>` of fedtail-sync, `media/` in a folder | only in fedtail |
-| Sync: WebDAV, a snapshot of the journal | planned | — | `[sync]` | — | — |
+| Sync: WebDAV spoken directly, the journal packed | has | 0.22.0 | `sync.webdav`, `sync.webdav_user` | — | — |
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
 | Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
 | A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
@@ -294,7 +294,7 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **A draft's pictures travel with it.** A draft begun with a picture is finished on another device with the same picture, its description and focus point. Each picture is sealed with the account's key and named by its hash: it goes once however often the draft is saved; a sent or emptied draft takes its pictures off the store too. One too big for the store, or dropped by it, stays on its own device; the rest travels. The sync server keeps pictures under a quota of their own where the least used go first, so drafts made in a loop churn only their own pictures, not the journal or the disk.
 
-**Sync: WebDAV, a snapshot of the journal.** WebDAV without mounting; old journals packed into a snapshot.
+**Sync: WebDAV spoken directly, the journal packed.** A WebDAV folder (Nextcloud, ownCloud, a NAS) without mounting: the password is asked once and kept in the profile's data folder, not in the config. Every device now and then packs its own journal into a snapshot and drops its older files or blobs (a fedtail-sync server 0.22+: `DELETE /v1/devices/<id>`), so the journal doesn't grow to the quota.
 
 **New posts wait for Refresh.** What comes after the lane is drawn doesn't go into it: the lane's header says "N new — Refresh shows them", and ⟳ / F5 lets them in. Older posts (paging down) come at once.
 
@@ -916,7 +916,6 @@ The features of the list above that the Android app lacks or has in part (◐ �
 
 | What | Android | Why |
 |---|---|---|
-| Reply with quotes, piece by piece | ◐ | the phone quotes the whole post, not a selected piece |
 | Spell checking in the compose panel | ◐ | the phone's keyboard checks; no checking of fedtail's own |
 
 ### The application
@@ -980,7 +979,6 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Sync: WebDAV, a snapshot of the journal | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 
 ## Won't do

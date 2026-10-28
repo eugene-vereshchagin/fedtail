@@ -234,6 +234,15 @@ def cmd_sync(core, out, args, stdin=None):
         except RuntimeError as e:
             raise SystemExit(str(e)) from None
         return
+    if what == "login" and core.cfg["sync"].get("webdav") and not core.cfg["sync"]["folder"]:
+        import getpass
+        user = args.arg or core.cfg["sync"].get("webdav_user") or input(
+            _("sync_webdav_user") + ": ")
+        why = core.sync_webdav_login(user, getpass.getpass(_("sync_webdav_password") + ": "))
+        if why:
+            raise SystemExit(why)
+        out.line(_("sync_webdav_ok"))
+        return
     if what == "login":
         if not core.logged_in:
             raise SystemExit(_("cli_login_first"))
@@ -289,8 +298,8 @@ def parser():
     w.add_argument("--lang", help="language code (ru, en, ka…)")
     y = sub.add_parser("sync", help="sync with your other devices")
     y.add_argument("what", choices=["status", "key", "join", "login", "now", "keep", "unlock"])
-    y.add_argument("arg", nargs="?", help="join: the key; login: the code; keep / unlock: "
-                                          "the password (else asked)")
+    y.add_argument("arg", nargs="?", help="join: the key; login: the code (WebDAV: the "
+                                          "user); keep / unlock: the password (else asked)")
     return p
 
 

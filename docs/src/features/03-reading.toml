@@ -161,15 +161,17 @@ details.en = "A draft begun with a picture is finished on another device with th
 
 [[feature]]
 id = "sync-rest"
-status = "planned"
-name.ru = "Синхронизация: WebDAV, снимок журнала"
-name.en = "Sync: WebDAV, a snapshot of the journal"
-config = "`[sync]`"
+status = "has"
+since = "0.22.0"
+android = "has"
+name.ru = "Синхронизация: WebDAV напрямую, журнал упаковывается"
+name.en = "Sync: WebDAV spoken directly, the journal packed"
+config = "`sync.webdav`, `sync.webdav_user`"
 others = "—"
 size.ru = "средний"
 size.en = "medium"
-details.ru = "WebDAV без монтирования; старые журналы упаковываются в снимок."
-details.en = "WebDAV without mounting; old journals packed into a snapshot."
+details.ru = "Папка WebDAV (Nextcloud, ownCloud, NAS) без монтирования: пароль спрашивается один раз и хранится в папке данных профиля, не в конфиге. Каждое устройство время от времени упаковывает свой журнал в снимок и удаляет свои старые файлы или блобы (сервер fedtail-sync 0.22+: `DELETE /v1/devices/<id>`), так что журнал не растёт до квоты."
+details.en = "A WebDAV folder (Nextcloud, ownCloud, a NAS) without mounting: the password is asked once and kept in the profile's data folder, not in the config. Every device now and then packs its own journal into a snapshot and drops its older files or blobs (a fedtail-sync server 0.22+: `DELETE /v1/devices/<id>`), so the journal doesn't grow to the quota."
 
 [[feature]]
 id = "hold-new"

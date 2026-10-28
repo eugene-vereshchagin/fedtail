@@ -472,10 +472,44 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
     }) { mod ->
         Column(mod.padding(16.dp).imePadding().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            place.replyTo?.let {
-                Text("↳ @${it.handle}: ${it.text}", maxLines = 3, overflow = TextOverflow.Ellipsis,
-                    fontStyle = FontStyle.Italic, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // the text with its cursor: what is typed right before it is completed, and
+            // where a quoted piece of the post answered goes
+            var field by remember { mutableStateOf(TextFieldValue(model.composeText,
+                TextRange(model.composeText.length))) }
+            if (field.text != model.composeText) {  // set from outside (a quote, a redraft)
+                field = TextFieldValue(model.composeText, TextRange(model.composeText.length))
+            }
+            val quoteScope = rememberCoroutineScope()
+            place.replyTo?.let { answered ->
+                // the post answered, whole: select a piece, "❝ Quote in reply" puts it
+                // where the cursor is (the windows' and the web's quoting piece by piece)
+                var whole by remember { mutableStateOf(false) }
+                var shown by remember(answered.sid) { mutableStateOf(TextFieldValue(answered.text)) }
+                if (!whole) {
+                    Text("↳ @${answered.handle}: ${answered.text}", maxLines = 3,
+                        overflow = TextOverflow.Ellipsis, fontStyle = FontStyle.Italic,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable { whole = true })
+                } else {
+                    OutlinedTextField(value = shown, onValueChange = { shown = it.copy(text = answered.text) },
+                        readOnly = true, label = { Text("↳ @${answered.handle}") },
+                        supportingText = { Text(stringResource(R.string.reply_whole)) },
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth())
+                    TextButton(enabled = !shown.selection.collapsed, onClick = {
+                        val piece = shown.text.substring(shown.selection.min, shown.selection.max)
+                        quoteScope.launch {
+                            val got = Core.quoteLines(piece.trim())
+                            val quoted = if (Core.failed(got) == null) got.optString("text")
+                                         else piece.trim().lines().joinToString("\n") { "> $it" } + "\n\n"
+                            val at = field.selection.max
+                            val text = field.text.substring(0, at) + quoted + field.text.substring(at)
+                            field = TextFieldValue(text, TextRange(at + quoted.length))
+                            model.composeText = text
+                        }
+                    }) { Text(stringResource(R.string.quote_in_reply)) }
+                }
             }
             if (model.quoteOf.isNotBlank()) {
                 Text("❝ " + model.quoteOf, style = MaterialTheme.typography.bodySmall,
@@ -509,12 +543,6 @@ private fun ComposePlace(model: AppModel, place: Place.Compose, snack: SnackbarH
                 OutlinedTextField(value = model.composeCw, onValueChange = { model.composeCw = it },
                     label = { Text(stringResource(R.string.cw_label)) }, singleLine = true,
                     modifier = Modifier.fillMaxWidth())
-            }
-            // the text with its cursor: what is typed right before it is completed
-            var field by remember { mutableStateOf(TextFieldValue(model.composeText,
-                TextRange(model.composeText.length))) }
-            if (field.text != model.composeText) {  // set from outside (a quote, a redraft)
-                field = TextFieldValue(model.composeText, TextRange(model.composeText.length))
             }
             var offer by remember { mutableStateOf<Pair<String, List<Pair<String, String>>>?>(null) }
             LaunchedEffect(field.text, field.selection) {

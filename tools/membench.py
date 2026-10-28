@@ -159,6 +159,7 @@ def pictures(core, w):
     window decodes and keeps them as it would — on 28.10 a real window's pictures were
     128 MB of its 550, which a bench without them never saw. Returns how many."""
     import hashlib
+
     from PySide6.QtCore import QBuffer, QByteArray, QIODevice
     from PySide6.QtGui import QColor, QImage
     made = {}

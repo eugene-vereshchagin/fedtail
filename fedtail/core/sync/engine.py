@@ -31,14 +31,24 @@ What travels — a switch for each in `[sync]`:
   (`[[lanes.custom]]`), `lanes.posts_only`. One value (kv "lane_rules"), the newest wins;
   a device that gets it writes it into its config.toml and shows the lanes anew.
 
+A journal only grows, so each device packs its own now and then (`_compact`): when what it
+has sent since the last time is past COMPACT_BYTES and several times what a snapshot of it
+all would be, it sends that snapshot — every newest-wins value with its own time and device,
+the read marks of the newest posts, how far events are seen, what was dismissed — and has
+the store drop its older blobs (a folder: its older files; a fedtail-sync that says
+`compact`). A device that was away reads the snapshot instead of what it replaced: the
+same state, but the read marks of posts older than the newest SNAPSHOT_READ.
+
 What a device already knows when it first syncs under a key goes out once too (`_snapshot`):
 the settings carried whole (not `lane_rules`), stamped time 0 so any real change anywhere
 beats them; how
 far events are seen; the read marks of the posts it keeps. A device that joins later
 gets the state, not only what changed after it came.
 
-Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server) or
-`sync.folder`. Nothing set — no sync, and nothing is recorded.
+Sync is on when it has a place to meet: `sync.url` (a fedtail-sync server),
+`sync.folder`, or `sync.webdav` (a WebDAV folder spoken directly — `sync.webdav_user`, the
+password in the profile's data folder, `sync_webdav.json`, never in the config). Nothing
+set — no sync, and nothing is recorded.
 
 Recording works without the sync thread (`fedtail read …` in a terminal, the window
 closed): the journal is in the store; whichever process of the profile runs the thread
@@ -82,13 +92,15 @@ LANE_KEYS = tuple(k for k, w in SETTINGS.items() if w in ("lanes", "lane_rules")
 READ_CHUNK = 1000   # ids in one recorded op
 BATCH_OPS = 400     # ops in one sealed blob
 DEBOUNCE = 3        # seconds after a mark before sending: scrolling marks in bursts
+COMPACT_BYTES = 1024 * 1024  # this device's journal past this → packed into a snapshot
+COMPACT_GAIN = 4    # … and only when it is this many times the snapshot
 SCOPES = "read:accounts"  # all a sync server needs to know whose journal it is
 
 
 def wanted(cfg):
     """Is sync on? It is when it has somewhere to go."""
     s = cfg.get("sync") or {}
-    return bool(s.get("url") or s.get("folder"))
+    return bool(s.get("url") or s.get("folder") or s.get("webdav"))
 
 
 def now_ms():
@@ -105,6 +117,34 @@ def key_path(paths):
 
 def auth_path(paths):
     return paths.data_dir / "sync_auth.json"
+
+
+def webdav_path(paths):
+    return paths.data_dir / "sync_webdav.json"
+
+
+def load_webdav(paths):
+    """The WebDAV password kept here, or ""."""
+    try:
+        data = json.loads(webdav_path(paths).read_text("utf-8"))
+    except (OSError, ValueError):
+        return ""
+    return data.get("password") if isinstance(data, dict) and \
+        isinstance(data.get("password"), str) else ""
+
+
+def save_webdav(paths, password):
+    """Readable by its owner only, as auth.json; "" — forgotten."""
+    f = webdav_path(paths)
+    if not password:
+        f.unlink(missing_ok=True)
+        return
+    f.parent.mkdir(parents=True, exist_ok=True)
+    tmp = f.with_name(f.name + ".part")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as out:
+        json.dump({"password": password}, out)
+    os.replace(tmp, f)
 
 
 def load_auth(path):
@@ -424,6 +464,8 @@ class Sync:
                 self._flush_drafts(backend, key)
                 sent = self._push(backend, key)
                 got = self._pull(backend, key) if pull else 0
+                if pull:
+                    self._compact(backend, key)
             except backends.BackendError as e:
                 text = {"auth": _("sync_auth_refused"), "full": _("sync_full")}.get(
                     e.kind, _("sync_failed", why=str(e)))
@@ -455,14 +497,22 @@ class Sync:
 
     # ---- where, and with what key ----------------------------------------------------
     def kind(self):
-        return "folder" if self.cfg["folder"] else "server"
+        return "folder" if self.cfg["folder"] else (
+            "webdav" if self.cfg.get("webdav") else "server")
 
     def where(self):
-        return self.cfg["folder"] or self.cfg["url"]
+        return self.cfg["folder"] or self.cfg.get("webdav") or self.cfg["url"]
 
     def backend(self):
         if self.cfg["folder"]:
             return backends.FolderBackend(self.cfg["folder"])
+        if self.cfg.get("webdav"):
+            password = load_webdav(self.paths)
+            if not password or not self.cfg.get("webdav_user"):
+                self._problem("login", _("sync_webdav_login_first"))
+                return None
+            return backends.WebDavBackend(self.cfg["webdav"], self.cfg["webdav_user"],
+                                          password)
         a = load_auth(auth_path(self.paths))
         if not a:
             self._problem("login", _("sync_login_first"))
@@ -536,10 +586,70 @@ class Sync:
             if not rows:
                 break
             payload = {"v": 1, "d": self.device, "at": now_ms(), "ops": [op for _, op in rows]}
-            backend.push(crypto.seal(key, payload), self.device)
+            blob = crypto.seal(key, payload)
+            backend.push(blob, self.device)
+            self._grew(len(blob))
             self.store.sync_sent(rows[-1][0])
             sent += len(rows)
         return sent
+
+    def _grew(self, n):
+        """How much this device has put into the journal since it was last packed."""
+        self.store.kv_set("sync.mine_bytes", int(self.store.kv_get("sync.mine_bytes") or 0) + n)
+
+    def state_ops(self):
+        """Everything this device knows that travels, as ops — the snapshot a packed
+        journal is replaced by. Each newest-wins value keeps its own time and the device
+        that set it ("by"), so the snapshot never beats a newer change anywhere."""
+        ops = []
+        kinds = {"t": "threads", "d": "drafts"}
+        for k, at, dev, value in self.store.sync_lww_rows():
+            kind, _sep, name = k.partition(":")
+            try:
+                v = json.loads(value) if kind in ("k", "d") else value
+            except ValueError:
+                continue
+            if kind == "k":
+                if SETTINGS.get(name) in self.what:
+                    ops.append({"k": name, "v": v, "at": at, "by": dev})
+            elif kinds.get(kind) in self.what:
+                ops.append({"t": name, "s": v, "at": at, "by": dev} if kind == "t" else
+                           {"dr": name, "v": v, "at": at, "by": dev})
+        if "activity" in self.what:
+            if self.store.kv_get("activity_seen"):
+                ops.append({"as": str(self.store.kv_get("activity_seen"))})
+            rows = [list(r) for r in self.store.activity_hidden_rows()]
+            ops += [{"h": rows[i:i + READ_CHUNK]} for i in range(0, len(rows), READ_CHUNK)]
+        if "read" in self.what:
+            ids = [str(i) for i in self.store.recent_read(self.SNAPSHOT_READ)]
+            ops += [{"r": ids[i:i + READ_CHUNK]} for i in range(0, len(ids), READ_CHUNK)]
+        return ops
+
+    def _compact(self, backend, key):
+        """This device's journal packed, when that is worth it (see the top). → how many
+        old blobs went, or 0."""
+        mine = int(self.store.kv_get("sync.mine_bytes") or 0)
+        can = getattr(backend, "can_compact", None)
+        if mine < COMPACT_BYTES or not can or not can():
+            return 0
+        ops = self.state_ops()
+        blobs = [crypto.seal(key, {"v": 1, "d": self.device, "at": now_ms(),
+                                   "ops": ops[i:i + BATCH_OPS]})
+                 for i in range(0, len(ops), BATCH_OPS)]
+        size = sum(map(len, blobs))
+        if not blobs or mine < size * COMPACT_GAIN:
+            return 0
+        first = None
+        for blob in blobs:
+            at = backend.push(blob, self.device)
+            first = at if first is None else first
+        self.store.kv_set("sync.mine_bytes", size)
+        if not first:  # the store didn't say where it went: the old ones stay
+            return 0
+        gone = backend.compact(self.device, first)
+        log.info("sync: this device's journal packed: %d old blobs gone, %d KB → %d KB",
+                 gone, mine // 1024, size // 1024)
+        return gone
 
     def _pull(self, backend, key):
         if self.store.kv_get("sync.where") != backend.where:  # another store: from its start
@@ -577,7 +687,7 @@ class Sync:
         reads, threads, lanes, hidden, drafts, tiles = [], [], [], [], [], False
         people = False
         seen_to = None  # how far events are seen elsewhere, when further than here
-        device = str(payload.get("d") or "")
+        sender = str(payload.get("d") or "")
         seen = 0
         for op in payload.get("ops") or []:
             if not isinstance(op, dict):
@@ -586,6 +696,9 @@ class Sync:
                 seen = max(seen, int(op.get("at") or 0))
             except (TypeError, ValueError):
                 op["at"] = 0
+            # a snapshot carries values other devices set: each with its own
+            by = op.get("by")
+            device = by if isinstance(by, str) and by else sender
             if isinstance(op.get("r"), list):
                 if "read" in self.what:
                     reads += [str(i) for i in op["r"] if isinstance(i, (str, int))]
@@ -688,9 +801,12 @@ class Sync:
     def status(self):
         key = crypto.load_key(key_path(self.paths))
         a = load_auth(auth_path(self.paths))
+        login = a["instance"] if a else ""
+        if self.kind() == "webdav":
+            login = self.cfg.get("webdav_user", "") if load_webdav(self.paths) else ""
         return {"backend": self.kind(),
                 "where": self.where(),
-                "login": a["instance"] if a else "",
+                "login": login,
                 "device": self.device,
                 "key": crypto.key_id(key).hex() if key else "",
                 "pending": self.store.sync_pending_count(),
