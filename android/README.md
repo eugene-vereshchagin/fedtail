@@ -66,7 +66,11 @@ Compose screens (Kotlin)  ──►  Core.kt  ──►  fedtail_android/bridge.
 * **Tiles**: which lanes and in which order — "change" over them (↑ ↓ ✕, ＋); the core
   keeps them (`pinned_tiles`), sync carries them to the other devices (`sync.tiles`).
 * **Sync**: status, a round now, logging in to the sync server (its page shows a code to
-  paste), showing this device's key and taking another device's.
+  paste), showing this device's key (a QR code and its text) and taking another device's —
+  pasted, or scanned with the camera ("Scan the QR code" by the key's field:
+  zxing-android-embedded, no Google services; the camera is asked only then).
+* **Lanes**: ⋮ → "Lanes…" and ⚙ on a lane's bar open the lane editor (the desktop's
+  places); "Mark all read" and "↓ N" (to the new) on the bar; the end of a lane one row.
 * The look is the mockups' variant A ("calm": `Theme.kt`), light and dark by the
   phone's setting; fedtail's other themes (terminal, Point, Juick) come later.
 
