@@ -536,16 +536,26 @@ class SocialMixin:
             self.caps.translation = True
             self.translation_languages = None
             return None
-        if not getattr(self.caps, "translation", False):
-            self.translation_languages = None
-            return None
+        # asked whatever the instance document said: a server whose document doesn't say
+        # it translates (the v2 one missing or late) may still list what it translates —
+        # and then it does (28.10's report: "Translate" gone though the server has it)
+        said = bool(getattr(self.caps, "translation", False))
         try:
             got = self._api("translation_languages", self.api.translation_languages)
             self.translation_languages = {str(k): [str(t) for t in v or ()]
-                                          for k, v in (got or {}).items()} or None
+                                          for k, v in (got or {}).items()
+                                          if isinstance(v, (list, tuple))} or None
         except Exception as e:  # noqa: BLE001 — a nicety: "Translate" stays where it was
             log.debug("translation languages: %s", e)
             self.translation_languages = None
+        if self.translation_languages and not said:
+            self.caps.translation = True
+        if not self.caps.translation:
+            self.translation_languages = None
+        log.info("translation: %s (the instance document %s; %s source languages listed)",
+                 "the server's" if self.caps.translation else "none",
+                 "says so" if said else "doesn't say",
+                 len(self.translation_languages or ()))
         return self.translation_languages
 
     def load_preferences(self):

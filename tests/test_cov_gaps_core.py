@@ -39,6 +39,30 @@ class CoreTurnsTest(Base):
             self.assertIsNone(core.load_translation_languages())
         core.caps.translation = True
         self.assertEqual(core.load_translation_languages(), {"en": ["ru", "de"], "ru": ["en"]})
+        # the instance document doesn't say it translates, the list says it does: it does
+        # (28.10's report: "Translate" gone though the server translates)
+        core.caps.translation = False
+        with self.assertLogs("fedtail.core.social", "INFO") as logs:
+            self.assertEqual(core.load_translation_languages(),
+                             {"en": ["ru", "de"], "ru": ["en"]})
+        self.assertTrue(core.caps.translation)
+        self.assertIn("doesn't say", logs.output[-1])
+        core.caps.translation = False  # it neither says nor lists: none
+        with mock.patch.object(core.api, "translation_languages", return_value={}):
+            self.assertIsNone(core.load_translation_languages())
+        self.assertFalse(core.caps.translation)
+
+    def test_a_late_v2_document_keeps_the_v1_facts(self):
+        """/api/v2/instance timing out cost every fact of /api/v1/instance (the limits,
+        Markdown): the two are asked apart now."""
+        import requests
+        core, w = self.make()
+        with mock.patch.object(type(core.api_class("https://example.test", "t")),
+                               "instance_v2", side_effect=requests.Timeout("slow")):
+            core.connect().result()
+        self.assertGreater(core.caps.max_characters, 0)
+        self.assertEqual(core.caps.max_characters,
+                         core.proto.capabilities(core.api.instance(), None).max_characters)
 
     def test_the_poller_paused_then_slow(self):
         core, _w = self.make()

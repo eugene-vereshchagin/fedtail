@@ -2,6 +2,12 @@
 
 ## 0.22.0 — in progress
 
+- Fixed: "Translate" could vanish though the server translates (28.10's report). Whether
+  it does is now also asked of the list of what it translates (a server whose instance
+  document doesn't say so, or whose newer document came late), and a late or broken
+  `/api/v2/instance` no longer costs the server's other facts (limits, Markdown) — they
+  were all forgotten with it. The log says at every start what was found.
+
 - The phone too: its start shows the swinging opossum, not a spinner, while Python, the
   core and the lanes come up.
 

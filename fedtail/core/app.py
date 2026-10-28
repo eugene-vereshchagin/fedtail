@@ -505,10 +505,16 @@ class Core(SocialMixin):
                             "clear (log in anew with https://)")
             api = self.api_class(self.auth["server"], self.auth["token"])
             me = api.me()
-            try:
+            try:  # the newer document apart: its trouble mustn't cost the older one's facts
                 v2 = api.instance_v2() if hasattr(api, "instance_v2") else None
+            except Exception as e:  # noqa: BLE001 — a timeout, a broken answer
+                log.info("instance v2: %s: %s", type(e).__name__, e)
+                v2 = None
+            try:
                 caps = self.proto.capabilities(api.instance(), v2)
-            except Exception:  # instance info is a nicety, not a must
+            except Exception as e:  # instance info is a nicety, not a must
+                log.warning("instance: %s: %s — the server's limits and features unknown",
+                            type(e).__name__, e)
                 caps = Capabilities()
             self._own_software(caps)
             self._carry_answers(self.caps, caps)
