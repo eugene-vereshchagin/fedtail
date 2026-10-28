@@ -73,6 +73,7 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Read marks, thread subscriptions and lane order shared by all your devices | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Cards are built around the reading place | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | Esc draws a curtain instead of closing the window | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| A draft's pictures travel with it | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | New posts wait for Refresh | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |   |   |
 | Sync set up in the window step by step, a new device by a password alone | ✓ |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | A lane without a seam: older posts come by themselves | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |   |   |   |   |
@@ -244,4 +245,4 @@ fedtail: ✓ — has, ◐ — partly, — — no, ⏳ — planned.
 | Web on localhost | ✓ |   |   |   | ✓ | ✓ |   |   |   |   |   |   |   |   |
 | GTK4 + libadwaita | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-Only in fedtail — **53** features of the 180 compared.
+Only in fedtail — **54** features of the 181 compared.

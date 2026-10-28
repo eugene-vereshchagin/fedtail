@@ -5,6 +5,7 @@ import json
 import threading
 import unittest
 import urllib.request
+from pathlib import Path
 
 from fedtail.core import auth, config, paths
 from fedtail.core.app import Core
@@ -235,6 +236,52 @@ class FolderSyncTest(Devices):
         self.desk.sync_now()
         self.assertIsNone(self.desk.get_draft("reply:77"))
 
+    def test_a_drafts_pictures_travel_once_and_go_when_sent(self):
+        cat = self.tmp / "cat.png"
+        cat.write_bytes(b"\x89PNG picture of a cat" * 50)
+        huge = self.tmp / "huge.jpg"
+        huge.write_bytes(b"x" * (backends.FOLDER_MEDIA_KB * 1024 + 1))
+        draft = {"text": "look", "cw": "", "visibility": "public",
+                 "media": [[str(cat), "a cat", [0.1, -0.2]], [str(huge), "too big"],
+                           [str(self.tmp / "gone.png"), ""]]}
+        self.desk.save_draft("new", draft)
+        self.desk.sync_now()
+        self.desk.save_draft("new", {**draft, "text": "look at it"})  # saved again
+        self.desk.sync_now()
+        store = self.tmp / "meet" / "media"
+        self.assertEqual(len(list(store.iterdir())), 1)  # the cat, once; sealed
+        self.assertNotIn(b"cat", next(store.iterdir()).read_bytes())
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.sync_now()
+        got = self.phone.get_draft("new")
+        self.assertEqual(got["text"], "look at it")
+        (path, desc, focus), = got["media"]  # the one that could travel
+        self.assertEqual((desc, focus), ("a cat", [0.1, -0.2]))
+        self.assertEqual(Path(path).read_bytes(), cat.read_bytes())
+        self.assertEqual(Path(path).parent, engine.media_dir(self.phone.paths))
+        # sent from the phone: gone everywhere, its picture off the store and the phone
+        self.phone.delete_draft("new")
+        self.phone.sync_now()
+        self.assertEqual(list(store.iterdir()), [])
+        self.assertFalse(Path(path).exists())
+        self.desk.sync_now()
+        self.assertIsNone(self.desk.get_draft("new"))
+        self.assertTrue(cat.exists())  # the desk's own file is never touched
+
+    def test_a_picture_the_store_lost_is_done_without(self):
+        cat = self.tmp / "cat.png"
+        cat.write_bytes(b"picture")
+        self.desk.save_draft("new", {"text": "x", "media": [[str(cat), ""]]})
+        self.desk.sync_now()
+        for f in (self.tmp / "meet" / "media").iterdir():
+            f.unlink()  # dropped by the store (it keeps the least used)
+        self.phone.sync_join(self.desk.sync_key())
+        self.phone.store.save_draft("new", {"text": "old", "media": [["/sd/dog.jpg", ""]]})
+        self.phone.sync_now()
+        got = self.phone.get_draft("new")
+        self.assertEqual(got["text"], "x")
+        self.assertEqual(got["media"], [["/sd/dog.jpg", ""]])  # nothing fetched: its own
+
     def test_dismissed_activity_goes_everywhere(self):
         for core in (self.desk, self.phone):
             core.store.activity_put([
@@ -398,6 +445,27 @@ class ClientServerTest(TmpDir):
         with self.assertRaises(backends.BackendError) as e:
             backends.HttpBackend(self.url, "https://me.example", "bad").pull(None, "c" * 16)
         self.assertEqual(e.exception.kind, "auth")
+
+    @need_crypto
+    def test_pictures_through_the_server(self):
+        b1 = backends.HttpBackend(self.url, "https://me.example", "t-me")
+        b2 = backends.HttpBackend(self.url, "https://me.example", "t-me2")
+        self.assertEqual(b1.media_kb(), 4096)  # the server keeps them
+        key = crypto.new_key()
+        data = b"a picture" * 100
+        name = crypto.media_name(key, data)
+        b1.media_put(name, crypto.seal_media(key, data))
+        self.assertEqual(crypto.unseal_media(key, b2.media_get(name)), data)
+        b2.media_delete(name)
+        self.assertIsNone(b1.media_get(name))
+        b1.media_delete(name)  # gone already: no error
+        with self.assertRaises(ValueError):
+            b1.media_get("../etc")
+        with self.assertRaises(crypto.BadBlob):
+            crypto.unseal_media(crypto.new_key(), crypto.seal_media(key, data))
+        self.app.cfg["media_quota_mb"] = 0  # a server without pictures
+        self.assertEqual(backends.HttpBackend(self.url, "https://me.example",
+                                              "t-me").media_kb(), 0)
 
 
 class CliSyncTest(Devices):

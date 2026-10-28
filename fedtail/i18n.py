@@ -62,7 +62,7 @@ _STRINGS = {
         "sync_login_first": "Синхронизация: нет входа на сервер синхронизации — "
                             "≡ → Синхронизация → Вход (или fedtail sync login)",
         "sync_need_key": "Синхронизация: у аккаунта уже есть журнал с ключом другого "
-                         "устройства — перенеси ключ: там ≡ → Синхронизация → «Скопировать ключ», "
+                         "устройства — перенеси ключ: там ≡ → Синхронизация → «Показать ключ», "
                          "здесь ≡ → Синхронизация → «Добавить к настроенным»",
         "sync_need_key_pass": "Синхронизация: у аккаунта есть журнал, а ключ к нему лежит "
                               "в нём под паролем — ≡ → Синхронизация → «Добавить к "
@@ -262,9 +262,9 @@ _STRINGS = {
                             "Если задать пароль, ключ ляжет в журнал синхронизации, зашифрованный "
                             "этим паролем, и на новом устройстве («Добавить к настроенным») "
                             "хватит ввести пароль — ключ оно достанет само.\n\nЭто необязательно: "
-                            "без пароля просто копируешь ключ кнопкой «Скопировать ключ». Не "
+                            "без пароля просто переносишь ключ кнопкой «Показать ключ». Не "
                             "короче {n} знаков; забудешь — ничего не сломается, ключ всегда можно "
-                            "скопировать с работающего устройства.",
+                            "взять с работающего устройства.",
         "sync_password": "Пароль",
         "sync_password_again": "Ещё раз",
         "sync_escrow_put": "Сохранить пароль",
@@ -1668,7 +1668,7 @@ _STRINGS = {
         "sync_need_key_pass": "Sync: the account has a journal, and its key is in it under "
                               "a password — ≡ → Sync → “Add to those set up”, the password",
         "sync_need_key": "Sync: the account already has a journal sealed by another "
-                         "device's key — carry the key over: there ≡ → Sync → “Copy the key”, "
+                         "device's key — carry the key over: there ≡ → Sync → “Show the key”, "
                          "here ≡ → Sync → “Add to those set up”",
         "sync_other_key": "Sync: the store holds a journal sealed by another key — "
                           "≡ → Sync → “Add to those set up”",
@@ -1856,9 +1856,9 @@ _STRINGS = {
                             "line ABCD-EFGH-…), and it has to get there somehow. With a password, "
                             "the key goes into the sync journal sealed by it, and on the new "
                             "device (“Add to those set up”) the password is enough — it takes the "
-                            "key itself.\n\nIt's optional: without it you just copy the key with "
-                            "“Copy the key”. At least {n} characters; forget it and nothing "
-                            "breaks — the key can always be copied from a working device.",
+                            "key itself.\n\nIt's optional: without it you just carry the key over "
+                            "with “Show the key”. At least {n} characters; forget it and nothing "
+                            "breaks — the key can always be taken from a working device.",
         "sync_password": "Password",
         "sync_password_again": "Once more",
         "sync_escrow_put": "Save the password",

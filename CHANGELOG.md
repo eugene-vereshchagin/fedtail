@@ -2,6 +2,14 @@
 
 ## 0.22.0 — in progress
 
+- Sync: a draft's pictures travel with it — the same picture, its description and focus
+  point on the other device. Each is sealed with the account's key and named by a keyed
+  hash, so it goes once however often the draft is saved; a sent or emptied draft takes
+  its pictures off the store. Too big for the store, or dropped by it — that one stays
+  where it was added. fedtail-sync 0.22 keeps them (`PUT/GET/DELETE /v1/media/…`, still
+  protocol 1) under a quota of their own where the least used go first, so drafts made in
+  a loop churn only their own pictures; a folder keeps them in `media/`.
+
 - Sync: the key for the next device is a QR code now. ≡ → Sync → "Show the key" (after a
   "sure?") shows the code and its text with "Copy"; on the phone "Add to those set up" has
   "Scan the QR code" by the key's field (the camera is asked only then; the scanner is

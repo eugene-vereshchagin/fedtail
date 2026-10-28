@@ -266,7 +266,8 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 | Read marks, thread subscriptions and lane order shared by all your devices | has | 0.18.0 | `sync.url` or `sync.folder` (none — no sync), `sync.read`, `sync.threads`, `sync.lanes`, `sync.drafts`, `sync.activity`, `sync.tiles`, `sync.lane_rules`, `sync.interval_seconds`; `fedtail sync status\|key\|join\|login\|now` | own: a fedtail-sync server (one file, `fedtail_sync.py`, fedtail-syncserver) or a shared folder; it is entered with a `read:accounts`-only token | only in fedtail (markers are just the place in Home and notifications) |
 | Cards are built around the reading place | has | 0.11.0 | `reading.build_at_once`, `reading.render_limit` | own | only in fedtail |
 | Esc draws a curtain instead of closing the window | has | 0.3.0 | `window.esc`, `window.start_lane` | own | only in fedtail |
-| Sync: the key by a QR code, drafts' pictures, WebDAV | planned | — | `[sync]` | — | — |
+| A draft's pictures travel with it | has | 0.22.0 | `sync.drafts`; the server: `max_media_kb`, `media_quota_mb`, `media_keep_days`, `media_per_minute` | own: `PUT/GET/DELETE /v1/media/<name>` of fedtail-sync, `media/` in a folder | only in fedtail |
+| Sync: WebDAV, a snapshot of the journal | planned | — | `[sync]` | — | — |
 | New posts wait for Refresh | has | 0.21.0 | `reading.on_new = "hold"` | own | Elk |
 | Sync set up in the window step by step, a new device by a password alone | has | 0.21.0 | ≡ → Sync (or a click on "⇅"); `fedtail sync keep` / `unlock` | own: the key in the journal, sealed by a password (scrypt + AES-GCM) | only in fedtail |
 | A lane without a seam: older posts come by themselves | has | 0.21.0 | `reading.older_ahead` | own | Mastodon web, Tusky, Phanpy, Ivory |
@@ -291,7 +292,9 @@ Splitting “replies to me” from “mentions” is what other clients don't do
 
 **Esc draws a curtain instead of closing the window.** Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = "curtain"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `"tray"` — off to the tray, `"off"` — nothing. What to start with — `window.start_lane`: `"none"` (the curtain, Enter opens the last one), `"last"` or a lane's name.
 
-**Sync: the key by a QR code, drafts' pictures, WebDAV.** The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot.
+**A draft's pictures travel with it.** A draft begun with a picture is finished on another device with the same picture, its description and focus point. Each picture is sealed with the account's key and named by its hash: it goes once however often the draft is saved; a sent or emptied draft takes its pictures off the store too. One too big for the store, or dropped by it, stays on its own device; the rest travels. The sync server keeps pictures under a quota of their own where the least used go first, so drafts made in a loop churn only their own pictures, not the journal or the disk.
+
+**Sync: WebDAV, a snapshot of the journal.** WebDAV without mounting; old journals packed into a snapshot.
 
 **New posts wait for Refresh.** What comes after the lane is drawn doesn't go into it: the lane's header says "N new — Refresh shows them", and ⟳ / F5 lets them in. Older posts (paging down) come at once.
 
@@ -974,7 +977,7 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Sync: the key by a QR code, drafts' pictures, WebDAV | Read marks and place | `[sync]` | medium |
+| Sync: WebDAV, a snapshot of the journal | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 
 ## Won't do

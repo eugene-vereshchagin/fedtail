@@ -1,5 +1,6 @@
 **0.22.0 (in progress):**
 
+- A draft's pictures travel with it
 - Formatting buttons
 
 **0.21.0:**

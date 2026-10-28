@@ -7,6 +7,7 @@ What's new in the latest versions, and the plans.
 <!-- include: parts/whats-new -->
 **0.22.0 (in progress):**
 
+- A draft's pictures travel with it
 - Formatting buttons
 
 **0.21.0:**
@@ -55,7 +56,7 @@ Each feature comes switchable, one at a time, with its entry here and a line in 
 
 | What | Chapter | Config | Size |
 |---|---|---|---|
-| Sync: the key by a QR code, drafts' pictures, WebDAV | Read marks and place | `[sync]` | medium |
+| Sync: WebDAV, a snapshot of the journal | Read marks and place | `[sync]` | medium |
 | Toga (BeeWare) | Interfaces | — | large |
 
 ### Won't do

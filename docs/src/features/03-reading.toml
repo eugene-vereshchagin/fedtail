@@ -144,16 +144,32 @@ details.ru = "Esc закрывает то, что сверху (картинку
 details.en = "Esc closes what's on top (a picture, the search), and the last Esc with `window.esc = \"curtain\"` draws a curtain over all lanes: the window stays, the counts on the left, nothing on the right, and nothing is marked read — open it in the morning and the new has piled up. `\"tray\"` — off to the tray, `\"off\"` — nothing. What to start with — `window.start_lane`: `\"none\"` (the curtain, Enter opens the last one), `\"last\"` or a lane's name."
 
 [[feature]]
+id = "sync-draft-pictures"
+status = "has"
+android = "has"
+since = "0.22.0"
+name.ru = "Картинки черновика едут вместе с ним"
+name.en = "A draft's pictures travel with it"
+config = "`sync.drafts`; the server: `max_media_kb`, `media_quota_mb`, `media_keep_days`, `media_per_minute`"
+api.ru = "своё: `PUT/GET/DELETE /v1/media/<имя>` у fedtail-sync, `media/` в папке"
+api.en = "own: `PUT/GET/DELETE /v1/media/<name>` of fedtail-sync, `media/` in a folder"
+others.ru = "только в fedtail"
+others.en = "only in fedtail"
+clients = []
+details.ru = "Начатый с картинкой черновик дописывается на другом устройстве с той же картинкой, описанием и точкой фокуса. Каждая картинка запечатана ключом аккаунта и названа его хешем: уходит один раз, сколько бы черновик ни сохранялся; отправил или стёр черновик — его картинки уходят и из хранилища. Слишком большая для хранилища или им выброшенная — остаётся на своём устройстве, остальное едет. Сервер синхронизации держит картинки отдельной квотой: сверх неё уходят давно не нужные, так что черновики в цикле перемалывают только свои картинки, а не журнал и не диск."
+details.en = "A draft begun with a picture is finished on another device with the same picture, its description and focus point. Each picture is sealed with the account's key and named by its hash: it goes once however often the draft is saved; a sent or emptied draft takes its pictures off the store too. One too big for the store, or dropped by it, stays on its own device; the rest travels. The sync server keeps pictures under a quota of their own where the least used go first, so drafts made in a loop churn only their own pictures, not the journal or the disk."
+
+[[feature]]
 id = "sync-rest"
 status = "planned"
-name.ru = "Синхронизация: ключ QR-кодом, картинки черновиков, WebDAV"
-name.en = "Sync: the key by a QR code, drafts' pictures, WebDAV"
+name.ru = "Синхронизация: WebDAV, снимок журнала"
+name.en = "Sync: WebDAV, a snapshot of the journal"
 config = "`[sync]`"
 others = "—"
 size.ru = "средний"
 size.en = "medium"
-details.ru = "Ключ переносится QR-кодом из окна на камеру телефона; картинки черновика едут вместе с ним; WebDAV без монтирования; старые журналы упаковываются в снимок."
-details.en = "The key carried by a QR code from the window to the phone's camera; a draft's pictures travel with it; WebDAV without mounting; old journals packed into a snapshot."
+details.ru = "WebDAV без монтирования; старые журналы упаковываются в снимок."
+details.en = "WebDAV without mounting; old journals packed into a snapshot."
 
 [[feature]]
 id = "hold-new"

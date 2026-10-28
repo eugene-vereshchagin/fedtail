@@ -1,9 +1,10 @@
 """Where the sealed batches meet: a sync server, or a folder every device sees.
 
 A backend knows two things: put a blob (`push`) and give the blobs other devices put
-since a cursor (`pull`). It never opens a blob — they are sealed (crypto.py) — so any
-dumb store will do; adding one is a class here and an option in `[sync]` that says
-where it is (as `url` and `folder` do).
+since a cursor (`pull`) — and, where it can, keeps the pictures of drafts by name beside
+them (`media_kb`, `media_put`, `media_get`, `media_delete`). It never opens a blob —
+they are sealed (crypto.py) — so any dumb store will do; adding one is a class here and
+an option in `[sync]` that says where it is (as `url` and `folder` do).
 
 * `HttpBackend` — fedtail-sync (its own repository, fedtail-syncserver) or anything speaking its two
   calls. The device proves who it is with a token of the account limited to
@@ -31,6 +32,8 @@ log = logging.getLogger(__name__)
 
 TIMEOUT = (10, 30)
 PAGE = 200  # blobs per pull
+FOLDER_MEDIA_KB = 4096  # a picture a folder takes (the server says its own)
+_MEDIA_NAME = re.compile(r"^[0-9a-f]{32,64}$")
 
 
 class BackendError(Exception):
@@ -96,6 +99,44 @@ class HttpBackend:
         last = max([seq for seq, _ in got] + [int(data.get("last") or 0), after])
         return [b for _, b in got], last, bool(data.get("more"))
 
+    # ---- the pictures of drafts (PROTOCOL.md: /v1/media) ---------------------------
+    def media_kb(self):
+        """The biggest picture the server keeps, in KB; 0 — it keeps none (an older one,
+        or turned off). Asked once."""
+        if getattr(self, "_media_kb", None) is None:
+            try:
+                r = self.s.get(f"{self.url}/v1", timeout=TIMEOUT)
+                self._media_kb = int(r.json().get("media_kb") or 0) if r.ok else 0
+            except (requests.RequestException, ValueError, AttributeError, TypeError):
+                return 0  # asked again next time
+        return self._media_kb
+
+    def _media(self, method, name, **kw):
+        if not _MEDIA_NAME.match(name):
+            raise ValueError(name)
+        try:
+            return self.s.request(method, f"{self.url}/v1/media/{name}", timeout=TIMEOUT, **kw)
+        except requests.RequestException as e:
+            raise BackendError("other", f"sync server: {self._net(e)}") from e
+
+    def media_put(self, name, blob):
+        r = self._media("PUT", name, data=blob,
+                        headers={"Content-Type": "application/octet-stream"})
+        self._check(r)
+
+    def media_get(self, name):
+        """The sealed bytes, or None — gone (the server drops the least used)."""
+        r = self._media("GET", name)
+        if r.status_code == 404:
+            return None
+        self._check(r)
+        return r.content
+
+    def media_delete(self, name):
+        r = self._media("DELETE", name)
+        if r.status_code != 404:
+            self._check(r)
+
 
 _NAME = re.compile(r"^(\d{12})\.fts$")
 _DEVICE = re.compile(r"^[0-9a-f]{8,32}$")
@@ -143,3 +184,31 @@ class FolderBackend:
                     break
                 cursor[sub.name] = n
         return out, cursor, more
+
+    # ---- the pictures of drafts: <folder>/media/<name> -----------------------------
+    def media_kb(self):
+        return FOLDER_MEDIA_KB
+
+    def _media_file(self, name):
+        if not _MEDIA_NAME.match(name):
+            raise ValueError(name)
+        self._ready()
+        return self.root / "media" / name
+
+    def media_put(self, name, blob):
+        f = self._media_file(name)
+        if f.exists():
+            return
+        f.parent.mkdir(exist_ok=True)
+        tmp = f.with_name(f".{name}.part")
+        tmp.write_bytes(blob)
+        os.replace(tmp, f)
+
+    def media_get(self, name):
+        try:
+            return self._media_file(name).read_bytes()
+        except FileNotFoundError:
+            return None
+
+    def media_delete(self, name):
+        self._media_file(name).unlink(missing_ok=True)

@@ -14,8 +14,12 @@ What travels — a switch for each in `[sync]`:
   is one value, the newest wins.
 * "drafts" — unsent posts, one per draft key ("new", "reply:<id>", "quote:<id>": post
   ids are the account's, the same everywhere); the newest version wins, a sent or
-  emptied draft goes everywhere. Attachments are files of this computer: they stay here
-  (a draft from elsewhere keeps the ones this device had for it).
+  emptied draft goes everywhere. Its pictures travel beside the journal where the store
+  keeps them (a fedtail-sync that says `media_kb`, or a folder): each sealed, named by a
+  keyed hash (sent once, however often the draft is saved), fetched by the other devices
+  into `sync_media/` of their profile; a sent or emptied draft takes its pictures off the
+  store. Too big for the store, or one it dropped (it keeps the least used) — that
+  picture stays on its own device, the rest goes.
 * "activity" — notifications I dismissed from Activity (the server can't always forget
   them): hidden on every device. Like read marks, they only add up.
 * "tiles" — which lanes the phone pins as tiles (kv "pinned_tiles", set through
@@ -39,10 +43,12 @@ a device without a key facing someone's journal stops and asks for `fedtail sync
 
 import json
 import logging
+import os
 import threading
 import time
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 from ...i18n import _
 from .. import auth
@@ -51,6 +57,9 @@ from . import backends, crypto
 log = logging.getLogger(__name__)
 
 THREAD_STATES = ("sub", "left", "muted")
+# the drafts' pictures that travel: what a fediverse server takes as an attachment
+MEDIA_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".heic", ".mp4", ".webm",
+              ".mov", ".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".m4a")
 WHAT = ("read", "threads", "lanes", "drafts", "activity", "tiles",
         "lane_rules", "people")  # = config.SYNC_WHAT
 # kv values carried whole (the newest wins) → the switch that lets them travel; app.py
@@ -100,6 +109,11 @@ def load_auth(path):
     return data if ok else None
 
 
+def media_dir(paths):
+    """Where the other devices' pictures of drafts are kept here."""
+    return Path(paths.data_dir) / "sync_media"
+
+
 class Sync:
     def __init__(self, core):
         self.core = core
@@ -116,6 +130,7 @@ class Sync:
         self._trouble = ""
         self._last_at = 0  # stamps strictly rise: two changes in one ms keep their order
         self._drafts = {}  # draft key → when it changed: sent at the next round, once
+        self._media_at = None  # (backend, key) while a round runs: the drafts' pictures
         self._lock_at = threading.Lock()  # guards both
 
     def _device(self):
@@ -165,18 +180,127 @@ class Sync:
             self.store.sync_record({"h": rows})
             self._wake.set()
 
-    def _flush_drafts(self):
+    def _flush_drafts(self, backend=None, key=None):
         with self._lock_at:
             dirty, self._drafts = self._drafts, {}
-        for key, at in dirty.items():
-            d = self.store.get_draft(key)
+        for dkey, at in dirty.items():
+            d = self.store.get_draft(dkey)
             value = None
             if d:
                 value = {k: v for k, v in d.items() if k != "media"}
-                if not any(value.get(k) for k in ("text", "cw", "poll")):
-                    continue  # only pictures: nothing another device could use
-            self.store.sync_newer(f"d:{key}", at, self.device, json.dumps(value))
-            self.store.sync_record({"dr": key, "v": value, "at": at})
+                refs = self._send_media(backend, key, d.get("media") or ())
+                if refs:
+                    value["media_refs"] = refs
+                if not refs and not any(value.get(k) for k in ("text", "cw", "poll")):
+                    continue  # only pictures that can't travel: nothing for another device
+                self._draft_refs(dkey, [r["ref"] for r in refs])
+            else:
+                self._drop_media(backend, self._draft_refs(dkey, []))
+            self.store.sync_newer(f"d:{dkey}", at, self.device, json.dumps(value))
+            self.store.sync_record({"dr": dkey, "v": value, "at": at})
+
+    # ---- the drafts' pictures ------------------------------------------------------
+    MEDIA_SENT_KEEP = 500  # names this device put on the store: not put again
+
+    def _send_media(self, backend, key, media):
+        """This device's pictures of a draft onto the store (each once) → their refs:
+        [{"ref", "ext", "desc", "focus"}] — the ones that can't go (too big, gone from
+        the disk, a store without pictures) are left out."""
+        if backend is None or key is None or not media:
+            return []
+        try:
+            kb = backend.media_kb()
+        except backends.BackendError:
+            kb = 0
+        if not kb:
+            return []
+        sent = list(self.store.kv_get("sync.media_sent") or ())
+        refs = []
+        for m in media:
+            m = list(m) if isinstance(m, (list, tuple)) else [m]
+            path = Path(str(m[0])) if m else None
+            ext = path.suffix.lower() if path else ""
+            try:
+                if path is None or ext not in MEDIA_EXTS or path.stat().st_size > kb * 1024:
+                    continue
+                data = path.read_bytes()
+            except OSError:
+                continue
+            name = crypto.media_name(key, data)
+            if name not in sent:
+                try:
+                    backend.media_put(name, crypto.seal_media(key, data))
+                except backends.BackendError as e:
+                    log.info("sync: a picture of a draft not sent: %s", e)
+                    continue
+                sent.append(name)
+            refs.append({"ref": name, "ext": ext, "desc": str(m[1] if len(m) > 1 else ""),
+                         "focus": m[2] if len(m) > 2 else None})
+        self.store.kv_set("sync.media_sent", sent[-self.MEDIA_SENT_KEEP:])
+        return refs
+
+    def _draft_refs(self, dkey, names):
+        """The pictures a draft has on the store now (kv "sync.draft_media"); → the ones it
+        had before that no draft has any more (to take off the store)."""
+        table = dict(self.store.kv_get("sync.draft_media") or {})
+        before = set(table.get(dkey) or ())
+        if names:
+            table[dkey] = list(names)
+        else:
+            table.pop(dkey, None)
+        self.store.kv_set("sync.draft_media", table)
+        still = {n for v in table.values() for n in v}
+        return sorted(before - still)
+
+    def _drop_media(self, backend, names):
+        if not names:
+            return
+        sent = [n for n in self.store.kv_get("sync.media_sent") or () if n not in names]
+        self.store.kv_set("sync.media_sent", sent)
+        for name in names:
+            f = next(media_dir(self.paths).glob(name + ".*"), None) \
+                if media_dir(self.paths).is_dir() else None
+            if f is not None:
+                f.unlink(missing_ok=True)
+            if backend is not None:
+                try:
+                    backend.media_delete(name)
+                except (backends.BackendError, ValueError) as e:
+                    log.info("sync: a picture not taken off the store: %s", e)
+
+    def _fetch_media(self, refs):
+        """Another device's pictures of a draft → [[path, desc, focus]] here (fetched into
+        sync_media/ once); those the store no longer has, or that don't open, left out."""
+        backend, key = self._media_at or (None, None)
+        out = []
+        folder = media_dir(self.paths)
+        for r in refs if isinstance(refs, list) else ():
+            if not isinstance(r, dict):
+                continue
+            name, ext = str(r.get("ref") or ""), str(r.get("ext") or "")
+            if not backends._MEDIA_NAME.match(name) or ext not in MEDIA_EXTS:
+                continue
+            f = folder / (name + ext)
+            if not f.exists():
+                if backend is None:
+                    continue
+                try:
+                    blob = backend.media_get(name)
+                    data = crypto.unseal_media(key, blob) if blob else None
+                except (backends.BackendError, crypto.BadBlob) as e:
+                    log.info("sync: a picture of a draft not fetched: %s", e)
+                    continue
+                if data is None or crypto.media_name(key, data) != name:
+                    continue  # gone from the store, or not the picture its name says
+                folder.mkdir(parents=True, exist_ok=True)
+                tmp = f.with_name("." + f.name + ".part")
+                tmp.write_bytes(data)
+                os.replace(tmp, f)
+            item = [str(f), str(r.get("desc") or "")]
+            if r.get("focus") is not None:
+                item.append(r["focus"])
+            out.append(item)
+        return out
 
     def record_thread(self, root, state):
         if "threads" not in self.what or not root or state not in THREAD_STATES:
@@ -238,7 +362,8 @@ class Sync:
                 key = self._key(backend)
                 if key is None:
                     return None
-                self._flush_drafts()
+                self._media_at = (backend, key)  # for the drafts' pictures, this round
+                self._flush_drafts(backend, key)
                 sent = self._push(backend, key)
                 got = self._pull(backend, key) if pull else 0
             except backends.BackendError as e:
@@ -249,6 +374,8 @@ class Sync:
             except crypto.CryptoMissing:
                 self._problem("crypto", _("sync_no_crypto"))
                 return None
+            finally:
+                self._media_at = None
             self.store.kv_set("sync.last", {"at": _iso(), "sent": sent, "got": got,
                                             "error": self._trouble})
             self.core.emit("sync_changed", None)
@@ -460,12 +587,19 @@ class Sync:
         return len(reads) + len(threads) + len(lanes) + int(tiles) + len(hidden) + len(drafts)
 
     def _apply_draft(self, key, value):
-        """Another device's version of a draft; this device's attachments for it stay."""
+        """Another device's version of a draft, with its pictures fetched; one without
+        pictures of its own keeps this device's ones for it."""
         if value is None:
             self.store.delete_draft(key)
+            self._drop_media(None, self._draft_refs(key, []))  # our copies of its pictures
             return
+        value = dict(value)
+        refs = value.pop("media_refs", None)
         mine = self.store.get_draft(key) or {}
-        self.store.save_draft(key, {**value, "media": mine.get("media", [])})
+        media = self._fetch_media(refs) if refs else []
+        self.store.save_draft(key, {**value, "media": media or mine.get("media", [])})
+        if refs:
+            self._draft_refs(key, [str(r.get("ref")) for r in refs if isinstance(r, dict)])
 
     @staticmethod
     def _setting_ok(key, value):

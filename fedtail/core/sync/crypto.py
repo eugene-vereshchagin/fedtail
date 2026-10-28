@@ -110,6 +110,51 @@ def unseal(key, blob):
     return json.loads(data)
 
 
+# ---- the pictures of drafts ---------------------------------------------------------
+# A draft's picture travels on its own, beside the journal (the store keeps it under a
+# name, PROTOCOL.md): sealed like a blob, its bytes in place of the JSON, and named by a
+# keyed hash — the same picture has the same name (stored once), and the name tells the
+# store nothing about it.
+#
+#     picture = b"FTM1" | key id (8) | nonce (12) | AES-GCM(the bytes) with the first 12 as AAD
+
+MEDIA = b"FTM1"
+MAX_MEDIA = 16 * 1024 * 1024  # a picture never opens bigger than this
+
+
+def media_name(key, data):
+    import hashlib
+    import hmac
+    return hmac.new(key, b"fedtail-media" + bytes(data), hashlib.sha256).hexdigest()[:48]
+
+
+def seal_media(key, data):
+    head = MEDIA + key_id(key)
+    nonce = os.urandom(_NONCE)
+    return head + nonce + _aes(key).encrypt(nonce, bytes(data), head)
+
+
+def unseal_media(key, blob):
+    """The picture's bytes; BadBlob: not one, another key's, damaged, or not the picture
+    its name says (`media_name` is checked by the caller)."""
+    blob = bytes(blob)
+    if len(blob) < _HEAD + _NONCE + 16 or blob[:len(MEDIA)] != MEDIA:
+        raise BadBlob("not a fedtail picture")
+    if len(blob) > MAX_MEDIA + _HEAD + _NONCE + 16:
+        raise BadBlob("too big")
+    if blob[len(MEDIA):_HEAD] != key_id(key):
+        raise BadBlob("sealed by another key")
+    head, nonce, body = blob[:_HEAD], blob[_HEAD:_HEAD + _NONCE], blob[_HEAD + _NONCE:]
+    try:
+        from cryptography.exceptions import InvalidTag
+    except ImportError as e:
+        raise CryptoMissing("sync needs the 'cryptography' package") from e
+    try:
+        return _aes(key).decrypt(nonce, body, head)
+    except InvalidTag as e:
+        raise BadBlob("damaged or forged") from e
+
+
 # ---- the key kept in the journal under a password ("escrow") ------------------------
 # A device that knows the key may put it into the journal itself, sealed by a password:
 # a new device with only the password (and the login to the account) takes it from
