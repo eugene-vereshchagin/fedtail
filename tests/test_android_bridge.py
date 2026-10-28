@@ -669,6 +669,9 @@ class BridgeGapsTest(_Base):
     def test_background_round_keeps_slow_mode(self):
         self.demo()
         core = self.bridge._s["core"]
+        core.pause_polling(True)  # as on the phone: out of sight, the poller waits (it
+        # polled at once when woken by set_slow, and poll_once counted twice: flaky)
+        self.addCleanup(lambda: setattr(core, "_paused", False))
         core.set_slow(60)
         core._last_poll_ok = __import__("time").time()
         with mock.patch.object(core, "poll_once") as poll:

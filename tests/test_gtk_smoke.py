@@ -536,7 +536,8 @@ class GtkSmokeTest(_GtkBase):
         with mock.patch.object(type(self.core), "poll_state", create=True,
                                return_value={"busy": False}):  # (the window may poll now)
             self.win._curtain_swing()
-        self.assertFalse(self.win._swing_on)
+        # the swing runs out first, then stands still (as Qt's)
+        self.assertTrue(pump(lambda: not self.win._swing_on, 5))
         self.world.add(status("030", BOB, minute=30, text="пока шторка"), home=True)
         self.core.poll_once()
         self.assertTrue(pump(lambda: i18n._("lane_home") in
@@ -1532,12 +1533,12 @@ class GtkSplitTest(_GtkBase):
         self.assertIn("home", win.lane_tabs)  # the start lane: a tab of its own
         lane = win.lane_tabs["home"]
         self.assertTrue(win.lane_on_screen("home"))
-        win.roster.open("replies")
+        win.roster.open("to_me")  # a lane of the set (fedtail's: "To me", not "replies")
         pump(timeout=0.3)
-        self.assertIn("replies", win.lane_tabs)
-        self.assertTrue(win.lane_on_screen("replies"))
-        win.close_lane_tab("replies")
-        self.assertNotIn("replies", win.lane_tabs)
+        self.assertIn("to_me", win.lane_tabs)
+        self.assertTrue(win.lane_on_screen("to_me"))
+        win.close_lane_tab("to_me")
+        self.assertNotIn("to_me", win.lane_tabs)
         # the input line: a new post over a lane; a reply when the card's button says so
         win.tabs.set_current_page(win.tabs.page_num(lane))
         pump(timeout=0.2)

@@ -112,7 +112,10 @@ class LaneView(Gtk.Box):
         self._filter_buttons = {}
         if len(self.lm.filters) > 1:
             group = None
-            seg = Gtk.Box()
+            # Home's quick filters are many (tags, boosts, threads with news…): one row
+            # of them wraps too, or a narrow window can't be narrower than they are
+            seg = wrap_box(spacing=2, row_spacing=2) if len(self.lm.filters) > 3 \
+                else Gtk.Box()
             seg.add_css_class("linked")
             now = self.lm.current_filter()
             for which in self.lm.filters:
