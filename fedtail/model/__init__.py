@@ -177,7 +177,9 @@ class Poll:
         themselves, so no option is ever over 100 %. 0: no votes."""
         counts = [o.votes or 0 for o in self.options]
         if self.multiple:
-            return max(self.people or 0, max(counts, default=0), 0) or self.votes or 0
+            if self.people is None:  # who voted, unsaid: the votes, at least the top's
+                return max(self.votes or 0, max(counts, default=0))
+            return max(self.people, max(counts, default=0))
         return max(self.votes or 0, sum(counts))
 
 

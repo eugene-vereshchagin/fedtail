@@ -80,6 +80,16 @@ sort = "post_time"
 any = [{}]
 none = [{ me = "reply" }]
 
+# "Commented posts", as on Point: threads with new comments, a card each
+[[fedtail]]
+name = "commented"
+group = "personal"
+source = ["subs", "mentions"]  # the comments, and the replies to me among them
+view = "threads"
+icon = "subs"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
 [[fedtail]]
 name = "important"
 group = "personal"
@@ -387,6 +397,16 @@ kind = "tags"
 # Lanes no set shows by default but any config may turn on (lanes.enabled) or take as a
 # start for its own: the ones before To me, Follow requests as a lane, My likes.
 
+# "Commented posts", as on Point — fedtail's set has it; any other may turn it on
+[[extra]]
+name = "commented"
+group = "personal"
+source = ["subs", "mentions"]  # the comments, and the replies to me among them
+view = "threads"
+icon = "subs"
+any = [{ state = "subscribed" }]
+none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
+
 [[extra]]
 name = "replies"
 group = "personal"
@@ -415,18 +435,6 @@ none = [{ state = "unliked" }]
 name = "requests"
 group = "personal"
 kind = "requests"
-
-# "Commented posts", as on Point: the threads followed (mine, those I commented in —
-# subs.auto — and those subscribed by hand) that have new comments, a card each; a
-# click opens the thread at its first new comment
-[[extra]]
-name = "commented"
-group = "personal"
-source = ["subs", "mentions"]  # the comments, and the replies to me among them
-view = "threads"
-icon = "subs"
-any = [{ state = "subscribed" }]
-none = [{ author = "me" }, { visibility = "direct", apart = "direct" }]
 
 # "The network": Federated without my own server's people — what other servers bring
 [[extra]]

@@ -18,7 +18,7 @@
   (it was 3–5 s for each part), so starting again doesn't find the old one "already
   running".
 
-- **"Commented posts"** (the extra set's `commented`, as on Point): your posts, threads
+- **"Commented posts"** (`commented`, as on Point; shown by default in fedtail's set, the others may turn it on — the extra set): your posts, threads
   you commented in and those followed by hand — the ones with new comments, a card a
   thread with how many are new; a click opens the thread at the first new comment. Any
   lane of rules can be shown so: `view = "threads"` (the editor's "Show: threads"). The
