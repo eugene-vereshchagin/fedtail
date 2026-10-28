@@ -49,10 +49,20 @@ class SyncPlaceTest(Devices):
         p_desk = self.place(self.desk)
         shown = p_desk.act("sync", "show", "", confirmed=True)
         self.assertEqual(shown.copy, self.desk.sync_key())
+        page = p_desk.page("sync")  # done: the password is a row of its own, not a form
+        self.assertFalse(page.form)
+        row = next(r for r in page.rows if r.key == "escrow")
+        self.assertIn("Not set", row.line)
+        page = p_desk.page("sync", "", "escrow")
+        self.assertEqual(page.tab, "escrow")
+        self.assertIn("NOT your account", page.hint)
+        self.assertEqual([f.name for f in page.form], ["password", "password2"])
         self.assertIn("short", p_desk.act("sync", "escrow", "",
                                           {"password": "abc", "password2": "abc"}).error)
         p_desk.act("sync", "escrow", "", {"password": "correct horse battery",
                                           "password2": "correct horse battery"})
+        row = next(r for r in p_desk.page("sync").rows if r.key == "escrow")
+        self.assertIn("Set:", row.line)
         p_phone = self.place(self.phone)
         page = p_phone.page("sync")
         self.assertEqual(page.tab, "key")

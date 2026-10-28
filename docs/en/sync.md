@@ -67,14 +67,18 @@ needs. The same in the Qt window, GTK, the terminal, the web page and the phone.
      here, and this device starts the journal. If the store holds someone's journal
      already, fedtail says so and offers the other way.
    * **"I'm adding this device to those already syncing"** — on the old device
-     ≡ → Sync → "Copy the key", here — paste it. Or, if the key was put into the
-     journal under a password there, the password alone, no old device needed. Neither
+     ≡ → Sync → "Copy the key", here — paste it. Or, if a "password for new
+     devices" was set there, that alone, no old device needed. Neither
      at hand — "Start again with a new key…" (what was read before won't come here, and
      the other devices will have to take the new key later).
 
 Once it's all done, the same page shows how it goes, "Sync now", "Copy the key" for the
-next device, "Put the key into the journal under a password" (then the next device joins
-with the password alone), what to sync, changing the server, turning it off.
+next device, what to sync, changing the server, turning it off.
+
+**A password for new devices** (optional, there too — "Set a password…"). It's not your
+account's password nor the server's: you make it up. The key goes into the sync journal
+sealed by it (scrypt + AES-GCM), and a new device needs the password instead of the long
+key. Forgot it — nothing breaks: the key can always be copied from a working device.
 
 A device without the key that finds someone's journal in the store doesn't make a key of
 its own: it says the key is needed (and that it can be taken by a password, if it is in

@@ -29,6 +29,11 @@ _LOGIN = {}  # profile → the sync login under way (core.sync_login_begin's pen
 STEPS = ("where", "login", "key")
 
 
+def crypto_min():
+    from ...core.sync import crypto
+    return crypto.MIN_PASSWORD
+
+
 class SyncPlaces:
     def _sync_state(self):
         """(status or None, the step it stands at: "where" | "login" | "key" | "done")."""
@@ -64,9 +69,12 @@ class SyncPlaces:
         v = self.view
         st, at = self._sync_state()
         step = tab if tab in ("where", "join", "first") else at
+        if tab == "escrow" and at == "done":
+            step = "escrow"
         page = Page("sync", _("sync_title"), tab=step)
         self._sync_steps(page, st, "key" if step in ("join", "first") else
-                         ("where" if step == "where" else at))
+                         ("where" if step == "where" else
+                          ("done" if step == "escrow" else at)))
         s = v.cfg["sync"]
 
         if step == "where":
@@ -130,6 +138,14 @@ class SyncPlaces:
                                          _("sync_fresh_btn"), "sync", "fresh"),)))
             return page
 
+        if step == "escrow":  # the password for new devices, on a page of its own
+            page.hint = _("sync_escrow_hint", n=crypto_min())
+            page.form = (Field("password", _("sync_password"), "", "secret"),
+                         Field("password2", _("sync_password_again"), "", "secret"))
+            page.submit = Btn(_("sync_escrow_put"), ("sync", "escrow", ""), True)
+            page.more = Btn(_("sync_back_done"), ("sync", "goto", "done"))
+            return page
+
         # done: how it goes, and what one does with it from here
         last = (st or {}).get("last") or {}
         nothing = _("sync_nothing")
@@ -141,14 +157,15 @@ class SyncPlaces:
                 buttons=(self._btn(_("sync_now_btn"), "sync", "now", primary=True),)),
             Row("item", _("sync_next_device_title"), _("sync_next_device_line"),
                 key="show", buttons=(self._btn(_("sync_key_show_btn"), "sync", "show"),)),
-            Row("item", _("sync_escrow_title"), _("sync_escrow_line"), key="escrow"),
+            Row("item", _("sync_escrow_title"),
+                _("sync_escrow_set") if v.sync_has_escrow() else _("sync_escrow_line"),
+                key="escrow", buttons=(self._btn(
+                    _("sync_escrow_change") if v.sync_has_escrow() else _("sync_escrow_btn"),
+                    "sync", "goto", "escrow"),)),
             Row("item", _("sync_what_title"), _("sync_what_line"), key="what",
                 buttons=(self._btn(_("sync_what_btn"), "sync", "what"),
                          self._btn(_("sync_change_where"), "sync", "goto", "where"))),
         ]
-        page.form = (Field("password", _("sync_password"), "", "secret"),
-                     Field("password2", _("sync_password_again"), "", "secret"))
-        page.submit = Btn(_("sync_escrow_put"), ("sync", "escrow", ""))
         return page
 
     # ---- the buttons ---------------------------------------------------------------
@@ -252,7 +269,7 @@ class SyncPlaces:
         if one != two:
             return Out(error=_("sync_password_differ"))
         self.view.sync_put_escrow(one)
-        return Out(message=_("sync_escrow_done"), refresh=True)
+        return Out(message=_("sync_escrow_done"), open={"page": "sync"})
 
     def _a_sync_take(self, _d, values, _c, _ans):
         from ...core.sync import crypto

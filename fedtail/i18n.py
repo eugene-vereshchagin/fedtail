@@ -185,8 +185,8 @@ _STRINGS = {
                                   "возьми его ключ",
         "sync_join_hint": "На устройстве, где синхронизация уже работает: ≡ → Синхронизация → "
                           "«Скопировать ключ», и вставь его сюда (мессенджер с самим собой, "
-                          "менеджер паролей). Если ключ там клали в журнал под паролем — "
-                          "достаточно пароля.",
+                          "менеджер паролей). Если там задавали пароль для новых устройств — "
+                          "хватит его.",
         "sync_lost_title": "Старого устройства под рукой нет и пароля нет?",
         "sync_lost_line": "Можно начать заново с новым ключом: прочитанное до этого сюда не "
                           "придёт, а старым устройствам потом надо будет взять новый ключ.",
@@ -239,17 +239,29 @@ _STRINGS = {
         "sync_key_show_btn": "Скопировать ключ",
         "sync_key_show_sure": "Ключ открывает всё, что синхронизируется. Скопировать его в буфер "
                               "обмена?",
-        "sync_key_copied": "Ключ в буфере обмена — вставь его на другом устройстве (≡ → "
-                           "Синхронизация → Ключ)",
-        "sync_escrow_title": "Ключ под паролем в журнале",
-        "sync_escrow_line": "Положи ключ в сам журнал, зашифровав паролем: новое устройство "
-                            "достанет его одним паролем, даже если этого устройства нет под рукой. "
-                            "Пароль подбирать долго (scrypt), но выбери длинный.",
+        "sync_key_copied": "Ключ в буфере обмена — на новом устройстве: ≡ → Синхронизация → "
+                           "«Добавить к настроенным»",
+        "sync_escrow_title": "Пароль для новых устройств (по желанию)",
+        "sync_escrow_line": "Не задан. Задай — и на новом ноутбуке или телефоне хватит этого "
+                            "пароля вместо длинного ключа.",
+        "sync_escrow_set": "Задан: на новом устройстве хватит этого пароля вместо ключа.",
+        "sync_escrow_btn": "Задать пароль…",
+        "sync_escrow_change": "Сменить пароль…",
+        "sync_back_done": "← Назад",
+        "sync_escrow_hint": "Это НЕ пароль от аккаунта и не от сервера — его придумываешь ты, "
+                            "прямо сейчас.\n\nЗачем: новому устройству нужен ключ синхронизации "
+                            "(длинная строка ABCD-EFGH-…), и его надо как-то туда перетащить. "
+                            "Если задать пароль, ключ ляжет в журнал синхронизации, зашифрованный "
+                            "этим паролем, и на новом устройстве («Добавить к настроенным») "
+                            "хватит ввести пароль — ключ оно достанет само.\n\nЭто необязательно: "
+                            "без пароля просто копируешь ключ кнопкой «Скопировать ключ». Не "
+                            "короче {n} знаков; забудешь — ничего не сломается, ключ всегда можно "
+                            "скопировать с работающего устройства.",
         "sync_password": "Пароль",
         "sync_password_again": "Ещё раз",
-        "sync_escrow_put": "Положить ключ в журнал под паролем",
-        "sync_escrow_done": "Ключ лежит в журнале под паролем — на новом устройстве: ≡ → "
-                            "Синхронизация → Ключ, пароль",
+        "sync_escrow_put": "Сохранить пароль",
+        "sync_escrow_done": "Готово — на новом устройстве выбери «Добавить к настроенным» и введи "
+                            "этот пароль",
         "sync_password_short": "Пароль короче {n} знаков — возьми подлиннее",
         "sync_password_differ": "Пароли не совпали",
         "sync_no_key_title": "Ключа на этом устройстве нет",
@@ -259,8 +271,9 @@ _STRINGS = {
                             "введи пароль, если ключ кладут в журнал.",
         "sync_key_paste_f": "Ключ с другого устройства",
         "sync_key_paste_tip": "Вида ABCD-EFGH-…; пробелы и регистр неважны",
-        "sync_password_take": "…или пароль ключа из журнала",
-        "sync_password_take_tip": "Ключ лежит в журнале под паролем — достаточно пароля",
+        "sync_password_take": "…или пароль для новых устройств",
+        "sync_password_take_tip": "Если на старом устройстве его задавали — хватит его, ключ не "
+                                  "нужен",
         "sync_take_btn": "Взять ключ",
         "sync_take_what": "Вставь ключ или введи пароль",
         "sync_password_wrong": "Пароль не подошёл",
@@ -1691,8 +1704,8 @@ _STRINGS = {
         "sync_first_but_journal": "The store holds another device's journal already — this isn't "
                                   "the first: take its key",
         "sync_join_hint": "On a device where sync already works: ≡ → Sync → “Copy the key”, and "
-                          "paste it here (a chat with yourself, a password manager). If the key "
-                          "was put into the journal under a password there — the password will do.",
+                          "paste it here (a chat with yourself, a password manager). If a password "
+                          "for new devices was set there — it is enough.",
         "sync_lost_title": "No old device at hand and no password?",
         "sync_lost_line": "You can start again with a new key: what was read before won't come "
                           "here, and the old devices will have to take the new key later.",
@@ -1742,17 +1755,28 @@ _STRINGS = {
                          "carried from one to another.",
         "sync_key_show_btn": "Copy the key",
         "sync_key_show_sure": "The key opens everything that is synced. Copy it to the clipboard?",
-        "sync_key_copied": "The key is on the clipboard — paste it on the other device (≡ → Sync → "
-                           "Key)",
-        "sync_escrow_title": "The key under a password in the journal",
-        "sync_escrow_line": "Put the key into the journal itself, sealed by a password: a new "
-                            "device takes it with the password alone, even when this one isn't at "
-                            "hand. The password is slow to guess (scrypt), but pick a long one.",
+        "sync_key_copied": "The key is on the clipboard — on the new device: ≡ → Sync → “Add to "
+                           "those set up”",
+        "sync_escrow_title": "A password for new devices (optional)",
+        "sync_escrow_line": "Not set. Set one, and a new laptop or phone needs only this password "
+                            "instead of the long key.",
+        "sync_escrow_set": "Set: a new device needs only this password instead of the key.",
+        "sync_escrow_btn": "Set a password…",
+        "sync_escrow_change": "Change the password…",
+        "sync_back_done": "← Back",
+        "sync_escrow_hint": "This is NOT your account's password nor the server's — you make it "
+                            "up, right now.\n\nWhat for: a new device needs the sync key (a long "
+                            "line ABCD-EFGH-…), and it has to get there somehow. With a password, "
+                            "the key goes into the sync journal sealed by it, and on the new "
+                            "device (“Add to those set up”) the password is enough — it takes the "
+                            "key itself.\n\nIt's optional: without it you just copy the key with "
+                            "“Copy the key”. At least {n} characters; forget it and nothing "
+                            "breaks — the key can always be copied from a working device.",
         "sync_password": "Password",
         "sync_password_again": "Once more",
-        "sync_escrow_put": "Put the key into the journal under a password",
-        "sync_escrow_done": "The key is in the journal under a password — on a new device: ≡ → "
-                            "Sync → Key, the password",
+        "sync_escrow_put": "Save the password",
+        "sync_escrow_done": "Done — on a new device pick “Add to those set up” and type this "
+                            "password",
         "sync_password_short": "The password is shorter than {n} characters — take a longer one",
         "sync_password_differ": "The passwords differ",
         "sync_no_key_title": "No key on this device",
@@ -1762,9 +1786,8 @@ _STRINGS = {
                             "into the journal.",
         "sync_key_paste_f": "The key from another device",
         "sync_key_paste_tip": "Like ABCD-EFGH-…; spaces and case don't matter",
-        "sync_password_take": "…or the password of the key in the journal",
-        "sync_password_take_tip": "The key is in the journal under a password — the password will "
-                                  "do",
+        "sync_password_take": "…or the password for new devices",
+        "sync_password_take_tip": "If one was set on the old device — it is enough, no key needed",
         "sync_take_btn": "Take the key",
         "sync_take_what": "Paste the key or type the password",
         "sync_password_wrong": "The password doesn't fit",

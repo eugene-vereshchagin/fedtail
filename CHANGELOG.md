@@ -2,6 +2,10 @@
 
 ## 0.21.0 — in progress
 
+- ≡ → Sync: the password for new devices is its own page now, saying plainly what it is
+  (not the account's nor the server's — one you make up, so a new device needs it instead
+  of the long key) and that it's optional; the done page only shows whether it's set.
+
 - Fixed: a poll of several choices whose server's "how many voted" lags behind its
   counts showed 400 % — a share is now never over 100 % and "N people" never fewer than
   one option's votes (every interface and the phone).
