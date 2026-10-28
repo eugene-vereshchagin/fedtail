@@ -34,7 +34,7 @@ The goal: **150–250 MB USS** in the same use, and a noticeably brisker lane.
 | 3 | **The database computes the lanes**: the lanes' rules compiled into SQL (WHERE + ORDER + LIMIT) with the indexes they need instead of loading posts into Python to filter them; the atoms SQL can't say computed when a post is stored and kept as columns (language, the event's kind, mine or not, seen already…); EXPLAIN QUERY PLAN checked for every set of lanes; the database's budget of about 1 GB of text a year kept | — |
 | 4 | **Only what is seen in memory**: the core's "window of a lane" — an interface asks for a range around a cursor (say 50 posts), the core gives it and keeps a small buffer around it; lanes not open aren't loaded; unread counts are COUNTs in the database; "where reading stopped" — a cursor in the database, not a loaded lane; one API for every interface and Android | — |
 | 5 | **Interfaces without a widget per post**: Qt — QListView / QAbstractListModel and a delegate that paints; GTK — Gtk.ListView with a model and reused rows; the web page, the terminal, Android — the same window, added lazily while scrolling; row heights cached, text not laid out again without need | — |
-| 6 | **Pictures and media**: decoded right at the size shown (Qt: QImageReader.setScaledSize), the full size only when opened; one picture cache with a limit in MB (an option, a sensible default), LRU; thumbnails cached on disk; media off screen not decoded; video — still a preview only | partly: `media.image_cache_mb`, `image_disk_mb`, `image_decode` |
+| 6 | **Pictures and media**: decoded right at the size shown (Qt: QImageReader.setScaledSize), the full size only when opened; one picture cache with a limit in MB (an option, a sensible default), LRU; thumbnails cached on disk; media off screen not decoded; video — still a preview only | partly: `media.image_cache_mb` (64 MB by default since 0.22, measured), `image_disk_mb`, `image_decode` |
 | 7 | **A lazy start**: heavy modules (language detection, spelling, sound, anything rare) imported at first use; the opossum's curtain drawn first, then the open lane, the rest in the background; every heavy operation (parsing, requests, language detection, the lanes' rules) off the GUI thread | partly: the curtain first (0.22) |
 | 8 | **Budgets as tests**: the bench of step 0 a test with ceilings of memory and time (the start, opening a lane, scrolling); over the ceiling — the test fails, so the lightness doesn't creep back with new features; run in the full CI, not on every small change | — |
 | 9 | **Only if 1–8 aren't enough**: the hot computing parts found by the profile and moved to Rust through PyO3, without touching the core's and the interfaces' architecture | — |
@@ -61,7 +61,9 @@ start over that store, then `--hours` of polling, a dozen new posts every five m
 
 What it says: USS / PSS / RSS (`/proc/self/smaps_rollup`), with `--trace` Python's part by
 package; the core's counters (`Core.diag_stats`); with `--ui qt` the number of widgets and the
-picture cache. Times: the cold start (core, connect, the first round), the first lane, opening
+picture cache (`--ui qt` puts a real JPEG of every picture and avatar of the fake server
+into the disk cache first, as after days of reading — the window decodes and keeps them as it
+would; `--image-mb N` sets `media.image_cache_mb`). Times: the cold start (core, connect, the first round), the first lane, opening
 every lane and the slowest of them, the rules applied anew, the day of polling, and with
 `--ui qt` scrolling Home through 1000 posts.
 
@@ -81,7 +83,8 @@ downloaded — the fake server's addresses lead nowhere — so the picture cache
 | RSS | 516.3 |
 
 The author's laptop said USS 484 MB: the bench reproduces the problem without pictures,
-so it is in our structures, not in images.
+so it is in our structures, not only in images (pictures came to the bench later — see below:
+they are a good part of it too).
 
 | time | ms |
 |---|---|
@@ -121,6 +124,18 @@ So the order of the plan holds for the core, but the window's weight is in the c
 * **Step 1 on the model's side** (one `Post` per stored post for every lane, `View.entry`):
   `--ui qt --hours 2` USS 401.0 → 399.5 MB, after the trim 245.3 → 245.0 MB, Python
   objects 228 169 → 222 232. Next to nothing: the Post objects were never the weight.
+* **Pictures** (28 Oct: a real window's stats line — USS 465–547 MB, `qt.images_mb` 127.9 of
+  174 pictures, 3342 widgets; the bench saw none of it, its addresses led nowhere). With the
+  pictures on its disk (`--ui qt --posts 4000 --hours 4`), after the trim:
+
+  | `media.image_cache_mb` | before the trim | after it |
+  |---|---|---|
+  | 128 (the old default) | 600.1 | 378.4 |
+  | 64 | 570.7 | 318.8 |
+  | 32 | 553.8 | 318.8 |
+
+  Below 64 nothing more goes: the pictures on screen are held by their cards whatever the
+  cache. The default is 64 MB now (step 6) — 60 MB of the 380 a window kept open holds.
 
 ## Decisions
 

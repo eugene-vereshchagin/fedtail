@@ -126,8 +126,11 @@ def make(tmp, posts, lanes):
               w.statuses.get(f"{i:06d}"), minute=i % 59)
     FakeApi.world = w
     preset = 11  # fedtail's set (Federated, Home, … Activity) — the rest one's own
-    cfg, _ = config.validate({"feed": {"first_run_mark_read": False},
-                              "lanes": {"custom": own_lanes(max(0, lanes - preset))}})
+    over = {"feed": {"first_run_mark_read": False},
+            "lanes": {"custom": own_lanes(max(0, lanes - preset))}}
+    if IMAGE_MB:
+        over["ui"] = {"image_cache_mb": IMAGE_MB}
+    cfg, _ = config.validate(over)
     p = paths.resolve("bench", config=str(Path(tmp) / "c.toml"), data=str(Path(tmp) / "d"))
     auth.save(p.auth_file, {"server": "https://example.test", "token": "tok"})
     core = Core(cfg, p, api_class=FakeApi)
@@ -145,6 +148,47 @@ def seed(core, w):
                                               if n.get("type") == "mention"
                                               and n.get("status")]))
     core.store.activity_put([n for n in w.notifications if n.get("type") != "mention"])
+
+
+IMAGE_MB = None  # --image-mb
+
+
+def pictures(core, w):
+    """Every picture of the fake server already in the disk cache, as after days of
+    reading (the bench has no network): real JPEGs of the sizes the posts say, so the
+    window decodes and keeps them as it would — on 28.10 a real window's pictures were
+    128 MB of its 550, which a bench without them never saw. Returns how many."""
+    import hashlib
+    from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+    from PySide6.QtGui import QColor, QImage
+    made = {}
+
+    def jpeg(w_, h_):
+        if (w_, h_) not in made:
+            img = QImage(w_, h_, QImage.Format.Format_RGB32)
+            img.fill(QColor(90, 120, 160))
+            data = QByteArray()
+            buf = QBuffer(data)
+            buf.open(QIODevice.OpenModeFlag.WriteOnly)
+            img.save(buf, "JPEG", 80)
+            made[w_, h_] = bytes(data)
+        return made[w_, h_]
+    urls = {}
+    for st in w.statuses.values():
+        av = st["account"].get("avatar_static")
+        if av:
+            urls[av] = (400, 400)
+        for m in st.get("media_attachments") or ():
+            o = (m.get("meta") or {}).get("original") or {}
+            size = (o.get("width") or 800, o.get("height") or 600)
+            for u in (m.get("url"), m.get("preview_url")):
+                if u:
+                    urls[u] = size
+    d = core.paths.cache_dir
+    d.mkdir(parents=True, exist_ok=True)
+    for url, size in urls.items():
+        (d / hashlib.sha1(url.encode()).hexdigest()).write_bytes(jpeg(*size))
+    return len(urls)
 
 
 def new_posts(w, k, n0):
@@ -196,6 +240,8 @@ def run(args):
         core.poll_once()
         return core, w2
     core, w = timed(times, "cold start: core, connect, first round", start)
+    if args.ui == "qt":
+        result["pictures_on_disk"] = pictures(core, w)
     from fedtail.core.view import View
     from fedtail.frontends.common.lane import LaneModel
     view = View(core)
@@ -355,6 +401,8 @@ def qt_counts(app, win):
     counts = getattr(win.images, "counts", None)
     if counts:
         out.update({k: v for k, v in counts().items() if isinstance(v, (int, float))})
+    out["images_mem"] = len(win.images.mem)  # as the stats line says them
+    out["images_mb"] = round(win.images.mem_bytes / 1024 / 1024, 1)
     return out
 
 
@@ -364,10 +412,14 @@ def main(argv=None):
     ap.add_argument("--lanes", type=int, default=20)
     ap.add_argument("--hours", type=float, default=24)
     ap.add_argument("--ui", choices=("none", "qt"), default="none")
+    ap.add_argument("--image-mb", type=int, help="ui.image_cache_mb (the default if not)")
     ap.add_argument("--trace", action="store_true", help="where Python's memory is (slower)")
     ap.add_argument("--json", help="the result as JSON into this file")
     ap.add_argument("--md", help="the result as the baseline's tables into this file")
-    run(ap.parse_args(argv))
+    args = ap.parse_args(argv)
+    global IMAGE_MB
+    IMAGE_MB = args.image_mb
+    run(args)
     return 0
 
 

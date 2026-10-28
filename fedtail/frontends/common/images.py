@@ -28,7 +28,7 @@ from ...version import USER_AGENT
 
 log = logging.getLogger(__name__)
 FEED_SIDE = 1200
-MEM_MB = 128  # default memory budget for decoded pictures (ui.image_cache_mb)
+MEM_MB = 64  # default memory budget for decoded pictures (ui.image_cache_mb)
 # the most one answer may bring: a picture's address comes from someone else's post, and
 # an answer that never ends must not fill the memory or the disk
 PICTURE_MAX = 20 * 1024 * 1024    # a preview, an avatar, a picture in the feed

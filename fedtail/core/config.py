@@ -63,7 +63,7 @@ DEFAULTS = {
         "image_upscale": 2,
         "save_dir": "",
         "links_in_app": True,
-        "image_cache_mb": 128,
+        "image_cache_mb": 64,
         "image_decode": 'box',
         "image_disk_mb": 1000,
         "video_disk_mb": 10000,

@@ -161,7 +161,7 @@ class FlowTest {
         waitText("Settings")
         waitText("Find a setting", 30_000)
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("command_line")
-        waitText("ui.command_line", 15_000)             // the search left that one card
+        waitText("window.command_line", 15_000)         // the search left that one card
         val file = File(ApplicationProvider.getApplicationContext<Context>().filesDir,
             "config/fedtail/demo/config.toml")
         val before = file.readText().contains("command_line = true")
@@ -174,7 +174,7 @@ class FlowTest {
         }
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.waitUntil(15_000) { file.readText().contains("command_line = true") == before }
-        assertTrue(file.readText().contains("[ui]"))
+        assertTrue(file.readText().contains("[window]"))
     }
 
     @Test

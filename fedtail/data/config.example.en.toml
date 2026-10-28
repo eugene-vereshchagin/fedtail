@@ -829,7 +829,7 @@ prefetch = "previews"
 
 # How much memory, MB, to keep for pictures already fetched and decoded (the oldest
 # are thrown out first; the cache stays on disk, rereading from there is instant).
-image_cache_mb = 128
+image_cache_mb = 64
 
 # Pictures in a lane are decoded in memory to the size of their frame (minding the
 # screen's density): "box" — several times less memory and work for the processor; "full" — as

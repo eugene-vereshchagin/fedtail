@@ -2,6 +2,13 @@
 
 ## 0.22.0 — in progress
 
+- Lighter: `media.image_cache_mb` is 64 MB by default (was 128). Measured: with pictures on
+  its disk the bench window holds 378 MB at 128, 319 MB at 64 and no less at 32 (the pictures
+  on screen are held by their cards anyway); a picture scrolled back to is reread from the
+  disk cache. `tools/membench.py --ui qt` now has real pictures in its disk cache, and
+  `--image-mb` to set the budget. The phone's settings test looked for `ui.command_line`,
+  which the file keeps under `[window]` since 0.21.
+
 - Fixed (the phone): writing crashed with the formatting buttons on a side (the default,
   left) — a scrolling column of them inside the scrolling editor. The UI tests waited for
   the overview's "Read in a row", gone since that button went: they wait for its title.
