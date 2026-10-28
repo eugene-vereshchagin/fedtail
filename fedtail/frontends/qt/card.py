@@ -639,9 +639,9 @@ class PostRow(QWidget):
             avatar.setAccessibleName(_("a11y_avatar", acct=acc.handle))
             avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
-            self.ctx.images.get(acc.avatar_static,
-                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
-                                owner=avatar)
+            self.ctx.images.face(acc.avatar_static, size,
+                                 lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
+                                 owner=avatar)
         line = QHBoxLayout()
         line.setSpacing(6)
         # "stacked" (point.im): the name alone on top, @address · time · … under it
@@ -766,9 +766,9 @@ class PostRow(QWidget):
             avatar.setToolTip("@" + acc.handle)
             avatar.clicked.connect(lambda a=acc.id: self.ctx.on_link(f"fedtail:account/{a}"))
             h.addWidget(avatar)
-            self.ctx.images.get(acc.avatar_static,
-                                lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
-                                owner=avatar)
+            self.ctx.images.face(acc.avatar_static, size,
+                                 lambda pm, w=avatar, s=size: w.setPixmap(_round(pm, s)),
+                                 owner=avatar)
         user, _sep, host = acc.handle.partition("@")
         h.addWidget(self._label(link("account", acc.id, "@" + esc(user),
                                      acc.color or self.theme.css("text"), bold=True),
@@ -1298,17 +1298,20 @@ class PostRow(QWidget):
         say so (a click still opens it). upgrade: a sharper file to put in once this
         one is shown — if it fails, the one shown stays. A video's still frame gets a
         ▶ on it; a video without one says it's a video, not a broken picture."""
-        def show(pm):
+        def shaped(pm):  # as the box shows it: what the cache keeps (images.get's fit)
             pm = _fit(pm, tw, th, radius, focus)
-            if kind != "image":
-                pm = _play_mark(pm)
+            return _play_mark(pm) if kind != "image" else pm
+        fit = (("box", tw, th, radius, focus, kind != "image"), shaped)
+
+        def show(pm):
             try:
                 lab.setPixmap(pm)
             except RuntimeError:  # the card was rebuilt meanwhile
                 return
             if upgrade:
-                self.ctx.images.get(upgrade, lambda big: _set(lab, _fit(big, tw, th, radius)),
-                                    big=True, owner=lab,
+                self.ctx.images.get(upgrade, lambda big: _set(lab, big), big=True, owner=lab,
+                                    fit=(("box", tw, th, radius, None, False),
+                                         lambda big: _fit(big, tw, th, radius)),
                                     **({"max_side": side} if side else {}))
 
         def failed():
@@ -1322,7 +1325,7 @@ class PostRow(QWidget):
         # the original named: once it comes (opened in the viewer), a preview that gave up
         # is asked again instead of staying broken
         self.ctx.images.get(src, show, failed=failed, original=fallback or upgrade, big=big,
-                            owner=lab, **({"max_side": side} if side else {}))
+                            owner=lab, fit=fit, **({"max_side": side} if side else {}))
 
 
 def _set(lab, pm):

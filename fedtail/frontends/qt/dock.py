@@ -694,8 +694,8 @@ def set_face(win, lab, url, owner, attr):
     else:
         lab.clear()
     if url:
-        win.images.get(url, lambda pm: getattr(owner, attr, None) == url and
-                       lab.setPixmap(_round(pm, lab.width())))
+        win.images.face(url, lab.width(), lambda pm: getattr(owner, attr, None) == url and
+                        lab.setPixmap(_round(pm, lab.width())))
 
 
 class _TabChip(QFrame):

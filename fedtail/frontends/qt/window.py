@@ -1166,8 +1166,8 @@ class MainWindow(QMainWindow):
         self.account_name.setText(t.words["account_title"].format(**fields))
         self.account_sub.setText(t.words["account_subtitle"].format(**fields))
         if t.shape["sidebar_avatar"]:
-            self.images.get(me.avatar_static or me.avatar,
-                            lambda pm: self.account_avatar.setPixmap(_round(pm, 44)))
+            self.images.face(me.avatar_static or me.avatar, 44,
+                             lambda pm: self.account_avatar.setPixmap(_round(pm, 44)))
 
     def _after_connect(self, me):
         if self.core.new_options:

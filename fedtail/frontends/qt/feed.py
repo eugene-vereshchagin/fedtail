@@ -1995,7 +1995,8 @@ class AccountWidget(_PagedTab):
         avatar = QLabel()
         avatar.setFixedSize(72, 72)
         from .card import _round
-        self.win.images.get(acc.avatar_static, lambda pm, w=avatar: w.setPixmap(_round(pm, 72)))
+        self.win.images.face(acc.avatar_static, 72,
+                             lambda pm, w=avatar: w.setPixmap(_round(pm, 72)))
         top.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(6)
@@ -2352,7 +2353,7 @@ class AccountRow(QFrame):
         avatar = QLabel()
         avatar.setFixedSize(40, 40)
         from .card import _round
-        win.images.get(acc.avatar_static, lambda pm, w=avatar: w.setPixmap(_round(pm, 40)))
+        win.images.face(acc.avatar_static, 40, lambda pm, w=avatar: w.setPixmap(_round(pm, 40)))
         h.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(2)

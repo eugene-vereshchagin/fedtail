@@ -64,8 +64,7 @@ class Avatar(Gtk.Image):
         if ctx.images is not None:
             url = account.avatar_static or account.avatar
             # read small: a face twice its size at most (sharp on a HiDPI screen)
-            ctx.images.get(url, self.set_from_paintable, max_side=max(64, size * 2),
-                           owner=self)
+            ctx.images.face(url, size, self.set_from_paintable, owner=self)
 
 
 class Card(Gtk.Box):

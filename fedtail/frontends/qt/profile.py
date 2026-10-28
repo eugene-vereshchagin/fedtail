@@ -144,8 +144,8 @@ class ProfileDialog(QDialog):
         self.save_btn.setEnabled(True)
         # pictures come later, from the image cache
         images = self.win.images
-        images.get(me.avatar_static or me.avatar,
-                   lambda pm: self.avatar_img.setPixmap(_round(pm, 72)))
+        images.face(me.avatar_static or me.avatar, 72,
+                    lambda pm: self.avatar_img.setPixmap(_round(pm, 72)))
         if me.header_static or me.header:
             images.get(me.header_static or me.header, self._show_header)
 

@@ -142,8 +142,8 @@ class RosterRow(QWidget):
             self.face.clear()
             if url:
                 from .card import _round
-                self.roster.win.images.get(
-                    url, lambda pm, w=self.face: _alive(w) and w.setPixmap(
+                self.roster.win.images.face(
+                    url, self.face.width(), lambda pm, w=self.face: _alive(w) and w.setPixmap(
                         _round(pm, w.width())))
         self._tip(item, new)
 
@@ -429,8 +429,8 @@ class RosterWindow(QWidget):
         if me.avatar_static and getattr(self, "_my_face", None) != me.avatar_static:
             self._my_face = me.avatar_static
             from .card import _round
-            self.win.images.get(me.avatar_static,
-                                lambda pm: self.avatar.setPixmap(_round(pm, AVATAR)))
+            self.win.images.face(me.avatar_static, AVATAR,
+                                 lambda pm: self.avatar.setPixmap(_round(pm, AVATAR)))
 
     def _filter(self, text):
         for i in range(self.list.count()):
